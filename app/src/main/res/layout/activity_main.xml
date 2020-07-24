@@ -5,80 +5,63 @@
     android:id="@+id/cl_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/colorPrimaryDarker"
     tools:context=".MainActivity">
 
-    <androidx.appcompat.widget.Toolbar
+    <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/my_toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="?attr/colorPrimary"
         android:elevation="4dp"
-        android:theme="@style/ThemeOverlay.AppCompat.ActionBar"
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
 
-    <me.rosuh.easywatermark.WaterMarkImageView
+    <me.rosuh.easywatermark.widget.WaterMarkImageView
         android:id="@+id/iv_photo"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:background="#000"
-        android:src="@drawable/ic_baseline_add_circle_24"
-        app:layout_constraintBottom_toTopOf="@+id/fl_control_panel"
+        android:layout_margin="2dp"
+        android:background="@color/colorPrimaryDarker"
+        app:layout_constraintBottom_toTopOf="@+id/rv_tool_bar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/my_toolbar" />
 
-    <LinearLayout
-        android:id="@+id/fl_control_panel"
-        android:layout_width="match_parent"
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_add"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:layout_marginBottom="16dp"
+        android:text="添加图片"
+        app:layout_constraintBottom_toBottomOf="@+id/iv_photo"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_tool_bar"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="@color/colorPrimaryDark"
+        android:paddingStart="16dp"
+        app:layout_constraintBottom_toTopOf="@+id/vp_control_panel"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHeight_percent="0.08"
+        app:layout_constraintStart_toStartOf="parent"
+        tools:itemCount="3"
+        tools:listitem="@layout/item_tool_bar" />
+
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/vp_control_panel"
+        android:layout_width="match_parent"
+        android:layout_height="250dp"
+        android:background="@color/colorPrimaryDark"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
-
-        <androidx.appcompat.widget.AppCompatSeekBar
-            android:id="@+id/sb_horizon"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:background="#fff"
-            android:max="100"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
-
-        <androidx.appcompat.widget.AppCompatSeekBar
-            android:id="@+id/sb_vertical"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:background="#fff"
-            android:max="100"
-            app:layout_constraintBottom_toTopOf="@+id/sb_horizon"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
-
-        <androidx.appcompat.widget.AppCompatSeekBar
-            android:id="@+id/sb_alpha"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:background="#fff"
-            android:max="100"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
-
-        <androidx.appcompat.widget.AppCompatSeekBar
-            android:id="@+id/sb_rotate"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:background="#fff"
-            android:max="360"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
-
-    </LinearLayout>
+        app:layout_constraintHeight_percent="0.30"
+        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

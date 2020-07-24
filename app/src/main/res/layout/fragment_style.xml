@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp"
+    tools:background="#000">
+
+    <TextView
+        android:id="@+id/tv_title_color"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="字体颜色"
+        android:textSize="16sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageView
+        android:id="@+id/iv_color_preview"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginTop="10dp"
+        android:src="@drawable/bg_color_preview"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tv_title_color" />
+
+    <TextView
+        android:id="@+id/tv_title_degree"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="文本角度"
+        android:textSize="16sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/iv_color_preview" />
+
+    <TextView
+        android:id="@+id/tv_tips_degree"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0°"
+        android:textAlignment="center"
+        android:textSize="16sp"
+        app:layout_constraintBottom_toBottomOf="@id/sb_degree"
+        app:layout_constraintStart_toStartOf="@+id/tv_title_degree"
+        app:layout_constraintTop_toTopOf="@id/sb_degree" />
+
+    <androidx.appcompat.widget.AppCompatSeekBar
+        android:id="@+id/sb_degree"
+        style="@style/MySeekBarStyle"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:layout_marginTop="10dp"
+        android:background="#fff"
+        android:max="360"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/tv_title_degree"
+        app:layout_constraintTop_toBottomOf="@+id/tv_title_degree" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

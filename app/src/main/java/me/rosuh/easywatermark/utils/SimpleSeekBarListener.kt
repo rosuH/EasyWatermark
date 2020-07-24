@@ -1,4 +1,4 @@
-package me.rosuh.easywatermark
+package me.rosuh.easywatermark.utils
 
 import android.widget.SeekBar
 
