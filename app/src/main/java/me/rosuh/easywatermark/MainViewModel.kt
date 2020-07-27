@@ -8,6 +8,7 @@ import android.graphics.*
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import android.service.quicksettings.Tile
 import androidx.lifecycle.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -15,6 +16,7 @@ import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.config.WaterMarkConfig
 import me.rosuh.easywatermark.config.WaterMarkConfig.Companion.calculateCircleRadius
 import me.rosuh.easywatermark.ktx.applyConfig
+import me.rosuh.easywatermark.widget.WaterMarkImageView
 import java.io.FileOutputStream
 import kotlin.math.roundToInt
 
@@ -93,41 +95,13 @@ class MainViewModel : ViewModel() {
             val tmpConfig = config.value!!
             val paint = Paint().applyConfig(tmpConfig)
             val bounds = Rect()
-            canvas.save()
-            canvas.rotate(
-                tmpConfig.degree,
-                (mutableBitmap.width / 2).toFloat(),
-                (mutableBitmap.height / 2).toFloat()
-            )
-            paint.getTextBounds(tmpConfig.text, 0, tmpConfig.text.length, bounds)
-            val textWidth = bounds.width().toFloat()
-            val textHeight = bounds.height().toFloat()
-            val horizonCount =
-                (calculateCircleRadius(
-                    mutableBitmap.width,
-                    mutableBitmap.height
-                ) / (textWidth + tmpConfig.calculateHorizon(mutableBitmap.width))).roundToInt()
-            val verticalCount =
-                (calculateCircleRadius(
-                    mutableBitmap.width,
-                    mutableBitmap.height
-                ) / (textHeight + tmpConfig.calculateHorizon(mutableBitmap.height))).roundToInt()
-            for (iX in 0..horizonCount) {
-                for (iY in 0..verticalCount) {
-                    canvas.drawText(
-                        tmpConfig.text,
-                        iX * (textWidth + (if (iX == 0) 0 else tmpConfig.calculateHorizon(
-                            mutableBitmap.width
-                        ))),
-                        iY * (textHeight + (if (iY == 0) 0 else tmpConfig.calculateHorizon(
-                            mutableBitmap.height
-                        ))),
-                        paint
-                    )
-                }
 
-            }
-            canvas.restore()
+            paint.getTextBounds(tmpConfig.text, 0, tmpConfig.text.length, bounds)
+            paint.shader = WaterMarkImageView.buildTextBitmapShader(config.value!!, bounds, paint)
+            canvas.drawRect(
+                0f, 0f,
+                mutableBitmap.width.toFloat(), mutableBitmap.height.toFloat(), paint
+            )
 
             return@withContext if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val imageCollection =
@@ -158,7 +132,12 @@ class MainViewModel : ViewModel() {
                 imageContentUri
             } else {
                 // need request write_storage permission
-                val u = MediaStore.Images.Media.insertImage(resolver, mutableBitmap, "Easy_water_mark_${System.currentTimeMillis()}.jpg" , "")
+                val u = MediaStore.Images.Media.insertImage(
+                    resolver,
+                    mutableBitmap,
+                    "Easy_water_mark_${System.currentTimeMillis()}.jpg",
+                    ""
+                )
                 Uri.parse(u)
             }
         }

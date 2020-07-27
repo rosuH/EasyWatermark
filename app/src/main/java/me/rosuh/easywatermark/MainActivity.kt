@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -67,7 +68,7 @@ class MainActivity : AppCompatActivity() {
                     ).show()
                 }
             }
-            if (state == MainViewModel.State.Saving){
+            if (state == MainViewModel.State.Saving) {
                 cpb_loading.show()
             } else {
                 cpb_loading.hide()
@@ -130,7 +131,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         R.id.action_pick -> {
-            if (isPermissionGrated()){
+            if (isPermissionGrated()) {
                 performFileSearch()
             } else {
                 requestPermission()
@@ -139,7 +140,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         R.id.action_save -> {
-            if (isPermissionGrated()){
+            if (isPermissionGrated()) {
                 viewModel.saveImage(contentResolver)
             } else {
                 requestPermission()
@@ -148,7 +149,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         R.id.action_share -> {
-            if (isPermissionGrated()){
+            if (isPermissionGrated()) {
                 viewModel.shareImage(this)
             } else {
                 requestPermission()
@@ -171,7 +172,7 @@ class MainActivity : AppCompatActivity() {
         startActivityForResult(intent, READ_REQUEST_CODE)
     }
 
-    private fun isPermissionGrated() = ContextCompat.checkSelfPermission(
+    private fun isPermissionGrated() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(
         this,
         Manifest.permission.READ_EXTERNAL_STORAGE
     ) == PackageManager.PERMISSION_GRANTED
