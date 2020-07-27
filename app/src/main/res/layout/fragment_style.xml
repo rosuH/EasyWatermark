@@ -9,10 +9,10 @@
 
     <TextView
         android:id="@+id/tv_title_color"
+        style="@style/AppTheme.TitleText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="字体颜色"
-        android:textSize="16sp"
+        android:text="@string/title_text_color"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -28,11 +28,11 @@
 
     <TextView
         android:id="@+id/tv_title_degree"
+        style="@style/AppTheme.TitleText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="文本角度"
-        android:textSize="16sp"
+        android:text="@string/title_text_rotate"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/iv_color_preview" />
 
@@ -40,9 +40,8 @@
         android:id="@+id/tv_tips_degree"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="0°"
+        android:text="@string/text_zero_degree"
         android:textAlignment="center"
-        android:textSize="16sp"
         app:layout_constraintBottom_toBottomOf="@id/sb_degree"
         app:layout_constraintStart_toStartOf="@+id/tv_title_degree"
         app:layout_constraintTop_toTopOf="@id/sb_degree" />

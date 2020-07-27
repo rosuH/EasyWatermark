@@ -40,7 +40,6 @@ class MainActivity : AppCompatActivity() {
     private fun initObserver() {
         viewModel.config.observe(this, Observer<WaterMarkConfig> {
             iv_photo?.config = it
-            btn_add.isVisible = it.uri.toString().isEmpty()
         })
 
         viewModel.saveState.observe(this, Observer { state ->
@@ -64,13 +63,16 @@ class MainActivity : AppCompatActivity() {
                     ).show()
                 }
             }
+            if (state == MainViewModel.State.Saving){
+                cpb_loading.show()
+            } else {
+                cpb_loading.hide()
+            }
         })
     }
 
     private fun initView() {
-        btn_add.apply {
-            setOnClickListener { performFileSearch() }
-        }
+        cpb_loading.hide()
 
         val titleArray = arrayOf(
             getString(R.string.title_layout),

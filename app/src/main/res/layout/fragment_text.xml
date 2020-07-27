@@ -14,10 +14,10 @@
 
         <TextView
             android:id="@+id/tv_title_et"
+            style="@style/AppTheme.TitleText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="文本内容"
-            android:textSize="16sp"
+            android:text="@string/title_enter_text"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -26,7 +26,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:hint="水印文字"
+            android:hint="@string/hint_water_mark"
             android:textColorHint="@color/swl_color_1"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -46,11 +46,11 @@
 
         <TextView
             android:id="@+id/tv_title_style"
+            style="@style/AppTheme.TitleText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="文字样式"
-            android:textSize="16sp"
+            android:text="@string/title_text_style"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tl_water_text" />
 
@@ -61,18 +61,17 @@
             android:layout_marginTop="10dp"
             android:drawableTop="@drawable/ic_text_style_fill"
             android:textColor="@color/textColor_Primary"
-            android:textSize="16sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tv_title_style" />
 
         <TextView
             android:id="@+id/tv_tips_vertical"
+            style="@style/AppTheme.TitleText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="字体大小"
-            android:textSize="16sp"
+            android:text="@string/title_text_size"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/tv_text_style" />
 
@@ -96,7 +95,7 @@
             android:padding="3dp"
             android:textAlignment="center"
             android:textSize="14sp"
-            app:layout_constraintBottom_toBottomOf="@+id/sb_vertical"
+            app:layout_constraintBottom_toBottomOf="@+id/sb_text_size"
             app:layout_constraintStart_toStartOf="@+id/tv_tips_vertical"
             app:layout_constraintTop_toTopOf="@+id/sb_text_size"
             tools:text="5" />
