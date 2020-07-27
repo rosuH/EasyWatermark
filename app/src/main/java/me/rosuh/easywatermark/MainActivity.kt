@@ -1,13 +1,17 @@
 package me.rosuh.easywatermark
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
@@ -126,17 +130,29 @@ class MainActivity : AppCompatActivity() {
         }
 
         R.id.action_pick -> {
-            performFileSearch()
+            if (isPermissionGrated()){
+                performFileSearch()
+            } else {
+                requestPermission()
+            }
             true
         }
 
         R.id.action_save -> {
-            viewModel.saveImage(contentResolver)
+            if (isPermissionGrated()){
+                viewModel.saveImage(contentResolver)
+            } else {
+                requestPermission()
+            }
             true
         }
 
         R.id.action_share -> {
-            viewModel.shareImage(this)
+            if (isPermissionGrated()){
+                viewModel.shareImage(this)
+            } else {
+                requestPermission()
+            }
             true
         }
         else -> {
@@ -153,6 +169,40 @@ class MainActivity : AppCompatActivity() {
             type = "image/*"
         }
         startActivityForResult(intent, READ_REQUEST_CODE)
+    }
+
+    private fun isPermissionGrated() = ContextCompat.checkSelfPermission(
+        this,
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    ) == PackageManager.PERMISSION_GRANTED
+
+    /**
+     * 申请权限
+     */
+    private fun requestPermission() {
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+            WRITE_PERMISSION_REQUEST_CODE
+        )
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        when (requestCode) {
+            WRITE_PERMISSION_REQUEST_CODE -> {
+                if (grantResults.isEmpty() || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(
+                        this,
+                        getString(R.string.request_permission_failed),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -183,5 +233,6 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val READ_REQUEST_CODE: Int = 42
+        private const val WRITE_PERMISSION_REQUEST_CODE: Int = 43
     }
 }

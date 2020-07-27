@@ -24,4 +24,5 @@
     <string name="title_text_color"># 字体颜色</string>
     <string name="title_text_rotate"># 文本角度</string>
     <string name="text_zero_degree">0°</string>
+    <string name="request_permission_failed">获取权限失败</string>
 </resources>

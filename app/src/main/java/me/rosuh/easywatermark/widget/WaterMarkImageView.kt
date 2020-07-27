@@ -38,14 +38,16 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView {
     private var bounds: Rect = Rect()
 
     init {
-        setImageURI(config?.uri)
+        if (!config?.uri?.toString().isNullOrEmpty()){
+            setImageURI(config?.uri)
+        }
     }
 
     private fun maxRadius() = WaterMarkConfig.calculateCircleRadius(measuredWidth, measuredHeight)
 
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
-        if (config?.text.isNullOrEmpty()) {
+        if (config?.text.isNullOrEmpty() || config?.uri.toString().isEmpty()) {
             return
         }
         canvas?.save()

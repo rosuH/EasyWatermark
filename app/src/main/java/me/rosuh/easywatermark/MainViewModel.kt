@@ -129,33 +129,38 @@ class MainViewModel : ViewModel() {
             }
             canvas.restore()
 
-            val imageCollection =
-                MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-            val imageDetail = ContentValues().apply {
-                put(
-                    MediaStore.Images.Media.DISPLAY_NAME,
-                    "Easy_water_mark_${System.currentTimeMillis()}.jpg"
-                )
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    put(MediaStore.Images.Media.IS_PENDING, 1)
+            return@withContext if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val imageCollection =
+                    MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+                val imageDetail = ContentValues().apply {
+                    put(
+                        MediaStore.Images.Media.DISPLAY_NAME,
+                        "Easy_water_mark_${System.currentTimeMillis()}.jpg"
+                    )
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        put(MediaStore.Images.Media.IS_PENDING, 1)
+                    }
                 }
-            }
 
-            val imageContentUri = resolver.insert(imageCollection, imageDetail)
-            resolver.openFileDescriptor(imageContentUri!!, "w", null).use { pfd ->
-                mutableBitmap.compress(
-                    Bitmap.CompressFormat.PNG,
-                    100,
-                    FileOutputStream(pfd!!.fileDescriptor)
-                )
+                val imageContentUri = resolver.insert(imageCollection, imageDetail)
+                resolver.openFileDescriptor(imageContentUri!!, "w", null).use { pfd ->
+                    mutableBitmap.compress(
+                        Bitmap.CompressFormat.PNG,
+                        100,
+                        FileOutputStream(pfd!!.fileDescriptor)
+                    )
+                }
+                imageDetail.clear()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    imageDetail.put(MediaStore.Images.Media.IS_PENDING, 0)
+                }
+                resolver.update(imageContentUri, imageDetail, null, null)
+                imageContentUri
+            } else {
+                // need request write_storage permission
+                val u = MediaStore.Images.Media.insertImage(resolver, mutableBitmap, "Easy_water_mark_${System.currentTimeMillis()}.jpg" , "")
+                Uri.parse(u)
             }
-            imageDetail.clear()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                imageDetail.put(MediaStore.Images.Media.IS_PENDING, 0)
-            }
-            resolver.update(imageContentUri, imageDetail, null, null)
-
-            return@withContext imageContentUri
         }
 
     fun updateUri(uri: Uri) {
