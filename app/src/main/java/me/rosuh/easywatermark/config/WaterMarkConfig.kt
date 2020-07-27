@@ -4,6 +4,7 @@ import android.content.Context.MODE_PRIVATE
 import android.graphics.Color
 import android.graphics.Paint
 import android.net.Uri
+import android.os.Build
 import androidx.core.content.edit
 import me.rosuh.easywatermark.MyApp
 import kotlin.math.pow
@@ -32,7 +33,11 @@ class WaterMarkConfig {
         with(
             MyApp.instance.getSharedPreferences(SP_NAME, MODE_PRIVATE)
         ) {
-            uri = Uri.parse(getString("uri", "") ?: "")
+            uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                Uri.parse(getString("uri", "") ?: "")
+            } else{
+                Uri.parse("")
+            }
             val saveText = getString("text", "")
             text = if (saveText.isNullOrEmpty()) "图片仅供测试，请勿作其他用途" else saveText
             textSize = getFloat("text_size", 14f)

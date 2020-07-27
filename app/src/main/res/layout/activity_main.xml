@@ -25,6 +25,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_margin="2dp"
+        android:scaleType="centerCrop"
         android:background="@color/colorPrimaryDarker"
         app:layout_constraintBottom_toTopOf="@+id/rv_tool_bar"
         app:layout_constraintEnd_toEndOf="parent"
@@ -45,12 +46,11 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_tool_bar"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_height="wrap_content"
         android:background="@color/colorPrimaryDark"
         android:paddingStart="16dp"
         app:layout_constraintBottom_toTopOf="@+id/vp_control_panel"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHeight_percent="0.08"
         app:layout_constraintStart_toStartOf="parent"
         tools:itemCount="3"
         tools:listitem="@layout/item_tool_bar" />

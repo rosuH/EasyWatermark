@@ -1,5 +1,6 @@
 package me.rosuh.easywatermark.ktx
 
+import android.graphics.BitmapShader
 import android.graphics.Color
 import android.graphics.Paint
 import me.rosuh.easywatermark.config.WaterMarkConfig
