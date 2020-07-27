@@ -2,7 +2,7 @@
     <string name="app_name">简单水印</string>
     <string name="action_pick">选择图片</string>
     <string name="action_save">保存</string>
-    <string name="action_share">分享</string>
+    <string name="action_send">发送</string>
     <string name="action_settings">关于</string>
     <string name="title_layout">分布</string>
     <string name="title_style">样式</string>

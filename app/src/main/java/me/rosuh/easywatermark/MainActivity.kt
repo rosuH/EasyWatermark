@@ -165,11 +165,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-
-    /**
-     * A simple pager adapter that represents 5 ScreenSlidePageFragment objects, in
-     * sequence.
-     */
     private inner class ControlPanelPagerAdapter(
         fa: FragmentActivity,
         var fragmentArray: Array<Fragment>
