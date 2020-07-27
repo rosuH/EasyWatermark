@@ -6,18 +6,18 @@
         android:id="@+id/action_pick"
         android:icon="@drawable/ic_picker_image"
         android:title="@string/action_pick"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="always" />
 
     <item
         android:id="@+id/action_save"
         android:icon="@drawable/ic_save"
         android:title="@string/action_save"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="always" />
 
     <item
         android:id="@+id/action_share"
-        android:icon="@drawable/ic_share"
-        android:title="@string/action_share"
+        android:icon="@drawable/ic_send"
+        android:title="@string/action_send"
         app:showAsAction="ifRoom" />
 
     <item

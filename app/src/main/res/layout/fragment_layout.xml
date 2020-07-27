@@ -9,10 +9,10 @@
 
     <TextView
         android:id="@+id/tv_tips_horizon"
+        style="@style/AppTheme.TitleText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="水平"
-        android:textSize="16sp"
+        android:text="@string/title_horizon_layout"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -42,11 +42,11 @@
 
     <TextView
         android:id="@+id/tv_tips_vertical"
+        style="@style/AppTheme.TitleText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="垂直"
-        android:textSize="16sp"
+        android:text="@string/title_vertical_layout"
         app:layout_constraintEnd_toStartOf="@id/sb_vertical"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/sb_horizon" />
