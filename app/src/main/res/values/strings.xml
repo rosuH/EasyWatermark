@@ -9,6 +9,8 @@
     <string name="title_text">文本</string>
     <string name="tips_do_not_choose_image">没有选择图片</string>
     <string name="tips_choose_color_dialog">选择颜色</string>
+    <string name="tips_confirm_dialog">确认</string>
+    <string name="tips_cancel_dialog">取消</string>
     <string name="tips_saving">正在保存</string>
     <string name="tips_sharing">正在分享</string>
     <string name="tips_save_ok">保存完成</string>

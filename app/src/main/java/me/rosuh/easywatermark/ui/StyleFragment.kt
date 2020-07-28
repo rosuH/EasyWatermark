@@ -55,12 +55,17 @@ class StyleFragment : BaseFragment() {
                 )
                     .setTitle(requireActivity().getString(R.string.tips_choose_color_dialog))
                     .setPreferenceName(SP_COLOR_PICKER_DIALOG)
-                    .setPositiveButton("确认", object : ColorEnvelopeListener {
-                        override fun onColorSelected(envelope: ColorEnvelope?, fromUser: Boolean) {
-                            changeIvColor(this@apply, envelope?.color ?: Color.RED)
-                        }
-                    })
-                    .setNegativeButton("取消") { dialogInterface, _ -> dialogInterface.dismiss() }
+                    .setPositiveButton(
+                        requireActivity().getString(R.string.tips_confirm_dialog),
+                        object : ColorEnvelopeListener {
+                            override fun onColorSelected(
+                                envelope: ColorEnvelope?,
+                                fromUser: Boolean
+                            ) {
+                                changeIvColor(this@apply, envelope?.color ?: Color.RED)
+                            }
+                        })
+                    .setNegativeButton(requireActivity().getString(R.string.tips_cancel_dialog)) { dialogInterface, _ -> dialogInterface.dismiss() }
                     .attachAlphaSlideBar(true)
                     .attachBrightnessSlideBar(true)
                     .setBottomSpace(20)
