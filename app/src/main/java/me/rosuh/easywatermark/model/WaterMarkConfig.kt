@@ -82,16 +82,6 @@ class WaterMarkConfig {
         }
     }
 
-    fun calculateHorizon(width: Int): Int {
-        return (horizonGapPercent / 100.0 * width).toInt().coerceAtLeast(0)
-            .coerceAtMost(width)
-    }
-
-    fun calculateVertical(height: Int): Int {
-        return (verticalGapPercent / 100.0 * height).toInt().coerceAtLeast(0)
-            .coerceAtMost(height)
-    }
-
     companion object {
         const val SP_NAME = "sp_water_mark_config"
 
