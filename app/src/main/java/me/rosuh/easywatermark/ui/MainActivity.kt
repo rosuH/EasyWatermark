@@ -1,4 +1,4 @@
-package me.rosuh.easywatermark
+package me.rosuh.easywatermark.ui
 
 import android.Manifest
 import android.app.Activity
@@ -20,12 +20,12 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import kotlinx.android.synthetic.main.activity_main.*
+import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.adapter.ControlPanelAdapter
-import me.rosuh.easywatermark.config.WaterMarkConfig
-import me.rosuh.easywatermark.ui.LayoutFragment
-import me.rosuh.easywatermark.ui.StyleFragment
-import me.rosuh.easywatermark.ui.TextFragment
-import me.rosuh.easywatermark.utils.ZoomOutPageTransformer
+import me.rosuh.easywatermark.model.WaterMarkConfig
+import me.rosuh.easywatermark.ui.fragment.LayoutFragment
+import me.rosuh.easywatermark.ui.fragment.StyleFragment
+import me.rosuh.easywatermark.ui.fragment.TextFragment
 import me.rosuh.easywatermark.utils.onItemClick
 
 
@@ -109,7 +109,6 @@ class MainActivity : AppCompatActivity() {
         val pagerAdapter = ControlPanelPagerAdapter(this, fragmentArray)
         vp_control_panel.apply {
             adapter = pagerAdapter
-            setPageTransformer(ZoomOutPageTransformer())
             registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
                 override fun onPageSelected(position: Int) {
                     super.onPageSelected(position)
@@ -168,7 +167,10 @@ class MainActivity : AppCompatActivity() {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "image/*"
         }
-        startActivityForResult(intent, READ_REQUEST_CODE)
+        startActivityForResult(
+            intent,
+            READ_REQUEST_CODE
+        )
     }
 
     private fun isPermissionGrated() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(

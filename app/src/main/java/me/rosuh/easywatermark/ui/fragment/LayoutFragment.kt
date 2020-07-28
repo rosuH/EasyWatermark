@@ -1,4 +1,4 @@
-package me.rosuh.easywatermark.ui
+package me.rosuh.easywatermark.ui.fragment
 
 import android.os.Bundle
 import android.view.LayoutInflater

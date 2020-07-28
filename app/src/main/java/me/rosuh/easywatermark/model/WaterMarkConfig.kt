@@ -1,4 +1,4 @@
-package me.rosuh.easywatermark.config
+package me.rosuh.easywatermark.model
 
 import android.content.Context.MODE_PRIVATE
 import android.graphics.Color

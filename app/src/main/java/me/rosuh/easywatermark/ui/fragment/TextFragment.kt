@@ -1,4 +1,4 @@
-package me.rosuh.easywatermark.ui
+package me.rosuh.easywatermark.ui.fragment
 
 import android.graphics.Paint
 import android.os.Bundle
