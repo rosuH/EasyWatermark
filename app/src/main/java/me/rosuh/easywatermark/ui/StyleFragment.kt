@@ -51,7 +51,7 @@ class StyleFragment : BaseFragment() {
                 }
                 ColorPickerDialog.Builder(
                     activity,
-                    android.R.style.Theme_DeviceDefault_Dialog_Alert
+                    R.style.ThemeOverlay_MaterialComponents_Dialog_MyDialog
                 )
                     .setTitle(requireActivity().getString(R.string.tips_choose_color_dialog))
                     .setPreferenceName(SP_COLOR_PICKER_DIALOG)
@@ -63,7 +63,7 @@ class StyleFragment : BaseFragment() {
                     .setNegativeButton("取消") { dialogInterface, _ -> dialogInterface.dismiss() }
                     .attachAlphaSlideBar(true)
                     .attachBrightnessSlideBar(true)
-                    .setBottomSpace(12)
+                    .setBottomSpace(20)
                     .show()
             }
         }

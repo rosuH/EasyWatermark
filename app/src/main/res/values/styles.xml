@@ -21,4 +21,14 @@
         <item name="android:backgroundTint">@android:color/transparent</item>
     </style>
 
+    <style name="DialogButtonStyle" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
+        <item name="android:textColor">@color/colorAccent</item>
+        <item name="color">@color/textColor_Primary</item>
+    </style>
+
+    <style name="ThemeOverlay.MaterialComponents.Dialog.MyDialog" parent="ThemeOverlay.MaterialComponents.Dialog">
+        <item name="materialButtonStyle">@style/DialogButtonStyle</item>
+        <item name="android:background">@color/colorPrimaryDark</item>
+    </style>
+
 </resources>
