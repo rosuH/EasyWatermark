@@ -17,7 +17,7 @@ class LayoutFragment : BaseFragment() {
     ): View? {
         val root = layoutInflater.inflate(R.layout.fragment_layout, null)
 
-        val seekBarHorizon = root.findViewById<SeekBar>(R.id.sb_horizon).apply {
+        root.findViewById<SeekBar>(R.id.sb_horizon).apply {
             with(shareViewModel.config.value?.horizonGapPercent ?: 30) {
                 progress = this
                 root.findViewById<TextView>(R.id.tv_progress_horizon).text = this.toString()
@@ -34,7 +34,7 @@ class LayoutFragment : BaseFragment() {
             })
         }
 
-        val seekBarVertical = root.findViewById<SeekBar>(R.id.sb_vertical).apply {
+        root.findViewById<SeekBar>(R.id.sb_vertical).apply {
             with(shareViewModel.config.value?.verticalGapPercent ?: 30) {
                 progress = this
                 root.findViewById<TextView>(R.id.tv_progress_vertical).text = this.toString()

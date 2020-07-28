@@ -13,7 +13,6 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
@@ -101,7 +100,7 @@ class MainActivity : AppCompatActivity() {
             adapter = ControlPanelAdapter(titleArray, iconArray)
             layoutManager =
                 LinearLayoutManager(this@MainActivity, LinearLayoutManager.HORIZONTAL, false)
-            onItemClick { _, position, v ->
+            onItemClick { _, position, _ ->
                 (adapter as ControlPanelAdapter).updateSelected(position)
                 vp_control_panel.currentItem = position
             }
