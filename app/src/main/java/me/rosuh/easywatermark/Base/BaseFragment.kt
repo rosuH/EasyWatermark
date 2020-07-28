@@ -1,4 +1,4 @@
-package me.rosuh.easywatermark.ui.fragment
+package me.rosuh.easywatermark.Base
 
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels

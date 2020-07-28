@@ -37,6 +37,7 @@ android {
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
     def lifecycle_version = "2.2.0"
+    implementation 'com.github.rosuH:material-about-library:3.2.3'
     // ktx
     implementation "androidx.fragment:fragment-ktx:1.2.5"
     // ViewModel

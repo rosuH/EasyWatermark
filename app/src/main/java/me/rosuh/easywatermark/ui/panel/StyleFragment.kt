@@ -1,4 +1,4 @@
-package me.rosuh.easywatermark.ui.fragment
+package me.rosuh.easywatermark.ui.panel
 
 import android.annotation.SuppressLint
 import android.graphics.Color
@@ -13,6 +13,7 @@ import android.widget.TextView
 import com.skydoves.colorpickerview.ColorEnvelope
 import com.skydoves.colorpickerview.ColorPickerDialog
 import com.skydoves.colorpickerview.listeners.ColorEnvelopeListener
+import me.rosuh.easywatermark.Base.BaseFragment
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.utils.SimpleSeekBarListener
 

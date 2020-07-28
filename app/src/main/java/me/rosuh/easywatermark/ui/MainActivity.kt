@@ -23,9 +23,10 @@ import kotlinx.android.synthetic.main.activity_main.*
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.adapter.ControlPanelAdapter
 import me.rosuh.easywatermark.model.WaterMarkConfig
-import me.rosuh.easywatermark.ui.fragment.LayoutFragment
-import me.rosuh.easywatermark.ui.fragment.StyleFragment
-import me.rosuh.easywatermark.ui.fragment.TextFragment
+import me.rosuh.easywatermark.ui.about.AboutActivity
+import me.rosuh.easywatermark.ui.panel.LayoutFragment
+import me.rosuh.easywatermark.ui.panel.StyleFragment
+import me.rosuh.easywatermark.ui.panel.TextFragment
 import me.rosuh.easywatermark.utils.onItemClick
 
 
@@ -125,6 +126,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
         R.id.action_settings -> {
+            startActivity(Intent(this, AboutActivity::class.java))
             true
         }
 
@@ -173,10 +175,11 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun isPermissionGrated() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(
-        this,
-        Manifest.permission.READ_EXTERNAL_STORAGE
-    ) == PackageManager.PERMISSION_GRANTED
+    private fun isPermissionGrated() =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED
 
     /**
      * 申请权限

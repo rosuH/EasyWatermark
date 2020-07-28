@@ -9,6 +9,18 @@
         <item name="colorOnSurface">@color/colorAccent</item>
     </style>
 
+    <style name="AppTheme.MaterialAboutActivity" parent="Theme.MaterialComponents">
+        <item name="android:textSize">14sp</item>
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorOnPrimary">@color/colorPrimary</item>
+        <item name="colorOnSurface">@color/colorAccent</item>
+        <item name="actionBarTheme">@style/AppTheme.AppBarOverlay</item>
+    </style>
+
+    <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
+        <item name="android:textColorPrimary">@color/textColor_Primary</item>
+    </style>
+
     <style name="AppTheme.TitleText" parent="AppTheme">
         <item name="android:textSize">16sp</item>
         <item name="android:textStyle">bold</item>

@@ -1,4 +1,4 @@
-package me.rosuh.easywatermark.ui.fragment
+package me.rosuh.easywatermark.ui.panel
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.SeekBar
 import android.widget.TextView
+import me.rosuh.easywatermark.Base.BaseFragment
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.utils.SimpleSeekBarListener
 
