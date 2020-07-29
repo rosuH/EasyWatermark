@@ -10,8 +10,8 @@ import android.view.ViewGroup
 import android.widget.SeekBar
 import android.widget.TextView
 import com.google.android.material.textfield.TextInputEditText
-import me.rosuh.easywatermark.Base.BaseFragment
 import me.rosuh.easywatermark.R
+import me.rosuh.easywatermark.base.BaseFragment
 import me.rosuh.easywatermark.utils.SimpleSeekBarListener
 
 class TextFragment : BaseFragment() {
