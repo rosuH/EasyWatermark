@@ -2,11 +2,10 @@ package me.rosuh.easywatermark.widget
 
 import android.content.Context
 import android.graphics.*
-import android.text.TextPaint
 import android.util.AttributeSet
 import me.rosuh.easywatermark.BuildConfig
-import me.rosuh.easywatermark.config.WaterMarkConfig
 import me.rosuh.easywatermark.ktx.applyConfig
+import me.rosuh.easywatermark.model.WaterMarkConfig
 import kotlin.math.pow
 import kotlin.math.sqrt
 
@@ -27,7 +26,12 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView {
             if (field != null && !field?.text.isNullOrEmpty() && field?.uri.toString().isNotEmpty()
             ) {
                 paint.getTextBounds(config!!.text, 0, config!!.text.length, bounds)
-                layoutShader = buildTextBitmapShader(field!!, bounds, paint)
+                layoutShader =
+                    buildTextBitmapShader(
+                        field!!,
+                        bounds,
+                        paint
+                    )
             }
             invalidate()
         }

@@ -4,6 +4,7 @@
     <color name="colorPrimaryDark">#232F34</color>
     <color name="colorPrimaryDarker">#191D27</color>
     <color name="colorAccent">#F9AA33</color>
+    <color name="colorAccent_30">#4D865900</color>
 
     <color name="button_focus">#865900</color>
     <color name="text_color">#fff</color>

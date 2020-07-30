@@ -9,6 +9,18 @@
         <item name="colorOnSurface">@color/colorAccent</item>
     </style>
 
+    <style name="AppTheme.MaterialAboutActivity" parent="Theme.MaterialComponents">
+        <item name="android:textSize">14sp</item>
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorOnPrimary">@color/colorPrimary</item>
+        <item name="colorOnSurface">@color/colorAccent</item>
+        <item name="actionBarTheme">@style/AppTheme.AppBarOverlay</item>
+    </style>
+
+    <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
+        <item name="android:textColorPrimary">@color/textColor_Primary</item>
+    </style>
+
     <style name="AppTheme.TitleText" parent="AppTheme">
         <item name="android:textSize">16sp</item>
         <item name="android:textStyle">bold</item>
@@ -19,6 +31,16 @@
         <item name="android:progressTint">@color/colorAccent</item>
         <item name="android:colorControlActivated">@color/colorAccent</item>
         <item name="android:backgroundTint">@android:color/transparent</item>
+    </style>
+
+    <style name="DialogButtonStyle" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
+        <item name="android:textColor">@color/colorAccent</item>
+        <item name="color">@color/textColor_Primary</item>
+    </style>
+
+    <style name="ThemeOverlay.MaterialComponents.Dialog.MyDialog" parent="ThemeOverlay.MaterialComponents.Dialog">
+        <item name="materialButtonStyle">@style/DialogButtonStyle</item>
+        <item name="android:background">@color/colorPrimaryDark</item>
     </style>
 
 </resources>

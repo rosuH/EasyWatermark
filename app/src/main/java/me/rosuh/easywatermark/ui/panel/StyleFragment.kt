@@ -1,4 +1,4 @@
-package me.rosuh.easywatermark.ui
+package me.rosuh.easywatermark.ui.panel
 
 import android.annotation.SuppressLint
 import android.graphics.Color
@@ -14,6 +14,7 @@ import com.skydoves.colorpickerview.ColorEnvelope
 import com.skydoves.colorpickerview.ColorPickerDialog
 import com.skydoves.colorpickerview.listeners.ColorEnvelopeListener
 import me.rosuh.easywatermark.R
+import me.rosuh.easywatermark.base.BaseFragment
 import me.rosuh.easywatermark.utils.SimpleSeekBarListener
 
 
@@ -51,19 +52,24 @@ class StyleFragment : BaseFragment() {
                 }
                 ColorPickerDialog.Builder(
                     activity,
-                    android.R.style.Theme_DeviceDefault_Dialog_Alert
+                    R.style.ThemeOverlay_MaterialComponents_Dialog_MyDialog
                 )
                     .setTitle(requireActivity().getString(R.string.tips_choose_color_dialog))
                     .setPreferenceName(SP_COLOR_PICKER_DIALOG)
-                    .setPositiveButton("确认", object : ColorEnvelopeListener {
-                        override fun onColorSelected(envelope: ColorEnvelope?, fromUser: Boolean) {
-                            changeIvColor(this@apply, envelope?.color ?: Color.RED)
-                        }
-                    })
-                    .setNegativeButton("取消") { dialogInterface, _ -> dialogInterface.dismiss() }
+                    .setPositiveButton(
+                        requireActivity().getString(R.string.tips_confirm_dialog),
+                        object : ColorEnvelopeListener {
+                            override fun onColorSelected(
+                                envelope: ColorEnvelope?,
+                                fromUser: Boolean
+                            ) {
+                                changeIvColor(this@apply, envelope?.color ?: Color.RED)
+                            }
+                        })
+                    .setNegativeButton(requireActivity().getString(R.string.tips_cancel_dialog)) { dialogInterface, _ -> dialogInterface.dismiss() }
                     .attachAlphaSlideBar(true)
                     .attachBrightnessSlideBar(true)
-                    .setBottomSpace(12)
+                    .setBottomSpace(20)
                     .show()
             }
         }

@@ -1,4 +1,4 @@
-package me.rosuh.easywatermark
+package me.rosuh.easywatermark.ui
 
 import android.app.Activity
 import android.content.ContentResolver
@@ -8,17 +8,15 @@ import android.graphics.*
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
-import android.service.quicksettings.Tile
 import androidx.lifecycle.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import me.rosuh.easywatermark.config.WaterMarkConfig
-import me.rosuh.easywatermark.config.WaterMarkConfig.Companion.calculateCircleRadius
+import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ktx.applyConfig
+import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.widget.WaterMarkImageView
 import java.io.FileOutputStream
-import kotlin.math.roundToInt
 
 class MainViewModel : ViewModel() {
 

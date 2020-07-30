@@ -1,4 +1,4 @@
-package me.rosuh.easywatermark
+package me.rosuh.easywatermark.ui
 
 import android.Manifest
 import android.app.Activity
@@ -13,7 +13,6 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
@@ -21,12 +20,13 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import kotlinx.android.synthetic.main.activity_main.*
+import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.adapter.ControlPanelAdapter
-import me.rosuh.easywatermark.config.WaterMarkConfig
-import me.rosuh.easywatermark.ui.LayoutFragment
-import me.rosuh.easywatermark.ui.StyleFragment
-import me.rosuh.easywatermark.ui.TextFragment
-import me.rosuh.easywatermark.utils.ZoomOutPageTransformer
+import me.rosuh.easywatermark.model.WaterMarkConfig
+import me.rosuh.easywatermark.ui.about.AboutActivity
+import me.rosuh.easywatermark.ui.panel.LayoutFragment
+import me.rosuh.easywatermark.ui.panel.StyleFragment
+import me.rosuh.easywatermark.ui.panel.TextFragment
 import me.rosuh.easywatermark.utils.onItemClick
 
 
@@ -101,7 +101,7 @@ class MainActivity : AppCompatActivity() {
             adapter = ControlPanelAdapter(titleArray, iconArray)
             layoutManager =
                 LinearLayoutManager(this@MainActivity, LinearLayoutManager.HORIZONTAL, false)
-            onItemClick { _, position, v ->
+            onItemClick { _, position, _ ->
                 (adapter as ControlPanelAdapter).updateSelected(position)
                 vp_control_panel.currentItem = position
             }
@@ -110,7 +110,6 @@ class MainActivity : AppCompatActivity() {
         val pagerAdapter = ControlPanelPagerAdapter(this, fragmentArray)
         vp_control_panel.apply {
             adapter = pagerAdapter
-            setPageTransformer(ZoomOutPageTransformer())
             registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
                 override fun onPageSelected(position: Int) {
                     super.onPageSelected(position)
@@ -127,6 +126,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
         R.id.action_settings -> {
+            startActivity(Intent(this, AboutActivity::class.java))
             true
         }
 
@@ -169,13 +169,17 @@ class MainActivity : AppCompatActivity() {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "image/*"
         }
-        startActivityForResult(intent, READ_REQUEST_CODE)
+        startActivityForResult(
+            intent,
+            READ_REQUEST_CODE
+        )
     }
 
-    private fun isPermissionGrated() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(
-        this,
-        Manifest.permission.READ_EXTERNAL_STORAGE
-    ) == PackageManager.PERMISSION_GRANTED
+    private fun isPermissionGrated() =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED
 
     /**
      * 申请权限
