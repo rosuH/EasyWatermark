@@ -16,6 +16,7 @@ import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ktx.applyConfig
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.widget.WaterMarkImageView
+import java.io.FileNotFoundException
 import java.io.FileOutputStream
 
 class MainViewModel : ViewModel() {
@@ -40,12 +41,16 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    fun saveImage(resolver: ContentResolver) {
+    fun saveImage(activity: MainActivity) {
         viewModelScope.launch {
+            if (config.value?.uri?.toString().isNullOrEmpty()){
+                _saveState.postValue(State.Error.apply { msg = activity.getString(R.string.error_not_img) })
+                return@launch
+            }
             _saveState.postValue(State.Saving)
-            val uri = generateImage(resolver, config.value?.uri ?: Uri.parse(""))
-            if (uri?.toString().isNullOrEmpty()) {
-                _saveState.postValue(State.Error.apply { msg = "Uri is empty" })
+            val outputUri = generateImage(activity.contentResolver, config.value?.uri ?: Uri.parse(""))
+            if (outputUri?.toString().isNullOrEmpty()) {
+                _saveState.postValue(State.Error.apply { msg = activity.getString(R.string.error_file_not_found) })
                 return@launch
             }
             _saveState.postValue(State.SaveOk)
@@ -54,15 +59,20 @@ class MainViewModel : ViewModel() {
 
     fun shareImage(activity: Activity) {
         viewModelScope.launch {
+            if (config.value?.uri?.toString().isNullOrEmpty()){
+                _saveState.postValue(State.Error.apply { msg = activity.getString(R.string.error_not_img) })
+                return@launch
+            }
             _saveState.postValue(State.Saving)
-            val uri = generateImage(activity.contentResolver, config.value?.uri ?: Uri.parse(""))
-            if (uri?.toString().isNullOrEmpty()) {
-                _saveState.postValue(State.Error.apply { msg = "Uri is empty" })
+            val outputUri =
+                generateImage(activity.contentResolver, config.value?.uri ?: Uri.parse(""))
+            if (outputUri?.toString().isNullOrEmpty()) {
+                _saveState.postValue(State.Error.apply { msg = activity.getString(R.string.error_file_not_found) })
                 return@launch
             }
             val intent = Intent(Intent.ACTION_SEND)
             intent.type = "image/jpeg"
-            intent.putExtra(Intent.EXTRA_STREAM, uri)
+            intent.putExtra(Intent.EXTRA_STREAM, outputUri)
             activity.startActivity(
                 Intent.createChooser(
                     intent,
@@ -76,8 +86,12 @@ class MainViewModel : ViewModel() {
     @Synchronized
     private suspend fun copyImage(resolver: ContentResolver, uri: Uri): Bitmap? =
         withContext(Dispatchers.IO) {
-            resolver.openInputStream(uri).use {
-                return@use BitmapFactory.decodeStream(it)
+            try {
+                resolver.openInputStream(uri).use {
+                    return@use BitmapFactory.decodeStream(it)
+                }
+            } catch (fne: FileNotFoundException) {
+                return@withContext null
             }
         }
 

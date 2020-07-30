@@ -63,7 +63,7 @@ class MainActivity : AppCompatActivity() {
                 MainViewModel.State.Error -> {
                     Toast.makeText(
                         this,
-                        getString(R.string.tips_error) + state.msg,
+                        "${getString(R.string.tips_error)}: ${state.msg}",
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -141,7 +141,7 @@ class MainActivity : AppCompatActivity() {
 
         R.id.action_save -> {
             if (isPermissionGrated()) {
-                viewModel.saveImage(contentResolver)
+                viewModel.saveImage(this)
             } else {
                 requestPermission()
             }

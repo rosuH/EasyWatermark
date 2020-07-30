@@ -45,7 +45,7 @@ class WaterMarkConfig {
             alpha = getInt(SP_KEY_ALPHA, 128)
             horizonGapPercent = getInt(SP_KEY_HORIZON_GAP, 30)
             verticalGapPercent = getInt(SP_KEY_VERTICAL_GAP, 30)
-            degree = getFloat(SP_KEY_DEGREE, 0f)
+            degree = getFloat(SP_KEY_DEGREE, 315f)
             textStyle = when (getInt(SP_KEY_TEXT_STYLE, 0)) {
                 0 -> {
                     Paint.Style.FILL
