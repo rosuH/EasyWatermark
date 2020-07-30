@@ -34,19 +34,19 @@ class WaterMarkConfig {
             MyApp.instance.getSharedPreferences(SP_NAME, MODE_PRIVATE)
         ) {
             uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                Uri.parse(getString("uri", "") ?: "")
-            } else{
+                Uri.parse(getString(SP_KEY_URI, "") ?: "")
+            } else {
                 Uri.parse("")
             }
-            val saveText = getString("text", "")
+            val saveText = getString(SP_KEY_TEXT, "")
             text = if (saveText.isNullOrEmpty()) "图片仅供测试，请勿作其他用途" else saveText
-            textSize = getFloat("text_size", 14f)
-            textColor = getInt("text_color", Color.RED)
-            alpha = getInt("alpha", 128)
-            horizonGapPercent = getInt("horizon_gap", 30)
-            verticalGapPercent = getInt("vertical_gap", 30)
-            degree = getFloat("degree", 0f)
-            textStyle = when (getInt("text_style", 0)) {
+            textSize = getFloat(SP_KEY_TEXT_SIZE, 14f)
+            textColor = getInt(SP_KEY_TEXT_COLOR, Color.RED)
+            alpha = getInt(SP_KEY_ALPHA, 128)
+            horizonGapPercent = getInt(SP_KEY_HORIZON_GAP, 30)
+            verticalGapPercent = getInt(SP_KEY_VERTICAL_GAP, 30)
+            degree = getFloat(SP_KEY_DEGREE, 0f)
+            textStyle = when (getInt(SP_KEY_TEXT_STYLE, 0)) {
                 0 -> {
                     Paint.Style.FILL
                 }
@@ -61,16 +61,16 @@ class WaterMarkConfig {
         MyApp.instance.getSharedPreferences(
             SP_NAME, MODE_PRIVATE
         ).edit {
-            putString("uri", uri.toString())
-            putString("text", text)
-            putFloat("text_size", textSize)
-            putInt("text_color", textColor)
-            putInt("alpha", alpha)
-            putInt("horizon_gap", horizonGapPercent)
-            putInt("vertical_gap", verticalGapPercent)
-            putFloat("degree", degree)
+            putString(SP_KEY_URI, uri.toString())
+            putString(SP_KEY_TEXT, text)
+            putFloat(SP_KEY_TEXT_SIZE, textSize)
+            putInt(SP_KEY_TEXT_COLOR, textColor)
+            putInt(SP_KEY_ALPHA, alpha)
+            putInt(SP_KEY_HORIZON_GAP, horizonGapPercent)
+            putInt(SP_KEY_VERTICAL_GAP, verticalGapPercent)
+            putFloat(SP_KEY_DEGREE, degree)
             putInt(
-                "text_style", when (textStyle) {
+                SP_KEY_TEXT_STYLE, when (textStyle) {
                     Paint.Style.FILL -> {
                         0
                     }
@@ -85,8 +85,14 @@ class WaterMarkConfig {
     companion object {
         const val SP_NAME = "sp_water_mark_config"
 
-        fun calculateCircleRadius(width: Int, height: Int): Float {
-            return sqrt(width.toFloat().pow(2) + height.toFloat().pow(2))
-        }
+        const val SP_KEY_URI = SP_NAME + "_key_uri"
+        const val SP_KEY_TEXT = SP_NAME + "_key_text"
+        const val SP_KEY_TEXT_SIZE = SP_NAME + "_key_text_size"
+        const val SP_KEY_TEXT_COLOR = SP_NAME + "_key_text_color"
+        const val SP_KEY_TEXT_STYLE = SP_NAME + "_key_text_style"
+        const val SP_KEY_ALPHA = SP_NAME + "_key_alpha"
+        const val SP_KEY_HORIZON_GAP = SP_NAME + "_key_horizon_gap"
+        const val SP_KEY_VERTICAL_GAP = SP_NAME + "_key_vertical_gap"
+        const val SP_KEY_DEGREE = SP_NAME + "_key_degree"
     }
 }
