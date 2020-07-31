@@ -5,9 +5,12 @@ import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Intent
 import android.graphics.*
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -18,6 +21,7 @@ import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.widget.WaterMarkImageView
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
+
 
 class MainViewModel : ViewModel() {
 
@@ -43,14 +47,19 @@ class MainViewModel : ViewModel() {
 
     fun saveImage(activity: MainActivity) {
         viewModelScope.launch {
-            if (config.value?.uri?.toString().isNullOrEmpty()){
-                _saveState.postValue(State.Error.apply { msg = activity.getString(R.string.error_not_img) })
+            if (config.value?.uri?.toString().isNullOrEmpty()) {
+                _saveState.postValue(State.Error.apply {
+                    msg = activity.getString(R.string.error_not_img)
+                })
                 return@launch
             }
             _saveState.postValue(State.Saving)
-            val outputUri = generateImage(activity.contentResolver, config.value?.uri ?: Uri.parse(""))
+            val outputUri =
+                generateImage(activity.contentResolver, config.value?.uri ?: Uri.parse(""))
             if (outputUri?.toString().isNullOrEmpty()) {
-                _saveState.postValue(State.Error.apply { msg = activity.getString(R.string.error_file_not_found) })
+                _saveState.postValue(State.Error.apply {
+                    msg = activity.getString(R.string.error_file_not_found)
+                })
                 return@launch
             }
             _saveState.postValue(State.SaveOk)
@@ -59,15 +68,19 @@ class MainViewModel : ViewModel() {
 
     fun shareImage(activity: Activity) {
         viewModelScope.launch {
-            if (config.value?.uri?.toString().isNullOrEmpty()){
-                _saveState.postValue(State.Error.apply { msg = activity.getString(R.string.error_not_img) })
+            if (config.value?.uri?.toString().isNullOrEmpty()) {
+                _saveState.postValue(State.Error.apply {
+                    msg = activity.getString(R.string.error_not_img)
+                })
                 return@launch
             }
             _saveState.postValue(State.Saving)
             val outputUri =
                 generateImage(activity.contentResolver, config.value?.uri ?: Uri.parse(""))
             if (outputUri?.toString().isNullOrEmpty()) {
-                _saveState.postValue(State.Error.apply { msg = activity.getString(R.string.error_file_not_found) })
+                _saveState.postValue(State.Error.apply {
+                    msg = activity.getString(R.string.error_file_not_found)
+                })
                 return@launch
             }
             val intent = Intent(Intent.ACTION_SEND)
@@ -199,7 +212,53 @@ class MainViewModel : ViewModel() {
         _config.forceRefresh()
     }
 
+    fun updateIcon(activity: Activity, iconUri: Uri = config.value?.iconUri ?: Uri.parse("")) {
+        config.value?.iconUri = iconUri
+        viewModelScope.launch() {
+            if (iconUri.toString().isNotEmpty()) {
+                val iconBitmap = copyImage(activity.contentResolver, iconUri) ?: kotlin.run {
+                    _saveState.postValue(State.Error.apply {
+                        msg = activity.getString(R.string.error_file_not_found)
+                    })
+                    return@launch
+                }
+//                val iconBitmap = drawableToBitmap(ContextCompat.getDrawable(activity, R.drawable.ic_github)!!) ?: kotlin.run {
+//                    _saveState.postValue(State.Error.apply {
+//                        msg = activity.getString(R.string.error_file_not_found)
+//                    })
+//                    return@launch
+//                }
+                if (config.value?.iconBitmap?.isRecycled != true) {
+                    config.value?.iconBitmap?.recycle()
+                }
+                config.value?.iconBitmap = iconBitmap
+            }
+            _config.forceRefresh()
+        }
+    }
+
+    fun updateMarkMode(mode: WaterMarkConfig.MarkMode) {
+        config.value?.markMode = mode
+        _config.forceRefresh()
+    }
+
+    private suspend fun drawableToBitmap(drawable: Drawable): Bitmap? =
+        withContext(Dispatchers.IO) {
+            if (drawable is BitmapDrawable) {
+                return@withContext drawable.bitmap
+            }
+            val bitmap = Bitmap.createBitmap(
+                drawable.intrinsicWidth,
+                drawable.intrinsicHeight,
+                Bitmap.Config.ARGB_8888
+            )
+            val canvas = Canvas(bitmap)
+            drawable.setBounds(0, 0, canvas.width, canvas.height)
+            drawable.draw(canvas)
+            return@withContext bitmap
+        }
+
     private fun <T> MutableLiveData<T>.forceRefresh() {
-        this.value = this.value
+        this.postValue(this.value)
     }
 }

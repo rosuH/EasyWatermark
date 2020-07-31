@@ -77,6 +77,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initView() {
+        iv_photo.setOnClickListener {
+            viewModel.updateIcon(this, viewModel.config.value!!.uri)
+        }
         cpb_loading.hide()
 
         val titleArray = arrayOf(
@@ -98,6 +101,7 @@ class MainActivity : AppCompatActivity() {
         )
 
         rv_tool_bar.apply {
+            setHasFixedSize(true)
             adapter = ControlPanelAdapter(titleArray, iconArray)
             layoutManager =
                 LinearLayoutManager(this@MainActivity, LinearLayoutManager.HORIZONTAL, false)
@@ -109,6 +113,7 @@ class MainActivity : AppCompatActivity() {
 
         val pagerAdapter = ControlPanelPagerAdapter(this, fragmentArray)
         vp_control_panel.apply {
+            offscreenPageLimit = 2
             adapter = pagerAdapter
             registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
                 override fun onPageSelected(position: Int) {

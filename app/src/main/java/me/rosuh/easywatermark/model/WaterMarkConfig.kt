@@ -1,14 +1,13 @@
 package me.rosuh.easywatermark.model
 
 import android.content.Context.MODE_PRIVATE
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Paint
 import android.net.Uri
 import android.os.Build
 import androidx.core.content.edit
 import me.rosuh.easywatermark.MyApp
-import kotlin.math.pow
-import kotlin.math.sqrt
 
 class WaterMarkConfig {
     var uri: Uri
@@ -28,6 +27,12 @@ class WaterMarkConfig {
     var degree: Float
 
     var textStyle: Paint.Style
+
+    var iconUri: Uri
+
+    var iconBitmap: Bitmap? = null
+
+    var markMode: MarkMode
 
     init {
         with(
@@ -54,6 +59,27 @@ class WaterMarkConfig {
                     Paint.Style.STROKE
                 }
             }
+            markMode = when (getInt(SP_KEY_MODE, 0)) {
+                0 -> {
+                    MarkMode.Text
+                }
+                else -> {
+                    MarkMode.Image
+                }
+            }
+
+            iconUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                Uri.parse(getString(SP_KEY_ICON_URI, "") ?: "")
+            } else {
+                Uri.parse("")
+            }
+            //@Test begin
+            iconUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                Uri.parse(getString(SP_KEY_URI, "") ?: "")
+            } else {
+                Uri.parse("")
+            }
+            //@Test end
         }
     }
 
@@ -62,6 +88,7 @@ class WaterMarkConfig {
             SP_NAME, MODE_PRIVATE
         ).edit {
             putString(SP_KEY_URI, uri.toString())
+            putString(SP_KEY_ICON_URI, iconUri.toString())
             putString(SP_KEY_TEXT, text)
             putFloat(SP_KEY_TEXT_SIZE, textSize)
             putInt(SP_KEY_TEXT_COLOR, textColor)
@@ -79,8 +106,21 @@ class WaterMarkConfig {
                     }
                 }
             )
+            putInt(
+                SP_KEY_MODE, when (markMode) {
+                    MarkMode.Text -> 0
+                    MarkMode.Image -> 1
+                }
+            )
         }
     }
+
+    sealed class MarkMode {
+        object Text : MarkMode()
+
+        object Image : MarkMode()
+    }
+
 
     companion object {
         const val SP_NAME = "sp_water_mark_config"
@@ -94,5 +134,7 @@ class WaterMarkConfig {
         const val SP_KEY_HORIZON_GAP = SP_NAME + "_key_horizon_gap"
         const val SP_KEY_VERTICAL_GAP = SP_NAME + "_key_vertical_gap"
         const val SP_KEY_DEGREE = SP_NAME + "_key_degree"
+        const val SP_KEY_ICON_URI = SP_NAME + "_key_icon_uri"
+        const val SP_KEY_MODE = SP_NAME + "_key_type"
     }
 }
