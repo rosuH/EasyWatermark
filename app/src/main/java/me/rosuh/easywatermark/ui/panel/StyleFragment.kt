@@ -15,7 +15,7 @@ import com.skydoves.colorpickerview.ColorPickerDialog
 import com.skydoves.colorpickerview.listeners.ColorEnvelopeListener
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.base.BaseFragment
-import me.rosuh.easywatermark.utils.SimpleSeekBarListener
+import me.rosuh.easywatermark.utils.DetectedPerformanceSeekBarListener
 
 
 class StyleFragment : BaseFragment() {
@@ -32,16 +32,16 @@ class StyleFragment : BaseFragment() {
         }
         root.findViewById<SeekBar>(R.id.sb_degree).apply {
             progress = (shareViewModel.config.value?.degree ?: 0f).toInt()
-            setOnSeekBarChangeListener(object : SimpleSeekBarListener() {
-                override fun onProgressChanged(
-                    seekBar: SeekBar?,
-                    progress: Int,
-                    fromUser: Boolean
+            setOnSeekBarChangeListener(object :
+                DetectedPerformanceSeekBarListener(
+                    config
                 ) {
-                    super.onProgressChanged(seekBar, progress, fromUser)
-                    shareViewModel.updateDegree(progress.toFloat())
+            }.apply {
+                inTimeAction = { _: SeekBar?, _: Int, _: Boolean ->
                     tvDegree.text = "${shareViewModel.config.value?.degree ?: 0}°"
                 }
+                postAction =
+                    { seekBar: SeekBar?, i: Int -> shareViewModel.updateDegree(progress.toFloat()) }
             })
         }
         root.findViewById<ImageView>(R.id.iv_color_preview).apply {

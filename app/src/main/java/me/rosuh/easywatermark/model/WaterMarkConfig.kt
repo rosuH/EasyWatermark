@@ -30,8 +30,6 @@ class WaterMarkConfig {
 
     var iconUri: Uri
 
-    var iconBitmap: Bitmap? = null
-
     var markMode: MarkMode
 
     init {
@@ -73,13 +71,6 @@ class WaterMarkConfig {
             } else {
                 Uri.parse("")
             }
-            //@Test begin
-            iconUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                Uri.parse(getString(SP_KEY_URI, "") ?: "")
-            } else {
-                Uri.parse("")
-            }
-            //@Test end
         }
     }
 
@@ -113,6 +104,14 @@ class WaterMarkConfig {
                 }
             )
         }
+    }
+
+    fun canDrawText(): Boolean {
+        return markMode == MarkMode.Text && text.isNotEmpty()
+    }
+
+    fun canDrawIcon(): Boolean {
+        return markMode == MarkMode.Image && iconUri.toString().isNotEmpty()
     }
 
     sealed class MarkMode {

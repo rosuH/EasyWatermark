@@ -77,8 +77,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initView() {
-        iv_photo.setOnClickListener {
-            viewModel.updateIcon(this, viewModel.config.value!!.uri)
+        iv_photo.apply {
+            setOnClickListener {
+                performFileSearch(ICON_REQUEST_CODE)
+            }
         }
         cpb_loading.hide()
 
@@ -137,7 +139,7 @@ class MainActivity : AppCompatActivity() {
 
         R.id.action_pick -> {
             if (isPermissionGrated()) {
-                performFileSearch()
+                performFileSearch(READ_REQUEST_CODE)
             } else {
                 requestPermission()
             }
@@ -169,14 +171,14 @@ class MainActivity : AppCompatActivity() {
     /**
      * Fires an intent to spin up the "file chooser" UI and select an image.
      */
-    private fun performFileSearch() {
+    private fun performFileSearch(requestCode: Int) {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "image/*"
         }
         startActivityForResult(
             intent,
-            READ_REQUEST_CODE
+            requestCode
         )
     }
 
@@ -217,13 +219,27 @@ class MainActivity : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == READ_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
-            data?.data?.also { uri ->
-                viewModel.updateUri(uri)
+        when(requestCode) {
+            READ_REQUEST_CODE -> {
+                if (resultCode == Activity.RESULT_OK) {
+                    data?.data?.also { uri ->
+                        viewModel.updateUri(uri)
+                    }
+                } else {
+                    Toast.makeText(this, getString(R.string.tips_do_not_choose_image), Toast.LENGTH_SHORT)
+                        .show()
+                }
             }
-        } else {
-            Toast.makeText(this, getString(R.string.tips_do_not_choose_image), Toast.LENGTH_SHORT)
-                .show()
+            ICON_REQUEST_CODE -> {
+                if (resultCode == Activity.RESULT_OK) {
+                    data?.data?.also { uri ->
+                        viewModel.updateIcon(this, uri)
+                    }
+                } else {
+                    Toast.makeText(this, getString(R.string.tips_do_not_choose_image), Toast.LENGTH_SHORT)
+                        .show()
+                }
+            }
         }
     }
 
@@ -244,5 +260,6 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val READ_REQUEST_CODE: Int = 42
         private const val WRITE_PERMISSION_REQUEST_CODE: Int = 43
+        private const val ICON_REQUEST_CODE: Int = 44
     }
 }

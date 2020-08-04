@@ -10,16 +10,14 @@ import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ktx.applyConfig
 import me.rosuh.easywatermark.model.WaterMarkConfig
+import me.rosuh.easywatermark.utils.decodeBitmapFromUri
+import me.rosuh.easywatermark.utils.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.widget.WaterMarkImageView
-import java.io.FileNotFoundException
 import java.io.FileOutputStream
 
 
@@ -96,22 +94,10 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    @Synchronized
-    private suspend fun copyImage(resolver: ContentResolver, uri: Uri): Bitmap? =
-        withContext(Dispatchers.IO) {
-            try {
-                resolver.openInputStream(uri).use {
-                    return@use BitmapFactory.decodeStream(it)
-                }
-            } catch (fne: FileNotFoundException) {
-                return@withContext null
-            }
-        }
-
     private suspend fun generateImage(resolver: ContentResolver, uri: Uri): Uri? =
         withContext(Dispatchers.IO) {
             val mutableBitmap =
-                copyImage(resolver, uri)?.copy(Bitmap.Config.ARGB_8888, true)
+                decodeBitmapFromUri(resolver, uri)?.copy(Bitmap.Config.ARGB_8888, true)
                     ?: return@withContext null
             if (config.value == null) {
                 return@withContext null
@@ -122,7 +108,33 @@ class MainViewModel : ViewModel() {
             val bounds = Rect()
 
             paint.getTextBounds(tmpConfig.text, 0, tmpConfig.text.length, bounds)
-            paint.shader = WaterMarkImageView.buildTextBitmapShader(config.value!!, bounds, paint)
+            paint.shader = when (config.value?.markMode) {
+                WaterMarkConfig.MarkMode.Text -> {
+                    WaterMarkImageView.buildTextBitmapShader(
+                        config.value!!,
+                        bounds,
+                        paint,
+                        Dispatchers.IO
+                    )
+                }
+                WaterMarkConfig.MarkMode.Image -> {
+                    val iconBitmap = decodeSampledBitmapFromResource(
+                        resolver,
+                        tmpConfig.iconUri,
+                        mutableBitmap.width,
+                        mutableBitmap.height
+                    ) ?: return@withContext null
+                    WaterMarkImageView.buildIconBitmapShader(
+                        iconBitmap,
+                        true,
+                        Rect(0, 0, mutableBitmap.width, mutableBitmap.height),
+                        tmpConfig,
+                        paint,
+                        Dispatchers.IO
+                    )
+                }
+                null -> return@withContext null
+            }
             canvas.drawRect(
                 0f, 0f,
                 mutableBitmap.width.toFloat(), mutableBitmap.height.toFloat(), paint
@@ -174,6 +186,7 @@ class MainViewModel : ViewModel() {
 
     fun updateText(text: String) {
         config.value?.text = text
+        config.value?.markMode = WaterMarkConfig.MarkMode.Text
         _config.forceRefresh()
     }
 
@@ -216,31 +229,13 @@ class MainViewModel : ViewModel() {
         config.value?.iconUri = iconUri
         viewModelScope.launch() {
             if (iconUri.toString().isNotEmpty()) {
-                val iconBitmap = copyImage(activity.contentResolver, iconUri) ?: kotlin.run {
-                    _saveState.postValue(State.Error.apply {
-                        msg = activity.getString(R.string.error_file_not_found)
-                    })
-                    return@launch
-                }
-//                val iconBitmap = drawableToBitmap(ContextCompat.getDrawable(activity, R.drawable.ic_github)!!) ?: kotlin.run {
-//                    _saveState.postValue(State.Error.apply {
-//                        msg = activity.getString(R.string.error_file_not_found)
-//                    })
-//                    return@launch
-//                }
-                if (config.value?.iconBitmap?.isRecycled != true) {
-                    config.value?.iconBitmap?.recycle()
-                }
-                config.value?.iconBitmap = iconBitmap
+                config.value?.iconUri = iconUri
+                config.value?.markMode = WaterMarkConfig.MarkMode.Image
             }
             _config.forceRefresh()
         }
     }
 
-    fun updateMarkMode(mode: WaterMarkConfig.MarkMode) {
-        config.value?.markMode = mode
-        _config.forceRefresh()
-    }
 
     private suspend fun drawableToBitmap(drawable: Drawable): Bitmap? =
         withContext(Dispatchers.IO) {

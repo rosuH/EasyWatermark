@@ -12,7 +12,7 @@ import android.widget.TextView
 import com.google.android.material.textfield.TextInputEditText
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.base.BaseFragment
-import me.rosuh.easywatermark.utils.SimpleSeekBarListener
+import me.rosuh.easywatermark.utils.DetectedPerformanceSeekBarListener
 
 class TextFragment : BaseFragment() {
 
@@ -70,14 +70,16 @@ class TextFragment : BaseFragment() {
             with(shareViewModel.config.value?.textSize ?: 14f) {
                 progress = this.toInt()
             }
-            setOnSeekBarChangeListener(object : SimpleSeekBarListener() {
-                override fun onProgressChanged(
-                    seekBar: SeekBar?,
-                    progress: Int,
-                    fromUser: Boolean
-                ) {
-                    shareViewModel.updateTextSize(progress.toFloat())
+            setOnSeekBarChangeListener(object : DetectedPerformanceSeekBarListener(
+                config
+
+            ) {
+            }.apply {
+                inTimeAction = { seekBar: SeekBar?, i: Int, b: Boolean ->
                     tvTextSize.text = progress.toString()
+                }
+                postAction = { seekBar: SeekBar?, i: Int ->
+                    shareViewModel.updateTextSize(progress.toFloat())
                 }
             })
         }
