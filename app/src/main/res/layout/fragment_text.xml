@@ -40,8 +40,7 @@
                 android:imeActionLabel="确认"
                 android:imeOptions="actionDone"
                 android:scrollbars="horizontal"
-                android:singleLine="true"
-                android:textColor="@color/textColor_Primary" />
+                android:singleLine="true" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <TextView
@@ -60,7 +59,6 @@
             android:layout_height="50dp"
             android:layout_marginTop="10dp"
             android:drawableTop="@drawable/ic_text_style_fill"
-            android:textColor="@color/textColor_Primary"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tv_title_style" />

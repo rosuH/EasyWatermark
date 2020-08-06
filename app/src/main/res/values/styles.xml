@@ -5,7 +5,7 @@
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
-        <item name="android:textColor">@color/text_color</item>
+        <item name="android:textColor">@color/text_color_main</item>
         <item name="colorOnSurface">@color/colorAccent</item>
     </style>
 
@@ -18,7 +18,7 @@
     </style>
 
     <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
-        <item name="android:textColorPrimary">@color/textColor_Primary</item>
+        <item name="android:textColorPrimary">@color/text_color_main</item>
     </style>
 
     <style name="AppTheme.TitleText" parent="AppTheme">
@@ -35,7 +35,7 @@
 
     <style name="DialogButtonStyle" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
         <item name="android:textColor">@color/colorAccent</item>
-        <item name="color">@color/textColor_Primary</item>
+        <item name="color">@color/text_color_main</item>
     </style>
 
     <style name="ThemeOverlay.MaterialComponents.Dialog.MyDialog" parent="ThemeOverlay.MaterialComponents.Dialog">

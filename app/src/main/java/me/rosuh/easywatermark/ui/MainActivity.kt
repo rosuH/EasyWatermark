@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.Menu
@@ -44,7 +45,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun initObserver() {
         viewModel.config.observe(this, Observer<WaterMarkConfig> {
-            iv_photo?.config = it
+            try {
+                takePersistableUriPermission(it.uri)
+                iv_photo?.config = it
+            } catch (se: SecurityException) {
+                // reset the uri because we don't have permission -_-
+                viewModel.updateUri(Uri.parse(""))
+            }
         })
 
         viewModel.saveState.observe(this, Observer { state ->
@@ -173,6 +180,9 @@ class MainActivity : AppCompatActivity() {
      */
     private fun performFileSearch(requestCode: Int) {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            flags = (Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "image/*"
         }
@@ -224,6 +234,7 @@ class MainActivity : AppCompatActivity() {
                 if (resultCode == Activity.RESULT_OK) {
                     data?.data?.also { uri ->
                         viewModel.updateUri(uri)
+                        takePersistableUriPermission(uri)
                     }
                 } else {
                     Toast.makeText(this, getString(R.string.tips_do_not_choose_image), Toast.LENGTH_SHORT)
@@ -234,13 +245,27 @@ class MainActivity : AppCompatActivity() {
                 if (resultCode == Activity.RESULT_OK) {
                     data?.data?.also { uri ->
                         viewModel.updateIcon(this, uri)
+                        takePersistableUriPermission(uri)
                     }
                 } else {
-                    Toast.makeText(this, getString(R.string.tips_do_not_choose_image), Toast.LENGTH_SHORT)
+                    Toast.makeText(
+                        this,
+                        getString(R.string.tips_do_not_choose_image),
+                        Toast.LENGTH_SHORT
+                    )
                         .show()
                 }
             }
         }
+    }
+
+    /**
+     * Try to get the permission without timeout.
+     */
+    private fun takePersistableUriPermission(uri: Uri) {
+        val takeFlags: Int = intent.flags and
+                (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+        contentResolver.takePersistableUriPermission(uri, takeFlags)
     }
 
     private inner class ControlPanelPagerAdapter(
