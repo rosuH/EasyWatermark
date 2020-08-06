@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?><!--http://blog.csdn.net/vrix/article/details/5785676-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@android:id/background">
+        <shape>
+            <size android:height="1dp" />
+            <solid android:color="#24FFFFFF" />
+        </shape>
+    </item>
+    <item android:id="@android:id/secondaryProgress">
+        <clip>
+            <shape>
+                <size android:height="1dp" />
+                <solid android:color="#fff" />
+            </shape>
+        </clip>
+    </item>
+    <item android:id="@android:id/progress">
+        <clip>
+            <shape>
+                <size android:height="1dp" />
+                <solid android:color="#fff" />
+            </shape>
+        </clip>
+    </item>
+</layer-list>

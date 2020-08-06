@@ -15,4 +15,11 @@
     <color name="swl_color_3">#CCffa900</color>
     <color name="swl_color_4">#E6ffa900</color>
     <color name="swl_color_5">#ffa900</color>
+
+    <color name="white">#fff</color>
+    <color name="white_14">#24FFFFFF</color>
+
+    <color name="logoPrimary">#FFB800</color>
+<!--    <color name="logoPrimary">#FFD740</color>-->
+    <color name="logoBackground">#000</color>
 </resources>

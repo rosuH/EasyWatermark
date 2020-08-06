@@ -12,6 +12,7 @@ import android.view.MenuItem
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.motion.widget.MotionLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -21,6 +22,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.coroutines.*
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.adapter.ControlPanelAdapter
 import me.rosuh.easywatermark.model.WaterMarkConfig
@@ -35,17 +37,30 @@ class MainActivity : AppCompatActivity() {
 
     private val viewModel: MainViewModel by viewModels()
 
+    private val scope = MainScope()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(findViewById(R.id.my_toolbar))
-        initView()
-        initObserver()
+        scope.launch {
+            val t = cl_root.getTransition(R.id.transition_launch)
+            cl_root.setTransition(R.id.transition_launch)
+            cl_root.transitionToEnd()
+            delay(t.duration.toLong())
+            initView()
+            initObserver()
+        }
     }
 
     private fun initObserver() {
         viewModel.config.observe(this, Observer<WaterMarkConfig> {
+            if (it.uri.toString().isEmpty()){
+                return@Observer
+            }
             try {
+                cl_root.setTransition(R.id.transition_open_image)
+                cl_root.transitionToEnd()
                 takePersistableUriPermission(it.uri)
                 iv_photo?.config = it
             } catch (se: SecurityException) {
@@ -76,20 +91,26 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             if (state == MainViewModel.State.Saving) {
-                cpb_loading.show()
+                // todo show loading
             } else {
-                cpb_loading.hide()
+                // todo hide loading
             }
         })
     }
 
     private fun initView() {
+        my_toolbar.apply {
+            navigationIcon = ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_launcher_foreground)
+            title = null
+        }
         iv_photo.apply {
             setOnClickListener {
                 performFileSearch(ICON_REQUEST_CODE)
             }
         }
-        cpb_loading.hide()
+        iv_picker_tips.setOnClickListener {
+            performFileSearch(READ_REQUEST_CODE)
+        }
 
         val titleArray = arrayOf(
             getString(R.string.title_layout),

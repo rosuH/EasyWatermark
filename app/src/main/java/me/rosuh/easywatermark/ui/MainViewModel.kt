@@ -35,12 +35,8 @@ class MainViewModel : ViewModel() {
 
     val saveState: LiveData<State> = Transformations.map(_saveState) { it }
 
-    private val _config: MutableLiveData<WaterMarkConfig> = MutableLiveData(WaterMarkConfig())
-
-    val config: LiveData<WaterMarkConfig> = Transformations.map(_config) {
-        it.apply {
-            save()
-        }
+    val config: MutableLiveData<WaterMarkConfig> by lazy {
+        MutableLiveData<WaterMarkConfig>(WaterMarkConfig())
     }
 
     fun saveImage(activity: MainActivity) {
@@ -181,48 +177,48 @@ class MainViewModel : ViewModel() {
 
     fun updateUri(uri: Uri) {
         config.value?.uri = uri
-        _config.forceRefresh()
+        config.forceRefresh()
     }
 
     fun updateText(text: String) {
         config.value?.text = text
         config.value?.markMode = WaterMarkConfig.MarkMode.Text
-        _config.forceRefresh()
+        config.forceRefresh()
     }
 
     fun updateTextSize(textSize: Float) {
         config.value?.textSize = textSize
-        _config.forceRefresh()
+        config.forceRefresh()
     }
 
     fun updateTextColor(color: Int) {
         config.value?.textColor = color
-        _config.forceRefresh()
+        config.forceRefresh()
     }
 
     fun updateTextStyle(style: Paint.Style) {
         config.value?.textStyle = style
-        _config.forceRefresh()
+        config.forceRefresh()
     }
 
     fun updateAlpha(alpha: Int) {
         config.value?.alpha = alpha
-        _config.forceRefresh()
+        config.forceRefresh()
     }
 
     fun updateHorizon(gap: Int) {
         config.value?.horizonGapPercent = gap
-        _config.forceRefresh()
+        config.forceRefresh()
     }
 
     fun updateVertical(gap: Int) {
         config.value?.verticalGapPercent = gap
-        _config.forceRefresh()
+        config.forceRefresh()
     }
 
     fun updateDegree(degree: Float) {
         config.value?.degree = degree
-        _config.forceRefresh()
+        config.forceRefresh()
     }
 
     fun updateIcon(activity: Activity, iconUri: Uri = config.value?.iconUri ?: Uri.parse("")) {
@@ -232,7 +228,7 @@ class MainViewModel : ViewModel() {
                 config.value?.iconUri = iconUri
                 config.value?.markMode = WaterMarkConfig.MarkMode.Image
             }
-            _config.forceRefresh()
+            config.forceRefresh()
         }
     }
 

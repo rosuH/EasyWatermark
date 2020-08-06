@@ -45,4 +45,5 @@
     <string name="open_source_desc_material_components">Material Components for Android (MDC-Android) help developers execute Material Design. Developed by a core team of engineers and UX designers at Google, these components enable a reliable development workflow to build beautiful and functional Android apps.Material Components for Android is a drop-in replacement for Android\'s Design Support Library.</string>
     <string name="error_not_img">请选择图片</string>
     <string name="error_file_not_found">未选择图片或图片不存在</string>
+    <string name="tips_pick_image">选择一张照片然后开始编辑\n↓</string>
 </resources>

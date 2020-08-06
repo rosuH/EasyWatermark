@@ -36,11 +36,7 @@ class WaterMarkConfig {
         with(
             MyApp.instance.getSharedPreferences(SP_NAME, MODE_PRIVATE)
         ) {
-            uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                Uri.parse(getString(SP_KEY_URI, "") ?: "")
-            } else {
-                Uri.parse("")
-            }
+            uri = Uri.parse("")
             val saveText = getString(SP_KEY_TEXT, "")
             text = if (saveText.isNullOrEmpty()) "图片仅供测试，请勿作其他用途" else saveText
             textSize = getFloat(SP_KEY_TEXT_SIZE, 14f)
@@ -78,7 +74,6 @@ class WaterMarkConfig {
         MyApp.instance.getSharedPreferences(
             SP_NAME, MODE_PRIVATE
         ).edit {
-            putString(SP_KEY_URI, uri.toString())
             putString(SP_KEY_ICON_URI, iconUri.toString())
             putString(SP_KEY_TEXT, text)
             putFloat(SP_KEY_TEXT_SIZE, textSize)
@@ -124,7 +119,6 @@ class WaterMarkConfig {
     companion object {
         const val SP_NAME = "sp_water_mark_config"
 
-        const val SP_KEY_URI = SP_NAME + "_key_uri"
         const val SP_KEY_TEXT = SP_NAME + "_key_text"
         const val SP_KEY_TEXT_SIZE = SP_NAME + "_key_text_size"
         const val SP_KEY_TEXT_COLOR = SP_NAME + "_key_text_color"

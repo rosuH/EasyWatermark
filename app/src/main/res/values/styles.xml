@@ -26,11 +26,14 @@
         <item name="android:textStyle">bold</item>
     </style>
 
-    <style name="MySeekBarStyle" parent="Widget.AppCompat.SeekBar">
-        <item name="android:progressBackgroundTint">@color/button_focus</item>
-        <item name="android:progressTint">@color/colorAccent</item>
-        <item name="android:colorControlActivated">@color/colorAccent</item>
+    <style name="MySeekBarStyle" >
+        <item name="android:maxHeight">20dp</item>
+        <item name="android:height">20dp</item>
+        <item name="android:progressBackgroundTint">@color/white_14</item>
+        <item name="android:progressTint">@color/white</item>
+        <item name="android:colorControlActivated">@color/white</item>
         <item name="android:backgroundTint">@android:color/transparent</item>
+        <item name="android:thumb">@drawable/thumb_seek_bar</item>
     </style>
 
     <style name="DialogButtonStyle" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
