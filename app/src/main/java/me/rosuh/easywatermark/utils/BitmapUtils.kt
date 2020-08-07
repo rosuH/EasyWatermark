@@ -1,6 +1,8 @@
 package me.rosuh.easywatermark.utils
 
+import android.app.ActivityManager
 import android.content.ContentResolver
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -8,7 +10,6 @@ import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
-import java.lang.Exception
 
 
 @Synchronized
@@ -96,10 +97,18 @@ fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeig
 fun getFreeMemory(): Long {
     return try {
         val runtime = Runtime.getRuntime()
-        val free = runtime.freeMemory() / 0x100000L
+        val free = runtime.freeMemory() / 1048576L
         Log.i("Utils", "availableMegs = $free")
         free
     } catch (e: Exception) {
         0L
+    }
+}
+
+// Get a MemoryInfo object for the device's current memory status.
+fun getAvailableMemory(context: Context): ActivityManager.MemoryInfo {
+    val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+    return ActivityManager.MemoryInfo().also { memoryInfo ->
+        activityManager.getMemoryInfo(memoryInfo)
     }
 }

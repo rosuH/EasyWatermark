@@ -65,9 +65,9 @@
 
         <Constraint
             android:id="@+id/iv_photo"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="0dp"
-            android:layout_margin="2dp"
+            android:padding="12dp"
             android:background="@color/colorPrimaryDark"
             android:scaleType="centerInside"
             android:visibility="invisible"
@@ -78,10 +78,10 @@
 
         <Constraint
             android:id="@+id/rv_tool_bar"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
             android:background="@color/colorPrimaryDark"
-            android:paddingStart="16dp"
             android:visibility="invisible"
             motion:layout_constraintBottom_toTopOf="@+id/vp_control_panel"
             motion:layout_constraintEnd_toEndOf="parent"
@@ -90,7 +90,7 @@
         <Constraint
             android:id="@+id/vp_control_panel"
             android:layout_width="match_parent"
-            android:layout_height="250dp"
+            android:layout_height="200dp"
             android:background="@color/colorPrimaryDark"
             android:visibility="invisible"
             motion:layout_constraintBottom_toBottomOf="parent"
@@ -145,6 +145,41 @@
             motion:layout_constraintStart_toStartOf="@id/tv_tips_pick"
             motion:layout_constraintTop_toBottomOf="@id/tv_tips_pick" />
 
+        <Constraint
+            android:id="@+id/iv_photo"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@color/colorPrimaryDark"
+            android:padding="12dp"
+            android:scaleType="centerInside"
+            android:visibility="invisible"
+            motion:layout_constraintBottom_toTopOf="@+id/rv_tool_bar"
+            motion:layout_constraintEnd_toEndOf="parent"
+            motion:layout_constraintStart_toStartOf="parent"
+            motion:layout_constraintTop_toBottomOf="@+id/my_toolbar" />
+
+        <Constraint
+            android:id="@+id/rv_tool_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@color/colorPrimaryDark"
+            android:visibility="invisible"
+            motion:layout_constraintBottom_toTopOf="@+id/vp_control_panel"
+            motion:layout_constraintEnd_toEndOf="parent"
+            motion:layout_constraintStart_toStartOf="parent" />
+
+        <Constraint
+            android:id="@+id/vp_control_panel"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:background="@color/colorPrimaryDark"
+            android:visibility="invisible"
+            motion:layout_constraintBottom_toBottomOf="parent"
+            motion:layout_constraintEnd_toEndOf="parent"
+            motion:layout_constraintHeight_percent="0.30"
+            motion:layout_constraintStart_toStartOf="parent" />
+
     </ConstraintSet>
 
     <ConstraintSet android:id="@+id/open_image_start">
@@ -152,6 +187,8 @@
             android:id="@+id/iv_logo"
             android:layout_width="64dp"
             android:layout_height="64dp"
+            android:scaleX="1.0"
+            android:scaleY="1.0"
             android:src="@drawable/ic_logo"
             android:visibility="gone"
             motion:layout_constraintBottom_toBottomOf="parent"
@@ -165,6 +202,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
+            android:scaleX="1.0"
+            android:scaleY="1.0"
             android:src="@drawable/ic_picker_image"
             android:visibility="gone"
             motion:layout_constraintBottom_toBottomOf="parent"
@@ -176,10 +215,13 @@
             android:id="@+id/tv_tips_pick"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:alpha="0"
             android:gravity="center"
-            android:visibility="gone"
+            android:scaleX="1.0"
+            android:scaleY="1.0"
             android:text="@string/tips_pick_image"
             android:textAlignment="center"
+            android:visibility="gone"
             motion:layout_constraintBottom_toBottomOf="parent"
             motion:layout_constraintEnd_toEndOf="parent"
             motion:layout_constraintStart_toStartOf="parent"
@@ -200,11 +242,11 @@
 
         <Constraint
             android:id="@+id/iv_photo"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="0dp"
-            android:layout_margin="2dp"
+            android:padding="12dp"
             android:background="#000"
-            android:scaleType="centerCrop"
+            android:scaleType="centerInside"
             android:visibility="visible"
             motion:layout_constraintBottom_toTopOf="@+id/rv_tool_bar"
             motion:layout_constraintEnd_toEndOf="parent"
@@ -213,10 +255,9 @@
 
         <Constraint
             android:id="@+id/rv_tool_bar"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@color/colorPrimaryDark"
-            android:paddingStart="16dp"
             android:visibility="visible"
             motion:layout_constraintBottom_toTopOf="@+id/vp_control_panel"
             motion:layout_constraintEnd_toEndOf="parent"
@@ -225,7 +266,7 @@
         <Constraint
             android:id="@+id/vp_control_panel"
             android:layout_width="match_parent"
-            android:layout_height="250dp"
+            android:layout_height="200dp"
             android:background="@color/colorPrimaryDark"
             android:visibility="visible"
             motion:layout_constraintBottom_toBottomOf="parent"

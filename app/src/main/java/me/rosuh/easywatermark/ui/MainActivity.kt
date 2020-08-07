@@ -12,7 +12,6 @@ import android.view.MenuItem
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.constraintlayout.motion.widget.MotionLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -22,7 +21,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.adapter.ControlPanelAdapter
 import me.rosuh.easywatermark.model.WaterMarkConfig
@@ -44,12 +44,10 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         setSupportActionBar(findViewById(R.id.my_toolbar))
         scope.launch {
-            val t = cl_root.getTransition(R.id.transition_launch)
-            cl_root.setTransition(R.id.transition_launch)
-            cl_root.transitionToEnd()
-            delay(t.duration.toLong())
             initView()
             initObserver()
+            cl_root.setTransition(R.id.transition_launch)
+            cl_root.transitionToEnd()
         }
     }
 

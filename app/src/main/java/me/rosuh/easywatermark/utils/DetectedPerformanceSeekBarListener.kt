@@ -1,7 +1,9 @@
 package me.rosuh.easywatermark.utils
 
 import android.widget.SeekBar
+import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.model.WaterMarkConfig
+import me.rosuh.easywatermark.utils.DetectedPerformanceSeekBarListener.Companion.HIGH_PERFORMANCE_MEMORY
 
 /**
  * An subClass of [SeekBar.OnSeekBarChangeListener] which using [isHighPerformancePredicate] to decide
@@ -23,22 +25,9 @@ open class DetectedPerformanceSeekBarListener(
 
     var postAction: (SeekBar?, Int) -> Unit = { _, _ -> }
 
-    private var lastMemory = 0L
-    private var lastTime = System.currentTimeMillis()
-
-    private val freeMemory:Long
-        get() {
-            if (lastMemory == 0L || System.currentTimeMillis() - lastTime > 300){
-                // get latest free memory per 300mm
-                lastMemory = getFreeMemory()
-                lastTime = System.currentTimeMillis()
-            }
-            return lastMemory
-        }
-
     private var isHighPerformancePredicate: () -> Boolean = {
         config?.markMode == WaterMarkConfig.MarkMode.Text
-                || freeMemory > HIGH_PERFORMANCE_MEMORY
+                || !getAvailableMemory(MyApp.instance).lowMemory
     }
 
     override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
