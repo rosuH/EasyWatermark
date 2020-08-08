@@ -18,6 +18,7 @@
 
     <color name="white">#fff</color>
     <color name="white_14">#24FFFFFF</color>
+    <color name="white_30">#4DFFFFFF</color>
 
     <color name="logoPrimary">#FFB800</color>
 <!--    <color name="logoPrimary">#FFD740</color>-->

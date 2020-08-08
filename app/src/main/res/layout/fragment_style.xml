@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="16dp"
+    android:padding="20dp"
     tools:background="#000">
 
     <TextView
@@ -13,14 +13,15 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/title_text_color"
+        android:layout_marginTop="8dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <ImageView
         android:id="@+id/iv_color_preview"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginTop="10dp"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:layout_marginTop="12dp"
         android:src="@drawable/bg_color_preview"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -42,9 +43,9 @@
         android:layout_height="wrap_content"
         android:text="@string/text_zero_degree"
         android:textAlignment="center"
-        app:layout_constraintBottom_toBottomOf="@id/sb_degree"
-        app:layout_constraintStart_toStartOf="@+id/tv_title_degree"
-        app:layout_constraintTop_toTopOf="@id/sb_degree" />
+        app:layout_constraintBottom_toBottomOf="@+id/tv_title_degree"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/tv_title_degree" />
 
     <androidx.appcompat.widget.AppCompatSeekBar
         android:id="@+id/sb_degree"
@@ -55,7 +56,7 @@
         android:background="#fff"
         android:max="360"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/tv_title_degree"
+        app:layout_constraintStart_toStartOf="@+id/tv_title_degree"
         app:layout_constraintTop_toBottomOf="@+id/tv_title_degree" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

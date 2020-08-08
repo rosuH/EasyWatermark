@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="16dp"
+    android:padding="20dp"
     tools:background="#000">
 
     <TextView
@@ -13,6 +13,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/title_horizon_layout"
+        android:layout_marginTop="8dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -21,11 +22,11 @@
         style="@style/MySeekBarStyle"
         android:layout_width="0dp"
         android:layout_height="20dp"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="12dp"
         android:background="#fff"
         android:max="100"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/tv_tips_horizon"
+        app:layout_constraintStart_toStartOf="@+id/tv_tips_horizon"
         app:layout_constraintTop_toBottomOf="@+id/tv_tips_horizon" />
 
     <TextView
@@ -35,9 +36,9 @@
         android:padding="3dp"
         android:textAlignment="center"
         android:textSize="16sp"
-        app:layout_constraintBottom_toBottomOf="@+id/sb_horizon"
-        app:layout_constraintStart_toStartOf="@+id/tv_tips_horizon"
-        app:layout_constraintTop_toTopOf="@+id/sb_horizon"
+        app:layout_constraintBottom_toBottomOf="@+id/tv_tips_horizon"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/tv_tips_horizon"
         tools:text="5" />
 
     <TextView
@@ -47,7 +48,6 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="@string/title_vertical_layout"
-        app:layout_constraintEnd_toStartOf="@id/sb_vertical"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/sb_horizon" />
 
@@ -56,11 +56,11 @@
         style="@style/MySeekBarStyle"
         android:layout_width="0dp"
         android:layout_height="20dp"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="12dp"
         android:background="#fff"
         android:max="100"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/tv_tips_vertical"
+        app:layout_constraintStart_toStartOf="@+id/tv_tips_vertical"
         app:layout_constraintTop_toBottomOf="@+id/tv_tips_vertical" />
 
     <TextView
@@ -70,9 +70,9 @@
         android:padding="3dp"
         android:textAlignment="center"
         android:textSize="16sp"
-        app:layout_constraintBottom_toBottomOf="@+id/sb_vertical"
-        app:layout_constraintStart_toStartOf="@+id/tv_tips_vertical"
-        app:layout_constraintTop_toTopOf="@+id/sb_vertical"
+        app:layout_constraintBottom_toBottomOf="@+id/tv_tips_vertical"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/tv_tips_vertical"
         tools:text="5" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

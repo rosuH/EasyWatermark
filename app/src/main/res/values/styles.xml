@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Base application theme. -->
     <style name="AppTheme" parent="Theme.MaterialComponents.NoActionBar">
         <!-- Customize your theme here. -->
@@ -22,8 +22,7 @@
     </style>
 
     <style name="AppTheme.TitleText" parent="AppTheme">
-        <item name="android:textSize">16sp</item>
-        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">14sp</item>
     </style>
 
     <style name="MySeekBarStyle" >
@@ -46,4 +45,8 @@
         <item name="android:background">@color/colorPrimaryDark</item>
     </style>
 
+    <style name="Widget.App.TabLayout" parent="Widget.MaterialComponents.TabLayout">
+        <item name="tabTextColor">@color/selector_tab_color</item>
+        <item name="tabIconTint">@color/selector_tab_color</item>
+    </style>
 </resources>

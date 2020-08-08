@@ -17,14 +17,14 @@
     <string name="tips_share_ok">分享完成</string>
     <string name="tips_error">错误</string>
     <string name="tips_share_image">分享图片</string>
-    <string name="title_enter_text"># 文本内容</string>
+    <string name="title_enter_text">文本内容</string>
     <string name="hint_water_mark">水印文字</string>
-    <string name="title_text_style"># 文字样式</string>
-    <string name="title_text_size"># 字体大小</string>
-    <string name="title_horizon_layout"># 水平</string>
-    <string name="title_vertical_layout"># 垂直</string>
-    <string name="title_text_color"># 字体颜色</string>
-    <string name="title_text_rotate"># 文本角度</string>
+    <string name="title_text_style">文字样式</string>
+    <string name="title_text_size">字体大小</string>
+    <string name="title_horizon_layout">水平</string>
+    <string name="title_vertical_layout">垂直</string>
+    <string name="title_text_color">字体颜色</string>
+    <string name="title_text_rotate">文本角度</string>
     <string name="text_zero_degree">0°</string>
     <string name="request_permission_failed">获取权限失败</string>
 
@@ -45,5 +45,5 @@
     <string name="open_source_desc_material_components">Material Components for Android (MDC-Android) help developers execute Material Design. Developed by a core team of engineers and UX designers at Google, these components enable a reliable development workflow to build beautiful and functional Android apps.Material Components for Android is a drop-in replacement for Android\'s Design Support Library.</string>
     <string name="error_not_img">请选择图片</string>
     <string name="error_file_not_found">未选择图片或图片不存在</string>
-    <string name="tips_pick_image">选择一张照片然后开始编辑\n↓</string>
+    <string name="tips_pick_image">选择图片，开始编辑\n↓</string>
 </resources>

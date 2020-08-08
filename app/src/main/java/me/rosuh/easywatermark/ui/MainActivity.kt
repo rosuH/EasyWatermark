@@ -17,20 +17,18 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.adapter.ControlPanelAdapter
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.ui.about.AboutActivity
 import me.rosuh.easywatermark.ui.panel.LayoutFragment
 import me.rosuh.easywatermark.ui.panel.StyleFragment
 import me.rosuh.easywatermark.ui.panel.TextFragment
-import me.rosuh.easywatermark.utils.onItemClick
 
 
 class MainActivity : AppCompatActivity() {
@@ -98,7 +96,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun initView() {
         my_toolbar.apply {
-            navigationIcon = ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_launcher_foreground)
+            navigationIcon = ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_logo_tool_bar)
             title = null
         }
         iv_photo.apply {
@@ -128,28 +126,29 @@ class MainActivity : AppCompatActivity() {
             initFragments(vp_control_panel, 2, TextFragment.newInstance())
         )
 
-        rv_tool_bar.apply {
-            setHasFixedSize(true)
-            adapter = ControlPanelAdapter(titleArray, iconArray)
-            layoutManager =
-                LinearLayoutManager(this@MainActivity, LinearLayoutManager.HORIZONTAL, false)
-            onItemClick { _, position, _ ->
-                (adapter as ControlPanelAdapter).updateSelected(position)
-                vp_control_panel.currentItem = position
-            }
-        }
+
 
         val pagerAdapter = ControlPanelPagerAdapter(this, fragmentArray)
         vp_control_panel.apply {
             offscreenPageLimit = 2
             adapter = pagerAdapter
-            registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
-                override fun onPageSelected(position: Int) {
-                    super.onPageSelected(position)
-                    (rv_tool_bar.adapter as ControlPanelAdapter).updateSelected(position)
-                }
-            })
         }
+        TabLayoutMediator(tb_tool_bar, vp_control_panel) { tab, position ->
+            when (position) {
+                0 -> {
+                    tab.text = getString(R.string.title_layout)
+                    tab.icon = getDrawable(R.drawable.ic_layout_title)
+                }
+                1 -> {
+                    tab.text = getString(R.string.title_style)
+                    tab.icon = getDrawable(R.drawable.ic_style_title)
+                }
+                2 -> {
+                    tab.text = getString(R.string.title_text)
+                    tab.icon = getDrawable(R.drawable.ic_text_title)
+                }
+            }
+        }.attach()
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {

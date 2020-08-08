@@ -23,11 +23,11 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tl_water_text"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:hint="@string/hint_water_mark"
-            android:textColorHint="@color/swl_color_1"
+            app:boxStrokeColor="@color/white"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/tv_title_et">
@@ -48,27 +48,27 @@
             style="@style/AppTheme.TitleText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="32dp"
             android:text="@string/title_text_style"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tl_water_text" />
 
         <TextView
             android:id="@+id/tv_text_style"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_marginTop="10dp"
             android:drawableTop="@drawable/ic_text_style_fill"
+            app:layout_constraintBottom_toBottomOf="@+id/tv_title_style"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tv_title_style" />
+            app:layout_constraintTop_toTopOf="@+id/tv_title_style" />
 
         <TextView
             android:id="@+id/tv_tips_vertical"
             style="@style/AppTheme.TitleText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="28dp"
             android:text="@string/title_text_size"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/tv_text_style" />
@@ -78,12 +78,12 @@
             style="@style/MySeekBarStyle"
             android:layout_width="0dp"
             android:layout_height="20dp"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="12dp"
             android:background="#fff"
             android:focusable="false"
             android:max="100"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/tv_tips_vertical"
+            app:layout_constraintStart_toStartOf="@+id/tv_tips_vertical"
             app:layout_constraintTop_toBottomOf="@+id/tv_tips_vertical" />
 
         <TextView
@@ -93,9 +93,9 @@
             android:padding="3dp"
             android:textAlignment="center"
             android:textSize="14sp"
-            app:layout_constraintBottom_toBottomOf="@+id/sb_text_size"
-            app:layout_constraintStart_toStartOf="@+id/tv_tips_vertical"
-            app:layout_constraintTop_toTopOf="@+id/sb_text_size"
+            app:layout_constraintBottom_toBottomOf="@+id/tv_tips_vertical"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/tv_tips_vertical"
             tools:text="5" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
