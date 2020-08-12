@@ -5,27 +5,31 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:padding="20dp"
-    tools:background="#000">
+    tools:background="#161616">
 
     <TextView
         android:id="@+id/tv_title_color"
         style="@style/AppTheme.TitleText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/title_text_color"
         android:layout_marginTop="8dp"
+        android:text="@string/title_text_color"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <ImageView
-        android:id="@+id/iv_color_preview"
-        android:layout_width="34dp"
-        android:layout_height="34dp"
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_color"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:src="@drawable/bg_color_preview"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tv_title_color" />
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        app:layout_constraintTop_toBottomOf="@+id/tv_title_color"
+        tools:itemCount="4"
+        tools:listitem="@layout/item_color_preview"
+        tools:orientation="horizontal" />
 
     <TextView
         android:id="@+id/tv_title_degree"
@@ -35,7 +39,7 @@
         android:layout_marginTop="16dp"
         android:text="@string/title_text_rotate"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/iv_color_preview" />
+        app:layout_constraintTop_toBottomOf="@+id/rv_color" />
 
     <TextView
         android:id="@+id/tv_tips_degree"

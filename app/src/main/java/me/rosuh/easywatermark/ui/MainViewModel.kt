@@ -4,14 +4,19 @@ import android.app.Activity
 import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Intent
-import android.graphics.*
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import androidx.lifecycle.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ktx.applyConfig
 import me.rosuh.easywatermark.model.WaterMarkConfig
@@ -177,58 +182,58 @@ class MainViewModel : ViewModel() {
 
     fun updateUri(uri: Uri) {
         config.value?.uri = uri
-        config.forceRefresh()
+        forceRefresh()
     }
 
     fun updateText(text: String) {
         config.value?.text = text
         config.value?.markMode = WaterMarkConfig.MarkMode.Text
-        config.forceRefresh()
+        forceRefresh()
     }
 
     fun updateTextSize(textSize: Float) {
         config.value?.textSize = textSize
-        config.forceRefresh()
+        forceRefresh()
     }
 
     fun updateTextColor(color: Int) {
         config.value?.textColor = color
-        config.forceRefresh()
+        forceRefresh()
     }
 
     fun updateTextStyle(style: Paint.Style) {
         config.value?.textStyle = style
-        config.forceRefresh()
+        forceRefresh()
     }
 
     fun updateAlpha(alpha: Int) {
         config.value?.alpha = alpha
-        config.forceRefresh()
+        forceRefresh()
     }
 
     fun updateHorizon(gap: Int) {
         config.value?.horizonGapPercent = gap
-        config.forceRefresh()
+        forceRefresh()
     }
 
     fun updateVertical(gap: Int) {
         config.value?.verticalGapPercent = gap
-        config.forceRefresh()
+        forceRefresh()
     }
 
     fun updateDegree(degree: Float) {
         config.value?.degree = degree
-        config.forceRefresh()
+        forceRefresh()
     }
 
     fun updateIcon(activity: Activity, iconUri: Uri = config.value?.iconUri ?: Uri.parse("")) {
         config.value?.iconUri = iconUri
-        viewModelScope.launch() {
+        viewModelScope.launch {
             if (iconUri.toString().isNotEmpty()) {
                 config.value?.iconUri = iconUri
                 config.value?.markMode = WaterMarkConfig.MarkMode.Image
             }
-            config.forceRefresh()
+            forceRefresh()
         }
     }
 
@@ -249,7 +254,8 @@ class MainViewModel : ViewModel() {
             return@withContext bitmap
         }
 
-    private fun <T> MutableLiveData<T>.forceRefresh() {
-        this.postValue(this.value)
+    private fun forceRefresh() {
+        config.value?.save()
+        config.postValue(config.value)
     }
 }
