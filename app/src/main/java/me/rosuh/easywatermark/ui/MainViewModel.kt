@@ -17,6 +17,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.R
@@ -33,6 +34,7 @@ class MainViewModel : ViewModel() {
     sealed class State(var msg: String = "") {
         object Ready : State()
         object Saving : State()
+        object Sharing : State()
         object SaveOk : State()
         object ShareOk : State()
         object Error : State()
@@ -100,7 +102,8 @@ class MainViewModel : ViewModel() {
                 })
                 return@launch
             }
-            _saveState.postValue(State.Saving)
+            _saveState.postValue(State.Sharing)
+            delay(1500)
             val outputUri =
                 generateImage(activity.contentResolver, config.value?.uri ?: Uri.parse(""))
             if (outputUri?.toString().isNullOrEmpty()) {
