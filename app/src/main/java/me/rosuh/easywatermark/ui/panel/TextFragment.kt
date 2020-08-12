@@ -9,9 +9,11 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.SeekBar
 import android.widget.TextView
+import androidx.lifecycle.Observer
 import com.google.android.material.textfield.TextInputEditText
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.base.BaseFragment
+import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.utils.DetectedPerformanceSeekBarListener
 
 class TextFragment : BaseFragment() {
@@ -66,7 +68,7 @@ class TextFragment : BaseFragment() {
             })
         }
 
-        root.findViewById<SeekBar>(R.id.sb_text_size).apply {
+        val sbTextSize = root.findViewById<SeekBar>(R.id.sb_text_size).apply {
             with(shareViewModel.config.value?.textSize ?: 14f) {
                 progress = this.toInt()
             }
@@ -83,7 +85,21 @@ class TextFragment : BaseFragment() {
                 }
             })
         }
+
+        initObserver(sbTextSize, tvTextSize)
         return root
+    }
+
+    private fun initObserver(
+        sbTextSize: SeekBar,
+        tvTextSize: TextView
+    ) {
+        shareViewModel.config.observe(viewLifecycleOwner, Observer<WaterMarkConfig> {
+            with(it.textSize) {
+                sbTextSize.progress = this.toInt()
+                tvTextSize.text = this.toInt().toString()
+            }
+        })
     }
 
     companion object {
