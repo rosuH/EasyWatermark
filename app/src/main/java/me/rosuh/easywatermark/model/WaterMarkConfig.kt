@@ -1,7 +1,6 @@
 package me.rosuh.easywatermark.model
 
 import android.content.Context.MODE_PRIVATE
-import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Paint
 import android.net.Uri
@@ -78,7 +77,7 @@ class WaterMarkConfig {
             putString(SP_KEY_TEXT, text)
             putFloat(SP_KEY_TEXT_SIZE, textSize)
             putInt(SP_KEY_TEXT_COLOR, textColor)
-            putInt(SP_KEY_ALPHA, alpha)
+            putInt(SP_KEY_ALPHA, alpha.coerceAtLeast(0).coerceAtMost(255))
             putInt(SP_KEY_HORIZON_GAP, horizonGapPercent)
             putInt(SP_KEY_VERTICAL_GAP, verticalGapPercent)
             putFloat(SP_KEY_DEGREE, degree)

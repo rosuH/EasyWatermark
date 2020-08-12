@@ -2,7 +2,6 @@ package me.rosuh.easywatermark.widget
 
 import android.content.Context
 import android.graphics.*
-import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.util.AttributeSet
 import android.util.Log
@@ -13,7 +12,6 @@ import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.utils.decodeSampledBitmapFromResource
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.pow
-import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 
@@ -113,8 +111,6 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     private var bounds: Rect = Rect()
 
-    private var actualDrawableBounds = Rect()
-
     init {
         if (!config?.uri?.toString().isNullOrEmpty()) {
             setImageURI(config?.uri)
@@ -137,34 +133,6 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         if (layoutShader != null) {
             canvas?.drawRect(0f, 0f, measuredWidth.toFloat(), measuredHeight.toFloat(), layoutPaint)
         }
-    }
-
-    private fun getBitmapPositionInsideImageView() {
-        // Get image dimensions
-        // Get image matrix values and place them in an array
-        val f = FloatArray(9)
-        imageMatrix.getValues(f)
-
-        // Extract the scale values using the constants (if aspect ratio maintained, scaleX == scaleY)
-        val scaleX = f[Matrix.MSCALE_X]
-        val scaleY = f[Matrix.MSCALE_Y]
-
-        // Get the drawable (could also get the bitmap behind the drawable and getWidth/getHeight)
-        val d: Drawable = drawable
-        val origW = d.intrinsicWidth
-        val origH = d.intrinsicHeight
-
-        // Calculate the actual dimensions
-        val actW = (origW * scaleX).roundToInt()
-        val actH = (origH * scaleY).roundToInt()
-
-        // Get image position
-        // We assume that the image is centered into ImageView
-        val imgViewW: Int = measuredWidth
-        val imgViewH: Int = measuredHeight
-        val top = (imgViewH - actH) / 2
-        val left = (imgViewW - actW) / 2
-        actualDrawableBounds.set(left, top, actW, actH)
     }
 
     companion object {

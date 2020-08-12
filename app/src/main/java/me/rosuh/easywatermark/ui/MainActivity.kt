@@ -9,6 +9,8 @@ import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.view.MotionEvent
+import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -29,6 +31,7 @@ import me.rosuh.easywatermark.ui.about.AboutActivity
 import me.rosuh.easywatermark.ui.panel.LayoutFragment
 import me.rosuh.easywatermark.ui.panel.StyleFragment
 import me.rosuh.easywatermark.ui.panel.TextFragment
+import kotlin.math.abs
 
 
 class MainActivity : AppCompatActivity() {
@@ -51,7 +54,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun initObserver() {
         viewModel.config.observe(this, Observer<WaterMarkConfig> {
-            if (it.uri.toString().isEmpty()){
+            if (it.uri.toString().isEmpty()) {
                 return@Observer
             }
             try {
@@ -96,13 +99,48 @@ class MainActivity : AppCompatActivity() {
 
     private fun initView() {
         my_toolbar.apply {
-            navigationIcon = ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_logo_tool_bar)
+            navigationIcon =
+                ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_logo_tool_bar)
             title = null
         }
         iv_photo.apply {
-            setOnClickListener {
-                performFileSearch(ICON_REQUEST_CODE)
-            }
+
+            setOnTouchListener(object : View.OnTouchListener {
+                private var startX = 0f
+                private var startY = 0f
+                private val verticalFac = 50
+                private val horizonFac = 50
+                private val leftArea = 0f..(iv_photo.width / 2).toFloat()
+                private val rightArea = (iv_photo.width / 2).toFloat()..(iv_photo.width.toFloat())
+
+                override fun onTouch(v: View?, event: MotionEvent?): Boolean {
+                    when (event?.actionMasked) {
+                        MotionEvent.ACTION_DOWN -> {
+                            startX = event.x
+                            startY = event.y
+                        }
+                        MotionEvent.ACTION_MOVE -> {
+                            val dx = event.x - startX
+                            val dy = event.y - startY
+                            if (abs(dx) > verticalFac) {
+                                return false
+                            }
+                            when {
+                                (event.x in leftArea) -> {
+                                    viewModel.updateAlphaBy(dy / 2)
+                                }
+                                (event.x in rightArea) -> {
+                                    viewModel.updateTextSizeBy(dy / 5)
+                                }
+                            }
+                            startX = event.x
+                            startY = event.y
+                        }
+                    }
+                    return true
+                }
+
+            })
         }
         iv_picker_tips.setOnClickListener {
             performFileSearch(READ_REQUEST_CODE)
@@ -125,7 +163,6 @@ class MainActivity : AppCompatActivity() {
             initFragments(vp_control_panel, 1, StyleFragment.newInstance()),
             initFragments(vp_control_panel, 2, TextFragment.newInstance())
         )
-
 
 
         val pagerAdapter = ControlPanelPagerAdapter(this, fragmentArray)
@@ -247,7 +284,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        when(requestCode) {
+        when (requestCode) {
             READ_REQUEST_CODE -> {
                 if (resultCode == Activity.RESULT_OK) {
                     data?.data?.also { uri ->
@@ -255,7 +292,11 @@ class MainActivity : AppCompatActivity() {
                         takePersistableUriPermission(uri)
                     }
                 } else {
-                    Toast.makeText(this, getString(R.string.tips_do_not_choose_image), Toast.LENGTH_SHORT)
+                    Toast.makeText(
+                        this,
+                        getString(R.string.tips_do_not_choose_image),
+                        Toast.LENGTH_SHORT
+                    )
                         .show()
                 }
             }

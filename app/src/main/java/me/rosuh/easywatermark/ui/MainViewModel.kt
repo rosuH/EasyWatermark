@@ -196,6 +196,11 @@ class MainViewModel : ViewModel() {
         forceRefresh()
     }
 
+    fun updateTextSizeBy(textSize: Float) {
+        val curTextSize = config.value?.textSize ?: 14f
+        updateTextSize(curTextSize + textSize)
+    }
+
     fun updateTextColor(color: Int) {
         config.value?.textColor = color
         forceRefresh()
@@ -207,8 +212,13 @@ class MainViewModel : ViewModel() {
     }
 
     fun updateAlpha(alpha: Int) {
-        config.value?.alpha = alpha
+        config.value?.alpha = alpha.coerceAtLeast(0).coerceAtMost(255)
         forceRefresh()
+    }
+
+    fun updateAlphaBy(alpha: Float) {
+        val curAlpha = config.value?.alpha ?: 128
+        updateAlpha(((curAlpha + alpha).toInt()).coerceAtLeast(0).coerceAtMost(255))
     }
 
     fun updateHorizon(gap: Int) {
