@@ -7,6 +7,7 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.lifecycle.Observer
@@ -27,13 +28,8 @@ class TextFragment : BaseFragment() {
         val tvTextSize = root.findViewById<TextView>(R.id.tv_progress_vertical).apply {
             text = shareViewModel.config.value?.textSize.toString()
         }
-        root.findViewById<TextView>(R.id.tv_text_style).apply {
-            setCompoundDrawablesWithIntrinsicBounds(
-                0,
-                if (shareViewModel.config.value?.textStyle == Paint.Style.FILL) R.drawable.ic_text_style_fill else R.drawable.ic_text_style_stroke,
-                0,
-                0
-            )
+        root.findViewById<ImageView>(R.id.iv_text_style).apply {
+            setImageResource(if (shareViewModel.config.value?.textStyle == Paint.Style.FILL) R.drawable.ic_text_style_fill else R.drawable.ic_text_style_stroke)
             setOnClickListener {
                 val isFill = shareViewModel.config.value?.textStyle == Paint.Style.FILL
                 if (isFill) {
@@ -41,12 +37,7 @@ class TextFragment : BaseFragment() {
                 } else {
                     shareViewModel.updateTextStyle(Paint.Style.FILL)
                 }
-                setCompoundDrawablesWithIntrinsicBounds(
-                    0,
-                    if (shareViewModel.config.value?.textStyle == Paint.Style.FILL) R.drawable.ic_text_style_fill else R.drawable.ic_text_style_stroke,
-                    0,
-                    0
-                )
+                setImageResource(if (shareViewModel.config.value?.textStyle == Paint.Style.FILL) R.drawable.ic_text_style_fill else R.drawable.ic_text_style_stroke)
             }
         }
         root.findViewById<TextInputEditText>(R.id.et_water_text).apply {

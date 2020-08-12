@@ -54,12 +54,12 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tl_water_text" />
 
-        <TextView
-            android:id="@+id/tv_text_style"
+        <ImageView
+            android:id="@+id/iv_text_style"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:layout_marginTop="10dp"
-            android:drawableTop="@drawable/ic_text_style_fill"
+            android:src="@drawable/ic_text_style_fill"
             app:layout_constraintBottom_toBottomOf="@+id/tv_title_style"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@+id/tv_title_style" />
@@ -72,7 +72,7 @@
             android:layout_marginTop="28dp"
             android:text="@string/title_text_size"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/tv_text_style" />
+            app:layout_constraintTop_toBottomOf="@+id/iv_text_style" />
 
         <androidx.appcompat.widget.AppCompatSeekBar
             android:id="@+id/sb_text_size"
