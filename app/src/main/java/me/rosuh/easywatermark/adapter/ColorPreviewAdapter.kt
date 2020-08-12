@@ -1,4 +1,4 @@
-package me.rosuh.easywatermark.ui.panel
+package me.rosuh.easywatermark.adapter
 
 import android.graphics.Color
 import android.view.LayoutInflater
@@ -24,7 +24,9 @@ class ColorPreviewAdapter(
         val root = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_color_preview, null)
 
-        return PreviewHolder(root)
+        return PreviewHolder(
+            root
+        )
     }
 
     override fun getItemCount(): Int {

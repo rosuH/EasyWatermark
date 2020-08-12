@@ -14,6 +14,7 @@ import com.skydoves.colorpickerview.ColorEnvelope
 import com.skydoves.colorpickerview.ColorPickerDialog
 import com.skydoves.colorpickerview.listeners.ColorEnvelopeListener
 import me.rosuh.easywatermark.R
+import me.rosuh.easywatermark.adapter.ColorPreviewAdapter
 import me.rosuh.easywatermark.base.BaseFragment
 import me.rosuh.easywatermark.utils.DetectedPerformanceSeekBarListener
 import me.rosuh.easywatermark.utils.onItemClick
@@ -80,7 +81,8 @@ class StyleFragment : BaseFragment() {
         root.findViewById<RecyclerView>(R.id.rv_color).apply {
             layoutManager =
                 LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
-            adapter = ColorPreviewAdapter(colorArrayList)
+            adapter =
+                ColorPreviewAdapter(colorArrayList)
             onItemClick { recyclerView, position, v ->
                 if (position == colorArrayList.size - 1 && activity != null) {
                     showColorPickerDialog(this.adapter as ColorPreviewAdapter)
