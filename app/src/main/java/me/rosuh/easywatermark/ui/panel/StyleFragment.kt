@@ -114,7 +114,7 @@ class StyleFragment : BaseFragment() {
                     ) {
                         envelope?.color?.let {
                             adapter.updateSelectedColor(it)
-                            changeIvColor(it)
+                            changeIvColor(it, Color.alpha(it))
                         }
                     }
                 })
@@ -125,10 +125,12 @@ class StyleFragment : BaseFragment() {
             .show()
     }
 
-    private fun changeIvColor(color: Int) {
+    private fun changeIvColor(color: Int, alpha: Int = -1) {
         with(shareViewModel) {
             updateTextColor(color)
-            updateAlpha(Color.alpha(color))
+            if (alpha != -1) {
+                updateAlpha(alpha)
+            }
         }
     }
 
