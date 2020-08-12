@@ -1,11 +1,9 @@
 package me.rosuh.easywatermark.ui
 
-import android.Manifest
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -14,7 +12,6 @@ import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
@@ -31,6 +28,7 @@ import me.rosuh.easywatermark.ui.about.AboutActivity
 import me.rosuh.easywatermark.ui.panel.LayoutFragment
 import me.rosuh.easywatermark.ui.panel.StyleFragment
 import me.rosuh.easywatermark.ui.panel.TextFragment
+import me.rosuh.easywatermark.ui.save.SaveImageBSDialogFragment
 import kotlin.math.abs
 
 
@@ -200,29 +198,16 @@ class MainActivity : AppCompatActivity() {
         }
 
         R.id.action_pick -> {
-            if (isPermissionGrated()) {
+            if (viewModel.isPermissionGrated(this)) {
                 performFileSearch(READ_REQUEST_CODE)
             } else {
-                requestPermission()
+                viewModel.requestPermission(this)
             }
             true
         }
 
         R.id.action_save -> {
-            if (isPermissionGrated()) {
-                viewModel.saveImage(this)
-            } else {
-                requestPermission()
-            }
-            true
-        }
-
-        R.id.action_share -> {
-            if (isPermissionGrated()) {
-                viewModel.shareImage(this)
-            } else {
-                requestPermission()
-            }
+            SaveImageBSDialogFragment.safetyShow(supportFragmentManager)
             true
         }
         else -> {
@@ -244,23 +229,6 @@ class MainActivity : AppCompatActivity() {
         startActivityForResult(
             intent,
             requestCode
-        )
-    }
-
-    private fun isPermissionGrated() =
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.READ_EXTERNAL_STORAGE
-        ) == PackageManager.PERMISSION_GRANTED
-
-    /**
-     * 申请权限
-     */
-    private fun requestPermission() {
-        ActivityCompat.requestPermissions(
-            this,
-            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
-            WRITE_PERMISSION_REQUEST_CODE
         )
     }
 
@@ -343,7 +311,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val READ_REQUEST_CODE: Int = 42
-        private const val WRITE_PERMISSION_REQUEST_CODE: Int = 43
+        const val WRITE_PERMISSION_REQUEST_CODE: Int = 43
         private const val ICON_REQUEST_CODE: Int = 44
     }
 }

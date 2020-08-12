@@ -15,12 +15,6 @@
         app:showAsAction="always" />
 
     <item
-        android:id="@+id/action_share"
-        android:icon="@drawable/ic_send"
-        android:title="@string/action_send"
-        app:showAsAction="ifRoom" />
-
-    <item
         android:id="@+id/action_settings"
         android:icon="@drawable/ic_setting"
         android:title="@string/action_settings"

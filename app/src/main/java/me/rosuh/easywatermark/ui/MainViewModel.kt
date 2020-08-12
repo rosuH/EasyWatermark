@@ -1,9 +1,11 @@
 package me.rosuh.easywatermark.ui
 
+import android.Manifest
 import android.app.Activity
 import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -11,6 +13,8 @@ import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -42,7 +46,28 @@ class MainViewModel : ViewModel() {
         MutableLiveData<WaterMarkConfig>(WaterMarkConfig())
     }
 
-    fun saveImage(activity: MainActivity) {
+    fun isPermissionGrated(activity: Activity) =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(
+            activity,
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED
+
+    /**
+     * 申请权限
+     */
+    fun requestPermission(activity: Activity) {
+        ActivityCompat.requestPermissions(
+            activity,
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+            MainActivity.WRITE_PERMISSION_REQUEST_CODE
+        )
+    }
+
+    fun saveImage(activity: Activity) {
+        if (!isPermissionGrated(activity)) {
+            requestPermission(activity)
+            return
+        }
         viewModelScope.launch {
             if (config.value?.uri?.toString().isNullOrEmpty()) {
                 _saveState.postValue(State.Error.apply {
@@ -64,6 +89,10 @@ class MainViewModel : ViewModel() {
     }
 
     fun shareImage(activity: Activity) {
+        if (!isPermissionGrated(activity)) {
+            requestPermission(activity)
+            return
+        }
         viewModelScope.launch {
             if (config.value?.uri?.toString().isNullOrEmpty()) {
                 _saveState.postValue(State.Error.apply {
