@@ -87,8 +87,8 @@ class TextFragment : BaseFragment() {
     ) {
         shareViewModel.config.observe(viewLifecycleOwner, Observer<WaterMarkConfig> {
             with(it.textSize) {
-                sbTextSize.progress = this.toInt()
-                tvTextSize.text = this.toInt().toString()
+                sbTextSize.progress = this.coerceAtLeast(0f).toInt()
+                tvTextSize.text = this.coerceAtLeast(0f).toInt().toString()
             }
         })
     }

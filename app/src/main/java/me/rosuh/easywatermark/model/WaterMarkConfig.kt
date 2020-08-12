@@ -75,7 +75,7 @@ class WaterMarkConfig {
         ).edit {
             putString(SP_KEY_ICON_URI, iconUri.toString())
             putString(SP_KEY_TEXT, text)
-            putFloat(SP_KEY_TEXT_SIZE, textSize)
+            putFloat(SP_KEY_TEXT_SIZE, textSize.coerceAtLeast(0f))
             putInt(SP_KEY_TEXT_COLOR, textColor)
             putInt(SP_KEY_ALPHA, alpha.coerceAtLeast(0).coerceAtMost(255))
             putInt(SP_KEY_HORIZON_GAP, horizonGapPercent)

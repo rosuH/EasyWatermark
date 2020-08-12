@@ -192,13 +192,13 @@ class MainViewModel : ViewModel() {
     }
 
     fun updateTextSize(textSize: Float) {
-        config.value?.textSize = textSize
+        config.value?.textSize = textSize.coerceAtLeast(0f)
         forceRefresh()
     }
 
     fun updateTextSizeBy(textSize: Float) {
         val curTextSize = config.value?.textSize ?: 14f
-        updateTextSize(curTextSize + textSize)
+        updateTextSize((curTextSize + textSize).coerceAtLeast(0f))
     }
 
     fun updateTextColor(color: Int) {
