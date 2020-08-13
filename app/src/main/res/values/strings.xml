@@ -39,7 +39,9 @@
     <string name="about_title_open_source">开源许可</string>
 
     <string name="about_title_author">作者</string>
+    <string name="about_title_designer">设计者</string>
     <string name="about_title_repo_link">在 Github 上查看此项目</string>
+    <string name="about_title_figma_link">查看他的更多作品</string>
     <string name="open_source_desc_color_picker"><![CDATA[ColorPickerView implements getting HSV colors, ARGB values, Hex color codes from any image drawables or your gallery pictures by tapping on the desired color. Supports alpha & brightness slider bar, dialog, and saving & restoring selected data.]]></string>
     <string name="open_source_desc_about_lib">Makes it easy to create a beautiful about screen for your app. Generates an Activity or Fragment. Idea from here: Heinrich Reimer\'s open-source-library-request-manager Design inspired by Phonograph If you use this library in your app, please let me know and I\'ll add it to the list.</string>
     <string name="open_source_desc_material_components">Material Components for Android (MDC-Android) help developers execute Material Design. Developed by a core team of engineers and UX designers at Google, these components enable a reliable development workflow to build beautiful and functional Android apps.Material Components for Android is a drop-in replacement for Android\'s Design Support Library.</string>
