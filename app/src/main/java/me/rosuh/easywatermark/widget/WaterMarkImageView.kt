@@ -164,7 +164,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             if (srcBitmap.isRecycled) {
                 return@withContext null
             }
-
+            val showDebugRect = BuildConfig.DEBUG && false
             val rawWidth = srcBitmap.width.toFloat().coerceAtLeast(1f)
                 .coerceAtMost(limitBounds.width().toFloat())
             val rawHeight = srcBitmap.height.toFloat().coerceAtLeast(1f)
@@ -196,7 +196,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 srcBitmap.recycle()
             }
 
-            if (BuildConfig.DEBUG) {
+            if (showDebugRect) {
                 val tmpPaint = Paint().apply {
                     color = Color.RED
                     strokeWidth = 1f
@@ -217,7 +217,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 (finalHeight * scaleRatio - scaleBitmap.height) / 2.toFloat(),
                 textPaint
             )
-            if (BuildConfig.DEBUG) {
+            if (showDebugRect) {
                 canvas.restore()
             }
             return@withContext BitmapShader(
@@ -233,6 +233,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             textPaint: Paint,
             coroutineContext: CoroutineContext
         ): BitmapShader? = withContext(coroutineContext) {
+            val showDebugRect = BuildConfig.DEBUG && false
             val textWidth = textBounds.width().toFloat().coerceAtLeast(1f) + 10
             val textHeight = textBounds.height().toFloat().coerceAtLeast(1f) + 10
 
@@ -242,7 +243,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             val bitmap =
                 Bitmap.createBitmap(finalWidth, finalHeight, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
-            if (BuildConfig.DEBUG) {
+            if (showDebugRect) {
                 val tmpPaint = Paint().apply {
                     color = Color.RED
                     strokeWidth = 1f
@@ -263,7 +264,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 (finalHeight + textHeight) / 2,
                 textPaint
             )
-            if (BuildConfig.DEBUG) {
+            if (showDebugRect) {
                 canvas.restore()
             }
 

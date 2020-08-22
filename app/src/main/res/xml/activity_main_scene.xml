@@ -264,9 +264,9 @@
             motion:layout_constraintEnd_toEndOf="parent"
             motion:layout_constraintStart_toStartOf="parent"
             motion:tabGravity="center"
-            motion:tabMode="fixed"
-            motion:tabIndicatorFullWidth="false"
             motion:tabIndicatorColor="@color/colorAccent"
+            motion:tabIndicatorFullWidth="false"
+            motion:tabMode="fixed"
             motion:tabPaddingBottom="0dp" />
 
         <Constraint

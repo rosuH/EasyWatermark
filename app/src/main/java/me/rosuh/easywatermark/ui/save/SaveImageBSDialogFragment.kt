@@ -6,6 +6,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
+import androidx.core.view.isInvisible
+import androidx.core.widget.ContentLoadingProgressBar
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
@@ -26,6 +28,8 @@ class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
 
         var ivSave: View?
         var ivShare: View?
+        var cpbSave: ContentLoadingProgressBar? = null
+        var cpbShare: ContentLoadingProgressBar? = null
         val curState = shareViewModel.saveState.value ?: MainViewModel.State.Ready
         with(root) {
             findViewById<View>(R.id.ll_save).apply {
@@ -51,34 +55,48 @@ class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
                     shareViewModel.shareImage(requireActivity())
                 }
             }
+
+            cpbSave = findViewById(R.id.cpb_save)
+
+            cpbShare = findViewById(R.id.cpb_share)
         }
 
+        setUpLoadingView(shareViewModel.saveState.value, cpbSave, cpbShare, ivSave, ivShare)
+
         shareViewModel.saveState.observe(viewLifecycleOwner, Observer {
-            when (it) {
-                MainViewModel.State.Ready, MainViewModel.State.Error -> {
-                    ivSave?.clearAnimation()
-                    ivShare?.clearAnimation()
-                }
-                MainViewModel.State.Saving -> {
-                    if (ivSave?.animation?.hasStarted() != true) {
-                        ivSave?.startAnimation(alphaAnimation)
-                    }
-                }
-                MainViewModel.State.Sharing -> {
-                    if (ivShare?.animation?.hasStarted() != true) {
-                        ivShare?.startAnimation(alphaAnimation)
-                    }
-                }
-                MainViewModel.State.SaveOk -> {
-                    ivSave?.clearAnimation()
-                }
-                MainViewModel.State.ShareOk -> {
-                    ivShare?.clearAnimation()
-                }
-            }
+            setUpLoadingView(it, cpbSave, cpbShare, ivSave, ivShare)
         })
 
         return root
+    }
+
+    private fun setUpLoadingView(
+        saveStatus: MainViewModel.State?,
+        cpbSave: ContentLoadingProgressBar?,
+        cpbShare: ContentLoadingProgressBar?,
+        ivSave: View?,
+        ivShare: View?
+    ) {
+        when (saveStatus) {
+            MainViewModel.State.Saving -> {
+                cpbSave?.show()
+                cpbShare?.hide()
+                ivSave?.isInvisible = true
+                ivShare?.isInvisible = false
+            }
+            MainViewModel.State.Sharing -> {
+                cpbSave?.hide()
+                cpbShare?.show()
+                ivSave?.isInvisible = false
+                ivShare?.isInvisible = true
+            }
+            MainViewModel.State.Ready, MainViewModel.State.SaveOk, MainViewModel.State.ShareOk, MainViewModel.State.Error, null -> {
+                cpbSave?.hide()
+                cpbShare?.hide()
+                ivSave?.isInvisible = false
+                ivShare?.isInvisible = false
+            }
+        }
     }
 
     private val alphaAnimation by lazy {

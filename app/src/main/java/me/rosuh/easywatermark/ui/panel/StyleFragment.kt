@@ -71,7 +71,7 @@ class StyleFragment : BaseFragment() {
                     tvDegree.text = "${shareViewModel.config.value?.degree ?: 0}°"
                 }
                 postAction =
-                    { seekBar: SeekBar?, i: Int -> shareViewModel.updateDegree(progress.toFloat()) }
+                    { _: SeekBar?, _: Int -> shareViewModel.updateDegree(progress.toFloat()) }
             })
         }
 

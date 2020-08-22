@@ -24,7 +24,7 @@
         android:layout_height="20dp"
         android:layout_marginTop="12dp"
         android:background="#fff"
-        android:max="100"
+        android:max="500"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="@+id/tv_tips_horizon"
         app:layout_constraintTop_toBottomOf="@+id/tv_tips_horizon" />
@@ -58,7 +58,7 @@
         android:layout_height="20dp"
         android:layout_marginTop="12dp"
         android:background="#fff"
-        android:max="100"
+        android:max="500"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="@+id/tv_tips_vertical"
         app:layout_constraintTop_toBottomOf="@+id/tv_tips_vertical" />

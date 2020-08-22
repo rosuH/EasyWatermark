@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:animateLayoutChanges="true"
     android:paddingBottom="12dp"
     android:scrollbars="vertical">
 
@@ -21,27 +22,31 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tl_water_text"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-            android:layout_width="match_parent"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_text"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            app:boxStrokeColor="@color/white"
-            app:layout_constraintEnd_toEndOf="parent"
+            android:text="@string/water_mark_mode_text"
+            android:textColor="@color/white"
+            android:textStyle="normal"
+            app:layout_constraintEnd_toStartOf="@id/btn_img"
+            app:layout_constraintHorizontal_chainStyle="packed"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/tv_title_et">
+            app:layout_constraintTop_toBottomOf="@+id/tv_title_et"
+            app:strokeColor="@color/white"
+            app:strokeWidth="1dp" />
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/et_water_text"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@color/colorPrimaryDark"
-                android:imeActionLabel="确认"
-                android:imeOptions="actionDone"
-                android:scrollbars="horizontal"
-                android:singleLine="true" />
-        </com.google.android.material.textfield.TextInputLayout>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_img"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="15dp"
+            android:text="@string/water_mark_mode_image"
+            android:textColor="@color/white"
+            android:textStyle="normal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/btn_text"
+            app:layout_constraintTop_toBottomOf="@+id/tv_title_et" />
 
         <TextView
             android:id="@+id/tv_title_style"
@@ -51,7 +56,7 @@
             android:layout_marginTop="32dp"
             android:text="@string/title_text_style"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tl_water_text" />
+            app:layout_constraintTop_toBottomOf="@id/btn_text" />
 
         <ImageView
             android:id="@+id/iv_text_style"
@@ -74,14 +79,13 @@
             app:layout_constraintTop_toBottomOf="@+id/iv_text_style" />
 
         <androidx.appcompat.widget.AppCompatSeekBar
-            android:id="@+id/sb_text_size"
+            android:id="@+id/sb_content_size"
             style="@style/MySeekBarStyle"
             android:layout_width="0dp"
             android:layout_height="20dp"
             android:layout_marginTop="12dp"
-            android:background="#fff"
             android:focusable="false"
-            android:max="100"
+            android:max="500"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="@+id/tv_tips_vertical"
             app:layout_constraintTop_toBottomOf="@+id/tv_tips_vertical" />

@@ -7,6 +7,7 @@
     android:layout_height="match_parent"
     android:background="@color/colorPrimaryDark"
     app:layoutDescription="@xml/activity_main_scene"
+    android:animateLayoutChanges="true"
     tools:context=".ui.MainActivity">
 
     <ImageView
@@ -73,6 +74,19 @@
         app:layout_constraintTop_toBottomOf="@+id/my_toolbar"
         tools:visibility="visible" />
 
+    <TextView
+        android:id="@+id/tv_data_tips"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="15dp"
+        android:background="@drawable/bg_tips_text"
+        android:padding="5dp"
+        android:visibility="invisible"
+        app:layout_constraintBottom_toBottomOf="@id/iv_photo"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        tools:text="@string/hint_tips_alpha_100" />
+
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tb_tool_bar"
         style="@style/Widget.App.TabLayout"
@@ -85,9 +99,9 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:tabGravity="center"
-        app:tabMode="fixed"
         app:tabIndicatorColor="@color/colorAccent"
         app:tabIndicatorFullWidth="false"
+        app:tabMode="fixed"
         app:tabPaddingBottom="0dp">
 
         <com.google.android.material.tabs.TabItem
@@ -106,7 +120,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:icon="@drawable/ic_text_title"
-            android:text="@string/title_text" />
+            android:text="@string/title_content" />
 
     </com.google.android.material.tabs.TabLayout>
 

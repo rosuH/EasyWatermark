@@ -40,12 +40,22 @@ class MainViewModel : ViewModel() {
         object Error : State()
     }
 
+    sealed class TipsStatus(val values: Any? = null) {
+        object None : TipsStatus()
+        class Alpha(v: Any?) : TipsStatus(values = v)
+        class Size(v: Any?) : TipsStatus(values = v)
+    }
+
     private val _saveState: MutableLiveData<State> = MutableLiveData()
 
     val saveState: LiveData<State> = Transformations.map(_saveState) { it }
 
     val config: MutableLiveData<WaterMarkConfig> by lazy {
         MutableLiveData<WaterMarkConfig>(WaterMarkConfig())
+    }
+
+    val tipsStatus: MutableLiveData<TipsStatus> by lazy {
+        MutableLiveData<TipsStatus>(TipsStatus.None)
     }
 
     fun isPermissionGrated(activity: Activity) =
@@ -86,6 +96,15 @@ class MainViewModel : ViewModel() {
                 })
                 return@launch
             }
+            val intent = Intent(Intent.ACTION_VIEW)
+            intent.type = "image/jpeg"
+            intent.putExtra(Intent.EXTRA_STREAM, outputUri)
+            activity.startActivity(
+                Intent.createChooser(
+                    intent,
+                    activity.getString(R.string.tips_share_image)
+                )
+            )
             _saveState.postValue(State.SaveOk)
         }
     }
@@ -135,16 +154,17 @@ class MainViewModel : ViewModel() {
             }
             val canvas = Canvas(mutableBitmap)
             val tmpConfig = config.value!!
-            val paint = Paint().applyConfig(tmpConfig)
+            val bitmapPaint = Paint().applyConfig(tmpConfig)
+            val layoutPaint = Paint()
             val bounds = Rect()
 
-            paint.getTextBounds(tmpConfig.text, 0, tmpConfig.text.length, bounds)
-            paint.shader = when (config.value?.markMode) {
+            bitmapPaint.getTextBounds(tmpConfig.text, 0, tmpConfig.text.length, bounds)
+            layoutPaint.shader = when (config.value?.markMode) {
                 WaterMarkConfig.MarkMode.Text -> {
                     WaterMarkImageView.buildTextBitmapShader(
                         config.value!!,
                         bounds,
-                        paint,
+                        bitmapPaint,
                         Dispatchers.IO
                     )
                 }
@@ -160,7 +180,7 @@ class MainViewModel : ViewModel() {
                         true,
                         Rect(0, 0, mutableBitmap.width, mutableBitmap.height),
                         tmpConfig,
-                        paint,
+                        bitmapPaint,
                         Dispatchers.IO
                     )
                 }
@@ -168,7 +188,7 @@ class MainViewModel : ViewModel() {
             }
             canvas.drawRect(
                 0f, 0f,
-                mutableBitmap.width.toFloat(), mutableBitmap.height.toFloat(), paint
+                mutableBitmap.width.toFloat(), mutableBitmap.height.toFloat(), layoutPaint
             )
 
             return@withContext if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -222,7 +242,9 @@ class MainViewModel : ViewModel() {
     }
 
     fun updateTextSize(textSize: Float) {
-        config.value?.textSize = textSize.coerceAtLeast(0f)
+        val finalTextSize = textSize.coerceAtLeast(0f)
+        config.value?.textSize = finalTextSize
+        tipsStatus.postValue(TipsStatus.Size((finalTextSize).toInt()))
         forceRefresh()
     }
 
@@ -242,7 +264,9 @@ class MainViewModel : ViewModel() {
     }
 
     fun updateAlpha(alpha: Int) {
-        config.value?.alpha = alpha.coerceAtLeast(0).coerceAtMost(255)
+        val finalAlpha = alpha.coerceAtLeast(0).coerceAtMost(255)
+        config.value?.alpha = finalAlpha
+        tipsStatus.postValue(TipsStatus.Alpha((finalAlpha.toFloat() / 255 * 100).toInt()))
         forceRefresh()
     }
 
@@ -275,6 +299,10 @@ class MainViewModel : ViewModel() {
             }
             forceRefresh()
         }
+    }
+
+    fun updateTips(tipsStatus: TipsStatus) {
+        this.tipsStatus.postValue(tipsStatus)
     }
 
 

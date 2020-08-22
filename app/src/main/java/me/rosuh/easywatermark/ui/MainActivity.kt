@@ -5,14 +5,14 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
-import android.view.MotionEvent
-import android.view.View
+import android.view.*
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewConfigurationCompat
+import androidx.core.view.isInvisible
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
@@ -21,13 +21,14 @@ import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.ui.about.AboutActivity
+import me.rosuh.easywatermark.ui.panel.ContentFragment
 import me.rosuh.easywatermark.ui.panel.LayoutFragment
 import me.rosuh.easywatermark.ui.panel.StyleFragment
-import me.rosuh.easywatermark.ui.panel.TextFragment
 import me.rosuh.easywatermark.ui.save.SaveImageBSDialogFragment
 import kotlin.math.abs
 
@@ -66,11 +67,30 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
+        viewModel.tipsStatus.observe(this, Observer { tips ->
+            when (tips) {
+                is MainViewModel.TipsStatus.None -> {
+                    tv_data_tips.apply {
+                        isInvisible = true
+                    }
+                }
+                is MainViewModel.TipsStatus.Alpha -> {
+                    tv_data_tips.apply {
+                        isVisible = true
+                        text = "${getString(R.string.alpha)}：${tips.values as? Int}%"
+                    }
+                }
+                is MainViewModel.TipsStatus.Size -> {
+                    tv_data_tips.apply {
+                        isVisible = true
+                        text = "${getString(R.string.title_text_size)}：${tips.values as? Int}"
+                    }
+                }
+            }
+        })
+
         viewModel.saveState.observe(this, Observer { state ->
             when (state) {
-                MainViewModel.State.Saving -> {
-                    Toast.makeText(this, getString(R.string.tips_saving), Toast.LENGTH_SHORT).show()
-                }
                 MainViewModel.State.SaveOk -> {
                     Toast.makeText(this, getString(R.string.tips_save_ok), Toast.LENGTH_SHORT)
                         .show()
@@ -87,11 +107,6 @@ class MainActivity : AppCompatActivity() {
                     ).show()
                 }
             }
-            if (state == MainViewModel.State.Saving) {
-                // todo show loading
-            } else {
-                // todo hide loading
-            }
         })
     }
 
@@ -106,8 +121,8 @@ class MainActivity : AppCompatActivity() {
             setOnTouchListener(object : View.OnTouchListener {
                 private var startX = 0f
                 private var startY = 0f
-                private val verticalFac = 50
-                private val horizonFac = 50
+                private val verticalFac =
+                    ViewConfigurationCompat.getScaledHoverSlop(ViewConfiguration.get(this@MainActivity))
                 private val leftArea = 0f..(iv_photo.width / 2).toFloat()
                 private val rightArea = (iv_photo.width / 2).toFloat()..(iv_photo.width.toFloat())
 
@@ -134,6 +149,12 @@ class MainActivity : AppCompatActivity() {
                             startX = event.x
                             startY = event.y
                         }
+                        MotionEvent.ACTION_UP -> {
+                            scope.launch {
+                                delay(300)
+                                viewModel.updateTips(MainViewModel.TipsStatus.None)
+                            }
+                        }
                     }
                     return true
                 }
@@ -147,7 +168,7 @@ class MainActivity : AppCompatActivity() {
         val titleArray = arrayOf(
             getString(R.string.title_layout),
             getString(R.string.title_style),
-            getString(R.string.title_text)
+            getString(R.string.title_content)
         )
 
         val iconArray = arrayOf(
@@ -159,7 +180,7 @@ class MainActivity : AppCompatActivity() {
         val fragmentArray = arrayOf(
             initFragments(vp_control_panel, 0, LayoutFragment.newInstance()),
             initFragments(vp_control_panel, 1, StyleFragment.newInstance()),
-            initFragments(vp_control_panel, 2, TextFragment.newInstance())
+            initFragments(vp_control_panel, 2, ContentFragment.newInstance())
         )
 
 
@@ -179,7 +200,7 @@ class MainActivity : AppCompatActivity() {
                     tab.icon = getDrawable(R.drawable.ic_style_title)
                 }
                 2 -> {
-                    tab.text = getString(R.string.title_text)
+                    tab.text = getString(R.string.title_content)
                     tab.icon = getDrawable(R.drawable.ic_text_title)
                 }
             }
@@ -218,7 +239,7 @@ class MainActivity : AppCompatActivity() {
     /**
      * Fires an intent to spin up the "file chooser" UI and select an image.
      */
-    private fun performFileSearch(requestCode: Int) {
+    fun performFileSearch(requestCode: Int) {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             flags = (Intent.FLAG_GRANT_READ_URI_PERMISSION
                     or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
@@ -312,6 +333,6 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val READ_REQUEST_CODE: Int = 42
         const val WRITE_PERMISSION_REQUEST_CODE: Int = 43
-        private const val ICON_REQUEST_CODE: Int = 44
+        const val ICON_REQUEST_CODE: Int = 44
     }
 }

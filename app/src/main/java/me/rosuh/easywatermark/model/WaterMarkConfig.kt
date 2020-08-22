@@ -37,10 +37,10 @@ class WaterMarkConfig {
         ) {
             uri = Uri.parse("")
             val saveText = getString(SP_KEY_TEXT, "")
-            text = if (saveText.isNullOrEmpty()) "图片仅供测试，请勿作其他用途" else saveText
-            textSize = getFloat(SP_KEY_TEXT_SIZE, 14f)
-            textColor = getInt(SP_KEY_TEXT_COLOR, Color.RED)
-            alpha = getInt(SP_KEY_ALPHA, 128)
+            text = if (saveText.isNullOrEmpty()) "👋图片仅供测试，请勿作其他用途" else saveText
+            textSize = getFloat(SP_KEY_TEXT_SIZE, 18f)
+            textColor = getInt(SP_KEY_TEXT_COLOR, Color.parseColor("#FFB800"))
+            alpha = getInt(SP_KEY_ALPHA, 255)
             horizonGapPercent = getInt(SP_KEY_HORIZON_GAP, 30)
             verticalGapPercent = getInt(SP_KEY_VERTICAL_GAP, 30)
             degree = getFloat(SP_KEY_DEGREE, 315f)

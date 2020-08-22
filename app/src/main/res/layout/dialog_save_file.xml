@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:animateLayoutChanges="true"
     android:background="@color/colorSecondary"
     android:orientation="vertical">
 
@@ -24,7 +26,21 @@
             android:src="@drawable/ic_save"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+            tools:visibility="invisible" />
+
+        <androidx.core.widget.ContentLoadingProgressBar
+            android:id="@+id/cpb_save"
+            style="@style/Widget.AppCompat.ProgressBar"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:indeterminate="true"
+            android:indeterminateTint="@color/white"
+            android:progressBackgroundTint="@color/white"
+            app:layout_constraintBottom_toBottomOf="@id/iv_save"
+            app:layout_constraintEnd_toEndOf="@id/iv_save"
+            app:layout_constraintStart_toStartOf="@id/iv_save"
+            app:layout_constraintTop_toTopOf="@id/iv_save" />
 
         <TextView
             android:id="@+id/tv_directly_save"
@@ -69,6 +85,19 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
+
+        <androidx.core.widget.ContentLoadingProgressBar
+            android:id="@+id/cpb_share"
+            style="@style/Widget.AppCompat.ProgressBar"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:indeterminate="true"
+            android:indeterminateTint="@color/white"
+            android:progressBackgroundTint="@color/white"
+            app:layout_constraintBottom_toBottomOf="@id/iv_share"
+            app:layout_constraintEnd_toEndOf="@id/iv_share"
+            app:layout_constraintStart_toStartOf="@id/iv_share"
+            app:layout_constraintTop_toTopOf="@id/iv_share" />
 
         <TextView
             android:id="@+id/tv_share"
