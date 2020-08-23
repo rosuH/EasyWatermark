@@ -1,4 +1,4 @@
-package me.rosuh.easywatermark.ui.save
+package me.rosuh.easywatermark.ui.dialog
 
 import android.app.Dialog
 import android.os.Bundle

@@ -31,12 +31,9 @@
 
         <androidx.core.widget.ContentLoadingProgressBar
             android:id="@+id/cpb_save"
-            style="@style/Widget.AppCompat.ProgressBar"
+            style="@style/ProgressBarStyle"
             android:layout_width="36dp"
             android:layout_height="36dp"
-            android:indeterminate="true"
-            android:indeterminateTint="@color/white"
-            android:progressBackgroundTint="@color/white"
             app:layout_constraintBottom_toBottomOf="@id/iv_save"
             app:layout_constraintEnd_toEndOf="@id/iv_save"
             app:layout_constraintStart_toStartOf="@id/iv_save"
@@ -88,12 +85,9 @@
 
         <androidx.core.widget.ContentLoadingProgressBar
             android:id="@+id/cpb_share"
-            style="@style/Widget.AppCompat.ProgressBar"
+            style="@style/ProgressBarStyle"
             android:layout_width="36dp"
             android:layout_height="36dp"
-            android:indeterminate="true"
-            android:indeterminateTint="@color/white"
-            android:progressBackgroundTint="@color/white"
             app:layout_constraintBottom_toBottomOf="@id/iv_share"
             app:layout_constraintEnd_toEndOf="@id/iv_share"
             app:layout_constraintStart_toStartOf="@id/iv_share"

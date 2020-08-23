@@ -11,20 +11,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
 
-
+@Throws(FileNotFoundException::class, OutOfMemoryError::class)
 @Synchronized
 suspend fun decodeBitmapFromUri(resolver: ContentResolver, uri: Uri): Bitmap? =
     withContext(Dispatchers.IO) {
-        try {
-            resolver.openInputStream(uri).use {
-                return@use BitmapFactory.decodeStream(it)
-            }
-        } catch (fne: FileNotFoundException) {
-            return@withContext null
-        } catch (oom: OutOfMemoryError) {
-            Log.i(this::class.simpleName, "copyImage oom")
-            return@withContext null
+        resolver.openInputStream(uri).use {
+            return@use BitmapFactory.decodeStream(it)
         }
+
     }
 
 suspend fun decodeSampledBitmapFromResource(

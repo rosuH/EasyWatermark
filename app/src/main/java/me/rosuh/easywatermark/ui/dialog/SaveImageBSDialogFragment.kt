@@ -1,4 +1,4 @@
-package me.rosuh.easywatermark.ui.save
+package me.rosuh.easywatermark.ui.dialog
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -90,7 +90,7 @@ class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
                 ivSave?.isInvisible = false
                 ivShare?.isInvisible = true
             }
-            MainViewModel.State.Ready, MainViewModel.State.SaveOk, MainViewModel.State.ShareOk, MainViewModel.State.Error, null -> {
+            else -> {
                 cpbSave?.hide()
                 cpbShare?.hide()
                 ivSave?.isInvisible = false

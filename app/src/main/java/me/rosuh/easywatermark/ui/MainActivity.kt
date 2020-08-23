@@ -26,10 +26,11 @@ import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.ui.about.AboutActivity
+import me.rosuh.easywatermark.ui.dialog.CompressImageDialogFragment
+import me.rosuh.easywatermark.ui.dialog.SaveImageBSDialogFragment
 import me.rosuh.easywatermark.ui.panel.ContentFragment
 import me.rosuh.easywatermark.ui.panel.LayoutFragment
 import me.rosuh.easywatermark.ui.panel.StyleFragment
-import me.rosuh.easywatermark.ui.save.SaveImageBSDialogFragment
 import kotlin.math.abs
 
 
@@ -59,9 +60,9 @@ class MainActivity : AppCompatActivity() {
             try {
                 cl_root.setTransition(R.id.transition_open_image)
                 cl_root.transitionToEnd()
-                takePersistableUriPermission(it.uri)
                 iv_photo?.config = it
             } catch (se: SecurityException) {
+                se.printStackTrace()
                 // reset the uri because we don't have permission -_-
                 viewModel.updateUri(Uri.parse(""))
             }
@@ -105,6 +106,11 @@ class MainActivity : AppCompatActivity() {
                         "${getString(R.string.tips_error)}: ${state.msg}",
                         Toast.LENGTH_SHORT
                     ).show()
+                    viewModel.resetStatus()
+                }
+                MainViewModel.State.OOMError -> {
+                    CompressImageDialogFragment.safetyShow(supportFragmentManager)
+                    viewModel.resetStatus()
                 }
             }
         })
@@ -164,18 +170,6 @@ class MainActivity : AppCompatActivity() {
         iv_picker_tips.setOnClickListener {
             performFileSearch(READ_REQUEST_CODE)
         }
-
-        val titleArray = arrayOf(
-            getString(R.string.title_layout),
-            getString(R.string.title_style),
-            getString(R.string.title_content)
-        )
-
-        val iconArray = arrayOf(
-            R.drawable.ic_layout_title,
-            R.drawable.ic_style_title,
-            R.drawable.ic_text_title
-        )
 
         val fragmentArray = arrayOf(
             initFragments(vp_control_panel, 0, LayoutFragment.newInstance()),

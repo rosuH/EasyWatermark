@@ -47,6 +47,7 @@
     <string name="open_source_desc_material_components">Material Components for Android (MDC-Android) help developers execute Material Design. Developed by a core team of engineers and UX designers at Google, these components enable a reliable development workflow to build beautiful and functional Android apps.Material Components for Android is a drop-in replacement for Android\'s Design Support Library.</string>
     <string name="error_not_img">请选择图片</string>
     <string name="error_file_not_found">未选择图片或图片不存在</string>
+    <string name="error_oom">图片过大，建议</string>
     <string name="tips_pick_image">选择图片，开始编辑\n↓</string>
     <string name="save_directly">直接保存</string>
     <string name="directly_save_tips">直接存储编辑后的图像到你的相册中</string>
@@ -58,4 +59,10 @@
     <string name="hint_tips_input_water_mark_text">请输入水印文字</string>
     <string name="tips_ok">确定</string>
     <string name="hint_tips_alpha_100">透明度100%</string>
+    <string name="tips_cancel_output">取消</string>
+    <string name="tips_need_compress_img">图片过大或内存不足</string>
+    <string name="tips_compressing">正在压缩中…</string>
+    <string name="tips_compress_images">压缩图片</string>
+    <string name="tips_compress_ok">压缩完成，点击确定继续输出</string>
+    <string name="tips_tip_title">提示</string>
 </resources>

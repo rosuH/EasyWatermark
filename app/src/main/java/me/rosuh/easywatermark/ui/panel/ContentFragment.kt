@@ -18,7 +18,7 @@ import me.rosuh.easywatermark.base.BaseFragment
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.ui.MainActivity
 import me.rosuh.easywatermark.ui.MainActivity.Companion.ICON_REQUEST_CODE
-import me.rosuh.easywatermark.ui.save.EditTextBSDialogFragment
+import me.rosuh.easywatermark.ui.dialog.EditTextBSDialogFragment
 import me.rosuh.easywatermark.utils.DetectedPerformanceSeekBarListener
 
 class ContentFragment : BaseFragment() {

@@ -13,11 +13,13 @@ import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.*
+import id.zelory.compressor.Compressor
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.R
@@ -26,6 +28,8 @@ import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.utils.decodeBitmapFromUri
 import me.rosuh.easywatermark.utils.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.widget.WaterMarkImageView
+import java.io.File
+import java.io.FileNotFoundException
 import java.io.FileOutputStream
 
 
@@ -37,7 +41,11 @@ class MainViewModel : ViewModel() {
         object Sharing : State()
         object SaveOk : State()
         object ShareOk : State()
+        object Compressing : State()
+        object CompressOK : State()
+        object CompressError : State()
         object Error : State()
+        object OOMError : State()
     }
 
     sealed class TipsStatus(val values: Any? = null) {
@@ -88,24 +96,32 @@ class MainViewModel : ViewModel() {
                 return@launch
             }
             _saveState.postValue(State.Saving)
-            val outputUri =
-                generateImage(activity.contentResolver, config.value?.uri ?: Uri.parse(""))
-            if (outputUri?.toString().isNullOrEmpty()) {
+            try {
+                val outputUri =
+                    generateImage(activity.contentResolver, config.value?.uri ?: Uri.parse(""))
+                if (outputUri?.toString().isNullOrEmpty()) {
+                    throw FileNotFoundException()
+                }
+                val intent = Intent(Intent.ACTION_VIEW)
+                intent.type = "image/jpeg"
+                intent.putExtra(Intent.EXTRA_STREAM, outputUri)
+                activity.startActivity(
+                    Intent.createChooser(
+                        intent,
+                        activity.getString(R.string.tips_share_image)
+                    )
+                )
+                _saveState.postValue(State.SaveOk)
+            } catch (fne: FileNotFoundException) {
+                fne.printStackTrace()
                 _saveState.postValue(State.Error.apply {
                     msg = activity.getString(R.string.error_file_not_found)
                 })
-                return@launch
+            } catch (oom: OutOfMemoryError) {
+                _saveState.postValue(State.OOMError.apply {
+                    msg = activity.getString(R.string.error_file_not_found)
+                })
             }
-            val intent = Intent(Intent.ACTION_VIEW)
-            intent.type = "image/jpeg"
-            intent.putExtra(Intent.EXTRA_STREAM, outputUri)
-            activity.startActivity(
-                Intent.createChooser(
-                    intent,
-                    activity.getString(R.string.tips_share_image)
-                )
-            )
-            _saveState.postValue(State.SaveOk)
         }
     }
 
@@ -121,29 +137,39 @@ class MainViewModel : ViewModel() {
                 })
                 return@launch
             }
-            _saveState.postValue(State.Sharing)
-            delay(1500)
-            val outputUri =
-                generateImage(activity.contentResolver, config.value?.uri ?: Uri.parse(""))
-            if (outputUri?.toString().isNullOrEmpty()) {
+            try {
+                _saveState.postValue(State.Sharing)
+                val outputUri =
+                    generateImage(activity.contentResolver, config.value?.uri ?: Uri.parse(""))
+                if (outputUri?.toString().isNullOrEmpty()) {
+                    _saveState.postValue(State.Error.apply {
+                        msg = activity.getString(R.string.error_file_not_found)
+                    })
+                    return@launch
+                }
+                val intent = Intent(Intent.ACTION_SEND)
+                intent.type = "image/jpeg"
+                intent.putExtra(Intent.EXTRA_STREAM, outputUri)
+                activity.startActivity(
+                    Intent.createChooser(
+                        intent,
+                        activity.getString(R.string.tips_share_image)
+                    )
+                )
+                _saveState.postValue(State.ShareOk)
+            } catch (fne: FileNotFoundException) {
+                fne.printStackTrace()
                 _saveState.postValue(State.Error.apply {
                     msg = activity.getString(R.string.error_file_not_found)
                 })
-                return@launch
+            } catch (oom: OutOfMemoryError) {
+                _saveState.postValue(State.OOMError)
             }
-            val intent = Intent(Intent.ACTION_SEND)
-            intent.type = "image/jpeg"
-            intent.putExtra(Intent.EXTRA_STREAM, outputUri)
-            activity.startActivity(
-                Intent.createChooser(
-                    intent,
-                    activity.getString(R.string.tips_share_image)
-                )
-            )
-            _saveState.postValue(State.ShareOk)
+
         }
     }
 
+    @Throws(FileNotFoundException::class, OutOfMemoryError::class)
     private suspend fun generateImage(resolver: ContentResolver, uri: Uri): Uri? =
         withContext(Dispatchers.IO) {
             val mutableBitmap =
@@ -305,9 +331,48 @@ class MainViewModel : ViewModel() {
         this.tipsStatus.postValue(tipsStatus)
     }
 
+    fun resetStatus() {
+        _saveState.postValue(State.Ready)
+    }
+
 
     private fun forceRefresh() {
         config.value?.save()
         config.postValue(config.value)
+    }
+
+    fun compressImg(activity: Activity): Job {
+        return viewModelScope.launch(Dispatchers.IO) {
+            config.value?.let {
+                _saveState.postValue(State.Compressing)
+                val tmpFile = File.createTempFile("easy_water_mark_", "_compressed")
+                activity.contentResolver.openInputStream(it.uri).use { input ->
+                    tmpFile.outputStream().use { output ->
+                        input?.copyTo(output)
+                    }
+                }
+                Log.i(
+                    "compressImg",
+                    "Before compress: file ${tmpFile.absolutePath}, length = ${tmpFile.length()}"
+                )
+                val compressedFile = Compressor.compress(activity, tmpFile)
+                Log.i(
+                    "compressImg",
+                    "After compress: compressedFile ${compressedFile.absolutePath}, length = ${compressedFile.length()}"
+                )
+                val compressedFileUri = Uri.parse(
+                    MediaStore.Images.Media.insertImage(
+                        activity.contentResolver,
+                        compressedFile.absolutePath,
+                        null,
+                        null
+                    )
+                )
+                updateUri(compressedFileUri)
+                _saveState.postValue(State.CompressOK)
+            } ?: kotlin.run {
+                _saveState.postValue(State.CompressError.also { it.msg = "Config value is null." })
+            }
+        }
     }
 }

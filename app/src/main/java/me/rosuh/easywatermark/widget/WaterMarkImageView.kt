@@ -37,7 +37,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         CoroutineExceptionHandler { _: CoroutineContext, throwable: Throwable ->
             Log.d(
                 this::class.simpleName,
-                "Throw OOM in WaterMarkImageView ${throwable.message.toString()}"
+                "Throw Exception in WaterMarkImageView ${throwable.message.toString()}"
             )
             generateBitmapJob?.cancel()
         }
@@ -55,7 +55,14 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         set(value) {
             field = value
             generateBitmapJob = launch(exceptionHandler) {
-                setImageURI(value?.uri)
+                val imageBitmap = decodeSampledBitmapFromResource(
+                    context.contentResolver,
+                    config!!.uri,
+                    this@WaterMarkImageView.width,
+                    this@WaterMarkImageView.height
+                )
+                setImageBitmap(imageBitmap)
+
                 paint.applyConfig(value)
                 val canDraw = field != null
                         && (field!!.canDrawIcon() || field!!.canDrawText())
@@ -110,12 +117,6 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
     }
 
     private var bounds: Rect = Rect()
-
-    init {
-        if (!config?.uri?.toString().isNullOrEmpty()) {
-            setImageURI(config?.uri)
-        }
-    }
 
     private var layoutShader: BitmapShader? = null
 
