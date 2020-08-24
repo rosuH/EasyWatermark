@@ -16,6 +16,7 @@ import android.provider.MediaStore
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.lifecycle.*
 import id.zelory.compressor.Compressor
 import kotlinx.coroutines.Dispatchers
@@ -356,20 +357,27 @@ class MainViewModel : ViewModel() {
                     "Before compress: file ${tmpFile.absolutePath}, length = ${tmpFile.length()}"
                 )
                 val compressedFile = Compressor.compress(activity, tmpFile)
+                // clear tmp files
+                if (tmpFile.exists()) {
+                    tmpFile.delete()
+                }
                 Log.i(
                     "compressImg",
                     "After compress: compressedFile ${compressedFile.absolutePath}, length = ${compressedFile.length()}"
                 )
-                val compressedFileUri = Uri.parse(
-                    MediaStore.Images.Media.insertImage(
-                        activity.contentResolver,
-                        compressedFile.absolutePath,
-                        null,
-                        null
+                try {
+                    val compressedFileUri = FileProvider.getUriForFile(
+                        activity,
+                        "me.rosuh.easywatermark.fileprovider",
+                        compressedFile
                     )
-                )
-                updateUri(compressedFileUri)
-                _saveState.postValue(State.CompressOK)
+                    updateUri(compressedFileUri)
+                    _saveState.postValue(State.CompressOK)
+                } catch (ie: IllegalArgumentException) {
+                    _saveState.postValue(State.CompressError.also {
+                        it.msg = "Images creates uri failed."
+                    })
+                }
             } ?: kotlin.run {
                 _saveState.postValue(State.CompressError.also { it.msg = "Config value is null." })
             }
