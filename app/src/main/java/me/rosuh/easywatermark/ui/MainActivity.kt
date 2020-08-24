@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.core.view.ViewConfigurationCompat
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
@@ -18,11 +19,13 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.ui.about.AboutActivity
@@ -49,7 +52,40 @@ class MainActivity : AppCompatActivity() {
             initObserver()
             cl_root.setTransition(R.id.transition_launch)
             cl_root.transitionToEnd()
+            checkHadCrash()
         }
+    }
+
+    private fun checkHadCrash() {
+        with(getSharedPreferences(MyApp.SP_NAME, MODE_PRIVATE)) {
+            val isCrash = getBoolean(MyApp.KEY_IS_CRASH, false)
+            if (!isCrash) {
+                return@with
+            }
+            val crashInfo = getString(MyApp.KEY_STACK_TRACE, "")
+            edit {
+                putBoolean(MyApp.KEY_IS_CRASH, false)
+                putString(MyApp.KEY_STACK_TRACE, "")
+            }
+            showCrashDialog(crashInfo)
+        }
+    }
+
+    private fun showCrashDialog(crashInfo: String?) {
+        MaterialAlertDialogBuilder(this, R.style.MaterialAlertDialog)
+            .setTitle(R.string.tips_tip_title)
+            .setMessage(R.string.msg_crash)
+            .setNegativeButton(
+                R.string.tips_cancel_dialog
+            ) { dialog, _ -> dialog?.dismiss() }
+            .setPositiveButton(
+                R.string.crash_mail
+            ) { dialog, _ ->
+                viewModel.extraCrashInfo(this, crashInfo)
+                dialog.dismiss()
+            }
+            .setCancelable(false)
+            .show()
     }
 
     private fun initObserver() {
@@ -267,6 +303,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+//        throw RuntimeException()
         when (requestCode) {
             READ_REQUEST_CODE -> {
                 if (resultCode == Activity.RESULT_OK) {
@@ -310,7 +347,7 @@ class MainActivity : AppCompatActivity() {
         contentResolver.takePersistableUriPermission(uri, takeFlags)
     }
 
-    private inner class ControlPanelPagerAdapter(
+    private class ControlPanelPagerAdapter(
         fa: FragmentActivity,
         var fragmentArray: Array<Fragment>
     ) : FragmentStateAdapter(fa) {

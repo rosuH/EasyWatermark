@@ -25,7 +25,7 @@
         <item name="android:textSize">14sp</item>
     </style>
 
-    <style name="MySeekBarStyle" >
+    <style name="MySeekBarStyle">
         <item name="android:maxHeight">20dp</item>
         <item name="android:height">20dp</item>
         <item name="android:progressBackgroundTint">@color/white_14</item>
@@ -74,5 +74,15 @@
         <item name="android:indeterminate">true</item>
         <item name="android:indeterminateTint">@color/white</item>
         <item name="android:progressBackgroundTint">@color/white</item>
+    </style>
+
+    <style name="MaterialAlertDialog" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <item name="buttonBarPositiveButtonStyle">@style/Widget.App.Button</item>
+        <item name="colorOnSurface">@color/white</item>
+        <item name="buttonBarNegativeButtonStyle">@style/Widget.App.Button</item>
+    </style>
+
+    <style name="Widget.App.Button" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
+        <item name="android:textColor">@color/white</item>
     </style>
 </resources>

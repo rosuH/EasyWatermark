@@ -64,5 +64,10 @@
     <string name="tips_compressing">正在压缩中…</string>
     <string name="tips_compress_images">压缩图片</string>
     <string name="tips_compress_ok">压缩完成，点击确定继续输出</string>
-    <string name="tips_tip_title">提示</string>
+    <string name="tips_tip_title">检测到崩溃</string>
+    <string name="msg_crash">你愿意帮忙反馈错误信息吗？这样可以帮我们做得更好！这不会收集你的个人信息。</string>
+    <string name="tips_yes">我愿意</string>
+    <string name="crash_mail">发送邮件</string>
+    <string name="tip_not_mail_found">似乎没有安装邮件客户端，你可以主动粘贴错误信息到应用市场或 Github</string>
+    <string name="email_subject">[EasyWaterMark] Crash info</string>
 </resources>

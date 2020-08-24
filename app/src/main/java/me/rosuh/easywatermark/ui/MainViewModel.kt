@@ -2,9 +2,7 @@ package me.rosuh.easywatermark.ui
 
 import android.Manifest
 import android.app.Activity
-import android.content.ContentResolver
-import android.content.ContentValues
-import android.content.Intent
+import android.content.*
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -14,6 +12,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
+import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -25,6 +24,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ktx.applyConfig
+import me.rosuh.easywatermark.ktx.formatDate
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.utils.decodeBitmapFromUri
 import me.rosuh.easywatermark.utils.decodeSampledBitmapFromResource
@@ -381,6 +381,43 @@ class MainViewModel : ViewModel() {
             } ?: kotlin.run {
                 _saveState.postValue(State.CompressError.also { it.msg = "Config value is null." })
             }
+        }
+    }
+
+    fun extraCrashInfo(activity: Activity, crashInfo: String?) {
+        // user do not saving crash info into external storage
+        // So that wo just share the internal file
+        val mainContent = """
+                    Dear developer, here are my crash info:
+                    <=======================================>
+                        $crashInfo
+                    <=======================================>
+                    ${System.currentTimeMillis().formatDate()}
+                """.trimIndent()
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "message/rfc822"
+            putExtra(Intent.EXTRA_EMAIL, arrayOf("rosuh@qq.com"))
+            putExtra(Intent.EXTRA_SUBJECT, activity.getString(R.string.email_subject))
+            putExtra(Intent.EXTRA_TEXT, mainContent)
+        }
+        try {
+            activity.startActivity(
+                Intent.createChooser(
+                    intent,
+                    activity.getString(R.string.crash_mail)
+                )
+            )
+        } catch (e: ActivityNotFoundException) {
+            e.printStackTrace()
+            val clipBoard =
+                activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip: ClipData = ClipData.newPlainText("Crash Info", "$crashInfo")
+            clipBoard.setPrimaryClip(clip)
+            Toast.makeText(
+                activity,
+                activity.getString(R.string.tip_not_mail_found),
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 }
