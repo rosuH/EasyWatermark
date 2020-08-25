@@ -21,7 +21,7 @@
 
 
 ## UI
-- 由驰名海内外（👏🤪）的 UI 大佬 [@twowei](https://github.com/twowei) 操刀设计
-  - 凡是你觉得不好用的，都是我 UI 还原不行，和 UI 无关。XD
+- 由驰名海内外（👏🤪）的 UI 大佬 [@tovi](https://www.figma.com/@tovi) 操刀设计
+  - 凡是你觉得不好用的，都是我 UI 还原不行，和 UI 稿无关。XD
   
-> 此APP由[@twowei](https://github.com/twowei)设计，因此UI和相关设计资源的所有权利均归他所有，未经任何人或组织的允许，不得使用。
+> 此APP由[@tovi](https://www.figma.com/@tovi)设计，因此UI和相关设计资源的所有权利均归他所有，未经任何人或组织的允许，不得使用。
