@@ -165,8 +165,14 @@ class MainActivity : AppCompatActivity() {
                 private var startY = 0f
                 private val verticalFac =
                     ViewConfigurationCompat.getScaledHoverSlop(ViewConfiguration.get(this@MainActivity))
-                private val leftArea = 0f..(iv_photo.width / 2).toFloat()
-                private val rightArea = (iv_photo.width / 2).toFloat()..(iv_photo.width.toFloat())
+                private val leftArea: ClosedFloatingPointRange<Float>
+                    get() {
+                        return 0f..(iv_photo.width / 2).toFloat()
+                    }
+                private val rightArea: ClosedFloatingPointRange<Float>
+                    get() {
+                        return (iv_photo.width / 2).toFloat()..(iv_photo.width.toFloat())
+                    }
 
                 override fun onTouch(v: View?, event: MotionEvent?): Boolean {
                     when (event?.actionMasked) {
