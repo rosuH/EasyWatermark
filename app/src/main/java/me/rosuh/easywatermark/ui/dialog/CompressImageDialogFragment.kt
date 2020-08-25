@@ -37,17 +37,17 @@ class CompressImageDialogFragment : DialogFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        val root = inflater.inflate(R.layout.dialog_compress_img, null)
+        val root = inflater.inflate(R.layout.dialog_compress_img, container, false)
         with(root) {
-            cpbCompress = findViewById<ContentLoadingProgressBar>(R.id.cpb_compress)
-            tvCompressTips = findViewById<TextView>(R.id.tv_compress_tips)
+            cpbCompress = findViewById(R.id.cpb_compress)
+            tvCompressTips = findViewById(R.id.tv_compress_tips)
             btnCancel = findViewById<MaterialButton>(R.id.btn_cancel).apply {
                 setOnClickListener {
                     compressJob?.cancel()
                     dismissAllowingStateLoss()
                 }
             }
-            btnCompress = findViewById<MaterialButton>(R.id.btn_compress)
+            btnCompress = findViewById(R.id.btn_compress)
         }
         setTupState()
         shareViewModel.saveState.observe(viewLifecycleOwner, Observer {
@@ -85,6 +85,7 @@ class CompressImageDialogFragment : DialogFragment() {
                 }
             }
             MainViewModel.State.CompressError -> {
+                tvCompressTips?.text = getString(R.string.tips_compress_create_uri_failed, state.msg)
                 cpbCompress?.apply {
                     isVisible = false
                     hide()
@@ -116,7 +117,7 @@ class CompressImageDialogFragment : DialogFragment() {
 
     companion object {
 
-        const val TAG = "CompressImageDialogFragment"
+        private const val TAG = "CompressImageDialogFragment"
 
         private fun newInstance(): CompressImageDialogFragment {
             return CompressImageDialogFragment()

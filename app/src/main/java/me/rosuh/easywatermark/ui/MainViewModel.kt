@@ -374,8 +374,8 @@ class MainViewModel : ViewModel() {
                     updateUri(compressedFileUri)
                     _saveState.postValue(State.CompressOK)
                 } catch (ie: IllegalArgumentException) {
-                    _saveState.postValue(State.CompressError.also {
-                        it.msg = "Images creates uri failed."
+                    _saveState.postValue(State.CompressError.also { error ->
+                        error.msg = "Images creates uri failed."
                     })
                 }
             } ?: kotlin.run {
@@ -389,10 +389,10 @@ class MainViewModel : ViewModel() {
         // So that wo just share the internal file
         val mainContent = """
                     Dear developer, here are my crash info:
-                    <=======================================>
+                    
                         $crashInfo
-                    <=======================================>
-                    ${System.currentTimeMillis().formatDate()}
+                        
+                    ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
                 """.trimIndent()
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "message/rfc822"

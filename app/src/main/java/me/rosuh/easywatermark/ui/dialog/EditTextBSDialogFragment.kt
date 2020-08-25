@@ -36,7 +36,7 @@ class EditTextBSDialogFragment : BottomSheetDialogFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        val root = inflater.inflate(R.layout.dialog_edit_text, null)
+        val root = inflater.inflate(R.layout.dialog_edit_text, container, false)
         with(root) {
             et = findViewById<TextInputEditText>(R.id.et_water_text).apply {
                 setText(shareViewModel.config.value?.text.toString())
@@ -79,7 +79,7 @@ class EditTextBSDialogFragment : BottomSheetDialogFragment() {
 
     companion object {
 
-        const val TAG = "EditTextBSDialogFragment"
+        private const val TAG = "EditTextBSDialogFragment"
 
         private fun newInstance(): EditTextBSDialogFragment {
             return EditTextBSDialogFragment()

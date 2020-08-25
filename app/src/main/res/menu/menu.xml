@@ -12,7 +12,7 @@
         android:id="@+id/action_save"
         android:icon="@drawable/ic_save"
         android:title="@string/action_save"
-        app:showAsAction="always" />
+        app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_settings"

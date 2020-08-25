@@ -2,7 +2,6 @@
     <string name="app_name">简单水印</string>
     <string name="action_pick">选择图片</string>
     <string name="action_save">保存</string>
-    <string name="action_send">发送图片…</string>
     <string name="action_settings">关于</string>
     <string name="title_layout">分布</string>
     <string name="title_style">样式</string>
@@ -11,14 +10,11 @@
     <string name="tips_choose_color_dialog">选择颜色</string>
     <string name="tips_confirm_dialog">确认</string>
     <string name="tips_cancel_dialog">取消</string>
-    <string name="tips_saving">正在保存</string>
-    <string name="tips_sharing">正在分享</string>
     <string name="tips_save_ok">保存完成</string>
     <string name="tips_share_ok">分享完成</string>
     <string name="tips_error">错误</string>
     <string name="tips_share_image">分享图片</string>
     <string name="title_enter_text">内容</string>
-    <string name="hint_water_mark">水印内容</string>
     <string name="title_text_style">样式</string>
     <string name="title_text_size">大小</string>
     <string name="title_horizon_layout">水平</string>
@@ -34,7 +30,6 @@
     <string name="about_title_version">版本</string>
     <string name="about_title_rating">为这个应用评分</string>
     <string name="about_title_feed_back">反馈</string>
-    <string name="about_title_sponsor">支持一波</string>
     <string name="about_title_update_log">更新日志</string>
     <string name="about_title_open_source">开源许可</string>
 
@@ -47,7 +42,6 @@
     <string name="open_source_desc_material_components">Material Components for Android (MDC-Android) help developers execute Material Design. Developed by a core team of engineers and UX designers at Google, these components enable a reliable development workflow to build beautiful and functional Android apps.Material Components for Android is a drop-in replacement for Android\'s Design Support Library.</string>
     <string name="error_not_img">请选择图片</string>
     <string name="error_file_not_found">未选择图片或图片不存在</string>
-    <string name="error_oom">图片过大，建议</string>
     <string name="tips_pick_image">选择图片，开始编辑\n↓</string>
     <string name="save_directly">直接保存</string>
     <string name="directly_save_tips">直接存储编辑后的图像到你的相册中</string>
@@ -55,7 +49,8 @@
     <string name="share">分享</string>
     <string name="water_mark_mode_text">文字</string>
     <string name="water_mark_mode_image">图片</string>
-    <string name="alpha">透明度</string>
+    <string name="touch_alpha">透明度: %1$d</string>
+    <string name="touch_size">大小: %1$d</string>
     <string name="hint_tips_input_water_mark_text">请输入水印文字</string>
     <string name="tips_ok">确定</string>
     <string name="hint_tips_alpha_100">透明度100%</string>
@@ -64,9 +59,9 @@
     <string name="tips_compressing">正在压缩中…</string>
     <string name="tips_compress_images">压缩图片</string>
     <string name="tips_compress_ok">压缩完成，点击确定继续输出</string>
+    <string name="tips_compress_create_uri_failed">压缩完成，但是创建 Uri 失败，请重启 APP 重试。%1$s</string>
     <string name="tips_tip_title">检测到崩溃</string>
     <string name="msg_crash">你愿意帮忙反馈错误信息吗？这样可以帮我们做得更好！这不会收集你的个人信息。</string>
-    <string name="tips_yes">我愿意</string>
     <string name="crash_mail">发送邮件</string>
     <string name="tip_not_mail_found">似乎没有安装邮件客户端，你可以主动粘贴错误信息到应用市场或 Github</string>
     <string name="email_subject">[EasyWaterMark] Crash info</string>

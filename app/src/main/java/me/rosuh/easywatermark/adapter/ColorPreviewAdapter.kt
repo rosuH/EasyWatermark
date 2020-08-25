@@ -22,7 +22,7 @@ class ColorPreviewAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val root = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_color_preview, null)
+            .inflate(R.layout.item_color_preview, parent, false)
 
         return PreviewHolder(
             root
@@ -56,7 +56,7 @@ class ColorPreviewAdapter(
         notifyDataSetChanged()
     }
 
-    internal class PreviewHolder(private val root: View) : RecyclerView.ViewHolder(root) {
+    internal class PreviewHolder(root: View) : RecyclerView.ViewHolder(root) {
         val siv: SelectableImageView = root.findViewById(R.id.siv_color)
     }
 

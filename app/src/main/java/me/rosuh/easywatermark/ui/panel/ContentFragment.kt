@@ -33,7 +33,7 @@ class ContentFragment : BaseFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        val root = layoutInflater.inflate(R.layout.fragment_content, null)
+        val root = layoutInflater.inflate(R.layout.fragment_content, container, false)
         val tvContentSize = root.findViewById<TextView>(R.id.tv_progress_vertical).apply {
             text = shareViewModel.config.value?.textSize.toString()
         }
@@ -61,7 +61,7 @@ class ContentFragment : BaseFragment() {
                     (requireActivity() as? MainActivity)?.performFileSearch(ICON_REQUEST_CODE)
                 }
             }
-            tvTitleTextStyle = findViewById<View>(R.id.tv_title_style)
+            tvTitleTextStyle = findViewById(R.id.tv_title_style)
         }
 
         val sbContentSize = root.findViewById<SeekBar>(R.id.sb_content_size).apply {

@@ -29,6 +29,9 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
     private val limitBounds = Rect()
 
     @Volatile
+    private var curUri: Uri? = null
+
+    @Volatile
     private var iconBitmap: Bitmap? = null
 
     private var localIconUri: Uri? = null
@@ -55,13 +58,16 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         set(value) {
             field = value
             generateBitmapJob = launch(exceptionHandler) {
-                val imageBitmap = decodeSampledBitmapFromResource(
-                    context.contentResolver,
-                    config!!.uri,
-                    this@WaterMarkImageView.width,
-                    this@WaterMarkImageView.height
-                )
-                setImageBitmap(imageBitmap)
+                if (curUri != field?.uri){
+                    val imageBitmap = decodeSampledBitmapFromResource(
+                        context.contentResolver,
+                        config!!.uri,
+                        this@WaterMarkImageView.width,
+                        this@WaterMarkImageView.height
+                    )
+                    setImageBitmap(imageBitmap)
+                    curUri = field?.uri
+                }
 
                 paint.applyConfig(value)
                 val canDraw = field != null

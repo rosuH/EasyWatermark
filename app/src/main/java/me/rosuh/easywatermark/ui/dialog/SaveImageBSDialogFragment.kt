@@ -24,7 +24,7 @@ class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        val root = inflater.inflate(R.layout.dialog_save_file, null)
+        val root = inflater.inflate(R.layout.dialog_save_file, container, false)
 
         var ivSave: View?
         var ivShare: View?
@@ -123,7 +123,7 @@ class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
 
     companion object {
 
-        const val TAG = "SaveImageBSDialogFragment"
+        private const val TAG = "SaveImageBSDialogFragment"
 
         private fun newInstance(): SaveImageBSDialogFragment {
             return SaveImageBSDialogFragment()

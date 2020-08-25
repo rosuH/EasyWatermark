@@ -7,14 +7,8 @@
     <color name="colorSecondary">#161616</color>
     <color name="colorOnSurface">#BFFFFFFF</color>
 
-    <color name="button_focus">#865900</color>
     <color name="text_color_main">#fff</color>
     <color name="text_color_tips">#80FFFFFF</color>
-    <color name="swl_color_1">#99ffa900</color>
-    <color name="swl_color_2">#BFffa900</color>
-    <color name="swl_color_3">#CCffa900</color>
-    <color name="swl_color_4">#E6ffa900</color>
-    <color name="swl_color_5">#ffa900</color>
 
     <color name="white">#fff</color>
     <color name="white_14">#24FFFFFF</color>

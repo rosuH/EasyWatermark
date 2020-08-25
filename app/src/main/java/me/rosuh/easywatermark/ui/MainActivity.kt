@@ -114,13 +114,13 @@ class MainActivity : AppCompatActivity() {
                 is MainViewModel.TipsStatus.Alpha -> {
                     tv_data_tips.apply {
                         isVisible = true
-                        text = "${getString(R.string.alpha)}：${tips.values as? Int}%"
+                        text = getString(R.string.touch_alpha, tips.values as? Int)
                     }
                 }
                 is MainViewModel.TipsStatus.Size -> {
                     tv_data_tips.apply {
                         isVisible = true
-                        text = "${getString(R.string.title_text_size)}：${tips.values as? Int}"
+                        text = getString(R.string.touch_size, tips.values as? Int)
                     }
                 }
             }
@@ -192,6 +192,7 @@ class MainActivity : AppCompatActivity() {
                             startY = event.y
                         }
                         MotionEvent.ACTION_UP -> {
+                            performClick()
                             scope.launch {
                                 delay(300)
                                 viewModel.updateTips(MainViewModel.TipsStatus.None)
@@ -303,7 +304,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-//        throw RuntimeException()
         when (requestCode) {
             READ_REQUEST_CODE -> {
                 if (resultCode == Activity.RESULT_OK) {

@@ -88,17 +88,6 @@ fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeig
     return inSampleSize
 }
 
-fun getFreeMemory(): Long {
-    return try {
-        val runtime = Runtime.getRuntime()
-        val free = runtime.freeMemory() / 1048576L
-        Log.i("Utils", "availableMegs = $free")
-        free
-    } catch (e: Exception) {
-        0L
-    }
-}
-
 // Get a MemoryInfo object for the device's current memory status.
 fun getAvailableMemory(context: Context): ActivityManager.MemoryInfo {
     val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager

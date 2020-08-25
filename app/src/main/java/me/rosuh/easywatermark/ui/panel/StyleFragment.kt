@@ -56,7 +56,7 @@ class StyleFragment : BaseFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        val root = layoutInflater.inflate(R.layout.fragment_style, null)
+        val root = layoutInflater.inflate(R.layout.fragment_style, container, false)
         val tvDegree = root.findViewById<TextView>(R.id.tv_tips_degree).apply {
             text = "${shareViewModel.config.value?.degree ?: 0}°"
         }
@@ -101,7 +101,7 @@ class StyleFragment : BaseFragment() {
     private fun showColorPickerDialog(adapter: ColorPreviewAdapter) {
         ColorPickerDialog.Builder(
             activity,
-            R.style.ThemeOverlay_MaterialComponents_Dialog_MyDialog
+            R.style.MaterialAlertDialog
         )
             .setTitle(requireActivity().getString(R.string.tips_choose_color_dialog))
             .setPreferenceName(SP_COLOR_PICKER_DIALOG)

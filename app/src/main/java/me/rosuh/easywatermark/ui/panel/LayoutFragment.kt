@@ -16,7 +16,7 @@ class LayoutFragment : BaseFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        val root = layoutInflater.inflate(R.layout.fragment_layout, null)
+        val root = layoutInflater.inflate(R.layout.fragment_layout, container, false)
         val tvProgressHorizon = root.findViewById<TextView>(
             R.id.tv_progress_horizon
         )
