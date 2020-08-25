@@ -5,6 +5,10 @@
 </p>
 </br>
 
+<p align="center">
+<img src="/static/preview.png"/>
+</p>
+
 ## 特性
 
 > 当时我就念了一首诗 👓
