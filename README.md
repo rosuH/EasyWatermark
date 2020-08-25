@@ -1,4 +1,4 @@
-# EasyWatermark
+# Watermark
 
 ## UI
 
