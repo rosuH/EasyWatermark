@@ -5,11 +5,9 @@ import android.content.Intent
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
-import android.os.PersistableBundle
 import androidx.core.content.ContextCompat
 import com.danielstone.materialaboutlibrary.MaterialAboutActivity
 import com.danielstone.materialaboutlibrary.items.MaterialAboutActionItem
-import com.danielstone.materialaboutlibrary.items.MaterialAboutTitleItem
 import com.danielstone.materialaboutlibrary.model.MaterialAboutCard
 import com.danielstone.materialaboutlibrary.model.MaterialAboutList
 import me.rosuh.easywatermark.BuildConfig
@@ -107,11 +105,32 @@ class AboutActivity : MaterialAboutActivity() {
                     }.build()
             )
 
+        val designBuilder = MaterialAboutCard.Builder()
+            .cardColor(ContextCompat.getColor(this, R.color.colorPrimaryDark))
+            .title(R.string.about_title_designer)
+            .addItem(
+                MaterialAboutActionItem.Builder()
+                    .text("Twowei")
+                    .icon(R.drawable.ic_author)
+                    .setOnClickAction {
+                        openLink("https://tovi.fun/")
+                    }.build()
+            )
+            .addItem(
+                MaterialAboutActionItem.Builder()
+                    .text(R.string.about_title_figma_link)
+                    .icon(R.drawable.ic_figma)
+                    .setOnClickAction {
+                        openLink("https://www.figma.com/@tovi")
+                    }.build()
+            )
+
 
         return MaterialAboutList.Builder()
             .addCard(aboutBuilder.build())
             .addCard(infoBuilder.build())
             .addCard(authorBuilder.build())
+            .addCard(designBuilder.build())
             .build()
     }
 }

@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:animateLayoutChanges="true"
+    android:background="@color/colorSecondary"
+    android:orientation="vertical">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/ll_save"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:background="?selectableItemBackground"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/iv_save"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="16dp"
+            android:src="@drawable/ic_save"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:visibility="invisible" />
+
+        <androidx.core.widget.ContentLoadingProgressBar
+            android:id="@+id/cpb_save"
+            style="@style/ProgressBarStyle"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            app:layout_constraintBottom_toBottomOf="@id/iv_save"
+            app:layout_constraintEnd_toEndOf="@id/iv_save"
+            app:layout_constraintStart_toStartOf="@id/iv_save"
+            app:layout_constraintTop_toTopOf="@id/iv_save" />
+
+        <TextView
+            android:id="@+id/tv_directly_save"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:gravity="center"
+            android:text="@string/save_directly"
+            app:layout_constraintStart_toEndOf="@+id/iv_save"
+            app:layout_constraintTop_toTopOf="@+id/iv_save" />
+
+        <TextView
+            android:id="@+id/tv_directly_save_tips"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/directly_save_tips"
+            android:textColor="@color/text_color_tips"
+            app:layout_constraintBottom_toBottomOf="@+id/iv_save"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0"
+            app:layout_constraintStart_toStartOf="@id/tv_directly_save"
+            app:layout_constraintTop_toBottomOf="@id/tv_directly_save" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/ll_share"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:layout_marginBottom="24dp"
+        android:background="?selectableItemBackground"
+        android:orientation="vertical"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="@id/ll_save"
+        app:layout_constraintTop_toBottomOf="@id/ll_save">
+
+        <ImageView
+            android:id="@+id/iv_share"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="16dp"
+            android:src="@drawable/ic_share"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <androidx.core.widget.ContentLoadingProgressBar
+            android:id="@+id/cpb_share"
+            style="@style/ProgressBarStyle"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            app:layout_constraintBottom_toBottomOf="@id/iv_share"
+            app:layout_constraintEnd_toEndOf="@id/iv_share"
+            app:layout_constraintStart_toStartOf="@id/iv_share"
+            app:layout_constraintTop_toTopOf="@id/iv_share" />
+
+        <TextView
+            android:id="@+id/tv_share"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:gravity="center"
+            android:text="@string/share"
+            app:layout_constraintStart_toEndOf="@+id/iv_share"
+            app:layout_constraintTop_toTopOf="@+id/iv_share" />
+
+        <TextView
+            android:id="@+id/tv_share_tips"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/share_tips"
+            android:textColor="@color/text_color_tips"
+            app:layout_constraintBottom_toBottomOf="@+id/iv_share"
+            app:layout_constraintStart_toStartOf="@+id/tv_share"
+            app:layout_constraintTop_toBottomOf="@+id/tv_share" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</LinearLayout>

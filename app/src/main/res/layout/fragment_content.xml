@@ -4,13 +4,14 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:animateLayoutChanges="true"
+    android:paddingBottom="12dp"
     android:scrollbars="vertical">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp"
-        tools:background="@color/colorPrimaryDark">
+        android:padding="16dp">
 
         <TextView
             android:id="@+id/tv_title_et"
@@ -21,71 +22,72 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tl_water_text"
-            android:layout_width="match_parent"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_text"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:hint="@string/hint_water_mark"
-            android:textColorHint="@color/swl_color_1"
-            app:layout_constraintEnd_toEndOf="parent"
+            android:text="@string/water_mark_mode_text"
+            android:textColor="@color/white"
+            android:textStyle="normal"
+            app:layout_constraintEnd_toStartOf="@id/btn_img"
+            app:layout_constraintHorizontal_chainStyle="packed"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/tv_title_et">
+            app:layout_constraintTop_toBottomOf="@+id/tv_title_et"
+            app:strokeColor="@color/white"
+            app:strokeWidth="1dp" />
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/et_water_text"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@color/colorPrimaryDark"
-                android:imeActionLabel="确认"
-                android:imeOptions="actionDone"
-                android:scrollbars="horizontal"
-                android:singleLine="true"
-                android:textColor="@color/textColor_Primary" />
-        </com.google.android.material.textfield.TextInputLayout>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_img"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="15dp"
+            android:text="@string/water_mark_mode_image"
+            android:textColor="@color/white"
+            android:textStyle="normal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/btn_text"
+            app:layout_constraintTop_toBottomOf="@+id/tv_title_et" />
 
         <TextView
             android:id="@+id/tv_title_style"
             style="@style/AppTheme.TitleText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="32dp"
             android:text="@string/title_text_style"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tl_water_text" />
+            app:layout_constraintTop_toBottomOf="@id/btn_text" />
 
-        <TextView
-            android:id="@+id/tv_text_style"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
+        <ImageView
+            android:id="@+id/iv_text_style"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_marginTop="10dp"
-            android:drawableTop="@drawable/ic_text_style_fill"
-            android:textColor="@color/textColor_Primary"
+            android:src="@drawable/ic_text_style_stroke"
+            app:layout_constraintBottom_toBottomOf="@+id/tv_title_style"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tv_title_style" />
+            app:layout_constraintTop_toTopOf="@+id/tv_title_style" />
 
         <TextView
             android:id="@+id/tv_tips_vertical"
             style="@style/AppTheme.TitleText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="28dp"
             android:text="@string/title_text_size"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/tv_text_style" />
+            app:layout_constraintTop_toBottomOf="@+id/iv_text_style" />
 
         <androidx.appcompat.widget.AppCompatSeekBar
-            android:id="@+id/sb_text_size"
+            android:id="@+id/sb_content_size"
             style="@style/MySeekBarStyle"
             android:layout_width="0dp"
-            android:layout_height="56dp"
-            android:layout_marginTop="10dp"
-            android:background="#fff"
+            android:layout_height="20dp"
+            android:layout_marginTop="12dp"
             android:focusable="false"
-            android:max="100"
+            android:max="500"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/tv_tips_vertical"
+            app:layout_constraintStart_toStartOf="@+id/tv_tips_vertical"
             app:layout_constraintTop_toBottomOf="@+id/tv_tips_vertical" />
 
         <TextView
@@ -95,9 +97,9 @@
             android:padding="3dp"
             android:textAlignment="center"
             android:textSize="14sp"
-            app:layout_constraintBottom_toBottomOf="@+id/sb_text_size"
-            app:layout_constraintStart_toStartOf="@+id/tv_tips_vertical"
-            app:layout_constraintTop_toTopOf="@+id/sb_text_size"
+            app:layout_constraintBottom_toBottomOf="@+id/tv_tips_vertical"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/tv_tips_vertical"
             tools:text="5" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,17 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#344955</color>
-    <color name="colorPrimaryDark">#232F34</color>
-    <color name="colorPrimaryDarker">#191D27</color>
-    <color name="colorAccent">#F9AA33</color>
+    <color name="colorPrimary">#000</color>
+    <color name="colorPrimaryDark">#000</color>
+    <color name="colorAccent">#ffc71c</color>
     <color name="colorAccent_30">#4D865900</color>
+    <color name="colorSecondary">#161616</color>
+    <color name="colorOnSurface">#BFFFFFFF</color>
 
-    <color name="button_focus">#865900</color>
-    <color name="text_color">#fff</color>
-    <color name="textColor_Primary">#fff</color>
-    <color name="swl_color_1">#99ffa900</color>
-    <color name="swl_color_2">#BFffa900</color>
-    <color name="swl_color_3">#CCffa900</color>
-    <color name="swl_color_4">#E6ffa900</color>
-    <color name="swl_color_5">#ffa900</color>
+    <color name="text_color_main">#fff</color>
+    <color name="text_color_tips">#80FFFFFF</color>
+
+    <color name="white">#fff</color>
+    <color name="white_14">#24FFFFFF</color>
+    <color name="white_30">#4DFFFFFF</color>
+
+    <color name="logoPrimary">#FFB800</color>
+<!--    <color name="logoPrimary">#FFD740</color>-->
+    <color name="logoBackground">#000</color>
 </resources>

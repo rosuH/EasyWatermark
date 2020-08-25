@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="SelectableImageView">
+        <attr name="siv_border_color" format="color" />
+        <attr name="siv_border_width" format="dimension" />
+        <attr name="siv_ring_color" format="color" />
+        <attr name="siv_ring_width" format="dimension" />
+        <attr name="siv_circle_width" format="dimension" />
+        <attr name="siv_src" format="reference" />
+        <attr name="siv_color" format="color" />
+    </declare-styleable>
+</resources>

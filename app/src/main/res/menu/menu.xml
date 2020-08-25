@@ -12,12 +12,6 @@
         android:id="@+id/action_save"
         android:icon="@drawable/ic_save"
         android:title="@string/action_save"
-        app:showAsAction="always" />
-
-    <item
-        android:id="@+id/action_share"
-        android:icon="@drawable/ic_send"
-        android:title="@string/action_send"
         app:showAsAction="ifRoom" />
 
     <item

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content">
+
+    <me.rosuh.easywatermark.widget.SelectableImageView
+        android:id="@+id/siv_color"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:layout_marginStart="9dp"
+        app:siv_border_color="@color/white"
+        app:siv_border_width="1dp"
+        app:siv_circle_width="28dp" />
+</FrameLayout>
