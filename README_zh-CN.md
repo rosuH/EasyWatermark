@@ -37,7 +37,7 @@
 ## 下载
 
 开发者所主导的下载渠道：
-- Github Release：永远保持最新
+- [Github Release](https://github.com/rosuH/EasyWatermark/releases)：永远保持最新
 - Google Play
   - ⚠️注意：此版本收费，但是代码完全一致，所以如果您愿意请作者喝一杯茶（或者您比较任性），那么请去此下载，否则请选择其他渠道:)
 - F-Droid
@@ -76,4 +76,4 @@
 当然您也可以直接联系开发者的 Telegram 或邮件，我们将择期回复。
 
 ## 隐私政策
-[隐私政策](https://github.com/rosuH/EasyWatermark/blob/PrivacyPolicy_zh-CN.md)
+[隐私政策](https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy_zh-CN.md)

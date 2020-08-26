@@ -1,6 +1,11 @@
 <h1 align="center">Easy Watermark</h1>
 
 <p align="center">  
+  <a href="https://github.com/rosuH/EasyWatermark/blob/master/README_zh-CN.md">简体中文</a>
+
+<p align="center">
+
+<p align="center">  
 Securely, easily add a watermark to your sensitive photos.</br>To prevent them from being leaked or exploited by the <b>BAD GUY</b>.
   </br>
 <p align="center">
@@ -36,7 +41,7 @@ Securely, easily add a watermark to your sensitive photos.</br>To prevent them f
 ## Download
 
 Developer-led download channels:
-- [Github Release](https://github.com/rosuH/EasyWatermark/release): Always stay up to date!
+- [Github Release](https://github.com/rosuH/EasyWatermark/releases): Always stay up to date!
 - Google Play
   - ⚠️Note: this version charges but the code is identical, so if you'd like to buy the author a cup of tea (or if you're more headstrong) then go here and download it, otherwise please choose another source :)
 - F-Droid
@@ -75,4 +80,4 @@ We welcome your comments and suggestions in the issues section, or you can contr
 Of course, you can also contact the developer directly via telegram or email and we'll get back to you shortly.
 
 ## Privacy policy
-[Privacy policy](https://github.com/rosuH/EasyWatermark/blob/PrivacyPolicy.md)
+[Privacy policy](https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy.md)
