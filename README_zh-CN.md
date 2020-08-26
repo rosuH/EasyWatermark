@@ -74,3 +74,6 @@
 ## 反馈与贡献
 我们非常欢迎您在 issues 区发表您任何意见与建议，或者直接提交 PR 以贡献您的代码。
 当然您也可以直接联系开发者的 Telegram 或邮件，我们将择期回复。
+
+## 隐私政策
+[隐私政策](https://github.com/rosuH/EasyWatermark/blob/PrivacyPolicy_zh-CN.md)
