@@ -49,6 +49,22 @@
             motion:layout_constraintTop_toBottomOf="@id/tv_tips_pick"
             motion:layout_constraintVertical_bias="0" />
 
+        <Constraint
+            android:id="@+id/iv_go_about_page"
+            style="@style/Widget.AppCompat.ActionButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:alpha="0.0"
+            android:rotation="90"
+            android:scaleX="0.0"
+            android:scaleY="0.0"
+            android:src="@drawable/ic_more"
+            motion:layout_constraintBottom_toBottomOf="parent"
+            motion:layout_constraintEnd_toEndOf="@id/tv_tips_pick"
+            motion:layout_constraintStart_toStartOf="@id/tv_tips_pick"
+            motion:layout_constraintTop_toBottomOf="@id/iv_picker_tips"
+            motion:layout_constraintVertical_bias="0.6" />
+
 
         <Constraint
             android:id="@+id/my_toolbar"
@@ -146,6 +162,22 @@
             motion:layout_constraintTop_toBottomOf="@id/tv_tips_pick" />
 
         <Constraint
+            android:id="@+id/iv_go_about_page"
+            style="@style/Widget.AppCompat.ActionButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:alpha="1.0"
+            android:rotation="90"
+            android:scaleX="1.0"
+            android:scaleY="1.0"
+            android:src="@drawable/ic_more"
+            motion:layout_constraintBottom_toBottomOf="parent"
+            motion:layout_constraintEnd_toEndOf="@id/tv_tips_pick"
+            motion:layout_constraintStart_toStartOf="@id/tv_tips_pick"
+            motion:layout_constraintTop_toBottomOf="@id/iv_picker_tips"
+            motion:layout_constraintVertical_bias="0.6" />
+
+        <Constraint
             android:id="@+id/iv_photo"
             android:layout_width="0dp"
             android:layout_height="0dp"
@@ -210,6 +242,22 @@
             motion:layout_constraintEnd_toEndOf="@id/tv_tips_pick"
             motion:layout_constraintStart_toStartOf="@id/tv_tips_pick"
             motion:layout_constraintTop_toBottomOf="@id/tv_tips_pick" />
+
+        <Constraint
+            android:id="@+id/iv_go_about_page"
+            style="@style/Widget.AppCompat.ActionButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:rotation="90"
+            android:scaleX="1.0"
+            android:scaleY="1.0"
+            android:src="@drawable/ic_more"
+            android:visibility="gone"
+            motion:layout_constraintBottom_toBottomOf="parent"
+            motion:layout_constraintEnd_toEndOf="@id/tv_tips_pick"
+            motion:layout_constraintStart_toStartOf="@id/tv_tips_pick"
+            motion:layout_constraintTop_toBottomOf="@id/iv_picker_tips"
+            motion:layout_constraintVertical_bias="0.6" />
 
         <Constraint
             android:id="@+id/tv_tips_pick"

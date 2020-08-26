@@ -20,7 +20,14 @@ class AboutActivity : MaterialAboutActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         supportActionBar?.apply {
-            setBackgroundDrawable(ColorDrawable(ContextCompat.getColor(this@AboutActivity, R.color.colorPrimary)))
+            setBackgroundDrawable(
+                ColorDrawable(
+                    ContextCompat.getColor(
+                        this@AboutActivity,
+                        R.color.colorPrimary
+                    )
+                )
+            )
         }
     }
 
@@ -81,6 +88,32 @@ class AboutActivity : MaterialAboutActivity() {
                     .icon(R.drawable.ic_open_source)
                     .setOnClickAction {
                         startActivity(Intent(this@AboutActivity, OpenSourceActivity::class.java))
+                    }.build()
+            )
+            .addItem(
+                MaterialAboutActionItem.Builder()
+                    .text(R.string.about_title_privacy_policy_zh)
+                    .icon(R.drawable.ic_baseline_priority_high)
+                    .setOnClickAction {
+                        val browserIntent =
+                            Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse("https://github.com/rosuH/EasyWatermark/blob/PrivacyPolicy_zh-CN.md")
+                            )
+                        startActivity(browserIntent)
+                    }.build()
+            )
+            .addItem(
+                MaterialAboutActionItem.Builder()
+                    .text(R.string.about_title_privacy_policy)
+                    .icon(R.drawable.ic_baseline_priority_high)
+                    .setOnClickAction {
+                        val browserIntent =
+                            Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse("https://github.com/rosuH/EasyWatermark/blob/PrivacyPolicy.md")
+                            )
+                        startActivity(browserIntent)
                     }.build()
             )
 
