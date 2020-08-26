@@ -76,4 +76,4 @@
 当然您也可以直接联系开发者的 Telegram 或邮件，我们将择期回复。
 
 ## 隐私政策
-[隐私政策](https://github.com/rosuH/EasyWatermark/blob/PrivacyPolicy_zh-CN.md)
+[隐私政策](https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy_zh-CN.md)
