@@ -317,7 +317,7 @@ class MainViewModel : ViewModel() {
         forceRefresh()
     }
 
-    fun updateIcon(activity: Activity, iconUri: Uri = config.value?.iconUri ?: Uri.parse("")) {
+    fun updateIcon(iconUri: Uri = config.value?.iconUri ?: Uri.parse("")) {
         config.value?.iconUri = iconUri
         viewModelScope.launch {
             if (iconUri.toString().isNotEmpty()) {
@@ -391,7 +391,9 @@ class MainViewModel : ViewModel() {
                     Dear developer, here are my crash info:
                     
                         $crashInfo
-                        
+                    =====================
+                    ${System.getProperty("os.version")}, ${Build.VERSION.SDK_INT}, ${Build.DEVICE}, ${Build.MODEL}, ${Build.PRODUCT}
+                    =====================
                     ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
                 """.trimIndent()
         val intent = Intent(Intent.ACTION_SEND).apply {

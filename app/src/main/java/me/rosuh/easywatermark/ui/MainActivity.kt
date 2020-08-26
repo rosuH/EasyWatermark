@@ -23,6 +23,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.MyApp
@@ -88,6 +89,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+    @ObsoleteCoroutinesApi
     private fun initObserver() {
         viewModel.config.observe(this, Observer<WaterMarkConfig> {
             if (it.uri.toString().isEmpty()) {
@@ -165,8 +167,14 @@ class MainActivity : AppCompatActivity() {
                 private var startY = 0f
                 private val verticalFac =
                     ViewConfigurationCompat.getScaledHoverSlop(ViewConfiguration.get(this@MainActivity))
-                private val leftArea = 0f..(iv_photo.width / 2).toFloat()
-                private val rightArea = (iv_photo.width / 2).toFloat()..(iv_photo.width.toFloat())
+                private val leftArea: ClosedFloatingPointRange<Float>
+                    get() {
+                        return 0f..(iv_photo.width / 2).toFloat()
+                    }
+                private val rightArea: ClosedFloatingPointRange<Float>
+                    get() {
+                        return (iv_photo.width / 2).toFloat()..(iv_photo.width.toFloat())
+                    }
 
                 override fun onTouch(v: View?, event: MotionEvent?): Boolean {
                     when (event?.actionMasked) {
@@ -323,7 +331,7 @@ class MainActivity : AppCompatActivity() {
             ICON_REQUEST_CODE -> {
                 if (resultCode == Activity.RESULT_OK) {
                     data?.data?.also { uri ->
-                        viewModel.updateIcon(this, uri)
+                        viewModel.updateIcon(uri)
                         takePersistableUriPermission(uri)
                     }
                 } else {

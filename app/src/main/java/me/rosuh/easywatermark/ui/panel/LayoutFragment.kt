@@ -32,10 +32,10 @@ class LayoutFragment : BaseFragment() {
                 config
             ) {
             }.apply {
-                inTimeAction = { seekBar: SeekBar?, i: Int, b: Boolean ->
+                inTimeAction = { seekBar: SeekBar?, _: Int, _: Boolean ->
                     tvProgressHorizon.text = seekBar?.progress.toString()
                 }
-                postAction = { seekBar: SeekBar?, i: Int ->
+                postAction = { seekBar: SeekBar?, _: Int ->
                     shareViewModel.updateHorizon(seekBar?.progress ?: 0)
                 }
             })
@@ -50,11 +50,11 @@ class LayoutFragment : BaseFragment() {
                 config
             ) {
             }.apply {
-                inTimeAction = { seekBar: SeekBar?, i: Int, b: Boolean ->
+                inTimeAction = { seekBar: SeekBar?, _: Int, _: Boolean ->
                     tvProgressVertical.text =
                         seekBar?.progress.toString()
                 }
-                postAction = { seekBar: SeekBar?, i: Int ->
+                postAction = { seekBar: SeekBar?, _: Int ->
                     shareViewModel.updateVertical(seekBar?.progress ?: 0)
                 }
             })

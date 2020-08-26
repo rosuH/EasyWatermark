@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import androidx.core.content.edit
 import me.rosuh.easywatermark.MyApp
+import me.rosuh.easywatermark.R
 
 class WaterMarkConfig {
     var uri: Uri
@@ -37,7 +38,8 @@ class WaterMarkConfig {
         ) {
             uri = Uri.parse("")
             val saveText = getString(SP_KEY_TEXT, "")
-            text = if (saveText.isNullOrEmpty()) "👋图片仅供测试，请勿作其他用途" else saveText
+            text =
+                if (saveText.isNullOrEmpty()) MyApp.instance.getString(R.string.config_default_water_mark_text) else saveText
             textSize = getFloat(SP_KEY_TEXT_SIZE, 18f)
             textColor = getInt(SP_KEY_TEXT_COLOR, Color.parseColor("#FFB800"))
             alpha = getInt(SP_KEY_ALPHA, 255)

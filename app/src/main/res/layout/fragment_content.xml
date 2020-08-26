@@ -27,7 +27,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/water_mark_mode_text"
+            android:textAllCaps="false"
             android:textColor="@color/white"
+            android:textSize="12sp"
             android:textStyle="normal"
             app:layout_constraintEnd_toStartOf="@id/btn_img"
             app:layout_constraintHorizontal_chainStyle="packed"
@@ -42,7 +44,9 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="15dp"
             android:text="@string/water_mark_mode_image"
+            android:textAllCaps="false"
             android:textColor="@color/white"
+            android:textSize="12sp"
             android:textStyle="normal"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@id/btn_text"
@@ -85,7 +89,7 @@
             android:layout_height="20dp"
             android:layout_marginTop="12dp"
             android:focusable="false"
-            android:max="500"
+            android:max="150"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="@+id/tv_tips_vertical"
             app:layout_constraintTop_toBottomOf="@+id/tv_tips_vertical" />
@@ -101,6 +105,19 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@+id/tv_tips_vertical"
             tools:text="5" />
+
+        <TextView
+            android:id="@+id/tv_size_tips"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="3dp"
+            android:text="@string/tips_content_size_performance"
+            android:textAlignment="center"
+            android:textColor="@color/text_color_tips"
+            android:textSize="14sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/sb_content_size" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.core.widget.NestedScrollView>

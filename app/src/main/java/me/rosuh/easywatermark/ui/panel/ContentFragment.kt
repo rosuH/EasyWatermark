@@ -73,10 +73,10 @@ class ContentFragment : BaseFragment() {
 
             ) {
             }.apply {
-                inTimeAction = { seekBar: SeekBar?, i: Int, b: Boolean ->
+                inTimeAction = { _: SeekBar?, _: Int, _: Boolean ->
                     tvContentSize.text = progress.toString()
                 }
-                postAction = { seekBar: SeekBar?, i: Int ->
+                postAction = { _: SeekBar?, _: Int ->
                     shareViewModel.updateTextSize(progress.toFloat())
                 }
             })

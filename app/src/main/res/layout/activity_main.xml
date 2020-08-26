@@ -97,10 +97,9 @@
         app:layout_constraintBottom_toTopOf="@+id/vp_control_panel"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:tabGravity="center"
+        app:tabGravity="fill"
         app:tabIndicatorColor="@color/colorAccent"
         app:tabIndicatorFullWidth="false"
-        app:tabMode="fixed"
         app:tabPaddingBottom="0dp">
 
         <com.google.android.material.tabs.TabItem
