@@ -21,7 +21,7 @@
     <string name="title_vertical_layout">垂直</string>
     <string name="title_text_color">颜色</string>
     <string name="title_text_rotate">角度</string>
-    <string name="text_zero_degree">0°</string>
+    <string name="text_zero_degree" translatable="false">0°</string>
     <string name="request_permission_failed">获取权限失败</string>
 
     <!--about page-->
@@ -37,12 +37,12 @@
     <string name="about_title_designer">设计者</string>
     <string name="about_title_repo_link">在 Github 上查看此项目</string>
     <string name="about_title_figma_link">查看他的更多作品</string>
-    <string name="open_source_desc_color_picker"><![CDATA[ColorPickerView implements getting HSV colors, ARGB values, Hex color codes from any image drawables or your gallery pictures by tapping on the desired color. Supports alpha & brightness slider bar, dialog, and saving & restoring selected data.]]></string>
-    <string name="open_source_desc_about_lib">Makes it easy to create a beautiful about screen for your app. Generates an Activity or Fragment. Idea from here: Heinrich Reimer\'s open-source-library-request-manager Design inspired by Phonograph If you use this library in your app, please let me know and I\'ll add it to the list.</string>
-    <string name="open_source_desc_material_components">Material Components for Android (MDC-Android) help developers execute Material Design. Developed by a core team of engineers and UX designers at Google, these components enable a reliable development workflow to build beautiful and functional Android apps.Material Components for Android is a drop-in replacement for Android\'s Design Support Library.</string>
+    <string name="open_source_desc_color_picker" translatable="false"><![CDATA[ColorPickerView implements getting HSV colors, ARGB values, Hex color codes from any image drawables or your gallery pictures by tapping on the desired color. Supports alpha & brightness slider bar, dialog, and saving & restoring selected data.]]></string>
+    <string name="open_source_desc_about_lib" translatable="false">Makes it easy to create a beautiful about screen for your app. Generates an Activity or Fragment. Idea from here: Heinrich Reimer\'s open-source-library-request-manager Design inspired by Phonograph If you use this library in your app, please let me know and I\'ll add it to the list.</string>
+    <string name="open_source_desc_material_components" translatable="false">Material Components for Android (MDC-Android) help developers execute Material Design. Developed by a core team of engineers and UX designers at Google, these components enable a reliable development workflow to build beautiful and functional Android apps.Material Components for Android is a drop-in replacement for Android\'s Design Support Library.</string>
     <string name="error_not_img">请选择图片</string>
     <string name="error_file_not_found">未选择图片或图片不存在</string>
-    <string name="tips_pick_image">选择图片，开始编辑\n↓</string>
+    <string name="tips_pick_image">选择图片，开始编辑 ↓</string>
     <string name="save_directly">直接保存</string>
     <string name="directly_save_tips">直接存储编辑后的图像到你的相册中</string>
     <string name="share_tips">分享编辑后的图像到其他应用</string>
@@ -64,5 +64,5 @@
     <string name="msg_crash">你愿意帮忙反馈错误信息吗？这样可以帮我们做得更好！这不会收集你的个人信息。</string>
     <string name="crash_mail">发送邮件</string>
     <string name="tip_not_mail_found">似乎没有安装邮件客户端，你可以主动粘贴错误信息到应用市场或 Github</string>
-    <string name="email_subject">[EasyWaterMark] Crash info</string>
+    <string name="email_subject" translatable="false">[EasyWaterMark] Crash info</string>
 </resources>
