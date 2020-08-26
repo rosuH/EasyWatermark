@@ -160,6 +160,9 @@ class MainActivity : AppCompatActivity() {
                 ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_logo_tool_bar)
             title = null
         }
+        iv_go_about_page.setOnClickListener {
+            startActivity(Intent(this, AboutActivity::class.java))
+        }
         iv_photo.apply {
 
             setOnTouchListener(object : View.OnTouchListener {

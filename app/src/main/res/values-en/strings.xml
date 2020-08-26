@@ -36,7 +36,7 @@
     <string name="about_title_figma_link">More project</string>
     <string name="error_not_img">You should choose a picture</string>
     <string name="error_file_not_found">Maybe the picture not exist</string>
-    <string name="tips_pick_image">Choose picture, go editing ↓</string>
+    <string name="tips_pick_image">"Choose picture, go editing "</string>
     <string name="save_directly">Save directly</string>
     <string name="directly_save_tips">Store the edited image directly in your photo album</string>
     <string name="share_tips">Share the edited image to other apps</string>

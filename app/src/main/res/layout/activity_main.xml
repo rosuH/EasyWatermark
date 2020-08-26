@@ -47,6 +47,19 @@
         app:layout_constraintTop_toBottomOf="@id/tv_tips_pick"
         app:layout_constraintVertical_bias="0" />
 
+    <ImageView
+        android:id="@+id/iv_go_about_page"
+        style="@style/Widget.AppCompat.ActionButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:rotation="90"
+        android:src="@drawable/ic_more"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@id/tv_tips_pick"
+        app:layout_constraintStart_toStartOf="@id/tv_tips_pick"
+        app:layout_constraintTop_toBottomOf="@id/iv_picker_tips"
+        app:layout_constraintVertical_bias="0.6" />
+
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/my_toolbar"
         android:layout_width="match_parent"
