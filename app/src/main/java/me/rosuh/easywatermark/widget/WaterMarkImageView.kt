@@ -54,6 +54,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     private var generateBitmapJob: Job? = null
 
+    @ObsoleteCoroutinesApi
     var config: WaterMarkConfig? = null
         set(value) {
             field = value
@@ -114,6 +115,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             }
         }
 
+    @ObsoleteCoroutinesApi
     private val paint: Paint by lazy {
         Paint().applyConfig(config)
     }
@@ -131,6 +133,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         limitBounds.set(0, 0, w, h)
     }
 
+    @ObsoleteCoroutinesApi
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
         if (config?.text.isNullOrEmpty() || config?.uri.toString().isEmpty()) {

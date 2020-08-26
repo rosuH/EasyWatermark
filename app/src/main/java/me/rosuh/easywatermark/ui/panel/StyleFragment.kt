@@ -83,7 +83,7 @@ class StyleFragment : BaseFragment() {
                 LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
             adapter =
                 ColorPreviewAdapter(colorArrayList)
-            onItemClick { recyclerView, position, v ->
+            onItemClick { recyclerView, position, _ ->
                 if (position == colorArrayList.size - 1 && activity != null) {
                     showColorPickerDialog(this.adapter as ColorPreviewAdapter)
                     return@onItemClick

@@ -28,8 +28,8 @@ class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
 
         var ivSave: View?
         var ivShare: View?
-        var cpbSave: ContentLoadingProgressBar? = null
-        var cpbShare: ContentLoadingProgressBar? = null
+        var cpbSave: ContentLoadingProgressBar?
+        var cpbShare: ContentLoadingProgressBar?
         val curState = shareViewModel.saveState.value ?: MainViewModel.State.Ready
         with(root) {
             findViewById<View>(R.id.ll_save).apply {

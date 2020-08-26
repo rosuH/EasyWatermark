@@ -317,7 +317,7 @@ class MainViewModel : ViewModel() {
         forceRefresh()
     }
 
-    fun updateIcon(activity: Activity, iconUri: Uri = config.value?.iconUri ?: Uri.parse("")) {
+    fun updateIcon(iconUri: Uri = config.value?.iconUri ?: Uri.parse("")) {
         config.value?.iconUri = iconUri
         viewModelScope.launch {
             if (iconUri.toString().isNotEmpty()) {
