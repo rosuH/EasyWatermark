@@ -98,7 +98,7 @@ class AboutActivity : MaterialAboutActivity() {
                         val browserIntent =
                             Intent(
                                 Intent.ACTION_VIEW,
-                                Uri.parse("https://github.com/rosuH/EasyWatermark/blob/PrivacyPolicy_zh-CN.md")
+                                Uri.parse("https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy_zh-CN.md")
                             )
                         startActivity(browserIntent)
                     }.build()
@@ -111,7 +111,7 @@ class AboutActivity : MaterialAboutActivity() {
                         val browserIntent =
                             Intent(
                                 Intent.ACTION_VIEW,
-                                Uri.parse("https://github.com/rosuH/EasyWatermark/blob/PrivacyPolicy.md")
+                                Uri.parse("https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy.md")
                             )
                         startActivity(browserIntent)
                     }.build()
