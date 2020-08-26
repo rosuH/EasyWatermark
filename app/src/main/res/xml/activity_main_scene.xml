@@ -263,7 +263,7 @@
             motion:layout_constraintBottom_toTopOf="@+id/vp_control_panel"
             motion:layout_constraintEnd_toEndOf="parent"
             motion:layout_constraintStart_toStartOf="parent"
-            motion:tabGravity="center"
+            motion:tabGravity="fill"
             motion:tabIndicatorColor="@color/colorAccent"
             motion:tabIndicatorFullWidth="false"
             motion:tabMode="fixed"

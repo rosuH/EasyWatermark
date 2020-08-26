@@ -66,4 +66,5 @@
     <string name="tip_not_mail_found">似乎没有安装邮件客户端，你可以主动粘贴错误信息到应用市场或 Github</string>
     <string name="email_subject" translatable="false">[EasyWaterMark] Crash info</string>
     <string name="tips_content_size_performance">尺寸越大，实时预览性能要求越高</string>
+    <string name="config_default_water_mark_text">👋图片仅供测试，请勿作其他用途</string>
 </resources>
