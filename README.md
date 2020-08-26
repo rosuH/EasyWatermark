@@ -36,7 +36,7 @@ Securely, easily add a watermark to your sensitive photos.</br>To prevent them f
 ## Download
 
 Developer-led download channels:
-- [Github Release](https://github.com/rosuH/EasyWatermark/release): Always stay up to date!
+- [Github Release](https://github.com/rosuH/EasyWatermark/releases): Always stay up to date!
 - Google Play
   - ⚠️Note: this version charges but the code is identical, so if you'd like to buy the author a cup of tea (or if you're more headstrong) then go here and download it, otherwise please choose another source :)
 - F-Droid
