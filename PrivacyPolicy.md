@@ -21,7 +21,7 @@ But if, after a crash, you actively send us information about your device, we'll
 <h3> 4. How we protect your personal information</h3>
 We don't actively collect information at all. And no personal information about you to worry about. We don't want, need or want to help you protect it.
 
-<h3> V. How you manage your personal confidence</h3>
+<h3> V. How you manage your personal information</h3>
 We don't actively collect information at all. And no personal information about you that you don't need or want to manage.
 
 <h3> VI. How this policy is updated</h3>
