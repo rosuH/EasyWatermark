@@ -38,10 +38,12 @@
 
 开发者所主导的下载渠道：
 - [Github Release](https://github.com/rosuH/EasyWatermark/releases)：永远保持最新
-- Google Play
+- [奶牛快传](https://rosu.cowtransfer.com/s/50464fc931dc4c): ⚡不限速下载，永远保持最新
+  - 如果你有意尝试奶牛快传，可以使用我的[邀请链接](https://cowtransfer.com/?lx_guid=d14511ff-0fb9-4add-9cf1-e22b63415f33) ;)
+- Google Play（审核中）
   - ⚠️注意：此版本收费，但是代码完全一致，所以如果您愿意请作者喝一杯茶（或者您比较任性），那么请去此下载，否则请选择其他渠道:)
-- F-Droid
-- 酷安
+- F-Droid（构建中）
+- 酷安（审核中）
 
 其他渠道均非开发者所主导，请仔细甄别后下载使用。
 
