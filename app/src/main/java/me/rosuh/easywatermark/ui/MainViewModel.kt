@@ -10,6 +10,7 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
@@ -99,7 +100,7 @@ class MainViewModel : ViewModel() {
             _saveState.postValue(State.Saving)
             try {
                 val outputUri =
-                    generateImage(activity.contentResolver, config.value?.uri ?: Uri.parse(""))
+                    generateImage(activity, config.value?.uri ?: Uri.parse(""))
                 if (outputUri?.toString().isNullOrEmpty()) {
                     throw FileNotFoundException()
                 }
@@ -141,7 +142,7 @@ class MainViewModel : ViewModel() {
             try {
                 _saveState.postValue(State.Sharing)
                 val outputUri =
-                    generateImage(activity.contentResolver, config.value?.uri ?: Uri.parse(""))
+                    generateImage(activity, config.value?.uri ?: Uri.parse(""))
                 if (outputUri?.toString().isNullOrEmpty()) {
                     _saveState.postValue(State.Error.apply {
                         msg = activity.getString(R.string.error_file_not_found)
@@ -171,8 +172,9 @@ class MainViewModel : ViewModel() {
     }
 
     @Throws(FileNotFoundException::class, OutOfMemoryError::class)
-    private suspend fun generateImage(resolver: ContentResolver, uri: Uri): Uri? =
+    private suspend fun generateImage(activity: Activity, uri: Uri): Uri? =
         withContext(Dispatchers.IO) {
+            val resolver = activity.contentResolver
             val mutableBitmap =
                 decodeBitmapFromUri(resolver, uri)?.copy(Bitmap.Config.ARGB_8888, true)
                     ?: return@withContext null
@@ -247,12 +249,24 @@ class MainViewModel : ViewModel() {
                 imageContentUri
             } else {
                 // need request write_storage permission
+                // should check Camera folder exist
+                val dcimFile: File = activity.getExternalFilesDir(Environment.DIRECTORY_DCIM)?:return@withContext null
+                if (!dcimFile.exists()){
+                    dcimFile.mkdir()
+                }
+                val mediaDir = File(dcimFile, "Camera")
+                if (!mediaDir.exists()) {
+                    mediaDir.mkdirs()
+                }
                 val u = MediaStore.Images.Media.insertImage(
                     resolver,
                     mutableBitmap,
                     "Easy_water_mark_${System.currentTimeMillis()}.jpg",
                     ""
                 )
+                if (u.isNullOrBlank()){
+                    return@withContext null
+                }
                 Uri.parse(u)
             }
         }
