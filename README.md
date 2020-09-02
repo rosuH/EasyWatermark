@@ -1,13 +1,17 @@
 <h1 align="center">Easy Watermark</h1>
 
+<p align="center">
+  <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/rosuh/easywatermark">
+</p>
+
 <p align="center">  
   <a href="https://github.com/rosuH/EasyWatermark/blob/master/README_zh-CN.md">简体中文</a>
-
 <p align="center">
 
 <p align="center">  
 Securely, easily add a watermark to your sensitive photos.</br>To prevent them from being leaked or exploited by the <b>BAD GUY</b>.
   </br>
+</p>
 <p align="center">
 <img src="/static/preview.png"/>
 </p>
@@ -16,6 +20,11 @@ Securely, easily add a watermark to your sensitive photos.</br>To prevent them f
 >
 > After all, it supports image watermarking with very ghostly effects.
 <a href="#" align="right"><img src="https://i.loli.net/2020/08/26/A53u6UbKZPYCv7t.jpg" width="5%"></a>
+
+<p align="left">
+<a href="https://play.google.com/store/apps/details?id=me.rosuh.easywatermark"><img src="/static/google-play-badge.png" width="auto" height="64px"/></a>
+  <a href="https://www.coolapk.com/apk/272743"><img src="/static/logo_coolapk.png" width="auto" height="64px"/></a>
+</p>
 
 ## Characteristics
 
@@ -42,10 +51,10 @@ Securely, easily add a watermark to your sensitive photos.</br>To prevent them f
 
 Developer-led download channels:
 - [Github Release](https://github.com/rosuH/EasyWatermark/releases): Always stay up to date!
-- Google Play
+- [Google Play](https://play.google.com/store/apps/details?id=me.rosuh.easywatermark)
   - ⚠️Note: this version charges but the code is identical, so if you'd like to buy the author a cup of tea🍵 then go here and download it, otherwise please choose another source :)
 - F-Droid
-- Coolapk
+- [Coolapk](https://www.coolapk.com/apk/272743)
 
 All other channels are not developer-driven, so please screen them carefully before downloading and using them.
 
