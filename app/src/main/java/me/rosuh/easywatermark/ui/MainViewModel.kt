@@ -250,24 +250,29 @@ class MainViewModel : ViewModel() {
             } else {
                 // need request write_storage permission
                 // should check Camera folder exist
-                val dcimFile: File = activity.getExternalFilesDir(Environment.DIRECTORY_DCIM)?:return@withContext null
-                if (!dcimFile.exists()){
-                    dcimFile.mkdir()
+                val picturesFile: File =
+                    activity.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+                        ?: return@withContext null
+                if (!picturesFile.exists()) {
+                    picturesFile.mkdir()
                 }
-                val mediaDir = File(dcimFile, "Camera")
+                val mediaDir =
+                    File(picturesFile, "Easy_water_mark_${System.currentTimeMillis()}.jpg")
+
                 if (!mediaDir.exists()) {
                     mediaDir.mkdirs()
                 }
-                val u = MediaStore.Images.Media.insertImage(
-                    resolver,
-                    mutableBitmap,
-                    "Easy_water_mark_${System.currentTimeMillis()}.jpg",
-                    ""
-                )
-                if (u.isNullOrBlank()){
-                    return@withContext null
+                val outputFile = File(mediaDir, "")
+                outputFile.outputStream().use { fileOutputStream ->
+                    mutableBitmap.compress(Bitmap.CompressFormat.JPEG, 100, fileOutputStream)
                 }
-                Uri.parse(u)
+                val outputUri = FileProvider.getUriForFile(
+                    activity,
+                    "me.rosuh.easywatermark.fileprovider",
+                    outputFile
+                )
+                resolver.notifyChange(outputUri, null)
+                outputUri
             }
         }
 
