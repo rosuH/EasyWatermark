@@ -1,5 +1,9 @@
 <h1 align="center">简单水印</h1>
 
+<p align="center">
+  <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/rosuh/easywatermark">
+</p>
+
 <p align="center">  
 安全、简单、快速地为你的敏感照片添加水印，防止被小人泄露、利用。
   </br>
@@ -13,6 +17,11 @@
 
 > 当然，也适用于制作表情包，毕竟支持图片水印，效果十分鬼畜。
 <a href="#" align="right"><img src="https://i.loli.net/2020/08/26/A53u6UbKZPYCv7t.jpg" width="5%"></a>
+
+<p align="left">
+<a href="https://play.google.com/store/apps/details?id=me.rosuh.easywatermark"><img src="/static/google-play-badge_cn.png" width="auto" height="64px"/></a>
+  <a href="https://www.coolapk.com/apk/272743"><img src="/static/logo_coolapk.png" width="auto" height="64px"/></a>
+</p>
 
 ## 特性
 
@@ -40,7 +49,7 @@
 - [Github Release](https://github.com/rosuH/EasyWatermark/releases)：永远保持最新
 - [奶牛快传](https://rosu.cowtransfer.com/s/50464fc931dc4c): ⚡不限速下载，永远保持最新
   - 如果你有意尝试奶牛快传，可以使用我的[邀请链接](https://cowtransfer.com/?lx_guid=d14511ff-0fb9-4add-9cf1-e22b63415f33) ;)
-- Google Play（审核中）
+- [Google Play](https://play.google.com/store/apps/details?id=me.rosuh.easywatermark)
   - ⚠️注意：此版本收费，但是代码完全一致，所以如果您愿意请作者喝一杯茶（或者您比较任性），那么请去此下载，否则请选择其他渠道:)
 - F-Droid（构建中）
 - [酷安](https://www.coolapk.com/apk/272743)
