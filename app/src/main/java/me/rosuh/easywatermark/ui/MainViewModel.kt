@@ -23,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ktx.applyConfig
 import me.rosuh.easywatermark.ktx.formatDate
@@ -268,7 +269,7 @@ class MainViewModel : ViewModel() {
                 }
                 val outputUri = FileProvider.getUriForFile(
                     activity,
-                    "me.rosuh.easywatermark.fileprovider",
+                    "${BuildConfig.APPLICATION_ID}.fileprovider",
                     outputFile
                 )
                 resolver.notifyChange(outputUri, null)
@@ -387,7 +388,7 @@ class MainViewModel : ViewModel() {
                 try {
                     val compressedFileUri = FileProvider.getUriForFile(
                         activity,
-                        "me.rosuh.easywatermark.fileprovider",
+                        "${BuildConfig.APPLICATION_ID}.fileprovider",
                         compressedFile
                     )
                     updateUri(compressedFileUri)
@@ -411,7 +412,10 @@ class MainViewModel : ViewModel() {
                     
                         $crashInfo
                     =====================
-                    ${System.getProperty("os.version")}, ${Build.VERSION.SDK_INT}, ${Build.DEVICE}, ${Build.MODEL}, ${Build.PRODUCT}
+                    APP:
+                    ${BuildConfig.VERSION_CODE}, ${BuildConfig.VERSION_NAME}, ${BuildConfig.FLAVOR} 
+                    Devices:
+                    ${Build.VERSION.RELEASE}, ${Build.VERSION.SDK_INT}, ${Build.DEVICE}, ${Build.MODEL}, ${Build.PRODUCT}, ${Build.MANUFACTURER}
                     =====================
                     ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
                 """.trimIndent()
