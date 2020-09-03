@@ -30,6 +30,7 @@ import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.ui.about.AboutActivity
+import me.rosuh.easywatermark.ui.dialog.ChangeLogDialogFragment
 import me.rosuh.easywatermark.ui.dialog.CompressImageDialogFragment
 import me.rosuh.easywatermark.ui.dialog.SaveImageBSDialogFragment
 import me.rosuh.easywatermark.ui.panel.ContentFragment
@@ -57,6 +58,7 @@ class MainActivity : AppCompatActivity() {
             checkHadCrash()
             // Activity was recycled but dialog still showing in some case?
             SaveImageBSDialogFragment.safetyHide(this@MainActivity.supportFragmentManager)
+            ChangeLogDialogFragment.safetyShow(this@MainActivity.supportFragmentManager)
         }
     }
 

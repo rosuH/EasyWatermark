@@ -408,6 +408,8 @@ class MainViewModel : ViewModel() {
                     Devices:
                     ${Build.VERSION.RELEASE}, ${Build.VERSION.SDK_INT}, ${Build.DEVICE}, ${Build.MODEL}, ${Build.PRODUCT}, ${Build.MANUFACTURER}
                     =====================
+                    ${activity.getString(R.string.contributor_info)}
+                    =====================
                     ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
                 """.trimIndent()
         val intent = Intent(Intent.ACTION_SEND).apply {
