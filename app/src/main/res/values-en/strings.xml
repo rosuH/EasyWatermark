@@ -60,4 +60,5 @@
     <string name="tip_not_mail_found">It seems that there is no mail client installed, you can actively paste the error message to the app market or Github</string>
     <string name="tips_content_size_performance">The larger the size, the more demanding the real-time preview performance.</string>
     <string name="config_default_water_mark_text">👋Photos are for testing purposes only.</string>
+    <string name="style_alpha">Alpha</string>
 </resources>

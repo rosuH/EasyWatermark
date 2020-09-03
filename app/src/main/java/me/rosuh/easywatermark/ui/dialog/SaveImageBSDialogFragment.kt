@@ -129,6 +129,12 @@ class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
             return SaveImageBSDialogFragment()
         }
 
+        fun safetyHide(manager: FragmentManager) {
+            kotlin.runCatching {
+                (manager.findFragmentByTag(TAG) as? SaveImageBSDialogFragment)?.dismissAllowingStateLoss()
+            }
+        }
+
         fun safetyShow(manager: FragmentManager) {
             try {
                 val f = manager.findFragmentByTag(TAG) as? SaveImageBSDialogFragment

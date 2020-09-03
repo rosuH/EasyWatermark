@@ -55,6 +55,8 @@ class MainActivity : AppCompatActivity() {
             cl_root.setTransition(R.id.transition_launch)
             cl_root.transitionToEnd()
             checkHadCrash()
+            // Activity was recycled but dialog still showing in some case?
+            SaveImageBSDialogFragment.safetyHide(this@MainActivity.supportFragmentManager)
         }
     }
 
@@ -229,6 +231,7 @@ class MainActivity : AppCompatActivity() {
 
         val pagerAdapter = ControlPanelPagerAdapter(this, fragmentArray)
         vp_control_panel.apply {
+            isUserInputEnabled = false
             offscreenPageLimit = 2
             adapter = pagerAdapter
         }

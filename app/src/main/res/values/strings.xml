@@ -69,4 +69,5 @@
     <string name="email_subject" translatable="false">[EasyWaterMark] Crash info</string>
     <string name="tips_content_size_performance">尺寸越大，实时预览性能要求越高</string>
     <string name="config_default_water_mark_text">👋图片仅供测试，请勿作其他用途</string>
+    <string name="style_alpha">透明度</string>
 </resources>

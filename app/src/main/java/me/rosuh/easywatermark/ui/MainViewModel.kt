@@ -12,7 +12,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
-import android.util.Log
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -372,19 +371,11 @@ class MainViewModel : ViewModel() {
                         input?.copyTo(output)
                     }
                 }
-                Log.i(
-                    "compressImg",
-                    "Before compress: file ${tmpFile.absolutePath}, length = ${tmpFile.length()}"
-                )
                 val compressedFile = Compressor.compress(activity, tmpFile)
                 // clear tmp files
                 if (tmpFile.exists()) {
                     tmpFile.delete()
                 }
-                Log.i(
-                    "compressImg",
-                    "After compress: compressedFile ${compressedFile.absolutePath}, length = ${compressedFile.length()}"
-                )
                 try {
                     val compressedFileUri = FileProvider.getUriForFile(
                         activity,
