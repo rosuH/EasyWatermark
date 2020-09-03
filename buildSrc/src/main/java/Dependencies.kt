@@ -48,6 +48,8 @@ object Versions {
     const val compressor = "3.0.0"
 
     const val junit = "4.12"
+
+    const val gifDrawable = "1.2.19"
 }
 
 object Libs {
@@ -81,6 +83,8 @@ object Libs {
     const val coreKtx = "org.jetbrains.kotlin:kotlin-stdlib:${Versions.coreKtx}"
 
     const val appcompat = "androidx.appcompat:appcompat:${Versions.appcompat}"
+
+    const val gifDrawable = "pl.droidsonroids.gif:android-gif-drawable:${Versions.gifDrawable}"
 }
 
 object TestLibs {

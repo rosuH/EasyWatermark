@@ -36,6 +36,8 @@ import me.rosuh.easywatermark.ui.dialog.SaveImageBSDialogFragment
 import me.rosuh.easywatermark.ui.panel.ContentFragment
 import me.rosuh.easywatermark.ui.panel.LayoutFragment
 import me.rosuh.easywatermark.ui.panel.StyleFragment
+import pl.droidsonroids.gif.GifDrawable
+import pl.droidsonroids.gif.GifImageView
 import kotlin.math.abs
 
 
@@ -53,6 +55,7 @@ class MainActivity : AppCompatActivity() {
         scope.launch {
             initView()
             initObserver()
+            (iv_logo.drawable as? GifDrawable)?.start()
             cl_root.setTransition(R.id.transition_launch)
             cl_root.transitionToEnd()
             checkHadCrash()
@@ -103,6 +106,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 cl_root.setTransition(R.id.transition_open_image)
                 cl_root.transitionToEnd()
+                (iv_logo.drawable as? GifDrawable)?.stop()
                 iv_photo?.config = it
             } catch (se: SecurityException) {
                 se.printStackTrace()

@@ -78,9 +78,11 @@
         调节透明度的选项。虽然在预览区左侧，上下滑动也可以调节，但是你们好像都不太喜欢这种方式😄\n\n
         (感谢：e**oc, la**r)\n\n
         <u><big>调整</big></u> \n\n
-        控制面板禁止滑动，降低调节参数的误触问题 \n\n
+        · 控制面板禁止滑动，降低调节参数的误触问题 \n\n
+        · 使用了全新的 Icon，感谢我们的设计师！@Twowei\n\n
         <u><big>修复</big></u> \n\n
         修复部分低版本手机保存图片时崩溃的问题。\n (感谢：2**9@qq.com, a**liang)\n\n
     </string>
     <string name="open_source_desc_compressor" translatable="false">"Compressor is a lightweight and powerful android image compression library. Compressor will allow you to compress large photos into smaller sized photos with very less or negligible loss in quality of the image. "</string>
+    <string name="open_source_desc_gif" translatable="false">Bundled GIFLib via JNI is used to render frames. This way should be more efficient than WebView or Movie classes.</string>
 </resources>

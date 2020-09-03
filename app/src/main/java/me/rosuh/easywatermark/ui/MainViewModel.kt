@@ -249,20 +249,18 @@ class MainViewModel : ViewModel() {
                 imageContentUri
             } else {
                 // need request write_storage permission
-                // should check Camera folder exist
-                val picturesFile: File =
-                    activity.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+                // should check Pictures folder exist
+                val picturesFile: File = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
                         ?: return@withContext null
                 if (!picturesFile.exists()) {
                     picturesFile.mkdir()
                 }
-                val mediaDir =
-                    File(picturesFile, "Easy_water_mark_${System.currentTimeMillis()}.jpg")
+                val mediaDir = File(picturesFile, "EasyWaterMark")
 
                 if (!mediaDir.exists()) {
                     mediaDir.mkdirs()
                 }
-                val outputFile = File(mediaDir, "")
+                val outputFile = File(mediaDir, "ewm_${System.currentTimeMillis()}.jpg")
                 outputFile.outputStream().use { fileOutputStream ->
                     mutableBitmap.compress(Bitmap.CompressFormat.JPEG, 100, fileOutputStream)
                 }
@@ -271,7 +269,12 @@ class MainViewModel : ViewModel() {
                     "${BuildConfig.APPLICATION_ID}.fileprovider",
                     outputFile
                 )
-                resolver.notifyChange(outputUri, null)
+                activity.sendBroadcast(
+                    Intent(
+                        Intent.ACTION_MEDIA_SCANNER_SCAN_FILE,
+                        Uri.fromFile(outputFile)
+                    )
+                )
                 outputUri
             }
         }
