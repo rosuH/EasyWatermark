@@ -10,8 +10,8 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.provider.MediaStore
-import android.util.Log
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -22,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ktx.applyConfig
 import me.rosuh.easywatermark.ktx.formatDate
@@ -99,7 +100,7 @@ class MainViewModel : ViewModel() {
             _saveState.postValue(State.Saving)
             try {
                 val outputUri =
-                    generateImage(activity.contentResolver, config.value?.uri ?: Uri.parse(""))
+                    generateImage(activity, config.value?.uri ?: Uri.parse(""))
                 if (outputUri?.toString().isNullOrEmpty()) {
                     throw FileNotFoundException()
                 }
@@ -141,7 +142,7 @@ class MainViewModel : ViewModel() {
             try {
                 _saveState.postValue(State.Sharing)
                 val outputUri =
-                    generateImage(activity.contentResolver, config.value?.uri ?: Uri.parse(""))
+                    generateImage(activity, config.value?.uri ?: Uri.parse(""))
                 if (outputUri?.toString().isNullOrEmpty()) {
                     _saveState.postValue(State.Error.apply {
                         msg = activity.getString(R.string.error_file_not_found)
@@ -171,8 +172,9 @@ class MainViewModel : ViewModel() {
     }
 
     @Throws(FileNotFoundException::class, OutOfMemoryError::class)
-    private suspend fun generateImage(resolver: ContentResolver, uri: Uri): Uri? =
+    private suspend fun generateImage(activity: Activity, uri: Uri): Uri? =
         withContext(Dispatchers.IO) {
+            val resolver = activity.contentResolver
             val mutableBitmap =
                 decodeBitmapFromUri(resolver, uri)?.copy(Bitmap.Config.ARGB_8888, true)
                     ?: return@withContext null
@@ -247,13 +249,33 @@ class MainViewModel : ViewModel() {
                 imageContentUri
             } else {
                 // need request write_storage permission
-                val u = MediaStore.Images.Media.insertImage(
-                    resolver,
-                    mutableBitmap,
-                    "Easy_water_mark_${System.currentTimeMillis()}.jpg",
-                    ""
+                // should check Pictures folder exist
+                val picturesFile: File = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                        ?: return@withContext null
+                if (!picturesFile.exists()) {
+                    picturesFile.mkdir()
+                }
+                val mediaDir = File(picturesFile, "EasyWaterMark")
+
+                if (!mediaDir.exists()) {
+                    mediaDir.mkdirs()
+                }
+                val outputFile = File(mediaDir, "ewm_${System.currentTimeMillis()}.jpg")
+                outputFile.outputStream().use { fileOutputStream ->
+                    mutableBitmap.compress(Bitmap.CompressFormat.JPEG, 100, fileOutputStream)
+                }
+                val outputUri = FileProvider.getUriForFile(
+                    activity,
+                    "${BuildConfig.APPLICATION_ID}.fileprovider",
+                    outputFile
                 )
-                Uri.parse(u)
+                activity.sendBroadcast(
+                    Intent(
+                        Intent.ACTION_MEDIA_SCANNER_SCAN_FILE,
+                        Uri.fromFile(outputFile)
+                    )
+                )
+                outputUri
             }
         }
 
@@ -352,23 +374,15 @@ class MainViewModel : ViewModel() {
                         input?.copyTo(output)
                     }
                 }
-                Log.i(
-                    "compressImg",
-                    "Before compress: file ${tmpFile.absolutePath}, length = ${tmpFile.length()}"
-                )
                 val compressedFile = Compressor.compress(activity, tmpFile)
                 // clear tmp files
                 if (tmpFile.exists()) {
                     tmpFile.delete()
                 }
-                Log.i(
-                    "compressImg",
-                    "After compress: compressedFile ${compressedFile.absolutePath}, length = ${compressedFile.length()}"
-                )
                 try {
                     val compressedFileUri = FileProvider.getUriForFile(
                         activity,
-                        "me.rosuh.easywatermark.fileprovider",
+                        "${BuildConfig.APPLICATION_ID}.fileprovider",
                         compressedFile
                     )
                     updateUri(compressedFileUri)
@@ -392,7 +406,12 @@ class MainViewModel : ViewModel() {
                     
                         $crashInfo
                     =====================
-                    ${System.getProperty("os.version")}, ${Build.VERSION.SDK_INT}, ${Build.DEVICE}, ${Build.MODEL}, ${Build.PRODUCT}
+                    APP:
+                    ${BuildConfig.VERSION_CODE}, ${BuildConfig.VERSION_NAME}, ${BuildConfig.FLAVOR} 
+                    Devices:
+                    ${Build.VERSION.RELEASE}, ${Build.VERSION.SDK_INT}, ${Build.DEVICE}, ${Build.MODEL}, ${Build.PRODUCT}, ${Build.MANUFACTURER}
+                    =====================
+                    ${activity.getString(R.string.contributor_info)}
                     =====================
                     ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
                 """.trimIndent()

@@ -30,11 +30,14 @@ import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.ui.about.AboutActivity
+import me.rosuh.easywatermark.ui.dialog.ChangeLogDialogFragment
 import me.rosuh.easywatermark.ui.dialog.CompressImageDialogFragment
 import me.rosuh.easywatermark.ui.dialog.SaveImageBSDialogFragment
 import me.rosuh.easywatermark.ui.panel.ContentFragment
 import me.rosuh.easywatermark.ui.panel.LayoutFragment
 import me.rosuh.easywatermark.ui.panel.StyleFragment
+import pl.droidsonroids.gif.GifDrawable
+import pl.droidsonroids.gif.GifImageView
 import kotlin.math.abs
 
 
@@ -44,6 +47,7 @@ class MainActivity : AppCompatActivity() {
 
     private val scope = MainScope()
 
+    @ObsoleteCoroutinesApi
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -51,9 +55,13 @@ class MainActivity : AppCompatActivity() {
         scope.launch {
             initView()
             initObserver()
+            (iv_logo.drawable as? GifDrawable)?.start()
             cl_root.setTransition(R.id.transition_launch)
             cl_root.transitionToEnd()
             checkHadCrash()
+            // Activity was recycled but dialog still showing in some case?
+            SaveImageBSDialogFragment.safetyHide(this@MainActivity.supportFragmentManager)
+            ChangeLogDialogFragment.safetyShow(this@MainActivity.supportFragmentManager)
         }
     }
 
@@ -98,6 +106,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 cl_root.setTransition(R.id.transition_open_image)
                 cl_root.transitionToEnd()
+                (iv_logo.drawable as? GifDrawable)?.stop()
                 iv_photo?.config = it
             } catch (se: SecurityException) {
                 se.printStackTrace()
@@ -228,6 +237,7 @@ class MainActivity : AppCompatActivity() {
 
         val pagerAdapter = ControlPanelPagerAdapter(this, fragmentArray)
         vp_control_panel.apply {
+            isUserInputEnabled = false
             offscreenPageLimit = 2
             adapter = pagerAdapter
         }

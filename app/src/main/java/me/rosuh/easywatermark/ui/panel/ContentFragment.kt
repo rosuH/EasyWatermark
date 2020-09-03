@@ -68,16 +68,16 @@ class ContentFragment : BaseFragment() {
             with(shareViewModel.config.value?.textSize ?: 14f) {
                 progress = this.toInt()
             }
-            setOnSeekBarChangeListener(object : DetectedPerformanceSeekBarListener(
-                config
+            setOnSeekBarChangeListener(object : DetectedPerformanceSeekBarListener(config) {
 
-            ) {
             }.apply {
                 inTimeAction = { _: SeekBar?, _: Int, _: Boolean ->
                     tvContentSize.text = progress.toString()
                 }
-                postAction = { _: SeekBar?, _: Int ->
-                    shareViewModel.updateTextSize(progress.toFloat())
+                postAction = { _: SeekBar?, _: Int, fromUser: Boolean ->
+                    if (fromUser) {
+                        shareViewModel.updateTextSize(progress.toFloat())
+                    }
                 }
             })
         }

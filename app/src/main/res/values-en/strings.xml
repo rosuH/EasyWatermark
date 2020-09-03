@@ -60,4 +60,18 @@
     <string name="tip_not_mail_found">It seems that there is no mail client installed, you can actively paste the error message to the app market or Github</string>
     <string name="tips_content_size_performance">The larger the size, the more demanding the real-time preview performance.</string>
     <string name="config_default_water_mark_text">👋Photos are for testing purposes only.</string>
+    <string name="style_alpha">Alpha</string>
+    <string name="contributor_info">When the feedback problem is valid and is fixed or a new version is added, your name or email will appear in the update log pop-up window. We will obscure your information and the full name will not appear. \\n If you do not want to appear, please mark: I do not want to.</string>
+    <string name="dialog_change_log_title">Change log</string>
+    <string name="dialog_change_log_content">
+        Thank you for your feedback. The main update of this version is:\n\n
+        <u><big>New</big></u> \n\n
+        Options for adjusting transparency. Although on the left side of the preview area, sliding up and down can also be adjusted, but you don’t seem to like this method very much. 😄\n\n
+        (Thanks: e**oc, la**r)\n\n
+        <u><big>Adjustment</big></u> \n\n
+        · The control panel is forbidden to slide to reduce the false touch of the adjustment parameters. \n
+        · Used a brand new Icon, thanks to our designers! @Twowei \n\n
+        <u><big>Fix</big></u> \n\n
+        Fix the crash of some lower version phones when saving pictures problem. (Thanks: 2**9@qq.com, a**liang)\n
+    </string>
 </resources>

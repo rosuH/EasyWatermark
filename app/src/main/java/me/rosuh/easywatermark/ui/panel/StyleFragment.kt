@@ -70,8 +70,32 @@ class StyleFragment : BaseFragment() {
                 inTimeAction = { _: SeekBar?, _: Int, _: Boolean ->
                     tvDegree.text = "${shareViewModel.config.value?.degree ?: 0}°"
                 }
-                postAction =
-                    { _: SeekBar?, _: Int -> shareViewModel.updateDegree(progress.toFloat()) }
+                postAction = { _: SeekBar?, _: Int, fromUser: Boolean ->
+                    if (fromUser) {
+                        shareViewModel.updateDegree(progress.toFloat())
+                    }
+                }
+            })
+        }
+
+        val tvAlpha = root.findViewById<TextView>(R.id.tv_tips_alpha).apply {
+            text = "${getAlphaValue()}%"
+        }
+        val sbAlpha = root.findViewById<SeekBar>(R.id.sb_alpha).apply {
+            progress = getAlphaValue()
+            setOnSeekBarChangeListener(object :
+                DetectedPerformanceSeekBarListener(
+                    config
+                ) {
+            }.apply {
+                inTimeAction = { _: SeekBar?, p: Int, _: Boolean ->
+                    tvAlpha.text = "${p}%"
+                }
+                postAction = { _: SeekBar?, p: Int, fromUser: Boolean ->
+                    if (fromUser) {
+                        shareViewModel.updateAlpha((p.toFloat() / 100 * 255).toInt())
+                    }
+                }
             })
         }
 
@@ -95,7 +119,27 @@ class StyleFragment : BaseFragment() {
                 }
             }
         }
+        initObserver(sbAlpha, tvAlpha)
         return root
+    }
+
+    private fun getAlphaValue(): Int {
+        return ((shareViewModel.config.value?.alpha ?: 255).toFloat() / 255 * 100).toInt()
+            .coerceAtLeast(0).coerceAtMost(100)
+    }
+
+    private fun initObserver(
+        sbAlpha: SeekBar,
+        tvAlpha: TextView
+    ) {
+        shareViewModel.config.observe(viewLifecycleOwner, {
+            with(it.alpha) {
+                val intAlpha =
+                    (this.toFloat() / 255 * 100).toInt().coerceAtLeast(0).coerceAtMost(100)
+                sbAlpha.progress = intAlpha
+                tvAlpha.text = "${intAlpha}%"
+            }
+        })
     }
 
     private fun showColorPickerDialog(adapter: ColorPreviewAdapter) {

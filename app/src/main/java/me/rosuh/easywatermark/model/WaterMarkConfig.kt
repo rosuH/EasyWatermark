@@ -130,5 +130,7 @@ class WaterMarkConfig {
         const val SP_KEY_DEGREE = SP_NAME + "_key_degree"
         const val SP_KEY_ICON_URI = SP_NAME + "_key_icon_uri"
         const val SP_KEY_MODE = SP_NAME + "_key_type"
+        const val SP_KEY_CHANGE_LOG = SP_NAME + "_key_change_log"
+
     }
 }

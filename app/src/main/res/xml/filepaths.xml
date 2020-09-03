@@ -3,4 +3,7 @@
     <cache-path
         name="my_compressor_images"
         path="compressor/"/>
+    <external-path
+        name="my_external_dir"
+        path="Pictures/EasyWaterMark/"/>
 </paths>

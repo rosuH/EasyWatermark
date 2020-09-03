@@ -35,7 +35,7 @@ class LayoutFragment : BaseFragment() {
                 inTimeAction = { seekBar: SeekBar?, _: Int, _: Boolean ->
                     tvProgressHorizon.text = seekBar?.progress.toString()
                 }
-                postAction = { seekBar: SeekBar?, _: Int ->
+                postAction = { seekBar: SeekBar?, _: Int, _ ->
                     shareViewModel.updateHorizon(seekBar?.progress ?: 0)
                 }
             })
@@ -54,7 +54,7 @@ class LayoutFragment : BaseFragment() {
                     tvProgressVertical.text =
                         seekBar?.progress.toString()
                 }
-                postAction = { seekBar: SeekBar?, _: Int ->
+                postAction = { seekBar: SeekBar?, _: Int, _ ->
                     shareViewModel.updateVertical(seekBar?.progress ?: 0)
                 }
             })

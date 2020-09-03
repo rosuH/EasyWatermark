@@ -23,7 +23,7 @@ open class DetectedPerformanceSeekBarListener(
 
     var inTimeAction: (SeekBar?, Int, Boolean) -> Unit = { _, _, _ -> }
 
-    var postAction: (SeekBar?, Int) -> Unit = { _, _ -> }
+    var postAction: (SeekBar?, Int, Boolean) -> Unit = { _, _, _ -> }
 
     private var isHighPerformancePredicate: () -> Boolean = {
         config?.markMode == WaterMarkConfig.MarkMode.Text
@@ -32,7 +32,7 @@ open class DetectedPerformanceSeekBarListener(
 
     override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
         if (isHighPerformancePredicate()) {
-            seekBar?.progress?.let { postAction.invoke(seekBar, it) }
+            seekBar?.progress?.let { postAction.invoke(seekBar, it, fromUser) }
         }
         inTimeAction.invoke(seekBar, progress, fromUser)
     }
@@ -43,7 +43,7 @@ open class DetectedPerformanceSeekBarListener(
 
     override fun onStopTrackingTouch(seekBar: SeekBar?) {
         if (!isHighPerformancePredicate()) {
-            seekBar?.progress?.let { postAction.invoke(seekBar, it) }
+            seekBar?.progress?.let { postAction.invoke(seekBar, it, true) }
         }
     }
 

@@ -28,5 +28,13 @@ class OpenSourceActivity : AppCompatActivity() {
         card_material_components.setOnClickListener {
             openLink("https://github.com/material-components/material-components-android")
         }
+
+        card_material_compressor.setOnClickListener {
+            openLink("https://github.com/zetbaitsu/Compressor/")
+        }
+
+        card_gif.setOnClickListener {
+            openLink("https://github.com/koral--/android-gif-drawable")
+        }
     }
 }
