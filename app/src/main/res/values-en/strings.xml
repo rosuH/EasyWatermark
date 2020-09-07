@@ -74,4 +74,6 @@
         <u><big>Fix</big></u> \n\n
         Fix the crash of some lower version phones when saving pictures problem. (Thanks: 2**9@qq.com, a**liang)\n
     </string>
+    <string name="tips_not_app_can_open_imaegs">It looks like you have no file manager installed</string>
+    <string name="tips_choose_other_file_type">Looks like you chose not a picture</string>
 </resources>

@@ -7,6 +7,7 @@
     <string name="title_style">样式</string>
     <string name="title_content">内容</string>
     <string name="tips_do_not_choose_image">没有选择图片</string>
+    <string name="tips_choose_other_file_type">貌似你选择的不是图片</string>
     <string name="tips_choose_color_dialog">选择颜色</string>
     <string name="tips_confirm_dialog">确认</string>
     <string name="tips_cancel_dialog">取消</string>
@@ -85,4 +86,5 @@
     </string>
     <string name="open_source_desc_compressor" translatable="false">"Compressor is a lightweight and powerful android image compression library. Compressor will allow you to compress large photos into smaller sized photos with very less or negligible loss in quality of the image. "</string>
     <string name="open_source_desc_gif" translatable="false">Bundled GIFLib via JNI is used to render frames. This way should be more efficient than WebView or Movie classes.</string>
+    <string name="tips_not_app_can_open_imaegs">看起来您安装没有文件管理器？</string>
 </resources>

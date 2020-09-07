@@ -36,8 +36,8 @@ import me.rosuh.easywatermark.ui.dialog.SaveImageBSDialogFragment
 import me.rosuh.easywatermark.ui.panel.ContentFragment
 import me.rosuh.easywatermark.ui.panel.LayoutFragment
 import me.rosuh.easywatermark.ui.panel.StyleFragment
+import me.rosuh.easywatermark.utils.FileUtils
 import pl.droidsonroids.gif.GifDrawable
-import pl.droidsonroids.gif.GifImageView
 import kotlin.math.abs
 
 
@@ -297,12 +297,21 @@ class MainActivity : AppCompatActivity() {
                     or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                     or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
             addCategory(Intent.CATEGORY_OPENABLE)
-            type = "image/*"
+            type = "*/*"
         }
-        startActivityForResult(
-            intent,
-            requestCode
-        )
+        val result = kotlin.runCatching {
+            startActivityForResult(
+                intent,
+                requestCode
+            )
+        }
+        if (result.isFailure) {
+            Toast.makeText(
+                this,
+                getString(R.string.tips_not_app_can_open_imaegs),
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
 
     override fun onRequestPermissionsResult(
@@ -325,35 +334,39 @@ class MainActivity : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode != Activity.RESULT_OK) {
+            Toast.makeText(
+                this,
+                getString(R.string.tips_do_not_choose_image),
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
         when (requestCode) {
             READ_REQUEST_CODE -> {
-                if (resultCode == Activity.RESULT_OK) {
-                    data?.data?.also { uri ->
-                        viewModel.updateUri(uri)
-                        takePersistableUriPermission(uri)
-                    }
+                val uri = data?.data
+                if (FileUtils.isImage(this.contentResolver, uri)) {
+                    viewModel.updateUri(uri!!)
+                    takePersistableUriPermission(uri)
                 } else {
                     Toast.makeText(
                         this,
-                        getString(R.string.tips_do_not_choose_image),
+                        getString(R.string.tips_choose_other_file_type),
                         Toast.LENGTH_SHORT
-                    )
-                        .show()
+                    ).show()
                 }
             }
             ICON_REQUEST_CODE -> {
-                if (resultCode == Activity.RESULT_OK) {
-                    data?.data?.also { uri ->
-                        viewModel.updateIcon(uri)
-                        takePersistableUriPermission(uri)
-                    }
+                val uri = data?.data
+                if (FileUtils.isImage(this.contentResolver, uri)) {
+                    viewModel.updateIcon(uri!!)
+                    takePersistableUriPermission(uri)
                 } else {
                     Toast.makeText(
                         this,
-                        getString(R.string.tips_do_not_choose_image),
+                        getString(R.string.tips_choose_other_file_type),
                         Toast.LENGTH_SHORT
-                    )
-                        .show()
+                    ).show()
                 }
             }
         }

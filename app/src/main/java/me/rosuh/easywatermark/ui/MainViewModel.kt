@@ -2,7 +2,9 @@ package me.rosuh.easywatermark.ui
 
 import android.Manifest
 import android.app.Activity
-import android.content.*
+import android.content.ActivityNotFoundException
+import android.content.ContentValues
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -27,6 +29,7 @@ import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ktx.applyConfig
 import me.rosuh.easywatermark.ktx.formatDate
 import me.rosuh.easywatermark.model.WaterMarkConfig
+import me.rosuh.easywatermark.utils.FileUtils.Companion.outPutFolderName
 import me.rosuh.easywatermark.utils.decodeBitmapFromUri
 import me.rosuh.easywatermark.utils.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.widget.WaterMarkImageView
@@ -226,25 +229,23 @@ class MainViewModel : ViewModel() {
                 val imageDetail = ContentValues().apply {
                     put(
                         MediaStore.Images.Media.DISPLAY_NAME,
-                        "Easy_water_mark_${System.currentTimeMillis()}.jpg"
+                        "ewm_${System.currentTimeMillis()}.jpg"
                     )
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        put(MediaStore.Images.Media.IS_PENDING, 1)
-                    }
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                    put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/${outPutFolderName}/")
+                    put(MediaStore.Images.Media.IS_PENDING, 1)
                 }
 
                 val imageContentUri = resolver.insert(imageCollection, imageDetail)
                 resolver.openFileDescriptor(imageContentUri!!, "w", null).use { pfd ->
                     mutableBitmap.compress(
-                        Bitmap.CompressFormat.PNG,
+                        Bitmap.CompressFormat.JPEG,
                         100,
                         FileOutputStream(pfd!!.fileDescriptor)
                     )
                 }
                 imageDetail.clear()
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    imageDetail.put(MediaStore.Images.Media.IS_PENDING, 0)
-                }
+                imageDetail.put(MediaStore.Images.Media.IS_PENDING, 0)
                 resolver.update(imageContentUri, imageDetail, null, null)
                 imageContentUri
             } else {
@@ -255,7 +256,7 @@ class MainViewModel : ViewModel() {
                 if (!picturesFile.exists()) {
                     picturesFile.mkdir()
                 }
-                val mediaDir = File(picturesFile, "EasyWaterMark")
+                val mediaDir = File(picturesFile, outPutFolderName)
 
                 if (!mediaDir.exists()) {
                     mediaDir.mkdirs()
@@ -430,10 +431,6 @@ class MainViewModel : ViewModel() {
             )
         } catch (e: ActivityNotFoundException) {
             e.printStackTrace()
-            val clipBoard =
-                activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val clip: ClipData = ClipData.newPlainText("Crash Info", "$crashInfo")
-            clipBoard.setPrimaryClip(clip)
             Toast.makeText(
                 activity,
                 activity.getString(R.string.tip_not_mail_found),
