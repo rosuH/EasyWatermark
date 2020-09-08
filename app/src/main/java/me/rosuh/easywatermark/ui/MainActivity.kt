@@ -215,7 +215,9 @@ class MainActivity : AppCompatActivity() {
                             performClick()
                             scope.launch {
                                 delay(300)
-                                viewModel.updateTips(MainViewModel.TipsStatus.None)
+                                val isAlphaZero = (config?.alpha ?: 0) == 0
+                                val isTextSize = (config?.textSize ?: 0) == 0
+                                viewModel.updateTips(MainViewModel.TipsStatus.None(isAlphaZero || isTextSize))
                             }
                         }
                     }

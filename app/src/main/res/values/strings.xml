@@ -16,7 +16,7 @@
     <string name="tips_error">错误</string>
     <string name="tips_share_image">分享图片</string>
     <string name="title_enter_text">内容</string>
-    <string name="title_text_style">样式</string>
+    <string name="title_text_style">字体样式</string>
     <string name="title_text_size">大小</string>
     <string name="title_horizon_layout">水平</string>
     <string name="title_vertical_layout">垂直</string>
@@ -69,6 +69,7 @@
     <string name="tip_not_mail_found">似乎没有安装邮件客户端，你可以主动粘贴错误信息到应用市场或 Github</string>
     <string name="email_subject" translatable="false">[EasyWaterMark] Crash info</string>
     <string name="tips_content_size_performance">尺寸越大，实时预览性能要求越高</string>
+    <string name="tips_content_mode_button">点击可修改文字或图片</string>
     <string name="config_default_water_mark_text">👋图片仅供测试，请勿作其他用途</string>
     <string name="style_alpha">透明度</string>
     <string name="dialog_change_log_title">更新日志</string>

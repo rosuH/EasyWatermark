@@ -13,7 +13,7 @@ plugins {
 android {
     compileSdkVersion(Apps.compileSdk)
     buildToolsVersion(Apps.buildTools)
-
+    ndkVersion = "21.3.6528147"
     defaultConfig {
         applicationId = "me.rosuh.easywatermark"
         minSdkVersion(Apps.minSdk)

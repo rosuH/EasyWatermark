@@ -54,7 +54,7 @@ class MainViewModel : ViewModel() {
     }
 
     sealed class TipsStatus(val values: Any? = null) {
-        object None : TipsStatus()
+        class None(v: Any?) : TipsStatus(values = v)
         class Alpha(v: Any?) : TipsStatus(values = v)
         class Size(v: Any?) : TipsStatus(values = v)
     }
@@ -68,7 +68,7 @@ class MainViewModel : ViewModel() {
     }
 
     val tipsStatus: MutableLiveData<TipsStatus> by lazy {
-        MutableLiveData<TipsStatus>(TipsStatus.None)
+        MutableLiveData<TipsStatus>(TipsStatus.None(false))
     }
 
     fun isPermissionGrated(activity: Activity) =

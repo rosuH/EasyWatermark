@@ -96,18 +96,40 @@ class ContentFragment : BaseFragment() {
                 tvTextSize.text = this.coerceAtLeast(0f).toInt().toString()
             }
             btnText?.apply {
-                strokeWidth = if (it.markMode == WaterMarkConfig.MarkMode.Text) 3 else 0
                 strokeColor =
-                    if (it.markMode == WaterMarkConfig.MarkMode.Text) ColorStateList.valueOf(
-                        ContextCompat.getColor(requireContext(), R.color.white)
-                    ) else null
+                    if (it.markMode == WaterMarkConfig.MarkMode.Text) {
+                        ColorStateList.valueOf(
+                            ContextCompat.getColor(
+                                requireContext(),
+                                R.color.white
+                            )
+                        )
+                    } else {
+                        ColorStateList.valueOf(
+                            ContextCompat.getColor(
+                                requireContext(),
+                                R.color.colorAccent_30
+                            )
+                        )
+                    }
             }
             btnImage?.apply {
-                strokeWidth = if (it.markMode == WaterMarkConfig.MarkMode.Image) 3 else 0
                 strokeColor =
-                    if (it.markMode == WaterMarkConfig.MarkMode.Image) ColorStateList.valueOf(
-                        ContextCompat.getColor(requireContext(), R.color.white)
-                    ) else null
+                    if (it.markMode == WaterMarkConfig.MarkMode.Image) {
+                        ColorStateList.valueOf(
+                            ContextCompat.getColor(
+                                requireContext(),
+                                R.color.white
+                            )
+                        )
+                    } else {
+                        ColorStateList.valueOf(
+                            ContextCompat.getColor(
+                                requireContext(),
+                                R.color.colorAccent_30
+                            )
+                        )
+                    }
             }
             tvTitleTextStyle?.isVisible = it.markMode == WaterMarkConfig.MarkMode.Text
             ivTextStyle?.isVisible = it.markMode == WaterMarkConfig.MarkMode.Text

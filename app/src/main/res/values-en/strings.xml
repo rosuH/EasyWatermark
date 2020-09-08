@@ -59,6 +59,7 @@
     <string name="crash_mail">Send email</string>
     <string name="tip_not_mail_found">It seems that there is no mail client installed, you can actively paste the error message to the app market or Github</string>
     <string name="tips_content_size_performance">The larger the size, the more demanding the real-time preview performance.</string>
+    <string name="tips_content_mode_button">Click to modify text or picture</string>
     <string name="config_default_water_mark_text">👋Photos are for testing purposes only.</string>
     <string name="style_alpha">Alpha</string>
     <string name="contributor_info">When the feedback problem is valid and is fixed or a new version is added, your name or email will appear in the update log pop-up window. We will obscure your information and the full name will not appear. \\n If you do not want to appear, please mark: I do not want to.</string>

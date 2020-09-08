@@ -17,12 +17,18 @@ class MyApp : Application() {
 
     private fun catchException() {
         Thread.setDefaultUncaughtExceptionHandler { t, e ->
+            // Because intent limit data to 1mb, so that we should limit the stack track by magic number below
+            val maxStringLength = 1024 * 1024 / 2 / 10 // the 10 is a magic number ;)
+            var fullStackTrace = Log.getStackTraceString(e)
+            if (fullStackTrace.length > maxStringLength) {
+                fullStackTrace = fullStackTrace.substring(IntRange(0, maxStringLength))
+            }
             getSharedPreferences(SP_NAME, MODE_PRIVATE).edit(true) {
                 putBoolean(KEY_IS_CRASH, true)
                 putString(
                     KEY_STACK_TRACE, """
                     Crash in ${t.name}:
-                    ${Log.getStackTraceString(e)}
+                    $fullStackTrace
                 """.trimIndent()
                 )
             }
