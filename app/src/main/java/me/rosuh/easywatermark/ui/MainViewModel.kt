@@ -186,7 +186,7 @@ class MainViewModel : ViewModel() {
             }
             val canvas = Canvas(mutableBitmap)
             val tmpConfig = config.value!!
-            val bitmapPaint = Paint().applyConfig(tmpConfig)
+            val bitmapPaint = Paint().applyConfig(tmpConfig, false)
             val layoutPaint = Paint()
             val bounds = Rect()
 
