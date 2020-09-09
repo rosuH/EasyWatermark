@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Easy WaterMark</string>
+    <string name="action_pick">Eliga una Imagen</string>
+    <string name="action_save">Guardar</string>
+    <string name="action_settings">Acerca de</string>
+    <string name="title_layout">Diseño</string>
+    <string name="title_style">Estilo</string>
+    <string name="title_content">Contenido</string>
+    <string name="tips_do_not_choose_image">Escoger ninguno</string>
+    <string name="tips_choose_color_dialog">Escoger Color</string>
+    <string name="tips_confirm_dialog">Confirmar</string>
+    <string name="tips_cancel_dialog">Cancelar</string>
+    <string name="tips_save_ok">Guardado con éxito</string>
+    <string name="tips_share_ok">Compartido con éxito</string>
+    <string name="tips_error">Error</string>
+    <string name="tips_share_image">Guardar imagen</string>
+    <string name="title_enter_text">Contenido</string>
+    <string name="title_text_style">Estilo</string>
+    <string name="title_text_size">Tamaño</string>
+    <string name="title_horizon_layout">Horizontal</string>
+    <string name="title_vertical_layout">Vertical</string>
+    <string name="title_text_color">Color</string>
+    <string name="title_text_rotate">Ángulo</string>
+    <string name="request_permission_failed">Solicitud permiso fallido</string>
+    <string name="about_title_about">Acerca de</string>
+    <string name="about_title_info">Información</string>
+    <string name="about_title_version">Versión</string>
+    <string name="about_title_rating">Puntuación</string>
+    <string name="about_title_feed_back">Comentarios</string>
+    <string name="about_title_update_log">Cambiar registro</string>
+    <string name="about_title_open_source">Código abierto</string>
+    <string name="about_title_author">Autor</string>
+    <string name="about_title_designer">Diseñador</string>
+    <string name="about_title_repo_link">Abrir en Github</string>
+    <string name="about_title_figma_link">Más proyectos</string>
+    <string name="error_not_img">Deberías elegir una foto</string>
+    <string name="error_file_not_found">La foto quizás no existe</string>
+    <string name="tips_pick_image">"Elija la imagen, vaya a la edición "</string>
+    <string name="save_directly">Guardar directamente</string>
+    <string name="directly_save_tips">Almacena la imagen editada directamente en tu álbum de fotos</string>
+    <string name="share_tips">Compartir la imagen editada con otras aplicaciones</string>
+    <string name="share">Compartir</string>
+    <string name="water_mark_mode_text">Texto</string>
+    <string name="water_mark_mode_image">Ícono</string>
+    <string name="touch_alpha">Alfa: %1$d</string>
+    <string name="touch_size">Tamaño: %1$d</string>
+    <string name="hint_tips_input_water_mark_text">Ingresa el texto a marcar por favor</string>
+    <string name="tips_ok">Confirmar</string>
+    <string name="hint_tips_alpha_100">Alfa 100%</string>
+    <string name="tips_cancel_output">Cancelar</string>
+    <string name="tips_need_compress_img">La imagen es demasiado grande o la memoria es insuficiente</string>
+    <string name="tips_compressing">Comprimiendo…</string>
+    <string name="tips_compress_images">Comprimir imagen</string>
+    <string name="tips_compress_ok">La compresión se ha completado, haga clic en Aceptar para continuar la salida</string>
+    <string name="tips_compress_create_uri_failed">La compresión está completa, pero falló la creación de Uri, por favor reinicie el APP e inténtelo de nuevo. %1$s</string>
+    <string name="tips_tip_title">Se detectó trabas</string>
+    <string name="msg_crash">¿Le gustaría ayudar a comentar la información errónea? ¡Esto puede ayudarnos a hacerlo mejor! Esto no recogerá su información personal.</string>
+    <string name="crash_mail">Enviar correo</string>
+    <string name="tip_not_mail_found">Parece que no hay ningún cliente de correo instalado, puedes pegar activamente el mensaje en la tienda de aplicaciones o en Github</string>
+    <string name="tips_content_size_performance">Cuanto más grande es el tamaño, más exigente es el rendimiento de la vista previa en tiempo real.</string>
+    <string name="config_default_water_mark_text">👋Fotos son solo para propósitos de prueba.</string>
+    <string name="style_alpha">Alfa</string>
+    <string name="contributor_info">Cuando el informe del problema es válido y se arregla o se añade una nueva versión, su nombre o correo electrónico aparecerá en la ventana emergente del registro de actualizaciones. Nosotros podemos ocultar su información y el nombre completo no aparecerá. \\nSi no quieres aparecer, por favor marca: No quiero.</string>
+    <string name="dialog_change_log_title">Registro de cambios</string>
+    <string name="dialog_change_log_content">
+        Thank you for your feedback. The main update of this version is:\n\n
+        <u><big>New</big></u> \n\n
+        Options for adjusting transparency. Although on the left side of the preview area, sliding up and down can also be adjusted, but you don’t seem to like this method very much. 😄\n\n
+        (Thanks: e**oc, la**r)\n\n
+        <u><big>Adjustment</big></u> \n\n
+        · The control panel is forbidden to slide to reduce the false touch of the adjustment parameters. \n
+        · Used a brand new Icon, thanks to our designers! @Twowei \n\n
+        <u><big>Fix</big></u> \n\n
+        Fix the crash of some lower version phones when saving pictures problem. (Thanks: 2**9@qq.com, a**liang)\n
+    </string>
+</resources>
