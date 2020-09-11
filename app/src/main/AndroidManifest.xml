@@ -20,6 +20,8 @@
         android:theme="@style/AppTheme">
         <activity
             android:name=".ui.MainActivity"
+            android:configChanges="orientation|keyboardHidden"
+            android:screenOrientation="portrait"
             android:windowSoftInputMode="stateAlwaysHidden|adjustPan">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -29,6 +31,8 @@
         </activity>
         <activity
             android:name=".ui.about.AboutActivity"
+            android:configChanges="orientation|keyboardHidden"
+            android:screenOrientation="portrait"
             android:parentActivityName=".ui.MainActivity"
             android:theme="@style/AppTheme.MaterialAboutActivity">
             <meta-data
@@ -37,6 +41,8 @@
         </activity>
         <activity
             android:name=".ui.about.OpenSourceActivity"
+            android:configChanges="orientation|keyboardHidden"
+            android:screenOrientation="portrait"
             android:parentActivityName=".ui.about.AboutActivity">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
