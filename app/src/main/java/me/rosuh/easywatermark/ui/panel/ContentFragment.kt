@@ -20,6 +20,7 @@ import me.rosuh.easywatermark.ui.MainActivity
 import me.rosuh.easywatermark.ui.MainActivity.Companion.ICON_REQUEST_CODE
 import me.rosuh.easywatermark.ui.dialog.EditTextBSDialogFragment
 import me.rosuh.easywatermark.utils.DetectedPerformanceSeekBarListener
+import me.rosuh.easywatermark.widget.ControllableScrollView
 
 class ContentFragment : BaseFragment() {
 
@@ -34,6 +35,8 @@ class ContentFragment : BaseFragment() {
         savedInstanceState: Bundle?
     ): View? {
         val root = layoutInflater.inflate(R.layout.fragment_content, container, false)
+        val sv = root.findViewById<ControllableScrollView>(R.id.scrollView)
+
         val tvContentSize = root.findViewById<TextView>(R.id.tv_progress_vertical).apply {
             text = shareViewModel.config.value?.textSize.toString()
         }
@@ -73,6 +76,8 @@ class ContentFragment : BaseFragment() {
             }.apply {
                 inTimeAction = { _: SeekBar?, _: Int, _: Boolean ->
                     tvContentSize.text = progress.toString()
+                    sv.canScroll = false
+
                 }
                 postAction = { _: SeekBar?, _: Int, fromUser: Boolean ->
                     if (fromUser) {

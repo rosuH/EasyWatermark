@@ -71,11 +71,21 @@ class MainViewModel : ViewModel() {
         MutableLiveData<TipsStatus>(TipsStatus.None(false))
     }
 
-    fun isPermissionGrated(activity: Activity) =
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(
-            activity,
-            Manifest.permission.READ_EXTERNAL_STORAGE
-        ) == PackageManager.PERMISSION_GRANTED
+    fun isPermissionGrated(activity: Activity): Boolean {
+        val readGranted =
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(
+                activity,
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            ) == PackageManager.PERMISSION_GRANTED
+
+        val writeGranted =
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(
+                activity,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ) == PackageManager.PERMISSION_GRANTED
+
+        return readGranted && writeGranted
+    }
 
     /**
      * 申请权限
@@ -83,7 +93,10 @@ class MainViewModel : ViewModel() {
     fun requestPermission(activity: Activity) {
         ActivityCompat.requestPermissions(
             activity,
-            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+            arrayOf(
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ),
             MainActivity.WRITE_PERMISSION_REQUEST_CODE
         )
     }
@@ -108,8 +121,8 @@ class MainViewModel : ViewModel() {
                     throw FileNotFoundException()
                 }
                 val intent = Intent(Intent.ACTION_VIEW)
-                intent.type = "image/jpeg"
-                intent.putExtra(Intent.EXTRA_STREAM, outputUri)
+                intent.setDataAndType(outputUri, "image/*")
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 activity.startActivity(
                     Intent.createChooser(
                         intent,
@@ -124,7 +137,7 @@ class MainViewModel : ViewModel() {
                 })
             } catch (oom: OutOfMemoryError) {
                 _saveState.postValue(State.OOMError.apply {
-                    msg = activity.getString(R.string.error_file_not_found)
+                    msg = activity.getString(R.string.error_save_oom)
                 })
             }
         }
@@ -148,12 +161,12 @@ class MainViewModel : ViewModel() {
                     generateImage(activity, config.value?.uri ?: Uri.parse(""))
                 if (outputUri?.toString().isNullOrEmpty()) {
                     _saveState.postValue(State.Error.apply {
-                        msg = activity.getString(R.string.error_file_not_found)
+                        msg = activity.getString(R.string.error_share_uri_is_null)
                     })
                     return@launch
                 }
                 val intent = Intent(Intent.ACTION_SEND)
-                intent.type = "image/jpeg"
+                intent.type = "image/*"
                 intent.putExtra(Intent.EXTRA_STREAM, outputUri)
                 activity.startActivity(
                     Intent.createChooser(
@@ -273,7 +286,7 @@ class MainViewModel : ViewModel() {
                 activity.sendBroadcast(
                     Intent(
                         Intent.ACTION_MEDIA_SCANNER_SCAN_FILE,
-                        Uri.fromFile(outputFile)
+                        outputUri
                     )
                 )
                 outputUri

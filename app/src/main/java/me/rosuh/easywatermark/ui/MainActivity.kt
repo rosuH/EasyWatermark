@@ -273,11 +273,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         R.id.action_pick -> {
-            if (viewModel.isPermissionGrated(this)) {
-                performFileSearch(READ_REQUEST_CODE)
-            } else {
-                viewModel.requestPermission(this)
-            }
+            performFileSearch(READ_REQUEST_CODE)
             true
         }
 
@@ -294,6 +290,10 @@ class MainActivity : AppCompatActivity() {
      * Fires an intent to spin up the "file chooser" UI and select an image.
      */
     fun performFileSearch(requestCode: Int) {
+        if (!viewModel.isPermissionGrated(this)) {
+            viewModel.requestPermission(this)
+            return
+        }
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             flags = (Intent.FLAG_GRANT_READ_URI_PERMISSION
                     or Intent.FLAG_GRANT_WRITE_URI_PERMISSION

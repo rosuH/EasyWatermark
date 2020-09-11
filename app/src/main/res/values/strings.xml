@@ -88,4 +88,6 @@
     <string name="open_source_desc_compressor" translatable="false">"Compressor is a lightweight and powerful android image compression library. Compressor will allow you to compress large photos into smaller sized photos with very less or negligible loss in quality of the image. "</string>
     <string name="open_source_desc_gif" translatable="false">Bundled GIFLib via JNI is used to render frames. This way should be more efficient than WebView or Movie classes.</string>
     <string name="tips_not_app_can_open_imaegs">看起来您安装没有文件管理器？</string>
+    <string name="error_save_oom">内存不足，请清理后台后重试</string>
+    <string name="error_share_uri_is_null">输出 Uri 为空，请联系开发者反馈，谢谢</string>
 </resources>
