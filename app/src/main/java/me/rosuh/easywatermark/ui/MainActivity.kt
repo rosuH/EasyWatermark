@@ -37,7 +37,6 @@ import me.rosuh.easywatermark.ui.panel.ContentFragment
 import me.rosuh.easywatermark.ui.panel.LayoutFragment
 import me.rosuh.easywatermark.ui.panel.StyleFragment
 import me.rosuh.easywatermark.utils.FileUtils
-import pl.droidsonroids.gif.GifDrawable
 import kotlin.math.abs
 
 
@@ -55,7 +54,6 @@ class MainActivity : AppCompatActivity() {
         scope.launch {
             initView()
             initObserver()
-            (iv_logo.drawable as? GifDrawable)?.start()
             cl_root.setTransition(R.id.transition_launch)
             cl_root.transitionToEnd()
             checkHadCrash()
@@ -63,6 +61,16 @@ class MainActivity : AppCompatActivity() {
             SaveImageBSDialogFragment.safetyHide(this@MainActivity.supportFragmentManager)
             ChangeLogDialogFragment.safetyShow(this@MainActivity.supportFragmentManager)
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        iv_logo.start()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        iv_logo.stop()
     }
 
     private fun checkHadCrash() {
@@ -106,8 +114,8 @@ class MainActivity : AppCompatActivity() {
             try {
                 cl_root.setTransition(R.id.transition_open_image)
                 cl_root.transitionToEnd()
-                (iv_logo.drawable as? GifDrawable)?.stop()
                 iv_photo?.config = it
+                iv_logo.stop()
             } catch (se: SecurityException) {
                 se.printStackTrace()
                 // reset the uri because we don't have permission -_-
@@ -115,7 +123,7 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        viewModel.tipsStatus.observe(this, Observer { tips ->
+        viewModel.tipsStatus.observe(this, { tips ->
             when (tips) {
                 is MainViewModel.TipsStatus.None -> {
                     tv_data_tips.apply {
@@ -137,7 +145,7 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        viewModel.saveState.observe(this, Observer { state ->
+        viewModel.saveState.observe(this, { state ->
             when (state) {
                 MainViewModel.State.SaveOk -> {
                     Toast.makeText(this, getString(R.string.tips_save_ok), Toast.LENGTH_SHORT)

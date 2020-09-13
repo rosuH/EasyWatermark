@@ -88,7 +88,6 @@ dependencies {
     implementation(Libs.recycleView)
     implementation(Libs.constraintLayout)
     implementation(Libs.coreKtx)
-    implementation(Libs.gifDrawable)
     implementation(Libs.exif)
     testImplementation(TestLibs.junit)
 }

@@ -51,7 +51,7 @@ suspend fun decodeSampledBitmapFromResource(
                 val b = BitmapFactory.decodeStream(inputStream, null, this)
 
                 val exif =
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
                         ExifInterface(resolver.openFile(uri, "r", null)!!.fileDescriptor)
                     } else {
                         ExifInterface(uri.path!!)

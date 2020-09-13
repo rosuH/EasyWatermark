@@ -123,12 +123,7 @@ class MainViewModel : ViewModel() {
                 val intent = Intent(Intent.ACTION_VIEW)
                 intent.setDataAndType(outputUri, "image/*")
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                activity.startActivity(
-                    Intent.createChooser(
-                        intent,
-                        activity.getString(R.string.tips_share_image)
-                    )
-                )
+                activity.startActivity(intent)
                 _saveState.postValue(State.SaveOk)
             } catch (fne: FileNotFoundException) {
                 fne.printStackTrace()
@@ -168,12 +163,7 @@ class MainViewModel : ViewModel() {
                 val intent = Intent(Intent.ACTION_SEND)
                 intent.type = "image/*"
                 intent.putExtra(Intent.EXTRA_STREAM, outputUri)
-                activity.startActivity(
-                    Intent.createChooser(
-                        intent,
-                        activity.getString(R.string.tips_share_image)
-                    )
-                )
+                activity.startActivity(intent)
                 _saveState.postValue(State.ShareOk)
             } catch (fne: FileNotFoundException) {
                 fne.printStackTrace()
