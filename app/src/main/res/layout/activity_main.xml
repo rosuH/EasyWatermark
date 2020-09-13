@@ -10,11 +10,11 @@
     android:animateLayoutChanges="true"
     tools:context=".ui.MainActivity">
 
-    <pl.droidsonroids.gif.GifImageView
+    <me.rosuh.easywatermark.widget.ColoredImageVIew
         android:id="@+id/iv_logo"
         android:layout_width="180dp"
         android:layout_height="180dp"
-        android:src="@drawable/ic_logo_motion_launcher"
+        android:src="@mipmap/ic_log_transparent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -138,11 +138,11 @@
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/vp_control_panel"
         android:layout_width="match_parent"
-        android:layout_height="250dp"
+        android:layout_height="0dp"
         android:background="@color/colorSecondary"
         android:visibility="invisible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHeight_percent="0.30"
+        app:layout_constraintHeight_percent="0.50"
         app:layout_constraintStart_toStartOf="parent" />
 </androidx.constraintlayout.motion.widget.MotionLayout>

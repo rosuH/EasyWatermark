@@ -5,11 +5,15 @@ import android.content.ContentResolver
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.net.Uri
 import android.util.Log
+import androidx.exifinterface.media.ExifInterface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
+import kotlin.math.max
+
 
 @Throws(FileNotFoundException::class, OutOfMemoryError::class)
 @Synchronized
@@ -25,7 +29,8 @@ suspend fun decodeSampledBitmapFromResource(
     resolver: ContentResolver,
     uri: Uri,
     reqWidth: Int,
-    reqHeight: Int
+    reqHeight: Int,
+    scale: FloatArray = FloatArray(1) { 1f }
 ): Bitmap? = withContext(Dispatchers.IO) {
     try {
         return@withContext BitmapFactory.Options().run {
@@ -40,8 +45,40 @@ suspend fun decodeSampledBitmapFromResource(
             // Decode bitmap with inSampleSize set
             inJustDecodeBounds = false
 
-            resolver.openInputStream(uri).use { `is` ->
-                return@use BitmapFactory.decodeStream(`is`, null, this)
+            scale[0] = max(outWidth.toFloat() / reqWidth, outHeight.toFloat() / reqHeight)
+            // fixme make the code more elegant
+            resolver.openInputStream(uri).use { inputStream ->
+                val b = BitmapFactory.decodeStream(inputStream, null, this)
+
+                val exif =
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                        ExifInterface(resolver.openFile(uri, "r", null)!!.fileDescriptor)
+                    } else {
+                        ExifInterface(uri.path!!)
+                    }
+                val orientation: Int = exif.getAttributeInt(
+                    ExifInterface.TAG_ORIENTATION,
+                    ExifInterface.ORIENTATION_UNDEFINED
+                )
+
+                val matrix = Matrix()
+                when (orientation) {
+                    ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+                    ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+                    ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+                    ExifInterface.ORIENTATION_UNDEFINED, ExifInterface.ORIENTATION_NORMAL -> {
+                        // do not need to rotate bitmap
+                        return@withContext b
+                    }
+                    else -> {
+                    }
+                }
+
+                val rotatedBitmap = Bitmap.createBitmap(b!!, 0, 0, b.width, b.height, matrix, false)
+                if (rotatedBitmap != b && !b.isRecycled) {
+                    b.recycle()
+                }
+                return@use rotatedBitmap
             }
         }
     } catch (fne: FileNotFoundException) {

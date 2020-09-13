@@ -83,6 +83,7 @@ Third party libraries used.
 - [daniel-stonuk/material-about-library](https://github.com/daniel-stoneuk/material-about-library)
 - [skydoves/ColorPickerView](https://github.com/skydoves/ColorPickerView)
 - [material-components/material-components-android](https://github.com/material-components/material-components-android)
+- [Compressor](https://github.com/zetbaitsu/Compressor/)
 
 ## Feedback and contribution
 We welcome your comments and suggestions in the issues section, or you can contribute your code by submitting a PR directly to us.

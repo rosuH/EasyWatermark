@@ -59,19 +59,28 @@
     <string name="crash_mail">Send email</string>
     <string name="tip_not_mail_found">It seems that there is no mail client installed, you can actively paste the error message to the app market or Github</string>
     <string name="tips_content_size_performance">The larger the size, the more demanding the real-time preview performance.</string>
+    <string name="tips_content_mode_button">Click to modify text or picture</string>
     <string name="config_default_water_mark_text">👋Photos are for testing purposes only.</string>
     <string name="style_alpha">Alpha</string>
     <string name="contributor_info">When the feedback problem is valid and is fixed or a new version is added, your name or email will appear in the update log pop-up window. We will obscure your information and the full name will not appear. \\n If you do not want to appear, please mark: I do not want to.</string>
     <string name="dialog_change_log_title">Change log</string>
     <string name="dialog_change_log_content">
-        Thank you for your feedback. The main update of this version is:\n\n
-        <u><big>New</big></u> \n\n
-        Options for adjusting transparency. Although on the left side of the preview area, sliding up and down can also be adjusted, but you don’t seem to like this method very much. 😄\n\n
-        (Thanks: e**oc, la**r)\n\n
-        <u><big>Adjustment</big></u> \n\n
-        · The control panel is forbidden to slide to reduce the false touch of the adjustment parameters. \n
-        · Used a brand new Icon, thanks to our designers! @Twowei \n\n
-        <u><big>Fix</big></u> \n\n
-        Fix the crash of some lower version phones when saving pictures problem. (Thanks: 2**9@qq.com, a**liang)\n
+        Thank you for your feedback, the main update of this version is:\n\n
+         <u><big>Adjustment</big></u> \n\n
+         · "Content" section UI adjustment\n\n
+         · For systems above Q, when saving pictures, they will be saved in the Pictures/EasyWatermark folder\n\n
+         · Reduce the size of the installation package \n\n
+         Thanks Cyan2102, pokon548 \n\n
+         <u><big>Repair</big></u> \n\n
+         · The watermark text size preview is inconsistent with the output effect. There is still a problem with margins, fix it next time XD \n\n
+         · Select picture crash problem on some machines (especially Xiaomi 6)\n\n
+         · On some machines, the problem of failing to save pictures \n\n
+         · The picture does not read the EXIF information, which leads to the wrong direction of the selection.\n\n
+         · Abnormal status caused by device rotation\n\n
+         Thanks to Phantom Bamboo Shadow, Unisia, Bu Ge, gao*@outlook, yin**131, Randy Petri, Neo \n\n
     </string>
+    <string name="tips_not_app_can_open_imaegs">It looks like you have no file manager installed</string>
+    <string name="tips_choose_other_file_type">Looks like you chose not a picture</string>
+    <string name="error_save_oom">Insufficient memory, please clean up the background and try again</string>
+    <string name="error_share_uri_is_null">The output Uri is empty, please contact the developer for feedback, thank you</string>
 </resources>

@@ -60,12 +60,15 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             field = value
             generateBitmapJob = launch(exceptionHandler) {
                 if (curUri != field?.uri){
+                    val scale = FloatArray(1)
                     val imageBitmap = decodeSampledBitmapFromResource(
                         context.contentResolver,
                         config!!.uri,
                         this@WaterMarkImageView.width,
-                        this@WaterMarkImageView.height
+                        this@WaterMarkImageView.height,
+                        scale
                     )
+                    field?.imageScale = scale.first()
                     setImageBitmap(imageBitmap)
                     curUri = field?.uri
                 }
@@ -248,8 +251,8 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             val textHeight = textBounds.height().toFloat().coerceAtLeast(1f) + 10
 
             val maxSize = sqrt(textHeight.pow(2) + textWidth.pow(2)).toInt()
-            val finalWidth = maxSize + config.horizonGapPercent
-            val finalHeight = maxSize + config.verticalGapPercent
+            val finalWidth = maxSize + (config.horizonGapPercent * config.imageScale).toInt()
+            val finalHeight = maxSize + (config.verticalGapPercent * config.imageScale).toInt()
             val bitmap =
                 Bitmap.createBitmap(finalWidth, finalHeight, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)

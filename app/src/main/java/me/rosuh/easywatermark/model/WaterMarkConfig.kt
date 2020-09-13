@@ -32,6 +32,8 @@ class WaterMarkConfig {
 
     var markMode: MarkMode
 
+    var imageScale: Float
+
     init {
         with(
             MyApp.instance.getSharedPreferences(SP_NAME, MODE_PRIVATE)
@@ -68,6 +70,7 @@ class WaterMarkConfig {
             } else {
                 Uri.parse("")
             }
+            imageScale = getFloat(SP_KEY_TEXT_SIZE, 1f)
         }
     }
 
@@ -99,6 +102,7 @@ class WaterMarkConfig {
                     MarkMode.Image -> 1
                 }
             )
+            putFloat(SP_KEY_IMAGE_SCALE, imageScale)
         }
     }
 
@@ -131,6 +135,7 @@ class WaterMarkConfig {
         const val SP_KEY_ICON_URI = SP_NAME + "_key_icon_uri"
         const val SP_KEY_MODE = SP_NAME + "_key_type"
         const val SP_KEY_CHANGE_LOG = SP_NAME + "_key_change_log"
+        const val SP_KEY_IMAGE_SCALE = SP_NAME + "_key_image_scale"
 
     }
 }

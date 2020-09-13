@@ -3,8 +3,8 @@ object Apps {
     const val buildTools = "29.0.3"
     const val minSdk = 22
     const val targetSdk = 29
-    const val versionCode = 10001
-    const val versionName = "1.0.1"
+    const val versionCode = 10100
+    const val versionName = "1.1.0"
 }
 
 object BuildTypes {
@@ -21,6 +21,8 @@ object ProductFlavors {
 }
 
 object Versions {
+    const val exif: String = "1.3.0-rc01"
+
     const val gap = "4.0.1"
 
     const val kotlin = "1.4.0"
@@ -85,6 +87,8 @@ object Libs {
     const val appcompat = "androidx.appcompat:appcompat:${Versions.appcompat}"
 
     const val gifDrawable = "pl.droidsonroids.gif:android-gif-drawable:${Versions.gifDrawable}"
+
+    const val exif = "androidx.exifinterface:exifinterface:${Versions.exif}"
 }
 
 object TestLibs {
