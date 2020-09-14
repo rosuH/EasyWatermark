@@ -66,18 +66,9 @@
     <string name="dialog_change_log_title">Change log</string>
     <string name="dialog_change_log_content">
         Thank you for your feedback, the main update of this version is:\n\n
-         <u><big>Adjustment</big></u> \n\n
-         · "Content" section UI adjustment\n\n
-         · For systems above Q, when saving pictures, they will be saved in the Pictures/EasyWatermark folder\n\n
-         · Reduce the size of the installation package \n\n
-         Thanks Cyan2102, pokon548 \n\n
          <u><big>Repair</big></u> \n\n
-         · The watermark text size preview is inconsistent with the output effect. There is still a problem with margins, fix it next time XD \n\n
-         · Select picture crash problem on some machines (especially Xiaomi 6)\n\n
-         · On some machines, the problem of failing to save pictures \n\n
-         · The picture does not read the EXIF information, which leads to the wrong direction of the selection.\n\n
-         · Abnormal status caused by device rotation\n\n
-         Thanks to Phantom Bamboo Shadow, Unisia, Bu Ge, gao*@outlook, yin**131, Randy Petri, Neo \n\n
+         · Android Q and lower systems: failed to preview pictures\n\n · Android Q and lower systems: After the pictures are output, the media scan failed to be notified\n\n
+         Thanks to reverieo_o, wong077 \n\n
     </string>
     <string name="tips_not_app_can_open_imaegs">It looks like you have no file manager installed</string>
     <string name="tips_choose_other_file_type">Looks like you chose not a picture</string>
