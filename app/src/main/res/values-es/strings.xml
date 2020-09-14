@@ -74,4 +74,8 @@
         <u><big>Fix</big></u> \n\n
         Fix the crash of some lower version phones when saving pictures problem. (Thanks: 2**9@qq.com, a**liang)\n
     </string>
+    <string name="tips_not_app_can_open_imaegs">Parece que no tienes un gestor de archivos instalado</string>
+    <string name="tips_choose_other_file_type">Parece que no escogió una imagen</string>
+    <string name="error_save_oom">Memoria insuficiente, limpie la caché y vuelva a intentarlo</string>
+    <string name="error_share_uri_is_null">El Uri de salida está vacío, contacta con el desarrollador para enviar comentarios, gracias</string>
 </resources>
