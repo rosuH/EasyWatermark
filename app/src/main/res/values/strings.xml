@@ -76,18 +76,10 @@
     <string name="contributor_info">当反馈的问题有效，并被修复或加入新版本时，您的名字或邮件出现在更新日志弹窗中。我们会对您的信息作遮挡处理，不会出现全称。\n 如果您不愿意出现，请标注：我不愿意。即可</string>
     <string name="dialog_change_log_content">
         感谢大家的反馈，此版本主要更新为：\n\n
-        <u><big>调整</big></u> \n\n
-        · 「内容」板块 UI 调整\n\n
-        · Q 以上的系统，保存图片时，将保存到 Pictures/EasyWatermark 文件夹中 \n\n
-        · 缩小安装包体积 \n\n
-        感谢 Cyan2102, pokon548 \n\n
         <u><big>修复</big></u> \n\n
-        · 水印文字大小的预览与输出效果不一致的问题。边距还有点问题，下次修复 XD \n\n
-        · 部分机器上选择图片崩溃问题（特指小米 6）\n\n
-        · 部分机器上，保存图片失败的问题 \n\n
-        · 图片没有读取 EXIF 信息导致选择方向错误的问题 \n\n
-        · 因设备旋转导致的状态异常问题 \n\n
-        感谢 幻竹影，U尼西亚，布鸽，gao*@outlook，yin**131, Randy Petri, Neo \n\n
+        · Android Q 以下的系统：预览图片失败的问题\n\n
+        · Android Q 以下的系统：图片输出后，通知媒体扫描失败的问题 \n\n
+        感谢 reverieo_o, wong077 \n\n
     </string>
     <string name="open_source_desc_compressor" translatable="false">"Compressor is a lightweight and powerful android image compression library. Compressor will allow you to compress large photos into smaller sized photos with very less or negligible loss in quality of the image. "</string>
     <string name="open_source_desc_gif" translatable="false">Bundled GIFLib via JNI is used to render frames. This way should be more efficient than WebView or Movie classes.</string>

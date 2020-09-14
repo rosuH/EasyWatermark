@@ -276,7 +276,7 @@ class MainViewModel : ViewModel() {
                 activity.sendBroadcast(
                     Intent(
                         Intent.ACTION_MEDIA_SCANNER_SCAN_FILE,
-                        outputUri
+                        Uri.fromFile(outputFile)
                     )
                 )
                 outputUri

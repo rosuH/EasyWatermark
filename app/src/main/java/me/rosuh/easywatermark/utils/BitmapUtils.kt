@@ -6,9 +6,9 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
 import android.util.Log
-import androidx.exifinterface.media.ExifInterface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
@@ -33,7 +33,7 @@ suspend fun decodeSampledBitmapFromResource(
     scale: FloatArray = FloatArray(1) { 1f }
 ): Bitmap? = withContext(Dispatchers.IO) {
     try {
-        return@withContext BitmapFactory.Options().run {
+        BitmapFactory.Options().run {
             inJustDecodeBounds = true
             resolver.openInputStream(uri).use { `is` ->
                 BitmapFactory.decodeStream(`is`, null, this)
@@ -46,15 +46,21 @@ suspend fun decodeSampledBitmapFromResource(
             inJustDecodeBounds = false
 
             scale[0] = max(outWidth.toFloat() / reqWidth, outHeight.toFloat() / reqHeight)
-            // fixme make the code more elegant
-            resolver.openInputStream(uri).use { inputStream ->
-                val b = BitmapFactory.decodeStream(inputStream, null, this)
+            // fixme pls make the code more elegant >_<
+            val rawBitmap = resolver.openInputStream(uri).use { inputStream ->
+                BitmapFactory.decodeStream(inputStream, null, this)
+            }
 
+            resolver.openInputStream(uri).use { inputStream ->
+                if (inputStream == null) {
+                    return@withContext rawBitmap
+                }
                 val exif =
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                        ExifInterface(resolver.openFile(uri, "r", null)!!.fileDescriptor)
+                    if (android.os.Build.VERSION.SDK_INT > android.os.Build.VERSION_CODES.N) {
+                        ExifInterface(inputStream)
                     } else {
-                        ExifInterface(uri.path!!)
+                        // do not support api lower 24
+                        return@withContext rawBitmap
                     }
                 val orientation: Int = exif.getAttributeInt(
                     ExifInterface.TAG_ORIENTATION,
@@ -68,17 +74,25 @@ suspend fun decodeSampledBitmapFromResource(
                     ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
                     ExifInterface.ORIENTATION_UNDEFINED, ExifInterface.ORIENTATION_NORMAL -> {
                         // do not need to rotate bitmap
-                        return@withContext b
+                        return@withContext rawBitmap
                     }
                     else -> {
                     }
                 }
 
-                val rotatedBitmap = Bitmap.createBitmap(b!!, 0, 0, b.width, b.height, matrix, false)
-                if (rotatedBitmap != b && !b.isRecycled) {
-                    b.recycle()
+                val rotatedBitmap = Bitmap.createBitmap(
+                    rawBitmap!!,
+                    0,
+                    0,
+                    rawBitmap.width,
+                    rawBitmap.height,
+                    matrix,
+                    false
+                )
+                if (rotatedBitmap != rawBitmap && !rawBitmap.isRecycled) {
+                    rawBitmap.recycle()
                 }
-                return@use rotatedBitmap
+                return@withContext rotatedBitmap
             }
         }
     } catch (fne: FileNotFoundException) {
