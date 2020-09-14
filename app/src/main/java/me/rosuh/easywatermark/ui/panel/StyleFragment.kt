@@ -18,6 +18,7 @@ import me.rosuh.easywatermark.adapter.ColorPreviewAdapter
 import me.rosuh.easywatermark.base.BaseFragment
 import me.rosuh.easywatermark.utils.DetectedPerformanceSeekBarListener
 import me.rosuh.easywatermark.utils.onItemClick
+import me.rosuh.easywatermark.widget.ControllableScrollView
 
 
 class StyleFragment : BaseFragment() {
@@ -57,6 +58,8 @@ class StyleFragment : BaseFragment() {
         savedInstanceState: Bundle?
     ): View? {
         val root = layoutInflater.inflate(R.layout.fragment_style, container, false)
+        val sv = root.findViewById<ControllableScrollView>(R.id.scrollView)
+
         val tvDegree = root.findViewById<TextView>(R.id.tv_tips_degree).apply {
             text = "${shareViewModel.config.value?.degree ?: 0}°"
         }
@@ -69,6 +72,7 @@ class StyleFragment : BaseFragment() {
             }.apply {
                 inTimeAction = { _: SeekBar?, _: Int, _: Boolean ->
                     tvDegree.text = "${shareViewModel.config.value?.degree ?: 0}°"
+                    sv.canScroll = false
                 }
                 postAction = { _: SeekBar?, _: Int, fromUser: Boolean ->
                     if (fromUser) {
@@ -77,6 +81,7 @@ class StyleFragment : BaseFragment() {
                 }
             })
         }
+
 
         val tvAlpha = root.findViewById<TextView>(R.id.tv_tips_alpha).apply {
             text = "${getAlphaValue()}%"
@@ -90,6 +95,7 @@ class StyleFragment : BaseFragment() {
             }.apply {
                 inTimeAction = { _: SeekBar?, p: Int, _: Boolean ->
                     tvAlpha.text = "${p}%"
+                    sv.canScroll = false
                 }
                 postAction = { _: SeekBar?, p: Int, fromUser: Boolean ->
                     if (fromUser) {

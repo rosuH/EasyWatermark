@@ -36,8 +36,7 @@ import me.rosuh.easywatermark.ui.dialog.SaveImageBSDialogFragment
 import me.rosuh.easywatermark.ui.panel.ContentFragment
 import me.rosuh.easywatermark.ui.panel.LayoutFragment
 import me.rosuh.easywatermark.ui.panel.StyleFragment
-import pl.droidsonroids.gif.GifDrawable
-import pl.droidsonroids.gif.GifImageView
+import me.rosuh.easywatermark.utils.FileUtils
 import kotlin.math.abs
 
 
@@ -55,7 +54,6 @@ class MainActivity : AppCompatActivity() {
         scope.launch {
             initView()
             initObserver()
-            (iv_logo.drawable as? GifDrawable)?.start()
             cl_root.setTransition(R.id.transition_launch)
             cl_root.transitionToEnd()
             checkHadCrash()
@@ -63,6 +61,16 @@ class MainActivity : AppCompatActivity() {
             SaveImageBSDialogFragment.safetyHide(this@MainActivity.supportFragmentManager)
             ChangeLogDialogFragment.safetyShow(this@MainActivity.supportFragmentManager)
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        iv_logo.start()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        iv_logo.stop()
     }
 
     private fun checkHadCrash() {
@@ -106,8 +114,8 @@ class MainActivity : AppCompatActivity() {
             try {
                 cl_root.setTransition(R.id.transition_open_image)
                 cl_root.transitionToEnd()
-                (iv_logo.drawable as? GifDrawable)?.stop()
                 iv_photo?.config = it
+                iv_logo.stop()
             } catch (se: SecurityException) {
                 se.printStackTrace()
                 // reset the uri because we don't have permission -_-
@@ -115,7 +123,7 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        viewModel.tipsStatus.observe(this, Observer { tips ->
+        viewModel.tipsStatus.observe(this, { tips ->
             when (tips) {
                 is MainViewModel.TipsStatus.None -> {
                     tv_data_tips.apply {
@@ -137,7 +145,7 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        viewModel.saveState.observe(this, Observer { state ->
+        viewModel.saveState.observe(this, { state ->
             when (state) {
                 MainViewModel.State.SaveOk -> {
                     Toast.makeText(this, getString(R.string.tips_save_ok), Toast.LENGTH_SHORT)
@@ -215,7 +223,9 @@ class MainActivity : AppCompatActivity() {
                             performClick()
                             scope.launch {
                                 delay(300)
-                                viewModel.updateTips(MainViewModel.TipsStatus.None)
+                                val isAlphaZero = (config?.alpha ?: 0) == 0
+                                val isTextSize = (config?.textSize ?: 0) == 0
+                                viewModel.updateTips(MainViewModel.TipsStatus.None(isAlphaZero || isTextSize))
                             }
                         }
                     }
@@ -271,11 +281,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         R.id.action_pick -> {
-            if (viewModel.isPermissionGrated(this)) {
-                performFileSearch(READ_REQUEST_CODE)
-            } else {
-                viewModel.requestPermission(this)
-            }
+            performFileSearch(READ_REQUEST_CODE)
             true
         }
 
@@ -292,17 +298,30 @@ class MainActivity : AppCompatActivity() {
      * Fires an intent to spin up the "file chooser" UI and select an image.
      */
     fun performFileSearch(requestCode: Int) {
+        if (!viewModel.isPermissionGrated(this)) {
+            viewModel.requestPermission(this)
+            return
+        }
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             flags = (Intent.FLAG_GRANT_READ_URI_PERMISSION
                     or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                     or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
             addCategory(Intent.CATEGORY_OPENABLE)
-            type = "image/*"
+            type = "*/*"
         }
-        startActivityForResult(
-            intent,
-            requestCode
-        )
+        val result = kotlin.runCatching {
+            startActivityForResult(
+                intent,
+                requestCode
+            )
+        }
+        if (result.isFailure) {
+            Toast.makeText(
+                this,
+                getString(R.string.tips_not_app_can_open_imaegs),
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
 
     override fun onRequestPermissionsResult(
@@ -325,35 +344,39 @@ class MainActivity : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode != Activity.RESULT_OK) {
+            Toast.makeText(
+                this,
+                getString(R.string.tips_do_not_choose_image),
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
         when (requestCode) {
             READ_REQUEST_CODE -> {
-                if (resultCode == Activity.RESULT_OK) {
-                    data?.data?.also { uri ->
-                        viewModel.updateUri(uri)
-                        takePersistableUriPermission(uri)
-                    }
+                val uri = data?.data
+                if (FileUtils.isImage(this.contentResolver, uri)) {
+                    viewModel.updateUri(uri!!)
+                    takePersistableUriPermission(uri)
                 } else {
                     Toast.makeText(
                         this,
-                        getString(R.string.tips_do_not_choose_image),
+                        getString(R.string.tips_choose_other_file_type),
                         Toast.LENGTH_SHORT
-                    )
-                        .show()
+                    ).show()
                 }
             }
             ICON_REQUEST_CODE -> {
-                if (resultCode == Activity.RESULT_OK) {
-                    data?.data?.also { uri ->
-                        viewModel.updateIcon(uri)
-                        takePersistableUriPermission(uri)
-                    }
+                val uri = data?.data
+                if (FileUtils.isImage(this.contentResolver, uri)) {
+                    viewModel.updateIcon(uri!!)
+                    takePersistableUriPermission(uri)
                 } else {
                     Toast.makeText(
                         this,
-                        getString(R.string.tips_do_not_choose_image),
+                        getString(R.string.tips_choose_other_file_type),
                         Toast.LENGTH_SHORT
-                    )
-                        .show()
+                    ).show()
                 }
             }
         }

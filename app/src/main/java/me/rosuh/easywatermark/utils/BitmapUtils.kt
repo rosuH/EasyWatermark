@@ -5,11 +5,15 @@ import android.content.ContentResolver
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
+import kotlin.math.max
+
 
 @Throws(FileNotFoundException::class, OutOfMemoryError::class)
 @Synchronized
@@ -25,10 +29,11 @@ suspend fun decodeSampledBitmapFromResource(
     resolver: ContentResolver,
     uri: Uri,
     reqWidth: Int,
-    reqHeight: Int
+    reqHeight: Int,
+    scale: FloatArray = FloatArray(1) { 1f }
 ): Bitmap? = withContext(Dispatchers.IO) {
     try {
-        return@withContext BitmapFactory.Options().run {
+        BitmapFactory.Options().run {
             inJustDecodeBounds = true
             resolver.openInputStream(uri).use { `is` ->
                 BitmapFactory.decodeStream(`is`, null, this)
@@ -40,8 +45,54 @@ suspend fun decodeSampledBitmapFromResource(
             // Decode bitmap with inSampleSize set
             inJustDecodeBounds = false
 
-            resolver.openInputStream(uri).use { `is` ->
-                return@use BitmapFactory.decodeStream(`is`, null, this)
+            scale[0] = max(outWidth.toFloat() / reqWidth, outHeight.toFloat() / reqHeight)
+            // fixme pls make the code more elegant >_<
+            val rawBitmap = resolver.openInputStream(uri).use { inputStream ->
+                BitmapFactory.decodeStream(inputStream, null, this)
+            }
+
+            resolver.openInputStream(uri).use { inputStream ->
+                if (inputStream == null) {
+                    return@withContext rawBitmap
+                }
+                val exif =
+                    if (android.os.Build.VERSION.SDK_INT > android.os.Build.VERSION_CODES.N) {
+                        ExifInterface(inputStream)
+                    } else {
+                        // do not support api lower 24
+                        return@withContext rawBitmap
+                    }
+                val orientation: Int = exif.getAttributeInt(
+                    ExifInterface.TAG_ORIENTATION,
+                    ExifInterface.ORIENTATION_UNDEFINED
+                )
+
+                val matrix = Matrix()
+                when (orientation) {
+                    ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+                    ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+                    ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+                    ExifInterface.ORIENTATION_UNDEFINED, ExifInterface.ORIENTATION_NORMAL -> {
+                        // do not need to rotate bitmap
+                        return@withContext rawBitmap
+                    }
+                    else -> {
+                    }
+                }
+
+                val rotatedBitmap = Bitmap.createBitmap(
+                    rawBitmap!!,
+                    0,
+                    0,
+                    rawBitmap.width,
+                    rawBitmap.height,
+                    matrix,
+                    false
+                )
+                if (rotatedBitmap != rawBitmap && !rawBitmap.isRecycled) {
+                    rawBitmap.recycle()
+                }
+                return@withContext rotatedBitmap
             }
         }
     } catch (fne: FileNotFoundException) {

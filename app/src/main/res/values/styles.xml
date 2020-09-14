@@ -8,7 +8,7 @@
         <item name="android:textColor">@color/text_color_main</item>
         <item name="colorOnSurface">@color/colorAccent</item>
     </style>
-    
+
     <style name="AppTheme.ActionOverflowButtonStyle">
         <item name="android:src">@drawable/ic_more</item>
     </style>
@@ -27,6 +27,12 @@
 
     <style name="AppTheme.TitleText" parent="AppTheme">
         <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="AppTheme.TipsText" parent="AppTheme">
+        <item name="android:layout_marginTop">3dp</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/text_color_tips</item>
     </style>
 
     <style name="MySeekBarStyle">
@@ -88,12 +94,25 @@
     </style>
 
     <style name="MaterialAlertDialog" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
-        <item name="buttonBarPositiveButtonStyle">@style/Widget.App.Button</item>
+        <item name="buttonBarPositiveButtonStyle">@style/Widget.App.Dialog.Button</item>
         <item name="colorOnSurface">@color/white</item>
-        <item name="buttonBarNegativeButtonStyle">@style/Widget.App.Button</item>
+        <item name="buttonBarNegativeButtonStyle">@style/Widget.App.Dialog.Button</item>
     </style>
 
-    <style name="Widget.App.Button" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
+    <style name="Widget.App.Dialog.Button" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
         <item name="android:textColor">@color/white</item>
     </style>
+
+    <style name="Widget.App.Button" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="materialThemeOverlay">@style/ThemeOverlay.App.Button.TextButton</item>
+    </style>
+
+    <style name="ThemeOverlay.App.Button.TextButton" parent="">
+        <item name="colorPrimary">@color/colorAccent</item>
+        <item name="rippleColor">@color/colorAccent</item>
+        <item name="android:textSize">12sp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="android:textColor">@color/white</item>
+    </style>
+
 </resources>
