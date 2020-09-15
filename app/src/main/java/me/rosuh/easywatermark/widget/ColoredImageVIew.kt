@@ -7,7 +7,6 @@ import android.graphics.*
 import android.util.AttributeSet
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.graphics.drawable.toBitmap
-import androidx.interpolator.view.animation.FastOutLinearInInterpolator
 
 
 class ColoredImageVIew : AppCompatImageView {
@@ -19,6 +18,7 @@ class ColoredImageVIew : AppCompatImageView {
         defStyleAttr
     )
 
+    private var sizeHasChanged: Boolean = true
     private val paint by lazy { Paint() }
 
     private val colorList = arrayOf(
@@ -29,6 +29,8 @@ class ColoredImageVIew : AppCompatImageView {
     ).toIntArray()
 
     private val posList = arrayOf(0f, 0.5178f, 0.7654f, 1f).toFloatArray()
+
+    private val xfermode by lazy { PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP) }
 
     private val colorAnimator by lazy {
         ObjectAnimator.ofFloat(1f, 0f)
@@ -48,7 +50,6 @@ class ColoredImageVIew : AppCompatImageView {
                     postInvalidateOnAnimation()
                 }
                 duration = 1200
-                interpolator = FastOutLinearInInterpolator()
                 repeatCount = ObjectAnimator.INFINITE
                 repeatMode = ObjectAnimator.REVERSE
             }
@@ -57,16 +58,21 @@ class ColoredImageVIew : AppCompatImageView {
 
     private var innerBitmap: Bitmap? = null
 
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        sizeHasChanged = w != oldh || h != oldh
+    }
+
     @SuppressLint("DrawAllocation")
     override fun onDraw(canvas: Canvas?) {
-        if (innerBitmap == null) {
+        if (innerBitmap == null || sizeHasChanged) {
             super.onDraw(canvas)
             innerBitmap = drawable.toBitmap(width, height)
         }
         innerBitmap?.let {
             val sc = canvas?.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), null) ?: return
             canvas.drawBitmap(it, 0f, 0f, paint)
-            paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
+            paint.xfermode = xfermode
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
             paint.xfermode = null
             canvas.restoreToCount(sc)
