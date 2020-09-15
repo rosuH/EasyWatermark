@@ -25,7 +25,7 @@ object Versions {
 
     const val gap = "4.0.1"
 
-    const val kotlin = "1.4.0"
+    const val kotlin = "1.4.10"
 
     const val appcompat = "1.2.0"
 
