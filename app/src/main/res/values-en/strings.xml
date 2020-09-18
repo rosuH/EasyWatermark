@@ -66,9 +66,11 @@
     <string name="dialog_change_log_title">Change log</string>
     <string name="dialog_change_log_content">
         Thank you for your feedback, the main update of this version is:\n\n
+         <u><big>New</big></u> \n\n
+         · Spanish \n\n
+         Thank sguinetti \n\n
          <u><big>Repair</big></u> \n\n
-         · Android Q and lower systems: failed to preview pictures\n\n · Android Q and lower systems: After the pictures are output, the media scan failed to be notified\n\n
-         Thanks to reverieo_o, wong077 \n\n
+         · Part of the ROM crashed due to animation
     </string>
     <string name="tips_not_app_can_open_imaegs">It looks like you have no file manager installed</string>
     <string name="tips_choose_other_file_type">Looks like you chose not a picture</string>

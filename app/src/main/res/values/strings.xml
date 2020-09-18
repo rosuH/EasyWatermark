@@ -76,10 +76,11 @@
     <string name="contributor_info">当反馈的问题有效，并被修复或加入新版本时，您的名字或邮件出现在更新日志弹窗中。我们会对您的信息作遮挡处理，不会出现全称。\n 如果您不愿意出现，请标注：我不愿意。即可</string>
     <string name="dialog_change_log_content">
         感谢大家的反馈，此版本主要更新为：\n\n
+        <u><big>新增</big></u> \n\n
+        · 西班牙语 \n\n
+        感谢 sguinetti \n\n
         <u><big>修复</big></u> \n\n
-        · Android Q 以下的系统：预览图片失败的问题\n\n
-        · Android Q 以下的系统：图片输出后，通知媒体扫描失败的问题 \n\n
-        感谢 reverieo_o, wong077 \n\n
+        · 部分 ROM 因为动画导致的崩溃
     </string>
     <string name="open_source_desc_compressor" translatable="false">"Compressor is a lightweight and powerful android image compression library. Compressor will allow you to compress large photos into smaller sized photos with very less or negligible loss in quality of the image. "</string>
     <string name="open_source_desc_gif" translatable="false">Bundled GIFLib via JNI is used to render frames. This way should be more efficient than WebView or Movie classes.</string>

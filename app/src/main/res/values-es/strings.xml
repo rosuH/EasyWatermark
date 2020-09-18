@@ -65,17 +65,15 @@
     <string name="dialog_change_log_title">Registro de cambios</string>
     <string name="dialog_change_log_content">
         Thank you for your feedback. The main update of this version is:\n\n
-        <u><big>New</big></u> \n\n
-        Options for adjusting transparency. Although on the left side of the preview area, sliding up and down can also be adjusted, but you don’t seem to like this method very much. 😄\n\n
-        (Thanks: e**oc, la**r)\n\n
-        <u><big>Adjustment</big></u> \n\n
-        · The control panel is forbidden to slide to reduce the false touch of the adjustment parameters. \n
-        · Used a brand new Icon, thanks to our designers! @Twowei \n\n
-        <u><big>Fix</big></u> \n\n
-        Fix the crash of some lower version phones when saving pictures problem. (Thanks: 2**9@qq.com, a**liang)\n
+        <u><big>Nuevo</big> </u> \n\n
+         · Español \n\n
+         Gracias, sguinetti \n\n
+        <u><big>Reparación</big> </u> \n\n
+         · Parte de la ROM se bloqueó debido a la animación
     </string>
     <string name="tips_not_app_can_open_imaegs">Parece que no tienes un gestor de archivos instalado</string>
     <string name="tips_choose_other_file_type">Parece que no escogió una imagen</string>
     <string name="error_save_oom">Memoria insuficiente, limpie la caché y vuelva a intentarlo</string>
     <string name="error_share_uri_is_null">El Uri de salida está vacío, contacta con el desarrollador para enviar comentarios, gracias</string>
+    <string name="tips_content_mode_button">Haga clic para editar texto o imagen</string>
 </resources>
