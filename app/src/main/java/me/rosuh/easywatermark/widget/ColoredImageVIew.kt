@@ -65,7 +65,7 @@ class ColoredImageVIew : AppCompatImageView {
 
     @SuppressLint("DrawAllocation")
     override fun onDraw(canvas: Canvas?) {
-        if (innerBitmap == null || sizeHasChanged) {
+        if (innerBitmap == null || (sizeHasChanged && width > 0 && height > 0)) {
             super.onDraw(canvas)
             innerBitmap = drawable.toBitmap(width, height)
         }
