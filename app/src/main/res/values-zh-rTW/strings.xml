@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="about_title_about">關於</string>
+    <string name="about_title_author">作者</string>
+    <string name="about_title_designer">設計者</string>
+    <string name="about_title_feed_back">回饋</string>
+    <string name="about_title_figma_link">查看他的更多作品</string>
+    <string name="about_title_info">消息</string>
+    <string name="about_title_open_source">開源許可</string>
+    <string name="about_title_rating">為這個應用程式評分</string>
+    <string name="about_title_repo_link">在 Github 上查看此項目</string>
+    <string name="about_title_update_log">更新日誌</string>
+    <string name="about_title_version">版本</string>
+    <string name="action_pick">選擇圖片</string>
+    <string name="action_save">儲存</string>
+    <string name="action_settings">關於</string>
+    <string name="app_name">簡單浮水印</string>
+    <string name="config_default_water_mark_text">👋圖片僅供測試，請勿作其他用途</string>
+    <string name="contributor_info">當您所提交的問題確實存在，且已被修復或加入新版本時，您的名字或郵件將會出現在更新日誌中。我們會對您的資料做遮擋處理，不會出現全名。\n如果您不願意出現，請標註：我不願意。即可。</string>
+    <string name="crash_mail">發送郵件</string>
+    <string name="dialog_change_log_title">更新日誌</string>
+    <string name="directly_save_tips">直接儲存編輯後的圖片到相簿中</string>
+    <string name="error_file_not_found">未選擇圖片或圖片不存在</string>
+    <string name="error_not_img">請選擇圖片</string>
+    <string name="error_save_oom">內存不足，請清理內存後重試</string>
+    <string name="error_share_uri_is_null">輸出 Uri 為空，請聯繫開發者，謝謝</string>
+    <string name="hint_tips_alpha_100">透明度 100%</string>
+    <string name="hint_tips_input_water_mark_text">請輸入浮水印文字</string>
+    <string name="msg_crash">你願意幫忙提交錯誤訊息嗎？這樣可以幫我們做得更好！這不會收集您的個人資料。</string>
+    <string name="request_permission_failed">無法取得權限</string>
+    <string name="save_directly">直接儲存</string>
+    <string name="share">分享</string>
+    <string name="share_tips">分享儲存後的圖片到其他應用程式中</string>
+    <string name="style_alpha">透明度</string>
+    <string name="tip_not_mail_found">似乎沒有安裝郵件客戶端，你可以主動將錯誤訊息貼至到商店或 Github 中</string>
+    <string name="tips_cancel_dialog">取消</string>
+    <string name="tips_cancel_output">取消</string>
+    <string name="tips_choose_color_dialog">選擇顏色</string>
+    <string name="tips_choose_other_file_type">您選擇的檔案似乎不是圖片</string>
+    <string name="tips_compress_create_uri_failed">壓縮完成，但無法建立 Uri，請重啟 APP 重試。%1$s</string>
+    <string name="tips_compress_images">壓縮圖片</string>
+    <string name="tips_compress_ok">壓縮完成，點擊確定繼續匯出</string>
+    <string name="tips_compressing">正在壓縮中…</string>
+    <string name="tips_confirm_dialog">確認</string>
+    <string name="tips_content_mode_button">點擊可修改文字或圖片</string>
+    <string name="tips_content_size_performance">尺寸越大，實時預覽性能要求越高</string>
+    <string name="tips_do_not_choose_image">沒有選擇圖片</string>
+    <string name="tips_error">錯誤</string>
+    <string name="tips_need_compress_img">圖片過大或內存不足</string>
+    <string name="tips_not_app_can_open_imaegs">看起來您安裝沒有檔案管理員？</string>
+    <string name="tips_ok">確定</string>
+    <string name="tips_pick_image">選擇圖片，開始編輯</string>
+    <string name="tips_save_ok">儲存完成</string>
+    <string name="tips_share_image">分享圖片</string>
+    <string name="tips_share_ok">分享完成</string>
+    <string name="tips_tip_title">發現故障</string>
+    <string name="title_content">內容</string>
+    <string name="title_enter_text">內容</string>
+    <string name="title_horizon_layout">水平</string>
+    <string name="title_layout">分布</string>
+    <string name="title_style">樣式</string>
+    <string name="title_text_color">顏色</string>
+    <string name="title_text_rotate">角度</string>
+    <string name="title_text_size">大小</string>
+    <string name="title_text_style">字體樣式</string>
+    <string name="title_vertical_layout">垂直</string>
+    <string name="touch_alpha">透明度: %1$d</string>
+    <string name="touch_size">大小: %1$d</string>
+    <string name="water_mark_mode_image">圖片</string>
+    <string name="water_mark_mode_text">文字</string>
+    <string name="dialog_change_log_content">
+        感谢大家的幫助，此版本主要更新內容為：
+        <u><big>新增</big></u>\n\n
+        · 西班牙語
+        感谢 sguinetti
+        <u><big>修复</big></u>\n\n
+        · 部分 ROM 因為動畫導致的問題
+    </string>
+</resources>
