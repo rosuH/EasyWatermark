@@ -3,8 +3,10 @@ package me.rosuh.easywatermark
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.content.edit
+import me.rosuh.easywatermark.model.WaterMarkConfig
 import kotlin.system.exitProcess
 
 
@@ -44,6 +46,13 @@ class MyApp : Application() {
     companion object {
         lateinit var instance: Context
             private set
+
+        fun globalSp(): SharedPreferences {
+            return instance.getSharedPreferences(
+                WaterMarkConfig.SP_NAME,
+                MODE_PRIVATE
+            )
+        }
 
         const val SP_NAME = "sp_water_mark_crash_info"
 

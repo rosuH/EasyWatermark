@@ -1,6 +1,7 @@
 package me.rosuh.easywatermark.model
 
 import android.content.Context.MODE_PRIVATE
+import android.content.SharedPreferences
 import android.graphics.Color
 import android.graphics.Paint
 import android.net.Uri
@@ -9,35 +10,38 @@ import androidx.core.content.edit
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 
-class WaterMarkConfig {
-    var uri: Uri
+class WaterMarkConfig private constructor() {
+    lateinit var uri: Uri
 
-    var text: String
+    lateinit var text: String
 
-    var textSize: Float
+    var textSize: Float = 0.0f
 
-    var textColor: Int
+    var textColor: Int = Color.RED
 
-    var alpha: Int
+    var alpha: Int = 255
 
-    var horizonGapPercent: Int
+    var horizonGapPercent: Int = 30
 
-    var verticalGapPercent: Int
+    var verticalGapPercent: Int = 30
 
-    var degree: Float
+    var degree: Float = 315f
 
-    var textStyle: Paint.Style
+    lateinit var textStyle: Paint.Style
 
-    var iconUri: Uri
+    lateinit var iconUri: Uri
 
-    var markMode: MarkMode
+    lateinit var markMode: MarkMode
 
-    var imageScale: Float
+    var imageScale: Float = 0.0f
 
-    init {
-        with(
-            MyApp.instance.getSharedPreferences(SP_NAME, MODE_PRIVATE)
-        ) {
+    fun restore(
+        sharedPreferences: SharedPreferences = MyApp.instance.getSharedPreferences(
+            SP_NAME,
+            MODE_PRIVATE
+        )
+    ) {
+        with(sharedPreferences) {
             uri = Uri.parse("")
             val saveText = getString(SP_KEY_TEXT, "")
             text =
@@ -74,10 +78,8 @@ class WaterMarkConfig {
         }
     }
 
-    fun save() {
-        MyApp.instance.getSharedPreferences(
-            SP_NAME, MODE_PRIVATE
-        ).edit {
+    fun save(sharedPreferences: SharedPreferences = MyApp.globalSp()) {
+        sharedPreferences.edit {
             putString(SP_KEY_ICON_URI, iconUri.toString())
             putString(SP_KEY_TEXT, text)
             putFloat(SP_KEY_TEXT_SIZE, textSize.coerceAtLeast(0f))
@@ -120,22 +122,46 @@ class WaterMarkConfig {
         object Image : MarkMode()
     }
 
+    override fun toString(): String {
+        return """
+            uri: $uri, 
+            text: $text,
+            textSize: $textSize,
+            textColor: $textColor,
+            alpha: $alpha,
+            horizonGapPercent: $horizonGapPercent,
+            verticalGapPercent: $verticalGapPercent,
+            degree: $degree,
+            textStyle: $textStyle,
+            iconUri: $iconUri,
+            markMode: $markMode,
+            imageScale: $imageScale
+        """.trimIndent()
+    }
+
 
     companion object {
         const val SP_NAME = "sp_water_mark_config"
 
-        const val SP_KEY_TEXT = SP_NAME + "_key_text"
-        const val SP_KEY_TEXT_SIZE = SP_NAME + "_key_text_size"
-        const val SP_KEY_TEXT_COLOR = SP_NAME + "_key_text_color"
-        const val SP_KEY_TEXT_STYLE = SP_NAME + "_key_text_style"
-        const val SP_KEY_ALPHA = SP_NAME + "_key_alpha"
-        const val SP_KEY_HORIZON_GAP = SP_NAME + "_key_horizon_gap"
-        const val SP_KEY_VERTICAL_GAP = SP_NAME + "_key_vertical_gap"
-        const val SP_KEY_DEGREE = SP_NAME + "_key_degree"
-        const val SP_KEY_ICON_URI = SP_NAME + "_key_icon_uri"
-        const val SP_KEY_MODE = SP_NAME + "_key_type"
-        const val SP_KEY_CHANGE_LOG = SP_NAME + "_key_change_log"
-        const val SP_KEY_IMAGE_SCALE = SP_NAME + "_key_image_scale"
+        const val SP_KEY_TEXT = "${SP_NAME}_key_text"
+        const val SP_KEY_TEXT_SIZE = "${SP_NAME}_key_text_size"
+        const val SP_KEY_TEXT_COLOR = "${SP_NAME}_key_text_color"
+        const val SP_KEY_TEXT_STYLE = "${SP_NAME}_key_text_style"
+        const val SP_KEY_ALPHA = "${SP_NAME}_key_alpha"
+        const val SP_KEY_HORIZON_GAP = "${SP_NAME}_key_horizon_gap"
+        const val SP_KEY_VERTICAL_GAP = "${SP_NAME}_key_vertical_gap"
+        const val SP_KEY_DEGREE = "${SP_NAME}_key_degree"
+        const val SP_KEY_ICON_URI = "${SP_NAME}_key_icon_uri"
+        const val SP_KEY_MODE = "${SP_NAME}_key_type"
+        const val SP_KEY_CHANGE_LOG = "${SP_NAME}_key_change_log"
+        const val SP_KEY_IMAGE_SCALE = "${SP_NAME}_key_image_scale"
 
+        fun pull(
+            sp: SharedPreferences = MyApp.globalSp()
+        ): WaterMarkConfig {
+            return WaterMarkConfig().apply {
+                restore(sp)
+            }
+        }
     }
 }
