@@ -64,7 +64,7 @@ class MainViewModel : ViewModel() {
     val saveState: LiveData<State> = Transformations.map(_saveState) { it }
 
     val config: MutableLiveData<WaterMarkConfig> by lazy {
-        MutableLiveData<WaterMarkConfig>(WaterMarkConfig())
+        MutableLiveData<WaterMarkConfig>(WaterMarkConfig.pull())
     }
 
     val tipsStatus: MutableLiveData<TipsStatus> by lazy {
