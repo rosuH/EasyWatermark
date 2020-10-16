@@ -255,15 +255,15 @@ class MainActivity : AppCompatActivity() {
             when (position) {
                 0 -> {
                     tab.text = getString(R.string.title_layout)
-                    tab.icon = getDrawable(R.drawable.ic_layout_title)
+                    tab.icon = ContextCompat.getDrawable(this, R.drawable.ic_layout_title)
                 }
                 1 -> {
                     tab.text = getString(R.string.title_style)
-                    tab.icon = getDrawable(R.drawable.ic_style_title)
+                    tab.icon = ContextCompat.getDrawable(this, R.drawable.ic_style_title)
                 }
                 2 -> {
                     tab.text = getString(R.string.title_content)
-                    tab.icon = getDrawable(R.drawable.ic_text_title)
+                    tab.icon = ContextCompat.getDrawable(this, R.drawable.ic_text_title)
                 }
             }
         }.attach()
