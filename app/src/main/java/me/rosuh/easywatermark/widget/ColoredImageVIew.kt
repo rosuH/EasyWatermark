@@ -28,17 +28,17 @@ class ColoredImageVIew : AppCompatImageView {
         Color.parseColor("#00FFE0")
     ).toIntArray()
 
-    private val posList = arrayOf(0f, 0.5178f, 0.7654f, 1f).toFloatArray()
+    private val posList = arrayOf(0f, 0.5f, 0.7f, 0.99f).toFloatArray()
 
     private val xfermode by lazy { PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP) }
 
     private val colorAnimator by lazy {
-        ObjectAnimator.ofFloat(1f, 0f)
+        ObjectAnimator.ofFloat(1f, 0.1f)
             .apply {
                 addUpdateListener {
                     val pos = (it.animatedValue as Float)
                     val shader = LinearGradient(
-                        (1 - pos) * width.toFloat() * 2f,
+                        (1.1f - pos) * width.toFloat() * 2f,
                         pos * height.toFloat(),
                         0f,
                         height.toFloat(),
@@ -49,7 +49,7 @@ class ColoredImageVIew : AppCompatImageView {
                     paint.shader = shader
                     postInvalidateOnAnimation()
                 }
-                duration = 1200
+                duration = 2500
                 repeatCount = ObjectAnimator.INFINITE
                 repeatMode = ObjectAnimator.REVERSE
             }
@@ -68,6 +68,7 @@ class ColoredImageVIew : AppCompatImageView {
         if (innerBitmap == null || (sizeHasChanged && width > 0 && height > 0)) {
             super.onDraw(canvas)
             innerBitmap = drawable.toBitmap(width, height)
+            sizeHasChanged = false
         }
         innerBitmap?.let {
             val sc = canvas?.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), null) ?: return
