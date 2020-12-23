@@ -53,7 +53,7 @@ Developer-led download channels:
 - [Github Release](https://github.com/rosuH/EasyWatermark/releases): Always stay up to date!
 - [Google Play](https://play.google.com/store/apps/details?id=me.rosuh.easywatermark)
   - ⚠️Note: this version charges but the code is identical, so if you'd like to buy the author a cup of tea🍵 then go here and download it, otherwise please choose another source :)
-- F-Droid
+- [F-Droid](https://f-droid.org/packages/me.rosuh.easywatermark/)
 - [Coolapk](https://www.coolapk.com/apk/272743)
 
 All other channels are not developer-driven, so please screen them carefully before downloading and using them.
