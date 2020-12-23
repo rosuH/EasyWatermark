@@ -2,9 +2,11 @@ package me.rosuh.easywatermark.ui
 
 import android.app.Activity
 import android.content.Intent
+import android.content.Intent.ACTION_SEND
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.Parcelable
 import android.view.*
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -60,6 +62,17 @@ class MainActivity : AppCompatActivity() {
             // Activity was recycled but dialog still showing in some case?
             SaveImageBSDialogFragment.safetyHide(this@MainActivity.supportFragmentManager)
             ChangeLogDialogFragment.safetyShow(this@MainActivity.supportFragmentManager)
+            // Accepting gallery shared images
+            if (intent?.action == ACTION_SEND) {
+                dealWithImage(intent)
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        if (intent?.action == ACTION_SEND) {
+            dealWithImage(intent)
         }
     }
 
@@ -342,6 +355,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun dealWithImage(intent: Intent?) {
+        var uri = if (intent?.type?.startsWith("image") == true) {
+            (intent.getParcelableExtra<Parcelable>(Intent.EXTRA_STREAM) as? Uri)
+        } else {
+            intent?.data
+        }
+        if (FileUtils.isImage(this.contentResolver, uri)) {
+            viewModel.updateUri(uri!!)
+            takePersistableUriPermission(uri)
+        } else {
+            Toast.makeText(
+                this,
+                getString(R.string.tips_choose_other_file_type),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (resultCode != Activity.RESULT_OK) {
@@ -354,17 +385,7 @@ class MainActivity : AppCompatActivity() {
         }
         when (requestCode) {
             READ_REQUEST_CODE -> {
-                val uri = data?.data
-                if (FileUtils.isImage(this.contentResolver, uri)) {
-                    viewModel.updateUri(uri!!)
-                    takePersistableUriPermission(uri)
-                } else {
-                    Toast.makeText(
-                        this,
-                        getString(R.string.tips_choose_other_file_type),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+                dealWithImage(data)
             }
             ICON_REQUEST_CODE -> {
                 val uri = data?.data
@@ -386,9 +407,13 @@ class MainActivity : AppCompatActivity() {
      * Try to get the permission without timeout.
      */
     private fun takePersistableUriPermission(uri: Uri) {
-        val takeFlags: Int = intent.flags and
-                (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-        contentResolver.takePersistableUriPermission(uri, takeFlags)
+        try {
+            val takeFlags: Int = intent.flags and
+                    (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            contentResolver.takePersistableUriPermission(uri, takeFlags)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private class ControlPanelPagerAdapter(

@@ -3,8 +3,6 @@ object Apps {
     const val buildTools = "29.0.3"
     const val minSdk = 22
     const val targetSdk = 29
-    const val versionCode = 10102
-    const val versionName = "1.1.2"
 }
 
 object BuildTypes {
