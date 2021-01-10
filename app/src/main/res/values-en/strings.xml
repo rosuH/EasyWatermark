@@ -76,4 +76,5 @@
     <string name="tips_choose_other_file_type">Invalid image</string>
     <string name="error_save_oom">Insufficient memory, please clean up the background and try again</string>
     <string name="error_share_uri_is_null">The output Uri is empty, please contact the developer for feedback, thank you</string>
+    <string name="dev_comment">Any sufficiently advanced technology is indistinguishable from magic.</string>
 </resources>

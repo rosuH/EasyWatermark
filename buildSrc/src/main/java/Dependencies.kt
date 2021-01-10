@@ -100,6 +100,8 @@ object Libs {
 
     const val appcompat = "androidx.appcompat:appcompat:${Versions.appcompat}"
 
+    const val appcompatRes = "androidx.appcompat:appcompat-resources:${Versions.appcompat}"
+
     const val gifDrawable = "pl.droidsonroids.gif:android-gif-drawable:${Versions.gifDrawable}"
 
     const val exif = "androidx.exifinterface:exifinterface:${Versions.exif}"

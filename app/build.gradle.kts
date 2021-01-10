@@ -67,6 +67,8 @@ android {
                 output.outputFileName = "ewm-v${variant.versionName}.apk"
             }
     }
+
+    android.buildFeatures.viewBinding = true
 }
 
 tasks.withType<KotlinCompile> {
