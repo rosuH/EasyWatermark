@@ -76,4 +76,5 @@
     <string name="error_save_oom">Memoria insuficiente, limpie la caché y vuelva a intentarlo</string>
     <string name="error_share_uri_is_null">El Uri de salida está vacío, contacta con el desarrollador para enviar comentarios, gracias</string>
     <string name="tips_content_mode_button">Haga clic para editar texto o imagen</string>
+    <string name="dev_comment">Cualquier tecnología avanzada, a primera vista, no es diferente de la magia.</string>
 </resources>

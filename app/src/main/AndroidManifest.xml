@@ -22,7 +22,7 @@
             android:name=".ui.MainActivity"
             android:configChanges="orientation|keyboardHidden"
             android:screenOrientation="portrait"
-            android:launchMode="singleInstance"
+            android:launchMode="singleTask"
             android:windowSoftInputMode="stateAlwaysHidden|adjustPan">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -38,13 +38,7 @@
         <activity
             android:name=".ui.about.AboutActivity"
             android:configChanges="orientation|keyboardHidden"
-            android:screenOrientation="portrait"
-            android:parentActivityName=".ui.MainActivity"
-            android:theme="@style/AppTheme.MaterialAboutActivity">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value=".ui.MainActivity" />
-        </activity>
+            android:screenOrientation="portrait"></activity>
         <activity
             android:name=".ui.about.OpenSourceActivity"
             android:configChanges="orientation|keyboardHidden"

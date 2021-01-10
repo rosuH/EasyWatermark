@@ -33,8 +33,8 @@
     <string name="about_title_feed_back">反馈</string>
     <string name="about_title_update_log">更新日志</string>
     <string name="about_title_open_source">开源许可</string>
-    <string name="about_title_privacy_policy" translatable="false">Privacy policy</string>
-    <string name="about_title_privacy_policy_zh" translatable="false">隐私政策</string>
+    <string name="about_title_privacy_statement" translatable="false">Privacy Statement</string>
+    <string name="about_title_privacy_statement_zh" translatable="false">隐私政策</string>
 
     <string name="about_title_author">作者</string>
     <string name="about_title_designer">设计者</string>
@@ -87,4 +87,5 @@
     <string name="tips_not_app_can_open_imaegs">看起来您安装没有文件管理器？</string>
     <string name="error_save_oom">内存不足，请清理后台后重试</string>
     <string name="error_share_uri_is_null">输出 Uri 为空，请联系开发者反馈，谢谢</string>
+    <string name="dev_comment">任何先进的科技，初看皆与魔法无异</string>
 </resources>

@@ -1,169 +1,94 @@
 package me.rosuh.easywatermark.ui.about
 
-import android.content.Context
 import android.content.Intent
-import android.graphics.drawable.ColorDrawable
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
-import androidx.core.content.ContextCompat
-import com.danielstone.materialaboutlibrary.MaterialAboutActivity
-import com.danielstone.materialaboutlibrary.items.MaterialAboutActionItem
-import com.danielstone.materialaboutlibrary.model.MaterialAboutCard
-import com.danielstone.materialaboutlibrary.model.MaterialAboutList
+import android.view.View
+import androidx.appcompat.app.AppCompatActivity
+import kotlinx.android.synthetic.main.activity_main.view.*
 import me.rosuh.easywatermark.BuildConfig
-import me.rosuh.easywatermark.R
+import me.rosuh.easywatermark.databinding.ActivityAboutBinding
 import me.rosuh.easywatermark.ktx.openLink
 
 
-class AboutActivity : MaterialAboutActivity() {
+class AboutActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivityAboutBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        supportActionBar?.apply {
-            setBackgroundDrawable(
-                ColorDrawable(
-                    ContextCompat.getColor(
-                        this@AboutActivity,
-                        R.color.colorPrimary
-                    )
-                )
-            )
-        }
+        binding = ActivityAboutBinding.inflate(layoutInflater)
+        val view = binding.root
+        setContentView(view)
+        initView()
+        changeStatusBarStyle()
     }
 
-    override fun getActivityTitle(): CharSequence? {
-        return getString(R.string.app_name)
+    private fun changeStatusBarStyle() {
+        val flag = (View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE)
+        window?.decorView?.systemUiVisibility = flag
+        window?.statusBarColor = Color.TRANSPARENT
+        window?.navigationBarColor = Color.TRANSPARENT
     }
 
-    override fun getMaterialAboutList(context: Context): MaterialAboutList {
-        val aboutBuilder = MaterialAboutCard.Builder()
-            .title(R.string.about_title_about)
-            .cardColor(ContextCompat.getColor(this, R.color.colorPrimaryDark))
-            .addItem(
-                MaterialAboutActionItem.Builder()
-                    .text(R.string.about_title_version)
-                    .subText(BuildConfig.VERSION_NAME)
-                    .icon(R.drawable.ic_version)
-                    .setOnClickAction {
-                        openLink("https://github.com/rosuH/EasyWatermark/releases/")
-
-                    }.build()
-            )
-            .addItem(
-                MaterialAboutActionItem.Builder()
-                    .text(R.string.about_title_rating)
-                    .icon(R.drawable.ic_rate)
-                    .setOnClickAction {
-                        startActivity(
-                            Intent(
-                                Intent.ACTION_VIEW,
-                                Uri.parse("market://details?id=me.rosuh.easywatermark")
-                            )
+    private fun initView() {
+        with(binding) {
+            tvVersion.setOnClickListener {
+                openLink("https://github.com/rosuH/EasyWatermark/releases/")
+            }
+            tvVersionValue.text = BuildConfig.VERSION_NAME
+            tvRating.setOnClickListener {
+                kotlin.runCatching {
+                    startActivity(
+                        Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("market://details?id=me.rosuh.easywatermark")
                         )
-                    }.build()
-            )
-            .addItem(
-                MaterialAboutActionItem.Builder()
-                    .text(R.string.about_title_feed_back)
-                    .icon(R.drawable.ic_bug_report)
-                    .setOnClickAction {
-                        openLink("https://github.com/rosuH/EasyWatermark/issues/new")
-                    }.build()
-            )
-
-        val infoBuilder = MaterialAboutCard.Builder()
-            .cardColor(ContextCompat.getColor(this, R.color.colorPrimaryDark))
-            .title(R.string.about_title_info)
-            .addItem(
-                MaterialAboutActionItem.Builder()
-                    .text(R.string.about_title_update_log)
-                    .icon(R.drawable.ic_update_log)
-                    .setOnClickAction {
-                        openLink("https://github.com/rosuH/EasyWatermark/releases/")
-                    }.build()
-            )
-            .addItem(
-                MaterialAboutActionItem.Builder()
-                    .text(R.string.about_title_open_source)
-                    .icon(R.drawable.ic_open_source)
-                    .setOnClickAction {
-                        startActivity(Intent(this@AboutActivity, OpenSourceActivity::class.java))
-                    }.build()
-            )
-            .addItem(
-                MaterialAboutActionItem.Builder()
-                    .text(R.string.about_title_privacy_policy_zh)
-                    .icon(R.drawable.ic_baseline_priority_high)
-                    .setOnClickAction {
-                        val browserIntent =
-                            Intent(
-                                Intent.ACTION_VIEW,
-                                Uri.parse("https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy_zh-CN.md")
-                            )
-                        startActivity(browserIntent)
-                    }.build()
-            )
-            .addItem(
-                MaterialAboutActionItem.Builder()
-                    .text(R.string.about_title_privacy_policy)
-                    .icon(R.drawable.ic_baseline_priority_high)
-                    .setOnClickAction {
-                        val browserIntent =
-                            Intent(
-                                Intent.ACTION_VIEW,
-                                Uri.parse("https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy.md")
-                            )
-                        startActivity(browserIntent)
-                    }.build()
-            )
-
-
-        val authorBuilder = MaterialAboutCard.Builder()
-            .cardColor(ContextCompat.getColor(this, R.color.colorPrimaryDark))
-            .title(R.string.about_title_author)
-            .addItem(
-                MaterialAboutActionItem.Builder()
-                    .text("rosuH")
-                    .icon(R.drawable.ic_author)
-                    .setOnClickAction {
-                        openLink("https://github.com/rosuH")
-                    }.build()
-            )
-            .addItem(
-                MaterialAboutActionItem.Builder()
-                    .text(R.string.about_title_repo_link)
-                    .icon(R.drawable.ic_github)
-                    .setOnClickAction {
-                        openLink("https://github.com/rosuH/EasyWatermark")
-                    }.build()
-            )
-
-        val designBuilder = MaterialAboutCard.Builder()
-            .cardColor(ContextCompat.getColor(this, R.color.colorPrimaryDark))
-            .title(R.string.about_title_designer)
-            .addItem(
-                MaterialAboutActionItem.Builder()
-                    .text("Twowei")
-                    .icon(R.drawable.ic_author)
-                    .setOnClickAction {
-                        openLink("https://tovi.fun/")
-                    }.build()
-            )
-            .addItem(
-                MaterialAboutActionItem.Builder()
-                    .text(R.string.about_title_figma_link)
-                    .icon(R.drawable.ic_figma)
-                    .setOnClickAction {
-                        openLink("https://www.figma.com/@tovi")
-                    }.build()
-            )
-
-
-        return MaterialAboutList.Builder()
-            .addCard(aboutBuilder.build())
-            .addCard(infoBuilder.build())
-            .addCard(authorBuilder.build())
-            .addCard(designBuilder.build())
-            .build()
+                    )
+                }
+            }
+            tvFeedBack.setOnClickListener {
+                openLink("https://github.com/rosuH/EasyWatermark/issues/new")
+            }
+            tvChangeLog.setOnClickListener {
+                openLink("https://github.com/rosuH/EasyWatermark/releases/")
+            }
+            tvOpenSource.setOnClickListener {
+                kotlin.runCatching {
+                    startActivity(
+                        Intent(
+                            this@AboutActivity,
+                            OpenSourceActivity::class.java
+                        )
+                    )
+                }
+            }
+            tvPrivacyCn.setOnClickListener {
+                val browserIntent =
+                    Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse("https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy_zh-CN.md")
+                    )
+                kotlin.runCatching { startActivity(browserIntent) }
+            }
+            tvPrivacyEng.setOnClickListener {
+                val browserIntent =
+                    Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse("https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy.md")
+                    )
+                kotlin.runCatching { startActivity(browserIntent) }
+            }
+            civAvatar.setOnClickListener {
+                openLink("https://github.com/rosuH")
+            }
+            civAvatarDesigner.setOnClickListener {
+                openLink("https://tovi.fun/")
+            }
+            ivBack.setOnClickListener { finish() }
+        }
     }
 }
