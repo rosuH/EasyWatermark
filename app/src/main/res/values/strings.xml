@@ -3,7 +3,7 @@
     <string name="action_pick">选择图片</string>
     <string name="action_save">保存</string>
     <string name="action_settings">关于</string>
-    <string name="title_layout">分布</string>
+    <string name="title_layout">布局</string>
     <string name="title_style">样式</string>
     <string name="title_content">内容</string>
     <string name="tips_do_not_choose_image">没有选择图片</string>
@@ -35,7 +35,6 @@
     <string name="about_title_open_source">开源许可</string>
     <string name="about_title_privacy_statement" translatable="false">Privacy Statement</string>
     <string name="about_title_privacy_statement_zh" translatable="false">隐私政策</string>
-
     <string name="about_title_author">作者</string>
     <string name="about_title_designer">设计者</string>
     <string name="about_title_repo_link">在 Github 上查看此项目</string>
@@ -43,6 +42,7 @@
     <string name="open_source_desc_color_picker" translatable="false"><![CDATA[ColorPickerView implements getting HSV colors, ARGB values, Hex color codes from any image drawables or your gallery pictures by tapping on the desired color. Supports alpha & brightness slider bar, dialog, and saving & restoring selected data.]]></string>
     <string name="open_source_desc_about_lib" translatable="false">Makes it easy to create a beautiful about screen for your app. Generates an Activity or Fragment. Idea from here: Heinrich Reimer\'s open-source-library-request-manager Design inspired by Phonograph If you use this library in your app, please let me know and I\'ll add it to the list.</string>
     <string name="open_source_desc_material_components" translatable="false">Material Components for Android (MDC-Android) help developers execute Material Design. Developed by a core team of engineers and UX designers at Google, these components enable a reliable development workflow to build beautiful and functional Android apps.Material Components for Android is a drop-in replacement for Android\'s Design Support Library.</string>
+    <!--UI-->
     <string name="error_not_img">请选择图片</string>
     <string name="error_file_not_found">未选择图片或图片不存在</string>
     <string name="tips_pick_image">"选择图片，开始编辑 "</string>
@@ -88,4 +88,9 @@
     <string name="error_save_oom">内存不足，请清理后台后重试</string>
     <string name="error_share_uri_is_null">输出 Uri 为空，请联系开发者反馈，谢谢</string>
     <string name="dev_comment">任何先进的科技，初看皆与魔法无异</string>
+    <!--exit confirm dialog-->
+    <string name="dialog_title_exist_confirm">提示</string>
+    <string name="dialog_content_exist_confirm">确认返回吗？返回将丢弃所有修改</string>
+    <string name="dialog_cancel_exist_confirm">按错了</string>
+
 </resources>

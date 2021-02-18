@@ -27,7 +27,7 @@ class EditTextBSDialogFragment : BottomSheetDialogFragment() {
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
             )
-            window?.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+//            window?.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         }
     }
 

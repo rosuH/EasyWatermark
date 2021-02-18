@@ -3,15 +3,8 @@
     android:duration="@android:integer/config_mediumAnimTime"
     android:interpolator="@android:interpolator/fast_out_slow_in"
     android:shareInterpolator="true">
-    <scale
-        android:fromXScale="0.75"
-        android:fromYScale="0.75"
-        android:pivotX="50%p"
-        android:pivotY="50%p"
-        android:toXScale="1"
-        android:toYScale="1" />
 
     <translate
-        android:fromXDelta="100%"
-        android:toXDelta="0" />
+        android:fromYDelta="100%"
+        android:toYDelta="0" />
 </set>

@@ -116,6 +116,10 @@ class WaterMarkConfig private constructor() {
         return markMode == MarkMode.Image && iconUri.toString().isNotEmpty()
     }
 
+    fun canDraw(): Boolean {
+        return canDrawText() || canDrawIcon()
+    }
+
     sealed class MarkMode {
         object Text : MarkMode()
 

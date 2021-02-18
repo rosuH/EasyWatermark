@@ -29,9 +29,9 @@ object Versions {
 
     const val lifeCycle = "2.2.0"
 
-    const val material = "1.2.0"
+    const val material = "1.3.0-rc01"
 
-    const val constraintLayout = "2.0.1"
+    const val constraintLayout = "2.1.0-alpha2"
 
     const val materialAboutLibrary = "3.1.2"
 

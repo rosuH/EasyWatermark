@@ -14,7 +14,8 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.Observer
 import com.google.android.material.button.MaterialButton
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.base.BaseFragment
+import me.rosuh.easywatermark.base.BaseBindFragment
+import me.rosuh.easywatermark.databinding.FragmentContentBinding
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.ui.MainActivity
 import me.rosuh.easywatermark.ui.MainActivity.Companion.ICON_REQUEST_CODE
@@ -22,25 +23,26 @@ import me.rosuh.easywatermark.ui.dialog.EditTextBSDialogFragment
 import me.rosuh.easywatermark.utils.DetectedPerformanceSeekBarListener
 import me.rosuh.easywatermark.widget.ControllableScrollView
 
-class ContentFragment : BaseFragment() {
+class ContentFragment : BaseBindFragment<FragmentContentBinding>() {
 
     private var tvTitleTextStyle: View? = null
     private var btnImage: MaterialButton? = null
     private var btnText: MaterialButton? = null
     private var ivTextStyle: ImageView? = null
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        val root = layoutInflater.inflate(R.layout.fragment_content, container, false)
-        val sv = root.findViewById<ControllableScrollView>(R.id.scrollView)
+    override fun bindView(
+        layoutInflater: LayoutInflater,
+        container: ViewGroup?
+    ): FragmentContentBinding {
+        return FragmentContentBinding.inflate(layoutInflater, container, false)
+    }
 
-        val tvContentSize = root.findViewById<TextView>(R.id.tv_progress_vertical).apply {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        binding.tvProgressVertical.apply {
             text = shareViewModel.config.value?.textSize.toString()
         }
-        with(root) {
+        with(binding.root) {
             ivTextStyle = findViewById<ImageView>(R.id.iv_text_style).apply {
                 setImageResource(if (shareViewModel.config.value?.textStyle == Paint.Style.FILL) R.drawable.ic_text_style_fill else R.drawable.ic_text_style_stroke)
                 setOnClickListener {
@@ -67,7 +69,7 @@ class ContentFragment : BaseFragment() {
             tvTitleTextStyle = findViewById(R.id.tv_title_style)
         }
 
-        val sbContentSize = root.findViewById<SeekBar>(R.id.sb_content_size).apply {
+        binding.sbContentSize.apply {
             with(shareViewModel.config.value?.textSize ?: 14f) {
                 progress = this.toInt()
             }
@@ -75,9 +77,8 @@ class ContentFragment : BaseFragment() {
 
             }.apply {
                 inTimeAction = { _: SeekBar?, _: Int, _: Boolean ->
-                    tvContentSize.text = progress.toString()
-                    sv.canScroll = false
-
+                    binding.tvProgressVertical.text = progress.toString()
+                    binding.scrollView.canScroll = false
                 }
                 postAction = { _: SeekBar?, _: Int, fromUser: Boolean ->
                     if (fromUser) {
@@ -87,13 +88,12 @@ class ContentFragment : BaseFragment() {
             })
         }
 
-        initObserver(sbContentSize, tvContentSize)
-        return root
+        initObserver()
     }
 
     private fun initObserver(
-        sbTextSize: SeekBar,
-        tvTextSize: TextView
+        sbTextSize: SeekBar = binding.sbContentSize,
+        tvTextSize: TextView = binding.tvProgressVertical
     ) {
         shareViewModel.config.observe(viewLifecycleOwner, Observer<WaterMarkConfig> {
             with(it.textSize) {

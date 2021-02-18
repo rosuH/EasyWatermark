@@ -9,14 +9,14 @@
         android:fromYScale="1"
         android:pivotX="50%p"
         android:pivotY="50%p"
-        android:toXScale="0.45"
-        android:toYScale="0.45" />
+        android:toXScale="0.75"
+        android:toYScale="0.75" />
 
-    <alpha
-        android:fromAlpha="1"
-        android:toAlpha="0" />
+<!--    <alpha-->
+<!--        android:fromAlpha="1"-->
+<!--        android:toAlpha="0" />-->
 
-    <!--    <translate-->
-    <!--        android:fromYDelta="0"-->
-    <!--        android:toYDelta="100%" />-->
+        <translate
+            android:fromXDelta="0"
+            android:toXDelta="100%" />
 </set>

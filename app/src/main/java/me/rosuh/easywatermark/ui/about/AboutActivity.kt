@@ -2,25 +2,23 @@ package me.rosuh.easywatermark.ui.about
 
 import android.content.Intent
 import android.graphics.Color
+import android.graphics.PixelFormat
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import kotlinx.android.synthetic.main.activity_main.view.*
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.databinding.ActivityAboutBinding
+import me.rosuh.easywatermark.ktx.inflate
 import me.rosuh.easywatermark.ktx.openLink
 
 
 class AboutActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityAboutBinding
+    private val binding by inflate<ActivityAboutBinding>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityAboutBinding.inflate(layoutInflater)
-        val view = binding.root
-        setContentView(view)
         initView()
         changeStatusBarStyle()
     }

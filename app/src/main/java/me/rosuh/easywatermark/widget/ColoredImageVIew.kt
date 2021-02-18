@@ -20,6 +20,7 @@ class ColoredImageVIew : AppCompatImageView {
 
     private var sizeHasChanged: Boolean = true
     private val paint by lazy { Paint() }
+    var enable = true
 
     private val colorList = arrayOf(
         Color.parseColor("#FFA51F"),
@@ -80,12 +81,24 @@ class ColoredImageVIew : AppCompatImageView {
         }
     }
 
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (enable) {
+            colorAnimator.start()
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        colorAnimator.pause()
+    }
+
 
     fun start() {
-        colorAnimator.start()
+        enable = true
     }
 
     fun stop() {
-        colorAnimator.pause()
+        enable = false
     }
 }

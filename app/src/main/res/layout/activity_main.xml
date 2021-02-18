@@ -5,9 +5,9 @@
     android:id="@+id/cl_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:animateLayoutChanges="true"
     android:background="@color/colorPrimaryDark"
     app:layoutDescription="@xml/activity_main_scene"
-    android:animateLayoutChanges="true"
     tools:context=".ui.MainActivity">
 
     <me.rosuh.easywatermark.widget.ColoredImageVIew
@@ -52,8 +52,7 @@
         style="@style/Widget.AppCompat.ActionButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:rotation="90"
-        android:src="@drawable/ic_more"
+        android:src="@drawable/ic_about"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="@id/tv_tips_pick"
         app:layout_constraintStart_toStartOf="@id/tv_tips_pick"
@@ -78,9 +77,8 @@
         android:layout_height="0dp"
         android:background="@color/colorPrimaryDark"
         android:padding="12dp"
-        android:scaleType="centerInside"
         android:visibility="invisible"
-        app:layout_constraintBottom_toTopOf="@+id/tb_tool_bar"
+        app:layout_constraintBottom_toTopOf="@+id/fc_fun_detail"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/my_toolbar"
@@ -107,8 +105,9 @@
         android:background="@color/colorPrimaryDark"
         android:visibility="invisible"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-        app:layout_constraintBottom_toTopOf="@+id/vp_control_panel"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:tabGravity="fill"
         app:tabIndicatorColor="@color/colorAccent"
@@ -138,11 +137,29 @@
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/vp_control_panel"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_height="wrap_content"
         android:background="@color/colorSecondary"
         android:visibility="invisible"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/tb_tool_bar"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHeight_percent="0.50"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/fc_fun_detail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/colorSecondary"
+        app:layout_constraintBottom_toTopOf="@id/rv_panel"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_panel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/colorSecondary"
+        android:visibility="invisible"
+        app:layout_constraintBottom_toTopOf="@id/tb_tool_bar"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 </androidx.constraintlayout.motion.widget.MotionLayout>

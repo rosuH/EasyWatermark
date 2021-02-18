@@ -13,6 +13,6 @@
             android:toYScale="1" />
 
     <translate
-        android:fromXDelta="-15%"
-        android:toXDelta="0" />
+        android:fromYDelta="-15%"
+        android:toYDelta="0" />
 </set>

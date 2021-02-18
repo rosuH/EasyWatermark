@@ -5,6 +5,7 @@ import android.graphics.*
 import android.net.Uri
 import android.util.AttributeSet
 import android.util.Log
+import androidx.core.view.updateLayoutParams
 import kotlinx.coroutines.*
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.ktx.applyConfig
@@ -59,7 +60,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         set(value) {
             field = value
             generateBitmapJob = launch(exceptionHandler) {
-                if (curUri != field?.uri){
+                if (curUri != field?.uri) {
                     val scale = FloatArray(1)
                     val imageBitmap = decodeSampledBitmapFromResource(
                         context.contentResolver,
@@ -69,13 +70,16 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                         scale
                     )
                     field?.imageScale = scale.first()
+                    updateLayoutParams {
+                        width = imageBitmap?.width ?: width
+                        height = imageBitmap?.height ?: width
+                    }
                     setImageBitmap(imageBitmap)
                     curUri = field?.uri
                 }
 
                 paint.applyConfig(value)
-                val canDraw = field != null
-                        && (field!!.canDrawIcon() || field!!.canDrawText())
+                val canDraw = field?.canDraw() ?: return@launch
                 if (canDraw) {
                     layoutShader = when (field!!.markMode) {
                         WaterMarkConfig.MarkMode.Text -> {
