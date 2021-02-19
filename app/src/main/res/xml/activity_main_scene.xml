@@ -86,7 +86,7 @@
             android:background="@color/colorPrimaryDark"
             android:padding="12dp"
             android:visibility="invisible"
-            motion:layout_constraintBottom_toTopOf="@+id/vp_control_panel"
+            motion:layout_constraintBottom_toTopOf="@id/fc_fun_detail"
             motion:layout_constraintEnd_toEndOf="parent"
             motion:layout_constraintStart_toStartOf="parent"
             motion:layout_constraintTop_toBottomOf="@+id/my_toolbar" />
@@ -107,7 +107,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/colorPrimaryDark"
-            android:visibility="invisible"
+            android:visibility="gone"
             motion:layout_constraintBottom_toTopOf="@id/tb_tool_bar"
             motion:layout_constraintEnd_toEndOf="parent"
             motion:layout_constraintStart_toStartOf="parent" />
@@ -119,6 +119,14 @@
             android:background="@color/colorSecondary"
             android:visibility="invisible"
             motion:layout_constraintBottom_toTopOf="@id/tb_tool_bar"
+            motion:layout_constraintEnd_toEndOf="parent"
+            motion:layout_constraintStart_toStartOf="parent" />
+        <Constraint
+            android:id="@+id/fc_fun_detail"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:visibility="invisible"
+            motion:layout_constraintBottom_toTopOf="@id/rv_panel"
             motion:layout_constraintEnd_toEndOf="parent"
             motion:layout_constraintStart_toStartOf="parent" />
     </ConstraintSet>
@@ -194,7 +202,7 @@
             android:background="@color/colorPrimaryDark"
             android:padding="12dp"
             android:visibility="invisible"
-            motion:layout_constraintBottom_toTopOf="@+id/vp_control_panel"
+            motion:layout_constraintBottom_toTopOf="@id/fc_fun_detail"
             motion:layout_constraintEnd_toEndOf="parent"
             motion:layout_constraintStart_toStartOf="parent"
             motion:layout_constraintTop_toBottomOf="@+id/my_toolbar" />
@@ -215,7 +223,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/colorPrimaryDark"
-            android:visibility="invisible"
+            android:visibility="gone"
             motion:layout_constraintBottom_toTopOf="@id/tb_tool_bar"
             motion:layout_constraintEnd_toEndOf="parent"
             motion:layout_constraintStart_toStartOf="parent" />
@@ -227,6 +235,14 @@
             android:background="@color/colorSecondary"
             android:visibility="invisible"
             motion:layout_constraintBottom_toTopOf="@id/tb_tool_bar"
+            motion:layout_constraintEnd_toEndOf="parent"
+            motion:layout_constraintStart_toStartOf="parent" />
+        <Constraint
+            android:id="@+id/fc_fun_detail"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:visibility="invisible"
+            motion:layout_constraintBottom_toTopOf="@id/rv_panel"
             motion:layout_constraintEnd_toEndOf="parent"
             motion:layout_constraintStart_toStartOf="parent" />
 
@@ -318,7 +334,7 @@
             android:background="#000"
             android:padding="12dp"
             android:visibility="visible"
-            motion:layout_constraintBottom_toTopOf="@+id/vp_control_panel"
+            motion:layout_constraintBottom_toTopOf="@id/fc_fun_detail"
             motion:layout_constraintEnd_toEndOf="parent"
             motion:layout_constraintStart_toStartOf="parent"
             motion:layout_constraintTop_toBottomOf="@+id/my_toolbar" />
@@ -344,7 +360,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/colorPrimaryDark"
-            android:visibility="invisible"
+            android:visibility="gone"
             motion:layout_constraintBottom_toTopOf="@id/tb_tool_bar"
             motion:layout_constraintEnd_toEndOf="parent"
             motion:layout_constraintStart_toStartOf="parent" />
@@ -356,6 +372,14 @@
             android:background="@color/colorSecondary"
             android:visibility="visible"
             motion:layout_constraintBottom_toTopOf="@id/tb_tool_bar"
+            motion:layout_constraintEnd_toEndOf="parent"
+            motion:layout_constraintStart_toStartOf="parent" />
+        <Constraint
+            android:id="@+id/fc_fun_detail"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:visibility="visible"
+            motion:layout_constraintBottom_toTopOf="@id/rv_panel"
             motion:layout_constraintEnd_toEndOf="parent"
             motion:layout_constraintStart_toStartOf="parent" />
     </ConstraintSet>

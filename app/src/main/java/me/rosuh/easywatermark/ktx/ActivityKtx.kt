@@ -10,8 +10,6 @@ import androidx.fragment.app.FragmentTransaction
 import androidx.fragment.app.commit
 import androidx.viewbinding.ViewBinding
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.model.FuncTitleModel
-import me.rosuh.easywatermark.ui.panel.TextSizePbFragment
 
 fun Activity.openLink(url: String) {
     val i = Intent(Intent.ACTION_VIEW)
@@ -37,7 +35,7 @@ inline fun FragmentActivity.commitWithAnimation(body: FragmentTransaction.() -> 
         setCustomAnimations(
             R.anim.fragment_open_in,
             R.anim.fragment_close_out,
-            R.anim.fragment_open_in,
+            R.anim.fragment_close_in,
             R.anim.fragment_close_out
         )
         body.invoke(this)

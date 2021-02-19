@@ -5,7 +5,7 @@ import android.graphics.*
 import android.net.Uri
 import android.util.AttributeSet
 import android.util.Log
-import androidx.core.view.updateLayoutParams
+import androidx.palette.graphics.Palette
 import kotlinx.coroutines.*
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.ktx.applyConfig
@@ -37,9 +37,15 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     private var localIconUri: Uri? = null
 
+    private var onColorReady: (palette: Palette) -> Unit = {}
+
+    fun doOnColorReady(colorReady: (palette: Palette) -> Unit) {
+        onColorReady = colorReady
+    }
+
     private var exceptionHandler: CoroutineExceptionHandler =
         CoroutineExceptionHandler { _: CoroutineContext, throwable: Throwable ->
-            Log.d(
+            Log.e(
                 this::class.simpleName,
                 "Throw Exception in WaterMarkImageView ${throwable.message.toString()}"
             )
@@ -70,11 +76,10 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                         scale
                     )
                     field?.imageScale = scale.first()
-                    updateLayoutParams {
-                        width = imageBitmap?.width ?: width
-                        height = imageBitmap?.height ?: width
-                    }
                     setImageBitmap(imageBitmap)
+                    imageBitmap?.let { Palette.Builder(it).generate() }?.let {
+                        onColorReady.invoke(it)
+                    }
                     curUri = field?.uri
                 }
 

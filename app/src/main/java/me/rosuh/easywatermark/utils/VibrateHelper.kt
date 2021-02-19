@@ -5,18 +5,12 @@ import android.media.AudioAttributes
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
-import androidx.annotation.RequiresApi
-import me.rosuh.easywatermark.BuildConfig
 
 class VibrateHelper private constructor(private val v: Vibrator) {
 
     private var latestVibration: Long = 0L
-    private var vibrateShot = 10L
     private var cd: Long = 0L
     private var skipLowVersionDevices: Boolean = true
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    private var vibrateEffect: Int = 10
 
     private val audioAttributes by lazy {
         AudioAttributes.Builder()
@@ -26,16 +20,20 @@ class VibrateHelper private constructor(private val v: Vibrator) {
             .build()
     }
 
-    fun doVibrate() {
-        if (!v.hasVibrator() || System.currentTimeMillis() - latestVibration <= cd || canSkipLowVersionDevices()) {
+    fun doVibrate(shot: Long = 20L, amplitude: Int = 20) {
+        if (!v.hasVibrator()
+            || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !v.hasAmplitudeControl())
+            || System.currentTimeMillis() - latestVibration <= cd
+            || canSkipLowVersionDevices()
+        ) {
             return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             v.cancel()
-            v.vibrate(VibrationEffect.createOneShot(vibrateShot, vibrateEffect), audioAttributes)
+            v.vibrate(VibrationEffect.createOneShot(shot, amplitude), audioAttributes)
         } else {
             //deprecated in API 26
-            v.vibrate(vibrateShot)
+            v.vibrate(shot)
         }
         latestVibration = System.currentTimeMillis()
     }

@@ -19,6 +19,8 @@ object ProductFlavors {
 }
 
 object Versions {
+    const val palette: String = "1.0.0"
+
     const val exif: String = "1.3.0-rc01"
 
     const val gap = "4.0.1"
@@ -105,6 +107,8 @@ object Libs {
     const val gifDrawable = "pl.droidsonroids.gif:android-gif-drawable:${Versions.gifDrawable}"
 
     const val exif = "androidx.exifinterface:exifinterface:${Versions.exif}"
+
+    const val palette = "androidx.palette:palette:${Versions.palette}"
 }
 
 object TestLibs {

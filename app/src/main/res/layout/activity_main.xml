@@ -147,13 +147,13 @@
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/fc_fun_detail"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="56dp"
         android:background="@color/colorSecondary"
         app:layout_constraintBottom_toTopOf="@id/rv_panel"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
-    <androidx.recyclerview.widget.RecyclerView
+    <me.rosuh.easywatermark.widget.TouchSensitiveRv
         android:id="@+id/rv_panel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

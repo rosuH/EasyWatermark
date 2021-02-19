@@ -4,11 +4,9 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.lifecycle.LiveData
 import com.google.android.material.slider.Slider
 import me.rosuh.easywatermark.databinding.FragemntBasePbBinding
 import me.rosuh.easywatermark.model.WaterMarkConfig
-import me.rosuh.easywatermark.utils.DetectedPerformanceSlideTouchListener
 import me.rosuh.easywatermark.utils.VibrateHelper
 
 abstract class BasePBFragment : BaseBindFragment<FragemntBasePbBinding>() {
@@ -30,7 +28,7 @@ abstract class BasePBFragment : BaseBindFragment<FragemntBasePbBinding>() {
             value = formatValue(shareViewModel.config.value)
             addOnChangeListener { slider, value, fromUser ->
                 if (fromUser) {
-                    vibrateHelper.doVibrate()
+                    vibrateHelper.doVibrate(1L, 1)
                 }
                 doOnChange(slider, value, fromUser)
             }

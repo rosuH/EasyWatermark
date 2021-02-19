@@ -93,6 +93,7 @@ dependencies {
     implementation(Libs.constraintLayout)
     implementation(Libs.coreKtx)
     implementation(Libs.exif)
+    implementation(Libs.palette)
     testImplementation(TestLibs.junit)
     testImplementation(TestLibs.androidXTest)
     testImplementation(TestLibs.mock)

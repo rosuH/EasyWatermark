@@ -3,19 +3,21 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="56dp">
 
     <com.google.android.material.slider.Slider
         android:id="@+id/slide_content_size"
         style="@style/MySeekBarStyle"
         android:layout_width="0dp"
         android:layout_height="20dp"
-        android:layout_marginTop="12dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
         android:focusable="false"
         android:stepSize="1"
         android:valueFrom="1"
         android:valueTo="300"
         app:labelBehavior="floating"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
@@ -27,7 +29,7 @@
         app:trackColor="@color/white"
         app:trackColorActive="@color/colorAccent"
         app:trackColorInactive="@color/colorAccent"
-        app:trackHeight="2dp"
+        app:trackHeight="1dp"
         tools:value="340" />
 
     <TextView
