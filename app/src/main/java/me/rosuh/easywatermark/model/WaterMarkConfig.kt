@@ -33,7 +33,7 @@ class WaterMarkConfig private constructor() {
 
     lateinit var markMode: MarkMode
 
-    var imageScale: Float = 0.0f
+    var imageScale: FloatArray = floatArrayOf(1f, 1f)
 
     fun restore(
         sharedPreferences: SharedPreferences = MyApp.instance.getSharedPreferences(
@@ -74,7 +74,8 @@ class WaterMarkConfig private constructor() {
             } else {
                 Uri.parse("")
             }
-            imageScale = getFloat(SP_KEY_TEXT_SIZE, 1f)
+            imageScale[0] = getFloat(SP_KEY_IMAGE_SCALE_X, 1f)
+            imageScale[1] = getFloat(SP_KEY_IMAGE_SCALE_Y, imageScale[0])
         }
     }
 
@@ -104,7 +105,8 @@ class WaterMarkConfig private constructor() {
                     MarkMode.Image -> 1
                 }
             )
-            putFloat(SP_KEY_IMAGE_SCALE, imageScale)
+            putFloat(SP_KEY_IMAGE_SCALE_X, imageScale[0])
+            putFloat(SP_KEY_IMAGE_SCALE_Y, imageScale[1])
         }
     }
 
@@ -158,7 +160,8 @@ class WaterMarkConfig private constructor() {
         const val SP_KEY_ICON_URI = "${SP_NAME}_key_icon_uri"
         const val SP_KEY_MODE = "${SP_NAME}_key_type"
         const val SP_KEY_CHANGE_LOG = "${SP_NAME}_key_change_log"
-        const val SP_KEY_IMAGE_SCALE = "${SP_NAME}_key_image_scale"
+        const val SP_KEY_IMAGE_SCALE_X = "${SP_NAME}_key_image_scale"
+        const val SP_KEY_IMAGE_SCALE_Y = "${SP_NAME}_key_image_scale_y"
 
         fun pull(
             sp: SharedPreferences = MyApp.globalSp()

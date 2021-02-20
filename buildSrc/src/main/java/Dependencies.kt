@@ -21,27 +21,33 @@ object ProductFlavors {
 object Versions {
     const val palette: String = "1.0.0"
 
-    const val exif: String = "1.3.0-rc01"
+    const val exif: String = "1.3.2"
 
     const val gap = "4.0.1"
 
-    const val kotlin = "1.4.10"
+    const val kotlin = "1.4.30"
+
+    const val coroutineCore = "1.4.2"
+
+    const val coroutineAndroid = "1.4.2"
 
     const val appcompat = "1.2.0"
 
-    const val lifeCycle = "2.2.0"
+    const val lifeCycle = "2.3.0"
 
-    const val material = "1.3.0-rc01"
+    const val material = "1.3.0"
 
     const val constraintLayout = "2.1.0-alpha2"
 
     const val materialAboutLibrary = "3.1.2"
 
-    const val fragmentKtx = "1.2.5"
+    const val fragmentKtx = "1.3.0-rc02"
+
+    const val activityKtx = "1.3.0-alpha02"
 
     const val coreKtx = "1.3.1"
 
-    const val colorPickerView = "2.1.7"
+    const val colorPickerView = "2.2.3"
 
     const val viewpager2 = "1.0.0"
 
@@ -53,15 +59,15 @@ object Versions {
 
     const val junit = "4.12"
 
-    const val androidXTest = "1.0.0"
+    const val androidXTest = "1.3.0"
 
     const val mock = "+"
 
     const val robolectric = "4.4"
 
-    const val testRule = "1.1.0"
+    const val testRule = "1.3.0"
 
-    const val hamcrest = "1.3"
+    const val hamcrest = "2.2"
 
     const val espresso = "3.1.0"
 
@@ -73,6 +79,12 @@ object Versions {
 object Libs {
     const val kotlin = "org.jetbrains.kotlin:kotlin-stdlib:${Versions.kotlin}"
 
+    const val coroutineAndroid =
+        "org.jetbrains.kotlinx:kotlinx-coroutines-android:${Versions.coroutineAndroid}"
+
+    const val coroutineCore =
+        "org.jetbrains.kotlinx:kotlinx-coroutines-core:${Versions.coroutineCore}"
+
     const val gap = "com.android.tools.build:gradle:${Versions.gap}"
 
     const val compressor = "id.zelory:compressor:${Versions.compressor}"
@@ -81,6 +93,8 @@ object Libs {
         "com.github.daniel-stoneuk:material-about-library:${Versions.materialAboutLibrary}"
 
     const val fragmentKtx = "androidx.fragment:fragment-ktx:${Versions.fragmentKtx}"
+
+    const val activityKtx = "androidx.activity:activity-ktx:${Versions.activityKtx}"
 
     const val lifecycleViewModel =
         "androidx.lifecycle:lifecycle-viewmodel-ktx:${Versions.lifeCycle}"
@@ -101,10 +115,6 @@ object Libs {
     const val coreKtx = "org.jetbrains.kotlin:kotlin-stdlib:${Versions.coreKtx}"
 
     const val appcompat = "androidx.appcompat:appcompat:${Versions.appcompat}"
-
-    const val appcompatRes = "androidx.appcompat:appcompat-resources:${Versions.appcompat}"
-
-    const val gifDrawable = "pl.droidsonroids.gif:android-gif-drawable:${Versions.gifDrawable}"
 
     const val exif = "androidx.exifinterface:exifinterface:${Versions.exif}"
 

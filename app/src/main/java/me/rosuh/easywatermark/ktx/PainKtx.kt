@@ -12,14 +12,9 @@ import me.rosuh.easywatermark.model.WaterMarkConfig
  * When saving, it’s not needed
  */
 fun Paint.applyConfig(
-    config: WaterMarkConfig?,
-    scale: Boolean = true
+    config: WaterMarkConfig?
 ): Paint {
-    textSize = (config?.textSize ?: 14f) / if (scale) {
-        (config?.imageScale ?: 1f)
-    } else {
-        1f
-    }
+    textSize = config?.textSize ?: 14f
     color = config?.textColor ?: Color.RED
     alpha = config?.alpha ?: 128
     style = config?.textStyle ?: Paint.Style.FILL

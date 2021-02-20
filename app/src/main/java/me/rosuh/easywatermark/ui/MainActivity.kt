@@ -1,19 +1,18 @@
 package me.rosuh.easywatermark.ui
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.Intent
 import android.content.Intent.ACTION_SEND
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
-import android.os.Parcelable
 import android.util.Log
 import android.view.*
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.motion.widget.MotionLayout
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
@@ -35,16 +34,15 @@ import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
-import kotlinx.android.synthetic.*
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.adapter.FuncPanelAdapter
+import me.rosuh.easywatermark.base.BaseBindingActivity
 import me.rosuh.easywatermark.databinding.ActivityMainBinding
 import me.rosuh.easywatermark.ktx.commitWithAnimation
-import me.rosuh.easywatermark.ktx.inflate
 import me.rosuh.easywatermark.model.FuncTitleModel
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.ui.about.AboutActivity
@@ -58,10 +56,10 @@ import me.rosuh.easywatermark.widget.SpaceHeaderItemDecoration
 import kotlin.math.abs
 
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
 
-    private val binding by inflate<ActivityMainBinding>()
-
+    private lateinit var pickImageLauncher: ActivityResultLauncher<String>
+    private lateinit var pickIconLauncher: ActivityResultLauncher<String>
     private val viewModel: MainViewModel by viewModels()
 
     private val scope = lifecycleScope
@@ -102,12 +100,7 @@ class MainActivity : AppCompatActivity() {
                 FuncTitleModel.FuncType.Degree,
                 getString(R.string.title_text_rotate),
                 R.drawable.ic_bug_report
-            ),
-//            FuncTitleModel(
-//                FuncTitleModel.FuncType.TextStyle,
-//                getString(R.string.title_text_style),
-//                R.drawable.ic_bug_report
-//            )
+            )
         )
     }
 
@@ -130,6 +123,9 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var vibrateHelper: VibrateHelper
 
+    override fun initViewBinding(): ActivityMainBinding {
+        return ActivityMainBinding.inflate(layoutInflater)
+    }
 
     @ObsoleteCoroutinesApi
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -139,25 +135,25 @@ class MainActivity : AppCompatActivity() {
                 setReorderingAllowed(true)
             }
         }
-        setContentView(R.layout.activity_main)
         vibrateHelper = VibrateHelper.init(this)
         initView()
         initObserver()
-        binding.clRoot.addTransitionListener(object : SimpleTransitionListener() {
-            override fun onTransitionCompleted(p0: MotionLayout?, id: Int) {
-                if (id == R.id.launch_end) {
-                    binding.ivLogo.start()
-                } else {
-                    binding.ivLogo.stop()
-                }
-            }
-        })
-        binding.clRoot.setTransition(R.id.transition_launch)
-        binding.clRoot.transitionToEnd()
+        registerResultCallback()
         checkHadCrash()
         // Activity was recycled but dialog still showing in some case?
         SaveImageBSDialogFragment.safetyHide(this@MainActivity.supportFragmentManager)
         ChangeLogDialogFragment.safetyShow(this@MainActivity.supportFragmentManager)
+    }
+
+    private fun registerResultCallback() {
+        pickImageLauncher =
+            registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+                handleActivityResult(REQ_CODE_PICK_IMAGE, uri)
+            }
+        pickIconLauncher =
+            registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+                handleActivityResult(REQ_PICK_ICON, uri)
+            }
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -167,9 +163,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        // Accepting gallery shared images
+        // Accepting shared images from other apps
         if (intent?.action == ACTION_SEND) {
-            dealWithImage(intent)
+            dealWithImage(intent?.data)
         }
     }
 
@@ -212,10 +208,11 @@ class MainActivity : AppCompatActivity() {
                 return@Observer
             }
             try {
-                binding.clRoot.setTransition(R.id.transition_open_image)
-                binding.clRoot.transitionToEnd()
+                if (binding.clRoot.currentState != R.id.open_image_start) {
+                    setTransition(R.id.launch_end, R.id.open_image_start)
+                    binding.ivLogo.stop()
+                }
                 binding.ivPhoto.config = it
-                binding.ivLogo.stop()
             } catch (se: SecurityException) {
                 se.printStackTrace()
                 // reset the uri because we don't have permission -_-
@@ -273,6 +270,18 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("ClickableViewAccessibility")
     private fun initView() {
+        // prepare MotionLayout
+        binding.clRoot.addTransitionListener(object : SimpleTransitionListener() {
+            override fun onTransitionCompleted(p0: MotionLayout?, p1: Int) {
+                if (p1 == R.id.launch_end) {
+                    binding.ivLogo.start()
+                } else {
+                    binding.ivLogo.stop()
+                }
+            }
+        })
+        setTransition(R.id.launch_start, R.id.launch_end)
+        // setting tool bar
         binding.myToolbar.apply {
             navigationIcon =
                 ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_logo_tool_bar)
@@ -280,9 +289,11 @@ class MainActivity : AppCompatActivity() {
             setSupportActionBar(this)
             supportActionBar?.title = null
         }
+        // go about page
         binding.ivGoAboutPage.setOnClickListener {
             startActivity(Intent(this, AboutActivity::class.java))
         }
+        // setting water image widget
         binding.ivPhoto.apply {
             setOnTouchListener(object : View.OnTouchListener {
                 private var startX = 0f
@@ -341,23 +352,27 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+        // pick image button
         binding.ivPickerTips.setOnClickListener {
-            performFileSearch(READ_REQUEST_CODE)
+            performFileSearch(REQ_CODE_PICK_IMAGE)
         }
-
+        // functional panel in recyclerView
         binding.rvPanel.apply {
             adapter = FuncPanelAdapter(ArrayList(contentFunList))
             layoutManager = LinearLayoutManager(this@MainActivity, RecyclerView.HORIZONTAL, false)
-            onItemClick { recyclerView, position, v ->
-                smoothScrollBy(
-                    v.left - (recyclerView.width / 2) + v.width / 2,
-                    0,
-                    AccelerateDecelerateInterpolator(),
-                    250
-                )
-                val item = (recyclerView.adapter as? FuncPanelAdapter)?.dataSet?.get(position)
-                    ?: return@onItemClick
-                handleFuncItem(item)
+            onItemClick { recyclerView, pos, v ->
+                if (pos == 0) {
+                    val item = (recyclerView.adapter as? FuncPanelAdapter)?.dataSet?.get(0)
+                        ?: return@onItemClick
+                    handleFuncItem(item)
+                } else {
+                    smoothScrollBy(
+                        v.left - (recyclerView.width / 2) + v.width / 2,
+                        0,
+                        AccelerateDecelerateInterpolator(),
+                        150
+                    )
+                }
             }
             post {
                 if (itemDecorationCount == 0) {
@@ -392,7 +407,6 @@ class MainActivity : AppCompatActivity() {
 
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                     super.onScrolled(recyclerView, dx, dy)
-                    Log.i("onScrolled", "isTouching = $isTouching")
                     if (!isTouching) {
                         return
                     }
@@ -405,13 +419,12 @@ class MainActivity : AppCompatActivity() {
                 }
             })
         }
-
+        // setting tab layout
         val fragmentArray = arrayOf(
             initFragments(binding.vpControlPanel, 2, ContentFragment.newInstance()),
             initFragments(binding.vpControlPanel, 1, StyleFragment.newInstance()),
             initFragments(binding.vpControlPanel, 0, LayoutFragment.newInstance())
         )
-
 
         val pagerAdapter = ControlPanelPagerAdapter(this, fragmentArray)
         binding.vpControlPanel.apply {
@@ -419,6 +432,7 @@ class MainActivity : AppCompatActivity() {
             offscreenPageLimit = 2
             adapter = pagerAdapter
         }
+
         TabLayoutMediator(binding.tbToolBar, binding.vpControlPanel) { tab, position ->
             when (position) {
                 0 -> {
@@ -435,6 +449,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }.attach()
+
         binding.tbToolBar.apply {
             addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
                 override fun onTabSelected(tab: TabLayout.Tab?) {
@@ -474,6 +489,7 @@ class MainActivity : AppCompatActivity() {
     private fun applyBgColor(palette: Palette) {
         val color =
             palette.lightVibrantSwatch?.rgb ?: ContextCompat.getColor(this, R.color.colorSecondary)
+        binding.ivPhoto.setBackgroundColor(color)
     }
 
     private fun handleFuncItem(item: FuncTitleModel) {
@@ -483,7 +499,7 @@ class MainActivity : AppCompatActivity() {
                 EditTextBSDialogFragment.safetyShow(supportFragmentManager)
             }
             FuncTitleModel.FuncType.Icon -> {
-                performFileSearch(ICON_REQUEST_CODE)
+                performFileSearch(REQ_PICK_ICON)
             }
             FuncTitleModel.FuncType.Color -> {
                 ColorFragment.replaceShow(this, binding.fcFunDetail.id)
@@ -521,7 +537,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         R.id.action_pick -> {
-            performFileSearch(READ_REQUEST_CODE)
+            performFileSearch(REQ_CODE_PICK_IMAGE)
             true
         }
 
@@ -543,18 +559,25 @@ class MainActivity : AppCompatActivity() {
             return
         }
         // FIXME: 2021/2/19 should test in low version devices.
-        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-            type = "image/*"
-        }
+        val mime = "image/*"
         val result = kotlin.runCatching {
-            startActivityForResult(Intent.createChooser(intent, "Pick images"), requestCode)
+            when (requestCode) {
+                REQ_CODE_PICK_IMAGE -> {
+                    pickImageLauncher.launch(mime)
+                }
+                REQ_PICK_ICON -> {
+                    pickIconLauncher.launch(mime)
+                }
+            }
         }
+
         if (result.isFailure) {
             Toast.makeText(
                 this,
                 getString(R.string.tips_not_app_can_open_imaegs),
                 Toast.LENGTH_LONG
             ).show()
+            Log.i("performFileSearch", result.exceptionOrNull()?.message ?: "No msg provided")
         }
     }
 
@@ -563,8 +586,9 @@ class MainActivity : AppCompatActivity() {
         permissions: Array<out String>,
         grantResults: IntArray
     ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         when (requestCode) {
-            WRITE_PERMISSION_REQUEST_CODE -> {
+            REQ_CODE_REQ_WRITE_PERMISSION -> {
                 if (grantResults.isEmpty() || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
                     Toast.makeText(
                         this,
@@ -576,12 +600,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun dealWithImage(intent: Intent?) {
-        var uri = if (intent?.type?.startsWith("image") == true) {
-            (intent.getParcelableExtra<Parcelable>(Intent.EXTRA_STREAM) as? Uri)
-        } else {
-            intent?.data
-        }
+    private fun dealWithImage(uri: Uri?) {
         if (FileUtils.isImage(this.contentResolver, uri)) {
             viewModel.updateUri(uri!!)
             takePersistableUriPermission(uri)
@@ -594,9 +613,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (resultCode != Activity.RESULT_OK) {
+    private fun handleActivityResult(requestCode: Int, uri: Uri?) {
+        if (uri == null) {
             Toast.makeText(
                 this,
                 getString(R.string.tips_do_not_choose_image),
@@ -605,13 +623,12 @@ class MainActivity : AppCompatActivity() {
             return
         }
         when (requestCode) {
-            READ_REQUEST_CODE -> {
-                dealWithImage(data)
+            REQ_CODE_PICK_IMAGE -> {
+                dealWithImage(uri)
             }
-            ICON_REQUEST_CODE -> {
-                val uri = data?.data
+            REQ_PICK_ICON -> {
                 if (FileUtils.isImage(this.contentResolver, uri)) {
-                    viewModel.updateIcon(uri!!)
+                    viewModel.updateIcon(uri)
                     takePersistableUriPermission(uri)
                 } else {
                     Toast.makeText(
@@ -662,8 +679,7 @@ class MainActivity : AppCompatActivity() {
             .setNegativeButton(
                 R.string.tips_confirm_dialog
             ) { _, _ ->
-                binding.clRoot.setTransition(R.id.transition_launch)
-                binding.clRoot.transitionToEnd()
+                setTransition(R.id.launch_start, R.id.launch_end)
             }
             .setPositiveButton(
                 R.string.dialog_cancel_exist_confirm
@@ -674,9 +690,18 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+    private fun setTransition(startState: Int, endState: Int) {
+        binding.clRoot.setTransition(startState, endState)
+        binding.clRoot.setTransitionDuration(550)
+        scope.launch {
+            delay(1)
+            binding.clRoot.transitionToEnd()
+        }
+    }
+
     companion object {
-        private const val READ_REQUEST_CODE: Int = 42
-        const val WRITE_PERMISSION_REQUEST_CODE: Int = 43
-        const val ICON_REQUEST_CODE: Int = 44
+        private const val REQ_CODE_PICK_IMAGE: Int = 42
+        const val REQ_CODE_REQ_WRITE_PERMISSION: Int = 43
+        const val REQ_PICK_ICON: Int = 44
     }
 }

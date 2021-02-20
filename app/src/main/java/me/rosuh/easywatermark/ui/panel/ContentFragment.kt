@@ -18,10 +18,9 @@ import me.rosuh.easywatermark.base.BaseBindFragment
 import me.rosuh.easywatermark.databinding.FragmentContentBinding
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.ui.MainActivity
-import me.rosuh.easywatermark.ui.MainActivity.Companion.ICON_REQUEST_CODE
+import me.rosuh.easywatermark.ui.MainActivity.Companion.REQ_PICK_ICON
 import me.rosuh.easywatermark.ui.dialog.EditTextBSDialogFragment
 import me.rosuh.easywatermark.utils.DetectedPerformanceSeekBarListener
-import me.rosuh.easywatermark.widget.ControllableScrollView
 
 class ContentFragment : BaseBindFragment<FragmentContentBinding>() {
 
@@ -63,7 +62,7 @@ class ContentFragment : BaseBindFragment<FragmentContentBinding>() {
 
             btnImage = findViewById<MaterialButton>(R.id.btn_img).apply {
                 setOnClickListener {
-                    (requireActivity() as? MainActivity)?.performFileSearch(ICON_REQUEST_CODE)
+                    (requireActivity() as? MainActivity)?.performFileSearch(REQ_PICK_ICON)
                 }
             }
             tvTitleTextStyle = findViewById(R.id.tv_title_style)

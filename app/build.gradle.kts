@@ -7,7 +7,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    id("kotlin-android-extensions")
+    id("name.remal.check-dependency-updates") version "1.2.2"
 }
 
 android {
@@ -38,7 +38,7 @@ android {
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard/*.pro"
             )
         }
     }
@@ -68,6 +68,10 @@ android {
             }
     }
 
+    packagingOptions {
+        exclude("DebugProbesKt.bin")
+    }
+
     android.buildFeatures.viewBinding = true
 }
 
@@ -85,6 +89,9 @@ dependencies {
     implementation(Libs.materialAboutLibrary)
     implementation(Libs.material)
     implementation(Libs.fragmentKtx)
+    implementation(Libs.activityKtx)
+    implementation(Libs.coroutineAndroid)
+    implementation(Libs.coroutineCore)
     implementation(Libs.lifecycleLiveData)
     implementation(Libs.lifecycleViewModel)
     implementation(Libs.colorPickerView)

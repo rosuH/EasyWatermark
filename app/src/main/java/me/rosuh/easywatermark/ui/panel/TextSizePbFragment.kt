@@ -9,15 +9,15 @@ import me.rosuh.easywatermark.model.WaterMarkConfig
 class TextSizePbFragment : BasePBFragment() {
 
     override fun doOnChange(slider: Slider, value: Float, fromUser: Boolean) {
-        shareViewModel.updateTextSize(value)
+        shareViewModel.updateTextSize(value * resources.displayMetrics.density)
     }
 
     override fun formatValue(config: WaterMarkConfig?): Float {
-        return config?.textSize ?: 1f
+        return config?.textSize?.toInt()?.toFloat() ?: 1f
     }
 
     override fun formatValueTips(config: WaterMarkConfig?): String {
-        return "${config?.textSize ?: 1f}"
+        return "${config?.textSize?.toInt()?.toFloat() ?: 1f}"
     }
 
     companion object {

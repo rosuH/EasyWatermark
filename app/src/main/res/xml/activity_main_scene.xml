@@ -47,6 +47,7 @@
             motion:layout_constraintEnd_toEndOf="@id/tv_tips_pick"
             motion:layout_constraintStart_toStartOf="@id/tv_tips_pick"
             motion:layout_constraintTop_toBottomOf="@id/tv_tips_pick"
+            android:visibility="invisible"
             motion:layout_constraintVertical_bias="0" />
 
         <Constraint
@@ -165,6 +166,7 @@
             motion:layout_constraintVertical_bias="0.65" />
 
         <Constraint
+            android:id="@+id/iv_picker_tips"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
@@ -388,13 +390,11 @@
         android:id="@+id/transition_launch"
         motion:constraintSetEnd="@id/launch_end"
         motion:constraintSetStart="@+id/launch_start"
-        motion:duration="550"
-        motion:motionInterpolator="anticipate" />
+        motion:duration="550" />
 
     <Transition
         android:id="@+id/transition_open_image"
         motion:constraintSetEnd="@id/open_image_start"
         motion:constraintSetStart="@+id/launch_end"
-        motion:duration="550"
-        motion:motionInterpolator="easeOut" />
+        motion:duration="550" />
 </MotionScene>

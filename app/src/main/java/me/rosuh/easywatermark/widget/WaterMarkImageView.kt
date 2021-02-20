@@ -2,14 +2,17 @@ package me.rosuh.easywatermark.widget
 
 import android.content.Context
 import android.graphics.*
+import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.util.AttributeSet
 import android.util.Log
+import androidx.core.graphics.scaleMatrix
 import androidx.palette.graphics.Palette
 import kotlinx.coroutines.*
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.ktx.applyConfig
 import me.rosuh.easywatermark.model.WaterMarkConfig
+import me.rosuh.easywatermark.utils.ImageHelper
 import me.rosuh.easywatermark.utils.decodeSampledBitmapFromResource
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.pow
@@ -27,7 +30,8 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     override val coroutineContext: CoroutineContext
         get() = Dispatchers.Main
-    private val limitBounds = Rect()
+
+    private val iconBounds = Rect()
 
     @Volatile
     private var curUri: Uri? = null
@@ -38,6 +42,9 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
     private var localIconUri: Uri? = null
 
     private var onColorReady: (palette: Palette) -> Unit = {}
+
+    var drawableBounds = RectF()
+        private set
 
     fun doOnColorReady(colorReady: (palette: Palette) -> Unit) {
         onColorReady = colorReady
@@ -67,7 +74,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             field = value
             generateBitmapJob = launch(exceptionHandler) {
                 if (curUri != field?.uri) {
-                    val scale = FloatArray(1)
+                    val scale = floatArrayOf(1f, 1f)
                     val imageBitmap = decodeSampledBitmapFromResource(
                         context.contentResolver,
                         config!!.uri,
@@ -75,8 +82,9 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                         this@WaterMarkImageView.height,
                         scale
                     )
-                    field?.imageScale = scale.first()
+                    field?.imageScale = scale
                     setImageBitmap(imageBitmap)
+                    drawableBounds = generateDrawableBounds()
                     imageBitmap?.let { Palette.Builder(it).generate() }?.let {
                         onColorReady.invoke(it)
                     }
@@ -93,7 +101,8 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                                 field!!,
                                 bounds,
                                 paint,
-                                generateBitmapCoroutineCtx
+                                generateBitmapCoroutineCtx,
+                                true
                             )
                         }
                         WaterMarkConfig.MarkMode.Image -> {
@@ -104,8 +113,8 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                                 iconBitmap = decodeSampledBitmapFromResource(
                                     context.contentResolver,
                                     field!!.iconUri,
-                                    limitBounds.width(),
-                                    limitBounds.height()
+                                    iconBounds.width(),
+                                    iconBounds.height()
                                 )
                                 // and flagging the old one should be recycled
                                 shouldRecycled = true
@@ -115,13 +124,18 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                             buildIconBitmapShader(
                                 iconBitmap!!,
                                 shouldRecycled,
-                                limitBounds,
+                                iconBounds,
                                 field!!,
                                 paint,
                                 generateBitmapCoroutineCtx
                             )
                         }
                     }
+                    val matrix = scaleMatrix(
+                        1 / (config?.imageScale?.get(0) ?: 1f),
+                        1 / (config?.imageScale?.get(1) ?: 1f)
+                    )
+                    layoutShader?.setLocalMatrix(matrix)
                     invalidate()
                 }
             }
@@ -142,7 +156,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        limitBounds.set(0, 0, w, h)
+        iconBounds.set(0, 0, w, h)
     }
 
     @ObsoleteCoroutinesApi
@@ -153,8 +167,21 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         }
         layoutPaint.shader = layoutShader
         if (layoutShader != null) {
-            canvas?.drawRect(0f, 0f, measuredWidth.toFloat(), measuredHeight.toFloat(), layoutPaint)
+            ImageHelper.draw(canvas, layoutPaint, drawableBounds)
         }
+    }
+
+    private fun generateDrawableBounds(): RectF {
+        val bounds = RectF()
+        val drawable: Drawable = drawable
+        imageMatrix.mapRect(bounds, RectF(drawable.bounds))
+        bounds.set(
+            bounds.left + paddingLeft,
+            bounds.top + paddingTop,
+            bounds.right + paddingRight,
+            bounds.bottom + paddingBottom,
+        )
+        return bounds
     }
 
     companion object {
@@ -253,15 +280,18 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             config: WaterMarkConfig,
             textBounds: Rect,
             textPaint: Paint,
-            coroutineContext: CoroutineContext
-        ): BitmapShader? = withContext(coroutineContext) {
-            val showDebugRect = BuildConfig.DEBUG && false
+            coroutineContext: CoroutineContext,
+            needScale: Boolean = false
+        ): BitmapShader = withContext(coroutineContext) {
+            val showDebugRect = BuildConfig.DEBUG
             val textWidth = textBounds.width().toFloat().coerceAtLeast(1f) + 10
             val textHeight = textBounds.height().toFloat().coerceAtLeast(1f) + 10
 
             val maxSize = sqrt(textHeight.pow(2) + textWidth.pow(2)).toInt()
-            val finalWidth = maxSize + (config.horizonGapPercent * config.imageScale).toInt()
-            val finalHeight = maxSize + (config.verticalGapPercent * config.imageScale).toInt()
+            val finalWidth =
+                maxSize + (config.horizonGapPercent * if (needScale) config.imageScale[0] else 1f).toInt()
+            val finalHeight =
+                maxSize + (config.verticalGapPercent * if (needScale) config.imageScale[1] else 1f).toInt()
             val bitmap =
                 Bitmap.createBitmap(finalWidth, finalHeight, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)

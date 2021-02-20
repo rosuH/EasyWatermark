@@ -97,7 +97,7 @@ class MainViewModel : ViewModel() {
                 Manifest.permission.READ_EXTERNAL_STORAGE,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE
             ),
-            MainActivity.WRITE_PERMISSION_REQUEST_CODE
+            MainActivity.REQ_CODE_REQ_WRITE_PERMISSION
         )
     }
 
@@ -189,7 +189,7 @@ class MainViewModel : ViewModel() {
             }
             val canvas = Canvas(mutableBitmap)
             val tmpConfig = config.value!!
-            val bitmapPaint = Paint().applyConfig(tmpConfig, false)
+            val bitmapPaint = Paint().applyConfig(tmpConfig)
             val layoutPaint = Paint()
             val bounds = Rect()
 

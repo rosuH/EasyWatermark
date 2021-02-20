@@ -12,7 +12,6 @@ import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
-import kotlin.math.max
 
 
 @Throws(FileNotFoundException::class, OutOfMemoryError::class)
@@ -30,22 +29,25 @@ suspend fun decodeSampledBitmapFromResource(
     uri: Uri,
     reqWidth: Int,
     reqHeight: Int,
-    scale: FloatArray = FloatArray(1) { 1f }
+    scale: FloatArray = FloatArray(2) { 1f }
 ): Bitmap? = withContext(Dispatchers.IO) {
     try {
         BitmapFactory.Options().run {
             inJustDecodeBounds = true
+            // 1. decode bounds only
             resolver.openInputStream(uri).use { `is` ->
                 BitmapFactory.decodeStream(`is`, null, this)
             }
 
-            // Calculate inSampleSize
+            // 2. Calculate inSampleSize
             inSampleSize = calculateInSampleSize(this, reqWidth, reqHeight)
 
-            // Decode bitmap with inSampleSize set
+            // 3. Decode bitmap with inSampleSize set
             inJustDecodeBounds = false
 
-            scale[0] = max(outWidth.toFloat() / reqWidth, outHeight.toFloat() / reqHeight)
+            scale[0] = outWidth.toFloat() / reqWidth
+            scale[1] = outHeight.toFloat() / reqHeight
+
             // fixme pls make the code more elegant >_<
             val rawBitmap = resolver.openInputStream(uri).use { inputStream ->
                 BitmapFactory.decodeStream(inputStream, null, this)
