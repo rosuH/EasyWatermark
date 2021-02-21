@@ -159,6 +159,7 @@
         android:layout_height="wrap_content"
         android:background="@color/colorSecondary"
         android:visibility="invisible"
+        android:clipToPadding="false"
         app:layout_constraintBottom_toTopOf="@id/tb_tool_bar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />

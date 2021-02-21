@@ -6,13 +6,13 @@ import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.util.AttributeSet
 import android.util.Log
-import androidx.core.graphics.scaleMatrix
 import androidx.palette.graphics.Palette
 import kotlinx.coroutines.*
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.ktx.applyConfig
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.utils.ImageHelper
+import me.rosuh.easywatermark.utils.decodeBitmapFromUri
 import me.rosuh.easywatermark.utils.decodeSampledBitmapFromResource
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.pow
@@ -75,12 +75,9 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             generateBitmapJob = launch(exceptionHandler) {
                 if (curUri != field?.uri) {
                     val scale = floatArrayOf(1f, 1f)
-                    val imageBitmap = decodeSampledBitmapFromResource(
+                    val imageBitmap = decodeBitmapFromUri(
                         context.contentResolver,
-                        config!!.uri,
-                        this@WaterMarkImageView.width,
-                        this@WaterMarkImageView.height,
-                        scale
+                        config!!.uri
                     )
                     field?.imageScale = scale
                     setImageBitmap(imageBitmap)
@@ -131,11 +128,6 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                             )
                         }
                     }
-                    val matrix = scaleMatrix(
-                        1 / (config?.imageScale?.get(0) ?: 1f),
-                        1 / (config?.imageScale?.get(1) ?: 1f)
-                    )
-                    layoutShader?.setLocalMatrix(matrix)
                     invalidate()
                 }
             }

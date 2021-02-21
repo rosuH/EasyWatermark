@@ -8,7 +8,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.*
-import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -25,7 +24,6 @@ import androidx.fragment.app.commit
 import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import androidx.palette.graphics.Palette
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.LinearSnapHelper
 import androidx.recyclerview.widget.RecyclerView
 import androidx.transition.TransitionManager
@@ -359,20 +357,9 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
         // functional panel in recyclerView
         binding.rvPanel.apply {
             adapter = FuncPanelAdapter(ArrayList(contentFunList))
-            layoutManager = LinearLayoutManager(this@MainActivity, RecyclerView.HORIZONTAL, false)
+            layoutManager = CenterLayoutManager(this@MainActivity, RecyclerView.HORIZONTAL, false)
             onItemClick { recyclerView, pos, v ->
-                if (pos == 0) {
-                    val item = (recyclerView.adapter as? FuncPanelAdapter)?.dataSet?.get(0)
-                        ?: return@onItemClick
-                    handleFuncItem(item)
-                } else {
-                    smoothScrollBy(
-                        v.left - (recyclerView.width / 2) + v.width / 2,
-                        0,
-                        AccelerateDecelerateInterpolator(),
-                        150
-                    )
-                }
+                smoothScrollToPosition(pos)
             }
             post {
                 if (itemDecorationCount == 0) {
@@ -390,7 +377,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                         RecyclerView.SCROLL_STATE_IDLE -> {
                             // change UI alpha
                             binding.fcFunDetail.animate().alpha(1f).setDuration(150).start()
-                            // select target item
+//                            // select target item
                             if (snapView == null) {
                                 return
                             }
@@ -468,7 +455,10 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                         }
                     }
                     hideDetailPanel()
-                    (binding.rvPanel.adapter as? FuncPanelAdapter)?.seNewData(list)
+                    (binding.rvPanel.adapter as? FuncPanelAdapter)?.also {
+                        it.seNewData(list)
+                        handleFuncItem(it.dataSet[0])
+                    }
                 }
 
                 override fun onTabUnselected(tab: TabLayout.Tab?) {}
