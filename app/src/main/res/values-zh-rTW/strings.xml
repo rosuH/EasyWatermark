@@ -77,4 +77,7 @@
         · 部分 ROM 因為動畫導致的問題
     </string>
     <string name="dev_comment">任何先进的科技，初看皆与魔法无异</string>
+    <string name="dialog_content_exist_confirm">丟棄修改？</string>
+    <string name="dialog_cancel_exist_confirm">取消</string>
+    <string name="dialog_title_exist_confirm">溫馨提示</string>
 </resources>

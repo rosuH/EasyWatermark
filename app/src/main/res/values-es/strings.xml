@@ -77,4 +77,7 @@
     <string name="error_share_uri_is_null">El Uri de salida está vacío, contacta con el desarrollador para enviar comentarios, gracias</string>
     <string name="tips_content_mode_button">Haga clic para editar texto o imagen</string>
     <string name="dev_comment">Cualquier tecnología avanzada, a primera vista, no es diferente de la magia.</string>
+    <string name="dialog_content_exist_confirm">¿Descartar editar?</string>
+    <string name="dialog_cancel_exist_confirm">Cancelar</string>
+    <string name="dialog_title_exist_confirm">Consejo</string>
 </resources>
