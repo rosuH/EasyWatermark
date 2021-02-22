@@ -17,6 +17,9 @@ class TouchSensitiveRv : RecyclerView {
 
     var isTouching = false
 
+    // toggle whether if scroll listener can detected snap view to handle selected item
+    var canAutoSelected = true
+
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
         when (ev?.actionMasked) {

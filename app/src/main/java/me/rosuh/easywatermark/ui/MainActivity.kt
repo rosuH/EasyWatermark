@@ -26,7 +26,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.palette.graphics.Palette
 import androidx.recyclerview.widget.LinearSnapHelper
 import androidx.recyclerview.widget.RecyclerView
-import androidx.transition.TransitionManager
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -50,7 +49,6 @@ import me.rosuh.easywatermark.ui.dialog.EditTextBSDialogFragment
 import me.rosuh.easywatermark.ui.dialog.SaveImageBSDialogFragment
 import me.rosuh.easywatermark.ui.panel.*
 import me.rosuh.easywatermark.utils.*
-import me.rosuh.easywatermark.widget.SpaceHeaderItemDecoration
 import kotlin.math.abs
 
 
@@ -276,6 +274,14 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                 } else {
                     binding.ivLogo.stop()
                 }
+                if (p1 == R.id.open_image_start) {
+                    // auto scroll to correct x-position
+                    binding.rvPanel.post {
+                        // disable scroll listener
+                        binding.rvPanel.canAutoSelected = false
+                        binding.rvPanel.smoothScrollToPosition(0)
+                    }
+                }
             }
         })
         setTransition(R.id.launch_start, R.id.launch_end)
@@ -358,36 +364,40 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
         binding.rvPanel.apply {
             adapter = FuncPanelAdapter(ArrayList(contentFunList))
             layoutManager = CenterLayoutManager(this@MainActivity, RecyclerView.HORIZONTAL, false)
-            onItemClick { recyclerView, pos, v ->
-                smoothScrollToPosition(pos)
-            }
-            post {
-                if (itemDecorationCount == 0) {
-                    addItemDecoration(SpaceHeaderItemDecoration(binding.root.width / 2))
-                }
-            }
+
             snapHelper = LinearSnapHelper().also {
                 it.attachToRecyclerView(this)
             }
+
+            onItemClick { _, pos, v ->
+                val snapView = snapHelper.findSnapView(binding.rvPanel.layoutManager)
+                if (snapView == v) {
+                    val item = (this.adapter as FuncPanelAdapter).dataSet[pos]
+                    handleFuncItem(item)
+                } else {
+                    smoothScrollToPosition(pos)
+                }
+            }
+
+            post {
+                // center item x-position
+                val padding = (this.width / 2)
+                this.setPadding(padding, 0, padding, 0)
+            }
+
             addOnScrollListener(object : RecyclerView.OnScrollListener() {
                 override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                     super.onScrollStateChanged(recyclerView, newState)
                     val snapView = snapHelper.findSnapView(binding.rvPanel.layoutManager)
                     when (newState) {
                         RecyclerView.SCROLL_STATE_IDLE -> {
-                            // change UI alpha
-                            binding.fcFunDetail.animate().alpha(1f).setDuration(150).start()
-//                            // select target item
-                            if (snapView == null) {
+                            if (snapView == null || !canAutoSelected) {
+                                canAutoSelected = true
                                 return
                             }
                             val pos = binding.rvPanel.getChildLayoutPosition(snapView)
                             (recyclerView.adapter as? FuncPanelAdapter)?.dataSet?.get(pos)
                                 ?.let { handleFuncItem(it) }
-                        }
-                        else -> {
-                            // change UI alpha
-                            binding.fcFunDetail.animate().alpha(0.45f).setDuration(150).start()
                         }
                     }
                 }
@@ -443,21 +453,27 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                     if (tab == null) {
                         return
                     }
-                    val list = when (tab.position) {
+                    hideDetailPanel()
+                    binding.rvPanel.smoothScrollToPosition(0)
+                    val adapter = (binding.rvPanel.adapter as? FuncPanelAdapter)
+                    when (tab.position) {
                         1 -> {
-                            styleFunList
+                            adapter?.also {
+                                it.seNewData(styleFunList)
+                                handleFuncItem(it.dataSet[0])
+                            }
                         }
                         2 -> {
-                            layoutFunList
+                            adapter?.also {
+                                it.seNewData(layoutFunList)
+                                handleFuncItem(it.dataSet[0])
+                            }
                         }
                         else -> {
-                            contentFunList
+                            adapter?.also {
+                                it.seNewData(contentFunList)
+                            }
                         }
-                    }
-                    hideDetailPanel()
-                    (binding.rvPanel.adapter as? FuncPanelAdapter)?.also {
-                        it.seNewData(list)
-                        handleFuncItem(it.dataSet[0])
                     }
                 }
 
@@ -470,20 +486,32 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
 
     private fun hideDetailPanel() {
         commitWithAnimation {
-            for (f in supportFragmentManager.fragments) {
-                remove(f!!)
+            fragmentsTagList.forEach {
+                val f = supportFragmentManager.findFragmentByTag(it)
+                if (f != null) {
+                    remove(f)
+                }
             }
         }
     }
 
     private fun applyBgColor(palette: Palette) {
         val color =
-            palette.lightVibrantSwatch?.rgb ?: ContextCompat.getColor(this, R.color.colorSecondary)
+            palette.darkMutedSwatch?.rgb ?: ContextCompat.getColor(this, R.color.colorSecondary)
         binding.ivPhoto.setBackgroundColor(color)
     }
 
+    private val fragmentsTagList = listOf<String>(
+        ColorFragment.TAG,
+        AlphaPbFragment.TAG,
+        DegreePbFragment.TAG,
+        VerticalPbFragment.TAG,
+        HorizonPbFragment.TAG,
+        TextSizePbFragment.TAG
+    )
+
     private fun handleFuncItem(item: FuncTitleModel) {
-        TransitionManager.beginDelayedTransition(binding.clRoot)
+        Log.i("handleFuncItem", "item = $item")
         when (item.type) {
             FuncTitleModel.FuncType.Text -> {
                 EditTextBSDialogFragment.safetyShow(supportFragmentManager)
@@ -681,10 +709,10 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
     }
 
     private fun setTransition(startState: Int, endState: Int) {
-        binding.clRoot.setTransition(startState, endState)
-        binding.clRoot.setTransitionDuration(550)
         scope.launch {
-            delay(1)
+            binding.clRoot.setTransition(startState, endState)
+            binding.clRoot.setTransitionDuration(550)
+            delay(16)
             binding.clRoot.transitionToEnd()
         }
     }

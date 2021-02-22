@@ -45,7 +45,7 @@
     <string name="share_tips">分享编辑后的图像到其他应用</string>
     <string name="share">分享</string>
     <string name="water_mark_mode_text">文字</string>
-    <string name="water_mark_mode_image">图片</string>
+    <string name="water_mark_mode_image">图标</string>
     <string name="touch_alpha">透明度: %1$d</string>
     <string name="touch_size">大小: %1$d</string>
     <string name="hint_tips_input_water_mark_text">请输入水印文字</string>

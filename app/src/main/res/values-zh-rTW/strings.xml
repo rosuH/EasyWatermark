@@ -66,7 +66,7 @@
     <string name="title_vertical_layout">垂直</string>
     <string name="touch_alpha">透明度: %1$d</string>
     <string name="touch_size">大小: %1$d</string>
-    <string name="water_mark_mode_image">圖片</string>
+    <string name="water_mark_mode_image">圖標</string>
     <string name="water_mark_mode_text">文字</string>
     <string name="dialog_change_log_content">
         感谢大家的幫助，此版本主要更新內容為：

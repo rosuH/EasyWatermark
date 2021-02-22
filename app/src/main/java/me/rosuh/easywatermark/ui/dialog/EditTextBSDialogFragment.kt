@@ -79,7 +79,7 @@ class EditTextBSDialogFragment : BottomSheetDialogFragment() {
 
     companion object {
 
-        private const val TAG = "EditTextBSDialogFragment"
+        const val TAG = "EditTextBSDialogFragment"
 
         private fun newInstance(): EditTextBSDialogFragment {
             return EditTextBSDialogFragment()
