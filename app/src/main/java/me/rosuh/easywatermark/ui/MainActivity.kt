@@ -15,7 +15,6 @@ import androidx.activity.viewModels
 import androidx.constraintlayout.motion.widget.MotionLayout
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
-import androidx.core.view.ViewConfigurationCompat
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -30,7 +29,6 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
-import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -65,12 +63,12 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
             FuncTitleModel(
                 FuncTitleModel.FuncType.Text,
                 getString(R.string.water_mark_mode_text),
-                R.drawable.ic_bug_report
+                R.drawable.ic_func_text
             ),
             FuncTitleModel(
                 FuncTitleModel.FuncType.Icon,
                 getString(R.string.water_mark_mode_image),
-                R.drawable.ic_bug_report
+                R.drawable.ic_func_sticker
             )
         )
     }
@@ -80,22 +78,22 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
             FuncTitleModel(
                 FuncTitleModel.FuncType.TextSize,
                 getString(R.string.title_text_size),
-                R.drawable.ic_bug_report
+                R.drawable.ic_func_size
             ),
             FuncTitleModel(
                 FuncTitleModel.FuncType.Color,
                 getString(R.string.title_text_color),
-                R.drawable.ic_bug_report
+                R.drawable.ic_func_color
             ),
             FuncTitleModel(
                 FuncTitleModel.FuncType.Alpha,
                 getString(R.string.style_alpha),
-                R.drawable.ic_bug_report
+                R.drawable.ic_func_opacity
             ),
             FuncTitleModel(
                 FuncTitleModel.FuncType.Degree,
                 getString(R.string.title_text_rotate),
-                R.drawable.ic_bug_report
+                R.drawable.ic_func_angle
             )
         )
     }
@@ -105,12 +103,12 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
             FuncTitleModel(
                 FuncTitleModel.FuncType.Horizon,
                 getString(R.string.title_horizon_layout),
-                R.drawable.ic_bug_report
+                R.drawable.ic_func_layour_horizontal
             ),
             FuncTitleModel(
                 FuncTitleModel.FuncType.Vertical,
                 getString(R.string.title_vertical_layout),
-                R.drawable.ic_bug_report
+                R.drawable.ic_func_layout_vertical
             )
         )
     }
@@ -299,57 +297,6 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
         }
         // setting water image widget
         binding.ivPhoto.apply {
-            setOnTouchListener(object : View.OnTouchListener {
-                private var startX = 0f
-                private var startY = 0f
-                private val verticalFac =
-                    ViewConfigurationCompat.getScaledHoverSlop(ViewConfiguration.get(this@MainActivity))
-                private val leftArea: ClosedFloatingPointRange<Float>
-                    get() {
-                        return 0f..(binding.ivPhoto.width / 2).toFloat()
-                    }
-                private val rightArea: ClosedFloatingPointRange<Float>
-                    get() {
-                        return (binding.ivPhoto.width / 2).toFloat()..(binding.ivPhoto.width.toFloat())
-                    }
-
-                override fun onTouch(v: View?, event: MotionEvent?): Boolean {
-                    when (event?.actionMasked) {
-                        MotionEvent.ACTION_DOWN -> {
-                            startX = event.x
-                            startY = event.y
-                        }
-                        MotionEvent.ACTION_MOVE -> {
-                            val dx = event.x - startX
-                            val dy = event.y - startY
-                            if (abs(dx) > verticalFac) {
-                                return false
-                            }
-                            when {
-                                (event.x in leftArea) -> {
-                                    viewModel.updateAlphaBy(dy / 2)
-                                }
-                                (event.x in rightArea) -> {
-                                    viewModel.updateTextSizeBy(dy / 5)
-                                }
-                            }
-                            startX = event.x
-                            startY = event.y
-                        }
-                        MotionEvent.ACTION_UP -> {
-                            performClick()
-                            scope.launch {
-                                delay(300)
-                                val isAlphaZero = (config?.alpha ?: 0) == 0
-                                val isTextSize = (config?.textSize ?: 0) == 0
-                                viewModel.updateTips(MainViewModel.TipsStatus.None(isAlphaZero || isTextSize))
-                            }
-                        }
-                    }
-                    return true
-                }
-
-            })
             doOnColorReady {
                 scope.launch {
                     applyBgColor(it)
@@ -410,42 +357,12 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                     val snapView = snapHelper.findSnapView(binding.rvPanel.layoutManager) ?: return
                     val detailX =
                         abs(binding.fcFunDetail.width / 2 - (snapView.left + snapView.right) / 2)
-                    if (detailX <= 1) {
+                    if (detailX <= 3) {
                         vibrateHelper.doVibrate()
                     }
                 }
             })
         }
-        // setting tab layout
-        val fragmentArray = arrayOf(
-            initFragments(binding.vpControlPanel, 2, ContentFragment.newInstance()),
-            initFragments(binding.vpControlPanel, 1, StyleFragment.newInstance()),
-            initFragments(binding.vpControlPanel, 0, LayoutFragment.newInstance())
-        )
-
-        val pagerAdapter = ControlPanelPagerAdapter(this, fragmentArray)
-        binding.vpControlPanel.apply {
-            isUserInputEnabled = false
-            offscreenPageLimit = 2
-            adapter = pagerAdapter
-        }
-
-        TabLayoutMediator(binding.tbToolBar, binding.vpControlPanel) { tab, position ->
-            when (position) {
-                0 -> {
-                    tab.text = getString(R.string.title_content)
-                    tab.icon = ContextCompat.getDrawable(this, R.drawable.ic_text_title)
-                }
-                1 -> {
-                    tab.text = getString(R.string.title_style)
-                    tab.icon = ContextCompat.getDrawable(this, R.drawable.ic_style_title)
-                }
-                2 -> {
-                    tab.text = getString(R.string.title_layout)
-                    tab.icon = ContextCompat.getDrawable(this, R.drawable.ic_layout_title)
-                }
-            }
-        }.attach()
 
         binding.tbToolBar.apply {
             addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {

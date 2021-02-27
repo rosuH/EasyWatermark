@@ -1,5 +1,7 @@
 package me.rosuh.easywatermark.ui.panel
 
+import android.os.Bundle
+import android.view.View
 import androidx.fragment.app.FragmentActivity
 import com.google.android.material.slider.Slider
 import me.rosuh.easywatermark.base.BasePBFragment
@@ -8,8 +10,14 @@ import me.rosuh.easywatermark.model.WaterMarkConfig
 
 class TextSizePbFragment : BasePBFragment() {
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        binding.slideContentSize.valueFrom = 0f
+        binding.slideContentSize.valueTo = WaterMarkConfig.MAX_TEXT_SIZE
+    }
+
     override fun doOnChange(slider: Slider, value: Float, fromUser: Boolean) {
-        shareViewModel.updateTextSize(value * resources.displayMetrics.density)
+        shareViewModel.updateTextSize(value)
     }
 
     override fun formatValue(config: WaterMarkConfig?): Float {

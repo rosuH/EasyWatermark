@@ -15,7 +15,6 @@ import me.rosuh.easywatermark.adapter.ColorPreviewAdapter
 import me.rosuh.easywatermark.base.BaseBindFragment
 import me.rosuh.easywatermark.databinding.FragmentColorBinding
 import me.rosuh.easywatermark.ktx.commitWithAnimation
-import me.rosuh.easywatermark.model.FuncTitleModel
 import me.rosuh.easywatermark.utils.DetectedPerformanceSeekBarListener
 import me.rosuh.easywatermark.utils.onItemClick
 
@@ -126,7 +125,7 @@ class ColorFragment : BaseBindFragment<FragmentColorBinding>() {
             R.style.MaterialAlertDialog
         )
             .setTitle(requireActivity().getString(R.string.tips_choose_color_dialog))
-            .setPreferenceName(StyleFragment.SP_COLOR_PICKER_DIALOG)
+            .setPreferenceName(SP_COLOR_PICKER_DIALOG)
             .setPositiveButton(
                 requireActivity().getString(R.string.tips_confirm_dialog),
                 object : ColorEnvelopeListener {
@@ -180,6 +179,8 @@ class ColorFragment : BaseBindFragment<FragmentColorBinding>() {
 
     companion object {
         const val TAG = "ColorFragment"
+        private const val SP_COLOR_PICKER_DIALOG = "water_mark_color_picker_dialog"
+
 
         fun replaceShow(fa: FragmentActivity, containerId: Int) {
             val f = fa.supportFragmentManager.findFragmentByTag(TAG)

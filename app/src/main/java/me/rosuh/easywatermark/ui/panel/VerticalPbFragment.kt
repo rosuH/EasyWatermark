@@ -21,7 +21,8 @@ class VerticalPbFragment : BasePBFragment() {
     }
 
     override fun formatValue(config: WaterMarkConfig?): Float {
-        return config?.verticalGapPercent?.toFloat() ?: 1f
+        return (config?.verticalGapPercent?.toFloat() ?: 1f).coerceAtLeast(0f)
+            .coerceAtMost(WaterMarkConfig.MAX_VERTICAL_GAP.toFloat())
     }
 
     override fun formatValueTips(config: WaterMarkConfig?): String {

@@ -1,10 +1,7 @@
 package me.rosuh.easywatermark.ui.panel
 
 import android.os.Bundle
-import android.transition.Slide
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.fragment.app.FragmentActivity
 import com.google.android.material.slider.Slider
 import me.rosuh.easywatermark.base.BasePBFragment
@@ -27,7 +24,7 @@ class AlphaPbFragment : BasePBFragment() {
     }
 
     override fun formatValue(config: WaterMarkConfig?): Float {
-        return rebuildAlpha(config).toFloat()
+        return rebuildAlpha(config).toFloat().coerceAtLeast(0f).coerceAtMost(100f)
     }
 
     private fun rebuildAlpha(config: WaterMarkConfig?): Int {

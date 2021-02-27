@@ -45,7 +45,7 @@
     <string name="share_tips">分享编辑后的图像到其他应用</string>
     <string name="share">分享</string>
     <string name="water_mark_mode_text">文字</string>
-    <string name="water_mark_mode_image">图标</string>
+    <string name="water_mark_mode_image">贴纸</string>
     <string name="touch_alpha">透明度: %1$d</string>
     <string name="touch_size">大小: %1$d</string>
     <string name="hint_tips_input_water_mark_text">请输入水印文字</string>
@@ -83,5 +83,8 @@
     <string name="dialog_title_exist_confirm">提示</string>
     <string name="dialog_content_exist_confirm">丢弃修改？</string>
     <string name="dialog_cancel_exist_confirm">取消</string>
+    <string name="about_title_setting">设置</string>
+    <string name="about_title_output">输出格式</string>
+    <string name="dialog_out_put_title">格式与质量</string>
 
 </resources>

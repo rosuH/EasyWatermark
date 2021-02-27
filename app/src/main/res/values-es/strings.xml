@@ -80,4 +80,7 @@
     <string name="dialog_content_exist_confirm">¿Descartar editar?</string>
     <string name="dialog_cancel_exist_confirm">Cancelar</string>
     <string name="dialog_title_exist_confirm">Consejo</string>
+    <string name="about_title_setting">Configuración</string>
+    <string name="about_title_output">Formato de salida</string>
+    <string name="dialog_out_put_title">Formato y calidad de salida</string>
 </resources>

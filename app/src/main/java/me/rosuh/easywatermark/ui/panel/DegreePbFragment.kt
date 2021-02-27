@@ -21,7 +21,7 @@ class DegreePbFragment : BasePBFragment() {
     }
 
     override fun formatValue(config: WaterMarkConfig?): Float {
-        return config?.degree ?: 1f
+        return (config?.degree ?: 0f).coerceAtLeast(0f).coerceAtMost(WaterMarkConfig.MAX_DEGREE)
     }
 
     override fun formatValueTips(config: WaterMarkConfig?): String {

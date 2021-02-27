@@ -25,6 +25,8 @@
     <string name="request_permission_failed">Request permission failed</string>
     <string name="about_title_about">About</string>
     <string name="about_title_info">Information</string>
+    <string name="about_title_setting">Setting</string>
+    <string name="about_title_output">Output Format</string>
     <string name="about_title_version">Version</string>
     <string name="about_title_rating">Rate our app</string>
     <string name="about_title_feed_back">Feedback</string>
@@ -80,6 +82,7 @@
     <string name="dialog_title_exist_confirm">Tips</string>
     <string name="dialog_cancel_exist_confirm">Cancel</string>
     <string name="dialog_content_exist_confirm">Discard edit?</string>
+    <string name="dialog_out_put_title">Output format and quality</string>
     <string name="text_zero_degree" translatable="false">0°</string>
     <string name="about_title_privacy_statement" translatable="false">Privacy Statement</string>
     <string name="about_title_privacy_statement_zh" translatable="false">隐私政策</string>

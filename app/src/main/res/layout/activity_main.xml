@@ -30,8 +30,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.75" />
+        app:layout_constraintTop_toBottomOf="@id/iv_logo" />
 
     <ImageView
         android:id="@+id/iv_picker_tips"
@@ -116,6 +115,12 @@
         <com.google.android.material.tabs.TabItem
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:icon="@drawable/ic_text_title"
+            android:text="@string/title_content" />
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:icon="@drawable/ic_layout_title"
             android:text="@string/title_layout" />
 
@@ -125,29 +130,14 @@
             android:icon="@drawable/ic_style_title"
             android:text="@string/title_style" />
 
-        <com.google.android.material.tabs.TabItem
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:icon="@drawable/ic_text_title"
-            android:text="@string/title_content" />
-
     </com.google.android.material.tabs.TabLayout>
-
-    <androidx.viewpager2.widget.ViewPager2
-        android:id="@+id/vp_control_panel"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/colorSecondary"
-        android:visibility="invisible"
-        app:layout_constraintBottom_toTopOf="@id/tb_tool_bar"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
 
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/fc_fun_detail"
         android:layout_width="match_parent"
         android:layout_height="56dp"
         android:background="@color/colorSecondary"
+        android:visibility="invisible"
         app:layout_constraintBottom_toTopOf="@id/rv_panel"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
@@ -155,11 +145,11 @@
     <me.rosuh.easywatermark.widget.TouchSensitiveRv
         android:id="@+id/rv_panel"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="72dp"
         android:background="@color/colorSecondary"
-        android:visibility="invisible"
         android:clipChildren="false"
         android:clipToPadding="false"
+        android:visibility="invisible"
         app:layout_constraintBottom_toTopOf="@id/tb_tool_bar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />

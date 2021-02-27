@@ -7,6 +7,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     id("com.android.application")
     id("kotlin-android")
+    id("kotlin-parcelize")
     id("name.remal.check-dependency-updates") version "1.2.2"
 }
 
@@ -73,11 +74,13 @@ android {
     }
 
     android.buildFeatures.viewBinding = true
+
 }
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
         jvmTarget = "1.8"
+        useIR = true
     }
 }
 

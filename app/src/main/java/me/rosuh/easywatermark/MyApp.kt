@@ -1,11 +1,13 @@
 package me.rosuh.easywatermark
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.content.edit
+import me.rosuh.easywatermark.model.UserConfig
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import kotlin.system.exitProcess
 
@@ -44,12 +46,20 @@ class MyApp : Application() {
     }
 
     companion object {
+        @SuppressLint("StaticFieldLeak")
         lateinit var instance: Context
             private set
 
         fun globalSp(): SharedPreferences {
             return instance.getSharedPreferences(
                 WaterMarkConfig.SP_NAME,
+                MODE_PRIVATE
+            )
+        }
+
+        fun userConfigSp(): SharedPreferences {
+            return instance.getSharedPreferences(
+                UserConfig.SP_NAME,
                 MODE_PRIVATE
             )
         }

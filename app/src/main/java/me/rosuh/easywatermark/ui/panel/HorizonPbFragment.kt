@@ -21,7 +21,8 @@ class HorizonPbFragment : BasePBFragment() {
     }
 
     override fun formatValue(config: WaterMarkConfig?): Float {
-        return config?.horizonGapPercent?.toFloat() ?: 1f
+        return (config?.horizonGapPercent?.toFloat() ?: 1f).coerceAtLeast(0f)
+            .coerceAtMost(WaterMarkConfig.MAX_HORIZON_GAP.toFloat())
     }
 
     override fun formatValueTips(config: WaterMarkConfig?): String {
