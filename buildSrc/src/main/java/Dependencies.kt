@@ -41,7 +41,7 @@ object Versions {
 
     const val materialAboutLibrary = "3.1.2"
 
-    const val fragmentKtx = "1.3.0-rc02"
+    const val fragmentKtx = "1.3.0"
 
     const val activityKtx = "1.3.0-alpha02"
 
@@ -93,6 +93,8 @@ object Libs {
         "com.github.daniel-stoneuk:material-about-library:${Versions.materialAboutLibrary}"
 
     const val fragmentKtx = "androidx.fragment:fragment-ktx:${Versions.fragmentKtx}"
+
+    const val fragment = "androidx.fragment:fragment:${Versions.fragmentKtx}"
 
     const val activityKtx = "androidx.activity:activity-ktx:${Versions.activityKtx}"
 

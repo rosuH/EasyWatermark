@@ -67,12 +67,13 @@
     <string name="contributor_info">When the feedback problem is valid and is fixed or a new version is added, your name or email will appear in the update log pop-up window. We will obscure your information and the full name will not appear. \\n If you do not want to appear, please mark: I do not want to.</string>
     <string name="dialog_change_log_title">Changelog</string>
     <string name="dialog_change_log_content">
-        Thank you for your feedback. Updates featured in this version are:\n\n
+        This update brings the following features:\n\n
          <u><big>New</big></u> \n\n
-         · Spanish \n\n
+         · A new way of interaction, more beautiful and efficiency has been improved, welcome to taste. \n\n
          Thank sguinetti \n\n
+         · Added output format and quality options, easy to use.
          <u><big>Fixes</big></u> \n\n
-         · Part of the ROM crashed due to animation
+         · The watermark accuracy has been adjusted, except for some cases, are very accurate.\n\n
     </string>
     <string name="tips_not_app_can_open_imaegs">No file manager detected.</string>
     <string name="tips_choose_other_file_type">Invalid image</string>

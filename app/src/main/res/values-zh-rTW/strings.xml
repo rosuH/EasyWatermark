@@ -69,12 +69,12 @@
     <string name="water_mark_mode_image">圖標</string>
     <string name="water_mark_mode_text">文字</string>
     <string name="dialog_change_log_content">
-        感谢大家的幫助，此版本主要更新內容為：
+        本次更新帶來瞭如下特性：
         <u><big>新增</big></u>\n\n
-        · 西班牙語
-        感谢 sguinetti
+        · 全新的交互方式，更加美觀且效率也有所提高，歡迎品鑑。\n\n
+        · 添加了輸出格式和質量選項。\n\n
         <u><big>修复</big></u>\n\n
-        · 部分 ROM 因為動畫導致的問題
+        · 對水印精度有所調整，除了個別情況外，都非常精確了。
     </string>
     <string name="dev_comment">任何先进的科技，初看皆与魔法无异</string>
     <string name="dialog_content_exist_confirm">丟棄修改？</string>

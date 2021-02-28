@@ -64,12 +64,12 @@
     <string name="contributor_info">Cuando el informe del problema es válido y se arregla o se añade una nueva versión, su nombre o correo electrónico aparecerá en la ventana emergente del registro de actualizaciones. Nosotros podemos ocultar su información y el nombre completo no aparecerá. \\nSi no quieres aparecer, por favor marca: No quiero.</string>
     <string name="dialog_change_log_title">Registro de cambios</string>
     <string name="dialog_change_log_content">
-        Thank you for your feedback. The main update of this version is:\n\n
+        Esta actualización aporta las siguientes características:\n\n
         <u><big>Nuevo</big> </u> \n\n
-         · Español \n\n
-         Gracias, sguinetti \n\n
+         · nueva interacción, más hermosa y más eficiente, bienvenido a probar \n\n
+         · Se han añadido opciones de formato y calidad de salida, fáciles de usar. \n\n
         <u><big>Reparación</big> </u> \n\n
-         · Parte de la ROM se bloqueó debido a la animación
+         · se ha ajustado la precisión de la marca de agua, excepto en algunos casos, ahora es muy precisa.
     </string>
     <string name="tips_not_app_can_open_imaegs">Parece que no tienes un gestor de archivos instalado</string>
     <string name="tips_choose_other_file_type">Parece que no escogió una imagen</string>

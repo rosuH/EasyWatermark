@@ -19,9 +19,8 @@ android {
         applicationId = "me.rosuh.easywatermark"
         minSdkVersion(Apps.minSdk)
         targetSdkVersion(Apps.targetSdk)
-        versionCode = 10102
-        versionName = "1.1.2"
-
+        versionCode = 20000
+        versionName = "2.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -39,7 +38,7 @@ android {
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard/*.pro"
+                "coroutines.pro","proguard-rules.pro"
             )
         }
     }
@@ -92,6 +91,7 @@ dependencies {
     implementation(Libs.materialAboutLibrary)
     implementation(Libs.material)
     implementation(Libs.fragmentKtx)
+    implementation(Libs.fragment)
     implementation(Libs.activityKtx)
     implementation(Libs.coroutineAndroid)
     implementation(Libs.coroutineCore)

@@ -82,6 +82,7 @@
 - [skydoves/ColorPickerView](https://github.com/skydoves/ColorPickerView)
 - [material-components/material-components-android](https://github.com/material-components/material-components-android)
 - [Compressor](https://github.com/zetbaitsu/Compressor/)
+- 示例图片来自 Deepak Nautiyal on [Unsplash](https://unsplash.com/s/photos/animals?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText)
 
 ## 反馈与贡献
 我们非常欢迎您在 issues 区发表您任何意见与建议，或者直接提交 PR 以贡献您的代码。
