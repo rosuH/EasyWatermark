@@ -121,14 +121,14 @@
         <com.google.android.material.tabs.TabItem
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:icon="@drawable/ic_layout_title"
-            android:text="@string/title_layout" />
+            android:icon="@drawable/ic_style_title"
+            android:text="@string/title_style" />
 
         <com.google.android.material.tabs.TabItem
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:icon="@drawable/ic_style_title"
-            android:text="@string/title_style" />
+            android:icon="@drawable/ic_layout_title"
+            android:text="@string/title_layout" />
 
     </com.google.android.material.tabs.TabLayout>
 

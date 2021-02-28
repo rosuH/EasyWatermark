@@ -246,7 +246,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             if (srcBitmap.isRecycled) {
                 return@withContext null
             }
-            val showDebugRect = BuildConfig.DEBUG
+            val showDebugRect = BuildConfig.DEBUG && false
             val rawWidth = srcBitmap.width.toFloat().coerceAtLeast(1f)
                 .coerceAtMost(limitBounds.width().toFloat())
             val rawHeight = srcBitmap.height.toFloat().coerceAtLeast(1f)
@@ -315,7 +315,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             textPaint: Paint,
             coroutineContext: CoroutineContext
         ): BitmapShader = withContext(coroutineContext) {
-            val showDebugRect = BuildConfig.DEBUG
+            val showDebugRect = BuildConfig.DEBUG && false
             val textWidth = textBounds.width().toFloat().coerceAtLeast(1f)
             val textHeight = textBounds.height().toFloat().coerceAtLeast(1f)
 
