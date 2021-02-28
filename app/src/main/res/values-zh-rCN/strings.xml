@@ -83,7 +83,7 @@
     <string name="dialog_title_exist_confirm">提示</string>
     <string name="dialog_content_exist_confirm">丢弃修改？</string>
     <string name="dialog_cancel_exist_confirm">取消</string>
-    <string name="about_title_setting">设置</string>
+    <string name="about_title_options">选项</string>
     <string name="about_title_output">输出格式</string>
     <string name="dialog_out_put_title">格式与质量</string>
 

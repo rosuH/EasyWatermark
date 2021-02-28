@@ -44,7 +44,7 @@
                 android:layout_height="wrap_content"
                 android:paddingStart="28dp"
                 android:paddingEnd="28dp"
-                android:text="@string/about_title_setting"
+                android:text="@string/about_title_options"
                 android:textColor="@color/d_neutral_2"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />

@@ -79,7 +79,6 @@ You can turn down the transparency, just don't block the key information.
 > This app was designed by [@tovi](https://www.figma.com/@tovi), so all rights to the UI and related design resources belong to him and may not be used without permission from any person or organization.
 
 ## Open Source License.
-Third party libraries used.
 - [daniel-stonuk/material-about-library](https://github.com/daniel-stoneuk/material-about-library)
 - [skydoves/ColorPickerView](https://github.com/skydoves/ColorPickerView)
 - [material-components/material-components-android](https://github.com/material-components/material-components-android)

@@ -25,7 +25,7 @@
     <string name="request_permission_failed">Request permission failed</string>
     <string name="about_title_about">About</string>
     <string name="about_title_info">Information</string>
-    <string name="about_title_setting">Setting</string>
+    <string name="about_title_options">Options</string>
     <string name="about_title_output">Output Format</string>
     <string name="about_title_version">Version</string>
     <string name="about_title_rating">Rate our app</string>
