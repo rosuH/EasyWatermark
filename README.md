@@ -24,6 +24,7 @@ Securely, easily add a watermark to your sensitive photos.</br>To prevent them f
 <p align="left">
 <a href="https://play.google.com/store/apps/details?id=me.rosuh.easywatermark"><img src="/static/google-play-badge.png" width="auto" height="64px"/></a>
   <a href="https://www.coolapk.com/apk/272743"><img src="/static/logo_coolapk.png" width="auto" height="64px"/></a>
+  <a href="https://f-droid.org/packages/me.rosuh.easywatermark/"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" width="auto" height="64px"/></a>
 </p>
 
 ## Characteristics
