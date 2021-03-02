@@ -21,7 +21,9 @@
 <p align="left">
 <a href="https://play.google.com/store/apps/details?id=me.rosuh.easywatermark"><img src="/static/google-play-badge_cn.png" width="auto" height="64px"/></a>
   <a href="https://www.coolapk.com/apk/272743"><img src="/static/logo_coolapk.png" width="auto" height="64px"/></a>
+    <a href="https://f-droid.org/packages/me.rosuh.easywatermark/"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" width="auto" height="64px"/></a>
 </p>
+
 
 ## 特性
 
@@ -47,11 +49,9 @@
 
 开发者所主导的下载渠道：
 - [Github Release](https://github.com/rosuH/EasyWatermark/releases)：永远保持最新
-- [奶牛快传](https://ewm.rosuh.me): ⚡不限速下载，永远保持最新
-  - 如果你有意尝试奶牛快传，可以使用我的[邀请链接](https://cowtransfer.com/?lx_guid=d14511ff-0fb9-4add-9cf1-e22b63415f33) ;)
 - [Google Play](https://play.google.com/store/apps/details?id=me.rosuh.easywatermark)
   - ⚠️注意：此版本收费，但是代码完全一致，所以如果您愿意请作者喝一杯茶（或者您比较任性），那么请去此下载，否则请选择其他渠道:)
-- F-Droid（构建中）
+- [F-Droid](https://f-droid.org/packages/me.rosuh.easywatermark/)
 - [酷安](https://www.coolapk.com/apk/272743)
 
 其他渠道均非开发者所主导，请仔细甄别后下载使用。
@@ -82,6 +82,7 @@
 - [skydoves/ColorPickerView](https://github.com/skydoves/ColorPickerView)
 - [material-components/material-components-android](https://github.com/material-components/material-components-android)
 - [Compressor](https://github.com/zetbaitsu/Compressor/)
+- 示例图片来自 Jeremy Bishop on [Unsplash](https://unsplash.com/s/photos/animals?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText)
 
 ## 反馈与贡献
 我们非常欢迎您在 issues 区发表您任何意见与建议，或者直接提交 PR 以贡献您的代码。

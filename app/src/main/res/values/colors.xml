@@ -1,20 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#000</color>
-    <color name="colorPrimaryDark">#000</color>
-    <color name="colorAccent">#ffc71c</color>
-    <color name="colorAccent_30">#4D865900</color>
-    <color name="colorSecondary">#161616</color>
-    <color name="colorOnSurface">#BFFFFFFF</color>
+    <color name="colorPrimary">@color/d_page_bg</color>
+    <color name="colorPrimaryDark">@color/d_page_bg</color>
+    <color name="colorAccent">@color/d_brand</color>
+    <color name="colorAccent_30">#4DFFDE32</color>
+    <color name="colorAccent_50">#40FFDE32</color>
+    <color name="colorSecondary">@color/d_tool_bar_bg</color>
+    <color name="colorOnSurface">@color/d_neutral_3</color>
 
     <color name="text_color_main">#fff</color>
-    <color name="text_color_tips">#80FFFFFF</color>
+    <color name="text_color_tips">@color/d_neutral_3</color>
 
     <color name="white">#fff</color>
     <color name="white_14">#24FFFFFF</color>
     <color name="white_30">#4DFFFFFF</color>
 
     <color name="logoPrimary">#FFB800</color>
-<!--    <color name="logoPrimary">#FFD740</color>-->
     <color name="logoBackground">#000</color>
+
+    <!--    Designer color system-->
+    <color name="d_brand">#FFDE32</color>
+    <color name="d_neutral_1">#40FFFFFF</color>
+    <color name="d_neutral_2">#80FFFFFF</color>
+    <color name="d_neutral_3">#BFFFFFFF</color>
+    <color name="d_neutral_4">#FFFFFF</color>
+    <color name="d_page_bg">#000</color>
+    <color name="d_tool_bar_bg">#161616</color>
 </resources>

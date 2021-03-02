@@ -1,12 +1,33 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.MaterialComponents.NoActionBar">
-        <!-- Customize your theme here. -->
-        <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-        <item name="colorAccent">@color/colorAccent</item>
-        <item name="android:textColor">@color/text_color_main</item>
-        <item name="colorOnSurface">@color/colorAccent</item>
+
+
+    <style name="MaterialAlertDialog.App" parent="MaterialAlertDialog.MaterialComponents">
+        <item name="shapeAppearance">@style/ShapeAppearance.App.MediumComponent</item>
+    </style>
+
+    <style name="MaterialAlertDialog.App.Title.Text" parent="MaterialAlertDialog.MaterialComponents.Title.Text">
+        <item name="android:textColor">@color/d_brand</item>
+    </style>
+
+    <style name="ThemeOverlay.App.Button" parent="">
+        <!--        <item name="colorPrimary">@color/shrine_pink_900</item>-->
+    </style>
+
+    <style name="ShapeAppearance.App.MediumComponent" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">8dp</item>
+    </style>
+
+    <style name="ShapeAppearance.App.SmallComponent" parent="ShapeAppearance.MaterialComponents.SmallComponent">
+        <item name="cornerFamily">cut</item>
+        <item name="cornerSize">4dp</item>
+    </style>
+
+    <style name="WindowAnimationTransition">
+        <item name="android:activityOpenEnterAnimation">@anim/activity_open_in</item>
+        <item name="android:activityOpenExitAnimation">@anim/activity_open_out</item>
+        <item name="android:activityCloseEnterAnimation">@anim/activity_close_in</item>
+        <item name="android:activityCloseExitAnimation">@anim/activity_close_out</item>
     </style>
 
     <style name="AppTheme.ActionOverflowButtonStyle">
@@ -19,6 +40,7 @@
         <item name="colorOnPrimary">@color/colorPrimary</item>
         <item name="colorOnSurface">@color/colorAccent</item>
         <item name="actionBarTheme">@style/AppTheme.AppBarOverlay</item>
+        <item name="android:windowAnimationStyle">@style/WindowAnimationTransition</item>
     </style>
 
     <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
@@ -113,6 +135,12 @@
         <item name="android:textSize">12sp</item>
         <item name="strokeWidth">1dp</item>
         <item name="android:textColor">@color/white</item>
+    </style>
+
+    <style name="AboutPageTextViewStyle">
+        <item name="android:textColor">@color/d_neutral_3</item>
+        <item name="android:paddingStart">28dp</item>
+        <item name="android:paddingEnd">28dp</item>
     </style>
 
 </resources>

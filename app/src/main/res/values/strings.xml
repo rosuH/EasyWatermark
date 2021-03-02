@@ -1,90 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">简单水印</string>
-    <string name="action_pick">选择图片</string>
-    <string name="action_save">保存</string>
-    <string name="action_settings">关于</string>
-    <string name="title_layout">分布</string>
-    <string name="title_style">样式</string>
-    <string name="title_content">内容</string>
-    <string name="tips_do_not_choose_image">没有选择图片</string>
-    <string name="tips_choose_other_file_type">貌似你选择的不是图片</string>
-    <string name="tips_choose_color_dialog">选择颜色</string>
-    <string name="tips_confirm_dialog">确认</string>
-    <string name="tips_cancel_dialog">取消</string>
-    <string name="tips_save_ok">保存完成</string>
-    <string name="tips_share_ok">分享完成</string>
-    <string name="tips_error">错误</string>
-    <string name="tips_share_image">分享图片</string>
-    <string name="title_enter_text">内容</string>
-    <string name="title_text_style">字体样式</string>
-    <string name="title_text_size">大小</string>
-    <string name="title_horizon_layout">水平</string>
-    <string name="title_vertical_layout">垂直</string>
-    <string name="title_text_color">颜色</string>
-    <string name="title_text_rotate">角度</string>
+    <string name="app_name">Easy WaterMark</string>
+    <string name="action_pick">Choose Picture</string>
+    <string name="action_save">Save</string>
+    <string name="action_settings">About</string>
+    <string name="title_layout">Layout</string>
+    <string name="title_style">Style</string>
+    <string name="title_content">Content</string>
+    <string name="tips_do_not_choose_image">Choose nothing</string>
+    <string name="tips_choose_color_dialog">Choose Color</string>
+    <string name="tips_confirm_dialog">Confirm</string>
+    <string name="tips_cancel_dialog">Cancel</string>
+    <string name="tips_save_ok">Save successful</string>
+    <string name="tips_share_ok">Share successful</string>
+    <string name="tips_error">Error</string>
+    <string name="tips_share_image">Share picture</string>
+    <string name="title_enter_text">Content</string>
+    <string name="title_text_style">Style</string>
+    <string name="title_text_size">Size</string>
+    <string name="title_horizon_layout">Horizontal</string>
+    <string name="title_vertical_layout">Vertical</string>
+    <string name="title_text_color">Color</string>
+    <string name="title_text_rotate">Angle</string>
+    <string name="request_permission_failed">Request permission failed</string>
+    <string name="about_title_about">About</string>
+    <string name="about_title_info">Information</string>
+    <string name="about_title_options">Options</string>
+    <string name="about_title_output">Output Format</string>
+    <string name="about_title_version">Version</string>
+    <string name="about_title_rating">Rate our app</string>
+    <string name="about_title_feed_back">Feedback</string>
+    <string name="about_title_update_log">Changelog</string>
+    <string name="about_title_open_source">Open source</string>
+    <string name="about_title_author">Author</string>
+    <string name="about_title_designer">Designer</string>
+    <string name="about_title_repo_link">Open in Github</string>
+    <string name="about_title_figma_link">More project</string>
+    <string name="error_not_img">Please select an image</string>
+    <string name="error_file_not_found">The image cannot be opened or was not selected</string>
+    <string name="tips_pick_image">Let\'s start by selecting an image</string>
+    <string name="save_directly">Save directly</string>
+    <string name="directly_save_tips">Store the edited image directly to your gallery</string>
+    <string name="share_tips">Share the edited image to other apps</string>
+    <string name="share">Share</string>
+    <string name="water_mark_mode_text">Text</string>
+    <string name="water_mark_mode_image">Icon</string>
+    <string name="touch_alpha">Alpha: %1$d</string>
+    <string name="touch_size">Size: %1$d</string>
+    <string name="hint_tips_input_water_mark_text">Please enter watermark text</string>
+    <string name="tips_ok">Confirm</string>
+    <string name="hint_tips_alpha_100">Alpha 100%</string>
+    <string name="tips_cancel_output">Cancel</string>
+    <string name="tips_need_compress_img">Insufficient storage or the image is too large</string>
+    <string name="tips_compressing">Compressing…</string>
+    <string name="tips_compress_images">Compress picture</string>
+    <string name="tips_compress_ok">Finished compressing. Click OK to continue the export.</string>
+    <string name="tips_compress_create_uri_failed">Finished compressing, but failed to create the Uri. Please restart the app and try again. %1$s</string>
+    <string name="tips_tip_title">Crash detected</string>
+    <string name="msg_crash">Would you like to report this crash? This can help us improve the app! This will not collect any personal information.</string>
+    <string name="crash_mail">Send email</string>
+    <string name="tip_not_mail_found">No email client detected. Alternatively, you can paste the error message to the app store or Github.</string>
+    <string name="tips_content_size_performance">The larger the image, the more demanding it is to view the image in realtime.</string>
+    <string name="tips_content_mode_button">Click to modify text or picture</string>
+    <string name="config_default_water_mark_text">👋 DO NOT REDISTRIBUTE</string>
+    <string name="style_alpha">Alpha</string>
+    <string name="contributor_info">When the feedback problem is valid and is fixed or a new version is added, your name or email will appear in the update log pop-up window. We will obscure your information and the full name will not appear. \\n If you do not want to appear, please mark: I do not want to.</string>
+    <string name="dialog_change_log_title">Changelog</string>
+    <string name="dialog_change_log_content">
+        This update brings the following features:\n\n
+         <u><big>New</big></u> \n\n
+         · A new way of interaction, more beautiful and efficiency has been improved, welcome to taste. \n\n
+         · Added output format and quality options, easy to use.
+         <u><big>Fixes</big></u> \n\n
+         · The watermark accuracy has been adjusted, except for some cases, are very accurate.\n\n
+    </string>
+    <string name="tips_not_app_can_open_imaegs">No file manager detected.</string>
+    <string name="tips_choose_other_file_type">Invalid image</string>
+    <string name="error_save_oom">Insufficient memory, please clean up the background and try again</string>
+    <string name="error_share_uri_is_null">The output Uri is empty, please contact the developer for feedback, thank you</string>
+    <string name="dev_comment">Any sufficiently advanced technology is indistinguishable from magic.</string>
+    <string name="dialog_title_exist_confirm">Tips</string>
+    <string name="dialog_cancel_exist_confirm">Cancel</string>
+    <string name="dialog_content_exist_confirm">Discard edit?</string>
+    <string name="dialog_out_put_title">Output format and quality</string>
     <string name="text_zero_degree" translatable="false">0°</string>
-    <string name="request_permission_failed">获取权限失败</string>
-
-    <!--about page-->
-    <string name="about_title_about">关于</string>
-    <string name="about_title_info">信息</string>
-    <string name="about_title_version">版本</string>
-    <string name="about_title_rating">为这个应用评分</string>
-    <string name="about_title_feed_back">反馈</string>
-    <string name="about_title_update_log">更新日志</string>
-    <string name="about_title_open_source">开源许可</string>
-    <string name="about_title_privacy_policy" translatable="false">Privacy policy</string>
-    <string name="about_title_privacy_policy_zh" translatable="false">隐私政策</string>
-
-    <string name="about_title_author">作者</string>
-    <string name="about_title_designer">设计者</string>
-    <string name="about_title_repo_link">在 Github 上查看此项目</string>
-    <string name="about_title_figma_link">查看他的更多作品</string>
+    <string name="about_title_privacy_statement" translatable="false">Privacy Statement</string>
+    <string name="about_title_privacy_statement_zh" translatable="false">隐私政策</string>
     <string name="open_source_desc_color_picker" translatable="false"><![CDATA[ColorPickerView implements getting HSV colors, ARGB values, Hex color codes from any image drawables or your gallery pictures by tapping on the desired color. Supports alpha & brightness slider bar, dialog, and saving & restoring selected data.]]></string>
     <string name="open_source_desc_about_lib" translatable="false">Makes it easy to create a beautiful about screen for your app. Generates an Activity or Fragment. Idea from here: Heinrich Reimer\'s open-source-library-request-manager Design inspired by Phonograph If you use this library in your app, please let me know and I\'ll add it to the list.</string>
     <string name="open_source_desc_material_components" translatable="false">Material Components for Android (MDC-Android) help developers execute Material Design. Developed by a core team of engineers and UX designers at Google, these components enable a reliable development workflow to build beautiful and functional Android apps.Material Components for Android is a drop-in replacement for Android\'s Design Support Library.</string>
-    <string name="error_not_img">请选择图片</string>
-    <string name="error_file_not_found">未选择图片或图片不存在</string>
-    <string name="tips_pick_image">"选择图片，开始编辑 "</string>
-    <string name="save_directly">直接保存</string>
-    <string name="directly_save_tips">直接存储编辑后的图像到你的相册中</string>
-    <string name="share_tips">分享编辑后的图像到其他应用</string>
-    <string name="share">分享</string>
-    <string name="water_mark_mode_text">文字</string>
-    <string name="water_mark_mode_image">图片</string>
-    <string name="touch_alpha">透明度: %1$d</string>
-    <string name="touch_size">大小: %1$d</string>
-    <string name="hint_tips_input_water_mark_text">请输入水印文字</string>
-    <string name="tips_ok">确定</string>
-    <string name="hint_tips_alpha_100">透明度100%</string>
-    <string name="tips_cancel_output">取消</string>
-    <string name="tips_need_compress_img">图片过大或内存不足</string>
-    <string name="tips_compressing">正在压缩中…</string>
-    <string name="tips_compress_images">压缩图片</string>
-    <string name="tips_compress_ok">压缩完成，点击确定继续输出</string>
-    <string name="tips_compress_create_uri_failed">压缩完成，但是创建 Uri 失败，请重启 APP 重试。%1$s</string>
-    <string name="tips_tip_title">检测到崩溃</string>
-    <string name="msg_crash">你愿意帮忙反馈错误信息吗？这样可以帮我们做得更好！这不会收集你的个人信息。</string>
-    <string name="crash_mail">发送邮件</string>
-    <string name="tip_not_mail_found">似乎没有安装邮件客户端，你可以主动粘贴错误信息到应用市场或 Github</string>
     <string name="email_subject" translatable="false">[EasyWaterMark] Crash info</string>
-    <string name="tips_content_size_performance">尺寸越大，实时预览性能要求越高</string>
-    <string name="tips_content_mode_button">点击可修改文字或图片</string>
-    <string name="config_default_water_mark_text">👋图片仅供测试，请勿作其他用途</string>
-    <string name="style_alpha">透明度</string>
-    <string name="dialog_change_log_title">更新日志</string>
-    <string name="contributor_info">当反馈的问题有效，并被修复或加入新版本时，您的名字或邮件出现在更新日志弹窗中。我们会对您的信息作遮挡处理，不会出现全称。\n 如果您不愿意出现，请标注：我不愿意。即可</string>
-    <string name="dialog_change_log_content">
-        感谢大家的反馈，此版本主要更新为：\n\n
-        <u><big>新增</big></u> \n\n
-        · 西班牙语 \n\n
-        感谢 sguinetti \n\n
-        <u><big>修复</big></u> \n\n
-        · 部分 ROM 因为动画导致的崩溃
-    </string>
     <string name="open_source_desc_compressor" translatable="false">"Compressor is a lightweight and powerful android image compression library. Compressor will allow you to compress large photos into smaller sized photos with very less or negligible loss in quality of the image. "</string>
     <string name="open_source_desc_gif" translatable="false">Bundled GIFLib via JNI is used to render frames. This way should be more efficient than WebView or Movie classes.</string>
-    <string name="tips_not_app_can_open_imaegs">看起来您安装没有文件管理器？</string>
-    <string name="error_save_oom">内存不足，请清理后台后重试</string>
-    <string name="error_share_uri_is_null">输出 Uri 为空，请联系开发者反馈，谢谢</string>
 </resources>

@@ -1,0 +1,90 @@
+<resources>
+    <string name="app_name">简单水印</string>
+    <string name="action_pick">选择图片</string>
+    <string name="action_save">保存</string>
+    <string name="action_settings">关于</string>
+    <string name="title_layout">布局</string>
+    <string name="title_style">样式</string>
+    <string name="title_content">内容</string>
+    <string name="tips_do_not_choose_image">没有选择图片</string>
+    <string name="tips_choose_other_file_type">貌似你选择的不是图片</string>
+    <string name="tips_choose_color_dialog">选择颜色</string>
+    <string name="tips_confirm_dialog">确认</string>
+    <string name="tips_cancel_dialog">取消</string>
+    <string name="tips_save_ok">保存完成</string>
+    <string name="tips_share_ok">分享完成</string>
+    <string name="tips_error">错误</string>
+    <string name="tips_share_image">分享图片</string>
+    <string name="title_enter_text">内容</string>
+    <string name="title_text_style">字体样式</string>
+    <string name="title_text_size">大小</string>
+    <string name="title_horizon_layout">水平</string>
+    <string name="title_vertical_layout">垂直</string>
+    <string name="title_text_color">颜色</string>
+    <string name="title_text_rotate">角度</string>
+    <string name="request_permission_failed">获取权限失败</string>
+
+    <!--about page-->
+    <string name="about_title_about">关于</string>
+    <string name="about_title_info">信息</string>
+    <string name="about_title_version">版本</string>
+    <string name="about_title_rating">为这个应用评分</string>
+    <string name="about_title_feed_back">反馈</string>
+    <string name="about_title_update_log">更新日志</string>
+    <string name="about_title_open_source">开源许可</string>
+    <string name="about_title_author">作者</string>
+    <string name="about_title_designer">设计者</string>
+    <string name="about_title_repo_link">在 Github 上查看此项目</string>
+    <string name="about_title_figma_link">查看他的更多作品</string>
+    <!--UI-->
+    <string name="error_not_img">请选择图片</string>
+    <string name="error_file_not_found">未选择图片或图片不存在</string>
+    <string name="tips_pick_image">"选择图片，开始编辑 "</string>
+    <string name="save_directly">直接保存</string>
+    <string name="directly_save_tips">直接存储编辑后的图像到你的相册中</string>
+    <string name="share_tips">分享编辑后的图像到其他应用</string>
+    <string name="share">分享</string>
+    <string name="water_mark_mode_text">文字</string>
+    <string name="water_mark_mode_image">贴纸</string>
+    <string name="touch_alpha">透明度: %1$d</string>
+    <string name="touch_size">大小: %1$d</string>
+    <string name="hint_tips_input_water_mark_text">请输入水印文字</string>
+    <string name="tips_ok">确定</string>
+    <string name="hint_tips_alpha_100">透明度100%</string>
+    <string name="tips_cancel_output">取消</string>
+    <string name="tips_need_compress_img">图片过大或内存不足</string>
+    <string name="tips_compressing">正在压缩中…</string>
+    <string name="tips_compress_images">压缩图片</string>
+    <string name="tips_compress_ok">压缩完成，点击确定继续输出</string>
+    <string name="tips_compress_create_uri_failed">压缩完成，但是创建 Uri 失败，请重启 APP 重试。%1$s</string>
+    <string name="tips_tip_title">检测到崩溃</string>
+    <string name="msg_crash">你愿意帮忙反馈错误信息吗？这样可以帮我们做得更好！这不会收集你的个人信息。</string>
+    <string name="crash_mail">发送邮件</string>
+    <string name="tip_not_mail_found">似乎没有安装邮件客户端，你可以主动粘贴错误信息到应用市场或 Github</string>
+    <string name="tips_content_size_performance">尺寸越大，实时预览性能要求越高</string>
+    <string name="tips_content_mode_button">点击可修改文字或图片</string>
+    <string name="config_default_water_mark_text">👋图片仅供测试，请勿作其他用途</string>
+    <string name="style_alpha">透明度</string>
+    <string name="dialog_change_log_title">更新日志</string>
+    <string name="contributor_info">当反馈的问题有效，并被修复或加入新版本时，您的名字或邮件出现在更新日志弹窗中。我们会对您的信息作遮挡处理，不会出现全称。\n 如果您不愿意出现，请标注：我不愿意。即可</string>
+    <string name="dialog_change_log_content">
+        本次更新带来了如下特性：\n\n
+        <u><big>新增</big></u> \n\n
+        · 全新的交互方式，更加美观且效率也有所提高，欢迎品鉴。 \n\n
+        · 添加了输出格式和质量选项。 \n\n
+        <u><big>修复</big></u> \n\n
+        · 对水印精度有所调整，除了个别情况外，都非常精确了。
+    </string>
+    <string name="tips_not_app_can_open_imaegs">看起来您安装没有文件管理器？</string>
+    <string name="error_save_oom">内存不足，请清理后台后重试</string>
+    <string name="error_share_uri_is_null">输出 Uri 为空，请联系开发者反馈，谢谢</string>
+    <string name="dev_comment">任何先进的科技，初看皆与魔法无异</string>
+    <!--exit confirm dialog-->
+    <string name="dialog_title_exist_confirm">提示</string>
+    <string name="dialog_content_exist_confirm">丢弃修改？</string>
+    <string name="dialog_cancel_exist_confirm">取消</string>
+    <string name="about_title_options">选项</string>
+    <string name="about_title_output">输出格式</string>
+    <string name="dialog_out_put_title">格式与质量</string>
+
+</resources>

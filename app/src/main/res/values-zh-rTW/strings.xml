@@ -57,7 +57,7 @@
     <string name="title_content">內容</string>
     <string name="title_enter_text">內容</string>
     <string name="title_horizon_layout">水平</string>
-    <string name="title_layout">分布</string>
+    <string name="title_layout">布局</string>
     <string name="title_style">樣式</string>
     <string name="title_text_color">顏色</string>
     <string name="title_text_rotate">角度</string>
@@ -66,14 +66,21 @@
     <string name="title_vertical_layout">垂直</string>
     <string name="touch_alpha">透明度: %1$d</string>
     <string name="touch_size">大小: %1$d</string>
-    <string name="water_mark_mode_image">圖片</string>
+    <string name="water_mark_mode_image">圖標</string>
     <string name="water_mark_mode_text">文字</string>
     <string name="dialog_change_log_content">
-        感谢大家的幫助，此版本主要更新內容為：
+        本次更新帶來瞭如下特性：
         <u><big>新增</big></u>\n\n
-        · 西班牙語
-        感谢 sguinetti
+        · 全新的交互方式，更加美觀且效率也有所提高，歡迎品鑑。\n\n
+        · 添加了輸出格式和質量選項。\n\n
         <u><big>修复</big></u>\n\n
-        · 部分 ROM 因為動畫導致的問題
+        · 對水印精度有所調整，除了個別情況外，都非常精確了。
     </string>
+    <string name="dev_comment">任何先进的科技，初看皆与魔法无异</string>
+    <string name="dialog_content_exist_confirm">丟棄修改？</string>
+    <string name="dialog_cancel_exist_confirm">取消</string>
+    <string name="dialog_title_exist_confirm">溫馨提示</string>
+    <string name="about_title_options">选项</string>
+    <string name="about_title_output">输出格式</string>
+    <string name="dialog_out_put_title">格式与质量</string>
 </resources>

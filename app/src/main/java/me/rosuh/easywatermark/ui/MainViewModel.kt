@@ -28,7 +28,9 @@ import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ktx.applyConfig
 import me.rosuh.easywatermark.ktx.formatDate
+import me.rosuh.easywatermark.model.UserConfig
 import me.rosuh.easywatermark.model.WaterMarkConfig
+import me.rosuh.easywatermark.repo.UserConfigRepo
 import me.rosuh.easywatermark.utils.FileUtils.Companion.outPutFolderName
 import me.rosuh.easywatermark.utils.decodeBitmapFromUri
 import me.rosuh.easywatermark.utils.decodeSampledBitmapFromResource
@@ -64,12 +66,15 @@ class MainViewModel : ViewModel() {
     val saveState: LiveData<State> = Transformations.map(_saveState) { it }
 
     val config: MutableLiveData<WaterMarkConfig> by lazy {
-        MutableLiveData<WaterMarkConfig>(WaterMarkConfig())
+        MutableLiveData<WaterMarkConfig>(WaterMarkConfig.pull())
     }
 
     val tipsStatus: MutableLiveData<TipsStatus> by lazy {
         MutableLiveData<TipsStatus>(TipsStatus.None(false))
     }
+
+    private val repo = UserConfigRepo
+    private val userConfig: MutableLiveData<UserConfig> = repo.userConfig
 
     fun isPermissionGrated(activity: Activity): Boolean {
         val readGranted =
@@ -97,7 +102,7 @@ class MainViewModel : ViewModel() {
                 Manifest.permission.READ_EXTERNAL_STORAGE,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE
             ),
-            MainActivity.WRITE_PERMISSION_REQUEST_CODE
+            MainActivity.REQ_CODE_REQ_WRITE_PERMISSION
         )
     }
 
@@ -232,7 +237,7 @@ class MainViewModel : ViewModel() {
                 val imageDetail = ContentValues().apply {
                     put(
                         MediaStore.Images.Media.DISPLAY_NAME,
-                        "ewm_${System.currentTimeMillis()}.jpg"
+                        generateOutputName()
                     )
                     put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
                     put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/${outPutFolderName}/")
@@ -242,8 +247,8 @@ class MainViewModel : ViewModel() {
                 val imageContentUri = resolver.insert(imageCollection, imageDetail)
                 resolver.openFileDescriptor(imageContentUri!!, "w", null).use { pfd ->
                     mutableBitmap.compress(
-                        Bitmap.CompressFormat.JPEG,
-                        100,
+                        userConfig.value?.outputFormat ?: Bitmap.CompressFormat.JPEG,
+                        userConfig.value?.compressLevel ?: 95,
                         FileOutputStream(pfd!!.fileDescriptor)
                     )
                 }
@@ -254,7 +259,8 @@ class MainViewModel : ViewModel() {
             } else {
                 // need request write_storage permission
                 // should check Pictures folder exist
-                val picturesFile: File = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                val picturesFile: File =
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
                         ?: return@withContext null
                 if (!picturesFile.exists()) {
                     picturesFile.mkdir()
@@ -264,9 +270,14 @@ class MainViewModel : ViewModel() {
                 if (!mediaDir.exists()) {
                     mediaDir.mkdirs()
                 }
-                val outputFile = File(mediaDir, "ewm_${System.currentTimeMillis()}.jpg")
+                val outputFile =
+                    File(mediaDir, generateOutputName())
                 outputFile.outputStream().use { fileOutputStream ->
-                    mutableBitmap.compress(Bitmap.CompressFormat.JPEG, 100, fileOutputStream)
+                    mutableBitmap.compress(
+                        userConfig.value?.outputFormat ?: Bitmap.CompressFormat.JPEG,
+                        userConfig.value?.compressLevel ?: 95,
+                        fileOutputStream
+                    )
                 }
                 val outputUri = FileProvider.getUriForFile(
                     activity,
@@ -282,6 +293,14 @@ class MainViewModel : ViewModel() {
                 outputUri
             }
         }
+
+    private fun generateOutputName(): String {
+        return "ewm_${System.currentTimeMillis()}.${trapOutputExtension()}"
+    }
+
+    private fun trapOutputExtension(): String {
+        return if (userConfig.value?.outputFormat == Bitmap.CompressFormat.PNG) "png" else "jpg"
+    }
 
     fun updateUri(uri: Uri) {
         config.value?.uri = uri

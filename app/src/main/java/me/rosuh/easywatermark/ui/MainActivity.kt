@@ -1,76 +1,166 @@
 package me.rosuh.easywatermark.ui
 
-import android.app.Activity
+import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.Intent.ACTION_SEND
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.*
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.motion.widget.MotionLayout
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
-import androidx.core.view.ViewConfigurationCompat
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
+import androidx.fragment.app.commit
 import androidx.lifecycle.Observer
+import androidx.lifecycle.lifecycleScope
+import androidx.palette.graphics.Palette
+import androidx.recyclerview.widget.LinearSnapHelper
+import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.tabs.TabLayoutMediator
-import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.coroutines.MainScope
+import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
+import me.rosuh.easywatermark.adapter.FuncPanelAdapter
+import me.rosuh.easywatermark.base.BaseBindingActivity
+import me.rosuh.easywatermark.databinding.ActivityMainBinding
+import me.rosuh.easywatermark.ktx.commitWithAnimation
+import me.rosuh.easywatermark.model.FuncTitleModel
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.ui.about.AboutActivity
 import me.rosuh.easywatermark.ui.dialog.ChangeLogDialogFragment
 import me.rosuh.easywatermark.ui.dialog.CompressImageDialogFragment
+import me.rosuh.easywatermark.ui.dialog.EditTextBSDialogFragment
 import me.rosuh.easywatermark.ui.dialog.SaveImageBSDialogFragment
-import me.rosuh.easywatermark.ui.panel.ContentFragment
-import me.rosuh.easywatermark.ui.panel.LayoutFragment
-import me.rosuh.easywatermark.ui.panel.StyleFragment
-import me.rosuh.easywatermark.utils.FileUtils
+import me.rosuh.easywatermark.ui.panel.*
+import me.rosuh.easywatermark.utils.*
 import kotlin.math.abs
 
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
 
+    private lateinit var pickImageLauncher: ActivityResultLauncher<String>
+    private lateinit var pickIconLauncher: ActivityResultLauncher<String>
     private val viewModel: MainViewModel by viewModels()
 
-    private val scope = MainScope()
+    private val scope = lifecycleScope
+
+    private val contentFunList: List<FuncTitleModel> by lazy {
+        listOf(
+            FuncTitleModel(
+                FuncTitleModel.FuncType.Text,
+                getString(R.string.water_mark_mode_text),
+                R.drawable.ic_func_text
+            ),
+            FuncTitleModel(
+                FuncTitleModel.FuncType.Icon,
+                getString(R.string.water_mark_mode_image),
+                R.drawable.ic_func_sticker
+            )
+        )
+    }
+
+    private val styleFunList: List<FuncTitleModel> by lazy {
+        listOf(
+            FuncTitleModel(
+                FuncTitleModel.FuncType.TextSize,
+                getString(R.string.title_text_size),
+                R.drawable.ic_func_size
+            ),
+            FuncTitleModel(
+                FuncTitleModel.FuncType.Color,
+                getString(R.string.title_text_color),
+                R.drawable.ic_func_color
+            ),
+            FuncTitleModel(
+                FuncTitleModel.FuncType.Alpha,
+                getString(R.string.style_alpha),
+                R.drawable.ic_func_opacity
+            ),
+            FuncTitleModel(
+                FuncTitleModel.FuncType.Degree,
+                getString(R.string.title_text_rotate),
+                R.drawable.ic_func_angle
+            )
+        )
+    }
+
+    private val layoutFunList: List<FuncTitleModel> by lazy {
+        listOf(
+            FuncTitleModel(
+                FuncTitleModel.FuncType.Horizon,
+                getString(R.string.title_horizon_layout),
+                R.drawable.ic_func_layour_horizontal
+            ),
+            FuncTitleModel(
+                FuncTitleModel.FuncType.Vertical,
+                getString(R.string.title_vertical_layout),
+                R.drawable.ic_func_layout_vertical
+            )
+        )
+    }
+
+    private lateinit var snapHelper: LinearSnapHelper
+
+    private lateinit var vibrateHelper: VibrateHelper
+
+    override fun initViewBinding(): ActivityMainBinding {
+        return ActivityMainBinding.inflate(layoutInflater)
+    }
 
     @ObsoleteCoroutinesApi
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        setSupportActionBar(findViewById(R.id.my_toolbar))
-        scope.launch {
-            initView()
-            initObserver()
-            cl_root.setTransition(R.id.transition_launch)
-            cl_root.transitionToEnd()
-            checkHadCrash()
-            // Activity was recycled but dialog still showing in some case?
-            SaveImageBSDialogFragment.safetyHide(this@MainActivity.supportFragmentManager)
-            ChangeLogDialogFragment.safetyShow(this@MainActivity.supportFragmentManager)
+        if (savedInstanceState == null) {
+            supportFragmentManager.commit {
+                setReorderingAllowed(true)
+            }
         }
+        vibrateHelper = VibrateHelper.init(this)
+        initView()
+        initObserver()
+        registerResultCallback()
+        checkHadCrash()
+        // Activity was recycled but dialog still showing in some case?
+        SaveImageBSDialogFragment.safetyHide(this@MainActivity.supportFragmentManager)
+        ChangeLogDialogFragment.safetyShow(this@MainActivity.supportFragmentManager)
+    }
+
+    private fun registerResultCallback() {
+        pickImageLauncher =
+            registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+                handleActivityResult(REQ_CODE_PICK_IMAGE, uri)
+            }
+        pickIconLauncher =
+            registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+                handleActivityResult(REQ_PICK_ICON, uri)
+            }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        this.intent = intent
     }
 
     override fun onStart() {
         super.onStart()
-        iv_logo.start()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        iv_logo.stop()
+        // Accepting shared images from other apps
+        if (intent?.action == ACTION_SEND) {
+            dealWithImage(intent?.data)
+        }
     }
 
     private fun checkHadCrash() {
@@ -112,10 +202,11 @@ class MainActivity : AppCompatActivity() {
                 return@Observer
             }
             try {
-                cl_root.setTransition(R.id.transition_open_image)
-                cl_root.transitionToEnd()
-                iv_photo?.config = it
-                iv_logo.stop()
+                if (binding.clRoot.currentState != R.id.open_image_start) {
+                    setTransition(R.id.launch_end, R.id.open_image_start)
+                    binding.ivLogo.stop()
+                }
+                binding.ivPhoto.config = it
             } catch (se: SecurityException) {
                 se.printStackTrace()
                 // reset the uri because we don't have permission -_-
@@ -126,18 +217,18 @@ class MainActivity : AppCompatActivity() {
         viewModel.tipsStatus.observe(this, { tips ->
             when (tips) {
                 is MainViewModel.TipsStatus.None -> {
-                    tv_data_tips.apply {
+                    binding.tvDataTips.apply {
                         isInvisible = true
                     }
                 }
                 is MainViewModel.TipsStatus.Alpha -> {
-                    tv_data_tips.apply {
+                    binding.tvDataTips.apply {
                         isVisible = true
                         text = getString(R.string.touch_alpha, tips.values as? Int)
                     }
                 }
                 is MainViewModel.TipsStatus.Size -> {
-                    tv_data_tips.apply {
+                    binding.tvDataTips.apply {
                         isVisible = true
                         text = getString(R.string.touch_size, tips.values as? Int)
                     }
@@ -171,102 +262,202 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private fun initView() {
-        my_toolbar.apply {
+        // prepare MotionLayout
+        binding.clRoot.addTransitionListener(object : SimpleTransitionListener() {
+            override fun onTransitionCompleted(p0: MotionLayout?, p1: Int) {
+                if (p1 == R.id.launch_end) {
+                    binding.ivLogo.start()
+                } else {
+                    binding.ivLogo.stop()
+                }
+                if (p1 == R.id.open_image_start) {
+                    // auto scroll to correct x-position
+                    binding.rvPanel.post {
+                        // disable scroll listener
+                        binding.rvPanel.canAutoSelected = false
+                        binding.rvPanel.smoothScrollToPosition(0)
+                    }
+                }
+            }
+        })
+        setTransition(R.id.launch_start, R.id.launch_end)
+        // setting tool bar
+        binding.myToolbar.apply {
             navigationIcon =
                 ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_logo_tool_bar)
             title = null
+            setSupportActionBar(this)
+            supportActionBar?.title = null
         }
-        iv_go_about_page.setOnClickListener {
+        // go about page
+        binding.ivGoAboutPage.setOnClickListener {
             startActivity(Intent(this, AboutActivity::class.java))
         }
-        iv_photo.apply {
-
-            setOnTouchListener(object : View.OnTouchListener {
-                private var startX = 0f
-                private var startY = 0f
-                private val verticalFac =
-                    ViewConfigurationCompat.getScaledHoverSlop(ViewConfiguration.get(this@MainActivity))
-                private val leftArea: ClosedFloatingPointRange<Float>
-                    get() {
-                        return 0f..(iv_photo.width / 2).toFloat()
-                    }
-                private val rightArea: ClosedFloatingPointRange<Float>
-                    get() {
-                        return (iv_photo.width / 2).toFloat()..(iv_photo.width.toFloat())
-                    }
-
-                override fun onTouch(v: View?, event: MotionEvent?): Boolean {
-                    when (event?.actionMasked) {
-                        MotionEvent.ACTION_DOWN -> {
-                            startX = event.x
-                            startY = event.y
-                        }
-                        MotionEvent.ACTION_MOVE -> {
-                            val dx = event.x - startX
-                            val dy = event.y - startY
-                            if (abs(dx) > verticalFac) {
-                                return false
-                            }
-                            when {
-                                (event.x in leftArea) -> {
-                                    viewModel.updateAlphaBy(dy / 2)
-                                }
-                                (event.x in rightArea) -> {
-                                    viewModel.updateTextSizeBy(dy / 5)
-                                }
-                            }
-                            startX = event.x
-                            startY = event.y
-                        }
-                        MotionEvent.ACTION_UP -> {
-                            performClick()
-                            scope.launch {
-                                delay(300)
-                                val isAlphaZero = (config?.alpha ?: 0) == 0
-                                val isTextSize = (config?.textSize ?: 0) == 0
-                                viewModel.updateTips(MainViewModel.TipsStatus.None(isAlphaZero || isTextSize))
-                            }
-                        }
-                    }
-                    return true
-                }
-
-            })
-        }
-        iv_picker_tips.setOnClickListener {
-            performFileSearch(READ_REQUEST_CODE)
-        }
-
-        val fragmentArray = arrayOf(
-            initFragments(vp_control_panel, 0, LayoutFragment.newInstance()),
-            initFragments(vp_control_panel, 1, StyleFragment.newInstance()),
-            initFragments(vp_control_panel, 2, ContentFragment.newInstance())
-        )
-
-
-        val pagerAdapter = ControlPanelPagerAdapter(this, fragmentArray)
-        vp_control_panel.apply {
-            isUserInputEnabled = false
-            offscreenPageLimit = 2
-            adapter = pagerAdapter
-        }
-        TabLayoutMediator(tb_tool_bar, vp_control_panel) { tab, position ->
-            when (position) {
-                0 -> {
-                    tab.text = getString(R.string.title_layout)
-                    tab.icon = getDrawable(R.drawable.ic_layout_title)
-                }
-                1 -> {
-                    tab.text = getString(R.string.title_style)
-                    tab.icon = getDrawable(R.drawable.ic_style_title)
-                }
-                2 -> {
-                    tab.text = getString(R.string.title_content)
-                    tab.icon = getDrawable(R.drawable.ic_text_title)
+        // setting water image widget
+        binding.ivPhoto.apply {
+            doOnColorReady {
+                scope.launch {
+                    applyBgColor(it)
                 }
             }
-        }.attach()
+        }
+        // pick image button
+        binding.ivPickerTips.setOnClickListener {
+            performFileSearch(REQ_CODE_PICK_IMAGE)
+        }
+        // functional panel in recyclerView
+        binding.rvPanel.apply {
+            adapter = FuncPanelAdapter(ArrayList(contentFunList))
+            layoutManager = CenterLayoutManager(this@MainActivity, RecyclerView.HORIZONTAL, false)
+
+            snapHelper = LinearSnapHelper().also {
+                it.attachToRecyclerView(this)
+            }
+
+            onItemClick { _, pos, v ->
+                val snapView = snapHelper.findSnapView(binding.rvPanel.layoutManager)
+                if (snapView == v) {
+                    val item = (this.adapter as FuncPanelAdapter).dataSet[pos]
+                    handleFuncItem(item)
+                } else {
+                    smoothScrollToPosition(pos)
+                }
+            }
+
+            post {
+                // center item x-position
+                val padding = (this.width / 2)
+                this.setPadding(padding, 0, padding, 0)
+            }
+
+            addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                    super.onScrollStateChanged(recyclerView, newState)
+                    val snapView = snapHelper.findSnapView(binding.rvPanel.layoutManager)
+                    when (newState) {
+                        RecyclerView.SCROLL_STATE_IDLE -> {
+                            if (snapView == null || !canAutoSelected) {
+                                canAutoSelected = true
+                                return
+                            }
+                            val pos = binding.rvPanel.getChildLayoutPosition(snapView)
+                            (recyclerView.adapter as? FuncPanelAdapter)?.dataSet?.get(pos)
+                                ?.let { handleFuncItem(it) }
+                        }
+                    }
+                }
+
+                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                    super.onScrolled(recyclerView, dx, dy)
+                    if (!isTouching) {
+                        return
+                    }
+                    val snapView = snapHelper.findSnapView(binding.rvPanel.layoutManager) ?: return
+                    val detailX =
+                        abs(binding.fcFunDetail.width / 2 - (snapView.left + snapView.right) / 2)
+                    if (detailX <= 3) {
+                        vibrateHelper.doVibrate()
+                    }
+                }
+            })
+        }
+
+        binding.tbToolBar.apply {
+            addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+                override fun onTabSelected(tab: TabLayout.Tab?) {
+                    if (tab == null) {
+                        return
+                    }
+                    hideDetailPanel()
+                    binding.rvPanel.smoothScrollToPosition(0)
+                    val adapter = (binding.rvPanel.adapter as? FuncPanelAdapter)
+                    when (tab.position) {
+                        1 -> {
+                            adapter?.also {
+                                it.seNewData(styleFunList)
+                                handleFuncItem(it.dataSet[0])
+                            }
+                        }
+                        2 -> {
+                            adapter?.also {
+                                it.seNewData(layoutFunList)
+                                handleFuncItem(it.dataSet[0])
+                            }
+                        }
+                        else -> {
+                            adapter?.also {
+                                it.seNewData(contentFunList)
+                            }
+                        }
+                    }
+                }
+
+                override fun onTabUnselected(tab: TabLayout.Tab?) {}
+
+                override fun onTabReselected(tab: TabLayout.Tab?) {}
+            })
+        }
+    }
+
+    private fun hideDetailPanel() {
+        commitWithAnimation {
+            fragmentsTagList.forEach {
+                val f = supportFragmentManager.findFragmentByTag(it)
+                if (f != null) {
+                    remove(f)
+                }
+            }
+        }
+    }
+
+    private fun applyBgColor(palette: Palette) {
+        val color =
+            palette.darkMutedSwatch?.rgb ?: ContextCompat.getColor(this, R.color.colorSecondary)
+        binding.ivPhoto.setBackgroundColor(color)
+    }
+
+    private val fragmentsTagList = listOf<String>(
+        ColorFragment.TAG,
+        AlphaPbFragment.TAG,
+        DegreePbFragment.TAG,
+        VerticalPbFragment.TAG,
+        HorizonPbFragment.TAG,
+        TextSizePbFragment.TAG
+    )
+
+    private fun handleFuncItem(item: FuncTitleModel) {
+        Log.i("handleFuncItem", "item = $item")
+        when (item.type) {
+            FuncTitleModel.FuncType.Text -> {
+                EditTextBSDialogFragment.safetyShow(supportFragmentManager)
+            }
+            FuncTitleModel.FuncType.Icon -> {
+                performFileSearch(REQ_PICK_ICON)
+            }
+            FuncTitleModel.FuncType.Color -> {
+                ColorFragment.replaceShow(this, binding.fcFunDetail.id)
+            }
+            FuncTitleModel.FuncType.Alpha -> {
+                AlphaPbFragment.replaceShow(this, binding.fcFunDetail.id)
+            }
+            FuncTitleModel.FuncType.Degree -> {
+                DegreePbFragment.replaceShow(this, binding.fcFunDetail.id)
+            }
+            FuncTitleModel.FuncType.TextStyle -> {
+
+            }
+            FuncTitleModel.FuncType.Vertical -> {
+                VerticalPbFragment.replaceShow(this, binding.fcFunDetail.id)
+            }
+            FuncTitleModel.FuncType.Horizon -> {
+                HorizonPbFragment.replaceShow(this, binding.fcFunDetail.id)
+            }
+            FuncTitleModel.FuncType.TextSize -> {
+                TextSizePbFragment.replaceShow(this, binding.fcFunDetail.id)
+            }
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -281,7 +472,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         R.id.action_pick -> {
-            performFileSearch(READ_REQUEST_CODE)
+            performFileSearch(REQ_CODE_PICK_IMAGE)
             true
         }
 
@@ -302,25 +493,26 @@ class MainActivity : AppCompatActivity() {
             viewModel.requestPermission(this)
             return
         }
-        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-            flags = (Intent.FLAG_GRANT_READ_URI_PERMISSION
-                    or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                    or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
-            addCategory(Intent.CATEGORY_OPENABLE)
-            type = "*/*"
-        }
+        // FIXME: 2021/2/19 should test in low version devices.
+        val mime = "image/*"
         val result = kotlin.runCatching {
-            startActivityForResult(
-                intent,
-                requestCode
-            )
+            when (requestCode) {
+                REQ_CODE_PICK_IMAGE -> {
+                    pickImageLauncher.launch(mime)
+                }
+                REQ_PICK_ICON -> {
+                    pickIconLauncher.launch(mime)
+                }
+            }
         }
+
         if (result.isFailure) {
             Toast.makeText(
                 this,
                 getString(R.string.tips_not_app_can_open_imaegs),
                 Toast.LENGTH_LONG
             ).show()
+            Log.i("performFileSearch", result.exceptionOrNull()?.message ?: "No msg provided")
         }
     }
 
@@ -329,8 +521,9 @@ class MainActivity : AppCompatActivity() {
         permissions: Array<out String>,
         grantResults: IntArray
     ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         when (requestCode) {
-            WRITE_PERMISSION_REQUEST_CODE -> {
+            REQ_CODE_REQ_WRITE_PERMISSION -> {
                 if (grantResults.isEmpty() || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
                     Toast.makeText(
                         this,
@@ -342,9 +535,21 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (resultCode != Activity.RESULT_OK) {
+    private fun dealWithImage(uri: Uri?) {
+        if (FileUtils.isImage(this.contentResolver, uri)) {
+            viewModel.updateUri(uri!!)
+            takePersistableUriPermission(uri)
+        } else {
+            Toast.makeText(
+                this,
+                getString(R.string.tips_choose_other_file_type),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    private fun handleActivityResult(requestCode: Int, uri: Uri?) {
+        if (uri == null) {
             Toast.makeText(
                 this,
                 getString(R.string.tips_do_not_choose_image),
@@ -353,23 +558,12 @@ class MainActivity : AppCompatActivity() {
             return
         }
         when (requestCode) {
-            READ_REQUEST_CODE -> {
-                val uri = data?.data
-                if (FileUtils.isImage(this.contentResolver, uri)) {
-                    viewModel.updateUri(uri!!)
-                    takePersistableUriPermission(uri)
-                } else {
-                    Toast.makeText(
-                        this,
-                        getString(R.string.tips_choose_other_file_type),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+            REQ_CODE_PICK_IMAGE -> {
+                dealWithImage(uri)
             }
-            ICON_REQUEST_CODE -> {
-                val uri = data?.data
+            REQ_PICK_ICON -> {
                 if (FileUtils.isImage(this.contentResolver, uri)) {
-                    viewModel.updateIcon(uri!!)
+                    viewModel.updateIcon(uri)
                     takePersistableUriPermission(uri)
                 } else {
                     Toast.makeText(
@@ -386,9 +580,13 @@ class MainActivity : AppCompatActivity() {
      * Try to get the permission without timeout.
      */
     private fun takePersistableUriPermission(uri: Uri) {
-        val takeFlags: Int = intent.flags and
-                (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-        contentResolver.takePersistableUriPermission(uri, takeFlags)
+        try {
+            val takeFlags: Int = intent.flags and
+                    (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            contentResolver.takePersistableUriPermission(uri, takeFlags)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private class ControlPanelPagerAdapter(
@@ -405,9 +603,40 @@ class MainActivity : AppCompatActivity() {
         return supportFragmentManager.findFragmentByTag(tag) ?: defaultFragment
     }
 
+    override fun onBackPressed() {
+        if (binding.clRoot.currentState == R.id.launch_end) {
+            super.onBackPressed()
+            return
+        }
+        MaterialAlertDialogBuilder(this, R.style.MaterialAlertDialog)
+            .setTitle(R.string.dialog_title_exist_confirm)
+            .setMessage(R.string.dialog_content_exist_confirm)
+            .setNegativeButton(
+                R.string.tips_confirm_dialog
+            ) { _, _ ->
+                setTransition(R.id.launch_start, R.id.launch_end)
+            }
+            .setPositiveButton(
+                R.string.dialog_cancel_exist_confirm
+            ) { dialog, _ ->
+                dialog.dismiss()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun setTransition(startState: Int, endState: Int) {
+        scope.launch {
+            binding.clRoot.setTransition(startState, endState)
+            binding.clRoot.setTransitionDuration(550)
+            delay(16)
+            binding.clRoot.transitionToEnd()
+        }
+    }
+
     companion object {
-        private const val READ_REQUEST_CODE: Int = 42
-        const val WRITE_PERMISSION_REQUEST_CODE: Int = 43
-        const val ICON_REQUEST_CODE: Int = 44
+        private const val REQ_CODE_PICK_IMAGE: Int = 42
+        const val REQ_CODE_REQ_WRITE_PERMISSION: Int = 43
+        const val REQ_PICK_ICON: Int = 44
     }
 }

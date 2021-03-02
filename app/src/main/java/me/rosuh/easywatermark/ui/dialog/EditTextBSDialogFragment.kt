@@ -11,9 +11,11 @@ import android.view.WindowManager
 import android.widget.Button
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.activityViewModels
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.textfield.TextInputEditText
 import me.rosuh.easywatermark.R
+import me.rosuh.easywatermark.ktx.dp
 import me.rosuh.easywatermark.ui.MainViewModel
 
 class EditTextBSDialogFragment : BottomSheetDialogFragment() {
@@ -27,7 +29,10 @@ class EditTextBSDialogFragment : BottomSheetDialogFragment() {
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
             )
-            window?.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            (this as BottomSheetDialog).behavior.apply {
+                peekHeight = 165.dp.toInt()
+                isDraggable = false
+            }
         }
     }
 
@@ -79,7 +84,7 @@ class EditTextBSDialogFragment : BottomSheetDialogFragment() {
 
     companion object {
 
-        private const val TAG = "EditTextBSDialogFragment"
+        const val TAG = "EditTextBSDialogFragment"
 
         private fun newInstance(): EditTextBSDialogFragment {
             return EditTextBSDialogFragment()
