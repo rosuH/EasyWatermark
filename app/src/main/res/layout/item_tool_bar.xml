@@ -13,4 +13,4 @@
     android:textAlignment="center"
     android:textColor="#fff"
     tools:drawableTop="@drawable/ic_layout_title"
-    tools:text="分布" />
+    tools:text="布局" />

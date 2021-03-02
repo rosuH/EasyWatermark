@@ -13,12 +13,14 @@ import me.rosuh.easywatermark.model.WaterMarkConfig
  */
 fun Paint.applyConfig(
     config: WaterMarkConfig?,
-    scale: Boolean = true
+    isScale: Boolean = true
 ): Paint {
-    textSize = (config?.textSize ?: 14f) / if (scale) {
-        (config?.imageScale ?: 1f)
+    val size = config?.textSize ?: 14f
+    textSize = if (isScale) {
+        size
     } else {
-        1f
+//        size * ceil(((config?.imageScale?.get(0) ?: 1f)))
+        size * ((config?.imageScale?.get(0) ?: 1f))
     }
     color = config?.textColor ?: Color.RED
     alpha = config?.alpha ?: 128

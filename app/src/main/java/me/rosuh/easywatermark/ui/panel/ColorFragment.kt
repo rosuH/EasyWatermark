@@ -1,27 +1,24 @@
 package me.rosuh.easywatermark.ui.panel
 
-import android.annotation.SuppressLint
 import android.graphics.Color
-import android.os.Bundle
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
 import android.widget.SeekBar
 import android.widget.TextView
+import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.skydoves.colorpickerview.ColorEnvelope
 import com.skydoves.colorpickerview.ColorPickerDialog
 import com.skydoves.colorpickerview.listeners.ColorEnvelopeListener
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.adapter.ColorPreviewAdapter
-import me.rosuh.easywatermark.base.BaseFragment
+import me.rosuh.easywatermark.base.BaseBindFragment
+import me.rosuh.easywatermark.databinding.FragmentColorBinding
+import me.rosuh.easywatermark.ktx.commitWithAnimation
 import me.rosuh.easywatermark.utils.DetectedPerformanceSeekBarListener
 import me.rosuh.easywatermark.utils.onItemClick
-import me.rosuh.easywatermark.widget.ControllableScrollView
 
-
-class StyleFragment : BaseFragment() {
+class ColorFragment : BaseBindFragment<FragmentColorBinding>() {
 
     private val white by lazy {
         Color.WHITE
@@ -51,42 +48,16 @@ class StyleFragment : BaseFragment() {
         Color.parseColor("#1BFF3F")
     }
 
-    @SuppressLint("SetTextI18n")
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        val root = layoutInflater.inflate(R.layout.fragment_style, container, false)
-        val sv = root.findViewById<ControllableScrollView>(R.id.scrollView)
+    override fun bindView(
+        layoutInflater: LayoutInflater,
+        container: ViewGroup?
+    ): FragmentColorBinding {
+        val b = FragmentColorBinding.inflate(layoutInflater, container, false)
 
-        val tvDegree = root.findViewById<TextView>(R.id.tv_tips_degree).apply {
-            text = "${shareViewModel.config.value?.degree ?: 0}°"
-        }
-        root.findViewById<SeekBar>(R.id.sb_degree).apply {
-            progress = (shareViewModel.config.value?.degree ?: 0f).toInt()
-            setOnSeekBarChangeListener(object :
-                DetectedPerformanceSeekBarListener(
-                    config
-                ) {
-            }.apply {
-                inTimeAction = { _: SeekBar?, _: Int, _: Boolean ->
-                    tvDegree.text = "${shareViewModel.config.value?.degree ?: 0}°"
-                    sv.canScroll = false
-                }
-                postAction = { _: SeekBar?, _: Int, fromUser: Boolean ->
-                    if (fromUser) {
-                        shareViewModel.updateDegree(progress.toFloat())
-                    }
-                }
-            })
-        }
-
-
-        val tvAlpha = root.findViewById<TextView>(R.id.tv_tips_alpha).apply {
+        val tvAlpha = b.tvTipsAlpha.apply {
             text = "${getAlphaValue()}%"
         }
-        val sbAlpha = root.findViewById<SeekBar>(R.id.sb_alpha).apply {
+        val sbAlpha = b.sbAlpha.apply {
             progress = getAlphaValue()
             setOnSeekBarChangeListener(object :
                 DetectedPerformanceSeekBarListener(
@@ -95,7 +66,6 @@ class StyleFragment : BaseFragment() {
             }.apply {
                 inTimeAction = { _: SeekBar?, p: Int, _: Boolean ->
                     tvAlpha.text = "${p}%"
-                    sv.canScroll = false
                 }
                 postAction = { _: SeekBar?, p: Int, fromUser: Boolean ->
                     if (fromUser) {
@@ -108,7 +78,7 @@ class StyleFragment : BaseFragment() {
         val savedColor = shareViewModel.config.value?.textColor ?: Color.WHITE
         val colorArrayList = buildColorList(savedColor)
 
-        root.findViewById<RecyclerView>(R.id.rv_color).apply {
+        b.rvColor.apply {
             layoutManager =
                 LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
             adapter =
@@ -126,12 +96,8 @@ class StyleFragment : BaseFragment() {
             }
         }
         initObserver(sbAlpha, tvAlpha)
-        return root
-    }
 
-    private fun getAlphaValue(): Int {
-        return ((shareViewModel.config.value?.alpha ?: 255).toFloat() / 255 * 100).toInt()
-            .coerceAtLeast(0).coerceAtMost(100)
+        return b
     }
 
     private fun initObserver(
@@ -146,6 +112,11 @@ class StyleFragment : BaseFragment() {
                 tvAlpha.text = "${intAlpha}%"
             }
         })
+    }
+
+    private fun getAlphaValue(): Int {
+        return ((shareViewModel.config.value?.alpha ?: 255).toFloat() / 255 * 100).toInt()
+            .coerceAtLeast(0).coerceAtMost(100)
     }
 
     private fun showColorPickerDialog(adapter: ColorPreviewAdapter) {
@@ -207,12 +178,22 @@ class StyleFragment : BaseFragment() {
     }
 
     companion object {
+        const val TAG = "ColorFragment"
+        private const val SP_COLOR_PICKER_DIALOG = "water_mark_color_picker_dialog"
 
-        const val SP_COLOR_PICKER_DIALOG = "water_mark_color_picker_dialog"
 
-        fun newInstance(): StyleFragment {
-            return StyleFragment()
+        fun replaceShow(fa: FragmentActivity, containerId: Int) {
+            val f = fa.supportFragmentManager.findFragmentByTag(TAG)
+            if (f?.isVisible == true || f?.isAdded == true) {
+                return
+            }
+            fa.commitWithAnimation {
+                replace(
+                    containerId,
+                    ColorFragment(),
+                    TAG
+                )
+            }
         }
     }
-
 }

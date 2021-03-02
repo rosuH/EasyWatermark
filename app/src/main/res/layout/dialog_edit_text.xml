@@ -1,25 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+
     android:layout_width="match_parent"
-    android:layout_height="250dp"
+    android:layout_height="165dp"
     android:background="#161616"
-    android:minHeight="250dp"
     android:orientation="vertical">
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/tl_water_text"
         style="@style/TextInputLayoutStyle"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_height="165dp"
         android:layout_marginTop="10dp"
         android:background="@color/colorPrimary"
         android:paddingTop="15dp"
         android:paddingBottom="15dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btn_confirm">
+        app:layout_constraintStart_toStartOf="parent">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/et_water_text"
@@ -29,22 +28,29 @@
             android:hint="@string/hint_tips_input_water_mark_text"
             android:imeActionLabel="@string/tips_ok"
             android:imeOptions="actionDone"
-            android:scrollbars="vertical" />
+            android:scrollbars="vertical"
+            android:textSize="16sp" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_confirm"
-        style="@style/AppTheme.EditTextDialogOverlay"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:layout_marginTop="15dp"
-        android:layout_marginEnd="15dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="20dp"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:paddingStart="12dp"
+        android:paddingTop="5dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="5dp"
         android:text="@string/tips_ok"
         android:textAllCaps="false"
-        android:textSize="12sp"
+        android:textColor="@color/colorAccent"
+        android:textSize="14sp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:strokeColor="@color/white"
+        app:strokeColor="@color/colorAccent_50"
         app:strokeWidth="1dp" />
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -3,16 +3,16 @@
     android:duration="@android:integer/config_mediumAnimTime"
     android:interpolator="@android:interpolator/fast_out_slow_in"
     android:shareInterpolator="true">
-    <!--    <scale-->
-    <!--        android:fromXScale="1"-->
-    <!--        android:fromYScale="1"-->
-    <!--        android:pivotX="0.5"-->
-    <!--        android:pivotY="0"-->
-    <!--        android:toXScale="0.45"-->
-    <!--        android:toYScale="0.45" />-->
+        <scale
+            android:fromXScale="1"
+            android:fromYScale="1"
+            android:pivotX="50%p"
+            android:pivotY="50%p"
+            android:toXScale="0.5"
+            android:toYScale="0.5" />
 
     <translate
-        android:fromYDelta="0"
-        android:toYDelta="15%" />
+        android:fromXDelta="0"
+        android:toXDelta="-15%" />
 
 </set>

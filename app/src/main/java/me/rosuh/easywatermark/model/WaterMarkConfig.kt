@@ -16,16 +16,30 @@ class WaterMarkConfig private constructor() {
     lateinit var text: String
 
     var textSize: Float = 0.0f
-
+        set(value) {
+            field = value.coerceAtLeast(0f).coerceAtMost(MAX_TEXT_SIZE)
+        }
     var textColor: Int = Color.RED
 
     var alpha: Int = 255
+        set(value) {
+            field = value.coerceAtLeast(0).coerceAtMost(255)
+        }
 
     var horizonGapPercent: Int = 30
+        set(value) {
+            field = value.coerceAtLeast(0).coerceAtMost(MAX_HORIZON_GAP)
+        }
 
     var verticalGapPercent: Int = 30
+        set(value) {
+            field = value.coerceAtLeast(0).coerceAtMost(MAX_VERTICAL_GAP)
+        }
 
     var degree: Float = 315f
+        set(value) {
+            field = value.coerceAtLeast(0f).coerceAtMost(MAX_DEGREE)
+        }
 
     lateinit var textStyle: Paint.Style
 
@@ -33,7 +47,7 @@ class WaterMarkConfig private constructor() {
 
     lateinit var markMode: MarkMode
 
-    var imageScale: Float = 0.0f
+    var imageScale: FloatArray = floatArrayOf(1f, 1f)
 
     fun restore(
         sharedPreferences: SharedPreferences = MyApp.instance.getSharedPreferences(
@@ -74,7 +88,8 @@ class WaterMarkConfig private constructor() {
             } else {
                 Uri.parse("")
             }
-            imageScale = getFloat(SP_KEY_TEXT_SIZE, 1f)
+            imageScale[0] = getFloat(SP_KEY_IMAGE_SCALE_X, 1f)
+            imageScale[1] = getFloat(SP_KEY_IMAGE_SCALE_Y, imageScale[0])
         }
     }
 
@@ -82,9 +97,9 @@ class WaterMarkConfig private constructor() {
         sharedPreferences.edit {
             putString(SP_KEY_ICON_URI, iconUri.toString())
             putString(SP_KEY_TEXT, text)
-            putFloat(SP_KEY_TEXT_SIZE, textSize.coerceAtLeast(0f))
+            putFloat(SP_KEY_TEXT_SIZE, textSize)
             putInt(SP_KEY_TEXT_COLOR, textColor)
-            putInt(SP_KEY_ALPHA, alpha.coerceAtLeast(0).coerceAtMost(255))
+            putInt(SP_KEY_ALPHA, alpha)
             putInt(SP_KEY_HORIZON_GAP, horizonGapPercent)
             putInt(SP_KEY_VERTICAL_GAP, verticalGapPercent)
             putFloat(SP_KEY_DEGREE, degree)
@@ -104,7 +119,8 @@ class WaterMarkConfig private constructor() {
                     MarkMode.Image -> 1
                 }
             )
-            putFloat(SP_KEY_IMAGE_SCALE, imageScale)
+            putFloat(SP_KEY_IMAGE_SCALE_X, imageScale[0])
+            putFloat(SP_KEY_IMAGE_SCALE_Y, imageScale[1])
         }
     }
 
@@ -114,6 +130,10 @@ class WaterMarkConfig private constructor() {
 
     fun canDrawIcon(): Boolean {
         return markMode == MarkMode.Image && iconUri.toString().isNotEmpty()
+    }
+
+    fun canDraw(): Boolean {
+        return canDrawText() || canDrawIcon()
     }
 
     sealed class MarkMode {
@@ -154,7 +174,13 @@ class WaterMarkConfig private constructor() {
         const val SP_KEY_ICON_URI = "${SP_NAME}_key_icon_uri"
         const val SP_KEY_MODE = "${SP_NAME}_key_type"
         const val SP_KEY_CHANGE_LOG = "${SP_NAME}_key_change_log"
-        const val SP_KEY_IMAGE_SCALE = "${SP_NAME}_key_image_scale"
+        const val SP_KEY_IMAGE_SCALE_X = "${SP_NAME}_key_image_scale"
+        const val SP_KEY_IMAGE_SCALE_Y = "${SP_NAME}_key_image_scale_y"
+
+        const val MAX_TEXT_SIZE = 100f
+        const val MAX_DEGREE = 360f
+        const val MAX_HORIZON_GAP = 500
+        const val MAX_VERTICAL_GAP = 500
 
         fun pull(
             sp: SharedPreferences = MyApp.globalSp()

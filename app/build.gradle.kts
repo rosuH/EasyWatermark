@@ -7,7 +7,8 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    id("kotlin-android-extensions")
+    id("kotlin-parcelize")
+    id("name.remal.check-dependency-updates") version "1.2.2"
 }
 
 android {
@@ -18,8 +19,8 @@ android {
         applicationId = "me.rosuh.easywatermark"
         minSdkVersion(Apps.minSdk)
         targetSdkVersion(Apps.targetSdk)
-        versionCode = 10103
-        versionName = "1.1.3"
+        versionCode = 20000
+        versionName = "2.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -37,7 +38,7 @@ android {
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "coroutines.pro","proguard-rules.pro"
             )
         }
     }
@@ -67,12 +68,18 @@ android {
             }
     }
 
+    packagingOptions {
+        exclude("DebugProbesKt.bin")
+    }
+
     android.buildFeatures.viewBinding = true
+
 }
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
         jvmTarget = "1.8"
+        useIR = true
     }
 }
 
@@ -84,6 +91,10 @@ dependencies {
     implementation(Libs.materialAboutLibrary)
     implementation(Libs.material)
     implementation(Libs.fragmentKtx)
+    implementation(Libs.fragment)
+    implementation(Libs.activityKtx)
+    implementation(Libs.coroutineAndroid)
+    implementation(Libs.coroutineCore)
     implementation(Libs.lifecycleLiveData)
     implementation(Libs.lifecycleViewModel)
     implementation(Libs.colorPickerView)
@@ -92,6 +103,7 @@ dependencies {
     implementation(Libs.constraintLayout)
     implementation(Libs.coreKtx)
     implementation(Libs.exif)
+    implementation(Libs.palette)
     testImplementation(TestLibs.junit)
     testImplementation(TestLibs.androidXTest)
     testImplementation(TestLibs.mock)
