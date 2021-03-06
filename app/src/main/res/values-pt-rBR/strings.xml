@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Easy WaterMark</string>
+    <string name="action_pick">Escolha um foto</string>
+    <string name="action_save">Salvar</string>
+    <string name="action_settings">Sobre</string>
+    <string name="title_layout">Layout</string>
+    <string name="title_style">Estilo</string>
+    <string name="title_content">Conteúdo</string>
+    <string name="tips_do_not_choose_image">Nada selecionado</string>
+    <string name="tips_choose_color_dialog">Escolha a cor</string>
+    <string name="tips_confirm_dialog">Confirmar</string>
+    <string name="tips_cancel_dialog">Cancelar</string>
+    <string name="tips_save_ok">Salvo com sucesso</string>
+    <string name="tips_share_ok">Compartilhado com sucesso</string>
+    <string name="tips_error">Falha</string>
+    <string name="tips_share_image">Compartilhar imagem</string>
+    <string name="title_enter_text">Conteúdo</string>
+    <string name="title_text_style">Estilo</string>
+    <string name="title_text_size">Tamanho</string>
+    <string name="title_horizon_layout">Horizontal</string>
+    <string name="title_vertical_layout">Vertical</string>
+    <string name="title_text_color">Cor</string>
+    <string name="title_text_rotate">Ângulo</string>
+    <string name="request_permission_failed">Pedido de permissão falhou</string>
+    <string name="about_title_about">Sobre</string>
+    <string name="about_title_info">Informação</string>
+    <string name="about_title_options">Opções</string>
+    <string name="about_title_output">Formato de saída</string>
+    <string name="about_title_version">Versão</string>
+    <string name="about_title_rating">Avalie nosso app</string>
+    <string name="about_title_feed_back">Feedback</string>
+    <string name="about_title_update_log">Registro de modificações</string>
+    <string name="about_title_open_source">Software livre</string>
+    <string name="about_title_author">Dev</string>
+    <string name="about_title_designer">Designer</string>
+    <string name="about_title_repo_link">Visitar no Github</string>
+    <string name="about_title_figma_link">Mais projetos</string>
+    <string name="error_not_img">Favor selecionar uma imagem</string>
+    <string name="error_file_not_found">A imagem não pôde ser aberta ou não foi selecionada</string>
+    <string name="tips_pick_image">Vamos começar selecionando uma imagem</string>
+    <string name="save_directly">Salvar diretamente</string>
+    <string name="directly_save_tips">Salvar a imagem editada diretamente na sua galeria</string>
+    <string name="share_tips">Compartilhar a imagem editada com outros aplicativos</string>
+    <string name="share">Compartilhar</string>
+    <string name="water_mark_mode_text">Texto</string>
+    <string name="water_mark_mode_image">Ícone</string>
+    <string name="touch_alpha">Alfa: %1$d</string>
+    <string name="touch_size">Tamanho: %1$d</string>
+    <string name="hint_tips_input_water_mark_text">Digite o texto da marca d'água digital</string>
+    <string name="tips_ok">Confirmar</string>
+    <string name="hint_tips_alpha_100">Alfa 100%</string>
+    <string name="tips_cancel_output">Cancelar</string>
+    <string name="tips_need_compress_img">Não há espaço suficiente ou a imagem é muito grande</string>
+    <string name="tips_compressing">Compactando…</string>
+    <string name="tips_compress_images">Compactar foto</string>
+    <string name="tips_compress_ok">Compactado. Clique OK para continuar a exportação.</string>
+    <string name="tips_compress_create_uri_failed">Compactado, mas falhou em criar o Uri. Reinicie o aplicativo e tente de novo. %1$s</string>
+    <string name="tips_tip_title">Falha detectada</string>
+    <string name="msg_crash">Gostaria de relatar este problema? Isto pode nos ajudar a melhorar o aplicativo e não irá coletar nenhuma informação pessoal.</string>
+    <string name="crash_mail">Enviar e-mail</string>
+    <string name="tip_not_mail_found">Nenhum cliente de e-mail detectado. Alternativamente, você pode colar a mensagem de erro na loja de aplicativos ou no Github.</string>
+    <string name="tips_content_size_performance">Quanto maior a imagem, mais recursos utilizará para ser visualizada em tempo real.</string>
+    <string name="tips_content_mode_button">Clique para modificar texto ou imagem</string>
+    <string name="config_default_water_mark_text">👋 NÃO REDISTRIBUIR</string>
+    <string name="style_alpha">Alfa</string>
+    <string name="contributor_info">Se o feedback com problema for válido e corrigido ou uma nova versão for adicionada, seu nome ou e-mail aparecerá na janela pop-up do registro de modificações. Editaremos informações sobre você, seu nome completo não aparecerá. \\n Se você não quiser aparecer, por favor, marque: Não quero aparecer.</string>
+    <string name="dialog_change_log_title">Registro de modificações</string>
+    <string name="dialog_change_log_content">
+        Esta atualização traz as seguintes modificações:\n\n
+         <u><big>Novidades</big></u> \n\n
+         · Uma nova forma de interação, mais elegante e também eficiência foi melhorada, bem-vindo a testar. \n\n
+         · Foi adicionado formato de saída e opções de qualidade, fácil de usar.
+         <u><big>Correções</big></u> \n\n
+         · A precisão da marca d'água foi ajustada, agora são muito mais precisas, exceto em alguns casos.\n\n
+    </string>
+    <string name="tips_not_app_can_open_imaegs">Nenhum gerenciador de arquivos detectado.</string>
+    <string name="tips_choose_other_file_type">Imagem inválida</string>
+    <string name="error_save_oom">Memória insuficiente, por favor limpe processos em segundo plano e tente novamente</string>
+    <string name="error_share_uri_is_null">Uri de saída está vazio, favor entrar em contato com o desenvolvedor para submeter um feedback, obrigado</string>
+    <string name="dev_comment">Qualquer tecnologia suficientemente avançada é indistinguível da magia.</string>
+    <string name="dialog_title_exist_confirm">Dicas</string>
+    <string name="dialog_cancel_exist_confirm">Cancelar</string>
+    <string name="dialog_content_exist_confirm">Descartar a edição?</string>
+    <string name="dialog_out_put_title">Formato de saída e qualidade</string>
+    </resources>
