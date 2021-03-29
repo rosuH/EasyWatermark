@@ -53,7 +53,7 @@ import kotlin.math.abs
 class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
 
     private lateinit var pickImageLauncher: ActivityResultLauncher<String>
-    private lateinit var pickIconLauncher: ActivityResultLauncher<String>
+    private lateinit var pickIconLauncher: ActivityResultLauncher<Array<String>>
     private val viewModel: MainViewModel by viewModels()
 
     private val scope = lifecycleScope
@@ -145,7 +145,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                 handleActivityResult(REQ_CODE_PICK_IMAGE, uri)
             }
         pickIconLauncher =
-            registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+            registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
                 handleActivityResult(REQ_PICK_ICON, uri)
             }
     }
@@ -333,15 +333,20 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
             }
 
             addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                private var debounceTs = 0L
                 override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                     super.onScrollStateChanged(recyclerView, newState)
                     val snapView = snapHelper.findSnapView(binding.rvPanel.layoutManager)
                     when (newState) {
                         RecyclerView.SCROLL_STATE_IDLE -> {
-                            if (snapView == null || !canAutoSelected) {
+                            if (snapView == null
+                                || !canAutoSelected
+                                || System.currentTimeMillis() - debounceTs < 120
+                            ) {
                                 canAutoSelected = true
                                 return
                             }
+                            debounceTs = System.currentTimeMillis()
                             val pos = binding.rvPanel.getChildLayoutPosition(snapView)
                             (recyclerView.adapter as? FuncPanelAdapter)?.dataSet?.get(pos)
                                 ?.let { handleFuncItem(it) }
@@ -488,12 +493,11 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
     /**
      * Fires an intent to spin up the "file chooser" UI and select an image.
      */
-    fun performFileSearch(requestCode: Int) {
+    private fun performFileSearch(requestCode: Int) {
         if (!viewModel.isPermissionGrated(this)) {
             viewModel.requestPermission(this)
             return
         }
-        // FIXME: 2021/2/19 should test in low version devices.
         val mime = "image/*"
         val result = kotlin.runCatching {
             when (requestCode) {
@@ -501,7 +505,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                     pickImageLauncher.launch(mime)
                 }
                 REQ_PICK_ICON -> {
-                    pickIconLauncher.launch(mime)
+                    pickIconLauncher.launch(arrayOf(mime))
                 }
             }
         }
@@ -581,8 +585,8 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
      */
     private fun takePersistableUriPermission(uri: Uri) {
         try {
-            val takeFlags: Int = intent.flags and
-                    (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            val takeFlags: Int =
+                (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
             contentResolver.takePersistableUriPermission(uri, takeFlags)
         } catch (e: Exception) {
             e.printStackTrace()

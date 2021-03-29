@@ -175,23 +175,6 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         }
         layoutPaint.shader = layoutShader
         if (layoutShader != null) {
-            // clear canvas
-
-//            saveCount = canvas?.saveCount
-//            canvas?.save()
-//            canvas?.translate(drawableBounds.left, drawableBounds.top)
-//            canvas?.drawBitmap(
-//                imageBitmap!!,
-//                0f,
-//                0f,
-//                null
-//            )
-//            canvas?.restoreToCount(saveCount!!)
-//            canvas?.drawBitmap(
-//                imageBitmap!!,
-//                drawableBounds.left.toFloat(), drawableBounds.top.toFloat(),
-//                null
-//            )
             ImageHelper.draw(canvas, layoutPaint, drawableBounds)
         }
     }
@@ -207,14 +190,6 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             bounds.bottom + paddingBottom,
         )
         return bounds
-//        val bounds = RectF()
-//        bounds.set(
-//            paddingLeft.toFloat(),
-//            paddingTop.toFloat(),
-//            measuredWidth - paddingRight.toFloat(),
-//            measuredHeight - paddingBottom.toFloat(),
-//        )
-//        return bounds
     }
 
     companion object {
@@ -315,7 +290,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             textPaint: Paint,
             coroutineContext: CoroutineContext
         ): BitmapShader = withContext(coroutineContext) {
-            val showDebugRect = BuildConfig.DEBUG && false
+            val showDebugRect = BuildConfig.DEBUG && true
             val textWidth = textBounds.width().toFloat().coerceAtLeast(1f)
             val textHeight = textBounds.height().toFloat().coerceAtLeast(1f)
 
@@ -339,9 +314,10 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 (finalWidth / 2).toFloat(),
                 (finalHeight / 2).toFloat()
             )
+
             canvas.drawText(
                 config.text,
-                (finalWidth - textWidth) / 2,
+                finalWidth.toFloat() / 2,
                 (finalHeight + textHeight) / 2,
                 textPaint
             )
