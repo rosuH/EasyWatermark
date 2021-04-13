@@ -47,7 +47,7 @@
     <string name="water_mark_mode_image">Ícone</string>
     <string name="touch_alpha">Alfa: %1$d</string>
     <string name="touch_size">Tamanho: %1$d</string>
-    <string name="hint_tips_input_water_mark_text">Digite o texto da marca d'água digital</string>
+    <string name="hint_tips_input_water_mark_text">Digite o texto da marca d\'água digital</string>
     <string name="tips_ok">Confirmar</string>
     <string name="hint_tips_alpha_100">Alfa 100%</string>
     <string name="tips_cancel_output">Cancelar</string>
@@ -72,7 +72,7 @@
          · Uma nova forma de interação, mais elegante e também eficiência foi melhorada, bem-vindo a testar. \n\n
          · Foi adicionado formato de saída e opções de qualidade, fácil de usar.
          <u><big>Correções</big></u> \n\n
-         · A precisão da marca d'água foi ajustada, agora são muito mais precisas, exceto em alguns casos.\n\n
+         · A precisão da marca d\'água foi ajustada, agora são muito mais precisas, exceto em alguns casos.\n\n
     </string>
     <string name="tips_not_app_can_open_imaegs">Nenhum gerenciador de arquivos detectado.</string>
     <string name="tips_choose_other_file_type">Imagem inválida</string>
