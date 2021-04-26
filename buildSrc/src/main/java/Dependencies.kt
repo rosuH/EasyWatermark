@@ -25,7 +25,7 @@ object Versions {
 
     const val gap = "4.0.1"
 
-    const val kotlin = "1.4.30"
+    const val kotlin = "1.4.32"
 
     const val coroutineCore = "1.4.2"
 

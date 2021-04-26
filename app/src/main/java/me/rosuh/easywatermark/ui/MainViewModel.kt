@@ -32,6 +32,7 @@ import me.rosuh.easywatermark.model.UserConfig
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.repo.UserConfigRepo
 import me.rosuh.easywatermark.utils.FileUtils.Companion.outPutFolderName
+import me.rosuh.easywatermark.utils.Result
 import me.rosuh.easywatermark.utils.decodeBitmapFromUri
 import me.rosuh.easywatermark.utils.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.widget.WaterMarkImageView
@@ -62,6 +63,8 @@ class MainViewModel : ViewModel() {
     }
 
     private val _saveState: MutableLiveData<State> = MutableLiveData()
+
+    val result: MutableLiveData<Result<*>> = MutableLiveData()
 
     val saveState: LiveData<State> = Transformations.map(_saveState) { it }
 
@@ -120,11 +123,12 @@ class MainViewModel : ViewModel() {
             }
             _saveState.postValue(State.Saving)
             try {
-                val outputUri =
-                    generateImage(activity, config.value?.uri ?: Uri.parse(""))
-                if (outputUri?.toString().isNullOrEmpty()) {
-                    throw FileNotFoundException()
+                val rect = generateImage(activity, config.value?.uri ?: Uri.parse(""))
+                if (rect.isFailure() || rect.data == null) {
+                    result.postValue(rect)
+                    return@launch
                 }
+                val outputUri = rect.data!!
                 val intent = Intent(Intent.ACTION_VIEW)
                 intent.setDataAndType(outputUri, "image/*")
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -157,14 +161,12 @@ class MainViewModel : ViewModel() {
             }
             try {
                 _saveState.postValue(State.Sharing)
-                val outputUri =
-                    generateImage(activity, config.value?.uri ?: Uri.parse(""))
-                if (outputUri?.toString().isNullOrEmpty()) {
-                    _saveState.postValue(State.Error.apply {
-                        msg = activity.getString(R.string.error_share_uri_is_null)
-                    })
+                val rect = generateImage(activity, config.value?.uri ?: Uri.parse(""))
+                if (rect.isFailure() || rect.data == null) {
+                    result.postValue(rect)
                     return@launch
                 }
+                val outputUri = rect.data!!
                 val intent = Intent(Intent.ACTION_SEND)
                 intent.type = "image/*"
                 intent.putExtra(Intent.EXTRA_STREAM, outputUri)
@@ -178,19 +180,29 @@ class MainViewModel : ViewModel() {
             } catch (oom: OutOfMemoryError) {
                 _saveState.postValue(State.OOMError)
             }
-
         }
     }
 
     @Throws(FileNotFoundException::class, OutOfMemoryError::class)
-    private suspend fun generateImage(activity: Activity, uri: Uri): Uri? =
+    private suspend fun generateImage(activity: Activity, uri: Uri): Result<Uri> =
         withContext(Dispatchers.IO) {
             val resolver = activity.contentResolver
-            val mutableBitmap =
-                decodeBitmapFromUri(resolver, uri)?.copy(Bitmap.Config.ARGB_8888, true)
-                    ?: return@withContext null
+            val rect = decodeBitmapFromUri(resolver, uri)
+            if (rect.isFailure()) {
+                return@withContext Result.extendMsg(rect)
+            }
+            val mutableBitmap = rect.data?.copy(Bitmap.Config.ARGB_8888, true)
+                ?: return@withContext Result.failure(
+                    null,
+                    code = "-1",
+                    message = "Copy bitmap from uri failed."
+                )
             if (config.value == null) {
-                return@withContext null
+                return@withContext Result.failure(
+                    null,
+                    code = "-1",
+                    message = "config.value == null"
+                )
             }
             val canvas = Canvas(mutableBitmap)
             val tmpConfig = config.value!!
@@ -209,12 +221,20 @@ class MainViewModel : ViewModel() {
                     )
                 }
                 WaterMarkConfig.MarkMode.Image -> {
-                    val iconBitmap = decodeSampledBitmapFromResource(
+                    val iconBitmapRect = decodeSampledBitmapFromResource(
                         resolver,
                         tmpConfig.iconUri,
                         mutableBitmap.width,
                         mutableBitmap.height
-                    ) ?: return@withContext null
+                    )
+                    if (iconBitmapRect.isFailure() || iconBitmapRect.data == null) {
+                        return@withContext Result.failure(
+                            null,
+                            code = "-1",
+                            message = "decodeSampledBitmapFromResource == null"
+                        )
+                    }
+                    val iconBitmap = iconBitmapRect.data!!
                     WaterMarkImageView.buildIconBitmapShader(
                         iconBitmap,
                         true,
@@ -224,7 +244,11 @@ class MainViewModel : ViewModel() {
                         Dispatchers.IO
                     )
                 }
-                null -> return@withContext null
+                null -> return@withContext Result.failure(
+                    null,
+                    code = "-1",
+                    message = "Unknown markmode"
+                )
             }
             canvas.drawRect(
                 0f, 0f,
@@ -255,13 +279,17 @@ class MainViewModel : ViewModel() {
                 imageDetail.clear()
                 imageDetail.put(MediaStore.Images.Media.IS_PENDING, 0)
                 resolver.update(imageContentUri, imageDetail, null, null)
-                imageContentUri
+                Result.success(imageContentUri)
             } else {
                 // need request write_storage permission
                 // should check Pictures folder exist
                 val picturesFile: File =
                     Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-                        ?: return@withContext null
+                        ?: return@withContext Result.failure(
+                            null,
+                            code = "-1",
+                            message = "Can't get pictures directory."
+                        )
                 if (!picturesFile.exists()) {
                     picturesFile.mkdir()
                 }
@@ -290,7 +318,7 @@ class MainViewModel : ViewModel() {
                         Uri.fromFile(outputFile)
                     )
                 )
-                outputUri
+                Result.success(outputUri)
             }
         }
 

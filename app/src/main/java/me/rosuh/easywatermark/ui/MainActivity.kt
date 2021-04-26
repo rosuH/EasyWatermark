@@ -260,6 +260,10 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                 }
             }
         })
+
+        viewModel.result.observe(this, {
+            Toast.makeText(this, it.message, Toast.LENGTH_SHORT).show()
+        })
     }
 
     @SuppressLint("ClickableViewAccessibility")

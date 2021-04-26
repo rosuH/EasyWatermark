@@ -76,13 +76,17 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             generateBitmapJob = launch(exceptionHandler) {
                 if (curUri != field?.uri) {
                     val scale = floatArrayOf(1f, 1f)
-                    val imageBitmap = decodeSampledBitmapFromResource(
+                    val imageBitmapRect = decodeSampledBitmapFromResource(
                         context.contentResolver,
                         config!!.uri,
                         this@WaterMarkImageView.measuredWidth - paddingStart * 2,
                         this@WaterMarkImageView.measuredHeight - paddingTop * 2,
                         scale
                     )
+                    if (imageBitmapRect.isFailure() || imageBitmapRect.data == null) {
+                        return@launch
+                    }
+                    val imageBitmap = imageBitmapRect.data
                     setImageBitmap(imageBitmap)
                     mutableBitmap = imageBitmap!!.copy(Bitmap.Config.ARGB_8888, true)
                     amazingCanvas = Canvas(mutableBitmap!!)
@@ -114,12 +118,16 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                             if (iconBitmap == null || localIconUri != field!!.iconUri) {
                                 // if uri was changed, create a new bitmap
                                 // Here would decode a inSampled bitmap, the max size was imageView's width and height
-                                iconBitmap = decodeSampledBitmapFromResource(
+                                val iconBitmapRect = decodeSampledBitmapFromResource(
                                     context.contentResolver,
                                     field!!.iconUri,
                                     iconBounds.width(),
                                     iconBounds.height()
                                 )
+                                if (iconBitmapRect.isFailure()) {
+                                    return@launch
+                                }
+                                iconBitmap = iconBitmapRect.data
                                 // and flagging the old one should be recycled
                                 shouldRecycled = true
                             }
