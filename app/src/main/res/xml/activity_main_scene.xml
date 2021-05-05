@@ -107,7 +107,7 @@
         <Constraint
             android:id="@+id/rv_panel"
             android:layout_width="match_parent"
-            android:layout_height="72dp"
+            android:layout_height="wrap_content"
             android:background="@color/colorSecondary"
             android:visibility="invisible"
             motion:layout_constraintBottom_toTopOf="@id/tb_tool_bar"
@@ -116,7 +116,7 @@
         <Constraint
             android:id="@+id/fc_fun_detail"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="wrap_content"
             android:visibility="invisible"
             motion:layout_constraintBottom_toTopOf="@id/rv_panel"
             motion:layout_constraintEnd_toEndOf="parent"
@@ -215,7 +215,7 @@
         <Constraint
             android:id="@+id/rv_panel"
             android:layout_width="match_parent"
-            android:layout_height="72dp"
+            android:layout_height="wrap_content"
             android:background="@color/colorSecondary"
             android:visibility="invisible"
             motion:layout_constraintBottom_toTopOf="@id/tb_tool_bar"
@@ -342,7 +342,7 @@
         <Constraint
             android:id="@+id/rv_panel"
             android:layout_width="match_parent"
-            android:layout_height="72dp"
+            android:layout_height="wrap_content"
             android:background="@color/colorSecondary"
             android:visibility="visible"
             motion:layout_constraintBottom_toTopOf="@id/tb_tool_bar"

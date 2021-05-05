@@ -14,6 +14,7 @@ import androidx.lifecycle.Observer
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ui.MainViewModel
+import me.rosuh.easywatermark.utils.preCheckStoragePermission
 
 class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
 
@@ -34,7 +35,9 @@ class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
         with(root) {
             findViewById<View>(R.id.ll_save).apply {
                 setOnClickListener {
-                    shareViewModel.saveImage(requireActivity())
+                    requireActivity().preCheckStoragePermission {
+                        shareViewModel.saveImage(requireActivity())
+                    }
                 }
             }
 
@@ -52,7 +55,9 @@ class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
 
             findViewById<View>(R.id.ll_share).apply {
                 setOnClickListener {
-                    shareViewModel.shareImage(requireActivity())
+                    requireActivity().preCheckStoragePermission {
+                        shareViewModel.shareImage(requireActivity())
+                    }
                 }
             }
 

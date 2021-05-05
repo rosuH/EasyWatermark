@@ -25,25 +25,25 @@ object Versions {
 
     const val gap = "4.0.1"
 
-    const val kotlin = "1.4.32"
+    const val kotlin = "1.5.0-RC"
 
-    const val coroutineCore = "1.4.2"
+    const val coroutineCore = "1.5.0-RC"
 
-    const val coroutineAndroid = "1.4.2"
+    const val coroutineAndroid = "1.5.0-RC"
 
-    const val appcompat = "1.2.0"
+    const val appcompat = "1.3.0-rc01"
 
     const val lifeCycle = "2.3.0"
 
     const val material = "1.3.0"
 
-    const val constraintLayout = "2.1.0-alpha2"
+    const val constraintLayout = "2.1.0-beta01"
 
     const val materialAboutLibrary = "3.1.2"
 
-    const val fragmentKtx = "1.3.0"
+    const val fragmentKtx = "1.3.3"
 
-    const val activityKtx = "1.3.0-alpha02"
+    const val activityKtx = "1.3.0-alpha07"
 
     const val coreKtx = "1.3.1"
 
@@ -51,7 +51,7 @@ object Versions {
 
     const val viewpager2 = "1.0.0"
 
-    const val recyclerView = "1.0.0"
+    const val recyclerView = "1.2.0"
 
     const val compressor = "3.0.0"
 

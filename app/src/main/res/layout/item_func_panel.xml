@@ -2,20 +2,19 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
-    android:layout_height="64dp"
-    android:layout_marginStart="8dp"
-    android:layout_marginEnd="8dp"
+    android:layout_height="wrap_content"
     android:gravity="center"
     android:minWidth="70dp"
     android:minHeight="64dp"
     android:orientation="vertical"
+    android:padding="8dp"
     android:weightSum="2">
 
     <ImageView
         android:id="@+id/iv_icon"
         style="@style/Widget.AppCompat.ActionButton"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:layout_weight="1"
         android:scaleType="centerInside" />
@@ -23,7 +22,7 @@
     <TextView
         android:id="@+id/tv_title"
         android:layout_width="wrap_content"
-        android:layout_height="0dp"
+        android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:layout_weight="1"
         android:gravity="center"

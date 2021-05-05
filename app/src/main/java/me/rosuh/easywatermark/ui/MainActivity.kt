@@ -26,7 +26,6 @@ import androidx.palette.graphics.Palette
 import androidx.recyclerview.widget.LinearSnapHelper
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.adapter.FragmentStateAdapter
-import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.ObsoleteCoroutinesApi
@@ -129,7 +128,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                 setReorderingAllowed(true)
             }
         }
-        vibrateHelper = VibrateHelper.init(this)
+        vibrateHelper = VibrateHelper.get()
         initView()
         initObserver()
         registerResultCallback()
@@ -214,7 +213,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
             }
         })
 
-        viewModel.tipsStatus.observe(this, { tips ->
+        viewModel.tipsStatus.observe(this) { tips ->
             when (tips) {
                 is MainViewModel.TipsStatus.None -> {
                     binding.tvDataTips.apply {
@@ -234,9 +233,9 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                     }
                 }
             }
-        })
+        }
 
-        viewModel.saveState.observe(this, { state ->
+        viewModel.saveState.observe(this) { state ->
             when (state) {
                 MainViewModel.State.SaveOk -> {
                     Toast.makeText(this, getString(R.string.tips_save_ok), Toast.LENGTH_SHORT)
@@ -259,11 +258,11 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                     viewModel.resetStatus()
                 }
             }
-        })
+        }
 
-        viewModel.result.observe(this, {
+        viewModel.result.observe(this) {
             Toast.makeText(this, it.message, Toast.LENGTH_SHORT).show()
-        })
+        }
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -309,7 +308,9 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
         }
         // pick image button
         binding.ivPickerTips.setOnClickListener {
-            performFileSearch(REQ_CODE_PICK_IMAGE)
+            preCheckStoragePermission {
+                performFileSearch(REQ_CODE_PICK_IMAGE)
+            }
         }
         // functional panel in recyclerView
         binding.rvPanel.apply {
@@ -354,20 +355,22 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                             val pos = binding.rvPanel.getChildLayoutPosition(snapView)
                             (recyclerView.adapter as? FuncPanelAdapter)?.dataSet?.get(pos)
                                 ?.let { handleFuncItem(it) }
+                            vibrateHelper.doVibrate(snapView)
                         }
                     }
                 }
 
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                     super.onScrolled(recyclerView, dx, dy)
-                    if (!isTouching) {
+                    if (recyclerView.scrollState != RecyclerView.SCROLL_STATE_DRAGGING) {
                         return
                     }
                     val snapView = snapHelper.findSnapView(binding.rvPanel.layoutManager) ?: return
-                    val detailX =
+                    val dX =
                         abs(binding.fcFunDetail.width / 2 - (snapView.left + snapView.right) / 2)
-                    if (detailX <= 3) {
-                        vibrateHelper.doVibrate()
+
+                    if (dX <= 1) {
+                        vibrateHelper.doVibrate(snapView)
                     }
                 }
             })
@@ -443,7 +446,9 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                 EditTextBSDialogFragment.safetyShow(supportFragmentManager)
             }
             FuncTitleModel.FuncType.Icon -> {
-                performFileSearch(REQ_PICK_ICON)
+                preCheckStoragePermission {
+                    performFileSearch(REQ_PICK_ICON)
+                }
             }
             FuncTitleModel.FuncType.Color -> {
                 ColorFragment.replaceShow(this, binding.fcFunDetail.id)
@@ -481,7 +486,9 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
         }
 
         R.id.action_pick -> {
-            performFileSearch(REQ_CODE_PICK_IMAGE)
+            preCheckStoragePermission {
+                performFileSearch(REQ_CODE_PICK_IMAGE)
+            }
             true
         }
 
@@ -498,10 +505,6 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
      * Fires an intent to spin up the "file chooser" UI and select an image.
      */
     private fun performFileSearch(requestCode: Int) {
-        if (!viewModel.isPermissionGrated(this)) {
-            viewModel.requestPermission(this)
-            return
-        }
         val mime = "image/*"
         val result = kotlin.runCatching {
             when (requestCode) {
@@ -604,11 +607,6 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
         override fun getItemCount(): Int = fragmentArray.size
 
         override fun createFragment(position: Int): Fragment = fragmentArray[position]
-    }
-
-    private fun initFragments(vp: ViewPager2, pos: Int, defaultFragment: Fragment): Fragment {
-        val tag = "android:switcher:" + vp.id + ":" + pos
-        return supportFragmentManager.findFragmentByTag(tag) ?: defaultFragment
     }
 
     override fun onBackPressed() {

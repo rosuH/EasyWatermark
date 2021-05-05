@@ -14,8 +14,7 @@ import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.utils.ImageHelper
 import me.rosuh.easywatermark.utils.decodeSampledBitmapFromResource
 import kotlin.coroutines.CoroutineContext
-import kotlin.math.pow
-import kotlin.math.sqrt
+import kotlin.math.*
 
 
 class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, CoroutineScope {
@@ -302,9 +301,20 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             val textWidth = textBounds.width().toFloat().coerceAtLeast(1f)
             val textHeight = textBounds.height().toFloat().coerceAtLeast(1f)
 
-            val maxSize = calculateMaxSize(textHeight, textWidth)
-            val finalWidth = calculateFinalWidth(config, maxSize)
-            val finalHeight = calculateFinalHeight(config, maxSize)
+            val radians = Math.toRadians(
+                when (config.degree) {
+                    in 0.0..90.0 -> config.degree.toDouble()
+                    in 90.0..270.0 -> {
+                        abs(180 - config.degree.toDouble())
+                    }
+                    else -> 360 - config.degree.toDouble()
+                }
+            )
+            val fixWidth = textWidth * cos(radians) + textHeight * sin(radians)
+            val fixHeight = textWidth * sin(radians) + textHeight * cos(radians)
+
+            val finalWidth = calculateFinalWidth(config, fixWidth.toInt())
+            val finalHeight = calculateFinalHeight(config, fixHeight.toInt())
             val bitmap =
                 Bitmap.createBitmap(finalWidth, finalHeight, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)

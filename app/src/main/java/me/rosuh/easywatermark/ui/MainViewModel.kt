@@ -1,11 +1,9 @@
 package me.rosuh.easywatermark.ui
 
-import android.Manifest
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.ContentValues
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -15,8 +13,6 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.*
 import id.zelory.compressor.Compressor
@@ -79,41 +75,7 @@ class MainViewModel : ViewModel() {
     private val repo = UserConfigRepo
     private val userConfig: MutableLiveData<UserConfig> = repo.userConfig
 
-    fun isPermissionGrated(activity: Activity): Boolean {
-        val readGranted =
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(
-                activity,
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED
-
-        val writeGranted =
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(
-                activity,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED
-
-        return readGranted && writeGranted
-    }
-
-    /**
-     * 申请权限
-     */
-    fun requestPermission(activity: Activity) {
-        ActivityCompat.requestPermissions(
-            activity,
-            arrayOf(
-                Manifest.permission.READ_EXTERNAL_STORAGE,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
-            ),
-            MainActivity.REQ_CODE_REQ_WRITE_PERMISSION
-        )
-    }
-
     fun saveImage(activity: Activity) {
-        if (!isPermissionGrated(activity)) {
-            requestPermission(activity)
-            return
-        }
         viewModelScope.launch {
             if (config.value?.uri?.toString().isNullOrEmpty()) {
                 _saveState.postValue(State.Error.apply {
@@ -148,10 +110,6 @@ class MainViewModel : ViewModel() {
     }
 
     fun shareImage(activity: Activity) {
-        if (!isPermissionGrated(activity)) {
-            requestPermission(activity)
-            return
-        }
         viewModelScope.launch {
             if (config.value?.uri?.toString().isNullOrEmpty()) {
                 _saveState.postValue(State.Error.apply {

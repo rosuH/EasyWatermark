@@ -8,7 +8,7 @@ plugins {
     id("com.android.application")
     id("kotlin-android")
     id("kotlin-parcelize")
-    id("name.remal.check-dependency-updates") version "1.2.2"
+    id("com.github.ben-manes.versions")
 }
 
 android {

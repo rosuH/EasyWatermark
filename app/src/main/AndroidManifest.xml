@@ -10,8 +10,6 @@
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
 
-    <uses-permission android:name="android.permission.VIBRATE" />
-
     <application
         android:name=".MyApp"
         android:allowBackup="true"
@@ -40,7 +38,7 @@
         <activity
             android:name=".ui.about.AboutActivity"
             android:configChanges="orientation|keyboardHidden"
-            android:screenOrientation="portrait"></activity>
+            android:screenOrientation="portrait" />
         <activity
             android:name=".ui.about.OpenSourceActivity"
             android:configChanges="orientation|keyboardHidden"
