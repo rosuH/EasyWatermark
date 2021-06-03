@@ -11,12 +11,7 @@ import me.rosuh.easywatermark.utils.VibrateHelper
 
 abstract class BasePBFragment : BaseBindFragment<FragemntBasePbBinding>() {
 
-    private lateinit var vibrateHelper: VibrateHelper
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        vibrateHelper = VibrateHelper.get()
-    }
+    private val vibrateHelper: VibrateHelper by lazy { VibrateHelper.get() }
 
     override fun bindView(
         layoutInflater: LayoutInflater,

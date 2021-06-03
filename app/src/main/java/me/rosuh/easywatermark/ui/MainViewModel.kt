@@ -58,11 +58,9 @@ class MainViewModel : ViewModel() {
         class Size(v: Any?) : TipsStatus(values = v)
     }
 
-    private val _saveState: MutableLiveData<State> = MutableLiveData()
-
     val result: MutableLiveData<Result<*>> = MutableLiveData()
 
-    val saveState: LiveData<State> = Transformations.map(_saveState) { it }
+    val saveState: MutableLiveData<State> = MutableLiveData()
 
     val config: MutableLiveData<WaterMarkConfig> by lazy {
         MutableLiveData<WaterMarkConfig>(WaterMarkConfig.pull())
@@ -78,12 +76,12 @@ class MainViewModel : ViewModel() {
     fun saveImage(activity: Activity) {
         viewModelScope.launch {
             if (config.value?.uri?.toString().isNullOrEmpty()) {
-                _saveState.postValue(State.Error.apply {
+                saveState.postValue(State.Error.apply {
                     msg = activity.getString(R.string.error_not_img)
                 })
                 return@launch
             }
-            _saveState.postValue(State.Saving)
+            saveState.postValue(State.Saving)
             try {
                 val rect = generateImage(activity, config.value?.uri ?: Uri.parse(""))
                 if (rect.isFailure() || rect.data == null) {
@@ -95,14 +93,14 @@ class MainViewModel : ViewModel() {
                 intent.setDataAndType(outputUri, "image/*")
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 activity.startActivity(intent)
-                _saveState.postValue(State.SaveOk)
+                saveState.postValue(State.SaveOk)
             } catch (fne: FileNotFoundException) {
                 fne.printStackTrace()
-                _saveState.postValue(State.Error.apply {
+                saveState.postValue(State.Error.apply {
                     msg = activity.getString(R.string.error_file_not_found)
                 })
             } catch (oom: OutOfMemoryError) {
-                _saveState.postValue(State.OOMError.apply {
+                saveState.postValue(State.OOMError.apply {
                     msg = activity.getString(R.string.error_save_oom)
                 })
             }
@@ -112,13 +110,13 @@ class MainViewModel : ViewModel() {
     fun shareImage(activity: Activity) {
         viewModelScope.launch {
             if (config.value?.uri?.toString().isNullOrEmpty()) {
-                _saveState.postValue(State.Error.apply {
+                saveState.postValue(State.Error.apply {
                     msg = activity.getString(R.string.error_not_img)
                 })
                 return@launch
             }
             try {
-                _saveState.postValue(State.Sharing)
+                saveState.postValue(State.Sharing)
                 val rect = generateImage(activity, config.value?.uri ?: Uri.parse(""))
                 if (rect.isFailure() || rect.data == null) {
                     result.postValue(rect)
@@ -129,14 +127,14 @@ class MainViewModel : ViewModel() {
                 intent.type = "image/*"
                 intent.putExtra(Intent.EXTRA_STREAM, outputUri)
                 activity.startActivity(intent)
-                _saveState.postValue(State.ShareOk)
+                saveState.postValue(State.ShareOk)
             } catch (fne: FileNotFoundException) {
                 fne.printStackTrace()
-                _saveState.postValue(State.Error.apply {
+                saveState.postValue(State.Error.apply {
                     msg = activity.getString(R.string.error_file_not_found)
                 })
             } catch (oom: OutOfMemoryError) {
-                _saveState.postValue(State.OOMError)
+                saveState.postValue(State.OOMError)
             }
         }
     }
@@ -364,7 +362,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun resetStatus() {
-        _saveState.postValue(State.Ready)
+        saveState.postValue(State.Ready)
     }
 
 
@@ -376,7 +374,7 @@ class MainViewModel : ViewModel() {
     fun compressImg(activity: Activity): Job {
         return viewModelScope.launch(Dispatchers.IO) {
             config.value?.let {
-                _saveState.postValue(State.Compressing)
+                saveState.postValue(State.Compressing)
                 val tmpFile = File.createTempFile("easy_water_mark_", "_compressed")
                 activity.contentResolver.openInputStream(it.uri).use { input ->
                     tmpFile.outputStream().use { output ->
@@ -395,14 +393,14 @@ class MainViewModel : ViewModel() {
                         compressedFile
                     )
                     updateUri(compressedFileUri)
-                    _saveState.postValue(State.CompressOK)
+                    saveState.postValue(State.CompressOK)
                 } catch (ie: IllegalArgumentException) {
-                    _saveState.postValue(State.CompressError.also { error ->
+                    saveState.postValue(State.CompressError.also { error ->
                         error.msg = "Images creates uri failed."
                     })
                 }
             } ?: kotlin.run {
-                _saveState.postValue(State.CompressError.also { it.msg = "Config value is null." })
+                saveState.postValue(State.CompressError.also { it.msg = "Config value is null." })
             }
         }
     }

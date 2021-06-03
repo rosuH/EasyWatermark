@@ -29,7 +29,6 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.ObsoleteCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
@@ -114,7 +113,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
 
     private lateinit var snapHelper: LinearSnapHelper
 
-    private lateinit var vibrateHelper: VibrateHelper
+    private val vibrateHelper: VibrateHelper by lazy { VibrateHelper.get() }
 
     override fun initViewBinding(): ActivityMainBinding {
         return ActivityMainBinding.inflate(layoutInflater)
@@ -128,7 +127,6 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                 setReorderingAllowed(true)
             }
         }
-        vibrateHelper = VibrateHelper.get()
         initView()
         initObserver()
         registerResultCallback()
@@ -632,10 +630,8 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
     }
 
     private fun setTransition(startState: Int, endState: Int) {
-        scope.launch {
+        binding.root.post {
             binding.clRoot.setTransition(startState, endState)
-            binding.clRoot.setTransitionDuration(550)
-            delay(16)
             binding.clRoot.transitionToEnd()
         }
     }
