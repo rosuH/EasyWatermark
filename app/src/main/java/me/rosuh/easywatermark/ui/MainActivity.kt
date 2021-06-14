@@ -51,7 +51,7 @@ import kotlin.math.abs
 class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
 
     private lateinit var pickImageLauncher: ActivityResultLauncher<String>
-    private lateinit var pickIconLauncher: ActivityResultLauncher<Array<String>>
+    private lateinit var pickIconLauncher: ActivityResultLauncher<String>
     private val viewModel: MainViewModel by viewModels()
 
     private val scope = lifecycleScope
@@ -111,6 +111,8 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
         )
     }
 
+    private val funcAdapter by lazy { FuncPanelAdapter(ArrayList(contentFunList)) }
+
     private lateinit var snapHelper: LinearSnapHelper
 
     private val vibrateHelper: VibrateHelper by lazy { VibrateHelper.get() }
@@ -142,7 +144,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                 handleActivityResult(REQ_CODE_PICK_IMAGE, uri)
             }
         pickIconLauncher =
-            registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+            registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
                 handleActivityResult(REQ_PICK_ICON, uri)
             }
     }
@@ -312,7 +314,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
         }
         // functional panel in recyclerView
         binding.rvPanel.apply {
-            adapter = FuncPanelAdapter(ArrayList(contentFunList))
+            adapter = funcAdapter
             layoutManager = CenterLayoutManager(this@MainActivity, RecyclerView.HORIZONTAL, false)
 
             snapHelper = LinearSnapHelper().also {
@@ -324,6 +326,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                 if (snapView == v) {
                     val item = (this.adapter as FuncPanelAdapter).dataSet[pos]
                     handleFuncItem(item)
+                    funcAdapter.selectedPos = pos
                 } else {
                     smoothScrollToPosition(pos)
                 }
@@ -351,8 +354,8 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                             }
                             debounceTs = System.currentTimeMillis()
                             val pos = binding.rvPanel.getChildLayoutPosition(snapView)
-                            (recyclerView.adapter as? FuncPanelAdapter)?.dataSet?.get(pos)
-                                ?.let { handleFuncItem(it) }
+                            funcAdapter.selectedPos = pos
+                            handleFuncItem(funcAdapter.dataSet[pos])
                             vibrateHelper.doVibrate(snapView)
                         }
                     }
@@ -381,25 +384,30 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                         return
                     }
                     hideDetailPanel()
-                    binding.rvPanel.smoothScrollToPosition(0)
                     val adapter = (binding.rvPanel.adapter as? FuncPanelAdapter)
                     when (tab.position) {
                         1 -> {
+                            binding.rvPanel.smoothScrollToPosition(0)
                             adapter?.also {
-                                it.seNewData(styleFunList)
+                                it.seNewData(styleFunList, 0)
                                 handleFuncItem(it.dataSet[0])
                             }
                         }
                         2 -> {
+                            binding.rvPanel.smoothScrollToPosition(0)
                             adapter?.also {
-                                it.seNewData(layoutFunList)
+                                it.seNewData(layoutFunList, 0)
                                 handleFuncItem(it.dataSet[0])
                             }
                         }
                         else -> {
+                            val curPos =
+                                if (binding.ivPhoto.config?.markMode == WaterMarkConfig.MarkMode.Text) 0 else 1
                             adapter?.also {
-                                it.seNewData(contentFunList)
+                                it.seNewData(contentFunList, curPos)
                             }
+                            binding.rvPanel.canAutoSelected = false
+                            binding.rvPanel.smoothScrollToPosition(curPos)
                         }
                     }
                 }
@@ -510,7 +518,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                     pickImageLauncher.launch(mime)
                 }
                 REQ_PICK_ICON -> {
-                    pickIconLauncher.launch(arrayOf(mime))
+                    pickIconLauncher.launch(mime)
                 }
             }
         }
