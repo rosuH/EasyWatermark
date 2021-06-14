@@ -107,7 +107,7 @@ dependencies {
     testImplementation("androidx.test:core:1.3.0")
     testImplementation("org.mockito:mockito-core:+")
     androidTestImplementation("org.mockito:mockito-android:+")
-    androidTestImplementation("org.robolectric:robolectric:4.4")
+    androidTestImplementation("org.robolectric:robolectric:4.5.1")
     androidTestImplementation("androidx.test:rules:1.3.0")
     androidTestImplementation("androidx.test:runner:1.3.0")
     androidTestImplementation("org.hamcrest:hamcrest-library:2.2")
