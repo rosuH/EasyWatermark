@@ -11,12 +11,7 @@ import me.rosuh.easywatermark.utils.VibrateHelper
 
 abstract class BasePBFragment : BaseBindFragment<FragemntBasePbBinding>() {
 
-    private lateinit var vibrateHelper: VibrateHelper
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        vibrateHelper = VibrateHelper.init(requireContext())
-    }
+    private val vibrateHelper: VibrateHelper by lazy { VibrateHelper.get() }
 
     override fun bindView(
         layoutInflater: LayoutInflater,
@@ -28,7 +23,7 @@ abstract class BasePBFragment : BaseBindFragment<FragemntBasePbBinding>() {
             value = formatValue(shareViewModel.config.value)
             addOnChangeListener { slider, value, fromUser ->
                 if (fromUser) {
-                    vibrateHelper.doVibrate(1L, 1)
+                    vibrateHelper.doVibrate(this)
                 }
                 doOnChange(slider, value, fromUser)
             }

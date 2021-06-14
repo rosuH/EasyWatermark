@@ -171,6 +171,9 @@ class AboutActivity : AppCompatActivity() {
             Bitmap.CompressFormat.JPEG -> "JPG"
             Bitmap.CompressFormat.PNG -> "PNG"
             Bitmap.CompressFormat.WEBP -> "WEBP"
+            else -> {
+                "WEBP"
+            }
         }
         val value = if (config.outputFormat == Bitmap.CompressFormat.JPEG) {
             " ${config.compressLevel}%"

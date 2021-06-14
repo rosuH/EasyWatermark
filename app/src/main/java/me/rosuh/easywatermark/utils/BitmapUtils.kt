@@ -6,21 +6,79 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
-import androidx.exifinterface.media.ExifInterface
 import android.net.Uri
 import android.util.Log
+import androidx.exifinterface.media.ExifInterface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
+import java.io.InputStream
 import kotlin.math.roundToInt
 
-
-@Throws(FileNotFoundException::class, OutOfMemoryError::class)
-@Synchronized
-suspend fun decodeBitmapFromUri(resolver: ContentResolver, uri: Uri): Bitmap? =
+suspend fun decodeBitmapWithExif(
+    inputStream: InputStream,
+    options: BitmapFactory.Options? = null,
+    scale: FloatArray = FloatArray(2) { 1f }
+): Result<Bitmap> =
     withContext(Dispatchers.IO) {
-        resolver.openInputStream(uri).use {
-            return@use BitmapFactory.decodeStream(it)
+        val bitmap = BitmapFactory.decodeStream(inputStream, null, options)
+            ?: return@withContext Result.failure(null, "-1", "Generate Bitmap failed.")
+        if (options != null) {
+            scale[0] = options.inSampleSize.toFloat()
+            scale[1] = options.inSampleSize.toFloat()
+        }
+        val exif = if (android.os.Build.VERSION.SDK_INT > android.os.Build.VERSION_CODES.N) {
+            try {
+                ExifInterface(inputStream)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return@withContext Result.success(bitmap)
+            }
+        } else {
+            // do not support api lower 24
+            return@withContext Result.success(bitmap)
+        }
+
+        val orientation: Int = exif.getAttributeInt(
+            ExifInterface.TAG_ORIENTATION,
+            ExifInterface.ORIENTATION_UNDEFINED
+        )
+
+        val matrix = Matrix()
+        when (orientation) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+            ExifInterface.ORIENTATION_UNDEFINED, ExifInterface.ORIENTATION_NORMAL -> {
+                // do not need to rotate bitmap
+                return@withContext Result.success(bitmap)
+            }
+            else -> {
+            }
+        }
+
+        val rotatedBitmap = Bitmap.createBitmap(
+            bitmap,
+            0,
+            0,
+            bitmap.width,
+            bitmap.height,
+            matrix,
+            false
+        )
+        if (rotatedBitmap != bitmap && !bitmap.isRecycled) {
+            bitmap.recycle()
+        }
+        return@withContext Result.success(rotatedBitmap)
+    }
+
+suspend fun decodeBitmapFromUri(resolver: ContentResolver, uri: Uri): Result<Bitmap> =
+    withContext(Dispatchers.IO) {
+        resolver.openInputStream(uri).use { inputStream ->
+            if (inputStream == null) {
+                return@withContext Result.failure(null, "-1", "Open input stream failed.")
+            }
+            return@withContext decodeBitmapWithExif(inputStream)
         }
     }
 
@@ -30,7 +88,7 @@ suspend fun decodeSampledBitmapFromResource(
     reqWidth: Int,
     reqHeight: Int,
     scale: FloatArray = FloatArray(2) { 1f }
-): Bitmap? = withContext(Dispatchers.IO) {
+): Result<Bitmap> = withContext(Dispatchers.IO) {
     try {
         val options = BitmapFactory.Options()
         options.inJustDecodeBounds = true
@@ -38,69 +96,26 @@ suspend fun decodeSampledBitmapFromResource(
         resolver.openInputStream(uri).use { `is` ->
             BitmapFactory.decodeStream(`is`, null, options)
         }
-
         // 2. Calculate inSampleSize
         options.inSampleSize = calculateInSampleSizeAccurate(options, reqWidth, reqHeight)
         // 3. Decode bitmap with inSampleSize set
         options.inJustDecodeBounds = false
-
-        // fixme pls make the code more elegant >_<
-        val rawBitmap = resolver.openInputStream(uri).use { inputStream ->
-            BitmapFactory.decodeStream(inputStream, null, options)
-        }
-
-        scale[0] = options.inSampleSize.toFloat()
-        scale[1] = options.inSampleSize.toFloat()
         resolver.openInputStream(uri).use { inputStream ->
             if (inputStream == null) {
-                return@withContext rawBitmap
+                return@withContext Result.failure(null, "-1", "Open input stream failed.")
             }
-            val exif =
-                if (android.os.Build.VERSION.SDK_INT > android.os.Build.VERSION_CODES.N) {
-                    ExifInterface(inputStream)
-                } else {
-                    // do not support api lower 24
-                    return@withContext rawBitmap
-                }
-            val orientation: Int = exif.getAttributeInt(
-                ExifInterface.TAG_ORIENTATION,
-                ExifInterface.ORIENTATION_UNDEFINED
-            )
-
-            val matrix = Matrix()
-            when (orientation) {
-                ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
-                ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
-                ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
-                ExifInterface.ORIENTATION_UNDEFINED, ExifInterface.ORIENTATION_NORMAL -> {
-                    // do not need to rotate bitmap
-                    return@withContext rawBitmap
-                }
-                else -> {
-                }
-            }
-
-            val rotatedBitmap = Bitmap.createBitmap(
-                rawBitmap!!,
-                0,
-                0,
-                rawBitmap.width,
-                rawBitmap.height,
-                matrix,
-                false
-            )
-            if (rotatedBitmap != rawBitmap && !rawBitmap.isRecycled) {
-                rawBitmap.recycle()
-            }
-            return@withContext rotatedBitmap
+            return@withContext decodeBitmapWithExif(inputStream, options, scale)
         }
     } catch (fne: FileNotFoundException) {
-        return@withContext null
+        return@withContext Result.failure(null, "-1", fne.message)
     } catch (oom: OutOfMemoryError) {
         Log.i(this::class.simpleName, "Decoding sampled bitmap from resource throw oom")
-        return@withContext null
+        return@withContext Result.failure(
+            null,
+            "-1",
+            "Decoding sampled bitmap from resource throw oom"
+        )
     }
-    // First decode with inJustDecodeBounds=true to check dimensions
 }
 
 fun calculateInSampleSizeAccurate(

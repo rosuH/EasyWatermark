@@ -8,7 +8,7 @@ plugins {
     id("com.android.application")
     id("kotlin-android")
     id("kotlin-parcelize")
-    id("name.remal.check-dependency-updates") version "1.2.2"
+    id("com.github.ben-manes.versions")
 }
 
 android {
@@ -38,7 +38,7 @@ android {
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "coroutines.pro","proguard-rules.pro"
+                "coroutines.pro", "proguard-rules.pro"
             )
         }
     }
@@ -79,40 +79,39 @@ android {
 tasks.withType<KotlinCompile> {
     kotlinOptions {
         jvmTarget = "1.8"
-        useIR = true
     }
 }
 
 dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
-    implementation(Libs.kotlin)
-    implementation(Libs.appcompat)
-    implementation(Libs.compressor)
-    implementation(Libs.materialAboutLibrary)
-    implementation(Libs.material)
-    implementation(Libs.fragmentKtx)
-    implementation(Libs.fragment)
-    implementation(Libs.activityKtx)
-    implementation(Libs.coroutineAndroid)
-    implementation(Libs.coroutineCore)
-    implementation(Libs.lifecycleLiveData)
-    implementation(Libs.lifecycleViewModel)
-    implementation(Libs.colorPickerView)
-    implementation(Libs.viewpager2)
-    implementation(Libs.recycleView)
-    implementation(Libs.constraintLayout)
-    implementation(Libs.coreKtx)
-    implementation(Libs.exif)
-    implementation(Libs.palette)
-    testImplementation(TestLibs.junit)
-    testImplementation(TestLibs.androidXTest)
-    testImplementation(TestLibs.mock)
-    androidTestImplementation(TestLibs.mockAndroid)
-    androidTestImplementation(TestLibs.robolectric)
-    androidTestImplementation(TestLibs.testRules)
-    androidTestImplementation(TestLibs.testRunner)
-    androidTestImplementation(TestLibs.hamcrest)
-    androidTestImplementation(TestLibs.espresso)
-    androidTestImplementation(TestLibs.uiautomator)
-    androidTestImplementation(TestLibs.junitExt)
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:${Versions.kotlin}")
+    implementation("androidx.appcompat:appcompat:1.4.0-alpha02")
+    implementation("id.zelory:compressor:3.0.1")
+    implementation("com.github.daniel-stoneuk:material-about-library:3.1.2")
+    implementation("com.google.android.material:material:1.3.0")
+    implementation("androidx.fragment:fragment-ktx:1.4.0-alpha02")
+    implementation("androidx.activity:activity-ktx:1.3.0-beta01")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.3.1")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.3.1")
+    implementation("com.github.skydoves:colorpickerview:2.2.3")
+    implementation("androidx.viewpager2:viewpager2:1.0.0")
+    implementation("androidx.recyclerview:recyclerview:1.2.1")
+    implementation("androidx.constraintlayout:constraintlayout:2.1.0-beta02")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.5.10")
+    implementation("androidx.exifinterface:exifinterface:1.3.2")
+    implementation("androidx.palette:palette-ktx:1.0.0")
+
+    testImplementation("junit:junit:4.12")
+    testImplementation("androidx.test:core:1.3.0")
+    testImplementation("org.mockito:mockito-core:+")
+    androidTestImplementation("org.mockito:mockito-android:+")
+    androidTestImplementation("org.robolectric:robolectric:4.4")
+    androidTestImplementation("androidx.test:rules:1.3.0")
+    androidTestImplementation("androidx.test:runner:1.3.0")
+    androidTestImplementation("org.hamcrest:hamcrest-library:2.2")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.3.0")
+    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.2.0")
+    androidTestImplementation("androidx.test.ext:junit:1.0.0")
 }

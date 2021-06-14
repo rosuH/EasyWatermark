@@ -27,5 +27,6 @@ fun Paint.applyConfig(
     style = config?.textStyle ?: Paint.Style.FILL
     isAntiAlias = true
     isDither = true
+    textAlign = Paint.Align.CENTER
     return this
 }

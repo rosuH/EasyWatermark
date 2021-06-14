@@ -1,11 +1,9 @@
 package me.rosuh.easywatermark.ui
 
-import android.Manifest
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.ContentValues
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -15,8 +13,6 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.*
 import id.zelory.compressor.Compressor
@@ -32,6 +28,7 @@ import me.rosuh.easywatermark.model.UserConfig
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.repo.UserConfigRepo
 import me.rosuh.easywatermark.utils.FileUtils.Companion.outPutFolderName
+import me.rosuh.easywatermark.utils.Result
 import me.rosuh.easywatermark.utils.decodeBitmapFromUri
 import me.rosuh.easywatermark.utils.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.widget.WaterMarkImageView
@@ -61,9 +58,9 @@ class MainViewModel : ViewModel() {
         class Size(v: Any?) : TipsStatus(values = v)
     }
 
-    private val _saveState: MutableLiveData<State> = MutableLiveData()
+    val result: MutableLiveData<Result<*>> = MutableLiveData()
 
-    val saveState: LiveData<State> = Transformations.map(_saveState) { it }
+    val saveState: MutableLiveData<State> = MutableLiveData()
 
     val config: MutableLiveData<WaterMarkConfig> by lazy {
         MutableLiveData<WaterMarkConfig>(WaterMarkConfig.pull())
@@ -76,67 +73,34 @@ class MainViewModel : ViewModel() {
     private val repo = UserConfigRepo
     private val userConfig: MutableLiveData<UserConfig> = repo.userConfig
 
-    fun isPermissionGrated(activity: Activity): Boolean {
-        val readGranted =
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(
-                activity,
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED
-
-        val writeGranted =
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(
-                activity,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED
-
-        return readGranted && writeGranted
-    }
-
-    /**
-     * 申请权限
-     */
-    fun requestPermission(activity: Activity) {
-        ActivityCompat.requestPermissions(
-            activity,
-            arrayOf(
-                Manifest.permission.READ_EXTERNAL_STORAGE,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
-            ),
-            MainActivity.REQ_CODE_REQ_WRITE_PERMISSION
-        )
-    }
-
     fun saveImage(activity: Activity) {
-        if (!isPermissionGrated(activity)) {
-            requestPermission(activity)
-            return
-        }
         viewModelScope.launch {
             if (config.value?.uri?.toString().isNullOrEmpty()) {
-                _saveState.postValue(State.Error.apply {
+                saveState.postValue(State.Error.apply {
                     msg = activity.getString(R.string.error_not_img)
                 })
                 return@launch
             }
-            _saveState.postValue(State.Saving)
+            saveState.postValue(State.Saving)
             try {
-                val outputUri =
-                    generateImage(activity, config.value?.uri ?: Uri.parse(""))
-                if (outputUri?.toString().isNullOrEmpty()) {
-                    throw FileNotFoundException()
+                val rect = generateImage(activity, config.value?.uri ?: Uri.parse(""))
+                if (rect.isFailure() || rect.data == null) {
+                    result.postValue(rect)
+                    return@launch
                 }
+                val outputUri = rect.data!!
                 val intent = Intent(Intent.ACTION_VIEW)
                 intent.setDataAndType(outputUri, "image/*")
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 activity.startActivity(intent)
-                _saveState.postValue(State.SaveOk)
+                saveState.postValue(State.SaveOk)
             } catch (fne: FileNotFoundException) {
                 fne.printStackTrace()
-                _saveState.postValue(State.Error.apply {
+                saveState.postValue(State.Error.apply {
                     msg = activity.getString(R.string.error_file_not_found)
                 })
             } catch (oom: OutOfMemoryError) {
-                _saveState.postValue(State.OOMError.apply {
+                saveState.postValue(State.OOMError.apply {
                     msg = activity.getString(R.string.error_save_oom)
                 })
             }
@@ -144,53 +108,57 @@ class MainViewModel : ViewModel() {
     }
 
     fun shareImage(activity: Activity) {
-        if (!isPermissionGrated(activity)) {
-            requestPermission(activity)
-            return
-        }
         viewModelScope.launch {
             if (config.value?.uri?.toString().isNullOrEmpty()) {
-                _saveState.postValue(State.Error.apply {
+                saveState.postValue(State.Error.apply {
                     msg = activity.getString(R.string.error_not_img)
                 })
                 return@launch
             }
             try {
-                _saveState.postValue(State.Sharing)
-                val outputUri =
-                    generateImage(activity, config.value?.uri ?: Uri.parse(""))
-                if (outputUri?.toString().isNullOrEmpty()) {
-                    _saveState.postValue(State.Error.apply {
-                        msg = activity.getString(R.string.error_share_uri_is_null)
-                    })
+                saveState.postValue(State.Sharing)
+                val rect = generateImage(activity, config.value?.uri ?: Uri.parse(""))
+                if (rect.isFailure() || rect.data == null) {
+                    result.postValue(rect)
                     return@launch
                 }
+                val outputUri = rect.data!!
                 val intent = Intent(Intent.ACTION_SEND)
                 intent.type = "image/*"
                 intent.putExtra(Intent.EXTRA_STREAM, outputUri)
                 activity.startActivity(intent)
-                _saveState.postValue(State.ShareOk)
+                saveState.postValue(State.ShareOk)
             } catch (fne: FileNotFoundException) {
                 fne.printStackTrace()
-                _saveState.postValue(State.Error.apply {
+                saveState.postValue(State.Error.apply {
                     msg = activity.getString(R.string.error_file_not_found)
                 })
             } catch (oom: OutOfMemoryError) {
-                _saveState.postValue(State.OOMError)
+                saveState.postValue(State.OOMError)
             }
-
         }
     }
 
     @Throws(FileNotFoundException::class, OutOfMemoryError::class)
-    private suspend fun generateImage(activity: Activity, uri: Uri): Uri? =
+    private suspend fun generateImage(activity: Activity, uri: Uri): Result<Uri> =
         withContext(Dispatchers.IO) {
             val resolver = activity.contentResolver
-            val mutableBitmap =
-                decodeBitmapFromUri(resolver, uri)?.copy(Bitmap.Config.ARGB_8888, true)
-                    ?: return@withContext null
+            val rect = decodeBitmapFromUri(resolver, uri)
+            if (rect.isFailure()) {
+                return@withContext Result.extendMsg(rect)
+            }
+            val mutableBitmap = rect.data?.copy(Bitmap.Config.ARGB_8888, true)
+                ?: return@withContext Result.failure(
+                    null,
+                    code = "-1",
+                    message = "Copy bitmap from uri failed."
+                )
             if (config.value == null) {
-                return@withContext null
+                return@withContext Result.failure(
+                    null,
+                    code = "-1",
+                    message = "config.value == null"
+                )
             }
             val canvas = Canvas(mutableBitmap)
             val tmpConfig = config.value!!
@@ -209,12 +177,20 @@ class MainViewModel : ViewModel() {
                     )
                 }
                 WaterMarkConfig.MarkMode.Image -> {
-                    val iconBitmap = decodeSampledBitmapFromResource(
+                    val iconBitmapRect = decodeSampledBitmapFromResource(
                         resolver,
                         tmpConfig.iconUri,
                         mutableBitmap.width,
                         mutableBitmap.height
-                    ) ?: return@withContext null
+                    )
+                    if (iconBitmapRect.isFailure() || iconBitmapRect.data == null) {
+                        return@withContext Result.failure(
+                            null,
+                            code = "-1",
+                            message = "decodeSampledBitmapFromResource == null"
+                        )
+                    }
+                    val iconBitmap = iconBitmapRect.data!!
                     WaterMarkImageView.buildIconBitmapShader(
                         iconBitmap,
                         true,
@@ -224,7 +200,11 @@ class MainViewModel : ViewModel() {
                         Dispatchers.IO
                     )
                 }
-                null -> return@withContext null
+                null -> return@withContext Result.failure(
+                    null,
+                    code = "-1",
+                    message = "Unknown markmode"
+                )
             }
             canvas.drawRect(
                 0f, 0f,
@@ -255,13 +235,17 @@ class MainViewModel : ViewModel() {
                 imageDetail.clear()
                 imageDetail.put(MediaStore.Images.Media.IS_PENDING, 0)
                 resolver.update(imageContentUri, imageDetail, null, null)
-                imageContentUri
+                Result.success(imageContentUri)
             } else {
                 // need request write_storage permission
                 // should check Pictures folder exist
                 val picturesFile: File =
                     Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-                        ?: return@withContext null
+                        ?: return@withContext Result.failure(
+                            null,
+                            code = "-1",
+                            message = "Can't get pictures directory."
+                        )
                 if (!picturesFile.exists()) {
                     picturesFile.mkdir()
                 }
@@ -290,7 +274,7 @@ class MainViewModel : ViewModel() {
                         Uri.fromFile(outputFile)
                     )
                 )
-                outputUri
+                Result.success(outputUri)
             }
         }
 
@@ -378,7 +362,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun resetStatus() {
-        _saveState.postValue(State.Ready)
+        saveState.postValue(State.Ready)
     }
 
 
@@ -390,7 +374,7 @@ class MainViewModel : ViewModel() {
     fun compressImg(activity: Activity): Job {
         return viewModelScope.launch(Dispatchers.IO) {
             config.value?.let {
-                _saveState.postValue(State.Compressing)
+                saveState.postValue(State.Compressing)
                 val tmpFile = File.createTempFile("easy_water_mark_", "_compressed")
                 activity.contentResolver.openInputStream(it.uri).use { input ->
                     tmpFile.outputStream().use { output ->
@@ -409,14 +393,14 @@ class MainViewModel : ViewModel() {
                         compressedFile
                     )
                     updateUri(compressedFileUri)
-                    _saveState.postValue(State.CompressOK)
+                    saveState.postValue(State.CompressOK)
                 } catch (ie: IllegalArgumentException) {
-                    _saveState.postValue(State.CompressError.also { error ->
+                    saveState.postValue(State.CompressError.also { error ->
                         error.msg = "Images creates uri failed."
                     })
                 }
             } ?: kotlin.run {
-                _saveState.postValue(State.CompressError.also { it.msg = "Config value is null." })
+                saveState.postValue(State.CompressError.also { it.msg = "Config value is null." })
             }
         }
     }

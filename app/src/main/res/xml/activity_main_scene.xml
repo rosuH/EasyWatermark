@@ -23,14 +23,15 @@
             android:layout_height="wrap_content"
             android:alpha="0.0"
             android:gravity="center"
-            android:scaleX="0.0"
-            android:scaleY="0.0"
+            android:scaleX="1.0"
+            android:scaleY="1.0"
             android:text="@string/tips_pick_image"
             android:textAlignment="center"
             motion:layout_constraintBottom_toBottomOf="parent"
             motion:layout_constraintEnd_toEndOf="parent"
             motion:layout_constraintStart_toStartOf="parent"
             motion:layout_constraintTop_toBottomOf="@id/iv_logo"
+            android:translationY="10dp"
             motion:layout_constraintVertical_bias="0.30" />
 
 
@@ -41,14 +42,15 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:alpha="0.0"
-            android:scaleX="0.0"
-            android:scaleY="0.0"
+            android:scaleX="1.0"
+            android:scaleY="1.0"
             android:src="@drawable/ic_picker_image"
             motion:layout_constraintBottom_toBottomOf="parent"
             motion:layout_constraintEnd_toEndOf="@id/tv_tips_pick"
             motion:layout_constraintStart_toStartOf="@id/tv_tips_pick"
             motion:layout_constraintTop_toBottomOf="@id/tv_tips_pick"
             android:visibility="invisible"
+            android:translationY="5dp"
             motion:layout_constraintVertical_bias="0" />
 
         <Constraint
@@ -107,7 +109,7 @@
         <Constraint
             android:id="@+id/rv_panel"
             android:layout_width="match_parent"
-            android:layout_height="72dp"
+            android:layout_height="wrap_content"
             android:background="@color/colorSecondary"
             android:visibility="invisible"
             motion:layout_constraintBottom_toTopOf="@id/tb_tool_bar"
@@ -116,7 +118,7 @@
         <Constraint
             android:id="@+id/fc_fun_detail"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="wrap_content"
             android:visibility="invisible"
             motion:layout_constraintBottom_toTopOf="@id/rv_panel"
             motion:layout_constraintEnd_toEndOf="parent"
@@ -131,7 +133,7 @@
             android:alpha="1.0"
             android:scaleX="1.0"
             android:scaleY="1.0"
-            android:src="@mipmap/ic_log_transparent"
+            android:src="@drawable/ic_log_transparent"
             motion:layout_constraintBottom_toBottomOf="parent"
             motion:layout_constraintEnd_toEndOf="parent"
             motion:layout_constraintStart_toStartOf="parent"
@@ -154,6 +156,7 @@
             motion:layout_constraintEnd_toEndOf="parent"
             motion:layout_constraintStart_toStartOf="parent"
             motion:layout_constraintTop_toBottomOf="@id/iv_logo"
+            android:translationY="0dp"
             motion:layout_constraintVertical_bias="0.3" />
 
         <Constraint
@@ -170,6 +173,7 @@
             motion:layout_constraintEnd_toEndOf="@id/tv_tips_pick"
             motion:layout_constraintStart_toStartOf="@id/tv_tips_pick"
             motion:layout_constraintTop_toBottomOf="@id/tv_tips_pick"
+            android:translationY="0dp"
             motion:layout_constraintVertical_bias="0" />
 
         <Constraint
@@ -215,7 +219,7 @@
         <Constraint
             android:id="@+id/rv_panel"
             android:layout_width="match_parent"
-            android:layout_height="72dp"
+            android:layout_height="wrap_content"
             android:background="@color/colorSecondary"
             android:visibility="invisible"
             motion:layout_constraintBottom_toTopOf="@id/tb_tool_bar"
@@ -240,7 +244,7 @@
             android:alpha="0"
             android:scaleX="1.0"
             android:scaleY="1.0"
-            android:src="@mipmap/ic_log_transparent"
+            android:src="@drawable/ic_log_transparent"
             android:visibility="invisible"
             motion:layout_constraintBottom_toBottomOf="parent"
             motion:layout_constraintEnd_toEndOf="parent"
@@ -342,7 +346,7 @@
         <Constraint
             android:id="@+id/rv_panel"
             android:layout_width="match_parent"
-            android:layout_height="72dp"
+            android:layout_height="wrap_content"
             android:background="@color/colorSecondary"
             android:visibility="visible"
             motion:layout_constraintBottom_toTopOf="@id/tb_tool_bar"
@@ -363,8 +367,26 @@
         motion:constraintSetEnd="@id/launch_end"
         motion:constraintSetStart="@+id/launch_start"
         motion:autoTransition="animateToEnd"
-        motion:duration="1500"
-        motion:motionInterpolator="easeInOut" />
+        motion:duration="500"
+        motion:motionInterpolator="easeInOut">
+        <KeyFrameSet>
+            <KeyAttribute
+                android:alpha="0.5"
+                motion:framePosition="35"
+                motion:motionTarget="@+id/iv_logo" />
+            <KeyAttribute
+                android:scaleX="1"
+                motion:framePosition="50"
+                motion:motionTarget="@+id/iv_logo" />
+            <KeyAttribute
+                motion:framePosition="60"
+                motion:motionTarget="@+id/iv_logo" />
+            <KeyAttribute
+                android:scaleY="1"
+                motion:framePosition="50"
+                motion:motionTarget="@+id/iv_logo" />
+        </KeyFrameSet>
+    </Transition>
 
     <Transition
         android:id="@+id/transition_open_image"

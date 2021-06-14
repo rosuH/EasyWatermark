@@ -26,11 +26,9 @@ import androidx.palette.graphics.Palette
 import androidx.recyclerview.widget.LinearSnapHelper
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.adapter.FragmentStateAdapter
-import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.ObsoleteCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
@@ -113,9 +111,11 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
         )
     }
 
+    private val funcAdapter by lazy { FuncPanelAdapter(ArrayList(contentFunList)) }
+
     private lateinit var snapHelper: LinearSnapHelper
 
-    private lateinit var vibrateHelper: VibrateHelper
+    private val vibrateHelper: VibrateHelper by lazy { VibrateHelper.get() }
 
     override fun initViewBinding(): ActivityMainBinding {
         return ActivityMainBinding.inflate(layoutInflater)
@@ -129,7 +129,6 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                 setReorderingAllowed(true)
             }
         }
-        vibrateHelper = VibrateHelper.init(this)
         initView()
         initObserver()
         registerResultCallback()
@@ -214,7 +213,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
             }
         })
 
-        viewModel.tipsStatus.observe(this, { tips ->
+        viewModel.tipsStatus.observe(this) { tips ->
             when (tips) {
                 is MainViewModel.TipsStatus.None -> {
                     binding.tvDataTips.apply {
@@ -234,9 +233,9 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                     }
                 }
             }
-        })
+        }
 
-        viewModel.saveState.observe(this, { state ->
+        viewModel.saveState.observe(this) { state ->
             when (state) {
                 MainViewModel.State.SaveOk -> {
                     Toast.makeText(this, getString(R.string.tips_save_ok), Toast.LENGTH_SHORT)
@@ -259,7 +258,11 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                     viewModel.resetStatus()
                 }
             }
-        })
+        }
+
+        viewModel.result.observe(this) {
+            Toast.makeText(this, it.message, Toast.LENGTH_SHORT).show()
+        }
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -305,11 +308,13 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
         }
         // pick image button
         binding.ivPickerTips.setOnClickListener {
-            performFileSearch(REQ_CODE_PICK_IMAGE)
+            preCheckStoragePermission {
+                performFileSearch(REQ_CODE_PICK_IMAGE)
+            }
         }
         // functional panel in recyclerView
         binding.rvPanel.apply {
-            adapter = FuncPanelAdapter(ArrayList(contentFunList))
+            adapter = funcAdapter
             layoutManager = CenterLayoutManager(this@MainActivity, RecyclerView.HORIZONTAL, false)
 
             snapHelper = LinearSnapHelper().also {
@@ -321,6 +326,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                 if (snapView == v) {
                     val item = (this.adapter as FuncPanelAdapter).dataSet[pos]
                     handleFuncItem(item)
+                    funcAdapter.selectedPos = pos
                 } else {
                     smoothScrollToPosition(pos)
                 }
@@ -333,32 +339,39 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
             }
 
             addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                private var debounceTs = 0L
                 override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                     super.onScrollStateChanged(recyclerView, newState)
                     val snapView = snapHelper.findSnapView(binding.rvPanel.layoutManager)
                     when (newState) {
                         RecyclerView.SCROLL_STATE_IDLE -> {
-                            if (snapView == null || !canAutoSelected) {
+                            if (snapView == null
+                                || !canAutoSelected
+                                || System.currentTimeMillis() - debounceTs < 120
+                            ) {
                                 canAutoSelected = true
                                 return
                             }
+                            debounceTs = System.currentTimeMillis()
                             val pos = binding.rvPanel.getChildLayoutPosition(snapView)
-                            (recyclerView.adapter as? FuncPanelAdapter)?.dataSet?.get(pos)
-                                ?.let { handleFuncItem(it) }
+                            funcAdapter.selectedPos = pos
+                            handleFuncItem(funcAdapter.dataSet[pos])
+                            vibrateHelper.doVibrate(snapView)
                         }
                     }
                 }
 
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                     super.onScrolled(recyclerView, dx, dy)
-                    if (!isTouching) {
+                    if (recyclerView.scrollState != RecyclerView.SCROLL_STATE_DRAGGING) {
                         return
                     }
                     val snapView = snapHelper.findSnapView(binding.rvPanel.layoutManager) ?: return
-                    val detailX =
+                    val dX =
                         abs(binding.fcFunDetail.width / 2 - (snapView.left + snapView.right) / 2)
-                    if (detailX <= 3) {
-                        vibrateHelper.doVibrate()
+
+                    if (dX <= 1) {
+                        vibrateHelper.doVibrate(snapView)
                     }
                 }
             })
@@ -371,25 +384,30 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                         return
                     }
                     hideDetailPanel()
-                    binding.rvPanel.smoothScrollToPosition(0)
                     val adapter = (binding.rvPanel.adapter as? FuncPanelAdapter)
                     when (tab.position) {
                         1 -> {
+                            binding.rvPanel.smoothScrollToPosition(0)
                             adapter?.also {
-                                it.seNewData(styleFunList)
+                                it.seNewData(styleFunList, 0)
                                 handleFuncItem(it.dataSet[0])
                             }
                         }
                         2 -> {
+                            binding.rvPanel.smoothScrollToPosition(0)
                             adapter?.also {
-                                it.seNewData(layoutFunList)
+                                it.seNewData(layoutFunList, 0)
                                 handleFuncItem(it.dataSet[0])
                             }
                         }
                         else -> {
+                            val curPos =
+                                if (binding.ivPhoto.config?.markMode == WaterMarkConfig.MarkMode.Text) 0 else 1
                             adapter?.also {
-                                it.seNewData(contentFunList)
+                                it.seNewData(contentFunList, curPos)
                             }
+                            binding.rvPanel.canAutoSelected = false
+                            binding.rvPanel.smoothScrollToPosition(curPos)
                         }
                     }
                 }
@@ -434,7 +452,9 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                 EditTextBSDialogFragment.safetyShow(supportFragmentManager)
             }
             FuncTitleModel.FuncType.Icon -> {
-                performFileSearch(REQ_PICK_ICON)
+                preCheckStoragePermission {
+                    performFileSearch(REQ_PICK_ICON)
+                }
             }
             FuncTitleModel.FuncType.Color -> {
                 ColorFragment.replaceShow(this, binding.fcFunDetail.id)
@@ -472,7 +492,9 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
         }
 
         R.id.action_pick -> {
-            performFileSearch(REQ_CODE_PICK_IMAGE)
+            preCheckStoragePermission {
+                performFileSearch(REQ_CODE_PICK_IMAGE)
+            }
             true
         }
 
@@ -488,12 +510,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
     /**
      * Fires an intent to spin up the "file chooser" UI and select an image.
      */
-    fun performFileSearch(requestCode: Int) {
-        if (!viewModel.isPermissionGrated(this)) {
-            viewModel.requestPermission(this)
-            return
-        }
-        // FIXME: 2021/2/19 should test in low version devices.
+    private fun performFileSearch(requestCode: Int) {
         val mime = "image/*"
         val result = kotlin.runCatching {
             when (requestCode) {
@@ -581,8 +598,8 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
      */
     private fun takePersistableUriPermission(uri: Uri) {
         try {
-            val takeFlags: Int = intent.flags and
-                    (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            val takeFlags: Int =
+                (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
             contentResolver.takePersistableUriPermission(uri, takeFlags)
         } catch (e: Exception) {
             e.printStackTrace()
@@ -596,11 +613,6 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
         override fun getItemCount(): Int = fragmentArray.size
 
         override fun createFragment(position: Int): Fragment = fragmentArray[position]
-    }
-
-    private fun initFragments(vp: ViewPager2, pos: Int, defaultFragment: Fragment): Fragment {
-        val tag = "android:switcher:" + vp.id + ":" + pos
-        return supportFragmentManager.findFragmentByTag(tag) ?: defaultFragment
     }
 
     override fun onBackPressed() {
@@ -626,10 +638,8 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
     }
 
     private fun setTransition(startState: Int, endState: Int) {
-        scope.launch {
+        binding.root.post {
             binding.clRoot.setTransition(startState, endState)
-            binding.clRoot.setTransitionDuration(550)
-            delay(16)
             binding.clRoot.transitionToEnd()
         }
     }

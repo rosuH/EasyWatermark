@@ -13,7 +13,7 @@
         android:id="@+id/iv_logo"
         android:layout_width="180dp"
         android:layout_height="180dp"
-        android:src="@mipmap/ic_log_transparent"
+        android:src="@drawable/ic_log_transparent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -90,7 +90,7 @@
         android:background="@drawable/bg_tips_text"
         android:padding="5dp"
         android:visibility="invisible"
-        app:layout_constraintBottom_toBottomOf="@id/iv_photo"
+        app:layout_constraintBottom_toTopOf="@id/fc_fun_detail"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         tools:text="@string/hint_tips_alpha_100" />
@@ -145,7 +145,7 @@
     <me.rosuh.easywatermark.widget.TouchSensitiveRv
         android:id="@+id/rv_panel"
         android:layout_width="match_parent"
-        android:layout_height="72dp"
+        android:layout_height="wrap_content"
         android:background="@color/colorSecondary"
         android:clipChildren="false"
         android:clipToPadding="false"
