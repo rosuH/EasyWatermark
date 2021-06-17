@@ -616,7 +616,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
     }
 
     override fun onBackPressed() {
-        if (binding.clRoot.currentState == R.id.launch_end) {
+        if (binding.clRoot.currentState != R.id.open_image_start) {
             super.onBackPressed()
             return
         }
