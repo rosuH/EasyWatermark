@@ -75,4 +75,10 @@
     <string name="tips_content_size_performance">Je größer das Bild ist, desto rechenintensiver wird die Bearbeitung sein.</string>
     <string name="dev_comment">Jede hinreichend fortschrittliche Technologie ist von Magie nicht zu unterscheiden.</string>
     <string name="error_share_uri_is_null">Die Uri der Ausgabe ist leer. Bitte ein Feedback an die Entwickler senden. Danke</string>
+    <string name="text_paint_fill">Füllung</string>
+    <string name="text_paint_stroke">Strich</string>
+    <string name="text_typeface_normal">Normal</string>
+    <string name="text_typeface_bold">Fett</string>
+    <string name="text_typeface_italic">Kursiv</string>
+    <string name="text_typeface_bold_italic">Fett und Kursiv</string>
 </resources>

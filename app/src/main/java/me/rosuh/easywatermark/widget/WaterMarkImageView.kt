@@ -297,7 +297,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             textPaint: Paint,
             coroutineContext: CoroutineContext
         ): BitmapShader = withContext(coroutineContext) {
-            val showDebugRect = BuildConfig.DEBUG && true
+            val showDebugRect = BuildConfig.DEBUG && false
             val textWidth = textBounds.width().toFloat().coerceAtLeast(1f)
             val textHeight = textBounds.height().toFloat().coerceAtLeast(1f)
 

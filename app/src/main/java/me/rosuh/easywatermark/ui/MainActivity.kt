@@ -17,15 +17,12 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.commit
 import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import androidx.palette.graphics.Palette
 import androidx.recyclerview.widget.LinearSnapHelper
 import androidx.recyclerview.widget.RecyclerView
-import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.ObsoleteCoroutinesApi
@@ -77,6 +74,11 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                 FuncTitleModel.FuncType.TextSize,
                 getString(R.string.title_text_size),
                 R.drawable.ic_func_size
+            ),
+            FuncTitleModel(
+                FuncTitleModel.FuncType.TextStyle,
+                getString(R.string.title_text_style),
+                R.drawable.ic_func_typeface
             ),
             FuncTitleModel(
                 FuncTitleModel.FuncType.Color,
@@ -279,8 +281,8 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                     // auto scroll to correct x-position
                     binding.rvPanel.post {
                         // disable scroll listener
-                        binding.rvPanel.canAutoSelected = false
-                        binding.rvPanel.smoothScrollToPosition(0)
+//                        binding.rvPanel.canAutoSelected = false
+//                        binding.rvPanel.smoothScrollToPosition(0)
                     }
                 }
             }
@@ -406,8 +408,8 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                             adapter?.also {
                                 it.seNewData(contentFunList, curPos)
                             }
-                            binding.rvPanel.canAutoSelected = false
-                            binding.rvPanel.smoothScrollToPosition(curPos)
+//                            binding.rvPanel.canAutoSelected = false
+//                            binding.rvPanel.smoothScrollToPosition(curPos)
                         }
                     }
                 }
@@ -421,11 +423,8 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
 
     private fun hideDetailPanel() {
         commitWithAnimation {
-            fragmentsTagList.forEach {
-                val f = supportFragmentManager.findFragmentByTag(it)
-                if (f != null) {
-                    remove(f)
-                }
+            supportFragmentManager.fragments.forEach {
+                remove(it)
             }
         }
     }
@@ -435,15 +434,6 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
             palette.darkMutedSwatch?.rgb ?: ContextCompat.getColor(this, R.color.colorSecondary)
         binding.ivPhoto.setBackgroundColor(color)
     }
-
-    private val fragmentsTagList = listOf<String>(
-        ColorFragment.TAG,
-        AlphaPbFragment.TAG,
-        DegreePbFragment.TAG,
-        VerticalPbFragment.TAG,
-        HorizonPbFragment.TAG,
-        TextSizePbFragment.TAG
-    )
 
     private fun handleFuncItem(item: FuncTitleModel) {
         Log.i("handleFuncItem", "item = $item")
@@ -466,7 +456,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                 DegreePbFragment.replaceShow(this, binding.fcFunDetail.id)
             }
             FuncTitleModel.FuncType.TextStyle -> {
-
+                TextStyleFragment.replaceShow(this, binding.fcFunDetail.id)
             }
             FuncTitleModel.FuncType.Vertical -> {
                 VerticalPbFragment.replaceShow(this, binding.fcFunDetail.id)
@@ -572,6 +562,9 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                 getString(R.string.tips_do_not_choose_image),
                 Toast.LENGTH_SHORT
             ).show()
+            if (requestCode == REQ_PICK_ICON) {
+                manuallySelectedItem(0)
+            }
             return
         }
         when (requestCode) {
@@ -593,6 +586,12 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
         }
     }
 
+    private fun manuallySelectedItem(pos: Int) {
+        binding.rvPanel.canAutoSelected = false
+        funcAdapter.selectedPos = pos
+        binding.rvPanel.smoothScrollToPosition(pos)
+    }
+
     /**
      * Try to get the permission without timeout.
      */
@@ -604,15 +603,6 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
-    }
-
-    private class ControlPanelPagerAdapter(
-        fa: FragmentActivity,
-        var fragmentArray: Array<Fragment>
-    ) : FragmentStateAdapter(fa) {
-        override fun getItemCount(): Int = fragmentArray.size
-
-        override fun createFragment(position: Int): Fragment = fragmentArray[position]
     }
 
     override fun onBackPressed() {
@@ -627,6 +617,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                 R.string.tips_confirm_dialog
             ) { _, _ ->
                 setTransition(R.id.launch_start, R.id.launch_end)
+                resetView()
             }
             .setPositiveButton(
                 R.string.dialog_cancel_exist_confirm
@@ -635,6 +626,10 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
             }
             .setCancelable(false)
             .show()
+    }
+
+    private fun resetView() {
+        hideDetailPanel()
     }
 
     private fun setTransition(startState: Int, endState: Int) {

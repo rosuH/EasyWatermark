@@ -3,10 +3,10 @@ package me.rosuh.easywatermark.ui.panel
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import android.widget.SeekBar
-import android.widget.TextView
+import android.widget.EdgeEffect
 import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.skydoves.colorpickerview.ColorEnvelope
 import com.skydoves.colorpickerview.ColorPickerDialog
 import com.skydoves.colorpickerview.listeners.ColorEnvelopeListener
@@ -15,8 +15,8 @@ import me.rosuh.easywatermark.adapter.ColorPreviewAdapter
 import me.rosuh.easywatermark.base.BaseBindFragment
 import me.rosuh.easywatermark.databinding.FragmentColorBinding
 import me.rosuh.easywatermark.ktx.commitWithAnimation
-import me.rosuh.easywatermark.utils.DetectedPerformanceSeekBarListener
 import me.rosuh.easywatermark.utils.onItemClick
+import me.rosuh.easywatermark.widget.utils.SimpleOvserScrollEdgeEffect
 
 class ColorFragment : BaseBindFragment<FragmentColorBinding>() {
 
@@ -54,27 +54,6 @@ class ColorFragment : BaseBindFragment<FragmentColorBinding>() {
     ): FragmentColorBinding {
         val b = FragmentColorBinding.inflate(layoutInflater, container, false)
 
-        val tvAlpha = b.tvTipsAlpha.apply {
-            text = "${getAlphaValue()}%"
-        }
-        val sbAlpha = b.sbAlpha.apply {
-            progress = getAlphaValue()
-            setOnSeekBarChangeListener(object :
-                DetectedPerformanceSeekBarListener(
-                    config
-                ) {
-            }.apply {
-                inTimeAction = { _: SeekBar?, p: Int, _: Boolean ->
-                    tvAlpha.text = "${p}%"
-                }
-                postAction = { _: SeekBar?, p: Int, fromUser: Boolean ->
-                    if (fromUser) {
-                        shareViewModel.updateAlpha((p.toFloat() / 100 * 255).toInt())
-                    }
-                }
-            })
-        }
-
         val savedColor = shareViewModel.config.value?.textColor ?: Color.WHITE
         val colorArrayList = buildColorList(savedColor)
 
@@ -94,29 +73,13 @@ class ColorFragment : BaseBindFragment<FragmentColorBinding>() {
                     it.updateSelectedColor(color)
                 }
             }
-        }
-        initObserver(sbAlpha, tvAlpha)
-
-        return b
-    }
-
-    private fun initObserver(
-        sbAlpha: SeekBar,
-        tvAlpha: TextView
-    ) {
-        shareViewModel.config.observe(viewLifecycleOwner, {
-            with(it.alpha) {
-                val intAlpha =
-                    (this.toFloat() / 255 * 100).toInt().coerceAtLeast(0).coerceAtMost(100)
-                sbAlpha.progress = intAlpha
-                tvAlpha.text = "${intAlpha}%"
+            edgeEffectFactory = object : RecyclerView.EdgeEffectFactory() {
+                override fun createEdgeEffect(view: RecyclerView, direction: Int): EdgeEffect {
+                    return SimpleOvserScrollEdgeEffect(this@apply, direction, context)
+                }
             }
-        })
-    }
-
-    private fun getAlphaValue(): Int {
-        return ((shareViewModel.config.value?.alpha ?: 255).toFloat() / 255 * 100).toInt()
-            .coerceAtLeast(0).coerceAtMost(100)
+        }
+        return b
     }
 
     private fun showColorPickerDialog(adapter: ColorPreviewAdapter) {

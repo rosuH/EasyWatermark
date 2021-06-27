@@ -83,4 +83,10 @@
     <string name="dialog_cancel_exist_confirm">Cancelar</string>
     <string name="dialog_content_exist_confirm">Descartar a edição?</string>
     <string name="dialog_out_put_title">Formato de saída e qualidade</string>
-    </resources>
+    <string name="text_paint_fill">Preencher</string>
+    <string name="text_paint_stroke">Traço</string>
+    <string name="text_typeface_normal">Normal</string>
+    <string name="text_typeface_bold">Negrito</string>
+    <string name="text_typeface_italic">Itálico</string>
+    <string name="text_typeface_bold_italic">Negrito Itálico</string>
+</resources>

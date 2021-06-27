@@ -24,6 +24,8 @@ import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ktx.applyConfig
 import me.rosuh.easywatermark.ktx.formatDate
+import me.rosuh.easywatermark.model.TextPaintStyle
+import me.rosuh.easywatermark.model.TextTypeface
 import me.rosuh.easywatermark.model.UserConfig
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.repo.UserConfigRepo
@@ -89,9 +91,11 @@ class MainViewModel : ViewModel() {
                     return@launch
                 }
                 val outputUri = rect.data!!
-                val intent = Intent(Intent.ACTION_VIEW)
-                intent.setDataAndType(outputUri, "image/*")
-                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(outputUri, "image/*")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
                 activity.startActivity(intent)
                 saveState.postValue(State.SaveOk)
             } catch (fne: FileNotFoundException) {
@@ -123,9 +127,11 @@ class MainViewModel : ViewModel() {
                     return@launch
                 }
                 val outputUri = rect.data!!
-                val intent = Intent(Intent.ACTION_SEND)
-                intent.type = "image/*"
-                intent.putExtra(Intent.EXTRA_STREAM, outputUri)
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "image/*"
+                    putExtra(Intent.EXTRA_STREAM, outputUri)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
                 activity.startActivity(intent)
                 saveState.postValue(State.ShareOk)
             } catch (fne: FileNotFoundException) {
@@ -314,8 +320,13 @@ class MainViewModel : ViewModel() {
         forceRefresh()
     }
 
-    fun updateTextStyle(style: Paint.Style) {
+    fun updateTextStyle(style: TextPaintStyle) {
         config.value?.textStyle = style
+        forceRefresh()
+    }
+
+    fun updateTextTypeface(typeface: TextTypeface) {
+        config.value?.textTypeface = typeface
         forceRefresh()
     }
 

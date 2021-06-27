@@ -86,5 +86,11 @@
     <string name="about_title_options">选项</string>
     <string name="about_title_output">输出格式</string>
     <string name="dialog_out_put_title">格式与质量</string>
+    <string name="text_paint_fill">填充</string>
+    <string name="text_paint_stroke">描边</string>
+    <string name="text_typeface_normal">正常</string>
+    <string name="text_typeface_bold">粗体</string>
+    <string name="text_typeface_italic">斜体</string>
+    <string name="text_typeface_bold_italic">斜体加粗</string>
 
 </resources>

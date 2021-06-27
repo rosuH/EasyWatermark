@@ -92,4 +92,13 @@
     <string name="email_subject" translatable="false">[EasyWaterMark] Crash info</string>
     <string name="open_source_desc_compressor" translatable="false">"Compressor is a lightweight and powerful android image compression library. Compressor will allow you to compress large photos into smaller sized photos with very less or negligible loss in quality of the image. "</string>
     <string name="open_source_desc_gif" translatable="false">Bundled GIFLib via JNI is used to render frames. This way should be more efficient than WebView or Movie classes.</string>
+
+    <!--    -->
+    <string name="text_paint_fill">Fill</string>
+    <string name="text_paint_stroke">Stroke</string>
+    <string name="text_typeface_normal">Normal</string>
+    <string name="text_typeface_bold">Bold</string>
+    <string name="text_typeface_italic">Italic</string>
+    <string name="text_typeface_bold_italic">Bold Italic</string>
+
 </resources>

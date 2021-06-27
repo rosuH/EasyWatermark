@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import me.rosuh.easywatermark.R
+import me.rosuh.easywatermark.base.BaseVideHolder
 import me.rosuh.easywatermark.widget.SelectableImageView
 
 class ColorPreviewAdapter(
@@ -56,7 +57,7 @@ class ColorPreviewAdapter(
         notifyDataSetChanged()
     }
 
-    internal class PreviewHolder(root: View) : RecyclerView.ViewHolder(root) {
+    internal class PreviewHolder(root: View) : BaseVideHolder(root) {
         val siv: SelectableImageView = root.findViewById(R.id.siv_color)
     }
 

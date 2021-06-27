@@ -83,4 +83,10 @@
     <string name="about_title_options">opciones</string>
     <string name="about_title_output">Formato de salida</string>
     <string name="dialog_out_put_title">Formato y calidad de salida</string>
+    <string name="text_paint_fill">Relleno</string>
+    <string name="text_paint_stroke">Trazo</string>
+    <string name="text_typeface_normal">Normal</string>
+    <string name="text_typeface_bold">Negrita</string>
+    <string name="text_typeface_italic">Cursiva</string>
+    <string name="text_typeface_bold_italic">Cursiva negrita</string>
 </resources>
