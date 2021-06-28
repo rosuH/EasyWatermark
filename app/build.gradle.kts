@@ -19,8 +19,8 @@ android {
         applicationId = "me.rosuh.easywatermark"
         minSdkVersion(Apps.minSdk)
         targetSdkVersion(Apps.targetSdk)
-        versionCode = 20000
-        versionName = "2.0.0"
+        versionCode = 20100
+        versionName = "2.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -99,7 +99,7 @@ dependencies {
     implementation("androidx.viewpager2:viewpager2:1.0.0")
     implementation("androidx.recyclerview:recyclerview:1.2.1")
     implementation("androidx.constraintlayout:constraintlayout:2.1.0-beta02")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.5.10")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.5.20")
     implementation("androidx.exifinterface:exifinterface:1.3.2")
     implementation("androidx.palette:palette-ktx:1.0.0")
 

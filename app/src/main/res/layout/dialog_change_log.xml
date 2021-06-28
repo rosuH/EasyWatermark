@@ -35,6 +35,16 @@
             android:layout_margin="16dp"
             android:textColor="@color/text_color_tips"
             tools:text="近期更新了..." />
+
+        <TextView
+            android:id="@+id/tv_go_github"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:paddingTop="36dp"
+            android:paddingBottom="36dp"
+            android:text="@string/dialog_check_out_in_github"
+            android:textColor="@color/colorAccent" />
     </LinearLayout>
 
 

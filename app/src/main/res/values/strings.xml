@@ -67,12 +67,28 @@
     <string name="contributor_info">When the feedback problem is valid and is fixed or a new version is added, your name or email will appear in the update log pop-up window. We will obscure your information and the full name will not appear. \\n If you do not want to appear, please mark: I do not want to.</string>
     <string name="dialog_change_log_title">Changelog</string>
     <string name="dialog_change_log_content">
-        This update brings the following features:\n\n
-         <u><big>New</big></u> \n\n
-         · A new way of interaction, more beautiful and efficiency has been improved, welcome to taste. \n\n
-         · Added output format and quality options, easy to use.
-         <u><big>Fixes</big></u> \n\n
-         · The watermark accuracy has been adjusted, except for some cases, are very accurate.\n\n
+        <![CDATA[
+        <h2 id="new-and-optimized">New and Optimized</h2>
+        <ol>
+        <li>⭐ New text style function!</li>
+        <li>🥳 Optimize text alignment</li>
+        <li>🥳 Optimize text watermark size calculation method, adjust the spacing becomes more flexible</li>
+        <li>🎄 Optimize the interface dynamic effect</li>
+        <li>🎨 Update some icons</li>
+        <li>🔧 Update targetApi to 30</li>
+        <li>🌏 Added Brazilian Portuguese (pt-rBr) translation (thanks to mezysinc)</li>
+        <li>🌏 Added German (de-rDe) translation (thanks to <a href="https://github.com/nuclearfog">nuclearfog</a>)</li>
+        </ol>
+        <h2 id="fixes">Fixes</h2>
+        <ol>
+        <li>item text UI problem in Spanish interface</li>
+        <li>sticker selection screen was repeatedly opened problem</li>
+        <li>wrong orientation of saved images on Samsung devices (#41)</li>
+        <li>unclear intent of sticker selection: adjust to Image Intent</li>
+        <li>wrong display of exit confirmation pop-up window in some scenarios</li>
+        </ol>
+
+]]>
     </string>
     <string name="tips_not_app_can_open_imaegs">No file manager detected.</string>
     <string name="tips_choose_other_file_type">Invalid image</string>
@@ -100,5 +116,6 @@
     <string name="text_typeface_bold">Bold</string>
     <string name="text_typeface_italic">Italic</string>
     <string name="text_typeface_bold_italic">Bold Italic</string>
+    <string name="dialog_check_out_in_github">Check out on Github</string>
 
 </resources>
