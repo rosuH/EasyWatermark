@@ -2,6 +2,7 @@ package me.rosuh.easywatermark.ktx
 
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Typeface
 import me.rosuh.easywatermark.model.WaterMarkConfig
 
 /**
@@ -24,7 +25,9 @@ fun Paint.applyConfig(
     }
     color = config?.textColor ?: Color.RED
     alpha = config?.alpha ?: 128
-    style = config?.textStyle ?: Paint.Style.FILL
+    style = config?.textStyle?.obtainSysStyle() ?: Paint.Style.FILL
+    typeface =
+        Typeface.create(typeface, config?.textTypeface?.obtainSysTypeface() ?: Typeface.NORMAL)
     isAntiAlias = true
     isDither = true
     textAlign = Paint.Align.CENTER

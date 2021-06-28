@@ -3,7 +3,6 @@ package me.rosuh.easywatermark.model
 import android.content.Context.MODE_PRIVATE
 import android.content.SharedPreferences
 import android.graphics.Color
-import android.graphics.Paint
 import android.net.Uri
 import android.os.Build
 import androidx.core.content.edit
@@ -41,7 +40,9 @@ class WaterMarkConfig private constructor() {
             field = value.coerceAtLeast(0f).coerceAtMost(MAX_DEGREE)
         }
 
-    lateinit var textStyle: Paint.Style
+    lateinit var textStyle: TextPaintStyle
+
+    lateinit var textTypeface: TextTypeface
 
     lateinit var iconUri: Uri
 
@@ -66,14 +67,8 @@ class WaterMarkConfig private constructor() {
             horizonGapPercent = getInt(SP_KEY_HORIZON_GAP, 30)
             verticalGapPercent = getInt(SP_KEY_VERTICAL_GAP, 30)
             degree = getFloat(SP_KEY_DEGREE, 315f)
-            textStyle = when (getInt(SP_KEY_TEXT_STYLE, 0)) {
-                0 -> {
-                    Paint.Style.FILL
-                }
-                else -> {
-                    Paint.Style.STROKE
-                }
-            }
+            textStyle = TextPaintStyle.obtainSealedClass(getInt(SP_KEY_TEXT_STYLE, 0))
+            textTypeface = TextTypeface.obtainSealedClass(getInt(SP_KEY_TEXT_TYPEFACE, 0))
             markMode = when (getInt(SP_KEY_MODE, 0)) {
                 0 -> {
                     MarkMode.Text
@@ -103,16 +98,8 @@ class WaterMarkConfig private constructor() {
             putInt(SP_KEY_HORIZON_GAP, horizonGapPercent)
             putInt(SP_KEY_VERTICAL_GAP, verticalGapPercent)
             putFloat(SP_KEY_DEGREE, degree)
-            putInt(
-                SP_KEY_TEXT_STYLE, when (textStyle) {
-                    Paint.Style.FILL -> {
-                        0
-                    }
-                    else -> {
-                        1
-                    }
-                }
-            )
+            putInt(SP_KEY_TEXT_STYLE, textStyle.serializeKey())
+            putInt(SP_KEY_TEXT_TYPEFACE, textTypeface.serializeKey())
             putInt(
                 SP_KEY_MODE, when (markMode) {
                     MarkMode.Text -> 0
@@ -167,6 +154,7 @@ class WaterMarkConfig private constructor() {
         const val SP_KEY_TEXT_SIZE = "${SP_NAME}_key_text_size"
         const val SP_KEY_TEXT_COLOR = "${SP_NAME}_key_text_color"
         const val SP_KEY_TEXT_STYLE = "${SP_NAME}_key_text_style"
+        const val SP_KEY_TEXT_TYPEFACE = "${SP_NAME}_key_text_typeface"
         const val SP_KEY_ALPHA = "${SP_NAME}_key_alpha"
         const val SP_KEY_HORIZON_GAP = "${SP_NAME}_key_horizon_gap"
         const val SP_KEY_VERTICAL_GAP = "${SP_NAME}_key_vertical_gap"

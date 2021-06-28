@@ -67,12 +67,25 @@
     <string name="contributor_info">Se o feedback com problema for válido e corrigido ou uma nova versão for adicionada, seu nome ou e-mail aparecerá na janela pop-up do registro de modificações. Editaremos informações sobre você, seu nome completo não aparecerá. \\n Se você não quiser aparecer, por favor, marque: Não quero aparecer.</string>
     <string name="dialog_change_log_title">Registro de modificações</string>
     <string name="dialog_change_log_content">
-        Esta atualização traz as seguintes modificações:\n\n
-         <u><big>Novidades</big></u> \n\n
-         · Uma nova forma de interação, mais elegante e também eficiência foi melhorada, bem-vindo a testar. \n\n
-         · Foi adicionado formato de saída e opções de qualidade, fácil de usar.
-         <u><big>Correções</big></u> \n\n
-         · A precisão da marca d\'água foi ajustada, agora são muito mais precisas, exceto em alguns casos.\n\n
+        <![CDATA[
+            <h2 id="novo-e-otimizado">Novo e otimizado</h2>
+            <ol>
+            <li>⭐ Novo recurso de estilo de texto!</li>
+            <li>🥳 Otimizar o alinhamento do texto</li>
+            <li>🥳 Otimizar o método de cálculo do tamanho da marca d&#39;água do texto, ajustar o espaçamento torna-se mais flexível</li>
+            <li>🎄 Otimizar o efeito dinâmico da interface</li>
+            <li>🎨 Atualizar alguns ícones</li>
+            <li>🔧 Atualizar targetApi para 30</li>
+            <li>🌏 Acrescentada a tradução do português brasileiro (pt-rBr) (graças ao mezysinc)</li>
+            <li>🌏 Adicionado tradução em alemão (de-rDe) (graças ao <a href="https://github.com/nuclearfog">nuclearfog</a>)</li>
+            <h2 id="corre-es">Correções</h2>
+            <li>item texto UI emissão na interface espanhola</li>
+            <li>A tela de seleção de adesivos foi aberta repetidamente.</li>
+            <li>Orientação errada das imagens salvas nos dispositivos Samsung (#41)</li>
+            <li>questão com intenção pouco clara de seleção de adesivos: ajustar à intenção da imagem</li>
+            <li>emissão com popup de confirmação de saída sendo exibida incorretamente em alguns cenários</li>
+            </ol>
+        ]]>
     </string>
     <string name="tips_not_app_can_open_imaegs">Nenhum gerenciador de arquivos detectado.</string>
     <string name="tips_choose_other_file_type">Imagem inválida</string>
@@ -83,4 +96,12 @@
     <string name="dialog_cancel_exist_confirm">Cancelar</string>
     <string name="dialog_content_exist_confirm">Descartar a edição?</string>
     <string name="dialog_out_put_title">Formato de saída e qualidade</string>
-    </resources>
+    <string name="text_paint_fill">Preencher</string>
+    <string name="text_paint_stroke">Traço</string>
+    <string name="text_typeface_normal">Normal</string>
+    <string name="text_typeface_bold">Negrito</string>
+    <string name="text_typeface_italic">Itálico</string>
+    <string name="text_typeface_bold_italic">Negrito Itálico</string>
+    <string name="dialog_check_out_in_github">Confira no Github</string>
+
+</resources>

@@ -64,12 +64,25 @@
     <string name="contributor_info">Cuando el informe del problema es válido y se arregla o se añade una nueva versión, su nombre o correo electrónico aparecerá en la ventana emergente del registro de actualizaciones. Nosotros podemos ocultar su información y el nombre completo no aparecerá. \\nSi no quieres aparecer, por favor marca: No quiero.</string>
     <string name="dialog_change_log_title">Registro de cambios</string>
     <string name="dialog_change_log_content">
-        Esta actualización aporta las siguientes características:\n\n
-        <u><big>Nuevo</big> </u> \n\n
-         · nueva interacción, más hermosa y más eficiente, bienvenido a probar \n\n
-         · Se han añadido opciones de formato y calidad de salida, fáciles de usar. \n\n
-        <u><big>Reparación</big> </u> \n\n
-         · se ha ajustado la precisión de la marca de agua, excepto en algunos casos, ahora es muy precisa.
+       <![CDATA[
+            <h2 id="nuevo-y-optimizado">Nuevo y optimizado</h2>
+            <ol>
+            <li>⭐ ¡Nueva función de estilo de texto!</li>
+            <li>🥳 Optimizar la alineación del texto</li>
+            <li>🥳 Optimizar el método de cálculo del tamaño de la marca de agua de texto, ajustar el espaciado se vuelve más flexible</li>
+            <li>🎄 Optimizar el efecto dinámico de la interfaz</li>
+            <li>🎨 Actualizar algunos iconos</li>
+            <li>🔧 Actualizar targetApi a 30</li>
+            <li>🌏 Añadida la traducción al portugués brasileño (pt-rBr) (gracias a mezysinc)</li>
+            <li>🌏 Añadida la traducción al alemán (de-rDe) (gracias a <a href="https://github.com/nuclearfog">nuclearfog</a>)</li>
+            <h2 id="arreglos">Arreglos</h2>
+            <li>problema de la interfaz de usuario del texto del artículo en español</li>
+            <li>la pantalla de selección de pegatinas se abrió repetidamente</li>
+            <li>orientación errónea de las imágenes guardadas en los dispositivos Samsung (#41)</li>
+            <li>Problema con la intención poco clara de la selección de pegatinas: ajustar a la intención de la imagen</li>
+            <li>Problema con la ventana emergente de confirmación de salida que se muestra incorrectamente en algunos escenarios</li>
+            </ol>
+       ]]>
     </string>
     <string name="tips_not_app_can_open_imaegs">Parece que no tienes un gestor de archivos instalado</string>
     <string name="tips_choose_other_file_type">Parece que no escogió una imagen</string>
@@ -83,4 +96,12 @@
     <string name="about_title_options">opciones</string>
     <string name="about_title_output">Formato de salida</string>
     <string name="dialog_out_put_title">Formato y calidad de salida</string>
+    <string name="text_paint_fill">Relleno</string>
+    <string name="text_paint_stroke">Trazo</string>
+    <string name="text_typeface_normal">Normal</string>
+    <string name="text_typeface_bold">Negrita</string>
+    <string name="text_typeface_italic">Cursiva</string>
+    <string name="text_typeface_bold_italic">Cursiva negrita</string>
+    <string name="dialog_check_out_in_github">Echa un vistazo a Github</string>
+
 </resources>

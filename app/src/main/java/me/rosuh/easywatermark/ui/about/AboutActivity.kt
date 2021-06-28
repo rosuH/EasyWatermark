@@ -15,6 +15,7 @@ import me.rosuh.easywatermark.databinding.ActivityAboutBinding
 import me.rosuh.easywatermark.ktx.inflate
 import me.rosuh.easywatermark.ktx.openLink
 import me.rosuh.easywatermark.model.UserConfig
+import me.rosuh.easywatermark.ui.dialog.ChangeLogDialogFragment
 
 
 class AboutActivity : AppCompatActivity() {
@@ -77,7 +78,7 @@ class AboutActivity : AppCompatActivity() {
                 openLink("https://github.com/rosuH/EasyWatermark/issues/new")
             }
             tvChangeLog.setOnClickListener {
-                openLink("https://github.com/rosuH/EasyWatermark/releases/")
+                ChangeLogDialogFragment.safetyShow(supportFragmentManager, true)
             }
             tvOpenSource.setOnClickListener {
                 kotlin.runCatching {

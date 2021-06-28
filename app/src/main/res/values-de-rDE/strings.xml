@@ -75,4 +75,32 @@
     <string name="tips_content_size_performance">Je größer das Bild ist, desto rechenintensiver wird die Bearbeitung sein.</string>
     <string name="dev_comment">Jede hinreichend fortschrittliche Technologie ist von Magie nicht zu unterscheiden.</string>
     <string name="error_share_uri_is_null">Die Uri der Ausgabe ist leer. Bitte ein Feedback an die Entwickler senden. Danke</string>
+    <string name="text_paint_fill">Füllung</string>
+    <string name="text_paint_stroke">Strich</string>
+    <string name="text_typeface_normal">Normal</string>
+    <string name="text_typeface_bold">Fett</string>
+    <string name="text_typeface_italic">Kursiv</string>
+    <string name="text_typeface_bold_italic">Fett und Kursiv</string>
+    <string name="dialog_change_log_content"><![CDATA[
+        <h2 id="neu-und-optimiert">Neu und optimiert</h2>
+        <ol>
+        <li>⭐ Neue Textstil-Funktion!</li>
+        <li>🥳 Textausrichtung optimieren</li>
+        <li>🥳 Optimieren Sie die Berechnungsmethode für die Größe des Textwasserzeichens, passen Sie die Abstände flexibler an.</li>
+        <li>🎄 Optimieren Sie die dynamische Wirkung der Schnittstelle</li>
+        <li>🎨 Einige Symbole aktualisieren</li>
+        <li>🔧 targetApi auf 30 aktualisieren</li>
+        <li>🌏 Übersetzung ins brasilianische Portugiesisch (pt-rBr) hinzugefügt (Dank an mezysinc)</li>
+        <li>🌏 Deutsche (de-rDe) Übersetzung hinzugefügt (Dank an <a href="https://github.com/nuclearfog">nuclearfog</a>)</li>
+        <h2 id="korrekturen">Korrekturen</h2>
+        <li>Elementtext UI-Problem in der spanischen Benutzeroberfläche</li>
+        <li>Der Aufkleber-Auswahlbildschirm wurde wiederholt geöffnet.</li>
+        <li>Falsche Ausrichtung der gespeicherten Bilder auf Samsung-Geräten (#41)</li>
+        <li>Problem mit unklarer Absicht der Aufkleberauswahl: Anpassen an Image Intent</li>
+        <li>ein Problem mit einem Popup zur Beendigungsbestätigung, das in einigen Szenarien nicht korrekt angezeigt wird</li>
+        </ol>
+
+    ]]></string>
+    <string name="dialog_check_out_in_github">Schau mal auf Github</string>
+
 </resources>

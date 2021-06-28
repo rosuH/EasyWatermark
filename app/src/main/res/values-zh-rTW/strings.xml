@@ -69,12 +69,25 @@
     <string name="water_mark_mode_image">圖標</string>
     <string name="water_mark_mode_text">文字</string>
     <string name="dialog_change_log_content">
-        本次更新帶來瞭如下特性：
-        <u><big>新增</big></u>\n\n
-        · 全新的交互方式，更加美觀且效率也有所提高，歡迎品鑑。\n\n
-        · 添加了輸出格式和質量選項。\n\n
-        <u><big>修复</big></u>\n\n
-        · 對水印精度有所調整，除了個別情況外，都非常精確了。
+        <![CDATA[
+            <h2 id="-">新增與優化</h2>
+            <ol>
+            <li>⭐新增文字風格功能！</li>
+            <li>🥳優化文字對齊方式</li>
+            <li>🥳優化文字水印大小計算方式，調節間距變得更加靈活</li>
+            <li>🎄優化界面動效</li>
+            <li>🎨更新部分 icon</li>
+            <li>🔧更新 targetApi 到 30</li>
+            <li>🌏新增巴西葡萄牙（pt-rBr）翻譯（感謝 mezysinc）</li>
+            <li>🌏新增德語（de-rDe）翻譯（感謝 <a href="https://github.com/nuclearfog">nuclearfog</a>)</li>
+            <h2 id="-">修復</h2>
+            <li>西文界面下 item 文字 UI 問題</li>
+            <li>貼紙選擇界面被重複打開問題</li>
+            <li>三星設備上保存圖片方向錯誤問題（#41）</li>
+            <li>選擇貼紙意圖不明確問題：調節為 Image Intent</li>
+            <li>退出確認彈窗某些場景下錯誤顯示的問題</li>
+            </ol>
+        ]]>
     </string>
     <string name="dev_comment">任何先进的科技，初看皆与魔法无异</string>
     <string name="dialog_content_exist_confirm">丟棄修改？</string>
@@ -83,4 +96,11 @@
     <string name="about_title_options">选项</string>
     <string name="about_title_output">输出格式</string>
     <string name="dialog_out_put_title">格式与质量</string>
+    <string name="text_paint_fill">填滿</string>
+    <string name="text_paint_stroke">描邊</string>
+    <string name="text_typeface_normal">正常</string>
+    <string name="text_typeface_bold">粗體</string>
+    <string name="text_typeface_italic">斜體</string>
+    <string name="text_typeface_bold_italic">斜體加粗</string>
+    <string name="dialog_check_out_in_github">在 Github 上查看</string>
 </resources>
