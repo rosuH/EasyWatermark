@@ -67,20 +67,20 @@
        <![CDATA[
             <h2 id="nuevo-y-optimizado">Nuevo y optimizado</h2>
             <ol>
-            <li>⭐ ¡Nueva función de estilo de texto!</li>
-            <li>🥳 Optimizar la alineación del texto</li>
-            <li>🥳 Optimizar el método de cálculo del tamaño de la marca de agua de texto, ajustar el espaciado se vuelve más flexible</li>
-            <li>🎄 Optimizar el efecto dinámico de la interfaz</li>
-            <li>🎨 Actualizar algunos iconos</li>
-            <li>🔧 Actualizar targetApi a 30</li>
-            <li>🌏 Añadida la traducción al portugués brasileño (pt-rBr) (gracias a mezysinc)</li>
-            <li>🌏 Añadida la traducción al alemán (de-rDe) (gracias a <a href="https://github.com/nuclearfog">nuclearfog</a>)</li>
+            <li>&nbsp;&nbsp;⭐¡Nueva función de estilo de texto!</li>
+            <li>&nbsp;&nbsp;🥳 Optimizar la alineación del texto</li>
+            <li>&nbsp;&nbsp;🥳 Optimizar el método de cálculo del tamaño de la marca de agua de texto, ajustar el espaciado se vuelve más flexible</li>
+            <li>&nbsp;&nbsp;🎄 Optimizar el efecto dinámico de la interfaz</li>
+            <li>&nbsp;&nbsp;🎨 Actualizar algunos iconos</li>
+            <li>&nbsp;&nbsp;🔧 Actualizar targetApi a 30</li>
+            <li>&nbsp;&nbsp;🌏 Añadida la traducción al portugués brasileño (pt-rBr) (gracias a mezysinc)</li>
+            <li>&nbsp;&nbsp;🌏 Añadida la traducción al alemán (de-rDe) (gracias a <a href="https://github.com/nuclearfog">nuclearfog</a>)</li>
             <h2 id="arreglos">Arreglos</h2>
-            <li>problema de la interfaz de usuario del texto del artículo en español</li>
-            <li>la pantalla de selección de pegatinas se abrió repetidamente</li>
-            <li>orientación errónea de las imágenes guardadas en los dispositivos Samsung (#41)</li>
-            <li>Problema con la intención poco clara de la selección de pegatinas: ajustar a la intención de la imagen</li>
-            <li>Problema con la ventana emergente de confirmación de salida que se muestra incorrectamente en algunos escenarios</li>
+            <li>&nbsp;&nbsp;problema de la interfaz de usuario del texto del artículo en español</li>
+            <li>&nbsp;&nbsp;la pantalla de selección de pegatinas se abrió repetidamente</li>
+            <li>&nbsp;&nbsp;orientación errónea de las imágenes guardadas en los dispositivos Samsung (#41)</li>
+            <li>&nbsp;&nbsp;Problema con la intención poco clara de la selección de pegatinas: ajustar a la intención de la imagen</li>
+            <li>&nbsp;&nbsp;Problema con la ventana emergente de confirmación de salida que se muestra incorrectamente en algunos escenarios</li>
             </ol>
        ]]>
     </string>

@@ -71,22 +71,22 @@
         <![CDATA[
         <h2>新增与优化</h2>
         <ol>
-        <li>⭐新增文字风格功能！</li>
-        <li>🥳优化文字对齐方式</li>
-        <li>🥳优化文字水印大小计算方式，调节间距变得更加灵活</li>
-        <li>🎄优化界面动效</li>
-        <li>🎨更新部分 icon</li>
-        <li>🔧更新 targetApi 到 30</li>
-        <li>🌏新增巴西葡萄牙（pt-rBr）翻译（感谢 mezysinc）</li>
-        <li>🌏新增德语（de-rDe）翻译（感谢 <a href="https://github.com/nuclearfog">nuclearfog</a>)</li>
+        <li>&nbsp;&nbsp;⭐新增文字风格功能！</li>
+        <li>&nbsp;&nbsp;🥳优化文字对齐方式</li>
+        <li>&nbsp;&nbsp;🥳优化文字水印大小计算方式，调节间距变得更加灵活</li>
+        <li>&nbsp;&nbsp;🎄优化界面动效</li>
+        <li>&nbsp;&nbsp;🎨更新部分 icon</li>
+        <li>&nbsp;&nbsp;🔧更新 targetApi 到 30</li>
+        <li>&nbsp;&nbsp;🌏新增巴西葡萄牙（pt-rBr）翻译（感谢 mezysinc）</li>
+        <li>&nbsp;&nbsp;🌏新增德语（de-rDe）翻译（感谢 <a href="https://github.com/nuclearfog">nuclearfog</a>)</li>
         </ol>
         <h2>修复</h2>
         <ol>
-        <li>西文界面下 item 文字 UI 问题</li>
-        <li>贴纸选择界面被重复打开问题</li>
-        <li>三星设备上保存图片方向错误问题（#41）</li>
-        <li>选择贴纸意图不明确问题：调节为 Image Intent</li>
-        <li>退出确认弹窗某些场景下错误显示的问题</li>
+        <li>&nbsp;&nbsp;西文界面下 item 文字 UI 问题</li>
+        <li>&nbsp;&nbsp;贴纸选择界面被重复打开问题</li>
+        <li>&nbsp;&nbsp;三星设备上保存图片方向错误问题（#41）</li>
+        <li>&nbsp;&nbsp;选择贴纸意图不明确问题：调节为 Image Intent</li>
+        <li>&nbsp;&nbsp;退出确认弹窗某些场景下错误显示的问题</li>
         </ol>
 ]]>
 
