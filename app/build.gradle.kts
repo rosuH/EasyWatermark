@@ -104,7 +104,7 @@ dependencies {
     implementation("androidx.palette:palette-ktx:1.0.0")
 
     testImplementation("junit:junit:4.12")
-    testImplementation("androidx.test:core:1.3.0")
+    testImplementation("androidx.test:core:1.4.0")
     testImplementation("org.mockito:mockito-core:+")
     androidTestImplementation("org.mockito:mockito-android:+")
     androidTestImplementation("org.robolectric:robolectric:4.4")
