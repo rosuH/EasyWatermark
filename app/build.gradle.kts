@@ -90,7 +90,7 @@ dependencies {
     implementation("com.github.daniel-stoneuk:material-about-library:3.1.2")
     implementation("com.google.android.material:material:1.3.0")
     implementation("androidx.fragment:fragment-ktx:1.4.0-alpha02")
-    implementation("androidx.activity:activity-ktx:1.3.0-beta01")
+    implementation("androidx.activity:activity-ktx:1.3.0-rc01")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.3.1")
