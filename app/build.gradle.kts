@@ -99,7 +99,7 @@ dependencies {
     implementation("androidx.viewpager2:viewpager2:1.0.0")
     implementation("androidx.recyclerview:recyclerview:1.2.1")
     implementation("androidx.constraintlayout:constraintlayout:2.1.0-beta02")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.5.20")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.5.21")
     implementation("androidx.exifinterface:exifinterface:1.3.2")
     implementation("androidx.palette:palette-ktx:1.0.0")
 
