@@ -89,7 +89,7 @@ dependencies {
     implementation("id.zelory:compressor:3.0.1")
     implementation("com.github.daniel-stoneuk:material-about-library:3.1.2")
     implementation("com.google.android.material:material:1.3.0")
-    implementation("androidx.fragment:fragment-ktx:1.4.0-alpha02")
+    implementation("androidx.fragment:fragment-ktx:1.4.0-alpha05")
     implementation("androidx.activity:activity-ktx:1.3.0-beta01")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0")
