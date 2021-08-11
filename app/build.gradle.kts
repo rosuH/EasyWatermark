@@ -85,7 +85,7 @@ tasks.withType<KotlinCompile> {
 dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
     implementation("org.jetbrains.kotlin:kotlin-stdlib:${Versions.kotlin}")
-    implementation("androidx.appcompat:appcompat:1.4.0-alpha02")
+    implementation("androidx.appcompat:appcompat:1.4.0-alpha03")
     implementation("id.zelory:compressor:3.0.1")
     implementation("com.github.daniel-stoneuk:material-about-library:3.1.2")
     implementation("com.google.android.material:material:1.4.0")
