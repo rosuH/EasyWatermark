@@ -36,7 +36,7 @@ class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
             findViewById<View>(R.id.ll_save).apply {
                 setOnClickListener {
                     requireActivity().preCheckStoragePermission {
-                        shareViewModel.saveImage(requireActivity())
+                        shareViewModel.saveImage(requireActivity().contentResolver)
                     }
                 }
             }
@@ -56,7 +56,7 @@ class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
             findViewById<View>(R.id.ll_share).apply {
                 setOnClickListener {
                     requireActivity().preCheckStoragePermission {
-                        shareViewModel.shareImage(requireActivity())
+                        shareViewModel.shareImage(requireActivity().contentResolver)
                     }
                 }
             }

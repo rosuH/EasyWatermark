@@ -39,7 +39,7 @@ Securely, easily add a watermark to your sensitive photos.</br>To prevent them f
 > Seriously (pushes up glasses)
 
 - **Security**.
-  - The code is completely open source and uses a loose MIT protocol, you are free to Fork yourself to modify and remove code you think is problematic ;)
+  - The code is completely open source and feel free to FORK your won,  ;)
   - No network requests, no network request permissions, no fear of your photos being compromised. users with API >= 29 don't even need to request any permissions. (28 and below users need to apply for storage permissions to access and store photos)
   - And of course there are no stats, buried points or Device IDs, or even crash reporting (so if you get a crash, please share the crash info with us >_<).
   - We're forgoing the convenient third-party collection SDK and various stats just so you can use it with confidence. 

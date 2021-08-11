@@ -239,14 +239,6 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
 
         viewModel.saveState.observe(this) { state ->
             when (state) {
-                MainViewModel.State.SaveOk -> {
-                    Toast.makeText(this, getString(R.string.tips_save_ok), Toast.LENGTH_SHORT)
-                        .show()
-                }
-                MainViewModel.State.ShareOk -> {
-                    Toast.makeText(this, getString(R.string.tips_share_ok), Toast.LENGTH_SHORT)
-                        .show()
-                }
                 MainViewModel.State.Error -> {
                     Toast.makeText(
                         this,
@@ -263,8 +255,36 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
         }
 
         viewModel.result.observe(this) {
-            Toast.makeText(this, it.message, Toast.LENGTH_SHORT).show()
+            val msg = when (it.code) {
+                MainViewModel.TYPE_ERROR_SAVE_OOM -> getString(R.string.error_save_oom)
+                MainViewModel.TYPE_ERROR_FILE_NOT_FOUND -> getString(R.string.error_file_not_found)
+                MainViewModel.TYPE_ERROR_NOT_IMG -> getString(R.string.error_not_img)
+                else -> it.message
+            }
+            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
         }
+
+        viewModel.saveImageUri.observe(this, { outputUri ->
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(outputUri, "image/*")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+            Toast.makeText(this, getString(R.string.tips_save_ok), Toast.LENGTH_SHORT)
+                .show()
+        })
+
+        viewModel.shareImageUri.observe(this, { outputUri ->
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "image/*"
+                putExtra(Intent.EXTRA_STREAM, outputUri)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+            Toast.makeText(this, getString(R.string.tips_share_image), Toast.LENGTH_SHORT)
+                .show()
+        })
     }
 
     @SuppressLint("ClickableViewAccessibility")
