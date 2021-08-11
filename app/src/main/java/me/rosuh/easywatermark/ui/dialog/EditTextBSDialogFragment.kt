@@ -30,7 +30,7 @@ class EditTextBSDialogFragment : BottomSheetDialogFragment() {
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
             )
             (this as BottomSheetDialog).behavior.apply {
-                peekHeight = 165.dp.toInt()
+                peekHeight = 165.dp
                 isDraggable = false
             }
         }
