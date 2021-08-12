@@ -12,7 +12,7 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.constraintlayout.motion.widget.MotionLayout
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.view.isInvisible
@@ -30,8 +30,6 @@ import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.adapter.FuncPanelAdapter
-import me.rosuh.easywatermark.base.BaseBindingActivity
-import me.rosuh.easywatermark.databinding.ActivityMainBinding
 import me.rosuh.easywatermark.ktx.commitWithAnimation
 import me.rosuh.easywatermark.model.FuncTitleModel
 import me.rosuh.easywatermark.model.WaterMarkConfig
@@ -42,10 +40,11 @@ import me.rosuh.easywatermark.ui.dialog.EditTextBSDialogFragment
 import me.rosuh.easywatermark.ui.dialog.SaveImageBSDialogFragment
 import me.rosuh.easywatermark.ui.panel.*
 import me.rosuh.easywatermark.utils.*
+import me.rosuh.easywatermark.widget.LaunchView
 import kotlin.math.abs
 
 
-class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
+class MainActivity : AppCompatActivity() {
 
     private lateinit var pickImageLauncher: ActivityResultLauncher<String>
     private lateinit var pickIconLauncher: ActivityResultLauncher<String>
@@ -119,13 +118,13 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
 
     private val vibrateHelper: VibrateHelper by lazy { VibrateHelper.get() }
 
-    override fun initViewBinding(): ActivityMainBinding {
-        return ActivityMainBinding.inflate(layoutInflater)
-    }
+    private lateinit var binding: LaunchView
 
     @ObsoleteCoroutinesApi
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        binding = LaunchView(this)
+        setContentView(binding)
         if (savedInstanceState == null) {
             supportFragmentManager.commit {
                 setReorderingAllowed(true)
@@ -203,11 +202,8 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                 return@Observer
             }
             try {
-                if (binding.clRoot.currentState != R.id.open_image_start) {
-                    setTransition(R.id.launch_end, R.id.open_image_start)
-                    binding.ivLogo.stop()
-                }
                 binding.ivPhoto.config = it
+                binding.toEditorMode()
             } catch (se: SecurityException) {
                 se.printStackTrace()
                 // reset the uri because we don't have permission -_-
@@ -290,26 +286,20 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
     @SuppressLint("ClickableViewAccessibility")
     private fun initView() {
         // prepare MotionLayout
-        binding.clRoot.addTransitionListener(object : SimpleTransitionListener() {
-            override fun onTransitionCompleted(p0: MotionLayout?, p1: Int) {
-                if (p1 == R.id.launch_end) {
-                    binding.ivLogo.start()
-                } else {
-                    binding.ivLogo.stop()
-                }
-                if (p1 == R.id.open_image_start) {
-                    // auto scroll to correct x-position
-                    binding.rvPanel.post {
-                        // disable scroll listener
-//                        binding.rvPanel.canAutoSelected = false
-//                        binding.rvPanel.smoothScrollToPosition(0)
+        binding.setListener {
+            onModeChange { oldMode, newMode ->
+                when (newMode) {
+                    LaunchView.ViewMode.Editor -> {
+                        binding.logoView.stop()
+                    }
+                    LaunchView.ViewMode.LaunchMode -> {
+                        binding.logoView.start()
                     }
                 }
             }
-        })
-        setTransition(R.id.launch_start, R.id.launch_end)
+        }
         // setting tool bar
-        binding.myToolbar.apply {
+        binding.toolbar.apply {
             navigationIcon =
                 ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_logo_tool_bar)
             title = null
@@ -329,7 +319,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
             }
         }
         // pick image button
-        binding.ivPickerTips.setOnClickListener {
+        binding.ivSelectedPhotoTips.setOnClickListener {
             preCheckStoragePermission {
                 performFileSearch(REQ_CODE_PICK_IMAGE)
             }
@@ -338,7 +328,6 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
         binding.rvPanel.apply {
             adapter = funcAdapter
             layoutManager = CenterLayoutManager(this@MainActivity, RecyclerView.HORIZONTAL, false)
-
             snapHelper = LinearSnapHelper().also {
                 it.attachToRecyclerView(this)
             }
@@ -352,12 +341,6 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                 } else {
                     smoothScrollToPosition(pos)
                 }
-            }
-
-            post {
-                // center item x-position
-                val padding = (this.width / 2)
-                this.setPadding(padding, 0, padding, 0)
             }
 
             addOnScrollListener(object : RecyclerView.OnScrollListener() {
@@ -390,7 +373,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                     }
                     val snapView = snapHelper.findSnapView(binding.rvPanel.layoutManager) ?: return
                     val dX =
-                        abs(binding.fcFunDetail.width / 2 - (snapView.left + snapView.right) / 2)
+                        abs(binding.fcFunctionDetail.width / 2 - (snapView.left + snapView.right) / 2)
 
                     if (dX <= 1) {
                         vibrateHelper.doVibrate(snapView)
@@ -399,7 +382,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
             })
         }
 
-        binding.tbToolBar.apply {
+        binding.tabLayout.apply {
             addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
                 override fun onTabSelected(tab: TabLayout.Tab?) {
                     if (tab == null) {
@@ -467,25 +450,25 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
                 }
             }
             FuncTitleModel.FuncType.Color -> {
-                ColorFragment.replaceShow(this, binding.fcFunDetail.id)
+                ColorFragment.replaceShow(this, binding.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.Alpha -> {
-                AlphaPbFragment.replaceShow(this, binding.fcFunDetail.id)
+                AlphaPbFragment.replaceShow(this, binding.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.Degree -> {
-                DegreePbFragment.replaceShow(this, binding.fcFunDetail.id)
+                DegreePbFragment.replaceShow(this, binding.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.TextStyle -> {
-                TextStyleFragment.replaceShow(this, binding.fcFunDetail.id)
+                TextStyleFragment.replaceShow(this, binding.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.Vertical -> {
-                VerticalPbFragment.replaceShow(this, binding.fcFunDetail.id)
+                VerticalPbFragment.replaceShow(this, binding.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.Horizon -> {
-                HorizonPbFragment.replaceShow(this, binding.fcFunDetail.id)
+                HorizonPbFragment.replaceShow(this, binding.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.TextSize -> {
-                TextSizePbFragment.replaceShow(this, binding.fcFunDetail.id)
+                TextSizePbFragment.replaceShow(this, binding.fcFunctionDetail.id)
             }
         }
     }
@@ -626,7 +609,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
     }
 
     override fun onBackPressed() {
-        if (binding.clRoot.currentState != R.id.open_image_start) {
+        if (binding.mode == LaunchView.ViewMode.LaunchMode) {
             super.onBackPressed()
             return
         }
@@ -636,7 +619,7 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
             .setNegativeButton(
                 R.string.tips_confirm_dialog
             ) { _, _ ->
-                setTransition(R.id.launch_start, R.id.launch_end)
+                binding.toLaunchMode()
                 resetView()
             }
             .setPositiveButton(
@@ -650,13 +633,6 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
 
     private fun resetView() {
         hideDetailPanel()
-    }
-
-    private fun setTransition(startState: Int, endState: Int) {
-        binding.root.post {
-            binding.clRoot.setTransition(startState, endState)
-            binding.clRoot.transitionToEnd()
-        }
     }
 
     companion object {

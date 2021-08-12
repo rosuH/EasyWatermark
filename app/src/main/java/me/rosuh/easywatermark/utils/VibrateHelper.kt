@@ -7,7 +7,6 @@ class VibrateHelper private constructor() {
 
     private var latestVibration: Long = 0L
     private var cd: Long = 20L
-    private var skipLowVersionDevices: Boolean = true
 
     fun doVibrate(view: View) {
         if (android.os.Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.M) {
@@ -16,7 +15,7 @@ class VibrateHelper private constructor() {
         if (System.currentTimeMillis() - latestVibration <= cd) {
             return
         }
-        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
     }
 
     companion object {
