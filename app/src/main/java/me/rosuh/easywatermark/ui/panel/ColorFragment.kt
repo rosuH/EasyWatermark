@@ -3,10 +3,8 @@ package me.rosuh.easywatermark.ui.panel
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import android.widget.EdgeEffect
 import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.skydoves.colorpickerview.ColorEnvelope
 import com.skydoves.colorpickerview.ColorPickerDialog
 import com.skydoves.colorpickerview.listeners.ColorEnvelopeListener
@@ -16,7 +14,7 @@ import me.rosuh.easywatermark.base.BaseBindFragment
 import me.rosuh.easywatermark.databinding.FragmentColorBinding
 import me.rosuh.easywatermark.ktx.commitWithAnimation
 import me.rosuh.easywatermark.utils.onItemClick
-import me.rosuh.easywatermark.widget.utils.SimpleOvserScrollEdgeEffect
+import me.rosuh.easywatermark.widget.utils.BounceEdgeEffectFactory
 
 class ColorFragment : BaseBindFragment<FragmentColorBinding>() {
 
@@ -73,11 +71,7 @@ class ColorFragment : BaseBindFragment<FragmentColorBinding>() {
                     it.updateSelectedColor(color)
                 }
             }
-            edgeEffectFactory = object : RecyclerView.EdgeEffectFactory() {
-                override fun createEdgeEffect(view: RecyclerView, direction: Int): EdgeEffect {
-                    return SimpleOvserScrollEdgeEffect(this@apply, direction, context)
-                }
-            }
+            edgeEffectFactory = BounceEdgeEffectFactory(context, this)
         }
         return b
     }

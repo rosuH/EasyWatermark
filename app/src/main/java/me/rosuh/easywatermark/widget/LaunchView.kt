@@ -21,6 +21,7 @@ import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ktx.dp
 import me.rosuh.easywatermark.ktx.generateAppearAnimationList
 import me.rosuh.easywatermark.ktx.generateDisappearAnimationList
+import me.rosuh.easywatermark.widget.utils.BounceEdgeEffectFactory
 import kotlin.math.abs
 
 
@@ -187,7 +188,7 @@ class LaunchView : CustomViewGroup {
             setBackgroundColor(ContextCompat.getColor(context, R.color.colorSecondary))
             clipChildren = false
             clipToPadding = false
-
+            edgeEffectFactory = BounceEdgeEffectFactory(context, this)
         }
     }
     //endregion
@@ -266,14 +267,14 @@ class LaunchView : CustomViewGroup {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
         val parentHeight = MeasureSpec.getSize(heightMeasureSpec)
         val parentWidth = MeasureSpec.getSize(widthMeasureSpec)
+        rvPanel.let {
+            it.setPadding(it.measuredWidth / 2, 0, it.measuredWidth / 2, 0)
+        }
         // measure children
         children.forEach {
             if (it != ivPhoto) {
                 measureChildWithMargins(it, widthMeasureSpec, 0, heightMeasureSpec, 0)
             }
-        }
-        rvPanel.let {
-            it.setPadding(it.measuredWidth / 2, 0, it.measuredWidth / 2, 0)
         }
         val heightUsed =
             toolbar.measuredHeightWithMargins + fcFunctionDetail.measuredHeightWithMargins + tabLayout.measuredHeightWithMargins + rvPanel.measuredHeightWithMargins

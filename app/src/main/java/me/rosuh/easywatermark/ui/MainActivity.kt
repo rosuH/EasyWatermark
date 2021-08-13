@@ -287,7 +287,7 @@ class MainActivity : AppCompatActivity() {
     private fun initView() {
         // prepare MotionLayout
         binding.setListener {
-            onModeChange { oldMode, newMode ->
+            onModeChange { _, newMode ->
                 when (newMode) {
                     LaunchView.ViewMode.Editor -> {
                         binding.logoView.stop()
@@ -380,6 +380,12 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             })
+
+            post {
+                canAutoSelected = false
+                scrollToPosition(0)
+                canAutoSelected = true
+            }
         }
 
         binding.tabLayout.apply {
@@ -408,11 +414,8 @@ class MainActivity : AppCompatActivity() {
                         else -> {
                             val curPos =
                                 if (binding.ivPhoto.config?.markMode == WaterMarkConfig.MarkMode.Text) 0 else 1
-                            adapter?.also {
-                                it.seNewData(contentFunList, curPos)
-                            }
-//                            binding.rvPanel.canAutoSelected = false
-//                            binding.rvPanel.smoothScrollToPosition(curPos)
+                            adapter?.seNewData(contentFunList, curPos)
+                            manuallySelectedItem(curPos)
                         }
                     }
                 }
@@ -565,7 +568,7 @@ class MainActivity : AppCompatActivity() {
                 getString(R.string.tips_do_not_choose_image),
                 Toast.LENGTH_SHORT
             ).show()
-            if (requestCode == REQ_PICK_ICON) {
+            if (requestCode == REQ_PICK_ICON && viewModel.config.value?.markMode == WaterMarkConfig.MarkMode.Text) {
                 manuallySelectedItem(0)
             }
             return
@@ -592,7 +595,8 @@ class MainActivity : AppCompatActivity() {
     private fun manuallySelectedItem(pos: Int) {
         binding.rvPanel.canAutoSelected = false
         funcAdapter.selectedPos = pos
-        binding.rvPanel.smoothScrollToPosition(pos)
+        binding.rvPanel.scrollToPosition(pos)
+        binding.rvPanel.canAutoSelected = true
     }
 
     /**

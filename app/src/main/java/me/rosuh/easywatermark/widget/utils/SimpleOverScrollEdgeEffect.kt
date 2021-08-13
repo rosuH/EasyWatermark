@@ -6,7 +6,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.EdgeEffectFactory.DIRECTION_LEFT
 import me.rosuh.easywatermark.base.BaseVideHolder
 
-class SimpleOvserScrollEdgeEffect(
+class SimpleOverScrollEdgeEffect(
     val recyclerView: RecyclerView,
     private val direction: Int,
     val context: Context
@@ -66,7 +66,7 @@ class SimpleOvserScrollEdgeEffect(
         const val TAG = "ChatEdgeEffect"
 
         /** The magnitude of translation distance while the list is over-scrolled. */
-        private const val OVERSCROLL_TRANSLATION_MAGNITUDE = 0.2f
+        private const val OVERSCROLL_TRANSLATION_MAGNITUDE = 0.35f
 
         /** The magnitude of translation distance when the list reaches the edge on fling. */
         private const val FLING_TRANSLATION_MAGNITUDE = 0.5f
