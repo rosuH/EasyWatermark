@@ -3,6 +3,7 @@ package me.rosuh.easywatermark.widget
 import android.content.Context
 import android.util.AttributeSet
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
@@ -11,6 +12,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.children
 import androidx.core.view.isVisible
 import androidx.core.view.setPadding
+import androidx.dynamicanimation.animation.SpringAnimation
+import androidx.dynamicanimation.animation.SpringForce
 import androidx.fragment.app.FragmentContainerView
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.tabs.TabLayout
@@ -18,6 +21,7 @@ import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ktx.dp
 import me.rosuh.easywatermark.ktx.generateAppearAnimationList
 import me.rosuh.easywatermark.ktx.generateDisappearAnimationList
+import kotlin.math.abs
 
 
 /**
@@ -326,6 +330,54 @@ class LaunchView : CustomViewGroup {
         }
         requestLayout()
         launchViewListener?.onModeChange(oldMode, toMode)
+    }
+
+    private var startX = 0f
+    private var startY = 0f
+    private val dragYAnimation = SpringAnimation(this, SpringAnimation.TRANSLATION_Y).apply {
+        spring = SpringForce()
+            .setFinalPosition(0f)
+            .setDampingRatio(SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY)
+            .setStiffness(SpringForce.STIFFNESS_LOW)
+    }
+    private val dragXAnimation = SpringAnimation(this, SpringAnimation.TRANSLATION_X).apply {
+        spring = SpringForce()
+            .setFinalPosition(0f)
+            .setDampingRatio(SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY)
+            .setStiffness(SpringForce.STIFFNESS_LOW)
+    }
+
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        if (mode != ViewMode.LaunchMode) {
+            return super.onTouchEvent(event)
+        }
+        when (event?.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                dragYAnimation.cancel()
+                dragXAnimation.cancel()
+                startX = event.rawX
+                startY = event.rawY
+                return true
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val dx = (event.rawX - startX)
+                val dy = (event.rawY - startY)
+
+                var percentX = (1 - abs(this.translationX) / measuredWidth).coerceAtMost(1f) / 4
+                if (percentX <= 0.2) percentX = 0f
+                var percentY = (1 - abs(this.translationY) / measuredHeight).coerceAtMost(1f) / 4
+                if (percentY <= 0.2) percentY = 0f
+                this.translationX += dx * percentX
+                this.translationY += dy * percentY
+                startY = event.rawY
+                startX = event.rawX
+            }
+            MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_UP -> {
+                dragYAnimation.start()
+                dragXAnimation.start()
+            }
+        }
+        return super.onTouchEvent(event)
     }
     //endregion
 

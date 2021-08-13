@@ -12,9 +12,6 @@ fun View.appearAnimation(): SpringAnimation {
             .setFinalPosition(0f)
             .setDampingRatio(SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY)
             .setStiffness(SpringForce.STIFFNESS_LOW)
-        addUpdateListener { _, value, _ ->
-            this@appearAnimation.isVisible = true
-        }
     }
 }
 
@@ -80,6 +77,9 @@ fun generateAppearAnimationList(
                     view.alpha = 0.1f
                     view.animate()
                         .alpha(1f)
+                        .withStartAction {
+                            view.isVisible = true
+                        }
                         .setDuration(150L)
                         .start()
                 }
@@ -99,6 +99,9 @@ fun generateDisappearAnimationList(
                     view.animate()
                         .alpha(0f)
                         .setDuration(200L)
+                        .withEndAction {
+                            view.isVisible = false
+                        }
                         .start()
                 }
             }
