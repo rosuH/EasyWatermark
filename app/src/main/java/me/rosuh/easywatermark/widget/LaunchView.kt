@@ -226,6 +226,24 @@ class LaunchView : CustomViewGroup {
         }
 
     private var launchViewListener: LaunchViewListener? = null
+
+    private var startX = 0f
+
+    private var startY = 0f
+
+    private val dragYAnimation = SpringAnimation(this, SpringAnimation.TRANSLATION_Y).apply {
+        spring = SpringForce()
+            .setFinalPosition(0f)
+            .setDampingRatio(SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY)
+            .setStiffness(SpringForce.STIFFNESS_LOW)
+    }
+
+    private val dragXAnimation = SpringAnimation(this, SpringAnimation.TRANSLATION_X).apply {
+        spring = SpringForce()
+            .setFinalPosition(0f)
+            .setDampingRatio(SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY)
+            .setStiffness(SpringForce.STIFFNESS_LOW)
+    }
     //endregion
 
     init {
@@ -330,21 +348,6 @@ class LaunchView : CustomViewGroup {
         }
         requestLayout()
         launchViewListener?.onModeChange(oldMode, toMode)
-    }
-
-    private var startX = 0f
-    private var startY = 0f
-    private val dragYAnimation = SpringAnimation(this, SpringAnimation.TRANSLATION_Y).apply {
-        spring = SpringForce()
-            .setFinalPosition(0f)
-            .setDampingRatio(SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY)
-            .setStiffness(SpringForce.STIFFNESS_LOW)
-    }
-    private val dragXAnimation = SpringAnimation(this, SpringAnimation.TRANSLATION_X).apply {
-        spring = SpringForce()
-            .setFinalPosition(0f)
-            .setDampingRatio(SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY)
-            .setStiffness(SpringForce.STIFFNESS_LOW)
     }
 
     override fun onTouchEvent(event: MotionEvent?): Boolean {
