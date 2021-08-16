@@ -96,9 +96,11 @@ class ColoredImageVIew : AppCompatImageView {
 
     fun start() {
         enable = true
+        colorAnimator.start()
     }
 
     fun stop() {
         enable = false
+        colorAnimator.cancel()
     }
 }

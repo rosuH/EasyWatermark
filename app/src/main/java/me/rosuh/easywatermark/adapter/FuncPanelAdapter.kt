@@ -8,7 +8,7 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.base.BaseVideHolder
+import me.rosuh.easywatermark.base.BaseViewHolder
 import me.rosuh.easywatermark.model.FuncTitleModel
 
 class FuncPanelAdapter(
@@ -90,7 +90,7 @@ class FuncPanelAdapter(
         notifyDataSetChanged()
     }
 
-    class FuncTitleHolder(view: View) : BaseVideHolder(view) {
+    class FuncTitleHolder(view: View) : BaseViewHolder(view) {
         val tvTitle: TextView = view.findViewById(R.id.tv_title)
         val ivIcon: ImageView = view.findViewById(R.id.iv_icon)
     }

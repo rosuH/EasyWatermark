@@ -5,7 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.base.BaseVideHolder
+import me.rosuh.easywatermark.base.BaseViewHolder
 
 class DividerAdapter(
     private val dividerSize: Int = 1
@@ -26,5 +26,5 @@ class DividerAdapter(
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {}
 
-    internal class DividerHolder(val root: View) : BaseVideHolder(root)
+    internal class DividerHolder(val root: View) : BaseViewHolder(root)
 }

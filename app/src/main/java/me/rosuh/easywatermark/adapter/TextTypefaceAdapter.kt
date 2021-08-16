@@ -8,7 +8,7 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.base.BaseVideHolder
+import me.rosuh.easywatermark.base.BaseViewHolder
 import me.rosuh.easywatermark.model.TextPaintStyle
 import me.rosuh.easywatermark.model.TextTypeface
 
@@ -95,7 +95,7 @@ class TextTypefaceAdapter(
         notifyItemChanged(selectedPos, "Selected")
     }
 
-    internal class TypefaceHolder(val root: View) : BaseVideHolder(root) {
+    internal class TypefaceHolder(val root: View) : BaseViewHolder(root) {
         val tvPreview: TextView by lazy { root.findViewById(R.id.tv_preview) }
         val tvTitle: TextView? by lazy { root.findViewById(R.id.tv_title) }
     }
