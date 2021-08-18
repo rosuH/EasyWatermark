@@ -65,24 +65,14 @@
     <string name="dialog_change_log_title">Registro de cambios</string>
     <string name="dialog_change_log_content">
        <![CDATA[
-            <h2 id="nuevo-y-optimizado">Nuevo y optimizado</h2>
-            <ol>
-            <li>&nbsp;&nbsp;⭐¡Nueva función de estilo de texto!</li>
-            <li>&nbsp;&nbsp;🥳 Optimizar la alineación del texto</li>
-            <li>&nbsp;&nbsp;🥳 Optimizar el método de cálculo del tamaño de la marca de agua de texto, ajustar el espaciado se vuelve más flexible</li>
-            <li>&nbsp;&nbsp;🎄 Optimizar el efecto dinámico de la interfaz</li>
-            <li>&nbsp;&nbsp;🎨 Actualizar algunos iconos</li>
-            <li>&nbsp;&nbsp;🔧 Actualizar targetApi a 30</li>
-            <li>&nbsp;&nbsp;🌏 Añadida la traducción al portugués brasileño (pt-rBr) (gracias a mezysinc)</li>
-            <li>&nbsp;&nbsp;🌏 Añadida la traducción al alemán (de-rDe) (gracias a <a href="https://github.com/nuclearfog">nuclearfog</a>)</li>
-            <h2 id="arreglos">Arreglos</h2>
-            <li>&nbsp;&nbsp;problema de la interfaz de usuario del texto del artículo en español</li>
-            <li>&nbsp;&nbsp;la pantalla de selección de pegatinas se abrió repetidamente</li>
-            <li>&nbsp;&nbsp;orientación errónea de las imágenes guardadas en los dispositivos Samsung (#41)</li>
-            <li>&nbsp;&nbsp;Problema con la intención poco clara de la selección de pegatinas: ajustar a la intención de la imagen</li>
-            <li>&nbsp;&nbsp;Problema con la ventana emergente de confirmación de salida que se muestra incorrectamente en algunos escenarios</li>
-            </ol>
-       ]]>
+        <h2 id="new-and-optimized">Nuevo y optimizado</h2>
+        <ol>
+        <li>&nbsp;&nbsp;⚡️ Uso de memoria mejorado.</li>
+        <li>&nbsp;&nbsp;🎨 Animación mejorada y efecto táctil..</li>
+        <li>&nbsp;&nbsp;🥳 Pantalla de bienvenida compatible en Android 12.</li>
+        <li>&nbsp;&nbsp;🔧 TargetApi actualizado a 31.</li>
+        </ol>
+]]>
     </string>
     <string name="tips_not_app_can_open_imaegs">Parece que no tienes un gestor de archivos instalado</string>
     <string name="tips_choose_other_file_type">Parece que no escogió una imagen</string>

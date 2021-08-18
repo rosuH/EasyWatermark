@@ -39,27 +39,32 @@ Securely, easily add a watermark to your sensitive photos.</br>To prevent them f
 > Seriously (pushes up glasses)
 
 - **Security**.
-  - The code is completely open source and feel free to FORK your won,  ;)
-  - No network requests, no network request permissions, no fear of your photos being compromised. users with API >= 29 don't even need to request any permissions. (28 and below users need to apply for storage permissions to access and store photos)
-  - And of course there are no stats, buried points or Device IDs, or even crash reporting (so if you get a crash, please share the crash info with us >_<).
-  - We're forgoing the convenient third-party collection SDK and various stats just so you can use it with confidence. 
-  **What's yours is yours**. 
-- **Layout**: support for horizontal and vertical intervals between the watermark, automatically repeat the full picture.
-- **Style**: font color, transparency, size and rotation angle can be adjusted.
-- **Content**: Support text watermark and image watermark.
+  - The code is completely open source and feel free to FORK your won, ;)
+  - Pure offline, no need to worry about your photos being leaked. Users with API >= 29 don't even
+    need to request any permissions. (28 and below users need to approve for storage permissions to
+    access and store photos)
+  - There are no stats, tracking, Device IDs, or even crash reporting (so if you got a crash, please
+    share the crash info with us >_<).
+  - We've given up all third-party tracking SDK and various stats just so you can use it with
+    confidence.
+    **What's yours is yours**.
+- **Layout**: support for horizontal and vertical intervals between the watermark, automatically
+  repeat the full picture.
+- **Style**: font color, font style, transparency, font size, and rotation angle are included.
+- **Content**: Support text watermark and image watermark (or says stickers).
 
 ## Download
 
 Developer-led download channels:
 - [Github Release](https://github.com/rosuH/EasyWatermark/releases): Always stay up to date!
 - [Google Play](https://play.google.com/store/apps/details?id=me.rosuh.easywatermark)
-  - ⚠️Note: this version charges but the code is identical, so if you'd like to buy the author a cup of tea🍵 then go here and download it, otherwise please choose another source :)
+  - 🍺 Noted: the paid version, the same code. Try it if you want to buy me a cup of tea 🍵.
 - [F-Droid](https://f-droid.org/packages/me.rosuh.easywatermark/)
 - [Coolapk](https://www.coolapk.com/apk/272743)
 
 All other channels are not developer-driven, so please screen them carefully before downloading and using them.
 
-## Use
+## How to ?
 You can use it however you want. It is more suitable for situations where you need to submit a photo ID, a hand-held photo ID or a sensitive photo. Example.
 - Various real names in the country, uploading front and back photos of ID cards at every turn, even handheld ID photos.
 - Pre-project previews, samples, copyrighted or simply spoofed images
@@ -74,21 +79,28 @@ You can turn down the transparency, just don't block the key information.
 > Even if it's (probably) useless in the end, at least you can disgust the leaker a bit.
 
 ## UI
-- Designed by renowned UI guru [@tovi](https://www.figma.com/@tovi) (👏🤪)
-  - Anything you think doesn't work well is my UI restore that doesn't work, and has nothing to do with the UI draft. xD
+
+- Designed by [@tovi](https://www.figma.com/@tovi) with ❤️.
+  - Any UI or UX you think doesn't great well is my coding issue, and has nothing to do with the UI
+    draft. xD
   
 > This app was designed by [@tovi](https://www.figma.com/@tovi), so all rights to the UI and related design resources belong to him and may not be used without permission from any person or organization.
 
 ## Credit
+
 - [daniel-stonuk/material-about-library](https://github.com/daniel-stoneuk/material-about-library)
 - [skydoves/ColorPickerView](https://github.com/skydoves/ColorPickerView)
 - [material-components/material-components-android](https://github.com/material-components/material-components-android)
 - [Compressor](https://github.com/zetbaitsu/Compressor/)
-- Sample Photo by Deepak Nautiyal on [Unsplash](https://unsplash.com/s/photos/animals?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText)
+- Sample Photo by Deepak Nautiyal
+  on [Unsplash](https://unsplash.com/s/photos/animals?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText)
 
 ## Feedback and contribution
-We welcome your comments and suggestions in the issues section, or you can contribute your code by submitting a PR directly to us.
-Of course, you can also contact the developer directly via telegram or email and we'll get back to you shortly.
 
-## Privacy policy
-[Privacy policy](https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy.md)
+We welcome your comments and suggestions in the issues section, or you can contribute your code by
+submitting a PR directly to us. Of course, you can also contact the developer directly via telegram
+or email and we'll get back to you shortly.
+
+## [Privacy policy](https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy.md)
+
+If you really need it.

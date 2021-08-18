@@ -69,24 +69,12 @@
     <string name="contributor_info">当反馈的问题有效，并被修复或加入新版本时，您的名字或邮件出现在更新日志弹窗中。我们会对您的信息作遮挡处理，不会出现全称。\n 如果您不愿意出现，请标注：我不愿意。即可</string>
     <string name="dialog_change_log_content">
         <![CDATA[
-        <h2>新增与优化</h2>
+        <h2 id="new-and-optimized">新增与优化</h2>
         <ol>
-        <li>&nbsp;&nbsp;⭐新增文字风格功能！</li>
-        <li>&nbsp;&nbsp;🥳优化文字对齐方式</li>
-        <li>&nbsp;&nbsp;🥳优化文字水印大小计算方式，调节间距变得更加灵活</li>
-        <li>&nbsp;&nbsp;🎄优化界面动效</li>
-        <li>&nbsp;&nbsp;🎨更新部分 icon</li>
-        <li>&nbsp;&nbsp;🔧更新 targetApi 到 30</li>
-        <li>&nbsp;&nbsp;🌏新增巴西葡萄牙（pt-rBr）翻译（感谢 mezysinc）</li>
-        <li>&nbsp;&nbsp;🌏新增德语（de-rDe）翻译（感谢 <a href="https://github.com/nuclearfog">nuclearfog</a>)</li>
-        </ol>
-        <h2>修复</h2>
-        <ol>
-        <li>&nbsp;&nbsp;西文界面下 item 文字 UI 问题</li>
-        <li>&nbsp;&nbsp;贴纸选择界面被重复打开问题</li>
-        <li>&nbsp;&nbsp;三星设备上保存图片方向错误问题（#41）</li>
-        <li>&nbsp;&nbsp;选择贴纸意图不明确问题：调节为 Image Intent</li>
-        <li>&nbsp;&nbsp;退出确认弹窗某些场景下错误显示的问题</li>
+        <li>&nbsp;&nbsp;⚡️ 改进内存的使用.</li>
+        <li>&nbsp;&nbsp;🎨 改进动画和交互.</li>
+        <li>&nbsp;&nbsp;🥳 支持 Android 12 的启动动画.</li>
+        <li>&nbsp;&nbsp;🔧 提升 targetApi 到 31.</li>
         </ol>
 ]]>
 

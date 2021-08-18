@@ -70,24 +70,11 @@
         <![CDATA[
         <h2 id="new-and-optimized">New and Optimized</h2>
         <ol>
-        <li>&nbsp;&nbsp;⭐New text style function!</li>
-        <li>&nbsp;&nbsp;🥳 Optimize text alignment</li>
-        <li>&nbsp;&nbsp;🥳 Optimize text watermark size calculation method, adjust the spacing becomes more flexible</li>
-        <li>&nbsp;&nbsp;🎄 Optimize the interface dynamic effect</li>
-        <li>&nbsp;&nbsp;🎨 Update some icons</li>
-        <li>&nbsp;&nbsp;🔧 Update targetApi to 30</li>
-        <li>&nbsp;&nbsp;🌏 Added Brazilian Portuguese (pt-rBr) translation (thanks to mezysinc)</li>
-        <li>&nbsp;&nbsp;🌏 Added German (de-rDe) translation (thanks to <a href="https://github.com/nuclearfog">nuclearfog</a>)</li>
+        <li>&nbsp;&nbsp;⚡️ Improved memory usage.</li>
+        <li>&nbsp;&nbsp;🎨 Improved animation and touch effect.</li>
+        <li>&nbsp;&nbsp;🥳 Supported splash screen in Android 12.</li>
+        <li>&nbsp;&nbsp;🔧 Upgraded targetApi to 31</li>
         </ol>
-        <h2 id="fixes">Fixes</h2>
-        <ol>
-        <li>&nbsp;&nbsp;item text UI problem in Spanish interface</li>
-        <li>&nbsp;&nbsp;sticker selection screen was repeatedly opened problem</li>
-        <li>&nbsp;&nbsp;wrong orientation of saved images on Samsung devices (#41)</li>
-        <li>&nbsp;&nbsp;unclear intent of sticker selection: adjust to Image Intent</li>
-        <li>&nbsp;&nbsp;wrong display of exit confirmation pop-up window in some scenarios</li>
-        </ol>
-
 ]]>
     </string>
     <string name="tips_not_app_can_open_imaegs">No file manager detected.</string>

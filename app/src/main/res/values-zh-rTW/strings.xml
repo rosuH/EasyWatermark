@@ -70,23 +70,13 @@
     <string name="water_mark_mode_text">文字</string>
     <string name="dialog_change_log_content">
         <![CDATA[
-            <h2 id="-">新增與優化</h2>
-            <ol>
-            <li>&nbsp;&nbsp;⭐新增文字風格功能！</li>
-            <li>&nbsp;&nbsp;🥳優化文字對齊方式</li>
-            <li>&nbsp;&nbsp;🥳優化文字水印大小計算方式，調節間距變得更加靈活</li>
-            <li>&nbsp;&nbsp;🎄優化界面動效</li>
-            <li>&nbsp;&nbsp;🎨更新部分 icon</li>
-            <li>&nbsp;&nbsp;🔧更新 targetApi 到 30</li>
-            <li>&nbsp;&nbsp;🌏新增巴西葡萄牙（pt-rBr）翻譯（感謝 mezysinc）</li>
-            <li>&nbsp;&nbsp;🌏新增德語（de-rDe）翻譯（感謝 <a href="https://github.com/nuclearfog">nuclearfog</a>)</li>
-            <h2 id="-">修復</h2>
-            <li>&nbsp;&nbsp;西文界面下 item 文字 UI 問題</li>
-            <li>&nbsp;&nbsp;貼紙選擇界面被重複打開問題</li>
-            <li>&nbsp;&nbsp;三星設備上保存圖片方向錯誤問題（#41）</li>
-            <li>&nbsp;&nbsp;選擇貼紙意圖不明確問題：調節為 Image Intent</li>
-            <li>&nbsp;&nbsp;退出確認彈窗某些場景下錯誤顯示的問題</li>
-            </ol>
+        <h2 id="new-and-optimized">新增与优化</h2>
+        <ol>
+        <li>&nbsp;&nbsp;⚡️ 改進內存的使用.</li>
+        <li>&nbsp;&nbsp;🎨 改進動畫和交互.</li>
+        <li>&nbsp;&nbsp;🥳 支持 Android 12 的啟動動畫.</li>
+        <li>&nbsp;&nbsp;🔧 提升目標Api到31.</li>
+        </ol>
         ]]>
     </string>
     <string name="dev_comment">任何先进的科技，初看皆与魔法无异</string>

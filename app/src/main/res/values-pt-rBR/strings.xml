@@ -68,24 +68,14 @@
     <string name="dialog_change_log_title">Registro de modificações</string>
     <string name="dialog_change_log_content">
         <![CDATA[
-            <h2 id="novo-e-otimizado">Novo e otimizado</h2>
-            <ol>
-            <li>&nbsp;&nbsp;⭐Novo recurso de estilo de texto!</li>
-            <li>&nbsp;&nbsp;🥳 Otimizar o alinhamento do texto</li>
-            <li>&nbsp;&nbsp;🥳 Otimizar o método de cálculo do tamanho da marca d&#39;água do texto, ajustar o espaçamento torna-se mais flexível</li>
-            <li>&nbsp;&nbsp;🎄 Otimizar o efeito dinâmico da interface</li>
-            <li>&nbsp;&nbsp;🎨 Atualizar alguns ícones</li>
-            <li>&nbsp;&nbsp;🔧 Atualizar targetApi para 30</li>
-            <li>&nbsp;&nbsp;🌏 Acrescentada a tradução do português brasileiro (pt-rBr) (graças ao mezysinc)</li>
-            <li>&nbsp;&nbsp;🌏 Adicionado tradução em alemão (de-rDe) (graças ao <a href="https://github.com/nuclearfog">nuclearfog</a>)</li>
-            <h2 id="corre-es">Correções</h2>
-            <li>&nbsp;&nbsp;item texto UI emissão na interface espanhola</li>
-            <li>&nbsp;&nbsp;A tela de seleção de adesivos foi aberta repetidamente.</li>
-            <li>&nbsp;&nbsp;Orientação errada das imagens salvas nos dispositivos Samsung (#41)</li>
-            <li>&nbsp;&nbsp;questão com intenção pouco clara de seleção de adesivos: ajustar à intenção da imagem</li>
-            <li>&nbsp;&nbsp;emissão com popup de confirmação de saída sendo exibida incorretamente em alguns cenários</li>
-            </ol>
-        ]]>
+        <h2 id="new-and-optimized">Novo e otimizado</h2>
+        <ol>
+        <li>&nbsp;&nbsp;⚡️ Melhor uso de memória.</li>
+        <li>&nbsp;&nbsp;🎨 Animação e efeito de toque aprimorados.</li>
+        <li>&nbsp;&nbsp;🥳 Tela inicial com suporte no Android 12.</li>
+        <li>&nbsp;&nbsp;🔧 TargetApi atualizado para 31.</li>
+        </ol>
+]]>
     </string>
     <string name="tips_not_app_can_open_imaegs">Nenhum gerenciador de arquivos detectado.</string>
     <string name="tips_choose_other_file_type">Imagem inválida</string>
