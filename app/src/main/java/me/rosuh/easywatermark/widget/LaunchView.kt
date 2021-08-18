@@ -56,7 +56,6 @@ class LaunchView : CustomViewGroup {
         ColoredImageVIew(context).apply {
             layoutParams = ViewGroup.MarginLayoutParams(180.dp, 180.dp)
             setImageResource(R.drawable.ic_log_transparent)
-
         }
     }
 
@@ -65,7 +64,6 @@ class LaunchView : CustomViewGroup {
             textAlignment = TEXT_ALIGNMENT_CENTER
             gravity = Gravity.CENTER
             text = context.getString(R.string.tips_pick_image)
-
         }
     }
 
@@ -77,7 +75,6 @@ class LaunchView : CustomViewGroup {
                     LayoutParams.WRAP_CONTENT
                 ).also { it.setMargins(0, 20.dp, 0, 0) }
             setImageResource(R.drawable.ic_picker_image)
-
         }
     }
 
@@ -89,7 +86,6 @@ class LaunchView : CustomViewGroup {
                     LayoutParams.WRAP_CONTENT
                 ).also { it.setMargins(0, 20.dp, 0, 0) }
             setImageResource(R.drawable.ic_about)
-
         }
     }
 
@@ -103,7 +99,6 @@ class LaunchView : CustomViewGroup {
                     .also { it.setMargins(0, 20.dp, 0, 0) }
             setBackgroundColor(ContextCompat.getColor(context, R.color.colorPrimary))
             elevation = 4.dp.toFloat()
-
             popupTheme = R.style.ThemeOverlay_AppCompat_Dark_ActionBar
         }
     }
@@ -111,7 +106,6 @@ class LaunchView : CustomViewGroup {
     val ivPhoto: WaterMarkImageView by lazy {
         WaterMarkImageView(context).apply {
             setPadding(12.dp)
-
             setBackgroundColor(ContextCompat.getColor(context, R.color.colorPrimaryDark))
         }
     }
@@ -124,8 +118,6 @@ class LaunchView : CustomViewGroup {
             textAlignment = TEXT_ALIGNMENT_CENTER
             gravity = Gravity.CENTER
             text = context.getString(R.string.tips_pick_image)
-
-
         }
     }
 
@@ -162,7 +154,6 @@ class LaunchView : CustomViewGroup {
             addTab(contentTab)
             addTab(styleTab)
             addTab(layoutTab)
-
         }
     }
 
@@ -174,8 +165,6 @@ class LaunchView : CustomViewGroup {
                 56.dp
             )
             setBackgroundColor(ContextCompat.getColor(context, R.color.colorSecondary))
-
-
         }
     }
 
@@ -232,18 +221,22 @@ class LaunchView : CustomViewGroup {
 
     private var startY = 0f
 
-    private val dragYAnimation = SpringAnimation(this, SpringAnimation.TRANSLATION_Y).apply {
-        spring = SpringForce()
-            .setFinalPosition(0f)
-            .setDampingRatio(SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY)
-            .setStiffness(SpringForce.STIFFNESS_LOW)
+    private val dragYAnimation by lazy {
+        SpringAnimation(this, SpringAnimation.TRANSLATION_Y).apply {
+            spring = SpringForce()
+                .setFinalPosition(0f)
+                .setDampingRatio(SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY)
+                .setStiffness(SpringForce.STIFFNESS_LOW)
+        }
     }
 
-    private val dragXAnimation = SpringAnimation(this, SpringAnimation.TRANSLATION_X).apply {
-        spring = SpringForce()
-            .setFinalPosition(0f)
-            .setDampingRatio(SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY)
-            .setStiffness(SpringForce.STIFFNESS_LOW)
+    private val dragXAnimation by lazy {
+        SpringAnimation(this, SpringAnimation.TRANSLATION_X).apply {
+            spring = SpringForce()
+                .setFinalPosition(0f)
+                .setDampingRatio(SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY)
+                .setStiffness(SpringForce.STIFFNESS_LOW)
+        }
     }
     //endregion
 

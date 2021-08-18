@@ -65,13 +65,17 @@ class ItemClickSupport private constructor(private val recyclerView: RecyclerVie
         // ask the RecyclerView for the viewHolder of this view.
         // then use it to get the position for the adapter
         val holder = this.recyclerView.getChildViewHolder(v)
-        listener.invoke(this.recyclerView, holder.adapterPosition, v)
+        listener.invoke(this.recyclerView, holder.bindingAdapterPosition, v)
     }
 
     private val onLongClickListener = View.OnLongClickListener { v ->
         val listener = onItemLongClickListener ?: return@OnLongClickListener false
         val holder = this.recyclerView.getChildViewHolder(v)
-        return@OnLongClickListener listener.invoke(this.recyclerView, holder.adapterPosition, v)
+        return@OnLongClickListener listener.invoke(
+            this.recyclerView,
+            holder.bindingAdapterPosition,
+            v
+        )
     }
 
     private fun detach(view: RecyclerView) {

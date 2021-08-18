@@ -21,7 +21,7 @@ fun View.disappearAnimation(toPos: Float = 10f): SpringAnimation {
             .setFinalPosition(toPos)
             .setDampingRatio(SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY)
             .setStiffness(SpringForce.STIFFNESS_LOW)
-        addUpdateListener { _, value, _ ->
+        addUpdateListener { _, _, _ ->
             this@disappearAnimation.isVisible = true
         }
         addEndListener { _, _, _, _ ->
@@ -91,7 +91,7 @@ fun generateAppearAnimationList(
 fun generateDisappearAnimationList(
     views: List<View>
 ): List<ViewAnimation> {
-    return views.mapIndexed { index, view ->
+    return views.mapIndexed { _, view ->
         ViewAnimation(view, null).apply {
             setListener {
                 applyBeforeStart { view, _ ->
