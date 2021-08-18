@@ -2,6 +2,7 @@ package me.rosuh.easywatermark.ui
 
 import android.app.Activity
 import android.content.ActivityNotFoundException
+import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Intent
 import android.graphics.Bitmap
@@ -21,6 +22,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.BuildConfig
+import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ktx.applyConfig
 import me.rosuh.easywatermark.ktx.formatDate
@@ -51,6 +53,7 @@ class MainViewModel : ViewModel() {
         object CompressOK : State()
         object CompressError : State()
         object Error : State()
+        object FileNotFoundError : State()
         object OOMError : State()
     }
 
@@ -72,84 +75,69 @@ class MainViewModel : ViewModel() {
         MutableLiveData<TipsStatus>(TipsStatus.None(false))
     }
 
+    val shareImageUri: MutableLiveData<Uri> = MutableLiveData()
+
+    val saveImageUri: MutableLiveData<Uri> = MutableLiveData()
+
     private val repo = UserConfigRepo
     private val userConfig: MutableLiveData<UserConfig> = repo.userConfig
 
-    fun saveImage(activity: Activity) {
+    fun saveImage(contentResolver: ContentResolver) {
         viewModelScope.launch {
             if (config.value?.uri?.toString().isNullOrEmpty()) {
-                saveState.postValue(State.Error.apply {
-                    msg = activity.getString(R.string.error_not_img)
-                })
+                result.value = Result.failure(null, code = TYPE_ERROR_NOT_IMG)
                 return@launch
             }
             saveState.postValue(State.Saving)
             try {
-                val rect = generateImage(activity, config.value?.uri ?: Uri.parse(""))
+                val rect = generateImage(contentResolver, config.value?.uri ?: Uri.parse(""))
                 if (rect.isFailure() || rect.data == null) {
                     result.postValue(rect)
                     return@launch
                 }
-                val outputUri = rect.data!!
-                val intent = Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(outputUri, "image/*")
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                activity.startActivity(intent)
+                saveImageUri.value = rect.data!!
                 saveState.postValue(State.SaveOk)
             } catch (fne: FileNotFoundException) {
                 fne.printStackTrace()
-                saveState.postValue(State.Error.apply {
-                    msg = activity.getString(R.string.error_file_not_found)
-                })
+                result.value = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
+                saveState.postValue(State.FileNotFoundError)
             } catch (oom: OutOfMemoryError) {
-                saveState.postValue(State.OOMError.apply {
-                    msg = activity.getString(R.string.error_save_oom)
-                })
+                saveState.postValue(State.OOMError)
+                result.value = Result.failure(null, code = TYPE_ERROR_SAVE_OOM)
             }
         }
     }
 
-    fun shareImage(activity: Activity) {
+    fun shareImage(contentResolver: ContentResolver,) {
         viewModelScope.launch {
             if (config.value?.uri?.toString().isNullOrEmpty()) {
-                saveState.postValue(State.Error.apply {
-                    msg = activity.getString(R.string.error_not_img)
-                })
+                result.value = Result.failure(null, code = TYPE_ERROR_NOT_IMG)
                 return@launch
             }
             try {
                 saveState.postValue(State.Sharing)
-                val rect = generateImage(activity, config.value?.uri ?: Uri.parse(""))
+                val rect = generateImage(contentResolver, config.value?.uri ?: Uri.parse(""))
                 if (rect.isFailure() || rect.data == null) {
                     result.postValue(rect)
                     return@launch
                 }
-                val outputUri = rect.data!!
-                val intent = Intent(Intent.ACTION_SEND).apply {
-                    type = "image/*"
-                    putExtra(Intent.EXTRA_STREAM, outputUri)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                activity.startActivity(intent)
+                shareImageUri.value = rect.data!!
                 saveState.postValue(State.ShareOk)
             } catch (fne: FileNotFoundException) {
                 fne.printStackTrace()
-                saveState.postValue(State.Error.apply {
-                    msg = activity.getString(R.string.error_file_not_found)
-                })
+                result.value = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
+                saveState.postValue(State.FileNotFoundError)
             } catch (oom: OutOfMemoryError) {
                 saveState.postValue(State.OOMError)
+                result.value = Result.failure(null, code = TYPE_ERROR_SAVE_OOM)
             }
         }
     }
 
     @Throws(FileNotFoundException::class, OutOfMemoryError::class)
-    private suspend fun generateImage(activity: Activity, uri: Uri): Result<Uri> =
+    private suspend fun generateImage(contentResolver: ContentResolver, uri: Uri): Result<Uri> =
         withContext(Dispatchers.IO) {
-            val resolver = activity.contentResolver
-            val rect = decodeBitmapFromUri(resolver, uri)
+            val rect = decodeBitmapFromUri(contentResolver, uri)
             if (rect.isFailure()) {
                 return@withContext Result.extendMsg(rect)
             }
@@ -184,7 +172,7 @@ class MainViewModel : ViewModel() {
                 }
                 WaterMarkConfig.MarkMode.Image -> {
                     val iconBitmapRect = decodeSampledBitmapFromResource(
-                        resolver,
+                        contentResolver,
                         tmpConfig.iconUri,
                         mutableBitmap.width,
                         mutableBitmap.height
@@ -230,8 +218,8 @@ class MainViewModel : ViewModel() {
                     put(MediaStore.Images.Media.IS_PENDING, 1)
                 }
 
-                val imageContentUri = resolver.insert(imageCollection, imageDetail)
-                resolver.openFileDescriptor(imageContentUri!!, "w", null).use { pfd ->
+                val imageContentUri = contentResolver.insert(imageCollection, imageDetail)
+                contentResolver.openFileDescriptor(imageContentUri!!, "w", null).use { pfd ->
                     mutableBitmap.compress(
                         userConfig.value?.outputFormat ?: Bitmap.CompressFormat.JPEG,
                         userConfig.value?.compressLevel ?: 95,
@@ -240,7 +228,7 @@ class MainViewModel : ViewModel() {
                 }
                 imageDetail.clear()
                 imageDetail.put(MediaStore.Images.Media.IS_PENDING, 0)
-                resolver.update(imageContentUri, imageDetail, null, null)
+                contentResolver.update(imageContentUri, imageDetail, null, null)
                 Result.success(imageContentUri)
             } else {
                 // need request write_storage permission
@@ -270,11 +258,11 @@ class MainViewModel : ViewModel() {
                     )
                 }
                 val outputUri = FileProvider.getUriForFile(
-                    activity,
+                    MyApp.instance,
                     "${BuildConfig.APPLICATION_ID}.fileprovider",
                     outputFile
                 )
-                activity.sendBroadcast(
+                MyApp.instance.sendBroadcast(
                     Intent(
                         Intent.ACTION_MEDIA_SCANNER_SCAN_FILE,
                         Uri.fromFile(outputFile)
@@ -425,7 +413,7 @@ class MainViewModel : ViewModel() {
                         $crashInfo
                     =====================
                     APP:
-                    ${BuildConfig.VERSION_CODE}, ${BuildConfig.VERSION_NAME}, ${BuildConfig.FLAVOR} 
+                    ${BuildConfig.VERSION_CODE}, ${BuildConfig.VERSION_NAME}, ${BuildConfig.BUILD_TYPE} 
                     Devices:
                     ${Build.VERSION.RELEASE}, ${Build.VERSION.SDK_INT}, ${Build.DEVICE}, ${Build.MODEL}, ${Build.PRODUCT}, ${Build.MANUFACTURER}
                     =====================
@@ -454,5 +442,11 @@ class MainViewModel : ViewModel() {
                 Toast.LENGTH_LONG
             ).show()
         }
+    }
+
+    companion object {
+        const val TYPE_ERROR_NOT_IMG = "type_error_not_img"
+        const val TYPE_ERROR_FILE_NOT_FOUND = "type_error_file_not_found"
+        const val TYPE_ERROR_SAVE_OOM = "type_error_save_oom"
     }
 }

@@ -81,26 +81,17 @@
     <string name="text_typeface_bold">Fett</string>
     <string name="text_typeface_italic">Kursiv</string>
     <string name="text_typeface_bold_italic">Fett und Kursiv</string>
-    <string name="dialog_change_log_content"><![CDATA[
-        <h2 id="neu-und-optimiert">Neu und optimiert</h2>
+    <string name="dialog_change_log_content">
+        <![CDATA[
+        <h2 id="new-and-optimized">Neu und optimiert</h2>
         <ol>
-        <li>⭐ Neue Textstil-Funktion!</li>
-        <li>&nbsp;&nbsp;🥳 Textausrichtung optimieren</li>
-        <li>&nbsp;&nbsp;🥳 Optimieren Sie die Berechnungsmethode für die Größe des Textwasserzeichens, passen Sie die Abstände flexibler an.</li>
-        <li>&nbsp;&nbsp;🎄 Optimieren Sie die dynamische Wirkung der Schnittstelle</li>
-        <li>&nbsp;&nbsp;🎨 Einige Symbole aktualisieren</li>
-        <li>&nbsp;&nbsp;🔧 targetApi auf 30 aktualisieren</li>
-        <li>&nbsp;&nbsp;🌏 Übersetzung ins brasilianische Portugiesisch (pt-rBr) hinzugefügt (Dank an mezysinc)</li>
-        <li>&nbsp;&nbsp;🌏 Deutsche (de-rDe) Übersetzung hinzugefügt (Dank an <a href="https://github.com/nuclearfog">nuclearfog</a>)</li>
-        <h2 id="korrekturen">Korrekturen</h2>
-        <li>&nbsp;&nbsp;Elementtext UI-Problem in der spanischen Benutzeroberfläche</li>
-        <li>&nbsp;&nbsp;Der Aufkleber-Auswahlbildschirm wurde wiederholt geöffnet.</li>
-        <li>&nbsp;&nbsp;Falsche Ausrichtung der gespeicherten Bilder auf Samsung-Geräten (#41)</li>
-        <li>&nbsp;&nbsp;Problem mit unklarer Absicht der Aufkleberauswahl: Anpassen an Image Intent</li>
-        <li>&nbsp;&nbsp;ein Problem mit einem Popup zur Beendigungsbestätigung, das in einigen Szenarien nicht korrekt angezeigt wird</li>
+        <li>&nbsp;&nbsp;⚡️ Verbesserte Speichernutzung.</li>
+        <li>&nbsp;&nbsp;🎨 Verbesserte Animation und Touch-Effekt.</li>
+        <li>&nbsp;&nbsp;🥳 Unterstützter Begrüßungsbildschirm in Android 12.</li>
+        <li>&nbsp;&nbsp;🔧 TargetApi auf 31 . aktualisiert.</li>
         </ol>
-
-    ]]></string>
+]]>
+    </string>
     <string name="dialog_check_out_in_github">Schau mal auf Github</string>
 
 </resources>

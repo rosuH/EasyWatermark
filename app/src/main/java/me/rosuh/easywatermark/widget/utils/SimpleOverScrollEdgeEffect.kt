@@ -4,9 +4,9 @@ import android.content.Context
 import android.widget.EdgeEffect
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.EdgeEffectFactory.DIRECTION_LEFT
-import me.rosuh.easywatermark.base.BaseVideHolder
+import me.rosuh.easywatermark.base.BaseViewHolder
 
-class SimpleOvserScrollEdgeEffect(
+class SimpleOverScrollEdgeEffect(
     val recyclerView: RecyclerView,
     private val direction: Int,
     val context: Context
@@ -28,7 +28,7 @@ class SimpleOvserScrollEdgeEffect(
         val sign = if (direction == DIRECTION_LEFT) 1 else -1
         val translationXDelta =
             sign * recyclerView.height * deltaDistance * OVERSCROLL_TRANSLATION_MAGNITUDE
-        recyclerView.forEachVisibleHolder<BaseVideHolder> { holder ->
+        recyclerView.forEachVisibleHolder<BaseViewHolder> { holder ->
             holder.itemView.translationX += translationXDelta
             holder.translationX.cancel()
         }
@@ -37,7 +37,7 @@ class SimpleOvserScrollEdgeEffect(
 
     override fun onRelease() {
         super.onRelease()
-        recyclerView.forEachVisibleHolder<BaseVideHolder> {
+        recyclerView.forEachVisibleHolder<BaseViewHolder> {
             it.translationX.start()
         }
     }
@@ -47,7 +47,7 @@ class SimpleOvserScrollEdgeEffect(
         val sign = if (direction == DIRECTION_LEFT) 1 else -1
         // The list has reached the edge on fling.
         val translationVelocity = sign * velocity * FLING_TRANSLATION_MAGNITUDE
-        recyclerView.forEachVisibleHolder<BaseVideHolder> {
+        recyclerView.forEachVisibleHolder<BaseViewHolder> {
             it.translationX
                 .setStartVelocity(translationVelocity)
                 .start()
@@ -66,7 +66,7 @@ class SimpleOvserScrollEdgeEffect(
         const val TAG = "ChatEdgeEffect"
 
         /** The magnitude of translation distance while the list is over-scrolled. */
-        private const val OVERSCROLL_TRANSLATION_MAGNITUDE = 0.2f
+        private const val OVERSCROLL_TRANSLATION_MAGNITUDE = 0.35f
 
         /** The magnitude of translation distance when the list reaches the edge on fling. */
         private const val FLING_TRANSLATION_MAGNITUDE = 0.5f

@@ -21,7 +21,7 @@ class Result<T>(
             return Result(Type.Success, data, code, message)
         }
 
-        fun <T> failure(data: T?, code: String? = null, message: String? = null): Result<T> {
+        fun <T> failure(data: T? = null, code: String? = null, message: String? = null): Result<T> {
             return Result(Type.Failure, data, code, message)
         }
 

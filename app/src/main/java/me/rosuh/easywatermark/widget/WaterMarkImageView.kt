@@ -12,6 +12,7 @@ import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.ktx.applyConfig
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.utils.ImageHelper
+import me.rosuh.easywatermark.utils.TextBitmapCache
 import me.rosuh.easywatermark.utils.decodeSampledBitmapFromResource
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.*
@@ -315,9 +316,11 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
             val finalWidth = calculateFinalWidth(config, fixWidth.toInt())
             val finalHeight = calculateFinalHeight(config, fixHeight.toInt())
-            val bitmap =
-                Bitmap.createBitmap(finalWidth, finalHeight, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bitmap)
+            val bitmap = TextBitmapCache.get(finalWidth, finalHeight)
+            val canvas = Canvas(bitmap).apply {
+                // Should clear content if the bitmap was reused
+                drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
+            }
             if (showDebugRect) {
                 val tmpPaint = Paint().apply {
                     color = Color.RED
@@ -344,7 +347,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             }
 
             return@withContext BitmapShader(
-                bitmap!!,
+                bitmap,
                 Shader.TileMode.REPEAT,
                 Shader.TileMode.REPEAT
             )

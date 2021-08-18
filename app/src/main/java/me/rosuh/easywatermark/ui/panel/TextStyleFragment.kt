@@ -4,18 +4,16 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EdgeEffect
 import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import me.rosuh.easywatermark.adapter.DividerAdapter
 import me.rosuh.easywatermark.adapter.TextPaintStyleAdapter
 import me.rosuh.easywatermark.adapter.TextTypefaceAdapter
 import me.rosuh.easywatermark.base.BaseBindFragment
 import me.rosuh.easywatermark.databinding.FragmentTextStyleBinding
 import me.rosuh.easywatermark.ktx.commitWithAnimation
-import me.rosuh.easywatermark.widget.utils.SimpleOvserScrollEdgeEffect
+import me.rosuh.easywatermark.widget.utils.BounceEdgeEffectFactory
 
 class TextStyleFragment : BaseBindFragment<FragmentTextStyleBinding>() {
     override fun bindView(
@@ -61,11 +59,7 @@ class TextStyleFragment : BaseBindFragment<FragmentTextStyleBinding>() {
             layoutManager =
                 LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
             adapter = concatAdapter
-            edgeEffectFactory = object : RecyclerView.EdgeEffectFactory() {
-                override fun createEdgeEffect(view: RecyclerView, direction: Int): EdgeEffect {
-                    return SimpleOvserScrollEdgeEffect(this@apply, direction, context)
-                }
-            }
+            edgeEffectFactory = BounceEdgeEffectFactory(context, this)
         }
     }
 
