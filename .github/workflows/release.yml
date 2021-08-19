@@ -58,10 +58,10 @@ jobs:
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
       - name: log all info
-        with: 
-          run: |
+        run: |
             ls app/build/outputs/apk/release/
             ls app/build/outputs/bundle/release
+          
       - name: Publish release.
         if: success()
         uses: "marvinpinto/action-automatic-releases@latest"
