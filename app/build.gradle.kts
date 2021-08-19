@@ -1,7 +1,4 @@
-import ProductFlavors.coolApk
-import ProductFlavors.github
-import ProductFlavors.googlePlay
-import ProductFlavors.others
+import com.android.build.gradle.internal.api.BaseVariantOutputImpl
 
 plugins {
     id("com.android.application")
@@ -19,6 +16,7 @@ android {
         versionCode = 20200
         versionName = "2.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        setProperty("archivesBaseName", "${applicationId}-v${versionName}(${versionCode})")
     }
 
     buildTypes {
@@ -37,14 +35,6 @@ android {
                 "coroutines.pro", "proguard-rules.pro"
             )
         }
-
-        productFlavors {
-            flavorDimensions.add("version")
-            create(googlePlay)
-            create(github)
-            create(coolApk)
-            create(others)
-        }
     }
 
 
@@ -53,13 +43,12 @@ android {
         targetCompatibility(JavaVersion.VERSION_11)
     }
 
+    // change output apk name
     applicationVariants.all {
-        val variant = this
-        variant.outputs
-            .map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
-            .forEach { output ->
-                output.outputFileName = "ewm-v${variant.versionName}.apk"
-            }
+        outputs.all {
+            (this as? BaseVariantOutputImpl)?.outputFileName =
+                "${applicationId}-v${versionName}(${versionCode}).apk"
+        }
     }
 
     packagingOptions {
