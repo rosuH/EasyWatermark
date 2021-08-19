@@ -57,11 +57,6 @@ jobs:
           alias: ${{ secrets.ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
-      - name: log all info
-        run: |
-            ls app/build/outputs/apk/release/
-            ls app/build/outputs/bundle/release
-          
       - name: Publish release.
         if: success()
         uses: "marvinpinto/action-automatic-releases@latest"
@@ -70,6 +65,6 @@ jobs:
           prerelease: false
           draft: true
           files: |
-            ${{steps.sign_apk.outputs.signedReleaseFile}}
-            ${{steps.sign_bundle.outputs.signedReleaseFile}}
+            app/build/outputs/apk/release/*-signed.apk
+            app/build/outputs/bundle/release/*.aab
             app/build/outputs/mapping/release/mapping.txt
