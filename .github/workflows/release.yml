@@ -32,6 +32,9 @@ jobs:
       - name: move bundle to release directory
         run: bash |
           mv app/build/outputs/bundle/release/*.aab app/build/outputs/apk/release
+          echo "--------------------------"
+          ls app/build/outputs/apk/release
+          echo "--------------------------"          
       - name: Sign Android release
         if: success()
         id: sign
