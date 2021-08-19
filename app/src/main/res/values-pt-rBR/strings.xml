@@ -41,7 +41,7 @@
     <string name="tips_pick_image">Vamos começar selecionando uma imagem</string>
     <string name="save_directly">Salvar diretamente</string>
     <string name="directly_save_tips">Salvar a imagem editada diretamente na sua galeria</string>
-    <string name="share_tips">Compartilhar a imagem editada com outros aplicativos</string>
+    <string name="share_tips">Compartilhar a imagem editada com outros apps</string>
     <string name="share">Compartilhar</string>
     <string name="water_mark_mode_text">Texto</string>
     <string name="water_mark_mode_image">Ícone</string>
@@ -54,34 +54,34 @@
     <string name="tips_need_compress_img">Não há espaço suficiente ou a imagem é muito grande</string>
     <string name="tips_compressing">Compactando…</string>
     <string name="tips_compress_images">Compactar foto</string>
-    <string name="tips_compress_ok">Compactado. Clique OK para continuar a exportação.</string>
-    <string name="tips_compress_create_uri_failed">Compactado, mas falhou em criar o Uri. Reinicie o aplicativo e tente de novo. %1$s</string>
+    <string name="tips_compress_ok">Compactada. Clique OK para continuar a exportação.</string>
+    <string name="tips_compress_create_uri_failed">Compactada mas falhou ao criar o Uri. Reinicie o App e tente de novo. %1$s</string>
     <string name="tips_tip_title">Falha detectada</string>
-    <string name="msg_crash">Gostaria de relatar este problema? Isto pode nos ajudar a melhorar o aplicativo e não irá coletar nenhuma informação pessoal.</string>
-    <string name="crash_mail">Enviar e-mail</string>
-    <string name="tip_not_mail_found">Nenhum cliente de e-mail detectado. Alternativamente, você pode colar a mensagem de erro na loja de aplicativos ou no Github.</string>
+    <string name="msg_crash">Gostaria de relatar este problema? Isto pode nos ajudar a melhorar o App e não irá coletar nenhuma informação pessoal.</string>
+    <string name="crash_mail">Enviar um e-mail</string>
+    <string name="tip_not_mail_found">Nenhum cliente do e-mail detectado. Alternativamente, você pode colar a mensagem do erro na loja de aplicativos ou no Github.</string>
     <string name="tips_content_size_performance">Quanto maior a imagem, mais recursos utilizará para ser visualizada em tempo real.</string>
     <string name="tips_content_mode_button">Clique para modificar texto ou imagem</string>
     <string name="config_default_water_mark_text">👋 NÃO REDISTRIBUIR</string>
     <string name="style_alpha">Alfa</string>
-    <string name="contributor_info">Se o feedback com problema for válido e corrigido ou uma nova versão for adicionada, seu nome ou e-mail aparecerá na janela pop-up do registro de modificações. Editaremos informações sobre você, seu nome completo não aparecerá. \\n Se você não quiser aparecer, por favor, marque: Não quero aparecer.</string>
-    <string name="dialog_change_log_title">Registro de modificações</string>
+    <string name="contributor_info">Se o relatório do problema for válido e portanto corrigido ou uma nova versão for publicada, seu nome ou e-mail aparecerá no aviso com histórico de modificações. Serão editados as informações sobre você, seu nome completo não aparecerá. \\n Se você quiser permanecer anônimo, por favor, marque: Quero permanecer anônimo.</string>
+    <string name="dialog_change_log_title">Histórico de modificações</string>
     <string name="dialog_change_log_content">
         <![CDATA[
-        <h2 id="new-and-optimized">Novo e otimizado</h2>
+        <h2 id="new-and-optimized">Novidades e otimizações</h2>
         <ol>
-        <li>&nbsp;&nbsp;⚡️ Melhor uso de memória.</li>
-        <li>&nbsp;&nbsp;🎨 Animação e efeito de toque aprimorados.</li>
-        <li>&nbsp;&nbsp;🥳 Tela inicial com suporte no Android 12.</li>
-        <li>&nbsp;&nbsp;🔧 TargetApi atualizado para 31.</li>
+        <li>&nbsp;&nbsp;⚡️ Melhor uso da memória.</li>
+        <li>&nbsp;&nbsp;🎨 Melhorada animação e efeito de toque.</li>
+        <li>&nbsp;&nbsp;🥳 Tela inicial suportada no Android 12.</li>
+        <li>&nbsp;&nbsp;🔧 Api alvo atualizado para 31.</li>
         </ol>
 ]]>
     </string>
     <string name="tips_not_app_can_open_imaegs">Nenhum gerenciador de arquivos detectado.</string>
     <string name="tips_choose_other_file_type">Imagem inválida</string>
-    <string name="error_save_oom">Memória insuficiente, por favor limpe processos em segundo plano e tente novamente</string>
-    <string name="error_share_uri_is_null">Uri de saída está vazio, favor entrar em contato com o desenvolvedor para submeter um feedback, obrigado</string>
-    <string name="dev_comment">Qualquer tecnologia suficientemente avançada é indistinguível da magia.</string>
+    <string name="error_save_oom">Memória insuficiente, por favor limpe os processos em segundo plano e tente novamente</string>
+    <string name="error_share_uri_is_null">Uri de saída está vazio, favor entrar em contato com o desenvolvedor para submeter um Feedback, obrigado</string>
+    <string name="dev_comment">Qualquer tecnologia suficientemente avançada é indistinguível da mágica.</string>
     <string name="dialog_title_exist_confirm">Dicas</string>
     <string name="dialog_cancel_exist_confirm">Cancelar</string>
     <string name="dialog_content_exist_confirm">Descartar a edição?</string>
