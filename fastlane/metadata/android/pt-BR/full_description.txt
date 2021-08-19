@@ -1,0 +1,55 @@
+Adicione de forma segura e com facilidade uma marca d'água a suas fotos privadas.
+Para evitar que elas sejam exploradas e vazadas pela PESSOA RUIM.
+
+Portanto, também serve para fazer emojis.
+Afinal de contas, App suporta a marca d'água com efeitos espectrais.
+
+## Funcionalidades
+### Sensacional 👓
+
+Aplicação exclusivamente offline, código disponível para verificação.
+Tanto o espaçamento vertical e horizontal como a cor do brilho e da tonalidade são ajustáveis à vontade.
+Pode girar livremente em todos os ângulos e manipular tamanhos, os texto e imagens podem ser imprimindos.
+A marca d'água está visível em toda a imagem e seria um pouco difícil para os mal intencionados a removê-la.
+
+### Importante
+
+- Segurança:
+
+O código é completamente livre e usa a licença MIT, fique a vontade para modificar e remover o código que você acha problemático ;)
+Nenhuma permissão de acesso à Internet é solicitada, pode ficar tranquilo e sem medo de que suas fotos sejam comprometidas. Usuários com API >= 29 não precisam de nenhuma permissão. (com 28 e menor, os usuários precisam conceder a permissões de armazenamento para acessar e armazenar as fotos)
+Não há estatísticas ou identificações de dispositivos, ou até mesmo relatórios de falhas (portanto, se você encontrar uma falha, por favor, compartilhe conosco as informações sobre o problema >_<).
+Estamos renunciando a conveniente coleção de terceiros via SDK e a várias estatísticas para que você possa usá-lo com confiança. O que é seu, é seu.
+- Layout: suporte para intervalos horizontais e verticais entre as marcas d'água que repita automaticamente em toda a imagem.
+- Estilo: a cor da fonte, transparência, tamanho e ângulo de rotação podem ser ajustados.
+- Conteúdo: Suporte para marca d'água de texto e de imagem.
+
+## Uso
+Você pode usá-lo como quiser. É bem adequado para situações em que você precisa apresentar uma identidade com foto, uma identidade com foto à mão ou uma foto sensível. Exemplo:
+
+Exigências de foto de frente e verso e de documentos de identificação a cada volta, até mesmo fotos de identificação pessoal.
+Prévias do projeto, amostras, imagens com direitos autorais ou simplesmente simulações da ID.
+Texto de referência.
+
+Esta foto é para xx apenas para uso de xxx, nenhuma outra utilização permitida.
+
+Você pode ajustar a transparência, para não esconder as informações-chave.
+
+(Por enquanto) não podemos (infelizmente) impedir que a nossa informação não seja enviada sem a nosso permissão, ou mesmo (infelizmente) impedir que a informação seja vazada, mas podemos reduzir o valor da informação que está sendo vazada.
+
+Mesmo que seja (provavelmente) inútil no final das contas, pelo menos você pode complicar um pouco as coisas.
+
+## IU
+Desenvolvido pelo renomado guru da IU @tovi (👏🤪)
+Qualquer coisa que você acha que não funciona bem é minha UI restore que não funciona, e não tem nada a ver com o projeto da UI. xD
+Este App foi desenvolvido por @tovi, por isso todos os direitos da IU e recursos de design relacionados pertencem a ele e não podem ser usados sem permissão por qualquer pessoa ou organização.
+
+## Licença de software livre.
+Bibliotecas de terceiros usadas.
+
+daniel-stonuk/material-about-library
+skydoves/ColorPickerView
+material-components/material-components-android
+
+## Feedback e contribuição
+Esperamos para seus comentários e sugestões em seção de assuntos, também você pode contribuir com seu código, enviando um PR diretamente. Naturalmente, você também pode entrar em contato diretamente com o desenvolvedor via Telegram ou e-mail e entraremos em contato com você em breve.
