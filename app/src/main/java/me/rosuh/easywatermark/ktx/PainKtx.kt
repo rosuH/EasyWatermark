@@ -20,7 +20,6 @@ fun Paint.applyConfig(
     textSize = if (isScale) {
         size
     } else {
-//        size * ceil(((config?.imageScale?.get(0) ?: 1f)))
         size * ((config?.imageScale?.get(0) ?: 1f))
     }
     color = config?.textColor ?: Color.RED

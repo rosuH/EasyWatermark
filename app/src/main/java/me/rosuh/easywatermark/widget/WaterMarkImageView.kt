@@ -27,7 +27,6 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         defStyleAttr
     )
 
-    private var mutableBitmap: Bitmap? = null
     override val coroutineContext: CoroutineContext
         get() = Dispatchers.Main
 
@@ -88,10 +87,8 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                     }
                     val imageBitmap = imageBitmapRect.data
                     setImageBitmap(imageBitmap)
-                    mutableBitmap = imageBitmap!!.copy(Bitmap.Config.ARGB_8888, true)
-                    amazingCanvas = Canvas(mutableBitmap!!)
                     drawableBounds = generateDrawableBounds()
-                    scale[0] = scale[0] * imageBitmap.width.toFloat() / drawableBounds.width()
+                    scale[0] = scale[0] * imageBitmap!!.width.toFloat() / drawableBounds.width()
                     scale[1] = scale[1] * imageBitmap.height.toFloat() / drawableBounds.height()
                     field?.imageScale = scale
                     imageBitmap.let { Palette.Builder(it).generate() }.let {
@@ -157,12 +154,6 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         Paint()
     }
 
-    private val bitmapPaint: Paint by lazy {
-        Paint()
-    }
-
-    private val scaleMatrix = Matrix()
-
     private var bounds: Rect = Rect()
 
     private var layoutShader: BitmapShader? = null
@@ -171,9 +162,6 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         super.onSizeChanged(w, h, oldw, oldh)
         iconBounds.set(0, 0, w, h)
     }
-
-    private var saveCount: Int? = null
-    private var amazingCanvas: Canvas? = null
 
     @ObsoleteCoroutinesApi
     override fun onDraw(canvas: Canvas?) {
@@ -317,10 +305,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             val finalWidth = calculateFinalWidth(config, fixWidth.toInt())
             val finalHeight = calculateFinalHeight(config, fixHeight.toInt())
             val bitmap = TextBitmapCache.get(finalWidth, finalHeight)
-            val canvas = Canvas(bitmap).apply {
-                // Should clear content if the bitmap was reused
-                drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
-            }
+            val canvas = Canvas(bitmap)
             if (showDebugRect) {
                 val tmpPaint = Paint().apply {
                     color = Color.RED

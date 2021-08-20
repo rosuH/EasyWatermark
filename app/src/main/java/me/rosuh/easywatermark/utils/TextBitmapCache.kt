@@ -1,6 +1,9 @@
 package me.rosuh.easywatermark.utils
 
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.PorterDuff
 import android.util.Size
 import androidx.collection.LruCache
 import kotlinx.coroutines.sync.Mutex
@@ -51,7 +54,11 @@ object TextBitmapCache {
     ): Bitmap {
         mutex.withLock {
             val size = Size(width, height)
-            return cache.get(size)!!
+            val b = cache.get(size)!!
+            Canvas(b).apply {
+                drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
+            }
+            return b
         }
     }
 }
