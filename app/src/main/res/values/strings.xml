@@ -16,7 +16,7 @@
     <string name="tips_error">Error</string>
     <string name="tips_share_image">Share picture</string>
     <string name="title_enter_text">Content</string>
-    <string name="title_text_style">Font</string>
+    <string name="title_text_style">Style</string>
     <string name="title_text_size">Size</string>
     <string name="title_horizon_layout">Horizontal</string>
     <string name="title_vertical_layout">Vertical</string>
@@ -33,7 +33,7 @@
     <string name="about_title_update_log">Changelog</string>
     <string name="about_title_open_source">Open source</string>
     <string name="about_title_author">Author</string>
-    <string name="about_title_designer">Developer</string>
+    <string name="about_title_designer">Designer</string>
     <string name="about_title_repo_link">Open in Github</string>
     <string name="about_title_figma_link">Other projects</string>
     <string name="error_not_img">Please select an image</string>
@@ -45,11 +45,11 @@
     <string name="share">Share</string>
     <string name="water_mark_mode_text">Text</string>
     <string name="water_mark_mode_image">Icon</string>
-    <string name="touch_alpha">Clarity: %1$d</string>
+    <string name="touch_alpha">Alpha: %1$d</string>
     <string name="touch_size">Size: %1$d</string>
     <string name="hint_tips_input_water_mark_text">Please enter watermark text</string>
     <string name="tips_ok">Confirm</string>
-    <string name="hint_tips_alpha_100">Clarity 100%</string>
+    <string name="hint_tips_alpha_100">Alpha 100%</string>
     <string name="tips_cancel_output">Cancel</string>
     <string name="tips_need_compress_img">Insufficient storage or the image is too large</string>
     <string name="tips_compressing">Compressing…</string>
@@ -63,7 +63,7 @@
     <string name="tips_content_size_performance">The larger the image, the more demanding it is to view the image in realtime.</string>
     <string name="tips_content_mode_button">Click to modify text or picture</string>
     <string name="config_default_water_mark_text">👋 DO NOT REDISTRIBUTE</string>
-    <string name="style_alpha">Clarity</string>
+    <string name="style_alpha">Alpha</string>
     <string name="contributor_info">If the feedback about a problem is valid and therefore fixed or a new version is released, your name or email will appear in the update pop-up window. We will hide your information, your full name will not appear. \\n If you do not want it to happen, please mark: I do not want to.</string>
     <string name="dialog_change_log_title">Changelog</string>
     <string name="dialog_change_log_content">
