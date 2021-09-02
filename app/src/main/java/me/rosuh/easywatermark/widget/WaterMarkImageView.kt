@@ -6,14 +6,16 @@ import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.util.AttributeSet
 import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.palette.graphics.Palette
 import kotlinx.coroutines.*
 import me.rosuh.easywatermark.BuildConfig
+import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ktx.applyConfig
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.utils.ImageHelper
-import me.rosuh.easywatermark.utils.TextBitmapCache
 import me.rosuh.easywatermark.utils.decodeSampledBitmapFromResource
+import java.util.concurrent.Executors
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.*
 
@@ -40,14 +42,8 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     private var localIconUri: Uri? = null
 
-    private var onColorReady: (palette: Palette) -> Unit = {}
-
     var drawableBounds = RectF()
         private set
-
-    fun doOnColorReady(colorReady: (palette: Palette) -> Unit) {
-        onColorReady = colorReady
-    }
 
     private var exceptionHandler: CoroutineExceptionHandler =
         CoroutineExceptionHandler { _: CoroutineContext, throwable: Throwable ->
@@ -63,12 +59,12 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
      * Using single thread to making all building bitmap working serially. Avoiding concurrency problem about [Bitmap.recycle].
      * 使用额外的单线程上下文来避免 [buildIconBitmapShader] 方法因并发导致的问题。因为 Bitmap 需要适时回收。
      */
-    @ObsoleteCoroutinesApi
-    val generateBitmapCoroutineCtx by lazy { newSingleThreadContext("Generate_Bitmap") }
+    private val generateBitmapCoroutineCtx by lazy {
+        Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+    }
 
     private var generateBitmapJob: Job? = null
 
-    @ObsoleteCoroutinesApi
     var config: WaterMarkConfig? = null
         set(value) {
             field = value
@@ -87,16 +83,13 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                     }
                     val imageBitmap = imageBitmapRect.data
                     setImageBitmap(imageBitmap)
+                    applyBg(imageBitmap)
                     drawableBounds = generateDrawableBounds()
                     scale[0] = scale[0] * imageBitmap!!.width.toFloat() / drawableBounds.width()
                     scale[1] = scale[1] * imageBitmap.height.toFloat() / drawableBounds.height()
                     field?.imageScale = scale
-                    imageBitmap.let { Palette.Builder(it).generate() }.let {
-                        onColorReady.invoke(it)
-                    }
                     curUri = field?.uri
                 }
-
                 paint.applyConfig(value)
                 val canDraw = field?.canDraw() ?: return@launch
                 if (canDraw) {
@@ -145,7 +138,16 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             }
         }
 
-    @ObsoleteCoroutinesApi
+    private fun applyBg(imageBitmap: Bitmap?) {
+        imageBitmap?.let { Palette.Builder(it).generate() }?.let { palette ->
+            val color = palette.darkMutedSwatch?.rgb ?: ContextCompat.getColor(
+                context,
+                R.color.colorSecondary
+            )
+            setBackgroundColor(color)
+        }
+    }
+
     private val paint: Paint by lazy {
         Paint().applyConfig(config)
     }
@@ -163,7 +165,6 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         iconBounds.set(0, 0, w, h)
     }
 
-    @ObsoleteCoroutinesApi
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
         if (config?.text.isNullOrEmpty() || config?.uri.toString().isEmpty()) {
@@ -304,7 +305,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
             val finalWidth = calculateFinalWidth(config, fixWidth.toInt())
             val finalHeight = calculateFinalHeight(config, fixHeight.toInt())
-            val bitmap = TextBitmapCache.get(finalWidth, finalHeight)
+            val bitmap = Bitmap.createBitmap(finalWidth, finalHeight, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             if (showDebugRect) {
                 val tmpPaint = Paint().apply {

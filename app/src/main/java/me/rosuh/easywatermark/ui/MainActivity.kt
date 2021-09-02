@@ -25,8 +25,6 @@ import androidx.recyclerview.widget.LinearSnapHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
-import kotlinx.coroutines.ObsoleteCoroutinesApi
-import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.adapter.FuncPanelAdapter
@@ -120,7 +118,6 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: LaunchView
 
-    @ObsoleteCoroutinesApi
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = LaunchView(this)
@@ -195,7 +192,6 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    @ObsoleteCoroutinesApi
     private fun initObserver() {
         viewModel.config.observe(this, Observer<WaterMarkConfig> {
             if (it.uri.toString().isEmpty()) {
@@ -309,14 +305,6 @@ class MainActivity : AppCompatActivity() {
         // go about page
         binding.ivGoAboutPage.setOnClickListener {
             startActivity(Intent(this, AboutActivity::class.java))
-        }
-        // setting water image widget
-        binding.ivPhoto.apply {
-            doOnColorReady {
-                scope.launch {
-                    applyBgColor(it)
-                }
-            }
         }
         // pick image button
         binding.ivSelectedPhotoTips.setOnClickListener {
