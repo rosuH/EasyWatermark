@@ -198,8 +198,8 @@ class MainActivity : AppCompatActivity() {
                 return@Observer
             }
             try {
-                binding.ivPhoto.config = it
                 binding.toEditorMode()
+                binding.ivPhoto.config = it
             } catch (se: SecurityException) {
                 se.printStackTrace()
                 // reset the uri because we don't have permission -_-
@@ -624,6 +624,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun resetView() {
+        binding.ivPhoto.reset()
         hideDetailPanel()
     }
 

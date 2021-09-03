@@ -7,13 +7,13 @@ import android.net.Uri
 import android.util.AttributeSet
 import android.util.Log
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.withSave
 import androidx.palette.graphics.Palette
 import kotlinx.coroutines.*
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ktx.applyConfig
 import me.rosuh.easywatermark.model.WaterMarkConfig
-import me.rosuh.easywatermark.utils.ImageHelper
 import me.rosuh.easywatermark.utils.decodeSampledBitmapFromResource
 import java.util.concurrent.Executors
 import kotlin.coroutines.CoroutineContext
@@ -68,75 +68,97 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
     var config: WaterMarkConfig? = null
         set(value) {
             field = value
-            generateBitmapJob = launch(exceptionHandler) {
-                if (curUri != field?.uri) {
-                    val scale = floatArrayOf(1f, 1f)
-                    val imageBitmapRect = decodeSampledBitmapFromResource(
-                        context.contentResolver,
-                        config!!.uri,
-                        this@WaterMarkImageView.measuredWidth - paddingStart * 2,
-                        this@WaterMarkImageView.measuredHeight - paddingTop * 2,
-                        scale
-                    )
-                    if (imageBitmapRect.isFailure() || imageBitmapRect.data == null) {
-                        return@launch
-                    }
-                    val imageBitmap = imageBitmapRect.data
-                    setImageBitmap(imageBitmap)
-                    applyBg(imageBitmap)
-                    drawableBounds = generateDrawableBounds()
-                    scale[0] = scale[0] * imageBitmap!!.width.toFloat() / drawableBounds.width()
-                    scale[1] = scale[1] * imageBitmap.height.toFloat() / drawableBounds.height()
-                    field?.imageScale = scale
-                    curUri = field?.uri
-                }
-                paint.applyConfig(value)
-                val canDraw = field?.canDraw() ?: return@launch
-                if (canDraw) {
-                    layoutShader = when (field!!.markMode) {
-                        WaterMarkConfig.MarkMode.Text -> {
-                            paint.getTextBounds(config!!.text, 0, config!!.text.length, bounds)
-                            buildTextBitmapShader(
-                                field!!,
-                                bounds,
-                                paint,
-                                generateBitmapCoroutineCtx
-                            )
-                        }
-                        WaterMarkConfig.MarkMode.Image -> {
-                            var shouldRecycled = false
-                            if (iconBitmap == null || localIconUri != field!!.iconUri) {
-                                // if uri was changed, create a new bitmap
-                                // Here would decode a inSampled bitmap, the max size was imageView's width and height
-                                val iconBitmapRect = decodeSampledBitmapFromResource(
-                                    context.contentResolver,
-                                    field!!.iconUri,
-                                    iconBounds.width(),
-                                    iconBounds.height()
-                                )
-                                if (iconBitmapRect.isFailure()) {
-                                    return@launch
-                                }
-                                iconBitmap = iconBitmapRect.data
-                                // and flagging the old one should be recycled
-                                shouldRecycled = true
-                            }
+            field?.let { applyNewConfig(it) }
+        }
 
-                            layoutPaint.shader = null
-                            buildIconBitmapShader(
-                                iconBitmap!!,
-                                shouldRecycled,
-                                iconBounds,
-                                field!!,
-                                paint,
-                                generateBitmapCoroutineCtx
-                            )
-                        }
-                    }
-                    invalidate()
+
+    private fun applyNewConfig(newConfig: WaterMarkConfig) {
+        generateBitmapJob = launch(exceptionHandler) {
+            // quick check is the same image
+            if (curUri != newConfig.uri) {
+                // hide iv
+                this@WaterMarkImageView.alpha = 0f
+                // decode with inSample
+                val scale = floatArrayOf(1f, 1f)
+                val imageBitmapRect = decodeSampledBitmapFromResource(
+                    context.contentResolver,
+                    config!!.uri,
+                    this@WaterMarkImageView.measuredWidth - paddingStart * 2,
+                    this@WaterMarkImageView.measuredHeight - paddingTop * 2,
+                    scale
+                )
+                if (imageBitmapRect.isFailure() || imageBitmapRect.data == null) {
+                    return@launch
                 }
+                val imageBitmap = imageBitmapRect.data
+                // setting background color via Palette
+                applyBg(imageBitmap)
+                // setting the bitmap of image
+                setImageBitmap(imageBitmap)
+                // animate to show
+                this@WaterMarkImageView.animate()
+                    .alpha(1f)
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .translationY(0f)
+                    .setDuration(300)
+                    .start()
+                // collect the drawable of new image in ImageView
+                drawableBounds = generateDrawableBounds()
+                scale[0] = scale[0] * imageBitmap!!.width.toFloat() / drawableBounds.width()
+                scale[1] = scale[1] * imageBitmap.height.toFloat() / drawableBounds.height()
+                // the scale factor which of real image and render bitmap
+                newConfig.imageScale = scale
+                curUri = newConfig.uri
+            }
+            // apply new config to paint
+            paint.applyConfig(newConfig)
+            val canDraw = newConfig.canDraw()
+            if (canDraw) {
+                layoutShader = when (newConfig.markMode) {
+                    WaterMarkConfig.MarkMode.Text -> {
+                        paint.getTextBounds(config!!.text, 0, config!!.text.length, bounds)
+                        buildTextBitmapShader(
+                            newConfig,
+                            bounds,
+                            paint,
+                            generateBitmapCoroutineCtx
+                        )
+                    }
+                    WaterMarkConfig.MarkMode.Image -> {
+                        var shouldRecycled = false
+                        if (iconBitmap == null || localIconUri != newConfig.iconUri) {
+                            // if uri was changed, create a new bitmap
+                            // Here would decode a inSampled bitmap, the max size was imageView's width and height
+                            val iconBitmapRect = decodeSampledBitmapFromResource(
+                                context.contentResolver,
+                                newConfig.iconUri,
+                                iconBounds.width(),
+                                iconBounds.height()
+                            )
+                            if (iconBitmapRect.isFailure()) {
+                                return@launch
+                            }
+                            iconBitmap = iconBitmapRect.data
+                            // and flagging the old one should be recycled
+                            shouldRecycled = true
+                        }
+
+                        layoutPaint.shader = null
+                        buildIconBitmapShader(
+                            iconBitmap!!,
+                            shouldRecycled,
+                            iconBounds,
+                            newConfig,
+                            paint,
+                            generateBitmapCoroutineCtx
+                        )
+                    }
+                }
+                invalidate()
             }
         }
+    }
 
     private fun applyBg(imageBitmap: Bitmap?) {
         imageBitmap?.let { Palette.Builder(it).generate() }?.let { palette ->
@@ -171,8 +193,15 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             return
         }
         layoutPaint.shader = layoutShader
-        if (layoutShader != null) {
-            ImageHelper.draw(canvas, layoutPaint, drawableBounds)
+        canvas?.withSave {
+            translate(drawableBounds.left, drawableBounds.top)
+            drawRect(
+                0f,
+                0f,
+                drawableBounds.right - drawableBounds.left,
+                drawableBounds.bottom - drawableBounds.top,
+                layoutPaint
+            )
         }
     }
 
@@ -187,6 +216,13 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             bounds.bottom + paddingBottom,
         )
         return bounds
+    }
+
+    fun reset() {
+        config = null
+        curUri = null
+        setImageBitmap(null)
+        setBackgroundColor(Color.TRANSPARENT)
     }
 
     companion object {
