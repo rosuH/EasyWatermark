@@ -10,6 +10,7 @@ import android.text.StaticLayout
 import android.text.TextPaint
 import android.util.AttributeSet
 import android.util.Log
+import android.view.MotionEvent
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.withSave
 import androidx.palette.graphics.Palette
@@ -202,6 +203,21 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 layoutPaint
             )
         }
+    }
+
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        when (event?.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                val x = event.rawX
+                if (x < measuredWidth / 2) {
+                    config?.prevUri()
+                } else {
+                    config?.nextUri()
+                }
+                applyNewConfig(config!!)
+            }
+        }
+        return super.onTouchEvent(event)
     }
 
     private fun generateDrawableBounds(): RectF {

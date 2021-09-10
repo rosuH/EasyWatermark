@@ -10,7 +10,16 @@ import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 
 class WaterMarkConfig private constructor() {
-    lateinit var uri: Uri
+
+    @Volatile
+    private var uriIndex = 0
+
+    lateinit var uriList: List<Uri>
+
+    val uri: Uri
+        get() {
+            return uriList[uriIndex]
+        }
 
     lateinit var text: String
 
@@ -57,7 +66,7 @@ class WaterMarkConfig private constructor() {
         )
     ) {
         with(sharedPreferences) {
-            uri = Uri.parse("")
+            uriList = listOf(Uri.parse(""))
             val saveText = getString(SP_KEY_TEXT, "")
             text =
                 if (saveText.isNullOrEmpty()) MyApp.instance.getString(R.string.config_default_water_mark_text) else saveText
@@ -111,16 +120,14 @@ class WaterMarkConfig private constructor() {
         }
     }
 
-    fun canDrawText(): Boolean {
-        return markMode == MarkMode.Text && text.isNotEmpty()
+    fun nextUri(): Uri {
+        uriIndex = (uriIndex + 1).coerceAtMost(uriList.size - 1)
+        return uri
     }
 
-    fun canDrawIcon(): Boolean {
-        return markMode == MarkMode.Image && iconUri.toString().isNotEmpty()
-    }
-
-    fun canDraw(): Boolean {
-        return canDrawText() || canDrawIcon()
+    fun prevUri(): Uri {
+        uriIndex = (uriIndex - 1).coerceAtLeast(0)
+        return uri
     }
 
     sealed class MarkMode {

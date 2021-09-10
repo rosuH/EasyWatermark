@@ -10,7 +10,6 @@ import android.util.Log
 import android.view.*
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -19,7 +18,6 @@ import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
 import androidx.fragment.app.commit
 import androidx.lifecycle.Observer
-import androidx.lifecycle.lifecycleScope
 import androidx.palette.graphics.Palette
 import androidx.recyclerview.widget.LinearSnapHelper
 import androidx.recyclerview.widget.RecyclerView
@@ -39,6 +37,8 @@ import me.rosuh.easywatermark.ui.dialog.SaveImageBSDialogFragment
 import me.rosuh.easywatermark.ui.panel.*
 import me.rosuh.easywatermark.utils.*
 import me.rosuh.easywatermark.widget.LaunchView
+import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.math.abs
 
 
@@ -47,8 +47,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var pickImageLauncher: ActivityResultLauncher<String>
     private lateinit var pickIconLauncher: ActivityResultLauncher<String>
     private val viewModel: MainViewModel by viewModels()
-
-    private val scope = lifecycleScope
 
     private val contentFunList: List<FuncTitleModel> by lazy {
         listOf(
@@ -138,12 +136,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun registerResultCallback() {
         pickImageLauncher =
-            registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+            registerForActivityResult(MultiPickContract()) { uri: List<Uri?>? ->
                 handleActivityResult(REQ_CODE_PICK_IMAGE, uri)
             }
         pickIconLauncher =
-            registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-                handleActivityResult(REQ_PICK_ICON, uri)
+            registerForActivityResult(PickImageContract()) { uri: Uri? ->
+                handleActivityResult(REQ_PICK_ICON, listOf(uri))
             }
     }
 
@@ -155,8 +153,8 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         // Accepting shared images from other apps
-        if (intent?.action == ACTION_SEND) {
-            dealWithImage(intent?.data)
+        if (intent?.action == ACTION_SEND && intent?.data != null) {
+            dealWithImage(listOf(intent?.data!!))
         }
     }
 
@@ -536,10 +534,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun dealWithImage(uri: Uri?) {
-        if (FileUtils.isImage(this.contentResolver, uri)) {
-            viewModel.updateUri(uri!!)
-            takePersistableUriPermission(uri)
+    private fun dealWithImage(uri: List<Uri>) {
+        if (FileUtils.isImage(this.contentResolver, uri.first())) {
+            viewModel.updateUri(uri)
         } else {
             Toast.makeText(
                 this,
@@ -549,8 +546,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun handleActivityResult(requestCode: Int, uri: Uri?) {
-        if (uri == null) {
+    private fun handleActivityResult(requestCode: Int, list: List<Uri?>?) {
+        val finalList = list?.filterNotNull()?.filter {
+            FileUtils.isImage(this.contentResolver, it)
+        } ?: emptyList()
+        if (finalList.isNullOrEmpty()) {
             Toast.makeText(
                 this,
                 getString(R.string.tips_do_not_choose_image),
@@ -563,19 +563,11 @@ class MainActivity : AppCompatActivity() {
         }
         when (requestCode) {
             REQ_CODE_PICK_IMAGE -> {
-                dealWithImage(uri)
+                Log.i(MainActivity::class.simpleName, finalList.toTypedArray().contentToString())
+                dealWithImage(finalList)
             }
             REQ_PICK_ICON -> {
-                if (FileUtils.isImage(this.contentResolver, uri)) {
-                    viewModel.updateIcon(uri)
-                    takePersistableUriPermission(uri)
-                } else {
-                    Toast.makeText(
-                        this,
-                        getString(R.string.tips_choose_other_file_type),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+                viewModel.updateIcon(finalList.first())
             }
         }
     }
@@ -585,19 +577,6 @@ class MainActivity : AppCompatActivity() {
         funcAdapter.selectedPos = pos
         binding.rvPanel.scrollToPosition(pos)
         binding.rvPanel.canAutoSelected = true
-    }
-
-    /**
-     * Try to get the permission without timeout.
-     */
-    private fun takePersistableUriPermission(uri: Uri) {
-        try {
-            val takeFlags: Int =
-                (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-            contentResolver.takePersistableUriPermission(uri, takeFlags)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
     }
 
     override fun onBackPressed() {

@@ -275,7 +275,11 @@ class MainViewModel : ViewModel() {
     }
 
     fun updateUri(uri: Uri) {
-        config.value?.uri = uri
+        updateUri(listOf(uri))
+    }
+
+    fun updateUri(list: List<Uri>) {
+        config.value?.uriList = list
         forceRefresh()
     }
 
