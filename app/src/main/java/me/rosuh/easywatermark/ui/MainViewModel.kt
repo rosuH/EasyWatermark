@@ -13,6 +13,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.text.TextPaint
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import androidx.lifecycle.*
@@ -153,16 +154,12 @@ class MainViewModel : ViewModel() {
             }
             val canvas = Canvas(mutableBitmap)
             val tmpConfig = config.value!!
-            val bitmapPaint = Paint().applyConfig(tmpConfig, false)
+            val bitmapPaint = TextPaint().applyConfig(tmpConfig, false)
             val layoutPaint = Paint()
-            val bounds = Rect()
-
-            bitmapPaint.getTextBounds(tmpConfig.text, 0, tmpConfig.text.length, bounds)
             layoutPaint.shader = when (config.value?.markMode) {
                 WaterMarkConfig.MarkMode.Text -> {
                     WaterMarkImageView.buildTextBitmapShader(
                         config.value!!,
-                        bounds,
                         bitmapPaint,
                         Dispatchers.IO
                     )

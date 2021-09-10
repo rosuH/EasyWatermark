@@ -4,6 +4,10 @@ import android.content.Context
 import android.graphics.*
 import android.graphics.drawable.Drawable
 import android.net.Uri
+import android.os.Build
+import android.text.Layout
+import android.text.StaticLayout
+import android.text.TextPaint
 import android.util.AttributeSet
 import android.util.Log
 import androidx.core.content.ContextCompat
@@ -112,51 +116,46 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 curUri = newConfig.uri
             }
             // apply new config to paint
-            paint.applyConfig(newConfig)
-            val canDraw = newConfig.canDraw()
-            if (canDraw) {
-                layoutShader = when (newConfig.markMode) {
-                    WaterMarkConfig.MarkMode.Text -> {
-                        paint.getTextBounds(config!!.text, 0, config!!.text.length, bounds)
-                        buildTextBitmapShader(
-                            newConfig,
-                            bounds,
-                            paint,
-                            generateBitmapCoroutineCtx
-                        )
-                    }
-                    WaterMarkConfig.MarkMode.Image -> {
-                        var shouldRecycled = false
-                        if (iconBitmap == null || localIconUri != newConfig.iconUri) {
-                            // if uri was changed, create a new bitmap
-                            // Here would decode a inSampled bitmap, the max size was imageView's width and height
-                            val iconBitmapRect = decodeSampledBitmapFromResource(
-                                context.contentResolver,
-                                newConfig.iconUri,
-                                iconBounds.width(),
-                                iconBounds.height()
-                            )
-                            if (iconBitmapRect.isFailure()) {
-                                return@launch
-                            }
-                            iconBitmap = iconBitmapRect.data
-                            // and flagging the old one should be recycled
-                            shouldRecycled = true
-                        }
-
-                        layoutPaint.shader = null
-                        buildIconBitmapShader(
-                            iconBitmap!!,
-                            shouldRecycled,
-                            iconBounds,
-                            newConfig,
-                            paint,
-                            generateBitmapCoroutineCtx
-                        )
-                    }
+            textPaint.applyConfig(newConfig)
+            layoutShader = when (newConfig.markMode) {
+                WaterMarkConfig.MarkMode.Text -> {
+                    buildTextBitmapShader(
+                        newConfig,
+                        textPaint,
+                        generateBitmapCoroutineCtx
+                    )
                 }
-                invalidate()
+                WaterMarkConfig.MarkMode.Image -> {
+                    var shouldRecycled = false
+                    if (iconBitmap == null || localIconUri != newConfig.iconUri) {
+                        // if uri was changed, create a new bitmap
+                        // Here would decode a inSampled bitmap, the max size was imageView's width and height
+                        val iconBitmapRect = decodeSampledBitmapFromResource(
+                            context.contentResolver,
+                            newConfig.iconUri,
+                            iconBounds.width(),
+                            iconBounds.height()
+                        )
+                        if (iconBitmapRect.isFailure()) {
+                            return@launch
+                        }
+                        iconBitmap = iconBitmapRect.data
+                        // and flagging the old one should be recycled
+                        shouldRecycled = true
+                    }
+
+                    layoutPaint.shader = null
+                    buildIconBitmapShader(
+                        iconBitmap!!,
+                        shouldRecycled,
+                        iconBounds,
+                        newConfig,
+                        textPaint,
+                        generateBitmapCoroutineCtx
+                    )
+                }
             }
+            invalidate()
         }
     }
 
@@ -170,15 +169,13 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         }
     }
 
-    private val paint: Paint by lazy {
-        Paint().applyConfig(config)
+    private val textPaint: TextPaint by lazy {
+        TextPaint().applyConfig(config)
     }
 
     private val layoutPaint: Paint by lazy {
         Paint()
     }
-
-    private var bounds: Rect = Rect()
 
     private var layoutShader: BitmapShader? = null
 
@@ -189,7 +186,9 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
-        if (config?.text.isNullOrEmpty() || config?.uri.toString().isEmpty()) {
+        if (config?.text.isNullOrEmpty() || config?.uri.toString()
+                .isEmpty() || layoutShader == null
+        ) {
             return
         }
         layoutPaint.shader = layoutShader
@@ -317,15 +316,57 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             )
         }
 
+        /**
+         * Generate bitmap shader from input text.
+         * Text watermark implemented by bitmap shader.
+         * Using [StaticLayout] to draw multi line text.
+         * @author hi@rosuh.me
+         */
         suspend fun buildTextBitmapShader(
             config: WaterMarkConfig,
-            textBounds: Rect,
-            textPaint: Paint,
+            textPaint: TextPaint,
             coroutineContext: CoroutineContext
-        ): BitmapShader = withContext(coroutineContext) {
+        ): BitmapShader? = withContext(coroutineContext) {
+            if (config.text.isBlank()) {
+                return@withContext null
+            }
             val showDebugRect = BuildConfig.DEBUG && false
-            val textWidth = textBounds.width().toFloat().coerceAtLeast(1f)
-            val textHeight = textBounds.height().toFloat().coerceAtLeast(1f)
+            var maxLineWidth = 0
+            // calculate the max width of all lines
+            config.text.split("\n").forEach {
+                val startIndex = config.text.indexOf(it).coerceAtLeast(0)
+                val lineWidth = textPaint.measureText(
+                    config.text,
+                    startIndex,
+                    (startIndex + it.length).coerceAtMost(config.text.length)
+                ).toInt()
+                maxLineWidth = max(maxLineWidth, lineWidth)
+            }
+
+            val staticLayout = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                StaticLayout.Builder.obtain(
+                    config.text,
+                    0,
+                    config.text.length,
+                    textPaint,
+                    maxLineWidth
+                )
+                    .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                    .build()
+            } else {
+                StaticLayout(
+                    config.text,
+                    textPaint,
+                    maxLineWidth,
+                    Layout.Alignment.ALIGN_NORMAL,
+                    1.0f,
+                    0f,
+                    false
+                )
+            }
+
+            val textWidth = staticLayout.width.toFloat().coerceAtLeast(1f)
+            val textHeight = staticLayout.height.toFloat().coerceAtLeast(1f)
 
             val radians = Math.toRadians(
                 when (config.degree) {
@@ -336,6 +377,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                     else -> 360 - config.degree.toDouble()
                 }
             )
+            // Generate tmp size from rotation degree, all degree have it's own size.
             val fixWidth = textWidth * cos(radians) + textHeight * sin(radians)
             val fixHeight = textWidth * sin(radians) + textHeight * cos(radians)
 
@@ -352,18 +394,21 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 canvas.drawRect(0f, 0f, finalWidth.toFloat(), finalHeight.toFloat(), tmpPaint)
                 canvas.save()
             }
+            // rotate by user input
             canvas.rotate(
                 config.degree,
                 (finalWidth / 2).toFloat(),
                 (finalHeight / 2).toFloat()
             )
+            // draw text
+            canvas.withSave {
+                this.translate(
+                    ((finalWidth) / 2).toFloat(),
+                    ((finalHeight - staticLayout.getLineBottom(0) - staticLayout.getLineTop(0)) / 2).toFloat()
+                )
+                staticLayout.draw(canvas)
+            }
 
-            canvas.drawText(
-                config.text,
-                finalWidth.toFloat() / 2,
-                (finalHeight + textHeight) / 2,
-                textPaint
-            )
             if (showDebugRect) {
                 canvas.restore()
             }
