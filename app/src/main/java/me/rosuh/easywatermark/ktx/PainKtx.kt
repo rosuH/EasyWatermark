@@ -1,7 +1,8 @@
 package me.rosuh.easywatermark.ktx
 
-import android.graphics.*
-import android.graphics.Shader.TileMode
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Typeface
 import android.text.TextPaint
 import me.rosuh.easywatermark.model.WaterMarkConfig
 
@@ -30,17 +31,6 @@ fun Paint.applyConfig(
     isAntiAlias = true
     isDither = true
     textAlign = Paint.Align.CENTER
-
-    val textShader: Shader = LinearGradient(
-        0f, 0f, measureText(config?.text), textSize, intArrayOf(
-            Color.parseColor("#F97C3C"),
-            Color.parseColor("#FDB54E"),
-            Color.parseColor("#64B678"),
-            Color.parseColor("#478AEA"),
-            Color.parseColor("#8446CC")
-        ), null, TileMode.CLAMP
-    )
-    shader = textShader
     return this
 }
 
