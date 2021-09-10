@@ -420,7 +420,7 @@ class MainViewModel : ViewModel() {
                 """.trimIndent()
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "message/rfc822"
-            putExtra(Intent.EXTRA_EMAIL, arrayOf("rosuh@qq.com"))
+            putExtra(Intent.EXTRA_EMAIL, arrayOf("hi@rosuh.me"))
             putExtra(Intent.EXTRA_SUBJECT, activity.getString(R.string.email_subject))
             putExtra(Intent.EXTRA_TEXT, mainContent)
         }

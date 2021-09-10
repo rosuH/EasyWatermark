@@ -29,7 +29,7 @@ import kotlin.math.abs
  * Custom launch ViewGroup to replace MotionLayout.
  * Using [toLaunchMode] or [toEditorMode] to transform the view layout.
  * Animation was Included.
- * @author rosuh@qq.com
+ * @author hi@rosuh.me
  * @date 2021/8/11
  */
 class LaunchView : CustomViewGroup {
@@ -326,7 +326,7 @@ class LaunchView : CustomViewGroup {
     //region 5 inside caller
     /**
      * Transform the layout when mode switched.
-     * @author rosuh@qq.com
+     * @author hi@rosuh.me
      * @date 2021/8/12
      */
     private fun transformLayout(oldMode: ViewMode, toMode: ViewMode) {
@@ -394,7 +394,7 @@ class LaunchView : CustomViewGroup {
 
     /**
      * Sealed class forView showing mode.
-     * @author rosuh@qq.com
+     * @author hi@rosuh.me
      * @date 2021/8/12
      */
     sealed class ViewMode {

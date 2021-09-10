@@ -225,7 +225,7 @@ fun getBitmapFromReusableSet(
 
 /**
  * Only the size equals or larger target options can be reused.
- * @author rosuh@qq.com
+ * @author hi@rosuh.me
  * @date 2021/8/16
  */
 private fun canUseForInBitmap(

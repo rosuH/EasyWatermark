@@ -8,7 +8,7 @@ import androidx.core.view.*
 
 /**
  * An Custom ViewGroup abstract class for convenience.
- * @author rosuh@qq.com
+ * @author hi@rosuh.me
  * @date 2021/8/12
  */
 abstract class CustomViewGroup : ViewGroup {

@@ -1,12 +1,17 @@
 <h1 align="center">Privacy Policy</h1>
 
-The Privacy Policy respects and protects the individual privacy of all users of the Privacy Policy Web Services.
-In order to provide you with a more accurate and personalized service, our Privacy Policy covers the ways in which we collect, use, disclose, transmit and store your information.
-However, the Privacy Policy will treat this information with a high degree of diligence and duty of care. We may update this Privacy Policy from time to time.
-By agreeing to the Privacy Policy Network Services Usage Agreement, you agree to this Privacy Policy in its entirety.
-This Privacy Policy is an integral part of the Privacy Policy Network Service Use Agreement.
-You do not have to provide us with the personal information we request, but in many cases, if you choose not to do so, we will not be able to provide you with our products or services or respond to any questions you may have.
-If you have any questions about the data processing practices described in this Privacy Policy, please contact us at [rosuh＠qq.com](mailto:rosuh@qq.com) so that we can address your specific needs. We are happy to receive your feedback.
+The Privacy Policy respects and protects the individual privacy of all users of the Privacy Policy
+Web Services. In order to provide you with a more accurate and personalized service, our Privacy
+Policy covers the ways in which we collect, use, disclose, transmit and store your information.
+However, the Privacy Policy will treat this information with a high degree of diligence and duty of
+care. We may update this Privacy Policy from time to time. By agreeing to the Privacy Policy Network
+Services Usage Agreement, you agree to this Privacy Policy in its entirety. This Privacy Policy is
+an integral part of the Privacy Policy Network Service Use Agreement. You do not have to provide us
+with the personal information we request, but in many cases, if you choose not to do so, we will not
+be able to provide you with our products or services or respond to any questions you may have. If
+you have any questions about the data processing practices described in this Privacy Policy, please
+contact us at [rosuh＠qq.com](mailto:hi@rosuh.me) so that we can address your specific needs. We are
+happy to receive your feedback.
 
 <h3> I. How we collect information</h3>
 We don't actively collect information at all. Even without your information, we're still running just fine. Of course, if it crashes, you have the option of sending us an email with the device model and system version information so that we can locate the problem.

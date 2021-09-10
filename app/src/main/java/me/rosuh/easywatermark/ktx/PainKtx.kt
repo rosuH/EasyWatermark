@@ -6,7 +6,7 @@ import android.graphics.Typeface
 import me.rosuh.easywatermark.model.WaterMarkConfig
 
 /**
- * @author rosuh@qq.com
+ * @author hi@rosuh.me
  * @date 2020/9/8
  * 因为预览和实际图像之间存在缩放，所以在预览时要除去缩放比。而在保存时，就不需要了
  * Because there is a zoom between the preview and the actual image, the zoom ratio should be removed when previewing

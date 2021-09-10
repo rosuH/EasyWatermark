@@ -6,7 +6,7 @@ import android.util.AttributeSet
 import androidx.core.widget.NestedScrollView
 
 /**
- * @author rosuh@qq.com
+ * @author hi@rosuh.me
  * @date 2020/9/11
  * 允许外部控制是否滚动，即便是在 onLayout 的时候。但不会阻止由用户触摸产生的滑动
  * Allow external control whether to scroll, even when onLayout was called.

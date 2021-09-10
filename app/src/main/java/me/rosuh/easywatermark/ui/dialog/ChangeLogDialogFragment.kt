@@ -25,7 +25,7 @@ import me.rosuh.easywatermark.model.WaterMarkConfig.Companion.SP_KEY_CHANGE_LOG
 
 
 /**
- * @author rosuh@qq.com
+ * @author hi@rosuh.me
  * @date 2020/9/3
  * A dialog showing change log, which using [BuildConfig.VERSION_CODE]
  * and [R.string.dialog_change_log_content] to generate md5 To decide whether to display
