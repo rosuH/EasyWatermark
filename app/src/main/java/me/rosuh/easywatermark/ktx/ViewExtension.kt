@@ -4,6 +4,7 @@ import android.view.View
 import androidx.core.view.isVisible
 import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.dynamicanimation.animation.SpringForce
+import me.rosuh.easywatermark.widget.WaterMarkImageView
 import me.rosuh.easywatermark.widget.utils.ViewAnimation
 
 fun View.appearAnimation(): SpringAnimation {
@@ -70,21 +71,32 @@ fun generateAppearAnimationList(
     views: List<View>
 ): List<ViewAnimation> {
     return views.mapIndexed { index, view ->
-        ViewAnimation(view, view.appearAnimation()).apply {
-            setListener {
-                applyBeforeStart { view, _ ->
-                    view.translationY = 10.dp.toFloat() + index * 10.dp
-                    view.alpha = 0.1f
-                    view.animate()
-                        .alpha(1f)
-                        .withStartAction {
-                            view.isVisible = true
-                        }
-                        .setDuration(150L)
-                        .start()
+        if (view is WaterMarkImageView) {
+            ViewAnimation(view, null).apply {
+                setListener {
+                    applyBeforeStart { view, animation ->
+                        view.isVisible = true
+                    }
+                }
+            }
+        } else {
+            ViewAnimation(view, view.appearAnimation()).apply {
+                setListener {
+                    applyBeforeStart { view, _ ->
+                        view.translationY = 10.dp.toFloat() + index * 10.dp
+                        view.alpha = 0.1f
+                        view.animate()
+                            .alpha(1f)
+                            .withStartAction {
+                                view.isVisible = true
+                            }
+                            .setDuration(150L)
+                            .start()
+                    }
                 }
             }
         }
+
     }
 }
 

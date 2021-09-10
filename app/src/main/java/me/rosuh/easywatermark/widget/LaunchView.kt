@@ -270,7 +270,7 @@ class LaunchView : CustomViewGroup {
             }
         }
         val heightUsed =
-            toolbar.measuredHeightWithMargins + fcFunctionDetail.measuredHeightWithMargins + tabLayout.measuredHeightWithMargins + rvPanel.measuredHeightWithMargins
+            toolbar.measuredHeight + fcFunctionDetail.measuredHeightWithMargins + tabLayout.measuredHeightWithMargins + rvPanel.measuredHeightWithMargins
         ivPhoto.measure(
             MeasureSpec.makeMeasureSpec(parentWidth, MeasureSpec.EXACTLY),
             MeasureSpec.makeMeasureSpec(parentHeight - heightUsed, MeasureSpec.EXACTLY)
