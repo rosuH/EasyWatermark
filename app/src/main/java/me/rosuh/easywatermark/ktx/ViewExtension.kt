@@ -68,7 +68,7 @@ fun generateAppearAnimationList(
 
 
 fun generateAppearAnimationList(
-    views: List<View>
+    views: Iterable<View>
 ): List<ViewAnimation> {
     return views.mapIndexed { index, view ->
         if (view is WaterMarkImageView) {
@@ -101,7 +101,7 @@ fun generateAppearAnimationList(
 }
 
 fun generateDisappearAnimationList(
-    views: List<View>
+    views: Iterable<View>
 ): List<ViewAnimation> {
     return views.mapIndexed { _, view ->
         ViewAnimation(view, null).apply {

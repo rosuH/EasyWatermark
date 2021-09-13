@@ -14,12 +14,7 @@ class WaterMarkConfig private constructor() {
     @Volatile
     private var uriIndex = 0
 
-    lateinit var uriList: List<Uri>
-
-    val uri: Uri
-        get() {
-            return uriList[uriIndex]
-        }
+    lateinit var uri: Uri
 
     lateinit var text: String
 
@@ -66,7 +61,7 @@ class WaterMarkConfig private constructor() {
         )
     ) {
         with(sharedPreferences) {
-            uriList = listOf(Uri.parse(""))
+            uri = Uri.parse("")
             val saveText = getString(SP_KEY_TEXT, "")
             text =
                 if (saveText.isNullOrEmpty()) MyApp.instance.getString(R.string.config_default_water_mark_text) else saveText
@@ -118,16 +113,6 @@ class WaterMarkConfig private constructor() {
             putFloat(SP_KEY_IMAGE_SCALE_X, imageScale[0])
             putFloat(SP_KEY_IMAGE_SCALE_Y, imageScale[1])
         }
-    }
-
-    fun nextUri(): Uri {
-        uriIndex = (uriIndex + 1).coerceAtMost(uriList.size - 1)
-        return uri
-    }
-
-    fun prevUri(): Uri {
-        uriIndex = (uriIndex - 1).coerceAtLeast(0)
-        return uri
     }
 
     sealed class MarkMode {

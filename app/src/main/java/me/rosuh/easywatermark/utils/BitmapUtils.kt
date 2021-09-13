@@ -110,7 +110,7 @@ suspend fun decodeSampledBitmapFromResource(
         ).data
         BitmapCache.addToCache(info, cachedBitmap)
     } else {
-        Log.i("BitmapUtils", "Shot on cache bitmap!")
+        Log.i("BitmapUtils", "Hit the cache bitmap!")
     }
     return@withContext Result.success(data = cachedBitmap)
 }

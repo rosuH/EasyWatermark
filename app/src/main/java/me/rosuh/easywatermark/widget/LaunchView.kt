@@ -180,6 +180,19 @@ class LaunchView : CustomViewGroup {
             edgeEffectFactory = BounceEdgeEffectFactory(context, this)
         }
     }
+
+    val rvPhotoList: TouchSensitiveRv by lazy {
+        TouchSensitiveRv(context).apply {
+            layoutParams = MarginLayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.WRAP_CONTENT
+            )
+            setBackgroundColor(ContextCompat.getColor(context, R.color.colorSecondary))
+            clipChildren = false
+            clipToPadding = false
+            edgeEffectFactory = BounceEdgeEffectFactory(context, this)
+        }
+    }
     //endregion
 
     //region 3 private field
@@ -188,7 +201,7 @@ class LaunchView : CustomViewGroup {
     }
 
     private val editorViews by lazy {
-        listOf(toolbar, ivPhoto, fcFunctionDetail, tabLayout, rvPanel)
+        listOf(toolbar, ivPhoto, rvPhotoList, fcFunctionDetail, tabLayout, rvPanel)
     }
 
     private val launchModeAppearAnimationList by lazy {
@@ -263,14 +276,15 @@ class LaunchView : CustomViewGroup {
         rvPanel.let {
             it.setPadding(it.measuredWidth / 2, 0, it.measuredWidth / 2, 0)
         }
+        var heightUsed = 0
         // measure children
         children.forEach {
             if (it != ivPhoto) {
                 measureChildWithMargins(it, widthMeasureSpec, 0, heightMeasureSpec, 0)
             }
         }
-        val heightUsed =
-            toolbar.measuredHeight + fcFunctionDetail.measuredHeightWithMargins + tabLayout.measuredHeightWithMargins + rvPanel.measuredHeightWithMargins
+        heightUsed =
+            toolbar.measuredHeight + fcFunctionDetail.measuredHeightWithMargins + tabLayout.measuredHeightWithMargins + rvPanel.measuredHeightWithMargins + rvPhotoList.measuredHeightWithMargins
         ivPhoto.measure(
             MeasureSpec.makeMeasureSpec(parentWidth, MeasureSpec.EXACTLY),
             MeasureSpec.makeMeasureSpec(parentHeight - heightUsed, MeasureSpec.EXACTLY)
@@ -306,6 +320,9 @@ class LaunchView : CustomViewGroup {
         toolbar.let {
             it.layout(0, 0)
         }
+        ivPhoto.let {
+            it.layout(0, toolbar.bottom)
+        }
         // bottom
         tabLayout.let {
             it.layout(0, measuredHeight - it.measuredHeight)
@@ -316,9 +333,8 @@ class LaunchView : CustomViewGroup {
         fcFunctionDetail.let {
             it.layout(0, rvPanel.top - it.measuredHeightWithMargins)
         }
-
-        ivPhoto.let {
-            it.layout(0, toolbar.bottom)
+        rvPhotoList.let {
+            it.layout(0, fcFunctionDetail.top - it.measuredHeightWithMargins)
         }
     }
     //endregion

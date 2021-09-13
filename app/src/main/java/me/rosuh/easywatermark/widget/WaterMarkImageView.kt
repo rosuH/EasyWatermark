@@ -1,5 +1,6 @@
 package me.rosuh.easywatermark.widget
 
+import android.animation.ObjectAnimator
 import android.content.Context
 import android.graphics.*
 import android.graphics.drawable.Drawable
@@ -10,7 +11,6 @@ import android.text.StaticLayout
 import android.text.TextPaint
 import android.util.AttributeSet
 import android.util.Log
-import android.view.MotionEvent
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.withSave
 import androidx.palette.graphics.Palette
@@ -50,6 +50,8 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
     var drawableBounds = RectF()
         private set
 
+    private var onBgReady: (palette: Palette) -> Unit = {}
+
     private var exceptionHandler: CoroutineExceptionHandler =
         CoroutineExceptionHandler { _: CoroutineContext, throwable: Throwable ->
             Log.e(
@@ -76,13 +78,21 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             field?.let { applyNewConfig(it) }
         }
 
+    private val drawableAlphaAnimator by lazy {
+        ObjectAnimator.ofInt(0, 255).apply {
+            addUpdateListener {
+                val alpha = it.animatedValue as Int
+                this@WaterMarkImageView.drawable?.alpha = alpha
+            }
+        }
+    }
 
     private fun applyNewConfig(newConfig: WaterMarkConfig) {
         generateBitmapJob = launch(exceptionHandler) {
             // quick check is the same image
             if (curUri != newConfig.uri) {
                 // hide iv
-                this@WaterMarkImageView.alpha = 0f
+                this@WaterMarkImageView.drawable?.alpha = 0
                 // decode with inSample
                 val scale = floatArrayOf(1f, 1f)
                 val imageBitmapRect = decodeSampledBitmapFromResource(
@@ -101,13 +111,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 // setting the bitmap of image
                 setImageBitmap(imageBitmap)
                 // animate to show
-                this@WaterMarkImageView.animate()
-                    .alpha(1f)
-                    .scaleX(1f)
-                    .scaleY(1f)
-                    .translationY(0f)
-                    .setDuration(300)
-                    .start()
+                drawableAlphaAnimator.start()
                 // collect the drawable of new image in ImageView
                 drawableBounds = generateDrawableBounds()
                 scale[0] = scale[0] * imageBitmap!!.width.toFloat() / drawableBounds.width()
@@ -162,11 +166,12 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     private fun applyBg(imageBitmap: Bitmap?) {
         imageBitmap?.let { Palette.Builder(it).generate() }?.let { palette ->
-            val color = palette.darkMutedSwatch?.rgb ?: ContextCompat.getColor(
+            val color = palette.mutedSwatch?.rgb ?: ContextCompat.getColor(
                 context,
                 R.color.colorSecondary
             )
             setBackgroundColor(color)
+            this.onBgReady.invoke(palette)
         }
     }
 
@@ -205,21 +210,6 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         }
     }
 
-    override fun onTouchEvent(event: MotionEvent?): Boolean {
-        when (event?.actionMasked) {
-            MotionEvent.ACTION_DOWN -> {
-                val x = event.rawX
-                if (x < measuredWidth / 2) {
-                    config?.prevUri()
-                } else {
-                    config?.nextUri()
-                }
-                applyNewConfig(config!!)
-            }
-        }
-        return super.onTouchEvent(event)
-    }
-
     private fun generateDrawableBounds(): RectF {
         val bounds = RectF()
         val drawable: Drawable = drawable
@@ -231,6 +221,10 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             bounds.bottom + paddingBottom,
         )
         return bounds
+    }
+
+    fun onBgReady(block: (palette: Palette) -> Unit) {
+        this.onBgReady = block
     }
 
     fun reset() {

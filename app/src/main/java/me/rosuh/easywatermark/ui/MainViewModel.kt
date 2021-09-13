@@ -24,10 +24,7 @@ import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ktx.applyConfig
 import me.rosuh.easywatermark.ktx.formatDate
-import me.rosuh.easywatermark.model.TextPaintStyle
-import me.rosuh.easywatermark.model.TextTypeface
-import me.rosuh.easywatermark.model.UserConfig
-import me.rosuh.easywatermark.model.WaterMarkConfig
+import me.rosuh.easywatermark.model.*
 import me.rosuh.easywatermark.repo.UserConfigRepo
 import me.rosuh.easywatermark.utils.FileUtils.Companion.outPutFolderName
 import me.rosuh.easywatermark.utils.Result
@@ -69,6 +66,10 @@ class MainViewModel : ViewModel() {
         MutableLiveData<WaterMarkConfig>(WaterMarkConfig.pull())
     }
 
+    val imageInfoList: MutableLiveData<List<ImageInfo>> by lazy {
+        MutableLiveData(emptyList())
+    }
+
     val tipsStatus: MutableLiveData<TipsStatus> by lazy {
         MutableLiveData<TipsStatus>(TipsStatus.None(false))
     }
@@ -106,7 +107,7 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    fun shareImage(contentResolver: ContentResolver,) {
+    fun shareImage(contentResolver: ContentResolver) {
         viewModelScope.launch {
             if (config.value?.uri?.toString().isNullOrEmpty()) {
                 result.value = Result.failure(null, code = TYPE_ERROR_NOT_IMG)
@@ -275,12 +276,23 @@ class MainViewModel : ViewModel() {
     }
 
     fun updateUri(uri: Uri) {
-        updateUri(listOf(uri))
+        config.value?.uri = uri
+        forceRefresh()
     }
 
     fun updateUri(list: List<Uri>) {
-        config.value?.uriList = list
-        forceRefresh()
+        list.map { ImageInfo(it) }
+            .let {
+                imageInfoList.value = list.map { ImageInfo(it) }
+                it
+            }
+            .takeIf {
+                it.isNotEmpty()
+            }
+            ?.let {
+                config.value?.uri = it.first().uri
+                forceRefresh()
+            }
     }
 
     fun updateText(text: String) {

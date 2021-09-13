@@ -19,13 +19,13 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.commit
 import androidx.lifecycle.Observer
 import androidx.palette.graphics.Palette
-import androidx.recyclerview.widget.LinearSnapHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.adapter.FuncPanelAdapter
+import me.rosuh.easywatermark.adapter.PhotoListPreviewAdapter
 import me.rosuh.easywatermark.ktx.commitWithAnimation
 import me.rosuh.easywatermark.model.FuncTitleModel
 import me.rosuh.easywatermark.model.WaterMarkConfig
@@ -39,7 +39,6 @@ import me.rosuh.easywatermark.utils.*
 import me.rosuh.easywatermark.widget.LaunchView
 import java.util.*
 import kotlin.collections.ArrayList
-import kotlin.math.abs
 
 
 class MainActivity : AppCompatActivity() {
@@ -110,16 +109,16 @@ class MainActivity : AppCompatActivity() {
 
     private val funcAdapter by lazy { FuncPanelAdapter(ArrayList(contentFunList)) }
 
-    private lateinit var snapHelper: LinearSnapHelper
+    private val photoListPreviewAdapter by lazy { PhotoListPreviewAdapter() }
 
     private val vibrateHelper: VibrateHelper by lazy { VibrateHelper.get() }
 
-    private lateinit var binding: LaunchView
+    private lateinit var launchView: LaunchView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = LaunchView(this)
-        setContentView(binding)
+        launchView = LaunchView(this)
+        setContentView(launchView)
         if (savedInstanceState == null) {
             supportFragmentManager.commit {
                 setReorderingAllowed(true)
@@ -196,8 +195,8 @@ class MainActivity : AppCompatActivity() {
                 return@Observer
             }
             try {
-                binding.toEditorMode()
-                binding.ivPhoto.config = it
+                launchView.toEditorMode()
+                launchView.ivPhoto.config = it
             } catch (se: SecurityException) {
                 se.printStackTrace()
                 // reset the uri because we don't have permission -_-
@@ -208,18 +207,18 @@ class MainActivity : AppCompatActivity() {
         viewModel.tipsStatus.observe(this) { tips ->
             when (tips) {
                 is MainViewModel.TipsStatus.None -> {
-                    binding.tvDataTips.apply {
+                    launchView.tvDataTips.apply {
                         isInvisible = true
                     }
                 }
                 is MainViewModel.TipsStatus.Alpha -> {
-                    binding.tvDataTips.apply {
+                    launchView.tvDataTips.apply {
                         isVisible = true
                         text = getString(R.string.touch_alpha, tips.values as? Int)
                     }
                 }
                 is MainViewModel.TipsStatus.Size -> {
-                    binding.tvDataTips.apply {
+                    launchView.tvDataTips.apply {
                         isVisible = true
                         text = getString(R.string.touch_size, tips.values as? Int)
                     }
@@ -275,25 +274,29 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, getString(R.string.tips_share_image), Toast.LENGTH_SHORT)
                 .show()
         })
+
+        viewModel.imageInfoList.observe(this) {
+            photoListPreviewAdapter.submitList(it)
+        }
     }
 
     @SuppressLint("ClickableViewAccessibility")
     private fun initView() {
         // prepare MotionLayout
-        binding.setListener {
+        launchView.setListener {
             onModeChange { _, newMode ->
                 when (newMode) {
                     LaunchView.ViewMode.Editor -> {
-                        binding.logoView.stop()
+                        launchView.logoView.stop()
                     }
                     LaunchView.ViewMode.LaunchMode -> {
-                        binding.logoView.start()
+                        launchView.logoView.start()
                     }
                 }
             }
         }
         // setting tool bar
-        binding.toolbar.apply {
+        launchView.toolbar.apply {
             navigationIcon =
                 ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_logo_tool_bar)
             title = null
@@ -301,25 +304,30 @@ class MainActivity : AppCompatActivity() {
             supportActionBar?.title = null
         }
         // go about page
-        binding.ivGoAboutPage.setOnClickListener {
+        launchView.ivGoAboutPage.setOnClickListener {
             startActivity(Intent(this, AboutActivity::class.java))
         }
         // pick image button
-        binding.ivSelectedPhotoTips.setOnClickListener {
+        launchView.ivSelectedPhotoTips.setOnClickListener {
             preCheckStoragePermission {
                 performFileSearch(REQ_CODE_PICK_IMAGE)
             }
         }
+        // setting bg
+        launchView.ivPhoto.onBgReady { palette ->
+            val color = palette.mutedSwatch?.rgb ?: ContextCompat.getColor(
+                this,
+                R.color.colorSecondary
+            )
+            launchView.rvPhotoList.setBackgroundColor(color)
+        }
         // functional panel in recyclerView
-        binding.rvPanel.apply {
+        launchView.rvPanel.apply {
             adapter = funcAdapter
             layoutManager = CenterLayoutManager(this@MainActivity, RecyclerView.HORIZONTAL, false)
-            snapHelper = LinearSnapHelper().also {
-                it.attachToRecyclerView(this)
-            }
 
             onItemClick { _, pos, v ->
-                val snapView = snapHelper.findSnapView(binding.rvPanel.layoutManager)
+                val snapView = snapHelper.findSnapView(launchView.rvPanel.layoutManager)
                 if (snapView == v) {
                     val item = (this.adapter as FuncPanelAdapter).dataSet[pos]
                     handleFuncItem(item)
@@ -329,43 +337,48 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            addOnScrollListener(object : RecyclerView.OnScrollListener() {
-                private var debounceTs = 0L
-                override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                    super.onScrollStateChanged(recyclerView, newState)
-                    val snapView = snapHelper.findSnapView(binding.rvPanel.layoutManager)
-                    when (newState) {
-                        RecyclerView.SCROLL_STATE_IDLE -> {
-                            if (snapView == null
-                                || !canAutoSelected
-                                || System.currentTimeMillis() - debounceTs < 120
-                            ) {
-                                canAutoSelected = true
-                                return
-                            }
-                            debounceTs = System.currentTimeMillis()
-                            val pos = binding.rvPanel.getChildLayoutPosition(snapView)
-                            funcAdapter.selectedPos = pos
-                            handleFuncItem(funcAdapter.dataSet[pos])
-                            vibrateHelper.doVibrate(snapView)
-                        }
-                    }
-                }
+            onSnapViewPreview { snapView, _ ->
+                vibrateHelper.doVibrate(snapView)
+            }
 
-                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                    super.onScrolled(recyclerView, dx, dy)
-                    if (recyclerView.scrollState != RecyclerView.SCROLL_STATE_DRAGGING) {
-                        return
-                    }
-                    val snapView = snapHelper.findSnapView(binding.rvPanel.layoutManager) ?: return
-                    val dX =
-                        abs(binding.fcFunctionDetail.width / 2 - (snapView.left + snapView.right) / 2)
+            onSnapViewSelected { snapView, pos ->
+                funcAdapter.selectedPos = pos
+                handleFuncItem(funcAdapter.dataSet[pos])
+                vibrateHelper.doVibrate(snapView)
+            }
 
-                    if (dX <= 1) {
-                        vibrateHelper.doVibrate(snapView)
-                    }
+            post {
+                canAutoSelected = false
+                scrollToPosition(0)
+                canAutoSelected = true
+            }
+        }
+        // image list
+        launchView.rvPhotoList.apply {
+            adapter = photoListPreviewAdapter
+            layoutManager = CenterLayoutManager(this@MainActivity, RecyclerView.HORIZONTAL, false)
+
+            onItemClick { _, pos, v ->
+                val snapView = snapHelper.findSnapView(launchView.rvPanel.layoutManager)
+                if (snapView == v) {
+                    val item = (this.adapter as FuncPanelAdapter).dataSet[pos]
+                    handleFuncItem(item)
+                    photoListPreviewAdapter.selectedPos = pos
+                } else {
+                    smoothScrollToPosition(pos)
                 }
-            })
+            }
+
+            onSnapViewPreview { snapView, _ ->
+                vibrateHelper.doVibrate(snapView)
+            }
+
+            onSnapViewSelected { snapView, pos ->
+                photoListPreviewAdapter.selectedPos = pos
+                val uri = photoListPreviewAdapter.getItem(pos).uri
+                viewModel.updateUri(uri)
+                vibrateHelper.doVibrate(snapView)
+            }
 
             post {
                 canAutoSelected = false
@@ -374,24 +387,24 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        binding.tabLayout.apply {
+        launchView.tabLayout.apply {
             addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
                 override fun onTabSelected(tab: TabLayout.Tab?) {
                     if (tab == null) {
                         return
                     }
                     hideDetailPanel()
-                    val adapter = (binding.rvPanel.adapter as? FuncPanelAdapter)
+                    val adapter = (launchView.rvPanel.adapter as? FuncPanelAdapter)
                     when (tab.position) {
                         1 -> {
-                            binding.rvPanel.smoothScrollToPosition(0)
+                            launchView.rvPanel.smoothScrollToPosition(0)
                             adapter?.also {
                                 it.seNewData(styleFunList, 0)
                                 handleFuncItem(it.dataSet[0])
                             }
                         }
                         2 -> {
-                            binding.rvPanel.smoothScrollToPosition(0)
+                            launchView.rvPanel.smoothScrollToPosition(0)
                             adapter?.also {
                                 it.seNewData(layoutFunList, 0)
                                 handleFuncItem(it.dataSet[0])
@@ -399,7 +412,7 @@ class MainActivity : AppCompatActivity() {
                         }
                         else -> {
                             val curPos =
-                                if (binding.ivPhoto.config?.markMode == WaterMarkConfig.MarkMode.Text) 0 else 1
+                                if (launchView.ivPhoto.config?.markMode == WaterMarkConfig.MarkMode.Text) 0 else 1
                             adapter?.seNewData(contentFunList, curPos)
                             manuallySelectedItem(curPos)
                         }
@@ -424,7 +437,7 @@ class MainActivity : AppCompatActivity() {
     private fun applyBgColor(palette: Palette) {
         val color =
             palette.darkMutedSwatch?.rgb ?: ContextCompat.getColor(this, R.color.colorSecondary)
-        binding.ivPhoto.setBackgroundColor(color)
+        launchView.ivPhoto.setBackgroundColor(color)
     }
 
     private fun handleFuncItem(item: FuncTitleModel) {
@@ -439,25 +452,25 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             FuncTitleModel.FuncType.Color -> {
-                ColorFragment.replaceShow(this, binding.fcFunctionDetail.id)
+                ColorFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.Alpha -> {
-                AlphaPbFragment.replaceShow(this, binding.fcFunctionDetail.id)
+                AlphaPbFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.Degree -> {
-                DegreePbFragment.replaceShow(this, binding.fcFunctionDetail.id)
+                DegreePbFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.TextStyle -> {
-                TextStyleFragment.replaceShow(this, binding.fcFunctionDetail.id)
+                TextStyleFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.Vertical -> {
-                VerticalPbFragment.replaceShow(this, binding.fcFunctionDetail.id)
+                VerticalPbFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.Horizon -> {
-                HorizonPbFragment.replaceShow(this, binding.fcFunctionDetail.id)
+                HorizonPbFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.TextSize -> {
-                TextSizePbFragment.replaceShow(this, binding.fcFunctionDetail.id)
+                TextSizePbFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
         }
     }
@@ -573,14 +586,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun manuallySelectedItem(pos: Int) {
-        binding.rvPanel.canAutoSelected = false
+        launchView.rvPanel.canAutoSelected = false
         funcAdapter.selectedPos = pos
-        binding.rvPanel.scrollToPosition(pos)
-        binding.rvPanel.canAutoSelected = true
+        launchView.rvPanel.scrollToPosition(pos)
+        launchView.rvPanel.canAutoSelected = true
     }
 
     override fun onBackPressed() {
-        if (binding.mode == LaunchView.ViewMode.LaunchMode) {
+        if (launchView.mode == LaunchView.ViewMode.LaunchMode) {
             super.onBackPressed()
             return
         }
@@ -590,7 +603,7 @@ class MainActivity : AppCompatActivity() {
             .setNegativeButton(
                 R.string.tips_confirm_dialog
             ) { _, _ ->
-                binding.toLaunchMode()
+                launchView.toLaunchMode()
                 resetView()
             }
             .setPositiveButton(
@@ -603,7 +616,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun resetView() {
-        binding.ivPhoto.reset()
+        launchView.ivPhoto.reset()
         hideDetailPanel()
     }
 
