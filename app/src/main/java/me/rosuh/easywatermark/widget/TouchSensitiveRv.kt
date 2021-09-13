@@ -25,9 +25,7 @@ class TouchSensitiveRv : RecyclerView {
     var canAutoSelected = true
 
     val snapHelper: LinearSnapHelper by lazy {
-        LinearSnapHelper().also {
-            it.attachToRecyclerView(this)
-        }
+        LinearSnapHelper()
     }
 
     private var onSnapViewSelected: (snapView: View, pos: Int) -> Unit = { _, _ -> }
@@ -42,7 +40,9 @@ class TouchSensitiveRv : RecyclerView {
         this.onSnapViewPreview = block
     }
 
+
     init {
+        snapHelper.attachToRecyclerView(this)
         addOnScrollListener(object : RecyclerView.OnScrollListener() {
             private var debounceTs = 0L
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {

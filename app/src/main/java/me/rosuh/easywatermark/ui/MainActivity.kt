@@ -277,6 +277,7 @@ class MainActivity : AppCompatActivity() {
 
         viewModel.imageInfoList.observe(this) {
             photoListPreviewAdapter.submitList(it)
+            launchView.rvPhotoList.smoothScrollToPosition(0)
         }
     }
 
