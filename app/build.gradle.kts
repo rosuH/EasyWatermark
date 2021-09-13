@@ -66,7 +66,7 @@ android {
 dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
     implementation("com.github.bumptech.glide:glide:4.11.0")
-    kapt("com.github.bumptech.glide:compiler:4.11.0")
+    kapt("com.github.bumptech.glide:compiler:4.12.0")
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.5.30")
     implementation("androidx.appcompat:appcompat:1.4.0-alpha03")
     implementation("id.zelory:compressor:3.0.1")
