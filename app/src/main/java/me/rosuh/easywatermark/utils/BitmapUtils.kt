@@ -99,8 +99,9 @@ suspend fun decodeSampledBitmapFromResource(
     scale: FloatArray = FloatArray(2) { 1f }
 ): Result<Bitmap> = withContext(Dispatchers.IO) {
     val info = BitmapCache.BitmapInfo(uri, reqWidth, reqHeight)
-    var cachedBitmap = BitmapCache.getFromCache(info)
-    if (cachedBitmap == null) {
+    val cacheValue = BitmapCache.getFromCache(info)
+    var cachedBitmap = cacheValue?.bitmap
+    if (cacheValue == null || cachedBitmap == null) {
         cachedBitmap = decodeSampledBitmapFromResourceSync(
             resolver,
             uri,
@@ -108,8 +109,10 @@ suspend fun decodeSampledBitmapFromResource(
             reqHeight,
             scale
         ).data
-        BitmapCache.addToCache(info, cachedBitmap)
+        BitmapCache.addToCache(info, cachedBitmap!!, scale[0], scale[1])
     } else {
+        scale[0] = cacheValue.scaleWidth
+        scale[1] = cacheValue.scaleHeight
         Log.i("BitmapUtils", "Hit the cache bitmap!")
     }
     return@withContext Result.success(data = cachedBitmap)

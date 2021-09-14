@@ -10,13 +10,13 @@ import android.util.LruCache
  */
 object BitmapCache {
 
-    private val memoryCache: LruCache<BitmapInfo, Bitmap> by lazy {
-        object : LruCache<BitmapInfo, Bitmap>(cacheSize) {
-            override fun sizeOf(key: BitmapInfo?, value: Bitmap?): Int {
-                return if (value == null) {
+    private val memoryCache: LruCache<BitmapInfo, BitmapValue> by lazy {
+        object : LruCache<BitmapInfo, BitmapValue>(cacheSize) {
+            override fun sizeOf(key: BitmapInfo?, value: BitmapValue?): Int {
+                return if (value?.bitmap == null) {
                     super.sizeOf(key, value)
                 } else {
-                    value.byteCount / 1024
+                    value.bitmap.byteCount / 1024
                 }
             }
         }
@@ -26,21 +26,28 @@ object BitmapCache {
         (Runtime.getRuntime().maxMemory() / 1024).toInt()
     }
 
-    val cacheSize = maxMemory / 4
+    val cacheSize = maxMemory / 8
 
 
-    fun getFromCache(info: BitmapInfo): Bitmap? {
+    fun getFromCache(info: BitmapInfo): BitmapValue? {
         return memoryCache.get(info)
     }
 
-    fun addToCache(info: BitmapInfo, bitmap: Bitmap?) {
-        memoryCache.put(info, bitmap)
+    fun addToCache(info: BitmapInfo, bitmap: Bitmap?, scaleWidth: Float, scaleHeight: Float) {
+        val value = if (bitmap == null) return else BitmapValue(bitmap, scaleWidth, scaleHeight)
+        memoryCache.put(info, value)
     }
 
 
     data class BitmapInfo(
         val uri: Uri,
         val reqWidth: Int,
-        val reqHeight: Int,
+        val reqHeight: Int
+    )
+
+    data class BitmapValue(
+        val bitmap: Bitmap,
+        val scaleWidth: Float,
+        val scaleHeight: Float
     )
 }

@@ -99,6 +99,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                     invalidate()
                 }
             }
+            duration = 250
         }
     }
 
@@ -209,7 +210,6 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         super.onDraw(canvas)
         if (config?.text.isNullOrEmpty() || config?.uri.toString().isEmpty()
             || layoutShader == null
-            || isAnimating.get()
         ) {
             return
         }

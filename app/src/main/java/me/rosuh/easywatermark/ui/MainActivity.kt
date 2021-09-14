@@ -18,7 +18,6 @@ import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
 import androidx.fragment.app.commit
 import androidx.lifecycle.Observer
-import androidx.palette.graphics.Palette
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
@@ -376,15 +375,10 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            onSnapViewPreview { snapView, _ ->
-                vibrateHelper.doVibrate(snapView)
-            }
-
-            onSnapViewSelected { snapView, pos ->
+            onSnapViewSelected { _, pos ->
                 photoListPreviewAdapter.selectedPos = pos
                 val uri = photoListPreviewAdapter.getItem(pos).uri
                 viewModel.updateUri(uri)
-                vibrateHelper.doVibrate(snapView)
             }
 
             post {
@@ -439,12 +433,6 @@ class MainActivity : AppCompatActivity() {
                 remove(it)
             }
         }
-    }
-
-    private fun applyBgColor(palette: Palette) {
-        val color =
-            palette.darkMutedSwatch?.rgb ?: ContextCompat.getColor(this, R.color.colorSecondary)
-        launchView.ivPhoto.setBackgroundColor(color)
     }
 
     private fun handleFuncItem(item: FuncTitleModel) {
