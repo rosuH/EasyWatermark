@@ -1,13 +1,16 @@
 package me.rosuh.easywatermark.widget
 
 import android.content.Context
+import android.graphics.*
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
+import androidx.core.graphics.withSave
 import androidx.core.view.children
 import androidx.recyclerview.widget.LinearSnapHelper
 import androidx.recyclerview.widget.RecyclerView
 import kotlin.math.abs
+import kotlin.math.min
 
 class TouchSensitiveRv : RecyclerView {
 
@@ -23,6 +26,23 @@ class TouchSensitiveRv : RecyclerView {
 
     // toggle whether if scroll listener can detected snap view to handle selected item
     var canAutoSelected = true
+
+    private var childWidth = 0
+
+    private var childHeight = 0
+
+    private val glowRectF = RectF()
+    private var glowRadius = 0f
+
+    private val colorList = arrayOf(
+        Color.parseColor("#00FFD703"),
+        Color.parseColor("#1AFFD703"),
+    ).toIntArray()
+
+
+    private val glowPaint by lazy {
+        Paint()
+    }
 
     val snapHelper: LinearSnapHelper by lazy {
         LinearSnapHelper()
@@ -81,8 +101,43 @@ class TouchSensitiveRv : RecyclerView {
 
     override fun onMeasure(widthSpec: Int, heightSpec: Int) {
         super.onMeasure(widthSpec, heightSpec)
-        val w = children.firstOrNull()?.measuredWidth ?: 0
-        setPadding((measuredWidth - w) / 2, 0, (measuredWidth - w) / 2, 0)
+        childWidth = children.firstOrNull()?.measuredWidth ?: 0
+        childHeight = children.firstOrNull()?.measuredHeight ?: 0
+        setPadding((measuredWidth - childWidth) / 2, 0, (measuredWidth - childWidth) / 2, 0)
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        glowRectF.set(
+            (measuredWidth - childWidth) / 2f,
+            0f,
+            (measuredWidth + childWidth) / 2f,
+            childHeight.toFloat()
+        )
+        glowRadius = min(childWidth.toFloat(), childHeight.toFloat()) / 2
+        if (glowRadius <= 0) {
+            glowPaint.shader = null
+            return
+        }
+        val shader = RadialGradient(
+            (measuredWidth / 2).toFloat(),
+            (measuredHeight / 2).toFloat(),
+            glowRadius,
+            colorList,
+            null,
+            Shader.TileMode.CLAMP
+        )
+        glowPaint.shader = shader
+    }
+
+    override fun onDraw(c: Canvas?) {
+        super.onDraw(c)
+        c?.withSave {
+            drawRect(
+                glowRectF,
+                glowPaint
+            )
+        }
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {

@@ -4,15 +4,18 @@ import android.view.View
 import androidx.core.view.isVisible
 import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.dynamicanimation.animation.SpringForce
-import me.rosuh.easywatermark.widget.WaterMarkImageView
+import androidx.dynamicanimation.animation.SpringForce.DAMPING_RATIO_NO_BOUNCY
 import me.rosuh.easywatermark.widget.utils.ViewAnimation
 
-fun View.appearAnimation(): SpringAnimation {
+fun View.appearAnimation(
+    dampingRatio: Float = SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY,
+    stiffness: Float = SpringForce.STIFFNESS_LOW
+): SpringAnimation {
     return SpringAnimation(this, SpringAnimation.TRANSLATION_Y, 0f).apply {
         spring = SpringForce()
             .setFinalPosition(0f)
-            .setDampingRatio(SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY)
-            .setStiffness(SpringForce.STIFFNESS_LOW)
+            .setDampingRatio(dampingRatio)
+            .setStiffness(stiffness)
     }
 }
 
@@ -71,32 +74,21 @@ fun generateAppearAnimationList(
     views: Iterable<View>
 ): List<ViewAnimation> {
     return views.mapIndexed { index, view ->
-        if (view is WaterMarkImageView) {
-            ViewAnimation(view, null).apply {
-                setListener {
-                    applyBeforeStart { view, animation ->
-                        view.isVisible = true
-                    }
-                }
-            }
-        } else {
-            ViewAnimation(view, view.appearAnimation()).apply {
-                setListener {
-                    applyBeforeStart { view, _ ->
-                        view.translationY = 10.dp.toFloat() + index * 10.dp
-                        view.alpha = 0.1f
-                        view.animate()
-                            .alpha(1f)
-                            .withStartAction {
-                                view.isVisible = true
-                            }
-                            .setDuration(150L)
-                            .start()
-                    }
+        ViewAnimation(view, view.appearAnimation(dampingRatio = DAMPING_RATIO_NO_BOUNCY)).apply {
+            setListener {
+                applyBeforeStart { view, _ ->
+                    view.translationY = 10.dp.toFloat() + index * 10.dp
+                    view.alpha = 0.1f
+                    view.animate()
+                        .alpha(1f)
+                        .withStartAction {
+                            view.isVisible = true
+                        }
+                        .setDuration(150L)
+                        .start()
                 }
             }
         }
-
     }
 }
 

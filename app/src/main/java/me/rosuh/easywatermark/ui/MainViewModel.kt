@@ -282,14 +282,11 @@ class MainViewModel : ViewModel() {
 
     fun updateUri(list: List<Uri>) {
         list.map { ImageInfo(it) }
-            .let {
-                imageInfoList.value = list.map { ImageInfo(it) }
-                it
-            }
             .takeIf {
                 it.isNotEmpty()
             }
             ?.let {
+                imageInfoList.value = it
                 config.value?.uri = it.first().uri
                 forceRefresh()
             }

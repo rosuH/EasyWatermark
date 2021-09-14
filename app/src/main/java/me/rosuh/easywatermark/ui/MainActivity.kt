@@ -315,12 +315,18 @@ class MainActivity : AppCompatActivity() {
             }
         }
         // setting bg
-        launchView.ivPhoto.onBgReady { palette ->
-            val color = palette.mutedSwatch?.rgb ?: ContextCompat.getColor(
-                this,
-                R.color.colorSecondary
-            )
-            launchView.rvPhotoList.setBackgroundColor(color)
+        launchView.ivPhoto.apply {
+            onBgReady { palette ->
+                val color = palette.darkMutedSwatch?.rgb ?: ContextCompat.getColor(
+                    this@MainActivity,
+                    R.color.colorSecondary
+                )
+                launchView.rvPhotoList.setBackgroundColor(color)
+            }
+
+            setOnTouchListener { _, motionEvent ->
+                return@setOnTouchListener launchView.rvPhotoList.onTouchEvent(motionEvent)
+            }
         }
         // functional panel in recyclerView
         launchView.rvPanel.apply {

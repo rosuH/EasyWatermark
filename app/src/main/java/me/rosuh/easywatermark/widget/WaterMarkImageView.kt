@@ -11,6 +11,9 @@ import android.text.StaticLayout
 import android.text.TextPaint
 import android.util.AttributeSet
 import android.util.Log
+import androidx.core.animation.addListener
+import androidx.core.animation.doOnEnd
+import androidx.core.animation.doOnStart
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.withSave
 import androidx.palette.graphics.Palette
@@ -21,6 +24,7 @@ import me.rosuh.easywatermark.ktx.applyConfig
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.utils.decodeSampledBitmapFromResource
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.*
 
@@ -44,6 +48,8 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     @Volatile
     private var iconBitmap: Bitmap? = null
+
+    private var isAnimating = AtomicBoolean(false)
 
     private var localIconUri: Uri? = null
 
@@ -83,6 +89,15 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             addUpdateListener {
                 val alpha = it.animatedValue as Int
                 this@WaterMarkImageView.drawable?.alpha = alpha
+            }
+            addListener {
+                doOnStart {
+                    isAnimating.set(true)
+                }
+                doOnEnd {
+                    isAnimating.set(false)
+                    invalidate()
+                }
             }
         }
     }
@@ -166,7 +181,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     private fun applyBg(imageBitmap: Bitmap?) {
         imageBitmap?.let { Palette.Builder(it).generate() }?.let { palette ->
-            val color = palette.mutedSwatch?.rgb ?: ContextCompat.getColor(
+            val color = palette.darkMutedSwatch?.rgb ?: ContextCompat.getColor(
                 context,
                 R.color.colorSecondary
             )
@@ -192,8 +207,9 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
-        if (config?.text.isNullOrEmpty() || config?.uri.toString()
-                .isEmpty() || layoutShader == null
+        if (config?.text.isNullOrEmpty() || config?.uri.toString().isEmpty()
+            || layoutShader == null
+            || isAnimating.get()
         ) {
             return
         }
