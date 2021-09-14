@@ -12,6 +12,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import me.rosuh.easywatermark.R
+import me.rosuh.easywatermark.model.Result
 import me.rosuh.easywatermark.ui.MainViewModel
 import me.rosuh.easywatermark.utils.preCheckStoragePermission
 
@@ -30,7 +31,8 @@ class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
         var ivShare: View?
         var cpbSave: ContentLoadingProgressBar?
         var cpbShare: ContentLoadingProgressBar?
-        val curState = shareViewModel.saveState.value ?: MainViewModel.State.Ready
+        val isSaving = shareViewModel.saveResult.value?.code == MainViewModel.TYPE_SAVING
+        val isSharing = shareViewModel.saveResult.value?.code == MainViewModel.TYPE_SHARING
         with(root) {
             findViewById<View>(R.id.ll_save).apply {
                 setOnClickListener {
@@ -41,13 +43,13 @@ class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
             }
 
             ivSave = findViewById<View>(R.id.iv_save).apply {
-                if (curState == MainViewModel.State.Saving && this.animation?.hasStarted() != true) {
+                if (isSaving && this.animation?.hasStarted() != true) {
                     this.startAnimation(alphaAnimation)
                 }
             }
 
             ivShare = findViewById<View>(R.id.iv_share).apply {
-                if (curState == MainViewModel.State.Sharing && this.animation?.hasStarted() != true) {
+                if (isSharing && this.animation?.hasStarted() != true) {
                     this.startAnimation(alphaAnimation)
                 }
             }
@@ -65,9 +67,9 @@ class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
             cpbShare = findViewById(R.id.cpb_share)
         }
 
-        setUpLoadingView(shareViewModel.saveState.value, cpbSave, cpbShare, ivSave, ivShare)
+        setUpLoadingView(shareViewModel.saveResult.value, cpbSave, cpbShare, ivSave, ivShare)
 
-        shareViewModel.saveState.observe(viewLifecycleOwner, Observer {
+        shareViewModel.saveResult.observe(viewLifecycleOwner, Observer {
             setUpLoadingView(it, cpbSave, cpbShare, ivSave, ivShare)
         })
 
@@ -75,20 +77,20 @@ class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
     }
 
     private fun setUpLoadingView(
-        saveStatus: MainViewModel.State?,
+        saveResult: Result<*>?,
         cpbSave: ContentLoadingProgressBar?,
         cpbShare: ContentLoadingProgressBar?,
         ivSave: View?,
         ivShare: View?
     ) {
-        when (saveStatus) {
-            MainViewModel.State.Saving -> {
+        when (saveResult?.code) {
+            MainViewModel.TYPE_SAVING -> {
                 cpbSave?.show()
                 cpbShare?.hide()
                 ivSave?.isInvisible = true
                 ivShare?.isInvisible = false
             }
-            MainViewModel.State.Sharing -> {
+            MainViewModel.TYPE_SHARING -> {
                 cpbSave?.hide()
                 cpbShare?.show()
                 ivSave?.isInvisible = false

@@ -38,23 +38,9 @@ import java.io.FileOutputStream
 
 class MainViewModel : ViewModel() {
 
-    sealed class State(var msg: String = "") {
-        object Ready : State()
-        object Saving : State()
-        object Sharing : State()
-        object SaveOk : State()
-        object ShareOk : State()
-        object Compressing : State()
-        object CompressOK : State()
-        object CompressError : State()
-        object Error : State()
-        object FileNotFoundError : State()
-        object OOMError : State()
-    }
-
     val saveResult: MutableLiveData<Result<*>> = MutableLiveData()
 
-    val saveState: MutableLiveData<State> = MutableLiveData()
+    val compressedResult: MutableLiveData<Result<*>> = MutableLiveData()
 
     val config: MutableLiveData<WaterMarkConfig> by lazy {
         MutableLiveData<WaterMarkConfig>(WaterMarkConfig.pull())
@@ -68,6 +54,8 @@ class MainViewModel : ViewModel() {
 
     val saveImageUri: MutableLiveData<List<ImageInfo>> = MutableLiveData()
 
+    private var compressedJob: Job? = null
+
     private val repo = UserConfigRepo
     private val userConfig: MutableLiveData<UserConfig> = repo.userConfig
 
@@ -77,11 +65,11 @@ class MainViewModel : ViewModel() {
                 saveResult.value = Result.failure(null, code = TYPE_ERROR_NOT_IMG)
                 return@launch
             }
-            saveState.value = (if (isSharing) State.Sharing else State.Saving)
+            saveResult.value =
+                Result.success(null, code = if (isSharing) TYPE_SHARING else TYPE_SAVING)
             val result = generateList(contentResolver, selectedImageInfoList.value)
             if (result.isFailure()) {
                 saveResult.value = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
-                saveState.postValue(State.FileNotFoundError)
                 return@launch
             }
             if (isSharing) {
@@ -89,7 +77,7 @@ class MainViewModel : ViewModel() {
             } else {
                 saveImageUri.value = result.data
             }
-            saveState.value = (if (isSharing) State.ShareOk else State.SaveOk)
+            saveResult.value = Result.success(result.data)
         }
     }
 
@@ -340,7 +328,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun resetStatus() {
-        saveState.postValue(State.Ready)
+        saveResult.postValue(Result.success(null))
     }
 
 
@@ -349,10 +337,10 @@ class MainViewModel : ViewModel() {
         config.postValue(config.value)
     }
 
-    fun compressImg(activity: Activity): Job {
-        return viewModelScope.launch(Dispatchers.IO) {
+    fun compressImg(activity: Activity) {
+        compressedJob = viewModelScope.launch(Dispatchers.IO) {
             config.value?.let {
-                saveState.postValue(State.Compressing)
+                compressedResult.postValue(Result.success(null, code = TYPE_COMPRESSING))
                 val tmpFile = File.createTempFile("easy_water_mark_", "_compressed")
                 activity.contentResolver.openInputStream(it.uri).use { input ->
                     tmpFile.outputStream().use { output ->
@@ -371,16 +359,30 @@ class MainViewModel : ViewModel() {
                         compressedFile
                     )
                     updateUri(compressedFileUri)
-                    saveState.postValue(State.CompressOK)
+                    compressedResult.postValue(Result.success(null, code = TYPE_COMPRESS_OK))
                 } catch (ie: IllegalArgumentException) {
-                    saveState.postValue(State.CompressError.also { error ->
-                        error.msg = "Images creates uri failed."
-                    })
+                    compressedResult.postValue(
+                        Result.failure(
+                            null,
+                            code = TYPE_COMPRESS_ERROR,
+                            message = "Images creates uri failed."
+                        )
+                    )
                 }
             } ?: kotlin.run {
-                saveState.postValue(State.CompressError.also { it.msg = "Config value is null." })
+                compressedResult.postValue(
+                    Result.failure(
+                        null,
+                        code = TYPE_COMPRESS_ERROR,
+                        message = "Config value is null."
+                    )
+                )
             }
         }
+    }
+
+    fun cancelCompressJob() {
+        compressedJob?.cancel()
     }
 
     fun extraCrashInfo(activity: Activity, crashInfo: String?) {
@@ -423,9 +425,19 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    override fun onCleared() {
+        cancelCompressJob()
+        super.onCleared()
+    }
+
     companion object {
         const val TYPE_ERROR_NOT_IMG = "type_error_not_img"
         const val TYPE_ERROR_FILE_NOT_FOUND = "type_error_file_not_found"
         const val TYPE_ERROR_SAVE_OOM = "type_error_save_oom"
+        const val TYPE_COMPRESS_ERROR = "type_CompressError"
+        const val TYPE_COMPRESS_OK = "type_CompressOK"
+        const val TYPE_COMPRESSING = "type_Compressing"
+        const val TYPE_SHARING = "type_sharing"
+        const val TYPE_SAVING = "type_saving"
     }
 }

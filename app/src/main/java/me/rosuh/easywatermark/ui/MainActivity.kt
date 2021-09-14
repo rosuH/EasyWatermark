@@ -1,6 +1,7 @@
 package me.rosuh.easywatermark.ui
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.content.Intent.ACTION_SEND
 import android.content.pm.PackageManager
@@ -202,31 +203,23 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        viewModel.saveState.observe(this) { state ->
-            when (state) {
-                MainViewModel.State.Error -> {
-                    Toast.makeText(
-                        this,
-                        "${getString(R.string.tips_error)}: ${state.msg}",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    viewModel.resetStatus()
-                }
-                MainViewModel.State.OOMError -> {
-                    CompressImageDialogFragment.safetyShow(supportFragmentManager)
-                    viewModel.resetStatus()
-                }
-            }
-        }
-
         viewModel.saveResult.observe(this) {
-            val msg = when (it.code) {
-                MainViewModel.TYPE_ERROR_SAVE_OOM -> getString(R.string.error_save_oom)
-                MainViewModel.TYPE_ERROR_FILE_NOT_FOUND -> getString(R.string.error_file_not_found)
-                MainViewModel.TYPE_ERROR_NOT_IMG -> getString(R.string.error_not_img)
-                else -> it.message
+            if (it.isFailure()) {
+                when (it.code) {
+                    MainViewModel.TYPE_ERROR_SAVE_OOM -> {
+                        toast(getString(R.string.error_save_oom))
+                        CompressImageDialogFragment.safetyShow(supportFragmentManager)
+                        viewModel.resetStatus()
+                    }
+                    MainViewModel.TYPE_ERROR_FILE_NOT_FOUND -> toast(getString(R.string.error_file_not_found))
+                    MainViewModel.TYPE_ERROR_NOT_IMG -> toast(getString(R.string.error_not_img))
+                    else -> toast("${getString(R.string.tips_error)}: ${it.message}")
+                }
+                viewModel.resetStatus()
+            } else {
+                toast(it.message)
             }
-            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+
         }
 
         viewModel.saveImageUri.observe(this, { list ->
@@ -238,8 +231,7 @@ class MainActivity : AppCompatActivity() {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             startActivity(intent)
-            Toast.makeText(this, getString(R.string.tips_save_ok), Toast.LENGTH_SHORT)
-                .show()
+            toast(getString(R.string.tips_save_ok))
         })
 
         viewModel.shareImageUri.observe(this, { list ->
@@ -262,14 +254,18 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             startActivity(intent)
-            Toast.makeText(this, getString(R.string.tips_share_image), Toast.LENGTH_SHORT)
-                .show()
+            toast(getString(R.string.tips_share_image))
         })
 
         viewModel.selectedImageInfoList.observe(this) {
             photoListPreviewAdapter.submitList(it)
             launchView.rvPhotoList.smoothScrollToPosition(0)
         }
+    }
+
+    private fun Context.toast(msg: String?) {
+        if (msg.isNullOrBlank()) return
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
     }
 
     @SuppressLint("ClickableViewAccessibility")

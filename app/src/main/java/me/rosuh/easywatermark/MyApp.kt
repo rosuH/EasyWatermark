@@ -42,6 +42,7 @@ class MyApp : Application() {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 this@MyApp.startActivity(this)
             }
+            e.printStackTrace()
             exitProcess(0)
         }
     }
