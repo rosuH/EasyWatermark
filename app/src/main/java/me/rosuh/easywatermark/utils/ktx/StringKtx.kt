@@ -1,4 +1,4 @@
-package me.rosuh.easywatermark.ktx
+package me.rosuh.easywatermark.utils.ktx
 
 import java.security.MessageDigest
 

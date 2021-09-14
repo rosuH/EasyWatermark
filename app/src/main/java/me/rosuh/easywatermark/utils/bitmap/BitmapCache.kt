@@ -1,4 +1,4 @@
-package me.rosuh.easywatermark.utils
+package me.rosuh.easywatermark.utils.bitmap
 
 import android.graphics.Bitmap
 import android.net.Uri

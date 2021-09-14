@@ -1,4 +1,4 @@
-package me.rosuh.easywatermark.utils
+package me.rosuh.easywatermark.model
 
 class Result<T>(
     var type: Type,

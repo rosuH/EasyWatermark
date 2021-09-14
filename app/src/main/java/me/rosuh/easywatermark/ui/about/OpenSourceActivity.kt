@@ -4,8 +4,8 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.databinding.ActivityOpenSourceBinding
-import me.rosuh.easywatermark.ktx.inflate
-import me.rosuh.easywatermark.ktx.openLink
+import me.rosuh.easywatermark.utils.ktx.inflate
+import me.rosuh.easywatermark.utils.ktx.openLink
 
 class OpenSourceActivity : AppCompatActivity() {
 

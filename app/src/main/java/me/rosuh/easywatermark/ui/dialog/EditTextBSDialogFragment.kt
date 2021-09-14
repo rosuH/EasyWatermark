@@ -15,8 +15,8 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.textfield.TextInputEditText
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.ktx.dp
 import me.rosuh.easywatermark.ui.MainViewModel
+import me.rosuh.easywatermark.utils.ktx.dp
 
 class EditTextBSDialogFragment : BottomSheetDialogFragment() {
 

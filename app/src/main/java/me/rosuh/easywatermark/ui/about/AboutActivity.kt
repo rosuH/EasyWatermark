@@ -12,10 +12,10 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.databinding.ActivityAboutBinding
-import me.rosuh.easywatermark.ktx.inflate
-import me.rosuh.easywatermark.ktx.openLink
 import me.rosuh.easywatermark.model.UserConfig
 import me.rosuh.easywatermark.ui.dialog.ChangeLogDialogFragment
+import me.rosuh.easywatermark.utils.ktx.inflate
+import me.rosuh.easywatermark.utils.ktx.openLink
 
 
 class AboutActivity : AppCompatActivity() {

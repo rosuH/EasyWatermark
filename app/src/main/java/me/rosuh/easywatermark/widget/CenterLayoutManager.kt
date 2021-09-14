@@ -1,4 +1,4 @@
-package me.rosuh.easywatermark.utils
+package me.rosuh.easywatermark.widget
 
 import android.content.Context
 import android.util.AttributeSet

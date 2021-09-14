@@ -20,9 +20,9 @@ import androidx.palette.graphics.Palette
 import kotlinx.coroutines.*
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.ktx.applyConfig
 import me.rosuh.easywatermark.model.WaterMarkConfig
-import me.rosuh.easywatermark.utils.decodeSampledBitmapFromResource
+import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
+import me.rosuh.easywatermark.utils.ktx.applyConfig
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext

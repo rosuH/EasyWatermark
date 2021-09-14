@@ -18,10 +18,10 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.ktx.openLink
-import me.rosuh.easywatermark.ktx.toMD5
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.model.WaterMarkConfig.Companion.SP_KEY_CHANGE_LOG
+import me.rosuh.easywatermark.utils.ktx.openLink
+import me.rosuh.easywatermark.utils.ktx.toMD5
 
 
 /**

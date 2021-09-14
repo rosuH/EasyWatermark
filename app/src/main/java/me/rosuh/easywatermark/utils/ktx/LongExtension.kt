@@ -1,4 +1,4 @@
-package me.rosuh.easywatermark.ktx
+package me.rosuh.easywatermark.utils.ktx
 
 import java.text.SimpleDateFormat
 import java.util.*

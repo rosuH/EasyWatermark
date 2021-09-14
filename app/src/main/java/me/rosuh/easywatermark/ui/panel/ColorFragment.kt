@@ -12,7 +12,7 @@ import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.adapter.ColorPreviewAdapter
 import me.rosuh.easywatermark.base.BaseBindFragment
 import me.rosuh.easywatermark.databinding.FragmentColorBinding
-import me.rosuh.easywatermark.ktx.commitWithAnimation
+import me.rosuh.easywatermark.utils.ktx.commitWithAnimation
 import me.rosuh.easywatermark.utils.onItemClick
 import me.rosuh.easywatermark.widget.utils.BounceEdgeEffectFactory
 

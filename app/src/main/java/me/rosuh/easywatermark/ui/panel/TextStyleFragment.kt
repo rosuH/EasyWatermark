@@ -12,7 +12,7 @@ import me.rosuh.easywatermark.adapter.TextPaintStyleAdapter
 import me.rosuh.easywatermark.adapter.TextTypefaceAdapter
 import me.rosuh.easywatermark.base.BaseBindFragment
 import me.rosuh.easywatermark.databinding.FragmentTextStyleBinding
-import me.rosuh.easywatermark.ktx.commitWithAnimation
+import me.rosuh.easywatermark.utils.ktx.commitWithAnimation
 import me.rosuh.easywatermark.widget.utils.BounceEdgeEffectFactory
 
 class TextStyleFragment : BaseBindFragment<FragmentTextStyleBinding>() {

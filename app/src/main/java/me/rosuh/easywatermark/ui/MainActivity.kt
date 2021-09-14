@@ -25,7 +25,6 @@ import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.adapter.FuncPanelAdapter
 import me.rosuh.easywatermark.adapter.PhotoListPreviewAdapter
-import me.rosuh.easywatermark.ktx.commitWithAnimation
 import me.rosuh.easywatermark.model.FuncTitleModel
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.ui.about.AboutActivity
@@ -35,6 +34,8 @@ import me.rosuh.easywatermark.ui.dialog.EditTextBSDialogFragment
 import me.rosuh.easywatermark.ui.dialog.SaveImageBSDialogFragment
 import me.rosuh.easywatermark.ui.panel.*
 import me.rosuh.easywatermark.utils.*
+import me.rosuh.easywatermark.utils.ktx.commitWithAnimation
+import me.rosuh.easywatermark.widget.CenterLayoutManager
 import me.rosuh.easywatermark.widget.LaunchView
 import java.util.*
 import kotlin.collections.ArrayList

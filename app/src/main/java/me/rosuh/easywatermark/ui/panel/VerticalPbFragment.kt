@@ -5,8 +5,8 @@ import android.view.View
 import androidx.fragment.app.FragmentActivity
 import com.google.android.material.slider.Slider
 import me.rosuh.easywatermark.base.BasePBFragment
-import me.rosuh.easywatermark.ktx.commitWithAnimation
 import me.rosuh.easywatermark.model.WaterMarkConfig
+import me.rosuh.easywatermark.utils.ktx.commitWithAnimation
 
 class VerticalPbFragment : BasePBFragment() {
 

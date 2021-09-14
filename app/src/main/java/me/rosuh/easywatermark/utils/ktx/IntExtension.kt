@@ -1,8 +1,7 @@
-package me.rosuh.easywatermark.ktx
+package me.rosuh.easywatermark.utils.ktx
 
 import android.content.res.Resources
 import android.util.TypedValue
-import me.rosuh.easywatermark.MyApp
 
 val Int.dp
     get() = TypedValue.applyDimension(

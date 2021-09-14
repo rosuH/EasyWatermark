@@ -6,7 +6,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.core.view.children
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.ktx.dp
+import me.rosuh.easywatermark.utils.ktx.dp
 
 class Toolbar : CustomViewGroup {
 

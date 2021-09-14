@@ -18,9 +18,9 @@ import androidx.fragment.app.FragmentContainerView
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.tabs.TabLayout
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.ktx.dp
-import me.rosuh.easywatermark.ktx.generateAppearAnimationList
-import me.rosuh.easywatermark.ktx.generateDisappearAnimationList
+import me.rosuh.easywatermark.utils.ktx.dp
+import me.rosuh.easywatermark.utils.ktx.generateAppearAnimationList
+import me.rosuh.easywatermark.utils.ktx.generateDisappearAnimationList
 import me.rosuh.easywatermark.widget.utils.BounceEdgeEffectFactory
 import kotlin.math.abs
 
@@ -276,15 +276,14 @@ class LaunchView : CustomViewGroup {
         rvPanel.let {
             it.setPadding(it.measuredWidth / 2, 0, it.measuredWidth / 2, 0)
         }
-        var heightUsed = 0
         // measure children
         children.forEach {
             if (it != ivPhoto) {
                 measureChildWithMargins(it, widthMeasureSpec, 0, heightMeasureSpec, 0)
             }
         }
-        heightUsed =
-            toolbar.measuredHeight + fcFunctionDetail.measuredHeightWithMargins + tabLayout.measuredHeightWithMargins + rvPanel.measuredHeightWithMargins + rvPhotoList.measuredHeightWithMargins
+        var heightUsed = toolbar.measuredHeight + fcFunctionDetail.measuredHeightWithMargins
+        +tabLayout.measuredHeightWithMargins + rvPanel.measuredHeightWithMargins + rvPhotoList.measuredHeightWithMargins
         ivPhoto.measure(
             MeasureSpec.makeMeasureSpec(parentWidth, MeasureSpec.EXACTLY),
             MeasureSpec.makeMeasureSpec(parentHeight - heightUsed, MeasureSpec.EXACTLY)
