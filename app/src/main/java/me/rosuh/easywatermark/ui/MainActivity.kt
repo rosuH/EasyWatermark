@@ -14,8 +14,6 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
-import androidx.core.view.isInvisible
-import androidx.core.view.isVisible
 import androidx.fragment.app.commit
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.RecyclerView
@@ -204,28 +202,6 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        viewModel.tipsStatus.observe(this) { tips ->
-            when (tips) {
-                is MainViewModel.TipsStatus.None -> {
-                    launchView.tvDataTips.apply {
-                        isInvisible = true
-                    }
-                }
-                is MainViewModel.TipsStatus.Alpha -> {
-                    launchView.tvDataTips.apply {
-                        isVisible = true
-                        text = getString(R.string.touch_alpha, tips.values as? Int)
-                    }
-                }
-                is MainViewModel.TipsStatus.Size -> {
-                    launchView.tvDataTips.apply {
-                        isVisible = true
-                        text = getString(R.string.touch_size, tips.values as? Int)
-                    }
-                }
-            }
-        }
-
         viewModel.saveState.observe(this) { state ->
             when (state) {
                 MainViewModel.State.Error -> {
@@ -243,7 +219,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        viewModel.result.observe(this) {
+        viewModel.saveResult.observe(this) {
             val msg = when (it.code) {
                 MainViewModel.TYPE_ERROR_SAVE_OOM -> getString(R.string.error_save_oom)
                 MainViewModel.TYPE_ERROR_FILE_NOT_FOUND -> getString(R.string.error_file_not_found)
@@ -253,7 +229,9 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
         }
 
-        viewModel.saveImageUri.observe(this, { outputUri ->
+        viewModel.saveImageUri.observe(this, { list ->
+            if (list.isNullOrEmpty()) return@observe
+            val outputUri = list.first().shareUri
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(outputUri, "image/*")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -264,18 +242,31 @@ class MainActivity : AppCompatActivity() {
                 .show()
         })
 
-        viewModel.shareImageUri.observe(this, { outputUri ->
-            val intent = Intent(Intent.ACTION_SEND).apply {
+        viewModel.shareImageUri.observe(this, { list ->
+            if (list.isNullOrEmpty()) return@observe
+            val intent = Intent().apply {
                 type = "image/*"
-                putExtra(Intent.EXTRA_STREAM, outputUri)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            if (list.size == 1) {
+                val outputUri = list.first().shareUri
+                intent.apply {
+                    action = Intent.ACTION_SEND
+                    putExtra(Intent.EXTRA_STREAM, outputUri)
+                }
+            } else {
+                val uriList = ArrayList(list.map { it.shareUri })
+                intent.apply {
+                    action = Intent.ACTION_SEND_MULTIPLE
+                    putParcelableArrayListExtra(Intent.EXTRA_STREAM, uriList)
+                }
             }
             startActivity(intent)
             Toast.makeText(this, getString(R.string.tips_share_image), Toast.LENGTH_SHORT)
                 .show()
         })
 
-        viewModel.imageInfoList.observe(this) {
+        viewModel.selectedImageInfoList.observe(this) {
             photoListPreviewAdapter.submitList(it)
             launchView.rvPhotoList.smoothScrollToPosition(0)
         }

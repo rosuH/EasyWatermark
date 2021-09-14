@@ -110,17 +110,6 @@ class LaunchView : CustomViewGroup {
         }
     }
 
-    val tvDataTips: TextView by lazy {
-        AppCompatTextView(context).apply {
-            layoutParams =
-                ViewGroup.MarginLayoutParams(180.dp, 180.dp).also { it.setMargins(0, 0, 0, 15.dp) }
-            setPadding(5.dp)
-            textAlignment = TEXT_ALIGNMENT_CENTER
-            gravity = Gravity.CENTER
-            text = context.getString(R.string.tips_pick_image)
-        }
-    }
-
     val tabLayout: TabLayout by lazy {
         TabLayout(context).apply {
             layoutParams = MarginLayoutParams(
@@ -282,8 +271,8 @@ class LaunchView : CustomViewGroup {
                 measureChildWithMargins(it, widthMeasureSpec, 0, heightMeasureSpec, 0)
             }
         }
-        var heightUsed = toolbar.measuredHeight + fcFunctionDetail.measuredHeightWithMargins
-        +tabLayout.measuredHeightWithMargins + rvPanel.measuredHeightWithMargins + rvPhotoList.measuredHeightWithMargins
+        val heightUsed =
+            toolbar.measuredHeight + fcFunctionDetail.measuredHeightWithMargins + tabLayout.measuredHeightWithMargins + rvPanel.measuredHeightWithMargins + rvPhotoList.measuredHeightWithMargins
         ivPhoto.measure(
             MeasureSpec.makeMeasureSpec(parentWidth, MeasureSpec.EXACTLY),
             MeasureSpec.makeMeasureSpec(parentHeight - heightUsed, MeasureSpec.EXACTLY)
@@ -324,7 +313,7 @@ class LaunchView : CustomViewGroup {
         }
         // bottom
         tabLayout.let {
-            it.layout(0, measuredHeight - it.measuredHeight)
+            it.layout(0, measuredHeight - it.measuredHeightWithMargins)
         }
         rvPanel.let {
             it.layout(0, tabLayout.top - it.measuredHeightWithMargins)

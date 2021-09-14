@@ -5,20 +5,22 @@
     android:layout_height="wrap_content"
     android:gravity="center"
     android:minWidth="70dp"
-    android:minHeight="64dp"
     android:orientation="vertical"
-    android:padding="8dp"
+    android:paddingBottom="8dp"
     android:weightSum="2">
 
     <ImageView
         android:id="@+id/iv_icon"
-        style="@style/Widget.AppCompat.ActionButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:layout_weight="1"
-        tools:src="@drawable/ic_func_size"
-        android:scaleType="centerInside" />
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:scaleType="centerInside"
+        tools:src="@drawable/ic_func_size" />
 
     <TextView
         android:id="@+id/tv_title"

@@ -5,7 +5,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AlphaAnimation
-import android.view.animation.Animation
 import androidx.core.view.isInvisible
 import androidx.core.widget.ContentLoadingProgressBar
 import androidx.fragment.app.FragmentManager
@@ -108,21 +107,7 @@ class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
         AlphaAnimation(1f, 0.30f).apply {
             repeatCount = AlphaAnimation.INFINITE
             repeatMode = AlphaAnimation.REVERSE
-            setAnimationListener(object : Animation.AnimationListener {
-                override fun onAnimationRepeat(animation: Animation?) {
-
-                }
-
-                override fun onAnimationEnd(animation: Animation?) {
-
-                }
-
-                override fun onAnimationStart(animation: Animation?) {
-
-                }
-
-            })
-            duration = 550
+            duration = 350
         }
     }
 

@@ -36,7 +36,7 @@ class TouchSensitiveRv : RecyclerView {
 
     private val colorList = arrayOf(
         Color.parseColor("#00FFD703"),
-        Color.parseColor("#1AFFD703"),
+        Color.parseColor("#0DFFD703"),
     ).toIntArray()
 
 

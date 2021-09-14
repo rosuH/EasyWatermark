@@ -14,6 +14,7 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.text.TextPaint
+import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import androidx.lifecycle.*
@@ -51,13 +52,7 @@ class MainViewModel : ViewModel() {
         object OOMError : State()
     }
 
-    sealed class TipsStatus(val values: Any? = null) {
-        class None(v: Any?) : TipsStatus(values = v)
-        class Alpha(v: Any?) : TipsStatus(values = v)
-        class Size(v: Any?) : TipsStatus(values = v)
-    }
-
-    val result: MutableLiveData<Result<*>> = MutableLiveData()
+    val saveResult: MutableLiveData<Result<*>> = MutableLiveData()
 
     val saveState: MutableLiveData<State> = MutableLiveData()
 
@@ -65,74 +60,68 @@ class MainViewModel : ViewModel() {
         MutableLiveData<WaterMarkConfig>(WaterMarkConfig.pull())
     }
 
-    val imageInfoList: MutableLiveData<List<ImageInfo>> by lazy {
+    val selectedImageInfoList: MutableLiveData<List<ImageInfo>> by lazy {
         MutableLiveData(emptyList())
     }
 
-    val tipsStatus: MutableLiveData<TipsStatus> by lazy {
-        MutableLiveData<TipsStatus>(TipsStatus.None(false))
-    }
+    val shareImageUri: MutableLiveData<List<ImageInfo>> = MutableLiveData()
 
-    val shareImageUri: MutableLiveData<Uri> = MutableLiveData()
-
-    val saveImageUri: MutableLiveData<Uri> = MutableLiveData()
+    val saveImageUri: MutableLiveData<List<ImageInfo>> = MutableLiveData()
 
     private val repo = UserConfigRepo
     private val userConfig: MutableLiveData<UserConfig> = repo.userConfig
 
-    fun saveImage(contentResolver: ContentResolver) {
+    fun saveImage(contentResolver: ContentResolver, isSharing: Boolean = false) {
         viewModelScope.launch {
-            if (config.value?.uri?.toString().isNullOrEmpty()) {
-                result.value = Result.failure(null, code = TYPE_ERROR_NOT_IMG)
+            if (selectedImageInfoList.value.isNullOrEmpty()) {
+                saveResult.value = Result.failure(null, code = TYPE_ERROR_NOT_IMG)
                 return@launch
             }
-            saveState.postValue(State.Saving)
-            try {
-                val rect = generateImage(contentResolver, config.value?.uri ?: Uri.parse(""))
-                if (rect.isFailure() || rect.data == null) {
-                    result.postValue(rect)
-                    return@launch
-                }
-                saveImageUri.value = rect.data!!
-                saveState.postValue(State.SaveOk)
-            } catch (fne: FileNotFoundException) {
-                fne.printStackTrace()
-                result.value = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
+            saveState.value = (if (isSharing) State.Sharing else State.Saving)
+            val result = generateList(contentResolver, selectedImageInfoList.value)
+            if (result.isFailure()) {
+                saveResult.value = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
                 saveState.postValue(State.FileNotFoundError)
-            } catch (oom: OutOfMemoryError) {
-                saveState.postValue(State.OOMError)
-                result.value = Result.failure(null, code = TYPE_ERROR_SAVE_OOM)
+                return@launch
             }
+            if (isSharing) {
+                shareImageUri.value = result.data
+            } else {
+                saveImageUri.value = result.data
+            }
+            saveState.value = (if (isSharing) State.ShareOk else State.SaveOk)
         }
     }
+
+    private suspend fun generateList(
+        contentResolver: ContentResolver,
+        infoList: List<ImageInfo>?
+    ): Result<List<ImageInfo>> =
+        withContext(Dispatchers.Default) {
+            if (infoList.isNullOrEmpty()) {
+                return@withContext Result.failure(null, TYPE_ERROR_NOT_IMG)
+            }
+            infoList.forEach { info ->
+                try {
+                    info.result = generateImage(contentResolver, info.uri)
+                } catch (fne: FileNotFoundException) {
+                    fne.printStackTrace()
+                    info.result = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
+                } catch (oom: OutOfMemoryError) {
+                    info.result = Result.failure(null, code = TYPE_ERROR_SAVE_OOM)
+                }
+                Log.i("generateList", "${info.uri} : ${info.result}")
+            }
+
+            return@withContext Result.success(infoList)
+        }
 
     fun shareImage(contentResolver: ContentResolver) {
         viewModelScope.launch {
-            if (config.value?.uri?.toString().isNullOrEmpty()) {
-                result.value = Result.failure(null, code = TYPE_ERROR_NOT_IMG)
-                return@launch
-            }
-            try {
-                saveState.postValue(State.Sharing)
-                val rect = generateImage(contentResolver, config.value?.uri ?: Uri.parse(""))
-                if (rect.isFailure() || rect.data == null) {
-                    result.postValue(rect)
-                    return@launch
-                }
-                shareImageUri.value = rect.data!!
-                saveState.postValue(State.ShareOk)
-            } catch (fne: FileNotFoundException) {
-                fne.printStackTrace()
-                result.value = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
-                saveState.postValue(State.FileNotFoundError)
-            } catch (oom: OutOfMemoryError) {
-                saveState.postValue(State.OOMError)
-                result.value = Result.failure(null, code = TYPE_ERROR_SAVE_OOM)
-            }
+            saveImage(contentResolver, true)
         }
     }
 
-    @Throws(FileNotFoundException::class, OutOfMemoryError::class)
     private suspend fun generateImage(contentResolver: ContentResolver, uri: Uri): Result<Uri> =
         withContext(Dispatchers.IO) {
             val rect = decodeBitmapFromUri(contentResolver, uri)
@@ -207,7 +196,7 @@ class MainViewModel : ViewModel() {
                         MediaStore.Images.Media.DISPLAY_NAME,
                         generateOutputName()
                     )
-                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/${trapOutputExtension()}")
                     put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/${outPutFolderName}/")
                     put(MediaStore.Images.Media.IS_PENDING, 1)
                 }
@@ -285,7 +274,7 @@ class MainViewModel : ViewModel() {
                 it.isNotEmpty()
             }
             ?.let {
-                imageInfoList.value = it
+                selectedImageInfoList.value = it
                 config.value?.uri = it.first().uri
                 forceRefresh()
             }
@@ -300,13 +289,7 @@ class MainViewModel : ViewModel() {
     fun updateTextSize(textSize: Float) {
         val finalTextSize = textSize.coerceAtLeast(0f)
         config.value?.textSize = finalTextSize
-        tipsStatus.postValue(TipsStatus.Size((finalTextSize).toInt()))
         forceRefresh()
-    }
-
-    fun updateTextSizeBy(textSize: Float) {
-        val curTextSize = config.value?.textSize ?: 14f
-        updateTextSize((curTextSize + textSize).coerceAtLeast(0f))
     }
 
     fun updateTextColor(color: Int) {
@@ -327,13 +310,7 @@ class MainViewModel : ViewModel() {
     fun updateAlpha(alpha: Int) {
         val finalAlpha = alpha.coerceAtLeast(0).coerceAtMost(255)
         config.value?.alpha = finalAlpha
-        tipsStatus.postValue(TipsStatus.Alpha((finalAlpha.toFloat() / 255 * 100).toInt()))
         forceRefresh()
-    }
-
-    fun updateAlphaBy(alpha: Float) {
-        val curAlpha = config.value?.alpha ?: 128
-        updateAlpha(((curAlpha + alpha).toInt()).coerceAtLeast(0).coerceAtMost(255))
     }
 
     fun updateHorizon(gap: Int) {
@@ -360,10 +337,6 @@ class MainViewModel : ViewModel() {
             }
             forceRefresh()
         }
-    }
-
-    fun updateTips(tipsStatus: TipsStatus) {
-        this.tipsStatus.postValue(tipsStatus)
     }
 
     fun resetStatus() {
