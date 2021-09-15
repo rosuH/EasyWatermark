@@ -25,7 +25,7 @@ class DegreePbFragment : BasePBFragment() {
     }
 
     override fun formatValueTips(config: WaterMarkConfig?): String {
-        return "${config?.degree?: 1f}"
+        return "${config?.degree ?: 1f}"
     }
 
     companion object {

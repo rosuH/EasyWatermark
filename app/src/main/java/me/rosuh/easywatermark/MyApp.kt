@@ -12,7 +12,6 @@ import me.rosuh.easywatermark.model.UserConfig
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import kotlin.system.exitProcess
 
-
 class MyApp : Application() {
     override fun onCreate() {
         super.onCreate()
@@ -31,10 +30,11 @@ class MyApp : Application() {
             getSharedPreferences(SP_NAME, MODE_PRIVATE).edit(true) {
                 putBoolean(KEY_IS_CRASH, true)
                 putString(
-                    KEY_STACK_TRACE, """
+                    KEY_STACK_TRACE,
+                    """
                     Crash in ${t.name}:
                     $fullStackTrace
-                """.trimIndent()
+                    """.trimIndent()
                 )
             }
             with(Intent(Intent.ACTION_MAIN)) {

@@ -49,9 +49,12 @@ class CompressImageDialogFragment : DialogFragment() {
             btnCompress = findViewById(R.id.btn_compress)
         }
         setTupState()
-        shareViewModel.compressedResult.observe(viewLifecycleOwner, Observer {
-            setTupState(it)
-        })
+        shareViewModel.compressedResult.observe(
+            viewLifecycleOwner,
+            Observer {
+                setTupState(it)
+            }
+        )
 
         return root
     }
@@ -138,6 +141,5 @@ class CompressImageDialogFragment : DialogFragment() {
                 ie.printStackTrace()
             }
         }
-
     }
 }

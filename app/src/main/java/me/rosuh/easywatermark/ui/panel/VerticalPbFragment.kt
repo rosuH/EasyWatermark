@@ -26,7 +26,7 @@ class VerticalPbFragment : BasePBFragment() {
     }
 
     override fun formatValueTips(config: WaterMarkConfig?): String {
-        return "${config?.verticalGapPercent?: 1f}"
+        return "${config?.verticalGapPercent ?: 1f}"
     }
 
     companion object {

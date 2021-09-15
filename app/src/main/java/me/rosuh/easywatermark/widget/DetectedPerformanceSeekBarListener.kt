@@ -27,8 +27,8 @@ open class DetectedPerformanceSeekBarListener(
     var postAction: (SeekBar?, Int, Boolean) -> Unit = { _, _, _ -> }
 
     private var isHighPerformancePredicate: () -> Boolean = {
-        config?.markMode == WaterMarkConfig.MarkMode.Text
-                || !getAvailableMemory(MyApp.instance).lowMemory
+        config?.markMode == WaterMarkConfig.MarkMode.Text ||
+            !getAvailableMemory(MyApp.instance).lowMemory
     }
 
     override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -39,7 +39,6 @@ open class DetectedPerformanceSeekBarListener(
     }
 
     override fun onStartTrackingTouch(seekBar: SeekBar?) {
-
     }
 
     override fun onStopTrackingTouch(seekBar: SeekBar?) {

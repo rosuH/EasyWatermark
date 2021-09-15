@@ -47,7 +47,6 @@ class EditTextBSDialogFragment : BottomSheetDialogFragment() {
                 setText(shareViewModel.config.value?.text.toString())
                 addTextChangedListener(object : TextWatcher {
                     override fun afterTextChanged(s: Editable?) {
-
                     }
 
                     override fun beforeTextChanged(
@@ -106,6 +105,5 @@ class EditTextBSDialogFragment : BottomSheetDialogFragment() {
                 ie.printStackTrace()
             }
         }
-
     }
 }

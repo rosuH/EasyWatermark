@@ -85,7 +85,6 @@ class TextTypefaceAdapter(
         notifyDataSetChanged()
     }
 
-
     private fun updateSelected(pos: Int) {
         if (pos == selectedPos) {
             return
@@ -99,7 +98,6 @@ class TextTypefaceAdapter(
         val tvPreview: TextView by lazy { root.findViewById(R.id.tv_preview) }
         val tvTitle: TextView? by lazy { root.findViewById(R.id.tv_title) }
     }
-
 
     data class TextTypefaceModel(
         val textTypeface: TextTypeface = TextTypeface.Normal,

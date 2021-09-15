@@ -8,7 +8,6 @@ import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.graphics.drawable.toBitmap
 import kotlin.math.min
 
-
 class CircleImageView : AppCompatImageView {
     constructor(context: Context) : super(context)
     constructor(context: Context, attrs: AttributeSet?) : super(context, attrs)
@@ -29,7 +28,6 @@ class CircleImageView : AppCompatImageView {
     }
 
     private val xfermode by lazy { PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP) }
-
 
     private var sourceImageBitmap: Bitmap? = null
 

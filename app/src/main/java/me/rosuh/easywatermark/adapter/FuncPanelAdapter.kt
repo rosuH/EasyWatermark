@@ -73,7 +73,6 @@ class FuncPanelAdapter(
                         R.color.text_color_main
                     )
                 )
-
             }
         }
     }
@@ -81,7 +80,6 @@ class FuncPanelAdapter(
     override fun getItemCount(): Int {
         return dataSet.count()
     }
-
 
     fun seNewData(contentFunList: List<FuncTitleModel>, toPos: Int = selectedPos) {
         selectedPos = toPos

@@ -69,7 +69,6 @@ abstract class CustomViewGroup : ViewGroup {
         layout(x, y, x + this.measuredWidth, y + this.measuredHeight)
     }
 
-
     override fun generateDefaultLayoutParams(): LayoutParams {
         return MarginLayoutParams(
             LayoutParams.WRAP_CONTENT,

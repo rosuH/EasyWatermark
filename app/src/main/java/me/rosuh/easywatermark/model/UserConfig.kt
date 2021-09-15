@@ -5,8 +5,7 @@ import android.graphics.Bitmap
 import androidx.core.content.edit
 import me.rosuh.easywatermark.MyApp
 
-class UserConfig private constructor(
-) {
+class UserConfig private constructor() {
 
     var outputFormat: Bitmap.CompressFormat = Bitmap.CompressFormat.JPEG
 

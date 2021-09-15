@@ -17,7 +17,6 @@ import me.rosuh.easywatermark.ui.dialog.ChangeLogDialogFragment
 import me.rosuh.easywatermark.utils.ktx.inflate
 import me.rosuh.easywatermark.utils.ktx.openLink
 
-
 class AboutActivity : AppCompatActivity() {
 
     private val binding by inflate<ActivityAboutBinding>()
@@ -32,18 +31,23 @@ class AboutActivity : AppCompatActivity() {
     }
 
     private fun initObserver() {
-        viewModel.userConfig.observe(this, {
-            if (it == null) {
-                return@observe
+        viewModel.userConfig.observe(
+            this,
+            {
+                if (it == null) {
+                    return@observe
+                }
+                binding.tvOutputValue.text = trapFormattingValue(it)
             }
-            binding.tvOutputValue.text = trapFormattingValue(it)
-        })
+        )
     }
 
     private fun changeStatusBarStyle() {
-        val flag = (View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+        val flag = (
+            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                 or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE)
+                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            )
         window?.decorView?.systemUiVisibility = flag
         window?.statusBarColor = Color.TRANSPARENT
         window?.navigationBarColor = Color.TRANSPARENT

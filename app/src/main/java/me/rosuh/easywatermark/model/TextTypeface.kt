@@ -13,7 +13,6 @@ sealed class TextTypeface : SerializableSealClass<Int> {
 
     abstract fun obtainSysTypeface(): Int
 
-
     object Normal : TextTypeface() {
         override fun applyStyle(tv: TextView?) {
             tv?.setTypeface(tv.typeface, android.graphics.Typeface.NORMAL)
@@ -36,7 +35,6 @@ sealed class TextTypeface : SerializableSealClass<Int> {
         override fun obtainSysTypeface(): Int {
             return android.graphics.Typeface.ITALIC
         }
-
 
         override fun serializeKey(): Int {
             return 1

@@ -24,7 +24,6 @@ import me.rosuh.easywatermark.utils.ktx.generateDisappearAnimationList
 import me.rosuh.easywatermark.widget.utils.BounceEdgeEffectFactory
 import kotlin.math.abs
 
-
 /**
  * Custom launch ViewGroup to replace MotionLayout.
  * Using [toLaunchMode] or [toEditorMode] to transform the view layout.
@@ -255,7 +254,6 @@ class LaunchView : CustomViewGroup {
             launchModeAppearAnimationList.forEach { it.start() }
         }
     }
-
 
     //region 4 override view rendering
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {

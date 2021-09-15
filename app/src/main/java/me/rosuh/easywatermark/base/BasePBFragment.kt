@@ -38,9 +38,12 @@ abstract class BasePBFragment : BaseBindFragment<FragemntBasePbBinding>() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        shareViewModel.config.observe(viewLifecycleOwner, {
-            binding.tvProgressVertical.text = formatValueTips(it)
-        })
+        shareViewModel.config.observe(
+            viewLifecycleOwner,
+            {
+                binding.tvProgressVertical.text = formatValueTips(it)
+            }
+        )
     }
 
     abstract fun doOnChange(slider: Slider, value: Float, fromUser: Boolean)
@@ -48,5 +51,4 @@ abstract class BasePBFragment : BaseBindFragment<FragemntBasePbBinding>() {
     abstract fun formatValue(config: WaterMarkConfig?): Float
 
     abstract fun formatValueTips(config: WaterMarkConfig?): String
-
 }

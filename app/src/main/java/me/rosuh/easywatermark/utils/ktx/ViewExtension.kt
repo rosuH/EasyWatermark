@@ -34,7 +34,6 @@ fun View.disappearAnimation(toPos: Float = 10f): SpringAnimation {
     }
 }
 
-
 fun View.appear(fromX: Float = 0f, fromY: Float = 10.dp.toFloat(), fromAlpha: Float = 0.5f) {
     this.translationY = fromY
     this.translationX = fromX
@@ -68,7 +67,6 @@ fun generateAppearAnimationList(
         it.appearAnimation()
     }
 }
-
 
 fun generateAppearAnimationList(
     views: Iterable<View>

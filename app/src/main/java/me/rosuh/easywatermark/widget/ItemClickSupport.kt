@@ -28,7 +28,6 @@ class ItemClickSupport private constructor(private val recyclerView: RecyclerVie
             }
 
             override fun onChildViewDetachedFromWindow(view: View) {
-
             }
         }
 
@@ -92,7 +91,6 @@ class ItemClickSupport private constructor(private val recyclerView: RecyclerVie
         onItemLongClickListener = listener
         return this
     }
-
 }
 
 /** Give click-ability and long-click-ability control to the ViewHolder */

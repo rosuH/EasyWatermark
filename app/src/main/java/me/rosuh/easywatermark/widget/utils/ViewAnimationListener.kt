@@ -33,5 +33,4 @@ class ViewAnimationListenerBuilder : ViewAnimationListener {
     fun applyAfterEnd(applyOnEnd: ApplyOnEnd) {
         this.applyAfterEnd = applyOnEnd
     }
-
 }

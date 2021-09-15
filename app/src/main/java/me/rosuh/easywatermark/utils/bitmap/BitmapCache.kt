@@ -28,7 +28,6 @@ object BitmapCache {
 
     val cacheSize = maxMemory / 8
 
-
     fun getFromCache(info: BitmapInfo): BitmapValue? {
         return memoryCache.get(info)
     }
@@ -37,7 +36,6 @@ object BitmapCache {
         val value = if (bitmap == null) return else BitmapValue(bitmap, scaleWidth, scaleHeight)
         memoryCache.put(info, value)
     }
-
 
     data class BitmapInfo(
         val uri: Uri,

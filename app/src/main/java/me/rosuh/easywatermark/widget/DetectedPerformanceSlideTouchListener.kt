@@ -29,12 +29,11 @@ open class DetectedPerformanceSlideTouchListener(
     var postAction: (Slider?, Float, Boolean) -> Unit = { _, _, _ -> }
 
     private var isHighPerformancePredicate: () -> Boolean = {
-        config?.markMode == WaterMarkConfig.MarkMode.Text
-                || !getAvailableMemory(MyApp.instance).lowMemory
+        config?.markMode == WaterMarkConfig.MarkMode.Text ||
+            !getAvailableMemory(MyApp.instance).lowMemory
     }
 
     override fun onStartTrackingTouch(slider: Slider) {
-
     }
 
     override fun onStopTrackingTouch(slider: Slider) {

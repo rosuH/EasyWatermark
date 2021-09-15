@@ -23,7 +23,6 @@ import me.rosuh.easywatermark.model.WaterMarkConfig.Companion.SP_KEY_CHANGE_LOG
 import me.rosuh.easywatermark.utils.ktx.openLink
 import me.rosuh.easywatermark.utils.ktx.toMD5
 
-
 /**
  * @author hi@rosuh.me
  * @date 2020/9/3

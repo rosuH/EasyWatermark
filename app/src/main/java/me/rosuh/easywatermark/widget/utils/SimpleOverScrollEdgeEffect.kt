@@ -34,7 +34,6 @@ class SimpleOverScrollEdgeEffect(
         }
     }
 
-
     override fun onRelease() {
         super.onRelease()
         recyclerView.forEachVisibleHolder<BaseViewHolder> {

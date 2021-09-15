@@ -69,9 +69,12 @@ class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
 
         setUpLoadingView(shareViewModel.saveResult.value, cpbSave, cpbShare, ivSave, ivShare)
 
-        shareViewModel.saveResult.observe(viewLifecycleOwner, Observer {
-            setUpLoadingView(it, cpbSave, cpbShare, ivSave, ivShare)
-        })
+        shareViewModel.saveResult.observe(
+            viewLifecycleOwner,
+            Observer {
+                setUpLoadingView(it, cpbSave, cpbShare, ivSave, ivShare)
+            }
+        )
 
         return root
     }
@@ -142,6 +145,5 @@ class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
                 ie.printStackTrace()
             }
         }
-
     }
 }

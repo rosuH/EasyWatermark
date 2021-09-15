@@ -13,7 +13,6 @@ import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.base.BaseViewHolder
 import me.rosuh.easywatermark.model.ImageInfo
 
-
 class PhotoListPreviewAdapter : RecyclerView.Adapter<PhotoListPreviewAdapter.ImageHolder>() {
 
     private val differ: AsyncListDiffer<ImageInfo> by lazy {
@@ -77,7 +76,6 @@ class PhotoListPreviewAdapter : RecyclerView.Adapter<PhotoListPreviewAdapter.Ima
     override fun getItemCount(): Int {
         return differ.currentList.count()
     }
-
 
     fun submitList(imageInfoList: List<ImageInfo>, toPos: Int = selectedPos) {
         selectedPos = toPos

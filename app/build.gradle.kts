@@ -17,7 +17,7 @@ android {
         versionCode = 20200
         versionName = "2.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        setProperty("archivesBaseName", "${applicationId}-v${versionName}(${versionCode})")
+        setProperty("archivesBaseName", "$applicationId-v$versionName($versionCode)")
     }
 
     buildTypes {
@@ -38,7 +38,6 @@ android {
         }
     }
 
-
     compileOptions {
         sourceCompatibility(JavaVersion.VERSION_11)
         targetCompatibility(JavaVersion.VERSION_11)
@@ -48,7 +47,7 @@ android {
     applicationVariants.all {
         outputs.all {
             (this as? BaseVariantOutputImpl)?.outputFileName =
-                "${applicationId}-v${versionName}(${versionCode}).apk"
+                "$applicationId-v$versionName($versionCode).apk"
         }
     }
 

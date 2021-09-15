@@ -95,7 +95,8 @@ class ColorFragment : BaseBindFragment<FragmentColorBinding>() {
                             changeIvColor(it, Color.alpha(it))
                         }
                     }
-                })
+                }
+            )
             .setNegativeButton(requireActivity().getString(R.string.tips_cancel_dialog)) { dialogInterface, _ -> dialogInterface.dismiss() }
             .attachAlphaSlideBar(true)
             .attachBrightnessSlideBar(true)
@@ -137,7 +138,6 @@ class ColorFragment : BaseBindFragment<FragmentColorBinding>() {
     companion object {
         const val TAG = "ColorFragment"
         private const val SP_COLOR_PICKER_DIALOG = "water_mark_color_picker_dialog"
-
 
         fun replaceShow(fa: FragmentActivity, containerId: Int) {
             val f = fa.supportFragmentManager.findFragmentByTag(TAG)

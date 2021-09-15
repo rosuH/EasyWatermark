@@ -8,7 +8,6 @@ import android.view.View
 import me.rosuh.easywatermark.R
 import kotlin.math.min
 
-
 class SelectableImageView : View {
 
     constructor(context: Context?) : super(context!!)

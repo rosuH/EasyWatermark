@@ -39,7 +39,6 @@ import me.rosuh.easywatermark.widget.LaunchView
 import java.util.*
 import kotlin.collections.ArrayList
 
-
 class MainActivity : AppCompatActivity() {
 
     private lateinit var pickImageLauncher: ActivityResultLauncher<String>
@@ -189,19 +188,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initObserver() {
-        viewModel.config.observe(this, Observer<WaterMarkConfig> {
-            if (it.uri.toString().isEmpty()) {
-                return@Observer
+        viewModel.config.observe(
+            this,
+            Observer<WaterMarkConfig> {
+                if (it.uri.toString().isEmpty()) {
+                    return@Observer
+                }
+                try {
+                    launchView.toEditorMode()
+                    launchView.ivPhoto.config = it
+                } catch (se: SecurityException) {
+                    se.printStackTrace()
+                    // reset the uri because we don't have permission -_-
+                    viewModel.updateUri(Uri.parse(""))
+                }
             }
-            try {
-                launchView.toEditorMode()
-                launchView.ivPhoto.config = it
-            } catch (se: SecurityException) {
-                se.printStackTrace()
-                // reset the uri because we don't have permission -_-
-                viewModel.updateUri(Uri.parse(""))
-            }
-        })
+        )
 
         viewModel.saveResult.observe(this) {
             if (it.isFailure()) {
@@ -219,43 +221,48 @@ class MainActivity : AppCompatActivity() {
             } else {
                 toast(it.message)
             }
-
         }
 
-        viewModel.saveImageUri.observe(this, { list ->
-            if (list.isNullOrEmpty()) return@observe
-            val outputUri = list.first().shareUri
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(outputUri, "image/*")
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            startActivity(intent)
-            toast(getString(R.string.tips_save_ok))
-        })
-
-        viewModel.shareImageUri.observe(this, { list ->
-            if (list.isNullOrEmpty()) return@observe
-            val intent = Intent().apply {
-                type = "image/*"
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            if (list.size == 1) {
+        viewModel.saveImageUri.observe(
+            this,
+            { list ->
+                if (list.isNullOrEmpty()) return@observe
                 val outputUri = list.first().shareUri
-                intent.apply {
-                    action = Intent.ACTION_SEND
-                    putExtra(Intent.EXTRA_STREAM, outputUri)
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(outputUri, "image/*")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-            } else {
-                val uriList = ArrayList(list.map { it.shareUri })
-                intent.apply {
-                    action = Intent.ACTION_SEND_MULTIPLE
-                    putParcelableArrayListExtra(Intent.EXTRA_STREAM, uriList)
-                }
+                startActivity(intent)
+                toast(getString(R.string.tips_save_ok))
             }
-            startActivity(intent)
-            toast(getString(R.string.tips_share_image))
-        })
+        )
+
+        viewModel.shareImageUri.observe(
+            this,
+            { list ->
+                if (list.isNullOrEmpty()) return@observe
+                val intent = Intent().apply {
+                    type = "image/*"
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                if (list.size == 1) {
+                    val outputUri = list.first().shareUri
+                    intent.apply {
+                        action = Intent.ACTION_SEND
+                        putExtra(Intent.EXTRA_STREAM, outputUri)
+                    }
+                } else {
+                    val uriList = ArrayList(list.map { it.shareUri })
+                    intent.apply {
+                        action = Intent.ACTION_SEND_MULTIPLE
+                        putParcelableArrayListExtra(Intent.EXTRA_STREAM, uriList)
+                    }
+                }
+                startActivity(intent)
+                toast(getString(R.string.tips_share_image))
+            }
+        )
 
         viewModel.selectedImageInfoList.observe(this) {
             photoListPreviewAdapter.submitList(it)

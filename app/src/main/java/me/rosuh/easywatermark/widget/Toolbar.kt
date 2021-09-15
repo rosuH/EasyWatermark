@@ -78,7 +78,6 @@ class Toolbar : CustomViewGroup {
         setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), 48.dp)
     }
 
-
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
         logoView.let {
             it.layoutCenterVertical()

@@ -105,7 +105,8 @@ class WaterMarkConfig private constructor() {
             putInt(SP_KEY_TEXT_STYLE, textStyle.serializeKey())
             putInt(SP_KEY_TEXT_TYPEFACE, textTypeface.serializeKey())
             putInt(
-                SP_KEY_MODE, when (markMode) {
+                SP_KEY_MODE,
+                when (markMode) {
                     MarkMode.Text -> 0
                     MarkMode.Image -> 1
                 }
@@ -137,7 +138,6 @@ class WaterMarkConfig private constructor() {
             imageScale: $imageScale
         """.trimIndent()
     }
-
 
     companion object {
         const val SP_NAME = "sp_water_mark_config"

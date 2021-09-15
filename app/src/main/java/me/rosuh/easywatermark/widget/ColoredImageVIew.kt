@@ -8,7 +8,6 @@ import android.util.AttributeSet
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.graphics.drawable.toBitmap
 
-
 class ColoredImageVIew : AppCompatImageView {
     constructor(context: Context) : super(context)
     constructor(context: Context, attrs: AttributeSet?) : super(context, attrs)
@@ -56,7 +55,6 @@ class ColoredImageVIew : AppCompatImageView {
             }
     }
 
-
     private var innerBitmap: Bitmap? = null
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -92,7 +90,6 @@ class ColoredImageVIew : AppCompatImageView {
         super.onDetachedFromWindow()
         colorAnimator.pause()
     }
-
 
     fun start() {
         enable = true

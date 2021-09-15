@@ -28,7 +28,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.*
 
-
 class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, CoroutineScope {
     constructor(context: Context) : super(context)
     constructor(context: Context, attrs: AttributeSet?) : super(context, attrs)
@@ -62,7 +61,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         CoroutineExceptionHandler { _: CoroutineContext, throwable: Throwable ->
             Log.e(
                 this::class.simpleName,
-                "Throw Exception in WaterMarkImageView ${throwable.message.toString()}"
+                "Throw Exception in WaterMarkImageView ${throwable.message}"
             )
             throwable.printStackTrace()
             generateBitmapJob?.cancel()
@@ -208,8 +207,8 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
-        if (config?.text.isNullOrEmpty() || config?.uri.toString().isEmpty()
-            || layoutShader == null
+        if (config?.text.isNullOrEmpty() || config?.uri.toString().isEmpty() ||
+            layoutShader == null
         ) {
             return
         }

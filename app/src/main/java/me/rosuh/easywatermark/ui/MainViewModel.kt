@@ -35,7 +35,6 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 
-
 class MainViewModel : ViewModel() {
 
     val saveResult: MutableLiveData<Result<*>> = MutableLiveData()
@@ -185,7 +184,7 @@ class MainViewModel : ViewModel() {
                         generateOutputName()
                     )
                     put(MediaStore.Images.Media.MIME_TYPE, "image/${trapOutputExtension()}")
-                    put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/${outPutFolderName}/")
+                    put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/$outPutFolderName/")
                     put(MediaStore.Images.Media.IS_PENDING, 1)
                 }
 
@@ -331,7 +330,6 @@ class MainViewModel : ViewModel() {
         saveResult.postValue(Result.success(null))
     }
 
-
     private fun forceRefresh() {
         config.value?.save()
         config.postValue(config.value)
@@ -401,7 +399,7 @@ class MainViewModel : ViewModel() {
                     ${activity.getString(R.string.contributor_info)}
                     =====================
                     ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
-                """.trimIndent()
+        """.trimIndent()
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "message/rfc822"
             putExtra(Intent.EXTRA_EMAIL, arrayOf("hi@rosuh.me"))

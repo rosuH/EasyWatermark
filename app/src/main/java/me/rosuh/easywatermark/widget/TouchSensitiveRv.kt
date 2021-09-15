@@ -39,7 +39,6 @@ class TouchSensitiveRv : RecyclerView {
         Color.parseColor("#0DFFD703"),
     ).toIntArray()
 
-
     private val glowPaint by lazy {
         Paint()
     }
@@ -60,7 +59,6 @@ class TouchSensitiveRv : RecyclerView {
         this.onSnapViewPreview = block
     }
 
-
     init {
         snapHelper.attachToRecyclerView(this)
         addOnScrollListener(object : RecyclerView.OnScrollListener() {
@@ -70,9 +68,9 @@ class TouchSensitiveRv : RecyclerView {
                 val snapView = snapHelper.findSnapView(layoutManager)
                 when (newState) {
                     RecyclerView.SCROLL_STATE_IDLE -> {
-                        if (snapView == null
-                            || !canAutoSelected
-                            || System.currentTimeMillis() - debounceTs < 120
+                        if (snapView == null ||
+                            !canAutoSelected ||
+                            System.currentTimeMillis() - debounceTs < 120
                         ) {
                             canAutoSelected = true
                             return
