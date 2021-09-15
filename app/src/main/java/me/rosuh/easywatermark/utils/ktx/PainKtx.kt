@@ -21,7 +21,7 @@ fun Paint.applyConfig(
     textSize = if (isScale) {
         size
     } else {
-        size * ((config?.imageScale?.get(0) ?: 1f))
+        size * ((config?.imageScaleWidth ?: 1f))
     }
     color = config?.textColor ?: Color.RED
     alpha = config?.alpha ?: 128

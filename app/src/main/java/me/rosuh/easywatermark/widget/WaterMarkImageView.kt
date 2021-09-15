@@ -109,18 +109,18 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 // hide iv
                 this@WaterMarkImageView.drawable?.alpha = 0
                 // decode with inSample
-                val scale = floatArrayOf(1f, 1f)
-                val imageBitmapRect = decodeSampledBitmapFromResource(
+                val decodeResult = decodeSampledBitmapFromResource(
                     context.contentResolver,
                     config!!.uri,
                     this@WaterMarkImageView.measuredWidth - paddingStart * 2,
-                    this@WaterMarkImageView.measuredHeight - paddingTop * 2,
-                    scale
+                    this@WaterMarkImageView.measuredHeight - paddingTop * 2
                 )
-                if (imageBitmapRect.isFailure() || imageBitmapRect.data == null) {
+                val bitmapValue = decodeResult.data
+                if (decodeResult.isFailure() || bitmapValue == null) {
                     return@launch
                 }
-                val imageBitmap = imageBitmapRect.data
+
+                val imageBitmap = bitmapValue.bitmap
                 // setting background color via Palette
                 applyBg(imageBitmap)
                 // setting the bitmap of image
@@ -129,10 +129,11 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 drawableAlphaAnimator.start()
                 // collect the drawable of new image in ImageView
                 drawableBounds = generateDrawableBounds()
-                scale[0] = scale[0] * imageBitmap!!.width.toFloat() / drawableBounds.width()
-                scale[1] = scale[1] * imageBitmap.height.toFloat() / drawableBounds.height()
                 // the scale factor which of real image and render bitmap
-                newConfig.imageScale = scale
+                newConfig.imageScaleWidth =
+                    bitmapValue.scaleWidth * imageBitmap.width.toFloat() / drawableBounds.width()
+                newConfig.imageScaleHeight =
+                    bitmapValue.scaleHeight * imageBitmap.height.toFloat() / drawableBounds.height()
                 curUri = newConfig.uri
             }
             // apply new config to paint
@@ -156,10 +157,10 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                             iconBounds.width(),
                             iconBounds.height()
                         )
-                        if (iconBitmapRect.isFailure()) {
+                        if (iconBitmapRect.isFailure() || iconBitmapRect.data == null) {
                             return@launch
                         }
-                        iconBitmap = iconBitmapRect.data
+                        iconBitmap = iconBitmapRect.data!!.bitmap
                         // and flagging the old one should be recycled
                         shouldRecycled = true
                     }

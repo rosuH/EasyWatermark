@@ -34,6 +34,7 @@ import me.rosuh.easywatermark.ui.dialog.SaveImageBSDialogFragment
 import me.rosuh.easywatermark.ui.panel.*
 import me.rosuh.easywatermark.utils.*
 import me.rosuh.easywatermark.utils.ktx.commitWithAnimation
+import me.rosuh.easywatermark.utils.ktx.preCheckStoragePermission
 import me.rosuh.easywatermark.widget.CenterLayoutManager
 import me.rosuh.easywatermark.widget.LaunchView
 import java.util.*

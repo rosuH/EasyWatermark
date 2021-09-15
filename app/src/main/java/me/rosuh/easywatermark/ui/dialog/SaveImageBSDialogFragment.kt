@@ -14,7 +14,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.model.Result
 import me.rosuh.easywatermark.ui.MainViewModel
-import me.rosuh.easywatermark.utils.preCheckStoragePermission
+import me.rosuh.easywatermark.utils.ktx.preCheckStoragePermission
 
 class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
 

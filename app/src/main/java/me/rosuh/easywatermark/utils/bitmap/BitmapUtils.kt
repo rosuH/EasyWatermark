@@ -21,32 +21,29 @@ suspend fun decodeBitmapWithExif(
     inputStream: InputStream,
     options: BitmapFactory.Options? = null,
     scale: FloatArray = FloatArray(2) { 1f }
-): Result<Bitmap> =
+): Result<BitmapCache.BitmapValue> =
     withContext(Dispatchers.IO) {
-        return@withContext decodeBitmapWithExifSync(inputStream, options, scale)
+        return@withContext decodeBitmapWithExifSync(inputStream, options)
     }
 
 fun decodeBitmapWithExifSync(
     inputStream: InputStream,
-    options: BitmapFactory.Options? = null,
-    scale: FloatArray = FloatArray(2) { 1f }
-): Result<Bitmap> {
+    options: BitmapFactory.Options? = null
+): Result<BitmapCache.BitmapValue> {
     val bitmap = BitmapFactory.decodeStream(inputStream, null, options)
         ?: return Result.failure(null, "-1", "Generate Bitmap failed.")
-    if (options != null) {
-        scale[0] = options.inSampleSize.toFloat()
-        scale[1] = options.inSampleSize.toFloat()
-    }
+    val inSampleSize = (options?.inSampleSize ?: 1).toFloat()
+    val bitmapValue = BitmapCache.BitmapValue(bitmap, inSampleSize, inSampleSize)
     val exif = if (android.os.Build.VERSION.SDK_INT > android.os.Build.VERSION_CODES.N) {
         try {
             ExifInterface(inputStream)
         } catch (e: Exception) {
             e.printStackTrace()
-            return Result.success(bitmap)
+            return Result.success(bitmapValue)
         }
     } else {
         // do not support api lower 24
-        return Result.success(bitmap)
+        return Result.success(bitmapValue)
     }
 
     val orientation: Int = exif.getAttributeInt(
@@ -61,7 +58,7 @@ fun decodeBitmapWithExifSync(
         ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
         ExifInterface.ORIENTATION_UNDEFINED, ExifInterface.ORIENTATION_NORMAL -> {
             // do not need to rotate bitmap
-            return Result.success(bitmap)
+            return Result.success(bitmapValue)
         }
         else -> {
         }
@@ -79,10 +76,14 @@ fun decodeBitmapWithExifSync(
     if (rotatedBitmap != bitmap && !bitmap.isRecycled) {
         bitmap.recycle()
     }
-    return Result.success(rotatedBitmap)
+    val rotateBitmapValue = BitmapCache.BitmapValue(rotatedBitmap, inSampleSize, inSampleSize)
+    return Result.success(rotateBitmapValue)
 }
 
-suspend fun decodeBitmapFromUri(resolver: ContentResolver, uri: Uri): Result<Bitmap> =
+suspend fun decodeBitmapFromUri(
+    resolver: ContentResolver,
+    uri: Uri
+): Result<BitmapCache.BitmapValue> =
     withContext(Dispatchers.IO) {
         resolver.openInputStream(uri).use { inputStream ->
             if (inputStream == null) {
@@ -96,36 +97,30 @@ suspend fun decodeSampledBitmapFromResource(
     resolver: ContentResolver,
     uri: Uri,
     reqWidth: Int,
-    reqHeight: Int,
-    scale: FloatArray = FloatArray(2) { 1f }
-): Result<Bitmap> = withContext(Dispatchers.IO) {
+    reqHeight: Int
+): Result<BitmapCache.BitmapValue> = withContext(Dispatchers.IO) {
     val info = BitmapCache.BitmapInfo(uri, reqWidth, reqHeight)
-    val cacheValue = BitmapCache.getFromCache(info)
-    var cachedBitmap = cacheValue?.bitmap
-    if (cacheValue == null || cachedBitmap == null) {
-        cachedBitmap = decodeSampledBitmapFromResourceSync(
+    var cacheValue = BitmapCache.getFromCache(info)
+    if (cacheValue?.bitmap == null) {
+        cacheValue = decodeSampledBitmapFromResourceSync(
             resolver,
             uri,
             reqWidth,
-            reqHeight,
-            scale
+            reqHeight
         ).data
-        BitmapCache.addToCache(info, cachedBitmap!!, scale[0], scale[1])
+        BitmapCache.addToCache(info, cacheValue)
     } else {
-        scale[0] = cacheValue.scaleWidth
-        scale[1] = cacheValue.scaleHeight
         Log.i("BitmapUtils", "Hit the cache bitmap!")
     }
-    return@withContext Result.success(data = cachedBitmap)
+    return@withContext Result.success(data = cacheValue)
 }
 
 fun decodeSampledBitmapFromResourceSync(
     resolver: ContentResolver,
     uri: Uri,
     reqWidth: Int,
-    reqHeight: Int,
-    scale: FloatArray = FloatArray(2) { 1f }
-): Result<Bitmap> {
+    reqHeight: Int
+): Result<BitmapCache.BitmapValue> {
     try {
         val options = BitmapFactory.Options()
         options.inJustDecodeBounds = true
@@ -141,7 +136,7 @@ fun decodeSampledBitmapFromResourceSync(
             if (inputStream == null) {
                 return Result.failure(null, "-1", "Open input stream failed.")
             }
-            return decodeBitmapWithExifSync(inputStream, options, scale)
+            return decodeBitmapWithExifSync(inputStream, options)
         }
     } catch (fne: FileNotFoundException) {
         return Result.failure(null, "-1", fne.message)

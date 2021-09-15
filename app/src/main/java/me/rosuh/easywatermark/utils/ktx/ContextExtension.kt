@@ -1,4 +1,4 @@
-package me.rosuh.easywatermark.utils
+package me.rosuh.easywatermark.utils.ktx
 
 import android.Manifest
 import android.app.Activity

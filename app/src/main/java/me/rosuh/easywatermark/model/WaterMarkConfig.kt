@@ -11,9 +11,6 @@ import me.rosuh.easywatermark.R
 
 class WaterMarkConfig private constructor() {
 
-    @Volatile
-    private var uriIndex = 0
-
     lateinit var uri: Uri
 
     lateinit var text: String
@@ -52,7 +49,9 @@ class WaterMarkConfig private constructor() {
 
     lateinit var markMode: MarkMode
 
-    var imageScale: FloatArray = floatArrayOf(1f, 1f)
+    var imageScaleWidth: Float = 1f
+
+    var imageScaleHeight: Float = 1f
 
     fun restore(
         sharedPreferences: SharedPreferences = MyApp.instance.getSharedPreferences(
@@ -87,8 +86,8 @@ class WaterMarkConfig private constructor() {
             } else {
                 Uri.parse("")
             }
-            imageScale[0] = getFloat(SP_KEY_IMAGE_SCALE_X, 1f)
-            imageScale[1] = getFloat(SP_KEY_IMAGE_SCALE_Y, imageScale[0])
+            imageScaleWidth = getFloat(SP_KEY_IMAGE_SCALE_X, 1f)
+            imageScaleHeight = getFloat(SP_KEY_IMAGE_SCALE_X, imageScaleWidth)
         }
     }
 
@@ -111,8 +110,8 @@ class WaterMarkConfig private constructor() {
                     MarkMode.Image -> 1
                 }
             )
-            putFloat(SP_KEY_IMAGE_SCALE_X, imageScale[0])
-            putFloat(SP_KEY_IMAGE_SCALE_Y, imageScale[1])
+            putFloat(SP_KEY_IMAGE_SCALE_X, imageScaleWidth)
+            putFloat(SP_KEY_IMAGE_SCALE_Y, imageScaleHeight)
         }
     }
 
@@ -135,7 +134,7 @@ class WaterMarkConfig private constructor() {
             textStyle: $textStyle,
             iconUri: $iconUri,
             markMode: $markMode,
-            imageScale: $imageScale
+            imageScale: $imageScaleWidth : $imageScaleHeight
         """.trimIndent()
     }
 

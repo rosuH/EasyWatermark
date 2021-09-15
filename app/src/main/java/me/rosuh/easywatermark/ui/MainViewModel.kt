@@ -115,7 +115,7 @@ class MainViewModel : ViewModel() {
             if (rect.isFailure()) {
                 return@withContext Result.extendMsg(rect)
             }
-            val mutableBitmap = rect.data?.copy(Bitmap.Config.ARGB_8888, true)
+            val mutableBitmap = rect.data?.bitmap?.copy(Bitmap.Config.ARGB_8888, true)
                 ?: return@withContext Result.failure(
                     null,
                     code = "-1",
@@ -154,7 +154,7 @@ class MainViewModel : ViewModel() {
                             message = "decodeSampledBitmapFromResource == null"
                         )
                     }
-                    val iconBitmap = iconBitmapRect.data!!
+                    val iconBitmap = iconBitmapRect.data!!.bitmap
                     WaterMarkImageView.buildIconBitmapShader(
                         iconBitmap,
                         true,

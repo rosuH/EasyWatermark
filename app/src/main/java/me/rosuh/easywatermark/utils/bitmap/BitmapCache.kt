@@ -32,9 +32,8 @@ object BitmapCache {
         return memoryCache.get(info)
     }
 
-    fun addToCache(info: BitmapInfo, bitmap: Bitmap?, scaleWidth: Float, scaleHeight: Float) {
-        val value = if (bitmap == null) return else BitmapValue(bitmap, scaleWidth, scaleHeight)
-        memoryCache.put(info, value)
+    fun addToCache(info: BitmapInfo, bitmapValue: BitmapValue?) {
+        memoryCache.put(info, bitmapValue)
     }
 
     data class BitmapInfo(
