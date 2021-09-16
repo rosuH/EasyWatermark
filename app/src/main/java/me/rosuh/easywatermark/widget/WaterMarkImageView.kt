@@ -3,6 +3,7 @@ package me.rosuh.easywatermark.widget
 import android.animation.ObjectAnimator
 import android.content.Context
 import android.graphics.*
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
@@ -23,6 +24,7 @@ import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.utils.ktx.applyConfig
+import me.rosuh.easywatermark.utils.ktx.toColor
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
@@ -103,17 +105,23 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
     }
 
     private fun applyNewConfig(newConfig: WaterMarkConfig) {
+        generateBitmapJob?.cancel()
         generateBitmapJob = launch(exceptionHandler) {
             // quick check is the same image
             if (curUri != newConfig.uri) {
                 // hide iv
                 this@WaterMarkImageView.drawable?.alpha = 0
+                drawableAlphaAnimator.cancel()
                 // decode with inSample
                 val decodeResult = decodeSampledBitmapFromResource(
                     context.contentResolver,
                     config!!.uri,
-                    this@WaterMarkImageView.measuredWidth - paddingStart * 2,
-                    this@WaterMarkImageView.measuredHeight - paddingTop * 2
+                    ((this@WaterMarkImageView.measuredWidth - paddingStart * 2) / 2).coerceAtMost(
+                        720
+                    ),
+                    ((this@WaterMarkImageView.measuredHeight - paddingTop * 2) / 2).coerceAtMost(
+                        1280
+                    )
                 )
                 val bitmapValue = decodeResult.data
                 if (decodeResult.isFailure() || bitmapValue == null) {
@@ -121,10 +129,10 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 }
 
                 val imageBitmap = bitmapValue.bitmap
-                // setting background color via Palette
-                applyBg(imageBitmap)
                 // setting the bitmap of image
                 setImageBitmap(imageBitmap)
+                // setting background color via Palette
+                applyBg(imageBitmap)
                 // animate to show
                 drawableAlphaAnimator.start()
                 // collect the drawable of new image in ImageView
@@ -180,16 +188,29 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         }
     }
 
+    private var bgTransformAnimator: ObjectAnimator? = null
+
     private fun applyBg(imageBitmap: Bitmap?) {
-        imageBitmap?.let { Palette.Builder(it).generate() }?.let { palette ->
-            val color = palette.darkMutedSwatch?.rgb ?: ContextCompat.getColor(
-                context,
-                R.color.colorSecondary
-            )
-            setBackgroundColor(color)
-            this.onBgReady.invoke(palette)
+        launch {
+            generatePalette(imageBitmap)?.let { palette ->
+                bgTransformAnimator?.cancel()
+                val color = palette.darkMutedSwatch?.rgb ?: ContextCompat.getColor(
+                    context,
+                    R.color.colorSecondary
+                )
+                bgTransformAnimator =
+                    ((background as? ColorDrawable)?.color ?: Color.BLACK).toColor(color) {
+                        setBackgroundColor(it.animatedValue as Int)
+                    }
+                this@WaterMarkImageView.onBgReady.invoke(palette)
+            }
         }
     }
+
+    private suspend fun generatePalette(imageBitmap: Bitmap?): Palette? =
+        withContext(Dispatchers.Default) {
+            return@withContext imageBitmap?.let { Palette.Builder(it).generate() }
+        }
 
     private val textPaint: TextPaint by lazy {
         TextPaint().applyConfig(config)

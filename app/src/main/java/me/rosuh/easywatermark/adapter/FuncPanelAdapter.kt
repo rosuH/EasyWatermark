@@ -22,6 +22,10 @@ class FuncPanelAdapter(
             notifyItemChanged(value, "Selected")
         }
 
+    override fun getItemId(position: Int): Long {
+        return position.toLong()
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FuncTitleHolder {
         val view =
             LayoutInflater.from(parent.context).inflate(R.layout.item_func_panel, parent, false)

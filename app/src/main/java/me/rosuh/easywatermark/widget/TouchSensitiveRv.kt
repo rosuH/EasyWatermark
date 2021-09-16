@@ -1,14 +1,18 @@
 package me.rosuh.easywatermark.widget
 
+import android.animation.ObjectAnimator
 import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.withSave
 import androidx.core.view.children
 import androidx.recyclerview.widget.LinearSnapHelper
 import androidx.recyclerview.widget.RecyclerView
+import me.rosuh.easywatermark.R
+import me.rosuh.easywatermark.utils.ktx.dp
 import kotlin.math.abs
 import kotlin.math.min
 
@@ -27,12 +31,19 @@ class TouchSensitiveRv : RecyclerView {
     // toggle whether if scroll listener can detected snap view to handle selected item
     var canAutoSelected = true
 
-    private var childWidth = 0
+    var childWidth = 0
+        private set
 
-    private var childHeight = 0
+    var childHeight = 0
+        private set
+
+    var canTouch: Boolean = true
+
+    var enableBorder = false
 
     private val glowRectF = RectF()
     private var glowRadius = 0f
+    private val borderRectF = RectF()
 
     private val colorList = arrayOf(
         Color.parseColor("#00FFD703"),
@@ -41,6 +52,18 @@ class TouchSensitiveRv : RecyclerView {
 
     private val glowPaint by lazy {
         Paint()
+    }
+
+    private val borderWidth = 3.dp.toFloat()
+
+    private val borderPaint by lazy {
+        Paint().apply {
+            color = ContextCompat.getColor(context, R.color.colorAccent)
+            style = Paint.Style.STROKE
+            strokeWidth = borderWidth
+            isAntiAlias = true
+            isDither = true
+        }
     }
 
     val snapHelper: LinearSnapHelper by lazy {
@@ -68,9 +91,10 @@ class TouchSensitiveRv : RecyclerView {
                 val snapView = snapHelper.findSnapView(layoutManager)
                 when (newState) {
                     RecyclerView.SCROLL_STATE_IDLE -> {
+                        borderAnimator.start()
                         if (snapView == null ||
                             !canAutoSelected ||
-                            System.currentTimeMillis() - debounceTs < 120
+                            System.currentTimeMillis() - debounceTs < 300
                         ) {
                             canAutoSelected = true
                             return
@@ -112,6 +136,12 @@ class TouchSensitiveRv : RecyclerView {
             (measuredWidth + childWidth) / 2f,
             childHeight.toFloat()
         )
+        borderRectF.set(
+            (measuredWidth - childWidth) / 2f + borderWidth,
+            borderWidth,
+            (measuredWidth + childWidth) / 2f - borderWidth,
+            childHeight.toFloat() - borderWidth
+        )
         glowRadius = min(childWidth.toFloat(), childHeight.toFloat()) / 2
         if (glowRadius <= 0) {
             glowPaint.shader = null
@@ -128,7 +158,23 @@ class TouchSensitiveRv : RecyclerView {
         glowPaint.shader = shader
     }
 
+    private val borderAnimator = ObjectAnimator.ofInt(0, 255).apply {
+        addUpdateListener {
+            if (!enableBorder) return@addUpdateListener
+            borderPaint.alpha = it.animatedValue as Int
+            postInvalidateOnAnimation()
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        borderAnimator.cancel()
+    }
+
     override fun onDraw(c: Canvas?) {
+        if (enableBorder && scrollState == SCROLL_STATE_IDLE) {
+            c?.drawRect(borderRectF, borderPaint)
+        }
         super.onDraw(c)
         c?.withSave {
             drawRect(

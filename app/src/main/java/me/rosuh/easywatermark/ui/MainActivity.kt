@@ -1,10 +1,13 @@
 package me.rosuh.easywatermark.ui
 
+import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.Intent.ACTION_SEND
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -35,6 +38,7 @@ import me.rosuh.easywatermark.ui.panel.*
 import me.rosuh.easywatermark.utils.*
 import me.rosuh.easywatermark.utils.ktx.commitWithAnimation
 import me.rosuh.easywatermark.utils.ktx.preCheckStoragePermission
+import me.rosuh.easywatermark.utils.ktx.toColor
 import me.rosuh.easywatermark.widget.CenterLayoutManager
 import me.rosuh.easywatermark.widget.LaunchView
 import java.util.*
@@ -106,13 +110,19 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private val funcAdapter by lazy { FuncPanelAdapter(ArrayList(contentFunList)) }
+    private val funcAdapter by lazy {
+        FuncPanelAdapter(ArrayList(contentFunList)).apply {
+            setHasStableIds(true)
+        }
+    }
 
     private val photoListPreviewAdapter by lazy { PhotoListPreviewAdapter() }
 
     private val vibrateHelper: VibrateHelper by lazy { VibrateHelper.get() }
 
     private lateinit var launchView: LaunchView
+
+    private var bgTransformAnimator: ObjectAnimator? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -154,6 +164,11 @@ class MainActivity : AppCompatActivity() {
         if (intent?.action == ACTION_SEND && intent?.data != null) {
             dealWithImage(listOf(intent?.data!!))
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        bgTransformAnimator?.cancel()
     }
 
     private fun checkHadCrash() {
@@ -316,7 +331,10 @@ class MainActivity : AppCompatActivity() {
                     this@MainActivity,
                     R.color.colorSecondary
                 )
-                launchView.rvPhotoList.setBackgroundColor(color)
+                bgTransformAnimator =
+                    ((background as? ColorDrawable)?.color ?: Color.BLACK).toColor(color) {
+                        launchView.rvPhotoList.setBackgroundColor(it.animatedValue as Int)
+                    }
             }
 
             setOnTouchListener { _, motionEvent ->
@@ -326,8 +344,8 @@ class MainActivity : AppCompatActivity() {
         // functional panel in recyclerView
         launchView.rvPanel.apply {
             adapter = funcAdapter
+            setHasFixedSize(true)
             layoutManager = CenterLayoutManager(this@MainActivity, RecyclerView.HORIZONTAL, false)
-
             onItemClick { _, pos, v ->
                 val snapView = snapHelper.findSnapView(launchView.rvPanel.layoutManager)
                 if (snapView == v) {
@@ -357,23 +375,40 @@ class MainActivity : AppCompatActivity() {
         }
         // image list
         launchView.rvPhotoList.apply {
+            enableBorder = true
             adapter = photoListPreviewAdapter
-            layoutManager = CenterLayoutManager(this@MainActivity, RecyclerView.HORIZONTAL, false)
-
+            setHasFixedSize(true)
+            layoutManager =
+                CenterLayoutManager(this@MainActivity, RecyclerView.HORIZONTAL, false).apply {
+                    onStartSmoothScroll {
+                        canTouch = false
+                    }
+                    onStopSmoothScroll {
+                        canTouch = true
+                    }
+                }
             onItemClick { _, pos, v ->
+                if (photoListPreviewAdapter.isInRemovedMode(pos)) {
+                    photoListPreviewAdapter.remove(pos) {
+                        val uri = it?.uri ?: return@remove
+                        viewModel.updateUri(uri)
+                    }
+                    return@onItemClick
+                }
                 val snapView = snapHelper.findSnapView(launchView.rvPanel.layoutManager)
-                if (snapView == v) {
-                    val item = (this.adapter as FuncPanelAdapter).dataSet[pos]
-                    handleFuncItem(item)
-                    photoListPreviewAdapter.selectedPos = pos
-                } else {
+                if (snapView != v) {
                     smoothScrollToPosition(pos)
                 }
             }
 
+            onItemLongClick { _, position, v ->
+                photoListPreviewAdapter.toggleRemovedMode(position, v)
+                return@onItemLongClick true
+            }
+
             onSnapViewSelected { _, pos ->
                 photoListPreviewAdapter.selectedPos = pos
-                val uri = photoListPreviewAdapter.getItem(pos).uri
+                val uri = photoListPreviewAdapter.getItem(pos)?.uri ?: return@onSnapViewSelected
                 viewModel.updateUri(uri)
             }
 
@@ -608,6 +643,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun resetView() {
         launchView.ivPhoto.reset()
+        bgTransformAnimator?.cancel()
         hideDetailPanel()
     }
 

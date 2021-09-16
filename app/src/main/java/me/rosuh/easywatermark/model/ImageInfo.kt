@@ -4,7 +4,8 @@ import android.net.Uri
 
 data class ImageInfo(
     val uri: Uri,
-    var result: Result<*>? = null
+    var result: Result<*>? = null,
+    var isInDelModel: Boolean = false,
 ) {
     val shareUri: Uri?
         get() = result?.data as? Uri?

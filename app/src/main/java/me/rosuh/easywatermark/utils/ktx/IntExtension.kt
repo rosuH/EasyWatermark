@@ -1,5 +1,8 @@
 package me.rosuh.easywatermark.utils.ktx
 
+import android.animation.ArgbEvaluator
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.content.res.Resources
 import android.util.TypedValue
 
@@ -9,3 +12,23 @@ val Int.dp
         this.toFloat(),
         Resources.getSystem().displayMetrics
     ).toInt()
+
+fun Int.toColor(
+    toColor: Int,
+    autoStart: Boolean = true,
+    doOnUpdate: (it: ValueAnimator) -> Unit = {}
+): ObjectAnimator? {
+    return ObjectAnimator.ofInt(
+        this,
+        "backgroundColor",
+        this,
+        toColor
+    ).apply {
+        setEvaluator(ArgbEvaluator())
+        addUpdateListener {
+            doOnUpdate.invoke(it)
+        }
+        duration = 250
+        if (autoStart) start()
+    }
+}

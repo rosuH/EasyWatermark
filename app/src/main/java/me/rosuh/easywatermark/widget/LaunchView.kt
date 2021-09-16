@@ -226,7 +226,7 @@ class LaunchView : CustomViewGroup {
         SpringAnimation(this, SpringAnimation.TRANSLATION_Y).apply {
             spring = SpringForce()
                 .setFinalPosition(0f)
-                .setDampingRatio(SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY)
+                .setDampingRatio(SpringForce.DAMPING_RATIO_NO_BOUNCY)
                 .setStiffness(SpringForce.STIFFNESS_LOW)
         }
     }
@@ -235,7 +235,7 @@ class LaunchView : CustomViewGroup {
         SpringAnimation(this, SpringAnimation.TRANSLATION_X).apply {
             spring = SpringForce()
                 .setFinalPosition(0f)
-                .setDampingRatio(SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY)
+                .setDampingRatio(SpringForce.DAMPING_RATIO_NO_BOUNCY)
                 .setStiffness(SpringForce.STIFFNESS_LOW)
         }
     }
