@@ -4,7 +4,6 @@ import android.content.Context.MODE_PRIVATE
 import android.content.SharedPreferences
 import android.graphics.Color
 import android.net.Uri
-import android.os.Build
 import androidx.core.content.edit
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
@@ -45,7 +44,7 @@ class WaterMarkConfig private constructor() {
 
     lateinit var textTypeface: TextTypeface
 
-    lateinit var iconUri: Uri
+    var iconUri: Uri = Uri.parse("")
 
     lateinit var markMode: MarkMode
 
@@ -72,20 +71,7 @@ class WaterMarkConfig private constructor() {
             degree = getFloat(SP_KEY_DEGREE, 315f)
             textStyle = TextPaintStyle.obtainSealedClass(getInt(SP_KEY_TEXT_STYLE, 0))
             textTypeface = TextTypeface.obtainSealedClass(getInt(SP_KEY_TEXT_TYPEFACE, 0))
-            markMode = when (getInt(SP_KEY_MODE, 0)) {
-                0 -> {
-                    MarkMode.Text
-                }
-                else -> {
-                    MarkMode.Image
-                }
-            }
-
-            iconUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                Uri.parse(getString(SP_KEY_ICON_URI, "") ?: "")
-            } else {
-                Uri.parse("")
-            }
+            markMode = MarkMode.Text
             imageScaleWidth = getFloat(SP_KEY_IMAGE_SCALE_X, 1f)
             imageScaleHeight = getFloat(SP_KEY_IMAGE_SCALE_X, imageScaleWidth)
         }
@@ -93,7 +79,6 @@ class WaterMarkConfig private constructor() {
 
     fun save(sharedPreferences: SharedPreferences = MyApp.globalSp()) {
         sharedPreferences.edit {
-            putString(SP_KEY_ICON_URI, iconUri.toString())
             putString(SP_KEY_TEXT, text)
             putFloat(SP_KEY_TEXT_SIZE, textSize)
             putInt(SP_KEY_TEXT_COLOR, textColor)

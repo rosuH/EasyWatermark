@@ -155,31 +155,28 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                     )
                 }
                 WaterMarkConfig.MarkMode.Image -> {
-                    var shouldRecycled = false
                     if (iconBitmap == null || localIconUri != newConfig.iconUri) {
                         // if uri was changed, create a new bitmap
                         // Here would decode a inSampled bitmap, the max size was imageView's width and height
                         val iconBitmapRect = decodeSampledBitmapFromResource(
                             context.contentResolver,
                             newConfig.iconUri,
-                            iconBounds.width(),
-                            iconBounds.height()
+                            config?.textSize?.toInt() ?: measuredWidth,
+                            config?.textSize?.toInt() ?: measuredHeight,
                         )
                         if (iconBitmapRect.isFailure() || iconBitmapRect.data == null) {
                             return@launch
                         }
                         iconBitmap = iconBitmapRect.data!!.bitmap
                         // and flagging the old one should be recycled
-                        shouldRecycled = true
                     }
 
                     layoutPaint.shader = null
                     buildIconBitmapShader(
                         iconBitmap!!,
-                        shouldRecycled,
-                        iconBounds,
                         newConfig,
                         textPaint,
+                        scale = false,
                         generateBitmapCoroutineCtx
                     )
                 }
@@ -224,7 +221,12 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        iconBounds.set(0, 0, w, h)
+        iconBounds.set(
+            0,
+            0,
+            config?.textSize?.toInt() ?: w,
+            config?.textSize?.toInt() ?: h
+        )
     }
 
     override fun onDraw(canvas: Canvas?) {
@@ -291,10 +293,9 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
         suspend fun buildIconBitmapShader(
             srcBitmap: Bitmap,
-            shouldRecycled: Boolean,
-            limitBounds: Rect,
             config: WaterMarkConfig,
             textPaint: Paint,
+            scale: Boolean,
             coroutineContext: CoroutineContext
         ): BitmapShader? = withContext(coroutineContext) {
             if (srcBitmap.isRecycled) {
@@ -302,16 +303,18 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             }
             val showDebugRect = BuildConfig.DEBUG && false
             val rawWidth = srcBitmap.width.toFloat().coerceAtLeast(1f)
-                .coerceAtMost(limitBounds.width().toFloat())
             val rawHeight = srcBitmap.height.toFloat().coerceAtLeast(1f)
-                .coerceAtMost(limitBounds.height().toFloat())
 
             val maxSize = calculateMaxSize(rawHeight, rawWidth)
 
             val finalWidth = calculateFinalWidth(config, maxSize)
             val finalHeight = calculateFinalHeight(config, maxSize)
             // textSize represents scale ratio of icon.
-            val scaleRatio = calculateScaleRatio(textPaint.textSize)
+            val scaleRatio = if (scale) {
+                config.imageScaleWidth
+            } else {
+                1f
+            }
 
             val targetBitmap = Bitmap.createBitmap(
                 (finalWidth * scaleRatio).toInt(),
@@ -326,11 +329,6 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 (rawWidth * scaleRatio).toInt(), (rawHeight * scaleRatio).toInt(),
                 false
             )!!
-
-            if (shouldRecycled && !srcBitmap.isRecycled && scaleBitmap != srcBitmap) {
-                // scaleBitmap may equals with srcBitmap when scale was 1.0, so we should check that
-                srcBitmap.recycle()
-            }
 
             if (showDebugRect) {
                 val tmpPaint = Paint().apply {

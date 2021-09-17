@@ -8,7 +8,6 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
-import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -144,8 +143,8 @@ class MainViewModel : ViewModel() {
                     val iconBitmapRect = decodeSampledBitmapFromResource(
                         contentResolver,
                         tmpConfig.iconUri,
-                        mutableBitmap.width,
-                        mutableBitmap.height
+                        config.value!!.textSize.toInt(),
+                        config.value!!.textSize.toInt()
                     )
                     if (iconBitmapRect.isFailure() || iconBitmapRect.data == null) {
                         return@withContext Result.failure(
@@ -157,10 +156,9 @@ class MainViewModel : ViewModel() {
                     val iconBitmap = iconBitmapRect.data!!.bitmap
                     WaterMarkImageView.buildIconBitmapShader(
                         iconBitmap,
-                        true,
-                        Rect(0, 0, mutableBitmap.width, mutableBitmap.height),
                         tmpConfig,
                         bitmapPaint,
+                        scale = true,
                         Dispatchers.IO
                     )
                 }
