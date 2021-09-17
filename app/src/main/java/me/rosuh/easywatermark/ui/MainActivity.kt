@@ -116,7 +116,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private val photoListPreviewAdapter by lazy { PhotoListPreviewAdapter() }
+    private val photoListPreviewAdapter by lazy { PhotoListPreviewAdapter(this) }
 
     private val vibrateHelper: VibrateHelper by lazy { VibrateHelper.get() }
 
@@ -336,10 +336,6 @@ class MainActivity : AppCompatActivity() {
                         launchView.rvPhotoList.setBackgroundColor(it.animatedValue as Int)
                     }
             }
-
-            setOnTouchListener { _, motionEvent ->
-                return@setOnTouchListener launchView.rvPhotoList.onTouchEvent(motionEvent)
-            }
         }
         // functional panel in recyclerView
         launchView.rvPanel.apply {
@@ -387,23 +383,17 @@ class MainActivity : AppCompatActivity() {
                         canTouch = true
                     }
                 }
+
+            photoListPreviewAdapter.onRemove {
+                val uri = it?.uri ?: return@onRemove
+                viewModel.updateUri(uri)
+            }
+
             onItemClick { _, pos, v ->
-                if (photoListPreviewAdapter.isInRemovedMode(pos)) {
-                    photoListPreviewAdapter.remove(pos) {
-                        val uri = it?.uri ?: return@remove
-                        viewModel.updateUri(uri)
-                    }
-                    return@onItemClick
-                }
                 val snapView = snapHelper.findSnapView(launchView.rvPanel.layoutManager)
                 if (snapView != v) {
                     smoothScrollToPosition(pos)
                 }
-            }
-
-            onItemLongClick { _, position, v ->
-                photoListPreviewAdapter.toggleRemovedMode(position, v)
-                return@onItemLongClick true
             }
 
             onSnapViewSelected { _, pos ->

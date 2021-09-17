@@ -189,7 +189,7 @@ class LaunchView : CustomViewGroup {
     }
 
     private val editorViews by lazy {
-        listOf(toolbar, ivPhoto, rvPhotoList, fcFunctionDetail, tabLayout, rvPanel)
+        listOf(toolbar, ivPhoto, fcFunctionDetail, tabLayout, rvPanel, rvPhotoList)
     }
 
     private val launchModeAppearAnimationList by lazy {
@@ -242,6 +242,8 @@ class LaunchView : CustomViewGroup {
     //endregion
 
     init {
+        clipChildren = false
+        clipToPadding = false
         launchViews.forEach {
             it.isVisible = false
             addView(it)
