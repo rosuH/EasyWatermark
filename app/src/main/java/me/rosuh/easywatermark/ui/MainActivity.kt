@@ -28,6 +28,7 @@ import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.adapter.FuncPanelAdapter
 import me.rosuh.easywatermark.adapter.PhotoListPreviewAdapter
 import me.rosuh.easywatermark.model.FuncTitleModel
+import me.rosuh.easywatermark.model.ImageInfo
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import me.rosuh.easywatermark.ui.about.AboutActivity
 import me.rosuh.easywatermark.ui.dialog.ChangeLogDialogFragment
@@ -635,6 +636,10 @@ class MainActivity : AppCompatActivity() {
         launchView.ivPhoto.reset()
         bgTransformAnimator?.cancel()
         hideDetailPanel()
+    }
+
+    fun getImageList(): List<ImageInfo> {
+        return photoListPreviewAdapter.data
     }
 
     companion object {

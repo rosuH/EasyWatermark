@@ -22,6 +22,9 @@ class PhotoListPreviewAdapter(
     private val context: Context
 ) : RecyclerView.Adapter<PhotoListPreviewAdapter.ImageHolder>() {
 
+    val data: List<ImageInfo>
+        get() = differ.currentList
+
     private val differ: AsyncListDiffer<ImageInfo> by lazy {
         AsyncListDiffer(this, differCallback)
     }

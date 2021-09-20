@@ -57,7 +57,11 @@ class MainViewModel : ViewModel() {
     private val repo = UserConfigRepo
     private val userConfig: MutableLiveData<UserConfig> = repo.userConfig
 
-    fun saveImage(contentResolver: ContentResolver, isSharing: Boolean = false) {
+    fun saveImage(
+        contentResolver: ContentResolver,
+        imageList: List<ImageInfo>,
+        isSharing: Boolean = false
+    ) {
         viewModelScope.launch {
             if (selectedImageInfoList.value.isNullOrEmpty()) {
                 saveResult.value = Result.failure(null, code = TYPE_ERROR_NOT_IMG)
@@ -65,7 +69,7 @@ class MainViewModel : ViewModel() {
             }
             saveResult.value =
                 Result.success(null, code = if (isSharing) TYPE_SHARING else TYPE_SAVING)
-            val result = generateList(contentResolver, selectedImageInfoList.value)
+            val result = generateList(contentResolver, imageList)
             if (result.isFailure()) {
                 saveResult.value = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
                 return@launch
@@ -102,9 +106,12 @@ class MainViewModel : ViewModel() {
             return@withContext Result.success(infoList)
         }
 
-    fun shareImage(contentResolver: ContentResolver) {
+    fun shareImage(
+        contentResolver: ContentResolver,
+        imageList: List<ImageInfo>
+    ) {
         viewModelScope.launch {
-            saveImage(contentResolver, true)
+            saveImage(contentResolver, imageList, true)
         }
     }
 
