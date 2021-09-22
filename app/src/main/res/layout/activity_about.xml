@@ -304,7 +304,7 @@
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintTop_toBottomOf="@id/tv_title" />
 
-                        <me.rosuh.easywatermark.widget.CircleImageView
+                        <me.rosuh.easywatermark.ui.widget.CircleImageView
                             android:id="@+id/civ_avatar"
                             android:layout_width="60dp"
                             android:layout_height="60dp"
@@ -354,7 +354,7 @@
                             app:layout_constraintTop_toBottomOf="@id/tv_title_designer"
                             tools:text="Designer" />
 
-                        <me.rosuh.easywatermark.widget.CircleImageView
+                        <me.rosuh.easywatermark.ui.widget.CircleImageView
                             android:id="@+id/civ_avatar_designer"
                             android:layout_width="60dp"
                             android:layout_height="60dp"

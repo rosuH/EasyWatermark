@@ -6,7 +6,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import me.rosuh.easywatermark.repo.UserConfigRepository
+import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import javax.inject.Singleton
 
 @Module

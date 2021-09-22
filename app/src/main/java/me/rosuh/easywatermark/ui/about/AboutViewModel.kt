@@ -6,7 +6,7 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
-import me.rosuh.easywatermark.repo.UserConfigRepository
+import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import javax.inject.Inject
 
 @HiltViewModel

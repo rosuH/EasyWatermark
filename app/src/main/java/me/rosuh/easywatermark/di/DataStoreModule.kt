@@ -10,7 +10,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import me.rosuh.easywatermark.repo.SP_NAME
+import me.rosuh.easywatermark.data.repo.SP_NAME
 import javax.inject.Singleton
 
 @Module

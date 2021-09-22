@@ -9,7 +9,7 @@ import android.util.Log
 import androidx.core.content.edit
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.*
-import me.rosuh.easywatermark.model.WaterMarkConfig
+import me.rosuh.easywatermark.data.model.WaterMarkConfig
 import kotlin.system.exitProcess
 
 @HiltAndroidApp

@@ -12,7 +12,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.model.Result
+import me.rosuh.easywatermark.data.model.Result
 import me.rosuh.easywatermark.ui.MainActivity
 import me.rosuh.easywatermark.ui.MainViewModel
 import me.rosuh.easywatermark.utils.ktx.preCheckStoragePermission

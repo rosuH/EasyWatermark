@@ -14,7 +14,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import com.google.android.material.button.MaterialButton
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.model.Result
+import me.rosuh.easywatermark.data.model.Result
 import me.rosuh.easywatermark.ui.MainViewModel
 
 class CompressImageDialogFragment : DialogFragment() {

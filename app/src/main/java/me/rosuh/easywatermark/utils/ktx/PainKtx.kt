@@ -4,7 +4,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.text.TextPaint
-import me.rosuh.easywatermark.model.WaterMarkConfig
+import me.rosuh.easywatermark.data.model.WaterMarkConfig
 
 /**
  * 因为预览和实际图像之间存在缩放，所以在预览时要除去缩放比。而在保存时，就不需要了

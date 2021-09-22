@@ -11,7 +11,7 @@ import android.util.Log
 import androidx.exifinterface.media.ExifInterface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import me.rosuh.easywatermark.model.Result
+import me.rosuh.easywatermark.data.model.Result
 import java.io.FileNotFoundException
 import java.io.InputStream
 import java.lang.ref.SoftReference

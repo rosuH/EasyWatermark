@@ -24,14 +24,14 @@ import kotlinx.coroutines.flow.*
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.model.*
-import me.rosuh.easywatermark.repo.UserConfigRepository
+import me.rosuh.easywatermark.data.model.*
+import me.rosuh.easywatermark.data.repo.UserConfigRepository
+import me.rosuh.easywatermark.ui.widget.WaterMarkImageView
 import me.rosuh.easywatermark.utils.FileUtils.Companion.outPutFolderName
 import me.rosuh.easywatermark.utils.bitmap.decodeBitmapFromUri
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.utils.ktx.applyConfig
 import me.rosuh.easywatermark.utils.ktx.formatDate
-import me.rosuh.easywatermark.widget.WaterMarkImageView
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
