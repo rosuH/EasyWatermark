@@ -17,13 +17,15 @@ import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import androidx.lifecycle.*
+import dagger.hilt.android.lifecycle.HiltViewModel
 import id.zelory.compressor.Compressor
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.model.*
-import me.rosuh.easywatermark.repo.UserConfigRepo
+import me.rosuh.easywatermark.repo.UserConfigRepository
 import me.rosuh.easywatermark.utils.FileUtils.Companion.outPutFolderName
 import me.rosuh.easywatermark.utils.bitmap.decodeBitmapFromUri
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
@@ -33,8 +35,12 @@ import me.rosuh.easywatermark.widget.WaterMarkImageView
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
+import javax.inject.Inject
 
-class MainViewModel : ViewModel() {
+@HiltViewModel
+class MainViewModel @Inject constructor(
+    userRepo: UserConfigRepository
+) : ViewModel() {
 
     val saveResult: MutableLiveData<Result<*>> = MutableLiveData()
 
@@ -54,8 +60,17 @@ class MainViewModel : ViewModel() {
 
     private var compressedJob: Job? = null
 
-    private val repo = UserConfigRepo
-    private val userConfig: MutableLiveData<UserConfig> = repo.userConfig
+    private var userPreferences: StateFlow<UserPreferences> = userRepo.userPreferences.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        UserPreferences.DEFAULT
+    )
+
+    private val outputFormat: Bitmap.CompressFormat
+        get() = userPreferences.value.outputFormat
+
+    private val compressLevel: Int
+        get() = userPreferences.value.compressLevel
 
     fun saveImage(
         contentResolver: ContentResolver,
@@ -196,8 +211,8 @@ class MainViewModel : ViewModel() {
                 val imageContentUri = contentResolver.insert(imageCollection, imageDetail)
                 contentResolver.openFileDescriptor(imageContentUri!!, "w", null).use { pfd ->
                     mutableBitmap.compress(
-                        userConfig.value?.outputFormat ?: Bitmap.CompressFormat.JPEG,
-                        userConfig.value?.compressLevel ?: 95,
+                        outputFormat,
+                        compressLevel,
                         FileOutputStream(pfd!!.fileDescriptor)
                     )
                 }
@@ -227,8 +242,8 @@ class MainViewModel : ViewModel() {
                     File(mediaDir, generateOutputName())
                 outputFile.outputStream().use { fileOutputStream ->
                     mutableBitmap.compress(
-                        userConfig.value?.outputFormat ?: Bitmap.CompressFormat.JPEG,
-                        userConfig.value?.compressLevel ?: 95,
+                        outputFormat,
+                        compressLevel,
                         fileOutputStream
                     )
                 }
@@ -252,7 +267,7 @@ class MainViewModel : ViewModel() {
     }
 
     private fun trapOutputExtension(): String {
-        return if (userConfig.value?.outputFormat == Bitmap.CompressFormat.PNG) "png" else "jpg"
+        return if (outputFormat == Bitmap.CompressFormat.PNG) "png" else "jpg"
     }
 
     fun updateUri(uri: Uri) {

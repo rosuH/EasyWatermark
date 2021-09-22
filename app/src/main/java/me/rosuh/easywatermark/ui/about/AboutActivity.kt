@@ -9,14 +9,16 @@ import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import dagger.hilt.android.AndroidEntryPoint
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.databinding.ActivityAboutBinding
-import me.rosuh.easywatermark.model.UserConfig
+import me.rosuh.easywatermark.model.UserPreferences
 import me.rosuh.easywatermark.ui.dialog.ChangeLogDialogFragment
 import me.rosuh.easywatermark.utils.ktx.inflate
 import me.rosuh.easywatermark.utils.ktx.openLink
 
+@AndroidEntryPoint
 class AboutActivity : AppCompatActivity() {
 
     private val binding by inflate<ActivityAboutBinding>()
@@ -31,7 +33,7 @@ class AboutActivity : AppCompatActivity() {
     }
 
     private fun initObserver() {
-        viewModel.userConfig.observe(
+        viewModel.userPreferences.observe(
             this,
             {
                 if (it == null) {
@@ -44,10 +46,10 @@ class AboutActivity : AppCompatActivity() {
 
     private fun changeStatusBarStyle() {
         val flag = (
-            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-            )
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                )
         window?.decorView?.systemUiVisibility = flag
         window?.statusBarColor = Color.TRANSPARENT
         window?.navigationBarColor = Color.TRANSPARENT
@@ -56,7 +58,7 @@ class AboutActivity : AppCompatActivity() {
     private fun initView() {
         with(binding) {
             tvOutputValue.let {
-                it.text = "${trapFormattingValue(viewModel.userConfig.value)}%"
+                it.text = "${trapFormattingValue(viewModel.userPreferences.value)}%"
                 it.setOnClickListener {
                     showOutputDialog()
                 }
@@ -121,14 +123,11 @@ class AboutActivity : AppCompatActivity() {
     }
 
     private fun showOutputDialog() {
-        val curFormat = viewModel.userConfig.value?.outputFormat ?: Bitmap.CompressFormat.JPEG
-        val curLevel = viewModel.userConfig.value?.compressLevel ?: 95
-
         MaterialAlertDialogBuilder(this@AboutActivity, R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle(getString(R.string.dialog_out_put_title))
             .setSingleChoiceItems(
                 arrayOf("JPG 100%", "JPG 95%", "JPG 80%", "PNG"),
-                getSelectedFormatting(viewModel.userConfig.value)
+                getSelectedFormatting(viewModel.userPreferences.value)
             ) { _, which ->
                 when (which) {
                     0 -> {
@@ -149,14 +148,14 @@ class AboutActivity : AppCompatActivity() {
                 dialog.cancel()
             }
             .setNegativeButton(R.string.tips_cancel_dialog) { dialog, _ ->
-                viewModel.saveOutput(curFormat, curLevel)
+                viewModel.saveOutput(viewModel.outputFormat, viewModel.compressLevel)
                 dialog.cancel()
             }
             .setCancelable(true)
             .show()
     }
 
-    private fun getSelectedFormatting(config: UserConfig?): Int {
+    private fun getSelectedFormatting(config: UserPreferences?): Int {
         if (config == null) {
             return 1
         }
@@ -168,7 +167,7 @@ class AboutActivity : AppCompatActivity() {
         }
     }
 
-    private fun trapFormattingValue(config: UserConfig?): String {
+    private fun trapFormattingValue(config: UserPreferences?): String {
         if (config == null) {
             return ""
         }

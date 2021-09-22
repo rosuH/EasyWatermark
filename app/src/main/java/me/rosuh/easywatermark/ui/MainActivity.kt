@@ -23,6 +23,7 @@ import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
+import dagger.hilt.android.AndroidEntryPoint
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.adapter.FuncPanelAdapter
@@ -45,6 +46,7 @@ import me.rosuh.easywatermark.widget.LaunchView
 import java.util.*
 import kotlin.collections.ArrayList
 
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     private lateinit var pickImageLauncher: ActivityResultLauncher<String>

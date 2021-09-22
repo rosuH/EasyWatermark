@@ -7,11 +7,12 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.content.edit
+import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.*
-import me.rosuh.easywatermark.model.UserConfig
 import me.rosuh.easywatermark.model.WaterMarkConfig
 import kotlin.system.exitProcess
 
+@HiltAndroidApp
 class MyApp : Application() {
     override fun onCreate() {
         super.onCreate()
@@ -55,13 +56,6 @@ class MyApp : Application() {
         fun globalSp(): SharedPreferences {
             return instance.getSharedPreferences(
                 WaterMarkConfig.SP_NAME,
-                MODE_PRIVATE
-            )
-        }
-
-        fun userConfigSp(): SharedPreferences {
-            return instance.getSharedPreferences(
-                UserConfig.SP_NAME,
                 MODE_PRIVATE
             )
         }
