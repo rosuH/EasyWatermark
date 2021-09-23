@@ -2,29 +2,29 @@ package me.rosuh.easywatermark.data.repo
 
 import android.graphics.Bitmap
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.emptyPreferences
-import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import me.rosuh.easywatermark.data.model.UserPreferences
+import me.rosuh.easywatermark.data.repo.UserConfigRepository.PreferenceKeys.KEY_CHANGE_LOG
 import me.rosuh.easywatermark.data.repo.UserConfigRepository.PreferenceKeys.KEY_COMPRESS_LEVEL
 import me.rosuh.easywatermark.data.repo.UserConfigRepository.PreferenceKeys.KEY_OUTPUT_FORMAT
 import java.io.IOException
 import javax.inject.Inject
+import javax.inject.Named
 import javax.inject.Singleton
-
 
 @Singleton
 class UserConfigRepository @Inject constructor(
-    private val dataStore: DataStore<Preferences>
+    @Named("UserPreferences") private val dataStore: DataStore<Preferences>
 ) {
     private object PreferenceKeys {
         val KEY_OUTPUT_FORMAT = intPreferencesKey(SP_KEY_FORMAT)
 
         val KEY_COMPRESS_LEVEL = intPreferencesKey(SP_KEY_COMPRESS_LEVEL)
+
+        val KEY_CHANGE_LOG = stringPreferencesKey(WaterMarkRepository.SP_KEY_CHANGE_LOG)
     }
 
     val userPreferences: Flow<UserPreferences> = dataStore.data
@@ -46,6 +46,18 @@ class UserConfigRepository @Inject constructor(
             UserPreferences(outputFormat, compressLevel)
         }
 
+    val changeLogFlow: Flow<String> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map {
+            it[KEY_CHANGE_LOG] ?: ""
+        }
+
     suspend fun updateFormat(
         outputFormat: Bitmap.CompressFormat
     ) {
@@ -59,6 +71,12 @@ class UserConfigRepository @Inject constructor(
     ) {
         dataStore.edit {
             it[KEY_COMPRESS_LEVEL] = compressLevel
+        }
+    }
+
+    suspend fun saveVersionCode(content: String) {
+        dataStore.edit {
+            it[KEY_CHANGE_LOG] = content
         }
     }
 

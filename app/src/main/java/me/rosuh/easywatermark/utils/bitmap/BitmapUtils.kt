@@ -20,7 +20,6 @@ import kotlin.math.roundToInt
 suspend fun decodeBitmapWithExif(
     inputStream: InputStream,
     options: BitmapFactory.Options? = null,
-    scale: FloatArray = FloatArray(2) { 1f }
 ): Result<BitmapCache.BitmapValue> =
     withContext(Dispatchers.IO) {
         return@withContext decodeBitmapWithExifSync(inputStream, options)

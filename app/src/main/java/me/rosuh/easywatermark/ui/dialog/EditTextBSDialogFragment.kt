@@ -44,7 +44,7 @@ class EditTextBSDialogFragment : BottomSheetDialogFragment() {
         val root = inflater.inflate(R.layout.dialog_edit_text, container, false)
         with(root) {
             et = findViewById<TextInputEditText>(R.id.et_water_text).apply {
-                setText(shareViewModel.config.value?.text.toString())
+                setText(shareViewModel.waterMark.value?.text.toString())
                 addTextChangedListener(object : TextWatcher {
                     override fun afterTextChanged(s: Editable?) {
                     }

@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.core.view.children
 import androidx.core.view.setPadding
+import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.utils.VibrateHelper
 import me.rosuh.easywatermark.utils.ktx.appear
@@ -40,17 +41,20 @@ class PhotoPreviewItem : ViewGroup {
                 MarginLayoutParams(40.dp, 40.dp)
             scaleType = ImageView.ScaleType.CENTER_CROP
             setOnLongClickListener {
+                if ((parent.parent as ViewGroup).childCount <= 1) return@setOnLongClickListener false
                 Log.i("gestureDetectorCompat", "long click")
                 isLongPress = true
                 VibrateHelper.get().doVibrate(it)
-                ivDel.appear()
+                ivDel.appear(duration = 150L)
                 return@setOnLongClickListener false
             }
             setOnTouchListener(object : OnTouchListener {
                 private var x = 0f
                 private var y = 0f
+                private var curIsPreview = false
 
                 override fun onTouch(view: View, motionEvent: MotionEvent?): Boolean {
+                    var isRemoved = false
                     when (motionEvent?.actionMasked) {
                         MotionEvent.ACTION_DOWN -> {
                             x = motionEvent.rawX
@@ -62,17 +66,22 @@ class PhotoPreviewItem : ViewGroup {
                             view.parent.requestDisallowInterceptTouchEvent(isLongPress)
                         }
                         MotionEvent.ACTION_MOVE -> {
+                            if (!isLongPress) return false
+                            val topEdge = ivDel.top.toFloat() - 3.dp
                             view.translationZ
                             view.translationY =
                                 (motionEvent.rawY - y).coerceAtMost(0f)
-                                    .coerceAtLeast(ivDel.top.toFloat())
+                                    .coerceAtLeast(topEdge)
                             view.parent.requestDisallowInterceptTouchEvent(isLongPress)
                             Log.i(
                                 "gestureDetectorCompat",
                                 "onTouch event = move, isLongPress = $isLongPress"
                             )
-                            if (view.translationY == ivDel.top.toFloat()) {
+                            curIsPreview = if (view.translationY == topEdge && !curIsPreview) {
                                 onRemovePreview.invoke()
+                                true
+                            } else {
+                                false
                             }
                         }
                         MotionEvent.ACTION_UP -> {
@@ -80,23 +89,46 @@ class PhotoPreviewItem : ViewGroup {
                                 post { this@PhotoPreviewItem.performClick() }
                             }
                             if (isLongPress && view.translationY <= ivDel.top.toFloat()) {
-                                onRemove.invoke()
+                                isRemoved = true
+                                view.animate()
+                                    .alpha(0f)
+                                    .translationX(0f)
+                                    .setDuration(200)
+                                    .setInterpolator(FastOutSlowInInterpolator())
+                                    .withStartAction {
+                                        ivDel.animate().alpha(0f).setDuration(200L).start()
+                                    }
+                                    .withEndAction {
+                                        view.apply {
+                                            translationY = 0f
+                                            translationX = 0f
+                                            translationZ = 0f
+                                        }
+                                        onRemove.invoke()
+                                    }
+                                    .start()
                             } else {
-                                onRemoveCancel.invoke()
+                                ivDel.animate()
+                                    .alpha(0f)
+                                    .setDuration(150L)
+                                    .withStartAction {
+                                        onRemoveCancel.invoke()
+                                    }
+                                    .start()
                             }
                             isLongPress = false
+                            curIsPreview = false
                             view.parent.requestDisallowInterceptTouchEvent(isLongPress)
                             (view.parent as ViewGroup).translationZ = 0f
                             Log.i(
                                 "gestureDetectorCompat",
                                 "onTouch event = up, isLongPress = $isLongPress"
                             )
-                            ivDel.animate().alpha(0f).start()
                         }
                     }
-                    if (motionEvent?.actionMasked != MotionEvent.ACTION_MOVE) {
+                    if (motionEvent?.actionMasked != MotionEvent.ACTION_MOVE && !isRemoved) {
                         view.animate().translationX(0f).translationY(0f).translationZ(0f)
-                            .setDuration(200).start()
+                            .setDuration(150).setInterpolator(FastOutSlowInInterpolator()).start()
                     }
                     return isLongPress
                 }
@@ -130,10 +162,10 @@ class PhotoPreviewItem : ViewGroup {
         ImageView(context).apply {
             id = View.generateViewId()
             layoutParams =
-                MarginLayoutParams(56.dp, 56.dp)
+                MarginLayoutParams(50.dp, 50.dp)
             scaleType = ImageView.ScaleType.CENTER_CROP
+            setPadding(10.dp)
             setBackgroundResource(R.drawable.bg_removed_photo_list)
-            setPadding(5.dp)
             setImageResource(R.drawable.ic_remove_item)
         }
     }
@@ -167,9 +199,9 @@ class PhotoPreviewItem : ViewGroup {
         ivDel.let {
             it.layout(
                 (measuredWidth - it.measuredWidth) / 2,
-                (-1.5 * ivIcon.measuredHeight).toInt(),
+                (-1.2 * ivDel.measuredHeight).toInt(),
                 (measuredWidth - it.measuredWidth) / 2 + it.measuredWidth,
-                (-1.5 * ivIcon.measuredHeight).toInt() + it.measuredHeight
+                (-1.2 * ivDel.measuredHeight).toInt() + it.measuredHeight
             )
         }
     }

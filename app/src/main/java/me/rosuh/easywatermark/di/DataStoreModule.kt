@@ -11,20 +11,42 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import me.rosuh.easywatermark.data.repo.SP_NAME
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository
+import javax.inject.Named
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object DataStoreModule {
 
+    @Named("UserPreferences")
     @Singleton
     @Provides
     fun userDataStore(@ApplicationContext context: Context): DataStore<Preferences> {
         return context.userDataStore
+    }
+
+    @Named("WaterMarkPreferences")
+    @Singleton
+    @Provides
+    fun provideWaterMarkDataStore(@ApplicationContext context: Context): DataStore<Preferences> {
+        return context.waterMarkDataStore
     }
 }
 
 val Context.userDataStore: DataStore<Preferences> by preferencesDataStore(
     name = SP_NAME,
     produceMigrations = { ctx -> listOf(SharedPreferencesMigration(ctx, SP_NAME)) }
+)
+
+val Context.waterMarkDataStore: DataStore<Preferences> by preferencesDataStore(
+    name = WaterMarkRepository.SP_NAME,
+    produceMigrations = { ctx ->
+        listOf(
+            SharedPreferencesMigration(
+                ctx,
+                WaterMarkRepository.SP_NAME
+            )
+        )
+    }
 )

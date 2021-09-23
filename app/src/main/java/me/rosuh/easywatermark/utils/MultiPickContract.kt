@@ -36,7 +36,7 @@ class MultiPickContract :
             // present in the ClipData
             val resultSet = LinkedHashSet<Uri>()
             if (intent.data != null) {
-                resultSet.add(intent.data ?: Uri.parse(""))
+                resultSet.add(intent.data ?: Uri.EMPTY)
             }
             val clipData = intent.clipData
             if (clipData == null && resultSet.isEmpty()) {

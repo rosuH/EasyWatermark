@@ -4,6 +4,10 @@ import android.net.Uri
 
 data class ImageInfo(
     val uri: Uri,
+    var width: Int = 1,
+    var height: Int = 1,
+    var scaleX: Float = 1f,
+    var scaleY: Float = 1f,
     var result: Result<*>? = null,
     var isInDelModel: Boolean = false,
 ) {

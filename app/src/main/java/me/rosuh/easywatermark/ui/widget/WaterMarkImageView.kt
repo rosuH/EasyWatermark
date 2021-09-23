@@ -21,7 +21,9 @@ import androidx.palette.graphics.Palette
 import kotlinx.coroutines.*
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.data.model.WaterMarkConfig
+import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.utils.ktx.applyConfig
 import me.rosuh.easywatermark.utils.ktx.toColor
@@ -45,14 +47,18 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
     private val iconBounds = Rect()
 
     @Volatile
-    private var curUri: Uri? = null
+    private var curImageInfo: ImageInfo = ImageInfo(Uri.EMPTY)
+
+    private val curUri: Uri
+        get() = curImageInfo.uri
+
+    @Volatile
+    private var localIconUri: Uri = Uri.EMPTY
 
     @Volatile
     private var iconBitmap: Bitmap? = null
 
     private var isAnimating = AtomicBoolean(false)
-
-    private var localIconUri: Uri? = null
 
     var drawableBounds = RectF()
         private set
@@ -79,10 +85,23 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     private var generateBitmapJob: Job? = null
 
-    var config: WaterMarkConfig? = null
+    fun updateUri(imageInfo: ImageInfo) {
+        config?.let {
+            applyNewConfig(it, imageInfo, localIconUri)
+        }
+    }
+
+    fun updateIconUri(iconUri: Uri) {
+        config?.let {
+            applyNewConfig(it, curImageInfo, iconUri)
+        }
+    }
+
+    var config: WaterMark? = null
         set(value) {
             field = value
-            field?.let { applyNewConfig(it) }
+            if (curUri.toString().isBlank()) return
+            field?.let { applyNewConfig(it, curImageInfo, localIconUri) }
         }
 
     private val drawableAlphaAnimator by lazy {
@@ -104,18 +123,23 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         }
     }
 
-    private fun applyNewConfig(newConfig: WaterMarkConfig) {
+    private fun applyNewConfig(
+        newConfig: WaterMark,
+        imageInfo: ImageInfo,
+        iconUri: Uri
+    ) {
+        val uri = imageInfo.uri
         generateBitmapJob?.cancel()
         generateBitmapJob = launch(exceptionHandler) {
             // quick check is the same image
-            if (curUri != newConfig.uri) {
+            if (curUri != uri) {
                 // hide iv
                 this@WaterMarkImageView.drawable?.alpha = 0
                 drawableAlphaAnimator.cancel()
                 // decode with inSample
                 val decodeResult = decodeSampledBitmapFromResource(
                     context.contentResolver,
-                    config!!.uri,
+                    uri,
                     ((this@WaterMarkImageView.measuredWidth - paddingStart * 2) / 2).coerceAtMost(
                         720
                     ),
@@ -138,29 +162,32 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 // collect the drawable of new image in ImageView
                 drawableBounds = generateDrawableBounds()
                 // the scale factor which of real image and render bitmap
-                newConfig.imageScaleWidth =
+                imageInfo.scaleX =
                     bitmapValue.scaleWidth * imageBitmap.width.toFloat() / drawableBounds.width()
-                newConfig.imageScaleHeight =
+                imageInfo.scaleY =
                     bitmapValue.scaleHeight * imageBitmap.height.toFloat() / drawableBounds.height()
-                curUri = newConfig.uri
+                curImageInfo = imageInfo
+                curImageInfo.width = drawableBounds.width().toInt()
+                curImageInfo.height = drawableBounds.height().toInt()
             }
             // apply new config to paint
-            textPaint.applyConfig(newConfig)
+            textPaint.applyConfig(curImageInfo, newConfig)
             layoutShader = when (newConfig.markMode) {
-                WaterMarkConfig.MarkMode.Text -> {
+                WaterMarkRepository.MarkMode.Text -> {
                     buildTextBitmapShader(
+                        curImageInfo,
                         newConfig,
                         textPaint,
                         generateBitmapCoroutineCtx
                     )
                 }
-                WaterMarkConfig.MarkMode.Image -> {
-                    if (iconBitmap == null || localIconUri != newConfig.iconUri) {
+                WaterMarkRepository.MarkMode.Image -> {
+                    if (iconBitmap == null || localIconUri != iconUri) {
                         // if uri was changed, create a new bitmap
                         // Here would decode a inSampled bitmap, the max size was imageView's width and height
                         val iconBitmapRect = decodeSampledBitmapFromResource(
                             context.contentResolver,
-                            newConfig.iconUri,
+                            iconUri,
                             config?.textSize?.toInt() ?: measuredWidth,
                             config?.textSize?.toInt() ?: measuredHeight,
                         )
@@ -170,9 +197,10 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                         iconBitmap = iconBitmapRect.data!!.bitmap
                         // and flagging the old one should be recycled
                     }
-
+                    localIconUri = iconUri
                     layoutPaint.shader = null
                     buildIconBitmapShader(
+                        curImageInfo,
                         iconBitmap!!,
                         newConfig,
                         textPaint,
@@ -210,7 +238,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         }
 
     private val textPaint: TextPaint by lazy {
-        TextPaint().applyConfig(config)
+        TextPaint().applyConfig(curImageInfo, config)
     }
 
     private val layoutPaint: Paint by lazy {
@@ -231,7 +259,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
-        if (config?.text.isNullOrEmpty() || config?.uri.toString().isEmpty() ||
+        if (config?.text.isNullOrEmpty() || curUri.toString().isEmpty() ||
             layoutShader == null
         ) {
             return
@@ -267,24 +295,20 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
     }
 
     fun reset() {
-        config = null
-        curUri = null
+        curImageInfo = ImageInfo(Uri.EMPTY)
+        localIconUri = Uri.EMPTY
         setImageBitmap(null)
         setBackgroundColor(Color.TRANSPARENT)
     }
 
     companion object {
 
-        private fun calculateScaleRatio(textSize: Float): Float {
-            return (textSize / 50).coerceAtLeast(0.1f)
+        private fun calculateFinalWidth(config: WaterMark, maxSize: Int): Int {
+            return (maxSize * ((config.hGap / 100f) + 1)).toInt()
         }
 
-        private fun calculateFinalWidth(config: WaterMarkConfig, maxSize: Int): Int {
-            return (maxSize * ((config.horizonGapPercent / 100f) + 1)).toInt()
-        }
-
-        private fun calculateFinalHeight(config: WaterMarkConfig, maxSize: Int): Int {
-            return (maxSize * ((config.verticalGapPercent / 100f) + 1)).toInt()
+        private fun calculateFinalHeight(config: WaterMark, maxSize: Int): Int {
+            return (maxSize * ((config.vGap / 100f) + 1)).toInt()
         }
 
         private fun calculateMaxSize(w: Float, h: Float): Int {
@@ -292,8 +316,9 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         }
 
         suspend fun buildIconBitmapShader(
+            imageInfo: ImageInfo,
             srcBitmap: Bitmap,
-            config: WaterMarkConfig,
+            config: WaterMark,
             textPaint: Paint,
             scale: Boolean,
             coroutineContext: CoroutineContext
@@ -302,8 +327,10 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 return@withContext null
             }
             val showDebugRect = BuildConfig.DEBUG && false
-            val rawWidth = srcBitmap.width.toFloat().coerceAtLeast(1f)
+            val rawWidth =
+                srcBitmap.width.toFloat().coerceAtLeast(1f).coerceAtMost(imageInfo.width.toFloat())
             val rawHeight = srcBitmap.height.toFloat().coerceAtLeast(1f)
+                .coerceAtMost(imageInfo.height.toFloat())
 
             val maxSize = calculateMaxSize(rawHeight, rawWidth)
 
@@ -311,7 +338,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             val finalHeight = calculateFinalHeight(config, maxSize)
             // textSize represents scale ratio of icon.
             val scaleRatio = if (scale) {
-                config.imageScaleWidth
+                imageInfo.scaleX
             } else {
                 1f
             }
@@ -368,7 +395,8 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
          * @author hi@rosuh.me
          */
         suspend fun buildTextBitmapShader(
-            config: WaterMarkConfig,
+            imageInfo: ImageInfo,
+            config: WaterMark,
             textPaint: TextPaint,
             coroutineContext: CoroutineContext
         ): BitmapShader? = withContext(coroutineContext) {
@@ -411,7 +439,9 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             }
 
             val textWidth = staticLayout.width.toFloat().coerceAtLeast(1f)
+                .coerceAtMost(imageInfo.width.toFloat())
             val textHeight = staticLayout.height.toFloat().coerceAtLeast(1f)
+                .coerceAtMost(imageInfo.height.toFloat())
 
             val radians = Math.toRadians(
                 when (config.degree) {

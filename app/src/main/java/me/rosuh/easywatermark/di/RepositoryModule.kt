@@ -7,15 +7,25 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository
+import javax.inject.Named
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object RepositoryModule {
 
+    @Named("UserPreferences")
     @Provides
     @Singleton
     fun provideUserRepository(dataStore: DataStore<Preferences>): UserConfigRepository {
         return UserConfigRepository(dataStore)
+    }
+
+    @Named("WaterMarkPreferences")
+    @Provides
+    @Singleton
+    fun provideWaterMarkRepository(dataStore: DataStore<Preferences>): WaterMarkRepository {
+        return WaterMarkRepository(dataStore)
     }
 }

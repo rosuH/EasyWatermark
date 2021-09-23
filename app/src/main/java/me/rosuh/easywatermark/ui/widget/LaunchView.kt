@@ -81,9 +81,9 @@ class LaunchView : CustomViewGroup {
         ImageView(context, null, 0, android.R.style.Widget_ActionButton).apply {
             layoutParams =
                 MarginLayoutParams(
-                    LayoutParams.WRAP_CONTENT,
-                    LayoutParams.WRAP_CONTENT
-                ).also { it.setMargins(0, 20.dp, 0, 0) }
+                    48.dp,
+                    48.dp
+                ).also { it.setMargins(0, 0, 0, 18.dp) }
             setImageResource(R.drawable.ic_about)
         }
     }

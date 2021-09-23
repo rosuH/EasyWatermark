@@ -126,6 +126,12 @@ class CompressImageDialogFragment : DialogFragment() {
             return CompressImageDialogFragment()
         }
 
+        fun safetyHide(manager: FragmentManager) {
+            kotlin.runCatching {
+                (manager.findFragmentByTag(TAG) as? CompressImageDialogFragment)?.dismissAllowingStateLoss()
+            }
+        }
+
         fun safetyShow(manager: FragmentManager) {
             try {
                 val f = manager.findFragmentByTag(TAG) as? CompressImageDialogFragment

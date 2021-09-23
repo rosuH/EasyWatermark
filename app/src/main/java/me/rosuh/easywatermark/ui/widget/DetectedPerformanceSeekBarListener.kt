@@ -2,7 +2,8 @@ package me.rosuh.easywatermark.ui.widget
 
 import android.widget.SeekBar
 import me.rosuh.easywatermark.MyApp
-import me.rosuh.easywatermark.data.model.WaterMarkConfig
+import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.ui.widget.DetectedPerformanceSeekBarListener.Companion.HIGH_PERFORMANCE_MEMORY
 import me.rosuh.easywatermark.utils.bitmap.getAvailableMemory
 
@@ -19,7 +20,7 @@ import me.rosuh.easywatermark.utils.bitmap.getAvailableMemory
  * 放到 [onStopTrackingTouch] 方法里调用。
  */
 open class DetectedPerformanceSeekBarListener(
-    private val config: WaterMarkConfig?
+    private val config: WaterMark?
 ) : SeekBar.OnSeekBarChangeListener {
 
     var inTimeAction: (SeekBar?, Int, Boolean) -> Unit = { _, _, _ -> }
@@ -27,8 +28,8 @@ open class DetectedPerformanceSeekBarListener(
     var postAction: (SeekBar?, Int, Boolean) -> Unit = { _, _, _ -> }
 
     private var isHighPerformancePredicate: () -> Boolean = {
-        config?.markMode == WaterMarkConfig.MarkMode.Text ||
-            !getAvailableMemory(MyApp.instance).lowMemory
+        config?.markMode == WaterMarkRepository.MarkMode.Text ||
+                !getAvailableMemory(MyApp.instance).lowMemory
     }
 
     override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {

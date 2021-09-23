@@ -34,7 +34,12 @@ fun View.disappearAnimation(toPos: Float = 10f): SpringAnimation {
     }
 }
 
-fun View.appear(fromX: Float = 0f, fromY: Float = 10.dp.toFloat(), fromAlpha: Float = 0.5f) {
+fun View.appear(
+    fromX: Float = 0f,
+    fromY: Float = 10.dp.toFloat(),
+    fromAlpha: Float = 0.5f,
+    duration: Long = 200
+) {
     this.translationY = fromY
     this.translationX = fromX
     this.alpha = fromAlpha
@@ -42,16 +47,23 @@ fun View.appear(fromX: Float = 0f, fromY: Float = 10.dp.toFloat(), fromAlpha: Fl
         .translationY(0f)
         .translationX(0f)
         .alpha(1f)
+        .setDuration(duration)
         .withStartAction {
             this.isVisible = true
         }
 }
 
-fun View.disappear(toX: Float = 0f, toY: Float = 10.dp.toFloat(), toAlpha: Float = 0.5f) {
+fun View.disappear(
+    toX: Float = 0f,
+    toY: Float = 10.dp.toFloat(),
+    toAlpha: Float = 0.5f,
+    duration: Long = 200
+) {
     this.animate()
         .translationY(toX)
         .translationX(toY)
         .alpha(toAlpha)
+        .setDuration(duration)
         .withStartAction {
             this.isVisible = true
         }

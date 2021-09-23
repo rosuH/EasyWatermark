@@ -4,7 +4,8 @@ import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.FragmentActivity
 import com.google.android.material.slider.Slider
-import me.rosuh.easywatermark.data.model.WaterMarkConfig
+import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.ui.base.BasePBFragment
 import me.rosuh.easywatermark.utils.ktx.commitWithAnimation
 
@@ -20,13 +21,13 @@ class VerticalPbFragment : BasePBFragment() {
         shareViewModel.updateVertical(value.toInt())
     }
 
-    override fun formatValue(config: WaterMarkConfig?): Float {
-        return (config?.verticalGapPercent?.toFloat() ?: 1f).coerceAtLeast(0f)
-            .coerceAtMost(WaterMarkConfig.MAX_VERTICAL_GAP.toFloat())
+    override fun formatValue(config: WaterMark?): Float {
+        return (config?.vGap?.toFloat() ?: 1f).coerceAtLeast(0f)
+            .coerceAtMost(WaterMarkRepository.MAX_VERTICAL_GAP.toFloat())
     }
 
-    override fun formatValueTips(config: WaterMarkConfig?): String {
-        return "${config?.verticalGapPercent ?: 1f}"
+    override fun formatValueTips(config: WaterMark?): String {
+        return "${config?.vGap ?: 1f}"
     }
 
     companion object {

@@ -6,6 +6,11 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.ui.MainActivity
 
 fun Activity.isStoragePermissionGrated(): Boolean {
@@ -44,4 +49,11 @@ fun Activity.requestPermission() {
         ),
         MainActivity.REQ_CODE_REQ_WRITE_PERMISSION
     )
+}
+
+
+inline fun ViewModel.launch(crossinline action: suspend CoroutineScope.() -> Unit): Job {
+    return viewModelScope.launch {
+        action()
+    }
 }

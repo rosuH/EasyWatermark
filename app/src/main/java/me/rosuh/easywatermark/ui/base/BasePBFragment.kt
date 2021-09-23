@@ -5,7 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import com.google.android.material.slider.Slider
-import me.rosuh.easywatermark.data.model.WaterMarkConfig
+import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.databinding.FragemntBasePbBinding
 import me.rosuh.easywatermark.utils.VibrateHelper
 
@@ -20,7 +20,7 @@ abstract class BasePBFragment : BaseBindFragment<FragemntBasePbBinding>() {
         val b = FragemntBasePbBinding.inflate(layoutInflater, container, false)
 
         b.slideContentSize.apply {
-            value = formatValue(shareViewModel.config.value)
+            value = formatValue(shareViewModel.waterMark.value)
             addOnChangeListener { slider, value, fromUser ->
                 if (fromUser) {
                     vibrateHelper.doVibrate(this)
@@ -30,7 +30,7 @@ abstract class BasePBFragment : BaseBindFragment<FragemntBasePbBinding>() {
         }
 
         b.tvProgressVertical.apply {
-            text = "${formatValue(shareViewModel.config.value)}"
+            text = "${formatValue(shareViewModel.waterMark.value)}"
         }
 
         return b
@@ -38,7 +38,7 @@ abstract class BasePBFragment : BaseBindFragment<FragemntBasePbBinding>() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        shareViewModel.config.observe(
+        shareViewModel.waterMark.observe(
             viewLifecycleOwner,
             {
                 binding.tvProgressVertical.text = formatValueTips(it)
@@ -48,7 +48,7 @@ abstract class BasePBFragment : BaseBindFragment<FragemntBasePbBinding>() {
 
     abstract fun doOnChange(slider: Slider, value: Float, fromUser: Boolean)
 
-    abstract fun formatValue(config: WaterMarkConfig?): Float
+    abstract fun formatValue(config: WaterMark?): Float
 
-    abstract fun formatValueTips(config: WaterMarkConfig?): String
+    abstract fun formatValueTips(config: WaterMark?): String
 }

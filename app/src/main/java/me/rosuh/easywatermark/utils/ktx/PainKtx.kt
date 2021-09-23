@@ -4,7 +4,8 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.text.TextPaint
-import me.rosuh.easywatermark.data.model.WaterMarkConfig
+import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.WaterMark
 
 /**
  * 因为预览和实际图像之间存在缩放，所以在预览时要除去缩放比。而在保存时，就不需要了
@@ -14,15 +15,14 @@ import me.rosuh.easywatermark.data.model.WaterMarkConfig
  * @date 2020/9/8
  */
 fun Paint.applyConfig(
-    config: WaterMarkConfig?,
+    imageInfo: ImageInfo,
+    config: WaterMark?,
     isScale: Boolean = true
 ): Paint {
     val size = config?.textSize ?: 14f
-    textSize = if (isScale) {
-        size
-    } else {
-        size * ((config?.imageScaleWidth ?: 1f))
-    }
+    textSize = if (isScale) size / imageInfo.scaleX else size
+    // fixme calculate scale factor while saving image for better text size
+    // textSize = if (isScale) size else size * imageInfo.scaleX
     color = config?.textColor ?: Color.RED
     alpha = config?.alpha ?: 128
     style = config?.textStyle?.obtainSysStyle() ?: Paint.Style.FILL
@@ -35,8 +35,9 @@ fun Paint.applyConfig(
 }
 
 fun TextPaint.applyConfig(
-    config: WaterMarkConfig?,
+    imageInfo: ImageInfo,
+    config: WaterMark?,
     isScale: Boolean = true
 ): TextPaint {
-    return (this as Paint).applyConfig(config, isScale) as TextPaint
+    return (this as Paint).applyConfig(imageInfo, config, isScale) as TextPaint
 }

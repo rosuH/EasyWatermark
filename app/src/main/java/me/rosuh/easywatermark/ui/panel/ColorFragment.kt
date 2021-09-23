@@ -52,7 +52,7 @@ class ColorFragment : BaseBindFragment<FragmentColorBinding>() {
     ): FragmentColorBinding {
         val b = FragmentColorBinding.inflate(layoutInflater, container, false)
 
-        val savedColor = shareViewModel.config.value?.textColor ?: Color.WHITE
+        val savedColor = shareViewModel.waterMark.value?.textColor ?: Color.WHITE
         val colorArrayList = buildColorList(savedColor)
 
         b.rvColor.apply {

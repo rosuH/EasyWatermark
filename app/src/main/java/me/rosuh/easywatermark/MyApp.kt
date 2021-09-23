@@ -9,7 +9,7 @@ import android.util.Log
 import androidx.core.content.edit
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.*
-import me.rosuh.easywatermark.data.model.WaterMarkConfig
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import kotlin.system.exitProcess
 
 @HiltAndroidApp
@@ -55,7 +55,7 @@ class MyApp : Application() {
 
         fun globalSp(): SharedPreferences {
             return instance.getSharedPreferences(
-                WaterMarkConfig.SP_NAME,
+                WaterMarkRepository.SP_NAME,
                 MODE_PRIVATE
             )
         }

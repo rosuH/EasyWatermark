@@ -26,12 +26,14 @@ import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.*
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.ui.widget.WaterMarkImageView
 import me.rosuh.easywatermark.utils.FileUtils.Companion.outPutFolderName
 import me.rosuh.easywatermark.utils.bitmap.decodeBitmapFromUri
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.utils.ktx.applyConfig
 import me.rosuh.easywatermark.utils.ktx.formatDate
+import me.rosuh.easywatermark.utils.ktx.launch
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
@@ -39,20 +41,26 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    userRepo: UserConfigRepository
+    userRepo: UserConfigRepository,
+    private val waterMarkRepo: WaterMarkRepository
 ) : ViewModel() {
+
+    var nextSelectedPos: Int = 0
 
     val saveResult: MutableLiveData<Result<*>> = MutableLiveData()
 
     val compressedResult: MutableLiveData<Result<*>> = MutableLiveData()
 
-    val config: MutableLiveData<WaterMarkConfig> by lazy {
-        MutableLiveData<WaterMarkConfig>(WaterMarkConfig.pull())
-    }
+    val waterMark: LiveData<WaterMark> = waterMarkRepo.waterMark.asLiveData()
 
-    val selectedImageInfoList: MutableLiveData<List<ImageInfo>> by lazy {
-        MutableLiveData(emptyList())
-    }
+    private var autoScroll = true
+
+    val imageList: LiveData<Pair<List<ImageInfo>, Boolean>> =
+        waterMarkRepo.uriLivedData.map { Pair(it, autoScroll) }
+
+    val selectedImage: MutableLiveData<ImageInfo> = MutableLiveData()
+
+    val iconUri: LiveData<Uri> = waterMarkRepo.iconUriLiveData
 
     val shareImageUri: MutableLiveData<List<ImageInfo>> = MutableLiveData()
 
@@ -72,13 +80,16 @@ class MainViewModel @Inject constructor(
     private val compressLevel: Int
         get() = userPreferences.value.compressLevel
 
+    val isNeedShowUpgradeInfo: LiveData<Boolean> =
+        userRepo.changeLogFlow.map { it != BuildConfig.VERSION_CODE.toString() }.asLiveData()
+
     fun saveImage(
         contentResolver: ContentResolver,
         imageList: List<ImageInfo>,
         isSharing: Boolean = false
     ) {
         viewModelScope.launch {
-            if (selectedImageInfoList.value.isNullOrEmpty()) {
+            if (this@MainViewModel.imageList.value?.first.isNullOrEmpty()) {
                 saveResult.value = Result.failure(null, code = TYPE_ERROR_NOT_IMG)
                 return@launch
             }
@@ -108,7 +119,7 @@ class MainViewModel @Inject constructor(
             }
             infoList.forEach { info ->
                 try {
-                    info.result = generateImage(contentResolver, info.uri)
+                    info.result = generateImage(contentResolver, info)
                 } catch (fne: FileNotFoundException) {
                     fne.printStackTrace()
                     info.result = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
@@ -130,9 +141,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private suspend fun generateImage(contentResolver: ContentResolver, uri: Uri): Result<Uri> =
+    private suspend fun generateImage(
+        contentResolver: ContentResolver,
+        imageInfo: ImageInfo
+    ): Result<Uri> =
         withContext(Dispatchers.IO) {
-            val rect = decodeBitmapFromUri(contentResolver, uri)
+            val rect = decodeBitmapFromUri(contentResolver, imageInfo.uri)
             if (rect.isFailure()) {
                 return@withContext Result.extendMsg(rect)
             }
@@ -142,7 +156,9 @@ class MainViewModel @Inject constructor(
                     code = "-1",
                     message = "Copy bitmap from uri failed."
                 )
-            if (config.value == null) {
+            imageInfo.width = mutableBitmap.width
+            imageInfo.height = mutableBitmap.height
+            if (waterMark.value == null) {
                 return@withContext Result.failure(
                     null,
                     code = "-1",
@@ -150,23 +166,24 @@ class MainViewModel @Inject constructor(
                 )
             }
             val canvas = Canvas(mutableBitmap)
-            val tmpConfig = config.value!!
-            val bitmapPaint = TextPaint().applyConfig(tmpConfig, false)
+            val tmpConfig = waterMark.value!!
+            val bitmapPaint = TextPaint().applyConfig(imageInfo, tmpConfig, isScale = false)
             val layoutPaint = Paint()
-            layoutPaint.shader = when (config.value?.markMode) {
-                WaterMarkConfig.MarkMode.Text -> {
+            layoutPaint.shader = when (waterMark.value?.markMode) {
+                WaterMarkRepository.MarkMode.Text -> {
                     WaterMarkImageView.buildTextBitmapShader(
-                        config.value!!,
+                        imageInfo,
+                        waterMark.value!!,
                         bitmapPaint,
                         Dispatchers.IO
                     )
                 }
-                WaterMarkConfig.MarkMode.Image -> {
+                WaterMarkRepository.MarkMode.Image -> {
                     val iconBitmapRect = decodeSampledBitmapFromResource(
                         contentResolver,
-                        tmpConfig.iconUri,
-                        config.value!!.textSize.toInt(),
-                        config.value!!.textSize.toInt()
+                        waterMarkRepo.iconUri,
+                        waterMark.value!!.textSize.toInt(),
+                        waterMark.value!!.textSize.toInt()
                     )
                     if (iconBitmapRect.isFailure() || iconBitmapRect.data == null) {
                         return@withContext Result.failure(
@@ -177,6 +194,7 @@ class MainViewModel @Inject constructor(
                     }
                     val iconBitmap = iconBitmapRect.data!!.bitmap
                     WaterMarkImageView.buildIconBitmapShader(
+                        imageInfo,
                         iconBitmap,
                         tmpConfig,
                         bitmapPaint,
@@ -270,79 +288,111 @@ class MainViewModel @Inject constructor(
         return if (outputFormat == Bitmap.CompressFormat.PNG) "png" else "jpg"
     }
 
-    fun updateUri(uri: Uri) {
-        config.value?.uri = uri
-        forceRefresh()
+    fun selectImage(uri: Uri) {
+        selectedImage.value = ImageInfo(uri)
     }
 
-    fun updateUri(list: List<Uri>) {
+    fun updateImageList(list: List<Uri>) {
         list.map { ImageInfo(it) }
             .takeIf {
                 it.isNotEmpty()
             }
             ?.let {
-                selectedImageInfoList.value = it
-                config.value?.uri = it.first().uri
-                forceRefresh()
+                autoScroll = true
+                selectedImage.value = it.first()
+                nextSelectedPos = 0
+                launch {
+                    waterMarkRepo.updateImageList(it)
+                }
             }
     }
 
     fun updateText(text: String) {
-        config.value?.text = text
-        config.value?.markMode = WaterMarkConfig.MarkMode.Text
-        forceRefresh()
+        launch {
+            waterMarkRepo.updateText(text)
+        }
     }
 
     fun updateTextSize(textSize: Float) {
-        val finalTextSize = textSize.coerceAtLeast(0f)
-        config.value?.textSize = finalTextSize
-        forceRefresh()
+        launch {
+            val finalTextSize = textSize.coerceAtLeast(0f)
+            waterMarkRepo.updateTextSize(finalTextSize)
+        }
     }
 
     fun updateTextColor(color: Int) {
-        config.value?.textColor = color
-        forceRefresh()
+        launch {
+            waterMarkRepo.updateColor(color)
+        }
     }
 
     fun updateTextStyle(style: TextPaintStyle) {
-        config.value?.textStyle = style
-        forceRefresh()
+        launch {
+            waterMarkRepo.updateTextStyle(style)
+        }
     }
 
     fun updateTextTypeface(typeface: TextTypeface) {
-        config.value?.textTypeface = typeface
-        forceRefresh()
+        launch {
+            waterMarkRepo.updateTypeFace(typeface)
+        }
     }
 
     fun updateAlpha(alpha: Int) {
-        val finalAlpha = alpha.coerceAtLeast(0).coerceAtMost(255)
-        config.value?.alpha = finalAlpha
-        forceRefresh()
+        launch {
+            val finalAlpha = alpha.coerceAtLeast(0).coerceAtMost(255)
+            waterMarkRepo.updateAlpha(finalAlpha)
+        }
     }
 
     fun updateHorizon(gap: Int) {
-        config.value?.horizonGapPercent = gap
-        forceRefresh()
+        launch {
+            waterMarkRepo.updateHorizon(gap)
+        }
     }
 
     fun updateVertical(gap: Int) {
-        config.value?.verticalGapPercent = gap
-        forceRefresh()
+        launch {
+            waterMarkRepo.updateVertical(gap)
+        }
     }
 
     fun updateDegree(degree: Float) {
-        config.value?.degree = degree
-        forceRefresh()
+        launch {
+            waterMarkRepo.updateDegree(degree)
+        }
     }
 
-    fun updateIcon(iconUri: Uri = config.value?.iconUri ?: Uri.parse("")) {
-        config.value?.iconUri = iconUri
-        viewModelScope.launch {
+    fun updateIcon(iconUri: Uri) {
+        launch {
             if (iconUri.toString().isNotEmpty()) {
-                config.value?.iconUri = iconUri
-                config.value?.markMode = WaterMarkConfig.MarkMode.Image
+                waterMarkRepo.updateIcon(iconUri)
             }
-            forceRefresh()
+        }
+    }
+
+    fun removeImage(
+        imageInfo: ImageInfo?,
+        curSelectedPos: Int
+    ) {
+        val list = imageList.value?.first?.toMutableList() ?: return
+        val removePos = list.indexOf(imageInfo)
+        list.removeAt(removePos)
+        val selectedPos =
+            if (removePos < curSelectedPos || removePos >= (imageList.value?.first?.size
+                    ?: 0) - 1
+            ) {
+                (curSelectedPos - 1).coerceAtLeast(0)
+            } else {
+                curSelectedPos
+            }
+        launch {
+            autoScroll = false
+            nextSelectedPos = selectedPos
+            waterMarkRepo.updateImageList(list)
+            if (removePos == curSelectedPos) {
+                list.getOrNull(selectedPos)?.uri?.let { selectImage(it) }
+            }
         }
     }
 
@@ -350,21 +400,17 @@ class MainViewModel @Inject constructor(
         saveResult.postValue(Result.success(null))
     }
 
-    private fun forceRefresh() {
-        config.value?.save()
-        config.postValue(config.value)
-    }
-
     fun compressImg(activity: Activity) {
         compressedJob = viewModelScope.launch(Dispatchers.IO) {
-            config.value?.let {
+            waterMark.value?.let {
                 compressedResult.postValue(Result.success(null, code = TYPE_COMPRESSING))
                 val tmpFile = File.createTempFile("easy_water_mark_", "_compressed")
-                activity.contentResolver.openInputStream(it.uri).use { input ->
-                    tmpFile.outputStream().use { output ->
-                        input?.copyTo(output)
+                activity.contentResolver.openInputStream(waterMarkRepo.imageInfoList.first().uri)
+                    .use { input ->
+                        tmpFile.outputStream().use { output ->
+                            input?.copyTo(output)
+                        }
                     }
-                }
                 val compressedFile = Compressor.compress(activity, tmpFile)
                 // clear tmp files
                 if (tmpFile.exists()) {
@@ -376,7 +422,7 @@ class MainViewModel @Inject constructor(
                         "${BuildConfig.APPLICATION_ID}.fileprovider",
                         compressedFile
                     )
-                    updateUri(compressedFileUri)
+                    selectImage(compressedFileUri)
                     compressedResult.postValue(Result.success(null, code = TYPE_COMPRESS_OK))
                 } catch (ie: IllegalArgumentException) {
                     compressedResult.postValue(

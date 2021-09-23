@@ -4,7 +4,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.FragmentActivity
 import com.google.android.material.slider.Slider
-import me.rosuh.easywatermark.data.model.WaterMarkConfig
+import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.ui.base.BasePBFragment
 import me.rosuh.easywatermark.utils.ktx.commitWithAnimation
 
@@ -22,18 +22,18 @@ class AlphaPbFragment : BasePBFragment() {
         }
     }
 
-    override fun formatValue(config: WaterMarkConfig?): Float {
+    override fun formatValue(config: WaterMark?): Float {
         return rebuildAlpha(config).toFloat().coerceAtLeast(0f).coerceAtMost(100f)
     }
 
-    private fun rebuildAlpha(config: WaterMarkConfig?): Int {
+    private fun rebuildAlpha(config: WaterMark?): Int {
         if (config?.alpha == null) {
             return 0
         }
         return (config.alpha.toFloat() / 255 * 100).toInt().coerceAtLeast(0).coerceAtMost(100)
     }
 
-    override fun formatValueTips(config: WaterMarkConfig?): String {
+    override fun formatValueTips(config: WaterMark?): String {
         return "${rebuildAlpha(config)}%"
     }
 

@@ -19,7 +19,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.fragment.app.commit
-import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
@@ -28,7 +27,7 @@ import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
 import me.rosuh.easywatermark.data.model.ImageInfo
-import me.rosuh.easywatermark.data.model.WaterMarkConfig
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.ui.about.AboutActivity
 import me.rosuh.easywatermark.ui.adapter.FuncPanelAdapter
 import me.rosuh.easywatermark.ui.adapter.PhotoListPreviewAdapter
@@ -142,7 +141,6 @@ class MainActivity : AppCompatActivity() {
         checkHadCrash()
         // Activity was recycled but dialog still showing in some case?
         SaveImageBSDialogFragment.safetyHide(this@MainActivity.supportFragmentManager)
-        ChangeLogDialogFragment.safetyShow(this@MainActivity.supportFragmentManager)
     }
 
     private fun registerResultCallback() {
@@ -170,8 +168,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        super.onDestroy()
         bgTransformAnimator?.cancel()
+        super.onDestroy()
     }
 
     private fun checkHadCrash() {
@@ -207,22 +205,40 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initObserver() {
-        viewModel.config.observe(
-            this,
-            Observer<WaterMarkConfig> {
-                if (it.uri.toString().isEmpty()) {
-                    return@Observer
-                }
-                try {
-                    launchView.toEditorMode()
-                    launchView.ivPhoto.config = it
-                } catch (se: SecurityException) {
-                    se.printStackTrace()
-                    // reset the uri because we don't have permission -_-
-                    viewModel.updateUri(Uri.parse(""))
+        viewModel.waterMark.observe(this) {
+            if (it == null) {
+                return@observe
+            }
+            launchView.ivPhoto.config = it
+        }
+        viewModel.selectedImage.observe(this) {
+            if (it.uri.toString().isEmpty()) {
+                return@observe
+            }
+            try {
+                launchView.toEditorMode()
+                launchView.ivPhoto.updateUri(it)
+            } catch (se: SecurityException) {
+                se.printStackTrace()
+                // reset the uri because we don't have permission -_-
+                viewModel.selectImage(Uri.EMPTY)
+            }
+        }
+        viewModel.imageList.observe(this) {
+            photoListPreviewAdapter.selectedPos = viewModel.nextSelectedPos
+            photoListPreviewAdapter.submitList(it.first)
+            if (it.second) {
+                launchView.rvPhotoList.apply {
+                    post { smoothScrollToPosition(0) }
                 }
             }
-        )
+        }
+        viewModel.iconUri.observe(this) {
+            if (it?.toString().isNullOrBlank()) {
+                return@observe
+            }
+            launchView.ivPhoto.updateIconUri(it)
+        }
 
         viewModel.saveResult.observe(this) {
             if (it.isFailure()) {
@@ -283,9 +299,10 @@ class MainActivity : AppCompatActivity() {
             }
         )
 
-        viewModel.selectedImageInfoList.observe(this) {
-            photoListPreviewAdapter.submitList(it)
-            launchView.rvPhotoList.smoothScrollToPosition(0)
+        viewModel.isNeedShowUpgradeInfo.observe(this) {
+            val needShow = it ?: false
+            if (!needShow) return@observe
+            ChangeLogDialogFragment.safetyShow(this@MainActivity.supportFragmentManager)
         }
     }
 
@@ -387,9 +404,8 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-            photoListPreviewAdapter.onRemove {
-                val uri = it?.uri ?: return@onRemove
-                viewModel.updateUri(uri)
+            photoListPreviewAdapter.onRemove { imageInfo ->
+                viewModel.removeImage(imageInfo, photoListPreviewAdapter.selectedPos)
             }
 
             onItemClick { _, pos, v ->
@@ -402,7 +418,7 @@ class MainActivity : AppCompatActivity() {
             onSnapViewSelected { _, pos ->
                 photoListPreviewAdapter.selectedPos = pos
                 val uri = photoListPreviewAdapter.getItem(pos)?.uri ?: return@onSnapViewSelected
-                viewModel.updateUri(uri)
+                viewModel.selectImage(uri)
             }
 
             post {
@@ -437,7 +453,7 @@ class MainActivity : AppCompatActivity() {
                         }
                         else -> {
                             val curPos =
-                                if (launchView.ivPhoto.config?.markMode == WaterMarkConfig.MarkMode.Text) 0 else 1
+                                if (launchView.ivPhoto.config?.markMode == WaterMarkRepository.MarkMode.Text) 0 else 1
                             adapter?.seNewData(contentFunList, curPos)
                             manuallySelectedItem(curPos)
                         }
@@ -568,7 +584,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun dealWithImage(uri: List<Uri>) {
         if (FileUtils.isImage(this.contentResolver, uri.first())) {
-            viewModel.updateUri(uri)
+            viewModel.updateImageList(uri)
         } else {
             Toast.makeText(
                 this,
@@ -588,7 +604,7 @@ class MainActivity : AppCompatActivity() {
                 getString(R.string.tips_do_not_choose_image),
                 Toast.LENGTH_SHORT
             ).show()
-            if (requestCode == REQ_PICK_ICON && viewModel.config.value?.markMode == WaterMarkConfig.MarkMode.Text) {
+            if (requestCode == REQ_PICK_ICON && viewModel.waterMark.value?.markMode == WaterMarkRepository.MarkMode.Text) {
                 manuallySelectedItem(0)
             }
             return

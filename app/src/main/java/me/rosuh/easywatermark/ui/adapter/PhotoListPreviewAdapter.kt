@@ -2,11 +2,8 @@ package me.rosuh.easywatermark.ui.adapter
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.util.Log
-import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import androidx.collection.ArraySet
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.DiffUtil
@@ -40,8 +37,6 @@ class PhotoListPreviewAdapter(
             }
         }
     }
-
-    private val inRemoveModeSet by lazy { ArraySet<ImageInfo>() }
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ImageHolder {
@@ -84,14 +79,6 @@ class PhotoListPreviewAdapter(
                 .load(this.uri)
                 .into(holder.ivIcon)
             when {
-                isInRemovedMode(position) -> {
-                    holder.ivIcon.animate().alpha(0.5f).setDuration(100).start()
-                    holder.ivRemove.animate()
-                        .alpha(1f)
-                        .setDuration(100)
-                        .withStartAction { holder.ivRemove.isVisible = true }
-                        .start()
-                }
                 isPayLoad -> {
                     holder.ivIcon.animate().alpha(1f).setDuration(100).start()
                     holder.ivRemove
@@ -124,32 +111,12 @@ class PhotoListPreviewAdapter(
     }
 
     fun submitList(imageInfoList: List<ImageInfo>) {
-        inRemoveModeSet.clear()
         differ.submitList(imageInfoList)
     }
 
     fun getItem(pos: Int): ImageInfo? {
         return differ.currentList.getOrNull(pos)
     }
-
-    fun toggleRemovedMode(position: Int, view: View) {
-        if (position < 0 || position >= differ.currentList.size) {
-            return
-        }
-        if (itemCount <= 1) {
-            VibrateHelper.get().doVibrate(view)
-            return
-        }
-        val item = getItem(position)
-        if (inRemoveModeSet.contains(item)) {
-            inRemoveModeSet.remove(item)
-        } else {
-            inRemoveModeSet.add(item)
-        }
-        notifyItemChanged(position, "Removed")
-    }
-
-    fun isInRemovedMode(pos: Int): Boolean = inRemoveModeSet.contains(getItem(pos))
 
     var selectedPos: Int = 0
 
@@ -159,23 +126,11 @@ class PhotoListPreviewAdapter(
         this.doOnRemoveItem = block
     }
 
-    private fun remove(removePos: Int): Boolean {
+    private fun remove(removePos: Int) {
         if (removePos < 0 || removePos >= itemCount || itemCount <= 1) {
-            return false
+            return
         }
-        inRemoveModeSet.remove(getItem(removePos))
-        val list = ArrayList(differ.currentList)
-        list.removeAt(removePos)
-        selectedPos = if (removePos < selectedPos || removePos >= itemCount - 1) {
-            (selectedPos - 1).coerceAtLeast(0)
-        } else {
-            selectedPos
-        }
-        differ.submitList(list) {
-            Log.i("remove", "$removePos, $itemCount")
-            doOnRemoveItem.invoke(getItem(selectedPos))
-        }
-        return true
+        doOnRemoveItem.invoke(getItem(removePos))
     }
 
     class ImageHolder(view: PhotoPreviewItem) : BaseViewHolder(view) {

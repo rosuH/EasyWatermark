@@ -28,7 +28,7 @@ class TextStyleFragment : BaseBindFragment<FragmentTextStyleBinding>() {
             TextPaintStyleAdapter.obtainDefaultPaintStyleList(
                 requireContext()
             ),
-            shareViewModel.config.value?.textStyle
+            shareViewModel.waterMark.value?.textStyle
         ) { _, paintStyle ->
             shareViewModel.updateTextStyle(paintStyle)
             typefaceAdapter.updateTextStyle(paintStyle)
@@ -39,7 +39,7 @@ class TextStyleFragment : BaseBindFragment<FragmentTextStyleBinding>() {
             TextTypefaceAdapter.obtainDefaultTypefaceList(
                 requireContext()
             ),
-            shareViewModel.config.value?.textTypeface
+            shareViewModel.waterMark.value?.textTypeface
         ) { _, typeface ->
             shareViewModel.updateTextTypeface(typeface)
         }
