@@ -64,15 +64,14 @@ class ColoredImageVIew : AppCompatImageView {
 
     @SuppressLint("DrawAllocation")
     override fun onDraw(canvas: Canvas?) {
-        if (drawable == null) {
-            super.onDraw(canvas)
-            return
-        }
         if (innerBitmap == null || (sizeHasChanged && width > 0 && height > 0)) {
             super.onDraw(canvas)
-            innerBitmap = drawable.toBitmap(width, height)
-            sizeHasChanged = false
         }
+        if (measuredWidth + measuredHeight <= 0) {
+            return
+        }
+        innerBitmap = drawable.toBitmap(measuredWidth, measuredHeight)
+        sizeHasChanged = false
         innerBitmap?.let {
             val sc = canvas?.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), null) ?: return
             canvas.drawBitmap(it, 0f, 0f, paint)
