@@ -22,9 +22,6 @@ abstract class BasePBFragment : BaseBindFragment<FragemntBasePbBinding>() {
         b.slideContentSize.apply {
             value = formatValue(shareViewModel.waterMark.value)
             addOnChangeListener { slider, value, fromUser ->
-                if (fromUser) {
-                    vibrateHelper.doVibrate(this)
-                }
                 doOnChange(slider, value, fromUser)
             }
         }

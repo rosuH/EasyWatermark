@@ -1,6 +1,5 @@
 package me.rosuh.easywatermark.ui.dialog
 
-import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -8,34 +7,25 @@ import android.view.animation.AlphaAnimation
 import androidx.core.view.isInvisible
 import androidx.core.widget.ContentLoadingProgressBar
 import androidx.fragment.app.FragmentManager
-import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
-import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.Result
+import me.rosuh.easywatermark.databinding.DialogSaveFileBinding
 import me.rosuh.easywatermark.ui.MainActivity
 import me.rosuh.easywatermark.ui.MainViewModel
+import me.rosuh.easywatermark.ui.base.BaseBindBSDFragment
 import me.rosuh.easywatermark.utils.ktx.preCheckStoragePermission
 
-class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
+class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
 
-    private val shareViewModel: MainViewModel by activityViewModels()
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        val root = inflater.inflate(R.layout.dialog_save_file, container, false)
-
-        var ivSave: View?
-        var ivShare: View?
-        var cpbSave: ContentLoadingProgressBar?
-        var cpbShare: ContentLoadingProgressBar?
+    override fun bindView(
+        layoutInflater: LayoutInflater,
+        container: ViewGroup?
+    ): DialogSaveFileBinding {
+        val root = DialogSaveFileBinding.inflate(layoutInflater, container, false)
         val isSaving = shareViewModel.saveResult.value?.code == MainViewModel.TYPE_SAVING
         val isSharing = shareViewModel.saveResult.value?.code == MainViewModel.TYPE_SHARING
         with(root) {
-            findViewById<View>(R.id.ll_save).apply {
+            llSave.apply {
                 setOnClickListener {
                     requireActivity().preCheckStoragePermission {
                         shareViewModel.saveImage(
@@ -46,19 +36,19 @@ class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
                 }
             }
 
-            ivSave = findViewById<View>(R.id.iv_save).apply {
+            ivSave.apply {
                 if (isSaving && this.animation?.hasStarted() != true) {
                     this.startAnimation(alphaAnimation)
                 }
             }
 
-            ivShare = findViewById<View>(R.id.iv_share).apply {
+            ivShare.apply {
                 if (isSharing && this.animation?.hasStarted() != true) {
                     this.startAnimation(alphaAnimation)
                 }
             }
 
-            findViewById<View>(R.id.ll_share).apply {
+            llShare.apply {
                 setOnClickListener {
                     requireActivity().preCheckStoragePermission {
                         shareViewModel.shareImage(
@@ -68,21 +58,15 @@ class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
                     }
                 }
             }
+            setUpLoadingView(shareViewModel.saveResult.value, cpbSave, cpbShare, ivSave, ivShare)
 
-            cpbSave = findViewById(R.id.cpb_save)
-
-            cpbShare = findViewById(R.id.cpb_share)
+            shareViewModel.saveResult.observe(
+                viewLifecycleOwner,
+                Observer {
+                    setUpLoadingView(it, cpbSave, cpbShare, ivSave, ivShare)
+                }
+            )
         }
-
-        setUpLoadingView(shareViewModel.saveResult.value, cpbSave, cpbShare, ivSave, ivShare)
-
-        shareViewModel.saveResult.observe(
-            viewLifecycleOwner,
-            Observer {
-                setUpLoadingView(it, cpbSave, cpbShare, ivSave, ivShare)
-            }
-        )
-
         return root
     }
 
