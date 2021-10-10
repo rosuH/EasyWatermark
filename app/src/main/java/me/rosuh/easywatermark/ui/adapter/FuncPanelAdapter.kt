@@ -1,5 +1,7 @@
 package me.rosuh.easywatermark.ui.adapter
 
+import android.annotation.SuppressLint
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -7,6 +9,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
+import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
 import me.rosuh.easywatermark.ui.base.BaseViewHolder
@@ -14,6 +17,11 @@ import me.rosuh.easywatermark.ui.base.BaseViewHolder
 class FuncPanelAdapter(
     val dataSet: ArrayList<FuncTitleModel>
 ) : RecyclerView.Adapter<FuncPanelAdapter.FuncTitleHolder>() {
+
+    private var textColor: Int = ContextCompat.getColor(
+        MyApp.instance.applicationContext,
+        R.color.text_color_main
+    )
 
     var selectedPos = 0
         set(value) {
@@ -71,12 +79,7 @@ class FuncPanelAdapter(
                 )
             } else {
                 holder.ivIcon.drawable.setTintList(null)
-                holder.tvTitle.setTextColor(
-                    ContextCompat.getColor(
-                        holder.itemView.context,
-                        R.color.text_color_main
-                    )
-                )
+                holder.tvTitle.setTextColor(textColor)
             }
         }
     }
@@ -85,10 +88,17 @@ class FuncPanelAdapter(
         return dataSet.count()
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     fun seNewData(contentFunList: List<FuncTitleModel>, toPos: Int = selectedPos) {
         selectedPos = toPos
         dataSet.clear()
         dataSet.addAll(contentFunList)
+        notifyDataSetChanged()
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    fun applyTextColor(color: Int) {
+        textColor = color
         notifyDataSetChanged()
     }
 

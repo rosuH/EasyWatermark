@@ -13,6 +13,13 @@ val Int.dp
         Resources.getSystem().displayMetrics
     ).toInt()
 
+val Float.dp
+    get() = TypedValue.applyDimension(
+        TypedValue.COMPLEX_UNIT_DIP,
+        this,
+        Resources.getSystem().displayMetrics
+    )
+
 fun Int.toColor(
     toColor: Int,
     autoStart: Boolean = true,

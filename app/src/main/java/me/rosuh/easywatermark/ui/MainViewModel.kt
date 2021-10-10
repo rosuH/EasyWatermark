@@ -17,6 +17,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import androidx.lifecycle.*
+import androidx.palette.graphics.Palette
 import dagger.hilt.android.lifecycle.HiltViewModel
 import id.zelory.compressor.Compressor
 import kotlinx.coroutines.*
@@ -41,7 +42,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    userRepo: UserConfigRepository,
+    private val userRepo: UserConfigRepository,
     private val waterMarkRepo: WaterMarkRepository
 ) : ViewModel() {
 
@@ -66,6 +67,8 @@ class MainViewModel @Inject constructor(
 
     val saveImageUri: MutableLiveData<List<ImageInfo>> = MutableLiveData()
 
+    val saveProcess: MutableLiveData<ImageInfo> = MutableLiveData()
+
     private var compressedJob: Job? = null
 
     private var userPreferences: StateFlow<UserPreferences> = userRepo.userPreferences.stateIn(
@@ -74,14 +77,16 @@ class MainViewModel @Inject constructor(
         UserPreferences.DEFAULT
     )
 
-    private val outputFormat: Bitmap.CompressFormat
+    val outputFormat: Bitmap.CompressFormat
         get() = userPreferences.value.outputFormat
 
-    private val compressLevel: Int
+    val compressLevel: Int
         get() = userPreferences.value.compressLevel
 
     val isNeedShowUpgradeInfo: LiveData<Boolean> =
         userRepo.changeLogFlow.map { it != BuildConfig.VERSION_CODE.toString() }.asLiveData()
+
+    val colorPalette: MutableLiveData<Palette> = MutableLiveData()
 
     fun saveImage(
         contentResolver: ContentResolver,
@@ -119,16 +124,23 @@ class MainViewModel @Inject constructor(
             }
             infoList.forEach { info ->
                 try {
+                    info.jobState = JobState.Ing
+                    launch(Dispatchers.Main) { saveProcess.value = info }
                     info.result = generateImage(contentResolver, info)
+                    info.jobState = JobState.Success(info.result!!)
+                    launch(Dispatchers.Main) { saveProcess.value = info }
                 } catch (fne: FileNotFoundException) {
                     fne.printStackTrace()
                     info.result = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
+                    info.jobState = JobState.Failure(info.result!!)
+                    saveProcess.postValue(info)
                 } catch (oom: OutOfMemoryError) {
                     info.result = Result.failure(null, code = TYPE_ERROR_SAVE_OOM)
+                    info.jobState = JobState.Failure(info.result!!)
+                    saveProcess.postValue(info)
                 }
                 Log.i("generateList", "${info.uri} : ${info.result}")
             }
-
             return@withContext Result.success(infoList)
         }
 
@@ -371,6 +383,13 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun saveOutput(format: Bitmap.CompressFormat, level: Int) {
+        viewModelScope.launch {
+            userRepo.updateFormat(format)
+            userRepo.updateCompressLevel(level)
+        }
+    }
+
     fun removeImage(
         imageInfo: ImageInfo?,
         curSelectedPos: Int
@@ -394,6 +413,10 @@ class MainViewModel @Inject constructor(
                 list.getOrNull(selectedPos)?.uri?.let { selectImage(it) }
             }
         }
+    }
+
+    fun updateColorPalette(palette: Palette) {
+        colorPalette.postValue(palette)
     }
 
     fun resetStatus() {

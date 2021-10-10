@@ -1,5 +1,7 @@
 package me.rosuh.easywatermark.ui.base
 
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -35,12 +37,13 @@ abstract class BasePBFragment : BaseBindFragment<FragemntBasePbBinding>() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        shareViewModel.waterMark.observe(
-            viewLifecycleOwner,
-            {
-                binding.tvProgressVertical.text = formatValueTips(it)
-            }
-        )
+        shareViewModel.waterMark.observe(viewLifecycleOwner) {
+            binding.tvProgressVertical.text = formatValueTips(it)
+        }
+        shareViewModel.colorPalette.observe(viewLifecycleOwner) {
+            binding.slideContentSize.trackTintList =
+                ColorStateList.valueOf(it.darkMutedSwatch?.bodyTextColor ?: Color.WHITE)
+        }
     }
 
     abstract fun doOnChange(slider: Slider, value: Float, fromUser: Boolean)

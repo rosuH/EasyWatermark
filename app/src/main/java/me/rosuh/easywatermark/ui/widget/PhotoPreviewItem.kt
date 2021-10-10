@@ -1,6 +1,7 @@
 package me.rosuh.easywatermark.ui.widget
 
 import android.content.Context
+import android.graphics.Color
 import android.util.AttributeSet
 import android.util.Log
 import android.view.MotionEvent
@@ -67,7 +68,7 @@ class PhotoPreviewItem : ViewGroup {
                         }
                         MotionEvent.ACTION_MOVE -> {
                             if (!isLongPress) return false
-                            val topEdge = ivDel.top.toFloat() - 3.dp
+                            val topEdge = ivDel.top.toFloat()
                             view.translationZ
                             view.translationY =
                                 (motionEvent.rawY - y).coerceAtMost(0f)
@@ -162,9 +163,9 @@ class PhotoPreviewItem : ViewGroup {
         ImageView(context).apply {
             id = View.generateViewId()
             layoutParams =
-                MarginLayoutParams(50.dp, 50.dp)
+                MarginLayoutParams(48.dp, 48.dp)
             scaleType = ImageView.ScaleType.CENTER_CROP
-            setPadding(10.dp)
+            setPadding(8.dp)
             setBackgroundResource(R.drawable.bg_removed_photo_list)
             setImageResource(R.drawable.ic_remove_item)
         }
@@ -182,8 +183,8 @@ class PhotoPreviewItem : ViewGroup {
             measureChildWithMargins(it, widthMeasureSpec, 0, heightMeasureSpec, 0)
         }
         setMeasuredDimension(
-            MeasureSpec.makeMeasureSpec(56.dp, MeasureSpec.EXACTLY),
-            MeasureSpec.makeMeasureSpec(56.dp, MeasureSpec.EXACTLY)
+            MeasureSpec.makeMeasureSpec(48.dp, MeasureSpec.EXACTLY),
+            MeasureSpec.makeMeasureSpec(48.dp, MeasureSpec.EXACTLY)
         )
     }
 

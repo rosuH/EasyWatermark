@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.*
@@ -304,6 +305,39 @@ class MainActivity : AppCompatActivity() {
             if (!needShow) return@observe
             ChangeLogDialogFragment.safetyShow(this@MainActivity.supportFragmentManager)
         }
+
+        viewModel.colorPalette.observe(this) { palette ->
+            val bgColor = palette.darkMutedSwatch?.rgb ?: ContextCompat.getColor(
+                this@MainActivity,
+                R.color.colorSecondary
+            )
+            val bodyTextColor = palette.darkMutedSwatch?.bodyTextColor ?: ContextCompat.getColor(
+                this@MainActivity,
+                R.color.text_color_main
+            )
+            val titleTextColor = palette.darkMutedSwatch?.titleTextColor ?: ContextCompat.getColor(
+                this@MainActivity,
+                R.color.text_color_main
+            )
+            bgTransformAnimator =
+                ((launchView.ivPhoto.background as? ColorDrawable)?.color ?: Color.BLACK).toColor(
+                    bgColor
+                ) {
+                    launchView.rvPhotoList.setBackgroundColor(it.animatedValue as Int)
+                    launchView.fcFunctionDetail.setBackgroundColor(it.animatedValue as Int)
+                    launchView.rvPanel.setBackgroundColor(it.animatedValue as Int)
+                    launchView.tabLayout.setBackgroundColor(it.animatedValue as Int)
+                    launchView.toolbar.setBackgroundColor(it.animatedValue as Int)
+                    setStatusBarColor(it.animatedValue as Int)
+                }
+            funcAdapter.applyTextColor(titleTextColor)
+            launchView.tabLayout.setTabTextColors(
+                titleTextColor, ContextCompat.getColor(
+                    this@MainActivity,
+                    R.color.colorAccent
+                )
+            )
+        }
     }
 
     private fun Context.toast(msg: String?) {
@@ -347,14 +381,7 @@ class MainActivity : AppCompatActivity() {
         // setting bg
         launchView.ivPhoto.apply {
             onBgReady { palette ->
-                val color = palette.darkMutedSwatch?.rgb ?: ContextCompat.getColor(
-                    this@MainActivity,
-                    R.color.colorSecondary
-                )
-                bgTransformAnimator =
-                    ((background as? ColorDrawable)?.color ?: Color.BLACK).toColor(color) {
-                        launchView.rvPhotoList.setBackgroundColor(it.animatedValue as Int)
-                    }
+                viewModel.updateColorPalette(palette)
             }
         }
         // functional panel in recyclerView
@@ -507,6 +534,15 @@ class MainActivity : AppCompatActivity() {
             FuncTitleModel.FuncType.TextSize -> {
                 TextSizePbFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
+        }
+    }
+
+    private fun setStatusBarColor(color: Int) {
+        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+        window.statusBarColor = color;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            window.findViewById<View>(android.R.id.content)?.foreground = null
         }
     }
 

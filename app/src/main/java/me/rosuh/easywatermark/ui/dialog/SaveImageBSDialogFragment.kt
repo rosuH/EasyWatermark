@@ -1,21 +1,30 @@
 package me.rosuh.easywatermark.ui.dialog
 
+import android.graphics.Bitmap
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AlphaAnimation
-import androidx.core.view.isInvisible
-import androidx.core.widget.ContentLoadingProgressBar
+import android.widget.ArrayAdapter
 import androidx.fragment.app.FragmentManager
-import androidx.lifecycle.Observer
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.StaggeredGridLayoutManager
+import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.Result
 import me.rosuh.easywatermark.databinding.DialogSaveFileBinding
 import me.rosuh.easywatermark.ui.MainActivity
 import me.rosuh.easywatermark.ui.MainViewModel
+import me.rosuh.easywatermark.ui.adapter.SaveImageListAdapter
 import me.rosuh.easywatermark.ui.base.BaseBindBSDFragment
+import me.rosuh.easywatermark.ui.widget.ScalebleGridLayoutManager
+import me.rosuh.easywatermark.utils.ktx.dp
 import me.rosuh.easywatermark.utils.ktx.preCheckStoragePermission
 
 class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
+    private val imageList: List<ImageInfo>
+        get() = (requireContext() as MainActivity).getImageList()
+
+    private val popArray = arrayOf("JPEG", "PNG")
 
     override fun bindView(
         layoutInflater: LayoutInflater,
@@ -23,9 +32,8 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
     ): DialogSaveFileBinding {
         val root = DialogSaveFileBinding.inflate(layoutInflater, container, false)
         val isSaving = shareViewModel.saveResult.value?.code == MainViewModel.TYPE_SAVING
-        val isSharing = shareViewModel.saveResult.value?.code == MainViewModel.TYPE_SHARING
         with(root) {
-            llSave.apply {
+            ivSave.apply {
                 setOnClickListener {
                     requireActivity().preCheckStoragePermission {
                         shareViewModel.saveImage(
@@ -42,59 +50,67 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
                 }
             }
 
-            ivShare.apply {
-                if (isSharing && this.animation?.hasStarted() != true) {
-                    this.startAnimation(alphaAnimation)
+            atvFormat.also {
+                it.setAdapter(
+                    ArrayAdapter(
+                        requireContext(),
+                        android.R.layout.simple_dropdown_item_1line,
+                        popArray
+                    )
+                )
+                it.setText(
+                    if (shareViewModel.outputFormat == Bitmap.CompressFormat.JPEG) "JPEG" else "PNG",
+                    false
+                )
+                it.setOnItemClickListener { _, _, index, _ ->
+                    val targetFormat =
+                        if (index == 0) Bitmap.CompressFormat.JPEG else Bitmap.CompressFormat.PNG
+                    shareViewModel.saveOutput(targetFormat, slideQuality.value.toInt())
                 }
             }
 
-            llShare.apply {
-                setOnClickListener {
-                    requireActivity().preCheckStoragePermission {
-                        shareViewModel.shareImage(
-                            requireActivity().contentResolver,
-                            (requireContext() as MainActivity).getImageList()
-                        )
-                    }
+            rvResult.apply {
+                adapter = SaveImageListAdapter(requireContext()).also {
+                    it.submitList(imageList)
+                }
+                itemAnimator = null
+                val spanCount = if (imageList.size > 5) (imageList.size / 2).coerceAtLeast(5) else imageList.size
+                layoutManager = GridLayoutManager(requireContext(), spanCount)
+            }
+
+            slideQuality.apply {
+                value = shareViewModel.compressLevel.toFloat()
+                addOnChangeListener { _, value, _ ->
+                    shareViewModel.saveOutput(shareViewModel.outputFormat, value.toInt())
                 }
             }
-            setUpLoadingView(shareViewModel.saveResult.value, cpbSave, cpbShare, ivSave, ivShare)
 
-            shareViewModel.saveResult.observe(
-                viewLifecycleOwner,
-                Observer {
-                    setUpLoadingView(it, cpbSave, cpbShare, ivSave, ivShare)
-                }
-            )
+            setUpLoadingView(shareViewModel.saveResult.value, ivSave)
+
+            shareViewModel.saveProcess.observe(viewLifecycleOwner) {
+                (rvResult.adapter as? SaveImageListAdapter)?.updateJobState(it)
+            }
+
+            shareViewModel.saveResult.observe(viewLifecycleOwner) {
+                setUpLoadingView(it, ivSave)
+            }
         }
         return root
     }
 
     private fun setUpLoadingView(
         saveResult: Result<*>?,
-        cpbSave: ContentLoadingProgressBar?,
-        cpbShare: ContentLoadingProgressBar?,
         ivSave: View?,
-        ivShare: View?
     ) {
         when (saveResult?.code) {
             MainViewModel.TYPE_SAVING -> {
-                cpbSave?.show()
-                cpbShare?.hide()
-                ivSave?.isInvisible = true
-                ivShare?.isInvisible = false
+                ivSave?.isEnabled = false
             }
             MainViewModel.TYPE_SHARING -> {
-                cpbSave?.hide()
-                cpbShare?.show()
-                ivSave?.isInvisible = false
-                ivShare?.isInvisible = true
+                ivSave?.isEnabled = false
             }
             else -> {
-                cpbSave?.hide()
-                cpbShare?.hide()
-                ivSave?.isInvisible = false
-                ivShare?.isInvisible = false
+                ivSave?.isEnabled = true
             }
         }
     }

@@ -44,7 +44,7 @@
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="70dp"
             android:layout_height="40dp"
-            android:layout_marginStart="15dp"
+            android:layout_marginStart="16dp"
             android:text="@string/water_mark_mode_image"
             android:textAllCaps="false"
             android:textColor="@color/white"

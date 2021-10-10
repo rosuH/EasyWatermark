@@ -97,7 +97,7 @@ class LaunchView : CustomViewGroup {
                 )
                     .also { it.setMargins(0, 20.dp, 0, 0) }
             setBackgroundColor(ContextCompat.getColor(context, R.color.colorPrimary))
-            elevation = 4.dp.toFloat()
+            elevation = 0f
             popupTheme = R.style.ThemeOverlay_AppCompat_Dark_ActionBar
         }
     }
@@ -128,15 +128,12 @@ class LaunchView : CustomViewGroup {
             setSelectedTabIndicatorColor(ContextCompat.getColor(context, R.color.colorAccent))
             val contentTab = newTab().also {
                 it.text = context.getString(R.string.title_content)
-                it.setIcon(R.drawable.ic_text_title)
             }
             val styleTab = newTab().also {
                 it.text = context.getString(R.string.title_style)
-                it.setIcon(R.drawable.ic_style_title)
             }
             val layoutTab = newTab().also {
                 it.text = context.getString(R.string.title_layout)
-                it.setIcon(R.drawable.ic_layout_title)
             }
 
             addTab(contentTab)

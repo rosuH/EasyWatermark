@@ -43,7 +43,9 @@ class TouchSensitiveRv : RecyclerView {
 
     private val glowRectF = RectF()
     private var glowRadius = 0f
+
     private val borderRectF = RectF()
+    private val borderSize = 48F.dp
 
     private val colorList = arrayOf(
         Color.parseColor("#00FFD703"),
@@ -60,7 +62,7 @@ class TouchSensitiveRv : RecyclerView {
         Paint().apply {
             color = ContextCompat.getColor(context, R.color.colorAccent)
             style = Paint.Style.STROKE
-            strokeWidth = borderWidth
+            strokeWidth = 1.5F.dp
             isAntiAlias = true
             isDither = true
         }
@@ -130,19 +132,19 @@ class TouchSensitiveRv : RecyclerView {
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
+        borderRectF.set(
+            (measuredWidth - borderSize) / 2f,
+            0f,
+            (measuredWidth + borderSize) / 2f,
+            borderSize
+        )
         glowRectF.set(
             (measuredWidth - childWidth) / 2f,
             0f,
             (measuredWidth + childWidth) / 2f,
             childHeight.toFloat()
         )
-        borderRectF.set(
-            (measuredWidth - childWidth) / 2f + borderWidth,
-            borderWidth,
-            (measuredWidth + childWidth) / 2f - borderWidth,
-            childHeight.toFloat() - borderWidth
-        )
-        glowRadius = min(childWidth.toFloat(), childHeight.toFloat()) / 2
+        glowRadius = borderSize / 2
         if (glowRadius <= 0) {
             glowPaint.shader = null
             return
@@ -172,15 +174,15 @@ class TouchSensitiveRv : RecyclerView {
     }
 
     override fun onDraw(c: Canvas?) {
-        if (enableBorder && scrollState == SCROLL_STATE_IDLE) {
-            c?.drawRect(borderRectF, borderPaint)
-        }
         super.onDraw(c)
         c?.withSave {
             drawRect(
                 glowRectF,
                 glowPaint
             )
+        }
+        if (enableBorder && scrollState == SCROLL_STATE_IDLE) {
+            c?.drawRoundRect(borderRectF, 2F.dp, 2F.dp, borderPaint)
         }
     }
 

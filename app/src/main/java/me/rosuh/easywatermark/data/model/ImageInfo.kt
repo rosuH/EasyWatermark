@@ -9,6 +9,7 @@ data class ImageInfo(
     var scaleX: Float = 1f,
     var scaleY: Float = 1f,
     var result: Result<*>? = null,
+    var jobState: JobState = JobState.Ready,
     var isInDelModel: Boolean = false,
 ) {
     val shareUri: Uri?

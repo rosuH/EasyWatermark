@@ -42,7 +42,8 @@ class UserConfigRepository @Inject constructor(
                     Bitmap.CompressFormat.JPEG
                 }
             }
-            val compressLevel = it[KEY_COMPRESS_LEVEL] ?: DEFAULT_COMPRESS_LEVEL
+            val savedValue = (it[KEY_COMPRESS_LEVEL] ?: DEFAULT_COMPRESS_LEVEL).coerceAtLeast(20).coerceAtMost(100)
+            val compressLevel = if (savedValue % 20 != 0) DEFAULT_COMPRESS_LEVEL else savedValue
             UserPreferences(outputFormat, compressLevel)
         }
 
