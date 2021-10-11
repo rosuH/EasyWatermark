@@ -4,7 +4,6 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:animateLayoutChanges="true"
     android:background="@color/colorSecondary"
     android:orientation="vertical">
 
@@ -101,13 +100,23 @@
         android:paddingEnd="5dp" />
 
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/iv_save"
+        android:id="@+id/btn_save"
         style="@style/Widget.App.Button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="24dp"
         android:layout_marginTop="43dp"
         android:layout_marginEnd="24dp"
-        android:layout_marginBottom="23dp"
+        android:layout_marginBottom="8dp"
         android:text="Export" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_open_gallery"
+        style="@style/Widget.App.OutlineButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:layout_gravity="center"
+        android:padding="8dp"
+        android:text="Open in gallery" />
 </LinearLayout>

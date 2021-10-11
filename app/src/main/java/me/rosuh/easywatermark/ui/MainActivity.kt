@@ -260,47 +260,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        viewModel.saveImageUri.observe(
-            this,
-            { list ->
-                if (list.isNullOrEmpty()) return@observe
-                val outputUri = list.first().shareUri
-                val intent = Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(outputUri, "image/*")
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                startActivity(intent)
-                toast(getString(R.string.tips_save_ok))
-            }
-        )
-
-        viewModel.shareImageUri.observe(
-            this,
-            { list ->
-                if (list.isNullOrEmpty()) return@observe
-                val intent = Intent().apply {
-                    type = "image/*"
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                if (list.size == 1) {
-                    val outputUri = list.first().shareUri
-                    intent.apply {
-                        action = Intent.ACTION_SEND
-                        putExtra(Intent.EXTRA_STREAM, outputUri)
-                    }
-                } else {
-                    val uriList = ArrayList(list.map { it.shareUri })
-                    intent.apply {
-                        action = Intent.ACTION_SEND_MULTIPLE
-                        putParcelableArrayListExtra(Intent.EXTRA_STREAM, uriList)
-                    }
-                }
-                startActivity(intent)
-                toast(getString(R.string.tips_share_image))
-            }
-        )
-
         viewModel.isNeedShowUpgradeInfo.observe(this) {
             val needShow = it ?: false
             if (!needShow) return@observe

@@ -110,7 +110,7 @@ class MainViewModel @Inject constructor(
             } else {
                 saveImageUri.value = result.data
             }
-            saveResult.value = Result.success(result.data)
+            saveResult.value = Result.success(code = TYPE_JOB_FINISH, data = result.data)
         }
     }
 
@@ -531,5 +531,6 @@ class MainViewModel @Inject constructor(
         const val TYPE_COMPRESSING = "type_Compressing"
         const val TYPE_SHARING = "type_sharing"
         const val TYPE_SAVING = "type_saving"
+        const val TYPE_JOB_FINISH = "type_job_finish"
     }
 }

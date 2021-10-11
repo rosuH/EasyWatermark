@@ -1,14 +1,19 @@
 package me.rosuh.easywatermark.ui.dialog
 
+import android.content.Intent
 import android.graphics.Bitmap
+import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AlphaAnimation
 import android.widget.ArrayAdapter
+import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentManager
 import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.StaggeredGridLayoutManager
+import androidx.transition.AutoTransition
+import androidx.transition.TransitionManager
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.Result
 import me.rosuh.easywatermark.databinding.DialogSaveFileBinding
@@ -16,9 +21,11 @@ import me.rosuh.easywatermark.ui.MainActivity
 import me.rosuh.easywatermark.ui.MainViewModel
 import me.rosuh.easywatermark.ui.adapter.SaveImageListAdapter
 import me.rosuh.easywatermark.ui.base.BaseBindBSDFragment
-import me.rosuh.easywatermark.ui.widget.ScalebleGridLayoutManager
-import me.rosuh.easywatermark.utils.ktx.dp
 import me.rosuh.easywatermark.utils.ktx.preCheckStoragePermission
+import android.animation.LayoutTransition
+
+
+
 
 class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
     private val imageList: List<ImageInfo>
@@ -33,20 +40,33 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
         val root = DialogSaveFileBinding.inflate(layoutInflater, container, false)
         val isSaving = shareViewModel.saveResult.value?.code == MainViewModel.TYPE_SAVING
         with(root) {
-            ivSave.apply {
+            btnSave.apply {
                 setOnClickListener {
-                    requireActivity().preCheckStoragePermission {
-                        shareViewModel.saveImage(
-                            requireActivity().contentResolver,
-                            (requireContext() as MainActivity).getImageList()
-                        )
+                    if (shareViewModel.saveResult.value?.code == MainViewModel.TYPE_JOB_FINISH) {
+                        // share to other apps
+                        openShare()
+                    } else {
+                        // saving jobs
+                        requireActivity().preCheckStoragePermission {
+                            shareViewModel.saveImage(
+                                requireActivity().contentResolver,
+                                (requireContext() as MainActivity).getImageList()
+                            )
+                        }
                     }
                 }
             }
 
-            ivSave.apply {
+            btnSave.apply {
                 if (isSaving && this.animation?.hasStarted() != true) {
                     this.startAnimation(alphaAnimation)
+                }
+            }
+
+            btnOpenGallery.apply {
+                this.isVisible = false
+                setOnClickListener {
+                    openGallery()
                 }
             }
 
@@ -66,6 +86,9 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
                     val targetFormat =
                         if (index == 0) Bitmap.CompressFormat.JPEG else Bitmap.CompressFormat.PNG
                     shareViewModel.saveOutput(targetFormat, slideQuality.value.toInt())
+                    performanceTransition()
+                    slideQuality.isVisible = targetFormat == Bitmap.CompressFormat.JPEG
+                    tvQuality.isVisible = targetFormat == Bitmap.CompressFormat.JPEG
                 }
             }
 
@@ -74,7 +97,8 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
                     it.submitList(imageList)
                 }
                 itemAnimator = null
-                val spanCount = if (imageList.size > 5) (imageList.size / 2).coerceAtLeast(5) else imageList.size
+                val spanCount =
+                    if (imageList.size > 5) (imageList.size / 2).coerceAtLeast(5) else imageList.size
                 layoutManager = GridLayoutManager(requireContext(), spanCount)
             }
 
@@ -85,32 +109,76 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
                 }
             }
 
-            setUpLoadingView(shareViewModel.saveResult.value, ivSave)
-
             shareViewModel.saveProcess.observe(viewLifecycleOwner) {
                 (rvResult.adapter as? SaveImageListAdapter)?.updateJobState(it)
             }
 
             shareViewModel.saveResult.observe(viewLifecycleOwner) {
-                setUpLoadingView(it, ivSave)
+                setUpLoadingView(it)
             }
         }
         return root
     }
 
+    private fun performanceTransition() {
+        val transition = LayoutTransition()
+        transition.setAnimateParentHierarchy(false)
+        binding.root.layoutTransition = transition
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        setUpLoadingView(shareViewModel.saveResult.value)
+    }
+
     private fun setUpLoadingView(
-        saveResult: Result<*>?,
-        ivSave: View?,
+        saveResult: Result<*>?
     ) {
+        performanceTransition()
         when (saveResult?.code) {
             MainViewModel.TYPE_SAVING -> {
-                ivSave?.isEnabled = false
+                binding.btnSave.apply {
+                    isEnabled = false
+                    text = "正在导出"
+                }
+                binding.atvFormat.isEnabled = false
+                binding.slideQuality.isEnabled = false
+                binding.menuFormat.isEnabled = false
+                binding.btnOpenGallery.isVisible = false
+                (dialog as BottomSheetDialog).behavior.isDraggable = false
             }
             MainViewModel.TYPE_SHARING -> {
-                ivSave?.isEnabled = false
+                binding.btnSave.apply {
+                    isEnabled = false
+                    text = "正在导出"
+                }
+                binding.atvFormat.isEnabled = false
+                binding.slideQuality.isEnabled = false
+                binding.menuFormat.isEnabled = false
+                binding.btnOpenGallery.isVisible = false
+                (dialog as BottomSheetDialog).behavior.isDraggable = false
+            }
+            MainViewModel.TYPE_JOB_FINISH -> {
+                binding.btnSave.apply {
+                    isEnabled = true
+                    text = "分享"
+                }
+                binding.atvFormat.isEnabled = true
+                binding.slideQuality.isEnabled = true
+                binding.menuFormat.isEnabled = true
+                binding.btnOpenGallery.isVisible = true
+                (dialog as BottomSheetDialog).behavior.isDraggable = true
             }
             else -> {
-                ivSave?.isEnabled = true
+                binding.btnSave.apply {
+                    isEnabled = true
+                    text = "导出到相册"
+                }
+                binding.atvFormat.isEnabled = true
+                binding.slideQuality.isEnabled = true
+                binding.menuFormat.isEnabled = true
+                binding.btnOpenGallery.isVisible = false
+                (dialog as BottomSheetDialog).behavior.isDraggable = true
             }
         }
     }
@@ -121,6 +189,41 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
             repeatMode = AlphaAnimation.REVERSE
             duration = 350
         }
+    }
+
+    private fun openGallery() {
+        val list = shareViewModel.imageList.value?.first
+        if (list.isNullOrEmpty()) return
+        val outputUri = list.first().shareUri
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(outputUri, "image/*")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(intent)
+    }
+
+    private fun openShare() {
+        val list = shareViewModel.imageList.value?.first
+        if (list.isNullOrEmpty()) return
+        val intent = Intent().apply {
+            type = "image/*"
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        if (list.size == 1) {
+            val outputUri = list.first().shareUri
+            intent.apply {
+                action = Intent.ACTION_SEND
+                putExtra(Intent.EXTRA_STREAM, outputUri)
+            }
+        } else {
+            val uriList = ArrayList(list.map { it.shareUri })
+            intent.apply {
+                action = Intent.ACTION_SEND_MULTIPLE
+                putParcelableArrayListExtra(Intent.EXTRA_STREAM, uriList)
+            }
+        }
+        startActivity(intent)
     }
 
     companion object {

@@ -13,6 +13,7 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.withSave
 import androidx.core.view.isVisible
 import me.rosuh.easywatermark.R
+import kotlin.random.Random
 
 class ProgressImageVIew : AppCompatImageView {
     constructor(context: Context) : super(context)
@@ -96,9 +97,10 @@ class ProgressImageVIew : AppCompatImageView {
 
     fun finish(animate: Boolean = true) {
         isVisible = true
+        val curValue = startAnimator.animatedValue as Float
         startAnimator.cancel()
         if (animate) {
-            startAnimator.setFloatValues(1f)
+            startAnimator.setFloatValues(curValue, 1f)
             startAnimator.start()
         } else {
             post {
