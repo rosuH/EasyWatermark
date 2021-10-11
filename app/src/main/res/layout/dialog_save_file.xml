@@ -1,28 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/colorSecondary"
-    android:orientation="vertical">
+    android:layout_height="match_parent">
 
     <LinearLayout
-        android:id="@+id/ll_output_format"
+        android:id="@+id/ll_container"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:layout_height="match_parent"
+        android:background="@color/d_save_dialog_main_color"
+        android:orientation="vertical"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp">
 
         <TextView
             android:id="@+id/tv_output_format"
             style="@style/AboutPageTextViewStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
             android:background="?android:attr/selectableItemBackground"
             android:gravity="center|start"
             android:includeFontPadding="false"
-            android:paddingTop="24dp"
-            android:paddingBottom="10dp"
             android:text="@string/about_title_output"
             android:textColor="@color/d_neutral_2"
             app:layout_constraintEnd_toEndOf="parent"
@@ -32,91 +32,119 @@
             android:id="@+id/menu_format"
             style="@style/Widget.App.ExposedDropdownMenu"
             android:layout_width="match_parent"
-            android:layout_height="44dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
             android:gravity="center"
-            android:hint="Format"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp">
+            android:hint="@string/dialog_save_config_format">
 
             <AutoCompleteTextView
                 android:id="@+id/atv_format"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:hint="@string/dialog_save_config_format"
                 android:inputType="none"
+                android:labelFor="@id/menu_format"
                 android:minWidth="120dp"
                 android:paddingStart="20dp"
                 android:paddingEnd="20dp"
-                android:textColor="@color/white"
                 android:textSize="16sp" />
 
         </com.google.android.material.textfield.TextInputLayout>
 
-        <TextView
-            android:id="@+id/tv_quality"
-            style="@style/AboutPageTextViewStyle"
+        <FrameLayout
+            android:id="@+id/fl_quality"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center|start"
-            android:includeFontPadding="false"
-            android:paddingTop="30dp"
-            android:paddingBottom="10dp"
-            android:text="Quality"
-            android:textColor="@color/d_neutral_2"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
+            android:paddingTop="32dp">
+
+            <TextView
+                android:id="@+id/tv_quality"
+                style="@style/AboutPageTextViewStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center|start"
+                android:includeFontPadding="false"
+                android:text="@string/dialog_save_config_quality"
+                android:textColor="@color/d_neutral_2"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <TextView
+                android:id="@+id/tv_quality_value"
+                style="@style/AboutPageTextViewStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center|end"
+                android:includeFontPadding="false"
+                android:textColor="@color/d_neutral_2"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                tools:text="80" />
+        </FrameLayout>
 
         <com.google.android.material.slider.Slider
             android:id="@+id/slide_quality"
             style="@style/MySeekBarStyle"
             android:layout_width="match_parent"
             android:layout_height="20dp"
-            android:layout_marginStart="20dp"
-            android:layout_marginEnd="20dp"
             android:focusable="false"
             android:stepSize="20"
             android:valueFrom="20.0"
             android:valueTo="100.0"
             app:labelBehavior="floating"
             tools:value="25" />
+
+        <TextView
+            android:id="@+id/tv_result"
+            style="@style/AboutPageTextViewStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center|start"
+            android:includeFontPadding="false"
+            android:paddingTop="30dp"
+            android:text="@string/dialog_save_export_list_title"
+            android:textColor="@color/d_neutral_2"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_result"
+            android:layout_width="match_parent"
+            android:layout_height="145dp"
+            android:layout_marginTop="23dp"
+            android:paddingStart="5dp"
+            android:paddingEnd="5dp" />
+
+        <LinearLayout
+            android:id="@+id/ll_export_btn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="43dp"
+            android:layout_marginBottom="23dp"
+            android:orientation="horizontal"
+            android:weightSum="1">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_open_gallery"
+                style="@style/Widget.App.OutlineButton"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:text="@string/dialog_open_in_gallery"
+                android:textAlignment="center" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_save"
+                style="@style/Widget.App.Button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="@string/dialog_export_to_gallery"
+                android:textAlignment="center" />
+        </LinearLayout>
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/tv_result"
-        style="@style/AboutPageTextViewStyle"
-        android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:gravity="center|start"
-        android:includeFontPadding="false"
-        android:text="Export list"
-        android:textColor="@color/d_neutral_2"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_result"
-        android:layout_width="match_parent"
-        android:layout_height="145dp"
-        android:paddingStart="5dp"
-        android:paddingEnd="5dp" />
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btn_save"
-        style="@style/Widget.App.Button"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
-        android:layout_marginTop="43dp"
-        android:layout_marginEnd="24dp"
-        android:layout_marginBottom="8dp"
-        android:text="Export" />
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btn_open_gallery"
-        style="@style/Widget.App.OutlineButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:layout_gravity="center"
-        android:padding="8dp"
-        android:text="Open in gallery" />
-</LinearLayout>
+</FrameLayout>

@@ -125,6 +125,9 @@ class SaveImageListAdapter(
         return differ.currentList.getOrNull(pos)
     }
 
+    val finishCount
+        get() = data.count { it.jobState is JobState.Success }
+
     fun updateJobState(it: ImageInfo?) {
         val index = data.indexOf(it).takeIf { it != -1 } ?: return
         Log.i("onBindViewHolder", "payloads, in $index")

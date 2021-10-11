@@ -23,8 +23,10 @@ import me.rosuh.easywatermark.ui.adapter.SaveImageListAdapter
 import me.rosuh.easywatermark.ui.base.BaseBindBSDFragment
 import me.rosuh.easywatermark.utils.ktx.preCheckStoragePermission
 import android.animation.LayoutTransition
-
-
+import android.view.Gravity
+import androidx.core.content.ContextCompat
+import me.rosuh.easywatermark.R
+import me.rosuh.easywatermark.data.model.JobState
 
 
 class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
@@ -57,12 +59,6 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
                 }
             }
 
-            btnSave.apply {
-                if (isSaving && this.animation?.hasStarted() != true) {
-                    this.startAnimation(alphaAnimation)
-                }
-            }
-
             btnOpenGallery.apply {
                 this.isVisible = false
                 setOnClickListener {
@@ -86,11 +82,13 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
                     val targetFormat =
                         if (index == 0) Bitmap.CompressFormat.JPEG else Bitmap.CompressFormat.PNG
                     shareViewModel.saveOutput(targetFormat, slideQuality.value.toInt())
-                    performanceTransition()
+                    flQuality.isVisible = targetFormat == Bitmap.CompressFormat.JPEG
                     slideQuality.isVisible = targetFormat == Bitmap.CompressFormat.JPEG
-                    tvQuality.isVisible = targetFormat == Bitmap.CompressFormat.JPEG
                 }
             }
+
+            flQuality.isVisible = shareViewModel.outputFormat == Bitmap.CompressFormat.JPEG
+            slideQuality.isVisible = shareViewModel.outputFormat == Bitmap.CompressFormat.JPEG
 
             rvResult.apply {
                 adapter = SaveImageListAdapter(requireContext()).also {
@@ -101,16 +99,34 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
                     if (imageList.size > 5) (imageList.size / 2).coerceAtLeast(5) else imageList.size
                 layoutManager = GridLayoutManager(requireContext(), spanCount)
             }
+            val compressLevel = shareViewModel.compressLevel.toFloat()
+
+            val theAdapter = rvResult.adapter as SaveImageListAdapter
+
+            tvQualityValue.text = compressLevel.toInt().toString()
+
+            tvResult.text = requireContext().getString(
+                R.string.dialog_save_export_list_title,
+                "${theAdapter.data.count { it.jobState is JobState.Success }}/${theAdapter.itemCount}"
+            )
 
             slideQuality.apply {
-                value = shareViewModel.compressLevel.toFloat()
+                value = compressLevel
                 addOnChangeListener { _, value, _ ->
                     shareViewModel.saveOutput(shareViewModel.outputFormat, value.toInt())
+                    tvQualityValue.text = value.toInt().toString()
                 }
             }
 
             shareViewModel.saveProcess.observe(viewLifecycleOwner) {
-                (rvResult.adapter as? SaveImageListAdapter)?.updateJobState(it)
+                theAdapter.updateJobState(it)
+                if (it?.jobState is JobState.Success) {
+                    val count = theAdapter.finishCount
+                    tvResult.text = requireContext().getString(
+                        R.string.dialog_save_export_list_title,
+                        "$count/${theAdapter.itemCount}"
+                    )
+                }
             }
 
             shareViewModel.saveResult.observe(viewLifecycleOwner) {
@@ -120,10 +136,34 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
         return root
     }
 
-    private fun performanceTransition() {
-        val transition = LayoutTransition()
+    private fun performanceTransition(
+        rootView: ViewGroup = binding.llContainer,
+        block: (start: Boolean) -> Unit = {}
+    ) {
+        val transition = LayoutTransition().apply {
+            addTransitionListener(object : LayoutTransition.TransitionListener {
+                override fun startTransition(
+                    p0: LayoutTransition?,
+                    p1: ViewGroup?,
+                    p2: View?,
+                    p3: Int
+                ) {
+                    block.invoke(true)
+                }
+
+                override fun endTransition(
+                    p0: LayoutTransition?,
+                    p1: ViewGroup?,
+                    p2: View?,
+                    p3: Int
+                ) {
+                    block.invoke(false)
+                }
+
+            })
+        }
         transition.setAnimateParentHierarchy(false)
-        binding.root.layoutTransition = transition
+        rootView.layoutTransition = transition
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -134,60 +174,59 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
     private fun setUpLoadingView(
         saveResult: Result<*>?
     ) {
-        performanceTransition()
         when (saveResult?.code) {
             MainViewModel.TYPE_SAVING -> {
-                binding.btnSave.apply {
-                    isEnabled = false
-                    text = "正在导出"
+                binding.btnSave.post {
+                    binding.btnSave.apply {
+                        isEnabled = false
+                        text = getString(R.string.dialog_save_exporting)
+                    }
                 }
                 binding.atvFormat.isEnabled = false
                 binding.slideQuality.isEnabled = false
                 binding.menuFormat.isEnabled = false
                 binding.btnOpenGallery.isVisible = false
                 (dialog as BottomSheetDialog).behavior.isDraggable = false
-            }
-            MainViewModel.TYPE_SHARING -> {
-                binding.btnSave.apply {
-                    isEnabled = false
-                    text = "正在导出"
-                }
-                binding.atvFormat.isEnabled = false
-                binding.slideQuality.isEnabled = false
-                binding.menuFormat.isEnabled = false
-                binding.btnOpenGallery.isVisible = false
-                (dialog as BottomSheetDialog).behavior.isDraggable = false
+                isCancelable = false
             }
             MainViewModel.TYPE_JOB_FINISH -> {
-                binding.btnSave.apply {
-                    isEnabled = true
-                    text = "分享"
+                performanceTransition(binding.llExportBtn) {
+                    binding.btnSave.post {
+                        binding.btnSave.apply {
+                            isEnabled = true
+                            text = if (it) null else getString(R.string.share)
+                        }
+                    }
                 }
                 binding.atvFormat.isEnabled = true
                 binding.slideQuality.isEnabled = true
                 binding.menuFormat.isEnabled = true
                 binding.btnOpenGallery.isVisible = true
                 (dialog as BottomSheetDialog).behavior.isDraggable = true
+                isCancelable = true
             }
             else -> {
-                binding.btnSave.apply {
-                    isEnabled = true
-                    text = "导出到相册"
+                performanceTransition(binding.llExportBtn) {
+                    binding.btnSave.post {
+                        binding.btnSave.apply {
+                            isEnabled = true
+                            text = if (it) null else getString(R.string.dialog_export_to_gallery)
+                        }
+                    }
+                    binding.btnSave.requestLayout()
                 }
                 binding.atvFormat.isEnabled = true
                 binding.slideQuality.isEnabled = true
                 binding.menuFormat.isEnabled = true
                 binding.btnOpenGallery.isVisible = false
                 (dialog as BottomSheetDialog).behavior.isDraggable = true
+                isCancelable = true
+                val theAdapter = binding.rvResult.adapter as SaveImageListAdapter
+                binding.tvResult.text = requireContext().getString(
+                    R.string.dialog_save_export_list_title,
+                    "${theAdapter.data.count { it.jobState is JobState.Success }}/${theAdapter.itemCount}"
+                )
             }
-        }
-    }
-
-    private val alphaAnimation by lazy {
-        AlphaAnimation(1f, 0.30f).apply {
-            repeatCount = AlphaAnimation.INFINITE
-            repeatMode = AlphaAnimation.REVERSE
-            duration = 350
         }
     }
 

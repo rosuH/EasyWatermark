@@ -28,7 +28,7 @@
     <string name="hint_tips_input_water_mark_text">請輸入浮水印文字</string>
     <string name="msg_crash">你願意幫忙提交錯誤訊息嗎？這樣可以幫我們做得更好！這不會收集您的個人資料。</string>
     <string name="request_permission_failed">無法取得權限</string>
-    <string name="save_directly">直接儲存</string>
+    <string name="dialog_export_to_gallery">匯出至相簿</string>
     <string name="share">分享</string>
     <string name="share_tips">分享儲存後的圖片到其他應用程式中</string>
     <string name="style_alpha">透明度</string>
@@ -93,4 +93,9 @@
     <string name="text_typeface_italic">斜體</string>
     <string name="text_typeface_bold_italic">斜體加粗</string>
     <string name="dialog_check_out_in_github">在 Github 上查看</string>
+    <string name="dialog_save_exporting">正在匯入</string>
+    <string name="dialog_save_export_list_title">輸出清單（%1$s）</string>
+    <string name="dialog_open_in_gallery">在圖片庫中檢視</string>
+    <string name="dialog_save_config_format">格式</string>
+    <string name="dialog_save_config_quality">品質</string>
 </resources>

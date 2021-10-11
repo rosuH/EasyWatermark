@@ -155,7 +155,7 @@
         <item name="colorPrimary">@color/d_neutral_2</item>
         <item name="colorOnPrimary">@color/text_color_on_export</item>
         <item name="android:textAllCaps">false</item>
-        <item name="android:textSize">14sp</item>
+        <item name="android:textSize">16sp</item>
     </style>
 
     <style name="ThemeOverlay.App.Button.TextButton" parent="">
@@ -166,12 +166,12 @@
 
     <style name="AboutPageTextViewStyle">
         <item name="android:textColor">@color/d_neutral_3</item>
-        <item name="android:paddingStart">28dp</item>
-        <item name="android:paddingEnd">28dp</item>
     </style>
 
 
     <style name="Widget.App.ExposedDropdownMenu" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+        <item name="boxBackgroundColor">#08FFFFFF</item>
+        <item name="boxStrokeColor">#08FFFFFF</item>
         <item name="materialThemeOverlay">@style/ThemeOverlay.App.ExposedDropdownMenu</item>
         <item name="shapeAppearance">@style/ShapeAppearance.App.SmallComponent</item>
         <item name="hintTextColor">?attr/colorOnSurface</item>
@@ -179,10 +179,8 @@
     </style>
 
     <style name="ThemeOverlay.App.ExposedDropdownMenu" parent="">
-        <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorOnSurface">@color/colorOnSurface</item>
+        <item name="colorOnSurface">#FFFFFF</item>
         <item name="colorError">@color/color_error</item>
-<!--        <item name="autoCompleteTextViewStyle">@style/Widget.AppCompat.AutoCompleteTextView</item>-->
     </style>
 
 

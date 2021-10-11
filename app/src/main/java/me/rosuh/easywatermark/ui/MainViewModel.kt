@@ -63,8 +63,6 @@ class MainViewModel @Inject constructor(
 
     val iconUri: LiveData<Uri> = waterMarkRepo.iconUriLiveData
 
-    val shareImageUri: MutableLiveData<List<ImageInfo>> = MutableLiveData()
-
     val saveImageUri: MutableLiveData<List<ImageInfo>> = MutableLiveData()
 
     val saveProcess: MutableLiveData<ImageInfo> = MutableLiveData()
@@ -90,8 +88,7 @@ class MainViewModel @Inject constructor(
 
     fun saveImage(
         contentResolver: ContentResolver,
-        imageList: List<ImageInfo>,
-        isSharing: Boolean = false
+        imageList: List<ImageInfo>
     ) {
         viewModelScope.launch {
             if (this@MainViewModel.imageList.value?.first.isNullOrEmpty()) {
@@ -99,17 +96,13 @@ class MainViewModel @Inject constructor(
                 return@launch
             }
             saveResult.value =
-                Result.success(null, code = if (isSharing) TYPE_SHARING else TYPE_SAVING)
+                Result.success(null, code = TYPE_SAVING)
             val result = generateList(contentResolver, imageList)
             if (result.isFailure()) {
                 saveResult.value = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
                 return@launch
             }
-            if (isSharing) {
-                shareImageUri.value = result.data
-            } else {
-                saveImageUri.value = result.data
-            }
+            saveImageUri.value = result.data
             saveResult.value = Result.success(code = TYPE_JOB_FINISH, data = result.data)
         }
     }
@@ -141,17 +134,10 @@ class MainViewModel @Inject constructor(
                 }
                 Log.i("generateList", "${info.uri} : ${info.result}")
             }
+            // reset process state
+            saveProcess.postValue(null)
             return@withContext Result.success(infoList)
         }
-
-    fun shareImage(
-        contentResolver: ContentResolver,
-        imageList: List<ImageInfo>
-    ) {
-        viewModelScope.launch {
-            saveImage(contentResolver, imageList, true)
-        }
-    }
 
     private suspend fun generateImage(
         contentResolver: ContentResolver,
@@ -529,7 +515,6 @@ class MainViewModel @Inject constructor(
         const val TYPE_COMPRESS_ERROR = "type_CompressError"
         const val TYPE_COMPRESS_OK = "type_CompressOK"
         const val TYPE_COMPRESSING = "type_Compressing"
-        const val TYPE_SHARING = "type_sharing"
         const val TYPE_SAVING = "type_saving"
         const val TYPE_JOB_FINISH = "type_job_finish"
     }

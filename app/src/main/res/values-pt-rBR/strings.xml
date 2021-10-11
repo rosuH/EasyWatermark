@@ -39,7 +39,7 @@
     <string name="error_not_img">Selecione uma imagem</string>
     <string name="error_file_not_found">A imagem não pôde ser aberta ou não foi selecionada</string>
     <string name="tips_pick_image">Vamos começar selecionando uma imagem</string>
-    <string name="save_directly">Salvar a imagem</string>
+    <string name="dialog_export_to_gallery">Exportar para Álbum</string>
     <string name="directly_save_tips">Salvar diretamente na galeria</string>
     <string name="share_tips">Compartilhar com outros apps</string>
     <string name="share">Compartilhar a imagem</string>
@@ -93,5 +93,10 @@
     <string name="text_typeface_italic">Itálico</string>
     <string name="text_typeface_bold_italic">Negrito Itálico</string>
     <string name="dialog_check_out_in_github">Confira no Github</string>
+    <string name="dialog_save_exporting">Exportando</string>
+    <string name="dialog_save_export_list_title">Exportar lista(%1$s)</string>
+    <string name="dialog_open_in_gallery">Ver na Galeria</string>
+    <string name="dialog_save_config_format">Formato</string>
+    <string name="dialog_save_config_quality">Qualidade</string>
 
 </resources>
