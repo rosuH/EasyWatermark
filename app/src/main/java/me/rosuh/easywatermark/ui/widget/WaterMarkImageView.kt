@@ -60,8 +60,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     private var isAnimating = AtomicBoolean(false)
 
-    var drawableBounds = RectF()
-        private set
+    private val drawableBounds = RectF()
 
     private var onBgReady: (palette: Palette) -> Unit = {}
 
@@ -160,7 +159,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 // animate to show
                 drawableAlphaAnimator.start()
                 // collect the drawable of new image in ImageView
-                drawableBounds = generateDrawableBounds()
+                generateDrawableBounds()
                 // the scale factor which of real image and render bitmap
                 imageInfo.scaleX =
                     bitmapValue.scaleWidth * imageBitmap.width.toFloat() / drawableBounds.width()
@@ -277,8 +276,8 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         }
     }
 
-    private fun generateDrawableBounds(): RectF {
-        val bounds = RectF()
+    private fun generateDrawableBounds() {
+        val bounds = drawableBounds
         val drawable: Drawable = drawable
         imageMatrix.mapRect(bounds, RectF(drawable.bounds))
         bounds.set(
@@ -287,7 +286,6 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             bounds.right + paddingRight,
             bounds.bottom + paddingBottom,
         )
-        return bounds
     }
 
     fun onBgReady(block: (palette: Palette) -> Unit) {

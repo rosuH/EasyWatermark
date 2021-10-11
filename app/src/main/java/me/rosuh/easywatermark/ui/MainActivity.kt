@@ -211,6 +211,7 @@ class MainActivity : AppCompatActivity() {
                 return@observe
             }
             launchView.ivPhoto.config = it
+            viewModel.resetStatus()
         }
         viewModel.selectedImage.observe(this) {
             if (it.uri.toString().isEmpty()) {

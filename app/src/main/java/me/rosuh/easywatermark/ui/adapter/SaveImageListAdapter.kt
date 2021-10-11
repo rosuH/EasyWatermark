@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
@@ -18,11 +19,9 @@ import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.JobState
 import me.rosuh.easywatermark.ui.base.BaseViewHolder
-import me.rosuh.easywatermark.ui.widget.PhotoSavingItem
 import me.rosuh.easywatermark.ui.widget.ProgressImageVIew
 import me.rosuh.easywatermark.utils.ktx.appear
 import me.rosuh.easywatermark.utils.ktx.disappear
-import me.rosuh.easywatermark.utils.ktx.dp
 
 class SaveImageListAdapter(
     private val context: Context
@@ -30,6 +29,8 @@ class SaveImageListAdapter(
 
     val data: List<ImageInfo>
         get() = differ.currentList
+
+    private var maxLineHeight = 0
 
     private val differ: AsyncListDiffer<ImageInfo> by lazy {
         AsyncListDiffer(this, differCallback)
@@ -51,11 +52,19 @@ class SaveImageListAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ImageHolder {
         val rootView =
             LayoutInflater.from(context).inflate(R.layout.item_saving_image, parent, false)
+
+        val holder = ImageHolder(rootView)
         (rootView as ConstraintLayout).apply {
             val h = (parent.height - parent.paddingTop - parent.paddingBottom)
-            maxHeight = if (itemCount >= 5) h / 2 else h
+            maxLineHeight = if (itemCount >= 5) h / 2 else h
+            maxHeight = maxLineHeight
         }
-        return ImageHolder(rootView)
+        (holder.ivIcon).apply {
+            updateLayoutParams {
+                height = maxLineHeight
+            }
+        }
+        return holder
     }
 
     override fun onBindViewHolder(
@@ -94,11 +103,10 @@ class SaveImageListAdapter(
                     holder.failed()
                 }
                 is JobState.Success -> {
-                    holder.success()
+                    holder.success(isPayLoad)
                 }
             }
         }
-        holder.ivIcon.isVisible = true
     }
 
     override fun getItemCount(): Int {
@@ -133,8 +141,8 @@ class SaveImageListAdapter(
             ivIcon.start()
         }
 
-        fun success() {
-            ivIcon.finish()
+        fun success(animate: Boolean = true) {
+            ivIcon.finish(animate)
             ivDone.appear()
         }
 

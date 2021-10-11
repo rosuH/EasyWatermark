@@ -388,6 +388,7 @@ class MainViewModel @Inject constructor(
             userRepo.updateFormat(format)
             userRepo.updateCompressLevel(level)
         }
+        resetStatus()
     }
 
     fun removeImage(
@@ -421,6 +422,10 @@ class MainViewModel @Inject constructor(
 
     fun resetStatus() {
         saveResult.postValue(Result.success(null))
+        imageList.value?.first?.forEach {
+            it.jobState = JobState.Ready
+            saveProcess.value = it
+        }
     }
 
     fun compressImg(activity: Activity) {

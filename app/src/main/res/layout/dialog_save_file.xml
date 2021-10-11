@@ -96,8 +96,9 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_result"
         android:layout_width="match_parent"
-        android:layout_height="155dp"
-        android:padding="5dp"/>
+        android:layout_height="145dp"
+        android:paddingStart="5dp"
+        android:paddingEnd="5dp" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/iv_save"
