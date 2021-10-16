@@ -115,36 +115,28 @@
             android:paddingStart="5dp"
             android:paddingEnd="5dp" />
 
-        <LinearLayout
-            android:id="@+id/ll_export_btn"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_save"
+            style="@style/Widget.App.Button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="43dp"
-            android:layout_marginBottom="23dp"
-            android:orientation="horizontal"
-            android:weightSum="1">
+            android:gravity="center"
+            android:text="@string/dialog_export_to_gallery"
+            android:textAlignment="center" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_open_gallery"
-                style="@style/Widget.App.OutlineButton"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:text="@string/dialog_open_in_gallery"
-                android:textAlignment="center" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_save"
-                style="@style/Widget.App.Button"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:text="@string/dialog_export_to_gallery"
-                android:textAlignment="center" />
-        </LinearLayout>
+        <TextView
+            android:id="@+id/btn_open_gallery"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:paddingStart="8dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="23dp"
+            android:text="@string/dialog_open_in_gallery"
+            android:textAlignment="center"
+            android:textColor="@color/d_neutral_2" />
     </LinearLayout>
-
 </FrameLayout>

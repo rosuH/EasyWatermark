@@ -25,6 +25,7 @@ import me.rosuh.easywatermark.utils.ktx.preCheckStoragePermission
 import android.animation.LayoutTransition
 import android.view.Gravity
 import androidx.core.content.ContextCompat
+import androidx.core.view.isInvisible
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.JobState
 
@@ -60,7 +61,7 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
             }
 
             btnOpenGallery.apply {
-                this.isVisible = false
+                this.isInvisible = true
                 setOnClickListener {
                     openGallery()
                 }
@@ -176,49 +177,38 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
     ) {
         when (saveResult?.code) {
             MainViewModel.TYPE_SAVING -> {
-                binding.btnSave.post {
-                    binding.btnSave.apply {
-                        isEnabled = false
-                        text = getString(R.string.dialog_save_exporting)
-                    }
+                binding.btnSave.apply {
+                    isEnabled = false
+                    text = getString(R.string.dialog_save_exporting)
                 }
+                binding.btnOpenGallery.isInvisible = true
                 binding.atvFormat.isEnabled = false
                 binding.slideQuality.isEnabled = false
                 binding.menuFormat.isEnabled = false
-                binding.btnOpenGallery.isVisible = false
                 (dialog as BottomSheetDialog).behavior.isDraggable = false
                 isCancelable = false
             }
             MainViewModel.TYPE_JOB_FINISH -> {
-                performanceTransition(binding.llExportBtn) {
-                    binding.btnSave.post {
-                        binding.btnSave.apply {
-                            isEnabled = true
-                            text = if (it) null else getString(R.string.share)
-                        }
-                    }
+                binding.btnSave.apply {
+                    isEnabled = true
+                    text = getString(R.string.share)
                 }
+                binding.btnOpenGallery.isInvisible = false
                 binding.atvFormat.isEnabled = true
                 binding.slideQuality.isEnabled = true
                 binding.menuFormat.isEnabled = true
-                binding.btnOpenGallery.isVisible = true
                 (dialog as BottomSheetDialog).behavior.isDraggable = true
                 isCancelable = true
             }
             else -> {
-                performanceTransition(binding.llExportBtn) {
-                    binding.btnSave.post {
-                        binding.btnSave.apply {
-                            isEnabled = true
-                            text = if (it) null else getString(R.string.dialog_export_to_gallery)
-                        }
-                    }
-                    binding.btnSave.requestLayout()
+                binding.btnSave.apply {
+                    isEnabled = true
+                    text = getString(R.string.dialog_export_to_gallery)
                 }
+                binding.btnOpenGallery.isInvisible = true
                 binding.atvFormat.isEnabled = true
                 binding.slideQuality.isEnabled = true
                 binding.menuFormat.isEnabled = true
-                binding.btnOpenGallery.isVisible = false
                 (dialog as BottomSheetDialog).behavior.isDraggable = true
                 isCancelable = true
                 val theAdapter = binding.rvResult.adapter as SaveImageListAdapter
