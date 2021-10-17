@@ -35,7 +35,7 @@ class ProgressImageVIew : AppCompatImageView {
     private val successColor = ContextCompat.getColor(context, R.color.d_progress_active)
     private val failedColor = ContextCompat.getColor(context, R.color.d_progress_error)
 
-    private val xfermode by lazy { PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP) }
+    private val xfermode by lazy { PorterDuffXfermode(PorterDuff.Mode.SRC) }
 
     private var curX = 0f
 
@@ -62,18 +62,20 @@ class ProgressImageVIew : AppCompatImageView {
     @SuppressLint("DrawAllocation")
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
-        if (measuredWidth < 0 || measuredHeight <= 0 || drawable == null || drawable.intrinsicWidth <= 0 || drawable.intrinsicHeight <= 0) {
+        if (measuredWidth < 0 || measuredHeight <= 0 || drawable == null
+            || drawable.intrinsicWidth <= 0 || drawable.intrinsicHeight <= 0 || canvas == null
+        ) {
             return
         }
         if (curX <= 0f) return
         setupLayerBounds()
-        innerBitmap = drawable.toBitmap()
-        canvas?.withSave {
-            canvas.drawBitmap(innerBitmap!!, saveLayerBounds.left, saveLayerBounds.top, paint)
-            paint.xfermode = xfermode
-            canvas.drawRect(0f, 0f, curX, height.toFloat(), paint)
-            paint.xfermode = null
-        }
+        canvas.drawRect(
+            saveLayerBounds.left,
+            saveLayerBounds.top,
+            curX.coerceAtLeast(saveLayerBounds.left).coerceAtMost(saveLayerBounds.right),
+            saveLayerBounds.bottom,
+            paint
+        )
     }
 
     private fun setupLayerBounds() {

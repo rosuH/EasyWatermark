@@ -384,8 +384,10 @@ class LaunchView : CustomViewGroup {
         mode = ViewMode.LaunchMode
     }
 
-    fun toEditorMode() {
+    fun toEditorMode(): Boolean {
+        val animate = mode == ViewMode.LaunchMode
         mode = ViewMode.Editor
+        return animate
     }
 
     fun setListener(block: LaunchViewListenerBuilder.() -> Unit) {

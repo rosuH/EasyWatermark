@@ -53,6 +53,7 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
                         requireActivity().preCheckStoragePermission {
                             shareViewModel.saveImage(
                                 requireActivity().contentResolver,
+                                (requireContext() as MainActivity).getImageViewInfo(),
                                 (requireContext() as MainActivity).getImageList()
                             )
                         }
@@ -98,7 +99,7 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
                 itemAnimator = null
                 val spanCount =
                     if (imageList.size > 5) (imageList.size / 2).coerceAtLeast(5) else imageList.size
-                layoutManager = GridLayoutManager(requireContext(), spanCount)
+                layoutManager = GridLayoutManager(requireContext(), spanCount.coerceAtLeast(1))
             }
             val compressLevel = shareViewModel.compressLevel.toFloat()
 

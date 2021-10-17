@@ -6,6 +6,7 @@ data class ImageInfo(
     val uri: Uri,
     var width: Int = 1,
     var height: Int = 1,
+    var inSample: Int = 1,
     var scaleX: Float = 1f,
     var scaleY: Float = 1f,
     var result: Result<*>? = null,
@@ -14,8 +15,4 @@ data class ImageInfo(
 ) {
     val shareUri: Uri?
         get() = result?.data as? Uri?
-
-    override fun toString(): String {
-        return super.toString() + "\n $result"
-    }
 }

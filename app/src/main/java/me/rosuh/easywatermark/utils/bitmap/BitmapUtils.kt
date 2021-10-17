@@ -3,15 +3,18 @@ package me.rosuh.easywatermark.utils.bitmap
 import android.app.ActivityManager
 import android.content.ContentResolver
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Matrix
+import android.graphics.*
+import android.graphics.Matrix.ScaleToFit
+import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.util.Log
+import android.widget.ImageView
+import android.widget.ImageView.ScaleType
 import androidx.exifinterface.media.ExifInterface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.data.model.Result
+import me.rosuh.easywatermark.data.model.ViewInfo
 import java.io.FileNotFoundException
 import java.io.InputStream
 import java.lang.ref.SoftReference
@@ -31,8 +34,8 @@ fun decodeBitmapWithExifSync(
 ): Result<BitmapCache.BitmapValue> {
     val bitmap = BitmapFactory.decodeStream(inputStream, null, options)
         ?: return Result.failure(null, "-1", "Generate Bitmap failed.")
-    val inSampleSize = (options?.inSampleSize ?: 1).toFloat()
-    val bitmapValue = BitmapCache.BitmapValue(bitmap, inSampleSize, inSampleSize)
+    val inSampleSize = options?.inSampleSize ?: 1
+    val bitmapValue = BitmapCache.BitmapValue(bitmap, inSampleSize)
     val exif = if (android.os.Build.VERSION.SDK_INT > android.os.Build.VERSION_CODES.N) {
         try {
             ExifInterface(inputStream)
@@ -75,7 +78,7 @@ fun decodeBitmapWithExifSync(
     if (rotatedBitmap != bitmap && !bitmap.isRecycled) {
         bitmap.recycle()
     }
-    val rotateBitmapValue = BitmapCache.BitmapValue(rotatedBitmap, inSampleSize, inSampleSize)
+    val rotateBitmapValue = BitmapCache.BitmapValue(rotatedBitmap, inSampleSize)
     return Result.success(rotateBitmapValue)
 }
 
@@ -128,7 +131,8 @@ fun decodeSampledBitmapFromResourceSync(
             BitmapFactory.decodeStream(`is`, null, options)
         }
         // 2. Calculate inSampleSize
-        options.inSampleSize = calculateInSampleSizeAccurate(options, reqWidth, reqHeight)
+        val (oHieght: Int, oWidth: Int) = options.run { outHeight to outWidth }
+        options.inSampleSize = calculateInSampleSize(oWidth, oHieght, reqWidth, reqHeight)
         // 3. Decode bitmap with inSampleSize set
         options.inJustDecodeBounds = false
         resolver.openInputStream(uri).use { inputStream ->
@@ -149,13 +153,16 @@ fun decodeSampledBitmapFromResourceSync(
     }
 }
 
-fun calculateInSampleSizeAccurate(
-    options: BitmapFactory.Options,
+fun calculateInSampleSize(
+    width: Int,
+    height: Int,
     reqWidth: Int,
     reqHeight: Int
 ): Int {
     // Raw height and width of image
-    val (height: Int, width: Int) = options.run { outHeight to outWidth }
+    Log.i(
+        "generateImage", "w = $width, h = $height, reqW = $reqWidth, reqH = $reqHeight"
+    )
     var inSampleSize = 2
 
     if (height > reqHeight || width > reqWidth) {
@@ -168,21 +175,6 @@ fun calculateInSampleSizeAccurate(
         while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
             inSampleSize *= 2
         }
-    }
-
-    return inSampleSize
-}
-
-fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
-    // Raw height and width of image
-    val (height: Int, width: Int) = options.run { outHeight to outWidth }
-    var inSampleSize = 1
-
-    if (height > reqHeight || width > reqHeight) {
-        // 计算出实际宽高和目标宽高的比率
-        val heightRatio = (height.toFloat() / reqHeight).roundToInt()
-        val widthRatio = (width.toFloat() / reqWidth).roundToInt()
-        inSampleSize = if (heightRatio < widthRatio) heightRatio else widthRatio
     }
 
     return inSampleSize
@@ -250,5 +242,116 @@ private fun getBytesInPixel(config: Bitmap.Config): Int {
         Bitmap.Config.RGB_565, Bitmap.Config.ARGB_4444 -> 2
         Bitmap.Config.ARGB_8888 -> 4
         else -> 1
+    }
+}
+
+/**
+ * @author hi@rosuh.me
+ * @date 2021/10/16
+ * Copy from [ImageView]
+ */
+fun generateMatrix(
+    viewInfo: ViewInfo,
+    drawableWidth: Int,
+    drawableHeight: Int,
+    bounds: Rect,
+    tempSrc: RectF,
+    tempDst: RectF,
+): Matrix {
+    val dwidth: Int = drawableWidth
+    val dheight: Int = drawableHeight
+    val vwidth: Int = viewInfo.width - viewInfo.paddingLeft - viewInfo.paddingRight
+    val vheight: Int = viewInfo.height - viewInfo.paddingTop - viewInfo.paddingBottom
+    val fits = ((dwidth < 0 || vwidth == dwidth)
+            && (dheight < 0 || vheight == dheight))
+    var mDrawMatrix = Matrix()
+    if (dwidth <= 0 || dheight <= 0 || ScaleType.FIT_XY == viewInfo.scaleType) {
+        /* If the drawable has no intrinsic size, or we're told to
+                scaletofit, then we just fill our entire view.
+            */
+        bounds.set(0, 0, vwidth, vheight)
+    } else {
+        // We need to do the scaling ourself, so have the drawable
+        // use its native size.
+        bounds.set(0, 0, dwidth, dheight)
+        if (ScaleType.MATRIX == viewInfo.scaleType) {
+            // Use the specified matrix as-is.
+            if (!viewInfo.matrix.isIdentity) {
+                mDrawMatrix = viewInfo.matrix
+            }
+        } else if (fits) {
+            // The bitmap fits exactly, no transform needed.
+        } else if (ScaleType.CENTER == viewInfo.scaleType) {
+            // Center bitmap in view, no scaling.
+            mDrawMatrix = viewInfo.matrix
+            mDrawMatrix.setTranslate(
+                ((vwidth - dwidth) * 0.5f).roundToInt().toFloat(),
+                ((vheight - dheight) * 0.5f).roundToInt().toFloat()
+            )
+        } else if (ScaleType.CENTER_CROP == viewInfo.scaleType) {
+            mDrawMatrix = viewInfo.matrix
+            val scale: Float
+            var dx = 0f
+            var dy = 0f
+            if (dwidth * vheight > vwidth * dheight) {
+                scale = vheight.toFloat() / dheight.toFloat()
+                dx = (vwidth - dwidth * scale) * 0.5f
+            } else {
+                scale = vwidth.toFloat() / dwidth.toFloat()
+                dy = (vheight - dheight * scale) * 0.5f
+            }
+            mDrawMatrix.setScale(scale, scale)
+            mDrawMatrix.postTranslate(Math.round(dx).toFloat(), Math.round(dy).toFloat())
+        } else if (ScaleType.CENTER_INSIDE == viewInfo.scaleType) {
+            mDrawMatrix = viewInfo.matrix
+            val dx: Float
+            val dy: Float
+            val scale: Float = if (dwidth <= vwidth && dheight <= vheight) {
+                1.0f
+            } else {
+                (vwidth.toFloat() / dwidth.toFloat()).coerceAtMost(vheight.toFloat() / dheight.toFloat())
+            }
+            dx = ((vwidth - dwidth * scale) * 0.5f).roundToInt().toFloat()
+            dy = ((vheight - dheight * scale) * 0.5f).roundToInt().toFloat()
+            mDrawMatrix.setScale(scale, scale)
+            mDrawMatrix.postTranslate(dx, dy)
+        } else {
+            // Generate the required transform.
+            tempSrc.set(0f, 0f, dwidth.toFloat(), dheight.toFloat())
+            tempDst.set(0f, 0f, vwidth.toFloat(), vheight.toFloat())
+            mDrawMatrix = viewInfo.matrix
+            mDrawMatrix.setRectToRect(
+                tempSrc,
+                tempDst,
+                scaleTypeToScaleToFit(viewInfo.scaleType)
+            )
+        }
+    }
+    return mDrawMatrix
+}
+
+
+fun scaleTypeToScaleToFit(st: ScaleType): ScaleToFit {
+    // ScaleToFit enum to their corresponding Matrix.ScaleToFit values
+    return sS2FArray[st.toNativeInt() - 1]
+}
+
+private val sS2FArray = arrayOf(
+    ScaleToFit.FILL,
+    ScaleToFit.START,
+    ScaleToFit.CENTER,
+    ScaleToFit.END
+)
+
+fun ImageView.ScaleType.toNativeInt(): Int {
+    return when (this) {
+        ScaleType.MATRIX -> 0
+        ScaleType.FIT_XY -> 1
+        ScaleType.FIT_START -> 2
+        ScaleType.FIT_CENTER -> 3
+        ScaleType.FIT_END -> 4
+        ScaleType.CENTER -> 5
+        ScaleType.CENTER_CROP -> 6
+        ScaleType.CENTER_INSIDE -> 7
     }
 }

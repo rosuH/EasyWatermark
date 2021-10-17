@@ -166,6 +166,13 @@
 
     <style name="AboutPageTextViewStyle">
         <item name="android:textColor">@color/d_neutral_3</item>
+        <item name="android:paddingStart">28dp</item>
+        <item name="android:paddingEnd">28dp</item>
+    </style>
+
+    <style name="SaveDialogTextViewStyle" parent="AboutPageTextViewStyle">
+        <item name="android:paddingStart">0dp</item>
+        <item name="android:paddingEnd">0dp</item>
     </style>
 
 

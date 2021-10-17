@@ -44,7 +44,6 @@ object BitmapCache {
 
     data class BitmapValue(
         val bitmap: Bitmap,
-        val scaleWidth: Float,
-        val scaleHeight: Float
+        val inSample: Int,
     )
 }

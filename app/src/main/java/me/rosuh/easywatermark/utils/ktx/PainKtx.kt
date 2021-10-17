@@ -20,9 +20,7 @@ fun Paint.applyConfig(
     isScale: Boolean = true
 ): Paint {
     val size = config?.textSize ?: 14f
-    textSize = if (isScale) size / imageInfo.scaleX else size
-    // fixme calculate scale factor while saving image for better text size
-    // textSize = if (isScale) size else size * imageInfo.scaleX
+    textSize = if (isScale) size else size * imageInfo.scaleX
     color = config?.textColor ?: Color.RED
     alpha = config?.alpha ?: 128
     style = config?.textStyle?.obtainSysStyle() ?: Paint.Style.FILL

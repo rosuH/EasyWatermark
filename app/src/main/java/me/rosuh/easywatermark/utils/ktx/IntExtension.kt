@@ -5,6 +5,8 @@ import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.content.res.Resources
 import android.util.TypedValue
+import me.rosuh.easywatermark.ui.widget.WaterMarkImageView
+import java.time.Duration
 
 val Int.dp
     get() = TypedValue.applyDimension(
@@ -23,6 +25,7 @@ val Float.dp
 fun Int.toColor(
     toColor: Int,
     autoStart: Boolean = true,
+    duration: Long = WaterMarkImageView.ANIMATION_DURATION,
     doOnUpdate: (it: ValueAnimator) -> Unit = {}
 ): ObjectAnimator? {
     return ObjectAnimator.ofInt(
@@ -35,7 +38,7 @@ fun Int.toColor(
         addUpdateListener {
             doOnUpdate.invoke(it)
         }
-        duration = 250
+        this.duration = duration
         if (autoStart) start()
     }
 }

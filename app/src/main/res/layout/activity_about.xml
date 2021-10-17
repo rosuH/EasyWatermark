@@ -40,56 +40,6 @@
             android:paddingTop="8dp">
 
             <TextView
-                android:id="@+id/tv_title_setting"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingStart="28dp"
-                android:paddingTop="16dp"
-                android:paddingEnd="28dp"
-                android:text="@string/about_title_options"
-                android:textColor="@color/d_neutral_2"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <View
-                android:id="@+id/view_divider_0"
-                android:layout_width="match_parent"
-                android:layout_height="2dp"
-                android:layout_marginStart="28dp"
-                android:layout_marginTop="11dp"
-                android:layout_marginEnd="28dp"
-                android:background="#0DFFFFFF"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tv_title_setting" />
-
-            <TextView
-                android:id="@+id/tv_output"
-                style="@style/AboutPageTextViewStyle"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:background="?android:attr/selectableItemBackground"
-                android:drawablePadding="24dp"
-                android:gravity="center|start"
-                android:text="@string/about_title_output"
-                android:textColor="@color/d_neutral_3"
-                app:drawableStartCompat="@drawable/ic_save"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/view_divider_0" />
-
-            <TextView
-                android:id="@+id/tv_output_value"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="28dp"
-                android:textColor="@color/d_neutral_3"
-                app:layout_constraintBottom_toBottomOf="@id/tv_output"
-                app:layout_constraintEnd_toEndOf="@id/tv_output"
-                app:layout_constraintTop_toTopOf="@id/tv_output"
-                tools:text="JPEG, 95%" />
-
-            <TextView
                 android:id="@+id/tv_title_about"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -99,7 +49,7 @@
                 android:text="@string/about_title_info"
                 android:textColor="@color/d_neutral_2"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tv_output" />
+                app:layout_constraintTop_toTopOf="parent" />
 
             <View
                 android:id="@+id/view_divider_1"

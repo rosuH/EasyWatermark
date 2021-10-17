@@ -5,9 +5,8 @@ import android.content.ActivityNotFoundException
 import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Paint
+import android.graphics.*
+import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -30,8 +29,7 @@ import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.ui.widget.WaterMarkImageView
 import me.rosuh.easywatermark.utils.FileUtils.Companion.outPutFolderName
-import me.rosuh.easywatermark.utils.bitmap.decodeBitmapFromUri
-import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
+import me.rosuh.easywatermark.utils.bitmap.*
 import me.rosuh.easywatermark.utils.ktx.applyConfig
 import me.rosuh.easywatermark.utils.ktx.formatDate
 import me.rosuh.easywatermark.utils.ktx.launch
@@ -39,6 +37,8 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import javax.inject.Inject
+import kotlin.math.ceil
+import kotlin.math.roundToInt
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
@@ -86,8 +86,14 @@ class MainViewModel @Inject constructor(
 
     val colorPalette: MutableLiveData<Palette> = MutableLiveData()
 
+    private val tmpDrawableBounds by lazy { Rect() }
+    private val drawableBounds by lazy { RectF() }
+    private val tmpSrcBounds by lazy { RectF() }
+    private val tmpDstBounds by lazy { RectF() }
+
     fun saveImage(
         contentResolver: ContentResolver,
+        viewInfo: ViewInfo,
         imageList: List<ImageInfo>
     ) {
         viewModelScope.launch {
@@ -97,7 +103,7 @@ class MainViewModel @Inject constructor(
             }
             saveResult.value =
                 Result.success(null, code = TYPE_SAVING)
-            val result = generateList(contentResolver, imageList)
+            val result = generateList(contentResolver, viewInfo, imageList)
             if (result.isFailure()) {
                 saveResult.value = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
                 return@launch
@@ -109,6 +115,7 @@ class MainViewModel @Inject constructor(
 
     private suspend fun generateList(
         contentResolver: ContentResolver,
+        viewInfo: ViewInfo,
         infoList: List<ImageInfo>?
     ): Result<List<ImageInfo>> =
         withContext(Dispatchers.Default) {
@@ -119,7 +126,7 @@ class MainViewModel @Inject constructor(
                 try {
                     info.jobState = JobState.Ing
                     launch(Dispatchers.Main) { saveProcess.value = info }
-                    info.result = generateImage(contentResolver, info)
+                    info.result = generateImage(contentResolver, viewInfo, info)
                     info.jobState = JobState.Success(info.result!!)
                     launch(Dispatchers.Main) { saveProcess.value = info }
                 } catch (fne: FileNotFoundException) {
@@ -141,6 +148,7 @@ class MainViewModel @Inject constructor(
 
     private suspend fun generateImage(
         contentResolver: ContentResolver,
+        viewInfo: ViewInfo,
         imageInfo: ImageInfo
     ): Result<Uri> =
         withContext(Dispatchers.IO) {
@@ -154,6 +162,13 @@ class MainViewModel @Inject constructor(
                     code = "-1",
                     message = "Copy bitmap from uri failed."
                 )
+
+            val inSample = calculateInSampleSize(
+                mutableBitmap.width,
+                mutableBitmap.height,
+                WaterMarkImageView.calculateDrawLimitWidth(viewInfo.width, viewInfo.paddingLeft),
+                WaterMarkImageView.calculateDrawLimitHeight(viewInfo.height, viewInfo.paddingRight),
+            )
             imageInfo.width = mutableBitmap.width
             imageInfo.height = mutableBitmap.height
             if (waterMark.value == null) {
@@ -163,8 +178,40 @@ class MainViewModel @Inject constructor(
                     message = "config.value == null"
                 )
             }
+            imageInfo.inSample = inSample
             val canvas = Canvas(mutableBitmap)
             val tmpConfig = waterMark.value!!
+            // generate matrxi of drawable
+            val imageMatrix = generateMatrix(
+                viewInfo,
+                ceil((imageInfo.width.toDouble() / imageInfo.inSample)).toInt(),
+                ceil((imageInfo.height.toDouble() / imageInfo.inSample)).toInt(),
+                tmpDrawableBounds,
+                tmpSrcBounds,
+                tmpDstBounds
+            )
+            Log.i(
+                "generateImage",
+                """
+                    imageMatrix = $imageMatrix,
+                    inSample = $inSample,
+                    imageInfo = $imageInfo
+                    viewInfo = $viewInfo,
+                    bitmapW = ${mutableBitmap.width}
+                    bitmapH = ${mutableBitmap.height},
+                """.trimIndent()
+            )
+            // map to drawable bounds
+            imageMatrix.mapRect(drawableBounds, RectF(tmpDrawableBounds))
+            drawableBounds.set(
+                drawableBounds.left + viewInfo.paddingLeft,
+                drawableBounds.top + viewInfo.paddingTop,
+                drawableBounds.right + viewInfo.paddingRight,
+                drawableBounds.bottom + viewInfo.paddingBottom,
+            )
+            // calculate the scale factor
+            imageInfo.scaleX = mutableBitmap.width.toFloat() / drawableBounds.width()
+            imageInfo.scaleY = mutableBitmap.height.toFloat() / drawableBounds.height()
             val bitmapPaint = TextPaint().applyConfig(imageInfo, tmpConfig, isScale = false)
             val layoutPaint = Paint()
             layoutPaint.shader = when (waterMark.value?.markMode) {
@@ -301,6 +348,9 @@ class MainViewModel @Inject constructor(
                 nextSelectedPos = 0
                 launch {
                     waterMarkRepo.updateImageList(it)
+                }
+                list.forEachIndexed { index, uri ->
+                    Log.i("updateImageList", "index = $index, uri = $uri, the same = ${list[index] == it[index].uri}")
                 }
             }
     }

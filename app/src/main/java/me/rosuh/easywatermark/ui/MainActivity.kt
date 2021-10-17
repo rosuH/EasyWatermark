@@ -28,6 +28,7 @@ import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
 import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.ViewInfo
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.ui.about.AboutActivity
 import me.rosuh.easywatermark.ui.adapter.FuncPanelAdapter
@@ -210,7 +211,9 @@ class MainActivity : AppCompatActivity() {
             if (it == null) {
                 return@observe
             }
-            launchView.ivPhoto.config = it
+            launchView.post {
+                launchView.ivPhoto.config = it
+            }
             viewModel.resetStatus()
         }
         viewModel.selectedImage.observe(this) {
@@ -218,8 +221,14 @@ class MainActivity : AppCompatActivity() {
                 return@observe
             }
             try {
-                launchView.toEditorMode()
-                launchView.ivPhoto.updateUri(it)
+                val isAnimating = launchView.toEditorMode()
+                if (isAnimating) {
+                    launchView.ivPhoto.postDelayed({
+                        launchView.ivPhoto.updateUri(it)
+                    }, 150)
+                } else {
+                    launchView.ivPhoto.updateUri(it)
+                }
             } catch (se: SecurityException) {
                 se.printStackTrace()
                 // reset the uri because we don't have permission -_-
@@ -228,8 +237,7 @@ class MainActivity : AppCompatActivity() {
         }
         viewModel.imageList.observe(this) {
             photoListPreviewAdapter.selectedPos = viewModel.nextSelectedPos
-            photoListPreviewAdapter.submitList(it.first)
-            if (it.second) {
+            photoListPreviewAdapter.submitList(it.first) {
                 launchView.rvPhotoList.apply {
                     post { smoothScrollToPosition(0) }
                 }
@@ -634,7 +642,6 @@ class MainActivity : AppCompatActivity() {
             .setNegativeButton(
                 R.string.tips_confirm_dialog
             ) { _, _ ->
-                launchView.toLaunchMode()
                 resetView()
             }
             .setPositiveButton(
@@ -647,13 +654,23 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun resetView() {
+        launchView.toLaunchMode()
+        viewModel.resetStatus()
         launchView.ivPhoto.reset()
         bgTransformAnimator?.cancel()
+        setStatusBarColor(ContextCompat.getColor(this, R.color.colorPrimary))
+        launchView.tabLayout.getTabAt(0).let {
+            launchView.tabLayout.selectTab(it)
+        }
         hideDetailPanel()
     }
 
     fun getImageList(): List<ImageInfo> {
         return photoListPreviewAdapter.data
+    }
+
+    fun getImageViewInfo(): ViewInfo {
+        return ViewInfo.from(launchView.ivPhoto)
     }
 
     companion object {

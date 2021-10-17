@@ -28,20 +28,7 @@ class AboutActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         initView()
-        initObserver()
         changeStatusBarStyle()
-    }
-
-    private fun initObserver() {
-        viewModel.userPreferences.observe(
-            this,
-            {
-                if (it == null) {
-                    return@observe
-                }
-                binding.tvOutputValue.text = trapFormattingValue(it)
-            }
-        )
     }
 
     private fun changeStatusBarStyle() {
@@ -57,15 +44,6 @@ class AboutActivity : AppCompatActivity() {
 
     private fun initView() {
         with(binding) {
-            tvOutputValue.let {
-                it.text = "${trapFormattingValue(viewModel.userPreferences.value)}%"
-                it.setOnClickListener {
-                    showOutputDialog()
-                }
-            }
-            tvOutput.setOnClickListener {
-                showOutputDialog()
-            }
             tvVersion.setOnClickListener {
                 openLink("https://github.com/rosuH/EasyWatermark/releases/")
             }

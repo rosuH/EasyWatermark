@@ -16,7 +16,7 @@
 
         <TextView
             android:id="@+id/tv_output_format"
-            style="@style/AboutPageTextViewStyle"
+            style="@style/SaveDialogTextViewStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
@@ -59,7 +59,7 @@
 
             <TextView
                 android:id="@+id/tv_quality"
-                style="@style/AboutPageTextViewStyle"
+                style="@style/SaveDialogTextViewStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center|start"
@@ -71,7 +71,7 @@
 
             <TextView
                 android:id="@+id/tv_quality_value"
-                style="@style/AboutPageTextViewStyle"
+                style="@style/SaveDialogTextViewStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center|end"
@@ -96,7 +96,7 @@
 
         <TextView
             android:id="@+id/tv_result"
-            style="@style/AboutPageTextViewStyle"
+            style="@style/SaveDialogTextViewStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center|start"

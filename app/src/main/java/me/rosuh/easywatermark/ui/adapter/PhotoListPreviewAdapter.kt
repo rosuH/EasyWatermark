@@ -110,8 +110,10 @@ class PhotoListPreviewAdapter(
         return position.toLong()
     }
 
-    fun submitList(imageInfoList: List<ImageInfo>) {
-        differ.submitList(imageInfoList)
+    fun submitList(imageInfoList: List<ImageInfo>, block: () -> Unit) {
+        differ.submitList(imageInfoList) {
+            block.invoke()
+        }
     }
 
     fun getItem(pos: Int): ImageInfo? {

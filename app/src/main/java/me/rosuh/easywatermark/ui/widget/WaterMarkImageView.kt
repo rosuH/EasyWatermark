@@ -4,7 +4,6 @@ import android.animation.ObjectAnimator
 import android.content.Context
 import android.graphics.*
 import android.graphics.drawable.ColorDrawable
-import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
 import android.text.Layout
@@ -118,7 +117,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                     invalidate()
                 }
             }
-            duration = 250
+            duration = ANIMATION_DURATION
         }
     }
 
@@ -139,21 +138,29 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 val decodeResult = decodeSampledBitmapFromResource(
                     context.contentResolver,
                     uri,
-                    ((this@WaterMarkImageView.measuredWidth - paddingStart * 2) / 2).coerceAtMost(
-                        720
+                    calculateDrawLimitWidth(
+                        this@WaterMarkImageView.width,
+                        this@WaterMarkImageView.paddingStart
                     ),
-                    ((this@WaterMarkImageView.measuredHeight - paddingTop * 2) / 2).coerceAtMost(
-                        1280
+                    calculateDrawLimitHeight(
+                        this@WaterMarkImageView.height,
+                        this@WaterMarkImageView.paddingTop
                     )
                 )
                 val bitmapValue = decodeResult.data
                 if (decodeResult.isFailure() || bitmapValue == null) {
                     return@launch
                 }
-
                 val imageBitmap = bitmapValue.bitmap
                 // setting the bitmap of image
                 setImageBitmap(imageBitmap)
+                Log.i(
+                    "generateImage",
+                    """
+                        imageMatrix = $imageMatrix, imageBitmapW = ${imageBitmap.width}, imageBitmapH = ${imageBitmap.height}
+                        inSample = ${bitmapValue.inSample}
+                    """.trimIndent()
+                )
                 // setting background color via Palette
                 applyBg(imageBitmap)
                 // animate to show
@@ -161,10 +168,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 // collect the drawable of new image in ImageView
                 generateDrawableBounds()
                 // the scale factor which of real image and render bitmap
-                imageInfo.scaleX =
-                    bitmapValue.scaleWidth * imageBitmap.width.toFloat() / drawableBounds.width()
-                imageInfo.scaleY =
-                    bitmapValue.scaleHeight * imageBitmap.height.toFloat() / drawableBounds.height()
+                imageInfo.inSample = bitmapValue.inSample
                 curImageInfo = imageInfo
                 curImageInfo.width = drawableBounds.width().toInt()
                 curImageInfo.height = drawableBounds.height().toInt()
@@ -208,7 +212,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                     )
                 }
             }
-            invalidate()
+            postInvalidate()
         }
     }
 
@@ -278,7 +282,6 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     private fun generateDrawableBounds() {
         val bounds = drawableBounds
-        val drawable: Drawable = drawable
         imageMatrix.mapRect(bounds, RectF(drawable.bounds))
         bounds.set(
             bounds.left + paddingLeft,
@@ -301,6 +304,8 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     companion object {
 
+        const val ANIMATION_DURATION = 450L
+
         private fun calculateFinalWidth(config: WaterMark, maxSize: Int): Int {
             return (maxSize * ((config.hGap / 100f) + 1)).toInt()
         }
@@ -312,6 +317,16 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         private fun calculateMaxSize(w: Float, h: Float): Int {
             return sqrt(w.pow(2) + h.pow(2)).toInt()
         }
+
+        fun calculateDrawLimitWidth(w: Int, ps: Int) =
+            ((w - ps * 2) / 2).coerceAtMost(
+                720
+            )
+
+        fun calculateDrawLimitHeight(h: Int, pt: Int) =
+            ((h - pt * 2) / 2).coerceAtMost(
+                1280
+            )
 
         suspend fun buildIconBitmapShader(
             imageInfo: ImageInfo,

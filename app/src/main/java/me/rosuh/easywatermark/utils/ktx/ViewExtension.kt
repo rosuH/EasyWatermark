@@ -43,9 +43,13 @@ fun View.appear(
     this.translationY = fromY
     this.translationX = fromX
     this.alpha = fromAlpha
+    this.scaleX = 0.75f
+    this.scaleY = 0.75f
     this.animate()
         .translationY(0f)
         .translationX(0f)
+        .scaleX(1f)
+        .scaleY(1f)
         .alpha(1f)
         .setDuration(duration)
         .withStartAction {

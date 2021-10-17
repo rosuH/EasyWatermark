@@ -29,15 +29,4 @@ class Result<T>(
             return Result(result.type, data, result.code, result.message)
         }
     }
-
-    override fun toString(): String {
-        return """
-            [===Result Begin===]
-            type = $type
-            data = $data
-            code = $code
-            message = $message
-            [===Result End===]
-        """.trimIndent()
-    }
 }
