@@ -91,14 +91,14 @@ fun generateAppearAnimationList(
         ViewAnimation(view, view.appearAnimation(dampingRatio = DAMPING_RATIO_NO_BOUNCY)).apply {
             setListener {
                 applyBeforeStart { view, _ ->
-                    view.translationY = 10.dp.toFloat() + index * 10.dp
+                    view.translationY = 20.dp.toFloat() + index * 35.dp
                     view.alpha = 0.1f
                     view.animate()
                         .alpha(1f)
                         .withStartAction {
                             view.isVisible = true
                         }
-                        .setDuration(150L)
+                        .setDuration(200L)
                         .start()
                 }
             }
