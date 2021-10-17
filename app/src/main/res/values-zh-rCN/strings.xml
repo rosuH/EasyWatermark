@@ -71,10 +71,11 @@
         <![CDATA[
         <h2 id="new-and-optimized">新增与优化</h2>
         <ol>
-        <li>&nbsp;&nbsp;⚡️ 改进内存的使用.</li>
-        <li>&nbsp;&nbsp;🎨 改进动画和交互.</li>
-        <li>&nbsp;&nbsp;🥳 支持 Android 12 的启动动画.</li>
-        <li>&nbsp;&nbsp;🔧 提升 targetApi 到 31.</li>
+        <li>&nbsp;&nbsp;🥳 欢迎批量模式的到来！</li>
+        </ol>
+        <h2 id="Fixed">修复</h2>
+        <ol>
+        <li>&nbsp;&nbsp;🐛 修复重用位图导致的崩溃（感谢 lala）</li>
         </ol>
 ]]>
 

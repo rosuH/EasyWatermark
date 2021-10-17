@@ -1,11 +1,13 @@
 package me.rosuh.easywatermark.data.repo
 
 import android.graphics.Bitmap
+import android.os.Build
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.repo.UserConfigRepository.PreferenceKeys.KEY_CHANGE_LOG
 import me.rosuh.easywatermark.data.repo.UserConfigRepository.PreferenceKeys.KEY_COMPRESS_LEVEL
@@ -75,9 +77,9 @@ class UserConfigRepository @Inject constructor(
         }
     }
 
-    suspend fun saveVersionCode(content: String) {
+    suspend fun saveVersionCode() {
         dataStore.edit {
-            it[KEY_CHANGE_LOG] = content
+            it[KEY_CHANGE_LOG] = BuildConfig.VERSION_CODE.toString()
         }
     }
 

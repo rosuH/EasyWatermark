@@ -58,13 +58,6 @@ class ChangeLogDialogFragment : BottomSheetDialogFragment() {
         return root
     }
 
-    override fun onDismiss(dialog: DialogInterface) {
-        super.onDismiss(dialog)
-        lifecycleScope.launch {
-            repo.saveVersionCode("${BuildConfig.VERSION_CODE}")
-        }
-    }
-
     companion object {
 
         private const val TAG = "ChangeLogDialogFragment"
@@ -73,11 +66,8 @@ class ChangeLogDialogFragment : BottomSheetDialogFragment() {
             return ChangeLogDialogFragment()
         }
 
-        fun safetyShow(manager: FragmentManager, force: Boolean = false) {
+        fun safetyShow(manager: FragmentManager) {
             kotlin.runCatching {
-                if (!force) {
-                    return
-                }
                 val f = manager.findFragmentByTag(TAG) as? ChangeLogDialogFragment
                 when {
                     f == null -> {

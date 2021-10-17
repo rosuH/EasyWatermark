@@ -62,7 +62,7 @@ class AboutActivity : AppCompatActivity() {
                 openLink("https://github.com/rosuH/EasyWatermark/issues/new")
             }
             tvChangeLog.setOnClickListener {
-                ChangeLogDialogFragment.safetyShow(supportFragmentManager, true)
+                ChangeLogDialogFragment.safetyShow(supportFragmentManager)
             }
             tvOpenSource.setOnClickListener {
                 kotlin.runCatching {

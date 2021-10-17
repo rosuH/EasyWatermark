@@ -65,15 +65,16 @@
     <string name="config_default_water_mark_text">👋 DO NOT REDISTRIBUTE</string>
     <string name="style_alpha">Alpha</string>
     <string name="contributor_info">If the feedback about a problem is valid and therefore fixed or a new version is released, your name or email will appear in the update pop-up window. We will hide your information, your full name will not appear. \\n If you do not want it to happen, please mark: I do not want to.</string>
-    <string name="dialog_change_log_title">Changelog</string>
-    <string name="dialog_change_log_content">
+    <string name="dialog_change_log_title">Change log</string>
+    <string name="dialog_change_log_content" translatable="false">
         <![CDATA[
         <h2 id="new-and-optimized">New and Optimized</h2>
         <ol>
-        <li>&nbsp;&nbsp;⚡️ Improved memory usage.</li>
-        <li>&nbsp;&nbsp;🎨 Improved animation and touch effect.</li>
-        <li>&nbsp;&nbsp;🥳 Supported splash screen in Android 12.</li>
-        <li>&nbsp;&nbsp;🔧 Upgraded targetApi to 31</li>
+        <li>&nbsp;&nbsp;🥳 Check out the new batch mode!.</li>
+        </ol>
+        <h2 id="fixed">Fixed</h2>
+        <ol>
+        <li>&nbsp;&nbsp;🐛 Fix crash while using a recycled bitmap. (Thanks to lala)</li>
         </ol>
 ]]>
     </string>

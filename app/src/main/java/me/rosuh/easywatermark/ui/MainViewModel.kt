@@ -350,7 +350,10 @@ class MainViewModel @Inject constructor(
                     waterMarkRepo.updateImageList(it)
                 }
                 list.forEachIndexed { index, uri ->
-                    Log.i("updateImageList", "index = $index, uri = $uri, the same = ${list[index] == it[index].uri}")
+                    Log.i(
+                        "updateImageList",
+                        "index = $index, uri = $uri, the same = ${list[index] == it[index].uri}"
+                    )
                 }
             }
     }
@@ -556,6 +559,10 @@ class MainViewModel @Inject constructor(
     override fun onCleared() {
         cancelCompressJob()
         super.onCleared()
+    }
+
+    fun saveUpgradeInfo() {
+        launch { userRepo.saveVersionCode() }
     }
 
     companion object {

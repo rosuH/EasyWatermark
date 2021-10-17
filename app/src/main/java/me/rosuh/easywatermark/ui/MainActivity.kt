@@ -272,6 +272,7 @@ class MainActivity : AppCompatActivity() {
             val needShow = it ?: false
             if (!needShow) return@observe
             ChangeLogDialogFragment.safetyShow(this@MainActivity.supportFragmentManager)
+            viewModel.saveUpgradeInfo()
         }
 
         viewModel.colorPalette.observe(this) { palette ->
