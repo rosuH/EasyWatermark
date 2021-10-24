@@ -26,6 +26,7 @@ import android.animation.LayoutTransition
 import android.view.Gravity
 import androidx.core.content.ContextCompat
 import androidx.core.view.isInvisible
+import androidx.recyclerview.widget.RecyclerView
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.JobState
 
@@ -97,9 +98,14 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
                     it.submitList(imageList)
                 }
                 itemAnimator = null
-                val spanCount =
-                    if (imageList.size > 5) (imageList.size / 2).coerceAtLeast(5) else imageList.size
-                layoutManager = GridLayoutManager(requireContext(), spanCount.coerceAtLeast(1))
+                val spanCount = when {
+                    imageList.size < 5 -> imageList.size.coerceAtLeast(1)
+                    imageList.size < 20 && imageList.size % 2 == 0 -> imageList.size / 2
+                    imageList.size < 20 -> imageList.size / 2 + 1
+                    else -> 10
+                }
+                scrollBarStyle
+                layoutManager = GridLayoutManager(requireContext(), spanCount)
             }
             val compressLevel = shareViewModel.compressLevel.toFloat()
 
@@ -136,36 +142,6 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
             }
         }
         return root
-    }
-
-    private fun performanceTransition(
-        rootView: ViewGroup = binding.llContainer,
-        block: (start: Boolean) -> Unit = {}
-    ) {
-        val transition = LayoutTransition().apply {
-            addTransitionListener(object : LayoutTransition.TransitionListener {
-                override fun startTransition(
-                    p0: LayoutTransition?,
-                    p1: ViewGroup?,
-                    p2: View?,
-                    p3: Int
-                ) {
-                    block.invoke(true)
-                }
-
-                override fun endTransition(
-                    p0: LayoutTransition?,
-                    p1: ViewGroup?,
-                    p2: View?,
-                    p3: Int
-                ) {
-                    block.invoke(false)
-                }
-
-            })
-        }
-        transition.setAnimateParentHierarchy(false)
-        rootView.layoutTransition = transition
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

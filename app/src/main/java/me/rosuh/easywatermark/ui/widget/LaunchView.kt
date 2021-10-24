@@ -1,6 +1,7 @@
 package me.rosuh.easywatermark.ui.widget
 
 import android.content.Context
+import android.graphics.Color
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.MotionEvent
@@ -96,7 +97,7 @@ class LaunchView : CustomViewGroup {
                     LayoutParams.WRAP_CONTENT
                 )
                     .also { it.setMargins(0, 20.dp, 0, 0) }
-            setBackgroundColor(ContextCompat.getColor(context, R.color.colorPrimary))
+            setBackgroundColor(Color.TRANSPARENT)
             elevation = 0f
             popupTheme = R.style.ThemeOverlay_AppCompat_Dark_ActionBar
         }
@@ -106,6 +107,7 @@ class LaunchView : CustomViewGroup {
         WaterMarkImageView(context).apply {
             setPadding(12.dp)
             setBackgroundColor(ContextCompat.getColor(context, R.color.colorPrimaryDark))
+            setOnTouchListener { _, event -> return@setOnTouchListener rvPhotoList.onTouchEvent(event) }
         }
     }
 
@@ -124,7 +126,7 @@ class LaunchView : CustomViewGroup {
             isTabIndicatorFullWidth = false
             tabIndicatorAnimationMode = TabLayout.INDICATOR_ANIMATION_MODE_ELASTIC
             setTabIconTintResource(R.color.selector_tab_color)
-            setBackgroundColor(ContextCompat.getColor(context, R.color.colorPrimaryDark))
+            setBackgroundColor(Color.TRANSPARENT)
             setSelectedTabIndicatorColor(ContextCompat.getColor(context, R.color.colorAccent))
             val contentTab = newTab().also {
                 it.text = context.getString(R.string.title_content)
@@ -136,8 +138,8 @@ class LaunchView : CustomViewGroup {
                 it.text = context.getString(R.string.title_layout)
             }
 
-            addTab(contentTab)
             addTab(styleTab)
+            addTab(contentTab)
             addTab(layoutTab)
         }
     }
@@ -149,7 +151,7 @@ class LaunchView : CustomViewGroup {
                 LayoutParams.MATCH_PARENT,
                 56.dp
             )
-            setBackgroundColor(ContextCompat.getColor(context, R.color.colorSecondary))
+            setBackgroundColor(Color.TRANSPARENT)
         }
     }
 
@@ -172,7 +174,7 @@ class LaunchView : CustomViewGroup {
                 LayoutParams.MATCH_PARENT,
                 LayoutParams.WRAP_CONTENT
             )
-            setBackgroundColor(ContextCompat.getColor(context, R.color.colorSecondary))
+            setBackgroundColor(Color.TRANSPARENT)
             clipChildren = false
             clipToPadding = false
             edgeEffectFactory = BounceEdgeEffectFactory(context, this)

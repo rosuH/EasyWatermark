@@ -18,6 +18,8 @@ import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_ALPHA
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_DEGREE
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_HORIZON_GAP
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_ICON_URI
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_MODE
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TEXT
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TEXT_COLOR
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TEXT_SIZE
@@ -44,6 +46,8 @@ class WaterMarkRepository @Inject constructor(
         val KEY_HORIZON_GAP = intPreferencesKey(SP_KEY_HORIZON_GAP)
         val KEY_VERTICAL_GAP = intPreferencesKey(SP_KEY_VERTICAL_GAP)
         val KEY_DEGREE = floatPreferencesKey(SP_KEY_DEGREE)
+        val KEY_ICON_URI = stringPreferencesKey(SP_KEY_ICON_URI)
+        val KEY_MODE = intPreferencesKey(SP_KEY_WATERMARK_MODE)
     }
 
     val waterMark: Flow<WaterMark> = dataStore.data
@@ -66,24 +70,18 @@ class WaterMarkRepository @Inject constructor(
                 degree = it[KEY_DEGREE] ?: 315f,
                 hGap = it[KEY_HORIZON_GAP] ?: 0,
                 vGap = it[KEY_VERTICAL_GAP] ?: 0,
-                markMode = MarkMode.Text
+                iconUri = Uri.parse(it[KEY_ICON_URI] ?: ""),
+                markMode = if (it[KEY_MODE] == MarkMode.Image.value) MarkMode.Image else MarkMode.Text
             )
         }
 
     private val imageListFlow: MutableStateFlow<List<ImageInfo>> =
         MutableStateFlow(emptyList<ImageInfo>())
 
-    private val iconUriFlow: MutableStateFlow<Uri> = MutableStateFlow(Uri.EMPTY)
-
     val uriLivedData = imageListFlow.asLiveData()
-
-    val iconUriLiveData = iconUriFlow.asLiveData()
 
     val imageInfoList: List<ImageInfo>
         get() = uriLivedData.value ?: emptyList()
-
-    val iconUri: Uri
-        get() = iconUriLiveData.value ?: Uri.EMPTY
 
     lateinit var text: String
 
@@ -92,7 +90,10 @@ class WaterMarkRepository @Inject constructor(
     }
 
     suspend fun updateText(text: String) {
-        dataStore.edit { it[KEY_TEXT] = text }
+        dataStore.edit {
+            it[KEY_MODE] = MarkMode.Text.value
+            it[KEY_TEXT] = text
+        }
     }
 
     suspend fun updateTextSize(size: Float) {
@@ -130,13 +131,20 @@ class WaterMarkRepository @Inject constructor(
     }
 
     suspend fun updateIcon(iconUri: Uri) {
-        iconUriFlow.emit(iconUri)
+        dataStore.edit {
+            it[KEY_MODE] = MarkMode.Image.value
+            it[KEY_ICON_URI] = iconUri.toString()
+        }
     }
 
-    sealed class MarkMode {
-        object Text : MarkMode()
+    suspend fun resetModeToText() {
+        dataStore.edit { it[KEY_MODE] = MarkMode.Text.value }
+    }
 
-        object Image : MarkMode()
+    sealed class MarkMode(val value: Int) {
+        object Text : MarkMode(0)
+
+        object Image : MarkMode(1)
     }
 
     companion object {
@@ -152,6 +160,8 @@ class WaterMarkRepository @Inject constructor(
         const val SP_KEY_VERTICAL_GAP = "${SP_NAME}_key_vertical_gap"
         const val SP_KEY_DEGREE = "${SP_NAME}_key_degree"
         const val SP_KEY_CHANGE_LOG = "${SP_NAME}_key_change_log"
+        const val SP_KEY_ICON_URI = "${SP_NAME}_key_icon_uri"
+        const val SP_KEY_WATERMARK_MODE = "${SP_NAME}_key_watermark_mode"
         const val MAX_TEXT_SIZE = 100f
         const val MAX_DEGREE = 360f
         const val MAX_HORIZON_GAP = 500

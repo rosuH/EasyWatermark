@@ -55,7 +55,7 @@ class TextStyleFragment : BaseBindFragment<FragmentTextStyleBinding>() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding.rvColor.apply {
+        binding?.rvColor?.apply {
             layoutManager =
                 LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
             adapter = concatAdapter

@@ -115,7 +115,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val funcAdapter by lazy {
-        FuncPanelAdapter(ArrayList(contentFunList)).apply {
+        FuncPanelAdapter(ArrayList(styleFunList)).apply {
             setHasStableIds(true)
         }
     }
@@ -225,6 +225,7 @@ class MainActivity : AppCompatActivity() {
                 if (isAnimating) {
                     launchView.ivPhoto.postDelayed({
                         launchView.ivPhoto.updateUri(it)
+                        selectTab(0)
                     }, 150)
                 } else {
                     launchView.ivPhoto.updateUri(it)
@@ -242,12 +243,6 @@ class MainActivity : AppCompatActivity() {
                     post { smoothScrollToPosition(0) }
                 }
             }
-        }
-        viewModel.iconUri.observe(this) {
-            if (it?.toString().isNullOrBlank()) {
-                return@observe
-            }
-            launchView.ivPhoto.updateIconUri(it)
         }
 
         viewModel.saveResult.observe(this) {
@@ -280,10 +275,6 @@ class MainActivity : AppCompatActivity() {
                 this@MainActivity,
                 R.color.colorSecondary
             )
-            val bodyTextColor = palette.darkMutedSwatch?.bodyTextColor ?: ContextCompat.getColor(
-                this@MainActivity,
-                R.color.text_color_main
-            )
             val titleTextColor = palette.darkMutedSwatch?.titleTextColor ?: ContextCompat.getColor(
                 this@MainActivity,
                 R.color.text_color_main
@@ -292,20 +283,20 @@ class MainActivity : AppCompatActivity() {
                 ((launchView.ivPhoto.background as? ColorDrawable)?.color ?: Color.BLACK).toColor(
                     bgColor
                 ) {
-                    launchView.rvPhotoList.setBackgroundColor(it.animatedValue as Int)
-                    launchView.fcFunctionDetail.setBackgroundColor(it.animatedValue as Int)
                     launchView.rvPanel.setBackgroundColor(it.animatedValue as Int)
-                    launchView.tabLayout.setBackgroundColor(it.animatedValue as Int)
-                    launchView.toolbar.setBackgroundColor(it.animatedValue as Int)
+                    launchView.setBackgroundColor(it.animatedValue as Int)
                     setStatusBarColor(it.animatedValue as Int)
                 }
-            funcAdapter.applyTextColor(titleTextColor)
-            launchView.tabLayout.setTabTextColors(
-                titleTextColor, ContextCompat.getColor(
-                    this@MainActivity,
-                    R.color.colorAccent
+            funcAdapter.textColor.toColor(titleTextColor) {
+                val c = it.animatedValue as Int
+                funcAdapter.applyTextColor(c)
+                launchView.tabLayout.setTabTextColors(
+                    c, ContextCompat.getColor(
+                        this@MainActivity,
+                        R.color.colorAccent
+                    )
                 )
-            )
+            }
         }
     }
 
@@ -411,10 +402,15 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            onSnapViewSelected { _, pos ->
+            onSnapViewPreview { snapView, _ ->
+                vibrateHelper.doVibrate(snapView)
+            }
+
+            onSnapViewSelected { snapView, pos ->
                 photoListPreviewAdapter.selectedPos = pos
                 val uri = photoListPreviewAdapter.getItem(pos)?.uri ?: return@onSnapViewSelected
                 viewModel.selectImage(uri)
+                vibrateHelper.doVibrate(snapView)
             }
 
             post {
@@ -425,26 +421,30 @@ class MainActivity : AppCompatActivity() {
         }
 
         launchView.tabLayout.apply {
+            post {
+                selectTab(0)
+            }
             addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
                 override fun onTabSelected(tab: TabLayout.Tab?) {
                     if (tab == null) {
                         return
                     }
                     hideDetailPanel()
+                    vibrateHelper.doVibrate(this@apply)
                     val adapter = (launchView.rvPanel.adapter as? FuncPanelAdapter)
                     when (tab.position) {
-                        1 -> {
+                        0 -> {
                             launchView.rvPanel.smoothScrollToPosition(0)
                             adapter?.also {
                                 it.seNewData(styleFunList, 0)
-                                handleFuncItem(it.dataSet[0])
+                                post { handleFuncItem(it.dataSet[0]) }
                             }
                         }
                         2 -> {
                             launchView.rvPanel.smoothScrollToPosition(0)
                             adapter?.also {
                                 it.seNewData(layoutFunList, 0)
-                                handleFuncItem(it.dataSet[0])
+                                post { handleFuncItem(it.dataSet[0]) }
                             }
                         }
                         else -> {
@@ -458,7 +458,12 @@ class MainActivity : AppCompatActivity() {
 
                 override fun onTabUnselected(tab: TabLayout.Tab?) {}
 
-                override fun onTabReselected(tab: TabLayout.Tab?) {}
+                override fun onTabReselected(tab: TabLayout.Tab?) {
+                    val adapter = (launchView.rvPanel.adapter as? FuncPanelAdapter)
+                    adapter?.also {
+                        post { handleFuncItem(it.dataSet[0]) }
+                    }
+                }
             })
         }
     }
@@ -659,11 +664,23 @@ class MainActivity : AppCompatActivity() {
         viewModel.resetStatus()
         launchView.ivPhoto.reset()
         bgTransformAnimator?.cancel()
-        setStatusBarColor(ContextCompat.getColor(this, R.color.colorPrimary))
-        launchView.tabLayout.getTabAt(0).let {
-            launchView.tabLayout.selectTab(it)
+        (launchView.background as ColorDrawable).color.toColor(
+            ContextCompat.getColor(
+                this,
+                R.color.colorPrimary
+            )
+        ) {
+            val c = it.animatedValue as Int
+            setStatusBarColor(c)
+            launchView.setBackgroundColor(c)
         }
         hideDetailPanel()
+    }
+
+    private fun selectTab(index: Int) {
+        launchView.tabLayout.getTabAt(index).let {
+            launchView.tabLayout.selectTab(it)
+        }
     }
 
     fun getImageList(): List<ImageInfo> {

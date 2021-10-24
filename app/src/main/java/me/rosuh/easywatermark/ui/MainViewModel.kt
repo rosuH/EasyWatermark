@@ -61,8 +61,6 @@ class MainViewModel @Inject constructor(
 
     val selectedImage: MutableLiveData<ImageInfo> = MutableLiveData()
 
-    val iconUri: LiveData<Uri> = waterMarkRepo.iconUriLiveData
-
     val saveImageUri: MutableLiveData<List<ImageInfo>> = MutableLiveData()
 
     val saveProcess: MutableLiveData<ImageInfo> = MutableLiveData()
@@ -226,9 +224,9 @@ class MainViewModel @Inject constructor(
                 WaterMarkRepository.MarkMode.Image -> {
                     val iconBitmapRect = decodeSampledBitmapFromResource(
                         contentResolver,
-                        waterMarkRepo.iconUri,
-                        waterMark.value!!.textSize.toInt(),
-                        waterMark.value!!.textSize.toInt()
+                        tmpConfig.iconUri,
+                        viewInfo.width,
+                        viewInfo.height
                     )
                     if (iconBitmapRect.isFailure() || iconBitmapRect.data == null) {
                         return@withContext Result.failure(
@@ -465,6 +463,10 @@ class MainViewModel @Inject constructor(
             it.jobState = JobState.Ready
             saveProcess.value = it
         }
+    }
+
+    fun resetModeToText() {
+        launch { waterMarkRepo.resetModeToText() }
     }
 
     fun compressImg(activity: Activity) {

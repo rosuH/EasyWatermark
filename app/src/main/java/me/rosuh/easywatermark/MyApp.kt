@@ -10,13 +10,21 @@ import androidx.core.content.edit
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.*
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
+import javax.inject.Inject
 import kotlin.system.exitProcess
 
 @HiltAndroidApp
 class MyApp : Application() {
+
+    @Inject
+    lateinit var waterMarkRepo: WaterMarkRepository
+
     override fun onCreate() {
         super.onCreate()
         instance = this
+        applicationScope.launch {
+            waterMarkRepo.resetModeToText()
+        }
         catchException()
     }
 
@@ -49,16 +57,12 @@ class MyApp : Application() {
     }
 
     companion object {
+
+        val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
         @SuppressLint("StaticFieldLeak")
         lateinit var instance: Context
             private set
-
-        fun globalSp(): SharedPreferences {
-            return instance.getSharedPreferences(
-                WaterMarkRepository.SP_NAME,
-                MODE_PRIVATE
-            )
-        }
 
         const val SP_NAME = "sp_water_mark_crash_info"
 

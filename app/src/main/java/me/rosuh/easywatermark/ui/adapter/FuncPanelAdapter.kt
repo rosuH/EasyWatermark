@@ -18,10 +18,11 @@ class FuncPanelAdapter(
     val dataSet: ArrayList<FuncTitleModel>
 ) : RecyclerView.Adapter<FuncPanelAdapter.FuncTitleHolder>() {
 
-    private var textColor: Int = ContextCompat.getColor(
+    var textColor: Int = ContextCompat.getColor(
         MyApp.instance.applicationContext,
         R.color.text_color_main
     )
+        private set
 
     var selectedPos = 0
         set(value) {

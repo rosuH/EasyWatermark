@@ -112,6 +112,7 @@
             android:layout_width="match_parent"
             android:layout_height="145dp"
             android:layout_marginTop="23dp"
+            android:scrollbars="vertical"
             android:paddingStart="5dp"
             android:paddingEnd="5dp" />
 
