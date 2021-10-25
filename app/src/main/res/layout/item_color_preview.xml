@@ -4,7 +4,7 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content">
 
-    <me.rosuh.easywatermark.widget.SelectableImageView
+    <me.rosuh.easywatermark.ui.widget.SelectableImageView
         android:id="@+id/siv_color"
         android:layout_width="30dp"
         android:layout_height="30dp"

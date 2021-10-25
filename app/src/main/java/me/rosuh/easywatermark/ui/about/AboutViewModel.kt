@@ -1,21 +1,31 @@
 package me.rosuh.easywatermark.ui.about
 
 import android.graphics.Bitmap
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import me.rosuh.easywatermark.model.UserConfig
-import me.rosuh.easywatermark.repo.UserConfigRepo
+import androidx.lifecycle.asLiveData
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.launch
+import me.rosuh.easywatermark.data.repo.UserConfigRepository
+import javax.inject.Inject
 
-class AboutViewModel : ViewModel() {
+@HiltViewModel
+class AboutViewModel @Inject constructor(
+    private val userRepo: UserConfigRepository
+) : ViewModel() {
 
-    private val repo = UserConfigRepo
-    val userConfig: MutableLiveData<UserConfig> = repo.userConfig
+    val userPreferences = userRepo.userPreferences.asLiveData()
+
+    val outputFormat: Bitmap.CompressFormat
+        get() = userPreferences.value?.outputFormat ?: Bitmap.CompressFormat.JPEG
+
+    val compressLevel: Int
+        get() = userPreferences.value?.compressLevel ?: UserConfigRepository.DEFAULT_COMPRESS_LEVEL
 
     fun saveOutput(format: Bitmap.CompressFormat, level: Int) {
-        userConfig.value?.apply {
-            outputFormat = format
-            compressLevel = level
+        viewModelScope.launch {
+            userRepo.updateFormat(format)
+            userRepo.updateCompressLevel(level)
         }
-        userConfig.value = userConfig.value
     }
 }

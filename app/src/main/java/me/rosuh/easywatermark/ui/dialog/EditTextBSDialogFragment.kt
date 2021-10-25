@@ -15,8 +15,8 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.textfield.TextInputEditText
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.ktx.dp
 import me.rosuh.easywatermark.ui.MainViewModel
+import me.rosuh.easywatermark.utils.ktx.dp
 
 class EditTextBSDialogFragment : BottomSheetDialogFragment() {
 
@@ -44,10 +44,9 @@ class EditTextBSDialogFragment : BottomSheetDialogFragment() {
         val root = inflater.inflate(R.layout.dialog_edit_text, container, false)
         with(root) {
             et = findViewById<TextInputEditText>(R.id.et_water_text).apply {
-                setText(shareViewModel.config.value?.text.toString())
+                setText(shareViewModel.waterMark.value?.text.toString())
                 addTextChangedListener(object : TextWatcher {
                     override fun afterTextChanged(s: Editable?) {
-                        shareViewModel.updateText(s?.toString() ?: "")
                     }
 
                     override fun beforeTextChanged(
@@ -64,6 +63,7 @@ class EditTextBSDialogFragment : BottomSheetDialogFragment() {
                         before: Int,
                         count: Int
                     ) {
+                        shareViewModel.updateText(s?.toString() ?: "")
                     }
                 })
             }
@@ -105,6 +105,5 @@ class EditTextBSDialogFragment : BottomSheetDialogFragment() {
                 ie.printStackTrace()
             }
         }
-
     }
 }

@@ -1,54 +1,58 @@
 package me.rosuh.easywatermark.ui
 
+import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.content.Intent.ACTION_SEND
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.*
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
-import androidx.core.view.isInvisible
-import androidx.core.view.isVisible
 import androidx.fragment.app.commit
-import androidx.lifecycle.Observer
-import androidx.lifecycle.lifecycleScope
-import androidx.palette.graphics.Palette
-import androidx.recyclerview.widget.LinearSnapHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
+import dagger.hilt.android.AndroidEntryPoint
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.adapter.FuncPanelAdapter
-import me.rosuh.easywatermark.ktx.commitWithAnimation
-import me.rosuh.easywatermark.model.FuncTitleModel
-import me.rosuh.easywatermark.model.WaterMarkConfig
+import me.rosuh.easywatermark.data.model.FuncTitleModel
+import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.ViewInfo
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.ui.about.AboutActivity
+import me.rosuh.easywatermark.ui.adapter.FuncPanelAdapter
+import me.rosuh.easywatermark.ui.adapter.PhotoListPreviewAdapter
 import me.rosuh.easywatermark.ui.dialog.ChangeLogDialogFragment
 import me.rosuh.easywatermark.ui.dialog.CompressImageDialogFragment
 import me.rosuh.easywatermark.ui.dialog.EditTextBSDialogFragment
 import me.rosuh.easywatermark.ui.dialog.SaveImageBSDialogFragment
 import me.rosuh.easywatermark.ui.panel.*
+import me.rosuh.easywatermark.ui.widget.CenterLayoutManager
+import me.rosuh.easywatermark.ui.widget.LaunchView
 import me.rosuh.easywatermark.utils.*
-import me.rosuh.easywatermark.widget.LaunchView
-import kotlin.math.abs
+import me.rosuh.easywatermark.utils.ktx.commitWithAnimation
+import me.rosuh.easywatermark.utils.ktx.preCheckStoragePermission
+import me.rosuh.easywatermark.utils.ktx.toColor
+import java.util.*
+import kotlin.collections.ArrayList
 
-
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     private lateinit var pickImageLauncher: ActivityResultLauncher<String>
     private lateinit var pickIconLauncher: ActivityResultLauncher<String>
     private val viewModel: MainViewModel by viewModels()
-
-    private val scope = lifecycleScope
 
     private val contentFunList: List<FuncTitleModel> by lazy {
         listOf(
@@ -110,18 +114,24 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private val funcAdapter by lazy { FuncPanelAdapter(ArrayList(contentFunList)) }
+    private val funcAdapter by lazy {
+        FuncPanelAdapter(ArrayList(styleFunList)).apply {
+            setHasStableIds(true)
+        }
+    }
 
-    private lateinit var snapHelper: LinearSnapHelper
+    private val photoListPreviewAdapter by lazy { PhotoListPreviewAdapter(this) }
 
     private val vibrateHelper: VibrateHelper by lazy { VibrateHelper.get() }
 
-    private lateinit var binding: LaunchView
+    private lateinit var launchView: LaunchView
+
+    private var bgTransformAnimator: ObjectAnimator? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = LaunchView(this)
-        setContentView(binding)
+        launchView = LaunchView(this)
+        setContentView(launchView)
         if (savedInstanceState == null) {
             supportFragmentManager.commit {
                 setReorderingAllowed(true)
@@ -133,17 +143,16 @@ class MainActivity : AppCompatActivity() {
         checkHadCrash()
         // Activity was recycled but dialog still showing in some case?
         SaveImageBSDialogFragment.safetyHide(this@MainActivity.supportFragmentManager)
-        ChangeLogDialogFragment.safetyShow(this@MainActivity.supportFragmentManager)
     }
 
     private fun registerResultCallback() {
         pickImageLauncher =
-            registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+            registerForActivityResult(MultiPickContract()) { uri: List<Uri?>? ->
                 handleActivityResult(REQ_CODE_PICK_IMAGE, uri)
             }
         pickIconLauncher =
-            registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-                handleActivityResult(REQ_PICK_ICON, uri)
+            registerForActivityResult(PickImageContract()) { uri: Uri? ->
+                handleActivityResult(REQ_PICK_ICON, listOf(uri))
             }
     }
 
@@ -155,9 +164,14 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         // Accepting shared images from other apps
-        if (intent?.action == ACTION_SEND) {
-            dealWithImage(intent?.data)
+        if (intent?.action == ACTION_SEND && intent?.data != null) {
+            dealWithImage(listOf(intent?.data!!))
         }
+    }
+
+    override fun onDestroy() {
+        bgTransformAnimator?.cancel()
+        super.onDestroy()
     }
 
     private fun checkHadCrash() {
@@ -193,109 +207,121 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initObserver() {
-        viewModel.config.observe(this, Observer<WaterMarkConfig> {
+        viewModel.waterMark.observe(this) {
+            if (it == null) {
+                return@observe
+            }
+            launchView.post {
+                launchView.ivPhoto.config = it
+            }
+            viewModel.resetStatus()
+        }
+        viewModel.selectedImage.observe(this) {
             if (it.uri.toString().isEmpty()) {
-                return@Observer
+                return@observe
             }
             try {
-                binding.toEditorMode()
-                binding.ivPhoto.config = it
+                val isAnimating = launchView.toEditorMode()
+                if (isAnimating) {
+                    launchView.ivPhoto.postDelayed({
+                        launchView.ivPhoto.updateUri(it)
+                        selectTab(0)
+                    }, 150)
+                } else {
+                    launchView.ivPhoto.updateUri(it)
+                }
             } catch (se: SecurityException) {
                 se.printStackTrace()
                 // reset the uri because we don't have permission -_-
-                viewModel.updateUri(Uri.parse(""))
+                viewModel.selectImage(Uri.EMPTY)
             }
-        })
-
-        viewModel.tipsStatus.observe(this) { tips ->
-            when (tips) {
-                is MainViewModel.TipsStatus.None -> {
-                    binding.tvDataTips.apply {
-                        isInvisible = true
-                    }
-                }
-                is MainViewModel.TipsStatus.Alpha -> {
-                    binding.tvDataTips.apply {
-                        isVisible = true
-                        text = getString(R.string.touch_alpha, tips.values as? Int)
-                    }
-                }
-                is MainViewModel.TipsStatus.Size -> {
-                    binding.tvDataTips.apply {
-                        isVisible = true
-                        text = getString(R.string.touch_size, tips.values as? Int)
-                    }
+        }
+        viewModel.imageList.observe(this) {
+            photoListPreviewAdapter.selectedPos = viewModel.nextSelectedPos
+            photoListPreviewAdapter.submitList(it.first) {
+                launchView.rvPhotoList.apply {
+                    post { smoothScrollToPosition(0) }
                 }
             }
         }
 
-        viewModel.saveState.observe(this) { state ->
-            when (state) {
-                MainViewModel.State.Error -> {
-                    Toast.makeText(
-                        this,
-                        "${getString(R.string.tips_error)}: ${state.msg}",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    viewModel.resetStatus()
+        viewModel.saveResult.observe(this) {
+            if (it.isFailure()) {
+                when (it.code) {
+                    MainViewModel.TYPE_ERROR_SAVE_OOM -> {
+                        toast(getString(R.string.error_save_oom))
+                        CompressImageDialogFragment.safetyShow(supportFragmentManager)
+                        viewModel.resetStatus()
+                    }
+                    MainViewModel.TYPE_ERROR_FILE_NOT_FOUND -> toast(getString(R.string.error_file_not_found))
+                    MainViewModel.TYPE_ERROR_NOT_IMG -> toast(getString(R.string.error_not_img))
+                    else -> toast("${getString(R.string.tips_error)}: ${it.message}")
                 }
-                MainViewModel.State.OOMError -> {
-                    CompressImageDialogFragment.safetyShow(supportFragmentManager)
-                    viewModel.resetStatus()
-                }
+                viewModel.resetStatus()
+            } else {
+                toast(it.message)
             }
         }
 
-        viewModel.result.observe(this) {
-            val msg = when (it.code) {
-                MainViewModel.TYPE_ERROR_SAVE_OOM -> getString(R.string.error_save_oom)
-                MainViewModel.TYPE_ERROR_FILE_NOT_FOUND -> getString(R.string.error_file_not_found)
-                MainViewModel.TYPE_ERROR_NOT_IMG -> getString(R.string.error_not_img)
-                else -> it.message
-            }
-            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+        viewModel.isNeedShowUpgradeInfo.observe(this) {
+            val needShow = it ?: false
+            if (!needShow) return@observe
+            ChangeLogDialogFragment.safetyShow(this@MainActivity.supportFragmentManager)
+            viewModel.saveUpgradeInfo()
         }
 
-        viewModel.saveImageUri.observe(this, { outputUri ->
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(outputUri, "image/*")
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        viewModel.colorPalette.observe(this) { palette ->
+            val bgColor = palette.darkMutedSwatch?.rgb ?: ContextCompat.getColor(
+                this@MainActivity,
+                R.color.colorSecondary
+            )
+            val titleTextColor = palette.darkMutedSwatch?.titleTextColor ?: ContextCompat.getColor(
+                this@MainActivity,
+                R.color.text_color_main
+            )
+            bgTransformAnimator =
+                ((launchView.ivPhoto.background as? ColorDrawable)?.color ?: Color.BLACK).toColor(
+                    bgColor
+                ) {
+                    launchView.rvPanel.setBackgroundColor(it.animatedValue as Int)
+                    launchView.setBackgroundColor(it.animatedValue as Int)
+                    setStatusBarColor(it.animatedValue as Int)
+                }
+            funcAdapter.textColor.toColor(titleTextColor) {
+                val c = it.animatedValue as Int
+                funcAdapter.applyTextColor(c)
+                launchView.tabLayout.setTabTextColors(
+                    c, ContextCompat.getColor(
+                        this@MainActivity,
+                        R.color.colorAccent
+                    )
+                )
             }
-            startActivity(intent)
-            Toast.makeText(this, getString(R.string.tips_save_ok), Toast.LENGTH_SHORT)
-                .show()
-        })
+        }
+    }
 
-        viewModel.shareImageUri.observe(this, { outputUri ->
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "image/*"
-                putExtra(Intent.EXTRA_STREAM, outputUri)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            startActivity(intent)
-            Toast.makeText(this, getString(R.string.tips_share_image), Toast.LENGTH_SHORT)
-                .show()
-        })
+    private fun Context.toast(msg: String?) {
+        if (msg.isNullOrBlank()) return
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
     }
 
     @SuppressLint("ClickableViewAccessibility")
     private fun initView() {
         // prepare MotionLayout
-        binding.setListener {
+        launchView.setListener {
             onModeChange { _, newMode ->
                 when (newMode) {
                     LaunchView.ViewMode.Editor -> {
-                        binding.logoView.stop()
+                        launchView.logoView.stop()
                     }
                     LaunchView.ViewMode.LaunchMode -> {
-                        binding.logoView.start()
+                        launchView.logoView.start()
                     }
                 }
             }
         }
         // setting tool bar
-        binding.toolbar.apply {
+        launchView.toolbar.apply {
             navigationIcon =
                 ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_logo_tool_bar)
             title = null
@@ -303,25 +329,28 @@ class MainActivity : AppCompatActivity() {
             supportActionBar?.title = null
         }
         // go about page
-        binding.ivGoAboutPage.setOnClickListener {
+        launchView.ivGoAboutPage.setOnClickListener {
             startActivity(Intent(this, AboutActivity::class.java))
         }
         // pick image button
-        binding.ivSelectedPhotoTips.setOnClickListener {
+        launchView.ivSelectedPhotoTips.setOnClickListener {
             preCheckStoragePermission {
                 performFileSearch(REQ_CODE_PICK_IMAGE)
             }
         }
-        // functional panel in recyclerView
-        binding.rvPanel.apply {
-            adapter = funcAdapter
-            layoutManager = CenterLayoutManager(this@MainActivity, RecyclerView.HORIZONTAL, false)
-            snapHelper = LinearSnapHelper().also {
-                it.attachToRecyclerView(this)
+        // setting bg
+        launchView.ivPhoto.apply {
+            onBgReady { palette ->
+                viewModel.updateColorPalette(palette)
             }
-
+        }
+        // functional panel in recyclerView
+        launchView.rvPanel.apply {
+            adapter = funcAdapter
+            setHasFixedSize(true)
+            layoutManager = CenterLayoutManager(this@MainActivity, RecyclerView.HORIZONTAL, false)
             onItemClick { _, pos, v ->
-                val snapView = snapHelper.findSnapView(binding.rvPanel.layoutManager)
+                val snapView = snapHelper.findSnapView(launchView.rvPanel.layoutManager)
                 if (snapView == v) {
                     val item = (this.adapter as FuncPanelAdapter).dataSet[pos]
                     handleFuncItem(item)
@@ -331,43 +360,58 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            addOnScrollListener(object : RecyclerView.OnScrollListener() {
-                private var debounceTs = 0L
-                override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                    super.onScrollStateChanged(recyclerView, newState)
-                    val snapView = snapHelper.findSnapView(binding.rvPanel.layoutManager)
-                    when (newState) {
-                        RecyclerView.SCROLL_STATE_IDLE -> {
-                            if (snapView == null
-                                || !canAutoSelected
-                                || System.currentTimeMillis() - debounceTs < 120
-                            ) {
-                                canAutoSelected = true
-                                return
-                            }
-                            debounceTs = System.currentTimeMillis()
-                            val pos = binding.rvPanel.getChildLayoutPosition(snapView)
-                            funcAdapter.selectedPos = pos
-                            handleFuncItem(funcAdapter.dataSet[pos])
-                            vibrateHelper.doVibrate(snapView)
-                        }
+            onSnapViewPreview { snapView, _ ->
+                vibrateHelper.doVibrate(snapView)
+            }
+
+            onSnapViewSelected { snapView, pos ->
+                funcAdapter.selectedPos = pos
+                handleFuncItem(funcAdapter.dataSet[pos])
+                vibrateHelper.doVibrate(snapView)
+            }
+
+            post {
+                canAutoSelected = false
+                scrollToPosition(0)
+                canAutoSelected = true
+            }
+        }
+        // image list
+        launchView.rvPhotoList.apply {
+            enableBorder = true
+            adapter = photoListPreviewAdapter
+            setHasFixedSize(true)
+            layoutManager =
+                CenterLayoutManager(this@MainActivity, RecyclerView.HORIZONTAL, false).apply {
+                    onStartSmoothScroll {
+                        canTouch = false
+                    }
+                    onStopSmoothScroll {
+                        canTouch = true
                     }
                 }
 
-                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                    super.onScrolled(recyclerView, dx, dy)
-                    if (recyclerView.scrollState != RecyclerView.SCROLL_STATE_DRAGGING) {
-                        return
-                    }
-                    val snapView = snapHelper.findSnapView(binding.rvPanel.layoutManager) ?: return
-                    val dX =
-                        abs(binding.fcFunctionDetail.width / 2 - (snapView.left + snapView.right) / 2)
+            photoListPreviewAdapter.onRemove { imageInfo ->
+                viewModel.removeImage(imageInfo, photoListPreviewAdapter.selectedPos)
+            }
 
-                    if (dX <= 1) {
-                        vibrateHelper.doVibrate(snapView)
-                    }
+            onItemClick { _, pos, v ->
+                val snapView = snapHelper.findSnapView(launchView.rvPanel.layoutManager)
+                if (snapView != v) {
+                    smoothScrollToPosition(pos)
                 }
-            })
+            }
+
+            onSnapViewPreview { snapView, _ ->
+                vibrateHelper.doVibrate(snapView)
+            }
+
+            onSnapViewSelected { snapView, pos ->
+                photoListPreviewAdapter.selectedPos = pos
+                val uri = photoListPreviewAdapter.getItem(pos)?.uri ?: return@onSnapViewSelected
+                viewModel.selectImage(uri)
+                vibrateHelper.doVibrate(snapView)
+            }
 
             post {
                 canAutoSelected = false
@@ -376,32 +420,36 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        binding.tabLayout.apply {
+        launchView.tabLayout.apply {
+            post {
+                selectTab(0)
+            }
             addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
                 override fun onTabSelected(tab: TabLayout.Tab?) {
                     if (tab == null) {
                         return
                     }
                     hideDetailPanel()
-                    val adapter = (binding.rvPanel.adapter as? FuncPanelAdapter)
+                    vibrateHelper.doVibrate(this@apply)
+                    val adapter = (launchView.rvPanel.adapter as? FuncPanelAdapter)
                     when (tab.position) {
-                        1 -> {
-                            binding.rvPanel.smoothScrollToPosition(0)
+                        0 -> {
+                            launchView.rvPanel.smoothScrollToPosition(0)
                             adapter?.also {
                                 it.seNewData(styleFunList, 0)
-                                handleFuncItem(it.dataSet[0])
+                                post { handleFuncItem(it.dataSet[0]) }
                             }
                         }
                         2 -> {
-                            binding.rvPanel.smoothScrollToPosition(0)
+                            launchView.rvPanel.smoothScrollToPosition(0)
                             adapter?.also {
                                 it.seNewData(layoutFunList, 0)
-                                handleFuncItem(it.dataSet[0])
+                                post { handleFuncItem(it.dataSet[0]) }
                             }
                         }
                         else -> {
                             val curPos =
-                                if (binding.ivPhoto.config?.markMode == WaterMarkConfig.MarkMode.Text) 0 else 1
+                                if (launchView.ivPhoto.config?.markMode == WaterMarkRepository.MarkMode.Text) 0 else 1
                             adapter?.seNewData(contentFunList, curPos)
                             manuallySelectedItem(curPos)
                         }
@@ -410,7 +458,12 @@ class MainActivity : AppCompatActivity() {
 
                 override fun onTabUnselected(tab: TabLayout.Tab?) {}
 
-                override fun onTabReselected(tab: TabLayout.Tab?) {}
+                override fun onTabReselected(tab: TabLayout.Tab?) {
+                    val adapter = (launchView.rvPanel.adapter as? FuncPanelAdapter)
+                    adapter?.also {
+                        post { handleFuncItem(it.dataSet[0]) }
+                    }
+                }
             })
         }
     }
@@ -421,12 +474,6 @@ class MainActivity : AppCompatActivity() {
                 remove(it)
             }
         }
-    }
-
-    private fun applyBgColor(palette: Palette) {
-        val color =
-            palette.darkMutedSwatch?.rgb ?: ContextCompat.getColor(this, R.color.colorSecondary)
-        binding.ivPhoto.setBackgroundColor(color)
     }
 
     private fun handleFuncItem(item: FuncTitleModel) {
@@ -441,26 +488,35 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             FuncTitleModel.FuncType.Color -> {
-                ColorFragment.replaceShow(this, binding.fcFunctionDetail.id)
+                ColorFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.Alpha -> {
-                AlphaPbFragment.replaceShow(this, binding.fcFunctionDetail.id)
+                AlphaPbFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.Degree -> {
-                DegreePbFragment.replaceShow(this, binding.fcFunctionDetail.id)
+                DegreePbFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.TextStyle -> {
-                TextStyleFragment.replaceShow(this, binding.fcFunctionDetail.id)
+                TextStyleFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.Vertical -> {
-                VerticalPbFragment.replaceShow(this, binding.fcFunctionDetail.id)
+                VerticalPbFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.Horizon -> {
-                HorizonPbFragment.replaceShow(this, binding.fcFunctionDetail.id)
+                HorizonPbFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.TextSize -> {
-                TextSizePbFragment.replaceShow(this, binding.fcFunctionDetail.id)
+                TextSizePbFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
+        }
+    }
+
+    private fun setStatusBarColor(color: Int) {
+        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+        window.statusBarColor = color;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            window.findViewById<View>(android.R.id.content)?.foreground = null
         }
     }
 
@@ -536,10 +592,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun dealWithImage(uri: Uri?) {
-        if (FileUtils.isImage(this.contentResolver, uri)) {
-            viewModel.updateUri(uri!!)
-            takePersistableUriPermission(uri)
+    private fun dealWithImage(uri: List<Uri>) {
+        if (FileUtils.isImage(this.contentResolver, uri.first())) {
+            viewModel.updateImageList(uri)
         } else {
             Toast.makeText(
                 this,
@@ -549,59 +604,41 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun handleActivityResult(requestCode: Int, uri: Uri?) {
-        if (uri == null) {
+    private fun handleActivityResult(requestCode: Int, list: List<Uri?>?) {
+        val finalList = list?.filterNotNull()?.filter {
+            FileUtils.isImage(this.contentResolver, it)
+        } ?: emptyList()
+        if (finalList.isNullOrEmpty()) {
             Toast.makeText(
                 this,
                 getString(R.string.tips_do_not_choose_image),
                 Toast.LENGTH_SHORT
             ).show()
-            if (requestCode == REQ_PICK_ICON && viewModel.config.value?.markMode == WaterMarkConfig.MarkMode.Text) {
+            if (requestCode == REQ_PICK_ICON && viewModel.waterMark.value?.markMode == WaterMarkRepository.MarkMode.Text) {
                 manuallySelectedItem(0)
             }
             return
         }
         when (requestCode) {
             REQ_CODE_PICK_IMAGE -> {
-                dealWithImage(uri)
+                Log.i(MainActivity::class.simpleName, finalList.toTypedArray().contentToString())
+                dealWithImage(finalList)
             }
             REQ_PICK_ICON -> {
-                if (FileUtils.isImage(this.contentResolver, uri)) {
-                    viewModel.updateIcon(uri)
-                    takePersistableUriPermission(uri)
-                } else {
-                    Toast.makeText(
-                        this,
-                        getString(R.string.tips_choose_other_file_type),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+                viewModel.updateIcon(finalList.first())
             }
         }
     }
 
     private fun manuallySelectedItem(pos: Int) {
-        binding.rvPanel.canAutoSelected = false
+        launchView.rvPanel.canAutoSelected = false
         funcAdapter.selectedPos = pos
-        binding.rvPanel.scrollToPosition(pos)
-        binding.rvPanel.canAutoSelected = true
-    }
-
-    /**
-     * Try to get the permission without timeout.
-     */
-    private fun takePersistableUriPermission(uri: Uri) {
-        try {
-            val takeFlags: Int =
-                (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-            contentResolver.takePersistableUriPermission(uri, takeFlags)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        launchView.rvPanel.scrollToPosition(pos)
+        launchView.rvPanel.canAutoSelected = true
     }
 
     override fun onBackPressed() {
-        if (binding.mode == LaunchView.ViewMode.LaunchMode) {
+        if (launchView.mode == LaunchView.ViewMode.LaunchMode) {
             super.onBackPressed()
             return
         }
@@ -611,7 +648,6 @@ class MainActivity : AppCompatActivity() {
             .setNegativeButton(
                 R.string.tips_confirm_dialog
             ) { _, _ ->
-                binding.toLaunchMode()
                 resetView()
             }
             .setPositiveButton(
@@ -624,8 +660,35 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun resetView() {
-        binding.ivPhoto.reset()
+        launchView.toLaunchMode()
+        viewModel.resetStatus()
+        launchView.ivPhoto.reset()
+        bgTransformAnimator?.cancel()
+        (launchView.background as ColorDrawable).color.toColor(
+            ContextCompat.getColor(
+                this,
+                R.color.colorPrimary
+            )
+        ) {
+            val c = it.animatedValue as Int
+            setStatusBarColor(c)
+            launchView.setBackgroundColor(c)
+        }
         hideDetailPanel()
+    }
+
+    private fun selectTab(index: Int) {
+        launchView.tabLayout.getTabAt(index).let {
+            launchView.tabLayout.selectTab(it)
+        }
+    }
+
+    fun getImageList(): List<ImageInfo> {
+        return photoListPreviewAdapter.data
+    }
+
+    fun getImageViewInfo(): ViewInfo {
+        return ViewInfo.from(launchView.ivPhoto)
     }
 
     companion object {

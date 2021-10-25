@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<me.rosuh.easywatermark.widget.ControllableScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<me.rosuh.easywatermark.ui.widget.ControllableScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/scrollView"
@@ -44,7 +44,7 @@
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="70dp"
             android:layout_height="40dp"
-            android:layout_marginStart="15dp"
+            android:layout_marginStart="16dp"
             android:text="@string/water_mark_mode_image"
             android:textAllCaps="false"
             android:textColor="@color/white"
@@ -131,4 +131,4 @@
             app:layout_constraintTop_toBottomOf="@id/sb_content_size" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
-</me.rosuh.easywatermark.widget.ControllableScrollView>
+</me.rosuh.easywatermark.ui.widget.ControllableScrollView>

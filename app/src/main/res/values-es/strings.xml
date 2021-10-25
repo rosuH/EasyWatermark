@@ -37,7 +37,7 @@
     <string name="error_not_img">Deberías elegir una foto</string>
     <string name="error_file_not_found">La foto quizás no existe</string>
     <string name="tips_pick_image">"Elija la imagen, vaya a la edición "</string>
-    <string name="save_directly">Guardar directamente</string>
+    <string name="dialog_export_to_gallery">Exportar a álbum</string>
     <string name="directly_save_tips">Almacena la imagen editada directamente en tu álbum de fotos</string>
     <string name="share_tips">Compartir la imagen editada con otras aplicaciones</string>
     <string name="share">Compartir</string>
@@ -93,5 +93,10 @@
     <string name="text_typeface_italic">Cursiva</string>
     <string name="text_typeface_bold_italic">Cursiva negrita</string>
     <string name="dialog_check_out_in_github">Echa un vistazo a Github</string>
+    <string name="dialog_save_exporting">Exportando</string>
+    <string name="dialog_save_export_list_title">Exportar lista(%1$s)</string>
+    <string name="dialog_open_in_gallery">Ver en galería</string>
+    <string name="dialog_save_config_format">Formato</string>
+    <string name="dialog_save_config_quality">Calidad</string>
 
 </resources>

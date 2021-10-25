@@ -15,11 +15,11 @@
             android:layout_height="?attr/actionBarSize"
             android:background="?attr/colorPrimary"
             android:elevation="4dp"
-            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+            app:title="@string/about_title_open_source"
+            app:navigationIcon="@drawable/ic_back"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:popupTheme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
+            app:layout_constraintTop_toTopOf="parent"/>
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_color_picker"
@@ -51,7 +51,7 @@
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/card_material_about_library"
+            android:id="@+id/card_glide_library"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
@@ -68,7 +68,7 @@
                     style="@style/AppTheme.TitleText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="material-about-library" />
+                    android:text="Glide" />
 
                 <TextView
                     android:layout_width="wrap_content"

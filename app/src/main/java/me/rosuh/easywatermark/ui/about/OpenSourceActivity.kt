@@ -2,10 +2,11 @@ package me.rosuh.easywatermark.ui.about
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.databinding.ActivityOpenSourceBinding
-import me.rosuh.easywatermark.ktx.inflate
-import me.rosuh.easywatermark.ktx.openLink
+import me.rosuh.easywatermark.utils.ktx.inflate
+import me.rosuh.easywatermark.utils.ktx.openLink
 
 class OpenSourceActivity : AppCompatActivity() {
 
@@ -13,19 +14,18 @@ class OpenSourceActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_open_source)
-        setSupportActionBar(findViewById(R.id.my_toolbar))
-        supportActionBar?.apply {
-            title = getString(R.string.about_title_open_source)
-            setDisplayHomeAsUpEnabled(true)
+        setContentView(binding.root)
+        setSupportActionBar(binding.myToolbar)
+        binding.myToolbar.setNavigationOnClickListener {
+            onBackPressed()
         }
 
         binding.cardColorPicker.setOnClickListener {
             openLink("https://github.com/skydoves/ColorPickerView")
         }
 
-        binding.cardMaterialAboutLibrary.setOnClickListener {
-            openLink("https://github.com/daniel-stoneuk/material-about-library")
+        binding.cardGlideLibrary.setOnClickListener {
+            openLink("https://github.com/bumptech/glide")
         }
 
         binding.cardMaterialComponents.setOnClickListener {

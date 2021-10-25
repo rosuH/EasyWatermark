@@ -1,6 +1,5 @@
 package me.rosuh.easywatermark.ui.dialog
 
-import android.content.Context
 import android.content.DialogInterface
 import android.os.Build
 import android.os.Bundle
@@ -11,26 +10,29 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import androidx.core.content.edit
 import androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.BuildConfig
-import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.ktx.openLink
-import me.rosuh.easywatermark.ktx.toMD5
-import me.rosuh.easywatermark.model.WaterMarkConfig
-import me.rosuh.easywatermark.model.WaterMarkConfig.Companion.SP_KEY_CHANGE_LOG
-
+import me.rosuh.easywatermark.data.repo.UserConfigRepository
+import me.rosuh.easywatermark.utils.ktx.openLink
+import javax.inject.Inject
 
 /**
- * @author rosuh@qq.com
+ * @author hi@rosuh.me
  * @date 2020/9/3
  * A dialog showing change log, which using [BuildConfig.VERSION_CODE]
  * and [R.string.dialog_change_log_content] to generate md5 To decide whether to display
  */
+@AndroidEntryPoint
 class ChangeLogDialogFragment : BottomSheetDialogFragment() {
+
+    @Inject
+    lateinit var repo: UserConfigRepository
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -56,15 +58,6 @@ class ChangeLogDialogFragment : BottomSheetDialogFragment() {
         return root
     }
 
-    override fun onDismiss(dialog: DialogInterface) {
-        super.onDismiss(dialog)
-        MyApp.instance.getSharedPreferences(WaterMarkConfig.SP_NAME, Context.MODE_PRIVATE).edit {
-            val curMD5 =
-                "${BuildConfig.VERSION_CODE}${this@ChangeLogDialogFragment.getString(R.string.dialog_change_log_content)}".toMD5()
-            putString(SP_KEY_CHANGE_LOG, curMD5)
-        }
-    }
-
     companion object {
 
         private const val TAG = "ChangeLogDialogFragment"
@@ -73,31 +66,8 @@ class ChangeLogDialogFragment : BottomSheetDialogFragment() {
             return ChangeLogDialogFragment()
         }
 
-        private fun checkHasUpgraded(): Boolean {
-            with(
-                MyApp.instance.getSharedPreferences(
-                    WaterMarkConfig.SP_NAME,
-                    Context.MODE_PRIVATE
-                )
-            ) {
-                val savedMD5 = this.getString(SP_KEY_CHANGE_LOG, "")
-                val curMD5 =
-                    "${BuildConfig.VERSION_CODE}${MyApp.instance.getString(R.string.dialog_change_log_content)}".toMD5()
-                return savedMD5 != curMD5
-            }
-        }
-
-        fun safetyHide(manager: FragmentManager) {
+        fun safetyShow(manager: FragmentManager) {
             kotlin.runCatching {
-                (manager.findFragmentByTag(TAG) as? ChangeLogDialogFragment)?.dismissAllowingStateLoss()
-            }
-        }
-
-        fun safetyShow(manager: FragmentManager, force: Boolean = false) {
-            kotlin.runCatching {
-                if (!checkHasUpgraded() && !force) {
-                    return
-                }
                 val f = manager.findFragmentByTag(TAG) as? ChangeLogDialogFragment
                 when {
                     f == null -> {

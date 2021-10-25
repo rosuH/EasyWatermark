@@ -31,7 +31,7 @@
     <string name="about_title_rating">Rate our app</string>
     <string name="about_title_feed_back">Feedback</string>
     <string name="about_title_update_log">Changelog</string>
-    <string name="about_title_open_source">Open source</string>
+    <string name="about_title_open_source">Open source licenses</string>
     <string name="about_title_author">Author</string>
     <string name="about_title_designer">Designer</string>
     <string name="about_title_repo_link">Open in Github</string>
@@ -39,7 +39,7 @@
     <string name="error_not_img">Please select an image</string>
     <string name="error_file_not_found">The image couldn\'t be opened or was not selected</string>
     <string name="tips_pick_image">Let\'s start by selecting an image</string>
-    <string name="save_directly">Save directly</string>
+    <string name="dialog_export_to_gallery">Export to Album</string>
     <string name="directly_save_tips">Save the edited image directly to your gallery</string>
     <string name="share_tips">Share the edited image with other apps</string>
     <string name="share">Share</string>
@@ -65,15 +65,16 @@
     <string name="config_default_water_mark_text">👋 DO NOT REDISTRIBUTE</string>
     <string name="style_alpha">Alpha</string>
     <string name="contributor_info">If the feedback about a problem is valid and therefore fixed or a new version is released, your name or email will appear in the update pop-up window. We will hide your information, your full name will not appear. \\n If you do not want it to happen, please mark: I do not want to.</string>
-    <string name="dialog_change_log_title">Changelog</string>
-    <string name="dialog_change_log_content">
+    <string name="dialog_change_log_title">Change log</string>
+    <string name="dialog_change_log_content" translatable="false">
         <![CDATA[
         <h2 id="new-and-optimized">New and Optimized</h2>
         <ol>
-        <li>&nbsp;&nbsp;⚡️ Improved memory usage.</li>
-        <li>&nbsp;&nbsp;🎨 Improved animation and touch effect.</li>
-        <li>&nbsp;&nbsp;🥳 Supported splash screen in Android 12.</li>
-        <li>&nbsp;&nbsp;🔧 Upgraded targetApi to 31</li>
+        <li>&nbsp;&nbsp;🥳 Check out the new batch mode!.</li>
+        </ol>
+        <h2 id="fixed">Fixed</h2>
+        <ol>
+        <li>&nbsp;&nbsp;🐛 Fix crash while using a recycled bitmap. (Thanks to lala)</li>
         </ol>
 ]]>
     </string>
@@ -90,7 +91,7 @@
     <string name="about_title_privacy_statement" translatable="false">Privacy Statement</string>
     <string name="about_title_privacy_statement_zh" translatable="false">隐私政策</string>
     <string name="open_source_desc_color_picker" translatable="false"><![CDATA[ColorPickerView implements getting HSV colors, ARGB values, Hex color codes from any image drawables or your gallery pictures by tapping on the desired color. Supports alpha & brightness slider bar, dialog, and saving & restoring selected data.]]></string>
-    <string name="open_source_desc_about_lib" translatable="false">Makes it easy to create a beautiful about screen for your app. Generates an Activity or Fragment. Idea from here: Heinrich Reimer\'s open-source-library-request-manager Design inspired by Phonograph If you use this library in your app, please let me know and I\'ll add it to the list.</string>
+    <string name="open_source_desc_about_lib" translatable="false">Glide is a fast and efficient open source media management and image loading framework for Android that wraps media decoding, memory and disk caching, and resource pooling into a simple and easy to use interface.</string>
     <string name="open_source_desc_material_components" translatable="false">Material Components for Android (MDC-Android) help developers execute Material Design. Developed by a core team of engineers and UX designers at Google, these components enable a reliable development workflow to build beautiful and functional Android apps.Material Components for Android is a drop-in replacement for Android\'s Design Support Library.</string>
     <string name="email_subject" translatable="false">[EasyWaterMark] Crash info</string>
     <string name="open_source_desc_compressor" translatable="false">"Compressor is a lightweight and powerful android image compression library. Compressor will allow you to compress large photos into smaller sized photos with very less or negligible loss in quality of the image. "</string>
@@ -104,5 +105,10 @@
     <string name="text_typeface_italic">Italic</string>
     <string name="text_typeface_bold_italic">Bold Italic</string>
     <string name="dialog_check_out_in_github">Check out on Github</string>
+    <string name="dialog_save_export_list_title">Export list(%1$s)</string>
+    <string name="dialog_open_in_gallery">View in gallery</string>
+    <string name="dialog_save_config_format">Format</string>
+    <string name="dialog_save_config_quality">Quality</string>
+    <string name="dialog_save_exporting">Exporting</string>
 
 </resources>

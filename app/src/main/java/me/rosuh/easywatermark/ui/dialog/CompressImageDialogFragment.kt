@@ -13,15 +13,14 @@ import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import com.google.android.material.button.MaterialButton
-import kotlinx.coroutines.Job
 import me.rosuh.easywatermark.R
+import me.rosuh.easywatermark.data.model.Result
 import me.rosuh.easywatermark.ui.MainViewModel
 
 class CompressImageDialogFragment : DialogFragment() {
 
     private var btnCompress: MaterialButton? = null
     private var btnCancel: MaterialButton? = null
-    private var compressJob: Job? = null
     private var cpbCompress: ContentLoadingProgressBar? = null
     private var tvCompressTips: TextView? = null
     private val shareViewModel: MainViewModel by activityViewModels()
@@ -43,23 +42,26 @@ class CompressImageDialogFragment : DialogFragment() {
             tvCompressTips = findViewById(R.id.tv_compress_tips)
             btnCancel = findViewById<MaterialButton>(R.id.btn_cancel).apply {
                 setOnClickListener {
-                    compressJob?.cancel()
+                    shareViewModel.cancelCompressJob()
                     dismissAllowingStateLoss()
                 }
             }
             btnCompress = findViewById(R.id.btn_compress)
         }
         setTupState()
-        shareViewModel.saveState.observe(viewLifecycleOwner, Observer {
-            setTupState(it)
-        })
+        shareViewModel.compressedResult.observe(
+            viewLifecycleOwner,
+            Observer {
+                setTupState(it)
+            }
+        )
 
         return root
     }
 
-    private fun setTupState(state: MainViewModel.State? = shareViewModel.saveState.value) {
-        when (state) {
-            MainViewModel.State.Compressing -> {
+    private fun setTupState(result: Result<*>? = shareViewModel.compressedResult.value) {
+        when (result?.code) {
+            MainViewModel.TYPE_COMPRESSING -> {
                 cpbCompress?.apply {
                     isVisible = true
                     show()
@@ -70,7 +72,7 @@ class CompressImageDialogFragment : DialogFragment() {
                     text = context.getString(R.string.tips_compress_images)
                 }
             }
-            MainViewModel.State.CompressOK -> {
+            MainViewModel.TYPE_COMPRESS_OK -> {
                 cpbCompress?.apply {
                     isVisible = false
                     hide()
@@ -84,8 +86,9 @@ class CompressImageDialogFragment : DialogFragment() {
                     }
                 }
             }
-            MainViewModel.State.CompressError -> {
-                tvCompressTips?.text = getString(R.string.tips_compress_create_uri_failed, state.msg)
+            MainViewModel.TYPE_COMPRESS_ERROR -> {
+                tvCompressTips?.text =
+                    getString(R.string.tips_compress_create_uri_failed, result.message)
                 cpbCompress?.apply {
                     isVisible = false
                     hide()
@@ -94,7 +97,7 @@ class CompressImageDialogFragment : DialogFragment() {
                     isEnabled = true
                     text = context.getString(R.string.tips_compress_images)
                     setOnClickListener {
-                        compressJob = shareViewModel.compressImg(requireActivity())
+                        shareViewModel.compressImg(requireActivity())
                     }
                 }
             }
@@ -108,7 +111,7 @@ class CompressImageDialogFragment : DialogFragment() {
                     isEnabled = true
                     text = context.getString(R.string.tips_compress_images)
                     setOnClickListener {
-                        compressJob = shareViewModel.compressImg(requireActivity())
+                        shareViewModel.compressImg(requireActivity())
                     }
                 }
             }
@@ -121,6 +124,12 @@ class CompressImageDialogFragment : DialogFragment() {
 
         private fun newInstance(): CompressImageDialogFragment {
             return CompressImageDialogFragment()
+        }
+
+        fun safetyHide(manager: FragmentManager) {
+            kotlin.runCatching {
+                (manager.findFragmentByTag(TAG) as? CompressImageDialogFragment)?.dismissAllowingStateLoss()
+            }
         }
 
         fun safetyShow(manager: FragmentManager) {
@@ -138,6 +147,5 @@ class CompressImageDialogFragment : DialogFragment() {
                 ie.printStackTrace()
             }
         }
-
     }
 }

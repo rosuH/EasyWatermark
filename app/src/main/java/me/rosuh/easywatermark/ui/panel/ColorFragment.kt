@@ -9,12 +9,12 @@ import com.skydoves.colorpickerview.ColorEnvelope
 import com.skydoves.colorpickerview.ColorPickerDialog
 import com.skydoves.colorpickerview.listeners.ColorEnvelopeListener
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.adapter.ColorPreviewAdapter
-import me.rosuh.easywatermark.base.BaseBindFragment
 import me.rosuh.easywatermark.databinding.FragmentColorBinding
-import me.rosuh.easywatermark.ktx.commitWithAnimation
+import me.rosuh.easywatermark.ui.adapter.ColorPreviewAdapter
+import me.rosuh.easywatermark.ui.base.BaseBindFragment
+import me.rosuh.easywatermark.ui.widget.utils.BounceEdgeEffectFactory
+import me.rosuh.easywatermark.utils.ktx.commitWithAnimation
 import me.rosuh.easywatermark.utils.onItemClick
-import me.rosuh.easywatermark.widget.utils.BounceEdgeEffectFactory
 
 class ColorFragment : BaseBindFragment<FragmentColorBinding>() {
 
@@ -52,7 +52,7 @@ class ColorFragment : BaseBindFragment<FragmentColorBinding>() {
     ): FragmentColorBinding {
         val b = FragmentColorBinding.inflate(layoutInflater, container, false)
 
-        val savedColor = shareViewModel.config.value?.textColor ?: Color.WHITE
+        val savedColor = shareViewModel.waterMark.value?.textColor ?: Color.WHITE
         val colorArrayList = buildColorList(savedColor)
 
         b.rvColor.apply {
@@ -95,7 +95,8 @@ class ColorFragment : BaseBindFragment<FragmentColorBinding>() {
                             changeIvColor(it, Color.alpha(it))
                         }
                     }
-                })
+                }
+            )
             .setNegativeButton(requireActivity().getString(R.string.tips_cancel_dialog)) { dialogInterface, _ -> dialogInterface.dismiss() }
             .attachAlphaSlideBar(true)
             .attachBrightnessSlideBar(true)
@@ -137,7 +138,6 @@ class ColorFragment : BaseBindFragment<FragmentColorBinding>() {
     companion object {
         const val TAG = "ColorFragment"
         private const val SP_COLOR_PICKER_DIALOG = "water_mark_color_picker_dialog"
-
 
         fun replaceShow(fa: FragmentActivity, containerId: Int) {
             val f = fa.supportFragmentManager.findFragmentByTag(TAG)

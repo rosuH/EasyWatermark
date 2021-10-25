@@ -1,129 +1,235 @@
 package me.rosuh.easywatermark.ui.dialog
 
+import android.content.Intent
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AlphaAnimation
-import android.view.animation.Animation
-import androidx.core.view.isInvisible
-import androidx.core.widget.ContentLoadingProgressBar
+import android.widget.ArrayAdapter
+import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentManager
-import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.Observer
-import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import me.rosuh.easywatermark.R
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.transition.AutoTransition
+import androidx.transition.TransitionManager
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.Result
+import me.rosuh.easywatermark.databinding.DialogSaveFileBinding
+import me.rosuh.easywatermark.ui.MainActivity
 import me.rosuh.easywatermark.ui.MainViewModel
-import me.rosuh.easywatermark.utils.preCheckStoragePermission
+import me.rosuh.easywatermark.ui.adapter.SaveImageListAdapter
+import me.rosuh.easywatermark.ui.base.BaseBindBSDFragment
+import me.rosuh.easywatermark.utils.ktx.preCheckStoragePermission
+import android.animation.LayoutTransition
+import android.view.Gravity
+import androidx.core.content.ContextCompat
+import androidx.core.view.isInvisible
+import androidx.recyclerview.widget.RecyclerView
+import me.rosuh.easywatermark.R
+import me.rosuh.easywatermark.data.model.JobState
 
-class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
 
-    private val shareViewModel: MainViewModel by activityViewModels()
+class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
+    private val imageList: List<ImageInfo>
+        get() = (requireContext() as MainActivity).getImageList()
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        val root = inflater.inflate(R.layout.dialog_save_file, container, false)
+    private val popArray = arrayOf("JPEG", "PNG")
 
-        var ivSave: View?
-        var ivShare: View?
-        var cpbSave: ContentLoadingProgressBar?
-        var cpbShare: ContentLoadingProgressBar?
-        val curState = shareViewModel.saveState.value ?: MainViewModel.State.Ready
+    override fun bindView(
+        layoutInflater: LayoutInflater,
+        container: ViewGroup?
+    ): DialogSaveFileBinding {
+        val root = DialogSaveFileBinding.inflate(layoutInflater, container, false)
+        val isSaving = shareViewModel.saveResult.value?.code == MainViewModel.TYPE_SAVING
         with(root) {
-            findViewById<View>(R.id.ll_save).apply {
+            btnSave.apply {
                 setOnClickListener {
-                    requireActivity().preCheckStoragePermission {
-                        shareViewModel.saveImage(requireActivity().contentResolver)
+                    if (shareViewModel.saveResult.value?.code == MainViewModel.TYPE_JOB_FINISH) {
+                        // share to other apps
+                        openShare()
+                    } else {
+                        // saving jobs
+                        requireActivity().preCheckStoragePermission {
+                            shareViewModel.saveImage(
+                                requireActivity().contentResolver,
+                                (requireContext() as MainActivity).getImageViewInfo(),
+                                (requireContext() as MainActivity).getImageList()
+                            )
+                        }
                     }
                 }
             }
 
-            ivSave = findViewById<View>(R.id.iv_save).apply {
-                if (curState == MainViewModel.State.Saving && this.animation?.hasStarted() != true) {
-                    this.startAnimation(alphaAnimation)
-                }
-            }
-
-            ivShare = findViewById<View>(R.id.iv_share).apply {
-                if (curState == MainViewModel.State.Sharing && this.animation?.hasStarted() != true) {
-                    this.startAnimation(alphaAnimation)
-                }
-            }
-
-            findViewById<View>(R.id.ll_share).apply {
+            btnOpenGallery.apply {
+                this.isInvisible = true
                 setOnClickListener {
-                    requireActivity().preCheckStoragePermission {
-                        shareViewModel.shareImage(requireActivity().contentResolver)
-                    }
+                    openGallery()
                 }
             }
 
-            cpbSave = findViewById(R.id.cpb_save)
+            atvFormat.also {
+                it.setAdapter(
+                    ArrayAdapter(
+                        requireContext(),
+                        android.R.layout.simple_dropdown_item_1line,
+                        popArray
+                    )
+                )
+                it.setText(
+                    if (shareViewModel.outputFormat == Bitmap.CompressFormat.JPEG) "JPEG" else "PNG",
+                    false
+                )
+                it.setOnItemClickListener { _, _, index, _ ->
+                    val targetFormat =
+                        if (index == 0) Bitmap.CompressFormat.JPEG else Bitmap.CompressFormat.PNG
+                    shareViewModel.saveOutput(targetFormat, slideQuality.value.toInt())
+                    flQuality.isVisible = targetFormat == Bitmap.CompressFormat.JPEG
+                    slideQuality.isVisible = targetFormat == Bitmap.CompressFormat.JPEG
+                }
+            }
 
-            cpbShare = findViewById(R.id.cpb_share)
+            flQuality.isVisible = shareViewModel.outputFormat == Bitmap.CompressFormat.JPEG
+            slideQuality.isVisible = shareViewModel.outputFormat == Bitmap.CompressFormat.JPEG
+
+            rvResult.apply {
+                adapter = SaveImageListAdapter(requireContext()).also {
+                    it.submitList(imageList)
+                }
+                itemAnimator = null
+                val spanCount = when {
+                    imageList.size < 5 -> imageList.size.coerceAtLeast(1)
+                    imageList.size < 20 && imageList.size % 2 == 0 -> imageList.size / 2
+                    imageList.size < 20 -> imageList.size / 2 + 1
+                    else -> 10
+                }
+                scrollBarStyle
+                layoutManager = GridLayoutManager(requireContext(), spanCount)
+            }
+            val compressLevel = shareViewModel.compressLevel.toFloat()
+
+            val theAdapter = rvResult.adapter as SaveImageListAdapter
+
+            tvQualityValue.text = compressLevel.toInt().toString()
+
+            tvResult.text = requireContext().getString(
+                R.string.dialog_save_export_list_title,
+                "${theAdapter.data.count { it.jobState is JobState.Success }}/${theAdapter.itemCount}"
+            )
+
+            slideQuality.apply {
+                value = compressLevel
+                addOnChangeListener { _, value, _ ->
+                    shareViewModel.saveOutput(shareViewModel.outputFormat, value.toInt())
+                    tvQualityValue.text = value.toInt().toString()
+                }
+            }
+
+            shareViewModel.saveProcess.observe(viewLifecycleOwner) {
+                theAdapter.updateJobState(it)
+                if (it?.jobState is JobState.Success) {
+                    val count = theAdapter.finishCount
+                    tvResult.text = requireContext().getString(
+                        R.string.dialog_save_export_list_title,
+                        "$count/${theAdapter.itemCount}"
+                    )
+                }
+            }
+
+            shareViewModel.saveResult.observe(viewLifecycleOwner) {
+                setUpLoadingView(it)
+            }
         }
-
-        setUpLoadingView(shareViewModel.saveState.value, cpbSave, cpbShare, ivSave, ivShare)
-
-        shareViewModel.saveState.observe(viewLifecycleOwner, Observer {
-            setUpLoadingView(it, cpbSave, cpbShare, ivSave, ivShare)
-        })
-
         return root
     }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        setUpLoadingView(shareViewModel.saveResult.value)
+    }
+
     private fun setUpLoadingView(
-        saveStatus: MainViewModel.State?,
-        cpbSave: ContentLoadingProgressBar?,
-        cpbShare: ContentLoadingProgressBar?,
-        ivSave: View?,
-        ivShare: View?
+        saveResult: Result<*>?
     ) {
-        when (saveStatus) {
-            MainViewModel.State.Saving -> {
-                cpbSave?.show()
-                cpbShare?.hide()
-                ivSave?.isInvisible = true
-                ivShare?.isInvisible = false
+        when (saveResult?.code) {
+            MainViewModel.TYPE_SAVING -> {
+                binding.btnSave.apply {
+                    isEnabled = false
+                    text = getString(R.string.dialog_save_exporting)
+                }
+                binding.btnOpenGallery.isInvisible = true
+                binding.atvFormat.isEnabled = false
+                binding.slideQuality.isEnabled = false
+                binding.menuFormat.isEnabled = false
+                (dialog as BottomSheetDialog).behavior.isDraggable = false
+                isCancelable = false
             }
-            MainViewModel.State.Sharing -> {
-                cpbSave?.hide()
-                cpbShare?.show()
-                ivSave?.isInvisible = false
-                ivShare?.isInvisible = true
+            MainViewModel.TYPE_JOB_FINISH -> {
+                binding.btnSave.apply {
+                    isEnabled = true
+                    text = getString(R.string.share)
+                }
+                binding.btnOpenGallery.isInvisible = false
+                binding.atvFormat.isEnabled = true
+                binding.slideQuality.isEnabled = true
+                binding.menuFormat.isEnabled = true
+                (dialog as BottomSheetDialog).behavior.isDraggable = true
+                isCancelable = true
             }
             else -> {
-                cpbSave?.hide()
-                cpbShare?.hide()
-                ivSave?.isInvisible = false
-                ivShare?.isInvisible = false
+                binding.btnSave.apply {
+                    isEnabled = true
+                    text = getString(R.string.dialog_export_to_gallery)
+                }
+                binding.btnOpenGallery.isInvisible = true
+                binding.atvFormat.isEnabled = true
+                binding.slideQuality.isEnabled = true
+                binding.menuFormat.isEnabled = true
+                (dialog as BottomSheetDialog).behavior.isDraggable = true
+                isCancelable = true
+                val theAdapter = binding.rvResult.adapter as SaveImageListAdapter
+                binding.tvResult.text = requireContext().getString(
+                    R.string.dialog_save_export_list_title,
+                    "${theAdapter.data.count { it.jobState is JobState.Success }}/${theAdapter.itemCount}"
+                )
             }
         }
     }
 
-    private val alphaAnimation by lazy {
-        AlphaAnimation(1f, 0.30f).apply {
-            repeatCount = AlphaAnimation.INFINITE
-            repeatMode = AlphaAnimation.REVERSE
-            setAnimationListener(object : Animation.AnimationListener {
-                override fun onAnimationRepeat(animation: Animation?) {
-
-                }
-
-                override fun onAnimationEnd(animation: Animation?) {
-
-                }
-
-                override fun onAnimationStart(animation: Animation?) {
-
-                }
-
-            })
-            duration = 550
+    private fun openGallery() {
+        val list = shareViewModel.imageList.value?.first
+        if (list.isNullOrEmpty()) return
+        val outputUri = list.first().shareUri
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(outputUri, "image/*")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
+        startActivity(intent)
+    }
+
+    private fun openShare() {
+        val list = shareViewModel.imageList.value?.first
+        if (list.isNullOrEmpty()) return
+        val intent = Intent().apply {
+            type = "image/*"
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        if (list.size == 1) {
+            val outputUri = list.first().shareUri
+            intent.apply {
+                action = Intent.ACTION_SEND
+                putExtra(Intent.EXTRA_STREAM, outputUri)
+            }
+        } else {
+            val uriList = ArrayList(list.map { it.shareUri })
+            intent.apply {
+                action = Intent.ACTION_SEND_MULTIPLE
+                putParcelableArrayListExtra(Intent.EXTRA_STREAM, uriList)
+            }
+        }
+        startActivity(intent)
     }
 
     companion object {
@@ -155,6 +261,5 @@ class SaveImageBSDialogFragment : BottomSheetDialogFragment() {
                 ie.printStackTrace()
             }
         }
-
     }
 }

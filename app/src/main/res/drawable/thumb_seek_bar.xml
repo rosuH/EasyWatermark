@@ -2,13 +2,13 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="oval">
-            <solid android:color="@color/colorSecondary" />
+            <solid android:color="@color/white" />
             <size
-                android:width="20dp"
-                android:height="20dp" />
+                android:width="22dp"
+                android:height="22dp" />
             <stroke
                 android:width="2dp"
-                android:color="#fff" />
+                android:color="#00FFFFFF" />
         </shape>
     </item>
 

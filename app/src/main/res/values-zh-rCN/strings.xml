@@ -40,7 +40,7 @@
     <string name="error_not_img">请选择图片</string>
     <string name="error_file_not_found">未选择图片或图片不存在</string>
     <string name="tips_pick_image">"选择图片，开始编辑 "</string>
-    <string name="save_directly">直接保存</string>
+    <string name="dialog_export_to_gallery">导出到相册</string>
     <string name="directly_save_tips">直接存储编辑后的图像到你的相册中</string>
     <string name="share_tips">分享编辑后的图像到其他应用</string>
     <string name="share">分享</string>
@@ -71,10 +71,11 @@
         <![CDATA[
         <h2 id="new-and-optimized">新增与优化</h2>
         <ol>
-        <li>&nbsp;&nbsp;⚡️ 改进内存的使用.</li>
-        <li>&nbsp;&nbsp;🎨 改进动画和交互.</li>
-        <li>&nbsp;&nbsp;🥳 支持 Android 12 的启动动画.</li>
-        <li>&nbsp;&nbsp;🔧 提升 targetApi 到 31.</li>
+        <li>&nbsp;&nbsp;🥳 欢迎批量模式的到来！</li>
+        </ol>
+        <h2 id="Fixed">修复</h2>
+        <ol>
+        <li>&nbsp;&nbsp;🐛 修复重用位图导致的崩溃（感谢 lala）</li>
         </ol>
 ]]>
 
@@ -97,5 +98,10 @@
     <string name="text_typeface_italic">斜体</string>
     <string name="text_typeface_bold_italic">斜体加粗</string>
     <string name="dialog_check_out_in_github">在 Github 上查看</string>
+    <string name="dialog_save_exporting">正在导出</string>
+    <string name="dialog_save_export_list_title">导出列表（%1$s）</string>
+    <string name="dialog_open_in_gallery">在相册中查看</string>
+    <string name="dialog_save_config_format">格式</string>
+    <string name="dialog_save_config_quality">质量</string>
 
 </resources>

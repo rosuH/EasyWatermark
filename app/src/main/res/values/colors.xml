@@ -10,6 +10,8 @@
 
     <color name="text_color_main">#fff</color>
     <color name="text_color_tips">@color/d_neutral_3</color>
+    <color name="color_error">#C81412</color>
+    <color name="text_color_on_export">@color/d_save_dialog_main_color</color>
 
     <color name="white">#fff</color>
     <color name="white_14">#24FFFFFF</color>
@@ -26,6 +28,10 @@
     <color name="d_neutral_4">#FFFFFF</color>
     <color name="d_page_bg">#000</color>
     <color name="d_tool_bar_bg">#161616</color>
+    <color name="d_slide_bg">#3DFFFFFF</color>
+    <color name="d_progress_active">#8000A407</color>
+    <color name="d_progress_error">#80C81412</color>
+    <color name="d_save_dialog_main_color">#0D0D0D</color>
 
     <color name="black">#000</color>
 </resources>

@@ -5,174 +5,228 @@ import android.content.ActivityNotFoundException
 import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.Rect
+import android.graphics.*
+import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.text.TextPaint
+import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import androidx.lifecycle.*
+import androidx.palette.graphics.Palette
+import dagger.hilt.android.lifecycle.HiltViewModel
 import id.zelory.compressor.Compressor
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.ktx.applyConfig
-import me.rosuh.easywatermark.ktx.formatDate
-import me.rosuh.easywatermark.model.TextPaintStyle
-import me.rosuh.easywatermark.model.TextTypeface
-import me.rosuh.easywatermark.model.UserConfig
-import me.rosuh.easywatermark.model.WaterMarkConfig
-import me.rosuh.easywatermark.repo.UserConfigRepo
+import me.rosuh.easywatermark.data.model.*
+import me.rosuh.easywatermark.data.repo.UserConfigRepository
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository
+import me.rosuh.easywatermark.ui.widget.WaterMarkImageView
 import me.rosuh.easywatermark.utils.FileUtils.Companion.outPutFolderName
-import me.rosuh.easywatermark.utils.Result
-import me.rosuh.easywatermark.utils.decodeBitmapFromUri
-import me.rosuh.easywatermark.utils.decodeSampledBitmapFromResource
-import me.rosuh.easywatermark.widget.WaterMarkImageView
+import me.rosuh.easywatermark.utils.bitmap.*
+import me.rosuh.easywatermark.utils.ktx.applyConfig
+import me.rosuh.easywatermark.utils.ktx.formatDate
+import me.rosuh.easywatermark.utils.ktx.launch
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
+import javax.inject.Inject
+import kotlin.math.ceil
+import kotlin.math.roundToInt
 
+@HiltViewModel
+class MainViewModel @Inject constructor(
+    private val userRepo: UserConfigRepository,
+    private val waterMarkRepo: WaterMarkRepository
+) : ViewModel() {
 
-class MainViewModel : ViewModel() {
+    var nextSelectedPos: Int = 0
 
-    sealed class State(var msg: String = "") {
-        object Ready : State()
-        object Saving : State()
-        object Sharing : State()
-        object SaveOk : State()
-        object ShareOk : State()
-        object Compressing : State()
-        object CompressOK : State()
-        object CompressError : State()
-        object Error : State()
-        object FileNotFoundError : State()
-        object OOMError : State()
-    }
+    val saveResult: MutableLiveData<Result<*>> = MutableLiveData()
 
-    sealed class TipsStatus(val values: Any? = null) {
-        class None(v: Any?) : TipsStatus(values = v)
-        class Alpha(v: Any?) : TipsStatus(values = v)
-        class Size(v: Any?) : TipsStatus(values = v)
-    }
+    val compressedResult: MutableLiveData<Result<*>> = MutableLiveData()
 
-    val result: MutableLiveData<Result<*>> = MutableLiveData()
+    val waterMark: LiveData<WaterMark> = waterMarkRepo.waterMark.asLiveData()
 
-    val saveState: MutableLiveData<State> = MutableLiveData()
+    private var autoScroll = true
 
-    val config: MutableLiveData<WaterMarkConfig> by lazy {
-        MutableLiveData<WaterMarkConfig>(WaterMarkConfig.pull())
-    }
+    val imageList: LiveData<Pair<List<ImageInfo>, Boolean>> =
+        waterMarkRepo.uriLivedData.map { Pair(it, autoScroll) }
 
-    val tipsStatus: MutableLiveData<TipsStatus> by lazy {
-        MutableLiveData<TipsStatus>(TipsStatus.None(false))
-    }
+    val selectedImage: MutableLiveData<ImageInfo> = MutableLiveData()
 
-    val shareImageUri: MutableLiveData<Uri> = MutableLiveData()
+    val saveImageUri: MutableLiveData<List<ImageInfo>> = MutableLiveData()
 
-    val saveImageUri: MutableLiveData<Uri> = MutableLiveData()
+    val saveProcess: MutableLiveData<ImageInfo> = MutableLiveData()
 
-    private val repo = UserConfigRepo
-    private val userConfig: MutableLiveData<UserConfig> = repo.userConfig
+    private var compressedJob: Job? = null
 
-    fun saveImage(contentResolver: ContentResolver) {
+    private var userPreferences: StateFlow<UserPreferences> = userRepo.userPreferences.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        UserPreferences.DEFAULT
+    )
+
+    val outputFormat: Bitmap.CompressFormat
+        get() = userPreferences.value.outputFormat
+
+    val compressLevel: Int
+        get() = userPreferences.value.compressLevel
+
+    val isNeedShowUpgradeInfo: LiveData<Boolean> =
+        userRepo.changeLogFlow.map { it != BuildConfig.VERSION_CODE.toString() }.asLiveData()
+
+    val colorPalette: MutableLiveData<Palette> = MutableLiveData()
+
+    private val tmpDrawableBounds by lazy { Rect() }
+    private val drawableBounds by lazy { RectF() }
+    private val tmpSrcBounds by lazy { RectF() }
+    private val tmpDstBounds by lazy { RectF() }
+
+    fun saveImage(
+        contentResolver: ContentResolver,
+        viewInfo: ViewInfo,
+        imageList: List<ImageInfo>
+    ) {
         viewModelScope.launch {
-            if (config.value?.uri?.toString().isNullOrEmpty()) {
-                result.value = Result.failure(null, code = TYPE_ERROR_NOT_IMG)
+            if (this@MainViewModel.imageList.value?.first.isNullOrEmpty()) {
+                saveResult.value = Result.failure(null, code = TYPE_ERROR_NOT_IMG)
                 return@launch
             }
-            saveState.postValue(State.Saving)
-            try {
-                val rect = generateImage(contentResolver, config.value?.uri ?: Uri.parse(""))
-                if (rect.isFailure() || rect.data == null) {
-                    result.postValue(rect)
-                    return@launch
-                }
-                saveImageUri.value = rect.data!!
-                saveState.postValue(State.SaveOk)
-            } catch (fne: FileNotFoundException) {
-                fne.printStackTrace()
-                result.value = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
-                saveState.postValue(State.FileNotFoundError)
-            } catch (oom: OutOfMemoryError) {
-                saveState.postValue(State.OOMError)
-                result.value = Result.failure(null, code = TYPE_ERROR_SAVE_OOM)
+            saveResult.value =
+                Result.success(null, code = TYPE_SAVING)
+            val result = generateList(contentResolver, viewInfo, imageList)
+            if (result.isFailure()) {
+                saveResult.value = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
+                return@launch
             }
+            saveImageUri.value = result.data
+            saveResult.value = Result.success(code = TYPE_JOB_FINISH, data = result.data)
         }
     }
 
-    fun shareImage(contentResolver: ContentResolver,) {
-        viewModelScope.launch {
-            if (config.value?.uri?.toString().isNullOrEmpty()) {
-                result.value = Result.failure(null, code = TYPE_ERROR_NOT_IMG)
-                return@launch
+    private suspend fun generateList(
+        contentResolver: ContentResolver,
+        viewInfo: ViewInfo,
+        infoList: List<ImageInfo>?
+    ): Result<List<ImageInfo>> =
+        withContext(Dispatchers.Default) {
+            if (infoList.isNullOrEmpty()) {
+                return@withContext Result.failure(null, TYPE_ERROR_NOT_IMG)
             }
-            try {
-                saveState.postValue(State.Sharing)
-                val rect = generateImage(contentResolver, config.value?.uri ?: Uri.parse(""))
-                if (rect.isFailure() || rect.data == null) {
-                    result.postValue(rect)
-                    return@launch
+            infoList.forEach { info ->
+                try {
+                    info.jobState = JobState.Ing
+                    launch(Dispatchers.Main) { saveProcess.value = info }
+                    info.result = generateImage(contentResolver, viewInfo, info)
+                    info.jobState = JobState.Success(info.result!!)
+                    launch(Dispatchers.Main) { saveProcess.value = info }
+                } catch (fne: FileNotFoundException) {
+                    fne.printStackTrace()
+                    info.result = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
+                    info.jobState = JobState.Failure(info.result!!)
+                    saveProcess.postValue(info)
+                } catch (oom: OutOfMemoryError) {
+                    info.result = Result.failure(null, code = TYPE_ERROR_SAVE_OOM)
+                    info.jobState = JobState.Failure(info.result!!)
+                    saveProcess.postValue(info)
                 }
-                shareImageUri.value = rect.data!!
-                saveState.postValue(State.ShareOk)
-            } catch (fne: FileNotFoundException) {
-                fne.printStackTrace()
-                result.value = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
-                saveState.postValue(State.FileNotFoundError)
-            } catch (oom: OutOfMemoryError) {
-                saveState.postValue(State.OOMError)
-                result.value = Result.failure(null, code = TYPE_ERROR_SAVE_OOM)
+                Log.i("generateList", "${info.uri} : ${info.result}")
             }
+            // reset process state
+            saveProcess.postValue(null)
+            return@withContext Result.success(infoList)
         }
-    }
 
-    @Throws(FileNotFoundException::class, OutOfMemoryError::class)
-    private suspend fun generateImage(contentResolver: ContentResolver, uri: Uri): Result<Uri> =
+    private suspend fun generateImage(
+        contentResolver: ContentResolver,
+        viewInfo: ViewInfo,
+        imageInfo: ImageInfo
+    ): Result<Uri> =
         withContext(Dispatchers.IO) {
-            val rect = decodeBitmapFromUri(contentResolver, uri)
+            val rect = decodeBitmapFromUri(contentResolver, imageInfo.uri)
             if (rect.isFailure()) {
                 return@withContext Result.extendMsg(rect)
             }
-            val mutableBitmap = rect.data?.copy(Bitmap.Config.ARGB_8888, true)
+            val mutableBitmap = rect.data?.bitmap?.copy(Bitmap.Config.ARGB_8888, true)
                 ?: return@withContext Result.failure(
                     null,
                     code = "-1",
                     message = "Copy bitmap from uri failed."
                 )
-            if (config.value == null) {
+
+            val inSample = calculateInSampleSize(
+                mutableBitmap.width,
+                mutableBitmap.height,
+                WaterMarkImageView.calculateDrawLimitWidth(viewInfo.width, viewInfo.paddingLeft),
+                WaterMarkImageView.calculateDrawLimitHeight(viewInfo.height, viewInfo.paddingRight),
+            )
+            imageInfo.width = mutableBitmap.width
+            imageInfo.height = mutableBitmap.height
+            if (waterMark.value == null) {
                 return@withContext Result.failure(
                     null,
                     code = "-1",
                     message = "config.value == null"
                 )
             }
+            imageInfo.inSample = inSample
             val canvas = Canvas(mutableBitmap)
-            val tmpConfig = config.value!!
-            val bitmapPaint = Paint().applyConfig(tmpConfig, false)
+            val tmpConfig = waterMark.value!!
+            // generate matrxi of drawable
+            val imageMatrix = generateMatrix(
+                viewInfo,
+                ceil((imageInfo.width.toDouble() / imageInfo.inSample)).toInt(),
+                ceil((imageInfo.height.toDouble() / imageInfo.inSample)).toInt(),
+                tmpDrawableBounds,
+                tmpSrcBounds,
+                tmpDstBounds
+            )
+            Log.i(
+                "generateImage",
+                """
+                    imageMatrix = $imageMatrix,
+                    inSample = $inSample,
+                    imageInfo = $imageInfo
+                    viewInfo = $viewInfo,
+                    bitmapW = ${mutableBitmap.width}
+                    bitmapH = ${mutableBitmap.height},
+                """.trimIndent()
+            )
+            // map to drawable bounds
+            imageMatrix.mapRect(drawableBounds, RectF(tmpDrawableBounds))
+            drawableBounds.set(
+                drawableBounds.left + viewInfo.paddingLeft,
+                drawableBounds.top + viewInfo.paddingTop,
+                drawableBounds.right + viewInfo.paddingRight,
+                drawableBounds.bottom + viewInfo.paddingBottom,
+            )
+            // calculate the scale factor
+            imageInfo.scaleX = mutableBitmap.width.toFloat() / drawableBounds.width()
+            imageInfo.scaleY = mutableBitmap.height.toFloat() / drawableBounds.height()
+            val bitmapPaint = TextPaint().applyConfig(imageInfo, tmpConfig, isScale = false)
             val layoutPaint = Paint()
-            val bounds = Rect()
-
-            bitmapPaint.getTextBounds(tmpConfig.text, 0, tmpConfig.text.length, bounds)
-            layoutPaint.shader = when (config.value?.markMode) {
-                WaterMarkConfig.MarkMode.Text -> {
+            layoutPaint.shader = when (waterMark.value?.markMode) {
+                WaterMarkRepository.MarkMode.Text -> {
                     WaterMarkImageView.buildTextBitmapShader(
-                        config.value!!,
-                        bounds,
+                        imageInfo,
+                        waterMark.value!!,
                         bitmapPaint,
                         Dispatchers.IO
                     )
                 }
-                WaterMarkConfig.MarkMode.Image -> {
+                WaterMarkRepository.MarkMode.Image -> {
                     val iconBitmapRect = decodeSampledBitmapFromResource(
                         contentResolver,
                         tmpConfig.iconUri,
-                        mutableBitmap.width,
-                        mutableBitmap.height
+                        viewInfo.width,
+                        viewInfo.height
                     )
                     if (iconBitmapRect.isFailure() || iconBitmapRect.data == null) {
                         return@withContext Result.failure(
@@ -181,13 +235,13 @@ class MainViewModel : ViewModel() {
                             message = "decodeSampledBitmapFromResource == null"
                         )
                     }
-                    val iconBitmap = iconBitmapRect.data!!
+                    val iconBitmap = iconBitmapRect.data!!.bitmap
                     WaterMarkImageView.buildIconBitmapShader(
+                        imageInfo,
                         iconBitmap,
-                        true,
-                        Rect(0, 0, mutableBitmap.width, mutableBitmap.height),
                         tmpConfig,
                         bitmapPaint,
+                        scale = true,
                         Dispatchers.IO
                     )
                 }
@@ -210,16 +264,16 @@ class MainViewModel : ViewModel() {
                         MediaStore.Images.Media.DISPLAY_NAME,
                         generateOutputName()
                     )
-                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-                    put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/${outPutFolderName}/")
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/${trapOutputExtension()}")
+                    put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/$outPutFolderName/")
                     put(MediaStore.Images.Media.IS_PENDING, 1)
                 }
 
                 val imageContentUri = contentResolver.insert(imageCollection, imageDetail)
                 contentResolver.openFileDescriptor(imageContentUri!!, "w", null).use { pfd ->
                     mutableBitmap.compress(
-                        userConfig.value?.outputFormat ?: Bitmap.CompressFormat.JPEG,
-                        userConfig.value?.compressLevel ?: 95,
+                        outputFormat,
+                        compressLevel,
                         FileOutputStream(pfd!!.fileDescriptor)
                     )
                 }
@@ -249,8 +303,8 @@ class MainViewModel : ViewModel() {
                     File(mediaDir, generateOutputName())
                 outputFile.outputStream().use { fileOutputStream ->
                     mutableBitmap.compress(
-                        userConfig.value?.outputFormat ?: Bitmap.CompressFormat.JPEG,
-                        userConfig.value?.compressLevel ?: 95,
+                        outputFormat,
+                        compressLevel,
                         fileOutputStream
                     )
                 }
@@ -274,109 +328,158 @@ class MainViewModel : ViewModel() {
     }
 
     private fun trapOutputExtension(): String {
-        return if (userConfig.value?.outputFormat == Bitmap.CompressFormat.PNG) "png" else "jpg"
+        return if (outputFormat == Bitmap.CompressFormat.PNG) "png" else "jpg"
     }
 
-    fun updateUri(uri: Uri) {
-        config.value?.uri = uri
-        forceRefresh()
+    fun selectImage(uri: Uri) {
+        selectedImage.value = ImageInfo(uri)
+    }
+
+    fun updateImageList(list: List<Uri>) {
+        list.map { ImageInfo(it) }
+            .takeIf {
+                it.isNotEmpty()
+            }
+            ?.let {
+                autoScroll = true
+                selectedImage.value = it.first()
+                nextSelectedPos = 0
+                launch {
+                    waterMarkRepo.updateImageList(it)
+                }
+                list.forEachIndexed { index, uri ->
+                    Log.i(
+                        "updateImageList",
+                        "index = $index, uri = $uri, the same = ${list[index] == it[index].uri}"
+                    )
+                }
+            }
     }
 
     fun updateText(text: String) {
-        config.value?.text = text
-        config.value?.markMode = WaterMarkConfig.MarkMode.Text
-        forceRefresh()
-    }
-
-    fun updateTextSize(textSize: Float) {
-        val finalTextSize = textSize.coerceAtLeast(0f)
-        config.value?.textSize = finalTextSize
-        tipsStatus.postValue(TipsStatus.Size((finalTextSize).toInt()))
-        forceRefresh()
-    }
-
-    fun updateTextSizeBy(textSize: Float) {
-        val curTextSize = config.value?.textSize ?: 14f
-        updateTextSize((curTextSize + textSize).coerceAtLeast(0f))
-    }
-
-    fun updateTextColor(color: Int) {
-        config.value?.textColor = color
-        forceRefresh()
-    }
-
-    fun updateTextStyle(style: TextPaintStyle) {
-        config.value?.textStyle = style
-        forceRefresh()
-    }
-
-    fun updateTextTypeface(typeface: TextTypeface) {
-        config.value?.textTypeface = typeface
-        forceRefresh()
-    }
-
-    fun updateAlpha(alpha: Int) {
-        val finalAlpha = alpha.coerceAtLeast(0).coerceAtMost(255)
-        config.value?.alpha = finalAlpha
-        tipsStatus.postValue(TipsStatus.Alpha((finalAlpha.toFloat() / 255 * 100).toInt()))
-        forceRefresh()
-    }
-
-    fun updateAlphaBy(alpha: Float) {
-        val curAlpha = config.value?.alpha ?: 128
-        updateAlpha(((curAlpha + alpha).toInt()).coerceAtLeast(0).coerceAtMost(255))
-    }
-
-    fun updateHorizon(gap: Int) {
-        config.value?.horizonGapPercent = gap
-        forceRefresh()
-    }
-
-    fun updateVertical(gap: Int) {
-        config.value?.verticalGapPercent = gap
-        forceRefresh()
-    }
-
-    fun updateDegree(degree: Float) {
-        config.value?.degree = degree
-        forceRefresh()
-    }
-
-    fun updateIcon(iconUri: Uri = config.value?.iconUri ?: Uri.parse("")) {
-        config.value?.iconUri = iconUri
-        viewModelScope.launch {
-            if (iconUri.toString().isNotEmpty()) {
-                config.value?.iconUri = iconUri
-                config.value?.markMode = WaterMarkConfig.MarkMode.Image
-            }
-            forceRefresh()
+        launch {
+            waterMarkRepo.updateText(text)
         }
     }
 
-    fun updateTips(tipsStatus: TipsStatus) {
-        this.tipsStatus.postValue(tipsStatus)
+    fun updateTextSize(textSize: Float) {
+        launch {
+            val finalTextSize = textSize.coerceAtLeast(0f)
+            waterMarkRepo.updateTextSize(finalTextSize)
+        }
+    }
+
+    fun updateTextColor(color: Int) {
+        launch {
+            waterMarkRepo.updateColor(color)
+        }
+    }
+
+    fun updateTextStyle(style: TextPaintStyle) {
+        launch {
+            waterMarkRepo.updateTextStyle(style)
+        }
+    }
+
+    fun updateTextTypeface(typeface: TextTypeface) {
+        launch {
+            waterMarkRepo.updateTypeFace(typeface)
+        }
+    }
+
+    fun updateAlpha(alpha: Int) {
+        launch {
+            val finalAlpha = alpha.coerceAtLeast(0).coerceAtMost(255)
+            waterMarkRepo.updateAlpha(finalAlpha)
+        }
+    }
+
+    fun updateHorizon(gap: Int) {
+        launch {
+            waterMarkRepo.updateHorizon(gap)
+        }
+    }
+
+    fun updateVertical(gap: Int) {
+        launch {
+            waterMarkRepo.updateVertical(gap)
+        }
+    }
+
+    fun updateDegree(degree: Float) {
+        launch {
+            waterMarkRepo.updateDegree(degree)
+        }
+    }
+
+    fun updateIcon(iconUri: Uri) {
+        launch {
+            if (iconUri.toString().isNotEmpty()) {
+                waterMarkRepo.updateIcon(iconUri)
+            }
+        }
+    }
+
+    fun saveOutput(format: Bitmap.CompressFormat, level: Int) {
+        viewModelScope.launch {
+            userRepo.updateFormat(format)
+            userRepo.updateCompressLevel(level)
+        }
+        resetStatus()
+    }
+
+    fun removeImage(
+        imageInfo: ImageInfo?,
+        curSelectedPos: Int
+    ) {
+        val list = imageList.value?.first?.toMutableList() ?: return
+        val removePos = list.indexOf(imageInfo)
+        list.removeAt(removePos)
+        val selectedPos =
+            if (removePos < curSelectedPos || removePos >= (imageList.value?.first?.size
+                    ?: 0) - 1
+            ) {
+                (curSelectedPos - 1).coerceAtLeast(0)
+            } else {
+                curSelectedPos
+            }
+        launch {
+            autoScroll = false
+            nextSelectedPos = selectedPos
+            waterMarkRepo.updateImageList(list)
+            if (removePos == curSelectedPos) {
+                list.getOrNull(selectedPos)?.uri?.let { selectImage(it) }
+            }
+        }
+    }
+
+    fun updateColorPalette(palette: Palette) {
+        colorPalette.postValue(palette)
     }
 
     fun resetStatus() {
-        saveState.postValue(State.Ready)
+        saveResult.postValue(Result.success(null))
+        imageList.value?.first?.forEach {
+            it.jobState = JobState.Ready
+            saveProcess.value = it
+        }
     }
 
-
-    private fun forceRefresh() {
-        config.value?.save()
-        config.postValue(config.value)
+    fun resetModeToText() {
+        launch { waterMarkRepo.resetModeToText() }
     }
 
-    fun compressImg(activity: Activity): Job {
-        return viewModelScope.launch(Dispatchers.IO) {
-            config.value?.let {
-                saveState.postValue(State.Compressing)
+    fun compressImg(activity: Activity) {
+        compressedJob = viewModelScope.launch(Dispatchers.IO) {
+            waterMark.value?.let {
+                compressedResult.postValue(Result.success(null, code = TYPE_COMPRESSING))
                 val tmpFile = File.createTempFile("easy_water_mark_", "_compressed")
-                activity.contentResolver.openInputStream(it.uri).use { input ->
-                    tmpFile.outputStream().use { output ->
-                        input?.copyTo(output)
+                activity.contentResolver.openInputStream(waterMarkRepo.imageInfoList.first().uri)
+                    .use { input ->
+                        tmpFile.outputStream().use { output ->
+                            input?.copyTo(output)
+                        }
                     }
-                }
                 val compressedFile = Compressor.compress(activity, tmpFile)
                 // clear tmp files
                 if (tmpFile.exists()) {
@@ -388,17 +491,31 @@ class MainViewModel : ViewModel() {
                         "${BuildConfig.APPLICATION_ID}.fileprovider",
                         compressedFile
                     )
-                    updateUri(compressedFileUri)
-                    saveState.postValue(State.CompressOK)
+                    selectImage(compressedFileUri)
+                    compressedResult.postValue(Result.success(null, code = TYPE_COMPRESS_OK))
                 } catch (ie: IllegalArgumentException) {
-                    saveState.postValue(State.CompressError.also { error ->
-                        error.msg = "Images creates uri failed."
-                    })
+                    compressedResult.postValue(
+                        Result.failure(
+                            null,
+                            code = TYPE_COMPRESS_ERROR,
+                            message = "Images creates uri failed."
+                        )
+                    )
                 }
             } ?: kotlin.run {
-                saveState.postValue(State.CompressError.also { it.msg = "Config value is null." })
+                compressedResult.postValue(
+                    Result.failure(
+                        null,
+                        code = TYPE_COMPRESS_ERROR,
+                        message = "Config value is null."
+                    )
+                )
             }
         }
+    }
+
+    fun cancelCompressJob() {
+        compressedJob?.cancel()
     }
 
     fun extraCrashInfo(activity: Activity, crashInfo: String?) {
@@ -417,10 +534,10 @@ class MainViewModel : ViewModel() {
                     ${activity.getString(R.string.contributor_info)}
                     =====================
                     ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
-                """.trimIndent()
+        """.trimIndent()
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "message/rfc822"
-            putExtra(Intent.EXTRA_EMAIL, arrayOf("rosuh@qq.com"))
+            putExtra(Intent.EXTRA_EMAIL, arrayOf("hi@rosuh.me"))
             putExtra(Intent.EXTRA_SUBJECT, activity.getString(R.string.email_subject))
             putExtra(Intent.EXTRA_TEXT, mainContent)
         }
@@ -441,9 +558,23 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    override fun onCleared() {
+        cancelCompressJob()
+        super.onCleared()
+    }
+
+    fun saveUpgradeInfo() {
+        launch { userRepo.saveVersionCode() }
+    }
+
     companion object {
         const val TYPE_ERROR_NOT_IMG = "type_error_not_img"
         const val TYPE_ERROR_FILE_NOT_FOUND = "type_error_file_not_found"
         const val TYPE_ERROR_SAVE_OOM = "type_error_save_oom"
+        const val TYPE_COMPRESS_ERROR = "type_CompressError"
+        const val TYPE_COMPRESS_OK = "type_CompressOK"
+        const val TYPE_COMPRESSING = "type_Compressing"
+        const val TYPE_SAVING = "type_saving"
+        const val TYPE_JOB_FINISH = "type_job_finish"
     }
 }

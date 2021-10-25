@@ -37,7 +37,7 @@
     <string name="error_not_img">Bild auswählen</string>
     <string name="error_file_not_found">Bild konnte nicht geöffnet werden</string>
     <string name="tips_pick_image">Bild auswählen um zu beginnen</string>
-    <string name="save_directly">Direkt speichern</string>
+    <string name="dialog_export_to_gallery">In Album exportieren</string>
     <string name="directly_save_tips">Bearbeitetes Bild speichern</string>
     <string name="share_tips">Bearbeitetes Bild teilen</string>
     <string name="share">Teilen</string>
@@ -93,5 +93,10 @@
 ]]>
     </string>
     <string name="dialog_check_out_in_github">Schau mal auf Github</string>
+    <string name="dialog_save_exporting">Export wird ausgeführt</string>
+    <string name="dialog_save_export_list_title">Liste exportieren(%1$s)</string>
+    <string name="dialog_open_in_gallery">In Galerie anzeigen</string>
+    <string name="dialog_save_config_format">Format</string>
+    <string name="dialog_save_config_quality">Qualität</string>
 
 </resources>

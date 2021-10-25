@@ -7,16 +7,24 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.content.edit
+import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.*
-import me.rosuh.easywatermark.model.UserConfig
-import me.rosuh.easywatermark.model.WaterMarkConfig
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository
+import javax.inject.Inject
 import kotlin.system.exitProcess
 
-
+@HiltAndroidApp
 class MyApp : Application() {
+
+    @Inject
+    lateinit var waterMarkRepo: WaterMarkRepository
+
     override fun onCreate() {
         super.onCreate()
         instance = this
+        applicationScope.launch {
+            waterMarkRepo.resetModeToText()
+        }
         catchException()
     }
 
@@ -31,10 +39,11 @@ class MyApp : Application() {
             getSharedPreferences(SP_NAME, MODE_PRIVATE).edit(true) {
                 putBoolean(KEY_IS_CRASH, true)
                 putString(
-                    KEY_STACK_TRACE, """
+                    KEY_STACK_TRACE,
+                    """
                     Crash in ${t.name}:
                     $fullStackTrace
-                """.trimIndent()
+                    """.trimIndent()
                 )
             }
             with(Intent(Intent.ACTION_MAIN)) {
@@ -42,28 +51,18 @@ class MyApp : Application() {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 this@MyApp.startActivity(this)
             }
+            e.printStackTrace()
             exitProcess(0)
         }
     }
 
     companion object {
+
+        val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
         @SuppressLint("StaticFieldLeak")
         lateinit var instance: Context
             private set
-
-        fun globalSp(): SharedPreferences {
-            return instance.getSharedPreferences(
-                WaterMarkConfig.SP_NAME,
-                MODE_PRIVATE
-            )
-        }
-
-        fun userConfigSp(): SharedPreferences {
-            return instance.getSharedPreferences(
-                UserConfig.SP_NAME,
-                MODE_PRIVATE
-            )
-        }
 
         const val SP_NAME = "sp_water_mark_crash_info"
 

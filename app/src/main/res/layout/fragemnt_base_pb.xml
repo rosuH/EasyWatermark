@@ -21,15 +21,6 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:thumbColor="@color/colorSecondary"
-        app:thumbRadius="10dp"
-        app:thumbStrokeColor="@color/white"
-        app:thumbStrokeWidth="1dp"
-        app:tickColor="@color/white"
-        app:trackColor="@color/white"
-        app:trackColorActive="@color/colorAccent"
-        app:trackColorInactive="@color/colorAccent"
-        app:trackHeight="0.5dp"
         tools:value="340" />
 
     <TextView
