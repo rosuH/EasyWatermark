@@ -82,7 +82,7 @@ dependencies {
     implementation("androidx.activity:activity-ktx:1.3.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1")
-    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.3.1")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.4.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.3.1")
     implementation("com.github.skydoves:colorpickerview:2.2.3")
     implementation("androidx.viewpager2:viewpager2:1.0.0")
