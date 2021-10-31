@@ -6,7 +6,7 @@
     android:layout_height="wrap_content"
     android:padding="5dp">
 
-    <me.rosuh.easywatermark.ui.widget.ProgressImageVIew
+    <me.rosuh.easywatermark.ui.widget.ProgressImageView
         android:id="@+id/iv_icon"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

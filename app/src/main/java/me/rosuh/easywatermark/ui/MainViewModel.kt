@@ -6,7 +6,6 @@ import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Intent
 import android.graphics.*
-import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -38,7 +37,6 @@ import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import javax.inject.Inject
 import kotlin.math.ceil
-import kotlin.math.roundToInt
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
@@ -336,25 +334,24 @@ class MainViewModel @Inject constructor(
     }
 
     fun updateImageList(list: List<Uri>) {
-        list.map { ImageInfo(it) }
-            .takeIf {
-                it.isNotEmpty()
-            }
-            ?.let {
+        launch {
+            generateImageInfoList(list)?.run {
                 autoScroll = true
-                selectedImage.value = it.first()
+                selectedImage.value = this.first()
                 nextSelectedPos = 0
-                launch {
-                    waterMarkRepo.updateImageList(it)
-                }
-                list.forEachIndexed { index, uri ->
-                    Log.i(
-                        "updateImageList",
-                        "index = $index, uri = $uri, the same = ${list[index] == it[index].uri}"
-                    )
-                }
+                waterMarkRepo.updateImageList(this)
             }
+        }
     }
+
+    private suspend fun generateImageInfoList(list: List<Uri>) =
+        withContext(Dispatchers.Default) {
+            return@withContext list.toSet()
+                .map { ImageInfo(it) }
+                .takeIf {
+                    it.isNotEmpty()
+                }
+        }
 
     fun updateText(text: String) {
         launch {
