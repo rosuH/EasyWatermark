@@ -3,19 +3,19 @@ package me.rosuh.easywatermark.ui.widget
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.*
-import android.graphics.drawable.BitmapDrawable
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.toBitmap
-import androidx.core.graphics.withSave
 import androidx.core.view.isVisible
 import me.rosuh.easywatermark.R
-import kotlin.random.Random
+import java.util.concurrent.atomic.AtomicBoolean
 
-class ProgressImageVIew : AppCompatImageView {
+class ProgressImageView : AppCompatImageView {
     constructor(context: Context) : super(context)
     constructor(context: Context, attrs: AttributeSet?) : super(context, attrs)
     constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(
@@ -35,7 +35,7 @@ class ProgressImageVIew : AppCompatImageView {
     private val successColor = ContextCompat.getColor(context, R.color.d_progress_active)
     private val failedColor = ContextCompat.getColor(context, R.color.d_progress_error)
 
-    private val xfermode by lazy { PorterDuffXfermode(PorterDuff.Mode.SRC) }
+    private val enableProgress by lazy { AtomicBoolean(false) }
 
     private var curX = 0f
 
@@ -64,10 +64,10 @@ class ProgressImageVIew : AppCompatImageView {
         super.onDraw(canvas)
         if (measuredWidth < 0 || measuredHeight <= 0 || drawable == null
             || drawable.intrinsicWidth <= 0 || drawable.intrinsicHeight <= 0 || canvas == null
+            || curX <= 0f || !enableProgress.get()
         ) {
             return
         }
-        if (curX <= 0f) return
         setupLayerBounds()
         canvas.drawRect(
             saveLayerBounds.left,
@@ -91,6 +91,7 @@ class ProgressImageVIew : AppCompatImageView {
     }
 
     fun start() {
+        enableProgress.set(true)
         isVisible = true
         startAnimator.cancel()
         startAnimator.setFloatValues(0f, 0.25f)
@@ -98,6 +99,7 @@ class ProgressImageVIew : AppCompatImageView {
     }
 
     fun finish(animate: Boolean = true) {
+        enableProgress.set(true)
         isVisible = true
         val curValue = startAnimator.animatedValue as Float
         startAnimator.cancel()
@@ -108,23 +110,25 @@ class ProgressImageVIew : AppCompatImageView {
             post {
                 curX = measuredWidth.toFloat()
                 paint.color = successColor
-                postInvalidateOnAnimation()
+                invalidate()
             }
         }
     }
 
     fun failed() {
+        enableProgress.set(true)
         isVisible = true
         startAnimator.cancel()
         paint.color = failedColor
         curX = measuredWidth.toFloat()
-        postInvalidateOnAnimation()
+        invalidate()
     }
 
     fun ready() {
-        isVisible = true
+        enableProgress.set(false)
         startAnimator.cancel()
         curX = 0f
-        postInvalidateOnAnimation()
+        isVisible = true
+        postInvalidate()
     }
 }

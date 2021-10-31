@@ -59,7 +59,7 @@ class LaunchView : CustomViewGroup {
         }
     }
 
-    val tvSelectPhotoTips: TextView by lazy {
+    private val tvSelectPhotoTips: TextView by lazy {
         AppCompatTextView(context).apply {
             textAlignment = TEXT_ALIGNMENT_CENTER
             gravity = Gravity.CENTER
@@ -73,7 +73,7 @@ class LaunchView : CustomViewGroup {
                 MarginLayoutParams(
                     LayoutParams.WRAP_CONTENT,
                     LayoutParams.WRAP_CONTENT
-                ).also { it.setMargins(0, 20.dp, 0, 0) }
+                )
             setImageResource(R.drawable.ic_picker_image)
         }
     }
@@ -84,7 +84,7 @@ class LaunchView : CustomViewGroup {
                 MarginLayoutParams(
                     48.dp,
                     48.dp
-                ).also { it.setMargins(0, 0, 0, 18.dp) }
+                )
             setImageResource(R.drawable.ic_about)
         }
     }
@@ -289,10 +289,10 @@ class LaunchView : CustomViewGroup {
 
     private fun layoutLaunch() {
         logoView.let {
-            it.layoutCenterHorizontal(appendY = (measuredHeight * 0.3f).toInt())
+            it.layoutCenterHorizontal(appendY = (measuredHeight * 0.2f).toInt())
         }
         tvSelectPhotoTips.let {
-            it.layoutCenterHorizontal(appendY = logoView.bottom)
+            it.layoutCenterHorizontal(appendY = (measuredHeight * 0.6f).toInt())
         }
         ivSelectedPhotoTips.let {
             it.layoutCenterHorizontal(appendY = tvSelectPhotoTips.bottom)
@@ -335,15 +335,21 @@ class LaunchView : CustomViewGroup {
     private fun transformLayout(oldMode: ViewMode, toMode: ViewMode) {
         when (toMode) {
             ViewMode.Editor -> {
-                launchModeDisappearAnimationList.forEach { it.start() }
-                editorModeAppearAnimationList.forEach { it.start() }
+                launchViews.forEach {
+                    it.alpha = 0f
+                    it.isVisible = false
+                }
+                editorViews.forEach {
+                    it.alpha = 1f
+                    it.translationY = 0f
+                    it.isVisible = true
+                }
             }
             ViewMode.LaunchMode -> {
                 editorModeDisappearAnimationList.forEach { it.start() }
                 launchModeAppearAnimationList.forEach { it.start() }
             }
         }
-        requestLayout()
         launchViewListener?.onModeChange(oldMode, toMode)
     }
 

@@ -19,7 +19,7 @@ import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.JobState
 import me.rosuh.easywatermark.ui.base.BaseViewHolder
-import me.rosuh.easywatermark.ui.widget.ProgressImageVIew
+import me.rosuh.easywatermark.ui.widget.ProgressImageView
 import me.rosuh.easywatermark.utils.ktx.appear
 import me.rosuh.easywatermark.utils.ktx.disappear
 
@@ -72,12 +72,7 @@ class SaveImageListAdapter(
         position: Int,
         payloads: MutableList<Any>
     ) {
-        super.onBindViewHolder(holder, position, payloads)
-        if (payloads.isNullOrEmpty()) {
-            onBindViewHolder(holder, position)
-            return
-        }
-        processUI(holder, position, isPayLoad = true)
+        processUI(holder, position, isPayLoad = !payloads.isNullOrEmpty())
     }
 
     override fun onBindViewHolder(holder: ImageHolder, position: Int) {
@@ -89,9 +84,6 @@ class SaveImageListAdapter(
             return
         }
         with(differ.currentList[position]) {
-            Glide.with(MyApp.instance)
-                .load(this.uri)
-                .into(holder.ivIcon)
             when (this.jobState) {
                 JobState.Ready -> {
                     holder.ready()
@@ -106,6 +98,9 @@ class SaveImageListAdapter(
                     holder.success(isPayLoad)
                 }
             }
+            Glide.with(MyApp.instance)
+                .load(this.uri)
+                .into(holder.ivIcon)
         }
     }
 
@@ -137,11 +132,13 @@ class SaveImageListAdapter(
     class ImageHolder(itemView: View) : BaseViewHolder(itemView) {
         fun ready() {
             ivIcon.ready()
+            ivDone.animate().cancel()
             ivDone.isVisible = false
         }
 
         fun start() {
             ivIcon.start()
+            ivDone.isVisible = false
         }
 
         fun success(animate: Boolean = true) {
@@ -154,7 +151,7 @@ class SaveImageListAdapter(
             ivDone.disappear()
         }
 
-        val ivIcon: ProgressImageVIew = itemView.findViewById(R.id.iv_icon)
+        val ivIcon: ProgressImageView = itemView.findViewById(R.id.iv_icon)
         private val ivDone: ImageView = itemView.findViewById(R.id.iv_done)
     }
 }
