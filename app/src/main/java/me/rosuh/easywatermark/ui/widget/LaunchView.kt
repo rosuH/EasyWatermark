@@ -335,15 +335,21 @@ class LaunchView : CustomViewGroup {
     private fun transformLayout(oldMode: ViewMode, toMode: ViewMode) {
         when (toMode) {
             ViewMode.Editor -> {
-                launchModeDisappearAnimationList.forEach { it.start() }
-                editorModeAppearAnimationList.forEach { it.start() }
+                launchViews.forEach {
+                    it.alpha = 0f
+                    it.isVisible = false
+                }
+                editorViews.forEach {
+                    it.alpha = 1f
+                    it.translationY = 0f
+                    it.isVisible = true
+                }
             }
             ViewMode.LaunchMode -> {
                 editorModeDisappearAnimationList.forEach { it.start() }
                 launchModeAppearAnimationList.forEach { it.start() }
             }
         }
-        requestLayout()
         launchViewListener?.onModeChange(oldMode, toMode)
     }
 

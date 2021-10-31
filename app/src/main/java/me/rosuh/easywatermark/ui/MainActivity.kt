@@ -223,12 +223,10 @@ class MainActivity : AppCompatActivity() {
             try {
                 val isAnimating = launchView.toEditorMode()
                 if (isAnimating) {
-                    launchView.ivPhoto.postDelayed({
-                        launchView.ivPhoto.updateUri(it)
-                        selectTab(0)
-                    }, 150)
+                    launchView.ivPhoto.updateUri(isAnimating, it)
+                    selectTab(0)
                 } else {
-                    launchView.ivPhoto.updateUri(it)
+                    launchView.ivPhoto.updateUri(isAnimating, it)
                 }
             } catch (se: SecurityException) {
                 se.printStackTrace()
@@ -512,9 +510,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setStatusBarColor(color: Int) {
-        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
-        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-        window.statusBarColor = color;
+        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+        window.statusBarColor = color
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             window.findViewById<View>(android.R.id.content)?.foreground = null
         }

@@ -11,9 +11,6 @@ import android.text.StaticLayout
 import android.text.TextPaint
 import android.util.AttributeSet
 import android.util.Log
-import androidx.core.animation.addListener
-import androidx.core.animation.doOnEnd
-import androidx.core.animation.doOnStart
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.withSave
 import androidx.palette.graphics.Palette
@@ -55,7 +52,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
     @Volatile
     private var iconBitmap: Bitmap? = null
 
-    private var isAnimating = AtomicBoolean(false)
+    private var enableWaterMark = AtomicBoolean(false)
 
     private val drawableBounds = RectF()
 
@@ -81,9 +78,9 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     private var generateBitmapJob: Job? = null
 
-    fun updateUri(imageInfo: ImageInfo) {
+    fun updateUri(init: Boolean, imageInfo: ImageInfo) {
         config?.let {
-            applyNewConfig(it, imageInfo)
+            applyNewConfig(init, it, imageInfo)
         }
     }
 
@@ -91,7 +88,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         set(value) {
             field = value
             if (curUri.toString().isBlank()) return
-            field?.let { applyNewConfig(it, curImageInfo) }
+            field?.let { applyNewConfig(false, it, curImageInfo) }
         }
 
     private val drawableAlphaAnimator by lazy {
@@ -100,20 +97,12 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 val alpha = it.animatedValue as Int
                 this@WaterMarkImageView.drawable?.alpha = alpha
             }
-            addListener {
-                doOnStart {
-                    isAnimating.set(true)
-                }
-                doOnEnd {
-                    isAnimating.set(false)
-                    invalidate()
-                }
-            }
             duration = ANIMATION_DURATION
         }
     }
 
     private fun applyNewConfig(
+        isInit: Boolean,
         newConfig: WaterMark,
         imageInfo: ImageInfo
     ) {
@@ -145,17 +134,19 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 val imageBitmap = bitmapValue.bitmap
                 // setting the bitmap of image
                 setImageBitmap(imageBitmap)
-                Log.i(
-                    "generateImage",
-                    """
-                        imageMatrix = $imageMatrix, imageBitmapW = ${imageBitmap.width}, imageBitmapH = ${imageBitmap.height}
-                        inSample = ${bitmapValue.inSample}
-                    """.trimIndent()
-                )
                 // setting background color via Palette
                 applyBg(imageBitmap)
                 // animate to show
+                // when showing first bitmap we need to wait the imageview prepared.
+                if (isInit) {
+                    enableWaterMark.set(false)
+                }
                 drawableAlphaAnimator.start()
+                if (isInit) {
+                    invalidate()
+                    delay(drawableAlphaAnimator.duration - 30)
+                    enableWaterMark.set(true)
+                }
                 // collect the drawable of new image in ImageView
                 generateDrawableBounds()
                 // the scale factor which of real image and render bitmap
@@ -243,6 +234,11 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
     }
 
     private var layoutShader: BitmapShader? = null
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        Log.i("onSizeChanged", "$w, $h, $oldh, $oldh")
+    }
 
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)

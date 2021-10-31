@@ -330,6 +330,9 @@ class MainViewModel @Inject constructor(
     }
 
     fun selectImage(uri: Uri) {
+        if (selectedImage.value?.uri == uri) {
+            return
+        }
         selectedImage.value = ImageInfo(uri)
     }
 
