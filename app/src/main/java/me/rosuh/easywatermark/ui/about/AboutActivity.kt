@@ -8,10 +8,8 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import me.rosuh.easywatermark.BuildConfig
-import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.databinding.ActivityAboutBinding
 import me.rosuh.easywatermark.ui.dialog.ChangeLogDialogFragment
@@ -97,71 +95,15 @@ class AboutActivity : AppCompatActivity() {
                 openLink("https://tovi.fun/")
             }
             ivBack.setOnClickListener { finish() }
+
+            switchDebug.setOnCheckedChangeListener { _, isChecked ->
+                viewModel.toggleBounds(isChecked)
+            }
+
+            viewModel.waterMark.observe(this@AboutActivity) {
+                switchDebug.isChecked = viewModel.waterMark.value?.enableBounds ?: false
+            }
         }
     }
 
-    private fun showOutputDialog() {
-        MaterialAlertDialogBuilder(this@AboutActivity, R.style.ThemeOverlay_App_MaterialAlertDialog)
-            .setTitle(getString(R.string.dialog_out_put_title))
-            .setSingleChoiceItems(
-                arrayOf("JPG 100%", "JPG 95%", "JPG 80%", "PNG"),
-                getSelectedFormatting(viewModel.userPreferences.value)
-            ) { _, which ->
-                when (which) {
-                    0 -> {
-                        viewModel.saveOutput(Bitmap.CompressFormat.JPEG, 100)
-                    }
-                    1 -> {
-                        viewModel.saveOutput(Bitmap.CompressFormat.JPEG, 95)
-                    }
-                    2 -> {
-                        viewModel.saveOutput(Bitmap.CompressFormat.JPEG, 80)
-                    }
-                    3 -> {
-                        viewModel.saveOutput(Bitmap.CompressFormat.PNG, 95)
-                    }
-                }
-            }
-            .setPositiveButton(R.string.tips_confirm_dialog) { dialog, _ ->
-                dialog.cancel()
-            }
-            .setNegativeButton(R.string.tips_cancel_dialog) { dialog, _ ->
-                viewModel.saveOutput(viewModel.outputFormat, viewModel.compressLevel)
-                dialog.cancel()
-            }
-            .setCancelable(true)
-            .show()
-    }
-
-    private fun getSelectedFormatting(config: UserPreferences?): Int {
-        if (config == null) {
-            return 1
-        }
-        return when {
-            config.outputFormat == Bitmap.CompressFormat.PNG -> 3
-            config.compressLevel == 100 -> 0
-            config.compressLevel == 80 -> 2
-            else -> 1
-        }
-    }
-
-    private fun trapFormattingValue(config: UserPreferences?): String {
-        if (config == null) {
-            return ""
-        }
-        val format = when (config.outputFormat) {
-            Bitmap.CompressFormat.JPEG -> "JPG"
-            Bitmap.CompressFormat.PNG -> "PNG"
-            Bitmap.CompressFormat.WEBP -> "WEBP"
-            else -> {
-                "WEBP"
-            }
-        }
-        val value = if (config.outputFormat == Bitmap.CompressFormat.JPEG) {
-            " ${config.compressLevel}%"
-        } else {
-            ""
-        }
-        return "$format$value"
-    }
 }

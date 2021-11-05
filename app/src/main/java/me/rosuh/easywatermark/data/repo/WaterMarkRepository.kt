@@ -17,6 +17,7 @@ import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_ALPHA
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_DEGREE
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_ENABLE_BOUNDS
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_HORIZON_GAP
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_ICON_URI
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_MODE
@@ -48,6 +49,7 @@ class WaterMarkRepository @Inject constructor(
         val KEY_DEGREE = floatPreferencesKey(SP_KEY_DEGREE)
         val KEY_ICON_URI = stringPreferencesKey(SP_KEY_ICON_URI)
         val KEY_MODE = intPreferencesKey(SP_KEY_WATERMARK_MODE)
+        val KEY_ENABLE_BOUNDS = booleanPreferencesKey(SP_KEY_ENABLE_BOUNDS)
     }
 
     val waterMark: Flow<WaterMark> = dataStore.data
@@ -71,7 +73,8 @@ class WaterMarkRepository @Inject constructor(
                 hGap = it[KEY_HORIZON_GAP] ?: 0,
                 vGap = it[KEY_VERTICAL_GAP] ?: 0,
                 iconUri = Uri.parse(it[KEY_ICON_URI] ?: ""),
-                markMode = if (it[KEY_MODE] == MarkMode.Image.value) MarkMode.Image else MarkMode.Text
+                markMode = if (it[KEY_MODE] == MarkMode.Image.value) MarkMode.Image else MarkMode.Text,
+                enableBounds = it[KEY_ENABLE_BOUNDS] ?: false
             )
         }
 
@@ -141,6 +144,10 @@ class WaterMarkRepository @Inject constructor(
         dataStore.edit { it[KEY_MODE] = MarkMode.Text.value }
     }
 
+    suspend fun toggleBounds(enable: Boolean) {
+        dataStore.edit { it[KEY_ENABLE_BOUNDS] = enable }
+    }
+
     sealed class MarkMode(val value: Int) {
         object Text : MarkMode(0)
 
@@ -160,6 +167,7 @@ class WaterMarkRepository @Inject constructor(
         const val SP_KEY_VERTICAL_GAP = "${SP_NAME}_key_vertical_gap"
         const val SP_KEY_DEGREE = "${SP_NAME}_key_degree"
         const val SP_KEY_CHANGE_LOG = "${SP_NAME}_key_change_log"
+        const val SP_KEY_ENABLE_BOUNDS = "${SP_NAME}_key_enable_bounds"
         const val SP_KEY_ICON_URI = "${SP_NAME}_key_icon_uri"
         const val SP_KEY_WATERMARK_MODE = "${SP_NAME}_key_watermark_mode"
         const val MAX_TEXT_SIZE = 100f
