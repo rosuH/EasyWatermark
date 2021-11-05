@@ -7,25 +7,20 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository
+import me.rosuh.easywatermark.utils.ktx.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class AboutViewModel @Inject constructor(
-    private val userRepo: UserConfigRepository
+    private val waterMarkRepository: WaterMarkRepository
 ) : ViewModel() {
 
-    val userPreferences = userRepo.userPreferences.asLiveData()
+    val waterMark = waterMarkRepository.waterMark.asLiveData()
 
-    val outputFormat: Bitmap.CompressFormat
-        get() = userPreferences.value?.outputFormat ?: Bitmap.CompressFormat.JPEG
-
-    val compressLevel: Int
-        get() = userPreferences.value?.compressLevel ?: UserConfigRepository.DEFAULT_COMPRESS_LEVEL
-
-    fun saveOutput(format: Bitmap.CompressFormat, level: Int) {
-        viewModelScope.launch {
-            userRepo.updateFormat(format)
-            userRepo.updateCompressLevel(level)
+    fun toggleBounds(enable: Boolean) {
+        launch {
+            waterMarkRepository.toggleBounds(enable)
         }
     }
 }

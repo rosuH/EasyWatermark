@@ -319,7 +319,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             if (srcBitmap.isRecycled) {
                 return@withContext null
             }
-            val showDebugRect = BuildConfig.DEBUG && false
+            val showDebugRect = config.enableBounds
             val rawWidth =
                 srcBitmap.width.toFloat().coerceAtLeast(1f).coerceAtMost(imageInfo.width.toFloat())
             val rawHeight = srcBitmap.height.toFloat().coerceAtLeast(1f)
@@ -397,7 +397,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             if (config.text.isBlank()) {
                 return@withContext null
             }
-            val showDebugRect = BuildConfig.DEBUG && false
+            val showDebugRect = config.enableBounds
             var maxLineWidth = 0
             // calculate the max width of all lines
             config.text.split("\n").forEach {
