@@ -5,12 +5,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.ui.base.BaseViewHolder
+import me.rosuh.easywatermark.utils.ktx.colorOnPrimary
 
 class TextTypefaceAdapter(
     private val dataList: ArrayList<TextTypefaceModel>,
@@ -67,10 +67,11 @@ class TextTypefaceAdapter(
             }
             tvTitle?.text = model.title
             tvPreview.setTextColor(
-                if (selected) ContextCompat.getColor(
-                    holder.root.context,
-                    R.color.colorAccent
-                ) else ContextCompat.getColor(holder.root.context, R.color.text_color_main)
+                if (selected) {
+                    tvPreview.context.colorOnPrimary
+                } else {
+                    tvPreview.context.colorOnPrimary
+                }
             )
             textPaintStyle.applyStyle(tvPreview)
             tvPreview.setOnClickListener {

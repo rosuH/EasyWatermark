@@ -7,6 +7,7 @@ import android.graphics.*
 import android.util.AttributeSet
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.graphics.drawable.toBitmap
+import me.rosuh.easywatermark.utils.ktx.*
 
 class ColoredImageVIew : AppCompatImageView {
     constructor(context: Context) : super(context)
@@ -22,10 +23,10 @@ class ColoredImageVIew : AppCompatImageView {
     var enable = true
 
     private val colorList = arrayOf(
-        Color.parseColor("#FFA51F"),
-        Color.parseColor("#FFD703"),
-        Color.parseColor("#C0FF39"),
-        Color.parseColor("#00FFE0")
+        context.colorPrimary,
+        context.colorSecondly,
+        context.colorTertiary,
+        context.colorBackground,
     ).toIntArray()
 
     private val posList = arrayOf(0f, 0.5f, 0.7f, 0.99f).toFloatArray()

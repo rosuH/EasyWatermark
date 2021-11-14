@@ -1,27 +1,23 @@
 package me.rosuh.easywatermark.ui.adapter
 
 import android.annotation.SuppressLint
-import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
 import me.rosuh.easywatermark.ui.base.BaseViewHolder
+import me.rosuh.easywatermark.utils.ktx.colorOnPrimary
 
 class FuncPanelAdapter(
     val dataSet: ArrayList<FuncTitleModel>
 ) : RecyclerView.Adapter<FuncPanelAdapter.FuncTitleHolder>() {
 
-    var textColor: Int = ContextCompat.getColor(
-        MyApp.instance.applicationContext,
-        R.color.text_color_main
-    )
+    var textColor: Int = MyApp.instance.applicationContext.colorOnPrimary
         private set
 
     var selectedPos = 0
@@ -67,16 +63,10 @@ class FuncPanelAdapter(
             holder.ivIcon.setImageResource(iconRes)
             if (position == selectedPos) {
                 holder.ivIcon.drawable.setTint(
-                    ContextCompat.getColor(
-                        holder.itemView.context,
-                        R.color.colorAccent
-                    )
+                    holder.ivIcon.context.colorOnPrimary
                 )
                 holder.tvTitle.setTextColor(
-                    ContextCompat.getColor(
-                        holder.itemView.context,
-                        R.color.colorAccent
-                    )
+                    holder.tvTitle.context.colorOnPrimary
                 )
             } else {
                 holder.ivIcon.drawable.setTintList(null)

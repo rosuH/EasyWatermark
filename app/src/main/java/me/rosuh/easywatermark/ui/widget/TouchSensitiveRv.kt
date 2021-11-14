@@ -4,6 +4,7 @@ import android.animation.ObjectAnimator
 import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
+import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
 import androidx.core.content.ContextCompat
@@ -58,9 +59,27 @@ class TouchSensitiveRv : RecyclerView {
 
     private val borderWidth = 3.dp.toFloat()
 
+    private val colorPrimary by lazy {
+        val typedValue = TypedValue()
+        context.theme.resolveAttribute(R.attr.colorPrimary, typedValue, true)
+        typedValue.data
+    }
+
+    private val colorPrimaryDark by lazy {
+        val typedValue = TypedValue()
+        context.theme.resolveAttribute(R.attr.colorPrimary, typedValue, true)
+        typedValue.data
+    }
+
+    private val colorAccent by lazy {
+        val typedValue = TypedValue()
+        context.theme.resolveAttribute(R.attr.colorAccent, typedValue, true)
+        typedValue.data
+    }
+
     private val borderPaint by lazy {
         Paint().apply {
-            color = ContextCompat.getColor(context, R.color.colorAccent)
+            color = colorAccent
             style = Paint.Style.STROKE
             strokeWidth = 1.5F.dp
             isAntiAlias = true

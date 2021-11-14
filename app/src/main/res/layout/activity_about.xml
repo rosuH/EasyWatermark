@@ -47,7 +47,6 @@
                 android:paddingTop="16dp"
                 android:paddingEnd="28dp"
                 android:text="@string/about_title_info"
-                android:textColor="@color/d_neutral_2"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
@@ -72,7 +71,7 @@
                 android:drawablePadding="24dp"
                 android:gravity="center|start"
                 android:text="@string/about_title_version"
-                android:textColor="@color/d_neutral_3"
+                
                 app:drawableStartCompat="@drawable/ic_version"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -83,7 +82,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="28dp"
-                android:textColor="@color/d_neutral_3"
+                
                 app:layout_constraintBottom_toBottomOf="@id/tv_version"
                 app:layout_constraintEnd_toEndOf="@id/tv_version"
                 app:layout_constraintTop_toTopOf="@id/tv_version" />
@@ -97,7 +96,7 @@
                 android:drawablePadding="24dp"
                 android:gravity="center|start"
                 android:text="@string/about_title_rating"
-                android:textColor="@color/d_neutral_3"
+                
                 app:drawableStartCompat="@drawable/ic_rate"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -113,7 +112,7 @@
                 android:gravity="center|start"
 
                 android:text="@string/about_title_feed_back"
-                android:textColor="@color/d_neutral_3"
+                
                 app:drawableStartCompat="@drawable/ic_bug_report"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -127,7 +126,7 @@
                 android:paddingTop="16dp"
                 android:paddingEnd="28dp"
                 android:text="@string/about_title_about"
-                android:textColor="@color/d_neutral_2"
+                
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tv_feed_back" />
 
@@ -152,7 +151,7 @@
                 android:drawablePadding="24dp"
                 android:gravity="center|start"
                 android:text="@string/about_title_update_log"
-                android:textColor="@color/d_neutral_3"
+                
                 app:drawableStartCompat="@drawable/ic_update_log"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -167,7 +166,7 @@
                 android:drawablePadding="24dp"
                 android:gravity="center|start"
                 android:text="@string/about_title_open_source"
-                android:textColor="@color/d_neutral_3"
+                
                 app:drawableStartCompat="@drawable/ic_open_source"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -182,7 +181,7 @@
                 android:drawablePadding="24dp"
                 android:gravity="center|start"
                 android:text="@string/about_title_privacy_statement_zh"
-                android:textColor="@color/d_neutral_3"
+                
                 app:drawableStartCompat="@drawable/ic_privacy_cn"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -197,7 +196,7 @@
                 android:drawablePadding="24dp"
                 android:gravity="center|start"
                 android:text="@string/about_title_privacy_statement"
-                android:textColor="@color/d_neutral_3"
+                
                 app:drawableStartCompat="@drawable/ic_privacy_en"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -237,7 +236,7 @@
                             android:ellipsize="end"
                             android:singleLine="true"
                             android:text="Developed with ♥ by rosu"
-                            android:textColor="@color/d_neutral_3"
+                            
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintTop_toTopOf="parent" />
@@ -251,7 +250,7 @@
                             android:layout_marginEnd="32dp"
                             android:ellipsize="end"
                             android:text="@string/dev_comment"
-                            android:textColor="@color/d_neutral_2"
+                            
                             app:layout_constraintBottom_toTopOf="@id/civ_avatar"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintStart_toStartOf="parent"
@@ -286,7 +285,7 @@
                             android:ellipsize="end"
                             android:singleLine="true"
                             android:text="Designed with ♥ by tovi"
-                            android:textColor="@color/d_neutral_3"
+                            
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintTop_toTopOf="parent" />
@@ -300,7 +299,7 @@
                             android:layout_marginEnd="32dp"
                             android:ellipsize="end"
                             android:text="A Designer."
-                            android:textColor="@color/d_neutral_2"
+                            
                             app:layout_constraintBottom_toTopOf="@id/civ_avatar_designer"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintStart_toStartOf="parent"

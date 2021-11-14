@@ -9,7 +9,6 @@
         android:id="@+id/ll_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/d_save_dialog_main_color"
         android:orientation="vertical"
         android:paddingStart="20dp"
         android:paddingEnd="20dp">
@@ -24,7 +23,6 @@
             android:gravity="center|start"
             android:includeFontPadding="false"
             android:text="@string/about_title_output"
-            android:textColor="@color/d_neutral_2"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
 
@@ -65,7 +63,7 @@
                 android:gravity="center|start"
                 android:includeFontPadding="false"
                 android:text="@string/dialog_save_config_quality"
-                android:textColor="@color/d_neutral_2"
+
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent" />
 
@@ -76,7 +74,7 @@
                 android:layout_height="wrap_content"
                 android:gravity="center|end"
                 android:includeFontPadding="false"
-                android:textColor="@color/d_neutral_2"
+
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 tools:text="80" />
@@ -103,7 +101,7 @@
             android:includeFontPadding="false"
             android:paddingTop="30dp"
             android:text="@string/dialog_save_export_list_title"
-            android:textColor="@color/d_neutral_2"
+
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
 
@@ -118,7 +116,6 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_save"
-            style="@style/Widget.App.Button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="43dp"
@@ -138,6 +135,6 @@
             android:paddingBottom="23dp"
             android:text="@string/dialog_open_in_gallery"
             android:textAlignment="center"
-            android:textColor="@color/d_neutral_2" />
+             />
     </LinearLayout>
 </FrameLayout>

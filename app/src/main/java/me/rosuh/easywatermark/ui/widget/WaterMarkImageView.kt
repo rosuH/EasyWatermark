@@ -11,17 +11,15 @@ import android.text.StaticLayout
 import android.text.TextPaint
 import android.util.AttributeSet
 import android.util.Log
-import androidx.core.content.ContextCompat
 import androidx.core.graphics.withSave
 import androidx.palette.graphics.Palette
 import kotlinx.coroutines.*
-import me.rosuh.easywatermark.BuildConfig
-import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.utils.ktx.applyConfig
+import me.rosuh.easywatermark.utils.ktx.colorBackground
 import me.rosuh.easywatermark.utils.ktx.toColor
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
@@ -207,10 +205,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         launch {
             generatePalette(imageBitmap)?.let { palette ->
                 bgTransformAnimator?.cancel()
-                val color = palette.darkMutedSwatch?.rgb ?: ContextCompat.getColor(
-                    context,
-                    R.color.colorSecondary
-                )
+                val color = palette.darkMutedSwatch?.rgb ?: context.colorBackground
                 bgTransformAnimator =
                     ((background as? ColorDrawable)?.color ?: Color.BLACK).toColor(color) {
                         setBackgroundColor(it.animatedValue as Int)

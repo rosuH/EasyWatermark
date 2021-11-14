@@ -26,12 +26,12 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_text"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="70dp"
             android:layout_height="40dp"
             android:text="@string/water_mark_mode_text"
             android:textAllCaps="false"
-            android:textColor="@color/white"
+
             android:textSize="12sp"
             android:textStyle="normal"
             app:layout_constraintEnd_toStartOf="@id/btn_img"
@@ -41,13 +41,13 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_img"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="70dp"
             android:layout_height="40dp"
             android:layout_marginStart="16dp"
             android:text="@string/water_mark_mode_image"
             android:textAllCaps="false"
-            android:textColor="@color/white"
+
             android:textSize="12sp"
             android:textStyle="normal"
             app:layout_constraintEnd_toEndOf="parent"

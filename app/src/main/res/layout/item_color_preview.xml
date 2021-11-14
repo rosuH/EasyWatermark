@@ -9,7 +9,6 @@
         android:layout_width="30dp"
         android:layout_height="30dp"
         android:layout_marginStart="9dp"
-        app:siv_border_color="@color/white"
         app:siv_border_width="0.5dp"
         app:siv_circle_width="24dp" />
 </FrameLayout>

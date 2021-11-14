@@ -41,11 +41,13 @@ import me.rosuh.easywatermark.ui.panel.*
 import me.rosuh.easywatermark.ui.widget.CenterLayoutManager
 import me.rosuh.easywatermark.ui.widget.LaunchView
 import me.rosuh.easywatermark.utils.*
-import me.rosuh.easywatermark.utils.ktx.commitWithAnimation
-import me.rosuh.easywatermark.utils.ktx.preCheckStoragePermission
-import me.rosuh.easywatermark.utils.ktx.toColor
 import java.util.*
 import kotlin.collections.ArrayList
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import me.rosuh.easywatermark.utils.ktx.*
+
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -143,6 +145,56 @@ class MainActivity : AppCompatActivity() {
         checkHadCrash()
         // Activity was recycled but dialog still showing in some case?
         SaveImageBSDialogFragment.safetyHide(this@MainActivity.supportFragmentManager)
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+//        if (hasFocus) {
+//            hideSystemUI()
+//        } else {
+//            showSystemUI()
+//        }
+    }
+
+    private fun hideSystemUI() {
+        // Enables regular immersive mode.
+        // For "lean back" mode, remove SYSTEM_UI_FLAG_IMMERSIVE.
+        // Or for "sticky immersive," replace it with SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+            WindowInsetsControllerCompat(window, launchView).let { controller ->
+                controller.hide(WindowInsetsCompat.Type.systemBars())
+                controller.systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        } else {
+            window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE
+                    // Set the content to appear under the system bars so that the
+                    // content doesn't resize when the system bars hide and show.
+                    or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    // Hide the nav bar and status bar
+                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    or View.SYSTEM_UI_FLAG_FULLSCREEN)
+        }
+
+    }
+
+    // Shows the system bars by removing all the flags
+    // except for the ones that make the content appear under the system bars.
+    private fun showSystemUI() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            WindowCompat.setDecorFitsSystemWindows(window, true)
+            WindowInsetsControllerCompat(
+                window,
+                launchView
+            ).show(WindowInsetsCompat.Type.systemBars())
+        } else {
+            window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN)
+        }
     }
 
     private fun registerResultCallback() {
@@ -269,14 +321,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         viewModel.colorPalette.observe(this) { palette ->
-            val bgColor = palette.darkMutedSwatch?.rgb ?: ContextCompat.getColor(
-                this@MainActivity,
-                R.color.colorSecondary
-            )
-            val titleTextColor = palette.darkMutedSwatch?.titleTextColor ?: ContextCompat.getColor(
-                this@MainActivity,
-                R.color.text_color_main
-            )
+            val bgColor = palette.darkMutedSwatch?.rgb ?: this.colorBackground
+            val titleTextColor = palette.darkMutedSwatch?.titleTextColor ?: this.colorOnPrimary
             bgTransformAnimator =
                 ((launchView.ivPhoto.background as? ColorDrawable)?.color ?: Color.BLACK).toColor(
                     bgColor
@@ -289,10 +335,7 @@ class MainActivity : AppCompatActivity() {
                 val c = it.animatedValue as Int
                 funcAdapter.applyTextColor(c)
                 launchView.tabLayout.setTabTextColors(
-                    c, ContextCompat.getColor(
-                        this@MainActivity,
-                        R.color.colorAccent
-                    )
+                    c, this.colorOnPrimary
                 )
             }
         }
@@ -305,6 +348,7 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("ClickableViewAccessibility")
     private fun initView() {
+        setStatusBarColor(this.colorSurface)
         // prepare MotionLayout
         launchView.setListener {
             onModeChange { _, newMode ->
@@ -510,12 +554,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setStatusBarColor(color: Int) {
-        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
-        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-        window.statusBarColor = color
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            window.findViewById<View>(android.R.id.content)?.foreground = null
-        }
+//        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+//        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+//        window.statusBarColor = color
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+//            window.findViewById<View>(android.R.id.content)?.foreground = null
+//        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -663,10 +707,7 @@ class MainActivity : AppCompatActivity() {
         launchView.ivPhoto.reset()
         bgTransformAnimator?.cancel()
         (launchView.background as ColorDrawable).color.toColor(
-            ContextCompat.getColor(
-                this,
-                R.color.colorPrimary
-            )
+            this.colorBackground
         ) {
             val c = it.animatedValue as Int
             setStatusBarColor(c)
