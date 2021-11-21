@@ -1,20 +1,27 @@
 package me.rosuh.easywatermark.ui.about
 
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.Color
+import android.content.res.ColorStateList
+import android.graphics.*
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.view.WindowManager
+import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
+import androidx.core.view.children
+import androidx.core.widget.TextViewCompat
+import androidx.palette.graphics.Palette
 import dagger.hilt.android.AndroidEntryPoint
 import me.rosuh.easywatermark.BuildConfig
-import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.databinding.ActivityAboutBinding
 import me.rosuh.easywatermark.ui.dialog.ChangeLogDialogFragment
-import me.rosuh.easywatermark.utils.ktx.inflate
-import me.rosuh.easywatermark.utils.ktx.openLink
+import me.rosuh.easywatermark.utils.ktx.*
 
 @AndroidEntryPoint
 class AboutActivity : AppCompatActivity() {
@@ -23,25 +30,35 @@ class AboutActivity : AppCompatActivity() {
 
     private val viewModel: AboutViewModel by viewModels()
 
+    private lateinit var bgDrawable: GradientDrawable
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         initView()
         changeStatusBarStyle()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false)
+        }
     }
 
-    private fun changeStatusBarStyle() {
-//        val flag = (
-//                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-//                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-//                        or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-//                )
-//        window?.decorView?.systemUiVisibility = flag
-//        window?.statusBarColor = Color.TRANSPARENT
-//        window?.navigationBarColor = Color.TRANSPARENT
+    private fun changeStatusBarStyle(color: Int = colorSurface) {
+        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+        window.statusBarColor = Color.TRANSPARENT
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            window.findViewById<View>(android.R.id.content)?.foreground = null
+        }
     }
+
 
     private fun initView() {
         with(binding) {
+            bgDrawable = ContextCompat.getDrawable(
+                this@AboutActivity,
+                me.rosuh.easywatermark.R.drawable.bg_gradient_about_page
+            ) as GradientDrawable
+
+            this.root.background = bgDrawable
             tvVersion.setOnClickListener {
                 openLink("https://github.com/rosuH/EasyWatermark/releases/")
             }
@@ -100,10 +117,110 @@ class AboutActivity : AppCompatActivity() {
                 viewModel.toggleBounds(isChecked)
             }
 
+            binding.clDevContainer.backgroundTintList =
+                ColorStateList.valueOf(this@AboutActivity.colorTertiaryContainer)
+            binding.clDesignerContainer.backgroundTintList =
+                ColorStateList.valueOf(this@AboutActivity.colorTertiaryContainer)
+
             viewModel.waterMark.observe(this@AboutActivity) {
                 switchDebug.isChecked = viewModel.waterMark.value?.enableBounds ?: false
+            }
+
+            viewModel.palette.observe(this@AboutActivity) {
+                when {
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+                        applyPaletteForSupoortNight(it)
+                    }
+                    it == null -> {
+                        binding.clContainer.children
+                            .plus(binding.tvTitle)
+                            .plus(binding.tvSubTitle)
+                            .plus(binding.tvTitleDesigner)
+                            .plus(binding.tvSubTitleDesigner)
+                            .forEach { view ->
+                                if (view !is TextView) {
+                                    return@forEach
+                                }
+                                view.setTextColor(Color.WHITE)
+                                TextViewCompat.setCompoundDrawableTintList(
+                                    view,
+                                    ColorStateList.valueOf(Color.WHITE)
+                                )
+                            }
+                        return@observe
+                    }
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
+                        applyPaletteForSupportLightStatusIcon(it)
+                    }
+                    else -> {
+                        applyPaletteForNoMatterWhoYouAre(it)
+                    }
+                }
             }
         }
     }
 
+    private fun applyPaletteForSupoortNight(palette: Palette?) {
+        val bgColor = palette?.bgColor(this@AboutActivity) ?: this@AboutActivity.colorBackground
+        val bgAccent = palette?.bgColor(this@AboutActivity) ?: this@AboutActivity.colorPrimary
+        val colorList = arrayOf(
+            ColorUtils.setAlphaComponent(bgAccent, 65),
+            ColorUtils.setAlphaComponent(bgColor, 255),
+        ).toIntArray()
+        bgDrawable.colors = colorList
+    }
+
+    private fun applyPaletteForSupportLightStatusIcon(palette: Palette) {
+        val bgColor = palette.bgColor(this@AboutActivity)
+        val bgAccent = palette.bgColor(this@AboutActivity)
+        val colorList = arrayOf(
+            ColorUtils.setAlphaComponent(bgColor, 255),
+            ColorUtils.setAlphaComponent(bgAccent, 65),
+        ).toIntArray()
+        bgDrawable.colors = colorList
+
+        val textColor = palette.titleTextColor(this@AboutActivity)
+        binding.clContainer.children
+            .plus(binding.tvTitle)
+            .plus(binding.tvSubTitle)
+            .plus(binding.tvTitleDesigner)
+            .plus(binding.tvSubTitleDesigner)
+            .forEach { view ->
+                if (view !is TextView) {
+                    return@forEach
+                }
+                view.setTextColor(textColor)
+                TextViewCompat.setCompoundDrawableTintList(
+                    view,
+                    ColorStateList.valueOf(textColor)
+                )
+            }
+    }
+
+    private fun applyPaletteForNoMatterWhoYouAre(palette: Palette) {
+        val bgColor = palette.bgColor(this@AboutActivity)
+        val bgAccent = palette.bgColor(this@AboutActivity)
+        val colorList = arrayOf(
+            ColorUtils.setAlphaComponent(bgColor, 255),
+            ColorUtils.setAlphaComponent(bgAccent, 65),
+        ).toIntArray()
+        bgDrawable.colors = colorList
+
+        val textColor = palette.titleTextColor(this@AboutActivity)
+        binding.clContainer.children
+            .plus(binding.tvTitle)
+            .plus(binding.tvSubTitle)
+            .plus(binding.tvTitleDesigner)
+            .plus(binding.tvSubTitleDesigner)
+            .forEach { view ->
+                if (view !is TextView) {
+                    return@forEach
+                }
+                view.setTextColor(textColor)
+                TextViewCompat.setCompoundDrawableTintList(
+                    view,
+                    ColorStateList.valueOf(textColor)
+                )
+            }
+    }
 }

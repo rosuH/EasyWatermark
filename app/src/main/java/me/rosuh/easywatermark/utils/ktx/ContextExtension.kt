@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
-import android.util.TypedValue
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
@@ -68,10 +67,13 @@ inline fun ViewModel.launch(crossinline action: suspend CoroutineScope.() -> Uni
 val Context.colorPrimary: Int
     get() {
         return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isNight() -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_primary80)
+            }
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 ContextCompat.getColor(this, R.color.material_dynamic_primary40)
             }
-            isNight() -> {
+            isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_primary)
             }
             else -> {
@@ -83,10 +85,13 @@ val Context.colorPrimary: Int
 val Context.colorOnPrimary: Int
     get() {
         return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isNight() -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_primary20)
+            }
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 ContextCompat.getColor(this, R.color.material_dynamic_primary100)
             }
-            isNight() -> {
+            isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_onPrimary)
             }
             else -> {
@@ -98,10 +103,13 @@ val Context.colorOnPrimary: Int
 val Context.colorPrimaryContainer: Int
     get() {
         return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isNight() -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_primary20)
+            }
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 ContextCompat.getColor(this, R.color.material_dynamic_primary90)
             }
-            isNight() -> {
+            isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_primaryContainer)
             }
             else -> {
@@ -113,10 +121,13 @@ val Context.colorPrimaryContainer: Int
 val Context.colorOnPrimaryContainer: Int
     get() {
         return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isNight() -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_primary90)
+            }
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 ContextCompat.getColor(this, R.color.material_dynamic_primary10)
             }
-            isNight() -> {
+            isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_onPrimaryContainer)
             }
             else -> {
@@ -132,10 +143,13 @@ val Context.colorOnPrimaryContainer: Int
 val Context.colorSecondly: Int
     get() {
         return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isNight() -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_secondary80)
+            }
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 ContextCompat.getColor(this, R.color.material_dynamic_secondary40)
             }
-            isNight() -> {
+            isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_secondary)
             }
             else -> {
@@ -147,10 +161,13 @@ val Context.colorSecondly: Int
 val Context.colorOnSecondly: Int
     get() {
         return when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                ContextCompat.getColor(this, R.color.material_dynamic_secondary40)
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isNight() -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_secondary20)
             }
-            isNight() -> {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_secondary100)
+            }
+            isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_secondary)
             }
             else -> {
@@ -162,10 +179,13 @@ val Context.colorOnSecondly: Int
 val Context.colorSecondlyContainer: Int
     get() {
         return when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                ContextCompat.getColor(this, R.color.material_dynamic_secondary40)
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isNight() -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_secondary30)
             }
-            isNight() -> {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_secondary90)
+            }
+            isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_secondary)
             }
             else -> {
@@ -177,10 +197,13 @@ val Context.colorSecondlyContainer: Int
 val Context.colorOnSecondlyContainer: Int
     get() {
         return when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                ContextCompat.getColor(this, R.color.material_dynamic_secondary40)
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isNight() -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_secondary90)
             }
-            isNight() -> {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_secondary10)
+            }
+            isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_secondary)
             }
             else -> {
@@ -195,10 +218,13 @@ val Context.colorOnSecondlyContainer: Int
 val Context.colorTertiary: Int
     get() {
         return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isNight() -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_tertiary80)
+            }
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 ContextCompat.getColor(this, R.color.material_dynamic_tertiary40)
             }
-            isNight() -> {
+            isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_tertiary)
             }
             else -> {
@@ -210,10 +236,13 @@ val Context.colorTertiary: Int
 val Context.colorOnTertiary: Int
     get() {
         return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isNight() -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_tertiary20)
+            }
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 ContextCompat.getColor(this, R.color.material_dynamic_tertiary100)
             }
-            isNight() -> {
+            isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_onTertiary)
             }
             else -> {
@@ -225,10 +254,13 @@ val Context.colorOnTertiary: Int
 val Context.colorTertiaryContainer: Int
     get() {
         return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isNight() -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_tertiary30)
+            }
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 ContextCompat.getColor(this, R.color.material_dynamic_tertiary90)
             }
-            isNight() -> {
+            isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_tertiaryContainer)
             }
             else -> {
@@ -240,10 +272,13 @@ val Context.colorTertiaryContainer: Int
 val Context.colorOnTertiaryContainer: Int
     get() {
         return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isNight() -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_tertiary90)
+            }
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 ContextCompat.getColor(this, R.color.material_dynamic_tertiary10)
             }
-            isNight() -> {
+            isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_onTertiaryContainer)
             }
             else -> {
@@ -303,10 +338,14 @@ val Context.colorOnErrorContainer: Int
 val Context.colorBackground: Int
     get() {
         return when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                ContextCompat.getColor(this, R.color.material_dynamic_neutral95)
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isNight() -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_neutral10)
             }
-            isNight() -> {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_neutral99)
+            }
+            isNight() || !supportNight() -> {
+                // default color is dark :)
                 ContextCompat.getColor(this, R.color.md_theme_dark_background)
             }
             else -> {
@@ -318,10 +357,13 @@ val Context.colorBackground: Int
 val Context.colorOnBackground: Int
     get() {
         return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isNight() -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_neutral90)
+            }
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 ContextCompat.getColor(this, R.color.material_dynamic_neutral10)
             }
-            isNight() -> {
+            isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_onBackground)
             }
             else -> {
@@ -333,10 +375,13 @@ val Context.colorOnBackground: Int
 val Context.colorSurface: Int
     get() {
         return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isNight() -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_neutral10)
+            }
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 ContextCompat.getColor(this, R.color.material_dynamic_neutral99)
             }
-            isNight() -> {
+            isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_surface)
             }
             else -> {
@@ -348,10 +393,13 @@ val Context.colorSurface: Int
 val Context.colorOnSurface: Int
     get() {
         return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isNight() -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_neutral80)
+            }
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 ContextCompat.getColor(this, R.color.material_dynamic_neutral10)
             }
-            isNight() -> {
+            isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_onSurface)
             }
             else -> {
@@ -363,10 +411,13 @@ val Context.colorOnSurface: Int
 val Context.colorSurfaceVariant: Int
     get() {
         return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isNight() -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_neutral_variant30)
+            }
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 ContextCompat.getColor(this, R.color.material_dynamic_neutral_variant90)
             }
-            isNight() -> {
+            isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_surfaceVariant)
             }
             else -> {
@@ -378,10 +429,13 @@ val Context.colorSurfaceVariant: Int
 val Context.colorOnSurfaceVariant: Int
     get() {
         return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isNight() -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_neutral_variant80)
+            }
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 ContextCompat.getColor(this, R.color.material_dynamic_neutral_variant30)
             }
-            isNight() -> {
+            isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_onSurfaceVariant)
             }
             else -> {
@@ -393,10 +447,13 @@ val Context.colorOnSurfaceVariant: Int
 val Context.colorOutline: Int
     get() {
         return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isNight() -> {
+                ContextCompat.getColor(this, R.color.material_dynamic_neutral_variant60)
+            }
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 ContextCompat.getColor(this, R.color.material_dynamic_neutral_variant50)
             }
-            isNight() -> {
+            isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_outline)
             }
             else -> {
@@ -406,12 +463,18 @@ val Context.colorOutline: Int
     }
 
 
-
-
-fun Context.isNight():Boolean {
+fun Context.isNight(): Boolean {
     return when (this.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) {
-        Configuration.UI_MODE_NIGHT_NO -> true // Night mode is not active, we're using the light theme
-        Configuration.UI_MODE_NIGHT_YES -> false // Night mode is active, we're using dark theme
+        Configuration.UI_MODE_NIGHT_YES -> true // Night mode is not active, we're using the light theme
+        Configuration.UI_MODE_NIGHT_NO -> false // Night mode is active, we're using dark theme
         else -> false
     }
+}
+
+fun Context.supportNight(): Boolean {
+    return Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+}
+
+fun Context.supportDynamicColor(): Boolean {
+    return Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 }

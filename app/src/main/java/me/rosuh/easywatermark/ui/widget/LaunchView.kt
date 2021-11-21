@@ -2,6 +2,7 @@ package me.rosuh.easywatermark.ui.widget
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.util.AttributeSet
 import android.view.Gravity
@@ -73,6 +74,7 @@ class LaunchView : CustomViewGroup {
                     48.dp
                 )
             setImageResource(R.drawable.ic_about)
+            imageTintList = ColorStateList.valueOf(context.colorPrimary)
         }
     }
 
@@ -84,9 +86,7 @@ class LaunchView : CustomViewGroup {
                     LayoutParams.WRAP_CONTENT
                 )
                     .also { it.setMargins(0, 20.dp, 0, 0) }
-            setBackgroundColor(Color.TRANSPARENT)
-            elevation = 0f
-            popupTheme = R.style.ThemeOverlay_AppCompat_Dark_ActionBar
+//            setBackgroundColor(context.colorSurface)
         }
     }
 
@@ -108,17 +108,10 @@ class LaunchView : CustomViewGroup {
                 LayoutParams.MATCH_PARENT,
                 LayoutParams.WRAP_CONTENT
             )
-//            setTabTextColors(
-//                context.colorOnSurface,
-//                ContextCompat.getColor(context, R.color.selector_tab_color)
-//            )
             isTabIndicatorFullWidth = false
             tabGravity = TabLayout.GRAVITY_FILL
-            isTabIndicatorFullWidth = false
             tabIndicatorAnimationMode = TabLayout.INDICATOR_ANIMATION_MODE_ELASTIC
-//            setTabIconTintResource(R.color.selector_tab_color)
             setBackgroundColor(Color.TRANSPARENT)
-            setSelectedTabIndicatorColor(context.colorOnPrimary)
             val contentTab = newTab().also {
                 it.text = context.getString(R.string.title_content)
             }
@@ -152,7 +145,7 @@ class LaunchView : CustomViewGroup {
                 LayoutParams.MATCH_PARENT,
                 LayoutParams.WRAP_CONTENT
             )
-//            setBackgroundColor(ContextCompat.getColor(context, R.color.colorSecondary))
+            setBackgroundColor(Color.TRANSPARENT)
             clipChildren = false
             clipToPadding = false
             edgeEffectFactory = BounceEdgeEffectFactory(context, this)
@@ -234,7 +227,6 @@ class LaunchView : CustomViewGroup {
     init {
         clipChildren = false
         clipToPadding = false
-        setBackgroundColor(context.colorBackground)
         launchViews.forEach {
             it.isVisible = false
             addView(it)
@@ -262,8 +254,10 @@ class LaunchView : CustomViewGroup {
                 measureChildWithMargins(it, widthMeasureSpec, 0, heightMeasureSpec, 0)
             }
         }
-        val heightUsed =
-            toolbar.measuredHeight + fcFunctionDetail.measuredHeightWithMargins + tabLayout.measuredHeightWithMargins + rvPanel.measuredHeightWithMargins + rvPhotoList.measuredHeightWithMargins
+        val heightUsed = toolbar.measuredHeight.plus(fcFunctionDetail.measuredHeightWithMargins)
+            .plus(tabLayout.measuredHeightWithMargins)
+            .plus(rvPanel.measuredHeightWithMargins)
+            .plus(rvPhotoList.measuredHeightWithMargins)
         ivPhoto.measure(
             MeasureSpec.makeMeasureSpec(parentWidth, MeasureSpec.EXACTLY),
             MeasureSpec.makeMeasureSpec(parentHeight - heightUsed, MeasureSpec.EXACTLY)

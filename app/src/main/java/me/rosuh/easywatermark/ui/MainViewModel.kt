@@ -24,6 +24,7 @@ import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.*
+import me.rosuh.easywatermark.data.repo.MemorySettingRepo
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.ui.widget.WaterMarkImageView
@@ -41,7 +42,8 @@ import kotlin.math.ceil
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val userRepo: UserConfigRepository,
-    private val waterMarkRepo: WaterMarkRepository
+    private val waterMarkRepo: WaterMarkRepository,
+    private val memorySettingRepo: MemorySettingRepo,
 ) : ViewModel() {
 
     var nextSelectedPos: Int = 0
@@ -61,7 +63,7 @@ class MainViewModel @Inject constructor(
 
     val saveImageUri: MutableLiveData<List<ImageInfo>> = MutableLiveData()
 
-    val saveProcess: MutableLiveData<ImageInfo> = MutableLiveData()
+    val saveProcess: MutableLiveData<ImageInfo?> = MutableLiveData()
 
     private var compressedJob: Job? = null
 
@@ -104,7 +106,7 @@ class MainViewModel @Inject constructor(
                 saveResult.value = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
                 return@launch
             }
-            saveImageUri.value = result.data
+            saveImageUri.value = result.data!!
             saveResult.value = Result.success(code = TYPE_JOB_FINISH, data = result.data)
         }
     }
@@ -455,6 +457,7 @@ class MainViewModel @Inject constructor(
 
     fun updateColorPalette(palette: Palette) {
         colorPalette.postValue(palette)
+        memorySettingRepo.updatePalette(palette)
     }
 
     fun resetStatus() {

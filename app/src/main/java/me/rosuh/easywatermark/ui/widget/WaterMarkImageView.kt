@@ -18,9 +18,7 @@ import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
-import me.rosuh.easywatermark.utils.ktx.applyConfig
-import me.rosuh.easywatermark.utils.ktx.colorBackground
-import me.rosuh.easywatermark.utils.ktx.toColor
+import me.rosuh.easywatermark.utils.ktx.*
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
@@ -79,6 +77,8 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
     fun updateUri(init: Boolean, imageInfo: ImageInfo) {
         config?.let {
             applyNewConfig(init, it, imageInfo)
+        } ?: kotlin.run {
+            curImageInfo = imageInfo
         }
     }
 
@@ -117,11 +117,11 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                     context.contentResolver,
                     uri,
                     calculateDrawLimitWidth(
-                        this@WaterMarkImageView.width,
+                        this@WaterMarkImageView.measuredWidth,
                         this@WaterMarkImageView.paddingStart
                     ),
                     calculateDrawLimitHeight(
-                        this@WaterMarkImageView.height,
+                        this@WaterMarkImageView.measuredHeight,
                         this@WaterMarkImageView.paddingTop
                     )
                 )
@@ -205,7 +205,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         launch {
             generatePalette(imageBitmap)?.let { palette ->
                 bgTransformAnimator?.cancel()
-                val color = palette.darkMutedSwatch?.rgb ?: context.colorBackground
+                val color = palette.bgColor(context)
                 bgTransformAnimator =
                     ((background as? ColorDrawable)?.color ?: Color.BLACK).toColor(color) {
                         setBackgroundColor(it.animatedValue as Int)

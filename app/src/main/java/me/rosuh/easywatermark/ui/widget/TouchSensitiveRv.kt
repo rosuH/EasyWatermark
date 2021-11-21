@@ -7,15 +7,15 @@ import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
-import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.withSave
 import androidx.core.view.children
 import androidx.recyclerview.widget.LinearSnapHelper
 import androidx.recyclerview.widget.RecyclerView
 import me.rosuh.easywatermark.R
+import me.rosuh.easywatermark.utils.ktx.colorPrimary
 import me.rosuh.easywatermark.utils.ktx.dp
 import kotlin.math.abs
-import kotlin.math.min
 
 class TouchSensitiveRv : RecyclerView {
 
@@ -49,8 +49,8 @@ class TouchSensitiveRv : RecyclerView {
     private val borderSize = 48F.dp
 
     private val colorList = arrayOf(
-        Color.parseColor("#00FFD703"),
-        Color.parseColor("#0DFFD703"),
+        ColorUtils.setAlphaComponent(context.colorPrimary, 0),
+        ColorUtils.setAlphaComponent(context.colorPrimary, 15),
     ).toIntArray()
 
     private val glowPaint by lazy {

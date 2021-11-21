@@ -6,6 +6,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import me.rosuh.easywatermark.data.repo.MemorySettingRepo
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import javax.inject.Named
@@ -27,5 +28,12 @@ object RepositoryModule {
     @Singleton
     fun provideWaterMarkRepository(dataStore: DataStore<Preferences>): WaterMarkRepository {
         return WaterMarkRepository(dataStore)
+    }
+
+    @Named("WaterMarkPreferences")
+    @Provides
+    @Singleton
+    fun provideMemorySettingRepository(): MemorySettingRepo {
+        return MemorySettingRepo()
     }
 }

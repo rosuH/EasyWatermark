@@ -39,7 +39,7 @@
     <!--UI-->
     <string name="error_not_img">请选择图片</string>
     <string name="error_file_not_found">未选择图片或图片不存在</string>
-    <string name="tips_pick_image">"选择图片，开始编辑 "</string>
+    <string name="tips_pick_image">选择图片</string>
     <string name="dialog_export_to_gallery">导出到相册</string>
     <string name="directly_save_tips">直接存储编辑后的图像到你的相册中</string>
     <string name="share_tips">分享编辑后的图像到其他应用</string>

@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.Intent.ACTION_SEND
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
@@ -19,6 +20,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import androidx.core.view.*
 import androidx.fragment.app.commit
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -41,12 +43,9 @@ import me.rosuh.easywatermark.ui.panel.*
 import me.rosuh.easywatermark.ui.widget.CenterLayoutManager
 import me.rosuh.easywatermark.ui.widget.LaunchView
 import me.rosuh.easywatermark.utils.*
+import me.rosuh.easywatermark.utils.ktx.*
 import java.util.*
 import kotlin.collections.ArrayList
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
-import me.rosuh.easywatermark.utils.ktx.*
 
 
 @AndroidEntryPoint
@@ -145,15 +144,6 @@ class MainActivity : AppCompatActivity() {
         checkHadCrash()
         // Activity was recycled but dialog still showing in some case?
         SaveImageBSDialogFragment.safetyHide(this@MainActivity.supportFragmentManager)
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-//        if (hasFocus) {
-//            hideSystemUI()
-//        } else {
-//            showSystemUI()
-//        }
     }
 
     private fun hideSystemUI() {
@@ -321,8 +311,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         viewModel.colorPalette.observe(this) { palette ->
-            val bgColor = palette.darkMutedSwatch?.rgb ?: this.colorBackground
-            val titleTextColor = palette.darkMutedSwatch?.titleTextColor ?: this.colorOnPrimary
+            val bgColor = palette.bgColor(this)
+            val titleTextColor = palette.titleTextColor(this)
+
             bgTransformAnimator =
                 ((launchView.ivPhoto.background as? ColorDrawable)?.color ?: Color.BLACK).toColor(
                     bgColor
@@ -334,9 +325,14 @@ class MainActivity : AppCompatActivity() {
             funcAdapter.textColor.toColor(titleTextColor) {
                 val c = it.animatedValue as Int
                 funcAdapter.applyTextColor(c)
-                launchView.tabLayout.setTabTextColors(
-                    c, this.colorOnPrimary
-                )
+                launchView.tabLayout.setTabTextColors(c, this.colorPrimary)
+                launchView.toolbar.menu.forEach { menuItem ->
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        menuItem.iconTintList = ColorStateList.valueOf(c)
+                    } else {
+                        menuItem.icon.setTint(c)
+                    }
+                }
             }
         }
     }
@@ -348,7 +344,6 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("ClickableViewAccessibility")
     private fun initView() {
-        setStatusBarColor(this.colorSurface)
         // prepare MotionLayout
         launchView.setListener {
             onModeChange { _, newMode ->
@@ -554,15 +549,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setStatusBarColor(color: Int) {
-//        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
-//        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-//        window.statusBarColor = color
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-//            window.findViewById<View>(android.R.id.content)?.foreground = null
-//        }
+        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+        window.statusBarColor = color
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            window.findViewById<View>(android.R.id.content)?.foreground = null
+        }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu, menu)
         return true
     }

@@ -9,7 +9,7 @@ import androidx.recyclerview.widget.RecyclerView
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.ui.base.BaseViewHolder
-import me.rosuh.easywatermark.utils.ktx.colorOnPrimary
+import me.rosuh.easywatermark.utils.ktx.colorPrimary
 
 class TextPaintStyleAdapter(
     private val dataList: ArrayList<TextPaintStyleModel>,
@@ -63,9 +63,9 @@ class TextPaintStyleAdapter(
             tvTitle?.text = model.title
             tvPreview.setTextColor(
                 if (selected) {
-                    tvPreview.context.colorOnPrimary
+                    tvPreview.context.colorPrimary
                 } else {
-                    tvPreview.context.colorOnPrimary
+                    tvPreview.context.colorPrimary
                 }
             )
             tvPreview.setOnClickListener {

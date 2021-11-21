@@ -28,34 +28,34 @@
         <item name="cornerSize">0dp</item>
     </style>
 
-    <style name="WindowAnimationTransition">
+    <style name="WindowAnimationTransition" parent="Animation.MaterialComponents.BottomSheetDialog">
         <item name="android:activityOpenEnterAnimation">@anim/activity_open_in</item>
         <item name="android:activityOpenExitAnimation">@anim/activity_open_out</item>
         <item name="android:activityCloseEnterAnimation">@anim/activity_close_in</item>
         <item name="android:activityCloseExitAnimation">@anim/activity_close_out</item>
     </style>
 
-    <style name="AppTheme.ActionOverflowButtonStyle">
+    <style name="Theme.MyApp.ActionOverflowButtonStyle">
         <item name="android:src">@drawable/ic_more</item>
     </style>
 
-    <style name="AppTheme.MaterialAboutActivity" parent="Theme.Material3.DayNight">
+    <style name="Theme.MyApp.MaterialAboutActivity" parent="Theme.MyApp">
         <item name="android:textSize">14sp</item>
         <item name="android:windowAnimationStyle">@style/WindowAnimationTransition</item>
     </style>
 
-    <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
-<!--        <item name="android:textColorPrimary">@color/text_color_main</item>-->
+    <style name="Theme.MyApp.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
+        <!--        <item name="android:textColorPrimary">@color/text_color_main</item>-->
     </style>
 
-    <style name="AppTheme.TitleText" parent="AppTheme">
+    <style name="Theme.MyApp.TitleText" parent="Theme.MyApp">
         <item name="android:textSize">14sp</item>
     </style>
 
-    <style name="AppTheme.TipsText" parent="AppTheme">
+    <style name="Theme.MyApp.TipsText" parent="Theme.MyApp">
         <item name="android:layout_marginTop">3dp</item>
         <item name="android:textSize">12sp</item>
-<!--        <item name="android:textColor">@color/text_color_tips</item>-->
+        <!--        <item name="android:textColor">@color/text_color_tips</item>-->
     </style>
 
     <style name="MySeekBarStyle">
@@ -97,12 +97,12 @@
         <item name="android:textAllCaps">false</item>
     </style>
 
-    <style name="AppTheme.EditTextDialogOverlay">
+    <style name="Theme.MyApp.EditTextDialogOverlay">
         <item name="colorPrimary">?attr/colorPrimary</item>
         <item name="colorPrimaryDark">?attr/colorPrimary</item>
         <item name="colorAccent">?attr/colorPrimary</item>
-<!--        <item name="android:textColor">@color/text_color_main</item>-->
-<!--        <item name="colorOnSurface">@color/white</item>-->
+        <!--        <item name="android:textColor">@color/text_color_main</item>-->
+        <!--        <item name="colorOnSurface">@color/white</item>-->
     </style>
 
     <style name="TextInputLayoutStyle" parent="Widget.Material3.TextInputLayout.OutlinedBox">
@@ -133,13 +133,6 @@
 <!--        <item name="android:textColor">@color/white</item>-->
     </style>
 
-    <style name="Widget.App.Button" parent="Widget.Material3.Button">
-        <item name="materialThemeOverlay">@style/ThemeOverlay.App.Button.TextButton</item>
-        <item name="android:paddingTop">16dp</item>
-        <item name="android:paddingBottom">16dp</item>
-        <item name="shapeAppearance">@style/ShapeAppearance.App.Button</item>
-    </style>
-
     <style name="Widget.App.OutlineButton" parent="Widget.Material3.Button.OutlinedButton">
         <item name="materialThemeOverlay">@style/ThemeOverlay.App.Button.TextOutlineButton</item>
         <item name="android:paddingTop">16dp</item>
@@ -148,46 +141,58 @@
     </style>
 
     <style name="ThemeOverlay.App.Button.TextOutlineButton" parent="">
-<!--        <item name="colorPrimary">@color/d_neutral_2</item>-->
-<!--        <item name="colorOnPrimary">@color/text_color_on_export</item>-->
+        <!--        <item name="colorPrimary">@color/d_neutral_2</item>-->
+        <!--        <item name="colorOnPrimary">@color/text_color_on_export</item>-->
         <item name="android:textAllCaps">false</item>
         <item name="android:textSize">16sp</item>
     </style>
 
     <style name="ThemeOverlay.App.Button.TextButton" parent="">
-<!--        <item name="colorPrimary">@color/colorAccent</item>-->
-<!--        <item name="colorOnPrimary">@color/text_color_on_export</item>-->
         <item name="android:textSize">16sp</item>
     </style>
 
-    <style name="AboutPageTextViewStyle">
-<!--        <item name="android:textColor">@color/d_neutral_3</item>-->
+
+    <style name="AboutPageTextViewStyle" parent="TextAppearance.Material3.TitleMedium">
         <item name="android:paddingStart">28dp</item>
         <item name="android:paddingEnd">28dp</item>
     </style>
 
-    <style name="SaveDialogTextViewStyle" parent="AboutPageTextViewStyle">
+    <style name="SaveDialogTextViewStyle" parent="Widget.MaterialComponents.BottomSheet.Modal">
+        <item name="android:textColor">@color/md_theme_dark_onSurface</item>
         <item name="android:paddingStart">0dp</item>
         <item name="android:paddingEnd">0dp</item>
     </style>
 
 
-    <style name="Widget.App.ExposedDropdownMenu" parent="Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
-        <item name="boxBackgroundColor">#08FFFFFF</item>
-        <item name="boxStrokeColor">#08FFFFFF</item>
+    <style name="SaveDialogExposedDropdownMenu" parent="Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+        <item name="boxBackgroundColor">@color/md_theme_dark_surface</item>
+        <item name="boxStrokeColor">@color/md_theme_dark_outline</item>
         <item name="materialThemeOverlay">@style/ThemeOverlay.App.ExposedDropdownMenu</item>
         <item name="shapeAppearance">@style/ShapeAppearance.App.SmallComponent</item>
-        <item name="hintTextColor">?attr/colorOnSurface</item>
-        <item name="endIconTint">?attr/colorOnSurface</item>
+        <item name="hintTextColor">@color/md_theme_dark_onSurface</item>
+        <item name="endIconTint">@color/md_theme_dark_onSurface</item>
+        <item name="android:textColor">@color/md_theme_dark_onSurface</item>
+        <item name="android:textColorHint">@color/md_theme_dark_onSurface</item>
+
     </style>
 
-    <style name="ThemeOverlay.App.ExposedDropdownMenu" parent="">
-        <item name="colorOnSurface">#FFFFFF</item>
-<!--        <item name="colorError">@color/color_error</item>-->
+    <style name="SaveDialogAutoCompleteTextView">
+        <item name="hintTextColor">@color/md_theme_dark_onSurface</item>
+        <item name="android:textColor">@color/md_theme_dark_onSurface</item>
+        <item name="android:textColorHint">@color/md_theme_dark_onSurface</item>
     </style>
 
 
-    <style name="ThemeOverlay.App.Dialog.SaveFile" parent="AppTheme">
+    <style name="ThemeOverlay.App.ExposedDropdownMenu" parent="Widget.MaterialComponents.AutoCompleteTextView.OutlinedBox">
+        <item name="autoCompleteTextViewStyle">@style/SaveDialogAutoCompleteTextView</item>
+    </style>
+
+    <style name="ThemeOverlay.App.AutoCompleteTextViewStyle" parent="Widget.Material3.AutoCompleteTextView.OutlinedBox">
+        <item name="android:textAppearance">?attr/textAppearanceBodyLarge</item>
+    </style>
+
+
+    <style name="ThemeOverlay.App.Dialog.SaveFile" parent="Theme.MyApp">
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="enableEdgeToEdge">true</item>
     </style>

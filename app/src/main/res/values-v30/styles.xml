@@ -1,0 +1,21 @@
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <style name="SaveDialogTextViewStyle" parent="Widget.MaterialComponents.BottomSheet.Modal">
+        <!--        <item name="android:textColor">@color/md_theme_dark_onSurface</item>-->
+        <item name="android:paddingStart">0dp</item>
+        <item name="android:paddingEnd">0dp</item>
+    </style>
+
+
+    <style name="SaveDialogExposedDropdownMenu" parent="Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"></style>
+
+    <style name="ThemeOverlay.App.ExposedDropdownMenu" parent="">
+        <!--        <item name="colorOnSurface">#FFFFFF</item>-->
+    </style>
+
+    <style name="SaveDialogAutoCompleteTextView" parent="ThemeOverlay.Material3.AutoCompleteTextView.OutlinedBox">
+        <!--        <item name="android:textColor">@color/md_theme_dark_surface</item>-->
+        <!--        <item name="android:textColorHint">@color/md_theme_dark_surface</item>-->
+    </style>
+
+</resources>

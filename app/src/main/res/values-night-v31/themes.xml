@@ -1,0 +1,36 @@
+<resources>
+
+    <style name="Theme.MyApp" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowAnimationStyle">@style/WindowAnimationTransition</item>
+        <item name="colorPrimary">@color/material_dynamic_primary80</item>
+        <item name="colorOnPrimary">@color/material_dynamic_primary20</item>
+        <item name="colorPrimaryContainer">@color/material_dynamic_primary30</item>
+        <item name="colorOnPrimaryContainer">@color/material_dynamic_primary90</item>
+        <item name="colorSecondary">@color/material_dynamic_secondary80</item>
+        <item name="colorOnSecondary">@color/material_dynamic_secondary20</item>
+        <item name="colorSecondaryContainer">@color/material_dynamic_secondary30</item>
+        <item name="colorOnSecondaryContainer">@color/material_dynamic_secondary90</item>
+        <item name="colorTertiary">@color/material_dynamic_tertiary80</item>
+        <item name="colorOnTertiary">@color/material_dynamic_tertiary20</item>
+        <item name="colorTertiaryContainer">@color/material_dynamic_tertiary30</item>
+        <item name="colorOnTertiaryContainer">@color/material_dynamic_tertiary90</item>
+        <item name="colorError">@color/md_theme_dark_error</item>
+        <item name="colorErrorContainer">@color/md_theme_dark_errorContainer</item>
+        <item name="colorOnError">@color/md_theme_dark_onError</item>
+        <item name="colorOnErrorContainer">@color/md_theme_dark_onErrorContainer</item>
+        <item name="android:colorBackground">@color/material_dynamic_neutral10</item>
+        <item name="colorOnBackground">@color/material_dynamic_neutral90</item>
+        <item name="colorSurface">@color/material_dynamic_neutral10</item>
+        <item name="colorOnSurface">@color/material_dynamic_neutral90</item>
+        <item name="colorSurfaceVariant">@color/material_dynamic_neutral_variant30</item>
+        <item name="colorOnSurfaceVariant">@color/material_dynamic_neutral_variant80</item>
+        <item name="colorOutline">@color/material_dynamic_neutral_variant60</item>
+        <!--  point to @android:color/system_neutral1_800      -->
+        <item name="colorSurfaceInverse">@color/m3_ref_palette_dynamic_neutral40</item>
+        <item name="colorOnSurfaceInverse">@color/material_dynamic_neutral20</item>
+        <!--  point to @android:color/system_accent1_200system_accent1_200      -->
+        <item name="colorPrimaryInverse">@color/material_dynamic_primary40</item>
+        <item name="android:statusBarColor">@color/material_dynamic_neutral10</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

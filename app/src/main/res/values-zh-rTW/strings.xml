@@ -49,7 +49,7 @@
     <string name="tips_need_compress_img">圖片過大或內存不足</string>
     <string name="tips_not_app_can_open_imaegs">看起來您安裝沒有檔案管理員？</string>
     <string name="tips_ok">確定</string>
-    <string name="tips_pick_image">選擇圖片，開始編輯</string>
+    <string name="tips_pick_image">選擇圖片</string>
     <string name="tips_save_ok">儲存完成</string>
     <string name="tips_share_image">分享圖片</string>
     <string name="tips_share_ok">分享完成</string>

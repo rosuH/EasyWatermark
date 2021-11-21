@@ -11,6 +11,7 @@ import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.view.isVisible
+import com.google.android.material.color.MaterialColors
 import me.rosuh.easywatermark.utils.ktx.colorError
 import me.rosuh.easywatermark.utils.ktx.colorTertiary
 import java.util.concurrent.atomic.AtomicBoolean
@@ -32,7 +33,7 @@ class ProgressImageView : AppCompatImageView {
         }
     }
 
-    private val successColor = context.colorTertiary
+    private val successColor = MaterialColors.compositeARGBWithAlpha(context.colorTertiary, 125)
     private val failedColor = context.colorError
 
     private val enableProgress by lazy { AtomicBoolean(false) }

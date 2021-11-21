@@ -6,15 +6,15 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.animation.AlphaAnimation
 import android.widget.ArrayAdapter
+import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentManager
 import androidx.recyclerview.widget.GridLayoutManager
-import androidx.transition.AutoTransition
-import androidx.transition.TransitionManager
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.JobState
 import me.rosuh.easywatermark.data.model.Result
 import me.rosuh.easywatermark.databinding.DialogSaveFileBinding
 import me.rosuh.easywatermark.ui.MainActivity
@@ -22,13 +22,6 @@ import me.rosuh.easywatermark.ui.MainViewModel
 import me.rosuh.easywatermark.ui.adapter.SaveImageListAdapter
 import me.rosuh.easywatermark.ui.base.BaseBindBSDFragment
 import me.rosuh.easywatermark.utils.ktx.preCheckStoragePermission
-import android.animation.LayoutTransition
-import android.view.Gravity
-import androidx.core.content.ContextCompat
-import androidx.core.view.isInvisible
-import androidx.recyclerview.widget.RecyclerView
-import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.data.model.JobState
 
 
 class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
@@ -139,6 +132,10 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
 
             shareViewModel.saveResult.observe(viewLifecycleOwner) {
                 setUpLoadingView(it)
+            }
+
+            shareViewModel.colorPalette.observe(viewLifecycleOwner) {
+
             }
         }
         return root
