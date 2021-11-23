@@ -66,7 +66,7 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
                 it.setAdapter(
                     ArrayAdapter(
                         requireContext(),
-                        android.R.layout.simple_dropdown_item_1line,
+                        R.layout.simple_dropdown_item_1line,
                         popArray
                     )
                 )

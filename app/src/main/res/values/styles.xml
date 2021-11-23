@@ -141,8 +141,6 @@
     </style>
 
     <style name="ThemeOverlay.App.Button.TextOutlineButton" parent="">
-        <!--        <item name="colorPrimary">@color/d_neutral_2</item>-->
-        <!--        <item name="colorOnPrimary">@color/text_color_on_export</item>-->
         <item name="android:textAllCaps">false</item>
         <item name="android:textSize">16sp</item>
     </style>
@@ -163,38 +161,20 @@
         <item name="android:paddingEnd">0dp</item>
     </style>
 
-
-    <style name="SaveDialogExposedDropdownMenu" parent="Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+    <style name="SaveDialogExposedDropdownMenu" parent="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
         <item name="boxBackgroundColor">@color/md_theme_dark_surface</item>
         <item name="boxStrokeColor">@color/md_theme_dark_outline</item>
-        <item name="materialThemeOverlay">@style/ThemeOverlay.App.ExposedDropdownMenu</item>
         <item name="shapeAppearance">@style/ShapeAppearance.App.SmallComponent</item>
         <item name="hintTextColor">@color/md_theme_dark_onSurface</item>
         <item name="endIconTint">@color/md_theme_dark_onSurface</item>
         <item name="android:textColor">@color/md_theme_dark_onSurface</item>
         <item name="android:textColorHint">@color/md_theme_dark_onSurface</item>
-
     </style>
 
     <style name="SaveDialogAutoCompleteTextView">
         <item name="hintTextColor">@color/md_theme_dark_onSurface</item>
         <item name="android:textColor">@color/md_theme_dark_onSurface</item>
         <item name="android:textColorHint">@color/md_theme_dark_onSurface</item>
-    </style>
-
-
-    <style name="ThemeOverlay.App.ExposedDropdownMenu" parent="Widget.MaterialComponents.AutoCompleteTextView.OutlinedBox">
-        <item name="autoCompleteTextViewStyle">@style/SaveDialogAutoCompleteTextView</item>
-    </style>
-
-    <style name="ThemeOverlay.App.AutoCompleteTextViewStyle" parent="Widget.Material3.AutoCompleteTextView.OutlinedBox">
-        <item name="android:textAppearance">?attr/textAppearanceBodyLarge</item>
-    </style>
-
-
-    <style name="ThemeOverlay.App.Dialog.SaveFile" parent="Theme.MyApp">
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="enableEdgeToEdge">true</item>
     </style>
 
 </resources>
