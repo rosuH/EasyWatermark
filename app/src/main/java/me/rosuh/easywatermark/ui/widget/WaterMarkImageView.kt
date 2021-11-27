@@ -39,8 +39,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
     @Volatile
     private var curImageInfo: ImageInfo = ImageInfo(Uri.EMPTY)
 
-    private val curUri: Uri
-        get() = curImageInfo.uri
+    private var decodedUri: Uri = Uri.EMPTY
 
     @Volatile
     private var localIconUri: Uri = Uri.EMPTY
@@ -85,7 +84,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
     var config: WaterMark? = null
         set(value) {
             field = value
-            if (curUri.toString().isBlank()) return
+            if (curImageInfo.uri.toString().isBlank()) return
             field?.let { applyNewConfig(false, it, curImageInfo) }
         }
 
@@ -108,7 +107,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         generateBitmapJob?.cancel()
         generateBitmapJob = launch(exceptionHandler) {
             // quick check is the same image
-            if (curUri != uri) {
+            if (decodedUri != uri) {
                 // hide iv
                 this@WaterMarkImageView.drawable?.alpha = 0
                 drawableAlphaAnimator.cancel()
@@ -152,6 +151,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 curImageInfo = imageInfo
                 curImageInfo.width = drawableBounds.width().toInt()
                 curImageInfo.height = drawableBounds.height().toInt()
+                decodedUri = uri
             }
             // apply new config to paint
             textPaint.applyConfig(curImageInfo, newConfig)
@@ -237,7 +237,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
-        if (config?.text.isNullOrEmpty() || curUri.toString().isEmpty() ||
+        if (config?.text.isNullOrEmpty() || decodedUri.toString().isEmpty() ||
             layoutShader == null
         ) {
             return
@@ -275,6 +275,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         localIconUri = Uri.EMPTY
         setImageBitmap(null)
         setBackgroundColor(Color.TRANSPARENT)
+        decodedUri = Uri.EMPTY
     }
 
     companion object {
