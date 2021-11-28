@@ -38,7 +38,6 @@
     <string name="about_title_figma_link">Other projects</string>
     <string name="error_not_img">Please select an image</string>
     <string name="error_file_not_found">The image couldn\'t be opened or was not selected</string>
-    <string name="tips_pick_image">Let\'s start by selecting an image</string>
     <string name="dialog_export_to_gallery">Export to Album</string>
     <string name="directly_save_tips">Save the edited image directly to your gallery</string>
     <string name="share_tips">Share the edited image with other apps</string>
@@ -65,16 +64,17 @@
     <string name="config_default_water_mark_text">👋 DO NOT REDISTRIBUTE</string>
     <string name="style_alpha">Alpha</string>
     <string name="contributor_info">If the feedback about a problem is valid and therefore fixed or a new version is released, your name or email will appear in the update pop-up window. We will hide your information, your full name will not appear. \\n If you do not want it to happen, please mark: I do not want to.</string>
-    <string name="dialog_change_log_title">Change log</string>
+    <string name="dialog_change_log_title">What\'s new</string>
     <string name="dialog_change_log_content" translatable="false">
         <![CDATA[
         <h2 id="new-and-optimized">New and Optimized</h2>
         <ol>
-        <li>&nbsp;&nbsp;🥳 Check out the new batch mode!.</li>
+        <li>&nbsp;&nbsp;🎨 Migrated to MD3 and fully supported Material You!</li>
+        <li>&nbsp;&nbsp;🥳 Check out the new gallery for image choosing!</li>
         </ol>
         <h2 id="fixed">Fixed</h2>
         <ol>
-        <li>&nbsp;&nbsp;🐛 Fix crash while using a recycled bitmap. (Thanks to lala)</li>
+        <li>&nbsp;&nbsp;🐛 Image lost after the system theme changed. (Thanks to wudai)</li>
         </ol>
 ]]>
     </string>
@@ -110,5 +110,9 @@
     <string name="dialog_save_config_format">Format</string>
     <string name="dialog_save_config_quality">Quality</string>
     <string name="dialog_save_exporting">Exporting</string>
+    <string name="tips_pick_image">Selecte images</string>
+    <string name="pick_via_system">more…</string>
+    <string name="gallery_pick_size">Choose %1$d</string>
+
 
 </resources>

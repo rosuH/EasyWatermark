@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="AboutPageTextViewStyle" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:drawableTint">?attr/colorOnBackground</item>
+        <item name="drawableTint">?attr/colorOnBackground</item>
+        <item name="android:paddingStart">28dp</item>
+        <item name="android:paddingEnd">28dp</item>
+    </style>
+</resources>

@@ -39,7 +39,7 @@
     <!--UI-->
     <string name="error_not_img">请选择图片</string>
     <string name="error_file_not_found">未选择图片或图片不存在</string>
-    <string name="tips_pick_image">"选择图片，开始编辑 "</string>
+    <string name="tips_pick_image">选择图片</string>
     <string name="dialog_export_to_gallery">导出到相册</string>
     <string name="directly_save_tips">直接存储编辑后的图像到你的相册中</string>
     <string name="share_tips">分享编辑后的图像到其他应用</string>
@@ -71,11 +71,12 @@
         <![CDATA[
         <h2 id="new-and-optimized">新增与优化</h2>
         <ol>
-        <li>&nbsp;&nbsp;🥳 欢迎批量模式的到来！</li>
+        <li>&nbsp;&nbsp;🎨 兼容 MD3 并支持 Material You！</li>
+        <li>&nbsp;&nbsp;🥳 新增图库以便多选图片。特别是在部分国产 ROM 的中。</li>
         </ol>
         <h2 id="Fixed">修复</h2>
         <ol>
-        <li>&nbsp;&nbsp;🐛 修复重用位图导致的崩溃（感谢 lala）</li>
+        <li>&nbsp;&nbsp;🐛 系统主题变更导致状态错误问题。(感谢 五代）</li>
         </ol>
 ]]>
 
@@ -103,5 +104,7 @@
     <string name="dialog_open_in_gallery">在相册中查看</string>
     <string name="dialog_save_config_format">格式</string>
     <string name="dialog_save_config_quality">质量</string>
+    <string name="pick_via_system">Choose more...</string>
+    <string name="gallery_pick_size">选择 %1$d</string>
 
 </resources>

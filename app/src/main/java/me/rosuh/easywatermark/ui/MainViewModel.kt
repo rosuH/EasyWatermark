@@ -1,10 +1,7 @@
 package me.rosuh.easywatermark.ui
 
 import android.app.Activity
-import android.content.ActivityNotFoundException
-import android.content.ContentResolver
-import android.content.ContentValues
-import android.content.Intent
+import android.content.*
 import android.graphics.*
 import android.net.Uri
 import android.os.Build
@@ -24,6 +21,7 @@ import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.*
+import me.rosuh.easywatermark.data.repo.MemorySettingRepo
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.ui.widget.WaterMarkImageView
@@ -41,7 +39,8 @@ import kotlin.math.ceil
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val userRepo: UserConfigRepository,
-    private val waterMarkRepo: WaterMarkRepository
+    private val waterMarkRepo: WaterMarkRepository,
+    private val memorySettingRepo: MemorySettingRepo,
 ) : ViewModel() {
 
     var nextSelectedPos: Int = 0
@@ -57,11 +56,13 @@ class MainViewModel @Inject constructor(
     val imageList: LiveData<Pair<List<ImageInfo>, Boolean>> =
         waterMarkRepo.uriLivedData.map { Pair(it, autoScroll) }
 
+    val galleryPickedImageList: MutableLiveData<List<Image>> = MutableLiveData()
+
     val selectedImage: MutableLiveData<ImageInfo> = MutableLiveData()
 
     val saveImageUri: MutableLiveData<List<ImageInfo>> = MutableLiveData()
 
-    val saveProcess: MutableLiveData<ImageInfo> = MutableLiveData()
+    val saveProcess: MutableLiveData<ImageInfo?> = MutableLiveData()
 
     private var compressedJob: Job? = null
 
@@ -87,6 +88,18 @@ class MainViewModel @Inject constructor(
     private val tmpSrcBounds by lazy { RectF() }
     private val tmpDstBounds by lazy { RectF() }
 
+    private val projection = arrayOf(
+        MediaStore.Images.Media._ID,
+        MediaStore.Images.Media.BUCKET_ID,
+        MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
+        MediaStore.Images.Media.DATA,
+        if (Build.VERSION.SDK_INT > 28) MediaStore.Images.Media.DATE_MODIFIED else MediaStore.Images.Media.DATE_TAKEN,
+        MediaStore.Images.Media.ORIENTATION,
+        MediaStore.Images.Media.WIDTH,
+        MediaStore.Images.Media.HEIGHT,
+        MediaStore.Images.Media.SIZE
+    )
+
     fun saveImage(
         contentResolver: ContentResolver,
         viewInfo: ViewInfo,
@@ -104,7 +117,7 @@ class MainViewModel @Inject constructor(
                 saveResult.value = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
                 return@launch
             }
-            saveImageUri.value = result.data
+            saveImageUri.value = result.data!!
             saveResult.value = Result.success(code = TYPE_JOB_FINISH, data = result.data)
         }
     }
@@ -339,11 +352,17 @@ class MainViewModel @Inject constructor(
     fun updateImageList(list: List<Uri>) {
         launch {
             generateImageInfoList(list)?.run {
-                autoScroll = true
-                selectedImage.value = this.first()
-                nextSelectedPos = 0
-                waterMarkRepo.updateImageList(this)
+                updateImageListInternal(this)
             }
+        }
+    }
+
+    private fun updateImageListInternal(list: List<ImageInfo>) {
+        launch {
+            autoScroll = true
+            selectedImage.value = list.first()
+            nextSelectedPos = 0
+            waterMarkRepo.updateImageList(list)
         }
     }
 
@@ -425,7 +444,7 @@ class MainViewModel @Inject constructor(
             userRepo.updateFormat(format)
             userRepo.updateCompressLevel(level)
         }
-        resetStatus()
+        resetJobStatus()
     }
 
     fun removeImage(
@@ -455,13 +474,21 @@ class MainViewModel @Inject constructor(
 
     fun updateColorPalette(palette: Palette) {
         colorPalette.postValue(palette)
+        memorySettingRepo.updatePalette(palette)
     }
 
-    fun resetStatus() {
+    fun resetJobStatus() {
         saveResult.postValue(Result.success(null))
         imageList.value?.first?.forEach {
             it.jobState = JobState.Ready
             saveProcess.value = it
+        }
+    }
+
+    fun clearData() {
+        selectedImage.value = ImageInfo(Uri.EMPTY)
+        launch {
+            waterMarkRepo.resetList()
         }
     }
 
@@ -565,6 +592,96 @@ class MainViewModel @Inject constructor(
 
     fun saveUpgradeInfo() {
         launch { userRepo.saveVersionCode() }
+    }
+
+    fun query(contentResolver: ContentResolver) {
+        launch {
+            queryInternal(contentResolver)
+        }
+    }
+
+    private suspend fun queryInternal(
+        contentResolver: ContentResolver,
+        force: Boolean = galleryPickedImageList.value == null
+    ) = withContext(Dispatchers.IO) {
+        if (!force) {
+            return@withContext
+        }
+        val list = ArrayList<Image>()
+        contentResolver.query(
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            projection,
+            null,
+            null,
+            (if (Build.VERSION.SDK_INT > 28) MediaStore.Images.Media.DATE_MODIFIED else MediaStore.Images.Media.DATE_TAKEN) + " DESC"
+        )?.use { cursor ->
+            val imageIdColumn = cursor.getColumnIndex(MediaStore.Images.Media._ID)
+            val bucketIdColumn = cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_ID)
+            val bucketNameColumn =
+                cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
+            val dataColumn = cursor.getColumnIndex(MediaStore.Images.Media.DATA)
+            val dateColumn =
+                cursor.getColumnIndex(if (Build.VERSION.SDK_INT > 28) MediaStore.Images.Media.DATE_MODIFIED else MediaStore.Images.Media.DATE_TAKEN)
+            val orientationColumn = cursor.getColumnIndex(MediaStore.Images.Media.ORIENTATION)
+            val widthColumn = cursor.getColumnIndex(MediaStore.Images.Media.WIDTH)
+            val heightColumn = cursor.getColumnIndex(MediaStore.Images.Media.HEIGHT)
+            val sizeColumn = cursor.getColumnIndex(MediaStore.Images.Media.SIZE)
+
+            while (cursor.moveToNext()) {
+                val path = cursor.getString(dataColumn)
+                if (path.isNullOrBlank()) {
+                    continue
+                }
+
+                val imageId = cursor.getInt(imageIdColumn)
+                val bucketId = cursor.getInt(bucketIdColumn)
+                val bucketName = cursor.getString(bucketNameColumn)
+                val dateTaken = cursor.getLong(dateColumn)
+                val orientation = cursor.getInt(orientationColumn)
+                val width = cursor.getInt(widthColumn)
+                val height = cursor.getInt(heightColumn)
+                val size = cursor.getLong(sizeColumn)
+
+                val contentUri: Uri = ContentUris.withAppendedId(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    imageId.toLong()
+                )
+
+                // Stores column values and the contentUri in a local object
+                // that represents the media file.
+                val image = Image(imageId, contentUri, bucketName, size, dateTaken)
+                list += image
+            }
+            galleryPickedImageList.postValue(list)
+        }
+    }
+
+    fun selectGallery(selectedList: List<Image>) {
+        launch {
+            withContext(Dispatchers.Default) {
+                selectedList
+                    .map {
+                        ImageInfo(it.uri)
+                    }
+                    .takeIf {
+                        it.isNotEmpty()
+                    }?.let {
+                        updateImageListInternal(it)
+                    }
+            }
+        }
+    }
+
+    fun resetGalleryData() {
+        launch {
+            withContext(Dispatchers.Default) {
+                val iterator = galleryPickedImageList.value?.iterator() ?: return@withContext
+                while (iterator.hasNext()) {
+                    val image = iterator.next()
+                    image.check = false
+                }
+            }
+        }
     }
 
     companion object {

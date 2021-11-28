@@ -1,0 +1,15 @@
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <style name="SaveDialogTextViewStyle" parent="Widget.MaterialComponents.BottomSheet.Modal">
+        <item name="android:paddingStart">0dp</item>
+        <item name="android:paddingEnd">0dp</item>
+    </style>
+
+
+    <style name="SaveDialogExposedDropdownMenu" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu" />
+
+    <style name="ThemeOverlay.App.ExposedDropdownMenu" parent="" />
+
+    <style name="SaveDialogAutoCompleteTextView" parent="ThemeOverlay.Material3.AutoCompleteTextView.OutlinedBox" />
+
+</resources>

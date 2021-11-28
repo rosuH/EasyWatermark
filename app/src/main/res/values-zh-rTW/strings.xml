@@ -49,7 +49,7 @@
     <string name="tips_need_compress_img">圖片過大或內存不足</string>
     <string name="tips_not_app_can_open_imaegs">看起來您安裝沒有檔案管理員？</string>
     <string name="tips_ok">確定</string>
-    <string name="tips_pick_image">選擇圖片，開始編輯</string>
+    <string name="tips_pick_image">選擇圖片</string>
     <string name="tips_save_ok">儲存完成</string>
     <string name="tips_share_image">分享圖片</string>
     <string name="tips_share_ok">分享完成</string>
@@ -70,14 +70,16 @@
     <string name="water_mark_mode_text">文字</string>
     <string name="dialog_change_log_content">
         <![CDATA[
-        <h2 id="new-and-optimized">新增与优化</h2>
-        <ol>
-        <li>&nbsp;&nbsp;⚡️ 改進內存的使用.</li>
-        <li>&nbsp;&nbsp;🎨 改進動畫和交互.</li>
-        <li>&nbsp;&nbsp;🥳 支持 Android 12 的啟動動畫.</li>
-        <li>&nbsp;&nbsp;🔧 提升目標Api到31.</li>
-        </ol>
-        ]]>
+         <h2 id="new-and-optimized">新的和優化的</h2>
+         <ol>
+         <li>&nbsp;&nbsp;🎨 遷移到 MD3 並完全支持 Material You！</li>
+         <li>&nbsp;&nbsp;🥳 查看新圖庫以選擇圖片！</li>
+         </ol>
+         <h2 id="fixed">固定</h2>
+         <ol>
+         <li>&nbsp;&nbsp;🐛 系統主題更改後圖片丟失。 （感謝五代）</li>
+         </ol>
+]]>
     </string>
     <string name="dev_comment">任何先进的科技，初看皆与魔法无异</string>
     <string name="dialog_content_exist_confirm">丟棄修改？</string>
@@ -98,4 +100,6 @@
     <string name="dialog_open_in_gallery">在圖片庫中檢視</string>
     <string name="dialog_save_config_format">格式</string>
     <string name="dialog_save_config_quality">品質</string>
+    <string name="pick_via_system">Choose more...</string>
+    <string name="gallery_pick_size">選擇 %1$d</string>
 </resources>

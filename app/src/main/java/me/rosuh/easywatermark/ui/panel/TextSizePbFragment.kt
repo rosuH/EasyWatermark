@@ -3,7 +3,6 @@ package me.rosuh.easywatermark.ui.panel
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.FragmentActivity
-import androidx.fragment.app.commit
 import com.google.android.material.slider.Slider
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
@@ -35,21 +34,15 @@ class TextSizePbFragment : BasePBFragment() {
 
         fun replaceShow(fa: FragmentActivity, containerId: Int) {
             val f = fa.supportFragmentManager.findFragmentByTag(TAG)
-            if (f?.isVisible == true || f?.isAdded == true) {
+            if (f?.isVisible == true) {
                 return
             }
-            if (f != null) {
-                fa.commitWithAnimation {
-                    show(f)
-                }
-            } else {
-                fa.commitWithAnimation {
-                    replace(
-                        containerId,
-                        TextSizePbFragment(),
-                        TAG
-                    )
-                }
+            fa.commitWithAnimation {
+                replace(
+                    containerId,
+                    TextSizePbFragment(),
+                    TAG
+                )
             }
         }
     }

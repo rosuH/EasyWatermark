@@ -83,12 +83,14 @@
     <string name="text_typeface_bold_italic">Fett und Kursiv</string>
     <string name="dialog_change_log_content">
         <![CDATA[
-        <h2 id="new-and-optimized">Neu und optimiert</h2>
+        <h2 id="new-and-optimized">New and Optimized</h2>
         <ol>
-        <li>&nbsp;&nbsp;⚡️ Verbesserte Speichernutzung.</li>
-        <li>&nbsp;&nbsp;🎨 Verbesserte Animation und Touch-Effekt.</li>
-        <li>&nbsp;&nbsp;🥳 Unterstützter Begrüßungsbildschirm in Android 12.</li>
-        <li>&nbsp;&nbsp;🔧 TargetApi auf 31 . aktualisiert.</li>
+        <li>&nbsp;&nbsp;🎨 Migrated to MD3 and fully supported Material You!</li>
+        <li>&nbsp;&nbsp;🥳 Check out the new gallery for image choosing!</li>
+        </ol>
+        <h2 id="fixed">Fixed</h2>
+        <ol>
+        <li>&nbsp;&nbsp;🐛 Image lost after the system theme changed. (Thanks to wudai)</li>
         </ol>
 ]]>
     </string>
@@ -98,5 +100,7 @@
     <string name="dialog_open_in_gallery">In Galerie anzeigen</string>
     <string name="dialog_save_config_format">Format</string>
     <string name="dialog_save_config_quality">Qualität</string>
+    <string name="pick_via_system">Choose more...</string>
+    <string name="gallery_pick_size">Choose %1$d</string>
 
 </resources>

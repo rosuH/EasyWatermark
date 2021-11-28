@@ -35,13 +35,13 @@
                 android:layout_margin="16dp"
                 android:orientation="vertical">
 
-                <TextView
-                    style="@style/AppTheme.TitleText"
+                <com.google.android.material.textview.MaterialTextView
+                    style="@style/Theme.MyApp.TitleText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="ColorPickerView" />
 
-                <TextView
+                <com.google.android.material.textview.MaterialTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
@@ -64,13 +64,13 @@
                 android:layout_margin="16dp"
                 android:orientation="vertical">
 
-                <TextView
-                    style="@style/AppTheme.TitleText"
+                <com.google.android.material.textview.MaterialTextView
+                    style="@style/Theme.MyApp.TitleText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Glide" />
 
-                <TextView
+                <com.google.android.material.textview.MaterialTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
@@ -93,13 +93,13 @@
                 android:layout_margin="16dp"
                 android:orientation="vertical">
 
-                <TextView
-                    style="@style/AppTheme.TitleText"
+                <com.google.android.material.textview.MaterialTextView
+                    style="@style/Theme.MyApp.TitleText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Material Components for Android" />
 
-                <TextView
+                <com.google.android.material.textview.MaterialTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
@@ -122,13 +122,13 @@
                 android:layout_margin="16dp"
                 android:orientation="vertical">
 
-                <TextView
-                    style="@style/AppTheme.TitleText"
+                <com.google.android.material.textview.MaterialTextView
+                    style="@style/Theme.MyApp.TitleText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Compressor" />
 
-                <TextView
+                <com.google.android.material.textview.MaterialTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"

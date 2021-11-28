@@ -1,15 +1,14 @@
 package me.rosuh.easywatermark.ui.widget
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.ViewGroup
 import android.widget.ImageView
-import android.widget.TextView
-import androidx.appcompat.widget.AppCompatTextView
-import androidx.core.content.ContextCompat
 import androidx.core.view.children
 import androidx.core.view.isVisible
 import androidx.core.view.setPadding
@@ -17,12 +16,11 @@ import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.dynamicanimation.animation.SpringForce
 import androidx.fragment.app.FragmentContainerView
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.tabs.TabLayout
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ui.widget.utils.BounceEdgeEffectFactory
-import me.rosuh.easywatermark.utils.ktx.dp
-import me.rosuh.easywatermark.utils.ktx.generateAppearAnimationList
-import me.rosuh.easywatermark.utils.ktx.generateDisappearAnimationList
+import me.rosuh.easywatermark.utils.ktx.*
 import kotlin.math.abs
 
 /**
@@ -32,6 +30,7 @@ import kotlin.math.abs
  * @author hi@rosuh.me
  * @date 2021/8/11
  */
+@SuppressLint("ClickableViewAccessibility")
 class LaunchView : CustomViewGroup {
 
     //region 1 constructor
@@ -59,22 +58,11 @@ class LaunchView : CustomViewGroup {
         }
     }
 
-    private val tvSelectPhotoTips: TextView by lazy {
-        AppCompatTextView(context).apply {
+    val ivSelectedPhotoTips: MaterialButton by lazy {
+        MaterialButton(context).apply {
             textAlignment = TEXT_ALIGNMENT_CENTER
             gravity = Gravity.CENTER
             text = context.getString(R.string.tips_pick_image)
-        }
-    }
-
-    val ivSelectedPhotoTips: ImageView by lazy {
-        ImageView(context, null, 0, android.R.style.Widget_ActionButton).apply {
-            layoutParams =
-                MarginLayoutParams(
-                    LayoutParams.WRAP_CONTENT,
-                    LayoutParams.WRAP_CONTENT
-                )
-            setImageResource(R.drawable.ic_picker_image)
         }
     }
 
@@ -86,6 +74,7 @@ class LaunchView : CustomViewGroup {
                     48.dp
                 )
             setImageResource(R.drawable.ic_about)
+            imageTintList = ColorStateList.valueOf(context.colorPrimary)
         }
     }
 
@@ -97,17 +86,19 @@ class LaunchView : CustomViewGroup {
                     LayoutParams.WRAP_CONTENT
                 )
                     .also { it.setMargins(0, 20.dp, 0, 0) }
-            setBackgroundColor(Color.TRANSPARENT)
-            elevation = 0f
-            popupTheme = R.style.ThemeOverlay_AppCompat_Dark_ActionBar
+//            setBackgroundColor(context.colorSurface)
         }
     }
 
     val ivPhoto: WaterMarkImageView by lazy {
         WaterMarkImageView(context).apply {
             setPadding(12.dp)
-            setBackgroundColor(ContextCompat.getColor(context, R.color.colorPrimaryDark))
-            setOnTouchListener { _, event -> return@setOnTouchListener rvPhotoList.onTouchEvent(event) }
+//            setBackgroundColor(context.colorPrimaryDark)
+            setOnTouchListener { _, event ->
+                return@setOnTouchListener rvPhotoList.onTouchEvent(
+                    event
+                )
+            }
         }
     }
 
@@ -117,17 +108,10 @@ class LaunchView : CustomViewGroup {
                 LayoutParams.MATCH_PARENT,
                 LayoutParams.WRAP_CONTENT
             )
-            setTabTextColors(
-                ContextCompat.getColor(context, R.color.text_color_main),
-                ContextCompat.getColor(context, R.color.selector_tab_color)
-            )
             isTabIndicatorFullWidth = false
             tabGravity = TabLayout.GRAVITY_FILL
-            isTabIndicatorFullWidth = false
             tabIndicatorAnimationMode = TabLayout.INDICATOR_ANIMATION_MODE_ELASTIC
-            setTabIconTintResource(R.color.selector_tab_color)
             setBackgroundColor(Color.TRANSPARENT)
-            setSelectedTabIndicatorColor(ContextCompat.getColor(context, R.color.colorAccent))
             val contentTab = newTab().also {
                 it.text = context.getString(R.string.title_content)
             }
@@ -161,7 +145,7 @@ class LaunchView : CustomViewGroup {
                 LayoutParams.MATCH_PARENT,
                 LayoutParams.WRAP_CONTENT
             )
-            setBackgroundColor(ContextCompat.getColor(context, R.color.colorSecondary))
+            setBackgroundColor(Color.TRANSPARENT)
             clipChildren = false
             clipToPadding = false
             edgeEffectFactory = BounceEdgeEffectFactory(context, this)
@@ -184,7 +168,7 @@ class LaunchView : CustomViewGroup {
 
     //region 3 private field
     private val launchViews by lazy {
-        listOf(logoView, tvSelectPhotoTips, ivSelectedPhotoTips, ivGoAboutPage)
+        listOf(logoView, ivSelectedPhotoTips, ivGoAboutPage)
     }
 
     private val editorViews by lazy {
@@ -270,8 +254,10 @@ class LaunchView : CustomViewGroup {
                 measureChildWithMargins(it, widthMeasureSpec, 0, heightMeasureSpec, 0)
             }
         }
-        val heightUsed =
-            toolbar.measuredHeight + fcFunctionDetail.measuredHeightWithMargins + tabLayout.measuredHeightWithMargins + rvPanel.measuredHeightWithMargins + rvPhotoList.measuredHeightWithMargins
+        val heightUsed = toolbar.measuredHeight.plus(fcFunctionDetail.measuredHeightWithMargins)
+            .plus(tabLayout.measuredHeightWithMargins)
+            .plus(rvPanel.measuredHeightWithMargins)
+            .plus(rvPhotoList.measuredHeightWithMargins)
         ivPhoto.measure(
             MeasureSpec.makeMeasureSpec(parentWidth, MeasureSpec.EXACTLY),
             MeasureSpec.makeMeasureSpec(parentHeight - heightUsed, MeasureSpec.EXACTLY)
@@ -291,11 +277,8 @@ class LaunchView : CustomViewGroup {
         logoView.let {
             it.layoutCenterHorizontal(appendY = (measuredHeight * 0.2f).toInt())
         }
-        tvSelectPhotoTips.let {
-            it.layoutCenterHorizontal(appendY = (measuredHeight * 0.6f).toInt())
-        }
         ivSelectedPhotoTips.let {
-            it.layoutCenterHorizontal(appendY = tvSelectPhotoTips.bottom)
+            it.layoutCenterHorizontal(appendY = (measuredHeight * 0.6f).toInt())
         }
         ivGoAboutPage.let {
             it.layoutCenterHorizontal(appendY = (measuredHeight - it.measuredHeightWithMargins))

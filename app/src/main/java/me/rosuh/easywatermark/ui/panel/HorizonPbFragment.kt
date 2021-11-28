@@ -35,7 +35,7 @@ class HorizonPbFragment : BasePBFragment() {
 
         fun replaceShow(fa: FragmentActivity, containerId: Int) {
             val f = fa.supportFragmentManager.findFragmentByTag(TAG)
-            if (f?.isVisible == true || f?.isAdded == true) {
+            if (f?.isVisible == true) {
                 return
             }
             fa.commitWithAnimation {

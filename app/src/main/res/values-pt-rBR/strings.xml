@@ -68,13 +68,15 @@
     <string name="dialog_change_log_title">Histórico de modificações</string>
     <string name="dialog_change_log_content">
         <![CDATA[
-        <h2 id="new-and-optimized">Novidades e otimizações</h2>
-        <ol>
-        <li>&nbsp;&nbsp;⚡️ Melhor uso da memória.</li>
-        <li>&nbsp;&nbsp;🎨 Melhorada animação e efeito de toque.</li>
-        <li>&nbsp;&nbsp;🥳 Suporte à Tela inicial no Android 12.</li>
-        <li>&nbsp;&nbsp;🔧 O API alvo atualizado para 31.</li>
-        </ol>
+         <h2 id="new-and-optimized"> Novo e otimizado </h2>
+         <ol>
+         <li>&nbsp; &nbsp; 🎨 Migrado para MD3 e totalmente compatível com o material que você! </li>
+         <li>&nbsp; &nbsp; 🥳 Confira a nova galeria para escolha de imagens! </li>
+         </ol>
+         <h2 id = "fixed"> Fixo </h2>
+         <ol>
+         <li>&nbsp;&nbsp; 🐛 Imagem perdida após a alteração do tema do sistema. (Graças a wudai) </li>
+         </ol>
 ]]>
     </string>
     <string name="tips_not_app_can_open_imaegs">Nenhum gerenciador de arquivos detectado.</string>
@@ -98,5 +100,7 @@
     <string name="dialog_open_in_gallery">Ver na Galeria</string>
     <string name="dialog_save_config_format">Formato</string>
     <string name="dialog_save_config_quality">Qualidade</string>
+    <string name="pick_via_system">Choose more...</string>
+    <string name="gallery_pick_size">Choose %1$d</string>
 
 </resources>

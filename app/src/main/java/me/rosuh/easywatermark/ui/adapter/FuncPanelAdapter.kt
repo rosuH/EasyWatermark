@@ -1,27 +1,24 @@
 package me.rosuh.easywatermark.ui.adapter
 
 import android.annotation.SuppressLint
-import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.color.MaterialColors
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
 import me.rosuh.easywatermark.ui.base.BaseViewHolder
+import me.rosuh.easywatermark.utils.ktx.colorPrimary
 
 class FuncPanelAdapter(
     val dataSet: ArrayList<FuncTitleModel>
 ) : RecyclerView.Adapter<FuncPanelAdapter.FuncTitleHolder>() {
 
-    var textColor: Int = ContextCompat.getColor(
-        MyApp.instance.applicationContext,
-        R.color.text_color_main
-    )
+    var textColor: Int = MyApp.instance.applicationContext.colorPrimary
         private set
 
     var selectedPos = 0
@@ -67,19 +64,13 @@ class FuncPanelAdapter(
             holder.ivIcon.setImageResource(iconRes)
             if (position == selectedPos) {
                 holder.ivIcon.drawable.setTint(
-                    ContextCompat.getColor(
-                        holder.itemView.context,
-                        R.color.colorAccent
-                    )
+                    MaterialColors.harmonize(textColor, holder.tvTitle.context.colorPrimary)
                 )
                 holder.tvTitle.setTextColor(
-                    ContextCompat.getColor(
-                        holder.itemView.context,
-                        R.color.colorAccent
-                    )
+                    MaterialColors.harmonize(textColor, holder.tvTitle.context.colorPrimary)
                 )
             } else {
-                holder.ivIcon.drawable.setTintList(null)
+                holder.ivIcon.drawable.setTint(textColor)
                 holder.tvTitle.setTextColor(textColor)
             }
         }

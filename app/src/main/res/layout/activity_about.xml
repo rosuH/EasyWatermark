@@ -4,8 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:animateLayoutChanges="true"
-    android:background="@drawable/bg_gradient_about_page">
+    android:animateLayoutChanges="true">
 
     <ImageView
         android:id="@+id/iv_back"
@@ -16,9 +15,10 @@
         android:layout_marginTop="44dp"
         android:src="@drawable/ic_back"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="?attr/colorPrimary" />
 
-    <ImageView
+    <me.rosuh.easywatermark.ui.widget.ColoredImageVIew
         android:id="@+id/iv_logo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -35,169 +35,135 @@
         app:layout_constraintTop_toBottomOf="@id/iv_logo">
 
         <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/cl_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingTop="8dp">
 
-            <TextView
+            <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/tv_title_about"
+                style="@style/TextAppearance.Material3.LabelMedium"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingStart="28dp"
                 android:paddingTop="16dp"
                 android:paddingEnd="28dp"
                 android:text="@string/about_title_info"
-                android:textColor="@color/d_neutral_2"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
-            <View
-                android:id="@+id/view_divider_1"
-                android:layout_width="match_parent"
-                android:layout_height="2dp"
-                android:layout_marginStart="28dp"
-                android:layout_marginTop="11dp"
-                android:layout_marginEnd="28dp"
-                android:background="#0DFFFFFF"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tv_title_about" />
-
-            <TextView
+            <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/tv_version"
                 style="@style/AboutPageTextViewStyle"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
-                android:background="?android:attr/selectableItemBackground"
                 android:drawablePadding="24dp"
                 android:gravity="center|start"
                 android:text="@string/about_title_version"
-                android:textColor="@color/d_neutral_3"
                 app:drawableStartCompat="@drawable/ic_version"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/view_divider_1" />
+                app:layout_constraintTop_toBottomOf="@id/tv_title_about" />
 
-            <TextView
+            <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/tv_version_value"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="28dp"
-                android:textColor="@color/d_neutral_3"
+
                 app:layout_constraintBottom_toBottomOf="@id/tv_version"
                 app:layout_constraintEnd_toEndOf="@id/tv_version"
                 app:layout_constraintTop_toTopOf="@id/tv_version" />
 
-            <TextView
+            <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/tv_rating"
                 style="@style/AboutPageTextViewStyle"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
-                android:background="?android:attr/selectableItemBackground"
                 android:drawablePadding="24dp"
                 android:gravity="center|start"
                 android:text="@string/about_title_rating"
-                android:textColor="@color/d_neutral_3"
+
                 app:drawableStartCompat="@drawable/ic_rate"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tv_version" />
 
-            <TextView
+            <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/tv_feed_back"
                 style="@style/AboutPageTextViewStyle"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
-                android:background="?android:attr/selectableItemBackground"
                 android:drawablePadding="24dp"
                 android:gravity="center|start"
-
                 android:text="@string/about_title_feed_back"
-                android:textColor="@color/d_neutral_3"
                 app:drawableStartCompat="@drawable/ic_bug_report"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tv_rating" />
 
-            <TextView
+            <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/tv_title_info"
+                style="@style/TextAppearance.Material3.LabelMedium"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingStart="28dp"
                 android:paddingTop="16dp"
                 android:paddingEnd="28dp"
                 android:text="@string/about_title_about"
-                android:textColor="@color/d_neutral_2"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tv_feed_back" />
 
-            <View
-                android:id="@+id/view_divider_2"
-                android:layout_width="match_parent"
-                android:layout_height="2dp"
-                android:layout_marginStart="28dp"
-                android:layout_marginTop="11dp"
-                android:layout_marginEnd="28dp"
-                android:background="#0DFFFFFF"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tv_title_info" />
 
-            <TextView
+            <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/tv_change_log"
                 style="@style/AboutPageTextViewStyle"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
-                android:background="?android:attr/selectableItemBackground"
                 android:drawablePadding="24dp"
                 android:gravity="center|start"
                 android:text="@string/about_title_update_log"
-                android:textColor="@color/d_neutral_3"
                 app:drawableStartCompat="@drawable/ic_update_log"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/view_divider_2" />
+                app:layout_constraintTop_toBottomOf="@id/tv_title_info" />
 
-            <TextView
+            <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/tv_open_source"
                 style="@style/AboutPageTextViewStyle"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
-                android:background="?android:attr/selectableItemBackground"
                 android:drawablePadding="24dp"
                 android:gravity="center|start"
                 android:text="@string/about_title_open_source"
-                android:textColor="@color/d_neutral_3"
+
                 app:drawableStartCompat="@drawable/ic_open_source"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tv_change_log" />
 
-            <TextView
+            <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/tv_privacy_cn"
                 style="@style/AboutPageTextViewStyle"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
-                android:background="?android:attr/selectableItemBackground"
                 android:drawablePadding="24dp"
                 android:gravity="center|start"
                 android:text="@string/about_title_privacy_statement_zh"
-                android:textColor="@color/d_neutral_3"
+
                 app:drawableStartCompat="@drawable/ic_privacy_cn"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tv_open_source" />
 
-            <TextView
+            <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/tv_privacy_eng"
                 style="@style/AboutPageTextViewStyle"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
-                android:background="?android:attr/selectableItemBackground"
                 android:drawablePadding="24dp"
                 android:gravity="center|start"
                 android:text="@string/about_title_privacy_statement"
-                android:textColor="@color/d_neutral_3"
                 app:drawableStartCompat="@drawable/ic_privacy_en"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -222,12 +188,13 @@
                     android:orientation="horizontal">
 
                     <androidx.constraintlayout.widget.ConstraintLayout
+                        android:id="@+id/cl_dev_container"
                         android:layout_width="300dp"
                         android:layout_height="226dp"
                         android:layout_marginStart="28dp"
                         android:background="@drawable/bg_card_person_info">
 
-                        <TextView
+                        <com.google.android.material.textview.MaterialTextView
                             android:id="@+id/tv_title"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -237,12 +204,11 @@
                             android:ellipsize="end"
                             android:singleLine="true"
                             android:text="Developed with ♥ by rosu"
-                            android:textColor="@color/d_neutral_3"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintTop_toTopOf="parent" />
 
-                        <TextView
+                        <com.google.android.material.textview.MaterialTextView
                             android:id="@+id/tv_sub_title"
                             android:layout_width="match_parent"
                             android:layout_height="0dp"
@@ -251,7 +217,7 @@
                             android:layout_marginEnd="32dp"
                             android:ellipsize="end"
                             android:text="@string/dev_comment"
-                            android:textColor="@color/d_neutral_2"
+
                             app:layout_constraintBottom_toTopOf="@id/civ_avatar"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintStart_toStartOf="parent"
@@ -270,13 +236,14 @@
                     </androidx.constraintlayout.widget.ConstraintLayout>
 
                     <androidx.constraintlayout.widget.ConstraintLayout
+                        android:id="@+id/cl_designer_container"
                         android:layout_width="300dp"
                         android:layout_height="226dp"
                         android:layout_marginStart="14dp"
                         android:layout_marginEnd="14dp"
                         android:background="@drawable/bg_card_person_info">
 
-                        <TextView
+                        <com.google.android.material.textview.MaterialTextView
                             android:id="@+id/tv_title_designer"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -286,12 +253,11 @@
                             android:ellipsize="end"
                             android:singleLine="true"
                             android:text="Designed with ♥ by tovi"
-                            android:textColor="@color/d_neutral_3"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintTop_toTopOf="parent" />
 
-                        <TextView
+                        <com.google.android.material.textview.MaterialTextView
                             android:id="@+id/tv_sub_title_designer"
                             android:layout_width="match_parent"
                             android:layout_height="0dp"
@@ -300,7 +266,6 @@
                             android:layout_marginEnd="32dp"
                             android:ellipsize="end"
                             android:text="A Designer."
-                            android:textColor="@color/d_neutral_2"
                             app:layout_constraintBottom_toTopOf="@id/civ_avatar_designer"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintStart_toStartOf="parent"
@@ -326,8 +291,8 @@
                 android:id="@+id/switch_debug"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Show Bounds"
                 android:padding="28dp"
+                android:text="Show Bounds"
                 app:layout_constraintTop_toBottomOf="@id/hsv" />
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.core.widget.NestedScrollView>

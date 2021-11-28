@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="280dp"
     android:layout_height="wrap_content"
-    android:background="@color/colorSecondary"
+
     android:minWidth="280dp"
     android:paddingBottom="8dp">
 
@@ -40,19 +40,17 @@
         android:gravity="center"
         android:text="@string/tips_need_compress_img"
         android:textAlignment="center"
-        android:textColor="@color/text_color_tips"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/cpb_compress" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_cancel"
-        style="@style/Widget.MaterialComponents.Button.TextButton"
+        style="@style/Widget.Material3.Button.TextButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="8dp"
         android:text="@string/tips_cancel_output"
-        android:textColor="@color/white"
         android:textStyle="normal"
         app:layout_constraintBottom_toBottomOf="@+id/btn_compress"
         app:layout_constraintEnd_toStartOf="@id/btn_compress"
@@ -61,13 +59,12 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_compress"
-        style="@style/Widget.MaterialComponents.Button.TextButton"
+        style="@style/Widget.Material3.Button.TextButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="36dp"
         android:layout_marginEnd="8dp"
         android:text="@string/tips_compress_images"
-        android:textColor="@color/white"
         android:textStyle="normal"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tv_compress_tips" />

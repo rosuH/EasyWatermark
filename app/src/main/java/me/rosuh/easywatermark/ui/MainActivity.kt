@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.Intent.ACTION_SEND
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
@@ -19,6 +20,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import androidx.core.view.*
 import androidx.fragment.app.commit
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -33,19 +35,15 @@ import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.ui.about.AboutActivity
 import me.rosuh.easywatermark.ui.adapter.FuncPanelAdapter
 import me.rosuh.easywatermark.ui.adapter.PhotoListPreviewAdapter
-import me.rosuh.easywatermark.ui.dialog.ChangeLogDialogFragment
-import me.rosuh.easywatermark.ui.dialog.CompressImageDialogFragment
-import me.rosuh.easywatermark.ui.dialog.EditTextBSDialogFragment
-import me.rosuh.easywatermark.ui.dialog.SaveImageBSDialogFragment
+import me.rosuh.easywatermark.ui.dialog.*
 import me.rosuh.easywatermark.ui.panel.*
 import me.rosuh.easywatermark.ui.widget.CenterLayoutManager
 import me.rosuh.easywatermark.ui.widget.LaunchView
 import me.rosuh.easywatermark.utils.*
-import me.rosuh.easywatermark.utils.ktx.commitWithAnimation
-import me.rosuh.easywatermark.utils.ktx.preCheckStoragePermission
-import me.rosuh.easywatermark.utils.ktx.toColor
+import me.rosuh.easywatermark.utils.ktx.*
 import java.util.*
 import kotlin.collections.ArrayList
+
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -145,6 +143,47 @@ class MainActivity : AppCompatActivity() {
         SaveImageBSDialogFragment.safetyHide(this@MainActivity.supportFragmentManager)
     }
 
+    private fun hideSystemUI() {
+        // Enables regular immersive mode.
+        // For "lean back" mode, remove SYSTEM_UI_FLAG_IMMERSIVE.
+        // Or for "sticky immersive," replace it with SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+            WindowInsetsControllerCompat(window, launchView).let { controller ->
+                controller.hide(WindowInsetsCompat.Type.systemBars())
+                controller.systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        } else {
+            window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE
+                    // Set the content to appear under the system bars so that the
+                    // content doesn't resize when the system bars hide and show.
+                    or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    // Hide the nav bar and status bar
+                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    or View.SYSTEM_UI_FLAG_FULLSCREEN)
+        }
+
+    }
+
+    // Shows the system bars by removing all the flags
+    // except for the ones that make the content appear under the system bars.
+    private fun showSystemUI() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            WindowCompat.setDecorFitsSystemWindows(window, true)
+            WindowInsetsControllerCompat(
+                window,
+                launchView
+            ).show(WindowInsetsCompat.Type.systemBars())
+        } else {
+            window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN)
+        }
+    }
+
     private fun registerResultCallback() {
         pickImageLauncher =
             registerForActivityResult(MultiPickContract()) { uri: List<Uri?>? ->
@@ -214,10 +253,10 @@ class MainActivity : AppCompatActivity() {
             launchView.post {
                 launchView.ivPhoto.config = it
             }
-            viewModel.resetStatus()
+            viewModel.resetJobStatus()
         }
         viewModel.selectedImage.observe(this) {
-            if (it.uri.toString().isEmpty()) {
+            if (it == null || it.uri.toString().isBlank()) {
                 return@observe
             }
             try {
@@ -249,13 +288,13 @@ class MainActivity : AppCompatActivity() {
                     MainViewModel.TYPE_ERROR_SAVE_OOM -> {
                         toast(getString(R.string.error_save_oom))
                         CompressImageDialogFragment.safetyShow(supportFragmentManager)
-                        viewModel.resetStatus()
+                        viewModel.resetJobStatus()
                     }
                     MainViewModel.TYPE_ERROR_FILE_NOT_FOUND -> toast(getString(R.string.error_file_not_found))
                     MainViewModel.TYPE_ERROR_NOT_IMG -> toast(getString(R.string.error_not_img))
                     else -> toast("${getString(R.string.tips_error)}: ${it.message}")
                 }
-                viewModel.resetStatus()
+                viewModel.resetJobStatus()
             } else {
                 toast(it.message)
             }
@@ -269,14 +308,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         viewModel.colorPalette.observe(this) { palette ->
-            val bgColor = palette.darkMutedSwatch?.rgb ?: ContextCompat.getColor(
-                this@MainActivity,
-                R.color.colorSecondary
-            )
-            val titleTextColor = palette.darkMutedSwatch?.titleTextColor ?: ContextCompat.getColor(
-                this@MainActivity,
-                R.color.text_color_main
-            )
+            val bgColor = palette.bgColor(this)
+            val titleTextColor = palette.titleTextColor(this)
+
             bgTransformAnimator =
                 ((launchView.ivPhoto.background as? ColorDrawable)?.color ?: Color.BLACK).toColor(
                     bgColor
@@ -288,12 +322,14 @@ class MainActivity : AppCompatActivity() {
             funcAdapter.textColor.toColor(titleTextColor) {
                 val c = it.animatedValue as Int
                 funcAdapter.applyTextColor(c)
-                launchView.tabLayout.setTabTextColors(
-                    c, ContextCompat.getColor(
-                        this@MainActivity,
-                        R.color.colorAccent
-                    )
-                )
+                launchView.tabLayout.setTabTextColors(c, this.colorPrimary)
+                launchView.toolbar.menu.forEach { menuItem ->
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        menuItem.iconTintList = ColorStateList.valueOf(c)
+                    } else {
+                        menuItem.icon.setTint(c)
+                    }
+                }
             }
         }
     }
@@ -518,7 +554,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu, menu)
         return true
     }
@@ -549,26 +586,27 @@ class MainActivity : AppCompatActivity() {
      * Fires an intent to spin up the "file chooser" UI and select an image.
      */
     private fun performFileSearch(requestCode: Int) {
-        val mime = "image/*"
-        val result = kotlin.runCatching {
-            when (requestCode) {
-                REQ_CODE_PICK_IMAGE -> {
-                    pickImageLauncher.launch(mime)
-                }
-                REQ_PICK_ICON -> {
-                    pickIconLauncher.launch(mime)
-                }
-            }
-        }
-
-        if (result.isFailure) {
-            Toast.makeText(
-                this,
-                getString(R.string.tips_not_app_can_open_imaegs),
-                Toast.LENGTH_LONG
-            ).show()
-            Log.i("performFileSearch", result.exceptionOrNull()?.message ?: "No msg provided")
-        }
+//        val mime = "image/*"
+//        val result = kotlin.runCatching {
+//            when (requestCode) {
+//                REQ_CODE_PICK_IMAGE -> {
+//                    pickImageLauncher.launch(mime)
+//                }
+//                REQ_PICK_ICON -> {
+//                    pickIconLauncher.launch(mime)
+//                }
+//            }
+//        }
+//
+//        if (result.isFailure) {
+//            Toast.makeText(
+//                this,
+//                getString(R.string.tips_not_app_can_open_imaegs),
+//                Toast.LENGTH_LONG
+//            ).show()
+//            Log.i("performFileSearch", result.exceptionOrNull()?.message ?: "No msg provided")
+//        }
+        GalleryFragment().show(supportFragmentManager, "GalleryFragment")
     }
 
     override fun onRequestPermissionsResult(
@@ -659,14 +697,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun resetView() {
         launchView.toLaunchMode()
-        viewModel.resetStatus()
+        viewModel.resetJobStatus()
+        viewModel.clearData()
         launchView.ivPhoto.reset()
         bgTransformAnimator?.cancel()
         (launchView.background as ColorDrawable).color.toColor(
-            ContextCompat.getColor(
-                this,
-                R.color.colorPrimary
-            )
+            this.colorBackground
         ) {
             val c = it.animatedValue as Int
             setStatusBarColor(c)
