@@ -148,6 +148,10 @@ class WaterMarkRepository @Inject constructor(
         dataStore.edit { it[KEY_ENABLE_BOUNDS] = enable }
     }
 
+    suspend fun resetList() {
+        updateImageList(emptyList())
+    }
+
     sealed class MarkMode(val value: Int) {
         object Text : MarkMode(0)
 

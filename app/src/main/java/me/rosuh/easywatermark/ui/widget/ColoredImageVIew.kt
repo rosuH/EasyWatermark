@@ -60,7 +60,7 @@ class ColoredImageVIew : AppCompatImageView {
                         Shader.TileMode.CLAMP
                     )
                     paint.shader = shader
-                    postInvalidateOnAnimation()
+                    postInvalidateDelayed(16)
                 }
                 duration = 2500
                 repeatCount = ObjectAnimator.INFINITE

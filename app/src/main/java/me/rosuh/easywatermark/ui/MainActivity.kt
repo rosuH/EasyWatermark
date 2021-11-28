@@ -35,10 +35,7 @@ import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.ui.about.AboutActivity
 import me.rosuh.easywatermark.ui.adapter.FuncPanelAdapter
 import me.rosuh.easywatermark.ui.adapter.PhotoListPreviewAdapter
-import me.rosuh.easywatermark.ui.dialog.ChangeLogDialogFragment
-import me.rosuh.easywatermark.ui.dialog.CompressImageDialogFragment
-import me.rosuh.easywatermark.ui.dialog.EditTextBSDialogFragment
-import me.rosuh.easywatermark.ui.dialog.SaveImageBSDialogFragment
+import me.rosuh.easywatermark.ui.dialog.*
 import me.rosuh.easywatermark.ui.panel.*
 import me.rosuh.easywatermark.ui.widget.CenterLayoutManager
 import me.rosuh.easywatermark.ui.widget.LaunchView
@@ -256,10 +253,10 @@ class MainActivity : AppCompatActivity() {
             launchView.post {
                 launchView.ivPhoto.config = it
             }
-            viewModel.resetStatus()
+            viewModel.resetJobStatus()
         }
         viewModel.selectedImage.observe(this) {
-            if (it.uri.toString().isEmpty()) {
+            if (it == null || it.uri.toString().isBlank()) {
                 return@observe
             }
             try {
@@ -291,13 +288,13 @@ class MainActivity : AppCompatActivity() {
                     MainViewModel.TYPE_ERROR_SAVE_OOM -> {
                         toast(getString(R.string.error_save_oom))
                         CompressImageDialogFragment.safetyShow(supportFragmentManager)
-                        viewModel.resetStatus()
+                        viewModel.resetJobStatus()
                     }
                     MainViewModel.TYPE_ERROR_FILE_NOT_FOUND -> toast(getString(R.string.error_file_not_found))
                     MainViewModel.TYPE_ERROR_NOT_IMG -> toast(getString(R.string.error_not_img))
                     else -> toast("${getString(R.string.tips_error)}: ${it.message}")
                 }
-                viewModel.resetStatus()
+                viewModel.resetJobStatus()
             } else {
                 toast(it.message)
             }
@@ -589,26 +586,27 @@ class MainActivity : AppCompatActivity() {
      * Fires an intent to spin up the "file chooser" UI and select an image.
      */
     private fun performFileSearch(requestCode: Int) {
-        val mime = "image/*"
-        val result = kotlin.runCatching {
-            when (requestCode) {
-                REQ_CODE_PICK_IMAGE -> {
-                    pickImageLauncher.launch(mime)
-                }
-                REQ_PICK_ICON -> {
-                    pickIconLauncher.launch(mime)
-                }
-            }
-        }
-
-        if (result.isFailure) {
-            Toast.makeText(
-                this,
-                getString(R.string.tips_not_app_can_open_imaegs),
-                Toast.LENGTH_LONG
-            ).show()
-            Log.i("performFileSearch", result.exceptionOrNull()?.message ?: "No msg provided")
-        }
+//        val mime = "image/*"
+//        val result = kotlin.runCatching {
+//            when (requestCode) {
+//                REQ_CODE_PICK_IMAGE -> {
+//                    pickImageLauncher.launch(mime)
+//                }
+//                REQ_PICK_ICON -> {
+//                    pickIconLauncher.launch(mime)
+//                }
+//            }
+//        }
+//
+//        if (result.isFailure) {
+//            Toast.makeText(
+//                this,
+//                getString(R.string.tips_not_app_can_open_imaegs),
+//                Toast.LENGTH_LONG
+//            ).show()
+//            Log.i("performFileSearch", result.exceptionOrNull()?.message ?: "No msg provided")
+//        }
+        GalleryFragment().show(supportFragmentManager, "GalleryFragment")
     }
 
     override fun onRequestPermissionsResult(
@@ -699,7 +697,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun resetView() {
         launchView.toLaunchMode()
-        viewModel.resetStatus()
+        viewModel.resetJobStatus()
+        viewModel.clearData()
         launchView.ivPhoto.reset()
         bgTransformAnimator?.cancel()
         (launchView.background as ColorDrawable).color.toColor(

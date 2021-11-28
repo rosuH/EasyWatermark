@@ -103,5 +103,7 @@
     <string name="dialog_open_in_gallery">在相册中查看</string>
     <string name="dialog_save_config_format">格式</string>
     <string name="dialog_save_config_quality">质量</string>
+    <string name="pick_via_system">Choose more...</string>
+    <string name="gallery_pick_size">选择 %1$d</string>
 
 </resources>

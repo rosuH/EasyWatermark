@@ -98,5 +98,7 @@
     <string name="dialog_open_in_gallery">Ver na Galeria</string>
     <string name="dialog_save_config_format">Formato</string>
     <string name="dialog_save_config_quality">Qualidade</string>
+    <string name="pick_via_system">Choose more...</string>
+    <string name="gallery_pick_size">Choose %1$d</string>
 
 </resources>

@@ -98,4 +98,6 @@
     <string name="dialog_open_in_gallery">在圖片庫中檢視</string>
     <string name="dialog_save_config_format">格式</string>
     <string name="dialog_save_config_quality">品質</string>
+    <string name="pick_via_system">Choose more...</string>
+    <string name="gallery_pick_size">選擇 %1$d</string>
 </resources>

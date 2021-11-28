@@ -110,5 +110,8 @@
     <string name="dialog_save_config_quality">Quality</string>
     <string name="dialog_save_exporting">Exporting</string>
     <string name="tips_pick_image">Selecte images</string>
+    <string name="pick_via_system">more…</string>
+    <string name="gallery_pick_size">Choose %1$d</string>
+
 
 </resources>
