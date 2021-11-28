@@ -635,7 +635,7 @@ class MainViewModel @Inject constructor(
 
                 val imageId = cursor.getInt(imageIdColumn)
                 val bucketId = cursor.getInt(bucketIdColumn)
-                val bucketName = cursor.getString(bucketNameColumn)
+                val bucketName = cursor.getString(bucketNameColumn) ?: ""
                 val dateTaken = cursor.getLong(dateColumn)
                 val orientation = cursor.getInt(orientationColumn)
                 val width = cursor.getInt(widthColumn)
