@@ -65,12 +65,14 @@
     <string name="dialog_change_log_title">Registro de cambios</string>
     <string name="dialog_change_log_content">
        <![CDATA[
-        <h2 id="new-and-optimized">Nuevo y optimizado</h2>
+        <h2 id="new-and-optimized">New and Optimized</h2>
         <ol>
-        <li>&nbsp;&nbsp;⚡️ Uso de memoria mejorado.</li>
-        <li>&nbsp;&nbsp;🎨 Animación mejorada y efecto táctil..</li>
-        <li>&nbsp;&nbsp;🥳 Pantalla de bienvenida compatible en Android 12.</li>
-        <li>&nbsp;&nbsp;🔧 TargetApi actualizado a 31.</li>
+        <li>&nbsp;&nbsp;🎨 Migrated to MD3 and fully supported Material You!</li>
+        <li>&nbsp;&nbsp;🥳 Check out the new gallery for image choosing!</li>
+        </ol>
+        <h2 id="fixed">Fixed</h2>
+        <ol>
+        <li>&nbsp;&nbsp;🐛 Image lost after the system theme changed. (Thanks to wudai)</li>
         </ol>
 ]]>
     </string>

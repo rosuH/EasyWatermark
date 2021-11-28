@@ -71,11 +71,12 @@
         <![CDATA[
         <h2 id="new-and-optimized">新增与优化</h2>
         <ol>
-        <li>&nbsp;&nbsp;🥳 欢迎批量模式的到来！</li>
+        <li>&nbsp;&nbsp;🎨 兼容 MD3 并支持 Material You！</li>
+        <li>&nbsp;&nbsp;🥳 新增图库以便多选图片。特别是在部分国产 ROM 的中。</li>
         </ol>
         <h2 id="Fixed">修复</h2>
         <ol>
-        <li>&nbsp;&nbsp;🐛 修复重用位图导致的崩溃（感谢 lala）</li>
+        <li>&nbsp;&nbsp;🐛 系统主题变更导致状态错误问题。(感谢 五代）</li>
         </ol>
 ]]>
 
