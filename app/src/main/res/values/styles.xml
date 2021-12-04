@@ -106,11 +106,8 @@
     </style>
 
     <style name="TextInputLayoutStyle" parent="Widget.Material3.TextInputLayout.OutlinedBox">
-<!--        <item name="android:textColorHint">@color/text_color_tips</item>-->
-<!--        <item name="hintTextColor">@color/colorAccent</item>-->
-        <item name="boxStrokeColor">@color/selector_text_input_white</item>
-        <item name="boxStrokeWidth">5dp</item>
-        <item name="android:theme">@style/TextInputCursorStyle</item>
+        <item name="boxStrokeWidth">0dp</item>
+        <item name="boxStrokeWidthFocused">0dp</item>
     </style>
 
     <style name="TextInputCursorStyle" parent="ThemeOverlay.Material3.TextInputEditText.OutlinedBox">

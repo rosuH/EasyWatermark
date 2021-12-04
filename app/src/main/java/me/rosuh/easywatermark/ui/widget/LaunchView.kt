@@ -60,6 +60,9 @@ class LaunchView : CustomViewGroup {
 
     val ivSelectedPhotoTips: MaterialButton by lazy {
         MaterialButton(context).apply {
+            minHeight = 56.dp
+            minWidth = 120.dp
+            cornerRadius = 56.dp / 3
             textAlignment = TEXT_ALIGNMENT_CENTER
             gravity = Gravity.CENTER
             text = context.getString(R.string.tips_pick_image)
