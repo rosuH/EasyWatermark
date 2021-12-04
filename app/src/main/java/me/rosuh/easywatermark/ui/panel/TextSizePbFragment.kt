@@ -13,7 +13,7 @@ class TextSizePbFragment : BasePBFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding?.slideContentSize?.valueFrom = 0f
+        binding?.slideContentSize?.valueFrom = 1f
         binding?.slideContentSize?.valueTo = WaterMarkRepository.MAX_TEXT_SIZE
     }
 

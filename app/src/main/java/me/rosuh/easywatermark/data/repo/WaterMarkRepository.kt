@@ -64,7 +64,7 @@ class WaterMarkRepository @Inject constructor(
             WaterMark(
                 text = it[KEY_TEXT]
                     ?: MyApp.instance.getString(R.string.config_default_water_mark_text),
-                textSize = it[KEY_TEXT_SIZE] ?: 14f,
+                textSize = (it[KEY_TEXT_SIZE] ?: 14f).coerceAtLeast(1f),
                 textColor = it[KEY_TEXT_COLOR] ?: Color.parseColor("#FFB800"),
                 textStyle = TextPaintStyle.obtainSealedClass(it[KEY_TEXT_STYLE] ?: 0),
                 textTypeface = TextTypeface.obtainSealedClass(it[KEY_TEXT_TYPEFACE] ?: 0),

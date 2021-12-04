@@ -586,27 +586,30 @@ class MainActivity : AppCompatActivity() {
      * Fires an intent to spin up the "file chooser" UI and select an image.
      */
     private fun performFileSearch(requestCode: Int) {
-//        val mime = "image/*"
-//        val result = kotlin.runCatching {
-//            when (requestCode) {
-//                REQ_CODE_PICK_IMAGE -> {
-//                    pickImageLauncher.launch(mime)
-//                }
-//                REQ_PICK_ICON -> {
-//                    pickIconLauncher.launch(mime)
-//                }
-//            }
-//        }
-//
-//        if (result.isFailure) {
-//            Toast.makeText(
-//                this,
-//                getString(R.string.tips_not_app_can_open_imaegs),
-//                Toast.LENGTH_LONG
-//            ).show()
-//            Log.i("performFileSearch", result.exceptionOrNull()?.message ?: "No msg provided")
-//        }
-        GalleryFragment().show(supportFragmentManager, "GalleryFragment")
+        if (requestCode == REQ_PICK_ICON) {
+            val mime = "image/*"
+            val result = kotlin.runCatching {
+                when (requestCode) {
+                    REQ_CODE_PICK_IMAGE -> {
+                        pickImageLauncher.launch(mime)
+                    }
+                    REQ_PICK_ICON -> {
+                        pickIconLauncher.launch(mime)
+                    }
+                }
+            }
+
+            if (result.isFailure) {
+                Toast.makeText(
+                    this,
+                    getString(R.string.tips_not_app_can_open_imaegs),
+                    Toast.LENGTH_LONG
+                ).show()
+                Log.i("performFileSearch", result.exceptionOrNull()?.message ?: "No msg provided")
+            }
+        } else {
+            GalleryFragment().show(supportFragmentManager, "GalleryFragment")
+        }
     }
 
     override fun onRequestPermissionsResult(
