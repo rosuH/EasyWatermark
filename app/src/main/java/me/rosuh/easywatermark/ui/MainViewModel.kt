@@ -78,9 +78,6 @@ class MainViewModel @Inject constructor(
     val compressLevel: Int
         get() = userPreferences.value.compressLevel
 
-    val isNeedShowUpgradeInfo: LiveData<Boolean> =
-        userRepo.changeLogFlow.map { it != BuildConfig.VERSION_CODE.toString() }.asLiveData()
-
     val colorPalette: MutableLiveData<Palette> = MutableLiveData()
 
     private val tmpDrawableBounds by lazy { Rect() }

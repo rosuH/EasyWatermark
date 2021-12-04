@@ -1,7 +1,6 @@
 package me.rosuh.easywatermark.data.repo
 
 import android.graphics.Bitmap
-import android.os.Build
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import kotlinx.coroutines.flow.Flow
@@ -47,18 +46,6 @@ class UserConfigRepository @Inject constructor(
             val savedValue = (it[KEY_COMPRESS_LEVEL] ?: DEFAULT_COMPRESS_LEVEL).coerceAtLeast(20).coerceAtMost(100)
             val compressLevel = if (savedValue % 20 != 0) DEFAULT_COMPRESS_LEVEL else savedValue
             UserPreferences(outputFormat, compressLevel)
-        }
-
-    val changeLogFlow: Flow<String> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map {
-            it[KEY_CHANGE_LOG] ?: ""
         }
 
     suspend fun updateFormat(

@@ -300,13 +300,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        viewModel.isNeedShowUpgradeInfo.observe(this) {
-            val needShow = it ?: false
-            if (!needShow) return@observe
-            ChangeLogDialogFragment.safetyShow(this@MainActivity.supportFragmentManager)
-            viewModel.saveUpgradeInfo()
-        }
-
         viewModel.colorPalette.observe(this) { palette ->
             val bgColor = palette.bgColor(this)
             val titleTextColor = palette.titleTextColor(this)

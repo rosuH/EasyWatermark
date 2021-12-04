@@ -20,7 +20,6 @@ import androidx.palette.graphics.Palette
 import dagger.hilt.android.AndroidEntryPoint
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.databinding.ActivityAboutBinding
-import me.rosuh.easywatermark.ui.dialog.ChangeLogDialogFragment
 import me.rosuh.easywatermark.utils.ktx.*
 
 @AndroidEntryPoint
@@ -77,7 +76,7 @@ class AboutActivity : AppCompatActivity() {
                 openLink("https://github.com/rosuH/EasyWatermark/issues/new")
             }
             tvChangeLog.setOnClickListener {
-                ChangeLogDialogFragment.safetyShow(supportFragmentManager)
+                openLink("https://github.com/rosuH/EasyWatermark/releases/")
             }
             tvOpenSource.setOnClickListener {
                 kotlin.runCatching {
