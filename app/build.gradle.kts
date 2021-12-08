@@ -70,7 +70,7 @@ kapt {
 dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
     implementation("androidx.datastore:datastore-preferences:1.0.0")
-    implementation("com.google.dagger:hilt-android:2.40.4")
+    implementation("com.google.dagger:hilt-android:2.40.5")
     kapt("com.google.dagger:hilt-compiler:2.40.4")
     implementation("com.github.bumptech.glide:glide:4.12.0")
     kapt("com.github.bumptech.glide:compiler:4.12.0")
