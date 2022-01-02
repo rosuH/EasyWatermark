@@ -1,6 +1,8 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <style name="Theme.MyApp" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.MyApp" parent="Theme.BaseTheme"/>
+
+    <style name="Theme.BaseTheme" parent="Theme.Material3.Dark.NoActionBar">
         <item name="android:windowAnimationStyle">@style/WindowAnimationTransition</item>
         <item name="colorPrimary">@color/md_theme_dark_primary</item>
         <item name="colorOnPrimary">@color/md_theme_dark_onPrimary</item>

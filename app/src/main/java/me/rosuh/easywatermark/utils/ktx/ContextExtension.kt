@@ -346,12 +346,8 @@ val Context.colorBackground: Int
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 ContextCompat.getColor(this, R.color.material_dynamic_neutral99)
             }
-            isNight() || !supportNight() -> {
-                // default color is dark :)
-                ContextCompat.getColor(this, R.color.md_theme_dark_background)
-            }
             else -> {
-                ContextCompat.getColor(this, R.color.md_theme_light_background)
+                ContextCompat.getColor(this, R.color.md_theme_dark_background)
             }
         }
     }

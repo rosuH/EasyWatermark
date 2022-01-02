@@ -75,7 +75,9 @@ class LaunchView : CustomViewGroup {
                 MarginLayoutParams(
                     48.dp,
                     48.dp
-                )
+                ).also {
+                    it.setMargins(0, 0, 16.dp, 0)
+                }
             setImageResource(R.drawable.ic_about)
             imageTintList = ColorStateList.valueOf(context.colorPrimary)
         }
