@@ -15,8 +15,8 @@ android {
         applicationId = "me.rosuh.easywatermark"
         minSdk = (Apps.minSdk)
         targetSdk = (Apps.targetSdk)
-        versionCode = 20602
-        versionName = "2.6.2"
+        versionCode = 20603
+        versionName = "2.6.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         setProperty("archivesBaseName", "$applicationId-v$versionName($versionCode)")
     }
