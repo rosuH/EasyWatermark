@@ -127,7 +127,7 @@ class AboutActivity : AppCompatActivity() {
 
             viewModel.palette.observe(this@AboutActivity) {
                 when {
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                         applyPaletteForSupoortNight(it)
                     }
                     it == null -> {

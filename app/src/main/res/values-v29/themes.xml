@@ -1,0 +1,6 @@
+<resources>
+
+    <style name="Theme.MyApp" parent="Theme.BaseTheme">
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
+</resources>
