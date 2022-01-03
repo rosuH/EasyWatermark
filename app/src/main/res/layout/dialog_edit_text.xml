@@ -15,6 +15,7 @@
         android:minHeight="165dp"
         android:paddingTop="15dp"
         android:paddingBottom="25dp"
+        android:hint="@string/hint_tips_input_water_mark_text"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
@@ -23,7 +24,6 @@
             android:id="@+id/et_water_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/hint_tips_input_water_mark_text"
             android:imeActionLabel="@string/tips_ok"
             android:imeOptions="actionDone"
             android:scrollbars="vertical"
