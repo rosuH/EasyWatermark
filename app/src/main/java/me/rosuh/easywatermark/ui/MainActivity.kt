@@ -697,7 +697,7 @@ class MainActivity : AppCompatActivity() {
         viewModel.clearData()
         launchView.ivPhoto.reset()
         bgTransformAnimator?.cancel()
-        (launchView.background as ColorDrawable).color.toColor(
+        (launchView.background as? ColorDrawable?)?.color?.toColor(
             this.colorBackground
         ) {
             val c = it.animatedValue as Int
