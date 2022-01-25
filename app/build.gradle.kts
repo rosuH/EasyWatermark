@@ -94,7 +94,7 @@ dependencies {
 
     testImplementation("junit:junit:4.12")
     testImplementation("androidx.test:core:1.4.0")
-    testImplementation("org.mockito:mockito-core:4.0.0")
+    testImplementation("org.mockito:mockito-core:4.3.1")
     androidTestImplementation("org.mockito:mockito-android:4.0.0")
     androidTestImplementation("org.robolectric:robolectric:4.4")
     androidTestImplementation("androidx.test:rules:1.4.0")
