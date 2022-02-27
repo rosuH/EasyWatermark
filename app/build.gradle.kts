@@ -73,7 +73,7 @@ dependencies {
     implementation("com.google.dagger:hilt-android:2.40.4")
     kapt("com.google.dagger:hilt-compiler:2.40.4")
     implementation("com.github.bumptech.glide:glide:4.13.1")
-    kapt("com.github.bumptech.glide:compiler:4.12.0")
+    kapt("com.github.bumptech.glide:compiler:4.13.1")
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.6.0")
     implementation("androidx.appcompat:appcompat:1.4.0")
     implementation("id.zelory:compressor:3.0.1")
