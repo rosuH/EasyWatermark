@@ -17,10 +17,9 @@
             android:id="@+id/topAppBar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
+            app:menu="@menu/top_app_bar"
             app:navigationIcon="@drawable/ic_close_24dp"
-            app:navigationIconTint="?attr/colorOnSurface"
-            app:title="@string/action_pick"
-            app:titleTextColor="?attr/colorOnSurface" />
+            app:title="@string/action_pick"/>
 
     </com.google.android.material.appbar.AppBarLayout>
 

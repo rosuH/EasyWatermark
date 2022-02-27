@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.Intent.ACTION_SEND
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
@@ -14,6 +15,7 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.*
+import android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.viewModels
@@ -48,7 +50,6 @@ import kotlin.collections.ArrayList
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var pickImageLauncher: ActivityResultLauncher<String>
     private lateinit var pickIconLauncher: ActivityResultLauncher<String>
     private val viewModel: MainViewModel by viewModels()
 
@@ -185,10 +186,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun registerResultCallback() {
-        pickImageLauncher =
-            registerForActivityResult(MultiPickContract()) { uri: List<Uri?>? ->
-                handleActivityResult(REQ_CODE_PICK_IMAGE, uri)
-            }
         pickIconLauncher =
             registerForActivityResult(PickImageContract()) { uri: Uri? ->
                 handleActivityResult(REQ_PICK_ICON, listOf(uri))
@@ -308,9 +305,12 @@ class MainActivity : AppCompatActivity() {
                 ((launchView.ivPhoto.background as? ColorDrawable)?.color ?: Color.BLACK).toColor(
                     bgColor
                 ) {
-                    launchView.rvPanel.setBackgroundColor(it.animatedValue as Int)
-                    launchView.setBackgroundColor(it.animatedValue as Int)
-                    setStatusBarColor(it.animatedValue as Int)
+                    val c = it.animatedValue as Int
+                    if (launchView.isEdit()) {
+                        launchView.rvPanel.setBackgroundColor(it.animatedValue as Int)
+                        setActivityBackground(c)
+                        setStatusBarColor(c, isInEditMode = true)
+                    }
                 }
             funcAdapter.textColor.toColor(titleTextColor) {
                 val c = it.animatedValue as Int
@@ -334,6 +334,8 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("ClickableViewAccessibility")
     private fun initView() {
+        setActivityBackground(ContextCompat.getColor(this, R.color.md_theme_dark_background))
+        setStatusBarColor(ContextCompat.getColor(this, R.color.md_theme_dark_background), false)
         // prepare MotionLayout
         launchView.setListener {
             onModeChange { _, newMode ->
@@ -538,9 +540,25 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun setStatusBarColor(color: Int) {
+    private fun setStatusBarColor(color: Int, isInEditMode: Boolean) {
         window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val systemUiAppearance = if (isInEditMode && this.isNight()) {
+                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+            } else {
+                0
+            }
+            window.insetsController?.setSystemBarsAppearance(systemUiAppearance,
+                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS)
+        } else {
+            val systemUiVisibilityFlags = if (!isInEditMode && !this.isNight()) {
+                window.decorView.systemUiVisibility or SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+            } else {
+                window.decorView.systemUiVisibility and SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
+            }
+            window.decorView.systemUiVisibility = systemUiVisibilityFlags
+        }
         window.statusBarColor = color
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             window.findViewById<View>(android.R.id.content)?.foreground = null
@@ -583,9 +601,6 @@ class MainActivity : AppCompatActivity() {
             val mime = "image/*"
             val result = kotlin.runCatching {
                 when (requestCode) {
-                    REQ_CODE_PICK_IMAGE -> {
-                        pickImageLauncher.launch(mime)
-                    }
                     REQ_PICK_ICON -> {
                         pickIconLauncher.launch(mime)
                     }
@@ -698,13 +713,17 @@ class MainActivity : AppCompatActivity() {
         launchView.ivPhoto.reset()
         bgTransformAnimator?.cancel()
         (launchView.background as? ColorDrawable?)?.color?.toColor(
-            this.colorBackground
+            ContextCompat.getColor(this, R.color.md_theme_dark_background)
         ) {
             val c = it.animatedValue as Int
-            setStatusBarColor(c)
-            launchView.setBackgroundColor(c)
+            setActivityBackground(c)
+            setStatusBarColor(c, isInEditMode = false)
         }
         hideDetailPanel()
+    }
+
+    private fun setActivityBackground(color: Int){
+        (launchView.parent as? View?)?.setBackgroundColor(color)
     }
 
     private fun selectTab(index: Int) {

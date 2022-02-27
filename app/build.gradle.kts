@@ -77,7 +77,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.6.0")
     implementation("androidx.appcompat:appcompat:1.4.0")
     implementation("id.zelory:compressor:3.0.1")
-    implementation("com.google.android.material:material:1.6.0-alpha01")
+    implementation("com.google.android.material:material:1.6.0-alpha03")
     implementation("androidx.fragment:fragment-ktx:1.4.0")
     implementation("androidx.activity:activity-ktx:1.4.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.1")
