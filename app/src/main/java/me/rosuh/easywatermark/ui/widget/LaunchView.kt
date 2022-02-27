@@ -9,6 +9,7 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.ViewGroup
 import android.widget.ImageView
+import androidx.core.content.ContextCompat
 import androidx.core.view.children
 import androidx.core.view.isVisible
 import androidx.core.view.setPadding
@@ -79,7 +80,6 @@ class LaunchView : CustomViewGroup {
                     it.setMargins(0, 0, 16.dp, 0)
                 }
             setImageResource(R.drawable.ic_about)
-            imageTintList = ColorStateList.valueOf(context.colorPrimary)
         }
     }
 
@@ -232,6 +232,7 @@ class LaunchView : CustomViewGroup {
     init {
         clipChildren = false
         clipToPadding = false
+//        setBackgroundColor(ContextCompat.getColor(context, R.color.md_theme_dark_background))
         launchViews.forEach {
             it.isVisible = false
             addView(it)
@@ -385,6 +386,8 @@ class LaunchView : CustomViewGroup {
         mode = ViewMode.Editor
         return animate
     }
+
+    fun isEdit(): Boolean = mode == ViewMode.Editor
 
     fun setListener(block: LaunchViewListenerBuilder.() -> Unit) {
         launchViewListener = LaunchViewListenerBuilder().also(block)
