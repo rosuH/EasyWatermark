@@ -83,6 +83,9 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     var config: WaterMark? = null
         set(value) {
+            if (field == value) {
+                return
+            }
             field = value
             if (curImageInfo.uri.toString().isBlank()) return
             field?.let { applyNewConfig(false, it, curImageInfo) }

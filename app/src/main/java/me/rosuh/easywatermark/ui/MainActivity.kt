@@ -144,6 +144,15 @@ class MainActivity : AppCompatActivity() {
         SaveImageBSDialogFragment.safetyHide(this@MainActivity.supportFragmentManager)
     }
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus){
+            hideSystemUI()
+        } else {
+            showSystemUI()
+        }
+    }
+
     private fun hideSystemUI() {
         // Enables regular immersive mode.
         // For "lean back" mode, remove SYSTEM_UI_FLAG_IMMERSIVE.
@@ -247,6 +256,7 @@ class MainActivity : AppCompatActivity() {
             if (it == null) {
                 return@observe
             }
+            Log.i("initObserver", "$it")
             launchView.post {
                 launchView.ivPhoto.config = it
             }
