@@ -10,6 +10,7 @@ import androidx.core.content.edit
 import com.google.android.material.color.DynamicColors
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.*
+import me.rosuh.cmonet.CMonet
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import javax.inject.Inject
 import kotlin.system.exitProcess
@@ -22,7 +23,7 @@ class MyApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        DynamicColors.applyToActivitiesIfAvailable(this);
+        CMonet.applyToActivitiesIfAvailable(this)
         instance = this
         applicationScope.launch {
             waterMarkRepo.resetModeToText()
