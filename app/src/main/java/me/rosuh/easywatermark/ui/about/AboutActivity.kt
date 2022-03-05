@@ -141,7 +141,7 @@ class AboutActivity : AppCompatActivity() {
             viewModel.palette.observe(this@AboutActivity) {
                 when {
                     Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                        applyPaletteForSupoortNight(it)
+                        applyPaletteForSupportNight(it)
                     }
                     it == null -> {
                         binding.clContainer.children
@@ -172,12 +172,12 @@ class AboutActivity : AppCompatActivity() {
         }
     }
 
-    private fun applyPaletteForSupoortNight(palette: Palette?) {
-        val bgColor = palette?.bgColor(this@AboutActivity) ?: this@AboutActivity.colorBackground
-        val bgAccent = palette?.bgColor(this@AboutActivity) ?: this@AboutActivity.colorPrimary
+    private fun applyPaletteForSupportNight(palette: Palette?) {
+        val bgColor = palette?.bgColor(this@AboutActivity) ?: this@AboutActivity.colorPrimary
+        val bgAccent = palette?.bgColor(this@AboutActivity) ?: this@AboutActivity.colorBackground
         val colorList = arrayOf(
-            ColorUtils.setAlphaComponent(bgAccent, 65),
             ColorUtils.setAlphaComponent(bgColor, 255),
+            ColorUtils.setAlphaComponent(bgAccent, 65),
         ).toIntArray()
         bgDrawable.colors = colorList
     }
