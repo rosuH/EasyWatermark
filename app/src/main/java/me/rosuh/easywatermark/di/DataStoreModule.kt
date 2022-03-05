@@ -11,7 +11,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import me.rosuh.easywatermark.data.repo.SP_NAME
+import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import javax.inject.Named
 import javax.inject.Singleton
@@ -36,8 +36,8 @@ object DataStoreModule {
 }
 
 val Context.userDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = SP_NAME,
-    produceMigrations = { ctx -> listOf(SharedPreferencesMigration(ctx, SP_NAME)) }
+    name = UserConfigRepository.SP_NAME,
+    produceMigrations = { ctx -> listOf(SharedPreferencesMigration(ctx, UserConfigRepository.SP_NAME)) }
 )
 
 val Context.waterMarkDataStore: DataStore<Preferences> by preferencesDataStore(

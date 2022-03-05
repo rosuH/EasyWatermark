@@ -288,12 +288,20 @@
             </HorizontalScrollView>
 
             <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_dynamic_color"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="28dp"
+                android:text="Force Open Dynamic Color Support"
+                app:layout_constraintTop_toBottomOf="@id/hsv" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
                 android:id="@+id/switch_debug"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:padding="28dp"
                 android:text="Show Bounds"
-                app:layout_constraintTop_toBottomOf="@id/hsv" />
+                app:layout_constraintTop_toBottomOf="@id/switch_dynamic_color" />
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.core.widget.NestedScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>

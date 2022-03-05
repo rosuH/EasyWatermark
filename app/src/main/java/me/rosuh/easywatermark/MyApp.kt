@@ -23,7 +23,7 @@ class MyApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        CMonet.applyToActivitiesIfAvailable(this)
+        CMonet.init(this, true )
         instance = this
         applicationScope.launch {
             waterMarkRepo.resetModeToText()

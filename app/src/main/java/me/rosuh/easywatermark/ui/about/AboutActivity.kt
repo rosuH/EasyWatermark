@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -18,6 +19,7 @@ import androidx.core.view.children
 import androidx.core.widget.TextViewCompat
 import androidx.palette.graphics.Palette
 import dagger.hilt.android.AndroidEntryPoint
+import me.rosuh.cmonet.CMonet
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.databinding.ActivityAboutBinding
 import me.rosuh.easywatermark.utils.ktx.*
@@ -116,10 +118,21 @@ class AboutActivity : AppCompatActivity() {
                 viewModel.toggleBounds(isChecked)
             }
 
+            switchDynamicColor.isChecked = CMonet.isDynamicColorAvailable()
+
+            switchDynamicColor.setOnCheckedChangeListener { _, isChecked ->
+                viewModel.toggleSupportDynamicColor(isChecked)
+                Toast.makeText(
+                    this@AboutActivity,
+                    "Reboot and you'll get what you want.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+
             binding.clDevContainer.backgroundTintList =
-                ColorStateList.valueOf(this@AboutActivity.colorTertiaryContainer)
+                ColorStateList.valueOf(this@AboutActivity.colorSecondlyContainer)
             binding.clDesignerContainer.backgroundTintList =
-                ColorStateList.valueOf(this@AboutActivity.colorTertiaryContainer)
+                ColorStateList.valueOf(this@AboutActivity.colorSecondlyContainer)
 
             viewModel.waterMark.observe(this@AboutActivity) {
                 switchDebug.isChecked = viewModel.waterMark.value?.enableBounds ?: false

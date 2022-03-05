@@ -77,7 +77,7 @@ class LaunchView : CustomViewGroup {
                     48.dp,
                     48.dp
                 ).also {
-                    it.setMargins(0, 0, 16.dp, 0)
+                    it.setMargins(0, 0, 0, 16.dp)
                 }
             setImageResource(R.drawable.ic_about)
         }

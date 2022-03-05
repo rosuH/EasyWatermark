@@ -1,9 +1,12 @@
 package me.rosuh.cmonet
 
+import android.content.Context
 import android.os.Build
 import com.google.android.material.color.DynamicColors
 
-class MonetManufacturer : IMonetManufacturer {
+class MonetManufacturer(
+    context: Context
+) : IMonetManufacturer {
     private val supportedSet by lazy {
         hashSetOf(
             "samsung",
@@ -20,15 +23,21 @@ class MonetManufacturer : IMonetManufacturer {
         )
     }
 
-    private var forceSupported = false
+    private val sp: IStorage = SimpleSp(context)
 
     override fun isDynamicColorAvailable(): Boolean {
         val setContains =
             supportedSet.contains(Build.MANUFACTURER.lowercase()) || supportedSet.contains(Build.BRAND.lowercase())
-        return DynamicColors.isDynamicColorAvailable() && setContains || forceSupported
+        return DynamicColors.isDynamicColorAvailable() && setContains
+                || sp.getValue(KEY_DYNAMIC_COLOR_FORCE, false)
     }
 
     override fun setForceSupport(supported: Boolean) {
-        forceSupported = supported
+        sp.save(KEY_DYNAMIC_COLOR_FORCE, supported)
+    }
+
+    companion object {
+        private const val TAG = "MonetManufacturer"
+        private const val KEY_DYNAMIC_COLOR_FORCE = "dynamic_color_force"
     }
 }

@@ -6,5 +6,6 @@
         <item name="drawableTint">?attr/colorOnBackground</item>
         <item name="android:paddingStart">28dp</item>
         <item name="android:paddingEnd">28dp</item>
+        <item name="android:background">?android:attr/selectableItemBackground</item>
     </style>
 </resources>

@@ -43,7 +43,8 @@ class UserConfigRepository @Inject constructor(
                     Bitmap.CompressFormat.JPEG
                 }
             }
-            val savedValue = (it[KEY_COMPRESS_LEVEL] ?: DEFAULT_COMPRESS_LEVEL).coerceAtLeast(20).coerceAtMost(100)
+            val savedValue = (it[KEY_COMPRESS_LEVEL] ?: DEFAULT_COMPRESS_LEVEL).coerceAtLeast(20)
+                .coerceAtMost(100)
             val compressLevel = if (savedValue % 20 != 0) DEFAULT_COMPRESS_LEVEL else savedValue
             UserPreferences(outputFormat, compressLevel)
         }
@@ -73,9 +74,10 @@ class UserConfigRepository @Inject constructor(
     companion object {
         const val DEFAULT_COMPRESS_LEVEL = 80
         val DEFAULT_BITMAP_COMPRESS_FORMAT = Bitmap.CompressFormat.JPEG
+
+
+        const val SP_NAME = "sp_water_mark_user_config"
+        const val SP_KEY_FORMAT = "${SP_NAME}_key_format"
+        const val SP_KEY_COMPRESS_LEVEL = "${SP_NAME}_key_compress_level"
     }
 }
-
-const val SP_NAME = "sp_water_mark_user_config"
-const val SP_KEY_FORMAT = "${SP_NAME}_key_format"
-const val SP_KEY_COMPRESS_LEVEL = "${SP_NAME}_key_compress_level"
