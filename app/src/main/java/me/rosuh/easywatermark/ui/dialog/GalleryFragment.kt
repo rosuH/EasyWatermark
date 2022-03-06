@@ -1,29 +1,32 @@
 package me.rosuh.easywatermark.ui.dialog
 
+import android.annotation.SuppressLint
 import android.app.Dialog
 import android.content.DialogInterface
 import android.net.Uri
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.ViewGroup
+import android.util.Log
+import android.view.*
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.databinding.FragmentGalleryBinding
-import me.rosuh.easywatermark.ui.MainActivity
 import me.rosuh.easywatermark.ui.adapter.GalleryAdapter
 import me.rosuh.easywatermark.ui.base.BaseBindBSDFragment
 import me.rosuh.easywatermark.utils.FileUtils
 import me.rosuh.easywatermark.utils.MultiPickContract
-import me.rosuh.easywatermark.utils.ktx.colorOnSurface
+import kotlin.math.abs
 
 
 class GalleryFragment : BaseBindBSDFragment<FragmentGalleryBinding>() {
+
+    companion object {
+        private const val TAG = "GalleryFragment"
+    }
 
     private val galleryAdapter by lazy { GalleryAdapter() }
 
@@ -51,6 +54,7 @@ class GalleryFragment : BaseBindBSDFragment<FragmentGalleryBinding>() {
         sheetContainer.layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun bindView(
         layoutInflater: LayoutInflater,
         container: ViewGroup?
@@ -70,14 +74,36 @@ class GalleryFragment : BaseBindBSDFragment<FragmentGalleryBinding>() {
             adapter = galleryAdapter
             layoutManager = GridLayoutManager(requireContext(), 4)
             setHasFixedSize(true)
+            addOnItemTouchListener(object : RecyclerView.OnItemTouchListener {
+                private var isLongPress = false
+                override fun onInterceptTouchEvent(rv: RecyclerView, e: MotionEvent): Boolean {
+                    if (galleryAdapter.isLongClick && !isLongPress) {
+                        isLongPress = true
+                        galleryAdapter.isLongClick = false
+                    }
+                    return isLongPress
+                }
+
+                override fun onTouchEvent(rv: RecyclerView, e: MotionEvent) {
+                    when(e.actionMasked) {
+                        MotionEvent.ACTION_DOWN -> {
+                            Log.i(TAG, "ACTION_DOWN")
+                        }
+                        MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_UP -> {
+                            Log.i(TAG, "ACTION_CANCEL or ACTION_UP")
+                            isLongPress = false
+                        }
+                    }
+                    if (isLongPress) {
+                        rvGestureDetector.onTouchEvent(e)
+                    }
+                }
+
+                override fun onRequestDisallowInterceptTouchEvent(disallowIntercept: Boolean) {}
+
+            })
         }
 
-//        rootView.ivSysImage.apply {
-//            setOnClickListener {
-//                val mime = "image/*"
-//                pickImageLauncher.launch(mime)
-//            }
-//        }
         rootView.topAppBar.setOnMenuItemClickListener {
             when (it.itemId) {
                 R.id.iv_sys_image -> {
@@ -103,6 +129,56 @@ class GalleryFragment : BaseBindBSDFragment<FragmentGalleryBinding>() {
             }
         }
         return rootView
+    }
+
+    private val rvGestureDetector by lazy {
+        GestureDetector(requireContext(), object : GestureDetector.SimpleOnGestureListener() {
+            private var preTouchPos: Int = -1
+            private var preX = 0f
+            private var preY = 0f
+
+            override fun onScroll(
+                e1: MotionEvent?,
+                e2: MotionEvent?,
+                distanceX: Float,
+                distanceY: Float
+            ): Boolean {
+                val x1 = e1?.x ?: 0f
+                val y1 = e1?.y ?: 0f
+                val x2 = e2?.x ?: 0f
+                val y2 = e2?.y ?: 0f
+                val item1 = binding.rvContent.findChildViewUnder(x1, y1)
+                val item2 = binding.rvContent.findChildViewUnder(x2, y2)
+                val dx = abs(x2 - preX)
+                val dy = abs(y2 - preY)
+                item2?.let {
+                    val pEnd = (binding.rvContent.layoutManager as GridLayoutManager).getPosition(item2)
+                    val reduce = (distanceX > 0 || distanceY > 0) && (preTouchPos != pEnd || dx >= it.measuredWidth || dy >= it.measuredHeight)
+                    val increase = (distanceX < 0 || distanceY < 0) && (preTouchPos != pEnd || dx >= it.measuredWidth || dy >= it.measuredHeight)
+                    Log.i(
+                        TAG,
+                        "rvGestureDetector onScroll reduce = $reduce, increase = $increase, distanceX = $distanceX, distanceY = $distanceY, $preTouchPos, $pEnd, dx = $dx, dy = $dy"
+                    )
+                    preTouchPos = pEnd
+                    when {
+                        increase -> {
+                            galleryAdapter.selectTo(pEnd)
+                            preX = x2
+                            preY = y2
+                        }
+                        reduce -> {
+                            galleryAdapter.unSelect(pEnd)
+                            preX = x2
+                            preY = y2
+                        }
+                        else -> {
+
+                        }
+                    }
+                }
+                return super.onScroll(e1, e2, distanceX, distanceY)
+            }
+        })
     }
 
     override fun onDismiss(dialog: DialogInterface) {

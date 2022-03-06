@@ -2,9 +2,12 @@ package me.rosuh.easywatermark.ui.adapter
 
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
+import android.util.Log
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.ScaleAnimation
 import androidx.constraintlayout.utils.widget.ImageFilterView
 import androidx.core.animation.doOnEnd
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
@@ -20,6 +23,13 @@ import me.rosuh.easywatermark.utils.ktx.*
 
 class GalleryAdapter : RecyclerView.Adapter<GalleryAdapter.GalleryItemHolder>() {
 
+    companion object {
+        private const val TAG = "GalleryAdapter"
+    }
+
+    private var longPressPos: Int = 0
+
+    var isLongClick: Boolean = false
     private val itemCallback: DiffUtil.ItemCallback<Image> =
         object : DiffUtil.ItemCallback<Image>() {
             override fun areItemsTheSame(
@@ -40,12 +50,12 @@ class GalleryAdapter : RecyclerView.Adapter<GalleryAdapter.GalleryItemHolder>() 
 
     val selectedCount: MutableLiveData<Int> = MutableLiveData(0)
 
-    private val differ: AsyncListDiffer<Image> =
-        AsyncListDiffer(this, itemCallback)
+    private val differ: ArrayList<Image> = ArrayList()
 
 
     fun submitList(list: List<Image>) {
-        differ.submitList(list)
+        differ.addAll(list)
+        notifyDataSetChanged()
     }
 
     private var maxSize = 120.dp
@@ -58,24 +68,47 @@ class GalleryAdapter : RecyclerView.Adapter<GalleryAdapter.GalleryItemHolder>() 
     }
 
     fun getItem(position: Int): Image? {
-        return differ.currentList[position]
+        return differ.getOrNull(position)
     }
 
-    fun getSelectedList() = differ.currentList.filter { it.check }
+    fun getSelectedList() = differ.filter { it.check }
 
     override fun onViewDetachedFromWindow(holder: GalleryItemHolder) {
         super.onViewDetachedFromWindow(holder)
         holder.cbImage.setOnCheckedChangeListener { }
     }
 
+    override fun onBindViewHolder(
+        holder: GalleryItemHolder,
+        position: Int,
+        payloads: MutableList<Any>
+    ) {
+        if (payloads.isNullOrEmpty()) {
+            onBindViewHolder(holder, position)
+            return
+        }
+        payloads.filterIsInstance<String>().forEach {
+            when (it) {
+                "selectTo" -> {
+                    holder.cbImage.isChecked = true
+                }
+                "unSelect" -> {
+                    holder.cbImage.isChecked = false
+                }
+            }
+        }
+    }
+
     override fun onBindViewHolder(holder: GalleryItemHolder, position: Int) {
-        if (position < 0 || position >= differ.currentList.size || getItem(position) == null) {
+        if (position < 0 || position >= differ.size || getItem(position) == null) {
             return
         }
         with(getItem(position)!!) {
             holder.itemView.apply {
                 setOnLongClickListener {
                     holder.cbImage.toggle()
+                    isLongClick = true
+                    longPressPos = position
                     return@setOnLongClickListener true
                 }
                 setOnClickListener {
@@ -95,6 +128,28 @@ class GalleryAdapter : RecyclerView.Adapter<GalleryAdapter.GalleryItemHolder>() 
             holder.ivImage.loadSmall(uri)
         }
     }
+
+    private val scaleAnimationIn = ScaleAnimation(
+        1f,
+        0.7f,
+        1f,
+        0.7f,
+        ScaleAnimation.RELATIVE_TO_SELF,
+        0.5f,
+        ScaleAnimation.RELATIVE_TO_SELF,
+        0.5f
+    )
+
+    private val scaleAnimationOut = ScaleAnimation(
+        0.7f,
+        1f,
+        0.7f,
+        1f,
+        ScaleAnimation.RELATIVE_TO_SELF,
+        0.5f,
+        ScaleAnimation.RELATIVE_TO_SELF,
+        0.5f
+    )
 
     private fun applyCheckStyle(
         imageFilterView: ImageFilterView,
@@ -136,13 +191,33 @@ class GalleryAdapter : RecyclerView.Adapter<GalleryAdapter.GalleryItemHolder>() 
         }
     }
 
-    fun findFistCheckedPos(): Int {
-        return differ.currentList.find { it.check }?.let { differ.currentList.indexOf(it) }
-            ?: RecyclerView.NO_POSITION
+    override fun getItemCount(): Int {
+        return differ.size
     }
 
-    override fun getItemCount(): Int {
-        return differ.currentList.size
+    fun selectTo(end: Int) {
+        val start = longPressPos
+        Log.i(TAG, "selectTo $start .. $end")
+        val list = differ
+        if (start < 0 || end >= list.size || start >= end) {
+            return
+        }
+        for (i in start .. end) {
+            list[i].check = true
+            notifyItemChanged(i, "selectTo")
+        }
+    }
+
+    fun unSelect(position: Int) {
+        Log.i(TAG, "unSelect pos = $position")
+        val list = differ
+        if (position < 0 || position >= list.size) {
+            return
+        }
+        for (i in list.size - 1 downTo position) {
+            list[i].check = false
+            notifyItemChanged(i, "unSelect")
+        }
     }
 
     class GalleryItemHolder(view: View) : RecyclerView.ViewHolder(view) {
