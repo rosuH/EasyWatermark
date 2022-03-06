@@ -3,6 +3,8 @@ package me.rosuh.easywatermark.ui.widget
 import android.animation.ObjectAnimator
 import android.content.Context
 import android.graphics.*
+import android.graphics.Matrix.MSCALE_X
+import android.graphics.Matrix.MSKEW_X
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Build
@@ -11,10 +13,16 @@ import android.text.StaticLayout
 import android.text.TextPaint
 import android.util.AttributeSet
 import android.util.Log
+import android.widget.ImageView
+import androidx.core.graphics.withRotation
 import androidx.core.graphics.withSave
+import androidx.dynamicanimation.animation.FloatPropertyCompat
+import androidx.dynamicanimation.animation.SpringAnimation
+import androidx.dynamicanimation.animation.SpringForce.DAMPING_RATIO_LOW_BOUNCY
 import androidx.palette.graphics.Palette
 import kotlinx.coroutines.*
 import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.ViewInfo
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
@@ -23,6 +31,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.*
+
 
 class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, CoroutineScope {
     constructor(context: Context) : super(context)
@@ -131,9 +140,20 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 if (decodeResult.isFailure() || bitmapValue == null) {
                     return@launch
                 }
-                val imageBitmap = bitmapValue.bitmap
                 // setting the bitmap of image
+                val imageBitmap = bitmapValue.bitmap
+                // adjust bitmap via matrix
                 setImageBitmap(imageBitmap)
+                val matrix = adjustMatrix(
+                    imageMatrix,
+                    measuredWidth,
+                    measuredHeight,
+                    paddingLeft,
+                    paddingTop,
+                    imageBitmap.width,
+                    imageBitmap.height
+                )
+                imageMatrix = matrix
                 // setting background color via Palette
                 applyBg(imageBitmap)
                 // animate to show
@@ -201,6 +221,9 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             postInvalidate()
         }
     }
+
+    private fun getAvailableCanvasWidth() = measuredWidth - paddingLeft - paddingRight
+    private fun getAvailableCanvasHeight() = measuredHeight - paddingTop - paddingBottom
 
     private var bgTransformAnimator: ObjectAnimator? = null
 
@@ -283,7 +306,40 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     companion object {
 
+        private const val TAG = "WatermarkImageView"
+
         const val ANIMATION_DURATION = 450L
+
+        /**
+         * Very simple way to fit the image into the canvas
+         */
+        fun adjustMatrix(
+            srcMatrix: Matrix,
+            viewWidth: Int,
+            viewHeight: Int,
+            paddingLeft: Int,
+            paddingTop: Int,
+            bitmapWidth: Int,
+            bitmapHeight: Int
+        ): Matrix {
+            Log.i(
+                TAG,
+                "width = $viewWidth, height = $viewHeight, bitmapWidth = $bitmapWidth, bitmapHeight = $bitmapHeight"
+            )
+            val matrix = Matrix(srcMatrix)
+            matrix.reset()
+            val canvasWidth = calculateDrawLimitWidth(viewWidth, paddingLeft).toFloat()
+            val canvasHeight = calculateDrawLimitHeight(viewHeight, paddingTop).toFloat()
+            val scaleX = canvasWidth / bitmapWidth
+            val scaleY = canvasHeight / bitmapHeight
+            val scale = min(scaleX, scaleY)
+            matrix.postScale(scale, scale)
+            matrix.postTranslate(
+                (canvasWidth - bitmapWidth * scale) / 2,
+                (canvasHeight - bitmapHeight * scale) / 2
+            )
+            return matrix
+        }
 
         private fun adjustHorizonalGap(config: WaterMark, maxSize: Int): Int {
             return (maxSize * ((config.hGap / 100f) + 1)).toInt()
@@ -297,15 +353,9 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             return sqrt(w.pow(2) + h.pow(2)).toInt()
         }
 
-        fun calculateDrawLimitWidth(w: Int, ps: Int) =
-            ((w - ps * 2) / 2).coerceAtMost(
-                720
-            )
+        fun calculateDrawLimitWidth(w: Int, ps: Int) = (w - ps * 2)
 
-        fun calculateDrawLimitHeight(h: Int, pt: Int) =
-            ((h - pt * 2) / 2).coerceAtMost(
-                1280
-            )
+        fun calculateDrawLimitHeight(h: Int, pt: Int) = (h - pt * 2)
 
         suspend fun buildIconBitmapShader(
             imageInfo: ImageInfo,

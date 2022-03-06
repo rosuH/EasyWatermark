@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.util.AttributeSet
+import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.ViewGroup
@@ -33,6 +34,10 @@ import kotlin.math.abs
  */
 @SuppressLint("ClickableViewAccessibility")
 class LaunchView : CustomViewGroup {
+
+    companion object {
+        private const val TAG = "LaunchView"
+    }
 
     //region 1 constructor
     constructor(context: Context?) : super(context)
@@ -97,8 +102,13 @@ class LaunchView : CustomViewGroup {
 
     val ivPhoto: WaterMarkImageView by lazy {
         WaterMarkImageView(context).apply {
+            layoutParams =
+                MarginLayoutParams(
+                    LayoutParams.MATCH_PARENT,
+                    LayoutParams.MATCH_PARENT
+                )
             setPadding(12.dp)
-//            setBackgroundColor(context.colorPrimaryDark)
+            scaleType = ImageView.ScaleType.MATRIX
             setOnTouchListener { _, event ->
                 return@setOnTouchListener rvPhotoList.onTouchEvent(
                     event
@@ -260,14 +270,13 @@ class LaunchView : CustomViewGroup {
                 measureChildWithMargins(it, widthMeasureSpec, 0, heightMeasureSpec, 0)
             }
         }
-        val heightUsed = toolbar.measuredHeight.plus(fcFunctionDetail.measuredHeightWithMargins)
+        val heightUsed = toolbar.measuredHeight
             .plus(tabLayout.measuredHeightWithMargins)
             .plus(rvPanel.measuredHeightWithMargins)
-            .plus(rvPhotoList.measuredHeightWithMargins)
-        ivPhoto.measure(
-            MeasureSpec.makeMeasureSpec(parentWidth, MeasureSpec.EXACTLY),
-            MeasureSpec.makeMeasureSpec(parentHeight - heightUsed, MeasureSpec.EXACTLY)
-        )
+            .plus(fcFunctionDetail.measuredHeightWithMargins)
+
+        measureChildWithMargins(ivPhoto, widthMeasureSpec, 0, heightMeasureSpec, heightUsed)
+
         // we are in match paren mode so just using parent size.
         setMeasuredDimension(widthMeasureSpec, heightMeasureSpec)
     }
