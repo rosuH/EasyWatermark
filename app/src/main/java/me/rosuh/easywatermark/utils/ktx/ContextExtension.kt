@@ -73,7 +73,20 @@ inline fun ViewModel.launch(crossinline action: suspend CoroutineScope.() -> Uni
  */
 val Context.colorPrimary: Int
     get() {
-        return ThemeManager.colorPrimary
+        return when {
+            CMonet.isDynamicColorAvailable() && isNight() -> {
+                getColorFromAttr(R.attr.colorPrimary)
+            }
+            CMonet.isDynamicColorAvailable() -> {
+                getColorFromAttr(R.attr.colorPrimary)
+            }
+            isNight() || !supportNight() -> {
+                ContextCompat.getColor(this, R.color.md_theme_dark_primary)
+            }
+            else -> {
+                ContextCompat.getColor(this, R.color.md_theme_light_primary)
+            }
+        }
     }
 
 val Context.colorOnPrimary: Int
