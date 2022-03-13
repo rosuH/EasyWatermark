@@ -106,5 +106,11 @@
     <string name="dialog_save_config_quality">质量</string>
     <string name="pick_via_system">Choose more...</string>
     <string name="gallery_pick_size">选择 %1$d</string>
+    <string name="recovery_title">Recovery Mode</string>
+    <string name="copy_success">复制成功</string>
+    <string name="copy_failed">复制失败</string>
+    <string name="telegram_not_found">Telegram 没有安装</string>
+    <string name="store_not_found">好像没有安装商店</string>
+    <string name="recovery_mode_closed">已关闭，重启后再试试看吧</string>
 
 </resources>

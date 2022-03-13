@@ -113,6 +113,12 @@
     <string name="tips_pick_image">Choose Images</string>
     <string name="pick_via_system">more…</string>
     <string name="gallery_pick_size">Choose %1$d</string>
+    <string name="recovery_title" translatable="false">Recovery Mode</string>
+    <string name="copy_success" translatable="false">Copy success</string>
+    <string name="copy_failed" translatable="false">Copy failed</string>
+    <string name="telegram_not_found" translatable="false">Telegram is not installed.</string>
+    <string name="store_not_found" translatable="false">Not Store was installed.</string>
+    <string name="recovery_mode_closed" translatable="false">It\'s closed, please try again</string>
 
 
 </resources>

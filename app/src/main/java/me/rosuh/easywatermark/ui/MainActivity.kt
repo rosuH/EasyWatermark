@@ -2,12 +2,14 @@ package me.rosuh.easywatermark.ui
 
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.Intent.ACTION_SEND
+import android.content.Intent.ACTION_VIEW
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
-import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
@@ -16,18 +18,26 @@ import android.os.Bundle
 import android.util.Log
 import android.view.*
 import android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+import android.widget.Button
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
-import androidx.core.view.*
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.forEach
 import androidx.fragment.app.commit
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
@@ -37,14 +47,18 @@ import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.ui.about.AboutActivity
 import me.rosuh.easywatermark.ui.adapter.FuncPanelAdapter
 import me.rosuh.easywatermark.ui.adapter.PhotoListPreviewAdapter
-import me.rosuh.easywatermark.ui.dialog.*
+import me.rosuh.easywatermark.ui.dialog.CompressImageDialogFragment
+import me.rosuh.easywatermark.ui.dialog.EditTextBSDialogFragment
+import me.rosuh.easywatermark.ui.dialog.GalleryFragment
+import me.rosuh.easywatermark.ui.dialog.SaveImageBSDialogFragment
 import me.rosuh.easywatermark.ui.panel.*
 import me.rosuh.easywatermark.ui.widget.CenterLayoutManager
 import me.rosuh.easywatermark.ui.widget.LaunchView
-import me.rosuh.easywatermark.utils.*
+import me.rosuh.easywatermark.utils.FileUtils
+import me.rosuh.easywatermark.utils.PickImageContract
+import me.rosuh.easywatermark.utils.VibrateHelper
 import me.rosuh.easywatermark.utils.ktx.*
-import java.util.*
-import kotlin.collections.ArrayList
+import me.rosuh.easywatermark.utils.onItemClick
 
 
 @AndroidEntryPoint
@@ -129,6 +143,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (MyApp.recoveryMode) {
+            setContentView(R.layout.activity_recovery)
+            initRecoveryView()
+            return
+        }
         launchView = LaunchView(this)
         setContentView(launchView)
         if (savedInstanceState == null) {
@@ -144,8 +163,67 @@ class MainActivity : AppCompatActivity() {
         SaveImageBSDialogFragment.safetyHide(this@MainActivity.supportFragmentManager)
     }
 
+    private fun initRecoveryView() {
+        val tvCrashInfo = findViewById<TextView>(R.id.tv_crash_info).apply {
+            with(getSharedPreferences(MyApp.SP_NAME, MODE_PRIVATE)) {
+                val crashInfo = getString(MyApp.KEY_STACK_TRACE, "")
+                text = crashInfo
+            }
+        }
+        val btnCopy = findViewById<Button>(R.id.btn_copy).apply {
+            setOnClickListener {
+                try {
+                    val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    val clip = ClipData.newPlainText(tvCrashInfo.text, tvCrashInfo.text)
+                    clipboard.setPrimaryClip(clip)
+                    Toast.makeText(this@MainActivity, R.string.copy_success, Toast.LENGTH_SHORT)
+                        .show()
+                } catch (e: Exception) {
+                    Toast.makeText(this@MainActivity, R.string.copy_failed, Toast.LENGTH_SHORT)
+                        .show()
+                }
+            }
+        }
+        val btnSendEmail = findViewById<Button>(R.id.btn_email).apply {
+            setOnClickListener {
+                viewModel.extraCrashInfo(this@MainActivity, tvCrashInfo.text.toString())
+            }
+        }
+        val btnTelegram = findViewById<Button>(R.id.btn_telegram).apply {
+            setOnClickListener {
+                openLink("https://t.me/rosuh")
+            }
+        }
+        val btnStore = findViewById<Button>(R.id.btn_store).apply {
+            setOnClickListener {
+                try {
+                    startActivity(
+                        Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("market://details?id=me.rosuh.easywatermark")
+                        )
+                    )
+                } catch (e: Exception) {
+                    Toast.makeText(this@MainActivity, R.string.store_not_found, Toast.LENGTH_SHORT)
+                        .show()
+                }
+            }
+        }
+
+        findViewById<Button>(R.id.btn_close_recovery_mode).apply {
+            setOnClickListener {
+                (MyApp.instance as MyApp).launchSuccess()
+                Toast.makeText(this@MainActivity, R.string.recovery_mode_closed, Toast.LENGTH_SHORT)
+                    .show()
+            }
+        }
+    }
+
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
+        if (MyApp.recoveryMode) {
+            return
+        }
         if (hasFocus) {
             hideSystemUI()
         }
@@ -193,6 +271,20 @@ class MainActivity : AppCompatActivity() {
         // Accepting shared images from other apps
         if (intent?.action == ACTION_SEND && intent?.data != null) {
             dealWithImage(listOf(intent?.data!!))
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (MyApp.recoveryMode) {
+            return
+        }
+        lifecycleScope.launch {
+            delay(1000)
+            if (this@MainActivity.isFinishing) {
+                return@launch
+            }
+            (MyApp.instance as? MyApp?)?.launchSuccess()
         }
     }
 
@@ -541,8 +633,10 @@ class MainActivity : AppCompatActivity() {
             } else {
                 0
             }
-            window.insetsController?.setSystemBarsAppearance(systemUiAppearance,
-                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS)
+            window.insetsController?.setSystemBarsAppearance(
+                systemUiAppearance,
+                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+            )
         } else {
             val systemUiVisibilityFlags = if (!isInEditMode && !this.isNight()) {
                 window.decorView.systemUiVisibility or SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
@@ -720,7 +814,7 @@ class MainActivity : AppCompatActivity() {
         hideDetailPanel()
     }
 
-    private fun setActivityBackground(color: Int){
+    private fun setActivityBackground(color: Int) {
         (launchView.parent as? View?)?.setBackgroundColor(color)
     }
 
