@@ -4,14 +4,14 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
+import android.content.res.Configuration
 import android.util.Log
 import androidx.core.content.edit
-import com.google.android.material.color.DynamicColors
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.*
 import me.rosuh.cmonet.CMonet
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
+import me.rosuh.easywatermark.ui.theme.ThemeManager
 import javax.inject.Inject
 import kotlin.system.exitProcess
 
@@ -29,6 +29,11 @@ class MyApp : Application() {
             waterMarkRepo.resetModeToText()
         }
         catchException()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        ThemeManager.onConfigurationChanged(newConfig)
+        super.onConfigurationChanged(newConfig)
     }
 
     private fun catchException() {

@@ -1,12 +1,15 @@
 package me.rosuh.easywatermark.ui.widget
 
 import android.content.Context
+import android.content.res.Resources
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
+import android.util.Log
+import android.util.TypedValue
 import android.view.View
 import androidx.core.content.ContextCompat
 import com.google.android.material.color.MaterialColors
@@ -30,15 +33,21 @@ class RadioButton : View {
         defStyleRes: Int
     ) : super(context, attrs, defStyleAttr, defStyleRes)
 
+    companion object {
+        private const val TAG = "RadioButton"
+    }
+
     private val icTint = ContextCompat.getColor(context, R.color.selector_gallery_icon_tint)
 
     private val bgColorNormal = Color.TRANSPARENT
-    private val bgColorSelected = context.colorPrimary
+    private val bgColorSelected = context.getColorFromAttr(R.attr.colorTertiaryContainer)
 
-    private val strokeColorNormal = MaterialColors.compositeARGBWithAlpha(
-        context.getColorFromAttr(R.attr.colorBackgroundFloating),
-        125
-    )
+    private val strokeColorNormal by lazy {
+        MaterialColors.compositeARGBWithAlpha(
+            context.getColorFromAttr(R.attr.colorBackgroundFloating),
+            125
+        )
+    }
     private val strokeColorSelected = context.colorSurfaceVariant
     private val strokeWidth = 2.dp
 

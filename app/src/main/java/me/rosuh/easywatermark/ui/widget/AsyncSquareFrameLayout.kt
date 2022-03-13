@@ -2,9 +2,11 @@ package me.rosuh.easywatermark.ui.widget
 
 import android.content.Context
 import android.util.AttributeSet
-import androidx.constraintlayout.widget.ConstraintLayout
+import android.view.View
+import androidx.asynclayoutinflater.view.AsyncLayoutInflater
+import me.rosuh.easywatermark.R
 
-class SquareCL : ConstraintLayout {
+class AsyncSquareFrameLayout : SquareFrameLayout {
 
     constructor(context: Context) : super(context)
     constructor(context: Context, attrs: AttributeSet?) : super(context, attrs)
@@ -21,7 +23,12 @@ class SquareCL : ConstraintLayout {
         defStyleRes: Int
     ) : super(context, attrs, defStyleAttr, defStyleRes)
 
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        super.onMeasure(widthMeasureSpec, widthMeasureSpec)
+
+    fun inflate(action: (view: View) -> Unit) {
+        AsyncLayoutInflater(context).inflate(R.layout.item_image_gallery, this) { view, _, _ ->
+            addView(view)
+            action.invoke(view)
+        }
     }
+
 }

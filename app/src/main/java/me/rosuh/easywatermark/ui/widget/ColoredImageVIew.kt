@@ -4,11 +4,12 @@ import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.*
+import android.hardware.display.DisplayManager
 import android.util.AttributeSet
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.graphics.drawable.toBitmap
 import me.rosuh.easywatermark.utils.ktx.colorPrimary
-import me.rosuh.easywatermark.utils.ktx.colorSecondly
+import me.rosuh.easywatermark.utils.ktx.colorSecondary
 import me.rosuh.easywatermark.utils.ktx.colorTertiary
 import me.rosuh.easywatermark.utils.ktx.supportDynamicColor
 
@@ -21,6 +22,7 @@ class ColoredImageVIew : AppCompatImageView {
         defStyleAttr
     )
 
+    private var refreshRate: Float = 60F
     private var sizeHasChanged: Boolean = true
     private val paint by lazy { Paint() }
     var enable = true
@@ -28,7 +30,7 @@ class ColoredImageVIew : AppCompatImageView {
     private val colorList = if (context.supportDynamicColor()) {
         arrayOf(
             context.colorPrimary,
-            context.colorSecondly,
+            context.colorSecondary,
             context.colorTertiary,
             context.colorTertiary,
         ).toIntArray()
@@ -60,7 +62,7 @@ class ColoredImageVIew : AppCompatImageView {
                         Shader.TileMode.CLAMP
                     )
                     paint.shader = shader
-                    postInvalidateDelayed(16)
+                    postInvalidateDelayed((1000 / refreshRate).toLong())
                 }
                 duration = 2500
                 repeatCount = ObjectAnimator.INFINITE
@@ -69,6 +71,11 @@ class ColoredImageVIew : AppCompatImageView {
     }
 
     private var innerBitmap: Bitmap? = null
+
+    init {
+        val displayManager: DisplayManager = context.applicationContext.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+        refreshRate = displayManager.displays?.getOrNull(0)?.refreshRate ?: 60F
+    }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)

@@ -608,7 +608,13 @@ class MainActivity : AppCompatActivity() {
                 Log.i("performFileSearch", result.exceptionOrNull()?.message ?: "No msg provided")
             }
         } else {
-            GalleryFragment().show(supportFragmentManager, "GalleryFragment")
+            GalleryFragment().apply {
+                launchView.logoView.stop()
+                doOnDismiss {
+                    launchView.logoView.start()
+                }
+                show(supportFragmentManager, "GalleryFragment")
+            }
         }
     }
 
