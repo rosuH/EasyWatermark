@@ -79,14 +79,12 @@ class WaterMarkRepository @Inject constructor(
         }
 
     private val imageListFlow: MutableStateFlow<List<ImageInfo>> =
-        MutableStateFlow(emptyList<ImageInfo>())
+        MutableStateFlow(emptyList())
 
     val uriLivedData = imageListFlow.asLiveData()
 
     val imageInfoList: List<ImageInfo>
         get() = uriLivedData.value ?: emptyList()
-
-    lateinit var text: String
 
     suspend fun updateImageList(imageList: List<ImageInfo>) {
         imageListFlow.emit(imageList)
@@ -174,6 +172,7 @@ class WaterMarkRepository @Inject constructor(
         const val SP_KEY_ENABLE_BOUNDS = "${SP_NAME}_key_enable_bounds"
         const val SP_KEY_ICON_URI = "${SP_NAME}_key_icon_uri"
         const val SP_KEY_WATERMARK_MODE = "${SP_NAME}_key_watermark_mode"
+        const val SP_KEY_IMAGE_ROTATION = "${SP_NAME}_key_watermark_mode"
         const val MAX_TEXT_SIZE = 100f
         const val MAX_DEGREE = 360f
         const val MAX_HORIZON_GAP = 500

@@ -22,6 +22,8 @@ import java.io.InputStream
 import java.lang.ref.SoftReference
 import kotlin.math.roundToInt
 
+private const val TAG = "BitmapUtils"
+
 suspend fun decodeBitmapWithExif(
     uri: Uri,
     inputStream: InputStream,
@@ -174,8 +176,13 @@ fun decodeSampledBitmapFromResourceSync(
             BitmapFactory.decodeStream(`is`, null, options)
         }
         // 2. Calculate inSampleSize
-        val (oHieght: Int, oWidth: Int) = options.run { outHeight to outWidth }
-        options.inSampleSize = calculateInSampleSize(oWidth, oHieght, reqWidth, reqHeight)
+        val (oHeight: Int, oWidth: Int) = if (interChangeSize(MyApp.instance, uri)) {
+            options.run { outWidth to outHeight }
+        } else {
+            options.run { outHeight to outWidth }
+        }
+        options.inSampleSize = calculateInSampleSize(oWidth, oHeight, reqWidth, reqHeight)
+        Log.i(TAG, "reqW x reqH = $reqWidth x $reqHeight, outWidth x outHeight = $oWidth x $oHeight, inSampleSize = ${options.inSampleSize}")
         // 3. Decode bitmap with inSampleSize set
         options.inJustDecodeBounds = false
         resolver.openInputStream(uri).use { inputStream ->
@@ -194,6 +201,14 @@ fun decodeSampledBitmapFromResourceSync(
             "Decoding sampled bitmap from resource throw oom"
         )
     }
+}
+
+fun interChangeSize(context: Context, uri: Uri): Boolean {
+    val rotation = getOrientation(context, uri)
+    if (rotation == 90f || rotation == 180f) {
+        return true
+    }
+    return false
 }
 
 fun calculateInSampleSize(
@@ -218,6 +233,14 @@ fun calculateInSampleSize(
         while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
             inSampleSize *= 2
         }
+
+//        var totalPixels = (width / inSampleSize) * (height / inSampleSize)
+//        val totalReqPixels = reqWidth * reqHeight * 2
+//        while (totalPixels > totalReqPixels) {
+//            inSampleSize *= 2;
+//            Log.i(TAG, "totalPixels = $totalPixels, totalReqPixels = $totalReqPixels, inSample -> $inSampleSize")
+//            totalPixels = (width / inSampleSize) * (height / inSampleSize)
+//        }
     }
 
     return inSampleSize

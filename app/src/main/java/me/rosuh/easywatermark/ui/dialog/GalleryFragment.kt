@@ -1,33 +1,50 @@
 package me.rosuh.easywatermark.ui.dialog
 
+import android.annotation.SuppressLint
 import android.app.Dialog
+import android.content.Context
 import android.content.DialogInterface
+import android.hardware.display.DisplayManager
 import android.net.Uri
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.ViewGroup
+import android.util.Log
+import android.view.*
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
-import androidx.core.content.ContextCompat
+import androidx.core.view.marginBottom
+import androidx.core.view.marginTop
+import androidx.interpolator.view.animation.FastOutLinearInInterpolator
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.databinding.FragmentGalleryBinding
-import me.rosuh.easywatermark.ui.MainActivity
 import me.rosuh.easywatermark.ui.adapter.GalleryAdapter
 import me.rosuh.easywatermark.ui.base.BaseBindBSDFragment
+import me.rosuh.easywatermark.ui.widget.UniformScrollGridLayoutManager
 import me.rosuh.easywatermark.utils.FileUtils
 import me.rosuh.easywatermark.utils.MultiPickContract
-import me.rosuh.easywatermark.utils.ktx.colorOnSurface
 
 
 class GalleryFragment : BaseBindBSDFragment<FragmentGalleryBinding>() {
 
+    companion object {
+        private const val TAG = "GalleryFragment"
+    }
+
+    private var isScrollSliderManually: Boolean = false
+    private var refreshRate: Float = 60f
     private val galleryAdapter by lazy { GalleryAdapter() }
 
     private lateinit var pickImageLauncher: ActivityResultLauncher<String>
+
+    private var doOnDismiss: () -> Unit = {}
+
+    fun doOnDismiss(doOnDismiss: () -> Unit) {
+        this.doOnDismiss = doOnDismiss
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,6 +53,11 @@ class GalleryFragment : BaseBindBSDFragment<FragmentGalleryBinding>() {
                 handleActivityResult(uri)
             }
         shareViewModel.query(requireContext().contentResolver)
+
+        val displayManager: DisplayManager =
+            requireContext().applicationContext.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+        refreshRate = displayManager.displays?.getOrNull(0)?.refreshRate ?: 60F
+        Log.i(TAG, "onCreate $refreshRate")
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
@@ -51,6 +73,7 @@ class GalleryFragment : BaseBindBSDFragment<FragmentGalleryBinding>() {
         sheetContainer.layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun bindView(
         layoutInflater: LayoutInflater,
         container: ViewGroup?
@@ -67,17 +90,32 @@ class GalleryFragment : BaseBindBSDFragment<FragmentGalleryBinding>() {
             }
         }
         rootView.rvContent.apply {
+            layoutManager = UniformScrollGridLayoutManager(requireContext(), 4).also {
+                it.scrollBarView = rootView.ivSlider
+            }
             adapter = galleryAdapter
-            layoutManager = GridLayoutManager(requireContext(), 4)
             setHasFixedSize(true)
+            setOnSelect { rv, end ->
+                galleryAdapter.select(rv, end)
+            }
+            setOnUnSelect { rv, end ->
+                galleryAdapter.unSelect(rv, end)
+            }
+            addOnScrollListener(object :RecyclerView.OnScrollListener() {
+
+                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                    super.onScrolled(recyclerView, dx, dy)
+                    if (isScrollSliderManually) {
+                        return
+                    }
+                    val verticalScrollRange = recyclerView.computeVerticalScrollRange()
+                    val computeVerticalScrollOffset = recyclerView.computeVerticalScrollOffset()
+                    Log.i(TAG, "onScrolled verticalScrollRange = $verticalScrollRange, computeVerticalScrollOffset = ${recyclerView.computeVerticalScrollOffset()}, computeVerticalScrollExtent = ${recyclerView.computeVerticalScrollExtent()}")
+                    rootView.ivSlider.translationY = ((computeVerticalScrollOffset.toFloat() / verticalScrollRange) * (recyclerView.bottom - recyclerView.paddingBottom)).coerceAtLeast(0f)
+                }
+            })
         }
 
-//        rootView.ivSysImage.apply {
-//            setOnClickListener {
-//                val mime = "image/*"
-//                pickImageLauncher.launch(mime)
-//            }
-//        }
         rootView.topAppBar.setOnMenuItemClickListener {
             when (it.itemId) {
                 R.id.iv_sys_image -> {
@@ -89,13 +127,61 @@ class GalleryFragment : BaseBindBSDFragment<FragmentGalleryBinding>() {
             return@setOnMenuItemClickListener false
         }
 
+        rootView.ivSlider.apply {
+            post {
+                translationX += this.measuredWidth / 5 * 1
+            }
+            setOnTouchListener(object : View.OnTouchListener {
+                private var startX = 0f
+                private var startY = 0f
+
+                override fun onTouch(v: View?, event: MotionEvent?): Boolean {
+                    if (v == null) {
+                        return false
+                    }
+                    val totalHeight = rootView.rvContent.bottom - rootView.rvContent.paddingBottom
+                    val percent = binding.rvContent.computeVerticalScrollRange() / totalHeight
+                    Log.i(
+                        TAG,
+                        "ivSlider totalHeight = $totalHeight, top = ${this@apply.top.toFloat()}, percent = $percent"
+                    )
+                    when (event?.actionMasked) {
+                        MotionEvent.ACTION_DOWN -> {
+                            startX = event.x
+                            startY = event.y
+                            this@apply.animate().scaleX(2f).scaleY(2f).start()
+                            binding.rvContent.stopScroll()
+                            isScrollSliderManually = true
+                        }
+                        MotionEvent.ACTION_MOVE -> {
+                            val dx = event.x - startX
+                            val dy = event.y - startY
+                            val targetPos = dy * percent
+                            Log.i(TAG, "ivSlider targetPos = $targetPos, dy = $dy")
+                            v?.let {
+                                it.translationY = (dy + it.translationY).coerceAtLeast(0f)
+                                    .coerceAtMost(totalHeight.toFloat())
+                            }
+                            binding.rvContent.stopScroll()
+                            binding.rvContent.scrollBy(0, targetPos.toInt())
+                        }
+                        MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_UP -> {
+                            this@apply.animate().scaleX(1f).scaleY(1f).start()
+                            isScrollSliderManually = false
+                        }
+                    }
+                    return true
+                }
+            })
+        }
+
         shareViewModel.galleryPickedImageList.observe(this) {
             galleryAdapter.submitList(it)
         }
         galleryAdapter.selectedCount.observe(this) {
             if (it > 0) {
                 rootView.fab.apply {
-                    text = requireContext().getString(R.string.gallery_pick_size, it)
+                    text = it.coerceAtLeast(0).toString()
                     show()
                 }
             } else {
@@ -107,6 +193,7 @@ class GalleryFragment : BaseBindBSDFragment<FragmentGalleryBinding>() {
 
     override fun onDismiss(dialog: DialogInterface) {
         super.onDismiss(dialog)
+        doOnDismiss.invoke()
         shareViewModel.resetGalleryData()
     }
 

@@ -15,8 +15,13 @@ import androidx.lifecycle.*
 import androidx.palette.graphics.Palette
 import dagger.hilt.android.lifecycle.HiltViewModel
 import id.zelory.compressor.Compressor
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
@@ -26,7 +31,9 @@ import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.ui.widget.WaterMarkImageView
 import me.rosuh.easywatermark.utils.FileUtils.Companion.outPutFolderName
-import me.rosuh.easywatermark.utils.bitmap.*
+import me.rosuh.easywatermark.utils.bitmap.calculateInSampleSize
+import me.rosuh.easywatermark.utils.bitmap.decodeBitmapFromUri
+import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.utils.ktx.applyConfig
 import me.rosuh.easywatermark.utils.ktx.formatDate
 import me.rosuh.easywatermark.utils.ktx.launch
@@ -34,7 +41,6 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import javax.inject.Inject
-import kotlin.math.ceil
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
@@ -82,6 +88,7 @@ class MainViewModel @Inject constructor(
 
     private val tmpDrawableBounds by lazy { Rect() }
     private val drawableBounds by lazy { RectF() }
+    var matrixValues = FloatArray(9)
     private val tmpSrcBounds by lazy { RectF() }
     private val tmpDstBounds by lazy { RectF() }
 
@@ -177,24 +184,22 @@ class MainViewModel @Inject constructor(
             )
             imageInfo.width = mutableBitmap.width
             imageInfo.height = mutableBitmap.height
-            if (waterMark.value == null) {
-                return@withContext Result.failure(
-                    null,
-                    code = "-1",
-                    message = "config.value == null"
-                )
-            }
+            val tmpConfig = waterMark.value ?: return@withContext Result.failure(
+                null,
+                code = "-1",
+                message = "config.value == null"
+            )
             imageInfo.inSample = inSample
             val canvas = Canvas(mutableBitmap)
-            val tmpConfig = waterMark.value!!
-            // generate matrxi of drawable
-            val imageMatrix = generateMatrix(
-                viewInfo,
-                ceil((imageInfo.width.toDouble() / imageInfo.inSample)).toInt(),
-                ceil((imageInfo.height.toDouble() / imageInfo.inSample)).toInt(),
-                tmpDrawableBounds,
-                tmpSrcBounds,
-                tmpDstBounds
+            // generate matrix of drawable
+            val imageMatrix = WaterMarkImageView.adjustMatrix(
+                Matrix(),
+                viewInfo.width,
+                viewInfo.height,
+                viewInfo.paddingLeft,
+                viewInfo.paddingTop,
+                imageInfo.width,
+                imageInfo.height
             )
             Log.i(
                 "generateImage",
@@ -207,17 +212,10 @@ class MainViewModel @Inject constructor(
                     bitmapH = ${mutableBitmap.height},
                 """.trimIndent()
             )
-            // map to drawable bounds
-            imageMatrix.mapRect(drawableBounds, RectF(tmpDrawableBounds))
-            drawableBounds.set(
-                drawableBounds.left + viewInfo.paddingLeft,
-                drawableBounds.top + viewInfo.paddingTop,
-                drawableBounds.right + viewInfo.paddingRight,
-                drawableBounds.bottom + viewInfo.paddingBottom,
-            )
             // calculate the scale factor
-            imageInfo.scaleX = mutableBitmap.width.toFloat() / drawableBounds.width()
-            imageInfo.scaleY = mutableBitmap.height.toFloat() / drawableBounds.height()
+            imageMatrix.getValues(matrixValues)
+            imageInfo.scaleX = 1 / matrixValues[Matrix.MSCALE_X]
+            imageInfo.scaleY = 1 / matrixValues[Matrix.MSCALE_X]
             val bitmapPaint = TextPaint().applyConfig(imageInfo, tmpConfig, isScale = false)
             val layoutPaint = Paint()
             layoutPaint.shader = when (waterMark.value?.markMode) {

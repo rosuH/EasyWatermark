@@ -130,9 +130,9 @@ class AboutActivity : AppCompatActivity() {
             }
 
             binding.clDevContainer.backgroundTintList =
-                ColorStateList.valueOf(this@AboutActivity.colorSecondlyContainer)
+                ColorStateList.valueOf(this@AboutActivity.colorSecondaryContainer)
             binding.clDesignerContainer.backgroundTintList =
-                ColorStateList.valueOf(this@AboutActivity.colorSecondlyContainer)
+                ColorStateList.valueOf(this@AboutActivity.colorSecondaryContainer)
 
             viewModel.waterMark.observe(this@AboutActivity) {
                 switchDebug.isChecked = viewModel.waterMark.value?.enableBounds ?: false
