@@ -161,7 +161,6 @@ class MainActivity : AppCompatActivity() {
         checkHadCrash()
         // Activity was recycled but dialog still showing in some case?
         SaveImageBSDialogFragment.safetyHide(this@MainActivity.supportFragmentManager)
-        throw RuntimeException("test")
     }
 
     private fun initRecoveryView() {
