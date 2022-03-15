@@ -119,6 +119,9 @@
     <string name="telegram_not_found" translatable="false">Telegram is not installed.</string>
     <string name="store_not_found" translatable="false">Not Store was installed.</string>
     <string name="recovery_mode_closed" translatable="false">It\'s closed, please try again</string>
+    <string name="copy" translatable="false">Copy error message</string>
+    <string name="recovery_mode_tips" translatable="false">Oops, you seem to have experienced multiple crashes. It has now automatically entered recovery mode. Below is your device information and the crash information, it would be very helpful if you could copy it and contact us via the following methods to resolve the issue. Thank you!</string>
+    <string name="turn_off_recovery_mode" translatable="false">Turn off recovery mode</string>
 
 
 </resources>

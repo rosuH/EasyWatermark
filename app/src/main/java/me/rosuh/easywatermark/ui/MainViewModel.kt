@@ -544,19 +544,22 @@ class MainViewModel @Inject constructor(
         // user do not saving crash info into external storage
         // So that wo just share the internal file
         val mainContent = """
-                    Dear developer, here are my crash info:
-                    
-                        $crashInfo
-                    =====================
-                    APP:
-                    ${BuildConfig.VERSION_CODE}, ${BuildConfig.VERSION_NAME}, ${BuildConfig.BUILD_TYPE} 
-                    Devices:
-                    ${Build.VERSION.RELEASE}, ${Build.VERSION.SDK_INT}, ${Build.DEVICE}, ${Build.MODEL}, ${Build.PRODUCT}, ${Build.MANUFACTURER}
-                    =====================
-                    ${activity.getString(R.string.contributor_info)}
-                    =====================
-                    ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
-        """.trimIndent()
+Dear developer, here are my crash info:
+```
+$crashInfo
+```
+---
+
+APP:
+
+${BuildConfig.VERSION_CODE}, ${BuildConfig.VERSION_NAME}, ${BuildConfig.BUILD_TYPE} 
+
+Devices:
+
+${Build.VERSION.RELEASE}, ${Build.VERSION.SDK_INT}, ${Build.DEVICE}, ${Build.MODEL}, ${Build.PRODUCT}, ${Build.MANUFACTURER}
+
+${System.currentTimeMillis().formatDate("yyy-MM-dd")}
+""".trimIndent()
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "message/rfc822"
             putExtra(Intent.EXTRA_EMAIL, arrayOf("hi@rosuh.me"))

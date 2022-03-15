@@ -26,11 +26,10 @@
         android:layout_marginTop="16dp"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
-        android:text="糟糕，您似乎遇到了多次崩溃。现在已经自动进入恢复模式。以下是您的设备信息以及崩溃信息，辛苦您将其复制以后通过下列方式联系我们，将对解决问题非常有帮助。谢谢您！"
+        android:text="@string/recovery_mode_tips"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/tv_title" />
-
 
     <ScrollView
         android:id="@+id/sv_info"
@@ -58,43 +57,41 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"
-        android:text="copy"
+        android:text="@string/copy"
         app:layout_constraintBottom_toTopOf="@id/btn_email"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_email"
+        style="@style/Widget.Material3.Button.TextButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="16dp"
         android:text="Send email"
-        app:layout_constraintBottom_toTopOf="@id/btn_telegram"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="@+id/btn_telegram"
+        app:layout_constraintEnd_toStartOf="@id/btn_telegram"
         app:layout_constraintStart_toStartOf="parent" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_telegram"
+        style="@style/Widget.Material3.Button.TextButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="16dp"
         android:text="Send Telegram"
-        app:layout_constraintBottom_toTopOf="@id/btn_store"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintBottom_toBottomOf="@+id/btn_store"
+        app:layout_constraintEnd_toStartOf="@id/btn_store"
+        app:layout_constraintStart_toEndOf="@+id/btn_email" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_store"
+        style="@style/Widget.Material3.Button.TextButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
         android:layout_marginBottom="16dp"
         android:text="Jump to Store"
         app:layout_constraintBottom_toTopOf="@+id/btn_close_recovery_mode"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toEndOf="@+id/btn_telegram" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_close_recovery_mode"
@@ -102,7 +99,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:layout_marginBottom="48dp"
-        android:text="关闭恢复模式"
+        android:text="@string/turn_off_recovery_mode"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />

@@ -21,8 +21,6 @@ import kotlinx.coroutines.launch
 import me.rosuh.cmonet.CMonet
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ui.MainActivity
-import me.rosuh.easywatermark.ui.theme.ThemeManager
-import me.rosuh.easywatermark.ui.widget.RadioButton
 
 fun Activity.isStoragePermissionGrated(): Boolean {
     val readGranted = ContextCompat.checkSelfPermission(
