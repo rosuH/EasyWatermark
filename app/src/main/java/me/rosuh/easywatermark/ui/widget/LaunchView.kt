@@ -274,6 +274,7 @@ class LaunchView : CustomViewGroup {
             .plus(tabLayout.measuredHeightWithMargins)
             .plus(rvPanel.measuredHeightWithMargins)
             .plus(fcFunctionDetail.measuredHeightWithMargins)
+            .plus(rvPhotoList.measuredHeightWithMargins)
 
         measureChildWithMargins(ivPhoto, widthMeasureSpec, 0, heightMeasureSpec, heightUsed)
 
