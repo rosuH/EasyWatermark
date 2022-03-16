@@ -40,7 +40,7 @@ class RadioButton : View {
     private val icTint = ContextCompat.getColor(context, R.color.selector_gallery_icon_tint)
 
     private val bgColorNormal = Color.TRANSPARENT
-    private val bgColorSelected = context.getColorFromAttr(R.attr.colorTertiaryContainer)
+    private val bgColorSelected = context.colorTertiaryContainer
 
     private val strokeColorNormal by lazy {
         MaterialColors.compositeARGBWithAlpha(

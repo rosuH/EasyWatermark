@@ -73,10 +73,10 @@ val Context.colorPrimary: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() && isNight() -> {
-                getColorFromAttr(R.attr.colorPrimary)
+                getColorFromAttr(R.attr.colorPrimary, defaultColor = R.color.material_dynamic_primary80)
             }
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.colorPrimary)
+                getColorFromAttr(R.attr.colorPrimary, defaultColor = R.color.material_dynamic_primary40)
             }
             isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_primary)
@@ -91,10 +91,10 @@ val Context.colorOnPrimary: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() && isNight() -> {
-                getColorFromAttr(R.attr.colorOnPrimary)
+                getColorFromAttr(R.attr.colorOnPrimary, defaultColor = R.color.material_dynamic_primary20)
             }
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.colorOnPrimary)
+                getColorFromAttr(R.attr.colorOnPrimary, defaultColor = R.color.material_dynamic_primary100)
             }
             isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_onPrimary)
@@ -109,10 +109,10 @@ val Context.colorPrimaryContainer: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() && isNight() -> {
-                getColorFromAttr(R.attr.colorPrimaryContainer)
+                getColorFromAttr(R.attr.colorPrimaryContainer, defaultColor = R.color.material_dynamic_primary20)
             }
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.colorPrimaryContainer)
+                getColorFromAttr(R.attr.colorPrimaryContainer, defaultColor = R.color.material_dynamic_primary90)
             }
             isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_primaryContainer)
@@ -127,10 +127,10 @@ val Context.colorOnPrimaryContainer: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() && isNight() -> {
-                getColorFromAttr(R.attr.colorOnPrimaryContainer)
+                getColorFromAttr(R.attr.colorOnPrimaryContainer, defaultColor = R.color.material_dynamic_primary90)
             }
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.colorOnPrimaryContainer)
+                getColorFromAttr(R.attr.colorOnPrimaryContainer, defaultColor = R.color.material_dynamic_primary10)
             }
             isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_onPrimaryContainer)
@@ -149,10 +149,10 @@ val Context.colorSecondary: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() && isNight() -> {
-                getColorFromAttr(R.attr.colorSecondary)
+                getColorFromAttr(R.attr.colorSecondary, defaultColor = R.color.material_dynamic_secondary80)
             }
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.colorSecondary)
+                getColorFromAttr(R.attr.colorSecondary, defaultColor = R.color.material_dynamic_secondary40)
             }
             isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_secondary)
@@ -167,10 +167,10 @@ val Context.colorOnSecondary: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() && isNight() -> {
-                getColorFromAttr(R.attr.colorOnSecondary)
+                getColorFromAttr(R.attr.colorOnSecondary, defaultColor = R.color.material_dynamic_secondary20)
             }
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.colorOnSecondary)
+                getColorFromAttr(R.attr.colorOnSecondary, defaultColor = R.color.material_dynamic_secondary100)
             }
             isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_secondary)
@@ -185,10 +185,10 @@ val Context.colorSecondaryContainer: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() && isNight() -> {
-                getColorFromAttr(R.attr.colorSecondaryContainer)
+                getColorFromAttr(R.attr.colorSecondaryContainer, defaultColor = R.color.material_dynamic_secondary30)
             }
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.colorSecondaryContainer)
+                getColorFromAttr(R.attr.colorSecondaryContainer, defaultColor = R.color.material_dynamic_secondary90)
             }
             isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_secondary)
@@ -203,10 +203,10 @@ val Context.colorOnSecondaryContainer: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() && isNight() -> {
-                getColorFromAttr(R.attr.colorOnSecondaryContainer)
+                getColorFromAttr(R.attr.colorOnSecondaryContainer, defaultColor = R.color.material_dynamic_secondary90)
             }
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.colorOnSecondaryContainer)
+                getColorFromAttr(R.attr.colorOnSecondaryContainer, defaultColor = R.color.material_dynamic_secondary10)
             }
             isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_secondary)
@@ -224,10 +224,10 @@ val Context.colorTertiary: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() && isNight() -> {
-                getColorFromAttr(R.attr.colorTertiary)
+                getColorFromAttr(R.attr.colorTertiary, defaultColor = R.color.material_dynamic_tertiary80)
             }
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.colorTertiary)
+                getColorFromAttr(R.attr.colorTertiary, defaultColor = R.color.material_dynamic_tertiary40)
             }
             isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_tertiary)
@@ -242,10 +242,10 @@ val Context.colorOnTertiary: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() && isNight() -> {
-                getColorFromAttr(R.attr.colorOnTertiary)
+                getColorFromAttr(R.attr.colorOnTertiary, defaultColor = R.color.material_dynamic_tertiary20)
             }
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.colorOnTertiary)
+                getColorFromAttr(R.attr.colorOnTertiary, defaultColor = R.color.material_dynamic_tertiary100)
             }
             isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_onTertiary)
@@ -260,10 +260,10 @@ val Context.colorTertiaryContainer: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() && isNight() -> {
-                getColorFromAttr(R.attr.colorTertiaryContainer)
+                getColorFromAttr(R.attr.colorTertiaryContainer, defaultColor = R.color.material_dynamic_tertiary30)
             }
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.colorTertiaryContainer)
+                getColorFromAttr(R.attr.colorTertiaryContainer, defaultColor = R.color.material_dynamic_tertiary90)
             }
             isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_tertiaryContainer)
@@ -278,10 +278,10 @@ val Context.colorOnTertiaryContainer: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() && isNight() -> {
-                getColorFromAttr(R.attr.colorOnTertiaryContainer)
+                getColorFromAttr(R.attr.colorOnTertiaryContainer, defaultColor = R.color.material_dynamic_tertiary90)
             }
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.colorOnTertiaryContainer)
+                getColorFromAttr(R.attr.colorOnTertiaryContainer, defaultColor = R.color.material_dynamic_tertiary10)
             }
             isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_onTertiaryContainer)
@@ -296,7 +296,7 @@ val Context.colorError: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.colorError)
+                getColorFromAttr(R.attr.colorError, defaultColor = R.color.design_default_color_error)
             }
             isNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_error)
@@ -311,7 +311,7 @@ val Context.colorOnError: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.colorOnError)
+                getColorFromAttr(R.attr.colorOnError, defaultColor = R.color.design_default_color_on_error)
             }
             isNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_onError)
@@ -326,7 +326,7 @@ val Context.colorErrorContainer: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.colorErrorContainer)
+                getColorFromAttr(R.attr.colorErrorContainer, defaultColor = R.color.md_theme_dark_errorContainer)
             }
             isNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_errorContainer)
@@ -341,7 +341,7 @@ val Context.colorOnErrorContainer: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.colorOnErrorContainer)
+                getColorFromAttr(R.attr.colorOnErrorContainer, defaultColor = R.color.md_theme_dark_onErrorContainer)
             }
             isNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_onErrorContainer)
@@ -356,10 +356,10 @@ val Context.colorBackground: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() && isNight() -> {
-                getColorFromAttr(R.attr.backgroundColor)
+                getColorFromAttr(R.attr.backgroundColor, defaultColor = R.color.material_dynamic_neutral10)
             }
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.backgroundColor)
+                getColorFromAttr(R.attr.backgroundColor, defaultColor = R.color.material_dynamic_neutral99)
             }
             else -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_background)
@@ -371,10 +371,10 @@ val Context.colorOnBackground: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() && isNight() -> {
-                getColorFromAttr(R.attr.colorOnBackground)
+                getColorFromAttr(R.attr.colorOnBackground, defaultColor = R.color.material_dynamic_neutral90)
             }
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.colorOnBackground)
+                getColorFromAttr(R.attr.colorOnBackground, defaultColor = R.color.material_dynamic_neutral10)
             }
             isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_onBackground)
@@ -389,10 +389,10 @@ val Context.colorSurface: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() && isNight() -> {
-                getColorFromAttr(R.attr.colorSurface)
+                getColorFromAttr(R.attr.colorSurface, defaultColor = R.color.material_dynamic_neutral10)
             }
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.colorSurface)
+                getColorFromAttr(R.attr.colorSurface, defaultColor = R.color.material_dynamic_neutral99)
             }
             isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_surface)
@@ -407,10 +407,10 @@ val Context.colorOnSurface: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() && isNight() -> {
-                getColorFromAttr(R.attr.colorOnSurface)
+                getColorFromAttr(R.attr.colorOnSurface, defaultColor = R.color.material_dynamic_neutral80)
             }
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.colorOnSurface)
+                getColorFromAttr(R.attr.colorOnSurface, defaultColor = R.color.material_dynamic_neutral10)
             }
             isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_onSurface)
@@ -425,10 +425,10 @@ val Context.colorSurfaceVariant: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() && isNight() -> {
-                getColorFromAttr(R.attr.colorSurfaceVariant)
+                getColorFromAttr(R.attr.colorSurfaceVariant, defaultColor = R.color.material_dynamic_neutral30)
             }
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.colorSurfaceVariant)
+                getColorFromAttr(R.attr.colorSurfaceVariant, defaultColor = R.color.material_dynamic_neutral90)
             }
             isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_surfaceVariant)
@@ -443,10 +443,10 @@ val Context.colorOnSurfaceVariant: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() && isNight() -> {
-                getColorFromAttr(R.attr.colorOnSurfaceVariant)
+                getColorFromAttr(R.attr.colorOnSurfaceVariant, defaultColor = R.color.material_dynamic_neutral80)
             }
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.colorOnSurfaceVariant)
+                getColorFromAttr(R.attr.colorOnSurfaceVariant, defaultColor = R.color.material_dynamic_neutral30)
             }
             isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_onSurfaceVariant)
@@ -461,10 +461,10 @@ val Context.colorOutline: Int
     get() {
         return when {
             CMonet.isDynamicColorAvailable() && isNight() -> {
-                getColorFromAttr(R.attr.colorOutline)
+                getColorFromAttr(R.attr.colorOutline, defaultColor = R.color.material_dynamic_neutral60)
             }
             CMonet.isDynamicColorAvailable() -> {
-                getColorFromAttr(R.attr.colorOutline)
+                getColorFromAttr(R.attr.colorOutline, defaultColor = R.color.material_dynamic_neutral50)
             }
             isNight() || !supportNight() -> {
                 ContextCompat.getColor(this, R.color.md_theme_dark_outline)
@@ -496,8 +496,13 @@ fun Context.supportDynamicColor(): Boolean {
 fun Context.getColorFromAttr(
     @AttrRes attrColor: Int,
     typedValue: TypedValue = TypedValue(),
-    resolveRefs: Boolean = true
+    resolveRefs: Boolean = true,
+    defaultColor: Int = 0
 ): Int {
-    theme.resolveAttribute(attrColor, typedValue, resolveRefs)
-    return typedValue.data
+    return try {
+        theme.resolveAttribute(attrColor, typedValue, resolveRefs)
+        typedValue.data
+    } catch (e: Exception) {
+        ContextCompat.getColor(this, defaultColor)
+    }
 }
