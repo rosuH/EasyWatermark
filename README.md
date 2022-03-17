@@ -24,6 +24,7 @@ Securely, easily add a watermark to your sensitive photos.</br>To prevent them f
 <p align="left">
 <a href="https://play.google.com/store/apps/details?id=me.rosuh.easywatermark"><img src="/static/google-play-badge.png" width="auto" height="64px"/></a>
   <a href="https://www.coolapk.com/apk/272743"><img src="/static/logo_coolapk.png" width="auto" height="64px"/></a>
+<a href="https://app.fossa.com/projects/git%2Bgithub.com%2FrosuH%2FEasyWatermark?ref=badge_shield" alt="FOSSA Status"><img src="https://app.fossa.com/api/projects/git%2Bgithub.com%2FrosuH%2FEasyWatermark.svg?type=shield"/></a>
   <a href="https://f-droid.org/packages/me.rosuh.easywatermark/"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" width="auto" height="64px"/></a>
 </p>
 
@@ -104,3 +105,7 @@ or email and we'll get back to you shortly.
 ## [Privacy policy](https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy.md)
 
 If you really need it.
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FrosuH%2FEasyWatermark.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FrosuH%2FEasyWatermark?ref=badge_large)
