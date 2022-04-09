@@ -128,7 +128,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val funcAdapter by lazy {
-        FuncPanelAdapter(ArrayList(styleFunList)).apply {
+        FuncPanelAdapter(ArrayList(contentFunList)).apply {
             setHasStableIds(true)
         }
     }
@@ -547,11 +547,10 @@ class MainActivity : AppCompatActivity() {
                     val adapter = (launchView.rvPanel.adapter as? FuncPanelAdapter)
                     when (tab.position) {
                         0 -> {
-                            launchView.rvPanel.smoothScrollToPosition(0)
-                            adapter?.also {
-                                it.seNewData(styleFunList, 0)
-                                post { handleFuncItem(it.dataSet[0]) }
-                            }
+                            val curPos =
+                                if (launchView.ivPhoto.config?.markMode == WaterMarkRepository.MarkMode.Text) 0 else 1
+                            adapter?.seNewData(contentFunList, curPos)
+                            manuallySelectedItem(curPos)
                         }
                         2 -> {
                             launchView.rvPanel.smoothScrollToPosition(0)
@@ -561,10 +560,11 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
                         else -> {
-                            val curPos =
-                                if (launchView.ivPhoto.config?.markMode == WaterMarkRepository.MarkMode.Text) 0 else 1
-                            adapter?.seNewData(contentFunList, curPos)
-                            manuallySelectedItem(curPos)
+                            launchView.rvPanel.smoothScrollToPosition(0)
+                            adapter?.also {
+                                it.seNewData(styleFunList, 0)
+                                post { handleFuncItem(it.dataSet[0]) }
+                            }
                         }
                     }
                 }
@@ -572,10 +572,6 @@ class MainActivity : AppCompatActivity() {
                 override fun onTabUnselected(tab: TabLayout.Tab?) {}
 
                 override fun onTabReselected(tab: TabLayout.Tab?) {
-                    val adapter = (launchView.rvPanel.adapter as? FuncPanelAdapter)
-                    adapter?.also {
-                        post { handleFuncItem(it.dataSet[0]) }
-                    }
                 }
             })
         }
