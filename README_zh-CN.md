@@ -4,6 +4,8 @@
   <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/rosuh/easywatermark">
 </p>
 
+<a href="https://app.fossa.com/projects/git%2Bgithub.com%2FrosuH%2FEasyWatermark?ref=badge_small" alt="FOSSA Status"><img src="https://app.fossa.com/api/projects/git%2Bgithub.com%2FrosuH%2FEasyWatermark.svg?type=small"/></a>
+
 <p align="center">  
 安全、简单、快速地为你的敏感照片添加水印，防止被小人泄露、利用。
   </br>

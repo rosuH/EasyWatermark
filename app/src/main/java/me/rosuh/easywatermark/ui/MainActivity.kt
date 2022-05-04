@@ -7,7 +7,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.Intent.ACTION_SEND
-import android.content.Intent.ACTION_VIEW
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -26,9 +25,6 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.forEach
 import androidx.fragment.app.commit
 import androidx.lifecycle.lifecycleScope
@@ -128,7 +124,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val funcAdapter by lazy {
-        FuncPanelAdapter(ArrayList(styleFunList)).apply {
+        FuncPanelAdapter(ArrayList(contentFunList)).apply {
             setHasStableIds(true)
         }
     }
@@ -224,34 +220,6 @@ class MainActivity : AppCompatActivity() {
         if (MyApp.recoveryMode) {
             return
         }
-        if (hasFocus) {
-            hideSystemUI()
-        }
-    }
-
-    private fun hideSystemUI() {
-        // Enables regular immersive mode.
-        // For "lean back" mode, remove SYSTEM_UI_FLAG_IMMERSIVE.
-        // Or for "sticky immersive," replace it with SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            WindowCompat.setDecorFitsSystemWindows(window, false)
-            WindowInsetsControllerCompat(window, launchView).let { controller ->
-                controller.hide(WindowInsetsCompat.Type.systemBars())
-                controller.systemBarsBehavior =
-                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            }
-        } else {
-            window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE
-                    // Set the content to appear under the system bars so that the
-                    // content doesn't resize when the system bars hide and show.
-                    or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    // Hide the nav bar and status bar
-                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_FULLSCREEN)
-        }
-
     }
 
     private fun registerResultCallback() {
@@ -391,9 +359,9 @@ class MainActivity : AppCompatActivity() {
                 ) {
                     val c = it.animatedValue as Int
                     if (launchView.isEdit()) {
-                        launchView.rvPanel.setBackgroundColor(it.animatedValue as Int)
-                        setActivityBackground(c)
-                        setStatusBarColor(c, isInEditMode = true)
+                        doApplyBgChanged(c)
+                    } else {
+                        doApplyBgChanged()
                     }
                 }
             funcAdapter.textColor.toColor(titleTextColor) {
@@ -418,8 +386,7 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("ClickableViewAccessibility")
     private fun initView() {
-        setActivityBackground(ContextCompat.getColor(this, R.color.md_theme_dark_background))
-        setStatusBarColor(ContextCompat.getColor(this, R.color.md_theme_dark_background), false)
+        doApplyBgChanged()
         // prepare MotionLayout
         launchView.setListener {
             onModeChange { _, newMode ->
@@ -547,11 +514,10 @@ class MainActivity : AppCompatActivity() {
                     val adapter = (launchView.rvPanel.adapter as? FuncPanelAdapter)
                     when (tab.position) {
                         0 -> {
-                            launchView.rvPanel.smoothScrollToPosition(0)
-                            adapter?.also {
-                                it.seNewData(styleFunList, 0)
-                                post { handleFuncItem(it.dataSet[0]) }
-                            }
+                            val curPos =
+                                if (launchView.ivPhoto.config?.markMode == WaterMarkRepository.MarkMode.Text) 0 else 1
+                            adapter?.seNewData(contentFunList, curPos)
+                            manuallySelectedItem(curPos)
                         }
                         2 -> {
                             launchView.rvPanel.smoothScrollToPosition(0)
@@ -561,10 +527,11 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
                         else -> {
-                            val curPos =
-                                if (launchView.ivPhoto.config?.markMode == WaterMarkRepository.MarkMode.Text) 0 else 1
-                            adapter?.seNewData(contentFunList, curPos)
-                            manuallySelectedItem(curPos)
+                            launchView.rvPanel.smoothScrollToPosition(0)
+                            adapter?.also {
+                                it.seNewData(styleFunList, 0)
+                                post { handleFuncItem(it.dataSet[0]) }
+                            }
                         }
                     }
                 }
@@ -572,10 +539,6 @@ class MainActivity : AppCompatActivity() {
                 override fun onTabUnselected(tab: TabLayout.Tab?) {}
 
                 override fun onTabReselected(tab: TabLayout.Tab?) {
-                    val adapter = (launchView.rvPanel.adapter as? FuncPanelAdapter)
-                    adapter?.also {
-                        post { handleFuncItem(it.dataSet[0]) }
-                    }
                 }
             })
         }
@@ -804,18 +767,17 @@ class MainActivity : AppCompatActivity() {
         viewModel.clearData()
         launchView.ivPhoto.reset()
         bgTransformAnimator?.cancel()
-        (launchView.background as? ColorDrawable?)?.color?.toColor(
-            ContextCompat.getColor(this, R.color.md_theme_dark_background)
-        ) {
-            val c = it.animatedValue as Int
-            setActivityBackground(c)
-            setStatusBarColor(c, isInEditMode = false)
-        }
+        doApplyBgChanged()
         hideDetailPanel()
     }
 
-    private fun setActivityBackground(color: Int) {
+    private fun doApplyBgChanged(color: Int = ContextCompat.getColor(this, R.color.md_theme_dark_background)) {
         (launchView.parent as? View?)?.setBackgroundColor(color)
+        window?.navigationBarColor = Color.TRANSPARENT
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window?.navigationBarDividerColor = Color.TRANSPARENT
+        }
+        setStatusBarColor(color, true)
     }
 
     private fun selectTab(index: Int) {

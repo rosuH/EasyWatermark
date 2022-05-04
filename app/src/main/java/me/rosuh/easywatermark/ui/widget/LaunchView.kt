@@ -137,8 +137,8 @@ class LaunchView : CustomViewGroup {
                 it.text = context.getString(R.string.title_layout)
             }
 
-            addTab(styleTab)
             addTab(contentTab)
+            addTab(styleTab)
             addTab(layoutTab)
         }
     }
