@@ -222,20 +222,10 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         }
     }
 
-    private fun getAvailableCanvasWidth() = measuredWidth - paddingLeft - paddingRight
-    private fun getAvailableCanvasHeight() = measuredHeight - paddingTop - paddingBottom
-
-    private var bgTransformAnimator: ObjectAnimator? = null
-
     private fun applyBg(imageBitmap: Bitmap?) {
         launch {
             generatePalette(imageBitmap)?.let { palette ->
-                bgTransformAnimator?.cancel()
-                val color = palette.bgColor(context)
-                bgTransformAnimator =
-                    ((background as? ColorDrawable)?.color ?: Color.BLACK).toColor(color) {
-                        setBackgroundColor(it.animatedValue as Int)
-                    }
+                setBackgroundColor(Color.TRANSPARENT)
                 this@WaterMarkImageView.onBgReady.invoke(palette)
             }
         }

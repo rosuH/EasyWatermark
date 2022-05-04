@@ -63,6 +63,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var pickIconLauncher: ActivityResultLauncher<String>
     private val viewModel: MainViewModel by viewModels()
 
+    private val currentBgColor:Int
+        get() = ((launchView.parent as? View?)?.background as? ColorDrawable)?.color ?: colorSurface
+
     private val contentFunList: List<FuncTitleModel> by lazy {
         listOf(
             FuncTitleModel(
@@ -353,10 +356,7 @@ class MainActivity : AppCompatActivity() {
             val bgColor = palette.bgColor(this)
             val titleTextColor = palette.titleTextColor(this)
 
-            bgTransformAnimator =
-                ((launchView.ivPhoto.background as? ColorDrawable)?.color ?: Color.BLACK).toColor(
-                    bgColor
-                ) {
+            bgTransformAnimator = currentBgColor.toColor(bgColor) {
                     val c = it.animatedValue as Int
                     if (launchView.isEdit()) {
                         doApplyBgChanged(c)

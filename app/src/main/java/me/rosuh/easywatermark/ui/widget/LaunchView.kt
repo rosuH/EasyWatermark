@@ -109,11 +109,6 @@ class LaunchView : CustomViewGroup {
                 )
             setPadding(12.dp)
             scaleType = ImageView.ScaleType.MATRIX
-            setOnTouchListener { _, event ->
-                return@setOnTouchListener rvPhotoList.onTouchEvent(
-                    event
-                )
-            }
         }
     }
 
