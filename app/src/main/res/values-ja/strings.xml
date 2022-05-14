@@ -30,7 +30,7 @@
     <string name="about_title_version">バージョン</string>
     <string name="about_title_rating">アプリを評価する</string>
     <string name="about_title_feed_back">フィードバック</string>
-    <string name="about_title_update_log">チェンジログ</string>
+    <string name="about_title_update_log">変更履歴</string>
     <string name="about_title_open_source">オープンソースライセンス</string>
     <string name="about_title_author">著作者</string>
     <string name="about_title_designer">デザイナー</string>
@@ -42,13 +42,13 @@
     <string name="directly_save_tips">編集した画像を直接ギャラリーに保存する</string>
     <string name="share_tips">編集した画像を他のアプリで共有する</string>
     <string name="share">共有</string>
-    <string name="water_mark_mode_text">文字</string>
+    <string name="water_mark_mode_text">テキスト</string>
     <string name="water_mark_mode_image">アイコン</string>
-    <string name="touch_alpha">アルファ: %1$d</string>
+    <string name="touch_alpha">透明度: %1$d</string>
     <string name="touch_size">サイズ: %1$d</string>
-    <string name="hint_tips_input_water_mark_text">ウォーターマークの文字を入力してください</string>
+    <string name="hint_tips_input_water_mark_text">ウォーターマークのテキストを入力してください</string>
     <string name="tips_ok">確認</string>
-    <string name="hint_tips_alpha_100">アルファ 100%</string>
+    <string name="hint_tips_alpha_100">透明度 100%</string>
     <string name="tips_cancel_output">キャンセル</string>
     <string name="tips_need_compress_img">ストレージが不足しているか、画像が大きすぎます</string>
     <string name="tips_compressing">圧縮しています…</string>
@@ -61,12 +61,13 @@
     <string name="tip_not_mail_found">メールクライアントが検出されませんでした。エラーメッセージをアプリストアやGitHubに貼り付けてください。</string>
     <string name="tips_content_size_performance">画像が大きくなればなるほど、リアルタイムで画像を見ることは難しくなります。</string>
     <string name="tips_content_mode_button">クリックすると、文字や画像を修正できます。</string>
-    <string name="config_default_water_mark_text">👋 再配布禁止</string>
-    <string name="style_alpha">アルファ</string>
+    <string name="config_default_water_mark_text">👋 DO NOT REDISTRIBUTE</string>
+    <string name="style_alpha">透明度</string>
     <string name="contributor_info">If the feedback about a problem is valid and therefore fixed or a new version is released, your name or email will appear in the update pop-up window. We will hide your information, your full name will not appear. \\n If you do not want it to happen, please mark: I do not want to.</string>
     <string name="dialog_change_log_title">What\'s new</string>
+    <string name="dialog_change_log_content">
         <![CDATA[
-        <h2 id="new-and-optimized">New and Optimized</h2>
+        <h2 id="new-and-optimized">新機能と最適化</h2>
         <ol>
         <li>&nbsp;&nbsp;🎨 Migrated to MD3 and fully supported Material You!</li>
         <li>&nbsp;&nbsp;🥳 Check out the new gallery for image choosing!</li>
@@ -94,10 +95,10 @@
     <string name="text_typeface_bold">太字</string>
     <string name="text_typeface_italic">斜体</string>
     <string name="text_typeface_bold_italic">太字斜体</string>
-    <string name="dialog_check_out_in_github">Githubで確認する</string>
+    <string name="dialog_check_out_in_github">GitHubで確認する</string>
     <string name="dialog_save_export_list_title">リストをエクスポート(%1$s)</string>
     <string name="dialog_open_in_gallery">ギャラリーで表示</string>
-    <string name="dialog_save_config_format">フォーマット</string>
+    <string name="dialog_save_config_format">形式</string>
     <string name="dialog_save_config_quality">品質</string>
     <string name="dialog_save_exporting">エクスポート中</string>
     <string name="tips_pick_image">画像を選択</string>
