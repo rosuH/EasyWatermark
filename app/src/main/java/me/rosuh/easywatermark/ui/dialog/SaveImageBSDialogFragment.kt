@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
+import android.widget.Toast
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentManager
@@ -207,8 +208,8 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
     }
 
     private fun openShare() {
-        val list = shareViewModel.imageList.value?.first
-        if (list.isNullOrEmpty()) return
+        val list = ArrayList(shareViewModel.imageList.value?.first ?: emptyList())
+        if (list.isEmpty()) return
         val intent = Intent().apply {
             type = "image/*"
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -226,7 +227,13 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
                 putParcelableArrayListExtra(Intent.EXTRA_STREAM, uriList)
             }
         }
-        startActivity(intent)
+        try {
+            startActivity(intent)
+        } catch (e: SecurityException) {
+            e.printStackTrace()
+            Toast.makeText(requireContext(), "Share error with ${e.message}", Toast.LENGTH_SHORT)
+                .show()
+        }
     }
 
     companion object {

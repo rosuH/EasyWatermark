@@ -40,7 +40,8 @@ class RadioButton : View {
     private val icTint = ContextCompat.getColor(context, R.color.selector_gallery_icon_tint)
 
     private val bgColorNormal = Color.TRANSPARENT
-    private val bgColorSelected = context.colorTertiaryContainer
+    private val bgColorSelected
+        get() = context.colorTertiaryContainer
 
     private val strokeColorNormal by lazy {
         MaterialColors.compositeARGBWithAlpha(
@@ -48,7 +49,8 @@ class RadioButton : View {
             125
         )
     }
-    private val strokeColorSelected = context.colorSurfaceVariant
+    private val strokeColorSelected
+        get() = context.colorSurfaceVariant
     private val strokeWidth = 2.dp
 
     private val iconRes: Int = R.drawable.ic_gallery_radio_button
@@ -92,6 +94,7 @@ class RadioButton : View {
         // icon
         if (canvas != null && isChecked) {
             icon?.setBounds(0, 0, (measuredWidth), (measuredHeight))
+            icon?.setTint(context.colorOnTertiaryContainer)
             icon?.draw(canvas)
         }
     }
