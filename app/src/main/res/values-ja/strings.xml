@@ -3,7 +3,7 @@
     <string name="app_name">Easy WaterMark</string>
     <string name="action_pick">画像を選択</string>
     <string name="action_save">保存</string>
-    <string name="action_settings">About</string>
+    <string name="action_settings">このアプリについて</string>
     <string name="title_layout">レイアウト</string>
     <string name="title_style">スタイル</string>
     <string name="title_content">内容</string>
@@ -63,7 +63,7 @@
     <string name="tips_content_mode_button">クリックすると、文字や画像を修正できます。</string>
     <string name="config_default_water_mark_text">👋 DO NOT REDISTRIBUTE</string>
     <string name="style_alpha">透明度</string>
-    <string name="contributor_info">If the feedback about a problem is valid and therefore fixed or a new version is released, your name or email will appear in the update pop-up window. We will hide your information, your full name will not appear. \\n If you do not want it to happen, please mark: I do not want to.</string>
+    <string name="contributor_info">問題についてのフィードバックが有効であるため修正された場合、または新しいバージョンがリリースされた場合、あなたの名前または電子メールがアップデートのポップアップウィンドウに表示されます。お客様の情報は非表示にしますので、フルネームは表示されません。\\n 表示させたくない場合は、"I don't want to."のマークを付けてください。</string>
     <string name="dialog_change_log_title">What\'s new</string>
     <string name="dialog_change_log_content">
         <![CDATA[
