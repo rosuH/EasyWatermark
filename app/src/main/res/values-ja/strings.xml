@@ -3,7 +3,7 @@
     <string name="app_name">Easy WaterMark</string>
     <string name="action_pick">画像を選択</string>
     <string name="action_save">保存</string>
-    <string name="action_settings">About</string>
+    <string name="action_settings">このアプリについて</string>
     <string name="title_layout">レイアウト</string>
     <string name="title_style">スタイル</string>
     <string name="title_content">内容</string>
@@ -23,7 +23,7 @@
     <string name="title_text_color">カラー</string>
     <string name="title_text_rotate">角度</string>
     <string name="request_permission_failed">パーミッションの取得に失敗しました</string>
-    <string name="about_title_about">About</string>
+    <string name="about_title_about">詳細</string>
     <string name="about_title_info">インフォメーション</string>
     <string name="about_title_options">オプション</string>
     <string name="about_title_output">出力形式</string>
