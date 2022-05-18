@@ -63,7 +63,7 @@
     <string name="tips_content_mode_button">クリックすると、文字や画像を修正できます。</string>
     <string name="config_default_water_mark_text">👋 DO NOT REDISTRIBUTE</string>
     <string name="style_alpha">透明度</string>
-    <string name="contributor_info">問題についてのフィードバックが有効であるため修正された場合、または新しいバージョンがリリースされた場合、あなたの名前または電子メールがアップデートのポップアップウィンドウに表示されます。お客様の情報は非表示にしますので、フルネームは表示されません。\\n 表示させたくない場合は、"I don't want to."のマークを付けてください。</string>
+    <string name="contributor_info">問題についてのフィードバックが有効であるため修正された場合、または新しいバージョンがリリースされた場合、あなたの名前または電子メールがアップデートのポップアップウィンドウに表示されます。お客様の情報は非表示にしますので、フルネームは表示されません。\\n 表示させたくない場合は、"I do not want to."のマークを付けてください。</string>
     <string name="dialog_change_log_title">What\'s new</string>
     <string name="dialog_change_log_content">
         <![CDATA[
