@@ -94,7 +94,7 @@ dependencies {
     implementation("com.github.skydoves:colorpickerview:2.2.3")
     implementation("androidx.viewpager2:viewpager2:1.0.0")
     implementation("androidx.recyclerview:recyclerview:1.2.1")
-    implementation("androidx.constraintlayout:constraintlayout:2.1.3")
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.6.21")
     implementation("androidx.exifinterface:exifinterface:1.3.3")
     implementation("androidx.palette:palette-ktx:1.0.0")
