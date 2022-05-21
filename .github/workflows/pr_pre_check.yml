@@ -2,11 +2,9 @@ name: PR Basic Check
 
 on:
   pull_request:
-    types:
-      - review_requested
+    types: [opened, reopened]
     branches:
       - master
-      - ci_pr_check
 jobs:
   build:
     runs-on: ubuntu-latest
