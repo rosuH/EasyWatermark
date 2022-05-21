@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - master
+      - ci_pr_check
 jobs:
   build:
     runs-on: ubuntu-latest
