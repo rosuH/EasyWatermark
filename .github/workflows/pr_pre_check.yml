@@ -2,6 +2,8 @@ name: PR Basic Check
 
 on:
   pull_request:
+    types:
+      - review_requested
     branches:
       - master
       - ci_pr_check
