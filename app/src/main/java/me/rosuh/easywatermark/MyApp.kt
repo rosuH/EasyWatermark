@@ -1,18 +1,5 @@
 package me.rosuh.easywatermark
 
-import android.annotation.SuppressLint
-import android.app.Application
-import android.content.Context
-import android.content.Intent
-import android.util.Log
-import androidx.core.content.edit
-import dagger.hilt.android.HiltAndroidApp
-import kotlinx.coroutines.*
-import me.rosuh.cmonet.CMonet
-import me.rosuh.easywatermark.data.repo.WaterMarkRepository
-import javax.inject.Inject
-import kotlin.system.exitProcess
-
 @HiltAndroidApp
 class MyApp : Application() {
 
