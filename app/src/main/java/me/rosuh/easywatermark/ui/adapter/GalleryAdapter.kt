@@ -3,16 +3,12 @@ package me.rosuh.easywatermark.ui.adapter
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
-import android.view.animation.ScaleAnimation
-import androidx.asynclayoutinflater.view.AsyncLayoutInflater
 import androidx.constraintlayout.utils.widget.ImageFilterView
 import androidx.core.animation.doOnEnd
-import androidx.core.view.isGone
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import androidx.lifecycle.MutableLiveData
+import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import me.rosuh.easywatermark.R
@@ -30,14 +26,26 @@ class GalleryAdapter : RecyclerView.Adapter<GalleryAdapter.GalleryItemHolder>() 
 
     private var latestSelectedItem: Int = -1
 
+    private val selectedPosSet: MutableSet<Int> = HashSet<Int>()
+
     val selectedCount: MutableLiveData<Int> = MutableLiveData(0)
 
-    private val differ: ArrayList<Image> = ArrayList()
+    private val differ by lazy {
+        AsyncListDiffer<Image>(this, DIFF_CALLBACK)
+    }
 
+    private val DIFF_CALLBACK:DiffUtil.ItemCallback<Image> = object : DiffUtil.ItemCallback<Image>() {
+        override fun areItemsTheSame(oldItem: Image, newItem: Image): Boolean {
+            return oldItem.uri == newItem.uri
+        }
+
+        override fun areContentsTheSame(oldItem: Image, newItem: Image): Boolean {
+            return oldItem == newItem
+        }
+    }
 
     fun submitList(list: List<Image>) {
-        differ.addAll(list)
-        notifyDataSetChanged()
+        differ.submitList(list)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): GalleryItemHolder {
@@ -46,17 +54,17 @@ class GalleryAdapter : RecyclerView.Adapter<GalleryAdapter.GalleryItemHolder>() 
     }
 
     fun getItem(position: Int): Image? {
-        return differ.getOrNull(position)
+        return differ.currentList.getOrNull(position)
     }
 
-    fun getSelectedList() = differ.filter { it.check }
+    fun getSelectedList() = differ.currentList.filter { it.check }
 
     override fun onBindViewHolder(
         holder: GalleryItemHolder,
         position: Int,
         payloads: MutableList<Any>
     ) {
-        if (payloads.isNullOrEmpty()) {
+        if (payloads.isEmpty()) {
             onBindViewHolder(holder, position)
             return
         }
@@ -79,7 +87,7 @@ class GalleryAdapter : RecyclerView.Adapter<GalleryAdapter.GalleryItemHolder>() 
     }
 
     override fun onBindViewHolder(holder: GalleryItemHolder, position: Int) {
-        if (position < 0 || position >= differ.size || getItem(position) == null) {
+        if (position < 0 || position >= differ.currentList.size || getItem(position) == null) {
             return
         }
         holder.bindWhenInflated {
@@ -113,6 +121,11 @@ class GalleryAdapter : RecyclerView.Adapter<GalleryAdapter.GalleryItemHolder>() 
                         }
                         selectedCount.value =
                             if (isChecked) selectedCount.value!! + 1 else selectedCount.value!! - 1
+                        if (isChecked) {
+                            selectedPosSet.add(holder.absoluteAdapterPosition)
+                        } else {
+                            selectedPosSet.remove(holder.absoluteAdapterPosition)
+                        }
                         data.check = isChecked
                     }
                 }
@@ -165,14 +178,14 @@ class GalleryAdapter : RecyclerView.Adapter<GalleryAdapter.GalleryItemHolder>() 
     }
 
     override fun getItemCount(): Int {
-        return differ.size
+        return differ.currentList.size
     }
 
     fun select(recyclerView: RecyclerView, endPos: Int) {
         val start = latestSelectedItem.coerceAtLeast(0)
         val end = endPos.coerceAtMost(itemCount - 1)
         Log.i(TAG, "selectTo $start .. $end")
-        val list = differ
+        val list = differ.currentList
         if (start < 0 || end >= list.size || start >= end) {
             return
         }
@@ -183,6 +196,7 @@ class GalleryAdapter : RecyclerView.Adapter<GalleryAdapter.GalleryItemHolder>() 
             list[i].check = true
             if (changed) {
                 selectedCount.value = selectedCount.value!! + 1
+                selectedPosSet.add(i)
             }
             (recyclerView.findViewHolderForAdapterPosition(i) as? GalleryItemHolder?)?.apply {
                 cbImage.isChecked = true
@@ -194,7 +208,7 @@ class GalleryAdapter : RecyclerView.Adapter<GalleryAdapter.GalleryItemHolder>() 
 
     fun unSelect(recyclerView: RecyclerView, position: Int) {
         Log.i(TAG, "unSelect pos = $position")
-        val list = differ
+        val list = differ.currentList
         if (position < 0 || position >= list.size) {
             return
         }
@@ -203,6 +217,7 @@ class GalleryAdapter : RecyclerView.Adapter<GalleryAdapter.GalleryItemHolder>() 
             if (item.check) {
                 list[i].check = false
                 selectedCount.value = selectedCount.value!! - 1
+                selectedPosSet.remove(i)
                 (recyclerView.findViewHolderForAdapterPosition(i) as? GalleryItemHolder?)?.apply {
                     cbImage.isChecked = false
                     applyCheckStyle(ivImage, false)
@@ -210,6 +225,19 @@ class GalleryAdapter : RecyclerView.Adapter<GalleryAdapter.GalleryItemHolder>() 
             }
         }
         latestSelectedItem = position
+    }
+
+    fun unSelectAll(recyclerView: RecyclerView) {
+        val list = differ.currentList
+        selectedPosSet.forEach { i ->
+            list[i].check = false
+            (recyclerView.findViewHolderForAdapterPosition(i) as? GalleryItemHolder?)?.apply {
+                cbImage.isChecked = false
+                applyCheckStyle(ivImage, false)
+            }
+        }
+        selectedCount.value = 0
+        latestSelectedItem = -1
     }
 
     fun markAutoScroll(autoScrolling: Boolean, autoSelect: Boolean) {
