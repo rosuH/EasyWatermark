@@ -34,6 +34,7 @@ android {
     }
 
     targetProjectPath = ":app"
+    namespace = "me.rosuh.benchmark"
     experimentalProperties["android.experimental.self-instrumenting"] = true
 }
 
