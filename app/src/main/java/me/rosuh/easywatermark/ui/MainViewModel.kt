@@ -17,16 +17,16 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import id.zelory.compressor.Compressor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.*
+import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.data.repo.MemorySettingRepo
+import me.rosuh.easywatermark.data.repo.TemplateRepository
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.ui.widget.WaterMarkImageView
@@ -40,13 +40,16 @@ import me.rosuh.easywatermark.utils.ktx.launch
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
+import java.util.*
 import javax.inject.Inject
+import kotlin.collections.ArrayList
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val userRepo: UserConfigRepository,
     private val waterMarkRepo: WaterMarkRepository,
     private val memorySettingRepo: MemorySettingRepo,
+    private val templateRepo: TemplateRepository,
 ) : ViewModel() {
 
     var nextSelectedPos: Int = 0
@@ -57,6 +60,10 @@ class MainViewModel @Inject constructor(
 
     val waterMark: LiveData<WaterMark> = waterMarkRepo.waterMark.asLiveData()
 
+    private val uiState: MutableStateFlow<UiState> = MutableStateFlow(UiState.None)
+
+    val uiStateFlow: StateFlow<UiState> = uiState.asStateFlow()
+
     private var autoScroll = true
 
     val imageList: LiveData<Pair<List<ImageInfo>, Boolean>> =
@@ -66,7 +73,7 @@ class MainViewModel @Inject constructor(
 
     val selectedImage: MutableLiveData<ImageInfo> = MutableLiveData()
 
-    val saveImageUri: MutableLiveData<List<ImageInfo>> = MutableLiveData()
+    private val saveImageUri: MutableLiveData<List<ImageInfo>> = MutableLiveData()
 
     val saveProcess: MutableLiveData<ImageInfo?> = MutableLiveData()
 
@@ -86,11 +93,7 @@ class MainViewModel @Inject constructor(
 
     val colorPalette: MutableLiveData<Palette> = MutableLiveData()
 
-    private val tmpDrawableBounds by lazy { Rect() }
-    private val drawableBounds by lazy { RectF() }
-    var matrixValues = FloatArray(9)
-    private val tmpSrcBounds by lazy { RectF() }
-    private val tmpDstBounds by lazy { RectF() }
+    private var matrixValues = FloatArray(9)
 
     private val projection = arrayOf(
         MediaStore.Images.Media._ID,
@@ -103,6 +106,36 @@ class MainViewModel @Inject constructor(
         MediaStore.Images.Media.HEIGHT,
         MediaStore.Images.Media.SIZE
     )
+
+    val templateListFlow: StateFlow<List<Template>> = templateRepo.getAllTemplate().stateIn(
+        viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        emptyList()
+    )
+
+    fun addTemplate(content: String) {
+        viewModelScope.launch {
+            val template = Template(
+                0,
+                content = content,
+                creationDate = Date(),
+                lastModifiedDate = Date()
+            )
+            templateRepo.insertTemplate(template)
+        }
+    }
+
+    fun updateTemplate(template: Template) {
+        viewModelScope.launch {
+            templateRepo.updateTemplate(template)
+        }
+    }
+
+    fun deleteTemplate(template: Template) {
+        viewModelScope.launch {
+            templateRepo.deleteTemplate(template)
+        }
+    }
 
     fun saveImage(
         contentResolver: ContentResolver,
@@ -482,13 +515,6 @@ class MainViewModel @Inject constructor(
 
     fun clearData() {
         selectedImage.value = ImageInfo(Uri.EMPTY)
-        launch {
-            waterMarkRepo.resetList()
-        }
-    }
-
-    fun resetModeToText() {
-        launch { waterMarkRepo.resetModeToText() }
     }
 
     fun compressImg(activity: Activity) {
@@ -679,6 +705,36 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
                     image.check = false
                 }
             }
+        }
+    }
+
+    fun goTemplate() {
+        viewModelScope.launch {
+            uiState.emit(UiState.GoTemplate)
+        }
+    }
+
+    fun resetEditDialog() {
+        viewModelScope.launch {
+            uiState.emit(UiState.None)
+        }
+    }
+
+    fun goTemplateEdit() {
+        viewModelScope.launch {
+            uiState.emit(UiState.GoEdit)
+        }
+    }
+
+    fun useTemplate(template: Template) {
+        viewModelScope.launch {
+            uiState.emit(UiState.UseTemplate(template))
+        }
+    }
+
+    fun goEditDialog() {
+        viewModelScope.launch {
+            uiState.emit(UiState.GoEditDialog)
         }
     }
 

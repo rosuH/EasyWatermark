@@ -2,7 +2,6 @@ package me.rosuh.easywatermark.ui.widget
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.res.ColorStateList
 import android.graphics.Color
 import android.util.AttributeSet
 import android.util.Log
@@ -10,7 +9,6 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.ViewGroup
 import android.widget.ImageView
-import androidx.core.content.ContextCompat
 import androidx.core.view.children
 import androidx.core.view.isVisible
 import androidx.core.view.setPadding
@@ -22,7 +20,9 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.tabs.TabLayout
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ui.widget.utils.BounceEdgeEffectFactory
-import me.rosuh.easywatermark.utils.ktx.*
+import me.rosuh.easywatermark.utils.ktx.dp
+import me.rosuh.easywatermark.utils.ktx.generateAppearAnimationList
+import me.rosuh.easywatermark.utils.ktx.generateDisappearAnimationList
 import kotlin.math.abs
 
 /**
@@ -168,6 +168,7 @@ class LaunchView : CustomViewGroup {
                 LayoutParams.MATCH_PARENT,
                 LayoutParams.WRAP_CONTENT
             )
+            this.minimumHeight = 144
             setBackgroundColor(Color.TRANSPARENT)
             clipChildren = false
             clipToPadding = false
@@ -187,14 +188,6 @@ class LaunchView : CustomViewGroup {
 
     private val launchModeAppearAnimationList by lazy {
         generateAppearAnimationList(launchViews)
-    }
-
-    private val launchModeDisappearAnimationList by lazy {
-        generateDisappearAnimationList(launchViews)
-    }
-
-    private val editorModeAppearAnimationList by lazy {
-        generateAppearAnimationList(editorViews)
     }
 
     private val editorModeDisappearAnimationList by lazy {
@@ -253,9 +246,6 @@ class LaunchView : CustomViewGroup {
 
     //region 4 override view rendering
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-        val parentHeight = MeasureSpec.getSize(heightMeasureSpec)
-        val parentWidth = MeasureSpec.getSize(widthMeasureSpec)
         rvPanel.let {
             it.setPadding(it.measuredWidth / 2, 0, it.measuredWidth / 2, 0)
         }
@@ -270,6 +260,8 @@ class LaunchView : CustomViewGroup {
             .plus(rvPanel.measuredHeightWithMargins)
             .plus(fcFunctionDetail.measuredHeightWithMargins)
             .plus(rvPhotoList.measuredHeightWithMargins)
+
+        Log.d(TAG, "${toolbar.measuredHeight}, ${tabLayout.measuredHeightWithMargins}, ${rvPanel.measuredHeightWithMargins},  ${fcFunctionDetail.measuredHeightWithMargins},  ${rvPhotoList.measuredHeightWithMargins}")
 
         measureChildWithMargins(ivPhoto, widthMeasureSpec, 0, heightMeasureSpec, heightUsed)
 

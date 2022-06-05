@@ -76,7 +76,7 @@
         </ol>
 ]]>
     </string>
-    <string name="tips_not_app_can_open_imaegs">Parece que no tienes un gestor de archivos instalado</string>
+    <string name="tips_not_app_can_open_images">Parece que no tienes un gestor de archivos instalado</string>
     <string name="tips_choose_other_file_type">Parece que no escogió una imagen</string>
     <string name="error_save_oom">Memoria insuficiente, limpie la caché y vuelva a intentarlo</string>
     <string name="error_share_uri_is_null">El Uri de salida está vacío, contacta con el desarrollador para enviar comentarios, gracias</string>
@@ -100,7 +100,25 @@
     <string name="dialog_open_in_gallery">Ver en galería</string>
     <string name="dialog_save_config_format">Formato</string>
     <string name="dialog_save_config_quality">Calidad</string>
-    <string name="pick_via_system">Choose more...</string>
+    <string name="pick_via_system">Choose more…</string>
     <string name="gallery_pick_size">Choose %1$d</string>
+    <string name="tips_input_text_can_not_be_empty">El contenido no puede vaciarse</string>
+    <string name="dialog_title_template_edit">Editar plantilla</string>
+    <string name="dialog_title_edit_watermark">Editar Marca de Agua</string>
+    <string name="dialog_title_template_title">Lista de plantillas</string>
+    <string name="tips_list_empty">Parece vacío, ¿no?</string>
+    <string name="dialog_button_add_template">Añadir</string>
+    <string name="back">Atrás</string>
+    <string name="recovery_title">Modo de recuperación</string>
+    <string name="copy_success">Copiado</string>
+    <string name="copy_failed">Error al copiar</string>
+    <string name="telegram_not_found">No instalado</string>
+    <string name="store_not_found">No instalado</string>
+    <string name="recovery_mode_closed">Reiniciar para que surta efecto</string>
+    <string name="copy">Copiar registros (logs)</string>
+    <string name="turn_off_recovery_mode">Desactivar el modo de recuperación</string>
+    <string name="recovery_mode_tips">Oops, parece que has experimentado múltiples caídas. Ahora se ha puesto automáticamente en modo de recuperación. A continuación encontrará la información de su dispositivo y la información de la colisión, sería muy útil si pudiera copiarla y ponerse en contacto con nosotros a través de los siguientes métodos. Gracias.</string>
+    <string name="tips_use_this_template">¿Seguro que quieres usar esta plantilla?</string>
+    <string name="tips_delete_template">¿Estás seguro de que quieres eliminar esta entrada?</string>
 
 </resources>

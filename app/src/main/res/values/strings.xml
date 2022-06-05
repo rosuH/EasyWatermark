@@ -38,7 +38,7 @@
     <string name="about_title_figma_link">Other projects</string>
     <string name="error_not_img">Please select an image</string>
     <string name="error_file_not_found">The image couldn\'t be opened or was not selected</string>
-    <string name="dialog_export_to_gallery">Export to Album</string>
+    <string name="dialog_export_to_gallery">Export to the album</string>
     <string name="directly_save_tips">Save the edited image directly to your gallery</string>
     <string name="share_tips">Share the edited image with other apps</string>
     <string name="share">Share</string>
@@ -78,7 +78,7 @@
         </ol>
 ]]>
     </string>
-    <string name="tips_not_app_can_open_imaegs">No file manager detected.</string>
+    <string name="tips_not_app_can_open_images">No file manager detected.</string>
     <string name="tips_choose_other_file_type">Invalid image</string>
     <string name="error_save_oom">Insufficient memory, please clean up the background and try again</string>
     <string name="error_share_uri_is_null">The output Uri is empty, please contact the developer for feedback, thank you</string>
@@ -113,15 +113,24 @@
     <string name="tips_pick_image">Choose Images</string>
     <string name="pick_via_system">more…</string>
     <string name="gallery_pick_size">Choose %1$d</string>
-    <string name="recovery_title" translatable="false">Recovery Mode</string>
-    <string name="copy_success" translatable="false">Copy success</string>
-    <string name="copy_failed" translatable="false">Copy failed</string>
-    <string name="telegram_not_found" translatable="false">Telegram is not installed.</string>
-    <string name="store_not_found" translatable="false">Not Store was installed.</string>
-    <string name="recovery_mode_closed" translatable="false">It\'s closed, please try again</string>
-    <string name="copy" translatable="false">Copy error message</string>
-    <string name="recovery_mode_tips" translatable="false">Oops, you seem to have experienced multiple crashes. It has now automatically entered recovery mode. Below is your device information and the crash information, it would be very helpful if you could copy it and contact us via the following methods to resolve the issue. Thank you!</string>
-    <string name="turn_off_recovery_mode" translatable="false">Turn off recovery mode</string>
+    <string name="recovery_title">Recovery Mode</string>
+    <string name="copy_success">Copy success</string>
+    <string name="copy_failed">Copy failed</string>
+    <string name="telegram_not_found">Telegram is not installed.</string>
+    <string name="store_not_found">Not Store was installed.</string>
+    <string name="recovery_mode_closed">It\'s closed, please try again</string>
+    <string name="copy">Copy error message</string>
+    <string name="recovery_mode_tips">Oops, you seem to have experienced multiple crashes. It has now automatically entered recovery mode. Below is your device information and the crash information, it would be very helpful if you could copy it and contact us via the following methods to resolve the issue. Thank you!</string>
+    <string name="turn_off_recovery_mode">Turn off recovery mode</string>
+    <string name="tips_input_text_can_not_be_empty">Content cannot be empty</string>
+    <string name="back">Back</string>
+    <string name="dialog_title_template_edit">Edit Template</string>
+    <string name="dialog_title_edit_watermark">Edit watermark</string>
+    <string name="dialog_title_template_title">Template List</string>
+    <string name="tips_list_empty">Look pretty empty</string>
+    <string name="dialog_button_add_template">Add</string>
+    <string name="tips_use_this_template">Sure you want to use this template?</string>
+    <string name="tips_delete_template">Are you sure you want to delete the entry?</string>
 
 
 </resources>

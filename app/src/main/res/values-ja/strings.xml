@@ -78,7 +78,7 @@
         </ol>
 ]]>
     </string>
-    <string name="tips_not_app_can_open_imaegs">ファイルマネージャーが検出されませんでした。</string>
+    <string name="tips_not_app_can_open_images">ファイルマネージャーが検出されませんでした。</string>
     <string name="tips_choose_other_file_type">無効な画像</string>
     <string name="error_save_oom">メモリ不足です。バックグラウンドのアプリをクリーンアップしてから再度お試しください。</string>
     <string name="error_share_uri_is_null">出力先Uriが空です。開発者に連絡してフィードバックしてください。</string>
@@ -104,6 +104,24 @@
     <string name="tips_pick_image">画像を選択</string>
     <string name="pick_via_system">more…</string>
     <string name="gallery_pick_size">%1$dを選択</string>
+    <string name="tips_input_text_can_not_be_empty">入力してください。</string>
+    <string name="dialog_title_template_edit">テンプレート編集</string>
+    <string name="dialog_title_edit_watermark">ウォーターマークを編集</string>
+    <string name="dialog_title_template_title">テンプレートの一覧</string>
+    <string name="tips_list_empty">ちょっと寂しですね。</string>
+    <string name="dialog_button_add_template">追加</string>
+    <string name="back">戻る</string>
+    <string name="recovery_title">リカバリモード</string>
+    <string name="copy_success">コピー</string>
+    <string name="copy_failed">コピー失敗</string>
+    <string name="telegram_not_found">インストールされていません。</string>
+    <string name="store_not_found">インストールされていません。</string>
+    <string name="recovery_mode_closed">変更を有効化するには再起動が必要です</string>
+    <string name="copy">ログをコピー</string>
+    <string name="turn_off_recovery_mode">リカバリーモードをオフにする</string>
+    <string name="recovery_mode_tips">おっと、複数回のクラッシュを経験しているようですね。 これで自動的にリカバリーモードになりました。 以下、お客様の端末情報、クラッシュ情報を記載しますので、コピーしていただき、以下の方法でご連絡いただければ幸いです。 ありがとうございました。</string>
+    <string name="tips_use_this_template">本当にこのテンプレートを使用しますか？</string>
+    <string name="tips_delete_template">本当にこのエントリーを削除しますか？</string>
 
 
 </resources>

@@ -76,6 +76,12 @@ dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
     implementation(project(mapOf("path" to ":cmonet")))
 
+    val roomVersion = "2.4.2"
+
+    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
+    kapt("androidx.room:room-compiler:$roomVersion")
+
     implementation("androidx.datastore:datastore-preferences:1.0.0")
     implementation("com.google.dagger:hilt-android:2.40.4")
     implementation("androidx.asynclayoutinflater:asynclayoutinflater:1.0.0")
@@ -83,11 +89,12 @@ dependencies {
     implementation("com.github.bumptech.glide:glide:4.13.1")
     kapt("com.github.bumptech.glide:compiler:4.13.1")
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.6.21")
-    implementation("androidx.appcompat:appcompat:1.4.1")
+    implementation("androidx.appcompat:appcompat:1.4.2")
     implementation("id.zelory:compressor:3.0.1")
-    implementation("com.google.android.material:material:1.7.0-alpha01")
+    implementation("com.google.android.material:material:1.7.0-alpha02")
     implementation("androidx.fragment:fragment-ktx:1.4.1")
     implementation("androidx.activity:activity-ktx:1.4.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.4.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.1")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.4.1")

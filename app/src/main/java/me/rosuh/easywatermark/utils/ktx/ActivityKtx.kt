@@ -3,9 +3,15 @@ package me.rosuh.easywatermark.utils.ktx
 import android.app.Activity
 import android.app.Dialog
 import android.content.Intent
+import android.graphics.Insets
 import android.net.Uri
+import android.os.Build
+import android.util.DisplayMetrics
 import android.view.LayoutInflater
+import android.view.WindowInsets
+import android.view.WindowMetrics
 import androidx.fragment.app.FragmentActivity
+import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
 import androidx.fragment.app.commit
 import androidx.viewbinding.ViewBinding
@@ -34,10 +40,48 @@ inline fun FragmentActivity.commitWithAnimation(body: FragmentTransaction.() -> 
     supportFragmentManager.commit {
         setCustomAnimations(
             R.anim.fragment_open_in,
-            R.anim.fragment_close_out,
+            R.anim.fragment_pop_exit_slide,
             R.anim.fragment_close_in,
-            R.anim.fragment_close_out
+            R.anim.fragment_pop_exit_slide
         )
         body.invoke(this)
+    }
+}
+
+inline fun FragmentManager.commitWithAnimation(body: FragmentTransaction.() -> Unit) {
+    this.commit {
+        setCustomAnimations(
+            R.anim.fragment_open_in,
+            R.anim.fragment_pop_exit_slide,
+            R.anim.fragment_close_in,
+            R.anim.fragment_pop_exit_slide
+        )
+        body.invoke(this)
+    }
+}
+
+fun Activity.getScreenWidth(): Int {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        val windowMetrics: WindowMetrics = this.windowManager.currentWindowMetrics
+        val insets: Insets = windowMetrics.windowInsets
+            .getInsetsIgnoringVisibility(WindowInsets.Type.systemBars())
+        windowMetrics.bounds.width() - insets.left - insets.right
+    } else {
+        val displayMetrics = DisplayMetrics()
+        this.windowManager.defaultDisplay.getMetrics(displayMetrics)
+        displayMetrics.widthPixels
+    }
+}
+
+fun Activity.getScreenHeight(): Int {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        val windowMetrics: WindowMetrics = this.windowManager.currentWindowMetrics
+        val insets: Insets = windowMetrics.windowInsets
+            .getInsetsIgnoringVisibility(WindowInsets.Type.systemBars())
+        windowMetrics.bounds.height() - insets.top - insets.bottom
+    } else {
+        val displayMetrics = DisplayMetrics()
+        this.windowManager.defaultDisplay.getMetrics(displayMetrics)
+        displayMetrics.heightPixels
     }
 }
