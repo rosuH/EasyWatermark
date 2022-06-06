@@ -33,7 +33,7 @@ class TextContentTemplateListFragment : BaseBindFragment<DialogEditTextTemplateL
             }
 
             setOnClickListener { template, pos ->
-                MaterialAlertDialogBuilder(requireContext(), R.style.MaterialAlertDialog)
+                MaterialAlertDialogBuilder(requireContext())
                     .setTitle(getString(R.string.dialog_title_exist_confirm))
                     .setMessage(getString(R.string.tips_use_this_template))
                     .setPositiveButton(getString(R.string.tips_confirm_dialog)) { _, _ ->
@@ -46,7 +46,7 @@ class TextContentTemplateListFragment : BaseBindFragment<DialogEditTextTemplateL
             }
 
             setOnRemoveListener { template, pos ->
-                MaterialAlertDialogBuilder(requireContext(), R.style.MaterialAlertDialog)
+                MaterialAlertDialogBuilder(requireContext())
                     .setTitle(getString(R.string.dialog_title_exist_confirm))
                     .setMessage(getString(R.string.tips_delete_template))
                     .setPositiveButton(getString(R.string.tips_confirm_dialog)) { _, _ ->

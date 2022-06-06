@@ -17,6 +17,9 @@ import androidx.dynamicanimation.animation.SpringForce
 import androidx.fragment.app.FragmentContainerView
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.shape.MaterialShapeDrawable
+import com.google.android.material.shape.MaterialShapeUtils
+import com.google.android.material.shape.ShapeAppearanceModel
 import com.google.android.material.tabs.TabLayout
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ui.widget.utils.BounceEdgeEffectFactory
@@ -72,6 +75,9 @@ class LaunchView : CustomViewGroup {
             textAlignment = TEXT_ALIGNMENT_CENTER
             gravity = Gravity.CENTER
             text = context.getString(R.string.tips_pick_image)
+            shapeAppearanceModel = ShapeAppearanceModel.Builder().also {
+                it.setAllCornerSizes(0f)
+            }.build()
         }
     }
 

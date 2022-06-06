@@ -56,7 +56,7 @@ class GalleryFragment : BaseBindBSDFragment<FragmentGalleryBinding>() {
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val d = object : BottomSheetDialog(requireContext(), theme) {
+        val d = object : BottomSheetDialog(requireContext()) {
             override fun onBackPressed() {
                 if (galleryAdapter.getSelectedList().isEmpty()) {
                     dismiss()

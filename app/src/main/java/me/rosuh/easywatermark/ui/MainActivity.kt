@@ -279,7 +279,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showCrashDialog(crashInfo: String?) {
-        MaterialAlertDialogBuilder(this, R.style.MaterialAlertDialog)
+        MaterialAlertDialogBuilder(this)
             .setTitle(R.string.tips_tip_title)
             .setMessage(R.string.msg_crash)
             .setNegativeButton(
@@ -760,7 +760,7 @@ class MainActivity : AppCompatActivity() {
             super.onBackPressed()
             return
         }
-        MaterialAlertDialogBuilder(this, R.style.MaterialAlertDialog)
+        MaterialAlertDialogBuilder(this)
             .setTitle(R.string.dialog_title_exist_confirm)
             .setMessage(R.string.dialog_content_exist_confirm)
             .setNegativeButton(

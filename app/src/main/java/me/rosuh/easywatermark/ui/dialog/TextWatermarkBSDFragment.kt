@@ -156,7 +156,7 @@ class TextWatermarkBSDFragment : BaseBindBSDFragment<DialogEditTextContainerBind
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        return object : BottomSheetDialog(requireContext(), theme) {
+        return object : BottomSheetDialog(requireContext()) {
             override fun onBackPressed() {
                 if (shareViewModel.uiStateFlow.value is UiState.GoEdit) {
                     super.onBackPressed()

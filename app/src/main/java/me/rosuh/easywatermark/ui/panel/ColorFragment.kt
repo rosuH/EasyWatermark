@@ -77,10 +77,7 @@ class ColorFragment : BaseBindFragment<FragmentColorBinding>() {
     }
 
     private fun showColorPickerDialog(adapter: ColorPreviewAdapter) {
-        ColorPickerDialog.Builder(
-            activity,
-            R.style.MaterialAlertDialog
-        )
+        ColorPickerDialog.Builder(activity)
             .setTitle(requireActivity().getString(R.string.tips_choose_color_dialog))
             .setPreferenceName(SP_COLOR_PICKER_DIALOG)
             .setPositiveButton(
