@@ -6,7 +6,9 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import me.rosuh.easywatermark.data.db.dao.TemplateDao
 import me.rosuh.easywatermark.data.repo.MemorySettingRepo
+import me.rosuh.easywatermark.data.repo.TemplateRepository
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import javax.inject.Named
@@ -35,5 +37,10 @@ object RepositoryModule {
     @Singleton
     fun provideMemorySettingRepository(): MemorySettingRepo {
         return MemorySettingRepo()
+    }
+
+    @Provides
+    fun provideTemplateRepository(dao: TemplateDao): TemplateRepository {
+        return TemplateRepository(dao)
     }
 }

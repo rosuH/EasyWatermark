@@ -29,6 +29,7 @@ fun Paint.applyConfig(
     isAntiAlias = true
     isDither = true
     textAlign = Paint.Align.CENTER
+    // todo setShadowLayer(textSize / 2, 0f, 0f, color)
     return this
 }
 

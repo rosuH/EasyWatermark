@@ -114,7 +114,6 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_save"
-            style="@style/Widget.Material3.Button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="43dp"
@@ -124,15 +123,12 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_open_gallery"
-            style="@style/Widget.Material3.Button.TextButton.Dialog"
+            style="@style/Widget.App.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:gravity="center"
-            android:paddingStart="8dp"
-            android:paddingTop="8dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="23dp"
+            android:layout_marginBottom="20dp"
             android:text="@string/dialog_open_in_gallery"
             android:textAlignment="center" />
     </LinearLayout>

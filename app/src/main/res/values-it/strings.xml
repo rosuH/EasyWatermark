@@ -65,7 +65,7 @@
     <string name="style_alpha">Alpha</string>
     <string name="contributor_info">Se il feedback su un problema è valido e quindi risolto o viene rilasciata una nuova versione, il tuo nome o la tua email appariranno nella finestra pop-up di aggiornamento. Nasconderemo le tue informazioni, il tuo nome completo non apparirà. \\n Se non vuoi che accada, scrivi: Non voglio.</string>
     <string name="dialog_change_log_title">Cosa c\'è di nuovo</string>
-    <string name="tips_not_app_can_open_imaegs">Nessun file manager rilevato.</string>
+    <string name="tips_not_app_can_open_images">Nessun file manager rilevato.</string>
     <string name="tips_choose_other_file_type">Immagine non valida</string>
     <string name="error_save_oom">Memoria insufficiente, ripulisci in background e riprova</string>
     <string name="error_share_uri_is_null">L\'Uri di output è vuoto, si prega di contattare lo sviluppatore per un feedback, grazie</string>
@@ -91,5 +91,23 @@
     <string name="tips_pick_image">Scegli immagini</string>
     <string name="pick_via_system">più…</string>
     <string name="gallery_pick_size">Scegli %1$d</string>
+    <string name="tips_input_text_can_not_be_empty">Il contenuto non può essere vuoto</string>
+    <string name="dialog_title_template_edit">Modifica modello</string>
+    <string name="dialog_title_edit_watermark">Edit filigrana</string>
+    <string name="dialog_title_template_title">Elenco modelli</string>
+    <string name="tips_list_empty">\"È un po\' vuoto qui, non trovi?\"</string>
+    <string name="dialog_button_add_template">Aggiungi</string>
+    <string name="back">Atgal</string>
+    <string name="recovery_title">Recovery mode</string>
+    <string name="copy_success">Copiato</string>
+    <string name="copy_failed">Copia non riuscita</string>
+    <string name="telegram_not_found">Non installato</string>
+    <string name="store_not_found">Non installato</string>
+    <string name="recovery_mode_closed">\"E\' necessario riavviare l\'applicazione per applicare i cambiamenti\"</string>
+    <string name="copy">Copiar registos</string>
+    <string name="turn_off_recovery_mode">Disattivare la modalità di recupero</string>
+    <string name="recovery_mode_tips">Ops, sembra che si siano verificati più arresti anomali. A questo punto è stata attivata automaticamente la modalità di ripristino. Di seguito sono riportati i dati del dispositivo e le informazioni sull\'incidente; sarebbe molto utile se poteste copiarli e contattarci tramite i seguenti metodi. Grazie!</string>
+    <string name="tips_use_this_template">Siete sicuri di voler utilizzare questo modello?</string>
+    <string name="tips_delete_template">È sicuro di voler cancellare questa voce?</string>
 
 </resources>

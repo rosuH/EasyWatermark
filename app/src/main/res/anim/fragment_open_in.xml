@@ -5,11 +5,11 @@
     android:shareInterpolator="true">
 
     <translate
-        android:fromYDelta="100%"
+        android:fromYDelta="60%"
         android:toYDelta="0" />
 
     <alpha
+        android:duration="@android:integer/config_shortAnimTime"
         android:fromAlpha="0"
-        android:toAlpha="1"
-        />
+        android:toAlpha="1" />
 </set>

@@ -47,7 +47,7 @@
     <string name="tips_do_not_choose_image">沒有選擇圖片</string>
     <string name="tips_error">錯誤</string>
     <string name="tips_need_compress_img">圖片過大或內存不足</string>
-    <string name="tips_not_app_can_open_imaegs">看起來您安裝沒有檔案管理員？</string>
+    <string name="tips_not_app_can_open_images">看起來您安裝沒有檔案管理員？</string>
     <string name="tips_ok">確定</string>
     <string name="tips_pick_image">選擇圖片</string>
     <string name="tips_save_ok">儲存完成</string>
@@ -100,6 +100,24 @@
     <string name="dialog_open_in_gallery">在圖片庫中檢視</string>
     <string name="dialog_save_config_format">格式</string>
     <string name="dialog_save_config_quality">品質</string>
-    <string name="pick_via_system">Choose more...</string>
+    <string name="pick_via_system">Choose more…</string>
     <string name="gallery_pick_size">選擇 %1$d</string>
+    <string name="tips_input_text_can_not_be_empty">內容不能為空</string>
+    <string name="recovery_title">恢复模式</string>
+    <string name="dialog_title_edit_watermark">編輯浮水印</string>
+    <string name="dialog_title_template_title">模板列表</string>
+    <string name="tips_list_empty">空空如也</string>
+    <string name="dialog_button_add_template">新增</string>
+    <string name="back">返回</string>
+    <string name="dialog_title_template_edit">編輯模板</string>
+    <string name="copy_success">拷貝成功</string>
+    <string name="copy_failed">複製失敗</string>
+    <string name="telegram_not_found">未安裝</string>
+    <string name="store_not_found">未安裝</string>
+    <string name="recovery_mode_closed">重啟生效</string>
+    <string name="copy">复制日志</string>
+    <string name="turn_off_recovery_mode">關閉恢復模式</string>
+    <string name="recovery_mode_tips">糟糕，您似乎遇到了多次崩潰。現在已經自動進入恢復模式。以下是您的設備信息以及崩潰信息，辛苦您將其複制以後通過下列方式聯繫我們，將對解決問題非常有幫助。謝謝您！</string>
+    <string name="tips_use_this_template">確定使用該模板嗎？</string>
+    <string name="tips_delete_template">確定刪除該條目嗎？</string>
 </resources>

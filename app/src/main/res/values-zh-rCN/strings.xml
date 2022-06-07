@@ -81,7 +81,7 @@
 ]]>
 
     </string>
-    <string name="tips_not_app_can_open_imaegs">看起来您安装没有文件管理器？</string>
+    <string name="tips_not_app_can_open_images">看起来您安装没有文件管理器？</string>
     <string name="error_save_oom">内存不足，请清理后台后重试</string>
     <string name="error_share_uri_is_null">输出 Uri 为空，请联系开发者反馈，谢谢</string>
     <string name="dev_comment">任何先进的科技，初看皆与魔法无异</string>
@@ -104,16 +104,25 @@
     <string name="dialog_open_in_gallery">在相册中查看</string>
     <string name="dialog_save_config_format">格式</string>
     <string name="dialog_save_config_quality">质量</string>
-    <string name="pick_via_system">Choose more...</string>
+    <string name="pick_via_system">Choose more…</string>
     <string name="gallery_pick_size">选择 %1$d</string>
     <string name="recovery_title">恢复模式</string>
     <string name="copy_success">复制成功</string>
     <string name="copy_failed">复制失败</string>
     <string name="telegram_not_found">Telegram 没有安装</string>
     <string name="store_not_found">好像没有安装商店</string>
-    <string name="recovery_mode_closed">已关闭，重启后再试试看吧</string>
+    <string name="recovery_mode_closed">重启生效</string>
     <string name="copy">复制错误信息</string>
     <string name="recovery_mode_tips">糟糕，您似乎遇到了多次崩溃。现在已经自动进入恢复模式。以下是您的设备信息以及崩溃信息，辛苦您将其复制以后通过下列方式联系我们，将对解决问题非常有帮助。谢谢您！</string>
     <string name="turn_off_recovery_mode">关闭恢复模式</string>
+    <string name="tips_input_text_can_not_be_empty">内容不能为空</string>
+    <string name="dialog_title_template_edit">编辑模板</string>
+    <string name="dialog_title_edit_watermark">编辑水印</string>
+    <string name="dialog_title_template_title">模板列表</string>
+    <string name="tips_list_empty">空空如也</string>
+    <string name="dialog_button_add_template">添加</string>
+    <string name="back">返回</string>
+    <string name="tips_use_this_template">确定使用该模板吗？</string>
+    <string name="tips_delete_template">确定删除该条目吗？</string>
 
 </resources>

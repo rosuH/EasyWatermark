@@ -11,12 +11,7 @@ import android.util.Log
 import android.view.*
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
-import androidx.core.view.marginBottom
-import androidx.core.view.marginTop
-import androidx.interpolator.view.animation.FastOutLinearInInterpolator
-import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import me.rosuh.easywatermark.R
@@ -61,10 +56,20 @@ class GalleryFragment : BaseBindBSDFragment<FragmentGalleryBinding>() {
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        return (super.onCreateDialog(savedInstanceState) as BottomSheetDialog).apply {
+        val d = object : BottomSheetDialog(requireContext()) {
+            override fun onBackPressed() {
+                if (galleryAdapter.getSelectedList().isEmpty()) {
+                    dismiss()
+                } else {
+                    galleryAdapter.unSelectAll(binding.rvContent)
+                }
+            }
+        }.apply {
             behavior.isDraggable = false
             behavior.state = BottomSheetBehavior.STATE_EXPANDED
+            isCancelable = false
         }
+        return d
     }
 
     override fun onStart() {
@@ -141,7 +146,7 @@ class GalleryFragment : BaseBindBSDFragment<FragmentGalleryBinding>() {
                     }
                     val totalHeight = rootView.rvContent.bottom - rootView.rvContent.paddingBottom
                     val percent = binding.rvContent.computeVerticalScrollRange() / totalHeight
-                    Log.i(
+                    Log.d(
                         TAG,
                         "ivSlider totalHeight = $totalHeight, top = ${this@apply.top.toFloat()}, percent = $percent"
                     )
@@ -158,7 +163,7 @@ class GalleryFragment : BaseBindBSDFragment<FragmentGalleryBinding>() {
                             val dy = event.y - startY
                             val targetPos = dy * percent
                             Log.i(TAG, "ivSlider targetPos = $targetPos, dy = $dy")
-                            v?.let {
+                            v.let {
                                 it.translationY = (dy + it.translationY).coerceAtLeast(0f)
                                     .coerceAtMost(totalHeight.toFloat())
                             }

@@ -50,7 +50,7 @@
     <string name="hint_tips_alpha_100">Alpha 100%</string>
     <string name="tips_cancel_output">Abbrechen</string>
     <string name="tips_need_compress_img">Nicht genügend Speicher vorhanden.</string>
-    <string name="tips_compressing">Komprimiere...</string>
+    <string name="tips_compressing">Komprimiere…</string>
     <string name="tips_compress_images">Komprimiere Bild</string>
     <string name="tips_compress_ok">Bildkompression beendet. OK klicken um zu exportieren.</string>
     <string name="tips_compress_create_uri_failed">Kompression wurde beendet, jedoch konnte keine URI erstellt werden. Bitte App neu starten und erneut versuchen. %1$s</string>
@@ -60,7 +60,7 @@
     <string name="tip_not_mail_found">Mail-Adresse wurde nicht erkannt. Alternativ kann die Fehlermeldung im App Store oder Github eingefügt werden.</string>
     <string name="style_alpha">Alpha</string>
     <string name="dialog_change_log_title">Änderungen</string>
-    <string name="tips_not_app_can_open_imaegs">Kein Dateimanager erkannt.</string>
+    <string name="tips_not_app_can_open_images">Kein Dateimanager erkannt.</string>
     <string name="tips_choose_other_file_type">Ungültiges Bild</string>
     <string name="dialog_cancel_exist_confirm">Abbruch</string>
     <string name="dialog_content_exist_confirm">Änderungen verwerfen?</string>
@@ -100,7 +100,25 @@
     <string name="dialog_open_in_gallery">In Galerie anzeigen</string>
     <string name="dialog_save_config_format">Format</string>
     <string name="dialog_save_config_quality">Qualität</string>
-    <string name="pick_via_system">Choose more...</string>
+    <string name="pick_via_system">Choose more…</string>
     <string name="gallery_pick_size">Choose %1$d</string>
+    <string name="tips_input_text_can_not_be_empty">Inhalt kann nicht leer sein</string>
+    <string name="recovery_title">Wiederherstellungsmodus</string>
+    <string name="dialog_title_template_edit">Vorlage bearbeiten</string>
+    <string name="dialog_title_edit_watermark">Wasserzeichen editieren</string>
+    <string name="dialog_title_template_title">Vorlagenliste</string>
+    <string name="tips_list_empty">Sieht recht leer aus, was?</string>
+    <string name="dialog_button_add_template">Hinzufügen</string>
+    <string name="back">Zurück</string>
+    <string name="copy_success">Kopiert</string>
+    <string name="copy_failed">Kopieren fehlgeschlagen</string>
+    <string name="telegram_not_found">Nicht installiert</string>
+    <string name="store_not_found">Nicht installiert</string>
+    <string name="recovery_mode_closed">Neustart erforderlich</string>
+    <string name="copy">Protokolle kopieren</string>
+    <string name="turn_off_recovery_mode">Wiederherstellungsmodus ausschalten</string>
+    <string name="recovery_mode_tips">Ups, Sie scheinen mehrere Abstürze erlebt zu haben. Sie sind nun automatisch in den Wiederherstellungsmodus versetzt worden. Nachstehend finden Sie Ihre Geräte- und Absturzinformationen. Es wäre sehr hilfreich, wenn Sie diese kopieren und uns über die folgenden Methoden kontaktieren könnten. Ich danke Ihnen!</string>
+    <string name="tips_use_this_template">Sind Sie sicher, dass Sie diese Vorlage verwenden möchten?</string>
+    <string name="tips_delete_template">Sind Sie sicher, dass Sie diesen Eintrag löschen wollen?</string>
 
 </resources>
