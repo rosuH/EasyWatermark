@@ -114,6 +114,12 @@ class MainViewModel @Inject constructor(
     )
 
     fun addTemplate(content: String) {
+        if (templateRepo.checkIfIsDaoNull()) {
+            launch {
+                uiState.emit(UiState.DatabaseError)
+            }
+            return
+        }
         viewModelScope.launch {
             val template = Template(
                 0,

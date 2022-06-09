@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.flowWithLifecycle
@@ -14,6 +15,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.databinding.DialogEditTextTemplateListBinding
+import me.rosuh.easywatermark.ui.UiState
 import me.rosuh.easywatermark.ui.adapter.TextContentTemplateListAdapter
 import me.rosuh.easywatermark.ui.base.BaseBindFragment
 import me.rosuh.easywatermark.utils.ktx.commitWithAnimation
@@ -88,6 +90,21 @@ class TextContentTemplateListFragment : BaseBindFragment<DialogEditTextTemplateL
             ).collect {
                 listAdapter.submitList(it)
                 binding?.tvEmpty?.visibility = if (it.isEmpty()) View.VISIBLE else View.GONE
+            }
+        }
+
+        lifecycleScope.launch {
+            shareViewModel.uiStateFlow.flowWithLifecycle(
+                viewLifecycleOwner.lifecycle,
+                Lifecycle.State.STARTED
+            ).collect {
+                if (it is UiState.DatabaseError) {
+                    Toast.makeText(
+                        requireContext(),
+                        getString(R.string.tips_database_init_error),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
         }
     }

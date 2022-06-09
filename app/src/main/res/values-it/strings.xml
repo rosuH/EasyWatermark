@@ -109,5 +109,6 @@
     <string name="recovery_mode_tips">Ops, sembra che si siano verificati più arresti anomali. A questo punto è stata attivata automaticamente la modalità di ripristino. Di seguito sono riportati i dati del dispositivo e le informazioni sull\'incidente; sarebbe molto utile se poteste copiarli e contattarci tramite i seguenti metodi. Grazie!</string>
     <string name="tips_use_this_template">Siete sicuri di voler utilizzare questo modello?</string>
     <string name="tips_delete_template">È sicuro di voler cancellare questa voce?</string>
+    <string name="tips_database_init_error">Inizializzazione del database fallita</string>
 
 </resources>

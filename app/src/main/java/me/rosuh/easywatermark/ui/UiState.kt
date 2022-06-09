@@ -8,4 +8,5 @@ sealed class UiState {
     object GoEdit : UiState()
     object GoEditDialog : UiState()
     object None : UiState()
+    object DatabaseError : UiState()
 }

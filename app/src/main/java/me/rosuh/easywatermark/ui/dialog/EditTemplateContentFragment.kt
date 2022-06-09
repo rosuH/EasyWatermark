@@ -38,28 +38,6 @@ class EditTemplateContentFragment : BaseBindBSDFragment<DialogEditTemplateBindin
         binding.tvTitle.text = if (isEdit) "编辑模板" else "添加模板"
         binding.etWaterText.apply {
             setText(template?.content)
-            addTextChangedListener(object : TextWatcher {
-                override fun afterTextChanged(s: Editable?) {
-                }
-
-                override fun beforeTextChanged(
-                    s: CharSequence?,
-                    start: Int,
-                    count: Int,
-                    after: Int
-                ) {
-                }
-
-                override fun onTextChanged(
-                    s: CharSequence?,
-                    start: Int,
-                    before: Int,
-                    count: Int
-                ) {
-                    template?.let { shareViewModel.updateTemplate(it) }
-                }
-            })
-
             post {
                 setSelection(text?.length ?: 0)
                 requestFocus()
@@ -67,7 +45,7 @@ class EditTemplateContentFragment : BaseBindBSDFragment<DialogEditTemplateBindin
         }
         binding.btnConfirm.apply {
             setOnClickListener {
-                val msg = binding.etWaterText.text.toString()
+                val msg = binding.etWaterText.text.toString().trim()
                 if (msg.isBlank()) {
                     Toast.makeText(requireContext(), "不能为空", Toast.LENGTH_LONG).show()
                     return@setOnClickListener
