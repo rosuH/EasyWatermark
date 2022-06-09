@@ -120,5 +120,6 @@
     <string name="recovery_mode_tips">Oops, parece ter sofrido múltiplas colisões. Foi agora automaticamente colocado em modo de recuperação. Abaixo encontra-se a informação do seu dispositivo e a informação sobre o crash, seria muito útil se pudesse copiá-la e contactar-nos através dos seguintes métodos. Obrigado!</string>
     <string name="tips_use_this_template">Tem a certeza de que quer usar este modelo?</string>
     <string name="tips_delete_template">Tem a certeza de que quer apagar esta entrada?</string>
+    <string name="tips_database_init_error">Inicialização da base de dados falhou</string>
 
 </resources>

@@ -19,7 +19,7 @@ object AppModule {
     @Provides
     fun provideYourDatabase(
         @ApplicationContext app: Context
-    ): AppDatabase {
+    ): AppDatabase? {
         val builder = Room.databaseBuilder(
             app,
             AppDatabase::class.java,
@@ -27,10 +27,15 @@ object AppModule {
         )
         val isCh = Locale.getDefault().language.contains("zh")
         builder.createFromAsset(if (isCh) "ewm-db-ch.db" else "ewm-db-eng.db")
-        return builder.build()
+        try {
+            return builder.build()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return null
     }
 
     @Singleton
     @Provides
-    fun provideTemplateDao(db: AppDatabase) = db.templateDao()
+    fun provideTemplateDao(db: AppDatabase?) = db?.templateDao()
 }

@@ -124,5 +124,6 @@
     <string name="back">返回</string>
     <string name="tips_use_this_template">确定使用该模板吗？</string>
     <string name="tips_delete_template">确定删除该条目吗？</string>
+    <string name="tips_database_init_error">数据库初始化失败</string>
 
 </resources>

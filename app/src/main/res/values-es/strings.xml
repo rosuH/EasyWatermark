@@ -120,5 +120,6 @@
     <string name="recovery_mode_tips">Oops, parece que has experimentado múltiples caídas. Ahora se ha puesto automáticamente en modo de recuperación. A continuación encontrará la información de su dispositivo y la información de la colisión, sería muy útil si pudiera copiarla y ponerse en contacto con nosotros a través de los siguientes métodos. Gracias.</string>
     <string name="tips_use_this_template">¿Seguro que quieres usar esta plantilla?</string>
     <string name="tips_delete_template">¿Estás seguro de que quieres eliminar esta entrada?</string>
+    <string name="tips_database_init_error">Fallo en la inicialización de la base de datos</string>
 
 </resources>

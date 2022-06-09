@@ -120,5 +120,6 @@
     <string name="recovery_mode_tips">Ups, Sie scheinen mehrere Abstürze erlebt zu haben. Sie sind nun automatisch in den Wiederherstellungsmodus versetzt worden. Nachstehend finden Sie Ihre Geräte- und Absturzinformationen. Es wäre sehr hilfreich, wenn Sie diese kopieren und uns über die folgenden Methoden kontaktieren könnten. Ich danke Ihnen!</string>
     <string name="tips_use_this_template">Sind Sie sicher, dass Sie diese Vorlage verwenden möchten?</string>
     <string name="tips_delete_template">Sind Sie sicher, dass Sie diesen Eintrag löschen wollen?</string>
+    <string name="tips_database_init_error">Datenbankinitialisierung misslungen</string>
 
 </resources>

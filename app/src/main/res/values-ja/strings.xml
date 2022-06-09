@@ -122,6 +122,7 @@
     <string name="recovery_mode_tips">おっと、複数回のクラッシュを経験しているようですね。 これで自動的にリカバリーモードになりました。 以下、お客様の端末情報、クラッシュ情報を記載しますので、コピーしていただき、以下の方法でご連絡いただければ幸いです。 ありがとうございました。</string>
     <string name="tips_use_this_template">本当にこのテンプレートを使用しますか？</string>
     <string name="tips_delete_template">本当にこのエントリーを削除しますか？</string>
+    <string name="tips_database_init_error">データベースの初期化に失敗しました</string>
 
 
 </resources>

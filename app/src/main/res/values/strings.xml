@@ -131,6 +131,6 @@
     <string name="dialog_button_add_template">Add</string>
     <string name="tips_use_this_template">Sure you want to use this template?</string>
     <string name="tips_delete_template">Are you sure you want to delete the entry?</string>
-
+    <string name="tips_database_init_error">Database init failed.</string>
 
 </resources>

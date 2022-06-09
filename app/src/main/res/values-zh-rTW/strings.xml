@@ -120,4 +120,5 @@
     <string name="recovery_mode_tips">糟糕，您似乎遇到了多次崩潰。現在已經自動進入恢復模式。以下是您的設備信息以及崩潰信息，辛苦您將其複制以後通過下列方式聯繫我們，將對解決問題非常有幫助。謝謝您！</string>
     <string name="tips_use_this_template">確定使用該模板嗎？</string>
     <string name="tips_delete_template">確定刪除該條目嗎？</string>
+    <string name="tips_database_init_error">數據庫初始化失敗</string>
 </resources>

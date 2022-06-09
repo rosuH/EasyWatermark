@@ -40,7 +40,7 @@ object RepositoryModule {
     }
 
     @Provides
-    fun provideTemplateRepository(dao: TemplateDao): TemplateRepository {
+    fun provideTemplateRepository(dao: TemplateDao?): TemplateRepository {
         return TemplateRepository(dao)
     }
 }
