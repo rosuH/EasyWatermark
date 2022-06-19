@@ -89,7 +89,7 @@ dependencies {
 
     implementation("androidx.asynclayoutinflater:asynclayoutinflater:1.0.0")
 
-    implementation("com.github.bumptech.glide:glide:4.13.1")
+    implementation("com.github.bumptech.glide:glide:4.13.2")
     kapt("com.github.bumptech.glide:compiler:4.13.1")
 
     implementation("id.zelory:compressor:3.0.1")
