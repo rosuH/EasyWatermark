@@ -63,6 +63,7 @@ class TextWatermarkBSDFragment : BaseBindBSDFragment<DialogEditTextContainerBind
                         UiState.GoTemplate -> {
                             expandToTemplateList()
                         }
+                        else -> {}
                     }
                 }
         }

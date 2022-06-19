@@ -22,11 +22,12 @@ class TextSizePbFragment : BasePBFragment() {
     }
 
     override fun formatValue(config: WaterMark?): Float {
-        return config?.textSize?.toInt()?.toFloat() ?: 1f
+        return (config?.textSize?.toInt()?.toFloat() ?: 1f).coerceAtLeast(1f).coerceAtMost(WaterMarkRepository.MAX_TEXT_SIZE)
     }
 
     override fun formatValueTips(config: WaterMark?): String {
-        return "${config?.textSize?.toInt()?.toFloat() ?: 1f}"
+        val size = (config?.textSize?.toInt()?.toFloat() ?: 1f).coerceAtLeast(1f).coerceAtMost(WaterMarkRepository.MAX_TEXT_SIZE)
+        return "$size"
     }
 
     companion object {

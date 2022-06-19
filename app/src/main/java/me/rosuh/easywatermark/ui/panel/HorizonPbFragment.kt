@@ -14,7 +14,7 @@ class HorizonPbFragment : BasePBFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding?.slideContentSize?.valueFrom = 0f
-        binding?.slideContentSize?.valueTo = 500f
+        binding?.slideContentSize?.valueTo = WaterMarkRepository.MAX_HORIZON_GAP.toFloat()
     }
 
     override fun doOnChange(slider: Slider, value: Float, fromUser: Boolean) {
