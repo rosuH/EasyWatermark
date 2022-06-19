@@ -14,7 +14,7 @@ class DegreePbFragment : BasePBFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding?.slideContentSize?.valueFrom = 0f
-        binding?.slideContentSize?.valueTo = 360f
+        binding?.slideContentSize?.valueTo = WaterMarkRepository.MAX_DEGREE
     }
 
     override fun doOnChange(slider: Slider, value: Float, fromUser: Boolean) {
