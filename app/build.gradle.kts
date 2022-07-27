@@ -99,7 +99,7 @@ dependencies {
     implementation("com.google.android.material:material:1.7.0-alpha02")
     implementation("androidx.fragment:fragment-ktx:1.5.0")
     implementation("androidx.activity:activity-ktx:1.5.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.5.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.5.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.1")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.5.0")
