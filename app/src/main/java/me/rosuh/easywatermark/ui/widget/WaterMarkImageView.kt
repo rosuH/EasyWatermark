@@ -416,8 +416,8 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             }
             return@withContext BitmapShader(
                 targetBitmap,
-                Shader.TileMode.REPEAT,
-                Shader.TileMode.REPEAT
+                config.obtainTileMode(),
+                config.obtainTileMode()
             )
         }
 
@@ -523,8 +523,8 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
             return@withContext BitmapShader(
                 bitmap,
-                Shader.TileMode.REPEAT,
-                Shader.TileMode.REPEAT
+                config.obtainTileMode(),
+                config.obtainTileMode()
             )
         }
     }

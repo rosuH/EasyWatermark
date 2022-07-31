@@ -121,4 +121,7 @@
     <string name="tips_use_this_template">確定使用該模板嗎？</string>
     <string name="tips_delete_template">確定刪除該條目嗎？</string>
     <string name="tips_database_init_error">數據庫初始化失敗</string>
+    <string name="title_tile_mode">平鋪模式</string>
+    <string name="tile_mode_title_repeat">重複</string>
+    <string name="tile_mode_title_decal">單一</string>
 </resources>

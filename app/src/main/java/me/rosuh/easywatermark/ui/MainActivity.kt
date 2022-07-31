@@ -83,6 +83,11 @@ class MainActivity : AppCompatActivity() {
     private val styleFunList: List<FuncTitleModel> by lazy {
         listOf(
             FuncTitleModel(
+                FuncTitleModel.FuncType.TileMode,
+                getString(R.string.title_tile_mode),
+                R.drawable.ic_tile_mode
+            ),
+            FuncTitleModel(
                 FuncTitleModel.FuncType.TextSize,
                 getString(R.string.title_text_size),
                 R.drawable.ic_func_size
@@ -600,6 +605,9 @@ class MainActivity : AppCompatActivity() {
             FuncTitleModel.FuncType.TextSize -> {
                 TextSizePbFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
+            FuncTitleModel.FuncType.TileMode -> {
+                TileModeFragment.replaceShow(this, launchView.fcFunctionDetail.id)
+            }
         }
     }
 
@@ -756,6 +764,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onBackPressed() {
+        if (MyApp.recoveryMode) {
+            super.onBackPressed()
+            return
+        }
         if (launchView.mode == LaunchView.ViewMode.LaunchMode) {
             super.onBackPressed()
             return

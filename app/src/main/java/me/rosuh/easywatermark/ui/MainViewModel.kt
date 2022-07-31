@@ -473,6 +473,18 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun updateTileMode(tileMode: Shader.TileMode) {
+        launch {
+            waterMarkRepo.updateTileMode(tileMode)
+        }
+    }
+
+    fun updateOffset(x: Int, y: Int) {
+        launch {
+            waterMarkRepo.updateOffset(x, y)
+        }
+    }
+
     fun saveOutput(format: Bitmap.CompressFormat, level: Int) {
         viewModelScope.launch {
             userRepo.updateFormat(format)

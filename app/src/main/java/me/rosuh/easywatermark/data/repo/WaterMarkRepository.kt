@@ -1,6 +1,7 @@
 package me.rosuh.easywatermark.data.repo
 
 import android.graphics.Color
+import android.graphics.Shader
 import android.net.Uri
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
@@ -21,11 +22,14 @@ import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_E
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_HORIZON_GAP
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_ICON_URI
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_MODE
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_OFFSET_X
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_OFFSET_Y
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TEXT
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TEXT_COLOR
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TEXT_SIZE
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TEXT_STYLE
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TEXT_TYPEFACE
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TILE_MODE
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_VERTICAL_GAP
 import java.io.IOException
 import javax.inject.Inject
@@ -50,6 +54,9 @@ class WaterMarkRepository @Inject constructor(
         val KEY_ICON_URI = stringPreferencesKey(SP_KEY_ICON_URI)
         val KEY_MODE = intPreferencesKey(SP_KEY_WATERMARK_MODE)
         val KEY_ENABLE_BOUNDS = booleanPreferencesKey(SP_KEY_ENABLE_BOUNDS)
+        val KEY_TILE_MODE = intPreferencesKey(SP_KEY_TILE_MODEL)
+        val KEY_OFFSET_X = intPreferencesKey(SP_KEY_OFFSET_X)
+        val KEY_OFFSET_Y = intPreferencesKey(SP_KEY_OFFSET_Y)
     }
 
     val waterMark: Flow<WaterMark> = dataStore.data
@@ -74,7 +81,10 @@ class WaterMarkRepository @Inject constructor(
                 vGap = it[KEY_VERTICAL_GAP] ?: 0,
                 iconUri = Uri.parse(it[KEY_ICON_URI] ?: ""),
                 markMode = if (it[KEY_MODE] == MarkMode.Image.value) MarkMode.Image else MarkMode.Text,
-                enableBounds = it[KEY_ENABLE_BOUNDS] ?: false
+                enableBounds = it[KEY_ENABLE_BOUNDS] ?: false,
+                tileMode = it[KEY_TILE_MODE] ?: Shader.TileMode.REPEAT.ordinal,
+                offsetX = it[KEY_OFFSET_X] ?: 0,
+                offsetY = it[KEY_OFFSET_Y] ?: 0
             )
         }
 
@@ -138,6 +148,17 @@ class WaterMarkRepository @Inject constructor(
         }
     }
 
+    suspend fun updateTileMode(mode: Shader.TileMode) {
+        dataStore.edit { it[KEY_TILE_MODE] = mode.ordinal }
+    }
+
+    suspend fun updateOffset(offsetX: Int, offsetY: Int) {
+        dataStore.edit {
+            it[KEY_OFFSET_X] = offsetX
+            it[KEY_OFFSET_Y] = offsetY
+        }
+    }
+
     suspend fun resetModeToText() {
         dataStore.edit { it[KEY_MODE] = MarkMode.Text.value }
     }
@@ -173,6 +194,9 @@ class WaterMarkRepository @Inject constructor(
         const val SP_KEY_ICON_URI = "${SP_NAME}_key_icon_uri"
         const val SP_KEY_WATERMARK_MODE = "${SP_NAME}_key_watermark_mode"
         const val SP_KEY_IMAGE_ROTATION = "${SP_NAME}_key_watermark_mode"
+        const val SP_KEY_TILE_MODEL = "${SP_NAME}_key_tile_model"
+        const val SP_KEY_OFFSET_X = "${SP_NAME}_key_offset_x"
+        const val SP_KEY_OFFSET_Y = "${SP_NAME}_key_offset_y"
         const val MAX_TEXT_SIZE = 100f
         const val MAX_DEGREE = 360f
         const val MAX_HORIZON_GAP = 500

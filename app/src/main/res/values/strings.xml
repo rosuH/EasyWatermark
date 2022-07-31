@@ -18,6 +18,7 @@
     <string name="title_enter_text">Content</string>
     <string name="title_text_style">Style</string>
     <string name="title_text_size">Size</string>
+    <string name="title_tile_mode">TileMode</string>
     <string name="title_horizon_layout">Horizontal</string>
     <string name="title_vertical_layout">Vertical</string>
     <string name="title_text_color">Color</string>
@@ -132,5 +133,9 @@
     <string name="tips_use_this_template">Sure you want to use this template?</string>
     <string name="tips_delete_template">Are you sure you want to delete the entry?</string>
     <string name="tips_database_init_error">Database init failed.</string>
+
+    <string name="tile_mode_title_repeat">Repeat</string>
+
+    <string name="tile_mode_title_decal">Single</string>
 
 </resources>

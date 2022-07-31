@@ -110,5 +110,8 @@
     <string name="tips_use_this_template">Siete sicuri di voler utilizzare questo modello?</string>
     <string name="tips_delete_template">È sicuro di voler cancellare questa voce?</string>
     <string name="tips_database_init_error">Inizializzazione del database fallita</string>
+    <string name="title_tile_mode">Modalità piastrella</string>
+    <string name="tile_mode_title_repeat">Ripeti</string>
+    <string name="tile_mode_title_decal">一つずつ実行</string>
 
 </resources>
