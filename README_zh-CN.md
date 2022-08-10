@@ -50,7 +50,7 @@
 ## 下载
 
 开发者所主导的下载渠道：
-- [Github Release](https://github.com/rosuH/EasyWatermark/releases)：永远保持最新
+- [GitHub Release](https://github.com/rosuH/EasyWatermark/releases)：永远保持最新
 - [Google Play](https://play.google.com/store/apps/details?id=me.rosuh.easywatermark)
     - 🍺 注意：收费版，但代码一致，如果您愿意请作者喝一杯茶（或者您比较任性），那么请去此下载，否则请选择其他渠道:)
 - [F-Droid](https://f-droid.org/packages/me.rosuh.easywatermark/)

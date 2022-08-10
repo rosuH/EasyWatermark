@@ -8,7 +8,7 @@
     <string name="about_title_info">消息</string>
     <string name="about_title_open_source">開源許可</string>
     <string name="about_title_rating">為這個應用程式評分</string>
-    <string name="about_title_repo_link">在 Github 上查看此項目</string>
+    <string name="about_title_repo_link">在 GitHub 上查看此項目</string>
     <string name="about_title_update_log">更新日誌</string>
     <string name="about_title_version">版本</string>
     <string name="action_pick">選擇圖片</string>
@@ -32,7 +32,7 @@
     <string name="share">分享</string>
     <string name="share_tips">分享儲存後的圖片到其他應用程式中</string>
     <string name="style_alpha">透明度</string>
-    <string name="tip_not_mail_found">似乎沒有安裝郵件客戶端，你可以主動將錯誤訊息貼至到商店或 Github 中</string>
+    <string name="tip_not_mail_found">似乎沒有安裝郵件客戶端，你可以主動將錯誤訊息貼至到商店或 GitHub 中</string>
     <string name="tips_cancel_dialog">取消</string>
     <string name="tips_cancel_output">取消</string>
     <string name="tips_choose_color_dialog">選擇顏色</string>
@@ -94,7 +94,7 @@
     <string name="text_typeface_bold">粗體</string>
     <string name="text_typeface_italic">斜體</string>
     <string name="text_typeface_bold_italic">斜體加粗</string>
-    <string name="dialog_check_out_in_github">在 Github 上查看</string>
+    <string name="dialog_check_out_in_github">在 GitHub 上查看</string>
     <string name="dialog_save_exporting">正在匯入</string>
     <string name="dialog_save_export_list_title">輸出清單（%1$s）</string>
     <string name="dialog_open_in_gallery">在圖片庫中檢視</string>

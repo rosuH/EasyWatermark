@@ -34,7 +34,7 @@
     <string name="about_title_open_source">Software livre</string>
     <string name="about_title_author">Autor</string>
     <string name="about_title_designer">Desenvolvedor</string>
-    <string name="about_title_repo_link">Visitar no Github</string>
+    <string name="about_title_repo_link">Visitar no GitHub</string>
     <string name="about_title_figma_link">Mais projetos</string>
     <string name="error_not_img">Selecione uma imagem</string>
     <string name="error_file_not_found">A imagem não pôde ser aberta ou não foi selecionada</string>
@@ -59,7 +59,7 @@
     <string name="tips_tip_title">Falha detectada</string>
     <string name="msg_crash">Gostaria de relatar este problema? Isto pode nos ajudar a melhorar o App e não coletará nenhuma informação pessoal.</string>
     <string name="crash_mail">Enviar um e-mail</string>
-    <string name="tip_not_mail_found">Nenhum cliente do e-mail detectado. Alternativamente, você pode colar a mensagem do erro na loja de aplicativos ou no Github.</string>
+    <string name="tip_not_mail_found">Nenhum cliente do e-mail detectado. Alternativamente, você pode colar a mensagem do erro na loja de aplicativos ou no GitHub.</string>
     <string name="tips_content_size_performance">Quanto maior for a imagem, mais recursos utilizará para ser visualizada em tempo real.</string>
     <string name="tips_content_mode_button">Clique para modificar texto ou imagem</string>
     <string name="config_default_water_mark_text">👋 NÃO REDISTRIBUIR</string>
@@ -94,7 +94,7 @@
     <string name="text_typeface_bold">Negrito</string>
     <string name="text_typeface_italic">Itálico</string>
     <string name="text_typeface_bold_italic">Negrito Itálico</string>
-    <string name="dialog_check_out_in_github">Confira no Github</string>
+    <string name="dialog_check_out_in_github">Confira no GitHub</string>
     <string name="dialog_save_exporting">Exportando</string>
     <string name="dialog_save_export_list_title">Exportar lista(%1$s)</string>
     <string name="dialog_open_in_gallery">Ver na Galeria</string>
