@@ -44,11 +44,11 @@
     <string name="share">共有</string>
     <string name="water_mark_mode_text">テキスト</string>
     <string name="water_mark_mode_image">アイコン</string>
-    <string name="touch_alpha">透明度: %1$d</string>
+    <string name="touch_alpha">不透明度: %1$d</string>
     <string name="touch_size">サイズ: %1$d</string>
     <string name="hint_tips_input_water_mark_text">ウォーターマークのテキストを入力してください</string>
     <string name="tips_ok">確認</string>
-    <string name="hint_tips_alpha_100">透明度 100%</string>
+    <string name="hint_tips_alpha_100">不透明度 100%</string>
     <string name="tips_cancel_output">キャンセル</string>
     <string name="tips_need_compress_img">ストレージが不足しているか、画像が大きすぎます</string>
     <string name="tips_compressing">圧縮しています…</string>
@@ -62,7 +62,7 @@
     <string name="tips_content_size_performance">画像が大きくなればなるほど、リアルタイムで画像を見ることは難しくなります。</string>
     <string name="tips_content_mode_button">クリックすると、文字や画像を修正できます。</string>
     <string name="config_default_water_mark_text">👋 DO NOT REDISTRIBUTE</string>
-    <string name="style_alpha">透明度</string>
+    <string name="style_alpha">不透明度</string>
     <string name="contributor_info">問題についてのフィードバックが有効であるため修正された場合、または新しいバージョンがリリースされた場合、あなたの名前または電子メールがアップデートのポップアップウィンドウに表示されます。お客様の情報は非表示にしますので、フルネームは表示されません。\\n 表示させたくない場合は、"I do not want to."のマークを付けてください。</string>
     <string name="dialog_change_log_title">What\'s new</string>
     <string name="dialog_change_log_content">

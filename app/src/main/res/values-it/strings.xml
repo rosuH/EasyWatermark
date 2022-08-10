@@ -34,7 +34,7 @@
     <string name="about_title_open_source">Licenze open source</string>
     <string name="about_title_author">Autore</string>
     <string name="about_title_designer">Designer</string>
-    <string name="about_title_repo_link">Apri su Github</string>
+    <string name="about_title_repo_link">Apri su GitHub</string>
     <string name="about_title_figma_link">Altri progetti</string>
     <string name="error_not_img">Seleziona un\'immagine</string>
     <string name="error_file_not_found">L\'immagine non può essere aperta o non è stata selezionata</string>
@@ -58,7 +58,7 @@
     <string name="tips_tip_title">Arresto anomalo rilevato</string>
     <string name="msg_crash">Vuoi segnalare questo arresto anomalo? Può aiutarci a migliorare l\'app! Ciò non raccoglierà alcuna informazione personale.</string>
     <string name="crash_mail">Invia email</string>
-    <string name="tip_not_mail_found">Nessun client di posta elettronica rilevato. In alternativa, puoi incollare il messaggio di errore nell\'app store o su Github.</string>
+    <string name="tip_not_mail_found">Nessun client di posta elettronica rilevato. In alternativa, puoi incollare il messaggio di errore nell\'app store o su GitHub.</string>
     <string name="tips_content_size_performance">Più grande è l\'immagine, più è difficile visualizzarla in tempo reale.</string>
     <string name="tips_content_mode_button">Clicca per modificare il testo o l\'immagine</string>
     <string name="config_default_water_mark_text">👋 NON RIDISTRIBUIRE</string>
@@ -82,7 +82,7 @@
     <string name="text_typeface_bold">Grassetto</string>
     <string name="text_typeface_italic">Corsivo</string>
     <string name="text_typeface_bold_italic">Grassetto Corsivo</string>
-    <string name="dialog_check_out_in_github">Dai un\'occhiata su Github</string>
+    <string name="dialog_check_out_in_github">Dai un\'occhiata su GitHub</string>
     <string name="dialog_save_export_list_title">Lista d\'esportazione (%1$s)</string>
     <string name="dialog_open_in_gallery">Visualizza nella galleria</string>
     <string name="dialog_save_config_format">Formato</string>

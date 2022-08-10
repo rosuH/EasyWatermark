@@ -32,7 +32,7 @@
     <string name="about_title_open_source">Quelloffen</string>
     <string name="about_title_author">Autor</string>
     <string name="about_title_designer">Designer</string>
-    <string name="about_title_repo_link">In Github öffnen</string>
+    <string name="about_title_repo_link">In GitHub öffnen</string>
     <string name="about_title_figma_link">Mehr Projekte</string>
     <string name="error_not_img">Bild auswählen</string>
     <string name="error_file_not_found">Bild konnte nicht geöffnet werden</string>
@@ -57,7 +57,7 @@
     <string name="tips_tip_title">Absturz erkannt</string>
     <string name="msg_crash">Absturz melden? Dies kann uns bei der Entwicklung helfen. Es werden hierbei keine persönlichen Daten gesammelt.</string>
     <string name="crash_mail">E-Mail senden</string>
-    <string name="tip_not_mail_found">Mail-Adresse wurde nicht erkannt. Alternativ kann die Fehlermeldung im App Store oder Github eingefügt werden.</string>
+    <string name="tip_not_mail_found">Mail-Adresse wurde nicht erkannt. Alternativ kann die Fehlermeldung im App Store oder GitHub eingefügt werden.</string>
     <string name="style_alpha">Alpha</string>
     <string name="dialog_change_log_title">Änderungen</string>
     <string name="tips_not_app_can_open_images">Kein Dateimanager erkannt.</string>
@@ -94,7 +94,7 @@
         </ol>
 ]]>
     </string>
-    <string name="dialog_check_out_in_github">Schau mal auf Github</string>
+    <string name="dialog_check_out_in_github">Schau mal auf GitHub</string>
     <string name="dialog_save_exporting">Export wird ausgeführt</string>
     <string name="dialog_save_export_list_title">Liste exportieren(%1$s)</string>
     <string name="dialog_open_in_gallery">In Galerie anzeigen</string>
