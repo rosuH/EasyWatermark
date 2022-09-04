@@ -1,11 +1,10 @@
 package me.rosuh.easywatermark.ui.widget
 
+import android.animation.Animator
 import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.*
-import android.graphics.Matrix.MSCALE_X
-import android.graphics.Matrix.MSKEW_X
-import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Build
 import android.text.Layout
@@ -13,18 +12,20 @@ import android.text.StaticLayout
 import android.text.TextPaint
 import android.util.AttributeSet
 import android.util.Log
-import android.widget.ImageView
-import androidx.core.graphics.withRotation
+import android.view.MotionEvent
+import android.view.ScaleGestureDetector
+import androidx.core.animation.doOnEnd
 import androidx.core.graphics.withSave
-import androidx.dynamicanimation.animation.FloatPropertyCompat
-import androidx.dynamicanimation.animation.SpringAnimation
-import androidx.dynamicanimation.animation.SpringForce.DAMPING_RATIO_LOW_BOUNCY
+import androidx.core.view.ViewCompat
 import androidx.palette.graphics.Palette
 import kotlinx.coroutines.*
 import me.rosuh.easywatermark.data.model.ImageInfo
-import me.rosuh.easywatermark.data.model.ViewInfo
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository.Companion.DEFAULT_TEXT_SIZE
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository.Companion.MAX_TEXT_SIZE
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository.Companion.MIN_TEXT_SIZE
+import me.rosuh.easywatermark.ui.widget.utils.WaterMarkShader
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.utils.ktx.*
 import java.util.concurrent.Executors
@@ -58,9 +59,13 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     private var enableWaterMark = AtomicBoolean(false)
 
-    private val drawableBounds = RectF()
+    val drawableBounds = RectF()
 
     private var onBgReady: (palette: Palette) -> Unit = {}
+
+    private var onOffsetChanged: (info: ImageInfo) -> Unit = { _ -> }
+
+    private var onScaleEnd: (textSize: Float) -> Unit = { _ -> }
 
     private var exceptionHandler: CoroutineExceptionHandler =
         CoroutineExceptionHandler { _: CoroutineContext, throwable: Throwable ->
@@ -113,9 +118,12 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
     private fun applyNewConfig(
         isInit: Boolean,
         newConfig: WaterMark,
-        imageInfo: ImageInfo
+        imageInfo: ImageInfo,
     ) {
         val uri = imageInfo.uri
+//        if (newConfig == config && uri == decodedUri && imageInfo == curImageInfo && isInit.not()) {
+//            return
+//        }
         generateBitmapJob?.cancel()
         generateBitmapJob = launch(exceptionHandler) {
             // quick check is the same image
@@ -176,6 +184,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 curImageInfo.height = drawableBounds.height().toInt()
                 decodedUri = uri
             }
+            curImageInfo = imageInfo
             // apply new config to paint
             textPaint.applyConfig(curImageInfo, newConfig)
             layoutShader = when (newConfig.markMode) {
@@ -244,7 +253,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         Paint()
     }
 
-    private var layoutShader: BitmapShader? = null
+    private var layoutShader: WaterMarkShader? = null
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
@@ -253,14 +262,23 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
-        if (config?.text.isNullOrEmpty() || decodedUri.toString().isEmpty() ||
-            layoutShader == null
+        if (config?.text.isNullOrEmpty()
+            || decodedUri.toString().isEmpty()
+            || layoutShader == null
+            || drawableAlphaAnimator.isRunning
         ) {
             return
         }
-        layoutPaint.shader = layoutShader
+        layoutPaint.shader = layoutShader?.bitmapShader
         canvas?.withSave {
-            translate(drawableBounds.left, drawableBounds.top)
+            if (curImageInfo.obtainTileMode() == Shader.TileMode.DECAL) {
+                translate(
+                    drawableBounds.left + curImageInfo.offsetX * drawableBounds.width(),
+                    drawableBounds.top + curImageInfo.offsetY * drawableBounds.height()
+                )
+            } else {
+                translate(drawableBounds.left, drawableBounds.top)
+            }
             drawRect(
                 0f,
                 0f,
@@ -286,12 +304,206 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         this.onBgReady = block
     }
 
+    fun onOffsetChanged(block: (info: ImageInfo) -> Unit) {
+        this.onOffsetChanged = block
+    }
+
+    fun onScaleEnd(block: (textSize: Float) -> Unit) {
+        this.onScaleEnd = block
+    }
+
     fun reset() {
         curImageInfo = ImageInfo(Uri.EMPTY)
         localIconUri = Uri.EMPTY
         setImageBitmap(null)
         setBackgroundColor(Color.TRANSPARENT)
         decodedUri = Uri.EMPTY
+    }
+
+    private fun updateWaterMarkOffset(deltaX: Float, deltaY: Float): ImageInfo {
+        if (curImageInfo.obtainTileMode() != Shader.TileMode.DECAL) {
+            return curImageInfo
+        }
+        val newOffsetX = (curImageInfo.offsetX + deltaX / drawableBounds.width())
+        val newOffsetY = (curImageInfo.offsetY + deltaY / drawableBounds.height())
+        curImageInfo = curImageInfo.copy(
+            offsetX = newOffsetX,
+            offsetY = newOffsetY
+        )
+        invalidate()
+        return curImageInfo
+    }
+
+    private var touchRect = RectF()
+
+    fun isOutOfDrawable(deltaX: Float, deltaY: Float): Boolean {
+        if (curImageInfo.obtainTileMode() != Shader.TileMode.DECAL) {
+            return false
+        }
+        val newOffsetX = (curImageInfo.offsetX + deltaX / drawableBounds.width())
+        val newOffsetY = (curImageInfo.offsetY + deltaY / drawableBounds.height())
+        val newX = drawableBounds.left + newOffsetX * drawableBounds.width()
+        val newY = drawableBounds.top + newOffsetY * drawableBounds.height()
+        val bitmapWith = layoutShader?.width ?: 0
+        val bitmapHeight = layoutShader?.height ?: 0
+        touchRect.set(
+            newX,
+            newY,
+            newX + bitmapWith,
+            newY + bitmapHeight
+        )
+        Log.i(TAG, "isOutOfDrawable $touchRect, drawableBounds: $drawableBounds")
+        return touchRect.right < drawableBounds.left
+                || touchRect.left > drawableBounds.right
+                || touchRect.top > drawableBounds.bottom
+                || touchRect.bottom < drawableBounds.top
+    }
+
+    fun isTouchWaterMark(event: MotionEvent): Boolean {
+        if (curImageInfo.obtainTileMode() != Shader.TileMode.DECAL) {
+            return false
+        }
+        val shader = layoutShader ?: return false
+        val bounds = drawableBounds
+        val waterMarkX = bounds.left + curImageInfo.offsetX * bounds.width()
+        val waterMarkY = bounds.top + curImageInfo.offsetY * bounds.height()
+        return event.x > waterMarkX
+                && event.x < waterMarkX + shader.width
+                && event.y > waterMarkY
+                && event.y < waterMarkY + shader.height
+    }
+
+    private var animator: Animator? = null
+
+    fun backToCenter(
+        post: (info: ImageInfo, x: Float, y: Float) -> Unit,
+    ) {
+        animator?.cancel()
+        val curOffsetX = curImageInfo.offsetX
+        val curOffsetY = curImageInfo.offsetY
+        val centerOffsetX = ((drawableBounds.width() - (layoutShader?.width ?: 0)) / 2)
+        val centerOffsetY = ((drawableBounds.height() - (layoutShader?.height ?: 0)) / 2)
+        val centerOffsetXP = (centerOffsetX) / drawableBounds.width()
+        val centerOffsetYP = (centerOffsetY) / drawableBounds.height()
+        val info = curImageInfo.copy(
+            offsetX = centerOffsetXP,
+            offsetY = centerOffsetYP
+        )
+        curImageInfo = info
+        animator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 300
+            addUpdateListener {
+                val value = it.animatedValue as Float
+                val offsetX = curOffsetX + (centerOffsetXP - curOffsetX) * value
+                val offsetY = curOffsetY + (centerOffsetYP - curOffsetY) * value
+                curImageInfo = curImageInfo.copy(
+                    offsetX = offsetX,
+                    offsetY = offsetY
+                )
+                invalidate()
+            }
+            doOnEnd {
+                post(info, centerOffsetX, centerOffsetY)
+            }
+            start()
+        }
+    }
+
+    private var mScaleFactor = 1f
+
+    private val mScaleDetector by lazy {
+        ScaleGestureDetector(context, scaleListener)
+    }
+
+    private val scaleListener = object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+
+        override fun onScale(detector: ScaleGestureDetector): Boolean {
+            mScaleFactor *= detector.scaleFactor
+            mScaleFactor = mScaleFactor.coerceAtLeast(0.1f).coerceAtMost(5.0f)
+            // Don't let the object get too small or too large.
+            val textSize = (config?.textSize ?: DEFAULT_TEXT_SIZE) * if (mScaleFactor > 1f) {
+                ((1 - mScaleFactor).absoluteValue * 0.1f + 1f)
+            } else {
+                1 - (1 - mScaleFactor).absoluteValue * 0.1f
+            }
+            if (textSize > MAX_TEXT_SIZE && mScaleFactor > 1f) {
+                Log.i(TAG, "onScale: $textSize, $mScaleFactor, to max")
+                return true
+            }
+            if (textSize < MIN_TEXT_SIZE && mScaleFactor < 1f) {
+                Log.i(TAG, "onScale: $textSize, $mScaleFactor, to min")
+                return true
+            }
+            Log.i(TAG, "onScale $mScaleFactor, textSize: ${config?.textSize} ==> $textSize")
+            config = config?.copy(textSize = textSize)
+            invalidate()
+            return true
+        }
+
+        override fun onScaleEnd(detector: ScaleGestureDetector?) {
+            super.onScaleEnd(detector)
+            Log.i(TAG, "onScaleEnd $mScaleFactor")
+            val textSize = (config?.textSize ?: DEFAULT_TEXT_SIZE)
+//            config = config?.copy(textSize = textSize)
+//            mScaleFactor = 1f
+            this@WaterMarkImageView.onScaleEnd(textSize)
+        }
+    }
+
+    private var startX = 0f
+    private var startY = 0f
+    private var enableTouch = true
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        // Let the ScaleGestureDetector inspect all events.
+        Log.i(TAG, "onTouch $event")
+        if (enableTouch.not()) {
+            return false
+        }
+//        mScaleDetector.onTouchEvent(event)
+//        if (mScaleDetector.isInProgress) {
+//            return true
+//        }
+        if (isTouchWaterMark(event).not() || event.pointerCount > 1) {
+            return true
+        }
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                startX = event.x
+                startY = event.y
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val endX = event.x
+                val endY = event.y
+                val deltaX = endX - startX
+                val deltaY = endY - startY
+                updateWaterMarkOffset(deltaX, deltaY)
+                this.startX = endX
+                this.startY = endY
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                val endX = event.x
+                val endY = event.y
+                val deltaX = endX - startX
+                val deltaY = endY - startY
+                if (isOutOfDrawable(deltaX, deltaY)) {
+                    // disable touch
+                    enableTouch = false
+                    // begin back to center animation
+                    backToCenter { info, x, y ->
+                        this.startX = x
+                        this.startY = y
+                        enableTouch = true
+                        onOffsetChanged(info)
+                    }
+                } else {
+                    this.startX = endX
+                    this.startY = endY
+                    onOffsetChanged(curImageInfo)
+                }
+            }
+        }
+        return true
     }
 
     companion object {
@@ -310,7 +522,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             paddingLeft: Int,
             paddingTop: Int,
             bitmapWidth: Int,
-            bitmapHeight: Int
+            bitmapHeight: Int,
         ): Matrix {
             Log.i(
                 TAG,
@@ -353,11 +565,12 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             config: WaterMark,
             textPaint: Paint,
             scale: Boolean,
-            coroutineContext: CoroutineContext
-        ): BitmapShader? = withContext(coroutineContext) {
+            coroutineContext: CoroutineContext,
+        ): WaterMarkShader? = withContext(coroutineContext) {
             if (srcBitmap.isRecycled) {
                 return@withContext null
             }
+            val tileMode = imageInfo.obtainTileMode()
             val showDebugRect = config.enableBounds
             val rawWidth =
                 srcBitmap.width.toFloat().coerceAtLeast(1f).coerceAtMost(imageInfo.width.toFloat())
@@ -414,10 +627,15 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             if (showDebugRect) {
                 canvas.restore()
             }
-            return@withContext BitmapShader(
+            val bitmapShader = BitmapShader(
                 targetBitmap,
-                config.obtainTileMode(),
-                config.obtainTileMode()
+                tileMode,
+                tileMode
+            )
+            return@withContext WaterMarkShader(
+                bitmapShader,
+                targetBitmap.width,
+                targetBitmap.height
             )
         }
 
@@ -431,13 +649,14 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             imageInfo: ImageInfo,
             config: WaterMark,
             textPaint: TextPaint,
-            coroutineContext: CoroutineContext
-        ): BitmapShader? = withContext(coroutineContext) {
+            coroutineContext: CoroutineContext,
+        ): WaterMarkShader? = withContext(coroutineContext) {
             if (config.text.isBlank()) {
                 return@withContext null
             }
             val showDebugRect = config.enableBounds
             var maxLineWidth = 0
+            val tileMode = imageInfo.obtainTileMode()
             // calculate the max width of all lines
             config.text.split("\n").forEach {
                 val startIndex = config.text.indexOf(it).coerceAtLeast(0)
@@ -520,11 +739,15 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             if (showDebugRect) {
                 canvas.restore()
             }
-
-            return@withContext BitmapShader(
+            val bitmapShader = BitmapShader(
                 bitmap,
-                config.obtainTileMode(),
-                config.obtainTileMode()
+                tileMode,
+                tileMode
+            )
+            return@withContext WaterMarkShader(
+                bitmapShader,
+                bitmap.width,
+                bitmap.height
             )
         }
     }

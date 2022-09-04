@@ -67,11 +67,11 @@ class MainViewModel @Inject constructor(
     private var autoScroll = true
 
     val imageList: LiveData<Pair<List<ImageInfo>, Boolean>> =
-        waterMarkRepo.uriLivedData.map { Pair(it, autoScroll) }
+        waterMarkRepo.imageInfoMapFlow.asLiveData().map { Pair(it, autoScroll) }
 
     val galleryPickedImageList: MutableLiveData<List<Image>> = MutableLiveData()
 
-    val selectedImage: MutableLiveData<ImageInfo> = MutableLiveData()
+    val selectedImage: LiveData<ImageInfo> = waterMarkRepo.selectedImage.asLiveData()
 
     private val saveImageUri: MutableLiveData<List<ImageInfo>> = MutableLiveData()
 
@@ -264,7 +264,7 @@ class MainViewModel @Inject constructor(
                         waterMark.value!!,
                         bitmapPaint,
                         Dispatchers.IO
-                    )
+                    )?.bitmapShader
                 }
                 WaterMarkRepository.MarkMode.Image -> {
                     val iconBitmapRect = decodeSampledBitmapFromResource(
@@ -288,12 +288,19 @@ class MainViewModel @Inject constructor(
                         bitmapPaint,
                         scale = true,
                         Dispatchers.IO
-                    )
+                    )?.bitmapShader
                 }
                 null -> return@withContext Result.failure(
                     null,
                     code = "-1",
                     message = "Unknown markmode"
+                )
+            }
+
+            if (imageInfo.obtainTileMode() == Shader.TileMode.DECAL) {
+                canvas.translate(
+                    0 + imageInfo.offsetX * mutableBitmap.width,
+                    0 + imageInfo.offsetY * mutableBitmap.height
                 )
             }
             canvas.drawRect(
@@ -380,7 +387,9 @@ class MainViewModel @Inject constructor(
         if (selectedImage.value?.uri == uri) {
             return
         }
-        selectedImage.value = ImageInfo(uri)
+        launch {
+            waterMarkRepo.select(uri)
+        }
     }
 
     fun updateImageList(list: List<Uri>) {
@@ -394,7 +403,7 @@ class MainViewModel @Inject constructor(
     private fun updateImageListInternal(list: List<ImageInfo>) {
         launch {
             autoScroll = true
-            selectedImage.value = list.first()
+            waterMarkRepo.select(list.first().uri)
             nextSelectedPos = 0
             waterMarkRepo.updateImageList(list)
         }
@@ -473,15 +482,17 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun updateTileMode(tileMode: Shader.TileMode) {
+    fun updateTileMode(imageInfo: ImageInfo, tileMode: Shader.TileMode) {
         launch {
-            waterMarkRepo.updateTileMode(tileMode)
+            autoScroll = false
+            waterMarkRepo.updateTileMode(imageInfo, tileMode)
         }
     }
 
-    fun updateOffset(x: Int, y: Int) {
+    fun updateOffset(info: ImageInfo) {
         launch {
-            waterMarkRepo.updateOffset(x, y)
+            autoScroll = false
+            waterMarkRepo.updateOffset(info)
         }
     }
 
@@ -532,7 +543,9 @@ class MainViewModel @Inject constructor(
     }
 
     fun clearData() {
-        selectedImage.value = ImageInfo(Uri.EMPTY)
+        launch {
+            waterMarkRepo.select(Uri.EMPTY)
+        }
     }
 
     fun compressImg(activity: Activity) {

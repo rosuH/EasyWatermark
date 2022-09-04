@@ -10,6 +10,7 @@ import android.content.Intent.ACTION_SEND
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.PointF
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Build
@@ -345,7 +346,10 @@ class MainActivity : AppCompatActivity() {
         }
         viewModel.imageList.observe(this) {
             photoListPreviewAdapter.selectedPos = viewModel.nextSelectedPos
-            photoListPreviewAdapter.submitList(it.first) {
+            photoListPreviewAdapter.submitList(it.first.toList()) {
+                if (it.second.not()) {
+                    return@submitList
+                }
                 launchView.rvPhotoList.apply {
                     post { smoothScrollToPosition(0) }
                 }
@@ -440,6 +444,12 @@ class MainActivity : AppCompatActivity() {
         launchView.ivPhoto.apply {
             onBgReady { palette ->
                 viewModel.updateColorPalette(palette)
+            }
+            onOffsetChanged {
+                viewModel.updateOffset(it)
+            }
+            onScaleEnd {
+                viewModel.updateTextSize(it)
             }
         }
         // functional panel in recyclerView
@@ -795,6 +805,7 @@ class MainActivity : AppCompatActivity() {
         viewModel.clearData()
         launchView.ivPhoto.reset()
         bgTransformAnimator?.cancel()
+        TextContentDisplayFragment.remove(this)
         doApplyBgChanged()
         hideDetailPanel()
     }

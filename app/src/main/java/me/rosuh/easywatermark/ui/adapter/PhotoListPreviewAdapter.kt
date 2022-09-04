@@ -29,11 +29,11 @@ class PhotoListPreviewAdapter(
     private val differCallback: DiffUtil.ItemCallback<ImageInfo> by lazy {
         object : DiffUtil.ItemCallback<ImageInfo>() {
             override fun areItemsTheSame(oldItem: ImageInfo, newItem: ImageInfo): Boolean {
-                return oldItem == newItem
+                return oldItem.isSameItem(newItem)
             }
 
             override fun areContentsTheSame(oldItem: ImageInfo, newItem: ImageInfo): Boolean {
-                return oldItem == newItem
+                return oldItem.isSameItem(newItem)
             }
         }
     }

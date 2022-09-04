@@ -1,13 +1,16 @@
 package me.rosuh.easywatermark.ui.panel
 
 import android.graphics.Shader
+import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.FragmentActivity
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.databinding.FragmentTileModeBinding
 import me.rosuh.easywatermark.ui.base.BaseBindFragment
 import me.rosuh.easywatermark.utils.ktx.commitWithAnimation
+import me.rosuh.easywatermark.utils.ktx.titleTextColor
 
 class TileModeFragment : BaseBindFragment<FragmentTileModeBinding>() {
 
@@ -15,20 +18,40 @@ class TileModeFragment : BaseBindFragment<FragmentTileModeBinding>() {
         layoutInflater: LayoutInflater,
         container: ViewGroup?
     ): FragmentTileModeBinding {
-        val b = FragmentTileModeBinding.inflate(layoutInflater, container, false)
+        return FragmentTileModeBinding.inflate(layoutInflater, container, false)
+    }
 
-        val checkedId = when(shareViewModel.waterMark.value?.tileMode) {
-            Shader.TileMode.DECAL.ordinal -> R.id.rb_tile_mode_decal
-            else -> R.id.rb_tile_mode_repeat
-        }
-        b.rgTileMode.check(checkedId)
-        b.rgTileMode.setOnCheckedChangeListener { _, id ->
-            when(id) {
-                R.id.rb_tile_mode_decal -> shareViewModel.updateTileMode(Shader.TileMode.DECAL)
-                else -> shareViewModel.updateTileMode(Shader.TileMode.REPEAT)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        shareViewModel.selectedImage.observe(viewLifecycleOwner) {
+            if (it == null) {
+                return@observe
+            }
+            val checkedId = when (it.tileMode) {
+                Shader.TileMode.DECAL.ordinal -> R.id.rb_tile_mode_decal
+                else -> R.id.rb_tile_mode_repeat
+            }
+            binding?.rgTileMode?.setOnCheckedChangeListener(null)
+            binding?.rgTileMode?.check(checkedId)
+            binding?.rgTileMode?.setOnCheckedChangeListener { _, id ->
+                val imageInfo = it
+                if (id == R.id.rb_tile_mode_decal && imageInfo.tileMode == Shader.TileMode.DECAL.ordinal) {
+                    return@setOnCheckedChangeListener
+                }
+                if (id == R.id.rb_tile_mode_repeat && imageInfo.tileMode == Shader.TileMode.REPEAT.ordinal) {
+                    return@setOnCheckedChangeListener
+                }
+                when(id) {
+                    R.id.rb_tile_mode_decal -> shareViewModel.updateTileMode(imageInfo, Shader.TileMode.DECAL)
+                    else -> shareViewModel.updateTileMode(imageInfo, Shader.TileMode.REPEAT)
+                }
             }
         }
-        return b
+        shareViewModel.colorPalette.observe(this.viewLifecycleOwner) {
+            val color = it.titleTextColor(requireContext())
+            binding?.rbTileModeDecal?.setTextColor(color)
+            binding?.rbTileModeRepeat?.setTextColor(color)
+        }
     }
 
     companion object {

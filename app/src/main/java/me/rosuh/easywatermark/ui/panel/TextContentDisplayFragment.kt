@@ -65,6 +65,12 @@ class TextContentDisplayFragment : BaseBindFragment<FragmentTextContentDisplayBi
     companion object {
         const val TAG = "TextContentDisplayFragment"
 
+        fun remove(activity: FragmentActivity) {
+            activity.supportFragmentManager.commitWithAnimation {
+                remove(activity.supportFragmentManager.findFragmentByTag(TAG)!!)
+            }
+        }
+
         fun replaceShow(fa: FragmentActivity, containerId: Int): Boolean {
             val f = fa.supportFragmentManager.findFragmentByTag(TAG)
             if (f?.isVisible == true) {

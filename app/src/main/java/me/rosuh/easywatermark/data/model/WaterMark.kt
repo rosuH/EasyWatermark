@@ -18,17 +18,5 @@ data class WaterMark(
     val vGap: Int,
     val iconUri: Uri,
     val markMode: WaterMarkRepository.MarkMode,
-    val enableBounds: Boolean,
-    val tileMode: Int,
-    val offsetX: Int,
-    val offsetY: Int,
-) {
-    fun obtainTileMode(): Shader.TileMode {
-        return when (tileMode) {
-            Shader.TileMode.CLAMP.ordinal -> Shader.TileMode.CLAMP
-            Shader.TileMode.MIRROR.ordinal -> Shader.TileMode.MIRROR
-            Shader.TileMode.REPEAT.ordinal -> Shader.TileMode.REPEAT
-            else -> Shader.TileMode.DECAL
-        }
-    }
-}
+    val enableBounds: Boolean
+)

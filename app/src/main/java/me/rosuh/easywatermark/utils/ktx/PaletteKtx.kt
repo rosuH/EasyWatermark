@@ -12,11 +12,7 @@ fun Palette?.bgColor(context: Context): Int {
         return context.colorSurfaceVariant
     }
 
-    val platteColor = if (context.isNight() || !context.supportNight()) {
-        (this.darkMutedSwatch?.rgb ?: this.mutedSwatch?.rgb) ?: context.colorSurfaceVariant
-    } else {
-        (this.lightMutedSwatch?.rgb ?: this.mutedSwatch?.rgb) ?: context.colorSurfaceVariant
-    }
+    val platteColor = (this.darkMutedSwatch?.rgb ?: this.mutedSwatch?.rgb) ?: context.colorSurfaceVariant
     val harmonizedColor = MaterialColors.harmonize(
         platteColor, ContextCompat.getColor(context, R.color.md_theme_dark_background)
     )
@@ -28,11 +24,6 @@ fun Palette?.titleTextColor(context: Context): Int {
     if (this == null) {
         return context.colorOnSurfaceVariant
     }
-    return if (context.isNight() || !context.supportNight()) {
-        (this.darkMutedSwatch?.titleTextColor ?: this.mutedSwatch?.titleTextColor)
-            ?: context.colorOnSurfaceVariant
-    } else {
-        (this.lightMutedSwatch?.titleTextColor ?: this.mutedSwatch?.titleTextColor)
-            ?: context.colorOnSurfaceVariant
-    }
+    return (this.darkMutedSwatch?.titleTextColor ?: this.mutedSwatch?.titleTextColor)
+        ?: context.colorOnSurfaceVariant
 }
