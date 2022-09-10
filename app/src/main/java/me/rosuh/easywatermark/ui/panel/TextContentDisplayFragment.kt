@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.FragmentActivity
+import androidx.fragment.app.commitNow
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.databinding.FragmentTextContentDisplayBinding
 import me.rosuh.easywatermark.ui.adapter.TextPaintStyleAdapter
@@ -66,8 +67,8 @@ class TextContentDisplayFragment : BaseBindFragment<FragmentTextContentDisplayBi
         const val TAG = "TextContentDisplayFragment"
 
         fun remove(activity: FragmentActivity) {
-            activity.supportFragmentManager.commitWithAnimation {
-                remove(activity.supportFragmentManager.findFragmentByTag(TAG)!!)
+            activity.supportFragmentManager.commitNow(true) {
+                activity.supportFragmentManager.findFragmentByTag(TAG)?.let { remove(it) }
             }
         }
 

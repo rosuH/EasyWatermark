@@ -334,7 +334,6 @@ class MainActivity : AppCompatActivity() {
                 if (isAnimating) {
                     launchView.ivPhoto.updateUri(true, it)
                     selectTab(0)
-                    handleFuncItem(contentFunList[0])
                 } else {
                     launchView.ivPhoto.updateUri(false, it)
                 }
@@ -567,6 +566,9 @@ class MainActivity : AppCompatActivity() {
                 override fun onTabUnselected(tab: TabLayout.Tab?) {}
 
                 override fun onTabReselected(tab: TabLayout.Tab?) {
+                    if (tab?.position == 0) {
+                        handleFuncItem(contentFunList[0])
+                    }
                 }
             })
         }
@@ -584,10 +586,7 @@ class MainActivity : AppCompatActivity() {
         Log.i("handleFuncItem", "item = $item")
         when (item.type) {
             FuncTitleModel.FuncType.Text -> {
-                val isReselected = TextContentDisplayFragment.replaceShow(this, launchView.fcFunctionDetail.id)
-                if (isReselected) {
-                    TextWatermarkBSDFragment.safetyShow(this.supportFragmentManager)
-                }
+                TextContentDisplayFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.Icon -> {
                 preCheckStoragePermission {
