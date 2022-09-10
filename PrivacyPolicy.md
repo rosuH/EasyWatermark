@@ -21,7 +21,7 @@ We don't collect information voluntarily at all. But if, after a crash, you volu
 
 <h3> Third, how we share, transfer, and publicly disclose your personal information</h3>
 We don't actively collect information at all. And no personal information about you, so don't worry.
-But if, after a crash, you actively send us information about your device, we'll use it for nothing more than locating and resolving your crash (which may appear in Git commits, logs, or Github-related issues).
+But if, after a crash, you actively send us information about your device, we'll use it for nothing more than locating and resolving your crash (which may appear in Git commits, logs, or GitHub-related issues).
 
 <h3> 4. How we protect your personal information</h3>
 We don't actively collect information at all. And no personal information about you to worry about. We don't want, need or want to help you protect it.

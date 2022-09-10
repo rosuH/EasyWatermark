@@ -34,7 +34,7 @@
     <string name="about_title_open_source">开源许可</string>
     <string name="about_title_author">作者</string>
     <string name="about_title_designer">设计者</string>
-    <string name="about_title_repo_link">在 Github 上查看此项目</string>
+    <string name="about_title_repo_link">在 GitHub 上查看此项目</string>
     <string name="about_title_figma_link">查看他的更多作品</string>
     <!--UI-->
     <string name="error_not_img">请选择图片</string>
@@ -46,11 +46,11 @@
     <string name="share">分享</string>
     <string name="water_mark_mode_text">文字</string>
     <string name="water_mark_mode_image">贴纸</string>
-    <string name="touch_alpha">透明度: %1$d</string>
+    <string name="touch_alpha">不透明度: %1$d</string>
     <string name="touch_size">大小: %1$d</string>
     <string name="hint_tips_input_water_mark_text">请输入水印文字</string>
     <string name="tips_ok">确定</string>
-    <string name="hint_tips_alpha_100">透明度100%</string>
+    <string name="hint_tips_alpha_100">不透明度100%</string>
     <string name="tips_cancel_output">取消</string>
     <string name="tips_need_compress_img">图片过大或内存不足</string>
     <string name="tips_compressing">正在压缩中…</string>
@@ -60,11 +60,11 @@
     <string name="tips_tip_title">检测到崩溃</string>
     <string name="msg_crash">你愿意帮忙反馈错误信息吗？这样可以帮我们做得更好！这不会收集你的个人信息。</string>
     <string name="crash_mail">发送邮件</string>
-    <string name="tip_not_mail_found">似乎没有安装邮件客户端，你可以主动粘贴错误信息到应用市场或 Github</string>
+    <string name="tip_not_mail_found">似乎没有安装邮件客户端，你可以主动粘贴错误信息到应用市场或 GitHub</string>
     <string name="tips_content_size_performance">尺寸越大，实时预览性能要求越高</string>
     <string name="tips_content_mode_button">点击可修改文字或图片</string>
     <string name="config_default_water_mark_text">👋图片仅供测试，请勿作其他用途</string>
-    <string name="style_alpha">透明度</string>
+    <string name="style_alpha">不透明度</string>
     <string name="dialog_change_log_title">更新日志</string>
     <string name="contributor_info">当反馈的问题有效，并被修复或加入新版本时，您的名字或邮件出现在更新日志弹窗中。我们会对您的信息作遮挡处理，不会出现全称。\n 如果您不愿意出现，请标注：我不愿意。即可</string>
     <string name="dialog_change_log_content">
@@ -98,7 +98,7 @@
     <string name="text_typeface_bold">粗体</string>
     <string name="text_typeface_italic">斜体</string>
     <string name="text_typeface_bold_italic">斜体加粗</string>
-    <string name="dialog_check_out_in_github">在 Github 上查看</string>
+    <string name="dialog_check_out_in_github">在 GitHub 上查看</string>
     <string name="dialog_save_exporting">正在导出</string>
     <string name="dialog_save_export_list_title">导出列表（%1$s）</string>
     <string name="dialog_open_in_gallery">在相册中查看</string>

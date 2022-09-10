@@ -35,7 +35,7 @@
     <string name="about_title_open_source">Open source licenses</string>
     <string name="about_title_author">Author</string>
     <string name="about_title_designer">Designer</string>
-    <string name="about_title_repo_link">Open in Github</string>
+    <string name="about_title_repo_link">Open in GitHub</string>
     <string name="about_title_figma_link">Other projects</string>
     <string name="error_not_img">Please select an image</string>
     <string name="error_file_not_found">The image couldn\'t be opened or was not selected</string>
@@ -59,7 +59,7 @@
     <string name="tips_tip_title">Crash detected</string>
     <string name="msg_crash">Would you like to report this crash? This can help us improve the app! This will not collect any personal information.</string>
     <string name="crash_mail">Send email</string>
-    <string name="tip_not_mail_found">No email client detected. Alternatively, you can paste the error message to the app store or Github.</string>
+    <string name="tip_not_mail_found">No email client detected. Alternatively, you can paste the error message to the app store or GitHub.</string>
     <string name="tips_content_size_performance">The larger the image, the more demanding it is to view the image in realtime.</string>
     <string name="tips_content_mode_button">Click to modify text or picture</string>
     <string name="config_default_water_mark_text">👋 DO NOT REDISTRIBUTE</string>
@@ -105,7 +105,7 @@
     <string name="text_typeface_bold">Bold</string>
     <string name="text_typeface_italic">Italic</string>
     <string name="text_typeface_bold_italic">Bold Italic</string>
-    <string name="dialog_check_out_in_github">Check out on Github</string>
+    <string name="dialog_check_out_in_github">Check out on GitHub</string>
     <string name="dialog_save_export_list_title">Export list(%1$s)</string>
     <string name="dialog_open_in_gallery">View in gallery</string>
     <string name="dialog_save_config_format">Format</string>
