@@ -27,4 +27,4 @@ jobs:
             gradle-
 
       - name: Build apk with Gradle
-        run: bash ./gradlew assembleRelease --no-configuration-cache
+        run: bash ./gradlew assembleRelease --scan --debug
