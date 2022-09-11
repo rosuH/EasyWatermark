@@ -10,10 +10,7 @@ import android.util.DisplayMetrics
 import android.view.LayoutInflater
 import android.view.WindowInsets
 import android.view.WindowMetrics
-import androidx.fragment.app.FragmentActivity
-import androidx.fragment.app.FragmentManager
-import androidx.fragment.app.FragmentTransaction
-import androidx.fragment.app.commit
+import androidx.fragment.app.*
 import androidx.viewbinding.ViewBinding
 import me.rosuh.easywatermark.R
 
@@ -49,7 +46,7 @@ inline fun FragmentActivity.commitWithAnimation(body: FragmentTransaction.() -> 
 }
 
 inline fun FragmentManager.commitWithAnimation(body: FragmentTransaction.() -> Unit) {
-    this.commit {
+    this.commitNow(allowStateLoss = true) {
         setCustomAnimations(
             R.anim.fragment_open_in,
             R.anim.fragment_pop_exit_slide,

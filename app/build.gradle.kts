@@ -15,8 +15,8 @@ android {
         applicationId = "me.rosuh.easywatermark"
         minSdk = (Apps.minSdk)
         targetSdk = (Apps.targetSdk)
-        versionCode = 20802
-        versionName = "2.8.2"
+        versionCode = 20803
+        versionName = "2.8.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         setProperty("archivesBaseName", "$applicationId-v$versionName($versionCode)")
     }
@@ -76,7 +76,7 @@ dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
     implementation(project(mapOf("path" to ":cmonet")))
 
-    val roomVersion = "2.4.2"
+    val roomVersion = "2.4.3"
 
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
@@ -84,26 +84,26 @@ dependencies {
 
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
-    implementation("com.google.dagger:hilt-android:2.42")
-    kapt("com.google.dagger:hilt-compiler:2.42")
+    implementation("com.google.dagger:hilt-android:2.43.2")
+    kapt("com.google.dagger:hilt-compiler:2.43.2")
 
     implementation("androidx.asynclayoutinflater:asynclayoutinflater:1.0.0")
 
-    implementation("com.github.bumptech.glide:glide:4.13.1")
-    kapt("com.github.bumptech.glide:compiler:4.13.1")
+    implementation("com.github.bumptech.glide:glide:4.13.2")
+    kapt("com.github.bumptech.glide:compiler:4.13.2")
 
     implementation("id.zelory:compressor:3.0.1")
     
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.7.0")
-    implementation("androidx.appcompat:appcompat:1.4.2")
-    implementation("com.google.android.material:material:1.7.0-alpha02")
-    implementation("androidx.fragment:fragment-ktx:1.5.0")
-    implementation("androidx.activity:activity-ktx:1.5.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.5.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.1")
-    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.5.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.0")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.7.10")
+    implementation("androidx.appcompat:appcompat:1.5.0")
+    implementation("com.google.android.material:material:1.8.0-alpha01")
+    implementation("androidx.fragment:fragment-ktx:1.5.2")
+    implementation("androidx.activity:activity-ktx:1.5.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.5.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.5.1")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.1")
     implementation("com.github.skydoves:colorpickerview:2.2.3")
     implementation("androidx.viewpager2:viewpager2:1.0.0")
     implementation("androidx.recyclerview:recyclerview:1.2.1")

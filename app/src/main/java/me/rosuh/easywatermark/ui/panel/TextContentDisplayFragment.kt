@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.FragmentActivity
+import androidx.fragment.app.commitNow
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.databinding.FragmentTextContentDisplayBinding
 import me.rosuh.easywatermark.ui.adapter.TextPaintStyleAdapter
@@ -64,6 +65,12 @@ class TextContentDisplayFragment : BaseBindFragment<FragmentTextContentDisplayBi
 
     companion object {
         const val TAG = "TextContentDisplayFragment"
+
+        fun remove(activity: FragmentActivity) {
+            activity.supportFragmentManager.commitNow(true) {
+                activity.supportFragmentManager.findFragmentByTag(TAG)?.let { remove(it) }
+            }
+        }
 
         fun replaceShow(fa: FragmentActivity, containerId: Int): Boolean {
             val f = fa.supportFragmentManager.findFragmentByTag(TAG)

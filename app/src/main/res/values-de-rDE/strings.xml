@@ -121,5 +121,8 @@
     <string name="tips_use_this_template">Sind Sie sicher, dass Sie diese Vorlage verwenden möchten?</string>
     <string name="tips_delete_template">Sind Sie sicher, dass Sie diesen Eintrag löschen wollen?</string>
     <string name="tips_database_init_error">Datenbankinitialisierung misslungen</string>
+    <string name="title_tile_mode">Kachel-Modus</string>
+    <string name="tile_mode_title_repeat">Wiederholen</string>
+    <string name="tile_mode_title_decal">Einzeln</string>
 
 </resources>

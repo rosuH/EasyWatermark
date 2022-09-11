@@ -23,5 +23,9 @@ data class FuncTitleModel(
         object TextSize : FuncType() {
             val tag = "TextSize"
         }
+
+        object TileMode : FuncType() {
+            val tag = "TileMode"
+        }
     }
 }

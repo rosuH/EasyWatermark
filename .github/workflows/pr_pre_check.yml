@@ -2,7 +2,7 @@ name: PR Basic Check
 
 on:
   pull_request:
-    types: [opened, reopened]
+    types: [opened,reopened,synchronize]
     branches:
       - master
 jobs:
@@ -27,4 +27,4 @@ jobs:
             gradle-
 
       - name: Build apk with Gradle
-        run: bash ./gradlew assembleRelease
+        run: bash ./gradlew assembleRelease --scan --debug

@@ -1,5 +1,6 @@
 package me.rosuh.easywatermark.data.model
 
+import android.graphics.Shader
 import android.net.Uri
 import androidx.annotation.Keep
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository

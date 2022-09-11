@@ -121,5 +121,8 @@
     <string name="tips_use_this_template">Tem a certeza de que quer usar este modelo?</string>
     <string name="tips_delete_template">Tem a certeza de que quer apagar esta entrada?</string>
     <string name="tips_database_init_error">Inicialização da base de dados falhou</string>
+    <string name="title_tile_mode">Modo Tile</string>
+    <string name="tile_mode_title_repeat">Repetir</string>
+    <string name="tile_mode_title_decal">Único</string>
 
 </resources>

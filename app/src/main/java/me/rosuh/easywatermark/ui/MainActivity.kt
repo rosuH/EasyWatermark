@@ -10,6 +10,7 @@ import android.content.Intent.ACTION_SEND
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.PointF
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Build
@@ -82,6 +83,11 @@ class MainActivity : AppCompatActivity() {
 
     private val styleFunList: List<FuncTitleModel> by lazy {
         listOf(
+            FuncTitleModel(
+                FuncTitleModel.FuncType.TileMode,
+                getString(R.string.title_tile_mode),
+                R.drawable.ic_tile_mode
+            ),
             FuncTitleModel(
                 FuncTitleModel.FuncType.TextSize,
                 getString(R.string.title_text_size),
@@ -328,7 +334,6 @@ class MainActivity : AppCompatActivity() {
                 if (isAnimating) {
                     launchView.ivPhoto.updateUri(true, it)
                     selectTab(0)
-                    handleFuncItem(contentFunList[0])
                 } else {
                     launchView.ivPhoto.updateUri(false, it)
                 }
@@ -340,7 +345,10 @@ class MainActivity : AppCompatActivity() {
         }
         viewModel.imageList.observe(this) {
             photoListPreviewAdapter.selectedPos = viewModel.nextSelectedPos
-            photoListPreviewAdapter.submitList(it.first) {
+            photoListPreviewAdapter.submitList(it.first.toList()) {
+                if (it.second.not()) {
+                    return@submitList
+                }
                 launchView.rvPhotoList.apply {
                     post { smoothScrollToPosition(0) }
                 }
@@ -435,6 +443,12 @@ class MainActivity : AppCompatActivity() {
         launchView.ivPhoto.apply {
             onBgReady { palette ->
                 viewModel.updateColorPalette(palette)
+            }
+            onOffsetChanged {
+                viewModel.updateOffset(it)
+            }
+            onScaleEnd {
+                viewModel.updateTextSize(it)
             }
         }
         // functional panel in recyclerView
@@ -552,6 +566,9 @@ class MainActivity : AppCompatActivity() {
                 override fun onTabUnselected(tab: TabLayout.Tab?) {}
 
                 override fun onTabReselected(tab: TabLayout.Tab?) {
+                    if (tab?.position == 0) {
+                        handleFuncItem(contentFunList[0])
+                    }
                 }
             })
         }
@@ -569,10 +586,7 @@ class MainActivity : AppCompatActivity() {
         Log.i("handleFuncItem", "item = $item")
         when (item.type) {
             FuncTitleModel.FuncType.Text -> {
-                val isReselected = TextContentDisplayFragment.replaceShow(this, launchView.fcFunctionDetail.id)
-                if (isReselected) {
-                    TextWatermarkBSDFragment.safetyShow(this.supportFragmentManager)
-                }
+                TextContentDisplayFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.Icon -> {
                 preCheckStoragePermission {
@@ -599,6 +613,9 @@ class MainActivity : AppCompatActivity() {
             }
             FuncTitleModel.FuncType.TextSize -> {
                 TextSizePbFragment.replaceShow(this, launchView.fcFunctionDetail.id)
+            }
+            FuncTitleModel.FuncType.TileMode -> {
+                TileModeFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
         }
     }
@@ -756,6 +773,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onBackPressed() {
+        if (MyApp.recoveryMode) {
+            super.onBackPressed()
+            return
+        }
         if (launchView.mode == LaunchView.ViewMode.LaunchMode) {
             super.onBackPressed()
             return
@@ -783,6 +804,7 @@ class MainActivity : AppCompatActivity() {
         viewModel.clearData()
         launchView.ivPhoto.reset()
         bgTransformAnimator?.cancel()
+        TextContentDisplayFragment.remove(this)
         doApplyBgChanged()
         hideDetailPanel()
     }
