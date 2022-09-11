@@ -2,6 +2,7 @@ package me.rosuh.easywatermark.data.model
 
 import android.graphics.Shader
 import android.net.Uri
+import android.os.Build
 import androidx.annotation.FloatRange
 
 data class ImageInfo(
@@ -26,7 +27,11 @@ data class ImageInfo(
             Shader.TileMode.CLAMP.ordinal -> Shader.TileMode.CLAMP
             Shader.TileMode.MIRROR.ordinal -> Shader.TileMode.MIRROR
             Shader.TileMode.REPEAT.ordinal -> Shader.TileMode.REPEAT
-            else -> Shader.TileMode.DECAL
+            else -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                Shader.TileMode.DECAL
+            } else {
+                Shader.TileMode.CLAMP
+            }
         }
     }
 

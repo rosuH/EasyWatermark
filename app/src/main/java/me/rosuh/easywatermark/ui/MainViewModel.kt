@@ -297,7 +297,7 @@ class MainViewModel @Inject constructor(
                 )
             }
 
-            if (imageInfo.obtainTileMode() == Shader.TileMode.DECAL) {
+            if (imageInfo.obtainTileMode() == Shader.TileMode.CLAMP) {
                 canvas.translate(
                     0 + imageInfo.offsetX * mutableBitmap.width,
                     0 + imageInfo.offsetY * mutableBitmap.height
