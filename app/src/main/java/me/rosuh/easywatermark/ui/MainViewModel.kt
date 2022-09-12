@@ -30,6 +30,7 @@ import me.rosuh.easywatermark.data.repo.TemplateRepository
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.ui.widget.WaterMarkImageView
+import me.rosuh.easywatermark.ui.widget.utils.WaterMarkShader
 import me.rosuh.easywatermark.utils.FileUtils.Companion.outPutFolderName
 import me.rosuh.easywatermark.utils.bitmap.calculateInSampleSize
 import me.rosuh.easywatermark.utils.bitmap.decodeBitmapFromUri
@@ -257,14 +258,14 @@ class MainViewModel @Inject constructor(
             imageInfo.scaleY = 1 / matrixValues[Matrix.MSCALE_X]
             val bitmapPaint = TextPaint().applyConfig(imageInfo, tmpConfig, isScale = false)
             val layoutPaint = Paint()
-            layoutPaint.shader = when (waterMark.value?.markMode) {
+            val shader = when (waterMark.value?.markMode) {
                 WaterMarkRepository.MarkMode.Text -> {
                     WaterMarkImageView.buildTextBitmapShader(
                         imageInfo,
                         waterMark.value!!,
                         bitmapPaint,
                         Dispatchers.IO
-                    )?.bitmapShader
+                    )
                 }
                 WaterMarkRepository.MarkMode.Image -> {
                     val iconBitmapRect = decodeSampledBitmapFromResource(
@@ -288,7 +289,7 @@ class MainViewModel @Inject constructor(
                         bitmapPaint,
                         scale = true,
                         Dispatchers.IO
-                    )?.bitmapShader
+                    )
                 }
                 null -> return@withContext Result.failure(
                     null,
@@ -297,16 +298,29 @@ class MainViewModel @Inject constructor(
                 )
             }
 
+            layoutPaint.shader = shader?.bitmapShader
+
             if (imageInfo.obtainTileMode() == Shader.TileMode.CLAMP) {
                 canvas.translate(
                     0 + imageInfo.offsetX * mutableBitmap.width,
                     0 + imageInfo.offsetY * mutableBitmap.height
                 )
+                canvas.drawRect(
+                    0f,
+                    0f,
+                    (shader?.width ?: 0).toFloat(),
+                    (shader?.height ?: 0).toFloat(),
+                    layoutPaint
+                )
+            } else {
+                canvas.drawRect(
+                    0f,
+                    0f,
+                    mutableBitmap.width.toFloat(),
+                    mutableBitmap.height.toFloat(),
+                    layoutPaint
+                )
             }
-            canvas.drawRect(
-                0f, 0f,
-                mutableBitmap.width.toFloat(), mutableBitmap.height.toFloat(), layoutPaint
-            )
 
             return@withContext if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val imageCollection =

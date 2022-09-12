@@ -276,16 +276,23 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                     drawableBounds.left + curImageInfo.offsetX * drawableBounds.width(),
                     drawableBounds.top + curImageInfo.offsetY * drawableBounds.height()
                 )
+                drawRect(
+                    0f,
+                    0f,
+                    (layoutShader?.width ?: 0).toFloat(),
+                    (layoutShader?.height ?: 0).toFloat(),
+                    layoutPaint
+                )
             } else {
                 translate(drawableBounds.left, drawableBounds.top)
+                drawRect(
+                    0f,
+                    0f,
+                    drawableBounds.right - drawableBounds.left,
+                    drawableBounds.bottom - drawableBounds.top,
+                    layoutPaint
+                )
             }
-            drawRect(
-                0f,
-                0f,
-                drawableBounds.right - drawableBounds.left,
-                drawableBounds.bottom - drawableBounds.top,
-                layoutPaint
-            )
         }
     }
 
@@ -572,10 +579,8 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             }
             val tileMode = imageInfo.obtainTileMode()
             val showDebugRect = config.enableBounds
-            val rawWidth =
-                srcBitmap.width.toFloat().coerceAtLeast(1f).coerceAtMost(imageInfo.width.toFloat())
+            val rawWidth = srcBitmap.width.toFloat().coerceAtLeast(1f)
             val rawHeight = srcBitmap.height.toFloat().coerceAtLeast(1f)
-                .coerceAtMost(imageInfo.height.toFloat())
 
             val maxSize = calculateMaxSize(rawHeight, rawWidth)
 
@@ -691,9 +696,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             }
 
             val textWidth = staticLayout.width.toFloat().coerceAtLeast(1f)
-                .coerceAtMost(imageInfo.width.toFloat())
             val textHeight = staticLayout.height.toFloat().coerceAtLeast(1f)
-                .coerceAtMost(imageInfo.height.toFloat())
 
             val radians = Math.toRadians(
                 when (config.degree) {
