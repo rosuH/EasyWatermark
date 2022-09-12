@@ -19,5 +19,7 @@ object ProductFlavors {
 }
 
 object Versions {
-    const val kotlin = "1.5.30-RC"
+    const val kotlin = "1.7.10"
+    const val appCompat = "1.5.0"
+    const val materialDesign = "1.8.0-alpha01"
 }
