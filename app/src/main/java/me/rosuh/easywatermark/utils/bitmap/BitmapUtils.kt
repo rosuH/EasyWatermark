@@ -106,21 +106,25 @@ private fun getOrientation(
             }
             else -> {
                 // do not need to rotate bitmap
-                val cursor: Cursor? = context.contentResolver.query(
-                    uri,
-                    arrayOf(MediaStore.Images.ImageColumns.ORIENTATION),
-                    null,
-                    null,
-                    null
-                )
-                if (cursor?.count != 1) {
-                    cursor?.close()
+                try {
+                    val cursor: Cursor? = context.contentResolver.query(
+                        uri,
+                        arrayOf(MediaStore.Images.ImageColumns.ORIENTATION),
+                        null,
+                        null,
+                        null
+                    )
+                    if (cursor?.count != 1) {
+                        cursor?.close()
+                        return 0f
+                    }
+                    cursor.moveToFirst()
+                    val orientation: Int = cursor.getInt(0)
+                    cursor.close()
+                    return orientation.toFloat()
+                } catch (e: Exception) {
                     return 0f
                 }
-                cursor.moveToFirst()
-                val orientation: Int = cursor.getInt(0)
-                cursor.close()
-                return orientation.toFloat()
             }
         }
     }
