@@ -1,3 +1,5 @@
 files:
-  - source: fastlane/metadata/android/zh-CN/*.txt
-    translation: '%original_file_name%'
+  - source: /fastlane/metadata/android/zh-CN/*.txt
+    translation: /fastlane/metadata/android/%locale%/%original_file_name%
+  - source: /app/src/main/res/values/strings.xml
+    translation: /app/src/main/res/values-%android_code%/%original_file_name%
