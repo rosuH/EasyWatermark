@@ -18,6 +18,7 @@
     <string name="title_enter_text">Conteúdo</string>
     <string name="title_text_style">Fonte</string>
     <string name="title_text_size">Tamanho</string>
+    <string name="title_tile_mode">Modo Tile</string>
     <string name="title_horizon_layout">Horizontal</string>
     <string name="title_vertical_layout">Vertical</string>
     <string name="title_text_color">Cor</string>
@@ -38,7 +39,6 @@
     <string name="about_title_figma_link">Mais projetos</string>
     <string name="error_not_img">Selecione uma imagem</string>
     <string name="error_file_not_found">A imagem não pôde ser aberta ou não foi selecionada</string>
-    <string name="tips_pick_image">Vamos começar selecionando uma imagem</string>
     <string name="dialog_export_to_gallery">Exportar para Álbum</string>
     <string name="directly_save_tips">Salvar diretamente na galeria</string>
     <string name="share_tips">Compartilhar com outros apps</string>
@@ -66,19 +66,6 @@
     <string name="style_alpha">Nitidez</string>
     <string name="contributor_info">Se o relatório do problema for válido e uma falha for corrigida ou uma nova versão for publicada, seu nome ou e-mail aparecerá no aviso com histórico de modificações. Serão editados as informações sobre você, seu nome completo não aparecerá. \\n Se você quiser permanecer anônimo, por favor, marque: Quero permanecer anônimo.</string>
     <string name="dialog_change_log_title">Histórico de modificações</string>
-    <string name="dialog_change_log_content">
-        <![CDATA[
-         <h2 id="new-and-optimized"> Novo e otimizado </h2>
-         <ol>
-         <li>&nbsp; &nbsp; 🎨 Migrado para MD3 e totalmente compatível com o material que você! </li>
-         <li>&nbsp; &nbsp; 🥳 Confira a nova galeria para escolha de imagens! </li>
-         </ol>
-         <h2 id = "fixed"> Fixo </h2>
-         <ol>
-         <li>&nbsp;&nbsp; 🐛 Imagem perdida após a alteração do tema do sistema. (Graças a wudai) </li>
-         </ol>
-]]>
-    </string>
     <string name="tips_not_app_can_open_images">Nenhum gerenciador de arquivos detectado.</string>
     <string name="tips_choose_other_file_type">Imagem inválida</string>
     <string name="error_save_oom">Memória insuficiente, por favor limpe os processos em segundo plano e tente novamente</string>
@@ -88,6 +75,7 @@
     <string name="dialog_cancel_exist_confirm">Cancelar</string>
     <string name="dialog_content_exist_confirm">Descartar a edição?</string>
     <string name="dialog_out_put_title">Qualidade e Formato de saída</string>
+    <!--    -->
     <string name="text_paint_fill">Preencher</string>
     <string name="text_paint_stroke">Traço</string>
     <string name="text_typeface_normal">Normal</string>
@@ -95,20 +83,14 @@
     <string name="text_typeface_italic">Itálico</string>
     <string name="text_typeface_bold_italic">Negrito Itálico</string>
     <string name="dialog_check_out_in_github">Confira no GitHub</string>
-    <string name="dialog_save_exporting">Exportando</string>
     <string name="dialog_save_export_list_title">Exportar lista(%1$s)</string>
     <string name="dialog_open_in_gallery">Ver na Galeria</string>
     <string name="dialog_save_config_format">Formato</string>
     <string name="dialog_save_config_quality">Qualidade</string>
+    <string name="dialog_save_exporting">Exportando</string>
+    <string name="tips_pick_image">Vamos começar selecionando uma imagem</string>
     <string name="pick_via_system">Choose more…</string>
     <string name="gallery_pick_size">Choose %1$d</string>
-    <string name="tips_input_text_can_not_be_empty">O conteúdo não pode estar vazio</string>
-    <string name="dialog_title_template_edit">Editar modelo</string>
-    <string name="dialog_title_edit_watermark">\"Editar Marca D\'água\"</string>
-    <string name="dialog_title_template_title">Lista de Modelos</string>
-    <string name="tips_list_empty">Parece bem vazio, né?</string>
-    <string name="dialog_button_add_template">Adicionar</string>
-    <string name="back">Anterior</string>
     <string name="recovery_title">Modo de restauração</string>
     <string name="copy_success">Copiado</string>
     <string name="copy_failed">Cópia falhou</string>
@@ -116,13 +98,18 @@
     <string name="store_not_found">Não Instalado</string>
     <string name="recovery_mode_closed">Reiniciar para atualizar modificações</string>
     <string name="copy">Copiar registos</string>
-    <string name="turn_off_recovery_mode">Desligar o modo de recuperação</string>
     <string name="recovery_mode_tips">Oops, parece ter sofrido múltiplas colisões. Foi agora automaticamente colocado em modo de recuperação. Abaixo encontra-se a informação do seu dispositivo e a informação sobre o crash, seria muito útil se pudesse copiá-la e contactar-nos através dos seguintes métodos. Obrigado!</string>
+    <string name="turn_off_recovery_mode">Desligar o modo de recuperação</string>
+    <string name="tips_input_text_can_not_be_empty">O conteúdo não pode estar vazio</string>
+    <string name="back">Anterior</string>
+    <string name="dialog_title_template_edit">Editar modelo</string>
+    <string name="dialog_title_edit_watermark">\"Editar Marca D\'água\"</string>
+    <string name="dialog_title_template_title">Lista de Modelos</string>
+    <string name="tips_list_empty">Parece bem vazio, né?</string>
+    <string name="dialog_button_add_template">Adicionar</string>
     <string name="tips_use_this_template">Tem a certeza de que quer usar este modelo?</string>
     <string name="tips_delete_template">Tem a certeza de que quer apagar esta entrada?</string>
     <string name="tips_database_init_error">Inicialização da base de dados falhou</string>
-    <string name="title_tile_mode">Modo Tile</string>
     <string name="tile_mode_title_repeat">Repetir</string>
     <string name="tile_mode_title_decal">Único</string>
-
 </resources>
