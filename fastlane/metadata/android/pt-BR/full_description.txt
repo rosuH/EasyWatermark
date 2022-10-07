@@ -1,47 +1,44 @@
-Adicione de forma segura e com facilidade uma marca d'água a suas fotos privadas.
-Para evitar que elas sejam exploradas e vazadas pela PESSOA RUIM.
+Adicione de forma segura e com facilidade uma marca d'água a suas fotos privadas. Nenhuma permissão de acesso à Internet é solicitada, pode ficar tranquilo e sem medo de que suas fotos sejam comprometidas. Portanto, também serve para fazer emojis. ### Sensacional 👓
+É bem adequado para situações em que você precisa apresentar uma identidade com foto, uma identidade com foto à mão ou uma foto sensível. Exigências de foto de frente e verso e de documentos de identificação a cada volta, até mesmo fotos de identificação pessoal. Prévias do projeto, amostras, imagens com direitos autorais ou simplesmente simulações da ID.
 
-Portanto, também serve para fazer emojis.
-Afinal de contas, App suporta a marca d'água com efeitos espectrais.
+当然，也适用于制作表情包，毕竟支持图片水印，效果十分鬼畜。 
 
 ## Funcionalidades
-### Sensacional 👓
+### 当时我就念了一首诗 👓
 
-Aplicação exclusivamente offline, código disponível para verificação.
-Tanto o espaçamento vertical e horizontal como a cor do brilho e da tonalidade são ajustáveis à vontade.
+单纯离线本地应用，代码开源想看就看
+横竖间距均可调节，颜色明暗随心转换
 Pode girar livremente em todos os ângulos e manipular tamanhos, os texto e imagens podem ser imprimindos.
-A marca d'água está visível em toda a imagem e seria um pouco difícil para os mal intencionados a removê-la.
+水印重复全图铺满，坏蛋除水印有点难
 
-### Importante
-
+### 正经地说（推了推眼镜）
 - Segurança:
-
-O código é completamente livre e usa a licença MIT, fique a vontade para modificar e remover o código que você acha problemático ;)
-Nenhuma permissão de acesso à Internet é solicitada, pode ficar tranquilo e sem medo de que suas fotos sejam comprometidas. Usuários com API >= 29 não precisam de nenhuma permissão. (com 28 e menor, os usuários precisam conceder a permissões de armazenamento para acessar e armazenar as fotos)
+代码完全开源，使用宽松的 MIT 协议，您可以随意 Fork 自己修改并删除您认为有问题的代码 ;)
+(com 28 e menor, os usuários precisam conceder a permissões de armazenamento para acessar e armazenar as fotos)
 Não há estatísticas ou identificações de dispositivos, ou até mesmo relatórios de falhas (portanto, se você encontrar uma falha, por favor, compartilhe conosco as informações sobre o problema >_<).
-Estamos renunciando a conveniente coleção de terceiros via SDK e a várias estatísticas para que você possa usá-lo com confiança. O que é seu, é seu.
+Estamos renunciando a conveniente coleção de terceiros via SDK e a várias estatísticas para que você possa usá-lo com confiança.
 - Layout: suporte para intervalos horizontais e verticais entre as marcas d'água que repita automaticamente em toda a imagem.
 - Estilo: a cor da fonte, transparência, tamanho e ângulo de rotação podem ser ajustados.
 - Conteúdo: Suporte para marca d'água de texto e de imagem.
 
 ## Uso
-Você pode usá-lo como quiser. É bem adequado para situações em que você precisa apresentar uma identidade com foto, uma identidade com foto à mão ou uma foto sensível. Exemplo:
+你想怎么用就怎么用。比较适合于需要提交证件照、手持证件照或敏感照片等情况。例如：
 
-Exigências de foto de frente e verso e de documentos de identificação a cada volta, até mesmo fotos de identificação pessoal.
-Prévias do projeto, amostras, imagens com direitos autorais ou simplesmente simulações da ID.
-Texto de referência.
+国内各种实名制，动不动就上传身份证正反照片，甚至是手持证件照。
+项目前期预览图、小样、版权或单纯的恶搞图片
+参考文案：
 
 Esta foto é para xx apenas para uso de xxx, nenhuma outra utilização permitida.
 
-Você pode ajustar a transparência, para não esconder as informações-chave.
+可以把不透明度调低，不要挡住关键信息即可，一般审核都没问题。
 
 (Por enquanto) não podemos (infelizmente) impedir que a nossa informação não seja enviada sem a nosso permissão, ou mesmo (infelizmente) impedir que a informação seja vazada, mas podemos reduzir o valor da informação que está sendo vazada.
 
-Mesmo que seja (provavelmente) inútil no final das contas, pelo menos você pode complicar um pouco as coisas.
+即便最后（可能）没什么用，起码可以恶心泄漏者一把。
 
 ## IU
-Desenvolvido pelo renomado guru da IU @tovi (👏🤪)
-Qualquer coisa que você acha que não funciona bem é minha UI restore que não funciona, e não tem nada a ver com o projeto da UI. xD
+由驰名海内外（👏🤪）的 UI 大佬 @tovi 操刀设计
+Mesmo que seja (provavelmente) inútil no final das contas, pelo menos você pode complicar um pouco as coisas. Desenvolvido pelo renomado guru da IU @tovi (👏🤪) Qualquer coisa que você acha que não funciona bem é minha UI restore que não funciona, e não tem nada a ver com o projeto da UI.
 Este App foi desenvolvido por @tovi, por isso todos os direitos da IU e recursos de design relacionados pertencem a ele e não podem ser usados sem permissão por qualquer pessoa ou organização.
 
 ## Licença de software livre.
@@ -52,4 +49,4 @@ skydoves/ColorPickerView
 material-components/material-components-android
 
 ## Feedback e contribuição
-Esperamos para seus comentários e sugestões em seção de assuntos, também você pode contribuir com seu código, enviando um PR diretamente. Naturalmente, você também pode entrar em contato diretamente com o desenvolvedor via Telegram ou e-mail e entraremos em contato com você em breve.
+我们非常欢迎您在 issues 区发表您任何意见与建议，或者直接提交 PR 以贡献您的代码。 当然您也可以直接联系开发者的 Telegram 或邮件，我们将择期回复。
