@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Easy WaterMark</string>
-    <string name="action_save">Speichern</string>
     <string name="action_pick">Bild auswählen</string>
+    <string name="action_save">Speichern</string>
     <string name="action_settings">Über</string>
     <string name="title_layout">Layout</string>
     <string name="title_style">Stil</string>
@@ -12,15 +12,18 @@
     <string name="tips_confirm_dialog">Bestätigen</string>
     <string name="tips_cancel_dialog">Abbrechen</string>
     <string name="tips_save_ok">Speichern erfolgreich</string>
+    <string name="tips_share_ok">Erfolgreich geteilt</string>
     <string name="tips_error">Fehler</string>
     <string name="tips_share_image">Bild teilen</string>
     <string name="title_enter_text">Inhalt</string>
     <string name="title_text_style">Stil</string>
     <string name="title_text_size">Größe</string>
+    <string name="title_tile_mode">Kachel-Modus</string>
     <string name="title_horizon_layout">Horizontal</string>
     <string name="title_vertical_layout">Vertikal</string>
     <string name="title_text_color">Farbe</string>
     <string name="title_text_rotate">Winkel</string>
+    <string name="request_permission_failed">Berechtigung abgelehnt</string>
     <string name="about_title_about">Über</string>
     <string name="about_title_info">Informationen</string>
     <string name="about_title_options">Optionen</string>
@@ -36,7 +39,6 @@
     <string name="about_title_figma_link">Mehr Projekte</string>
     <string name="error_not_img">Bild auswählen</string>
     <string name="error_file_not_found">Bild konnte nicht geöffnet werden</string>
-    <string name="tips_pick_image">Bild auswählen um zu beginnen</string>
     <string name="dialog_export_to_gallery">In Album exportieren</string>
     <string name="directly_save_tips">Bearbeitetes Bild speichern</string>
     <string name="share_tips">Bearbeitetes Bild teilen</string>
@@ -58,71 +60,56 @@
     <string name="msg_crash">Absturz melden? Dies kann uns bei der Entwicklung helfen. Es werden hierbei keine persönlichen Daten gesammelt.</string>
     <string name="crash_mail">E-Mail senden</string>
     <string name="tip_not_mail_found">Mail-Adresse wurde nicht erkannt. Alternativ kann die Fehlermeldung im App Store oder GitHub eingefügt werden.</string>
+    <string name="tips_content_size_performance">Je größer das Bild ist, desto rechenintensiver wird die Bearbeitung sein.</string>
+    <string name="tips_content_mode_button">Klicken für Text- oder Bildmodifikationen</string>
+    <string name="config_default_water_mark_text">NICHT FÜR DEN WEITERVERTRIEB</string>
     <string name="style_alpha">Alpha</string>
+    <string name="contributor_info">Falls ein gemeldetes Problem zur Fehlerbehebung beigetragen hat, werden Name und Mail Adresse im Update Log Popup hinzugefügt. Wir werden sensible Informationen wie den vollen Namen verschleihern. \\n Du kannst diesem schriftlich widersprechen.</string>
     <string name="dialog_change_log_title">Änderungen</string>
     <string name="tips_not_app_can_open_images">Kein Dateimanager erkannt.</string>
     <string name="tips_choose_other_file_type">Ungültiges Bild</string>
+    <string name="error_save_oom">Nicht genügend Speicher vorhanden. Bitte Hintergrundprozesse beenden und erneut versuchen.</string>
+    <string name="error_share_uri_is_null">Die Uri der Ausgabe ist leer. Bitte ein Feedback an die Entwickler senden. Danke</string>
+    <string name="dev_comment">Jede hinreichend fortschrittliche Technologie ist von Magie nicht zu unterscheiden.</string>
+    <string name="dialog_title_exist_confirm">Tipps</string>
     <string name="dialog_cancel_exist_confirm">Abbruch</string>
     <string name="dialog_content_exist_confirm">Änderungen verwerfen?</string>
     <string name="dialog_out_put_title">Ausgabeformat und Qualität</string>
-    <string name="tips_content_mode_button">Klicken für Text- oder Bildmodifikationen</string>
-    <string name="config_default_water_mark_text">NICHT FÜR DEN WEITERVERTRIEB</string>
-    <string name="dialog_title_exist_confirm">Tipps</string>
-    <string name="error_save_oom">Nicht genügend Speicher vorhanden. Bitte Hintergrundprozesse beenden und erneut versuchen.</string>
-    <string name="request_permission_failed">Berechtigung abgelehnt</string>
-    <string name="tips_share_ok">Erfolgreich geteilt</string>
-    <string name="contributor_info">Falls ein gemeldetes Problem zur Fehlerbehebung beigetragen hat, werden Name und Mail Adresse im Update Log Popup hinzugefügt. Wir werden sensible Informationen wie den vollen Namen verschleihern. \\n Du kannst diesem schriftlich widersprechen.</string>
-    <string name="tips_content_size_performance">Je größer das Bild ist, desto rechenintensiver wird die Bearbeitung sein.</string>
-    <string name="dev_comment">Jede hinreichend fortschrittliche Technologie ist von Magie nicht zu unterscheiden.</string>
-    <string name="error_share_uri_is_null">Die Uri der Ausgabe ist leer. Bitte ein Feedback an die Entwickler senden. Danke</string>
+    <!--    -->
     <string name="text_paint_fill">Füllung</string>
     <string name="text_paint_stroke">Strich</string>
     <string name="text_typeface_normal">Normal</string>
     <string name="text_typeface_bold">Fett</string>
     <string name="text_typeface_italic">Kursiv</string>
     <string name="text_typeface_bold_italic">Fett und Kursiv</string>
-    <string name="dialog_change_log_content">
-        <![CDATA[
-        <h2 id="new-and-optimized">New and Optimized</h2>
-        <ol>
-        <li>&nbsp;&nbsp;🎨 Migrated to MD3 and fully supported Material You!</li>
-        <li>&nbsp;&nbsp;🥳 Check out the new gallery for image choosing!</li>
-        </ol>
-        <h2 id="fixed">Fixed</h2>
-        <ol>
-        <li>&nbsp;&nbsp;🐛 Image lost after the system theme changed. (Thanks to wudai)</li>
-        </ol>
-]]>
-    </string>
     <string name="dialog_check_out_in_github">Schau mal auf GitHub</string>
-    <string name="dialog_save_exporting">Export wird ausgeführt</string>
     <string name="dialog_save_export_list_title">Liste exportieren(%1$s)</string>
     <string name="dialog_open_in_gallery">In Galerie anzeigen</string>
     <string name="dialog_save_config_format">Format</string>
     <string name="dialog_save_config_quality">Qualität</string>
+    <string name="dialog_save_exporting">Export wird ausgeführt</string>
+    <string name="tips_pick_image">Bild auswählen um zu beginnen</string>
     <string name="pick_via_system">Choose more…</string>
     <string name="gallery_pick_size">Choose %1$d</string>
-    <string name="tips_input_text_can_not_be_empty">Inhalt kann nicht leer sein</string>
     <string name="recovery_title">Wiederherstellungsmodus</string>
-    <string name="dialog_title_template_edit">Vorlage bearbeiten</string>
-    <string name="dialog_title_edit_watermark">Wasserzeichen editieren</string>
-    <string name="dialog_title_template_title">Vorlagenliste</string>
-    <string name="tips_list_empty">Sieht recht leer aus, was?</string>
-    <string name="dialog_button_add_template">Hinzufügen</string>
-    <string name="back">Zurück</string>
     <string name="copy_success">Kopiert</string>
     <string name="copy_failed">Kopieren fehlgeschlagen</string>
     <string name="telegram_not_found">Nicht installiert</string>
     <string name="store_not_found">Nicht installiert</string>
     <string name="recovery_mode_closed">Neustart erforderlich</string>
     <string name="copy">Protokolle kopieren</string>
-    <string name="turn_off_recovery_mode">Wiederherstellungsmodus ausschalten</string>
     <string name="recovery_mode_tips">Ups, Sie scheinen mehrere Abstürze erlebt zu haben. Sie sind nun automatisch in den Wiederherstellungsmodus versetzt worden. Nachstehend finden Sie Ihre Geräte- und Absturzinformationen. Es wäre sehr hilfreich, wenn Sie diese kopieren und uns über die folgenden Methoden kontaktieren könnten. Ich danke Ihnen!</string>
+    <string name="turn_off_recovery_mode">Wiederherstellungsmodus ausschalten</string>
+    <string name="tips_input_text_can_not_be_empty">Inhalt kann nicht leer sein</string>
+    <string name="back">Zurück</string>
+    <string name="dialog_title_template_edit">Vorlage bearbeiten</string>
+    <string name="dialog_title_edit_watermark">Wasserzeichen editieren</string>
+    <string name="dialog_title_template_title">Vorlagenliste</string>
+    <string name="tips_list_empty">Sieht recht leer aus, was?</string>
+    <string name="dialog_button_add_template">Hinzufügen</string>
     <string name="tips_use_this_template">Sind Sie sicher, dass Sie diese Vorlage verwenden möchten?</string>
     <string name="tips_delete_template">Sind Sie sicher, dass Sie diesen Eintrag löschen wollen?</string>
     <string name="tips_database_init_error">Datenbankinitialisierung misslungen</string>
-    <string name="title_tile_mode">Kachel-Modus</string>
     <string name="tile_mode_title_repeat">Wiederholen</string>
     <string name="tile_mode_title_decal">Einzeln</string>
-
 </resources>
