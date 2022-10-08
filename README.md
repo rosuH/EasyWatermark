@@ -7,6 +7,11 @@
   <a href="https://hosted.weblate.org/engage/easywatermark/en/">
     <img src="https://hosted.weblate.org/widgets/easywatermark/en/svg-badge.svg" alt="translate status" />
   </a>
+  &nbsp;
+  &nbsp;
+  <a href="https://app.fossa.com/projects/git%2Bgithub.com%2FrosuH%2FEasyWatermark?ref=badge_small" alt="FOSSA Status">
+    <img src="https://app.fossa.com/api/projects/git%2Bgithub.com%2FrosuH%2FEasyWatermark.svg?type=small"/>
+  </a>
 </p>
 
 <p align="center">  
