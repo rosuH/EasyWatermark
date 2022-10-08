@@ -2,6 +2,16 @@
 
 <p align="center">
   <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/rosuh/easywatermark">
+  &nbsp;
+  &nbsp;
+  <a href="https://hosted.weblate.org/engage/easywatermark/en/">
+    <img src="https://hosted.weblate.org/widgets/easywatermark/en/svg-badge.svg" alt="translate status" />
+  </a>
+  &nbsp;
+  &nbsp;
+  <a href="https://app.fossa.com/projects/git%2Bgithub.com%2FrosuH%2FEasyWatermark?ref=badge_small" alt="FOSSA Status">
+    <img src="https://app.fossa.com/api/projects/git%2Bgithub.com%2FrosuH%2FEasyWatermark.svg?type=small"/>
+  </a>
 </p>
 
 <p align="center">  
@@ -27,17 +37,7 @@ Securely, easily add a watermark to your sensitive photos.</br>To prevent them f
   <a href="https://f-droid.org/packages/me.rosuh.easywatermark/"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" width="auto" height="64px"/></a>
 </p>
 
-## Characteristics
-
-> Exciting 👓
-
-- Purely offline local applications , code to see on open source.
-- Vertical and horizontal spacing can be adjusted, the color of light and dark change at will.
-- Rotate freely in all sizes and angles, text and pictures can be printed.
-- The watermark repeats all over the picture, and it's a little hard for the bad guys to remove it.
-
-> Seriously (pushes up glasses)
-
+## Features
 - **Security**.
   - The code is completely open source and feel free to FORK your won, ;)
   - Pure offline, no need to worry about your photos being leaked. Users with API >= 29 don't even
@@ -64,7 +64,7 @@ Developer-led download channels:
 
 All other channels are not developer-driven, so please screen them carefully before downloading and using them.
 
-## How to ?
+## Usage
 You can use it however you want. It is more suitable for situations where you need to submit a photo ID, a hand-held photo ID or a sensitive photo. Example.
 - Various real names in the country, uploading front and back photos of ID cards at every turn, even handheld ID photos.
 - Pre-project previews, samples, copyrighted or simply spoofed images
@@ -81,9 +81,7 @@ You can turn down the transparency, just don't block the key information.
 ## UI
 
 - Designed by [@tovi](https://www.figma.com/@tovi) with ❤️.
-  - Any UI or UX you think doesn't great well is my coding issue, and has nothing to do with the UI
-    draft. xD
-  
+
 > This app was designed by [@tovi](https://www.figma.com/@tovi), so all rights to the UI and related design resources belong to him and may not be used without permission from any person or organization.
 
 ## Credit
@@ -100,6 +98,14 @@ You can turn down the transparency, just don't block the key information.
 We welcome your comments and suggestions in the issues section, or you can contribute your code by
 submitting a PR directly to us. Of course, you can also contact the developer directly via telegram
 or email and we'll get back to you shortly.
+
+## Localization
+
+We welcome your localization assistance in any way, including but not limited to direct involvement in writing code, creating issues, emails, etc., or we also recommend using the [WebLate](https://hosted.weblate.org/engage/easywatermark/) platform for translation assistance, thank you.
+
+<a href="https://hosted.weblate.org/engage/easywatermark/en/">
+  <img src="https://hosted.weblate.org/widgets/easywatermark/en/88x31-grey.png" alt="翻译状态" />
+</a>
 
 ## [Privacy policy](https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy.md)
 
