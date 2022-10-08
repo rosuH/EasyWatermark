@@ -33,7 +33,7 @@
     <string name="directly_save_tips">Lagre det redigerte bilde direkte i galleriet</string>
     <string name="share_tips">Del det redigerte bildet med andre programmer</string>
     <string name="hint_tips_input_water_mark_text">Skriv inn vannmerketekst</string>
-    <string name="app_name">Easy WaterMark</string>
+    <string name="app_name">Easy Watermark</string>
     <string name="tips_do_not_choose_image">Ingen bilder valgt</string>
     <string name="request_permission_failed">Fikk ikke tilgang</string>
     <string name="error_file_not_found">Bilde kunne ikke åpnes, eller ble ikke valgt</string>
