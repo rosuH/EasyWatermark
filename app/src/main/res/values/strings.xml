@@ -82,7 +82,7 @@
     <string name="tips_not_app_can_open_images">No file manager detected.</string>
     <string name="tips_choose_other_file_type">Invalid image</string>
     <string name="error_save_oom">Insufficient memory, please clean up the background and try again</string>
-    <string name="error_share_uri_is_null">The output Uri is empty, please contact the developer for feedback, thank you</string>
+    <string name="error_share_uri_is_null">The output URI is empty. Please contact the developer for feedback. Thank you.</string>
     <string name="dev_comment">Any sufficiently advanced technology is indistinguishable from magic.</string>
     <string name="dialog_title_exist_confirm">Warning</string>
     <string name="dialog_cancel_exist_confirm">Cancel</string>
@@ -97,7 +97,6 @@
     <string name="email_subject" translatable="false">[EasyWaterMark] Crash info</string>
     <string name="open_source_desc_compressor" translatable="false">"Compressor is a lightweight and powerful android image compression library. Compressor will allow you to compress large photos into smaller sized photos with very less or negligible loss in quality of the image. "</string>
     <string name="open_source_desc_gif" translatable="false">Bundled GIFLib via JNI is used to render frames. This way should be more efficient than WebView or Movie classes.</string>
-
     <!--    -->
     <string name="text_paint_fill">Fill</string>
     <string name="text_paint_stroke">Stroke</string>
@@ -121,7 +120,7 @@
     <string name="store_not_found">Not Store was installed.</string>
     <string name="recovery_mode_closed">It\'s closed, please try again</string>
     <string name="copy">Copy error message</string>
-    <string name="recovery_mode_tips">Oops, you seem to have experienced multiple crashes. It has now automatically entered recovery mode. Below is your device information and the crash information, it would be very helpful if you could copy it and contact us via the following methods to resolve the issue. Thank you!</string>
+    <string name="recovery_mode_tips">Entered recovery mode due to multiple crashes. Sending the device and crash info below via the following methods may resolve the issue. Thank you.</string>
     <string name="turn_off_recovery_mode">Turn off recovery mode</string>
     <string name="tips_input_text_can_not_be_empty">Content cannot be empty</string>
     <string name="back">Back</string>
@@ -130,12 +129,9 @@
     <string name="dialog_title_template_title">Template List</string>
     <string name="tips_list_empty">Look pretty empty</string>
     <string name="dialog_button_add_template">Add</string>
-    <string name="tips_use_this_template">Sure you want to use this template?</string>
-    <string name="tips_delete_template">Are you sure you want to delete the entry?</string>
+    <string name="tips_use_this_template">Use this template\?</string>
+    <string name="tips_delete_template">Delete the entry\?</string>
     <string name="tips_database_init_error">Database init failed.</string>
-
     <string name="tile_mode_title_repeat">Repeat</string>
-
     <string name="tile_mode_title_decal">Single</string>
-
 </resources>
