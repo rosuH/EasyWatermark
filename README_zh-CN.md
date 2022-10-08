@@ -2,9 +2,13 @@
 
 <p align="center">
   <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/rosuh/easywatermark">
+  &nbsp;
+  &nbsp;
   <a href="https://hosted.weblate.org/engage/easywatermark/zh_Hans/">
     <img src="https://hosted.weblate.org/widgets/easywatermark/zh_Hans/svg-badge.svg" alt="翻译状态" />
   </a>
+  &nbsp;
+  &nbsp;
   <a href="https://app.fossa.com/projects/git%2Bgithub.com%2FrosuH%2FEasyWatermark?ref=badge_small" alt="FOSSA Status">
     <img src="https://app.fossa.com/api/projects/git%2Bgithub.com%2FrosuH%2FEasyWatermark.svg?type=small"/>
   </a>
