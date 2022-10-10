@@ -27,7 +27,7 @@
     <string name="about_title_output">Ausgabeformat</string>
     <string name="about_title_version">Version</string>
     <string name="about_title_rating">Bewerte unsere App</string>
-    <string name="about_title_feed_back">Feedback</string>
+    <string name="about_title_feed_back">Rückmeldung</string>
     <string name="about_title_update_log">Änderungen</string>
     <string name="about_title_open_source">Quelloffen</string>
     <string name="about_title_author">Autor</string>
@@ -49,7 +49,7 @@
     <string name="tips_ok">Bestätigen</string>
     <string name="hint_tips_alpha_100">Alpha 100%</string>
     <string name="tips_cancel_output">Abbrechen</string>
-    <string name="tips_need_compress_img">Nicht genügend Speicher vorhanden.</string>
+    <string name="tips_need_compress_img">Unzureichender Speicherplatz oder das Bild ist zu groß</string>
     <string name="tips_compressing">Komprimiere…</string>
     <string name="tips_compress_images">Komprimiere Bild</string>
     <string name="tips_compress_ok">Bildkompression beendet. OK klicken um zu exportieren.</string>
@@ -57,7 +57,7 @@
     <string name="tips_tip_title">Absturz erkannt</string>
     <string name="msg_crash">Absturz melden? Dies kann uns bei der Entwicklung helfen. Es werden hierbei keine persönlichen Daten gesammelt.</string>
     <string name="crash_mail">E-Mail senden</string>
-    <string name="tip_not_mail_found">Mail-Adresse wurde nicht erkannt. Alternativ kann die Fehlermeldung im App Store oder GitHub eingefügt werden.</string>
+    <string name="tip_not_mail_found">Es wurde kein E-Mail-Client erkannt. Alternativ können Sie die Fehlermeldung in den App Store oder GitHub einfügen.</string>
     <string name="style_alpha">Alpha</string>
     <string name="dialog_change_log_title">Änderungen</string>
     <string name="tips_not_app_can_open_images">Kein Dateimanager erkannt.</string>
@@ -68,13 +68,13 @@
     <string name="tips_content_mode_button">Klicken für Text- oder Bildmodifikationen</string>
     <string name="config_default_water_mark_text">NICHT FÜR DEN WEITERVERTRIEB</string>
     <string name="dialog_title_exist_confirm">Tipps</string>
-    <string name="error_save_oom">Nicht genügend Speicher vorhanden. Bitte Hintergrundprozesse beenden und erneut versuchen.</string>
+    <string name="error_save_oom">Nicht genügend Speicher vorhanden. Bitte Hintergrundprozesse beenden und erneut versuchen</string>
     <string name="request_permission_failed">Berechtigung abgelehnt</string>
     <string name="tips_share_ok">Erfolgreich geteilt</string>
-    <string name="contributor_info">Falls ein gemeldetes Problem zur Fehlerbehebung beigetragen hat, werden Name und Mail Adresse im Update Log Popup hinzugefügt. Wir werden sensible Informationen wie den vollen Namen verschleihern. \\n Du kannst diesem schriftlich widersprechen.</string>
+    <string name="contributor_info">Falls ein gemeldetes Problem zur Fehlerbehebung beigetragen hat, werden Name und E-Mail-Adresse im Aktualisierungsprotokollspopup hinzugefügt. Wir werden sensible Informationen wie den vollen Namen verschleihern. \\n Du kannst diesem schriftlich widersprechen.</string>
     <string name="tips_content_size_performance">Je größer das Bild ist, desto rechenintensiver wird die Bearbeitung sein.</string>
     <string name="dev_comment">Jede hinreichend fortschrittliche Technologie ist von Magie nicht zu unterscheiden.</string>
-    <string name="error_share_uri_is_null">Die Uri der Ausgabe ist leer. Bitte ein Feedback an die Entwickler senden. Danke</string>
+    <string name="error_share_uri_is_null">Die URI der Ausgabe ist leer. Bitte Rückmeldung an die Entwickler senden. Danke.</string>
     <string name="text_paint_fill">Füllung</string>
     <string name="text_paint_stroke">Strich</string>
     <string name="text_typeface_normal">Normal</string>
@@ -100,8 +100,8 @@
     <string name="dialog_open_in_gallery">In Galerie anzeigen</string>
     <string name="dialog_save_config_format">Format</string>
     <string name="dialog_save_config_quality">Qualität</string>
-    <string name="pick_via_system">Choose more…</string>
-    <string name="gallery_pick_size">Choose %1$d</string>
+    <string name="pick_via_system">mehr …</string>
+    <string name="gallery_pick_size">%1$d auswählen</string>
     <string name="tips_input_text_can_not_be_empty">Inhalt kann nicht leer sein</string>
     <string name="recovery_title">Wiederherstellungsmodus</string>
     <string name="dialog_title_template_edit">Vorlage bearbeiten</string>
@@ -112,17 +112,16 @@
     <string name="back">Zurück</string>
     <string name="copy_success">Kopiert</string>
     <string name="copy_failed">Kopieren fehlgeschlagen</string>
-    <string name="telegram_not_found">Nicht installiert</string>
-    <string name="store_not_found">Nicht installiert</string>
+    <string name="telegram_not_found">Telegram ist nicht installiert.</string>
+    <string name="store_not_found">Not Store wurde installiert.</string>
     <string name="recovery_mode_closed">Neustart erforderlich</string>
     <string name="copy">Protokolle kopieren</string>
     <string name="turn_off_recovery_mode">Wiederherstellungsmodus ausschalten</string>
-    <string name="recovery_mode_tips">Ups, Sie scheinen mehrere Abstürze erlebt zu haben. Sie sind nun automatisch in den Wiederherstellungsmodus versetzt worden. Nachstehend finden Sie Ihre Geräte- und Absturzinformationen. Es wäre sehr hilfreich, wenn Sie diese kopieren und uns über die folgenden Methoden kontaktieren könnten. Ich danke Ihnen!</string>
-    <string name="tips_use_this_template">Sind Sie sicher, dass Sie diese Vorlage verwenden möchten?</string>
-    <string name="tips_delete_template">Sind Sie sicher, dass Sie diesen Eintrag löschen wollen?</string>
-    <string name="tips_database_init_error">Datenbankinitialisierung misslungen</string>
+    <string name="recovery_mode_tips">Der Wiederherstellungsmodus wurde aufgrund mehrerer Abstürze aktiviert. Wenn Sie das Gerät und die Absturzinformationen mit den folgenden Methoden senden, kann das Problem möglicherweise behoben werden. Vielen Dank.</string>
+    <string name="tips_use_this_template">Diese Vorlage verwenden\?</string>
+    <string name="tips_delete_template">Den Eintrag löschen\?</string>
+    <string name="tips_database_init_error">Datenbankinitialisierung misslungen.</string>
     <string name="title_tile_mode">Kachel-Modus</string>
     <string name="tile_mode_title_repeat">Wiederholen</string>
     <string name="tile_mode_title_decal">Einzeln</string>
-
 </resources>

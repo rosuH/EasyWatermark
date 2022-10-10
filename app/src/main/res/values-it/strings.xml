@@ -29,7 +29,7 @@
     <string name="about_title_output">Formato di output</string>
     <string name="about_title_version">Versione</string>
     <string name="about_title_rating">Valuta la nostra app</string>
-    <string name="about_title_feed_back">Feedback</string>
+    <string name="about_title_feed_back">Commenti</string>
     <string name="about_title_update_log">Registro delle modifiche</string>
     <string name="about_title_open_source">Licenze open source</string>
     <string name="about_title_author">Autore</string>
@@ -57,7 +57,7 @@
     <string name="tips_compress_create_uri_failed">Compressione terminata, ma creazione dell\'Uri fallita. Riavvia l\'app e riprova. %1$s</string>
     <string name="tips_tip_title">Arresto anomalo rilevato</string>
     <string name="msg_crash">Vuoi segnalare questo arresto anomalo? Può aiutarci a migliorare l\'app! Ciò non raccoglierà alcuna informazione personale.</string>
-    <string name="crash_mail">Invia email</string>
+    <string name="crash_mail">Invia un\'e-mail</string>
     <string name="tip_not_mail_found">Nessun client di posta elettronica rilevato. In alternativa, puoi incollare il messaggio di errore nell\'app store o su GitHub.</string>
     <string name="tips_content_size_performance">Più grande è l\'immagine, più è difficile visualizzarla in tempo reale.</string>
     <string name="tips_content_mode_button">Clicca per modificare il testo o l\'immagine</string>
@@ -68,13 +68,12 @@
     <string name="tips_not_app_can_open_images">Nessun file manager rilevato.</string>
     <string name="tips_choose_other_file_type">Immagine non valida</string>
     <string name="error_save_oom">Memoria insufficiente, ripulisci in background e riprova</string>
-    <string name="error_share_uri_is_null">L\'Uri di output è vuoto, si prega di contattare lo sviluppatore per un feedback, grazie</string>
+    <string name="error_share_uri_is_null">L\'URI di uscita è vuoto. Si prega di contattare lo sviluppatore per i tuoi commenti. Grazie.</string>
     <string name="dev_comment">Qualsiasi tecnologia sufficientemente avanzata è indistinguibile dalla magia.</string>
     <string name="dialog_title_exist_confirm">Attenzione</string>
     <string name="dialog_cancel_exist_confirm">Annulla</string>
     <string name="dialog_content_exist_confirm">Scartare le modifiche?</string>
     <string name="dialog_out_put_title">Qualità e formato di output</string>
-
     <!--    -->
     <string name="text_paint_fill">Riempimento</string>
     <string name="text_paint_stroke">Contorno</string>
@@ -93,25 +92,24 @@
     <string name="gallery_pick_size">Scegli %1$d</string>
     <string name="tips_input_text_can_not_be_empty">Il contenuto non può essere vuoto</string>
     <string name="dialog_title_template_edit">Modifica modello</string>
-    <string name="dialog_title_edit_watermark">Edit filigrana</string>
+    <string name="dialog_title_edit_watermark">Modifica il filigrana</string>
     <string name="dialog_title_template_title">Elenco modelli</string>
-    <string name="tips_list_empty">\"È un po\' vuoto qui, non trovi?\"</string>
+    <string name="tips_list_empty">È un po\' vuoto qui</string>
     <string name="dialog_button_add_template">Aggiungi</string>
-    <string name="back">Atgal</string>
+    <string name="back">Indietro</string>
     <string name="recovery_title">Recovery mode</string>
     <string name="copy_success">Copiato</string>
     <string name="copy_failed">Copia non riuscita</string>
-    <string name="telegram_not_found">Non installato</string>
-    <string name="store_not_found">Non installato</string>
-    <string name="recovery_mode_closed">\"E\' necessario riavviare l\'applicazione per applicare i cambiamenti\"</string>
-    <string name="copy">Copiar registos</string>
+    <string name="telegram_not_found">Telegram non è installato.</string>
+    <string name="store_not_found">È stato installato Not Store.</string>
+    <string name="recovery_mode_closed">È chiuso, riprova</string>
+    <string name="copy">Copia il messaggio di errore</string>
     <string name="turn_off_recovery_mode">Disattivare la modalità di recupero</string>
-    <string name="recovery_mode_tips">Ops, sembra che si siano verificati più arresti anomali. A questo punto è stata attivata automaticamente la modalità di ripristino. Di seguito sono riportati i dati del dispositivo e le informazioni sull\'incidente; sarebbe molto utile se poteste copiarli e contattarci tramite i seguenti metodi. Grazie!</string>
-    <string name="tips_use_this_template">Siete sicuri di voler utilizzare questo modello?</string>
-    <string name="tips_delete_template">È sicuro di voler cancellare questa voce?</string>
-    <string name="tips_database_init_error">Inizializzazione del database fallita</string>
+    <string name="recovery_mode_tips">Modalità di recupero attivata a causa di più arresti anomali. L\'invio del dispositivo e delle informazioni sull\'arresto anomalo di seguito riportate tramite i seguenti metodi potrebbe risolvere il problema. Grazie.</string>
+    <string name="tips_use_this_template">Utilizzare questo modello\?</string>
+    <string name="tips_delete_template">Eliminare la voce\?</string>
+    <string name="tips_database_init_error">Inizializzazione della base di dati fallita.</string>
     <string name="title_tile_mode">Modalità piastrella</string>
     <string name="tile_mode_title_repeat">Ripeti</string>
-    <string name="tile_mode_title_decal">一つずつ実行</string>
-
+    <string name="tile_mode_title_decal">Singolo</string>
 </resources>

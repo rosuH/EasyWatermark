@@ -52,7 +52,7 @@
     <string name="tips_need_compress_img">La imagen es demasiado grande o la memoria es insuficiente</string>
     <string name="tips_compressing">Comprimiendo…</string>
     <string name="tips_compress_images">Comprimir imagen</string>
-    <string name="tips_compress_ok">La compresión se ha completado, haga clic en Aceptar para continuar la salida</string>
+    <string name="tips_compress_ok">La compresión se ha completado. Haga clic en Aceptar para continuar la salida.</string>
     <string name="tips_compress_create_uri_failed">La compresión está completa, pero falló la creación de Uri, por favor reinicie el APP e inténtelo de nuevo. %1$s</string>
     <string name="tips_tip_title">Se detectó trabas</string>
     <string name="msg_crash">¿Le gustaría ayudar a comentar la información errónea? ¡Esto puede ayudarnos a hacerlo mejor! Esto no recogerá su información personal.</string>
@@ -79,7 +79,7 @@
     <string name="tips_not_app_can_open_images">Parece que no tienes un gestor de archivos instalado</string>
     <string name="tips_choose_other_file_type">Parece que no escogió una imagen</string>
     <string name="error_save_oom">Memoria insuficiente, limpie la caché y vuelva a intentarlo</string>
-    <string name="error_share_uri_is_null">El Uri de salida está vacío, contacta con el desarrollador para enviar comentarios, gracias</string>
+    <string name="error_share_uri_is_null">El URI de salida está vacío. Contacta con el desarrollador para enviar comentarios. Gracias.</string>
     <string name="tips_content_mode_button">Haga clic para editar texto o imagen</string>
     <string name="dev_comment">Cualquier tecnología avanzada, a primera vista, no es diferente de la magia.</string>
     <string name="dialog_content_exist_confirm">¿Descartar editar?</string>
@@ -117,12 +117,11 @@
     <string name="recovery_mode_closed">Reiniciar para que surta efecto</string>
     <string name="copy">Copiar registros (logs)</string>
     <string name="turn_off_recovery_mode">Desactivar el modo de recuperación</string>
-    <string name="recovery_mode_tips">Oops, parece que has experimentado múltiples caídas. Ahora se ha puesto automáticamente en modo de recuperación. A continuación encontrará la información de su dispositivo y la información de la colisión, sería muy útil si pudiera copiarla y ponerse en contacto con nosotros a través de los siguientes métodos. Gracias.</string>
-    <string name="tips_use_this_template">¿Seguro que quieres usar esta plantilla?</string>
-    <string name="tips_delete_template">¿Estás seguro de que quieres eliminar esta entrada?</string>
+    <string name="recovery_mode_tips">Se ha entrado en el modo de recuperación debido a múltiples fallos. El envío de la información sobre el dispositivo y el fallo a través de los siguientes métodos puede resolver el problema. Gracias.</string>
+    <string name="tips_use_this_template">¿Utilizar esta plantilla\?</string>
+    <string name="tips_delete_template">¿Borrar la entrada\?</string>
     <string name="tips_database_init_error">Fallo en la inicialización de la base de datos</string>
     <string name="title_tile_mode">Modo de baldosas</string>
     <string name="tile_mode_title_repeat">Repetir</string>
     <string name="tile_mode_title_decal">Único</string>
-
 </resources>
