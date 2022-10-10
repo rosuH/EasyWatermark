@@ -1,0 +1,54 @@
+Ajoutez facilement et en toute sécurité un filigrane à vos photos sensibles.
+Pour éviter qu'elles soient divulguées ou exploitées par le MÉCHANT.
+
+Bien sûr, il convient également à la création d'émojis.
+Après tout, il prend en charge le filigrane d'image avec des effets très fantomatiques. 
+
+## Caractéristiques
+### Excitant 👓
+
+Applications locales purement hors ligne, code source ouvert.
+L'espacement vertical et horizontal peut être ajusté, la couleur de la lumière et de l'obscurité changer à volonté.
+Rotation libre dans toutes les tailles et angles, le texte et les images peuvent être imprimés.
+Le filigrane se répète sur toute l'image, et c'est un peu difficile pour les méchants de l'enlever.
+
+### Sérieusement (pousse les lunettes vers le haut)
+
+- Sécurité :
+Le code source est complètement ouvert et utilise un protocole MIT flexible, vous êtes libre de modifier et supprimer le code qui vous semble problématique ;)
+Pas de demandes de réseau, pas de permissions de demande de réseau, pas de crainte que vos photos soient compromises. Les utilisateurs avec API >= 29 n'ont même pas besoin de demander des permissions. (Les utilisateurs de 28 et moins doivent demander des autorisations de stockage pour accéder aux photos et les stocker).
+Et bien sûr, il n'y a pas de statistiques, de points d'enfouissement ou d'identifiants d'appareil, ni même de rapport de plantage (donc si vous avez un crash, merci de partager les infos de plantage avec nous >_<).
+Nous renonçons au SDK de collecte tiers et aux diverses statistiques pour que vous puissiez l'utiliser en toute confiance. Ce qui est à vous est à vous.
+- Mise en page : support pour les intervalles horizontaux et verticaux entre le filigrane, répéter automatiquement l'image complète.
+- Style : la couleur de la police, la transparence, la taille et l'angle de rotation peuvent être ajustés.
+- Contenu : Prise en charge du filigrane de texte et du filigrane d'image.
+
+## Utilisation
+Vous pouvez l'utiliser comme bon vous semble. Il est plus adapté aux situations où vous devez soumettre une photo d'identité, une photo d'identité tenue à la main ou une photo sensible. Exemple.
+
+Différents noms réels dans le pays, télécharger des photos recto-verso de cartes d'identité à tout bout de champ, même des photos d'identité à main levée.
+Prévisualisations de projets, échantillons, images protégées par le droit d'auteur ou simplement usurpées.
+Texte de référence.
+
+Cette photo est destinée à xx pour xxx uniquement, aucune autre utilisation.
+
+Vous pouvez réduire la transparence, mais ne bloquez pas les informations clés.
+
+(Pour l'instant) nous ne pouvons pas empêcher (temporairement) le téléchargement d'informations, ni même empêcher (temporairement) la fuite d'informations, mais nous pouvons réduire la valeur des informations qui sont divulguées.
+
+Même si elle est (probablement) inutile au final, vous pouvez au moins dégoûter un peu le fauteur de troubles.
+
+## Interface utilisateur
+Conçu par le célèbre gourou de l'interface utilisateur @tovi (👏🤪).
+Tout ce que vous pensez qui ne fonctionne pas bien est ma restauration de l'interface utilisateur qui ne fonctionne pas, et n'a rien à voir avec le projet d'interface utilisateur. xD
+Cette application a été conçue par @tovi, donc tous les droits sur l'interface utilisateur et les ressources de conception connexes lui appartiennent et ne peuvent être utilisés sans la permission de toute personne ou organisation.
+
+## Licence ouverte.
+Bibliothèques tierces utilisées.
+
+daniel-stonuk/material-about-library
+skydoves/ColorPickerView
+material-components/material-components-android
+
+### Remarques et contribution
+Vos commentaires et suggestions sont les bienvenus dans la section des problèmes, ou vous pouvez contribuer au code en soumettant un PR directement à nous. Bien sûr, vous pouvez également contacter le concepteur directement par Telegram ou par courriel et nous vous répondrons rapidement.
