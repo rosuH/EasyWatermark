@@ -108,7 +108,7 @@ dependencies {
     implementation("androidx.viewpager2:viewpager2:1.0.0")
     implementation("androidx.recyclerview:recyclerview:1.2.1")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
-    implementation("androidx.exifinterface:exifinterface:1.3.3")
+    implementation("androidx.exifinterface:exifinterface:1.3.5")
     implementation("androidx.palette:palette-ktx:1.0.0")
 
     testImplementation("junit:junit:4.12")
