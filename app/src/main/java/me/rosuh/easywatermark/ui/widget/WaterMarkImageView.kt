@@ -447,7 +447,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             return true
         }
 
-        override fun onScaleEnd(detector: ScaleGestureDetector?) {
+        override fun onScaleEnd(detector: ScaleGestureDetector) {
             super.onScaleEnd(detector)
             Log.i(TAG, "onScaleEnd $mScaleFactor")
             val textSize = (config?.textSize ?: DEFAULT_TEXT_SIZE)

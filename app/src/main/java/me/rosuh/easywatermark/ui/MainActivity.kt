@@ -393,7 +393,7 @@ class MainActivity : AppCompatActivity() {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         menuItem.iconTintList = ColorStateList.valueOf(c)
                     } else {
-                        menuItem.icon.setTint(c)
+                        menuItem.icon?.setTint(c)
                     }
                 }
             }

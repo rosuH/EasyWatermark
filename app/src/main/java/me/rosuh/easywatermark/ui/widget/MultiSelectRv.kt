@@ -74,7 +74,7 @@ class MultiSelectRv : RecyclerView {
                 val gestureDetector = GestureDetectorCompat(
                     context,
                     object : GestureDetector.SimpleOnGestureListener() {
-                        override fun onLongPress(e: MotionEvent?) {
+                        override fun onLongPress(e: MotionEvent) {
                             super.onLongPress(e)
                             isLongPress = true
                         }
