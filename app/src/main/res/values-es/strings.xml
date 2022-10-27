@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Easy WaterMark</string>
+    <string name="app_name">Marca de agua fácil</string>
     <string name="action_pick">Eliga una Imagen</string>
     <string name="action_save">Guardar</string>
     <string name="action_settings">Acerca de</string>
@@ -36,7 +36,7 @@
     <string name="about_title_figma_link">Más proyectos</string>
     <string name="error_not_img">Deberías elegir una foto</string>
     <string name="error_file_not_found">La foto quizás no existe</string>
-    <string name="tips_pick_image">"Elija la imagen, vaya a la edición "</string>
+    <string name="tips_pick_image">Elija Imágenes</string>
     <string name="dialog_export_to_gallery">Exportar a álbum</string>
     <string name="directly_save_tips">Almacena la imagen editada directamente en tu álbum de fotos</string>
     <string name="share_tips">Compartir la imagen editada con otras aplicaciones</string>
@@ -57,9 +57,9 @@
     <string name="tips_tip_title">Se detectó trabas</string>
     <string name="msg_crash">¿Le gustaría ayudar a comentar la información errónea? ¡Esto puede ayudarnos a hacerlo mejor! Esto no recogerá su información personal.</string>
     <string name="crash_mail">Enviar correo</string>
-    <string name="tip_not_mail_found">Parece que no hay ningún cliente de correo instalado, puedes pegar activamente el mensaje en la tienda de aplicaciones o en GitHub</string>
+    <string name="tip_not_mail_found">No se detectó ningún cliente de correo electrónico. Alternativamente, puede pegar el mensaje de error en la tienda de aplicaciones o GitHub.</string>
     <string name="tips_content_size_performance">Cuanto más grande es el tamaño, más exigente es el rendimiento de la vista previa en tiempo real.</string>
-    <string name="config_default_water_mark_text">👋Fotos son solo para propósitos de prueba.</string>
+    <string name="config_default_water_mark_text">👋 NO REDISTRIBUIR</string>
     <string name="style_alpha">Alfa</string>
     <string name="contributor_info">Cuando el informe del problema es válido y se arregla o se añade una nueva versión, su nombre o correo electrónico aparecerá en la ventana emergente del registro de actualizaciones. Nosotros podemos ocultar su información y el nombre completo no aparecerá. \\nSi no quieres aparecer, por favor marca: No quiero.</string>
     <string name="dialog_change_log_title">Registro de cambios</string>
@@ -76,7 +76,7 @@
         </ol>
 ]]>
     </string>
-    <string name="tips_not_app_can_open_images">Parece que no tienes un gestor de archivos instalado</string>
+    <string name="tips_not_app_can_open_images">No se detectó ningún administrador de archivos.</string>
     <string name="tips_choose_other_file_type">Parece que no escogió una imagen</string>
     <string name="error_save_oom">Memoria insuficiente, limpie la caché y vuelva a intentarlo</string>
     <string name="error_share_uri_is_null">El URI de salida está vacío. Contacta con el desarrollador para enviar comentarios. Gracias.</string>
@@ -101,26 +101,26 @@
     <string name="dialog_save_config_format">Formato</string>
     <string name="dialog_save_config_quality">Calidad</string>
     <string name="pick_via_system">Choose more…</string>
-    <string name="gallery_pick_size">Choose %1$d</string>
+    <string name="gallery_pick_size">Elija %1$d</string>
     <string name="tips_input_text_can_not_be_empty">El contenido no puede vaciarse</string>
     <string name="dialog_title_template_edit">Editar plantilla</string>
     <string name="dialog_title_edit_watermark">Editar Marca de Agua</string>
     <string name="dialog_title_template_title">Lista de plantillas</string>
-    <string name="tips_list_empty">Parece vacío, ¿no?</string>
+    <string name="tips_list_empty">Parece bastante vacío</string>
     <string name="dialog_button_add_template">Añadir</string>
     <string name="back">Atrás</string>
     <string name="recovery_title">Modo de recuperación</string>
     <string name="copy_success">Copiado</string>
     <string name="copy_failed">Error al copiar</string>
-    <string name="telegram_not_found">No instalado</string>
-    <string name="store_not_found">No instalado</string>
+    <string name="telegram_not_found">Telegram no está instalado.</string>
+    <string name="store_not_found">No se instaló la tienda.</string>
     <string name="recovery_mode_closed">Reiniciar para que surta efecto</string>
     <string name="copy">Copiar registros (logs)</string>
     <string name="turn_off_recovery_mode">Desactivar el modo de recuperación</string>
     <string name="recovery_mode_tips">Se ha entrado en el modo de recuperación debido a múltiples fallos. El envío de la información sobre el dispositivo y el fallo a través de los siguientes métodos puede resolver el problema. Gracias.</string>
     <string name="tips_use_this_template">¿Utilizar esta plantilla\?</string>
     <string name="tips_delete_template">¿Borrar la entrada\?</string>
-    <string name="tips_database_init_error">Fallo en la inicialización de la base de datos</string>
+    <string name="tips_database_init_error">El inicio de la base de datos ha fallado.</string>
     <string name="title_tile_mode">Modo de baldosas</string>
     <string name="tile_mode_title_repeat">Repetir</string>
     <string name="tile_mode_title_decal">Único</string>

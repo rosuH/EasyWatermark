@@ -89,16 +89,16 @@ dependencies {
 
     implementation("androidx.asynclayoutinflater:asynclayoutinflater:1.0.0")
 
-    implementation("com.github.bumptech.glide:glide:4.13.2")
-    kapt("com.github.bumptech.glide:compiler:4.13.2")
+    implementation("com.github.bumptech.glide:glide:4.14.2")
+    kapt("com.github.bumptech.glide:compiler:4.14.2")
 
     implementation("id.zelory:compressor:3.0.1")
     
     implementation("org.jetbrains.kotlin:kotlin-stdlib:${Versions.kotlin}")
     implementation("androidx.appcompat:appcompat:${Versions.appCompat}")
     implementation("com.google.android.material:material:${Versions.materialDesign}")
-    implementation("androidx.fragment:fragment-ktx:1.5.2")
-    implementation("androidx.activity:activity-ktx:1.5.1")
+    implementation("androidx.fragment:fragment-ktx:1.5.4")
+    implementation("androidx.activity:activity-ktx:1.6.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.5.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
@@ -108,7 +108,7 @@ dependencies {
     implementation("androidx.viewpager2:viewpager2:1.0.0")
     implementation("androidx.recyclerview:recyclerview:1.2.1")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
-    implementation("androidx.exifinterface:exifinterface:1.3.3")
+    implementation("androidx.exifinterface:exifinterface:1.3.5")
     implementation("androidx.palette:palette-ktx:1.0.0")
 
     testImplementation("junit:junit:4.12")
