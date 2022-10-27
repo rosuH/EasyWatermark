@@ -2,10 +2,17 @@
 
 <p align="center">
   <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/rosuh/easywatermark">
+  &nbsp;
+  &nbsp;
+  <a href="https://hosted.weblate.org/engage/easywatermark/zh_Hans/">
+    <img src="https://hosted.weblate.org/widgets/easywatermark/zh_Hans/svg-badge.svg" alt="翻译状态" />
+  </a>
+  &nbsp;
+  &nbsp;
+  <a href="https://app.fossa.com/projects/git%2Bgithub.com%2FrosuH%2FEasyWatermark?ref=badge_small" alt="FOSSA Status">
+    <img src="https://app.fossa.com/api/projects/git%2Bgithub.com%2FrosuH%2FEasyWatermark.svg?type=small"/>
+  </a>
 </p>
-
-<a href="https://app.fossa.com/projects/git%2Bgithub.com%2FrosuH%2FEasyWatermark?ref=badge_small" alt="FOSSA Status"><img src="https://app.fossa.com/api/projects/git%2Bgithub.com%2FrosuH%2FEasyWatermark.svg?type=small"/></a>
-
 <p align="center">  
 安全、简单、快速地为你的敏感照片添加水印，防止被小人泄露、利用。
   </br>
@@ -91,6 +98,14 @@
 ## 反馈与贡献
 
 我们非常欢迎您在 issues 区发表您任何意见与建议，或者直接提交 PR 以贡献您的代码。 当然您也可以直接联系开发者的 Telegram 或邮件，我们将择期回复。
+
+## 本地化
+
+我们非常欢迎您提供任何方式的本地化帮助，包括但不限于直接参与代码编写、创建 issue、邮件等，或者我们也推荐您使用 [WebLate](https://hosted.weblate.org/engage/easywatermark/) 平台提供翻译帮助，谢谢！
+
+<a href="https://hosted.weblate.org/engage/easywatermark/zh_Hans/">
+<img src="https://hosted.weblate.org/widgets/easywatermark/zh_Hans/88x31-grey.png" alt="翻译状态" />
+</a>
 
 ## [隐私政策](https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy_zh-CN.md)
 
