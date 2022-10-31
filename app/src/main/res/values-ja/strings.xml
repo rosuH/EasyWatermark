@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Easy WaterMark</string>
+    <string name="app_name">Easy Watermark</string>
     <string name="action_pick">画像を選択</string>
     <string name="action_save">保存</string>
     <string name="action_settings">このアプリについて</string>
@@ -64,7 +64,7 @@
     <string name="config_default_water_mark_text">👋 DO NOT REDISTRIBUTE</string>
     <string name="style_alpha">不透明度</string>
     <string name="contributor_info">問題についてのフィードバックが有効であるため修正された場合、または新しいバージョンがリリースされた場合、あなたの名前または電子メールがアップデートのポップアップウィンドウに表示されます。お客様の情報は非表示にしますので、フルネームは表示されません。\\n 表示させたくない場合は、"I do not want to."のマークを付けてください。</string>
-    <string name="dialog_change_log_title">What\'s new</string>
+    <string name="dialog_change_log_title">新機能</string>
     <string name="dialog_change_log_content">
         <![CDATA[
         <h2 id="new-and-optimized">新機能と最適化</h2>
@@ -81,13 +81,12 @@
     <string name="tips_not_app_can_open_images">ファイルマネージャーが検出されませんでした。</string>
     <string name="tips_choose_other_file_type">無効な画像</string>
     <string name="error_save_oom">メモリ不足です。バックグラウンドのアプリをクリーンアップしてから再度お試しください。</string>
-    <string name="error_share_uri_is_null">出力先Uriが空です。開発者に連絡してフィードバックしてください。</string>
+    <string name="error_share_uri_is_null">出力先URIが空です。開発者に連絡してフィードバックしてください。</string>
     <string name="dev_comment">十分に高度な技術であれば、魔法と見分けがつかない。</string>
     <string name="dialog_title_exist_confirm">警告</string>
     <string name="dialog_cancel_exist_confirm">キャンセル</string>
     <string name="dialog_content_exist_confirm">変更を破棄しますか？</string>
     <string name="dialog_out_put_title">品質と出力形式</string>
-
     <!--    -->
     <string name="text_paint_fill">フィル</string>
     <string name="text_paint_stroke">ストローク</string>
@@ -120,12 +119,10 @@
     <string name="copy">ログをコピー</string>
     <string name="turn_off_recovery_mode">リカバリーモードをオフにする</string>
     <string name="recovery_mode_tips">おっと、複数回のクラッシュを経験しているようですね。 これで自動的にリカバリーモードになりました。 以下、お客様の端末情報、クラッシュ情報を記載しますので、コピーしていただき、以下の方法でご連絡いただければ幸いです。 ありがとうございました。</string>
-    <string name="tips_use_this_template">本当にこのテンプレートを使用しますか？</string>
-    <string name="tips_delete_template">本当にこのエントリーを削除しますか？</string>
-    <string name="tips_database_init_error">データベースの初期化に失敗しました</string>
+    <string name="tips_use_this_template">このテンプレートを使用しますか？</string>
+    <string name="tips_delete_template">このエントリーを削除しますか？</string>
+    <string name="tips_database_init_error">データベースの初期化に失敗しました。</string>
     <string name="title_tile_mode">タイルモード</string>
     <string name="tile_mode_title_repeat">繰り返し</string>
     <string name="tile_mode_title_decal">Singolo</string>
-
-
 </resources>
