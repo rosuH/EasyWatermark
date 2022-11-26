@@ -64,7 +64,7 @@
     <string name="tips_content_mode_button">Click to modify text or picture</string>
     <string name="config_default_water_mark_text">👋 DO NOT REDISTRIBUTE</string>
     <string name="style_alpha">Alpha</string>
-    <string name="contributor_info">If the feedback about a problem is valid and therefore fixed or a new version is released, your name or email will appear in the update pop-up window. We will hide your information, your full name will not appear. \\n If you do not want it to happen, please mark: I do not want to.</string>
+    <string name="contributor_info">Your name or e-mail will be included if the pop-up of the next version if the info helps sort out an issue.\\n If you do not want it to happen, please mark: I do not want to.</string>
     <string name="dialog_change_log_title">What\'s new</string>
     <string name="dialog_change_log_content" translatable="false">
         <![CDATA[
