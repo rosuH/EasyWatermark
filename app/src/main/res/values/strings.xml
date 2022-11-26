@@ -117,7 +117,7 @@
     <string name="copy_success">Copy success</string>
     <string name="copy_failed">Copy failed</string>
     <string name="telegram_not_found">Telegram is not installed.</string>
-    <string name="store_not_found">Not Store was installed.</string>
+    <string name="store_not_found">No store is installed\?</string>
     <string name="recovery_mode_closed">It\'s closed, please try again</string>
     <string name="copy">Copy error message</string>
     <string name="recovery_mode_tips">Entered recovery mode due to multiple crashes. Sending the device and crash info below via the following methods may resolve the issue. Thank you.</string>
