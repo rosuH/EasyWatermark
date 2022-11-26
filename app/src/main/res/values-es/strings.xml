@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Marca de agua fácil</string>
+    <string name="app_name">Easy Watermark</string>
     <string name="action_pick">Eliga una Imagen</string>
     <string name="action_save">Guardar</string>
     <string name="action_settings">Acerca de</string>
@@ -61,7 +61,7 @@
     <string name="tips_content_size_performance">Cuanto más grande es el tamaño, más exigente es el rendimiento de la vista previa en tiempo real.</string>
     <string name="config_default_water_mark_text">👋 NO REDISTRIBUIR</string>
     <string name="style_alpha">Alfa</string>
-    <string name="contributor_info">Cuando el informe del problema es válido y se arregla o se añade una nueva versión, su nombre o correo electrónico aparecerá en la ventana emergente del registro de actualizaciones. Nosotros podemos ocultar su información y el nombre completo no aparecerá. \\nSi no quieres aparecer, por favor marca: No quiero.</string>
+    <string name="contributor_info">Su nombre o correo electrónico se incluirán en la ventana emergente de la próxima versión si la información ayuda a resolver un problema.\\n Si no desea que suceda, marque: No quiero.</string>
     <string name="dialog_change_log_title">Registro de cambios</string>
     <string name="dialog_change_log_content">
        <![CDATA[
@@ -113,7 +113,7 @@
     <string name="copy_success">Copiado</string>
     <string name="copy_failed">Error al copiar</string>
     <string name="telegram_not_found">Telegram no está instalado.</string>
-    <string name="store_not_found">No se instaló la tienda.</string>
+    <string name="store_not_found">¿No hay ninguna tienda instalada\?</string>
     <string name="recovery_mode_closed">Reiniciar para que surta efecto</string>
     <string name="copy">Copiar registros (logs)</string>
     <string name="turn_off_recovery_mode">Desactivar el modo de recuperación</string>
