@@ -38,8 +38,15 @@ android {
             )
         }
         create("benchmark") {
+            isMinifyEnabled = true
+            isShrinkResources = true
             signingConfig = signingConfigs.getByName("debug")
             isDebuggable = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "coroutines.pro", "proguard-rules.pro"
+            )
+            matchingFallbacks += listOf("release")
         }
     }
 

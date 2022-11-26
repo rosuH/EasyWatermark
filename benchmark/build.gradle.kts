@@ -4,7 +4,8 @@ plugins {
 }
 
 android {
-    compileSdk = 32
+    namespace = "me.rosuh.benchmark"
+    compileSdk = 33
 
     compileOptions {
         sourceCompatibility(JavaVersion.VERSION_11)
@@ -12,15 +13,14 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
     }
 
     defaultConfig {
-        minSdk = 21
-        targetSdk = 32
+        minSdk = 24
+        targetSdk = 33
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        testInstrumentationRunnerArguments["androidx.benchmark.suppressErrors"] = "DEBUGGABLE,NOT-PROFILEABLE"
     }
 
     buildTypes {
@@ -30,19 +30,19 @@ android {
         create("benchmark") {
             isDebuggable = true
             signingConfig = getByName("debug").signingConfig
+            matchingFallbacks += listOf("release")
         }
     }
 
     targetProjectPath = ":app"
-    namespace = "me.rosuh.benchmark"
     experimentalProperties["android.experimental.self-instrumenting"] = true
 }
 
 dependencies {
-    implementation("androidx.test.ext:junit:1.1.3")
-    implementation("androidx.test.espresso:espresso-core:3.4.0")
+    implementation("androidx.test.ext:junit:1.1.4")
+    implementation("androidx.test.espresso:espresso-core:3.5.0")
     implementation("androidx.test.uiautomator:uiautomator:2.2.0")
-    implementation("androidx.benchmark:benchmark-macro-junit4:1.1.0-alpha03")
+    implementation("androidx.benchmark:benchmark-macro-junit4:1.1.1")
 }
 
 androidComponents {
