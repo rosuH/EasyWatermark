@@ -6,5 +6,4 @@
     <string name="about_title_version">Версия</string>
     <string name="back">Назад</string>
     <string name="dialog_save_config_quality">Качество</string>
-    <string name="dialog_cancel_exist_confirm"></string>
 </resources>
