@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Easy Watermark</string>
+    <string name="app_name">Marca de agua fácil</string>
     <string name="action_pick">Eliga una Imagen</string>
     <string name="action_save">Guardar</string>
     <string name="action_settings">Acerca de</string>
