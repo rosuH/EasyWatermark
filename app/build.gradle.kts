@@ -22,14 +22,11 @@ android {
     }
 
     buildTypes {
-        getByName(BuildTypes.Debug) {
-            isMinifyEnabled = false
-            applicationIdSuffix = ".${BuildTypes.Debug}"
-            versionNameSuffix = ".${BuildTypes.Debug}"
-            isDebuggable = true
+        val debug by getting {
+            applicationIdSuffix = ".debug"
         }
 
-        getByName(BuildTypes.Release) {
+        val release by getting {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -37,16 +34,15 @@ android {
                 "coroutines.pro", "proguard-rules.pro"
             )
         }
+
         create("benchmark") {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            initWith(release)
             signingConfig = signingConfigs.getByName("debug")
-            isDebuggable = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "coroutines.pro", "proguard-rules.pro"
-            )
-            matchingFallbacks += listOf("release")
+            // [START_EXCLUDE silent]
+            // Selects release buildType if the benchmark buildType not available in other modules.
+            matchingFallbacks.add("release")
+            // [END_EXCLUDE]
+            proguardFiles("benchmark-rules.pro")
         }
     }
 
@@ -83,50 +79,51 @@ dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
     implementation(project(mapOf("path" to ":cmonet")))
 
-    val roomVersion = "2.4.3"
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    kapt(libs.room.compiler)
 
-    implementation("androidx.room:room-runtime:$roomVersion")
-    implementation("androidx.room:room-ktx:$roomVersion")
-    kapt("androidx.room:room-compiler:$roomVersion")
+    implementation(libs.datastore.preference)
 
-    implementation("androidx.datastore:datastore-preferences:1.0.0")
+    implementation(libs.dagger.hilt.android)
+    kapt(libs.dagger.hilt.compiler)
 
-    implementation("com.google.dagger:hilt-android:2.43.2")
-    kapt("com.google.dagger:hilt-compiler:2.43.2")
+    implementation(libs.asyncLayoutInflater)
 
-    implementation("androidx.asynclayoutinflater:asynclayoutinflater:1.0.0")
+    implementation(libs.glide.glide)
+    kapt(libs.glide.compiler)
 
-    implementation("com.github.bumptech.glide:glide:4.14.2")
-    kapt("com.github.bumptech.glide:compiler:4.14.2")
+    implementation(libs.compressor)
 
-    implementation("id.zelory:compressor:3.0.1")
-    
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:${Versions.kotlin}")
-    implementation("androidx.appcompat:appcompat:${Versions.appCompat}")
-    implementation("com.google.android.material:material:${Versions.materialDesign}")
-    implementation("androidx.fragment:fragment-ktx:1.5.4")
-    implementation("androidx.activity:activity-ktx:1.6.1")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.5.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
-    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.5.1")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.1")
-    implementation("com.github.skydoves:colorpickerview:2.2.3")
-    implementation("androidx.viewpager2:viewpager2:1.0.0")
-    implementation("androidx.recyclerview:recyclerview:1.2.1")
-    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
-    implementation("androidx.exifinterface:exifinterface:1.3.5")
-    implementation("androidx.palette:palette-ktx:1.0.0")
+    implementation(libs.kotlin.stdlib)
+    implementation(libs.kotlin.coroutine.android)
+    implementation(libs.kotlin.coroutine.core)
 
-    testImplementation("junit:junit:4.12")
-    testImplementation("androidx.test:core:1.4.0")
-    testImplementation("org.mockito:mockito-core:4.0.0")
-    androidTestImplementation("org.mockito:mockito-android:4.0.0")
-    androidTestImplementation("org.robolectric:robolectric:4.4")
-    androidTestImplementation("androidx.test:rules:1.4.0")
-    androidTestImplementation("androidx.test:runner:1.4.0")
-    androidTestImplementation("org.hamcrest:hamcrest-library:2.2")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.4.0")
-    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.2.0")
-    androidTestImplementation("androidx.test.ext:junit:1.1.3")
+    implementation(libs.appcompat)
+    implementation(libs.material)
+    implementation(libs.fragment.ktx)
+    implementation(libs.activity.ktx)
+    implementation(libs.lifecycle.runtime.ktx)
+    implementation(libs.lifecycle.livedata.ktx)
+    implementation(libs.lifecycle.viewModel.ktx)
+    implementation(libs.viewpager2)
+    implementation(libs.recyclerview)
+    implementation(libs.constraintLayout)
+    implementation(libs.exifInterface)
+    implementation(libs.palette.ktx)
+    implementation(libs.profieinstaller)
+
+    implementation(libs.colorpicker)
+
+
+    testImplementation(libs.test.junit)
+    testImplementation(libs.test.rules)
+    testImplementation(libs.test.runner)
+    androidTestImplementation(libs.mockito.core)
+    androidTestImplementation(libs.mockito.android)
+    androidTestImplementation(libs.robolectric)
+    androidTestImplementation(libs.hamcrest.library)
+    androidTestImplementation(libs.test.espresso.core)
+    androidTestImplementation(libs.test.uiautomator)
+    androidTestImplementation(libs.test.ext.junit)
 }

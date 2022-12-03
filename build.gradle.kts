@@ -7,10 +7,10 @@ buildscript {
         maven("https://plugins.gradle.org/m2/")
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:7.3.0")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${Versions.kotlin}")
-        classpath("org.jlleitschuh.gradle:ktlint-gradle:10.1.0")
-        classpath("com.google.dagger:hilt-android-gradle-plugin:2.42")
+        classpath(libs.tools.gradle)
+        classpath(libs.kotlin.plugin)
+        classpath(libs.ktlint.gradle)
+        classpath(libs.dagger.hilt.plugin)
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }
