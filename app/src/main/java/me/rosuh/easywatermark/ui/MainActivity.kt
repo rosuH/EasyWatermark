@@ -200,14 +200,7 @@ class MainActivity : AppCompatActivity() {
         }
         val btnStore = findViewById<Button>(R.id.btn_store).apply {
             setOnClickListener {
-                try {
-                    startActivity(
-                        Intent(
-                            Intent.ACTION_VIEW,
-                            Uri.parse("market://details?id=me.rosuh.easywatermark")
-                        )
-                    )
-                } catch (e: Exception) {
+                openLink(Uri.parse("market://details?id=me.rosuh.easywatermark")) {
                     Toast.makeText(this@MainActivity, R.string.store_not_found, Toast.LENGTH_SHORT)
                         .show()
                 }

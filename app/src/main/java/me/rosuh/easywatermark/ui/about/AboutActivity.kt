@@ -69,14 +69,7 @@ class AboutActivity : AppCompatActivity() {
             }
             tvVersionValue.text = BuildConfig.VERSION_NAME
             tvRating.setOnClickListener {
-                kotlin.runCatching {
-                    startActivity(
-                        Intent(
-                            Intent.ACTION_VIEW,
-                            Uri.parse("market://details?id=me.rosuh.easywatermark")
-                        )
-                    )
-                }
+                openLink(Uri.parse("market://details?id=me.rosuh.easywatermark"))
             }
             tvFeedBack.setOnClickListener {
                 openLink("https://github.com/rosuH/EasyWatermark/issues/new")
@@ -95,20 +88,10 @@ class AboutActivity : AppCompatActivity() {
                 }
             }
             tvPrivacyCn.setOnClickListener {
-                val browserIntent =
-                    Intent(
-                        Intent.ACTION_VIEW,
-                        Uri.parse("https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy_zh-CN.md")
-                    )
-                kotlin.runCatching { startActivity(browserIntent) }
+                openLink(Uri.parse("https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy_zh-CN.md"))
             }
             tvPrivacyEng.setOnClickListener {
-                val browserIntent =
-                    Intent(
-                        Intent.ACTION_VIEW,
-                        Uri.parse("https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy.md")
-                    )
-                kotlin.runCatching { startActivity(browserIntent) }
+                openLink(Uri.parse("https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy.md"))
             }
             civAvatar.setOnClickListener {
                 openLink("https://github.com/rosuH")
@@ -147,6 +130,7 @@ class AboutActivity : AppCompatActivity() {
                     Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                         applyPaletteForSupportNight(it)
                     }
+
                     it == null -> {
                         binding.clContainer.children
                             .plus(binding.tvTitle)
@@ -165,9 +149,11 @@ class AboutActivity : AppCompatActivity() {
                             }
                         return@observe
                     }
+
                     Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
                         applyPaletteForSupportLightStatusIcon(it)
                     }
+
                     else -> {
                         applyPaletteForNoMatterWhoYouAre(it)
                     }
