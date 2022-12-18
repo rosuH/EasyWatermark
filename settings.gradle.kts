@@ -55,7 +55,7 @@ dependencyResolutionManagement {
 
             // benchmark && test libs
             library("benchmark", "androidx.benchmark:benchmark-macro-junit4:1.1.1")
-            library("profieinstaller", "androidx.profileinstaller:profileinstaller:1.2.0")
+            library("profieinstaller", "androidx.profileinstaller:profileinstaller:1.2.1")
 
             val testVersion = "1.4.0"
             library("test-core", "androidx.test:core:${testVersion}")
