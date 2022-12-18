@@ -1,0 +1,2446 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 7.3.1" type="baseline" client="gradle" dependencies="false" name="AGP (7.3.1)" variant="fatal" version="7.3.1">
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;touch_size&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;touch_size&quot;>Taille : %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="3"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_author&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_author&quot;>作者&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="4"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_designer&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_designer&quot;>設計者&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="5"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;gallery_pick_size&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;gallery_pick_size&quot;>Velg %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="6"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_figma_link&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_figma_link&quot;>查看他的更多作品&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="7"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_repo_link&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_repo_link&quot;>在 GitHub 上查看此項目&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="11"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_options&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_options&quot;>Alternativer&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="13"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_save_ok&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_save_ok&quot;>Speichern erfolgreich&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="14"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_save_ok&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_save_ok&quot;>Guardado con éxito&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="14"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_save_ok&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_save_ok&quot;>Enregistrement réussi&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="14"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_save_ok&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_save_ok&quot;>Salvato con successo&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="14"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_save_ok&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_save_ok&quot;>保存が完了しました&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="14"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_save_ok&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_save_ok&quot;>Salvo com sucesso&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="14"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_save_ok&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_save_ok&quot;>保存完成&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="14"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_share_ok&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_share_ok&quot;>Compartido con éxito&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="15"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_share_ok&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_share_ok&quot;>Condiviso con successo&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="15"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_share_ok&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_share_ok&quot;>共有できました&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="15"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_share_ok&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_share_ok&quot;>Compartilhado com sucesso&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="15"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_share_ok&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_share_ok&quot;>分享完成&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="15"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_share_image&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_share_image&quot;>Bild teilen&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="16"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_share_ok&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_share_ok&quot;>Partage réussi&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="16"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_share_image&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_share_image&quot;>Guardar imagen&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="17"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_share_image&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_share_image&quot;>Condividi immagine&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="17"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_share_image&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_share_image&quot;>画像を共有&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="17"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_share_image&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_share_image&quot;>Compartilhar imagem&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="17"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_share_image&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_share_image&quot;>分享图片&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="17"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;title_enter_text&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;title_enter_text&quot;>Inhalt&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="17"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_share_image&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_share_image&quot;>Partager l\&apos;image&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="18"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;title_enter_text&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;title_enter_text&quot;>Contenido&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="18"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;title_enter_text&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;title_enter_text&quot;>Contenuto&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="18"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;title_enter_text&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;title_enter_text&quot;>内容&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="18"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;title_enter_text&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;title_enter_text&quot;>Conteúdo&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="18"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;title_enter_text&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;title_enter_text&quot;>内容&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="18"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;contributor_info&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;contributor_info&quot;>當您所提交的問題確實存在，且已被修復或加入新版本時，您的名字或郵件將會出現在更新日誌中。我們會對您的資料做遮擋處理，不會出現全名。\n如果您不願意出現，請標註：我不願意。即可。&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="19"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;title_enter_text&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;title_enter_text&quot;>Contenu&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="19"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_author&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_author&quot;>Utvikler&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="20"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_designer&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_designer&quot;>Designer&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="21"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_change_log_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_change_log_title&quot;>更新日誌&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="21"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_repo_link&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_repo_link&quot;>Åpne på GitHub&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="22"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;directly_save_tips&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;directly_save_tips&quot;>直接儲存編輯後的圖片到相簿中&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="22"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_figma_link&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_figma_link&quot;>Andre prosjekter&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="23"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_options&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_options&quot;>Optionen&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="26"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;error_share_uri_is_null&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;error_share_uri_is_null&quot;>輸出 Uri 為空，請聯繫開發者，謝謝&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="26"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;hint_tips_alpha_100&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;hint_tips_alpha_100&quot;>不透明度 100%&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="27"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_options&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_options&quot;>Opzioni&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="28"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_options&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_options&quot;>オプション&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="28"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_options&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_options&quot;>Opções&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="28"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;hint_tips_input_water_mark_text&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;hint_tips_input_water_mark_text&quot;>請輸入浮水印文字&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="28"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;touch_alpha&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;touch_alpha&quot;>Alfa: %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="29"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_options&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_options&quot;>Options&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="30"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;touch_size&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;touch_size&quot;>Størrelse: %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="30"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_author&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_author&quot;>Autor&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="33"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_author&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_author&quot;>Autor&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="33"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;directly_save_tips&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;directly_save_tips&quot;>Lagre det redigerte bilde direkte i galleriet&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="33"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;share_tips&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;share_tips&quot;>分享儲存後的圖片到其他應用程式中&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="33"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_designer&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_designer&quot;>Designer&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="34"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_designer&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_designer&quot;>Diseñador&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="34"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;share_tips&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;share_tips&quot;>Del det redigerte bildet med andre programmer&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="34"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_author&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_author&quot;>Autore&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="35"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_author&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_author&quot;>著作者&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="35"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_author&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_author&quot;>Autor&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="35"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_author&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_author&quot;>作者&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="35"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_repo_link&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_repo_link&quot;>In GitHub öffnen&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="35"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_repo_link&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_repo_link&quot;>Abrir en GitHub&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="35"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;hint_tips_input_water_mark_text&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;hint_tips_input_water_mark_text&quot;>Skriv inn vannmerketekst&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="35"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_designer&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_designer&quot;>Designer&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="36"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_designer&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_designer&quot;>デザイナー&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="36"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_designer&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_designer&quot;>Desenvolvedor&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="36"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_designer&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_designer&quot;>设计者&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="36"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_figma_link&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_figma_link&quot;>Mehr Projekte&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="36"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_figma_link&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_figma_link&quot;>Más proyectos&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="36"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_author&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_author&quot;>Auteur&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="37"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_repo_link&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_repo_link&quot;>Apri su GitHub&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="37"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_repo_link&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_repo_link&quot;>GitHubで開く&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="37"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_repo_link&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_repo_link&quot;>Visitar no GitHub&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="37"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_repo_link&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_repo_link&quot;>在 GitHub 上查看此项目&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="37"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_designer&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_designer&quot;>Designer&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="38"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_figma_link&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_figma_link&quot;>Altri progetti&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="38"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_figma_link&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_figma_link&quot;>その他のプロジェクト&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="38"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_figma_link&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_figma_link&quot;>Mais projetos&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="38"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_figma_link&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_figma_link&quot;>查看他的更多作品&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="38"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_repo_link&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_repo_link&quot;>Ouvrir sur GitHub&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="39"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_figma_link&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_figma_link&quot;>Autres projets&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="40"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;hint_tips_alpha_100&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;hint_tips_alpha_100&quot;>Alfa 100%&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="40"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;directly_save_tips&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;directly_save_tips&quot;>Bearbeitetes Bild speichern&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="41"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;directly_save_tips&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;directly_save_tips&quot;>Almacena la imagen editada directamente en tu álbum de fotos&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="41"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;directly_save_tips&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;directly_save_tips&quot;>Salva l\&apos;immagine modificata direttamente nella tua galleria&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="42"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;directly_save_tips&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;directly_save_tips&quot;>編集した画像を直接ギャラリーに保存する&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="42"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;share_tips&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;share_tips&quot;>Bearbeitetes Bild teilen&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="42"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;share_tips&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;share_tips&quot;>Compartir la imagen editada con otras aplicaciones&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="42"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;directly_save_tips&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;directly_save_tips&quot;>Salvar diretamente na galeria&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="43"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;share_tips&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;share_tips&quot;>Condividi l\&apos;immagine modificata con altre app&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="43"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;share_tips&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;share_tips&quot;>編集した画像を他のアプリで共有する&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="43"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;directly_save_tips&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;directly_save_tips&quot;>Enregistrer l\&apos;image modifiée directement dans votre galerie&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="44"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;directly_save_tips&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;directly_save_tips&quot;>直接存储编辑后的图像到你的相册中&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="44"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;share_tips&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;share_tips&quot;>Compartilhar com outros apps&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="44"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;share_tips&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;share_tips&quot;>Partager l\&apos;image modifiée avec d\&apos;autres applis&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="45"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;share_tips&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;share_tips&quot;>分享编辑后的图像到其他应用&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="45"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_content_mode_button&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_content_mode_button&quot;>點擊可修改文字或圖片&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="45"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_content_size_performance&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_content_size_performance&quot;>尺寸越大，實時預覽性能要求越高&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="46"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;touch_alpha&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;touch_alpha&quot;>Alpha: %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="46"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;touch_alpha&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;touch_alpha&quot;>Alfa: %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="46"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;touch_alpha&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;touch_alpha&quot;>Alpha: %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="47"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;touch_alpha&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;touch_alpha&quot;>不透明度: %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="47"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;touch_size&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;touch_size&quot;>Größe: %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="47"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;touch_size&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;touch_size&quot;>Tamaño: %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="47"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;hint_tips_input_water_mark_text&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;hint_tips_input_water_mark_text&quot;>Bitte Text für das Wasserzeichen eingeben&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="48"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;hint_tips_input_water_mark_text&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;hint_tips_input_water_mark_text&quot;>Ingresa el texto a marcar por favor&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="48"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;touch_alpha&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;touch_alpha&quot;>Nitidez: %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="48"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;touch_size&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;touch_size&quot;>Dimensione: %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="48"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;touch_size&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;touch_size&quot;>サイズ: %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="48"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;hint_tips_input_water_mark_text&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;hint_tips_input_water_mark_text&quot;>Inserisci il testo della filigrana&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="49"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;hint_tips_input_water_mark_text&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;hint_tips_input_water_mark_text&quot;>ウォーターマークのテキストを入力してください&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="49"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;touch_alpha&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;touch_alpha&quot;>Alpha : %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="49"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;touch_alpha&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;touch_alpha&quot;>不透明度: %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="49"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;touch_size&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;touch_size&quot;>Tamanho: %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="49"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;hint_tips_alpha_100&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;hint_tips_alpha_100&quot;>Alpha 100%&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="50"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;hint_tips_alpha_100&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;hint_tips_alpha_100&quot;>Alfa 100%&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="50"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;hint_tips_input_water_mark_text&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;hint_tips_input_water_mark_text&quot;>Entrez le texte du filigrane&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="50"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;hint_tips_input_water_mark_text&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;hint_tips_input_water_mark_text&quot;>Digite o texto da marca d\&apos;água digital&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="50"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;touch_size&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;touch_size&quot;>大小: %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="50"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;hint_tips_alpha_100&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;hint_tips_alpha_100&quot;>Alpha 100%&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="51"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;hint_tips_alpha_100&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;hint_tips_alpha_100&quot;>不透明度 100%&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="51"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;hint_tips_input_water_mark_text&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;hint_tips_input_water_mark_text&quot;>请输入水印文字&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="51"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;hint_tips_alpha_100&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;hint_tips_alpha_100&quot;>Alpha 100 %&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="52"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;hint_tips_alpha_100&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;hint_tips_alpha_100&quot;>Nitidez 100%&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="52"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_content_size_performance&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_content_size_performance&quot;>Desto større bilde, desto mer krevende er det å vise det i sanntid.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="52"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_out_put_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_out_put_title&quot;>Kvalitet og utdata-format&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="53"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;hint_tips_alpha_100&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;hint_tips_alpha_100&quot;>不透明度100%&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="53"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_save_ok&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_save_ok&quot;>儲存完成&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="53"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;contributor_info&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;contributor_info&quot;>Hvis tilbakemeldingen fikser problemet kan du vises i neste versjon av programmet. Hvis du ikke vil at dette skjer, merk teksten med «I do not want to».&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="54"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_share_image&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_share_image&quot;>分享圖片&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="54"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_share_ok&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_share_ok&quot;>分享完成&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="55"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;title_enter_text&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;title_enter_text&quot;>內容&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="58"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_content_size_performance&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_content_size_performance&quot;>Cuanto más grande es el tamaño, más exigente es el rendimiento de la vista previa en tiempo real.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="61"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_change_log_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_change_log_title&quot;>Änderungen&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="62"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_content_size_performance&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_content_size_performance&quot;>Plus l\&apos;image est grande, plus il est difficile de la visualiser en temps réel.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="62"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_content_size_performance&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_content_size_performance&quot;>Più grande è l\&apos;immagine, più è difficile visualizzarla in tempo reale.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="62"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_content_size_performance&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_content_size_performance&quot;>画像が大きくなればなるほど、リアルタイムで画像を見ることは難しくなります。&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="62"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_content_mode_button&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_content_mode_button&quot;>Cliquez pour modifier le texte ou l\&apos;image&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="63"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_content_mode_button&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_content_mode_button&quot;>Clicca per modificare il testo o l\&apos;immagine&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="63"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_content_mode_button&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_content_mode_button&quot;>クリックすると、文字や画像を修正できます。&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="63"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_content_size_performance&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_content_size_performance&quot;>Quanto maior for a imagem, mais recursos utilizará para ser visualizada em tempo real.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="63"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;contributor_info&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;contributor_info&quot;>Su nombre o correo electrónico se incluirán en la ventana emergente de la próxima versión si la información ayuda a resolver un problema.\\n Si no desea que suceda, marque: No quiero.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="64"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_content_mode_button&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_content_mode_button&quot;>Clique para modificar texto ou imagem&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="64"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_content_size_performance&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_content_size_performance&quot;>尺寸越大，实时预览性能要求越高&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="64"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_change_log_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_change_log_title&quot;>Registro de cambios&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="65"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_content_mode_button&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_content_mode_button&quot;>点击可修改文字或图片&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="65"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;contributor_info&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;contributor_info&quot;>Se il feedback su un problema è valido e quindi risolto o viene rilasciata una nuova versione, il tuo nome o la tua email appariranno nella finestra pop-up di aggiornamento. Nasconderemo le tue informazioni, il tuo nome completo non apparirà. \\n Se non vuoi che accada, scrivi: Non voglio.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="66"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;contributor_info&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;contributor_info&quot;>問題についてのフィードバックが有効であるため修正された場合、または新しいバージョンがリリースされた場合、あなたの名前または電子メールがアップデートのポップアップウィンドウに表示されます。お客様の情報は非表示にしますので、フルネームは表示されません。\\n 表示させたくない場合は、&quot;I do not want to.&quot;のマークを付けてください。&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="66"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_change_log_content&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_change_log_content&quot;>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="66"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;contributor_info&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;contributor_info&quot;>Se o relatório do problema for válido e uma falha for corrigida ou uma nova versão for publicada, seu nome ou e-mail aparecerá no aviso com histórico de modificações. Serão editados as informações sobre você, seu nome completo não aparecerá. \\n Se você quiser permanecer anônimo, por favor, marque: Quero permanecer anônimo.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="67"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_change_log_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_change_log_title&quot;>Cosa c\&apos;è di nuovo&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="67"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_change_log_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_change_log_title&quot;>新機能&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="67"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_out_put_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_out_put_title&quot;>Ausgabeformat und Qualität&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="67"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;touch_alpha&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;touch_alpha&quot;>不透明度: %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="67"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_change_log_content&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_change_log_content&quot;>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="68"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_change_log_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_change_log_title&quot;>Histórico de modificações&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="68"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_change_log_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_change_log_title&quot;>更新日志&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="68"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_content_mode_button&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_content_mode_button&quot;>Klicken für Text- oder Bildmodifikationen&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="68"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;touch_size&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;touch_size&quot;>大小: %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="68"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;contributor_info&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;contributor_info&quot;>当反馈的问题有效，并被修复或加入新版本时，您的名字或邮件出现在更新日志弹窗中。我们会对您的信息作遮挡处理，不会出现全称。\n 如果您不愿意出现，请标注：我不愿意。即可&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="69"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_change_log_content&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_change_log_content&quot;>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="69"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;error_share_uri_is_null&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;error_share_uri_is_null&quot;>L\&apos;URI de sortie est vide. Veuillez contacter le concepteur pour un faire part de vos remarques. Merci.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="69"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_change_log_content&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_change_log_content&quot;>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="70"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_check_out_in_github&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_check_out_in_github&quot;>Sjekk på GitHub&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="70"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_change_log_content&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_change_log_content&quot;>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="71"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;error_share_uri_is_null&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;error_share_uri_is_null&quot;>L\&apos;URI di uscita è vuoto. Si prega di contattare lo sviluppatore per i tuoi commenti. Grazie.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="71"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_share_ok&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_share_ok&quot;>Erfolgreich geteilt&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="73"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;contributor_info&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;contributor_info&quot;>Falls ein gemeldetes Problem zur Fehlerbehebung beigetragen hat, werden Name und E-Mail-Adresse im Aktualisierungsprotokollspopup hinzugefügt. Wir werden sensible Informationen wie den vollen Namen verschleihern. \\n Du kannst diesem schriftlich widersprechen.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="74"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_out_put_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_out_put_title&quot;>Qualité et format de sortie&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="74"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;telegram_not_found&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;telegram_not_found&quot;>Telegram er ikke installert.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="74"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_content_size_performance&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_content_size_performance&quot;>Je größer das Bild ist, desto rechenintensiver wird die Bearbeitung sein.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="75"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_out_put_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_out_put_title&quot;>Qualità e formato di output&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="76"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;error_share_uri_is_null&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;error_share_uri_is_null&quot;>Die URI der Ausgabe ist leer. Bitte Rückmeldung an die Entwickler senden. Danke.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="77"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_check_out_in_github&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_check_out_in_github&quot;>Consultez sur GitHub&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="81"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;error_share_uri_is_null&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;error_share_uri_is_null&quot;>El URI de salida está vacío. Contacta con el desarrollador para enviar comentarios. Gracias.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="82"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_content_mode_button&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_content_mode_button&quot;>Haga clic para editar texto o imagen&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="83"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_change_log_content&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_change_log_content&quot;>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="84"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_check_out_in_github&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_check_out_in_github&quot;>Dai un\&apos;occhiata su GitHub&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="84"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;error_share_uri_is_null&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;error_share_uri_is_null&quot;>出力先URIが空です。開発者に連絡してフィードバックしてください。&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="84"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;error_share_uri_is_null&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;error_share_uri_is_null&quot;>Uri de saída está vazio, entre em contato com o desenvolvedor para submeter um Feedback, obrigado&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="85"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;error_share_uri_is_null&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;error_share_uri_is_null&quot;>输出 Uri 为空，请联系开发者反馈，谢谢&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="86"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_options&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_options&quot;>opciones&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="88"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_options&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_options&quot;>选项&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="88"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_out_put_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_out_put_title&quot;>品質と出力形式&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="89"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;gallery_pick_size&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;gallery_pick_size&quot;>Choisissez %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="89"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_save_ok&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_save_ok&quot;>Lagret&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="89"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_out_put_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_out_put_title&quot;>Formato y calidad de salida&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="90"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_out_put_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_out_put_title&quot;>Qualidade e Formato de saída&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="90"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_out_put_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_out_put_title&quot;>格式与质量&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="90"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;about_title_options&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;about_title_options&quot;>选项&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="92"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;gallery_pick_size&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;gallery_pick_size&quot;>Scegli %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="92"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;telegram_not_found&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;telegram_not_found&quot;>Telegram n\&apos;est pas installé.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="93"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_out_put_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_out_put_title&quot;>格式与质量&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="94"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_share_ok&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_share_ok&quot;>Delt&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="94"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_share_image&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_share_image&quot;>Del bilde&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="95"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;title_enter_text&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;title_enter_text&quot;>Innhold&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="96"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_check_out_in_github&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_check_out_in_github&quot;>Schau mal auf GitHub&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="97"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_check_out_in_github&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_check_out_in_github&quot;>Echa un vistazo a GitHub&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="97"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_check_out_in_github&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_check_out_in_github&quot;>GitHubで確認する&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="97"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_check_out_in_github&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_check_out_in_github&quot;>Confira no GitHub&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="97"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_check_out_in_github&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_check_out_in_github&quot;>在 GitHub 上查看&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="97"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_check_out_in_github&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_check_out_in_github&quot;>在 GitHub 上查看&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="101"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_change_log_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_change_log_title&quot;>Nyheter&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="102"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;telegram_not_found&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;telegram_not_found&quot;>Telegram non è installato.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-it/strings.xml"
+            line="103"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;gallery_pick_size&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;gallery_pick_size&quot;>%1$d auswählen&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="104"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;gallery_pick_size&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;gallery_pick_size&quot;>Elija %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="104"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;gallery_pick_size&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;gallery_pick_size&quot;>Choose %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="104"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;gallery_pick_size&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;gallery_pick_size&quot;>選擇 %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="104"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;gallery_pick_size&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;gallery_pick_size&quot;>%1$dを選択&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="105"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;gallery_pick_size&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;gallery_pick_size&quot;>选择 %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="108"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;tips_content_mode_button&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;tips_content_mode_button&quot;>Klikk for å endre tekst eller bilde&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="110"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;dialog_change_log_title&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;dialog_change_log_title&quot;>Quoi de neuf&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="112"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;telegram_not_found&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;telegram_not_found&quot;>Telegram 没有安装&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="112"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;contributor_info&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;contributor_info&quot;>Si le retour d\&apos;information concernant un problème est valable et donc corrigé ou si une nouvelle version est publiée, votre nom ou votre adresse électronique apparaîtra dans la fenêtre contextuelle de mise à jour. Nous masquerons vos informations, votre nom complet n\&apos;apparaîtra pas. \\n Si vous ne voulez pas que cela se produise, veuillez cocher : Je ne veux pas.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="113"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;error_share_uri_is_null&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;error_share_uri_is_null&quot;>Utdata-URI-en er tom. Kontakt utvikleren for tilbakemeldinger. Takk.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb-rNO/strings.xml"
+            line="113"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;telegram_not_found&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;telegram_not_found&quot;>Telegram ist nicht installiert.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de-rDE/strings.xml"
+            line="115"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;telegram_not_found&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;telegram_not_found&quot;>Telegram no está instalado.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="115"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;telegram_not_found&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;telegram_not_found&quot;>Não Instalado&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="115"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;telegram_not_found&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;telegram_not_found&quot;>未安裝&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rTW/strings.xml"
+            line="115"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExtraTranslation"
+        message="&quot;telegram_not_found&quot; is translated here but not found in default locale"
+        errorLine1="    &lt;string name=&quot;telegram_not_found&quot;>インストールされていません。&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="116"
+            column="13"/>
+    </issue>
+
+</issues>

@@ -5,9 +5,10 @@ plugins {
 
 android {
     namespace = "me.rosuh.cmonet"
-    compileSdk = 32
+    compileSdk = Apps.targetSdk
 
     defaultConfig {
+        minSdk = Apps.minSdk
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }

@@ -12,8 +12,8 @@ android {
     namespace = "me.rosuh.macrobenchmark"
 
     defaultConfig {
-        minSdk = 23 // Minimum supported version for macrobenchmark
-        targetSdk = 33
+        minSdk = Apps.minSdk
+        targetSdk = Apps.targetSdk
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

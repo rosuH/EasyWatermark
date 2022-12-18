@@ -2,8 +2,6 @@ package me.rosuh.easywatermark.ui.about
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
-import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.databinding.ActivityOpenSourceBinding
 import me.rosuh.easywatermark.utils.ktx.inflate
 import me.rosuh.easywatermark.utils.ktx.openLink

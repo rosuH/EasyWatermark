@@ -3,7 +3,10 @@ package me.rosuh.easywatermark.ui.dialog
 import android.app.Dialog
 import android.content.DialogInterface
 import android.os.Bundle
-import android.view.*
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.view.WindowManager
 import android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Lifecycle

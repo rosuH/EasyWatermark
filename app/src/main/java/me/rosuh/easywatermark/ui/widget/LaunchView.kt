@@ -7,7 +7,6 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
-import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.core.view.children
 import androidx.core.view.isVisible
@@ -17,8 +16,6 @@ import androidx.dynamicanimation.animation.SpringForce
 import androidx.fragment.app.FragmentContainerView
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.shape.MaterialShapeDrawable
-import com.google.android.material.shape.MaterialShapeUtils
 import com.google.android.material.shape.ShapeAppearanceModel
 import com.google.android.material.tabs.TabLayout
 import me.rosuh.easywatermark.R
@@ -62,7 +59,7 @@ class LaunchView : CustomViewGroup {
     //region 2 children components
     val logoView: ColoredImageVIew by lazy {
         ColoredImageVIew(context).apply {
-            layoutParams = ViewGroup.MarginLayoutParams(180.dp, 180.dp)
+            layoutParams = MarginLayoutParams(180.dp, 180.dp)
             setImageResource(R.drawable.ic_log_transparent)
         }
     }

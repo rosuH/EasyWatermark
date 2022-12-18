@@ -69,6 +69,10 @@ android {
         jvmTarget = "11"
     }
     namespace = "me.rosuh.easywatermark"
+
+    lint {
+        baseline = file("lint-baseline.xml")
+    }
 }
 
 kapt {

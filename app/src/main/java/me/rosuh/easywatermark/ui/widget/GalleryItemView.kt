@@ -30,7 +30,7 @@ class GalleryItemView : FrameLayout {
 
     val ivImage: ImageFilterView by lazy {
         ImageFilterView(context).apply {
-            layoutParams = ViewGroup.MarginLayoutParams(
+            layoutParams = MarginLayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
@@ -42,7 +42,7 @@ class GalleryItemView : FrameLayout {
 
     val radioButton: RadioButton by lazy {
         RadioButton(context).apply {
-            layoutParams = ViewGroup.MarginLayoutParams(
+            layoutParams = MarginLayoutParams(
                 24.dp,
                 24.dp
             ).also { it.setMargins(4.dp, 4.dp, 0, 0) }

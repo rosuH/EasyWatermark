@@ -2,7 +2,7 @@ package me.rosuh.easywatermark.ui.about
 
 import android.content.Intent
 import android.content.res.ColorStateList
-import android.graphics.*
+import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
@@ -22,7 +22,14 @@ import dagger.hilt.android.AndroidEntryPoint
 import me.rosuh.cmonet.CMonet
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.databinding.ActivityAboutBinding
-import me.rosuh.easywatermark.utils.ktx.*
+import me.rosuh.easywatermark.utils.ktx.bgColor
+import me.rosuh.easywatermark.utils.ktx.colorBackground
+import me.rosuh.easywatermark.utils.ktx.colorPrimary
+import me.rosuh.easywatermark.utils.ktx.colorSecondaryContainer
+import me.rosuh.easywatermark.utils.ktx.colorSurface
+import me.rosuh.easywatermark.utils.ktx.inflate
+import me.rosuh.easywatermark.utils.ktx.openLink
+import me.rosuh.easywatermark.utils.ktx.titleTextColor
 
 @AndroidEntryPoint
 class AboutActivity : AppCompatActivity() {

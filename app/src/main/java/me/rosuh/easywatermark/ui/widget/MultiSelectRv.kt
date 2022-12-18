@@ -52,7 +52,7 @@ class MultiSelectRv : RecyclerView {
                 context.applicationContext.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
             refreshRate = displayManager.displays?.getOrNull(0)?.refreshRate ?: 60F
 
-            addOnItemTouchListener(object : RecyclerView.OnItemTouchListener {
+            addOnItemTouchListener(object : OnItemTouchListener {
                 private var leftArea: Boolean = false
                 private var scrollTopArea: Boolean = false
                 private var scrollBottomArea: Boolean = false

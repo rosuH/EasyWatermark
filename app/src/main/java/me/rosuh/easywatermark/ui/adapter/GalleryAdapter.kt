@@ -15,7 +15,7 @@ import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ui.Image
 import me.rosuh.easywatermark.ui.widget.AsyncSquareFrameLayout
 import me.rosuh.easywatermark.ui.widget.RadioButton
-import me.rosuh.easywatermark.utils.ktx.*
+import me.rosuh.easywatermark.utils.ktx.loadSmall
 
 
 class GalleryAdapter : RecyclerView.Adapter<GalleryAdapter.GalleryItemHolder>() {

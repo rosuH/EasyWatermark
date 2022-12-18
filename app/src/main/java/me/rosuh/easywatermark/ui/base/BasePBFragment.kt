@@ -3,14 +3,12 @@ package me.rosuh.easywatermark.ui.base
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import com.google.android.material.slider.Slider
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.databinding.FragemntBasePbBinding
-import me.rosuh.easywatermark.utils.VibrateHelper
 import me.rosuh.easywatermark.utils.ktx.toColor
 
 abstract class BasePBFragment : BaseBindFragment<FragemntBasePbBinding>() {

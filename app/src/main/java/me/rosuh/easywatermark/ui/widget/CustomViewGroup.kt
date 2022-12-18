@@ -4,7 +4,11 @@ import android.content.Context
 import android.util.AttributeSet
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.view.*
+import androidx.core.view.marginBottom
+import androidx.core.view.marginLeft
+import androidx.core.view.marginRight
+import androidx.core.view.marginStart
+import androidx.core.view.marginTop
 
 /**
  * An Custom ViewGroup abstract class for convenience.
