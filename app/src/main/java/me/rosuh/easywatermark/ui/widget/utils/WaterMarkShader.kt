@@ -6,6 +6,4 @@ class WaterMarkShader(
     val bitmapShader: BitmapShader,
     val width: Int,
     val height: Int
-) {
-
-}
+)

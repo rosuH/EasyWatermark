@@ -6,7 +6,6 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.annotation.CallSuper
-import java.util.*
 
 class MultiPickContract :
     ActivityResultContract<String, List<Uri?>>() {

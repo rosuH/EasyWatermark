@@ -2,7 +2,6 @@ package me.rosuh.easywatermark.ui.widget
 
 import android.content.Context
 import android.util.AttributeSet
-import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.core.view.children
 import me.rosuh.easywatermark.R
@@ -27,7 +26,7 @@ class Toolbar : CustomViewGroup {
 
     val logoView: ColoredImageVIew by lazy {
         ColoredImageVIew(context).apply {
-            layoutParams = ViewGroup.MarginLayoutParams(48.dp, 48.dp)
+            layoutParams = MarginLayoutParams(48.dp, 48.dp)
             setImageResource(R.drawable.ic_log_transparent)
         }
     }

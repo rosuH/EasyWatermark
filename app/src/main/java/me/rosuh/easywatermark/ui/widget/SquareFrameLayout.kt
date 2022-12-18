@@ -3,7 +3,6 @@ package me.rosuh.easywatermark.ui.widget
 import android.content.Context
 import android.util.AttributeSet
 import android.widget.FrameLayout
-import androidx.constraintlayout.widget.ConstraintLayout
 
 open class SquareFrameLayout : FrameLayout {
 

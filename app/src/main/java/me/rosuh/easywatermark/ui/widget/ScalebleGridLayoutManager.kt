@@ -1,15 +1,9 @@
 package me.rosuh.easywatermark.ui.widget
 
 import android.content.Context
-import android.util.Log
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ImageView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import me.rosuh.easywatermark.utils.ktx.dp
-import kotlin.math.max
 
 class ScalebleGridLayoutManager(
     context: Context?,
@@ -29,10 +23,6 @@ class ScalebleGridLayoutManager(
             (recycler.getViewForPosition(i) as ConstraintLayout).maxHeight = maxLineHeight
         }
         super.onMeasure(recycler, state, widthSpec, heightSpec)
-    }
-
-    override fun measureChild(child: View, widthUsed: Int, heightUsed: Int) {
-        super.measureChild(child, widthUsed, heightUsed)
     }
 
     override fun isAutoMeasureEnabled(): Boolean {

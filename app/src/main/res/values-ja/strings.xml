@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Easy WaterMark</string>
+    <string name="app_name">Easy Watermark</string>
     <string name="action_pick">画像を選択</string>
     <string name="action_save">保存</string>
     <string name="action_settings">このアプリについて</string>
@@ -11,11 +11,7 @@
     <string name="tips_choose_color_dialog">カラーを選択</string>
     <string name="tips_confirm_dialog">確認</string>
     <string name="tips_cancel_dialog">キャンセル</string>
-    <string name="tips_save_ok">保存が完了しました</string>
-    <string name="tips_share_ok">共有できました</string>
     <string name="tips_error">エラー</string>
-    <string name="tips_share_image">画像を共有</string>
-    <string name="title_enter_text">内容</string>
     <string name="title_text_style">スタイル</string>
     <string name="title_text_size">サイズ</string>
     <string name="title_horizon_layout">水平</string>
@@ -25,30 +21,19 @@
     <string name="request_permission_failed">パーミッションの取得に失敗しました</string>
     <string name="about_title_about">詳細</string>
     <string name="about_title_info">インフォメーション</string>
-    <string name="about_title_options">オプション</string>
     <string name="about_title_output">出力形式</string>
     <string name="about_title_version">バージョン</string>
     <string name="about_title_rating">アプリを評価する</string>
     <string name="about_title_feed_back">フィードバック</string>
     <string name="about_title_update_log">変更履歴</string>
     <string name="about_title_open_source">オープンソースライセンス</string>
-    <string name="about_title_author">著作者</string>
-    <string name="about_title_designer">デザイナー</string>
-    <string name="about_title_repo_link">GitHubで開く</string>
-    <string name="about_title_figma_link">その他のプロジェクト</string>
     <string name="error_not_img">画像を選択してください</string>
     <string name="error_file_not_found">画像が選択されていないか、開くことができません</string>
     <string name="dialog_export_to_gallery">アルバムにエクスポート</string>
-    <string name="directly_save_tips">編集した画像を直接ギャラリーに保存する</string>
-    <string name="share_tips">編集した画像を他のアプリで共有する</string>
     <string name="share">共有</string>
     <string name="water_mark_mode_text">テキスト</string>
     <string name="water_mark_mode_image">アイコン</string>
-    <string name="touch_alpha">不透明度: %1$d</string>
-    <string name="touch_size">サイズ: %1$d</string>
-    <string name="hint_tips_input_water_mark_text">ウォーターマークのテキストを入力してください</string>
     <string name="tips_ok">確認</string>
-    <string name="hint_tips_alpha_100">不透明度 100%</string>
     <string name="tips_cancel_output">キャンセル</string>
     <string name="tips_need_compress_img">ストレージが不足しているか、画像が大きすぎます</string>
     <string name="tips_compressing">圧縮しています…</string>
@@ -59,35 +44,15 @@
     <string name="msg_crash">このクラッシュを報告しますか？これは、私たちがアプリを改善するのに役立ちます これは個人情報を収集するものではありません。</string>
     <string name="crash_mail">メールを送る</string>
     <string name="tip_not_mail_found">メールクライアントが検出されませんでした。エラーメッセージをアプリストアやGitHubに貼り付けてください。</string>
-    <string name="tips_content_size_performance">画像が大きくなればなるほど、リアルタイムで画像を見ることは難しくなります。</string>
-    <string name="tips_content_mode_button">クリックすると、文字や画像を修正できます。</string>
     <string name="config_default_water_mark_text">👋 DO NOT REDISTRIBUTE</string>
     <string name="style_alpha">不透明度</string>
-    <string name="contributor_info">問題についてのフィードバックが有効であるため修正された場合、または新しいバージョンがリリースされた場合、あなたの名前または電子メールがアップデートのポップアップウィンドウに表示されます。お客様の情報は非表示にしますので、フルネームは表示されません。\\n 表示させたくない場合は、"I do not want to."のマークを付けてください。</string>
-    <string name="dialog_change_log_title">What\'s new</string>
-    <string name="dialog_change_log_content">
-        <![CDATA[
-        <h2 id="new-and-optimized">新機能と最適化</h2>
-        <ol>
-        <li>&nbsp;&nbsp;🎨 Migrated to MD3 and fully supported Material You!</li>
-        <li>&nbsp;&nbsp;🥳 Check out the new gallery for image choosing!</li>
-        </ol>
-        <h2 id="fixed">Fixed</h2>
-        <ol>
-        <li>&nbsp;&nbsp;🐛 Image lost after the system theme changed. (Thanks to wudai)</li>
-        </ol>
-]]>
-    </string>
     <string name="tips_not_app_can_open_images">ファイルマネージャーが検出されませんでした。</string>
     <string name="tips_choose_other_file_type">無効な画像</string>
     <string name="error_save_oom">メモリ不足です。バックグラウンドのアプリをクリーンアップしてから再度お試しください。</string>
-    <string name="error_share_uri_is_null">出力先Uriが空です。開発者に連絡してフィードバックしてください。</string>
     <string name="dev_comment">十分に高度な技術であれば、魔法と見分けがつかない。</string>
     <string name="dialog_title_exist_confirm">警告</string>
     <string name="dialog_cancel_exist_confirm">キャンセル</string>
     <string name="dialog_content_exist_confirm">変更を破棄しますか？</string>
-    <string name="dialog_out_put_title">品質と出力形式</string>
-
     <!--    -->
     <string name="text_paint_fill">フィル</string>
     <string name="text_paint_stroke">ストローク</string>
@@ -95,7 +60,6 @@
     <string name="text_typeface_bold">太字</string>
     <string name="text_typeface_italic">斜体</string>
     <string name="text_typeface_bold_italic">太字斜体</string>
-    <string name="dialog_check_out_in_github">GitHubで確認する</string>
     <string name="dialog_save_export_list_title">リストをエクスポート(%1$s)</string>
     <string name="dialog_open_in_gallery">ギャラリーで表示</string>
     <string name="dialog_save_config_format">形式</string>
@@ -103,7 +67,6 @@
     <string name="dialog_save_exporting">エクスポート中</string>
     <string name="tips_pick_image">画像を選択</string>
     <string name="pick_via_system">more…</string>
-    <string name="gallery_pick_size">%1$dを選択</string>
     <string name="tips_input_text_can_not_be_empty">入力してください。</string>
     <string name="dialog_title_template_edit">テンプレート編集</string>
     <string name="dialog_title_edit_watermark">ウォーターマークを編集</string>
@@ -114,18 +77,15 @@
     <string name="recovery_title">リカバリモード</string>
     <string name="copy_success">コピー</string>
     <string name="copy_failed">コピー失敗</string>
-    <string name="telegram_not_found">インストールされていません。</string>
     <string name="store_not_found">インストールされていません。</string>
     <string name="recovery_mode_closed">変更を有効化するには再起動が必要です</string>
     <string name="copy">ログをコピー</string>
     <string name="turn_off_recovery_mode">リカバリーモードをオフにする</string>
     <string name="recovery_mode_tips">おっと、複数回のクラッシュを経験しているようですね。 これで自動的にリカバリーモードになりました。 以下、お客様の端末情報、クラッシュ情報を記載しますので、コピーしていただき、以下の方法でご連絡いただければ幸いです。 ありがとうございました。</string>
-    <string name="tips_use_this_template">本当にこのテンプレートを使用しますか？</string>
-    <string name="tips_delete_template">本当にこのエントリーを削除しますか？</string>
-    <string name="tips_database_init_error">データベースの初期化に失敗しました</string>
+    <string name="tips_use_this_template">このテンプレートを使用しますか？</string>
+    <string name="tips_delete_template">このエントリーを削除しますか？</string>
+    <string name="tips_database_init_error">データベースの初期化に失敗しました。</string>
     <string name="title_tile_mode">タイルモード</string>
     <string name="tile_mode_title_repeat">繰り返し</string>
     <string name="tile_mode_title_decal">Singolo</string>
-
-
 </resources>

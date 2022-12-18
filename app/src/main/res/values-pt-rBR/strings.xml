@@ -11,11 +11,7 @@
     <string name="tips_choose_color_dialog">Escolha a cor</string>
     <string name="tips_confirm_dialog">Confirmar</string>
     <string name="tips_cancel_dialog">Cancelar</string>
-    <string name="tips_save_ok">Salvo com sucesso</string>
-    <string name="tips_share_ok">Compartilhado com sucesso</string>
     <string name="tips_error">Falha</string>
-    <string name="tips_share_image">Compartilhar imagem</string>
-    <string name="title_enter_text">Conteúdo</string>
     <string name="title_text_style">Fonte</string>
     <string name="title_text_size">Tamanho</string>
     <string name="title_horizon_layout">Horizontal</string>
@@ -25,31 +21,20 @@
     <string name="request_permission_failed">Falha ao obter a permissão</string>
     <string name="about_title_about">Sobre</string>
     <string name="about_title_info">Detalhes</string>
-    <string name="about_title_options">Opções</string>
     <string name="about_title_output">Formato de saída</string>
     <string name="about_title_version">Versão</string>
     <string name="about_title_rating">Avalie nosso app</string>
     <string name="about_title_feed_back">Feedback</string>
     <string name="about_title_update_log">Histórico de modificações</string>
     <string name="about_title_open_source">Software livre</string>
-    <string name="about_title_author">Autor</string>
-    <string name="about_title_designer">Desenvolvedor</string>
-    <string name="about_title_repo_link">Visitar no GitHub</string>
-    <string name="about_title_figma_link">Mais projetos</string>
     <string name="error_not_img">Selecione uma imagem</string>
     <string name="error_file_not_found">A imagem não pôde ser aberta ou não foi selecionada</string>
     <string name="tips_pick_image">Vamos começar selecionando uma imagem</string>
     <string name="dialog_export_to_gallery">Exportar para Álbum</string>
-    <string name="directly_save_tips">Salvar diretamente na galeria</string>
-    <string name="share_tips">Compartilhar com outros apps</string>
     <string name="share">Compartilhar a imagem</string>
     <string name="water_mark_mode_text">Texto</string>
     <string name="water_mark_mode_image">Ícone</string>
-    <string name="touch_alpha">Nitidez: %1$d</string>
-    <string name="touch_size">Tamanho: %1$d</string>
-    <string name="hint_tips_input_water_mark_text">Digite o texto da marca d\'água digital</string>
     <string name="tips_ok">Confirmar</string>
-    <string name="hint_tips_alpha_100">Nitidez 100%</string>
     <string name="tips_cancel_output">Cancelar</string>
     <string name="tips_need_compress_img">Não há espaço suficiente ou a imagem é muito grande</string>
     <string name="tips_compressing">Compactando…</string>
@@ -60,48 +45,27 @@
     <string name="msg_crash">Gostaria de relatar este problema? Isto pode nos ajudar a melhorar o App e não coletará nenhuma informação pessoal.</string>
     <string name="crash_mail">Enviar um e-mail</string>
     <string name="tip_not_mail_found">Nenhum cliente do e-mail detectado. Alternativamente, você pode colar a mensagem do erro na loja de aplicativos ou no GitHub.</string>
-    <string name="tips_content_size_performance">Quanto maior for a imagem, mais recursos utilizará para ser visualizada em tempo real.</string>
-    <string name="tips_content_mode_button">Clique para modificar texto ou imagem</string>
     <string name="config_default_water_mark_text">👋 NÃO REDISTRIBUIR</string>
     <string name="style_alpha">Nitidez</string>
-    <string name="contributor_info">Se o relatório do problema for válido e uma falha for corrigida ou uma nova versão for publicada, seu nome ou e-mail aparecerá no aviso com histórico de modificações. Serão editados as informações sobre você, seu nome completo não aparecerá. \\n Se você quiser permanecer anônimo, por favor, marque: Quero permanecer anônimo.</string>
-    <string name="dialog_change_log_title">Histórico de modificações</string>
-    <string name="dialog_change_log_content">
-        <![CDATA[
-         <h2 id="new-and-optimized"> Novo e otimizado </h2>
-         <ol>
-         <li>&nbsp; &nbsp; 🎨 Migrado para MD3 e totalmente compatível com o material que você! </li>
-         <li>&nbsp; &nbsp; 🥳 Confira a nova galeria para escolha de imagens! </li>
-         </ol>
-         <h2 id = "fixed"> Fixo </h2>
-         <ol>
-         <li>&nbsp;&nbsp; 🐛 Imagem perdida após a alteração do tema do sistema. (Graças a wudai) </li>
-         </ol>
-]]>
-    </string>
     <string name="tips_not_app_can_open_images">Nenhum gerenciador de arquivos detectado.</string>
     <string name="tips_choose_other_file_type">Imagem inválida</string>
     <string name="error_save_oom">Memória insuficiente, por favor limpe os processos em segundo plano e tente novamente</string>
-    <string name="error_share_uri_is_null">Uri de saída está vazio, entre em contato com o desenvolvedor para submeter um Feedback, obrigado</string>
     <string name="dev_comment">Qualquer tecnologia suficientemente avançada é indistinguível da mágica.</string>
     <string name="dialog_title_exist_confirm">Aviso</string>
     <string name="dialog_cancel_exist_confirm">Cancelar</string>
     <string name="dialog_content_exist_confirm">Descartar a edição?</string>
-    <string name="dialog_out_put_title">Qualidade e Formato de saída</string>
     <string name="text_paint_fill">Preencher</string>
     <string name="text_paint_stroke">Traço</string>
     <string name="text_typeface_normal">Normal</string>
     <string name="text_typeface_bold">Negrito</string>
     <string name="text_typeface_italic">Itálico</string>
     <string name="text_typeface_bold_italic">Negrito Itálico</string>
-    <string name="dialog_check_out_in_github">Confira no GitHub</string>
     <string name="dialog_save_exporting">Exportando</string>
     <string name="dialog_save_export_list_title">Exportar lista(%1$s)</string>
     <string name="dialog_open_in_gallery">Ver na Galeria</string>
     <string name="dialog_save_config_format">Formato</string>
     <string name="dialog_save_config_quality">Qualidade</string>
     <string name="pick_via_system">Choose more…</string>
-    <string name="gallery_pick_size">Choose %1$d</string>
     <string name="tips_input_text_can_not_be_empty">O conteúdo não pode estar vazio</string>
     <string name="dialog_title_template_edit">Editar modelo</string>
     <string name="dialog_title_edit_watermark">\"Editar Marca D\'água\"</string>
@@ -112,7 +76,6 @@
     <string name="recovery_title">Modo de restauração</string>
     <string name="copy_success">Copiado</string>
     <string name="copy_failed">Cópia falhou</string>
-    <string name="telegram_not_found">Não Instalado</string>
     <string name="store_not_found">Não Instalado</string>
     <string name="recovery_mode_closed">Reiniciar para atualizar modificações</string>
     <string name="copy">Copiar registos</string>

@@ -6,7 +6,6 @@ import android.animation.ValueAnimator
 import android.content.res.Resources
 import android.util.TypedValue
 import me.rosuh.easywatermark.ui.widget.WaterMarkImageView
-import java.time.Duration
 
 val Int.dp
     get() = TypedValue.applyDimension(

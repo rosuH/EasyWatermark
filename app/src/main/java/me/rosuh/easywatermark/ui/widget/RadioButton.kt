@@ -1,20 +1,22 @@
 package me.rosuh.easywatermark.ui.widget
 
 import android.content.Context
-import android.content.res.Resources
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
-import android.util.Log
-import android.util.TypedValue
 import android.view.View
 import androidx.core.content.ContextCompat
 import com.google.android.material.color.MaterialColors
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.utils.ktx.*
+import me.rosuh.easywatermark.utils.ktx.colorOnSurface
+import me.rosuh.easywatermark.utils.ktx.colorOnTertiaryContainer
+import me.rosuh.easywatermark.utils.ktx.colorSurfaceVariant
+import me.rosuh.easywatermark.utils.ktx.colorTertiaryContainer
+import me.rosuh.easywatermark.utils.ktx.dp
+import me.rosuh.easywatermark.utils.ktx.getColorFromAttr
 
 class RadioButton : View {
 

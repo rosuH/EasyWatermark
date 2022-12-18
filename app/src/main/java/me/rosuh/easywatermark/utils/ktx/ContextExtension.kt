@@ -5,9 +5,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.Configuration
-import android.content.res.Resources
 import android.os.Build
-import android.util.Log
 import android.util.TypedValue
 import androidx.annotation.AttrRes
 import androidx.annotation.ColorInt

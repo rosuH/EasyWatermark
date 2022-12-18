@@ -10,7 +10,6 @@ import android.content.Intent.ACTION_SEND
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
-import android.graphics.PointF
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Build
@@ -200,14 +199,7 @@ class MainActivity : AppCompatActivity() {
         }
         val btnStore = findViewById<Button>(R.id.btn_store).apply {
             setOnClickListener {
-                try {
-                    startActivity(
-                        Intent(
-                            Intent.ACTION_VIEW,
-                            Uri.parse("market://details?id=me.rosuh.easywatermark")
-                        )
-                    )
-                } catch (e: Exception) {
+                openLink(Uri.parse("market://details?id=me.rosuh.easywatermark")) {
                     Toast.makeText(this@MainActivity, R.string.store_not_found, Toast.LENGTH_SHORT)
                         .show()
                 }

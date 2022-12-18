@@ -2,7 +2,11 @@ package me.rosuh.easywatermark.ui.widget
 
 import android.animation.ObjectAnimator
 import android.content.Context
-import android.graphics.*
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RadialGradient
+import android.graphics.RectF
+import android.graphics.Shader
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.MotionEvent
@@ -105,13 +109,13 @@ class TouchSensitiveRv : RecyclerView {
 
     init {
         snapHelper.attachToRecyclerView(this)
-        addOnScrollListener(object : RecyclerView.OnScrollListener() {
+        addOnScrollListener(object : OnScrollListener() {
             private var debounceTs = 0L
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                 super.onScrollStateChanged(recyclerView, newState)
                 val snapView = snapHelper.findSnapView(layoutManager)
                 when (newState) {
-                    RecyclerView.SCROLL_STATE_IDLE -> {
+                    SCROLL_STATE_IDLE -> {
                         borderAnimator.start()
                         if (snapView == null ||
                             !canAutoSelected ||

@@ -1,8 +1,16 @@
 package me.rosuh.easywatermark.ui
 
 import android.app.Activity
-import android.content.*
-import android.graphics.*
+import android.content.ActivityNotFoundException
+import android.content.ContentResolver
+import android.content.ContentUris
+import android.content.ContentValues
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.Shader
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -11,26 +19,41 @@ import android.text.TextPaint
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
-import androidx.lifecycle.*
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asLiveData
+import androidx.lifecycle.map
+import androidx.lifecycle.viewModelScope
 import androidx.palette.graphics.Palette
 import dagger.hilt.android.lifecycle.HiltViewModel
 import id.zelory.compressor.Compressor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.data.model.*
+import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.JobState
+import me.rosuh.easywatermark.data.model.Result
+import me.rosuh.easywatermark.data.model.TextPaintStyle
+import me.rosuh.easywatermark.data.model.TextTypeface
+import me.rosuh.easywatermark.data.model.UserPreferences
+import me.rosuh.easywatermark.data.model.ViewInfo
+import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.data.repo.MemorySettingRepo
 import me.rosuh.easywatermark.data.repo.TemplateRepository
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.ui.widget.WaterMarkImageView
-import me.rosuh.easywatermark.ui.widget.utils.WaterMarkShader
 import me.rosuh.easywatermark.utils.FileUtils.Companion.outPutFolderName
 import me.rosuh.easywatermark.utils.bitmap.calculateInSampleSize
 import me.rosuh.easywatermark.utils.bitmap.decodeBitmapFromUri
@@ -41,9 +64,8 @@ import me.rosuh.easywatermark.utils.ktx.launch
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
-import java.util.*
+import java.util.Date
 import javax.inject.Inject
-import kotlin.collections.ArrayList
 
 @HiltViewModel
 class MainViewModel @Inject constructor(

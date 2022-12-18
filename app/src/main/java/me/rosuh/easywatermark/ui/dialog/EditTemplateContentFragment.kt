@@ -1,8 +1,6 @@
 package me.rosuh.easywatermark.ui.dialog
 
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -12,7 +10,7 @@ import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.databinding.DialogEditTemplateBinding
 import me.rosuh.easywatermark.ui.base.BaseBindBSDFragment
-import java.util.*
+import java.util.Date
 
 class EditTemplateContentFragment : BaseBindBSDFragment<DialogEditTemplateBinding>() {
 

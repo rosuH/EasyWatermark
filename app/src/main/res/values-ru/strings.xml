@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_text_color">Цвет</string>
+    <string name="water_mark_mode_text">Текст</string>
+    <string name="action_save">Сохранить</string>
+    <string name="about_title_version">Версия</string>
+    <string name="back">Назад</string>
+    <string name="dialog_save_config_quality">Качество</string>
+</resources>

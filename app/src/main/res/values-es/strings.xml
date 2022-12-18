@@ -11,11 +11,7 @@
     <string name="tips_choose_color_dialog">Escoger Color</string>
     <string name="tips_confirm_dialog">Confirmar</string>
     <string name="tips_cancel_dialog">Cancelar</string>
-    <string name="tips_save_ok">Guardado con éxito</string>
-    <string name="tips_share_ok">Compartido con éxito</string>
     <string name="tips_error">Error</string>
-    <string name="tips_share_image">Guardar imagen</string>
-    <string name="title_enter_text">Contenido</string>
     <string name="title_text_style">Estilo</string>
     <string name="title_text_size">Tamaño</string>
     <string name="title_horizon_layout">Horizontal</string>
@@ -30,24 +26,14 @@
     <string name="about_title_feed_back">Comentarios</string>
     <string name="about_title_update_log">Cambiar registro</string>
     <string name="about_title_open_source">Código abierto</string>
-    <string name="about_title_author">Autor</string>
-    <string name="about_title_designer">Diseñador</string>
-    <string name="about_title_repo_link">Abrir en GitHub</string>
-    <string name="about_title_figma_link">Más proyectos</string>
     <string name="error_not_img">Deberías elegir una foto</string>
     <string name="error_file_not_found">La foto quizás no existe</string>
     <string name="tips_pick_image">Elija Imágenes</string>
     <string name="dialog_export_to_gallery">Exportar a álbum</string>
-    <string name="directly_save_tips">Almacena la imagen editada directamente en tu álbum de fotos</string>
-    <string name="share_tips">Compartir la imagen editada con otras aplicaciones</string>
     <string name="share">Compartir</string>
     <string name="water_mark_mode_text">Texto</string>
     <string name="water_mark_mode_image">Ícono</string>
-    <string name="touch_alpha">Alfa: %1$d</string>
-    <string name="touch_size">Tamaño: %1$d</string>
-    <string name="hint_tips_input_water_mark_text">Ingresa el texto a marcar por favor</string>
     <string name="tips_ok">Confirmar</string>
-    <string name="hint_tips_alpha_100">Alfa 100%</string>
     <string name="tips_cancel_output">Cancelar</string>
     <string name="tips_need_compress_img">La imagen es demasiado grande o la memoria es insuficiente</string>
     <string name="tips_compressing">Comprimiendo…</string>
@@ -58,50 +44,28 @@
     <string name="msg_crash">¿Le gustaría ayudar a comentar la información errónea? ¡Esto puede ayudarnos a hacerlo mejor! Esto no recogerá su información personal.</string>
     <string name="crash_mail">Enviar correo</string>
     <string name="tip_not_mail_found">No se detectó ningún cliente de correo electrónico. Alternativamente, puede pegar el mensaje de error en la tienda de aplicaciones o GitHub.</string>
-    <string name="tips_content_size_performance">Cuanto más grande es el tamaño, más exigente es el rendimiento de la vista previa en tiempo real.</string>
     <string name="config_default_water_mark_text">👋 NO REDISTRIBUIR</string>
     <string name="style_alpha">Alfa</string>
-    <string name="contributor_info">Cuando el informe del problema es válido y se arregla o se añade una nueva versión, su nombre o correo electrónico aparecerá en la ventana emergente del registro de actualizaciones. Nosotros podemos ocultar su información y el nombre completo no aparecerá. \\nSi no quieres aparecer, por favor marca: No quiero.</string>
-    <string name="dialog_change_log_title">Registro de cambios</string>
-    <string name="dialog_change_log_content">
-       <![CDATA[
-        <h2 id="new-and-optimized">New and Optimized</h2>
-        <ol>
-        <li>&nbsp;&nbsp;🎨 Migrated to MD3 and fully supported Material You!</li>
-        <li>&nbsp;&nbsp;🥳 Check out the new gallery for image choosing!</li>
-        </ol>
-        <h2 id="fixed">Fixed</h2>
-        <ol>
-        <li>&nbsp;&nbsp;🐛 Image lost after the system theme changed. (Thanks to wudai)</li>
-        </ol>
-]]>
-    </string>
     <string name="tips_not_app_can_open_images">No se detectó ningún administrador de archivos.</string>
     <string name="tips_choose_other_file_type">Parece que no escogió una imagen</string>
     <string name="error_save_oom">Memoria insuficiente, limpie la caché y vuelva a intentarlo</string>
-    <string name="error_share_uri_is_null">El URI de salida está vacío. Contacta con el desarrollador para enviar comentarios. Gracias.</string>
-    <string name="tips_content_mode_button">Haga clic para editar texto o imagen</string>
     <string name="dev_comment">Cualquier tecnología avanzada, a primera vista, no es diferente de la magia.</string>
     <string name="dialog_content_exist_confirm">¿Descartar editar?</string>
     <string name="dialog_cancel_exist_confirm">Cancelar</string>
     <string name="dialog_title_exist_confirm">Consejo</string>
-    <string name="about_title_options">opciones</string>
     <string name="about_title_output">Formato de salida</string>
-    <string name="dialog_out_put_title">Formato y calidad de salida</string>
     <string name="text_paint_fill">Relleno</string>
     <string name="text_paint_stroke">Trazo</string>
     <string name="text_typeface_normal">Normal</string>
     <string name="text_typeface_bold">Negrita</string>
     <string name="text_typeface_italic">Cursiva</string>
     <string name="text_typeface_bold_italic">Cursiva negrita</string>
-    <string name="dialog_check_out_in_github">Echa un vistazo a GitHub</string>
     <string name="dialog_save_exporting">Exportando</string>
     <string name="dialog_save_export_list_title">Exportar lista(%1$s)</string>
     <string name="dialog_open_in_gallery">Ver en galería</string>
     <string name="dialog_save_config_format">Formato</string>
     <string name="dialog_save_config_quality">Calidad</string>
     <string name="pick_via_system">Choose more…</string>
-    <string name="gallery_pick_size">Elija %1$d</string>
     <string name="tips_input_text_can_not_be_empty">El contenido no puede vaciarse</string>
     <string name="dialog_title_template_edit">Editar plantilla</string>
     <string name="dialog_title_edit_watermark">Editar Marca de Agua</string>
@@ -112,8 +76,7 @@
     <string name="recovery_title">Modo de recuperación</string>
     <string name="copy_success">Copiado</string>
     <string name="copy_failed">Error al copiar</string>
-    <string name="telegram_not_found">Telegram no está instalado.</string>
-    <string name="store_not_found">No se instaló la tienda.</string>
+    <string name="store_not_found">¿No hay ninguna tienda instalada\?</string>
     <string name="recovery_mode_closed">Reiniciar para que surta efecto</string>
     <string name="copy">Copiar registros (logs)</string>
     <string name="turn_off_recovery_mode">Desactivar el modo de recuperación</string>

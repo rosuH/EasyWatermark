@@ -22,8 +22,6 @@ import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_E
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_HORIZON_GAP
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_ICON_URI
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_MODE
-import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_OFFSET_X
-import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_OFFSET_Y
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TEXT
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TEXT_COLOR
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TEXT_SIZE
@@ -34,7 +32,6 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Named
 import javax.inject.Singleton
-import kotlin.collections.ArrayList
 
 @Singleton
 class WaterMarkRepository @Inject constructor(

@@ -14,10 +14,19 @@ import androidx.fragment.app.*
 import androidx.viewbinding.ViewBinding
 import me.rosuh.easywatermark.R
 
-fun Activity.openLink(url: String) {
-    val i = Intent(Intent.ACTION_VIEW)
-    i.data = Uri.parse(url)
-    startActivity(i)
+fun Activity.openLink(url: String, failedCallback: (() -> Unit)? = null) {
+    openLink(Uri.parse(url), failedCallback)
+}
+
+fun Activity.openLink(uri: Uri, failedCallback: (() -> Unit)? = null) {
+    try {
+        val i = Intent(Intent.ACTION_VIEW)
+        i.data = uri
+        startActivity(i)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        failedCallback?.invoke()
+    }
 }
 
 inline fun <reified VB : ViewBinding> Activity.inflate() = lazy {

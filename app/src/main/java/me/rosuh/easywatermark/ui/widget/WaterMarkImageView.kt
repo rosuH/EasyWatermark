@@ -4,7 +4,14 @@ import android.animation.Animator
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.content.Context
-import android.graphics.*
+import android.graphics.Bitmap
+import android.graphics.BitmapShader
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Shader
 import android.net.Uri
 import android.os.Build
 import android.text.Layout
@@ -16,9 +23,15 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import androidx.core.animation.doOnEnd
 import androidx.core.graphics.withSave
-import androidx.core.view.ViewCompat
 import androidx.palette.graphics.Palette
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
@@ -27,11 +40,18 @@ import me.rosuh.easywatermark.data.repo.WaterMarkRepository.Companion.MAX_TEXT_S
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.Companion.MIN_TEXT_SIZE
 import me.rosuh.easywatermark.ui.widget.utils.WaterMarkShader
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
-import me.rosuh.easywatermark.utils.ktx.*
+import me.rosuh.easywatermark.utils.ktx.applyConfig
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
-import kotlin.math.*
+import kotlin.math.abs
+import kotlin.math.absoluteValue
+import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 
 class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, CoroutineScope {

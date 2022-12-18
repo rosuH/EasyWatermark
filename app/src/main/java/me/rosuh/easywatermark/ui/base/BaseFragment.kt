@@ -14,7 +14,4 @@ open class BaseFragment : Fragment() {
             return shareViewModel.waterMark.value
         }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-    }
 }
