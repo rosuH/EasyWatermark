@@ -8,7 +8,7 @@ dependencyResolutionManagement {
     versionCatalogs {
         create("libs") {
             // plugins
-            val kotlinVersion = "1.7.20"
+            val kotlinVersion = "1.7.22"
             library("dagger-hilt-plugin", "com.google.dagger:hilt-android-gradle-plugin:2.42")
             library("tools-gradle", "com.android.tools.build:gradle:7.3.1")
             library("kotlin-plugin", "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlinVersion}")
