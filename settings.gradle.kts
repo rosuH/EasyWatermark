@@ -9,7 +9,7 @@ dependencyResolutionManagement {
         create("libs") {
             // plugins
             val kotlinVersion = "1.8.0"
-            library("dagger-hilt-plugin", "com.google.dagger:hilt-android-gradle-plugin:2.42")
+            library("dagger-hilt-plugin", "com.google.dagger:hilt-android-gradle-plugin:2.44.2")
             library("tools-gradle", "com.android.tools.build:gradle:7.3.1")
             library("kotlin-plugin", "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlinVersion}")
             library("ktlint-gradle", "org.jlleitschuh.gradle:ktlint-gradle:10.1.0")
@@ -41,7 +41,7 @@ dependencyResolutionManagement {
             library("palette-ktx", "androidx.palette:palette-ktx:1.0.0")
 
             // third party libs
-            val daggerVersion = "2.43.2"
+            val daggerVersion = "2.44.2"
             library("dagger-hilt-android", "com.google.dagger:hilt-android:${daggerVersion}")
             library("dagger-hilt-compiler", "com.google.dagger:hilt-compiler:${daggerVersion}")
 
