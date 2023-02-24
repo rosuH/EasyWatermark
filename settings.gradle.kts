@@ -45,7 +45,7 @@ dependencyResolutionManagement {
             library("dagger-hilt-android", "com.google.dagger:hilt-android:${daggerVersion}")
             library("dagger-hilt-compiler", "com.google.dagger:hilt-compiler:${daggerVersion}")
 
-            val glideVersion = "4.14.2"
+            val glideVersion = "4.15.0"
             library("glide-glide", "com.github.bumptech.glide:glide:${glideVersion}")
             library("glide-compiler", "com.github.bumptech.glide:compiler:${glideVersion}")
 
