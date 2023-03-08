@@ -22,7 +22,7 @@ dependencyResolutionManagement {
             // android platforms libs
             library("fragment-ktx", "androidx.fragment:fragment-ktx:1.5.5")
             library("activity-ktx", "androidx.activity:activity-ktx:1.6.1")
-            library("lifecycle-runtime-ktx", "androidx.lifecycle:lifecycle-runtime-ktx:2.5.1")
+            library("lifecycle-runtime-ktx", "androidx.lifecycle:lifecycle-runtime-ktx:2.6.0")
             library("lifecycle-livedata-ktx", "androidx.lifecycle:lifecycle-livedata-ktx:2.5.1")
             library("lifecycle-viewModel-ktx", "androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.1")
             library("core-ktx", "androidx.core:core-ktx:1.7.20")
