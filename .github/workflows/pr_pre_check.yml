@@ -5,6 +5,7 @@ on:
     types: [opened,reopened,synchronize]
     branches:
       - master
+      - dev
 jobs:
   simple_compile:
     runs-on: ubuntu-latest
