@@ -12,7 +12,7 @@ dependencyResolutionManagement {
             library("dagger-hilt-plugin", "com.google.dagger:hilt-android-gradle-plugin:2.44.2")
             library("tools-gradle", "com.android.tools.build:gradle:7.3.1")
             library("kotlin-plugin", "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlinVersion}")
-            library("ktlint-gradle", "org.jlleitschuh.gradle:ktlint-gradle:10.1.0")
+            library("ktlint-gradle", "org.jlleitschuh.gradle:ktlint-gradle:11.3.1")
 
             // kotlin libs
             library("kotlin-stdlib", "org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}")
