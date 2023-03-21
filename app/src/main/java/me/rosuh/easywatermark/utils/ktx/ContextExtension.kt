@@ -63,7 +63,7 @@ fun Activity.requestPermission() {
     } else {
         ActivityCompat.requestPermissions(
             this,
-            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE),
             MainActivity.REQ_CODE_REQ_WRITE_PERMISSION
         )
     }
