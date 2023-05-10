@@ -25,7 +25,7 @@ dependencyResolutionManagement {
             library("lifecycle-runtime-ktx", "androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
             library("lifecycle-livedata-ktx", "androidx.lifecycle:lifecycle-livedata-ktx:2.5.1")
             library("lifecycle-viewModel-ktx", "androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.1")
-            library("core-ktx", "androidx.core:core-ktx:1.7.20")
+            library("core-ktx", "androidx.core:core-ktx:1.10.1")
             library("appcompat", "androidx.appcompat:appcompat:1.6.0")
             library("material", "com.google.android.material:material:1.8.0-rc01")
             val roomVersion = "2.5.1"
