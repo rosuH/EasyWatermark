@@ -76,7 +76,7 @@
     <string name="back">Zurück</string>
     <string name="copy_success">Kopiert</string>
     <string name="copy_failed">Kopieren fehlgeschlagen</string>
-    <string name="store_not_found">Not Store wurde installiert.</string>
+    <string name="store_not_found">Ist kein Store installiert\?</string>
     <string name="recovery_mode_closed">Neustart erforderlich</string>
     <string name="copy">Protokolle kopieren</string>
     <string name="turn_off_recovery_mode">Wiederherstellungsmodus ausschalten</string>
