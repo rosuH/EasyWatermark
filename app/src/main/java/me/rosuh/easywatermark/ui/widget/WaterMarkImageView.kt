@@ -693,7 +693,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 maxLineWidth = max(maxLineWidth, lineWidth)
             }
 
-            val staticLayout = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val staticLayout =
                 StaticLayout.Builder.obtain(
                     config.text,
                     0,
@@ -703,17 +703,6 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 )
                     .setAlignment(Layout.Alignment.ALIGN_NORMAL)
                     .build()
-            } else {
-                StaticLayout(
-                    config.text,
-                    textPaint,
-                    maxLineWidth,
-                    Layout.Alignment.ALIGN_NORMAL,
-                    1.0f,
-                    0f,
-                    false
-                )
-            }
 
             val textWidth = staticLayout.width.toFloat().coerceAtLeast(1f)
             val textHeight = staticLayout.height.toFloat().coerceAtLeast(1f)
