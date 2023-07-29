@@ -12,6 +12,9 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
+    kotlin {
+        jvmToolchain(17)
+    }
 }
 
 dependencies {

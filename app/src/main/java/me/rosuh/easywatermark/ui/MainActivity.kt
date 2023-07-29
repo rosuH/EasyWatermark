@@ -634,9 +634,7 @@ class MainActivity : AppCompatActivity() {
             window.decorView.systemUiVisibility = systemUiVisibilityFlags
         }
         window.statusBarColor = color
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            window.findViewById<View>(android.R.id.content)?.foreground = null
-        }
+        window.findViewById<View>(android.R.id.content)?.foreground = null
     }
 
 

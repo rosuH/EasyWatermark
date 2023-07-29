@@ -8,9 +8,9 @@ dependencyResolutionManagement {
     versionCatalogs {
         create("libs") {
             // plugins
-            val kotlinVersion = "1.8.0"
+            val kotlinVersion = "1.8.22"
             library("dagger-hilt-plugin", "com.google.dagger:hilt-android-gradle-plugin:2.44.2")
-            library("tools-gradle", "com.android.tools.build:gradle:7.3.1")
+            library("tools-gradle", "com.android.tools.build:gradle:7.4.2")
             library("kotlin-plugin", "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlinVersion}")
             library("ktlint-gradle", "org.jlleitschuh.gradle:ktlint-gradle:11.3.1")
 
@@ -20,15 +20,15 @@ dependencyResolutionManagement {
             library("kotlin-coroutine-core", "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
 
             // android platforms libs
-            library("fragment-ktx", "androidx.fragment:fragment-ktx:1.5.5")
-            library("activity-ktx", "androidx.activity:activity-ktx:1.6.1")
-            library("lifecycle-runtime-ktx", "androidx.lifecycle:lifecycle-runtime-ktx:2.5.1")
+            library("fragment-ktx", "androidx.fragment:fragment-ktx:1.6.1")
+            library("activity-ktx", "androidx.activity:activity-ktx:1.7.2")
+            library("lifecycle-runtime-ktx", "androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
             library("lifecycle-livedata-ktx", "androidx.lifecycle:lifecycle-livedata-ktx:2.5.1")
             library("lifecycle-viewModel-ktx", "androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.1")
-            library("core-ktx", "androidx.core:core-ktx:1.7.20")
+            library("core-ktx", "androidx.core:core-ktx:1.10.1")
             library("appcompat", "androidx.appcompat:appcompat:1.6.0")
             library("material", "com.google.android.material:material:1.8.0-rc01")
-            val roomVersion = "2.5.0"
+            val roomVersion = "2.5.2"
             library("room-runtime", "androidx.room:room-runtime:${roomVersion}")
             library("room-ktx", "androidx.room:room-ktx:${roomVersion}")
             library("room-compiler", "androidx.room:room-compiler:$roomVersion")
@@ -55,7 +55,7 @@ dependencyResolutionManagement {
 
             // benchmark && test libs
             library("benchmark", "androidx.benchmark:benchmark-macro-junit4:1.1.1")
-            library("profieinstaller", "androidx.profileinstaller:profileinstaller:1.2.2")
+            library("profieinstaller", "androidx.profileinstaller:profileinstaller:1.3.1")
 
             val testVersion = "1.4.0"
             library("test-core", "androidx.test:core:${testVersion}")

@@ -322,7 +322,7 @@ class MainViewModel @Inject constructor(
 
             layoutPaint.shader = shader?.bitmapShader
 
-            if (imageInfo.obtainTileMode() == Shader.TileMode.CLAMP) {
+            if (tmpConfig.obtainTileMode() == Shader.TileMode.CLAMP) {
                 canvas.translate(
                     0 + imageInfo.offsetX * mutableBitmap.width,
                     0 + imageInfo.offsetY * mutableBitmap.height
@@ -518,10 +518,10 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun updateTileMode(imageInfo: ImageInfo, tileMode: Shader.TileMode) {
+    fun updateTileMode(tileMode: Shader.TileMode) {
         launch {
             autoScroll = false
-            waterMarkRepo.updateTileMode(imageInfo, tileMode)
+            waterMarkRepo.updateTileMode(tileMode)
         }
     }
 

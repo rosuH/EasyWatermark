@@ -57,9 +57,7 @@ class AboutActivity : AppCompatActivity() {
         window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
         window.statusBarColor = Color.TRANSPARENT
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            window.findViewById<View>(android.R.id.content)?.foreground = null
-        }
+        window.findViewById<View>(android.R.id.content)?.foreground = null
     }
 
 
@@ -157,12 +155,8 @@ class AboutActivity : AppCompatActivity() {
                         return@observe
                     }
 
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
-                        applyPaletteForSupportLightStatusIcon(it)
-                    }
-
                     else -> {
-                        applyPaletteForNoMatterWhoYouAre(it)
+                        applyPaletteForSupportLightStatusIcon(it)
                     }
                 }
             }

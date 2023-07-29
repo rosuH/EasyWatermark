@@ -7,7 +7,7 @@ buildscript {
         maven("https://plugins.gradle.org/m2/")
     }
     dependencies {
-        classpath(libs.tools.gradle)
+        classpath("com.android.tools.build:gradle:8.1.0")
         classpath(libs.kotlin.plugin)
         classpath(libs.ktlint.gradle)
         classpath(libs.dagger.hilt.plugin)
