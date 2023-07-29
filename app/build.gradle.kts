@@ -46,11 +46,6 @@ android {
         }
     }
 
-    compileOptions {
-        sourceCompatibility(JavaVersion.VERSION_11)
-        targetCompatibility(JavaVersion.VERSION_11)
-    }
-
     // change output apk name
     applicationVariants.all {
         outputs.all {
@@ -64,14 +59,15 @@ android {
     }
 
     android.buildFeatures.viewBinding = true
-
-    kotlinOptions {
-        jvmTarget = "11"
-    }
+    
     namespace = "me.rosuh.easywatermark"
 
     lint {
         baseline = file("lint-baseline.xml")
+    }
+
+    kotlin {
+        jvmToolchain(17)
     }
 }
 
