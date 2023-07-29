@@ -291,7 +291,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         }
         layoutPaint.shader = layoutShader?.bitmapShader
         canvas?.withSave {
-            if (curImageInfo.obtainTileMode() == Shader.TileMode.CLAMP) {
+            if (config?.obtainTileMode() == Shader.TileMode.CLAMP) {
                 translate(
                     drawableBounds.left + curImageInfo.offsetX * drawableBounds.width(),
                     drawableBounds.top + curImageInfo.offsetY * drawableBounds.height()
@@ -348,7 +348,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
     }
 
     private fun updateWaterMarkOffset(deltaX: Float, deltaY: Float): ImageInfo {
-        if (curImageInfo.obtainTileMode() != Shader.TileMode.CLAMP) {
+        if (config?.obtainTileMode() != Shader.TileMode.CLAMP) {
             return curImageInfo
         }
         val newOffsetX = (curImageInfo.offsetX + deltaX / drawableBounds.width())
@@ -364,7 +364,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
     private var touchRect = RectF()
 
     fun isOutOfDrawable(deltaX: Float, deltaY: Float): Boolean {
-        if (curImageInfo.obtainTileMode() != Shader.TileMode.CLAMP) {
+        if (config?.obtainTileMode() != Shader.TileMode.CLAMP) {
             return false
         }
         val newOffsetX = (curImageInfo.offsetX + deltaX / drawableBounds.width())
@@ -387,7 +387,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
     }
 
     fun isTouchWaterMark(event: MotionEvent): Boolean {
-        if (curImageInfo.obtainTileMode() != Shader.TileMode.CLAMP) {
+        if (config?.obtainTileMode() != Shader.TileMode.CLAMP) {
             return false
         }
         val shader = layoutShader ?: return false
@@ -597,7 +597,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             if (srcBitmap.isRecycled) {
                 return@withContext null
             }
-            val tileMode = imageInfo.obtainTileMode()
+            val tileMode = config.obtainTileMode()
             val showDebugRect = config.enableBounds
             val rawWidth = srcBitmap.width.toFloat().coerceAtLeast(1f)
             val rawHeight = srcBitmap.height.toFloat().coerceAtLeast(1f)
@@ -681,7 +681,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             }
             val showDebugRect = config.enableBounds
             var maxLineWidth = 0
-            val tileMode = imageInfo.obtainTileMode()
+            val tileMode = config.obtainTileMode()
             // calculate the max width of all lines
             config.text.split("\n").forEach {
                 val startIndex = config.text.indexOf(it).coerceAtLeast(0)

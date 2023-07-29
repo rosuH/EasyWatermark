@@ -27,7 +27,9 @@ import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_T
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TEXT_SIZE
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TEXT_STYLE
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TEXT_TYPEFACE
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TILE_MODE
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_VERTICAL_GAP
+import me.rosuh.easywatermark.utils.ktx.toTileMode
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Named
@@ -83,6 +85,7 @@ class WaterMarkRepository @Inject constructor(
                 vGap = it[KEY_VERTICAL_GAP] ?: 0,
                 iconUri = Uri.parse(it[KEY_ICON_URI] ?: ""),
                 markMode = if (it[KEY_MODE] == MarkMode.Image.value) MarkMode.Image else MarkMode.Text,
+                tileMode = it[KEY_TILE_MODE].toTileMode(),
                 enableBounds = it[KEY_ENABLE_BOUNDS] ?: false
             )
         }
@@ -150,23 +153,10 @@ class WaterMarkRepository @Inject constructor(
         }
     }
 
-    suspend fun updateTileMode(imageInfo: ImageInfo, mode: Shader.TileMode): ImageInfo {
-        if (imageInfo.tileMode == mode.ordinal) {
-            Log.i("WaterMarkRepository", "updateTileMode: same mode")
-            return imageInfo
+    suspend fun updateTileMode(mode: Shader.TileMode) {
+        dataStore.edit {
+            it[KEY_TILE_MODE] = mode.ordinal
         }
-        val index = imageInfoMap[imageInfo.uri] ?: kotlin.run {
-            Log.e("WaterMarkRepository", "updateTileMode: imageInfo not found, uri = ${imageInfo.uri}")
-            return imageInfo
-        }
-
-        val info = imageInfo.copy(tileMode = mode.ordinal)
-        val list = ArrayList(imageInfoList)
-        list[index] = info
-        imageInfoMap[info.uri] = index
-        _imageMapFlow.emit(list)
-        _selectedImage.emit(info)
-        return info
     }
 
     suspend fun updateOffset(imageInfo: ImageInfo) {

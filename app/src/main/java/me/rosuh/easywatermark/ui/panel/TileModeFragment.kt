@@ -23,27 +23,24 @@ class TileModeFragment : BaseBindFragment<FragmentTileModeBinding>() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        shareViewModel.selectedImage.observe(viewLifecycleOwner) {
-            if (it == null) {
-                return@observe
-            }
+        shareViewModel.waterMark.observe(viewLifecycleOwner) {
             val checkedId = when (it.tileMode) {
-                Shader.TileMode.CLAMP.ordinal -> R.id.rb_tile_mode_decal
+                Shader.TileMode.CLAMP -> R.id.rb_tile_mode_decal
                 else -> R.id.rb_tile_mode_repeat
             }
             binding?.rgTileMode?.setOnCheckedChangeListener(null)
             binding?.rgTileMode?.check(checkedId)
             binding?.rgTileMode?.setOnCheckedChangeListener { _, id ->
                 val imageInfo = it
-                if (id == R.id.rb_tile_mode_decal && imageInfo.tileMode == Shader.TileMode.CLAMP.ordinal) {
+                if (id == R.id.rb_tile_mode_decal && imageInfo.tileMode == Shader.TileMode.CLAMP) {
                     return@setOnCheckedChangeListener
                 }
-                if (id == R.id.rb_tile_mode_repeat && imageInfo.tileMode == Shader.TileMode.REPEAT.ordinal) {
+                if (id == R.id.rb_tile_mode_repeat && imageInfo.tileMode == Shader.TileMode.REPEAT) {
                     return@setOnCheckedChangeListener
                 }
                 when(id) {
-                    R.id.rb_tile_mode_decal -> shareViewModel.updateTileMode(imageInfo, Shader.TileMode.CLAMP)
-                    else -> shareViewModel.updateTileMode(imageInfo, Shader.TileMode.REPEAT)
+                    R.id.rb_tile_mode_decal -> shareViewModel.updateTileMode(Shader.TileMode.CLAMP)
+                    else -> shareViewModel.updateTileMode(Shader.TileMode.REPEAT)
                 }
             }
         }
