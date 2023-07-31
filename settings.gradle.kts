@@ -35,7 +35,7 @@ dependencyResolutionManagement {
             library("datastore-preference", "androidx.datastore:datastore-preferences:1.0.0")
             library("asyncLayoutInflater", "androidx.asynclayoutinflater:asynclayoutinflater:1.0.0")
             library("viewpager2", "androidx.viewpager2:viewpager2:1.0.0")
-            library("recyclerview", "androidx.recyclerview:recyclerview:1.2.1")
+            library("recyclerview", "androidx.recyclerview:recyclerview:1.3.1")
             library("constraintLayout", "androidx.constraintlayout:constraintlayout:2.1.4")
             library("exifInterface", "androidx.exifinterface:exifinterface:1.3.5")
             library("palette-ktx", "androidx.palette:palette-ktx:1.0.0")
