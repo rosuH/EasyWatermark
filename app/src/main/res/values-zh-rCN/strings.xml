@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">简单水印</string>
     <string name="action_pick">选择图片</string>
@@ -19,7 +20,6 @@
     <string name="title_text_color">颜色</string>
     <string name="title_text_rotate">角度</string>
     <string name="request_permission_failed">获取权限失败</string>
-
     <!--about page-->
     <string name="about_title_about">关于</string>
     <string name="about_title_info">信息</string>
@@ -72,7 +72,7 @@
     <string name="recovery_title">恢复模式</string>
     <string name="copy_success">复制成功</string>
     <string name="copy_failed">复制失败</string>
-    <string name="store_not_found">好像没有安装商店</string>
+    <string name="store_not_found">好像没有安装商店？</string>
     <string name="recovery_mode_closed">重启生效</string>
     <string name="copy">复制错误信息</string>
     <string name="recovery_mode_tips">糟糕，您似乎遇到了多次崩溃。现在已经自动进入恢复模式。以下是您的设备信息以及崩溃信息，辛苦您将其复制以后通过下列方式联系我们，将对解决问题非常有帮助。谢谢您！</string>
@@ -90,5 +90,4 @@
     <string name="title_tile_mode">平铺格式</string>
     <string name="tile_mode_title_repeat">重复</string>
     <string name="tile_mode_title_decal">单个</string>
-
 </resources>
