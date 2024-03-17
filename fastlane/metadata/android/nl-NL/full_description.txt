@@ -1,0 +1,54 @@
+Veilig en gemakkelijk een watermerk toevoegen aan uw gevoelige foto's.
+Om te voorkomen dat ze worden gelekt of misbruikt door de BAD GUY.
+
+Het is natuurlijk ook geschikt voor het maken van emoji's.
+Het ondersteunt immers het toevoegen van watermerken aan afbeeldingen met zeer spookachtige effecten.
+
+## Kenmerken
+### Spannend 👓
+
+Puurgebruik offline lokale applicaties, code om te bekijken op open source.
+Verticale en horizontale afstand kunnen worden aangepast, de kleur van licht en donker kan naar wens worden gewijzigd.
+Vrij roteren in alle maten en hoeken, tekst en afbeeldingen kunnen worden afgedrukt.
+Het watermerk herhaalt zich over de hele afbeelding en het is een beetje moeilijk voor de slechteriken om het te verwijderen.
+
+### Serieus (duwt bril omhoog)
+
+- Veiligheid:
+De code is volledig open source en maakt gebruik van een los MIT-protocol, u bent vrij om zelf een Fork te maken om code te wijzigen en te verwijderen die u problematisch vindt ;)
+Geen netwerkverzoeken, geen toestemming voor netwerkverzoeken, geen angst dat uw foto's worden gecompromitteerd. Gebruikers met API >= 29 hoeven zelfs geen toestemming aan te vragen. (Gebruikers van 28 en lager moeten toestemming aanvragen voor opslag om toegang te krijgen tot en foto's op te slaan)
+En natuurlijk zijn er geen statistieken, verborgen punten of apparaat-ID's, of zelfs crashrapportage (dus als u een crash krijgt, deel dan de crashinfo met ons >_<).
+We laten het handige SDK voor het verzamelen van gegevens van derden en verschillende statistieken achterwege, zodat u het met vertrouwen kunt gebruiken. Wat van u is, is van u.
+- Lay-out: ondersteuning voor horizontale en verticale tussenruimten tussen het watermerk, automatisch de volledige afbeelding herhalen.
+- Stijl: lettertypekleur, transparantie, grootte en rotatiehoek kunnen worden aangepast.
+- Inhoud: ondersteuning voor tekstwatermerk en afbeeldingswatermerk.
+
+## Gebruik
+U kunt het gebruiken zoals u wilt. Het is meer geschikt voor situaties waarin u een foto-ID moet indienen, een handgeschreven foto-ID of een gevoelige foto. Voorbeeld.
+
+Verschillende echte namen in het land, het uploaden van foto's van de voorkant en achterkant van ID-kaarten bij elke beurt, zelfs handgeschreven ID-foto's.
+Voorprojectvoorbeelden, monsters, auteursrechtelijk beschermd of eenvoudigweg vervalste afbeeldingen
+Referentietekst.
+
+Deze foto is alleen voor xx voor xxx doeleinden, geen ander gebruik.
+
+U kunt de transparantie verlagen, maar blokkeer niet de belangrijke informatie.
+
+(Voor nu) kunnen we (tijdelijk) niet voorkomen dat informatie wordt geüpload, of zelfs (tijdelijk) voorkomen dat informatie wordt gelekt, maar we kunnen de waarde van de gelekte informatie verminderen.
+
+Zelfs als het uiteindelijk (waarschijnlijk) nutteloos is, kunt u in ieder geval de leaker een beetje afkeer geven.
+
+## UI
+Ontworpen door de gerenommeerde UI-goeroe @tovi (👏🤪)
+Alles wat u denkt dat niet goed werkt, is mijn UI-herstel dat niet werkt en heeft niets te maken met het concept van de UI. xD
+Deze app is ontworpen door @tovi, dus alle rechten op de UI en gerelateerde ontwerpmiddelen behoren toe aan hem en mogen niet worden gebruikt zonder toestemming van enige persoon of organisatie.
+
+## Open Source Licentie.
+Gebruikte bibliotheken van derden.
+
+daniel-stonuk/material-about-library
+skydoves/ColorPickerView
+material-components/material-components-android
+
+## Feedback en bijdrage
+We verwelkomen uw opmerkingen en suggesties in de issues-sectie, of u kunt uw code bijdragen door rechtstreeks een PR naar ons te sturen. Natuurlijk kunt u ook rechtstreeks contact opnemen met de ontwikkelaar via telegram of e-mail en we zullen spoedig contact met u opnemen.
