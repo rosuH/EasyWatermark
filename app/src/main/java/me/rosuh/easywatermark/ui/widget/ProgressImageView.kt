@@ -61,11 +61,10 @@ class ProgressImageView : AppCompatImageView {
     private val saveLayerBounds = RectF()
 
     @SuppressLint("DrawAllocation")
-    override fun onDraw(canvas: Canvas?) {
+    override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        if (measuredWidth < 0 || measuredHeight <= 0 || drawable == null
-            || drawable.intrinsicWidth <= 0 || drawable.intrinsicHeight <= 0 || canvas == null
-            || curX <= 0f || !enableProgress.get()
+        if ((measuredWidth < 0 || measuredHeight <= 0 || drawable == null
+                || drawable.intrinsicWidth <= 0 || drawable.intrinsicHeight <= 0) || curX <= 0f || !enableProgress.get()
         ) {
             return
         }

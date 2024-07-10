@@ -60,7 +60,7 @@ class CircleImageView : AppCompatImageView {
     }
 
     @SuppressLint("DrawAllocation")
-    override fun onDraw(canvas: Canvas?) {
+    override fun onDraw(canvas: Canvas) {
         if (sourceImageBitmap == null || (sizeHasChanged && width > 0 && height > 0)) {
             super.onDraw(canvas)
             sourceImageBitmap = drawable.toBitmap(width, height)

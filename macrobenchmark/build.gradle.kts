@@ -1,14 +1,14 @@
 import com.android.build.api.dsl.ManagedVirtualDevice
 
 plugins {
-    id("com.android.test")
-    id("kotlin-android")
+    id(libs.plugins.android.test.get().pluginId)
+    id(libs.plugins.kotlin.android.get().pluginId)
 }
 
 // [START macrobenchmark_setup_android]
 android {
     // [START_EXCLUDE]
-    compileSdk = 33
+    compileSdk = 34
     namespace = "me.rosuh.macrobenchmark"
 
     defaultConfig {
@@ -45,6 +45,9 @@ android {
             // [END_EXCLUDE]
         }
     }
+    kotlin {
+        jvmToolchain(17)
+    }
 }
 // [END macrobenchmark_setup_android]
 
@@ -64,4 +67,5 @@ dependencies {
     implementation(libs.test.espresso.core)
     implementation(libs.test.uiautomator)
     implementation(libs.kotlin.stdlib)
+    implementation(libs.core.ktx)
 }

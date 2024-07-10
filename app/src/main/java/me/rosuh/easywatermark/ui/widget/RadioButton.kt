@@ -72,7 +72,7 @@ class RadioButton : View {
         return ContextCompat.getDrawable(context, iconRes) ?: ColorDrawable(context.colorOnSurface)
     }
 
-    override fun onDraw(canvas: Canvas?) {
+    override fun onDraw(canvas: Canvas) {
         // draw background
         paint.style = Paint.Style.FILL
         paint.color = if (isChecked) bgColorSelected else bgColorNormal

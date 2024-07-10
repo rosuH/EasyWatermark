@@ -1,11 +1,12 @@
 plugins {
-    id("com.android.library")
-    id("kotlin-android")
+    id(libs.plugins.android.library.get().pluginId)
+    id(libs.plugins.kotlin.android.get().pluginId)
+    id(libs.plugins.ksp.get().pluginId)
 }
 
 android {
     namespace = "me.rosuh.benchmark.macro.base"
-    compileSdk = 33
+    compileSdk = 34
 
     defaultConfig {
         minSdk = Apps.minSdk
@@ -29,4 +30,6 @@ android {
     }
 }
 
-dependencies {}
+dependencies {
+    implementation(libs.core.ktx)
+}
