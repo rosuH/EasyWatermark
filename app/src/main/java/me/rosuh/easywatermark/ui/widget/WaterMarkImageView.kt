@@ -280,7 +280,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         Log.i("onSizeChanged", "$w, $h, $oldh, $oldh")
     }
 
-    override fun onDraw(canvas: Canvas?) {
+    override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         if (config?.text.isNullOrEmpty()
             || decodedUri.toString().isEmpty()

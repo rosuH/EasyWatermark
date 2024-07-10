@@ -1,11 +1,11 @@
 import com.android.build.gradle.internal.api.BaseVariantOutputImpl
 
 plugins {
-    id("com.android.application")
-    id("kotlin-android")
-    id("kotlin-parcelize")
-    id("org.jetbrains.kotlin.kapt")
-    id("dagger.hilt.android.plugin")
+    id(libs.plugins.android.application.get().pluginId)
+    id(libs.plugins.kotlin.android.get().pluginId)
+    id(libs.plugins.kotlin.parcelize.get().pluginId)
+    id(libs.plugins.ksp.get().pluginId)
+    id(libs.plugins.hilt.plugin.get().pluginId)
 }
 
 android {
@@ -15,8 +15,8 @@ android {
         applicationId = "me.rosuh.easywatermark"
         minSdk = (Apps.minSdk)
         targetSdk = (Apps.targetSdk)
-        versionCode = 20809
-        versionName = "2.8.9"
+        versionCode = 20900
+        versionName = "2.9.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         setProperty("archivesBaseName", "$applicationId-v$versionName($versionCode)")
     }
@@ -62,8 +62,19 @@ android {
     
     namespace = "me.rosuh.easywatermark"
 
-    lint {
-        baseline = file("lint-baseline.xml")
+//    lint {
+//        baseline = file("lint-baseline.xml")
+//        quiet = true
+//        abortOnError = false
+//        checkReleaseBuilds = false
+//    }
+
+    buildFeatures {
+        compose = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = libs.versions.androidxComposeCompiler.get()
     }
 
     kotlin {
@@ -71,9 +82,6 @@ android {
     }
 }
 
-kapt {
-    correctErrorTypes = true
-}
 
 dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
@@ -81,17 +89,21 @@ dependencies {
 
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
-    kapt(libs.room.compiler)
+    implementation(libs.core.ktx)
+    ksp(libs.room.compiler)
 
     implementation(libs.datastore.preference)
 
-    implementation(libs.dagger.hilt.android)
-    kapt(libs.dagger.hilt.compiler)
+    // di
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
+    androidTestImplementation(libs.hilt.testing)
+    kspAndroidTest(libs.hilt.compiler)
 
-    implementation(libs.asyncLayoutInflater)
+    implementation(libs.asynclayout.inflater)
 
-    implementation(libs.glide.glide)
-    kapt(libs.glide.compiler)
+    implementation(libs.glide)
+    ksp(libs.glide.compiler)
 
     implementation(libs.compressor)
 
@@ -105,13 +117,13 @@ dependencies {
     implementation(libs.activity.ktx)
     implementation(libs.lifecycle.runtime.ktx)
     implementation(libs.lifecycle.livedata.ktx)
-    implementation(libs.lifecycle.viewModel.ktx)
+    implementation(libs.lifecycle.viewmodel.ktx)
     implementation(libs.viewpager2)
     implementation(libs.recyclerview)
-    implementation(libs.constraintLayout)
-    implementation(libs.exifInterface)
+    implementation(libs.constraintlayout)
+    implementation(libs.exifinterface)
     implementation(libs.palette.ktx)
-    implementation(libs.profieinstaller)
+    implementation(libs.profileinstaller)
 
     implementation(libs.colorpicker)
 
@@ -126,4 +138,58 @@ dependencies {
     androidTestImplementation(libs.test.espresso.core)
     androidTestImplementation(libs.test.uiautomator)
     androidTestImplementation(libs.test.ext.junit)
+
+    // or only import the main APIs for the underlying toolkit systems,
+    // such as input and measurement/layout
+//    val composeBom = platform("androidx.compose:compose-bom:2023.10.00")
+//    implementation(composeBom)
+//    androidTestImplementation(composeBom)
+    implementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    //    implementation("androidx.compose.material3:material3:1.2.0-alpha09")
+//    implementation("androidx.compose.material3:material3-window-size-class:1.1.2")
+//    implementation(libs.material)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material3.windowSizeClass)
+//    implementation("androidx.compose.ui:ui")
+    implementation(libs.androidx.compose.ui.ui)
+
+//    implementation("androidx.compose.ui:ui-tooling-preview")
+//    debugImplementation("androidx.compose.ui:ui-tooling")
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.ui.tooling)
+
+    // Optional - Integration with activities
+//    implementation("androidx.activity:activity-compose:1.8.0")
+    implementation(libs.androidx.activity.compose)
+    // Optional - Integration with ViewModels
+//    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
+    implementation(libs.androidx.compose.lifecycle.viewmodel)
+
+    // When using a MDC theme
+//    implementation("com.google.android.material:compose-theme-adapter:1.2.1")
+
+//    implementation("com.google.accompanist:accompanist-permissions:0.33.2-alpha")
+    implementation(libs.accompanist.permissions)
+//    implementation("io.coil-kt:coil-compose:2.3.0")
+    implementation(libs.coil.kt)
+    implementation(libs.coil.kt.compose)
+    implementation(libs.coil.kt.svg)
+
+//    implementation("androidx.compose.runtime:runtime-livedata:1.5.3")
+    implementation(libs.androidx.compose.runtime.livedata)
+
+//    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
+    implementation(libs.androidx.lifecycle.runtime.compose)
+
+//    implementation("androidx.navigation:navigation-compose:2.7.4")
+    implementation(libs.androidx.navigation.compose)
+
+//    implementation("com.google.accompanist:accompanist-navigation-animation:0.31.1-alpha")
+    implementation(libs.accompanist.navigation.animation)
+
+//    implementation("androidx.constraintlayout:constraintlayout-compose:1.0.1")
+    implementation(libs.androidx.constraintlayout.compose)
+    implementation(libs.androidx.motionlayoout.compose)
+
 }

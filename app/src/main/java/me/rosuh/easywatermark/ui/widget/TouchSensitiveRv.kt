@@ -196,16 +196,16 @@ class TouchSensitiveRv : RecyclerView {
         borderAnimator.cancel()
     }
 
-    override fun onDraw(c: Canvas?) {
+    override fun onDraw(c: Canvas) {
         super.onDraw(c)
-        c?.withSave {
+        c.withSave {
             drawRect(
                 glowRectF,
                 glowPaint
             )
         }
         if (enableBorder && scrollState == SCROLL_STATE_IDLE) {
-            c?.drawRoundRect(borderRectF, 2F.dp, 2F.dp, borderPaint)
+            c.drawRoundRect(borderRectF, 2F.dp, 2F.dp, borderPaint)
         }
     }
 
