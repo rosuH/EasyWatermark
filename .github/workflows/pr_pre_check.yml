@@ -31,7 +31,5 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
       - name: Build apk with Gradle
         run: ./gradlew assembleDebug
