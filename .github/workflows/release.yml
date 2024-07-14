@@ -37,6 +37,7 @@ jobs:
           cache: 'gradle'
       - uses: gradle/actions/setup-gradle@v3
         with:
+          gradle-version: wrapper
           gradle-home-cache-cleanup: true
 #      - run: ./gradlew spotlessCheck
   build:
@@ -57,6 +58,7 @@ jobs:
           cache: 'gradle'
       - uses: gradle/actions/setup-gradle@v3
         with:
+          gradle-version: wrapper
           gradle-home-cache-cleanup: true
       - name: Retrieve version
         run: |
@@ -84,7 +86,6 @@ jobs:
           alias: ${{ secrets.ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
-      
       - name: Sign bundle release
         if: success()
         id: sign_bundle

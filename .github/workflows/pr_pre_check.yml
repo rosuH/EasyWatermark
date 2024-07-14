@@ -23,6 +23,7 @@ jobs:
           cache: 'gradle'
       - uses: gradle/actions/setup-gradle@v3
         with:
+          gradle-version: wrapper
           gradle-home-cache-cleanup: true
 #      - run: ./gradlew spotlessCheck
   simple_compile:
@@ -38,6 +39,7 @@ jobs:
           cache: 'gradle'
       - uses: gradle/actions/setup-gradle@v3
         with:
+          gradle-version: wrapper
           gradle-home-cache-cleanup: true
       - name: Build apk with Gradle
         run: ./gradlew :app:assembleDebug
