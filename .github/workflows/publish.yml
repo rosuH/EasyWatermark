@@ -23,7 +23,7 @@ jobs:
           excludes: prerelease, draft
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: test
-        run: echo ${{ steps.fetchLatestRelease.fetchLatestRelease.release }}
+        run: echo ${{ steps.fetchLatestRelease.outputs.release }}
       - name: Prepare Release Artifact
         uses: dsaltares/fetch-gh-release-asset@master
         with:
