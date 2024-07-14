@@ -40,4 +40,4 @@ jobs:
         with:
           gradle-home-cache-cleanup: true
       - name: Build apk with Gradle
-        run: ./gradlew assembleDebug
+        run: ./gradlew :app:assembleDebug

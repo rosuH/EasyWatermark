@@ -66,7 +66,7 @@ jobs:
         run: echo "repository_name=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_ENV
       # Create APK Release
       - name: Build apk release project (APK) - ${{ env.main_project_module }} module
-        run: ./gradlew -PappVerName=${{ env.VERSION }} ${{ env.main_project_module }}assembleRelease
+        run: ./gradlew -PappVerName=${{ env.VERSION }} ${{ env.main_project_module }}:assembleRelease
       # Create Bundle AAB Release
       # Noted for main module build [main_project_module]:bundleRelease
       - name: Build app bundle release (AAB) - ${{ env.main_project_module }} module
