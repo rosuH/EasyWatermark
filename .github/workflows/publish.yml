@@ -34,5 +34,4 @@ jobs:
           packageName: me.rosuh.easywatermark
           releaseFiles: 'app-release.aab'
           track: production
-          status: inProgress
           mappingFile: 'mapping.txt'
