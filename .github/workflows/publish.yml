@@ -28,7 +28,7 @@ jobs:
         uses: dsaltares/fetch-gh-release-asset@master
         with:
           repo: 'dsaltares/godot-wild-jam-18'
-          version: ${{ steps.fetchLatestRelease.fetchLatestRelease.release }}
+          version: ${{ steps.fetchLatestRelease.outputs.release }}
           file: '*.aab'
           token: ${{ secrets.GITHUB_TOKEN }}
 #      - name: Upload Android Release to Play Store
