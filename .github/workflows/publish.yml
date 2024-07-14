@@ -15,7 +15,7 @@ jobs:
           repository: ${{ github.repository }}
           excludes: prerelease, draft
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: test
+      - name: Print Latest Release
         run: echo ${{ steps.fetchLatestRelease.outputs.release }}
       - name: Prepare Release Artifact
         uses: dsaltares/fetch-gh-release-asset@master
@@ -25,7 +25,7 @@ jobs:
         uses: dsaltares/fetch-gh-release-asset@master
         with:
           file: 'mapping.txt'
-      - name: test
+      - name: List files
         run: ls -l
       - name: Upload Android Release to Play Store
         uses: r0adkll/upload-google-play@v1.1.3
