@@ -5,8 +5,11 @@ env:
   main_project_module: app
 
 on:
-  release:
-    types: [published]
+#  release:
+#    types: [published]
+  push:
+    branches:
+      - dev
 
 jobs:
   build:
@@ -23,15 +26,15 @@ jobs:
         uses: dsaltares/fetch-gh-release-asset@master
         with:
           repo: 'dsaltares/godot-wild-jam-18'
-          version: ${{ steps.keydb.fetchLatestRelease.release }}
+          version: ${{ steps.fetchLatestRelease.fetchLatestRelease.release }}
           file: '*.aab'
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload Android Release to Play Store
-        uses: r0adkll/upload-google-play@v1.1.3
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.SERVICE_ACCOUNT_JSON }}
-          packageName: me.rosuh.easywatermark
-          releaseFiles: '*.aab'
-          track: production
-          status: inProgress
-          mappingFile: app/build/outputs/mapping/release/mapping.txt
+#      - name: Upload Android Release to Play Store
+#        uses: r0adkll/upload-google-play@v1.1.3
+#        with:
+#          serviceAccountJsonPlainText: ${{ secrets.SERVICE_ACCOUNT_JSON }}
+#          packageName: me.rosuh.easywatermark
+#          releaseFiles: '*.aab'
+#          track: production
+#          status: inProgress
+#          mappingFile: app/build/outputs/mapping/release/mapping.txt
