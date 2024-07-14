@@ -3,6 +3,7 @@ name: Generated APK AAB (Upload - Create Artifact To Github Action)
 env:
   # The name of the main module repository
   main_project_module: app
+  RELEASE_VERSION: ""
 
 on:
   # on merge to master
@@ -96,13 +97,22 @@ jobs:
           alias: ${{ secrets.ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
+      - name: Set version from properties
+        run: |
+          majorVersion=$(grep 'majorVersion=' gradle.properties | cut -d'=' -f2)
+          minorVersion=$(grep 'minorVersion=' gradle.properties | cut -d'=' -f2)
+          patchVersion=$(grep 'patchVersion=' gradle.properties | cut -d'=' -f2)
+          version="${majorVersion}.${minorVersion}.${patchVersion}"
+          echo "RELEASE_VERSION=$version" >> "$GITHUB_ENV"
       - name: Publish release.
         if: success()
-        uses: "marvinpinto/action-automatic-releases@latest"
+        uses: softprops/action-gh-release@v2
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           prerelease: false
           draft: true
+          tag_name: ${{ env.RELEASE_VERSION }}
+          generate_release_notes: true
           files: |
             app/build/outputs/apk/release/*-signed.apk
             app/build/outputs/bundle/release/*.aab
