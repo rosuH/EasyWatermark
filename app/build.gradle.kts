@@ -1,4 +1,4 @@
-import com.android.build.gradle.internal.api.BaseVariantOutputImpl
+import com.android.build.gradle.internal.api.ApkVariantOutputImpl
 
 plugins {
     id(libs.plugins.android.application.get().pluginId)
@@ -6,6 +6,22 @@ plugins {
     id(libs.plugins.kotlin.parcelize.get().pluginId)
     id(libs.plugins.ksp.get().pluginId)
     id(libs.plugins.hilt.plugin.get().pluginId)
+    id(libs.plugins.spotless.get().pluginId)
+}
+
+/**
+ * read version from gradle.properties
+ */
+val majorVersion by properties
+val minorVersion by properties
+val patchVersion by properties
+
+fun getVersionCode(): Int {
+    return (majorVersion as String).toInt() * 10000 + (minorVersion as String).toInt() * 100 + (patchVersion as String).toInt()
+}
+
+fun getVersionName(): String {
+    return "$majorVersion.$minorVersion.$patchVersion"
 }
 
 android {
@@ -15,10 +31,9 @@ android {
         applicationId = "me.rosuh.easywatermark"
         minSdk = (Apps.minSdk)
         targetSdk = (Apps.targetSdk)
-        versionCode = 20900
-        versionName = "2.9.0"
+        versionCode = getVersionCode()
+        versionName = getVersionName()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        setProperty("archivesBaseName", "$applicationId-v$versionName($versionCode)")
     }
 
     buildTypes {
@@ -46,14 +61,6 @@ android {
         }
     }
 
-    // change output apk name
-    applicationVariants.all {
-        outputs.all {
-            (this as? BaseVariantOutputImpl)?.outputFileName =
-                "$applicationId-v$versionName($versionCode).apk"
-        }
-    }
-
     packagingOptions {
         resources.excludes.add("DebugProbesKt.bin")
     }
@@ -61,13 +68,6 @@ android {
     android.buildFeatures.viewBinding = true
     
     namespace = "me.rosuh.easywatermark"
-
-//    lint {
-//        baseline = file("lint-baseline.xml")
-//        quiet = true
-//        abortOnError = false
-//        checkReleaseBuilds = false
-//    }
 
     buildFeatures {
         compose = true
@@ -79,6 +79,13 @@ android {
 
     kotlin {
         jvmToolchain(17)
+    }
+
+    applicationVariants.configureEach {
+        outputs.configureEach {
+            (this as? ApkVariantOutputImpl)?.outputFileName =
+                "EasyWatermark-$versionName-$versionCode.apk"
+        }
     }
 }
 

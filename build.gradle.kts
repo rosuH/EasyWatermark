@@ -1,3 +1,5 @@
+import com.diffplug.gradle.spotless.SpotlessExtension
+
 buildscript {
     repositories {
         mavenCentral()
@@ -13,27 +15,21 @@ buildscript {
 }
 
 
-tasks.register("clean", Delete::class) {
-    delete(rootProject.buildDir)
-}
-
-//apply(plugin = "org.jlleitschuh.gradle.ktlint")
-//
-//subprojects {
-//    apply(plugin = "org.jlleitschuh.gradle.ktlint") // Version should be inherited from parent
-//
-//    repositories {
-//        // Required to download KtLint
-//        mavenCentral()
-//    }
-//
-//    // Optionally configure plugin
-//    configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
-//        debug.set(true)
-//    }
-//}
-
 plugins {
     alias(libs.plugins.hilt) apply false
     alias(libs.plugins.ksp) apply false
+    alias(libs.plugins.spotless) apply false
+}
+
+allprojects {
+    plugins.apply(rootProject.libs.plugins.spotless.get().pluginId)
+    extensions.configure<SpotlessExtension> {
+        kotlin {
+            target("src/**/*.kt")
+            ktlint(rootProject.libs.ktlint.get().version)
+        }
+        kotlinGradle {
+            ktlint(rootProject.libs.ktlint.get().version)
+        }
+    }
 }
