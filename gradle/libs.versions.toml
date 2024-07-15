@@ -42,7 +42,7 @@ androidxComposeBom = "2023.10.01"
 androidxComposeCompiler = "1.5.3"
 androidxComposeRuntimeTracing = "1.0.0-alpha04"
 accompanist = "0.33.2-alpha"
-coil = "2.4.0"
+coil = "2.6.0"
 material3 = "1.2.0-alpha09"
 spotless = "7.0.0.BETA1"
 
