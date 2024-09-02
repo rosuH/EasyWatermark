@@ -7,9 +7,10 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
 import android.util.TypedValue
+import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
 import androidx.annotation.AttrRes
 import androidx.annotation.ColorInt
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,7 +19,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import me.rosuh.cmonet.CMonet
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.ui.MainActivity
 
 fun Activity.isStoragePermissionGrated(): Boolean {
     val readGranted = ContextCompat.checkSelfPermission(
@@ -39,33 +39,35 @@ fun Activity.isStoragePermissionGrated(): Boolean {
     return readGranted && writeGranted
 }
 
-fun Activity.preCheckStoragePermission(block: () -> Unit) {
+fun Activity.preCheckStoragePermission(
+    activityResultLauncher: ActivityResultLauncher<Array<String>>,
+    failed: (msg: String) -> Unit = {
+        Toast.makeText(this, it, Toast.LENGTH_SHORT).show()
+    },
+    grant: () -> Unit,
+) {
     if (isStoragePermissionGrated()) {
-        block.invoke()
-    } else {
-        requestPermission()
+        grant.invoke()
+        return
     }
-}
-
-/**
- * 申请权限
- */
-fun Activity.requestPermission() {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        ActivityCompat.requestPermissions(
-            this,
-            arrayOf(
-                Manifest.permission.READ_MEDIA_IMAGES,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
-            ),
-            MainActivity.REQ_CODE_REQ_WRITE_PERMISSION
-        )
-    } else {
-        ActivityCompat.requestPermissions(
-            this,
-            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE),
-            MainActivity.REQ_CODE_REQ_WRITE_PERMISSION
-        )
+    kotlin.runCatching {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            activityResultLauncher.launch(
+                arrayOf(
+                    Manifest.permission.READ_MEDIA_IMAGES,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                )
+            )
+        } else {
+            activityResultLauncher.launch(
+                arrayOf(
+                    Manifest.permission.READ_EXTERNAL_STORAGE,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                )
+            )
+        }
+    }.getOrElse {
+        failed.invoke(it.message ?: "Unknown error")
     }
 }
 

@@ -20,7 +20,9 @@ import android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.ActivityResultCallback
 import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -64,6 +66,8 @@ class MainActivity : AppCompatActivity() {
 
     private val currentBgColor: Int
         get() = ((launchView.parent as? View?)?.background as? ColorDrawable)?.color ?: colorSurface
+
+    private lateinit var requestPermissionLauncher: ActivityResultLauncher<Array<String>>
 
     private val contentFunList: List<FuncTitleModel> by lazy {
         listOf(
@@ -227,6 +231,17 @@ class MainActivity : AppCompatActivity() {
             registerForActivityResult(PickImageContract()) { uri: Uri? ->
                 handleActivityResult(REQ_PICK_ICON, listOf(uri))
             }
+        requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissionsMap ->
+            val isGranted = permissionsMap.values.all { it }
+            if (isGranted) {
+                return@registerForActivityResult
+            }
+            Toast.makeText(
+                this,
+                getString(R.string.request_permission_failed),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -427,7 +442,7 @@ class MainActivity : AppCompatActivity() {
         }
         // pick image button
         launchView.ivSelectedPhotoTips.setOnClickListener {
-            preCheckStoragePermission {
+            preCheckStoragePermission(requestPermissionLauncher) {
                 performFileSearch(REQ_CODE_PICK_IMAGE)
             }
         }
@@ -581,7 +596,7 @@ class MainActivity : AppCompatActivity() {
                 TextContentDisplayFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.Icon -> {
-                preCheckStoragePermission {
+                preCheckStoragePermission(requestPermissionLauncher) {
                     performFileSearch(REQ_PICK_ICON)
                 }
             }
@@ -650,7 +665,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         R.id.action_pick -> {
-            preCheckStoragePermission {
+            preCheckStoragePermission(requestPermissionLauncher) {
                 performFileSearch(REQ_CODE_PICK_IMAGE)
             }
             true
@@ -694,25 +709,6 @@ class MainActivity : AppCompatActivity() {
                     launchView.logoView.start()
                 }
                 show(supportFragmentManager, "GalleryFragment")
-            }
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        when (requestCode) {
-            REQ_CODE_REQ_WRITE_PERMISSION -> {
-                if (grantResults.isEmpty() || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(
-                        this,
-                        getString(R.string.request_permission_failed),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
             }
         }
     }
@@ -825,6 +821,10 @@ class MainActivity : AppCompatActivity() {
 
     fun getImageViewInfo(): ViewInfo {
         return ViewInfo.from(launchView.ivPhoto)
+    }
+
+    fun requestPermission(block: () -> Unit) {
+        preCheckStoragePermission(requestPermissionLauncher, grant = block)
     }
 
     companion object {
