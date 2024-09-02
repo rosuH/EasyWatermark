@@ -67,7 +67,7 @@ class MainActivity : AppCompatActivity() {
     private val currentBgColor: Int
         get() = ((launchView.parent as? View?)?.background as? ColorDrawable)?.color ?: colorSurface
 
-    private lateinit var requestPermissionLauncher: ActivityResultLauncher<Array<String>>
+    private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
 
     private val contentFunList: List<FuncTitleModel> by lazy {
         listOf(
@@ -231,8 +231,7 @@ class MainActivity : AppCompatActivity() {
             registerForActivityResult(PickImageContract()) { uri: Uri? ->
                 handleActivityResult(REQ_PICK_ICON, listOf(uri))
             }
-        requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissionsMap ->
-            val isGranted = permissionsMap.values.all { it }
+        requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) {
                 return@registerForActivityResult
             }
@@ -442,7 +441,7 @@ class MainActivity : AppCompatActivity() {
         }
         // pick image button
         launchView.ivSelectedPhotoTips.setOnClickListener {
-            preCheckStoragePermission(requestPermissionLauncher) {
+            checkReadingPermission(requestPermissionLauncher) {
                 performFileSearch(REQ_CODE_PICK_IMAGE)
             }
         }
@@ -596,7 +595,7 @@ class MainActivity : AppCompatActivity() {
                 TextContentDisplayFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.Icon -> {
-                preCheckStoragePermission(requestPermissionLauncher) {
+                checkReadingPermission(requestPermissionLauncher) {
                     performFileSearch(REQ_PICK_ICON)
                 }
             }
@@ -665,7 +664,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         R.id.action_pick -> {
-            preCheckStoragePermission(requestPermissionLauncher) {
+            checkReadingPermission(requestPermissionLauncher) {
                 performFileSearch(REQ_CODE_PICK_IMAGE)
             }
             true
@@ -824,7 +823,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun requestPermission(block: () -> Unit) {
-        preCheckStoragePermission(requestPermissionLauncher, grant = block)
+        checkWritingPermission(requestPermissionLauncher, grant = block)
     }
 
     companion object {
