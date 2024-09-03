@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentManager
@@ -48,7 +49,7 @@ class SaveImageBSDialogFragment : BaseBindBSDFragment<DialogSaveFileBinding>() {
                         openShare()
                     } else {
                         // saving jobs
-                        requireActivity().preCheckStoragePermission {
+                        (activity as? MainActivity)?.requestPermission {
                             shareViewModel.saveImage(
                                 requireActivity().contentResolver,
                                 (requireContext() as MainActivity).getImageViewInfo(),

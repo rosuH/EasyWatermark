@@ -7,9 +7,10 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
 import android.util.TypedValue
+import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
 import androidx.annotation.AttrRes
 import androidx.annotation.ColorInt
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,54 +19,57 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import me.rosuh.cmonet.CMonet
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.ui.MainActivity
 
-fun Activity.isStoragePermissionGrated(): Boolean {
-    val readGranted = ContextCompat.checkSelfPermission(
-        this,
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Manifest.permission.READ_MEDIA_IMAGES
-        } else {
-            Manifest.permission.READ_EXTERNAL_STORAGE
-        }
-    ) == PackageManager.PERMISSION_GRANTED
-
-    val writeGranted =
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
-        ) == PackageManager.PERMISSION_GRANTED
-
-    return readGranted && writeGranted
+fun Activity.isStoragePermissionGrated(permission: String): Boolean {
+    return ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
 }
 
-fun Activity.preCheckStoragePermission(block: () -> Unit) {
-    if (isStoragePermissionGrated()) {
-        block.invoke()
+fun Activity.checkReadingPermission(
+    activityResultLauncher: ActivityResultLauncher<String>,
+    failed: (msg: String) -> Unit = {
+        Toast.makeText(this, it, Toast.LENGTH_SHORT).show()
+    },
+    grant: () -> Unit,
+) {
+    val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_IMAGES
     } else {
-        requestPermission()
+        Manifest.permission.READ_EXTERNAL_STORAGE
     }
+    preCheckStoragePermission(activityResultLauncher, permissions, failed, grant)
 }
 
-/**
- * 申请权限
- */
-fun Activity.requestPermission() {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        ActivityCompat.requestPermissions(
-            this,
-            arrayOf(
-                Manifest.permission.READ_MEDIA_IMAGES,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
-            ),
-            MainActivity.REQ_CODE_REQ_WRITE_PERMISSION
-        )
+fun Activity.checkWritingPermission(
+    activityResultLauncher: ActivityResultLauncher<String>,
+    failed: (msg: String) -> Unit = {
+        Toast.makeText(this, it, Toast.LENGTH_SHORT).show()
+    },
+    grant: () -> Unit,
+) {
+    val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_IMAGES
     } else {
-        ActivityCompat.requestPermissions(
-            this,
-            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE),
-            MainActivity.REQ_CODE_REQ_WRITE_PERMISSION
-        )
+        Manifest.permission.WRITE_EXTERNAL_STORAGE
+    }
+    preCheckStoragePermission(activityResultLauncher, permissions, failed, grant)
+}
+
+fun Activity.preCheckStoragePermission(
+    activityResultLauncher: ActivityResultLauncher<String>,
+    permission: String,
+    failed: (msg: String) -> Unit = {
+        Toast.makeText(this, it, Toast.LENGTH_SHORT).show()
+    },
+    grant: () -> Unit,
+) {
+    if (isStoragePermissionGrated(permission)) {
+        grant.invoke()
+        return
+    }
+    kotlin.runCatching {
+        activityResultLauncher.launch(permission)
+    }.getOrElse {
+        failed.invoke(it.message ?: "Unknown error")
     }
 }
 
