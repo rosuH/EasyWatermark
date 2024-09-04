@@ -40,6 +40,7 @@ import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
+import me.rosuh.easywatermark.data.model.FuncTitleModel
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.JobState
 import me.rosuh.easywatermark.data.model.Result
@@ -66,6 +67,7 @@ import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.util.Date
 import javax.inject.Inject
+import kotlin.math.roundToInt
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
@@ -83,9 +85,19 @@ class MainViewModel @Inject constructor(
 
     val waterMark: LiveData<WaterMark> = waterMarkRepo.waterMark.asLiveData()
 
+    val waterMarkFlow = waterMarkRepo.waterMark.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000L),
+        WaterMark.default
+    )
+
     private val uiState: MutableStateFlow<UiState> = MutableStateFlow(UiState.None)
 
     val uiStateFlow: StateFlow<UiState> = uiState.asStateFlow()
+
+    private val _launchScreenUiStateFlow: MutableStateFlow<LaunchScreenState> =
+        MutableStateFlow(LaunchScreenState.default())
+    val launchScreenUiStateFlow = _launchScreenUiStateFlow.asStateFlow()
 
     private var autoScroll = true
 
@@ -95,6 +107,8 @@ class MainViewModel @Inject constructor(
     val galleryPickedImageList: MutableLiveData<List<Image>> = MutableLiveData()
 
     val selectedImage: LiveData<ImageInfo> = waterMarkRepo.selectedImage.asLiveData()
+
+    val selectedImageFlow = waterMarkRepo.selectedImage
 
     private val saveImageUri: MutableLiveData<List<ImageInfo>> = MutableLiveData()
 
@@ -136,6 +150,27 @@ class MainViewModel @Inject constructor(
         emptyList()
     )
 
+    init {
+        launch {
+            withContext(Dispatchers.Default) {
+                waterMarkFlow.collect {
+                    val nextState = launchScreenUiStateFlow.value.copy(waterMark = it)
+                    withContext(Dispatchers.Main) {
+                        _launchScreenUiStateFlow.emit(nextState)
+                    }
+                }
+            }
+        }
+        launch(Dispatchers.Default) {
+            selectedImageFlow.collect {
+                val nextState = launchScreenUiStateFlow.value.copy(curImageInfo = it)
+                withContext(Dispatchers.Main) {
+                    _launchScreenUiStateFlow.emit(nextState)
+                }
+            }
+        }
+    }
+
     fun addTemplate(content: String) {
         if (templateRepo.checkIfIsDaoNull()) {
             launch {
@@ -169,7 +204,7 @@ class MainViewModel @Inject constructor(
     fun saveImage(
         contentResolver: ContentResolver,
         viewInfo: ViewInfo,
-        imageList: List<ImageInfo>
+        imageList: List<ImageInfo>,
     ) {
         viewModelScope.launch {
             if (this@MainViewModel.imageList.value?.first.isNullOrEmpty()) {
@@ -191,7 +226,7 @@ class MainViewModel @Inject constructor(
     private suspend fun generateList(
         contentResolver: ContentResolver,
         viewInfo: ViewInfo,
-        infoList: List<ImageInfo>?
+        infoList: List<ImageInfo>?,
     ): Result<List<ImageInfo>> =
         withContext(Dispatchers.Default) {
             if (infoList.isNullOrEmpty()) {
@@ -224,7 +259,7 @@ class MainViewModel @Inject constructor(
     private suspend fun generateImage(
         contentResolver: ContentResolver,
         viewInfo: ViewInfo,
-        imageInfo: ImageInfo
+        imageInfo: ImageInfo,
     ): Result<Uri> =
         withContext(Dispatchers.IO) {
             val rect = decodeBitmapFromUri(contentResolver, imageInfo.uri)
@@ -289,6 +324,7 @@ class MainViewModel @Inject constructor(
                         Dispatchers.IO
                     )
                 }
+
                 WaterMarkRepository.MarkMode.Image -> {
                     val iconBitmapRect = decodeSampledBitmapFromResource(
                         contentResolver,
@@ -313,6 +349,7 @@ class MainViewModel @Inject constructor(
                         Dispatchers.IO
                     )
                 }
+
                 null -> return@withContext Result.failure(
                     null,
                     code = "-1",
@@ -485,9 +522,9 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun updateAlpha(alpha: Int) {
+    fun updateAlpha(alpha: Float) {
         launch {
-            val finalAlpha = alpha.coerceAtLeast(0).coerceAtMost(255)
+            val finalAlpha = (alpha / 100 * 255).toInt()
             waterMarkRepo.updateAlpha(finalAlpha)
         }
     }
@@ -542,7 +579,7 @@ class MainViewModel @Inject constructor(
 
     fun removeImage(
         imageInfo: ImageInfo?,
-        curSelectedPos: Int
+        curSelectedPos: Int,
     ) {
         val list = imageList.value?.first?.toMutableList() ?: return
         val removePos = list.indexOf(imageInfo)
@@ -693,7 +730,7 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
 
     private suspend fun queryInternal(
         contentResolver: ContentResolver,
-        force: Boolean = galleryPickedImageList.value == null
+        force: Boolean = true,
     ) = withContext(Dispatchers.IO) {
         if (!force) {
             return@withContext
@@ -744,6 +781,13 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
                 list += image
             }
             galleryPickedImageList.postValue(list)
+            withContext(Dispatchers.Main) {
+                val state = _launchScreenUiStateFlow.value.copy(
+                    uiState = LaunchScreenUiState.GalleryDialog,
+                    imageList = list
+                )
+                _launchScreenUiStateFlow.emit(state)
+            }
         }
     }
 
@@ -765,13 +809,7 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
 
     fun resetGalleryData() {
         launch {
-            withContext(Dispatchers.Default) {
-                val iterator = galleryPickedImageList.value?.iterator() ?: return@withContext
-                while (iterator.hasNext()) {
-                    val image = iterator.next()
-                    image.check = false
-                }
-            }
+            galleryPickedImageList.postValue(emptyList())
         }
     }
 
@@ -802,6 +840,175 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
     fun goEditDialog() {
         viewModelScope.launch {
             uiState.emit(UiState.GoEditDialog)
+        }
+    }
+
+    private fun onCheckedInGallery(image: Image, index: Int, checked: Boolean) {
+        launch {
+            withContext(Dispatchers.Default) {
+                val newList = galleryPickedImageList.value?.toMutableList() ?: return@withContext
+                newList[index] = image.copy(check = checked)
+                galleryPickedImageList.postValue(newList)
+                val newLaunchScreenState = launchScreenUiStateFlow.value.copy(
+                    imageList = newList,
+                )
+                _launchScreenUiStateFlow.emit(newLaunchScreenState)
+            }
+        }
+    }
+
+    private fun onGalleryDismiss(selected: Boolean) {
+        launch {
+            withContext(Dispatchers.Default) {
+                if (selected) {
+                    val newList =
+                        galleryPickedImageList.value?.filter { it.check } ?: return@withContext
+                    val imageList = newList.map {
+                        ImageInfo(it.uri)
+                    }
+                    updateImageListInternal(imageList)
+                    val nextState = launchScreenUiStateFlow.value.copy(
+                        uiState = LaunchScreenUiState.Editor,
+                        imageList = galleryPickedImageList.value ?: emptyList(),
+                        selectedImageList = imageList,
+                        waterMark = waterMark.value ?: WaterMark.default,
+                        curImageInfo = imageList.firstOrNull()
+                    )
+                    withContext(Dispatchers.Main) {
+                        _launchScreenUiStateFlow.emit(nextState)
+                    }
+                } else {
+                    resetGalleryData()
+                    val newLaunchScreenState = launchScreenUiStateFlow.value.copy(
+                        uiState = LaunchScreenUiState.Launch,
+                        imageList = emptyList()
+                    )
+                    withContext(Dispatchers.Main) {
+                        _launchScreenUiStateFlow.emit(newLaunchScreenState)
+                    }
+                }
+
+            }
+        }
+    }
+
+    fun onBackPressed() {
+        launch {
+            withContext(Dispatchers.Default) {
+                when (launchScreenUiStateFlow.value.uiState) {
+                    LaunchScreenUiState.Editor -> {
+                        val newLaunchScreenState = launchScreenUiStateFlow.value.copy(
+                            uiState = LaunchScreenUiState.Launch,
+                            imageList = emptyList()
+                        )
+                        withContext(Dispatchers.Main) {
+                            _launchScreenUiStateFlow.emit(newLaunchScreenState)
+                        }
+                    }
+
+                    LaunchScreenUiState.GalleryDialog -> {
+                        val newLaunchScreenState = launchScreenUiStateFlow.value.copy(
+                            uiState = LaunchScreenUiState.Launch,
+                            emptyList()
+                        )
+                        withContext(Dispatchers.Main) {
+                            _launchScreenUiStateFlow.emit(newLaunchScreenState)
+                        }
+                    }
+
+                    LaunchScreenUiState.Launch -> {
+                        val newLaunchScreenState = launchScreenUiStateFlow.value.copy(
+                            uiState = LaunchScreenUiState.Launch,
+                            imageList = emptyList()
+                        )
+                        withContext(Dispatchers.Main) {
+                            _launchScreenUiStateFlow.emit(newLaunchScreenState)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun process(action: Action) {
+        when (action) {
+            is Action.ChooseImage -> {
+                launch {
+                    val nextState =
+                        launchScreenUiStateFlow.value.copy(uiState = LaunchScreenUiState.GalleryDialog)
+                    _launchScreenUiStateFlow.emit(nextState)
+                }
+            }
+
+            is Action.DialogDismiss -> {
+                onGalleryDismiss(action.isSelected)
+            }
+
+            is Action.LoadImages -> {
+                query(action.resolver)
+            }
+
+            is Action.GalleryImageSelected -> {
+                launch {
+                    onCheckedInGallery(action.image, action.index, action.isCheck)
+                }
+            }
+
+            is Action.WaterMarkChange -> {
+                launch {
+                    onWaterMarkChanged(action.item, action.any)
+                }
+            }
+
+            is Action.EditorImageSelected -> {
+                launch {
+                    selectImage(action.image.uri)
+                }
+            }
+        }
+    }
+
+    private fun onWaterMarkChanged(item: FuncTitleModel, any: Any) {
+        when (item.type) {
+            FuncTitleModel.FuncType.Alpha -> {
+                updateAlpha(any as Float)
+            }
+
+            FuncTitleModel.FuncType.Color -> {
+                updateTextColor(any as Int)
+            }
+
+            FuncTitleModel.FuncType.Degree -> {
+                updateDegree((any as Float))
+            }
+
+            FuncTitleModel.FuncType.Icon -> {
+                updateIcon(any as Uri)
+            }
+
+            FuncTitleModel.FuncType.Text -> {
+                updateText(any as String)
+            }
+
+            FuncTitleModel.FuncType.TextSize -> {
+                updateTextSize(any as Float)
+            }
+
+            FuncTitleModel.FuncType.TextTypeFace -> {
+                updateTextTypeface(any as TextTypeface)
+            }
+
+            FuncTitleModel.FuncType.TileMode -> {
+                updateTileMode(any as Shader.TileMode)
+            }
+
+            FuncTitleModel.FuncType.Horizon -> {
+                updateHorizon(((any as Float).roundToInt()))
+            }
+
+            FuncTitleModel.FuncType.Vertical -> {
+                updateVertical(((any as Float).roundToInt()))
+            }
         }
     }
 

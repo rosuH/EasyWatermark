@@ -62,6 +62,7 @@ import me.rosuh.easywatermark.utils.onItemClick
 class MainActivity : AppCompatActivity() {
 
     private lateinit var pickIconLauncher: ActivityResultLauncher<String>
+
     private val viewModel: MainViewModel by viewModels()
 
     private val currentBgColor: Int
@@ -73,12 +74,12 @@ class MainActivity : AppCompatActivity() {
         listOf(
             FuncTitleModel(
                 FuncTitleModel.FuncType.Text,
-                getString(R.string.water_mark_mode_text),
+                R.string.water_mark_mode_text,
                 R.drawable.ic_func_text
             ),
             FuncTitleModel(
                 FuncTitleModel.FuncType.Icon,
-                getString(R.string.water_mark_mode_image),
+                R.string.water_mark_mode_image,
                 R.drawable.ic_func_sticker
             )
         )
@@ -88,32 +89,32 @@ class MainActivity : AppCompatActivity() {
         listOf(
             FuncTitleModel(
                 FuncTitleModel.FuncType.TileMode,
-                getString(R.string.title_tile_mode),
+                R.string.title_tile_mode,
                 R.drawable.ic_tile_mode
             ),
             FuncTitleModel(
                 FuncTitleModel.FuncType.TextSize,
-                getString(R.string.title_text_size),
+                R.string.title_text_size,
                 R.drawable.ic_func_size
             ),
             FuncTitleModel(
-                FuncTitleModel.FuncType.TextStyle,
-                getString(R.string.title_text_style),
+                FuncTitleModel.FuncType.TextTypeFace,
+                R.string.title_text_style,
                 R.drawable.ic_func_typeface
             ),
             FuncTitleModel(
                 FuncTitleModel.FuncType.Color,
-                getString(R.string.title_text_color),
+                R.string.title_text_color,
                 R.drawable.ic_func_color
             ),
             FuncTitleModel(
                 FuncTitleModel.FuncType.Alpha,
-                getString(R.string.style_alpha),
+                R.string.style_alpha,
                 R.drawable.ic_func_opacity
             ),
             FuncTitleModel(
                 FuncTitleModel.FuncType.Degree,
-                getString(R.string.title_text_rotate),
+                R.string.title_text_rotate,
                 R.drawable.ic_func_angle
             )
         )
@@ -123,12 +124,12 @@ class MainActivity : AppCompatActivity() {
         listOf(
             FuncTitleModel(
                 FuncTitleModel.FuncType.Horizon,
-                getString(R.string.title_horizon_layout),
+                R.string.title_horizon_layout,
                 R.drawable.ic_func_layour_horizontal
             ),
             FuncTitleModel(
                 FuncTitleModel.FuncType.Vertical,
-                getString(R.string.title_vertical_layout),
+                R.string.title_vertical_layout,
                 R.drawable.ic_func_layout_vertical
             )
         )
@@ -608,7 +609,7 @@ class MainActivity : AppCompatActivity() {
             FuncTitleModel.FuncType.Degree -> {
                 DegreePbFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
-            FuncTitleModel.FuncType.TextStyle -> {
+            FuncTitleModel.FuncType.TextTypeFace -> {
                 TextStyleFragment.replaceShow(this, launchView.fcFunctionDetail.id)
             }
             FuncTitleModel.FuncType.Vertical -> {

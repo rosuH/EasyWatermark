@@ -19,6 +19,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import me.rosuh.cmonet.CMonet
 import me.rosuh.easywatermark.R
+import me.rosuh.easywatermark.ui.MainActivity
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 
 fun Activity.isStoragePermissionGrated(permission: String): Boolean {
     return ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
@@ -79,6 +82,12 @@ inline fun ViewModel.launch(crossinline action: suspend CoroutineScope.() -> Uni
         action()
     }
 }
+inline fun ViewModel.launch(context: CoroutineContext = EmptyCoroutineContext, crossinline action: suspend CoroutineScope.() -> Unit): Job {
+    return viewModelScope.launch(context) {
+        action()
+    }
+}
+
 
 /**
  * 主要角色用于整个UI的关键组件，如FAB、突出按钮、活动状态以及高阴影表面的色调。

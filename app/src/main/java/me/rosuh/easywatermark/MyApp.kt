@@ -29,13 +29,13 @@ class MyApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        CMonet.init(this, true)
         if (checkRecoveryMode()) {
             return
         } else {
             applicationScope.launch {
                 waterMarkRepo.resetModeToText()
             }
-            CMonet.init(this, true)
         }
     }
 

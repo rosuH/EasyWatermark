@@ -105,7 +105,7 @@ class ColorFragment : BaseBindFragment<FragmentColorBinding>() {
         with(shareViewModel) {
             updateTextColor(color)
             if (alpha != -1) {
-                updateAlpha(alpha)
+                updateAlpha(alpha.toFloat() / 255 * 100)
             }
         }
     }

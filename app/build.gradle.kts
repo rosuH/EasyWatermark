@@ -6,7 +6,7 @@ plugins {
     id(libs.plugins.kotlin.parcelize.get().pluginId)
     id(libs.plugins.ksp.get().pluginId)
     id(libs.plugins.hilt.plugin.get().pluginId)
-    id(libs.plugins.spotless.get().pluginId)
+//    id(libs.plugins.spotless.get().pluginId)
 }
 
 /**

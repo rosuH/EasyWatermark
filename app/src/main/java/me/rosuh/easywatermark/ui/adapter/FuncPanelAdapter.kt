@@ -44,7 +44,7 @@ class FuncPanelAdapter(
         payloads: MutableList<Any>
     ) {
         super.onBindViewHolder(holder, position, payloads)
-        if (payloads.isNullOrEmpty()) {
+        if (payloads.isEmpty()) {
             onBindViewHolder(holder, position)
             return
         }
@@ -60,7 +60,7 @@ class FuncPanelAdapter(
             return
         }
         with(dataSet[position]) {
-            holder.tvTitle.text = title
+            holder.tvTitle.text = holder.itemView.context.getString(title)
             holder.ivIcon.setImageResource(iconRes)
             if (position == selectedPos) {
                 holder.ivIcon.drawable.setTint(

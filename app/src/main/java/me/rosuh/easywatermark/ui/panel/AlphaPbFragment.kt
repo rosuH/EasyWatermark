@@ -18,7 +18,7 @@ class AlphaPbFragment : BasePBFragment() {
 
     override fun doOnChange(slider: Slider, value: Float, fromUser: Boolean) {
         if (fromUser) {
-            shareViewModel.updateAlpha((value / 100 * 255).toInt())
+            shareViewModel.updateAlpha(value)
         }
     }
 

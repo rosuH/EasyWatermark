@@ -126,7 +126,7 @@ class GalleryAdapter : RecyclerView.Adapter<GalleryAdapter.GalleryItemHolder>() 
                         } else {
                             selectedPosSet.remove(holder.absoluteAdapterPosition)
                         }
-                        data.check = isChecked
+                        differ.currentList[holder.absoluteAdapterPosition] = data.copy(check = isChecked)
                     }
                 }
                 holder.ivImage.post {
@@ -193,7 +193,7 @@ class GalleryAdapter : RecyclerView.Adapter<GalleryAdapter.GalleryItemHolder>() 
         for (i in end downTo start) {
             val item = list[i]
             changed = item.check != true
-            list[i].check = true
+            list[i] = item.copy(check = true)
             if (changed) {
                 selectedCount.value = selectedCount.value!! + 1
                 selectedPosSet.add(i)
@@ -215,7 +215,7 @@ class GalleryAdapter : RecyclerView.Adapter<GalleryAdapter.GalleryItemHolder>() 
         for (i in list.size - 1 downTo position) {
             val item = list[i]
             if (item.check) {
-                list[i].check = false
+                list[i] = item.copy(check = false)
                 selectedCount.value = selectedCount.value!! - 1
                 selectedPosSet.remove(i)
                 (recyclerView.findViewHolderForAdapterPosition(i) as? GalleryItemHolder?)?.apply {
@@ -230,7 +230,7 @@ class GalleryAdapter : RecyclerView.Adapter<GalleryAdapter.GalleryItemHolder>() 
     fun unSelectAll(recyclerView: RecyclerView) {
         val list = differ.currentList
         selectedPosSet.forEach { i ->
-            list[i].check = false
+            list[i] = list[i].copy(check = false)
             (recyclerView.findViewHolderForAdapterPosition(i) as? GalleryItemHolder?)?.apply {
                 cbImage.isChecked = false
                 applyCheckStyle(ivImage, false)
