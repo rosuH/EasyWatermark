@@ -11,7 +11,6 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
@@ -30,13 +29,14 @@ import me.rosuh.easywatermark.utils.ktx.colorSurface
 import me.rosuh.easywatermark.utils.ktx.inflate
 import me.rosuh.easywatermark.utils.ktx.openLink
 import me.rosuh.easywatermark.utils.ktx.titleTextColor
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 
 class AboutActivity : AppCompatActivity() {
 
     private val binding by inflate<ActivityAboutBinding>()
 
-    private val viewModel: AboutViewModel by viewModels()
+    private val viewModel: AboutViewModel by viewModel()
 
     private lateinit var bgDrawable: GradientDrawable
 

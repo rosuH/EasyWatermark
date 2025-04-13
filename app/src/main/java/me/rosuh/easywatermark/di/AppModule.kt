@@ -3,6 +3,7 @@ package me.rosuh.easywatermark.di
 import androidx.room.Room
 import me.rosuh.easywatermark.data.db.AppDatabase
 import me.rosuh.easywatermark.ui.MainViewModel
+import me.rosuh.easywatermark.ui.about.AboutViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 import java.util.Locale
@@ -28,11 +29,9 @@ val appModule = module {
     }
     includes(repositoryModule)
     viewModel {
-        MainViewModel(
-            get(),
-            get(),
-            get(),
-            get(),
-        )
+        MainViewModel(get(), get(), get(), get())
+    }
+    viewModel {
+        AboutViewModel(get(), get())
     }
 }

@@ -56,13 +56,24 @@ private fun LaunchScreenContent(
         mutableStateOf(true)
     }
 
+    val requestPermissionResult = remember {
+        { isGranted: Boolean ->
+            if (isGranted) {
+                onShowGalleryDialog()
+            } else {
+                startLogoAnimation = true
+            }
+        }
+    }
     val mediaPermissionState = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         rememberPermissionState(
-            Manifest.permission.READ_MEDIA_IMAGES
+            Manifest.permission.READ_MEDIA_IMAGES,
+            onPermissionResult = requestPermissionResult
         )
     } else {
         rememberPermissionState(
-            Manifest.permission.READ_EXTERNAL_STORAGE
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            onPermissionResult = requestPermissionResult
         )
     }
 

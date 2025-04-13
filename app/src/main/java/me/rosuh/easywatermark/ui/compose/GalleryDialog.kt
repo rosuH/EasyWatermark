@@ -1,11 +1,15 @@
 package me.rosuh.easywatermark.ui.compose
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
@@ -37,21 +41,35 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.constraintlayout.motion.widget.KeyTrigger
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ui.Image
 
@@ -62,7 +80,122 @@ fun GalleryDialogPreview() {
     GalleryDialog(emptyList(), {}, {}, { _, _, _ -> })
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+private const val ANIMATION_DURATION = 50L
+
+class AnimatedTransitionDialogHelper(
+    private val coroutineScope: CoroutineScope,
+    private val onDismissFlow: MutableSharedFlow<Any>,
+) {
+    fun triggerDismiss() {
+        coroutineScope.launch {
+            onDismissFlow.emit(Any())
+        }
+    }
+}
+
+@Composable
+fun AnimatedTransitionDialog(
+    onDismissRequest: () -> Unit,
+    contentAlignment: Alignment = Alignment.Center,
+    content: @Composable (AnimatedTransitionDialogHelper) -> Unit,
+) {
+    val animateTrigger = remember {
+        mutableStateOf(false)
+    }
+    val onDismissSharedFlow: MutableSharedFlow<Any> = remember { MutableSharedFlow() }
+    val coroutineScope: CoroutineScope = rememberCoroutineScope()
+    LaunchedEffect(Unit) {
+        launch {
+            delay(ANIMATION_DURATION)
+            animateTrigger.value = true
+        }
+        launch {
+            onDismissSharedFlow.asSharedFlow().collectLatest {
+                startDismissWithExitAnimation(animateTrigger, onDismissRequest)
+            }
+        }
+    }
+    val scope = rememberCoroutineScope()
+    Dialog(onDismissRequest = {
+        scope.launch {
+            startDismissWithExitAnimation(
+                animateTrigger = animateTrigger,
+                onDismiss = {
+                    onDismissRequest()
+                }
+            )
+        }
+    }) {
+        Box(contentAlignment = contentAlignment, modifier = Modifier.fillMaxSize()) {
+            AnimatedSlideInTransition(visible = animateTrigger.value) {
+                content(AnimatedTransitionDialogHelper(coroutineScope, onDismissSharedFlow))
+            }
+        }
+    }
+}
+
+@Composable
+fun AnimatedTransitionView(
+    onDismissRequest: () -> Unit,
+    contentAlignment: Alignment = Alignment.Center,
+    content: @Composable (AnimatedTransitionDialogHelper) -> Unit,
+) {
+    val animateTrigger = remember {
+        mutableStateOf(false)
+    }
+    val onDismissSharedFlow: MutableSharedFlow<Any> = remember { MutableSharedFlow() }
+    val coroutineScope: CoroutineScope = rememberCoroutineScope()
+    LaunchedEffect(Unit) {
+        launch {
+            delay(ANIMATION_DURATION)
+            animateTrigger.value = true
+        }
+        launch {
+            onDismissSharedFlow.asSharedFlow().collectLatest {
+                startDismissWithExitAnimation(animateTrigger, onDismissRequest)
+            }
+        }
+    }
+    val scope = rememberCoroutineScope()
+    BackHandler {
+        scope.launch {
+            startDismissWithExitAnimation(
+                animateTrigger = animateTrigger,
+                onDismiss = {
+                    onDismissRequest()
+                }
+            )
+        }
+    }
+    Box(contentAlignment = contentAlignment, modifier = Modifier.fillMaxSize()) {
+        AnimatedSlideInTransition(visible = animateTrigger.value) {
+            content(AnimatedTransitionDialogHelper(coroutineScope, onDismissSharedFlow))
+        }
+    }
+}
+
+@Composable
+internal fun AnimatedSlideInTransition(
+    visible: Boolean,
+    content: @Composable AnimatedVisibilityScope.() -> Unit,
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+        content = content
+    )
+}
+
+suspend fun startDismissWithExitAnimation(
+    animateTrigger: MutableState<Boolean>,
+    onDismiss: () -> Unit,
+) {
+    animateTrigger.value = false
+    delay(300)
+    onDismiss()
+}
+
 @Composable
 fun GalleryDialog(
     images: List<Image>,
@@ -70,87 +203,85 @@ fun GalleryDialog(
     onDismiss: (selected: Boolean) -> Unit = {},
     onImageSelected: (image: Image, index: Int, isSelected: Boolean) -> Unit,
 ) {
-    var selectedCount by remember {
-        mutableIntStateOf(0)
-    }
-    LaunchedEffect(key1 = images.size) {
-        onLoaImages()
-    }
-    val multiplePhotoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(),
-        onResult = { uris ->
-
+    AnimatedTransitionView(onDismissRequest = {
+        onDismiss(false)
+    }) { dialogHelper ->
+        var selectedCount by remember {
+            mutableIntStateOf(0)
         }
-    )
-    Scaffold(
-        Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        topBar = {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                IconButton(
-                    onClick = {
-                        onDismiss(false)
-                    }
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_close_24dp),
-                        contentDescription = "close dialog",
-                    )
-                }
-                Text(
-                    text = stringResource(id = R.string.action_pick),
-                    style = MaterialTheme.typography.titleLarge,
-                )
-                IconButton(onClick = { /*TODO*/ }) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_baseline_image_search_24),
-                        contentDescription = "search"
-                    )
-                }
-            }
-
+        LaunchedEffect(key1 = images.size) {
+            onLoaImages()
         }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
+        Scaffold(
+            Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            // gallery list
-            GalleryImageList(images = images) { image, index, isChecked ->
-                selectedCount += if (isChecked) +1 else -1
-                onImageSelected(image, index, isChecked)
-            }
-
-            AnimatedVisibility(
-                visible = selectedCount > 0,
-                enter = slideInVertically() + fadeIn(),
-                exit = slideOutVertically() + fadeOut(),
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(64.dp),
-            ) {
-                ExtendedFloatingActionButton(
-                    onClick = {
-                        onDismiss(true)
-                    }
+                .background(MaterialTheme.colorScheme.background),
+            topBar = {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_save_done),
-                        contentDescription = "add"
+                    IconButton(
+                        onClick = {
+                            dialogHelper.triggerDismiss()
+                        }
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_close_24dp),
+                            contentDescription = "close dialog",
+                        )
+                    }
+                    Text(
+                        text = stringResource(id = R.string.action_pick),
+                        style = MaterialTheme.typography.titleLarge,
                     )
-                    Text(text = "$selectedCount")
+                    IconButton(onClick = { /*TODO*/ }) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_baseline_image_search_24),
+                            contentDescription = "search"
+                        )
+                    }
+                }
+
+            }
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                // gallery list
+                GalleryImageList(images = images) { image, index, isChecked ->
+                    selectedCount += if (isChecked) +1 else -1
+                    onImageSelected(image, index, isChecked)
+                }
+
+                AnimatedVisibility(
+                    visible = selectedCount > 0,
+                    enter = slideInVertically { fullHeight -> fullHeight } + fadeIn(),
+                    exit = slideOutVertically { fullHeight -> fullHeight } + fadeOut(),
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                ) {
+                    ExtendedFloatingActionButton(
+                        modifier = Modifier.padding(64.dp),
+                        onClick = {
+                            dialogHelper.triggerDismiss()
+                        }
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_save_done),
+                            contentDescription = "add"
+                        )
+                        Text(text = "$selectedCount")
+                    }
                 }
             }
         }
     }
+
 }
 
 @Composable
@@ -243,7 +374,7 @@ fun CircleCheckBox(
                 interactionSource = remember { MutableInteractionSource() },
             )
     ) {
-        AnimatedVisibility(visible = selected) {
+        AnimatedVisibility(visible = selected, enter = scaleIn() + fadeIn(), exit = scaleOut() + fadeOut()) {
             Image(
                 painter = painterResource(id = R.drawable.ic_gallery_radio_button),
                 contentDescription = "check box",
