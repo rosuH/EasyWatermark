@@ -3,6 +3,7 @@ package me.rosuh.easywatermark.ui
 import android.Manifest
 import android.content.ContentResolver
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -167,6 +168,10 @@ sealed class Action {
     data class DialogDismiss(val isSelected: Boolean) : Action()
 
     data class GalleryImageSelected(val image: Image, val index: Int, val isCheck: Boolean) : Action()
+
+    data class SystemPickerImageSelected(
+        val uriList: List<Uri>,
+    ) : Action()
 
     data class LoadImages(val resolver: ContentResolver) : Action()
 

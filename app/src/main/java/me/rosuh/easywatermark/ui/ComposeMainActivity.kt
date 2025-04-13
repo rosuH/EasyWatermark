@@ -1,8 +1,13 @@
 package me.rosuh.easywatermark.ui
 
 import android.os.Bundle
+import android.provider.MediaStore
+import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -27,6 +32,10 @@ import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class ComposeMainActivity : ComponentActivity() {
 
+    companion object {
+        const val TAG = "ComposeMainActivity"
+    }
+
 
     private val viewModel: MainViewModel by viewModel()
 
@@ -44,6 +53,19 @@ class ComposeMainActivity : ComponentActivity() {
                         val navController = rememberNavController()
                         val state by viewModel.launchScreenUiStateFlow.collectAsStateWithLifecycle()
                         val context = this
+                        val pickMultipleMedia =
+                            rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
+                                // Callback is invoked after the user selects media items or closes the
+                                // photo picker.
+                                if (uris.isNotEmpty()) {
+                                    Log.i(TAG, "PhotoPicker Number of items selected: ${uris.size}")
+                                    viewModel.process(Action.SystemPickerImageSelected(uris))
+                                    navController.navigate("EditorScreen")
+                                } else {
+                                    Log.i(TAG, "PhotoPicker No media selected")
+                                }
+                            }
+
                         NavHost(navController = navController, startDestination = "LaunchScreen") {
                             composable("LaunchScreen") {
                                 LaunchScreen {
@@ -73,6 +95,12 @@ class ComposeMainActivity : ComponentActivity() {
                                                 index,
                                                 isSelected
                                             )
+                                        )
+                                    },
+                                    onPickImageViaSystem = {
+                                        pickMultipleMedia.launch(
+                                            PickVisualMediaRequest(
+                                            ActivityResultContracts.PickVisualMedia.ImageOnly)
                                         )
                                     }
                                 )

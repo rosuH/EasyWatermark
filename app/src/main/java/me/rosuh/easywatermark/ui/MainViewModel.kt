@@ -5,6 +5,7 @@ import android.content.ActivityNotFoundException
 import android.content.ContentResolver
 import android.content.ContentUris
 import android.content.ContentValues
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -62,6 +63,8 @@ import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.utils.ktx.applyConfig
 import me.rosuh.easywatermark.utils.ktx.formatDate
 import me.rosuh.easywatermark.utils.ktx.launch
+import org.koin.java.KoinJavaComponent.get
+import org.koin.java.KoinJavaComponent.inject
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
@@ -147,6 +150,8 @@ class MainViewModel (
         started = SharingStarted.WhileSubscribed(5000),
         emptyList()
     )
+
+    private val applicationContext: Context by inject(Context::class.java)
 
     init {
         launch {
@@ -856,36 +861,33 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
     }
 
     private fun onGalleryDismiss(selected: Boolean) {
-        launch {
-            withContext(Dispatchers.Default) {
-                if (selected) {
-                    val newList =
-                        galleryPickedImageList.value?.filter { it.check } ?: return@withContext
-                    val imageList = newList.map {
-                        ImageInfo(it.uri)
-                    }
-                    updateImageListInternal(imageList)
-                    val nextState = launchScreenUiStateFlow.value.copy(
-                        uiState = LaunchScreenUiState.Editor,
-                        imageList = galleryPickedImageList.value ?: emptyList(),
-                        selectedImageList = imageList,
-                        waterMark = waterMark.value ?: WaterMark.default,
-                        curImageInfo = imageList.firstOrNull()
-                    )
-                    withContext(Dispatchers.Main) {
-                        _launchScreenUiStateFlow.emit(nextState)
-                    }
-                } else {
-                    resetGalleryData()
-                    val newLaunchScreenState = launchScreenUiStateFlow.value.copy(
-                        uiState = LaunchScreenUiState.Launch,
-                        imageList = emptyList()
-                    )
-                    withContext(Dispatchers.Main) {
-                        _launchScreenUiStateFlow.emit(newLaunchScreenState)
-                    }
+        launch(Dispatchers.Default) {
+            if (selected) {
+                val newList =
+                    galleryPickedImageList.value?.filter { it.check } ?: return@launch
+                val imageList = newList.map {
+                    ImageInfo(it.uri)
                 }
-
+                updateImageListInternal(imageList)
+                val nextState = launchScreenUiStateFlow.value.copy(
+                    uiState = LaunchScreenUiState.Editor,
+                    imageList = galleryPickedImageList.value ?: emptyList(),
+                    selectedImageList = imageList,
+                    waterMark = waterMark.value ?: WaterMark.default,
+                    curImageInfo = imageList.firstOrNull()
+                )
+                withContext(Dispatchers.Main) {
+                    _launchScreenUiStateFlow.emit(nextState)
+                }
+            } else {
+                resetGalleryData()
+                val newLaunchScreenState = launchScreenUiStateFlow.value.copy(
+                    uiState = LaunchScreenUiState.Launch,
+                    imageList = emptyList()
+                )
+                withContext(Dispatchers.Main) {
+                    _launchScreenUiStateFlow.emit(newLaunchScreenState)
+                }
             }
         }
     }
@@ -961,6 +963,105 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
             is Action.EditorImageSelected -> {
                 launch {
                     selectImage(action.image.uri)
+                }
+            }
+
+            is Action.SystemPickerImageSelected -> {
+                launch(Dispatchers.Default) {
+                    val newList = action.uriList
+
+                    /**
+                     * val projection = arrayOf(media-database-columns-to-retrieve)
+                     * val selection = sql-where-clause-with-placeholder-variables
+                     * val selectionArgs = values-of-placeholder-variables
+                     * val sortOrder = sql-order-by-clause
+                     *
+                     * applicationContext.contentResolver.query(
+                     *     MediaStore.media-type.Media.EXTERNAL_CONTENT_URI,
+                     *     projection,
+                     *     selection,
+                     *     selectionArgs,
+                     *     sortOrder
+                     * )?.use { cursor ->
+                     *     while (cursor.moveToNext()) {
+                     *         // Use an ID column from the projection to get
+                     *         // a URI representing the media item itself.
+                     *     }
+                     * }
+                     */
+                    // map the uri to image
+                    val imageList = ArrayList<Image>()
+                    val selection = "${MediaStore.Images.Media._ID} IN (${newList.joinToString(",") { "?" }})"
+                    val selectionArgs = newList.map { ContentUris.parseId(it).toString() }.toTypedArray()
+                    applicationContext.contentResolver.query(
+                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                        projection,
+                        selection,
+                        selectionArgs,
+                        (if (Build.VERSION.SDK_INT > 28) MediaStore.Images.Media.DATE_MODIFIED else MediaStore.Images.Media.DATE_TAKEN) + " DESC"
+                    )?.use { cursor ->
+                        val imageIdColumn = cursor.getColumnIndex(MediaStore.Images.Media._ID)
+                        val bucketIdColumn =
+                            cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_ID)
+                        val bucketNameColumn =
+                            cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
+                        val dataColumn = cursor.getColumnIndex(MediaStore.Images.Media.DATA)
+                        val dateColumn =
+                            cursor.getColumnIndex(if (Build.VERSION.SDK_INT > 28) MediaStore.Images.Media.DATE_MODIFIED else MediaStore.Images.Media.DATE_TAKEN)
+                        val orientationColumn =
+                            cursor.getColumnIndex(MediaStore.Images.Media.ORIENTATION)
+                        val widthColumn = cursor.getColumnIndex(MediaStore.Images.Media.WIDTH)
+                        val heightColumn = cursor.getColumnIndex(MediaStore.Images.Media.HEIGHT)
+                        val sizeColumn = cursor.getColumnIndex(MediaStore.Images.Media.SIZE)
+
+                        while (cursor.moveToNext()) {
+                            val path = cursor.getString(dataColumn)
+                            if (path.isNullOrBlank()) {
+                                continue
+                            }
+
+                            val imageId = cursor.getInt(imageIdColumn)
+                            val bucketId = cursor.getInt(bucketIdColumn)
+                            val bucketName =
+                                cursor.getString(bucketNameColumn) ?: ""
+                            val dateTaken = cursor.getLong(dateColumn)
+                            val orientation = cursor.getInt(orientationColumn)
+                            val width = cursor.getInt(widthColumn)
+                            val height = cursor.getInt(heightColumn)
+                            val size = cursor.getLong(sizeColumn)
+
+                            val contentUri: Uri = ContentUris.withAppendedId(
+                                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                                imageId.toLong()
+                            )
+
+                            // Stores column values and the contentUri in a local object
+                            // that represents the media file.
+                            val image = Image(
+                                imageId,
+                                contentUri,
+                                bucketName,
+                                size,
+                                dateTaken,
+                                check = true
+                            )
+                            imageList += image
+                        }
+                    }
+                    val imageInfoList = newList.map {
+                        ImageInfo(it)
+                    }
+                    updateImageListInternal(imageInfoList)
+                    val nextState = launchScreenUiStateFlow.value.copy(
+                        uiState = LaunchScreenUiState.Editor,
+                        imageList = imageList,
+                        selectedImageList = imageInfoList,
+                        waterMark = waterMark.value ?: WaterMark.default,
+                        curImageInfo = imageInfoList.firstOrNull()
+                    )
+                    withContext(Dispatchers.Main) {
+                        _launchScreenUiStateFlow.emit(nextState)
+                    }
                 }
             }
         }

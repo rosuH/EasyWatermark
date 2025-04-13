@@ -9,8 +9,8 @@ data class Image(
     val name: String,
     val size: Long,
     val date: Long,
-    val check: Boolean = false
-):PreviewParameterProvider<Image> {
+    val check: Boolean = false,
+) : PreviewParameterProvider<Image> {
     override val values: Sequence<Image>
         get() = sequenceOf(
             Image(

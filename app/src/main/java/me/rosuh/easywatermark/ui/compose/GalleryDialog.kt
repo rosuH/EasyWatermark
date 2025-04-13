@@ -202,6 +202,7 @@ fun GalleryDialog(
     onLoaImages: () -> Unit,
     onDismiss: (selected: Boolean) -> Unit = {},
     onImageSelected: (image: Image, index: Int, isSelected: Boolean) -> Unit,
+    onPickImageViaSystem: () -> Unit = {},
 ) {
     AnimatedTransitionView(onDismissRequest = {
         onDismiss(false)
@@ -238,7 +239,10 @@ fun GalleryDialog(
                         text = stringResource(id = R.string.action_pick),
                         style = MaterialTheme.typography.titleLarge,
                     )
-                    IconButton(onClick = { /*TODO*/ }) {
+                    IconButton(onClick = {
+                        onPickImageViaSystem.invoke()
+                        dialogHelper.triggerDismiss()
+                    }) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_baseline_image_search_24),
                             contentDescription = "search"
