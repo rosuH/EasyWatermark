@@ -8,14 +8,15 @@ buildscript {
     dependencies {
         classpath(libs.agp)
         classpath(libs.kotlin.gradlePlugin)
-        classpath(libs.hilt.plugin)
+//        classpath(libs.hilt.plugin)
     }
 }
 
 
 plugins {
-    alias(libs.plugins.hilt) apply false
+//    alias(libs.plugins.hilt) apply false
     alias(libs.plugins.ksp) apply false
+    alias(libs.plugins.compose.compiler) apply false
 //    alias(libs.plugins.spotless) apply false
 }
 

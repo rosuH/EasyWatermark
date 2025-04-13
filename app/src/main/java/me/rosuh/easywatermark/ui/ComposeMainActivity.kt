@@ -3,7 +3,6 @@ package me.rosuh.easywatermark.ui
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.viewModels
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -17,16 +16,17 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.dialog
 import androidx.navigation.compose.rememberNavController
-import dagger.hilt.android.AndroidEntryPoint
+
 import me.rosuh.easywatermark.data.model.FuncTitleModel
 import me.rosuh.easywatermark.ui.compose.GalleryDialog
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 @BuildCompat.PrereleaseSdkCheck
-@AndroidEntryPoint
+
 class ComposeMainActivity : ComponentActivity() {
 
 
-    private val viewModel: MainViewModel by viewModels()
+    private val viewModel: MainViewModel by viewModel()
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {

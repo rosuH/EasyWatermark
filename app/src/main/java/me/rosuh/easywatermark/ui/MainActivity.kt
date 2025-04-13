@@ -7,7 +7,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.Intent.ACTION_SEND
-import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -20,13 +19,12 @@ import android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.result.ActivityResultCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import androidx.core.util.Consumer
 import androidx.core.view.forEach
 import androidx.fragment.app.commit
 import androidx.lifecycle.Lifecycle
@@ -35,7 +33,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
-import dagger.hilt.android.AndroidEntryPoint
+
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.MyApp
@@ -56,14 +54,14 @@ import me.rosuh.easywatermark.utils.PickImageContract
 import me.rosuh.easywatermark.utils.VibrateHelper
 import me.rosuh.easywatermark.utils.ktx.*
 import me.rosuh.easywatermark.utils.onItemClick
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 
-@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     private lateinit var pickIconLauncher: ActivityResultLauncher<String>
 
-    private val viewModel: MainViewModel by viewModels()
+    private val mainViewModel: MainViewModel by viewModel()
 
     private val currentBgColor: Int
         get() = ((launchView.parent as? View?)?.background as? ColorDrawable)?.color ?: colorSurface
@@ -156,6 +154,7 @@ class MainActivity : AppCompatActivity() {
             initRecoveryView()
             return
         }
+        addOnNewIntentListener { this@MainActivity.intent = intent }
         launchView = LaunchView(this)
         setContentView(launchView)
         if (savedInstanceState == null) {
@@ -194,7 +193,7 @@ class MainActivity : AppCompatActivity() {
         }
         val btnSendEmail = findViewById<Button>(R.id.btn_email).apply {
             setOnClickListener {
-                viewModel.extraCrashInfo(this@MainActivity, tvCrashInfo.text.toString())
+                mainViewModel.extraCrashInfo(this@MainActivity, tvCrashInfo.text.toString())
             }
         }
         val btnTelegram = findViewById<Button>(R.id.btn_telegram).apply {
@@ -242,11 +241,6 @@ class MainActivity : AppCompatActivity() {
                 Toast.LENGTH_SHORT
             ).show()
         }
-    }
-
-    override fun onNewIntent(intent: Intent?) {
-        super.onNewIntent(intent)
-        this.intent = intent
     }
 
     override fun onStart() {
@@ -301,7 +295,7 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton(
                 R.string.crash_mail
             ) { dialog, _ ->
-                viewModel.extraCrashInfo(this, crashInfo)
+                mainViewModel.extraCrashInfo(this, crashInfo)
                 dialog.dismiss()
             }
             .setCancelable(false)
@@ -310,7 +304,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun initObserver() {
         lifecycleScope.launch {
-            viewModel.uiStateFlow.flowWithLifecycle(
+            mainViewModel.uiStateFlow.flowWithLifecycle(
                 this@MainActivity.lifecycle,
                 Lifecycle.State.STARTED
             ).collect {
@@ -319,7 +313,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        viewModel.waterMark.observe(this) {
+        mainViewModel.waterMark.observe(this) {
             if (it == null) {
                 return@observe
             }
@@ -330,9 +324,9 @@ class MainActivity : AppCompatActivity() {
             if (it.markMode == WaterMarkRepository.MarkMode.Image && launchView.tabLayout.selectedTabPosition == 0) {
                 hideDetailPanel()
             }
-            viewModel.resetJobStatus()
+            mainViewModel.resetJobStatus()
         }
-        viewModel.selectedImage.observe(this) {
+        mainViewModel.selectedImage.observe(this) {
             if (it == null || it.uri.toString().isBlank()) {
                 return@observe
             }
@@ -347,11 +341,11 @@ class MainActivity : AppCompatActivity() {
             } catch (se: SecurityException) {
                 se.printStackTrace()
                 // reset the uri because we don't have permission -_-
-                viewModel.selectImage(Uri.EMPTY)
+                mainViewModel.selectImage(Uri.EMPTY)
             }
         }
-        viewModel.imageList.observe(this) {
-            photoListPreviewAdapter.selectedPos = viewModel.nextSelectedPos
+        mainViewModel.imageList.observe(this) {
+            photoListPreviewAdapter.selectedPos = mainViewModel.nextSelectedPos
             photoListPreviewAdapter.submitList(it.first.toList()) {
                 if (it.second.not()) {
                     return@submitList
@@ -362,25 +356,25 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        viewModel.saveResult.observe(this) {
+        mainViewModel.saveResult.observe(this) {
             if (it.isFailure()) {
                 when (it.code) {
                     MainViewModel.TYPE_ERROR_SAVE_OOM -> {
                         toast(getString(R.string.error_save_oom))
                         CompressImageDialogFragment.safetyShow(supportFragmentManager)
-                        viewModel.resetJobStatus()
+                        mainViewModel.resetJobStatus()
                     }
                     MainViewModel.TYPE_ERROR_FILE_NOT_FOUND -> toast(getString(R.string.error_file_not_found))
                     MainViewModel.TYPE_ERROR_NOT_IMG -> toast(getString(R.string.error_not_img))
                     else -> toast("${getString(R.string.tips_error)}: ${it.message}")
                 }
-                viewModel.resetJobStatus()
+                mainViewModel.resetJobStatus()
             } else {
                 toast(it.message)
             }
         }
 
-        viewModel.colorPalette.observe(this) { palette ->
+        mainViewModel.colorPalette.observe(this) { palette ->
             val bgColor = palette.bgColor(this)
             val titleTextColor = palette.titleTextColor(this)
 
@@ -449,13 +443,13 @@ class MainActivity : AppCompatActivity() {
         // setting bg
         launchView.ivPhoto.apply {
             onBgReady { palette ->
-                viewModel.updateColorPalette(palette)
+                mainViewModel.updateColorPalette(palette)
             }
             onOffsetChanged {
-                viewModel.updateOffset(it)
+                mainViewModel.updateOffset(it)
             }
             onScaleEnd {
-                viewModel.updateTextSize(it)
+                mainViewModel.updateTextSize(it)
             }
         }
         // functional panel in recyclerView
@@ -506,7 +500,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
             photoListPreviewAdapter.onRemove { imageInfo ->
-                viewModel.removeImage(imageInfo, photoListPreviewAdapter.selectedPos)
+                mainViewModel.removeImage(imageInfo, photoListPreviewAdapter.selectedPos)
             }
 
             onItemClick { _, pos, v ->
@@ -523,7 +517,7 @@ class MainActivity : AppCompatActivity() {
             onSnapViewSelected { snapView, pos ->
                 photoListPreviewAdapter.selectedPos = pos
                 val uri = photoListPreviewAdapter.getItem(pos)?.uri ?: return@onSnapViewSelected
-                viewModel.selectImage(uri)
+                mainViewModel.selectImage(uri)
                 vibrateHelper.doVibrate(snapView)
             }
         }
@@ -715,7 +709,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun dealWithImage(uri: List<Uri>) {
         if (FileUtils.isImage(this.contentResolver, uri.first())) {
-            viewModel.updateImageList(uri)
+            mainViewModel.updateImageList(uri)
         } else {
             Toast.makeText(
                 this,
@@ -735,7 +729,7 @@ class MainActivity : AppCompatActivity() {
                 getString(R.string.tips_do_not_choose_image),
                 Toast.LENGTH_SHORT
             ).show()
-            if (requestCode == REQ_PICK_ICON && viewModel.waterMark.value?.markMode == WaterMarkRepository.MarkMode.Text) {
+            if (requestCode == REQ_PICK_ICON && mainViewModel.waterMark.value?.markMode == WaterMarkRepository.MarkMode.Text) {
                 manuallySelectedItem(0)
             }
             return
@@ -746,7 +740,7 @@ class MainActivity : AppCompatActivity() {
                 dealWithImage(finalList)
             }
             REQ_PICK_ICON -> {
-                viewModel.updateIcon(finalList.first())
+                mainViewModel.updateIcon(finalList.first())
             }
         }
     }
@@ -786,8 +780,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun resetView() {
         launchView.toLaunchMode()
-        viewModel.resetJobStatus()
-        viewModel.clearData()
+        mainViewModel.resetJobStatus()
+        mainViewModel.clearData()
         launchView.ivPhoto.reset()
         bgTransformAnimator?.cancel()
         TextContentDisplayFragment.remove(this)

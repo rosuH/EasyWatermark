@@ -26,7 +26,7 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import androidx.palette.graphics.Palette
-import dagger.hilt.android.lifecycle.HiltViewModel
+
 import id.zelory.compressor.Compressor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -66,11 +66,9 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.util.Date
-import javax.inject.Inject
 import kotlin.math.roundToInt
 
-@HiltViewModel
-class MainViewModel @Inject constructor(
+class MainViewModel (
     private val userRepo: UserConfigRepository,
     private val waterMarkRepo: WaterMarkRepository,
     private val memorySettingRepo: MemorySettingRepo,

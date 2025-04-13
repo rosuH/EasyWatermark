@@ -6,17 +6,17 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.core.content.edit
-import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.*
 import me.rosuh.cmonet.CMonet
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
-import javax.inject.Inject
+import me.rosuh.easywatermark.di.appModule
+import org.koin.android.ext.koin.androidContext
+import org.koin.android.ext.koin.androidLogger
+import org.koin.core.context.startKoin
 import kotlin.system.exitProcess
 
-@HiltAndroidApp
 class MyApp : Application() {
 
-    @Inject
     lateinit var waterMarkRepo: WaterMarkRepository
 
     private val sp by lazy { getSharedPreferences(SP_NAME, Context.MODE_PRIVATE) }
@@ -29,6 +29,13 @@ class MyApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        startKoin {
+            // 将 Koin 日志记录到 Android logger
+            androidLogger()
+            // 引用 Android 上下文
+            androidContext(this@MyApp)
+            modules(appModule)
+        }
         CMonet.init(this, true)
         if (checkRecoveryMode()) {
             return

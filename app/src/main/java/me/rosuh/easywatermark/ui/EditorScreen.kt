@@ -1,7 +1,11 @@
 package me.rosuh.easywatermark.ui
 
 import android.widget.ImageView
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,12 +15,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -33,8 +35,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
+import androidx.compose.material3.TabPosition
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -47,9 +48,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -57,13 +60,14 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.palette.graphics.Palette
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
@@ -127,7 +131,7 @@ fun EditorScreen(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun BottomView(
     waterMark: WaterMark,
@@ -237,22 +241,71 @@ private fun BottomView(
 
             PrimaryTabRow(
                 selectedTabIndex = selectedTabIndex,
-                indicator = { tabPositions ->
-                    val width by animateDpAsState(
-                        targetValue = tabPositions[selectedTabIndex].contentWidth,
-                        label = "indicator"
-                    )
-                    Row(
-                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
-                        horizontalArrangement = Arrangement.Center,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .height(2.dp)
-                                .width(width)
-                                .background(color = MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(topStart = 1.dp, topEnd = 1.dp))
+                indicator = {
+                    val coroutineScope = rememberCoroutineScope()
+                    var widthAnimatable by remember {
+                        mutableStateOf<Animatable<Dp, AnimationVector1D>?>(
+                            null
                         )
                     }
+                    val density = LocalDensity.current
+                    val primaryColor = MaterialTheme.colorScheme.primary
+                    Box(Modifier.tabIndicatorLayout {
+                            measurable: Measurable,
+                            constraints: Constraints,
+                            tabPositions: List<TabPosition>, ->
+                        val contentWidth = tabPositions[selectedTabIndex].contentWidth
+                        val animate = widthAnimatable ?: Animatable<Dp, AnimationVector1D>(
+                            contentWidth,
+                            Dp.VectorConverter
+                        ).also {
+                            widthAnimatable = it
+                        }
+                        val width = animate.value
+                        val offset = tabPositions[selectedTabIndex].left + width / 2
+                        val offsetPx = (tabPositions[selectedTabIndex].left + width / 2).roundToPx()
+                        if (width != animate.value) {
+                            coroutineScope.launch {
+                                animate.animateTo(
+                                    contentWidth,
+                                    animationSpec =
+                                        // Handle directionality here, if we are moving to the right, we
+                                        // want the right side of the indicator to move faster, if we are
+                                        // moving to the left, we want the left side to move faster.
+                                        if (animate.targetValue < contentWidth) {
+                                            spring(dampingRatio = 1f, stiffness = 50f)
+                                        } else {
+                                            spring(dampingRatio = 1f, stiffness = 1000f)
+                                        }
+                                )
+                            }
+                        }
+                        val placeable = measurable.measure(constraints.copy(
+                            minWidth = contentWidth.roundToPx(),
+                            maxWidth = constraints.maxWidth,
+                            minHeight = 2.dp.roundToPx(),
+                            maxHeight = constraints.maxHeight
+                        ))
+                        layout(constraints.maxWidth, constraints.maxHeight) {
+                            placeable.place(
+                                offsetPx,
+                                0
+                            )
+                        }
+                    }.drawWithContent {
+                        drawContent()
+                        drawRoundRect(
+                            color = primaryColor,
+                            size = size.copy(
+                                width = (widthAnimatable?.value ?: 0.dp).roundToPx().toFloat(),
+                                height = 2.dp.roundToPx().toFloat()
+                            ),
+                            topLeft = Offset(
+                                x = (size.width - (widthAnimatable?.value ?: 0.dp).roundToPx()) / 2f,
+                                y = 0f
+                            )
+                        )
+                    })
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {

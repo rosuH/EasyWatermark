@@ -8,14 +8,11 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.MyApp
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * hold memory data for across business usage
  */
-@Singleton
-class MemorySettingRepo @Inject constructor() {
+class MemorySettingRepo {
     private val scope = CoroutineScope(Dispatchers.Main)
 
     /**

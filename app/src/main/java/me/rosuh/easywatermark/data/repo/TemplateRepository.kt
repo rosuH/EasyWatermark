@@ -6,9 +6,8 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.data.db.dao.TemplateDao
 import me.rosuh.easywatermark.data.model.entity.Template
-import javax.inject.Inject
 
-class TemplateRepository @Inject constructor(
+class TemplateRepository (
     private val templateDao: TemplateDao?
 ) {
 

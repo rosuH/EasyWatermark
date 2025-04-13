@@ -5,7 +5,8 @@ plugins {
     id(libs.plugins.kotlin.android.get().pluginId)
     id(libs.plugins.kotlin.parcelize.get().pluginId)
     id(libs.plugins.ksp.get().pluginId)
-    id(libs.plugins.hilt.plugin.get().pluginId)
+//    id(libs.plugins.hilt.plugin.get().pluginId)
+    alias(libs.plugins.compose.compiler)
 //    id(libs.plugins.spotless.get().pluginId)
 }
 
@@ -102,10 +103,10 @@ dependencies {
     implementation(libs.datastore.preference)
 
     // di
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
-    androidTestImplementation(libs.hilt.testing)
-    kspAndroidTest(libs.hilt.compiler)
+//    implementation(libs.hilt.android)
+//    ksp(libs.hilt.compiler)
+//    androidTestImplementation(libs.hilt.testing)
+//    kspAndroidTest(libs.hilt.compiler)
 
     implementation(libs.asynclayout.inflater)
 
@@ -199,4 +200,7 @@ dependencies {
     implementation(libs.androidx.constraintlayout.compose)
     implementation(libs.androidx.motionlayoout.compose)
 
+    implementation(project.dependencies.platform(libs.koin.bom))
+    implementation(libs.koin.core)
+    implementation(libs.koin.android)
 }

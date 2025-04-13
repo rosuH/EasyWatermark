@@ -31,14 +31,8 @@ import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_T
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_VERTICAL_GAP
 import me.rosuh.easywatermark.utils.ktx.toTileMode
 import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Named
-import javax.inject.Singleton
 
-@Singleton
-class WaterMarkRepository @Inject constructor(
-    @Named("WaterMarkPreferences") private val dataStore: DataStore<Preferences>
-) {
+class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
 
     private object PreferenceKeys {
         val KEY_TEXT = stringPreferencesKey(SP_KEY_TEXT)

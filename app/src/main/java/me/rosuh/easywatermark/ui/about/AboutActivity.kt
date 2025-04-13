@@ -18,7 +18,7 @@ import androidx.core.graphics.ColorUtils
 import androidx.core.view.children
 import androidx.core.widget.TextViewCompat
 import androidx.palette.graphics.Palette
-import dagger.hilt.android.AndroidEntryPoint
+
 import me.rosuh.cmonet.CMonet
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.databinding.ActivityAboutBinding
@@ -31,7 +31,7 @@ import me.rosuh.easywatermark.utils.ktx.inflate
 import me.rosuh.easywatermark.utils.ktx.openLink
 import me.rosuh.easywatermark.utils.ktx.titleTextColor
 
-@AndroidEntryPoint
+
 class AboutActivity : AppCompatActivity() {
 
     private val binding by inflate<ActivityAboutBinding>()

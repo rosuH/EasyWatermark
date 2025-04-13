@@ -12,14 +12,8 @@ import me.rosuh.easywatermark.data.repo.UserConfigRepository.PreferenceKeys.KEY_
 import me.rosuh.easywatermark.data.repo.UserConfigRepository.PreferenceKeys.KEY_COMPRESS_LEVEL
 import me.rosuh.easywatermark.data.repo.UserConfigRepository.PreferenceKeys.KEY_OUTPUT_FORMAT
 import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Named
-import javax.inject.Singleton
 
-@Singleton
-class UserConfigRepository @Inject constructor(
-    @Named("UserPreferences") private val dataStore: DataStore<Preferences>
-) {
+class UserConfigRepository (private val dataStore: DataStore<Preferences>) {
     private object PreferenceKeys {
         val KEY_OUTPUT_FORMAT = intPreferencesKey(SP_KEY_FORMAT)
 
