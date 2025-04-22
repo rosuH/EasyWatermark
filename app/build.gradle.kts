@@ -9,21 +9,6 @@ plugins {
     id(libs.plugins.spotless.get().pluginId)
 }
 
-/**
- * read version from gradle.properties
- */
-val majorVersion by properties
-val minorVersion by properties
-val patchVersion by properties
-
-fun getVersionCode(): Int {
-    return (majorVersion as String).toInt() * 10000 + (minorVersion as String).toInt() * 100 + (patchVersion as String).toInt()
-}
-
-fun getVersionName(): String {
-    return "$majorVersion.$minorVersion.$patchVersion"
-}
-
 android {
     compileSdk = (Apps.compileSdk)
     buildToolsVersion = (Apps.buildTools)
@@ -31,8 +16,8 @@ android {
         applicationId = "me.rosuh.easywatermark"
         minSdk = (Apps.minSdk)
         targetSdk = (Apps.targetSdk)
-        versionCode = getVersionCode()
-        versionName = getVersionName()
+        versionCode = 20905
+        versionName = "2.9.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

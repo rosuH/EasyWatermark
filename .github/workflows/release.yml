@@ -101,10 +101,7 @@ jobs:
           keyPassword: ${{ secrets.KEY_PASSWORD }}
       - name: Set version from properties
         run: |
-          majorVersion=$(grep 'majorVersion=' gradle.properties | cut -d'=' -f2)
-          minorVersion=$(grep 'minorVersion=' gradle.properties | cut -d'=' -f2)
-          patchVersion=$(grep 'patchVersion=' gradle.properties | cut -d'=' -f2)
-          version="${majorVersion}.${minorVersion}.${patchVersion}"
+          version=$(grep 'versionName = ' app/build.gradle.kts | awk -F'"' '{print $2}')
           echo "RELEASE_VERSION=$version" >> "$GITHUB_ENV"
       - name: Publish release.
         if: success()
