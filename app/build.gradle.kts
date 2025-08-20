@@ -191,14 +191,15 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
 
 //    implementation("androidx.navigation:navigation-compose:2.7.4")
-    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.navigation3.runtime)
+    implementation(libs.androidx.navigation3.ui)
 
 //    implementation("com.google.accompanist:accompanist-navigation-animation:0.31.1-alpha")
     implementation(libs.accompanist.navigation.animation)
 
 //    implementation("androidx.constraintlayout:constraintlayout-compose:1.0.1")
     implementation(libs.androidx.constraintlayout.compose)
-    implementation(libs.androidx.motionlayoout.compose)
+//    implementation(libs.androidx.motionlayoout.compose)
 
     implementation(project.dependencies.platform(libs.koin.bom))
     implementation(libs.koin.core)

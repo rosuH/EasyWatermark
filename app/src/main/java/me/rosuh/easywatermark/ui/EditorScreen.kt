@@ -211,7 +211,7 @@ private fun BottomView(
                                 selectedOption = item
                                 showOptionControl = true
                             }
-                            .animateItemPlacement()
+                            .animateItem()
                     ) {
                         Icon(
                             painter = painterResource(id = item.iconRes),
@@ -728,7 +728,7 @@ fun PhotoList(
                     modifier = Modifier
                         .size(itemWidth)
                         .padding(4.dp)
-                        .animateItemPlacement(),
+                        .animateItem(),
                     imageInfo = imageInfo,
                     isSelected = imageInfo == selectedImage,
                     onImageClick = { selectedImageInfo ->
