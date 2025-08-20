@@ -6,8 +6,8 @@ import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -36,7 +35,6 @@ import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabPosition
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -248,6 +246,12 @@ private fun BottomView(
                             null
                         )
                     }
+                    var offsetXStartAnimatable by remember {
+                        mutableStateOf<Animatable<Dp, AnimationVector1D>?>(null)
+                    }
+                    var offsetXEndAnimatable by remember {
+                        mutableStateOf<Animatable<Dp, AnimationVector1D>?>(null)
+                    }
                     val density = LocalDensity.current
                     val primaryColor = MaterialTheme.colorScheme.primary
                     Box(Modifier.tabIndicatorLayout {
@@ -255,24 +259,22 @@ private fun BottomView(
                             constraints: Constraints,
                             tabPositions: List<TabPosition>, ->
                         val contentWidth = tabPositions[selectedTabIndex].contentWidth
-                        val animate = widthAnimatable ?: Animatable<Dp, AnimationVector1D>(
+                        val widthAnimate = widthAnimatable ?: Animatable<Dp, AnimationVector1D>(
                             contentWidth,
                             Dp.VectorConverter
                         ).also {
                             widthAnimatable = it
                         }
-                        val width = animate.value
-                        val offset = tabPositions[selectedTabIndex].left + width / 2
-                        val offsetPx = (tabPositions[selectedTabIndex].left + width / 2).roundToPx()
-                        if (width != animate.value) {
+                        val width = widthAnimate.value
+                        if (width != widthAnimate.value) {
                             coroutineScope.launch {
-                                animate.animateTo(
+                                widthAnimate.animateTo(
                                     contentWidth,
                                     animationSpec =
                                         // Handle directionality here, if we are moving to the right, we
                                         // want the right side of the indicator to move faster, if we are
                                         // moving to the left, we want the left side to move faster.
-                                        if (animate.targetValue < contentWidth) {
+                                        if (widthAnimate.targetValue < contentWidth) {
                                             spring(dampingRatio = 1f, stiffness = 50f)
                                         } else {
                                             spring(dampingRatio = 1f, stiffness = 1000f)
@@ -280,15 +282,56 @@ private fun BottomView(
                                 )
                             }
                         }
+                        val newStart = tabPositions[selectedTabIndex].left
+                        val newEnd = tabPositions[selectedTabIndex].right
+                        val offsetXStartAnimate = offsetXStartAnimatable ?: Animatable<Dp, AnimationVector1D>(
+                            newStart,
+                            Dp.VectorConverter
+                        ).also {
+                            offsetXStartAnimatable = it
+                        }
+                        val offsetXEndAnimate = offsetXEndAnimatable ?: Animatable<Dp, AnimationVector1D>(
+                            newEnd,
+                            Dp.VectorConverter
+                        ).also {
+                            offsetXEndAnimatable = it
+                        }
+
+                        if (offsetXStartAnimate.targetValue != newStart) {
+                            coroutineScope.launch {
+                                offsetXStartAnimate.animateTo(
+                                    newStart,
+                                    animationSpec = if (offsetXStartAnimate.targetValue < newStart) {
+                                        spring(dampingRatio = 1f, stiffness = 1000f)
+                                    } else {
+                                        spring(dampingRatio = 1f, stiffness = 200f)
+                                    }
+                                )
+                            }
+                        }
+                        if (offsetXEndAnimate.targetValue != newEnd) {
+                            coroutineScope.launch {
+                                offsetXEndAnimate.animateTo(
+                                    newEnd,
+                                    animationSpec = if (offsetXEndAnimate.targetValue < newEnd) {
+                                        spring(dampingRatio = 1f, stiffness = 200f)
+                                    } else {
+                                        spring(dampingRatio = 1f, stiffness = 1000f)
+                                    }
+                                )
+                            }
+                        }
+                        val offsetXStart = offsetXStartAnimate.value.roundToPx()
+                        val offsetXEnd = offsetXEndAnimate.value.roundToPx()
                         val placeable = measurable.measure(constraints.copy(
-                            minWidth = contentWidth.roundToPx(),
-                            maxWidth = constraints.maxWidth,
+                            minWidth = offsetXEnd - offsetXStart,
+                            maxWidth = offsetXEnd - offsetXStart,
                             minHeight = 2.dp.roundToPx(),
                             maxHeight = constraints.maxHeight
                         ))
                         layout(constraints.maxWidth, constraints.maxHeight) {
                             placeable.place(
-                                offsetPx,
+                                offsetXStart,
                                 0
                             )
                         }

@@ -204,12 +204,12 @@ fun GalleryDialog(
     onImageSelected: (image: Image, index: Int, isSelected: Boolean) -> Unit,
     onPickImageViaSystem: () -> Unit = {},
 ) {
+    var selectedCount by remember {
+        mutableIntStateOf(0)
+    }
     AnimatedTransitionView(onDismissRequest = {
-        onDismiss(false)
+        onDismiss(selectedCount > 0)
     }) { dialogHelper ->
-        var selectedCount by remember {
-            mutableIntStateOf(0)
-        }
         LaunchedEffect(key1 = images.size) {
             onLoaImages()
         }
