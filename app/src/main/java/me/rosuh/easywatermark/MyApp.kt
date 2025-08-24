@@ -10,6 +10,7 @@ import kotlinx.coroutines.*
 import me.rosuh.cmonet.CMonet
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.di.appModule
+import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -17,7 +18,7 @@ import kotlin.system.exitProcess
 
 class MyApp : Application() {
 
-    lateinit var waterMarkRepo: WaterMarkRepository
+    private val waterMarkRepo: WaterMarkRepository by inject()
 
     private val sp by lazy { getSharedPreferences(SP_NAME, Context.MODE_PRIVATE) }
 

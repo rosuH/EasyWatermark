@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -14,6 +16,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -45,21 +48,25 @@ fun TextContentOption(
     onTextChange: (String) -> Unit,
     onGoTemplateList: () -> Unit,
 ) {
+    val configuration = LocalWindowInfo.current.containerSize
+    val screenHeight = configuration.height.dp
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier,
+        modifier = modifier.wrapContentHeight(),
         verticalArrangement = Arrangement.Center
     ) {
+        TextField(
+            value = waterMark.text,
+            onValueChange = onTextChange,
+            maxLines = 1,
+            modifier = Modifier.fillMaxWidth().wrapContentHeight()
+        )
         Row(
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            Text(
-                text = stringResource(id = item.title),
-                style = MaterialTheme.typography.titleLarge
-            )
             Icon(
                 painter = painterResource(id = R.drawable.ic_go_template_list),
                 contentDescription = stringResource(
@@ -68,11 +75,6 @@ fun TextContentOption(
                 Modifier.clickable { onGoTemplateList() }
             )
         }
-        TextField(
-            value = waterMark.text,
-            onValueChange = onTextChange,
-            modifier = Modifier.fillMaxSize()
-        )
     }
 
 }

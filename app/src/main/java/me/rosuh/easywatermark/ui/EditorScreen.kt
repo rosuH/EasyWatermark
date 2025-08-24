@@ -1,5 +1,6 @@
 package me.rosuh.easywatermark.ui
 
+import android.util.Log
 import android.widget.ImageView
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
@@ -8,6 +9,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -55,6 +59,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -79,6 +84,7 @@ import me.rosuh.easywatermark.ui.compose.TextContentOption
 import me.rosuh.easywatermark.ui.compose.TextTypeface
 import me.rosuh.easywatermark.ui.compose.TileMode
 import me.rosuh.easywatermark.ui.widget.WaterMarkImageView
+import kotlin.math.absoluteValue
 
 
 @Composable
@@ -177,6 +183,16 @@ private fun BottomView(
                     }
                 }
         ) {
+            OptionControl(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                item = selectedOption,
+                waterMark = waterMark,
+                showSheet = showOptionControl,
+                onChange = onChange,
+                onDismissRequest = { showOptionControl = false }
+            )
             val itemWidth = 72.dp
             val contentPadding = if (selectedTabIndex == 1) {
                 8.dp
@@ -225,21 +241,12 @@ private fun BottomView(
                 }
             }
 
-            OptionControl(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(bottomViewHeight),
-                item = selectedOption,
-                waterMark = waterMark,
-                showSheet = showOptionControl,
-                onChange = onChange,
-                onDismissRequest = { showOptionControl = false }
-            )
             // Bottom Tab for contents, styles and layouts
 
             PrimaryTabRow(
                 selectedTabIndex = selectedTabIndex,
                 indicator = {
+                    val indicatorHeight = 3.dp
                     val coroutineScope = rememberCoroutineScope()
                     var widthAnimatable by remember {
                         mutableStateOf<Animatable<Dp, AnimationVector1D>?>(
@@ -323,10 +330,11 @@ private fun BottomView(
                         }
                         val offsetXStart = offsetXStartAnimate.value.roundToPx()
                         val offsetXEnd = offsetXEndAnimate.value.roundToPx()
+                        Log.i("TabRow", "indicator: $offsetXStart - $offsetXEnd")
                         val placeable = measurable.measure(constraints.copy(
-                            minWidth = offsetXEnd - offsetXStart,
-                            maxWidth = offsetXEnd - offsetXStart,
-                            minHeight = 2.dp.roundToPx(),
+                            minWidth = (offsetXEnd - offsetXStart).absoluteValue,
+                            maxWidth = (offsetXEnd - offsetXStart).absoluteValue,
+                            minHeight = constraints.maxHeight,
                             maxHeight = constraints.maxHeight
                         ))
                         layout(constraints.maxWidth, constraints.maxHeight) {
@@ -341,11 +349,15 @@ private fun BottomView(
                             color = primaryColor,
                             size = size.copy(
                                 width = (widthAnimatable?.value ?: 0.dp).roundToPx().toFloat(),
-                                height = 2.dp.roundToPx().toFloat()
+                                height = indicatorHeight.roundToPx().toFloat()
                             ),
                             topLeft = Offset(
                                 x = (size.width - (widthAnimatable?.value ?: 0.dp).roundToPx()) / 2f,
-                                y = 0f
+                                y = size.height - indicatorHeight.roundToPx().toFloat()
+                            ),
+                            cornerRadius = CornerRadius(
+                                indicatorHeight.roundToPx().toFloat() / 2f,
+                                indicatorHeight.roundToPx().toFloat() / 2f
                             )
                         )
                     })
@@ -414,22 +426,17 @@ fun OptionControl(
     onDismissRequest: () -> Unit,
 ) {
     if (showSheet) {
-        val configuration = LocalConfiguration.current
-        val screenHeight = configuration.screenHeightDp.dp
+        val configuration = LocalWindowInfo.current.containerSize
+        val screenHeight = configuration.height.dp
         val isColor = item.type == FuncTitleModel.FuncType.Color
         val height = if (isColor) {
             screenHeight / 3
         } else {
             screenHeight / 4
         }
-        ModalBottomSheet(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(height)
-                .then(modifier),
-            tonalElevation = BottomSheetDefaults.Elevation,
-            scrimColor = Color.Transparent,
-            onDismissRequest = onDismissRequest,
+        Box(
+            modifier = modifier
+                .background(MaterialTheme.colorScheme.surface)
         ) {
             val innerModifier = Modifier
                 .fillMaxWidth()
