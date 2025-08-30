@@ -37,7 +37,7 @@ jobs:
           distribution: 'zulu'
           java-version: 17
           cache: 'gradle'
-      - uses: gradle/actions/setup-gradle@v3
+      - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: wrapper
           gradle-home-cache-cleanup: true
@@ -57,7 +57,7 @@ jobs:
           distribution: 'zulu'
           java-version: 17
           cache: 'gradle'
-      - uses: gradle/actions/setup-gradle@v3
+      - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: wrapper
           gradle-home-cache-cleanup: true
