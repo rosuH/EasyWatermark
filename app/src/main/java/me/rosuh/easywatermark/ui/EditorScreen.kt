@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -101,37 +102,35 @@ fun EditorScreen(
     onShowSaveDialog: () -> Unit = { },
     onGoAboutScreen: () -> Unit = { },
 ) {
-    BottomSurface {
-        Column(
-            modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // topBar
-            EditorTopBar(
-                Modifier.fillMaxWidth(),
-                onBack = onBack,
-                onAddMoreImages = onAddMoreImages,
-                onShowSaveDialog = onShowSaveDialog,
-                onGoAboutScreen = onGoAboutScreen
+    Column(
+        modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // topBar
+        EditorTopBar(
+            Modifier.fillMaxWidth(),
+            onBack = onBack,
+            onAddMoreImages = onAddMoreImages,
+            onShowSaveDialog = onShowSaveDialog,
+            onGoAboutScreen = onGoAboutScreen
+        )
+        // WaterMarkView
+        WaterMarkView(
+            Modifier.weight(1f, true),
+            waterMark,
+            selectedImage ?: imageList.firstOrNull()
+        )
+        // PreviewList
+        if (imageList.size > 1) {
+            PhotoList(
+                imageList,
+                selectedImage,
+                modifier = Modifier.fillMaxWidth(),
+                onImageSelected,
+                onImageDelete
             )
-            // WaterMarkView
-            WaterMarkView(
-                Modifier.weight(1f, true),
-                waterMark,
-                selectedImage ?: imageList.firstOrNull()
-            )
-            // PreviewList
-            if (imageList.size > 1) {
-                PhotoList(
-                    imageList,
-                    selectedImage,
-                    modifier = Modifier.fillMaxWidth(),
-                    onImageSelected,
-                    onImageDelete
-                )
-            }
-            BottomView(waterMark, onChange = onWaterMrkChange)
         }
+        BottomView(waterMark, onChange = onWaterMrkChange)
     }
 }
 
@@ -173,242 +172,233 @@ private fun BottomView(
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
-    BottomSurface {
-        Column(
-            modifier = modifier
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .onGloballyPositioned {
+                bottomViewHeight = with(density) {
+                    it.size.height.toDp()
+                }
+            }
+    ) {
+        OptionControl(
+            modifier = Modifier
                 .fillMaxWidth()
+                .height(56.dp),
+            item = selectedOption,
+            waterMark = waterMark,
+            showSheet = showOptionControl,
+            onChange = onChange,
+            onDismissRequest = { showOptionControl = false }
+        )
+        val itemWidth = 72.dp
+        val contentPadding = if (selectedTabIndex == 1) {
+            8.dp
+        } else {
+            (optionWidth - itemWidth).coerceAtLeast(0.dp) / 2
+        }
+        LazyRow(
+            Modifier
+                .fillMaxWidth()
+                .height(64.dp)
                 .onGloballyPositioned {
-                    bottomViewHeight = with(density) {
-                        it.size.height.toDp()
+                    optionWidth = with(density) {
+                        it.size.width.toDp()
                     }
-                }
-        ) {
-            OptionControl(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                item = selectedOption,
-                waterMark = waterMark,
-                showSheet = showOptionControl,
-                onChange = onChange,
-                onDismissRequest = { showOptionControl = false }
-            )
-            val itemWidth = 72.dp
-            val contentPadding = if (selectedTabIndex == 1) {
-                8.dp
-            } else {
-                (optionWidth - itemWidth).coerceAtLeast(0.dp) / 2
-            }
-            LazyRow(
-                Modifier
-                    .fillMaxWidth()
-                    .height(64.dp)
-                    .onGloballyPositioned {
-                        optionWidth = with(density) {
-                            it.size.width.toDp()
-                        }
-                    },
-                state = listState,
-                contentPadding = PaddingValues(
-                    start = contentPadding,
-                    end = contentPadding,
-                ),
-            ) {
-                itemsIndexed(optionList) { index, item ->
-                    Column(
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .width(itemWidth)
-                            .fillMaxHeight()
-                            .clickable {
-                                selectedOption = item
-                                showOptionControl = true
-                            }
-                            .animateItem()
-                    ) {
-                        Icon(
-                            painter = painterResource(id = item.iconRes),
-                            contentDescription = stringResource(id = item.title),
-                            modifier = Modifier.height(24.dp)
-                        )
-                        Text(
-                            text = stringResource(id = item.title),
-                            style = MaterialTheme.typography.titleSmall,
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
-                    }
-                }
-            }
-
-            // Bottom Tab for contents, styles and layouts
-
-            PrimaryTabRow(
-                selectedTabIndex = selectedTabIndex,
-                indicator = {
-                    val indicatorHeight = 3.dp
-                    val coroutineScope = rememberCoroutineScope()
-                    var widthAnimatable by remember {
-                        mutableStateOf<Animatable<Dp, AnimationVector1D>?>(
-                            null
-                        )
-                    }
-                    var offsetXStartAnimatable by remember {
-                        mutableStateOf<Animatable<Dp, AnimationVector1D>?>(null)
-                    }
-                    var offsetXEndAnimatable by remember {
-                        mutableStateOf<Animatable<Dp, AnimationVector1D>?>(null)
-                    }
-                    val density = LocalDensity.current
-                    val primaryColor = MaterialTheme.colorScheme.primary
-                    Box(Modifier.tabIndicatorLayout {
-                            measurable: Measurable,
-                            constraints: Constraints,
-                            tabPositions: List<TabPosition>, ->
-                        val contentWidth = tabPositions[selectedTabIndex].contentWidth
-                        val widthAnimate = widthAnimatable ?: Animatable<Dp, AnimationVector1D>(
-                            contentWidth,
-                            Dp.VectorConverter
-                        ).also {
-                            widthAnimatable = it
-                        }
-                        val width = widthAnimate.value
-                        if (width != widthAnimate.value) {
-                            coroutineScope.launch {
-                                widthAnimate.animateTo(
-                                    contentWidth,
-                                    animationSpec =
-                                        // Handle directionality here, if we are moving to the right, we
-                                        // want the right side of the indicator to move faster, if we are
-                                        // moving to the left, we want the left side to move faster.
-                                        if (widthAnimate.targetValue < contentWidth) {
-                                            spring(dampingRatio = 1f, stiffness = 50f)
-                                        } else {
-                                            spring(dampingRatio = 1f, stiffness = 1000f)
-                                        }
-                                )
-                            }
-                        }
-                        val newStart = tabPositions[selectedTabIndex].left
-                        val newEnd = tabPositions[selectedTabIndex].right
-                        val offsetXStartAnimate = offsetXStartAnimatable ?: Animatable<Dp, AnimationVector1D>(
-                            newStart,
-                            Dp.VectorConverter
-                        ).also {
-                            offsetXStartAnimatable = it
-                        }
-                        val offsetXEndAnimate = offsetXEndAnimatable ?: Animatable<Dp, AnimationVector1D>(
-                            newEnd,
-                            Dp.VectorConverter
-                        ).also {
-                            offsetXEndAnimatable = it
-                        }
-
-                        if (offsetXStartAnimate.targetValue != newStart) {
-                            coroutineScope.launch {
-                                offsetXStartAnimate.animateTo(
-                                    newStart,
-                                    animationSpec = if (offsetXStartAnimate.targetValue < newStart) {
-                                        spring(dampingRatio = 1f, stiffness = 1000f)
-                                    } else {
-                                        spring(dampingRatio = 1f, stiffness = 200f)
-                                    }
-                                )
-                            }
-                        }
-                        if (offsetXEndAnimate.targetValue != newEnd) {
-                            coroutineScope.launch {
-                                offsetXEndAnimate.animateTo(
-                                    newEnd,
-                                    animationSpec = if (offsetXEndAnimate.targetValue < newEnd) {
-                                        spring(dampingRatio = 1f, stiffness = 200f)
-                                    } else {
-                                        spring(dampingRatio = 1f, stiffness = 1000f)
-                                    }
-                                )
-                            }
-                        }
-                        val offsetXStart = offsetXStartAnimate.value.roundToPx()
-                        val offsetXEnd = offsetXEndAnimate.value.roundToPx()
-                        Log.i("TabRow", "indicator: $offsetXStart - $offsetXEnd")
-                        val placeable = measurable.measure(constraints.copy(
-                            minWidth = (offsetXEnd - offsetXStart).absoluteValue,
-                            maxWidth = (offsetXEnd - offsetXStart).absoluteValue,
-                            minHeight = constraints.maxHeight,
-                            maxHeight = constraints.maxHeight
-                        ))
-                        layout(constraints.maxWidth, constraints.maxHeight) {
-                            placeable.place(
-                                offsetXStart,
-                                0
-                            )
-                        }
-                    }.drawWithContent {
-                        drawContent()
-                        drawRoundRect(
-                            color = primaryColor,
-                            size = size.copy(
-                                width = (widthAnimatable?.value ?: 0.dp).roundToPx().toFloat(),
-                                height = indicatorHeight.roundToPx().toFloat()
-                            ),
-                            topLeft = Offset(
-                                x = (size.width - (widthAnimatable?.value ?: 0.dp).roundToPx()) / 2f,
-                                y = size.height - indicatorHeight.roundToPx().toFloat()
-                            ),
-                            cornerRadius = CornerRadius(
-                                indicatorHeight.roundToPx().toFloat() / 2f,
-                                indicatorHeight.roundToPx().toFloat() / 2f
-                            )
-                        )
-                    })
                 },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                val textModifier = Modifier
-                    .fillMaxHeight()
-                BottomSurface {
-                    Tab(
-                        selectedTabIndex == 0,
-                        onClick = {
-                            selectedTabIndex = 0
-                        },
-                        modifier = Modifier.height(48.dp)
-                    ) {
-                        Column(modifier = textModifier, verticalArrangement = Arrangement.Center) {
-                            Text(
-                                text = stringResource(id = R.string.title_content),
-                                textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.titleSmall
+            state = listState,
+            contentPadding = PaddingValues(
+                start = contentPadding,
+                end = contentPadding,
+            ),
+        ) {
+            itemsIndexed(optionList) { index, item ->
+                Column(
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .width(itemWidth)
+                        .fillMaxHeight()
+                        .clickable {
+                            selectedOption = item
+                            showOptionControl = true
+                        }
+                        .animateItem()
+                ) {
+                    Icon(
+                        painter = painterResource(id = item.iconRes),
+                        contentDescription = stringResource(id = item.title),
+                        modifier = Modifier.height(24.dp)
+                    )
+                    Text(
+                        text = stringResource(id = item.title),
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+            }
+        }
+
+        // Bottom Tab for contents, styles and layouts
+
+        PrimaryTabRow(
+            selectedTabIndex = selectedTabIndex,
+            indicator = {
+                val indicatorHeight = 3.dp
+                val coroutineScope = rememberCoroutineScope()
+                var widthAnimatable by remember {
+                    mutableStateOf<Animatable<Dp, AnimationVector1D>?>(
+                        null
+                    )
+                }
+                var offsetXStartAnimatable by remember {
+                    mutableStateOf<Animatable<Dp, AnimationVector1D>?>(null)
+                }
+                var offsetXEndAnimatable by remember {
+                    mutableStateOf<Animatable<Dp, AnimationVector1D>?>(null)
+                }
+                val density = LocalDensity.current
+                val primaryColor = MaterialTheme.colorScheme.primary
+                Box(Modifier.tabIndicatorLayout {
+                        measurable: Measurable,
+                        constraints: Constraints,
+                        tabPositions: List<TabPosition>, ->
+                    val contentWidth = tabPositions[selectedTabIndex].contentWidth
+                    val widthAnimate = widthAnimatable ?: Animatable<Dp, AnimationVector1D>(
+                        contentWidth,
+                        Dp.VectorConverter
+                    ).also {
+                        widthAnimatable = it
+                    }
+                    val width = widthAnimate.value
+                    if (width != widthAnimate.value) {
+                        coroutineScope.launch {
+                            widthAnimate.animateTo(
+                                contentWidth,
+                                animationSpec =
+                                    // Handle directionality here, if we are moving to the right, we
+                                    // want the right side of the indicator to move faster, if we are
+                                    // moving to the left, we want the left side to move faster.
+                                    if (widthAnimate.targetValue < contentWidth) {
+                                        spring(dampingRatio = 1f, stiffness = 50f)
+                                    } else {
+                                        spring(dampingRatio = 1f, stiffness = 1000f)
+                                    }
                             )
                         }
+                    }
+                    val newStart = tabPositions[selectedTabIndex].left
+                    val newEnd = tabPositions[selectedTabIndex].right
+                    val offsetXStartAnimate = offsetXStartAnimatable ?: Animatable<Dp, AnimationVector1D>(
+                        newStart,
+                        Dp.VectorConverter
+                    ).also {
+                        offsetXStartAnimatable = it
+                    }
+                    val offsetXEndAnimate = offsetXEndAnimatable ?: Animatable<Dp, AnimationVector1D>(
+                        newEnd,
+                        Dp.VectorConverter
+                    ).also {
+                        offsetXEndAnimatable = it
                     }
 
-                }
-                BottomSurface {
-                    Tab(selectedTabIndex == 1, onClick = {
-                        selectedTabIndex = 1
-                    }) {
-                        Column(modifier = textModifier, verticalArrangement = Arrangement.Center) {
-                            Text(
-                                text = stringResource(id = R.string.title_style),
-                                textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.titleSmall
+                    if (offsetXStartAnimate.targetValue != newStart) {
+                        coroutineScope.launch {
+                            offsetXStartAnimate.animateTo(
+                                newStart,
+                                animationSpec = if (offsetXStartAnimate.targetValue < newStart) {
+                                    spring(dampingRatio = 1f, stiffness = 1000f)
+                                } else {
+                                    spring(dampingRatio = 1f, stiffness = 200f)
+                                }
                             )
                         }
                     }
-                }
-                BottomSurface {
-                    Tab(selectedTabIndex == 2, onClick = {
-                        selectedTabIndex = 2
-                    }) {
-                        Column(modifier = textModifier, verticalArrangement = Arrangement.Center) {
-                            Text(
-                                text = stringResource(id = R.string.title_layout),
-                                textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.titleSmall
+                    if (offsetXEndAnimate.targetValue != newEnd) {
+                        coroutineScope.launch {
+                            offsetXEndAnimate.animateTo(
+                                newEnd,
+                                animationSpec = if (offsetXEndAnimate.targetValue < newEnd) {
+                                    spring(dampingRatio = 1f, stiffness = 200f)
+                                } else {
+                                    spring(dampingRatio = 1f, stiffness = 1000f)
+                                }
                             )
                         }
                     }
+                    val offsetXStart = offsetXStartAnimate.value.roundToPx()
+                    val offsetXEnd = offsetXEndAnimate.value.roundToPx()
+                    Log.i("TabRow", "indicator: $offsetXStart - $offsetXEnd")
+                    val placeable = measurable.measure(constraints.copy(
+                        minWidth = (offsetXEnd - offsetXStart).absoluteValue,
+                        maxWidth = (offsetXEnd - offsetXStart).absoluteValue,
+                        minHeight = constraints.maxHeight,
+                        maxHeight = constraints.maxHeight
+                    ))
+                    layout(constraints.maxWidth, constraints.maxHeight) {
+                        placeable.place(
+                            offsetXStart,
+                            0
+                        )
+                    }
+                }.drawWithContent {
+                    drawContent()
+                    drawRoundRect(
+                        color = primaryColor,
+                        size = size.copy(
+                            width = (widthAnimatable?.value ?: 0.dp).roundToPx().toFloat(),
+                            height = indicatorHeight.roundToPx().toFloat()
+                        ),
+                        topLeft = Offset(
+                            x = (size.width - (widthAnimatable?.value ?: 0.dp).roundToPx()) / 2f,
+                            y = size.height - indicatorHeight.roundToPx().toFloat()
+                        ),
+                        cornerRadius = CornerRadius(
+                            indicatorHeight.roundToPx().toFloat() / 2f,
+                            indicatorHeight.roundToPx().toFloat() / 2f
+                        )
+                    )
+                })
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            val textModifier = Modifier
+                .fillMaxHeight()
+            Tab(
+                selectedTabIndex == 0,
+                onClick = {
+                    selectedTabIndex = 0
+                },
+                modifier = Modifier.height(48.dp)
+            ) {
+                Column(modifier = textModifier, verticalArrangement = Arrangement.Center) {
+                    Text(
+                        text = stringResource(id = R.string.title_content),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                }
+            }
+            Tab(selectedTabIndex == 1, onClick = {
+                selectedTabIndex = 1
+            }) {
+                Column(modifier = textModifier, verticalArrangement = Arrangement.Center) {
+                    Text(
+                        text = stringResource(id = R.string.title_style),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                }
+            }
+            Tab(selectedTabIndex == 2, onClick = {
+                selectedTabIndex = 2
+            }) {
+                Column(modifier = textModifier, verticalArrangement = Arrangement.Center) {
+                    Text(
+                        text = stringResource(id = R.string.title_layout),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.titleSmall
+                    )
                 }
             }
         }
@@ -617,6 +607,7 @@ fun EditorTopBar(
 ) {
     TopAppBar(
         modifier = modifier,
+        windowInsets = WindowInsets(0),
         title = {},
         navigationIcon = {
             Row(
@@ -757,39 +748,37 @@ fun PhotoList(
     }
     val itemWidth = 40.dp
     val density = LocalDensity.current
-    BottomSurface {
-        LazyRow(
-            modifier = modifier
-                .onGloballyPositioned {
-                    optionWidth = with(density) {
-                        it.size.width.toDp()
+    LazyRow(
+        modifier = modifier
+            .onGloballyPositioned {
+                optionWidth = with(density) {
+                    it.size.width.toDp()
+                }
+            },
+        contentPadding = PaddingValues(
+            start = (optionWidth - itemWidth).coerceAtLeast(0.dp) / 2,
+            end = (optionWidth - itemWidth).coerceAtLeast(0.dp) / 2
+        ),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        state = listState
+    ) {
+        items(imaList.size) {
+            val imageInfo = imaList[it]
+            PhotoItem(
+                modifier = Modifier
+                    .size(itemWidth)
+                    .padding(4.dp)
+                    .animateItem(),
+                imageInfo = imageInfo,
+                isSelected = imageInfo == selectedImage,
+                onImageClick = { selectedImageInfo ->
+                    coroutineScope.launch {
+                        listState.animateScrollToItem(it)
                     }
+                    onImageSelected.invoke(selectedImageInfo)
                 },
-            contentPadding = PaddingValues(
-                start = (optionWidth - itemWidth).coerceAtLeast(0.dp) / 2,
-                end = (optionWidth - itemWidth).coerceAtLeast(0.dp) / 2
-            ),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            state = listState
-        ) {
-            items(imaList.size) {
-                val imageInfo = imaList[it]
-                PhotoItem(
-                    modifier = Modifier
-                        .size(itemWidth)
-                        .padding(4.dp)
-                        .animateItem(),
-                    imageInfo = imageInfo,
-                    isSelected = imageInfo == selectedImage,
-                    onImageClick = { selectedImageInfo ->
-                        coroutineScope.launch {
-                            listState.animateScrollToItem(it)
-                        }
-                        onImageSelected.invoke(selectedImageInfo)
-                    },
-                    onImageDelete = onImageDelete
-                )
-            }
+                onImageDelete = onImageDelete
+            )
         }
     }
 }
@@ -830,8 +819,9 @@ fun PhotoItem(
 }
 
 @Composable
-fun BottomSurface(content: @Composable () -> Unit) {
+fun BottomSurface(modifier: Modifier, content: @Composable () -> Unit) {
     Surface(
+        modifier = modifier,
         color = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
         content = content
