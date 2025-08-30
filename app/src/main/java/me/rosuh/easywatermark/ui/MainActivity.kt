@@ -243,6 +243,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        this.intent = intent
+    }
+
     override fun onStart() {
         super.onStart()
         // Accepting shared images from other apps

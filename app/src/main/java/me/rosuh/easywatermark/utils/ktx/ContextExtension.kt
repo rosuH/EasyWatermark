@@ -49,12 +49,11 @@ fun Activity.checkWritingPermission(
     },
     grant: () -> Unit,
 ) {
-    val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        Manifest.permission.READ_MEDIA_IMAGES
-    } else {
-        Manifest.permission.WRITE_EXTERNAL_STORAGE
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        grant.invoke()
+        return
     }
-    preCheckStoragePermission(activityResultLauncher, permissions, failed, grant)
+    preCheckStoragePermission(activityResultLauncher, Manifest.permission.WRITE_EXTERNAL_STORAGE, failed, grant)
 }
 
 fun Activity.preCheckStoragePermission(
