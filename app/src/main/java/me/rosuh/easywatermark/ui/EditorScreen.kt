@@ -44,6 +44,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -143,25 +144,26 @@ private fun BottomView(
 ) {
     // StylePreview
     var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val optionList = when (selectedTabIndex) {
-        0 -> {
-            contentFunList
-        }
+    val optionList = remember(selectedTabIndex) { mutableStateListOf(*(when (selectedTabIndex) {
+            0 -> {
+                contentFunList
+            }
 
-        1 -> {
-            styleFunList
-        }
+            1 -> {
+                styleFunList
+            }
 
-        2 -> {
-            layoutFunList
-        }
+            2 -> {
+                layoutFunList
+            }
 
-        else -> {
-            throw IllegalStateException("Unexpected value: $selectedTabIndex")
-        }
+            else -> {
+                throw IllegalStateException("Unexpected value: $selectedTabIndex")
+            }
+        }).toTypedArray())
     }
-    var selectedOption by remember { mutableStateOf(optionList.first()) }
-    var showOptionControl by remember { mutableStateOf(false) }
+    var selectedOption by remember(selectedTabIndex) { mutableStateOf(optionList.first()) }
+    var showOptionControl by remember(selectedTabIndex) { mutableStateOf(selectedTabIndex != 0) }
     var optionWidth by remember {
         mutableStateOf(0.dp)
     }
