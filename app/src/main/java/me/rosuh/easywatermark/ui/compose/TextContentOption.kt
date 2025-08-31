@@ -76,5 +76,4 @@ fun TextContentOption(
             )
         }
     }
-
 }

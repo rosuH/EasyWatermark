@@ -36,6 +36,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DividerDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabPosition
@@ -163,35 +166,23 @@ private fun BottomView(
         }).toTypedArray())
     }
     var selectedOption by remember(selectedTabIndex) { mutableStateOf(optionList.first()) }
-    var showOptionControl by remember(selectedTabIndex) { mutableStateOf(selectedTabIndex != 0) }
     var optionWidth by remember {
         mutableStateOf(0.dp)
     }
-    var bottomViewHeight by remember {
-        mutableStateOf(0.dp)
-    }
+
     val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .onGloballyPositioned {
-                bottomViewHeight = with(density) {
-                    it.size.height.toDp()
-                }
-            }
-    ) {
+    Column(modifier = modifier.fillMaxWidth()) {
         OptionControl(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
             item = selectedOption,
             waterMark = waterMark,
-            showSheet = showOptionControl,
             onChange = onChange,
-            onDismissRequest = { showOptionControl = false }
+            onDismissRequest = {  }
         )
         val itemWidth = 72.dp
         val contentPadding = if (selectedTabIndex == 1) {
@@ -223,7 +214,6 @@ private fun BottomView(
                         .fillMaxHeight()
                         .clickable {
                             selectedOption = item
-                            showOptionControl = true
                         }
                         .animateItem()
                 ) {
@@ -243,6 +233,7 @@ private fun BottomView(
 
         // Bottom Tab for contents, styles and layouts
 
+        HorizontalDivider(thickness = 0.5.dp, color = DividerDefaults.color.copy(alpha = 0.5f))
         PrimaryTabRow(
             selectedTabIndex = selectedTabIndex,
             indicator = {
@@ -362,6 +353,7 @@ private fun BottomView(
                     )
                 })
             },
+            divider = {},
             modifier = Modifier.fillMaxWidth()
         ) {
             val textModifier = Modifier
@@ -417,113 +409,111 @@ fun OptionControl(
     onChange: (item: FuncTitleModel, any: Any) -> Unit = { _, _ -> },
     onDismissRequest: () -> Unit,
 ) {
-    if (showSheet) {
-        val configuration = LocalWindowInfo.current.containerSize
-        val screenHeight = configuration.height.dp
-        val isColor = item.type == FuncTitleModel.FuncType.Color
-        val height = if (isColor) {
-            screenHeight / 3
-        } else {
-            screenHeight / 4
-        }
-        Box(
-            modifier = modifier
-                .background(MaterialTheme.colorScheme.surface)
-        ) {
-            val innerModifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-            when (item.type) {
-                FuncTitleModel.FuncType.Alpha -> {
-                    SliderOption(
-                        item = item,
-                        modifier = innerModifier,
-                        currentValue = waterMark.alpha.toFloat() / 255 * 100,
-                        onValueChange = onChange
-                    )
-                }
-
-                FuncTitleModel.FuncType.TextSize -> {
-                    SliderOption(
-                        item = item,
-                        modifier = innerModifier,
-                        currentValue = waterMark.textSize,
-                        onValueChange = onChange
-                    )
-                }
-
-                FuncTitleModel.FuncType.Vertical -> {
-                    SliderOption(
-                        item = item,
-                        modifier = innerModifier,
-                        currentValue = waterMark.vGap.toFloat(),
-                        onValueChange = onChange
-                    )
-                }
-
-                FuncTitleModel.FuncType.Horizon -> {
-                    SliderOption(
-                        item = item,
-                        modifier = innerModifier,
-                        currentValue = waterMark.hGap.toFloat(),
-                        onValueChange = onChange
-                    )
-                }
-
-                FuncTitleModel.FuncType.Degree -> {
-                    SliderOption(
-                        item = item,
-                        modifier = innerModifier,
-                        currentValue = waterMark.degree,
-                        onValueChange = onChange
-                    )
-                }
-
-                FuncTitleModel.FuncType.Color -> {
-                    ColorOption(
-                        item = item,
-                        waterMark = waterMark,
-                        modifier = innerModifier,
-                        onChange = onChange
-                    )
-                }
-
-                FuncTitleModel.FuncType.Icon -> {
-                    IconOption(
-                        item = item,
-                        waterMark = waterMark,
-                        modifier = innerModifier,
-                        onIconSelected = onChange
-                    )
-                }
-
-                FuncTitleModel.FuncType.Text -> {
-                    TextContentOption(
-                        item = item,
-                        waterMark = waterMark,
-                        modifier = innerModifier,
-                        onTextChange = {}) {
-
-                    }
-                }
-
-                FuncTitleModel.FuncType.TextTypeFace -> {
-                    TextTypeface(
-                        item = item,
-                        waterMark = waterMark,
-                        modifier = innerModifier,
-                        onValueChange = onChange
-                    )
-                }
-
-                FuncTitleModel.FuncType.TileMode ->
-                    TileMode(
-                        item = item,
-                        waterMark = waterMark,
-                        modifier = innerModifier,
-                        onValueChange = onChange
-                    )
+    val configuration = LocalWindowInfo.current.containerSize
+    val screenHeight = configuration.height.dp
+    val isColor = item.type == FuncTitleModel.FuncType.Color
+    val height = if (isColor) {
+        screenHeight / 3
+    } else {
+        screenHeight / 4
+    }
+    Box(
+        modifier = modifier
+            .background(MaterialTheme.colorScheme.surface)
+    ) {
+        val innerModifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+        when (item.type) {
+            FuncTitleModel.FuncType.Alpha -> {
+                SliderOption(
+                    item = item,
+                    modifier = innerModifier,
+                    currentValue = waterMark.alpha.toFloat() / 255 * 100,
+                    onValueChange = onChange
+                )
             }
+
+            FuncTitleModel.FuncType.TextSize -> {
+                SliderOption(
+                    item = item,
+                    modifier = innerModifier,
+                    currentValue = waterMark.textSize,
+                    onValueChange = onChange
+                )
+            }
+
+            FuncTitleModel.FuncType.Vertical -> {
+                SliderOption(
+                    item = item,
+                    modifier = innerModifier,
+                    currentValue = waterMark.vGap.toFloat(),
+                    onValueChange = onChange
+                )
+            }
+
+            FuncTitleModel.FuncType.Horizon -> {
+                SliderOption(
+                    item = item,
+                    modifier = innerModifier,
+                    currentValue = waterMark.hGap.toFloat(),
+                    onValueChange = onChange
+                )
+            }
+
+            FuncTitleModel.FuncType.Degree -> {
+                SliderOption(
+                    item = item,
+                    modifier = innerModifier,
+                    currentValue = waterMark.degree,
+                    onValueChange = onChange
+                )
+            }
+
+            FuncTitleModel.FuncType.Color -> {
+                ColorOption(
+                    item = item,
+                    waterMark = waterMark,
+                    modifier = innerModifier,
+                    onChange = onChange
+                )
+            }
+
+            FuncTitleModel.FuncType.Icon -> {
+                IconOption(
+                    item = item,
+                    waterMark = waterMark,
+                    modifier = innerModifier,
+                    onIconSelected = onChange
+                )
+            }
+
+            FuncTitleModel.FuncType.Text -> {
+                TextContentOption(
+                    item = item,
+                    waterMark = waterMark,
+                    modifier = innerModifier,
+                    onTextChange = {}) {
+
+                }
+            }
+
+            FuncTitleModel.FuncType.TextTypeFace -> {
+                TextTypeface(
+                    item = item,
+                    waterMark = waterMark,
+                    modifier = innerModifier,
+                    onValueChange = onChange
+                )
+            }
+
+            FuncTitleModel.FuncType.TileMode ->
+                TileMode(
+                    item = item,
+                    waterMark = waterMark,
+                    modifier = innerModifier,
+                    onValueChange = onChange
+                )
         }
     }
 }
