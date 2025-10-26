@@ -72,6 +72,8 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
 
+    private var pendingPermissionAction: (() -> Unit)? = null
+
     private val isSystemPhotoPickerAvailable by lazy {
         ActivityResultContracts.PickVisualMedia.isPhotoPickerAvailable(this)
     }
@@ -250,6 +252,8 @@ class MainActivity : AppCompatActivity() {
             }
         requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) {
+                pendingPermissionAction?.invoke()
+                pendingPermissionAction = null
                 return@registerForActivityResult
             }
             Toast.makeText(
@@ -257,6 +261,7 @@ class MainActivity : AppCompatActivity() {
                 getString(R.string.request_permission_failed),
                 Toast.LENGTH_SHORT
             ).show()
+            pendingPermissionAction = null
         }
     }
 
@@ -716,7 +721,12 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        checkReadingPermission(requestPermissionLauncher, grant = launchLegacyPicker)
+        pendingPermissionAction = launchLegacyPicker
+        checkReadingPermission(requestPermissionLauncher, grant = {
+            val action = pendingPermissionAction
+            pendingPermissionAction = null
+            action?.invoke()
+        })
     }
 
     private fun openLegacyGallery() {
@@ -841,7 +851,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun requestPermission(block: () -> Unit) {
-        checkWritingPermission(requestPermissionLauncher, grant = block)
+        pendingPermissionAction = block
+        checkWritingPermission(requestPermissionLauncher, grant = {
+            val action = pendingPermissionAction
+            pendingPermissionAction = null
+            action?.invoke()
+        })
     }
 
     companion object {
