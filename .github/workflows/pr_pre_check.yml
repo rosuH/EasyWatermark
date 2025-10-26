@@ -1,48 +1,58 @@
-name: Basic Check
-
-env:
-  GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx3072m -Dfile.encoding=UTF-8 -XX:+HeapDumpOnOutOfMemoryError -XX:MaxMetaspaceSize=1g" -Dkotlin.daemon.jvm.options="-Xmx2560m" -Dkotlin.incremental=false
-  CI_GRADLE_ARG_PROPERTIES: --stacktrace -PpreDexEnable=false --max-workers 2 --no-daemon
+name: PR Checks
 
 on:
   pull_request:
-    types: [opened,reopened,synchronize]
+    types: [opened, reopened, synchronize]
     branches:
       - master
+    paths-ignore:
+      - '**/*.md'
+      - 'fastlane/**'
+      - 'static/**'
+      - 'captures/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  check:
-    name: Check
+  build:
+    name: Compile (app:assembleDebug)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Skip duplicate actions
-        uses: fkirc/skip-duplicate-actions@v5
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          cancel_others: true
-      - uses: actions/setup-java@v4
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/wrapper-validation-action@v2
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: 17
-          cache: 'gradle'
-      - uses: gradle/actions/setup-gradle@v4
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: wrapper
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
           gradle-home-cache-cleanup: true
-#      - run: ./gradlew spotlessCheck
-  simple_compile:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: 17
-          cache: 'gradle'
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: wrapper
-          gradle-home-cache-cleanup: true
-      - name: Build apk with Gradle
-        run: ./gradlew :app:assembleDebug
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build debug APK (skip lint/tests)
+        run: ./gradlew :app:assembleDebug -x lint -x test --stacktrace
