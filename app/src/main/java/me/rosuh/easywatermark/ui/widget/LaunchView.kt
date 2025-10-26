@@ -11,6 +11,11 @@ import android.widget.ImageView
 import androidx.core.view.children
 import androidx.core.view.isVisible
 import androidx.core.view.setPadding
+import androidx.core.view.marginBottom
+import androidx.core.view.marginTop
+import androidx.core.graphics.Insets
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
 import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.dynamicanimation.animation.SpringForce
 import androidx.fragment.app.FragmentContainerView
@@ -21,6 +26,7 @@ import com.google.android.material.tabs.TabLayout
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ui.widget.utils.BounceEdgeEffectFactory
 import me.rosuh.easywatermark.utils.ktx.dp
+import me.rosuh.easywatermark.utils.ktx.doOnApplyWindowInsets
 import me.rosuh.easywatermark.utils.ktx.generateAppearAnimationList
 import me.rosuh.easywatermark.utils.ktx.generateDisappearAnimationList
 import kotlin.math.abs
@@ -98,8 +104,7 @@ class LaunchView : CustomViewGroup {
                     LayoutParams.MATCH_PARENT,
                     LayoutParams.WRAP_CONTENT
                 )
-                    .also { it.setMargins(0, 20.dp, 0, 0) }
-//            setBackgroundColor(context.colorSurface)
+                    .also { it.setMargins(0, 0.dp, 0, 0) }
         }
     }
 
@@ -205,6 +210,8 @@ class LaunchView : CustomViewGroup {
             transformLayout(oldMode, value)
         }
 
+    private var systemBarInsets: Insets = Insets.NONE
+
     private var launchViewListener: LaunchViewListener? = null
 
     private var startX = 0f
@@ -241,6 +248,21 @@ class LaunchView : CustomViewGroup {
         editorViews.forEach {
             it.isVisible = false
             addView(it)
+        }
+        doOnApplyWindowInsets { view, insets, initialPadding ->
+            val systemBars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars()
+                        or WindowInsetsCompat.Type.displayCutout()
+            )
+            if (systemBarInsets != systemBars) {
+                systemBarInsets = systemBars
+                updateLayoutParams<MarginLayoutParams> {
+                    leftMargin = systemBars.left
+                    bottomMargin = systemBars.bottom
+                    rightMargin = systemBars.right
+                    topMargin = systemBars.top
+                }
+            }
         }
         post {
             launchModeAppearAnimationList.forEach { it.start() }

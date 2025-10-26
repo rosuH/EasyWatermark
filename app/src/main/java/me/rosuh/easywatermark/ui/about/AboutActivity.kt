@@ -8,7 +8,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.View
-import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.TextView
 import android.widget.Toast
@@ -16,10 +15,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
-import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.children
-import androidx.core.view.updateLayoutParams
 import androidx.core.widget.TextViewCompat
 import androidx.palette.graphics.Palette
 import dagger.hilt.android.AndroidEntryPoint
@@ -31,9 +27,13 @@ import me.rosuh.easywatermark.utils.ktx.colorBackground
 import me.rosuh.easywatermark.utils.ktx.colorPrimary
 import me.rosuh.easywatermark.utils.ktx.colorSecondaryContainer
 import me.rosuh.easywatermark.utils.ktx.colorSurface
+import me.rosuh.easywatermark.utils.ktx.doOnApplyWindowInsets
 import me.rosuh.easywatermark.utils.ktx.inflate
 import me.rosuh.easywatermark.utils.ktx.openLink
 import me.rosuh.easywatermark.utils.ktx.titleTextColor
+import androidx.core.view.WindowCompat
+import androidx.core.view.children
+import androidx.core.view.updatePadding
 
 @AndroidEntryPoint
 class AboutActivity : AppCompatActivity() {
@@ -48,9 +48,6 @@ class AboutActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         initView()
         changeStatusBarStyle()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.setDecorFitsSystemWindows(false)
-        }
         window?.navigationBarColor = Color.TRANSPARENT
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             window?.navigationBarDividerColor = Color.TRANSPARENT
@@ -67,20 +64,23 @@ class AboutActivity : AppCompatActivity() {
 
     private fun initView() {
         with(binding) {
-            // WindowInsets.Companion.navigationBars: WindowInsets
-            ViewCompat.setOnApplyWindowInsetsListener(nsv) { v, windowInsets ->
-                val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-                // Apply the insets as a margin to the view. This solution sets
-                // only the bottom, left, and right dimensions, but you can apply whichever
-                // insets are appropriate to your layout. You can also update the view padding
-                // if that's more appropriate.
-                v.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-                    bottomMargin = insets.bottom
-                }
-
-                // Return CONSUMED if you don't want want the window insets to keep passing
-                // down to descendant views.
-                WindowInsetsCompat.CONSUMED
+            root.doOnApplyWindowInsets { view, insets, initialPadding ->
+                val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+                view.updatePadding(
+                    left = initialPadding.left + systemBars.left,
+                    top = initialPadding.top + systemBars.top,
+                    right = initialPadding.right + systemBars.right,
+                    bottom = initialPadding.bottom
+                )
+            }
+            nsv.doOnApplyWindowInsets { view, insets, initialPadding ->
+                val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+                view.updatePadding(
+                    left = initialPadding.left,
+                    top = initialPadding.top,
+                    right = initialPadding.right,
+                    bottom = initialPadding.bottom + systemBars.bottom
+                )
             }
             bgDrawable = ContextCompat.getDrawable(
                 this@AboutActivity,
