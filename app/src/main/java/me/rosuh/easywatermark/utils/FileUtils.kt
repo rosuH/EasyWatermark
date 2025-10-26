@@ -52,16 +52,16 @@ class FileUtils {
          */
         private fun isImageByExtension(uri: Uri?): Boolean {
             if (uri == null) return false
-            
-            val uriString = uri.toString().lowercase()
-            val imageExtensions = listOf(
-                ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", 
-                ".tiff", ".tif", ".svg", ".ico", ".heic", ".heif"
+
+            val extension = MimeTypeMap.getFileExtensionFromUrl(uri.toString())?.lowercase()
+            if (extension.isNullOrEmpty()) return false
+
+            val imageExtensions = setOf(
+                "jpg", "jpeg", "png", "gif", "bmp", "webp",
+                "tiff", "tif", "svg", "ico", "heic", "heif"
             )
-            
-            return imageExtensions.any { extension ->
-                uriString.endsWith(extension)
-            }
+
+            return imageExtensions.contains(extension)
         }
     }
 }
