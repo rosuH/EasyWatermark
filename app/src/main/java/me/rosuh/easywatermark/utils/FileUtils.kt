@@ -35,8 +35,33 @@ class FileUtils {
         }
 
         fun isImage(resolver: ContentResolver, uri: Uri?): Boolean {
-            val mimeType = getFileTypeFromUri(resolver, uri)
-            return isImage(mimeType)
+            return try {
+                val mimeType = getFileTypeFromUri(resolver, uri)
+                isImage(mimeType)
+            } catch (e: SecurityException) {
+                // Handle SecurityException on some Android systems (e.g., MIUI)
+                // where ContentResolver.getType() might be restricted
+                // Fall back to checking file extension
+                isImageByExtension(uri)
+            }
+        }
+
+        /**
+         * Fallback method to check if URI is an image by examining the file extension
+         * when MIME type detection fails due to security restrictions
+         */
+        private fun isImageByExtension(uri: Uri?): Boolean {
+            if (uri == null) return false
+
+            val extension = MimeTypeMap.getFileExtensionFromUrl(uri.toString())?.lowercase()
+            if (extension.isNullOrEmpty()) return false
+
+            val imageExtensions = setOf(
+                "jpg", "jpeg", "png", "gif", "bmp", "webp",
+                "tiff", "tif", "svg", "ico", "heic", "heif"
+            )
+
+            return imageExtensions.contains(extension)
         }
     }
 }
