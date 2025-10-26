@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.TextView
 import android.widget.Toast
@@ -15,7 +16,10 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.children
+import androidx.core.view.updateLayoutParams
 import androidx.core.widget.TextViewCompat
 import androidx.palette.graphics.Palette
 import dagger.hilt.android.AndroidEntryPoint
@@ -63,6 +67,21 @@ class AboutActivity : AppCompatActivity() {
 
     private fun initView() {
         with(binding) {
+            // WindowInsets.Companion.navigationBars: WindowInsets
+            ViewCompat.setOnApplyWindowInsetsListener(nsv) { v, windowInsets ->
+                val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+                // Apply the insets as a margin to the view. This solution sets
+                // only the bottom, left, and right dimensions, but you can apply whichever
+                // insets are appropriate to your layout. You can also update the view padding
+                // if that's more appropriate.
+                v.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                    bottomMargin = insets.bottom
+                }
+
+                // Return CONSUMED if you don't want want the window insets to keep passing
+                // down to descendant views.
+                WindowInsetsCompat.CONSUMED
+            }
             bgDrawable = ContextCompat.getDrawable(
                 this@AboutActivity,
                 me.rosuh.easywatermark.R.drawable.bg_gradient_about_page

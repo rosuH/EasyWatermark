@@ -306,7 +306,7 @@ private fun canUseForInBitmap(
 ): Boolean {
     val width = targetOptions.outWidth / targetOptions.inSampleSize
     val height = targetOptions.outHeight / targetOptions.inSampleSize
-    val byteCount = width * height * getBytesInPixel(candidate.config)
+    val byteCount = width * height * getBytesInPixel(candidate.config ?: Bitmap.Config.ARGB_8888)
     return byteCount <= candidate.allocationByteCount
 }
 

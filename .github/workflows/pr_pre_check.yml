@@ -1,5 +1,9 @@
 name: Basic Check
 
+env:
+  GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx3072m -Dfile.encoding=UTF-8 -XX:+HeapDumpOnOutOfMemoryError -XX:MaxMetaspaceSize=1g" -Dkotlin.daemon.jvm.options="-Xmx2560m" -Dkotlin.incremental=false
+  CI_GRADLE_ARG_PROPERTIES: --stacktrace -PpreDexEnable=false --max-workers 2 --no-daemon
+
 on:
   pull_request:
     types: [opened,reopened,synchronize]
@@ -20,7 +24,7 @@ jobs:
           distribution: 'zulu'
           java-version: 17
           cache: 'gradle'
-      - uses: gradle/actions/setup-gradle@v3
+      - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: wrapper
           gradle-home-cache-cleanup: true
@@ -36,7 +40,7 @@ jobs:
           distribution: 'zulu'
           java-version: 17
           cache: 'gradle'
-      - uses: gradle/actions/setup-gradle@v3
+      - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: wrapper
           gradle-home-cache-cleanup: true
