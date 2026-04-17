@@ -19,7 +19,7 @@ android {
 
     testOptions {
         managedDevices {
-            devices {
+            allDevices {
                 create<ManagedVirtualDevice>("pixel6Api31") {
                     device = "Pixel 6"
                     apiLevel = 31

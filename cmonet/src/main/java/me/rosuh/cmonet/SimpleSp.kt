@@ -29,17 +29,6 @@ class SimpleSp(
         }
     }
 
-    inline fun <reified T> SharedPreferences.get(key: String, defaultValue: T): T {
-        return when (defaultValue) {
-            is Int -> getInt(key, defaultValue) as T
-            is Float -> getFloat(key, defaultValue) as T
-            is Boolean -> getBoolean(key, defaultValue) as T
-            is Long -> getLong(key, defaultValue) as T
-            is String -> getString(key, defaultValue) as T
-            else -> throw IllegalArgumentException("Unsupported type.")
-        }
-    }
-
     override fun <T> save(key: String, value: T) {
         Log.i(TAG, "save: $key, $value")
         when (value) {
@@ -74,23 +63,24 @@ class SimpleSp(
         }
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun <T> getValue(key: String, defaultValue: T): T {
         Log.i(TAG, "getValue: $key, $defaultValue")
         when (defaultValue) {
             is Int -> {
-                return sp.get(key, defaultValue)
+                return sp.getInt(key, defaultValue) as T
             }
             is Float -> {
-                return sp.get(key, defaultValue)
+                return sp.getFloat(key, defaultValue) as T
             }
             is String -> {
-                return sp.get(key, defaultValue)
+                return sp.getString(key, defaultValue) as T
             }
             is Long -> {
-                return sp.get(key, defaultValue)
+                return sp.getLong(key, defaultValue) as T
             }
             is Boolean -> {
-                return sp.get(key, defaultValue)
+                return sp.getBoolean(key, defaultValue) as T
             }
             else -> {
                 throw IllegalArgumentException("Not support such type yet!")

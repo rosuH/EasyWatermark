@@ -7,8 +7,8 @@ import androidx.annotation.StringRes
 @Keep
 data class FuncTitleModel(
     var type: FuncType,
-    @StringRes var title: Int,
-    @DrawableRes var iconRes: Int,
+    @param:StringRes var title: Int,
+    @param:DrawableRes var iconRes: Int,
     val valueRange: ClosedFloatingPointRange<Float> = 0f..100f,
 ) {
     sealed class FuncType {

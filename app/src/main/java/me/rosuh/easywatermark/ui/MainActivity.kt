@@ -15,16 +15,17 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.*
-import android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.util.Consumer
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.forEach
 import androidx.fragment.app.commit
 import androidx.lifecycle.Lifecycle
@@ -147,6 +148,32 @@ class MainActivity : AppCompatActivity() {
 
     private var bgTransformAnimator: ObjectAnimator? = null
 
+    private val backPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            if (launchView.mode == LaunchView.ViewMode.LaunchMode) {
+                isEnabled = false
+                onBackPressedDispatcher.onBackPressed()
+                isEnabled = true
+                return
+            }
+            MaterialAlertDialogBuilder(this@MainActivity)
+                .setTitle(R.string.dialog_title_exist_confirm)
+                .setMessage(R.string.dialog_content_exist_confirm)
+                .setNegativeButton(
+                    R.string.tips_confirm_dialog
+                ) { _, _ ->
+                    resetView()
+                }
+                .setPositiveButton(
+                    R.string.dialog_cancel_exist_confirm
+                ) { dialog, _ ->
+                    dialog.dismiss()
+                }
+                .setCancelable(false)
+                .show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (MyApp.recoveryMode) {
@@ -162,6 +189,7 @@ class MainActivity : AppCompatActivity() {
                 setReorderingAllowed(true)
             }
         }
+        onBackPressedDispatcher.addCallback(this, backPressedCallback)
         initView()
         initObserver()
         registerResultCallback()
@@ -626,27 +654,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun setStatusBarColor(color: Int, isInEditMode: Boolean) {
-        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
-        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val systemUiAppearance = if (isInEditMode && this.isNight()) {
-                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-            } else {
-                0
-            }
-            window.insetsController?.setSystemBarsAppearance(
-                systemUiAppearance,
-                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-            )
-        } else {
-            val systemUiVisibilityFlags = if (!isInEditMode && !this.isNight()) {
-                window.decorView.systemUiVisibility or SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-            } else {
-                window.decorView.systemUiVisibility and SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
-            }
-            window.decorView.systemUiVisibility = systemUiVisibilityFlags
-        }
+        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars =
+            !isInEditMode && !this.isNight()
         window.statusBarColor = color
         window.findViewById<View>(android.R.id.content)?.foreground = null
     }
@@ -757,32 +768,6 @@ class MainActivity : AppCompatActivity() {
         launchView.rvPanel.canAutoSelected = true
     }
 
-    override fun onBackPressed() {
-        if (MyApp.recoveryMode) {
-            super.onBackPressed()
-            return
-        }
-        if (launchView.mode == LaunchView.ViewMode.LaunchMode) {
-            super.onBackPressed()
-            return
-        }
-        MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.dialog_title_exist_confirm)
-            .setMessage(R.string.dialog_content_exist_confirm)
-            .setNegativeButton(
-                R.string.tips_confirm_dialog
-            ) { _, _ ->
-                resetView()
-            }
-            .setPositiveButton(
-                R.string.dialog_cancel_exist_confirm
-            ) { dialog, _ ->
-                dialog.dismiss()
-            }
-            .setCancelable(false)
-            .show()
-    }
-
     private fun resetView() {
         launchView.toLaunchMode()
         mainViewModel.resetJobStatus()
@@ -794,6 +779,7 @@ class MainActivity : AppCompatActivity() {
         hideDetailPanel()
     }
 
+    @Suppress("DEPRECATION")
     private fun doApplyBgChanged(
         color: Int = ContextCompat.getColor(
             this,

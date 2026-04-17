@@ -6,7 +6,6 @@ import android.content.Intent
 import android.graphics.Insets
 import android.net.Uri
 import android.os.Build
-import android.util.DisplayMetrics
 import android.view.LayoutInflater
 import android.view.WindowInsets
 import android.view.WindowMetrics
@@ -73,9 +72,7 @@ fun Activity.getScreenWidth(): Int {
             .getInsetsIgnoringVisibility(WindowInsets.Type.systemBars())
         windowMetrics.bounds.width() - insets.left - insets.right
     } else {
-        val displayMetrics = DisplayMetrics()
-        this.windowManager.defaultDisplay.getMetrics(displayMetrics)
-        displayMetrics.widthPixels
+        resources.displayMetrics.widthPixels
     }
 }
 
@@ -86,8 +83,6 @@ fun Activity.getScreenHeight(): Int {
             .getInsetsIgnoringVisibility(WindowInsets.Type.systemBars())
         windowMetrics.bounds.height() - insets.top - insets.bottom
     } else {
-        val displayMetrics = DisplayMetrics()
-        this.windowManager.defaultDisplay.getMetrics(displayMetrics)
-        displayMetrics.heightPixels
+        resources.displayMetrics.heightPixels
     }
 }

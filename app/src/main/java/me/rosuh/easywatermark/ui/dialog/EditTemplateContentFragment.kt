@@ -27,7 +27,12 @@ class EditTemplateContentFragment : BaseBindBSDFragment<DialogEditTemplateBindin
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        template = arguments?.getParcelable("template") as? Template
+        template = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            arguments?.getParcelable("template", Template::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            arguments?.getParcelable("template")
+        }
         isEdit = template != null
     }
 

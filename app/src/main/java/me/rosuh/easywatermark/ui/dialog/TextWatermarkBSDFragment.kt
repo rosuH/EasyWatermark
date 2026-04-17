@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND
+import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.flowWithLifecycle
@@ -34,6 +35,14 @@ class TextWatermarkBSDFragment : BaseBindBSDFragment<DialogEditTextContainerBind
     private var bottomSheet: View? = null
     private var et: TextInputEditText? = null
 
+    private fun handleBackNavigation() {
+        if (shareViewModel.uiStateFlow.value is UiState.GoEdit) {
+            dismissAllowingStateLoss()
+        } else {
+            shareViewModel.goTemplateEdit()
+        }
+    }
+
     override fun bindView(
         layoutInflater: LayoutInflater,
         container: ViewGroup?
@@ -53,14 +62,14 @@ class TextWatermarkBSDFragment : BaseBindBSDFragment<DialogEditTextContainerBind
                             if (childFragmentManager.fragments.lastOrNull() is TextContentTemplateListFragment) {
                                 collapseToEdit()
                             } else {
-                                dialog?.onBackPressed()
+                                handleBackNavigation()
                             }
                         }
                         UiState.GoEdit -> {
                             if (childFragmentManager.fragments.lastOrNull() is TextContentTemplateListFragment) {
                                 collapseToEdit()
                             } else {
-                                dialog?.onBackPressed()
+                                handleBackNavigation()
                             }
                         }
                         UiState.GoTemplate -> {
@@ -160,15 +169,12 @@ class TextWatermarkBSDFragment : BaseBindBSDFragment<DialogEditTextContainerBind
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        return object : BottomSheetDialog(requireContext()) {
-            override fun onBackPressed() {
-                if (shareViewModel.uiStateFlow.value is UiState.GoEdit) {
-                    super.onBackPressed()
-                } else {
-                    shareViewModel.goTemplateEdit()
+        return BottomSheetDialog(requireContext()).apply {
+            onBackPressedDispatcher.addCallback(this@TextWatermarkBSDFragment, object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    handleBackNavigation()
                 }
-            }
-        }.apply {
+            })
             window?.setFlags(
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL

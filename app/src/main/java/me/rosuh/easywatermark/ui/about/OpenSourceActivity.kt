@@ -15,7 +15,7 @@ class OpenSourceActivity : AppCompatActivity() {
         setContentView(binding.root)
         setSupportActionBar(binding.myToolbar)
         binding.myToolbar.setNavigationOnClickListener {
-            onBackPressed()
+            onBackPressedDispatcher.onBackPressed()
         }
 
         binding.cardColorPicker.setOnClickListener {

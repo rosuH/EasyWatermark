@@ -71,7 +71,7 @@ class CircleImageView : AppCompatImageView {
             destCircleBitmap = makeCircleFrame(width, height)
         }
         sourceImageBitmap?.let {
-            val sc = canvas?.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), null) ?: return
+            val sc = canvas.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), null)
             canvas.drawBitmap(destCircleBitmap!!, 0f, 0f, paint)
             paint.xfermode = xfermode
             canvas.drawBitmap(it, 0f, 0f, paint)

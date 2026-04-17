@@ -8,7 +8,6 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
-import androidx.core.view.GestureDetectorCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlin.math.abs
@@ -71,7 +70,7 @@ class MultiSelectRv : RecyclerView {
                 private val handle = Handler(Looper.getMainLooper())
                 private var startPressPos = 0
 
-                val gestureDetector = GestureDetectorCompat(
+                val gestureDetector = GestureDetector(
                     context,
                     object : GestureDetector.SimpleOnGestureListener() {
                         override fun onLongPress(e: MotionEvent) {

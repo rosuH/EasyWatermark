@@ -290,7 +290,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             return
         }
         layoutPaint.shader = layoutShader?.bitmapShader
-        canvas?.withSave {
+        canvas.withSave {
             if (config?.obtainTileMode() == Shader.TileMode.CLAMP) {
                 translate(
                     drawableBounds.left + curImageInfo.offsetX * drawableBounds.width(),
@@ -626,7 +626,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                 srcBitmap,
                 (rawWidth * scaleRatio).toInt(), (rawHeight * scaleRatio).toInt(),
                 false
-            )!!
+            )
 
             if (showDebugRect) {
                 val tmpPaint = Paint().apply {

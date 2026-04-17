@@ -77,7 +77,7 @@ class RadioButton : View {
         paint.style = Paint.Style.FILL
         paint.color = if (isChecked) bgColorSelected else bgColorNormal
         paint.strokeWidth = 0f
-        canvas?.drawCircle(
+        canvas.drawCircle(
             measuredWidth / 2f,
             measuredHeight / 2f,
             (measuredWidth - strokeWidth) / 2f,
@@ -87,14 +87,14 @@ class RadioButton : View {
         paint.style = Paint.Style.STROKE
         paint.color = if (isChecked) strokeColorSelected else strokeColorNormal
         paint.strokeWidth = strokeWidth.toFloat()
-        canvas?.drawCircle(
+        canvas.drawCircle(
             measuredWidth / 2f,
             measuredHeight / 2f,
             (measuredWidth - strokeWidth) / 2f,
             paint
         )
         // icon
-        if (canvas != null && isChecked) {
+        if (isChecked) {
             icon?.setBounds(0, 0, (measuredWidth), (measuredHeight))
             icon?.setTint(context.colorOnTertiaryContainer)
             icon?.draw(canvas)

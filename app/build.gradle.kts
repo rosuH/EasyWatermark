@@ -47,7 +47,7 @@ android {
         }
     }
 
-    packagingOptions {
+    packaging {
         resources.excludes.add("DebugProbesKt.bin")
     }
 
@@ -56,11 +56,8 @@ android {
     namespace = "me.rosuh.easywatermark"
 
     buildFeatures {
+        buildConfig = true
         compose = true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = libs.versions.androidxComposeCompiler.get()
     }
 
     kotlin {
@@ -176,11 +173,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
 
 //    implementation("androidx.navigation:navigation-compose:2.7.4")
-    implementation(libs.androidx.navigation3.runtime)
-    implementation(libs.androidx.navigation3.ui)
-
-//    implementation("com.google.accompanist:accompanist-navigation-animation:0.31.1-alpha")
-    implementation(libs.accompanist.navigation.animation)
+    implementation(libs.androidx.navigation.compose)
 
 //    implementation("androidx.constraintlayout:constraintlayout-compose:1.0.1")
     implementation(libs.androidx.constraintlayout.compose)

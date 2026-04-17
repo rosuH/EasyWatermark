@@ -13,8 +13,8 @@ data class ImageInfo(
     var result: Result<*>? = null,
     var jobState: JobState = JobState.Ready,
     var isInDelModel: Boolean = false,
-    @FloatRange(from = 0.0, to = 1.0) val offsetX: Float = 0.5f,
-    @FloatRange(from = 0.0, to = 1.0) val offsetY: Float = 0.5f,
+    @param:FloatRange(from = 0.0, to = 1.0) val offsetX: Float = 0.5f,
+    @param:FloatRange(from = 0.0, to = 1.0) val offsetY: Float = 0.5f,
 ) {
     val shareUri: Uri?
         get() = result?.data as? Uri?

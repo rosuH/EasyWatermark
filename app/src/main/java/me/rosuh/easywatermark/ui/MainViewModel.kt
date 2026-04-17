@@ -16,6 +16,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.media.MediaScannerConnection
 import android.text.TextPaint
 import android.util.Log
 import android.widget.Toast
@@ -441,11 +442,11 @@ class MainViewModel (
                     "${BuildConfig.APPLICATION_ID}.fileprovider",
                     outputFile
                 )
-                MyApp.instance.sendBroadcast(
-                    Intent(
-                        Intent.ACTION_MEDIA_SCANNER_SCAN_FILE,
-                        Uri.fromFile(outputFile)
-                    )
+                MediaScannerConnection.scanFile(
+                    MyApp.instance,
+                    arrayOf(outputFile.absolutePath),
+                    null,
+                    null
                 )
                 Result.success(outputUri)
             }

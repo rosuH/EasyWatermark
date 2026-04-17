@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.*
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -56,15 +57,16 @@ class GalleryFragment : BaseBindBSDFragment<FragmentGalleryBinding>() {
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val d = object : BottomSheetDialog(requireContext()) {
-            override fun onBackPressed() {
-                if (galleryAdapter.getSelectedList().isEmpty()) {
-                    dismiss()
-                } else {
-                    galleryAdapter.unSelectAll(binding.rvContent)
+        val d = BottomSheetDialog(requireContext()).apply {
+            onBackPressedDispatcher.addCallback(this@GalleryFragment, object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    if (galleryAdapter.getSelectedList().isEmpty()) {
+                        dismiss()
+                    } else {
+                        galleryAdapter.unSelectAll(binding.rvContent)
+                    }
                 }
-            }
-        }.apply {
+            })
             behavior.isDraggable = false
             behavior.state = BottomSheetBehavior.STATE_EXPANDED
             isCancelable = false

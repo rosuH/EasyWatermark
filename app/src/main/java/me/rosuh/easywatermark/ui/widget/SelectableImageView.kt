@@ -114,15 +114,13 @@ class SelectableImageView : View {
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         if (isSelected) {
-            canvas?.drawCircle(
+            canvas.drawCircle(
                 (measuredWidth / 2).toFloat(), (measuredHeight / 2).toFloat(),
                 outSizeCircleRadius, borderPaint
             )
         }
 
-        val sc =
-            canvas?.saveLayer(0f, 0f, measuredWidth.toFloat(), measuredHeight.toFloat(), paint)
-                ?: return
+        val sc = canvas.saveLayer(0f, 0f, measuredWidth.toFloat(), measuredHeight.toFloat(), paint)
 
         canvas.drawCircle(
             (measuredWidth / 2).toFloat(),
@@ -135,8 +133,8 @@ class SelectableImageView : View {
         srcBitmap?.let {
             canvas.drawBitmap(
                 it,
-                (measuredWidth - srcBitmap!!.width).toFloat() / 2,
-                (measuredHeight - srcBitmap!!.height).toFloat() / 2,
+                (measuredWidth - it.width).toFloat() / 2,
+                (measuredHeight - it.height).toFloat() / 2,
                 paint
             )
         }
