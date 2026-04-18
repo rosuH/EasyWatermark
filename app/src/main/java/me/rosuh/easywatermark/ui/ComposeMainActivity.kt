@@ -1,5 +1,6 @@
 package me.rosuh.easywatermark.ui
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -39,6 +40,7 @@ import androidx.navigation.compose.dialog
 import androidx.navigation.compose.rememberNavController
 
 import me.rosuh.easywatermark.data.model.FuncTitleModel
+import me.rosuh.easywatermark.ui.about.AboutActivity
 import me.rosuh.easywatermark.ui.compose.GalleryDialog
 import me.rosuh.easywatermark.utils.ktx.dp
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -162,6 +164,9 @@ class ComposeMainActivity : ComponentActivity() {
                                         },
                                         onImageSelected = {
                                             viewModel.process(Action.EditorImageSelected(it))
+                                        },
+                                        onGoAboutScreen = {
+                                            startActivity(Intent(this@ComposeMainActivity, AboutActivity::class.java))
                                         }
                                     )
                                 }
