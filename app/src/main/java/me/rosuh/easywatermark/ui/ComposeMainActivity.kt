@@ -167,6 +167,12 @@ class ComposeMainActivity : ComponentActivity() {
                                         },
                                         onGoAboutScreen = {
                                             startActivity(Intent(this@ComposeMainActivity, AboutActivity::class.java))
+                                        },
+                                        onAddMoreImages = {
+                                            pickMultipleMedia.launch(
+                                                PickVisualMediaRequest(
+                                                    ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                            )
                                         }
                                     )
                                 }
