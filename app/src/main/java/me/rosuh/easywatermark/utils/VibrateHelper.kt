@@ -1,5 +1,6 @@
 package me.rosuh.easywatermark.utils
 
+import android.os.Build
 import android.view.HapticFeedbackConstants
 import android.view.View
 
@@ -9,18 +10,30 @@ class VibrateHelper private constructor() {
     private var cd: Long = 20L
 
     fun doVibrate(view: View) {
-        if (android.os.Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.M) {
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.M) {
             return
         }
-        if (System.currentTimeMillis() - latestVibration <= cd) {
+        val now = System.currentTimeMillis()
+        if (now - latestVibration <= cd) {
             return
         }
-        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+        latestVibration = now
+        performHapticFeedbackSafely {
+            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+        }
     }
 
     companion object {
         fun get(): VibrateHelper {
             return VibrateHelper()
+        }
+
+        internal fun performHapticFeedbackSafely(performFeedback: () -> Boolean): Boolean {
+            return try {
+                performFeedback()
+            } catch (_: SecurityException) {
+                false
+            }
         }
     }
 }
