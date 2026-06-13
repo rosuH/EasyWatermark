@@ -21,6 +21,7 @@ dependencyResolutionManagement {
 
 include(":app")
 include(":shared")
+include(":desktopApp")
 include(":cmonet")
 include(":baseBenchmarks")
 include(":macrobenchmark")
