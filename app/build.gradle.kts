@@ -61,6 +61,12 @@ android {
         compose = true
     }
 
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+
     kotlin {
         jvmToolchain(17)
     }
@@ -122,6 +128,7 @@ dependencies {
     testImplementation(libs.test.junit)
     testImplementation(libs.test.rules)
     testImplementation(libs.test.runner)
+    testImplementation(libs.robolectric)
     androidTestImplementation(libs.mockito.core)
     androidTestImplementation(libs.mockito.android)
     androidTestImplementation(libs.robolectric)
