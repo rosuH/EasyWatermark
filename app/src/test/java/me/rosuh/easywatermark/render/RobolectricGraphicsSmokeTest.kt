@@ -1,5 +1,6 @@
 package me.rosuh.easywatermark.render
 
+import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -16,7 +17,7 @@ import org.robolectric.annotation.GraphicsMode
  * graphics, drawn pixels are not real; NATIVE mode rasterizes via the bundled Skia.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], application = Application::class) // plain app — avoids MyApp.startKoin double-start across the suite
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class RobolectricGraphicsSmokeTest {
 

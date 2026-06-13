@@ -1,5 +1,6 @@
 package me.rosuh.easywatermark.render
 
+import android.app.Application
 import android.net.Uri
 import android.text.TextPaint
 import kotlinx.coroutines.Dispatchers
@@ -29,7 +30,7 @@ import org.robolectric.annotation.GraphicsMode
  * WatermarkGeometry.rotatedCellWidth/Height and horizontalGap predict.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], application = Application::class) // plain app — avoids MyApp.startKoin double-start across the suite
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class WatermarkCellGoldenTest {
 

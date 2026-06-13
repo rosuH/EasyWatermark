@@ -48,3 +48,5 @@ jobs:
         run: ./gradlew :app:assembleDebug
       - name: Run :shared multiplatform tests (JVM, CMP plan C1.8)
         run: ./gradlew :shared:desktopTest
+      - name: Run :app unit tests incl. watermark golden (Robolectric NATIVE, CMP plan C1.7/C1.8)
+        run: ./gradlew :app:testDebugUnitTest
