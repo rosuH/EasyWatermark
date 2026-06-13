@@ -19,7 +19,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import me.rosuh.cmonet.CMonet
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.ui.MainActivity
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
