@@ -1,6 +1,9 @@
 package me.rosuh.easywatermark.ui
 
 import me.rosuh.cmonet.CMonet
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -46,6 +49,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.os.BuildCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import me.rosuh.easywatermark.MyApp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.dialog
@@ -97,8 +104,34 @@ class ComposeMainActivity : ComponentActivity() {
                     ?: emptyList()
             else -> emptyList()
         }
-        if (uris.isNotEmpty() && FileUtils.isImage(contentResolver, uris.first())) {
-            pendingShareUris = uris
+        // Validate every shared uri, not just the first — a multi-share may mix in non-images.
+        val images = uris.filter { FileUtils.isImage(contentResolver, it) }
+        if (images.isNotEmpty()) {
+            pendingShareUris = images
+        }
+    }
+
+    // A stable launch resets the crash counter. Ported from legacy MainActivity.onResume,
+    // which became dead once ComposeMainActivity took over as launcher (ADR-0016).
+    override fun onResume() {
+        super.onResume()
+        if (MyApp.recoveryMode) return
+        lifecycleScope.launch {
+            delay(1000)
+            if (!isFinishing) (application as? MyApp)?.launchSuccess()
+        }
+    }
+
+    private fun crashStackTrace(): String =
+        getSharedPreferences(MyApp.SP_NAME, MODE_PRIVATE).getString(MyApp.KEY_STACK_TRACE, "").orEmpty()
+
+    private fun copyCrashInfo(text: String) {
+        try {
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText(text, text))
+            Toast.makeText(this, R.string.copy_success, Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, R.string.copy_failed, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -106,6 +139,45 @@ class ComposeMainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         handleShareIntent(intent)
+
+        // Crash-recovery self-heal: MyApp.recoveryMode is computed in MyApp.onCreate.
+        // Port of the legacy MainActivity activity_recovery branch (ADR-0016).
+        if (MyApp.recoveryMode) {
+            setContent {
+                AppTheme {
+                    Surface(modifier = Modifier.fillMaxSize()) {
+                        RecoveryScreen(
+                            crashInfo = crashStackTrace(),
+                            onCopy = { copyCrashInfo(crashStackTrace()) },
+                            onSendEmail = {
+                                viewModel.extraCrashInfo(this@ComposeMainActivity, crashStackTrace())
+                            },
+                            onTelegram = { this@ComposeMainActivity.openLink("https://t.me/rosuh") },
+                            onStore = {
+                                this@ComposeMainActivity.openLink(
+                                    Uri.parse("market://details?id=me.rosuh.easywatermark")
+                                ) {
+                                    Toast.makeText(
+                                        this@ComposeMainActivity,
+                                        R.string.store_not_found,
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            },
+                            onCloseRecovery = {
+                                (application as MyApp).launchSuccess()
+                                Toast.makeText(
+                                    this@ComposeMainActivity,
+                                    R.string.recovery_mode_closed,
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        )
+                    }
+                }
+            }
+            return
+        }
 
         setContent {
             val windowSizeClass = calculateWindowSizeClass(this)
@@ -149,7 +221,12 @@ class ComposeMainActivity : ComponentActivity() {
                             LaunchedEffect(pendingShareUris) {
                                 pendingShareUris?.let { uris ->
                                     viewModel.updateImageList(uris)
-                                    navController.navigate("EditorScreen")
+                                    // launchSingleTop + popUpTo: a share received while already in the
+                                    // editor (onNewIntent) must not stack a second EditorScreen.
+                                    navController.navigate("EditorScreen") {
+                                        launchSingleTop = true
+                                        popUpTo("LaunchScreen")
+                                    }
                                     pendingShareUris = null
                                 }
                             }
