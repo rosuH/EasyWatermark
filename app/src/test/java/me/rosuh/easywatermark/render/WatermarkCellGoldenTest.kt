@@ -1,6 +1,10 @@
 package me.rosuh.easywatermark.render
 
 import android.app.Application
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
 import android.net.Uri
 import android.text.TextPaint
 import kotlinx.coroutines.Dispatchers
@@ -68,5 +72,40 @@ class WatermarkCellGoldenTest {
         // gap=100 doubles each axis vs gap=0 (maxSize*(100/100+1)=2x), per WatermarkGeometry.horizontalGap
         assertEquals("gap100 width == 2x", w0 * 2, wGap)
         assertEquals("gap100 height == 2x", h0 * 2, hGap)
+    }
+
+    /** Renders the tiled watermark shader onto a fixed canvas and returns its pixels. */
+    private fun renderTiledPixels(text: String, degree: Float, size: Int = 64): IntArray {
+        val config = WaterMark.default.copy(
+            text = text, degree = degree, hGap = 0, vGap = 0,
+            textSize = 24f, textColor = Color.WHITE, iconUri = Uri.EMPTY,
+        )
+        val imageInfo = ImageInfo.empty().apply { width = 1000; height = 1000 }
+        val paint = TextPaint().applyConfig(imageInfo, config, isScale = false)
+        val shader = runBlocking {
+            WaterMarkImageView.buildTextBitmapShader(imageInfo, config, paint, Dispatchers.Unconfined)
+        }!!
+        val out = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        Canvas(out).drawRect(0f, 0f, size.toFloat(), size.toFloat(), Paint().apply { this.shader = shader.bitmapShader })
+        return IntArray(size * size).also { out.getPixels(it, 0, size, 0, 0, size, size) }
+    }
+
+    /**
+     * PIXEL golden (upgrades the dimension-only golden): composites the tiled cell shader and pins
+     * the rendered output. Catches blank/empty-render regressions that cell dimensions miss — the
+     * class of bug the C2a engine-wiring attempt produced. Strict signature pins exact pixels
+     * (Robolectric NATIVE @ sdk34; update only on an intentional Robolectric/font bump).
+     */
+    @Test
+    fun textCell_rendered_pixels_are_nonblank_and_stable() {
+        val px = renderTiledPixels("GOLDEN", degree = 0f)
+        val nonTransparent = px.count { it != 0 }
+        var sig = 0
+        for (p in px) sig = sig * 31 + p
+        println("PIXEL-GOLDEN nonTransparent=$nonTransparent sig=$sig")
+
+        assertTrue("tiled watermark must render visible pixels (catches blank-cell regressions)", nonTransparent > 0)
+        assertEquals("rendered tiled cell renders ~1086 visible px baseline", 1086, nonTransparent)
+        assertEquals("rendered-pixel signature baseline", -587779666, sig)
     }
 }
