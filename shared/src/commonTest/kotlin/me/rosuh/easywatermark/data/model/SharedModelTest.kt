@@ -44,10 +44,14 @@ class SharedModelTest {
 
     @Test
     fun jobState_wraps_result() {
-        val r = Result.success(Unit)
-        val success = JobState.Success(r)
-        assertEquals(r, success.result)
-        // distinct singleton states
-        assertFalse(JobState.Ready === JobState.Ing)
+        val ok = Result.success(Unit)
+        val success = JobState.Success(ok)
+        assertEquals(ok, success.result)
+        assertTrue(success.result.isSuccess())
+
+        val failResult = Result.failure<Unit>(code = "X")
+        val failure = JobState.Failure(failResult)
+        assertEquals("X", failure.result.code)
+        assertTrue(failure.result.isFailure())
     }
 }
