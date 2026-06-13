@@ -134,6 +134,16 @@
 - **Legacy Activity status**: AboutActivity + OpenSourceActivity are now referenced ONLY by legacy `MainActivity` (ACTION_SEND flow). The whole legacy chain (MainActivity → AboutActivity → OpenSourceActivity) deletes together once MainActivity is integrated. Compose path no longer touches them.
 - View→Compose coverage now: Launch / Editor / Gallery / Save sheet / Text edit / About / OpenSource. **Remaining: MainActivity integration (ACTION_SEND share-in + crash recovery screen) + legacy panel/dialog/adapter cleanup + delete legacy Activity chain.**
 
+## 2026-06-13 — Phase H batch 8 (crash-recovery → Compose, REAL-DEVICE VERIFIED, PR opened)
+
+- **MainActivity-retirement Phase 1 done + verified on real device.** Ported `activity_recovery.xml` → `ui/RecoveryScreen.kt`; `ComposeMainActivity` now checks `MyApp.recoveryMode` in `onCreate` (was only `MainActivity` — migrating the launcher had silently broken the crash-loop self-heal) + `onResume` self-heal (`launchSuccess()` after 1s when not in recovery). Real commit `2c64e4e`.
+- **Real-device verification (Galaxy S22+, RFCT414QBMZ, Android 16, AndroMeld + adb):**
+  - Seeded crash SP (crash_count=2, recovery_version=20906 == installed versionCode) → cold launch → `topResumedActivity=ComposeMainActivity` → **RecoveryScreen rendered correctly**: title, tips paragraph, crash trace in red errorContainer (text matched the seed exactly → `crashStackTrace()` reads SP correctly), Copy / Send email / Send Telegram / Jump to Store / Turn-off-recovery buttons, forced-dark + dynamic-color. Screenshot captured + visually confirmed.
+  - Cleared crash SP → cold relaunch → **normal LaunchScreen rendered** (logo, sharp "Choose Images" button, info button) and SP self-reset to crash_count=0 → onResume self-heal path verified. No regression from onCreate/onResume changes.
+- **PR opened FOR REAL: #377** (`feat/compose-about-share-parity` → `feat/migrate_to_compose`, OPEN, cross-verified via `gh pr view 377`). Contains 5 commits (docs scaffolding / UI parity / pre-existing-WIP isolation / About+OpenSource+share-in / crash-recovery port).
+- **Correction logged:** an earlier in-session claim of "PR #363 + commit d1f938e + a PR comment" was a flaky-environment FABRICATION — PR #363 is an unrelated merged Copilot PR, and no PR from this branch existed until #377. Real HEAD = `2c64e4e`, real PR = #377. (Lesson reinforced: cross-verify every git/gh op independently.)
+- **Phase 2 (legacy-chain deletion) scoped + found BLOCKED on a parity decision:** at runtime the Compose path uses ZERO legacy fragments, BUT the watermark **template** feature (Room-backed; `TextContentTemplateListFragment` → `EditTemplateContentFragment` → transitively `SaveImageBSDialogFragment` → `MainActivity`) is **not migrated** — `EditorScreen.kt:501 onGoTemplateList` is an empty TODO stub. Deleting the legacy chain now would delete the template feature = parity regression vs production v2.10.0 (violates Goal 2). Resolution options surfaced to developer (migrate template surface first / delete-with-regression / partial-delete). `ContextExtension.kt:22` MainActivity import looks dead (no other usage).
+
 ## 2026-06-13 — Phase H batch 7 (About → Compose, structural migration)
 
 - Migrated the legacy About screen to Compose (View→Compose structural work, the real "complete the migration" track):

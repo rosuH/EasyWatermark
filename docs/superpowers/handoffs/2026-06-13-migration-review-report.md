@@ -1,6 +1,8 @@
 # View→Compose Migration — Review Report
 
-**Date:** 2026-06-13 · **Branch:** `feat/migrate_to_compose` · **Status:** uncommitted, build-green, ready for review
+**Date:** 2026-06-13 · **Branch:** `feat/compose-about-share-parity` · **Status:** committed (5 commits, tip `2c64e4e`), build-green, **opened as PR [#377](https://github.com/rosuH/EasyWatermark/pull/377)** → `feat/migrate_to_compose`. Crash-recovery Compose port (§5.1) is now DONE and real-device-verified on the S22+.
+
+> Update (post-report): the crash-recovery screen described as "designed, not executed" in §5 has since been **implemented (`ui/RecoveryScreen.kt`) and verified on the real device** — recovery render + normal-launch regression both green. The remaining §5.2 legacy-chain deletion is blocked on the un-migrated watermark-template feature (see §5 note below). An earlier in-session mention of "PR #363" was a flaky-environment fabrication; the real PR is **#377**.
 **Purpose:** review-ready summary of this work period's changes for a colleague to assess before deciding next steps.
 
 ---
