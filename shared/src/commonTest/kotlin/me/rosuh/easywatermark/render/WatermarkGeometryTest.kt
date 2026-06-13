@@ -37,6 +37,18 @@ class WatermarkGeometryTest {
     }
 
     @Test
+    fun export_scale_is_per_axis_independent() {
+        // uniform fit (MSCALE_X == MSCALE_Y) → equal inverse scales
+        val uniform = WatermarkGeometry.exportScale(0.2f, 0.2f)
+        assertEquals(5f, uniform.x, 0.001f)
+        assertEquals(5f, uniform.y, 0.001f)
+        // non-uniform preview → axes differ INDEPENDENTLY (the corrected rule; old code tied both to X)
+        val nonUniform = WatermarkGeometry.exportScale(0.2f, 0.5f)
+        assertEquals(5f, nonUniform.x, 0.001f)
+        assertEquals(2f, nonUniform.y, 0.001f)
+    }
+
+    @Test
     fun degree_normalization_branches() {
         // 0..90 → d ; 180 → |180−180|=0 ; 270 → |180−270|=90 ; 360 → 360−360=0
         assertEquals(0.0, WatermarkGeometry.normalizedRadians(0f), 1e-9)

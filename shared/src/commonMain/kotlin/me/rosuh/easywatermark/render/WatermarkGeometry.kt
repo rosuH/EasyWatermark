@@ -58,4 +58,19 @@ object WatermarkGeometry {
         val r = normalizedRadians(degree)
         return (contentWidth * sin(r) + contentHeight * cos(r)).toFloat()
     }
+
+    /** Per-axis export scale (x, y). */
+    data class ExportScale(val x: Float, val y: Float)
+
+    /**
+     * The export **scale rule** (CMP plan D4): export scale = inverse of the preview fit-transform's
+     * per-axis scale, computed **independently per axis**.
+     *
+     * This is the *corrected* rule. The current Android code (`MainViewModel.kt:325-326`) derives
+     * BOTH axes from `MSCALE_X` (`scaleY = 1/MSCALE_X` — a latent bug, invisible for uniform
+     * fit-center scaling but wrong for non-uniform/resizable surfaces like a Desktop window). The
+     * C2b renderer wires this; until then this is the verified target, not yet driving export.
+     */
+    fun exportScale(previewScaleX: Float, previewScaleY: Float): ExportScale =
+        ExportScale(x = 1f / previewScaleX, y = 1f / previewScaleY)
 }
