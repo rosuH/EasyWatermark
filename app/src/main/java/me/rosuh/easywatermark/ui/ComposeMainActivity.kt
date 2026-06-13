@@ -365,7 +365,7 @@ class ComposeMainActivity : ComponentActivity() {
                                     )
                                 }
                                 composable<AboutRoute> {
-                                    val wm by aboutViewModel.waterMark.observeAsState()
+                                    val wm by aboutViewModel.waterMark.collectAsStateWithLifecycle()
                                     AboutScreen(
                                         versionName = BuildConfig.VERSION_NAME,
                                         showBounds = wm?.enableBounds ?: false,
