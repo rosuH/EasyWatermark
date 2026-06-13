@@ -108,4 +108,26 @@ class WatermarkCellGoldenTest {
         assertEquals("rendered tiled cell renders ~1086 visible px baseline", 1086, nonTransparent)
         assertEquals("rendered-pixel signature baseline", -587779666, sig)
     }
+
+    /**
+     * KNOWN LIMITATION (pinned as a passing test, CMP plan C1.7 refinement): the REAL production
+     * default config — emoji "👋 DO NOT REDISTRIBUTE" @ 315° — renders BLANK (0 visible px) under
+     * Robolectric NATIVE, even though it renders correctly on a real device. So Robolectric NATIVE
+     * does NOT faithfully reproduce emoji + rotated text: the device-free JVM golden can cover
+     * simple ASCII/0° cells (above) but CANNOT serve as a faithful oracle for this app's actual
+     * watermark (emoji default + rotation). A faithful golden of the real configs — and trustworthy
+     * verification of the C2a engine-wiring swap — therefore needs INSTRUMENTED (on-device) tests.
+     * This test documents the gap so it isn't mistaken for a code regression.
+     */
+    @Test
+    fun KNOWN_robolectric_cannot_render_emoji_rotated_cell() {
+        val px = renderTiledPixels("👋 DO NOT REDISTRIBUTE", degree = 315f)
+        val nonTransparent = px.count { it != 0 }
+        println("DEFAULT-CELL-GOLDEN(robolectric) nonTransparent=$nonTransparent")
+        assertEquals(
+            "Robolectric NATIVE renders emoji+rotation blank (≠ real device) — JVM golden gap; " +
+                "real-config golden + C2a verification need instrumented tests",
+            0, nonTransparent
+        )
+    }
 }
