@@ -4,6 +4,7 @@ plugins {
     id(libs.plugins.android.application.get().pluginId)
     id(libs.plugins.kotlin.android.get().pluginId)
     id(libs.plugins.kotlin.parcelize.get().pluginId)
+    id(libs.plugins.kotlin.serialization.get().pluginId)
     id(libs.plugins.ksp.get().pluginId)
 //    id(libs.plugins.hilt.plugin.get().pluginId)
     alias(libs.plugins.compose.compiler)
@@ -174,6 +175,7 @@ dependencies {
 
 //    implementation("androidx.navigation:navigation-compose:2.7.4")
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.kotlinx.serialization.json)
 
 //    implementation("androidx.constraintlayout:constraintlayout-compose:1.0.1")
     implementation(libs.androidx.constraintlayout.compose)

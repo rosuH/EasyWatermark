@@ -223,9 +223,9 @@ class ComposeMainActivity : ComponentActivity() {
                                     viewModel.updateImageList(uris)
                                     // launchSingleTop + popUpTo: a share received while already in the
                                     // editor (onNewIntent) must not stack a second EditorScreen.
-                                    navController.navigate("EditorScreen") {
+                                    navController.navigate(EditorRoute) {
                                         launchSingleTop = true
-                                        popUpTo("LaunchScreen")
+                                        popUpTo(LaunchRoute)
                                     }
                                     pendingShareUris = null
                                 }
@@ -268,7 +268,7 @@ class ComposeMainActivity : ComponentActivity() {
                                             "PhotoPicker Number of items selected: ${uris.size}"
                                         )
                                         viewModel.process(Action.SystemPickerImageSelected(uris))
-                                        navController.navigate("EditorScreen")
+                                        navController.navigate(EditorRoute)
                                     } else {
                                         Log.i(TAG, "PhotoPicker No media selected")
                                     }
@@ -276,20 +276,19 @@ class ComposeMainActivity : ComponentActivity() {
 
                             NavHost(
                                 navController = navController,
-                                startDestination = "LaunchScreen",
+                                startDestination = LaunchRoute,
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .padding(innerPadding)
                                     .imePadding()
                             ) {
-                                composable("LaunchScreen") {
+                                composable<LaunchRoute> {
                                     LaunchScreen(
-                                        onGoDialog = { navController.navigate("GalleryDialog") },
-                                        onGoAbout = { navController.navigate("AboutScreen") }
+                                        onGoDialog = { navController.navigate(GalleryDialogRoute) },
+                                        onGoAbout = { navController.navigate(AboutRoute) }
                                     )
                                 }
-                                dialog(
-                                    "GalleryDialog",
+                                dialog<GalleryDialogRoute>(
                                     dialogProperties = DialogProperties(usePlatformDefaultWidth = false)
                                 ) {
                                     GalleryDialog(
@@ -300,7 +299,7 @@ class ComposeMainActivity : ComponentActivity() {
                                         onDismiss = { selected ->
                                             navController.popBackStack()
                                             if (selected) {
-                                                navController.navigate("EditorScreen")
+                                                navController.navigate(EditorRoute)
                                             }
                                             viewModel.process(Action.DialogDismiss(selected))
                                         },
@@ -322,7 +321,7 @@ class ComposeMainActivity : ComponentActivity() {
                                         }
                                     )
                                 }
-                                composable("EditorScreen") {
+                                composable<EditorRoute> {
                                     EditorScreen(
                                         imageList = state.selectedImageList,
                                         waterMark = state.waterMark,
@@ -335,7 +334,7 @@ class ComposeMainActivity : ComponentActivity() {
                                             viewModel.process(Action.EditorImageSelected(it))
                                         },
                                         onGoAboutScreen = {
-                                            navController.navigate("AboutScreen")
+                                            navController.navigate(AboutRoute)
                                         },
                                         onAddMoreImages = {
                                             pickMultipleMedia.launch(
@@ -365,7 +364,7 @@ class ComposeMainActivity : ComponentActivity() {
                                         }
                                     )
                                 }
-                                composable("AboutScreen") {
+                                composable<AboutRoute> {
                                     val wm by aboutViewModel.waterMark.observeAsState()
                                     AboutScreen(
                                         versionName = BuildConfig.VERSION_NAME,
@@ -374,7 +373,7 @@ class ComposeMainActivity : ComponentActivity() {
                                         onBack = { navController.popBackStack() },
                                         onOpenLink = { url -> this@ComposeMainActivity.openLink(url) },
                                         onOpenSource = {
-                                            navController.navigate("OpenSourceScreen")
+                                            navController.navigate(OpenSourceRoute)
                                         },
                                         onToggleBounds = { aboutViewModel.toggleBounds(it) },
                                         onToggleDynamicColor = {
@@ -387,7 +386,7 @@ class ComposeMainActivity : ComponentActivity() {
                                         }
                                     )
                                 }
-                                composable("OpenSourceScreen") {
+                                composable<OpenSourceRoute> {
                                     OpenSourceScreen(
                                         onBack = { navController.popBackStack() },
                                         onOpenLink = { url -> this@ComposeMainActivity.openLink(url) }
