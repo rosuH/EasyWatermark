@@ -1,6 +1,8 @@
 # ADR-0016: MainActivity integration — ACTION_SEND, crash recovery, legacy Activity retirement
 
-**Status:** Proposed (design for the final View→Compose block) · **Date:** 2026-06-13 · **Plan ref:** M1 (entry consolidation), C1.6 (crash recovery), M5 (legacy cleanup)
+**Status:** Implemented (PR #377, 2026-06-13) · **Date:** 2026-06-13 · **Plan ref:** M1 (entry consolidation), C1.6 (crash recovery), M5 (legacy cleanup)
+
+> **Implementation note (2026-06-13):** Executed and real-device-verified on Galaxy S22+. ACTION_SEND/SEND_MULTIPLE consolidated onto `ComposeMainActivity`; crash recovery ported to `RecoveryScreen.kt`; watermark-template surface ported to `TemplateListSheet.kt` (the last live Compose→legacy bridge). Then the legacy stack was deleted: 3 Activities + `ui/dialog/*` (7) + `ui/panel/*` (9) + `ui/adapter/*` (9) + `ui/base/*` (7) + `LaunchView`/`LaunchViewListener` + `SimpleOverScrollEdgeEffect`/`BounceEdgeEffectFactory` (39 .kt) + 3 manifest `<activity>` entries + the dead `ContextExtension` import. Build green, APK −330KB, full smoke test (launch/editor tabs/template/save/about/recovery) passed with no crashes. Orphaned layout XMLs remain for a follow-up hygiene pass.
 
 ## Context
 

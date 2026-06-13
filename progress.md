@@ -134,6 +134,16 @@
 - **Legacy Activity status**: AboutActivity + OpenSourceActivity are now referenced ONLY by legacy `MainActivity` (ACTION_SEND flow). The whole legacy chain (MainActivity → AboutActivity → OpenSourceActivity) deletes together once MainActivity is integrated. Compose path no longer touches them.
 - View→Compose coverage now: Launch / Editor / Gallery / Save sheet / Text edit / About / OpenSource. **Remaining: MainActivity integration (ACTION_SEND share-in + crash recovery screen) + legacy panel/dialog/adapter cleanup + delete legacy Activity chain.**
 
+## 2026-06-13 — Phase H batch 9 (legacy stack RETIRED — View→Compose migration complete)
+
+- **Executed the ~40-file legacy deletion (ADR-0016) and verified it on the real device.** Commit `5248985` (PR #377).
+- Deleted (39 .kt): 3 Activities (`MainActivity` 820L, `AboutActivity`, `OpenSourceActivity`); `ui/dialog/*` (7); `ui/panel/*` (9); `ui/adapter/*` (9); `ui/base/*` (7); legacy widgets `LaunchView`/`LaunchViewListener` + `SimpleOverScrollEdgeEffect`/`BounceEdgeEffectFactory`. Manifest: removed the 3 `<activity>` entries. `ContextExtension`: dropped the dead `MainActivity` import.
+- **Build-driven verification:** `assembleDebug --rerun-tasks` green; APK regenerated fresh and **−330KB** (20.06→19.73MB) — physical proof the deletion compiled clean. Remaining `ui/widget/*` files compiled (none reference deleted symbols).
+- **Real-device smoke (S22+, all green, zero crashes/ClassNotFound in logcat):** cold launch → LaunchScreen; share-in → editor; **Content/Style/Layout tabs all render via Compose** (the deleted `ui/panel/*` are fully replaced by `ui/compose/*` options); template sheet (icon→list→use-confirm→apply); save sheet (`SaveExportSheet`); About (Compose, `topResumedActivity` stayed `ComposeMainActivity`, not the deleted `AboutActivity`).
+- **Retained & clean:** `ComposeMainActivity` (`ComponentActivity`), `WaterMarkImageView` (Compose `AndroidView`), all `data`/`di`/`utils`.
+- Docs-with-code: CLAUDE.md current-state rewritten (migration complete), ADR-0016 → Implemented.
+- **Known follow-ups (not regressions from deletion):** (1) orphaned legacy layout XMLs unreferenced → hygiene cleanup pass; (2) `SaveExportSheet` shows "0 image(s)" when sharing into an already-running instance via `onNewIntent` (export-list state not repopulated) — pre-existing wiring detail in the Compose save path, untouched by this deletion.
+
 ## 2026-06-13 — Phase H batch 8 (crash-recovery → Compose, REAL-DEVICE VERIFIED, PR opened)
 
 - **MainActivity-retirement Phase 1 done + verified on real device.** Ported `activity_recovery.xml` → `ui/RecoveryScreen.kt`; `ComposeMainActivity` now checks `MyApp.recoveryMode` in `onCreate` (was only `MainActivity` — migrating the launcher had silently broken the crash-loop self-heal) + `onResume` self-heal (`launchSuccess()` after 1s when not in recovery). Real commit `2c64e4e`.
