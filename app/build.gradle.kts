@@ -176,6 +176,7 @@ dependencies {
 //    implementation("androidx.navigation:navigation-compose:2.7.4")
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.serialization.json)
+    implementation(project(":shared"))
 
 //    implementation("androidx.constraintlayout:constraintlayout-compose:1.0.1")
     implementation(libs.androidx.constraintlayout.compose)
