@@ -2,7 +2,6 @@ package me.rosuh.easywatermark.ui
 
 
 import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -79,7 +78,8 @@ private val DarkColorScheme = darkColorScheme(
 
 @Composable
 fun AppTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    // Parity (ADR-0011): production v2.10.0 is forced-dark (Theme.Material3.Dark, no DayNight)
+    darkTheme: Boolean = true,
     dynamicColor: Boolean = false,
     content: @Composable() () -> Unit
 ) {
