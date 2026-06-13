@@ -1,6 +1,5 @@
 package me.rosuh.easywatermark.ui.save
 
-import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.border
@@ -44,13 +43,14 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.R
+import me.rosuh.easywatermark.data.model.ImageFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SaveExportSheet(
     imageCount: Int,
     imageUris: List<Uri> = emptyList(),
-    selectedFormatLabel: Bitmap.CompressFormat,
+    selectedFormatLabel: ImageFormat,
     quality: Int,
     isSaving: Boolean,
     finishedCount: Int,
@@ -58,14 +58,14 @@ fun SaveExportSheet(
     resultSummaryText: String,
     primaryActionLabel: String,
     onDismiss: () -> Unit,
-    onFormatClick: (newFormat: Bitmap.CompressFormat) -> Unit,
+    onFormatClick: (newFormat: ImageFormat) -> Unit,
     onQualityChange: (Int) -> Unit,
     onExportClick: () -> Unit,
     onShareClick: () -> Unit,
     onOpenGalleryClick: () -> Unit,
 ) {
     val isQualityVisible: Boolean = remember(selectedFormatLabel) {
-        selectedFormatLabel == Bitmap.CompressFormat.JPEG
+        selectedFormatLabel == ImageFormat.JPEG
     }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -145,7 +145,7 @@ fun SaveExportSheet(
                         },
                         onClick = {
                             formatMenuExpanded = false
-                            onFormatClick(Bitmap.CompressFormat.JPEG)
+                            onFormatClick(ImageFormat.JPEG)
                         }
                     )
 
@@ -155,7 +155,7 @@ fun SaveExportSheet(
                         },
                         onClick = {
                             formatMenuExpanded = false
-                            onFormatClick(Bitmap.CompressFormat.PNG)
+                            onFormatClick(ImageFormat.PNG)
                         }
                     )
                 }

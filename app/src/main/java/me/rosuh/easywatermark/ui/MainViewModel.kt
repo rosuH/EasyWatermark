@@ -43,6 +43,7 @@ import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
+import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.JobState
 import me.rosuh.easywatermark.data.model.Result
@@ -63,6 +64,7 @@ import me.rosuh.easywatermark.utils.bitmap.decodeBitmapFromUri
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.utils.ktx.applyConfig
 import me.rosuh.easywatermark.utils.ktx.formatDate
+import me.rosuh.easywatermark.utils.ktx.toCompressFormat
 import me.rosuh.easywatermark.utils.ktx.launch
 import org.koin.java.KoinJavaComponent.inject
 import java.io.File
@@ -125,7 +127,7 @@ class MainViewModel (
 
     val userPreferences: StateFlow<UserPreferences> = _userPreferences
 
-    val outputFormat: Bitmap.CompressFormat
+    val outputFormat: ImageFormat
         get() = _userPreferences.value.outputFormat
 
     val compressLevel: Int
@@ -406,7 +408,7 @@ class MainViewModel (
                 val imageContentUri = contentResolver.insert(imageCollection, imageDetail)
                 contentResolver.openFileDescriptor(imageContentUri!!, "w", null).use { pfd ->
                     mutableBitmap.compress(
-                        outputFormat,
+                        outputFormat.toCompressFormat(),
                         compressLevel,
                         FileOutputStream(pfd!!.fileDescriptor)
                     )
@@ -437,7 +439,7 @@ class MainViewModel (
                     File(mediaDir, generateOutputName())
                 outputFile.outputStream().use { fileOutputStream ->
                     mutableBitmap.compress(
-                        outputFormat,
+                        outputFormat.toCompressFormat(),
                         compressLevel,
                         fileOutputStream
                     )
@@ -462,7 +464,7 @@ class MainViewModel (
     }
 
     private fun trapOutputExtension(): String {
-        return if (outputFormat == Bitmap.CompressFormat.PNG) "png" else "jpg"
+        return if (outputFormat == ImageFormat.PNG) "png" else "jpg"
     }
 
     fun selectImage(uri: Uri) {
@@ -583,7 +585,7 @@ class MainViewModel (
     }
 
     fun saveOutput(
-        format: Bitmap.CompressFormat = _userPreferences.value.outputFormat,
+        format: ImageFormat = _userPreferences.value.outputFormat,
         level: Int = _userPreferences.value.compressLevel
     ) {
         viewModelScope.launch {
