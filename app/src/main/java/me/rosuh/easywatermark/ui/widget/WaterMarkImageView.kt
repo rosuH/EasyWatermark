@@ -13,7 +13,6 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
 import android.net.Uri
-import android.os.Build
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
@@ -33,6 +32,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.ViewInfo
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.Companion.DEFAULT_TEXT_SIZE
@@ -86,6 +86,8 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
     private var onOffsetChanged: (info: ImageInfo) -> Unit = { _ -> }
 
     private var onScaleEnd: (textSize: Float) -> Unit = { _ -> }
+
+    private var onViewInfoChanged: (vi: ViewInfo) -> Unit = { _ -> }
 
     private var exceptionHandler: CoroutineExceptionHandler =
         CoroutineExceptionHandler { _: CoroutineContext, throwable: Throwable ->
@@ -247,6 +249,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                     )
                 }
             }
+            onViewInfoChanged(ViewInfo.from(this@WaterMarkImageView))
             postInvalidate()
         }
     }
@@ -278,6 +281,10 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         Log.i("onSizeChanged", "$w, $h, $oldh, $oldh")
+        if (drawable == null) {
+            return
+        }
+        onViewInfoChanged(ViewInfo.from(this@WaterMarkImageView))
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -337,6 +344,10 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     fun onScaleEnd(block: (textSize: Float) -> Unit) {
         this.onScaleEnd = block
+    }
+
+    fun onViewInfoChanged(block: (vi: ViewInfo) -> Unit) {
+        this.onViewInfoChanged = block
     }
 
     fun reset() {

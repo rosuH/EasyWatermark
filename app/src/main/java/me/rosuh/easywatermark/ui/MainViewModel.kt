@@ -64,7 +64,6 @@ import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.utils.ktx.applyConfig
 import me.rosuh.easywatermark.utils.ktx.formatDate
 import me.rosuh.easywatermark.utils.ktx.launch
-import org.koin.java.KoinJavaComponent.get
 import org.koin.java.KoinJavaComponent.inject
 import java.io.File
 import java.io.FileNotFoundException
@@ -118,21 +117,27 @@ class MainViewModel (
 
     private var compressedJob: Job? = null
 
-    private var userPreferences: StateFlow<UserPreferences> = userRepo.userPreferences.stateIn(
+    private var _userPreferences: StateFlow<UserPreferences> = userRepo.userPreferences.stateIn(
         viewModelScope,
         SharingStarted.Eagerly,
         UserPreferences.DEFAULT
     )
 
+    val userPreferences: StateFlow<UserPreferences> = _userPreferences
+
     val outputFormat: Bitmap.CompressFormat
-        get() = userPreferences.value.outputFormat
+        get() = _userPreferences.value.outputFormat
 
     val compressLevel: Int
-        get() = userPreferences.value.compressLevel
+        get() = _userPreferences.value.compressLevel
 
     val colorPalette: MutableLiveData<Palette> = MutableLiveData()
 
     private var matrixValues = FloatArray(9)
+
+    private var _viewInfoStateFlow: MutableStateFlow<ViewInfo> = MutableStateFlow(ViewInfo.Empty)
+
+    val viewInfoStateFlow: StateFlow<ViewInfo> = _viewInfoStateFlow
 
     private val projection = arrayOf(
         MediaStore.Images.Media._ID,
@@ -211,7 +216,7 @@ class MainViewModel (
         imageList: List<ImageInfo>,
     ) {
         viewModelScope.launch {
-            if (this@MainViewModel.imageList.value?.first.isNullOrEmpty()) {
+            if (imageList.isEmpty()) {
                 saveResult.value = Result.failure(null, code = TYPE_ERROR_NOT_IMG)
                 return@launch
             }
@@ -573,7 +578,14 @@ class MainViewModel (
         }
     }
 
-    fun saveOutput(format: Bitmap.CompressFormat, level: Int) {
+    fun updateViewInfo(viewInfo: ViewInfo) {
+        _viewInfoStateFlow.value = viewInfo
+    }
+
+    fun saveOutput(
+        format: Bitmap.CompressFormat = _userPreferences.value.outputFormat,
+        level: Int = _userPreferences.value.compressLevel
+    ) {
         viewModelScope.launch {
             userRepo.updateFormat(format)
             userRepo.updateCompressLevel(level)
