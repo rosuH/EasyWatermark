@@ -34,6 +34,7 @@ import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.ViewInfo
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.render.WatermarkGeometry
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.Companion.DEFAULT_TEXT_SIZE
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.Companion.MAX_TEXT_SIZE
@@ -718,21 +719,12 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             val textWidth = staticLayout.width.toFloat().coerceAtLeast(1f)
             val textHeight = staticLayout.height.toFloat().coerceAtLeast(1f)
 
-            val radians = Math.toRadians(
-                when (config.degree) {
-                    in 0.0..90.0 -> config.degree.toDouble()
-                    in 90.0..270.0 -> {
-                        abs(180 - config.degree.toDouble())
-                    }
-                    else -> 360 - config.degree.toDouble()
-                }
-            )
-            // Generate tmp size from rotation degree, all degree have it's own size.
-            val fixWidth = textWidth * cos(radians) + textHeight * sin(radians)
-            val fixHeight = textWidth * sin(radians) + textHeight * cos(radians)
-
-            val finalWidth = adjustHorizonalGap(config, fixWidth.toInt())
-            val finalHeight = adjustVerticalGap(config, fixHeight.toInt())
+            // C2a: delegate cell sizing to the shared commonMain engine core (behavior-identical
+            // formulas; pinned by WatermarkCellGoldenTest). Verified rendering parity on-device.
+            val fixWidth = WatermarkGeometry.rotatedCellWidth(textWidth, textHeight, config.degree)
+            val fixHeight = WatermarkGeometry.rotatedCellHeight(textWidth, textHeight, config.degree)
+            val finalWidth = WatermarkGeometry.horizontalGap(fixWidth.toInt(), config.hGap)
+            val finalHeight = WatermarkGeometry.verticalGap(fixHeight.toInt(), config.vGap)
             val bitmap = Bitmap.createBitmap(finalWidth, finalHeight, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             if (showDebugRect) {
