@@ -18,6 +18,8 @@ kotlin {
         }
     }
     jvm("desktop")
+    iosArm64()
+    iosSimulatorArm64()
 }
 
 android {
