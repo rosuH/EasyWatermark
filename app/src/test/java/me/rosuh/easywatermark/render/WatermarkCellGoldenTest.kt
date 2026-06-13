@@ -123,6 +123,34 @@ class WatermarkCellGoldenTest {
      * verification of the C2a engine-wiring swap — therefore needs INSTRUMENTED (on-device) tests.
      * This test documents the gap so it isn't mistaken for a code regression.
      */
+    private fun iconCellDims(iconW: Int, iconH: Int, degree: Float, hGap: Int, vGap: Int): Pair<Int, Int> {
+        val config = WaterMark.default.copy(
+            degree = degree, hGap = hGap, vGap = vGap, textSize = 14f, iconUri = Uri.EMPTY,
+        )
+        val imageInfo = ImageInfo.empty().apply { width = 1000; height = 1000 }
+        val src = Bitmap.createBitmap(iconW, iconH, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.WHITE) }
+        val shader = runBlocking {
+            WaterMarkImageView.buildIconBitmapShader(imageInfo, src, config, Paint(), false, Dispatchers.Unconfined)
+        }!!
+        return shader.width to shader.height
+    }
+
+    /**
+     * Icon-cell golden: cross-checks `buildIconBitmapShader`'s sizing against commonMain
+     * `WatermarkGeometry.diagonal`/`horizontalGap` — the equivalence proof that gates wiring the
+     * icon path to commonMain (C2a). At textSize=14 (scaleRatio=1), gap=0: cell = maxSize square.
+     */
+    @Test
+    fun iconCell_dimensions_match_geometry() {
+        val (w, h) = iconCellDims(40, 20, degree = 0f, hGap = 0, vGap = 0)
+        println("ICON-GOLDEN 40x20@0/gap0 = ${w}x${h}")
+        assertTrue("icon cell has positive size", w > 0 && h > 0)
+        assertEquals("gap=0 → square cell", w, h)
+        // calculateMaxSize(rawHeight,rawWidth)=diagonal; gap=0 → horizontalGap(maxSize,0)=maxSize
+        val expected = WatermarkGeometry.horizontalGap(WatermarkGeometry.diagonal(20f, 40f), 0)
+        assertEquals("icon cell width == WatermarkGeometry prediction", expected, w)
+    }
+
     @Test
     fun defaultConfig_emoji_rotated_cell_renders_nonblank() {
         val px = renderTiledPixels("👋 DO NOT REDISTRIBUTE", degree = 315f)

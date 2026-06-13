@@ -582,17 +582,8 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             return matrix
         }
 
-        private fun adjustHorizonalGap(config: WaterMark, maxSize: Int): Int {
-            return (maxSize * ((config.hGap / 100f) + 1)).toInt()
-        }
-
-        private fun adjustVerticalGap(config: WaterMark, maxSize: Int): Int {
-            return (maxSize * ((config.vGap / 100f) + 1)).toInt()
-        }
-
-        private fun calculateMaxSize(w: Float, h: Float): Int {
-            return sqrt(w.pow(2) + h.pow(2)).toInt()
-        }
+        // adjustHorizonalGap/adjustVerticalGap/calculateMaxSize removed — cell sizing now lives in
+        // commonMain WatermarkGeometry (C2a), used by both buildTextBitmapShader + buildIconBitmapShader.
 
         fun calculateDrawLimitWidth(w: Int, ps: Int) = (w - ps * 2)
 
@@ -614,11 +605,11 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             val rawWidth = srcBitmap.width.toFloat().coerceAtLeast(1f)
             val rawHeight = srcBitmap.height.toFloat().coerceAtLeast(1f)
 
-            val maxSize = calculateMaxSize(rawHeight, rawWidth)
-
-
-            val finalWidth = adjustHorizonalGap(config, maxSize)
-            val finalHeight = adjustVerticalGap(config, maxSize)
+            // C2a: icon-cell sizing via the shared commonMain engine core (equivalence pinned by
+            // WatermarkCellGoldenTest.iconCell_dimensions_match_geometry).
+            val maxSize = WatermarkGeometry.diagonal(rawHeight, rawWidth)
+            val finalWidth = WatermarkGeometry.horizontalGap(maxSize, config.hGap)
+            val finalHeight = WatermarkGeometry.verticalGap(maxSize, config.vGap)
             // textSize represents scale ratio of icon.
             val scaleRatio = if (scale) {
                 imageInfo.scaleX

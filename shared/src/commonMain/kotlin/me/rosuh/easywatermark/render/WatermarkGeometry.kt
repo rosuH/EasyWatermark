@@ -3,6 +3,7 @@ package me.rosuh.easywatermark.render
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -28,9 +29,13 @@ object WatermarkGeometry {
     fun verticalGap(maxSize: Int, vGapPercent: Int): Int =
         (maxSize * ((vGapPercent / 100f) + 1)).toInt()
 
-    /** Diagonal length of a w×h cell — the icon cell is laid out as a square of this side. */
+    /**
+     * Diagonal length of a w×h cell — the icon cell is laid out as a square of this side.
+     * Uses `pow(2)` (not `w*w`) to stay byte-identical to the Android `calculateMaxSize` it
+     * replaces, so the C2a icon-path delegation is behavior-preserving.
+     */
     fun diagonal(w: Float, h: Float): Int =
-        sqrt(w * w + h * h).toInt()
+        sqrt(w.pow(2) + h.pow(2)).toInt()
 
     /**
      * Maps an arbitrary 0..360 watermark rotation `degree` to the acute reference angle (radians)
