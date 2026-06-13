@@ -134,6 +134,14 @@
 - **Legacy Activity status**: AboutActivity + OpenSourceActivity are now referenced ONLY by legacy `MainActivity` (ACTION_SEND flow). The whole legacy chain (MainActivity → AboutActivity → OpenSourceActivity) deletes together once MainActivity is integrated. Compose path no longer touches them.
 - View→Compose coverage now: Launch / Editor / Gallery / Save sheet / Text edit / About / OpenSource. **Remaining: MainActivity integration (ACTION_SEND share-in + crash recovery screen) + legacy panel/dialog/adapter cleanup + delete legacy Activity chain.**
 
+## 2026-06-13 — Phase C: first real KMP module (`:shared` exists, compiles Android + JVM)
+
+- **`:shared` Kotlin Multiplatform module created (`3969414`) — KMP is now real, not just planned.** `kotlin-multiplatform` plugin + `androidTarget()` + `jvm("desktop")`; `android` library block (namespace `me.rosuh.easywatermark.shared`, compile/minSdk from buildSrc `Apps`). Pure-Kotlin only (no Compose / Android resources) → sidesteps CMP-9547; iOS targets deferred to C5. `:app` (`com.android.application`) depends on `project(":shared")`.
+- **`commonMain` domain types:** `ImageFormat` (`3969414`), then `Result` + `JobState` (`57320f7`) moved app → `:shared/commonMain` — all pure Kotlin, used app-wide, compiling for **Android + JVM/desktop**. `:app` imports unchanged (same package, transitive).
+- **Verified:** `./gradlew :shared:compileKotlinDesktop` (JVM target green) + `:app:assembleDebug` green at each step; real-device (S22+) — app launches clean (`ComposeMainActivity` resumed, no `ClassNotFound`/`NoClassDef`), save-sheet format selector (cross-module commonMain `ImageFormat`) renders.
+- **Rationale for bringing `:shared` online early** (vs plan D2 "module last"): a *minimal pure-Kotlin* module is low-risk (no CMP-9547, no long-lived restructure branch) and makes the multiplatform architecture concrete + verifiable now. The big restructure (moving Compose UI/repos/renderer to commonMain) stays C4. Docs: CLAUDE.md current-state updated.
+- **Still the bulk of CMP+KMP ahead** (months): full MainViewModel state consolidation (entangled with un-migrated compress/bg-palette features), golden harness (C1.7, gates engine), engine→commonMain (C2), dep de-Android-ization incl. TileMode (C3), Desktop app + iOS (C4/C5).
+
 ## 2026-06-13 — Phase C kickoff (XML cleanup done; first CMP foundations landed)
 
 Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; CMP foundation advanced with three safe, real-device-verified increments. Full CMP+KMP remains the documented multi-month C1–C6 roadmap (the `:shared` KMP module is C4, deliberately last per D2 to avoid a long-lived restructure branch + double AGP-plugin migration).
