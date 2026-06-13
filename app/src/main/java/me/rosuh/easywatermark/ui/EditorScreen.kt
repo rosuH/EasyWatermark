@@ -82,10 +82,12 @@ import me.rosuh.easywatermark.data.model.FuncTitleModel
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.ViewInfo
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.ui.compose.ColorOption
 import me.rosuh.easywatermark.ui.compose.IconOption
 import me.rosuh.easywatermark.ui.compose.SliderOption
+import me.rosuh.easywatermark.ui.compose.TemplateListSheet
 import me.rosuh.easywatermark.ui.compose.TextContentOption
 import me.rosuh.easywatermark.ui.compose.TextTypeface
 import me.rosuh.easywatermark.ui.compose.TileMode
@@ -107,7 +109,13 @@ fun EditorScreen(
     onShowSaveDialog: () -> Unit = { },
     onGoAboutScreen: () -> Unit = { },
     onViewInfoChanged: (vi: ViewInfo) -> Unit = { },
+    templates: List<Template> = emptyList(),
+    onUseTemplate: (Template) -> Unit = {},
+    onAddTemplate: (String) -> Unit = {},
+    onUpdateTemplate: (Template) -> Unit = {},
+    onDeleteTemplate: (Template) -> Unit = {},
 ) {
+    var showTemplateSheet by remember { mutableStateOf(false) }
     Column(
         modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -137,7 +145,22 @@ fun EditorScreen(
                 onImageDelete
             )
         }
-        BottomView(waterMark, onChange = onWaterMrkChange)
+        BottomView(
+            waterMark,
+            onChange = onWaterMrkChange,
+            onGoTemplateList = { showTemplateSheet = true }
+        )
+    }
+
+    if (showTemplateSheet) {
+        TemplateListSheet(
+            templates = templates,
+            onDismiss = { showTemplateSheet = false },
+            onUse = onUseTemplate,
+            onAdd = onAddTemplate,
+            onUpdate = onUpdateTemplate,
+            onDelete = onDeleteTemplate,
+        )
     }
 }
 
@@ -147,6 +170,7 @@ private fun BottomView(
     waterMark: WaterMark,
     modifier: Modifier = Modifier,
     onChange: (item: FuncTitleModel, any: Any) -> Unit = { _, _ -> },
+    onGoTemplateList: () -> Unit = {},
 ) {
     // StylePreview
     var selectedTabIndex by remember { mutableIntStateOf(0) }
@@ -185,6 +209,7 @@ private fun BottomView(
             item = selectedOption,
             waterMark = waterMark,
             onChange = onChange,
+            onGoTemplateList = onGoTemplateList,
             onDismissRequest = {  }
         )
         val itemWidth = 72.dp
@@ -410,6 +435,7 @@ fun OptionControl(
     modifier: Modifier = Modifier,
     showSheet: Boolean = true,
     onChange: (item: FuncTitleModel, any: Any) -> Unit = { _, _ -> },
+    onGoTemplateList: () -> Unit = {},
     onDismissRequest: () -> Unit,
 ) {
     val configuration = LocalWindowInfo.current.containerSize
@@ -497,9 +523,7 @@ fun OptionControl(
                     waterMark = waterMark,
                     modifier = innerModifier,
                     onTextChange = { onChange(item, it) },
-                    onGoTemplateList = {
-                        // TODO(M3 parity): template list surface not migrated yet (TextContentTemplateListFragment)
-                    }
+                    onGoTemplateList = onGoTemplateList
                 )
             }
 

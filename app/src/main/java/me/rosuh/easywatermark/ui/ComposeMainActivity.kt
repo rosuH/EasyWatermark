@@ -235,6 +235,7 @@ class ComposeMainActivity : ComponentActivity() {
                             val state by viewModel.launchScreenUiStateFlow.collectAsStateWithLifecycle()
                             val context = LocalContext.current
                             val viewInfo by viewModel.viewInfoStateFlow.collectAsStateWithLifecycle()
+                            val templates by viewModel.templateListFlow.collectAsStateWithLifecycle()
 
                             // [DEBUG] temporary export instrumentation — remove after diagnosing
                             val saveResult by viewModel.saveResult.observeAsState()
@@ -348,6 +349,19 @@ class ComposeMainActivity : ComponentActivity() {
                                         },
                                         onViewInfoChanged = { vi ->
                                             viewModel.updateViewInfo(vi)
+                                        },
+                                        templates = templates,
+                                        onUseTemplate = { template ->
+                                            template.content?.let { viewModel.updateText(it) }
+                                        },
+                                        onAddTemplate = { content ->
+                                            viewModel.addTemplate(content)
+                                        },
+                                        onUpdateTemplate = { template ->
+                                            viewModel.updateTemplate(template)
+                                        },
+                                        onDeleteTemplate = { template ->
+                                            viewModel.deleteTemplate(template)
                                         }
                                     )
                                 }
