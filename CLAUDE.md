@@ -1,0 +1,41 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What this app is
+
+EasyWatermark (`me.rosuh.easywatermark`) — a privacy-focused Android app that tiles text/image watermarks over photos so they can't be repurposed. Privacy promises that shape engineering decisions: fully offline, zero tracking/stats/crash SDKs, no permissions needed on API 29+ (pre-29 needs storage permission). Distributed via GitHub Releases, Google Play (paid, same code), F-Droid, Coolapk. Translations come from Weblate (13 locales) — don't hand-edit non-default `strings.xml`.
+
+## Current state: two migrations in flight — read this first
+
+1. **View→Compose migration** (this branch, `feat/migrate_to_compose`): two UI stacks coexist deliberately. `ComposeMainActivity` is the launcher (Navigation Compose: LaunchScreen → GalleryDialog → EditorScreen); legacy `MainActivity` still owns the `ACTION_SEND` share-in flow **and the crash-recovery screen** (`activity_recovery`) — do not delete it without porting both. `EditorScreen` still embeds the legacy `WaterMarkImageView` via `AndroidView`.
+2. **Compose Multiplatform migration** (planned, phases C1–C6): `docs/superpowers/plans/2026-06-12-cmp-migration-plan.md`. Decisions live in `docs/adr/`. Domain vocabulary in `docs/CONTEXT.md`. Dependency-level KMP classifications with sources: `docs/superpowers/research/2026-06-12-cmp-readiness-audit.json`.
+
+Session memory (planning-with-files): `task_plan.md`, `findings.md`, `progress.md` at repo root — read them at session start, update them as you work.
+
+**Parity rule:** the visual/behavioral source of truth is the latest production release (v2.10.0, built from `master`), NOT this branch's current Compose screens. Per-layout migrations follow the 10-step skill in `.claude/skills/migrate-xml-views-to-jetpack-compose/` (screenshot baseline → migrate → visual diff → delete XML).
+
+## Commands
+
+- Build debug: `./gradlew :app:assembleDebug` → `app/build/outputs/apk/debug/`. Debug applicationId is `me.rosuh.easywatermark.debug`, so it installs alongside the production app — useful for side-by-side parity checks.
+- Unit tests: `./gradlew :app:testDebugUnitTest` (only stub tests exist today; the golden/screenshot harness is planned work — see plan C1.7). Instrumented: `./gradlew :app:connectedDebugAndroidTest`.
+- No linter is wired up (spotless/ktlint blocks in root `build.gradle.kts` are commented out). Match existing style by hand.
+- SDK constants live in `buildSrc` (`Apps.kt`): compileSdk/targetSdk 36, minSdk 23. JVM toolchain 17.
+- Release builds are minified (R8, `proguard-rules.pro` + `coroutines.pro`); CI (`.github/workflows/`) runs `:app:assembleDebug` on PRs, signing + Play upload on release.
+- Android CLI 1.0 is installed (`android`): `android docs search '<query>'` queries an offline KB that mirrors developer.android.com AND the JetBrains KMP docs (then `android docs fetch kb://...`); `android emulator list/start`, `android screenshot`, `android layout` (UI tree as JSON — faster than screenshots for UI debugging), `android run`.
+
+## Architecture (big picture)
+
+- Modules: `:app` (everything), `:cmonet` (Material You dynamic-color gate, Android-only, scheduled for replacement — ADR-0007), `:baseBenchmarks`/`:macrobenchmark` (Android-only perf), `buildSrc`.
+- **Data flow:** DataStore Preferences (watermark config via `WaterMarkRepository`, user prefs via `UserConfigRepository`) + Room (`Template` entity; **prepopulated DBs** `assets/ewm-db-ch.db`/`ewm-db-eng.db` selected by locale in `AppModule`) → Koin DI (`di/`) → `MainViewModel` (large; LiveData+StateFlow currently mixed, being consolidated to StateFlow-only — kill-list in plan C1.1) → both UI stacks.
+- **Rendering engine (the product core):** `WaterMarkImageView`'s companion builds a watermark "cell" offscreen (text via StaticLayout, icon via scaled bitmap, rotated), wraps it in a `BitmapShader` — `REPEAT` tiles it across the photo, `CLAMP` ("decal") draws one draggable instance at a fractional offset. Preview composites in `onDraw`; **export reuses the same cell builders** in `MainViewModel.generateImage` but duplicates the composition and derives export scale from the preview view's matrix (`ViewInfo`, `1/MSCALE_X` — known debt; both axes use MSCALE_X). The CMP plan replaces all of this with one commonMain renderer (ADR-0004).
+- **Gotchas encoded in data:** `WaterMark.tileMode` is persisted in DataStore as an **android `Shader.TileMode` enum ordinal**; `Uri`/`Bitmap.CompressFormat` leak into models — platform-neutral replacements are planned (ADR-0007); don't extend these patterns.
+- Image IO: decode via `BitmapFactory` + inSampleSize with EXIF rotation baked in (`utils/bitmap/BitmapUtils.kt`); save via MediaStore `IS_PENDING` (API ≥29) or pre-Q file path; export deliberately strips all EXIF metadata (privacy feature — ADR-0009).
+
+## Conventions for agents
+
+- **Docs-with-code gate:** every milestone PR ships its context delta (ADR / CONTEXT.md / CLAUDE.md updates) or states "no doc impact" in the PR description.
+- Do not build new UI against `ViewInfo` / `AndroidView` contracts — both are scheduled for deletion (plan C2).
+- Decision forks get an ADR in `docs/adr/` (use the `grill-with-docs` flow); status `Proposed` until the developer signs off.
+- When unsure about an Android/KMP API, prefer `android docs search` over training data.
+- **Clean up heavy processes you start:** automated emulator sessions boot with `-no-window` when interaction isn't needed, and end with `adb emu kill` + `./gradlew --stop`; cap automated builds with `--max-workers=8`. Sustained emulator+build load has frozen this machine's input devices before — warn the developer before kicking off long heavy local automation.
