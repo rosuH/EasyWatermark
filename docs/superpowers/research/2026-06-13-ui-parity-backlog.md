@@ -78,6 +78,15 @@ End-to-end editor flow driven on the headless Medium_Phone emulator (API 29, adb
 - **GalleryDialog confirm-button note:** the amber "✓ N" confirm needs a reliable tap on its exact bounds (`[435,1959][645,2106]`); a near-miss silently no-ops. Worth a larger touch target / content-desc for testability (minor).
 - **Still open (re-confirmed against production):** P0-B filmstrip (editor still has the empty band where production shows the thumbnail strip); text-edit modal sheet (production opens a titled sheet w/ Confirm; Compose edits inline); save-sheet export-list thumbnails + sheet expansion + "View in gallery" link; top-bar logo vs back-arrow; TileMode segmented-vs-radio sign-off; quality-default re-check on clean install.
 
+## Feature parity gaps discovered during legacy retirement (2026-06-13)
+
+Two production v2.10.0 features have working logic in `MainViewModel` but **no Compose UI** (their legacy fragments were deleted in the View→Compose retirement; they were never wired into the Compose editor). Treat as parity gaps to **migrate** (like the template surface was), NOT dead code to delete:
+
+- **Source-image pre-compression** — `MainViewModel.compressImg()` + `compressedResult` + `cancelCompressJob()` (uses `id.zelory:compressor`). Legacy UI was `CompressImageDialogFragment` (deleted). No Compose entry point. Plan C3.8 reimplements it as renderer-based decode-downscale-encode; until then it's un-migrated. **Do not delete the VM logic** — it's the reference impl.
+- **Background palette extraction** — `MainViewModel.colorPalette` + `updateColorPalette()` (androidx.palette). Cosmetic bg color from the source image; legacy-only consumers deleted. Plan C3.3: port via kmpalette or drop (product call — cosmetic).
+
+Both are LiveData holders, so they also block the C1.1 "zero LiveData in MainViewModel" exit — but the fix is feature-preserving migration, not removal.
+
 ## Suggested C1 work order (parity stream)
 1. P0-A theme tokens (unblocks visual judgment of everything else)
 2. sheet-save quality-default bug (small, isolated, real)
