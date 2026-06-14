@@ -39,6 +39,32 @@ import kotlin.math.max
 object WatermarkRenderer {
 
     /**
+     * S3a image-space sizing reference width (px). `textSize` is interpreted as image-space:
+     *
+     * ```
+     * textPx = textSize * imageWidth / REF_WIDTH
+     * ```
+     *
+     * where `imageWidth` is the width of the bitmap the watermark cell tiles over (the displayed
+     * drawable in preview, the full source image at export — both already carried by
+     * `ImageInfo.width`). This makes the watermark a constant fraction (`textSize / REF_WIDTH`) of the
+     * image on every device and in both preview and export, replacing the old, device-dependent,
+     * un-persisted preview-matrix scale (`1/MSCALE_X`).
+     *
+     * **Why 1000:** it is the canonical reference image width already used by every existing
+     * golden/gate in this repo (`WatermarkExportGoldenTest`, `WatermarkCellGoldenTest`,
+     * `WatermarkCellInstrumentedGoldenTest`, `WatermarkCellParityGateTest` all use
+     * `ImageInfo.width = 1000`). At that reference width the formula reproduces the legacy unscaled
+     * paint size exactly (`textSize * 1000 / 1000 == textSize`), so `textSize` keeps its historical
+     * meaning at the reference and scales proportionally elsewhere. 1000 is also representative of a
+     * typical editor preview-canvas width on the dominant ~1080px-wide phone class (canvas = screen −
+     * padding ≈ 1000), so the typical user's export size is approximately preserved — the bounded
+     * one-time shift accepted under D3 Option A (see ACSP ref-width-decision.md). A precise
+     * production-preview-width recalibration on the authority device is a later optional refinement.
+     */
+    const val REF_WIDTH: Float = 1000f
+
+    /**
      * Build the text watermark cell + REPEAT/CLAMP [BitmapShader]. Verbatim extraction of the former
      * `WaterMarkImageView.buildTextBitmapShader` (which now delegates here). Uses legacy
      * `StaticLayout` + the supplied [textPaint] (configured via `TextPaint.applyConfig`).
@@ -133,11 +159,11 @@ object WatermarkRenderer {
      * nearest-neighbor `Bitmap.createScaledBitmap(..., false)` behavior.
      */
     suspend fun buildIconShader(
-        imageInfo: ImageInfo,
+        @Suppress("UNUSED_PARAMETER") imageInfo: ImageInfo, // S3a: icon no longer reads scaleX; kept for API compatibility
         srcBitmap: Bitmap,
         config: WaterMark,
         textPaint: Paint,
-        scale: Boolean,
+        @Suppress("UNUSED_PARAMETER") scale: Boolean, // S3a: view-scale coupling removed; param kept for source/API compatibility
         coroutineContext: CoroutineContext,
     ): WaterMarkShader? = withContext(coroutineContext) {
         if (srcBitmap.isRecycled) {
@@ -153,12 +179,10 @@ object WatermarkRenderer {
         val maxSize = WatermarkGeometry.diagonal(rawHeight, rawWidth)
         val finalWidth = WatermarkGeometry.horizontalGap(maxSize, config.hGap)
         val finalHeight = WatermarkGeometry.verticalGap(maxSize, config.vGap)
-        // textSize represents scale ratio of icon.
-        val scaleRatio = if (scale) {
-            imageInfo.scaleX
-        } else {
-            1f
-        } * config.textSize / 14f
+        // S3a: `textSize` is the icon scale ratio (textSize/14 ⇒ 14 = 1×), preserved from legacy.
+        // The old preview-matrix `imageInfo.scaleX` factor (applied only at export, `scale=true`) is
+        // REMOVED so preview and export size icons identically and independent of view scale (D2c).
+        val scaleRatio = config.textSize / 14f
 
         val targetBitmap = Bitmap.createBitmap(
             (finalWidth * scaleRatio).toInt(),
