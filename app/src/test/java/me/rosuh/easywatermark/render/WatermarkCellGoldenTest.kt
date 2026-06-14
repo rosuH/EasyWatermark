@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.render.androidTextMeasureEnv
 import me.rosuh.easywatermark.ui.widget.WaterMarkImageView
 import me.rosuh.easywatermark.utils.ktx.applyConfig
 import org.junit.Assert.assertEquals
@@ -19,6 +20,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -50,7 +52,10 @@ class WatermarkCellGoldenTest {
         val imageInfo = ImageInfo.empty().apply { width = 1000; height = 1000 }
         val paint = TextPaint().applyConfig(imageInfo, config, isScale = false)
         val shader = runBlocking {
-            WaterMarkImageView.buildTextBitmapShader(imageInfo, config, paint, Dispatchers.Unconfined)
+            WaterMarkImageView.buildTextBitmapShader(
+                imageInfo, config, paint,
+                androidTextMeasureEnv(RuntimeEnvironment.getApplication()), Dispatchers.Unconfined,
+            )
         }
         assertNotNull("shader must build for non-blank text", shader)
         return shader!!.width to shader.height
@@ -87,7 +92,10 @@ class WatermarkCellGoldenTest {
         val imageInfo = ImageInfo.empty().apply { width = 1000; height = 1000 }
         val paint = TextPaint().applyConfig(imageInfo, config, isScale = false)
         val shader = runBlocking {
-            WaterMarkImageView.buildTextBitmapShader(imageInfo, config, paint, Dispatchers.Unconfined)
+            WaterMarkImageView.buildTextBitmapShader(
+                imageInfo, config, paint,
+                androidTextMeasureEnv(RuntimeEnvironment.getApplication()), Dispatchers.Unconfined,
+            )
         }!!
         val w = shader.width.coerceAtLeast(1)
         val h = shader.height.coerceAtLeast(1)

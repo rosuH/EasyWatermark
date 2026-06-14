@@ -10,25 +10,30 @@ import androidx.compose.ui.unit.LayoutDirection
 
 /**
  * C2b text-measurement seam — **platform-neutral half** (ACSP 20260614-002242, boundary-polished
- * 20260614-080727). NOT product code: `internal` and **not called by any product path**
- * (`WaterMarkImageView`/`MainViewModel`/`EditorScreen` untouched). Today only the instrumented gate
- * `WatermarkCellParityGateTest` references it (via the Android glue in `AndroidTextMeasureEnv.kt`).
+ * 20260614-080727; adopted as **product measurement** in S3b/D1). Used by the renderer text path
+ * ([WatermarkRenderer.buildTextShader]) for the watermark text-cell box; drawing stays legacy
+ * `StaticLayout`. The instrumented gate `WatermarkCellParityGateTest` pins it against the signed CJK
+ * baseline (non-CJK exact; CJK width exact + signed height delta).
  *
  * This file contains **only platform-neutral, commonMain-ready** declarations — no Android `Context` or
  * `TextPaint`, no `createFontFamilyResolver`/`sp`. It constructs `TextMeasurer` directly (not
  * `@Composable`), so it lifts to `:shared/commonMain` unchanged once `:shared` gains Compose (the
- * `org.jetbrains.compose` ui-text dependency decision flagged in `decisions.md`/ADR-0004 — deliberately
- * out of this slice; the candidate stays app-side and dependency-free).
+ * `org.jetbrains.compose` ui-text dependency decision flagged in `decisions.md`/ADR-0004 — that move is
+ * a later C4-era slice; S3b keeps it app-side, dependency-free).
  *
  * The Android-specific bootstrap (`androidTextMeasureEnv(context)`) and the `TextPaint → TextStyle`
  * adapter (`toWatermarkTextStyle()`) live in the sibling `AndroidTextMeasureEnv.kt`.
  */
 
 /**
- * The minimal text-measurement environment the future renderer needs, as a value object (no `Context`):
+ * The minimal text-measurement environment the renderer needs, as a value object (no `Context`):
  * a [FontFamily.Resolver], a [Density], and a [LayoutDirection]. Platform-neutral / commonMain-ready.
+ *
+ * S3b (D1): **product measurement** — supplied to [WatermarkRenderer.buildTextShader] at the
+ * preview/export call sites (built via `androidTextMeasureEnv(context)`). `public` because it appears
+ * in the renderer's measurement API signature.
  */
-internal data class TextMeasureEnv(
+data class TextMeasureEnv(
     val fontFamilyResolver: FontFamily.Resolver,
     val density: Density,
     val layoutDirection: LayoutDirection = LayoutDirection.Ltr,
@@ -37,6 +42,7 @@ internal data class TextMeasureEnv(
 /**
  * The headless text-cell measurement seam. Platform-neutral: given an injected [TextMeasureEnv] and a
  * [TextStyle], returns the laid-out text size in px — the `StaticLayout.width/height` analogue.
+ * S3b: the renderer's product text-cell measurement.
  */
 internal object WatermarkTextMeasurer {
     fun measure(env: TextMeasureEnv, text: String, style: TextStyle): IntSize =

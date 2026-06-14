@@ -11,19 +11,22 @@ Several small open calls resolve automatically once production parity (ADR-0011)
 - **JPEG quality snapping** (min 20, multiples of 20): production behavior → keep through the rewrite.
 - **Icon scaling filter:** production uses nearest-neighbor (`filter=false`) → pin `FilterQuality.None` in C2a for parity; any softening is a C2b re-baseline decision.
 
-## Candidate (pending final C2b wiring sign-off)
+## Accepted (S3b / D1)
 
-- **CJK text-cell height — `TextMeasurer` vs `StaticLayout`:** the C2 commonMain `TextMeasurer` seam is
+- **CJK text-cell height — `TextMeasurer` vs `StaticLayout`:** the commonMain `TextMeasurer` seam is
   byte-exact vs legacy `StaticLayout` for the covered Latin/emoji/bold/italic rows, but **CJK cell height
-  grows** (width exact). Measured deterministically on device (SM-S906E / API 36): single-line +1/+2/+5px
-  at 12/24/48f; two-line +4/+9/+18px. **Candidate decision:** accept the Compose CJK line-height as the
-  C2b future-renderer baseline (Option 1 of the session-223154 product-decision matrix), under the
-  ADR-0004 `textSize` re-spec + golden re-baseline — rather than fragile per-script line-metric compat
-  tuning. Encoded as a green **signed-baseline** gate (`WatermarkCellParityGateTest`): non-CJK strict
-  legacy parity; CJK exact width + exact signed delta/baseline (no tolerance widening; delta logged, not
-  hidden). **Status: candidate pending final C2b wiring sign-off — not wired into the product
-  renderer/export.** If the developer prefers legacy-exact CJK cells, the alternative is compat tuning
-  (then the gate's CJK deltas become 0); record the choice here at C2b.
+  grows** (width exact). Deterministic deltas (device-independent; held on SM-S906E and emulator-5554,
+  both API 36): single-line +1/+2/+5px at 12/24/48f; two-line +4/+9/+18px. **Decision (ACCEPTED, S3b):**
+  the Compose CJK line-height is the renderer baseline (Option 1 of the session-223154 product-decision
+  matrix), under the ADR-0004 `textSize` re-spec + golden re-baseline — not fragile per-script compat
+  tuning. **Wired into the product renderer** in S3b: `WatermarkRenderer.buildTextShader` measures the
+  text-cell box via the `TextMeasureEnv`/`WatermarkTextMeasurer` seam (drawing stays legacy
+  `StaticLayout`). Gated green by `WatermarkCellParityGateTest`: non-CJK strict legacy==seam; CJK exact
+  width + exact signed delta + signed absolute baseline (no tolerance widening; delta logged, not
+  hidden). Per the updated device policy (any available adb target), the gate's device-pinned absolute
+  baselines were re-pinned to the S3b acceptance target **emulator-5554 / API 36** (CJK heights matched
+  the earlier SM-S906E baseline exactly; only CJK/emoji glyph widths differed by a few px). S0 export
+  golden: the two CJK entries (`cjk`, `cjk_multiline_315`) were re-baselined; non-CJK unchanged.
 
 ## Consequences
 - Fewer open questions before C2a; deviations from any of these require updating this ADR.

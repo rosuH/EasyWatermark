@@ -10,6 +10,7 @@ import android.net.Uri
 import android.text.TextPaint
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.model.ImageInfo
@@ -77,7 +78,11 @@ class WatermarkExportInstrumentedGoldenTest {
         val shader = runBlocking {
             if (spec.text != null) {
                 val paint = TextPaint().applyConfig(imageInfo, config, isScale = false)
-                WaterMarkImageView.buildTextBitmapShader(imageInfo, config, paint, Dispatchers.Unconfined)
+                WaterMarkImageView.buildTextBitmapShader(
+                    imageInfo, config, paint,
+                    androidTextMeasureEnv(InstrumentationRegistry.getInstrumentation().targetContext),
+                    Dispatchers.Unconfined,
+                )
             } else {
                 val src = Bitmap.createBitmap(spec.iconW, spec.iconH, Bitmap.Config.ARGB_8888).apply {
                     eraseColor(Color.WHITE)

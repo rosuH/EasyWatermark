@@ -17,6 +17,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -89,7 +90,10 @@ class WatermarkImageSpaceSizingTest {
         val info = imageInfo(width, scaleX)
         val paint = TextPaint().applyConfig(info, config(size), isScale = false)
         return runBlocking {
-            WatermarkRenderer.buildTextShader(info, config(size), paint, Dispatchers.Unconfined)
+            WatermarkRenderer.buildTextShader(
+                info, config(size), paint,
+                androidTextMeasureEnv(RuntimeEnvironment.getApplication()), Dispatchers.Unconfined,
+            )
         }!!
     }
 
