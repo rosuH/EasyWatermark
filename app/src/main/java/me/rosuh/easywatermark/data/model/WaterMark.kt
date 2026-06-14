@@ -8,6 +8,7 @@ import androidx.annotation.Keep
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
+import me.rosuh.easywatermark.utils.ktx.toShaderTileMode
 
 @Keep
 data class WaterMark(
@@ -23,10 +24,15 @@ data class WaterMark(
     val iconUri: Uri,
     val markMode: WaterMarkRepository.MarkMode,
     val enableBounds: Boolean,
-    val tileMode: Shader.TileMode,
+    val tileMode: WatermarkTileMode,
 ) {
+    /**
+     * Android render/edge bridge: the model holds the platform-neutral [WatermarkTileMode] (S1),
+     * but render/export code still asks for an `android.graphics.Shader.TileMode`. Kept as a method
+     * so all existing call sites (`onDraw`, `generateImage`, cell builders) are unchanged.
+     */
     fun obtainTileMode(): Shader.TileMode {
-        return tileMode
+        return tileMode.toShaderTileMode()
 	}
     
 	companion object {
@@ -43,7 +49,7 @@ data class WaterMark(
             iconUri = Uri.parse(""),
             markMode = WaterMarkRepository.MarkMode.Text,
             enableBounds = false,
-            tileMode = Shader.TileMode.REPEAT,
+            tileMode = WatermarkTileMode.REPEAT,
         )
     }
 }

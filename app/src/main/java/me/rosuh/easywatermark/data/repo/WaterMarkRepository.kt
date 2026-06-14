@@ -1,7 +1,6 @@
 package me.rosuh.easywatermark.data.repo
 
 import android.graphics.Color
-import android.graphics.Shader
 import android.net.Uri
 import android.util.Log
 import androidx.collection.ArrayMap
@@ -16,6 +15,7 @@ import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_ALPHA
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_DEGREE
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_ENABLE_BOUNDS
@@ -29,7 +29,7 @@ import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_T
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TEXT_TYPEFACE
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TILE_MODE
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_VERTICAL_GAP
-import me.rosuh.easywatermark.utils.ktx.toTileMode
+import me.rosuh.easywatermark.utils.ktx.toWatermarkTileMode
 import java.io.IOException
 
 class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
@@ -79,7 +79,7 @@ class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
                 vGap = it[KEY_VERTICAL_GAP] ?: 0,
                 iconUri = Uri.parse(it[KEY_ICON_URI] ?: ""),
                 markMode = if (it[KEY_MODE] == MarkMode.Image.value) MarkMode.Image else MarkMode.Text,
-                tileMode = it[KEY_TILE_MODE].toTileMode(),
+                tileMode = it[KEY_TILE_MODE].toWatermarkTileMode(),
                 enableBounds = it[KEY_ENABLE_BOUNDS] ?: false
             )
         }
@@ -147,9 +147,9 @@ class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
         }
     }
 
-    suspend fun updateTileMode(mode: Shader.TileMode) {
+    suspend fun updateTileMode(mode: WatermarkTileMode) {
         dataStore.edit {
-            it[KEY_TILE_MODE] = mode.ordinal
+            it[KEY_TILE_MODE] = mode.storageId
         }
     }
 

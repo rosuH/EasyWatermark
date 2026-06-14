@@ -52,6 +52,7 @@ import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.ViewInfo
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.data.repo.MemorySettingRepo
 import me.rosuh.easywatermark.data.repo.TemplateRepository
@@ -566,7 +567,7 @@ class MainViewModel (
         }
     }
 
-    fun updateTileMode(tileMode: Shader.TileMode) {
+    fun updateTileMode(tileMode: WatermarkTileMode) {
         launch {
             autoScroll = false
             waterMarkRepo.updateTileMode(tileMode)
@@ -1113,7 +1114,7 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
             }
 
             FuncTitleModel.FuncType.TileMode -> {
-                updateTileMode(any as Shader.TileMode)
+                updateTileMode(any as WatermarkTileMode)
             }
 
             FuncTitleModel.FuncType.Horizon -> {

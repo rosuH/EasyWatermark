@@ -15,9 +15,9 @@ import kotlin.math.sqrt
  * (`adjustHorizonalGap`/`adjustVerticalGap`/`calculateMaxSize` + the rotated-cell AABB) so the
  * future commonMain renderer (C2) reuses identical formulas on Android, JVM/desktop and iOS.
  *
- * NOTE: this is the verified-correct foundation only — it is NOT yet wired into the live Android
- * renderer. That swap (making `WaterMarkImageView`/export delegate here) is C2a and is gated
- * behind the golden image harness (C1.7), because it touches the product-core render path.
+ * Wired in C2a: Android text and icon watermark-cell sizing now delegates here for both preview
+ * (`WaterMarkImageView`) and export (`MainViewModel.generateImage`). C2b still owns the remaining
+ * composition/export-scale migration: drawing, tiling, `ViewInfo` deletion, and image-space sizing.
  */
 object WatermarkGeometry {
 
