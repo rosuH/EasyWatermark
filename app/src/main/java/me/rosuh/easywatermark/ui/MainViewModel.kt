@@ -11,7 +11,6 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Paint
-import android.graphics.Shader
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -54,6 +53,7 @@ import me.rosuh.easywatermark.data.model.ViewInfo
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.model.entity.Template
+import me.rosuh.easywatermark.render.WatermarkRenderer
 import me.rosuh.easywatermark.data.repo.MemorySettingRepo
 import me.rosuh.easywatermark.data.repo.TemplateRepository
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
@@ -327,9 +327,11 @@ class MainViewModel (
             imageInfo.scaleY = 1 / matrixValues[Matrix.MSCALE_X]
             val bitmapPaint = TextPaint().applyConfig(imageInfo, tmpConfig, isScale = false)
             val layoutPaint = Paint()
+            // S2a: build the cell shader through the Android renderer seam (same seam the preview
+            // path uses via WaterMarkImageView's companion wrappers).
             val shader = when (waterMark.value?.markMode) {
                 WaterMarkRepository.MarkMode.Text -> {
-                    WaterMarkImageView.buildTextBitmapShader(
+                    WatermarkRenderer.buildTextShader(
                         imageInfo,
                         waterMark.value!!,
                         bitmapPaint,
@@ -352,7 +354,7 @@ class MainViewModel (
                         )
                     }
                     val iconBitmap = iconBitmapRect.data!!.bitmap
-                    WaterMarkImageView.buildIconBitmapShader(
+                    WatermarkRenderer.buildIconShader(
                         imageInfo,
                         iconBitmap,
                         tmpConfig,
@@ -369,29 +371,21 @@ class MainViewModel (
                 )
             }
 
-            layoutPaint.shader = shader?.bitmapShader
-
-            if (tmpConfig.obtainTileMode() == Shader.TileMode.CLAMP) {
-                canvas.translate(
-                    0 + imageInfo.offsetX * mutableBitmap.width,
-                    0 + imageInfo.offsetY * mutableBitmap.height
-                )
-                canvas.drawRect(
-                    0f,
-                    0f,
-                    (shader?.width ?: 0).toFloat(),
-                    (shader?.height ?: 0).toFloat(),
-                    layoutPaint
-                )
-            } else {
-                canvas.drawRect(
-                    0f,
-                    0f,
-                    mutableBitmap.width.toFloat(),
-                    mutableBitmap.height.toFloat(),
-                    layoutPaint
-                )
-            }
+            // S2a: composition delegated to the shared renderer seam (same helper as preview).
+            // Export composites at the bitmap origin (left/top = 0, region = full bitmap); the old
+            // REPEAT branch had no canvas translate, which `compose` reproduces as translate(0,0).
+            WatermarkRenderer.compose(
+                canvas = canvas,
+                shader = shader,
+                tileMode = tmpConfig.obtainTileMode(),
+                paint = layoutPaint,
+                left = 0f,
+                top = 0f,
+                regionWidth = mutableBitmap.width.toFloat(),
+                regionHeight = mutableBitmap.height.toFloat(),
+                offsetX = imageInfo.offsetX,
+                offsetY = imageInfo.offsetY,
+            )
 
             return@withContext if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val imageCollection =

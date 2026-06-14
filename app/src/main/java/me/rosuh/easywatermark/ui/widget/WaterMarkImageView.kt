@@ -5,7 +5,6 @@ import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapShader
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Matrix
@@ -13,15 +12,12 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
 import android.net.Uri
-import android.text.Layout
-import android.text.StaticLayout
 import android.text.TextPaint
 import android.util.AttributeSet
 import android.util.Log
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import androidx.core.animation.doOnEnd
-import androidx.core.graphics.withSave
 import androidx.palette.graphics.Palette
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -34,7 +30,7 @@ import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.ViewInfo
 import me.rosuh.easywatermark.data.model.WaterMark
-import me.rosuh.easywatermark.render.WatermarkGeometry
+import me.rosuh.easywatermark.render.WatermarkRenderer
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.Companion.DEFAULT_TEXT_SIZE
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.Companion.MAX_TEXT_SIZE
@@ -48,7 +44,6 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.math.abs
 import kotlin.math.absoluteValue
 import kotlin.math.cos
-import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sin
@@ -297,31 +292,19 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
         ) {
             return
         }
-        layoutPaint.shader = layoutShader?.bitmapShader
-        canvas.withSave {
-            if (config?.obtainTileMode() == Shader.TileMode.CLAMP) {
-                translate(
-                    drawableBounds.left + curImageInfo.offsetX * drawableBounds.width(),
-                    drawableBounds.top + curImageInfo.offsetY * drawableBounds.height()
-                )
-                drawRect(
-                    0f,
-                    0f,
-                    (layoutShader?.width ?: 0).toFloat(),
-                    (layoutShader?.height ?: 0).toFloat(),
-                    layoutPaint
-                )
-            } else {
-                translate(drawableBounds.left, drawableBounds.top)
-                drawRect(
-                    0f,
-                    0f,
-                    drawableBounds.right - drawableBounds.left,
-                    drawableBounds.bottom - drawableBounds.top,
-                    layoutPaint
-                )
-            }
-        }
+        // S2a: composition delegated to the shared renderer seam (same helper as export).
+        WatermarkRenderer.compose(
+            canvas = canvas,
+            shader = layoutShader,
+            tileMode = config?.obtainTileMode() ?: Shader.TileMode.REPEAT,
+            paint = layoutPaint,
+            left = drawableBounds.left,
+            top = drawableBounds.top,
+            regionWidth = drawableBounds.width(),
+            regionHeight = drawableBounds.height(),
+            offsetX = curImageInfo.offsetX,
+            offsetY = curImageInfo.offsetY,
+        )
     }
 
     private fun generateDrawableBounds() {
@@ -589,6 +572,11 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
         fun calculateDrawLimitHeight(h: Int, pt: Int) = (h - pt * 2)
 
+        /**
+         * S2a: compatibility wrapper. The icon-cell builder body now lives in the Android renderer
+         * seam [WatermarkRenderer.buildIconShader]; this wrapper is retained so existing call sites
+         * and goldens (which reference `WaterMarkImageView.buildIconBitmapShader`) stay unchanged.
+         */
         suspend fun buildIconBitmapShader(
             imageInfo: ImageInfo,
             srcBitmap: Bitmap,
@@ -596,165 +584,22 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             textPaint: Paint,
             scale: Boolean,
             coroutineContext: CoroutineContext,
-        ): WaterMarkShader? = withContext(coroutineContext) {
-            if (srcBitmap.isRecycled) {
-                return@withContext null
-            }
-            val tileMode = config.obtainTileMode()
-            val showDebugRect = config.enableBounds
-            val rawWidth = srcBitmap.width.toFloat().coerceAtLeast(1f)
-            val rawHeight = srcBitmap.height.toFloat().coerceAtLeast(1f)
-
-            // C2a: icon-cell sizing via the shared commonMain engine core (equivalence pinned by
-            // WatermarkCellGoldenTest.iconCell_dimensions_match_geometry).
-            val maxSize = WatermarkGeometry.diagonal(rawHeight, rawWidth)
-            val finalWidth = WatermarkGeometry.horizontalGap(maxSize, config.hGap)
-            val finalHeight = WatermarkGeometry.verticalGap(maxSize, config.vGap)
-            // textSize represents scale ratio of icon.
-            val scaleRatio = if (scale) {
-                imageInfo.scaleX
-            } else {
-                1f
-            } * config.textSize / 14f
-
-            val targetBitmap = Bitmap.createBitmap(
-                (finalWidth * scaleRatio).toInt(),
-                (finalHeight * scaleRatio).toInt(),
-                Bitmap.Config.ARGB_8888
+        ): WaterMarkShader? =
+            WatermarkRenderer.buildIconShader(
+                imageInfo, srcBitmap, config, textPaint, scale, coroutineContext
             )
-
-            val canvas = Canvas(targetBitmap)
-
-            val scaleBitmap = Bitmap.createScaledBitmap(
-                srcBitmap,
-                (rawWidth * scaleRatio).toInt(), (rawHeight * scaleRatio).toInt(),
-                false
-            )
-
-            if (showDebugRect) {
-                val tmpPaint = Paint().apply {
-                    color = Color.RED
-                    strokeWidth = 1f
-                    style = Paint.Style.STROKE
-                }
-                canvas.drawRect(0f, 0f, finalWidth * scaleRatio, finalHeight * scaleRatio, tmpPaint)
-                canvas.save()
-            }
-            canvas.rotate(
-                config.degree,
-                (finalWidth * scaleRatio / 2),
-                (finalHeight * scaleRatio / 2)
-            )
-
-            canvas.drawBitmap(
-                scaleBitmap,
-                (finalWidth * scaleRatio - scaleBitmap.width) / 2.toFloat(),
-                (finalHeight * scaleRatio - scaleBitmap.height) / 2.toFloat(),
-                textPaint
-            )
-            if (showDebugRect) {
-                canvas.restore()
-            }
-            val bitmapShader = BitmapShader(
-                targetBitmap,
-                tileMode,
-                tileMode
-            )
-            return@withContext WaterMarkShader(
-                bitmapShader,
-                targetBitmap.width,
-                targetBitmap.height
-            )
-        }
 
         /**
-         * Generate bitmap shader from input text.
-         * Text watermark implemented by bitmap shader.
-         * Using [StaticLayout] to draw multi line text.
-         * @author hi@rosuh.me
+         * S2a: compatibility wrapper. The text-cell builder body now lives in the Android renderer
+         * seam [WatermarkRenderer.buildTextShader]; this wrapper is retained so existing call sites
+         * and goldens (which reference `WaterMarkImageView.buildTextBitmapShader`) stay unchanged.
          */
         suspend fun buildTextBitmapShader(
             imageInfo: ImageInfo,
             config: WaterMark,
             textPaint: TextPaint,
             coroutineContext: CoroutineContext,
-        ): WaterMarkShader? = withContext(coroutineContext) {
-            if (config.text.isBlank()) {
-                return@withContext null
-            }
-            val showDebugRect = config.enableBounds
-            var maxLineWidth = 0
-            val tileMode = config.obtainTileMode()
-            // calculate the max width of all lines
-            config.text.split("\n").forEach {
-                val startIndex = config.text.indexOf(it).coerceAtLeast(0)
-                val lineWidth = textPaint.measureText(
-                    config.text,
-                    startIndex,
-                    (startIndex + it.length).coerceAtMost(config.text.length)
-                ).toInt()
-                maxLineWidth = max(maxLineWidth, lineWidth)
-            }
-
-            val staticLayout =
-                StaticLayout.Builder.obtain(
-                    config.text,
-                    0,
-                    config.text.length,
-                    textPaint,
-                    maxLineWidth
-                )
-                    .setAlignment(Layout.Alignment.ALIGN_NORMAL)
-                    .build()
-
-            val textWidth = staticLayout.width.toFloat().coerceAtLeast(1f)
-            val textHeight = staticLayout.height.toFloat().coerceAtLeast(1f)
-
-            // C2a: delegate cell sizing to the shared commonMain engine core (behavior-identical
-            // formulas; pinned by WatermarkCellGoldenTest). Verified rendering parity on-device.
-            val fixWidth = WatermarkGeometry.rotatedCellWidth(textWidth, textHeight, config.degree)
-            val fixHeight = WatermarkGeometry.rotatedCellHeight(textWidth, textHeight, config.degree)
-            val finalWidth = WatermarkGeometry.horizontalGap(fixWidth.toInt(), config.hGap)
-            val finalHeight = WatermarkGeometry.verticalGap(fixHeight.toInt(), config.vGap)
-            val bitmap = Bitmap.createBitmap(finalWidth, finalHeight, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bitmap)
-            if (showDebugRect) {
-                val tmpPaint = Paint().apply {
-                    color = Color.RED
-                    strokeWidth = 1f
-                    style = Paint.Style.STROKE
-                }
-                canvas.drawRect(0f, 0f, finalWidth.toFloat(), finalHeight.toFloat(), tmpPaint)
-                canvas.save()
-            }
-            // rotate by user input
-            canvas.rotate(
-                config.degree,
-                (finalWidth / 2).toFloat(),
-                (finalHeight / 2).toFloat()
-            )
-            // draw text
-            canvas.withSave {
-                this.translate(
-                    ((finalWidth) / 2).toFloat(),
-                    ((finalHeight - staticLayout.getLineBottom(0) - staticLayout.getLineTop(0)) / 2).toFloat()
-                )
-                staticLayout.draw(canvas)
-            }
-
-            if (showDebugRect) {
-                canvas.restore()
-            }
-            val bitmapShader = BitmapShader(
-                bitmap,
-                tileMode,
-                tileMode
-            )
-            return@withContext WaterMarkShader(
-                bitmapShader,
-                bitmap.width,
-                bitmap.height
-            )
-        }
+        ): WaterMarkShader? =
+            WatermarkRenderer.buildTextShader(imageInfo, config, textPaint, coroutineContext)
     }
 }
