@@ -54,6 +54,7 @@ import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.render.WatermarkRenderer
+import me.rosuh.easywatermark.render.androidTextMeasureEnv
 import me.rosuh.easywatermark.data.repo.MemorySettingRepo
 import me.rosuh.easywatermark.data.repo.TemplateRepository
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
@@ -335,6 +336,7 @@ class MainViewModel (
                         imageInfo,
                         waterMark.value!!,
                         bitmapPaint,
+                        androidTextMeasureEnv(applicationContext),
                         Dispatchers.IO
                     )
                 }

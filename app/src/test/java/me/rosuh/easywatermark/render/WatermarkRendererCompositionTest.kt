@@ -20,6 +20,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -48,7 +49,10 @@ class WatermarkRendererCompositionTest {
         )
         val paint = TextPaint().applyConfig(imageInfo, config, isScale = false)
         return runBlocking {
-            WatermarkRenderer.buildTextShader(imageInfo, config, paint, Dispatchers.Unconfined)
+            WatermarkRenderer.buildTextShader(
+                imageInfo, config, paint,
+                androidTextMeasureEnv(RuntimeEnvironment.getApplication()), Dispatchers.Unconfined,
+            )
         }!!
     }
 

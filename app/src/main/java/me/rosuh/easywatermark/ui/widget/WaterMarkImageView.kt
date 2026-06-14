@@ -30,7 +30,9 @@ import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.ViewInfo
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.render.TextMeasureEnv
 import me.rosuh.easywatermark.render.WatermarkRenderer
+import me.rosuh.easywatermark.render.androidTextMeasureEnv
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.Companion.DEFAULT_TEXT_SIZE
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.Companion.MAX_TEXT_SIZE
@@ -211,6 +213,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                         curImageInfo,
                         newConfig,
                         textPaint,
+                        androidTextMeasureEnv(context),
                         generateBitmapCoroutineCtx
                     )
                 }
@@ -591,15 +594,16 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
         /**
          * S2a: compatibility wrapper. The text-cell builder body now lives in the Android renderer
-         * seam [WatermarkRenderer.buildTextShader]; this wrapper is retained so existing call sites
-         * and goldens (which reference `WaterMarkImageView.buildTextBitmapShader`) stay unchanged.
+         * seam [WatermarkRenderer.buildTextShader]; this wrapper is retained as the stable preview/test
+         * entry point while callers provide the Android [TextMeasureEnv].
          */
         suspend fun buildTextBitmapShader(
             imageInfo: ImageInfo,
             config: WaterMark,
             textPaint: TextPaint,
+            env: TextMeasureEnv,
             coroutineContext: CoroutineContext,
         ): WaterMarkShader? =
-            WatermarkRenderer.buildTextShader(imageInfo, config, textPaint, coroutineContext)
+            WatermarkRenderer.buildTextShader(imageInfo, config, textPaint, env, coroutineContext)
     }
 }

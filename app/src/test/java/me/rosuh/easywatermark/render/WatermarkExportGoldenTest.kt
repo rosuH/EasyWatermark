@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.render.androidTextMeasureEnv
 import me.rosuh.easywatermark.ui.widget.WaterMarkImageView
 import me.rosuh.easywatermark.ui.widget.utils.WaterMarkShader
 import me.rosuh.easywatermark.utils.ktx.applyConfig
@@ -22,6 +23,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.ByteArrayOutputStream
@@ -87,7 +89,10 @@ class WatermarkExportGoldenTest {
         val shader = runBlocking {
             if (spec.text != null) {
                 val paint = TextPaint().applyConfig(imageInfo, config, isScale = false)
-                WaterMarkImageView.buildTextBitmapShader(imageInfo, config, paint, Dispatchers.Unconfined)
+                WaterMarkImageView.buildTextBitmapShader(
+                    imageInfo, config, paint,
+                    androidTextMeasureEnv(RuntimeEnvironment.getApplication()), Dispatchers.Unconfined,
+                )
             } else {
                 val src = Bitmap.createBitmap(spec.iconW, spec.iconH, Bitmap.Config.ARGB_8888).apply {
                     eraseColor(Color.WHITE)
@@ -172,8 +177,10 @@ class WatermarkExportGoldenTest {
         "ascii_0" to Sig(93, 33, 845, -1154811034, -1856277548, 1859426124),
         "multiline" to Sig(110, 61, 1482, 1966207549, 976645029, -1767901595),
         "emoji_default_315" to Sig(228, 228, 2755, 506778156, 445027089, -303496632),
-        "cjk" to Sig(96, 33, 983, 1574907974, -2106528931, 1819751940),
-        "cjk_multiline_315" to Sig(77, 77, 877, -2051947968, 70436952, 425106212),
+        // S3b: CJK rebaselined for the TextMeasurer cell-box measurement (D1 accepted). Width exact,
+        // height grows per Compose line-height (96x33->96x36; 77x77->84x84). Non-CJK entries unchanged.
+        "cjk" to Sig(96, 36, 983, -1849753914, 1889317264, -32165372),
+        "cjk_multiline_315" to Sig(84, 84, 895, 966619550, 1980971113, -896606421),
         "gap_h_extreme" to Sig(372, 33, 845, 367245244, -1898366714, 1853155435),
         "gap_v_extreme" to Sig(93, 132, 845, -651002264, -1009720531, -6622388),
         "icon_40x20" to Sig(44, 44, 800, 2099708661, -480694123, 1766162126),

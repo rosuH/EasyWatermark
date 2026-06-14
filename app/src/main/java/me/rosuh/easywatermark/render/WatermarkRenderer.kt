@@ -65,23 +65,35 @@ object WatermarkRenderer {
     const val REF_WIDTH: Float = 1000f
 
     /**
-     * Build the text watermark cell + REPEAT/CLAMP [BitmapShader]. Verbatim extraction of the former
-     * `WaterMarkImageView.buildTextBitmapShader` (which now delegates here). Uses legacy
-     * `StaticLayout` + the supplied [textPaint] (configured via `TextPaint.applyConfig`).
+     * Build the text watermark cell + REPEAT/CLAMP [BitmapShader].
+     *
+     * S3b (D1 accepted): the cell BOX is measured via the platform-neutral
+     * [WatermarkTextMeasurer]/[TextMeasureEnv] seam — width is byte-exact vs legacy `StaticLayout`
+     * (device-independent), CJK height follows the Compose line-height (signed device baseline,
+     * `WatermarkCellParityGateTest`), non-CJK height is unchanged. DRAWING still uses legacy
+     * `StaticLayout` + the supplied [textPaint] (configured via `TextPaint.applyConfig`) — only
+     * measurement moved to the seam, not the rasterization. The [env] is the injected measurement
+     * environment (Android bootstrap via `androidTextMeasureEnv(context)` at the call sites).
      */
     suspend fun buildTextShader(
         imageInfo: ImageInfo,
         config: WaterMark,
         textPaint: TextPaint,
+        env: TextMeasureEnv,
         coroutineContext: CoroutineContext,
     ): WaterMarkShader? = withContext(coroutineContext) {
         if (config.text.isBlank()) {
             return@withContext null
         }
         val showDebugRect = config.enableBounds
-        var maxLineWidth = 0
         val tileMode = config.obtainTileMode()
-        // calculate the max width of all lines
+
+        // S3b: measure the cell box with the C2b seam (width == legacy StaticLayout.width exactly;
+        // CJK height per Compose line-height; non-CJK == legacy).
+        val measured = WatermarkTextMeasurer.measure(env, config.text, textPaint.toWatermarkTextStyle())
+
+        // Legacy StaticLayout retained FOR DRAWING ONLY (S3b is measurement-only; rasterization unchanged).
+        var maxLineWidth = 0
         config.text.split("\n").forEach {
             val startIndex = config.text.indexOf(it).coerceAtLeast(0)
             val lineWidth = textPaint.measureText(
@@ -103,8 +115,8 @@ object WatermarkRenderer {
                 .setAlignment(Layout.Alignment.ALIGN_NORMAL)
                 .build()
 
-        val textWidth = staticLayout.width.toFloat().coerceAtLeast(1f)
-        val textHeight = staticLayout.height.toFloat().coerceAtLeast(1f)
+        val textWidth = measured.width.toFloat().coerceAtLeast(1f)
+        val textHeight = measured.height.toFloat().coerceAtLeast(1f)
 
         // C2a: delegate cell sizing to the shared commonMain engine core (behavior-identical
         // formulas; pinned by WatermarkCellGoldenTest). Verified rendering parity on-device.

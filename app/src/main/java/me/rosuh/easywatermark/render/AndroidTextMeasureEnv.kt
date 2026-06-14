@@ -14,9 +14,11 @@ import androidx.compose.ui.unit.sp
 
 /**
  * C2b text-measurement seam — **Android glue half** (ACSP 20260614-002242, boundary-polished
- * 20260614-080727). NOT product code: `internal`, **not called by any product path**. Builds the
- * platform-neutral [TextMeasureEnv] / drives [WatermarkTextMeasurer] (both in `TextMeasureEnv.kt`) from
- * Android `Context` / `TextPaint`.
+ * 20260614-080727; adopted as **product measurement** in S3b/D1). Builds the platform-neutral
+ * [TextMeasureEnv] / drives [WatermarkTextMeasurer] (both in `TextMeasureEnv.kt`) from Android
+ * `Context` / `TextPaint`. Now called by the product text path
+ * ([me.rosuh.easywatermark.render.WatermarkRenderer.buildTextShader]) via the preview/export call
+ * sites (`WaterMarkImageView`, `MainViewModel.generateImage`); drawing stays legacy `StaticLayout`.
  *
  * These two declarations are the parts that MUST stay Android-side (they touch `Context` and the legacy
  * `TextPaint`); the neutral seam in `TextMeasureEnv.kt` stays free of them so it can move to
@@ -24,9 +26,9 @@ import androidx.compose.ui.unit.sp
  */
 
 /**
- * Android bootstrap: build a [TextMeasureEnv] where a [Context] already exists (the future renderer gets
- * this from DI, NOT through `buildTextBitmapShader`/`generateImage`). `Density(1f)` ⇒ image-space
- * (`1.sp == 1px`), the C2b "image-space sizing" direction, decoupled from any view/window density.
+ * Android bootstrap: build a [TextMeasureEnv] at the preview/export boundary where a [Context] already
+ * exists. `Density(1f)` ⇒ image-space (`1.sp == 1px`), the C2b "image-space sizing" direction,
+ * decoupled from any view/window density.
  */
 internal fun androidTextMeasureEnv(context: Context): TextMeasureEnv =
     TextMeasureEnv(
