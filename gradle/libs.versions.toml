@@ -8,6 +8,7 @@ ktlintGradle = "11.3.1"
 androidxActivity = "1.13.0"
 androidxConstraintLayoutCompose = "1.1.1"
 androidxNavigationCompose = "2.9.7"
+kotlinxSerialization = "1.9.0"
 coroutines = "1.10.2"
 fragmentKtx = "1.8.9"
 activityKtx = "1.13.0"
@@ -55,6 +56,9 @@ kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref =
 #hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 #hilt-plugin = { id = "dagger.hilt.android.plugin", version.ref = "hilt" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 
 
 
@@ -81,6 +85,7 @@ androidx-compose-lifecycle-viewmodel = { group = "androidx.lifecycle", name = "l
 
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanist" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "androidxNavigationCompose" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "androidxActivity" }
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
 androidx-constraintlayout-compose = { group = "androidx.constraintlayout", name = "constraintlayout-compose", version.ref = "androidxConstraintLayoutCompose" }

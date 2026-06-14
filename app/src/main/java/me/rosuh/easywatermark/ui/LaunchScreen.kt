@@ -2,7 +2,6 @@ package me.rosuh.easywatermark.ui
 
 import android.Manifest
 import android.content.ContentResolver
-import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -20,8 +19,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -29,7 +28,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.ui.about.AboutActivity
 import me.rosuh.easywatermark.ui.widget.ColoredImageVIew
 import androidx.core.os.BuildCompat
 import com.google.accompanist.permissions.isGranted
@@ -42,17 +40,17 @@ import me.rosuh.easywatermark.data.model.WaterMark
 @Composable
 fun LaunchScreen(
     onGoDialog: () -> Unit,
+    onGoAbout: () -> Unit = {},
 ) {
-    LaunchScreenContent(onGoDialog)
+    LaunchScreenContent(onGoDialog, onGoAbout)
 }
 
 @Composable
 @OptIn(ExperimentalPermissionsApi::class)
 private fun LaunchScreenContent(
     onShowGalleryDialog: () -> Unit = { },
+    onGoAbout: () -> Unit = { },
 ) {
-    val context = LocalContext.current
-
     var startLogoAnimation by remember {
         mutableStateOf(true)
     }
@@ -90,6 +88,8 @@ private fun LaunchScreenContent(
             modifier = Modifier
                 .align(Alignment.Center)
                 .padding(top = maxHeight * 0.3f),
+            // Parity (ADR-0011): production buttons are sharp-cornered (ShapeAppearance.App.SmallComponent = 0dp)
+            shape = RectangleShape,
             onClick = {
                 startLogoAnimation = false
                 if (mediaPermissionState.status.isGranted) {
@@ -105,9 +105,7 @@ private fun LaunchScreenContent(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = maxHeight * 0.03f),
-            onClick = {
-                context.startActivity(Intent(context, AboutActivity::class.java))
-            }) {
+            onClick = { onGoAbout() }) {
             Icon(
                 painter = painterResource(id = R.drawable.ic_about),
                 contentDescription = stringResource(

@@ -80,11 +80,14 @@ import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
 import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.ViewInfo
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.ui.compose.ColorOption
 import me.rosuh.easywatermark.ui.compose.IconOption
 import me.rosuh.easywatermark.ui.compose.SliderOption
+import me.rosuh.easywatermark.ui.compose.TemplateListSheet
 import me.rosuh.easywatermark.ui.compose.TextContentOption
 import me.rosuh.easywatermark.ui.compose.TextTypeface
 import me.rosuh.easywatermark.ui.compose.TileMode
@@ -105,7 +108,14 @@ fun EditorScreen(
     onAddMoreImages: () -> Unit = { },
     onShowSaveDialog: () -> Unit = { },
     onGoAboutScreen: () -> Unit = { },
+    onViewInfoChanged: (vi: ViewInfo) -> Unit = { },
+    templates: List<Template> = emptyList(),
+    onUseTemplate: (Template) -> Unit = {},
+    onAddTemplate: (String) -> Unit = {},
+    onUpdateTemplate: (Template) -> Unit = {},
+    onDeleteTemplate: (Template) -> Unit = {},
 ) {
+    var showTemplateSheet by remember { mutableStateOf(false) }
     Column(
         modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -122,10 +132,11 @@ fun EditorScreen(
         WaterMarkView(
             Modifier.weight(1f, true),
             waterMark,
-            selectedImage ?: imageList.firstOrNull()
+            selectedImage ?: imageList.firstOrNull(),
+            onViewInfoChanged = onViewInfoChanged
         )
-        // PreviewList
-        if (imageList.size > 1) {
+        // PreviewList — parity (ADR-0011): production shows the thumbnail strip even for a single image
+        if (imageList.isNotEmpty()) {
             PhotoList(
                 imageList,
                 selectedImage,
@@ -134,7 +145,22 @@ fun EditorScreen(
                 onImageDelete
             )
         }
-        BottomView(waterMark, onChange = onWaterMrkChange)
+        BottomView(
+            waterMark,
+            onChange = onWaterMrkChange,
+            onGoTemplateList = { showTemplateSheet = true }
+        )
+    }
+
+    if (showTemplateSheet) {
+        TemplateListSheet(
+            templates = templates,
+            onDismiss = { showTemplateSheet = false },
+            onUse = onUseTemplate,
+            onAdd = onAddTemplate,
+            onUpdate = onUpdateTemplate,
+            onDelete = onDeleteTemplate,
+        )
     }
 }
 
@@ -144,6 +170,7 @@ private fun BottomView(
     waterMark: WaterMark,
     modifier: Modifier = Modifier,
     onChange: (item: FuncTitleModel, any: Any) -> Unit = { _, _ -> },
+    onGoTemplateList: () -> Unit = {},
 ) {
     // StylePreview
     var selectedTabIndex by remember { mutableIntStateOf(0) }
@@ -182,6 +209,7 @@ private fun BottomView(
             item = selectedOption,
             waterMark = waterMark,
             onChange = onChange,
+            onGoTemplateList = onGoTemplateList,
             onDismissRequest = {  }
         )
         val itemWidth = 72.dp
@@ -407,6 +435,7 @@ fun OptionControl(
     modifier: Modifier = Modifier,
     showSheet: Boolean = true,
     onChange: (item: FuncTitleModel, any: Any) -> Unit = { _, _ -> },
+    onGoTemplateList: () -> Unit = {},
     onDismissRequest: () -> Unit,
 ) {
     val configuration = LocalWindowInfo.current.containerSize
@@ -493,9 +522,9 @@ fun OptionControl(
                     item = item,
                     waterMark = waterMark,
                     modifier = innerModifier,
-                    onTextChange = {}) {
-
-                }
+                    onTextChange = { onChange(item, it) },
+                    onGoTemplateList = onGoTemplateList
+                )
             }
 
             FuncTitleModel.FuncType.TextTypeFace -> {
@@ -653,6 +682,7 @@ fun WaterMarkView(
     onUpdateUriFailed: (SecurityException) -> Unit = { },
     onScaleEnd: (textSize: Float) -> Unit = { },
     onOffsetChanged: (info: ImageInfo) -> Unit = { },
+    onViewInfoChanged: (vi: ViewInfo) -> Unit = { },
     onBgReady: (palette: Palette) -> Unit = { },
 ) {
     Box(
@@ -685,6 +715,9 @@ fun WaterMarkView(
                         }
                         onOffsetChanged {
                             onOffsetChanged(it)
+                        }
+                        onViewInfoChanged {
+                            onViewInfoChanged(it)
                         }
                     }
                 },

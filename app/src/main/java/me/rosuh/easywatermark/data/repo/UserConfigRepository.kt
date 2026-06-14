@@ -1,12 +1,12 @@
 package me.rosuh.easywatermark.data.repo
 
-import android.graphics.Bitmap
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import me.rosuh.easywatermark.BuildConfig
+import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.repo.UserConfigRepository.PreferenceKeys.KEY_CHANGE_LOG
 import me.rosuh.easywatermark.data.repo.UserConfigRepository.PreferenceKeys.KEY_COMPRESS_LEVEL
@@ -31,12 +31,7 @@ class UserConfigRepository (private val dataStore: DataStore<Preferences>) {
             }
         }
         .map {
-            val outputFormat = when (it[KEY_OUTPUT_FORMAT]) {
-                Bitmap.CompressFormat.PNG.ordinal -> Bitmap.CompressFormat.PNG
-                else -> {
-                    Bitmap.CompressFormat.JPEG
-                }
-            }
+            val outputFormat = ImageFormat.fromStorageId(it[KEY_OUTPUT_FORMAT])
             val savedValue = (it[KEY_COMPRESS_LEVEL] ?: DEFAULT_COMPRESS_LEVEL).coerceAtLeast(20)
                 .coerceAtMost(100)
             val compressLevel = if (savedValue % 20 != 0) DEFAULT_COMPRESS_LEVEL else savedValue
@@ -44,10 +39,10 @@ class UserConfigRepository (private val dataStore: DataStore<Preferences>) {
         }
 
     suspend fun updateFormat(
-        outputFormat: Bitmap.CompressFormat
+        outputFormat: ImageFormat
     ) {
         dataStore.edit {
-            it[KEY_OUTPUT_FORMAT] = outputFormat.ordinal
+            it[KEY_OUTPUT_FORMAT] = outputFormat.storageId
         }
     }
 
@@ -67,7 +62,7 @@ class UserConfigRepository (private val dataStore: DataStore<Preferences>) {
 
     companion object {
         const val DEFAULT_COMPRESS_LEVEL = 80
-        val DEFAULT_BITMAP_COMPRESS_FORMAT = Bitmap.CompressFormat.JPEG
+        val DEFAULT_OUTPUT_FORMAT = ImageFormat.JPEG
 
 
         const val SP_NAME = "sp_water_mark_user_config"

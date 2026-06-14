@@ -13,7 +13,6 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
 import android.net.Uri
-import android.os.Build
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
@@ -33,7 +32,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.ViewInfo
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.render.WatermarkGeometry
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.Companion.DEFAULT_TEXT_SIZE
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.Companion.MAX_TEXT_SIZE
@@ -86,6 +87,8 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
     private var onOffsetChanged: (info: ImageInfo) -> Unit = { _ -> }
 
     private var onScaleEnd: (textSize: Float) -> Unit = { _ -> }
+
+    private var onViewInfoChanged: (vi: ViewInfo) -> Unit = { _ -> }
 
     private var exceptionHandler: CoroutineExceptionHandler =
         CoroutineExceptionHandler { _: CoroutineContext, throwable: Throwable ->
@@ -247,6 +250,7 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
                     )
                 }
             }
+            onViewInfoChanged(ViewInfo.from(this@WaterMarkImageView))
             postInvalidate()
         }
     }
@@ -278,6 +282,10 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         Log.i("onSizeChanged", "$w, $h, $oldh, $oldh")
+        if (drawable == null) {
+            return
+        }
+        onViewInfoChanged(ViewInfo.from(this@WaterMarkImageView))
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -337,6 +345,10 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
 
     fun onScaleEnd(block: (textSize: Float) -> Unit) {
         this.onScaleEnd = block
+    }
+
+    fun onViewInfoChanged(block: (vi: ViewInfo) -> Unit) {
+        this.onViewInfoChanged = block
     }
 
     fun reset() {
@@ -570,17 +582,8 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             return matrix
         }
 
-        private fun adjustHorizonalGap(config: WaterMark, maxSize: Int): Int {
-            return (maxSize * ((config.hGap / 100f) + 1)).toInt()
-        }
-
-        private fun adjustVerticalGap(config: WaterMark, maxSize: Int): Int {
-            return (maxSize * ((config.vGap / 100f) + 1)).toInt()
-        }
-
-        private fun calculateMaxSize(w: Float, h: Float): Int {
-            return sqrt(w.pow(2) + h.pow(2)).toInt()
-        }
+        // adjustHorizonalGap/adjustVerticalGap/calculateMaxSize removed — cell sizing now lives in
+        // commonMain WatermarkGeometry (C2a), used by both buildTextBitmapShader + buildIconBitmapShader.
 
         fun calculateDrawLimitWidth(w: Int, ps: Int) = (w - ps * 2)
 
@@ -602,11 +605,11 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             val rawWidth = srcBitmap.width.toFloat().coerceAtLeast(1f)
             val rawHeight = srcBitmap.height.toFloat().coerceAtLeast(1f)
 
-            val maxSize = calculateMaxSize(rawHeight, rawWidth)
-
-
-            val finalWidth = adjustHorizonalGap(config, maxSize)
-            val finalHeight = adjustVerticalGap(config, maxSize)
+            // C2a: icon-cell sizing via the shared commonMain engine core (equivalence pinned by
+            // WatermarkCellGoldenTest.iconCell_dimensions_match_geometry).
+            val maxSize = WatermarkGeometry.diagonal(rawHeight, rawWidth)
+            val finalWidth = WatermarkGeometry.horizontalGap(maxSize, config.hGap)
+            val finalHeight = WatermarkGeometry.verticalGap(maxSize, config.vGap)
             // textSize represents scale ratio of icon.
             val scaleRatio = if (scale) {
                 imageInfo.scaleX
@@ -707,21 +710,12 @@ class WaterMarkImageView : androidx.appcompat.widget.AppCompatImageView, Corouti
             val textWidth = staticLayout.width.toFloat().coerceAtLeast(1f)
             val textHeight = staticLayout.height.toFloat().coerceAtLeast(1f)
 
-            val radians = Math.toRadians(
-                when (config.degree) {
-                    in 0.0..90.0 -> config.degree.toDouble()
-                    in 90.0..270.0 -> {
-                        abs(180 - config.degree.toDouble())
-                    }
-                    else -> 360 - config.degree.toDouble()
-                }
-            )
-            // Generate tmp size from rotation degree, all degree have it's own size.
-            val fixWidth = textWidth * cos(radians) + textHeight * sin(radians)
-            val fixHeight = textWidth * sin(radians) + textHeight * cos(radians)
-
-            val finalWidth = adjustHorizonalGap(config, fixWidth.toInt())
-            val finalHeight = adjustVerticalGap(config, fixHeight.toInt())
+            // C2a: delegate cell sizing to the shared commonMain engine core (behavior-identical
+            // formulas; pinned by WatermarkCellGoldenTest). Verified rendering parity on-device.
+            val fixWidth = WatermarkGeometry.rotatedCellWidth(textWidth, textHeight, config.degree)
+            val fixHeight = WatermarkGeometry.rotatedCellHeight(textWidth, textHeight, config.degree)
+            val finalWidth = WatermarkGeometry.horizontalGap(fixWidth.toInt(), config.hGap)
+            val finalHeight = WatermarkGeometry.verticalGap(fixHeight.toInt(), config.vGap)
             val bitmap = Bitmap.createBitmap(finalWidth, finalHeight, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             if (showDebugRect) {

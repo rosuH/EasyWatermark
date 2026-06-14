@@ -1,6 +1,5 @@
 package me.rosuh.easywatermark.ui.compose
 
-import android.graphics.Shader
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.selection.selectableGroup
@@ -21,6 +20,7 @@ import androidx.compose.ui.util.packInts
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkTileMode
 
 @Preview
 @Composable
@@ -44,9 +44,11 @@ fun TileMode(
     modifier: Modifier = Modifier,
     onValueChange: (item: FuncTitleModel, value: Any) -> Unit,
 ) {
+    // Product modes only: "repeat" and the single-decal "decal" mode (backed by CLAMP at the
+    // Android edge). Neutral WatermarkTileMode flows UI -> MainViewModel -> repository (S1).
     val options = listOf(
-        stringResource(id = R.string.tile_mode_title_repeat) to Shader.TileMode.REPEAT,
-        stringResource(id = R.string.tile_mode_title_decal) to Shader.TileMode.CLAMP,
+        stringResource(id = R.string.tile_mode_title_repeat) to WatermarkTileMode.REPEAT,
+        stringResource(id = R.string.tile_mode_title_decal) to WatermarkTileMode.CLAMP,
     )
     SingleChoiceSegmentedButtonRow(modifier = modifier) {
         options.forEachIndexed { index, pair ->

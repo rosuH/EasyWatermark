@@ -111,3 +111,6 @@ hs_err_pid*
 
 # End of https://www.toptal.com/developers/gitignore/api/android,kotlin
 .idea/libraries-with-intellij-classes.xml
+.alma-snapshots
+.DS_Store
+.kotlin

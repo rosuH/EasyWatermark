@@ -4,6 +4,7 @@ plugins {
     id(libs.plugins.android.application.get().pluginId)
     id(libs.plugins.kotlin.android.get().pluginId)
     id(libs.plugins.kotlin.parcelize.get().pluginId)
+    id(libs.plugins.kotlin.serialization.get().pluginId)
     id(libs.plugins.ksp.get().pluginId)
 //    id(libs.plugins.hilt.plugin.get().pluginId)
     alias(libs.plugins.compose.compiler)
@@ -58,6 +59,12 @@ android {
     buildFeatures {
         buildConfig = true
         compose = true
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
     }
 
     kotlin {
@@ -121,6 +128,7 @@ dependencies {
     testImplementation(libs.test.junit)
     testImplementation(libs.test.rules)
     testImplementation(libs.test.runner)
+    testImplementation(libs.robolectric)
     androidTestImplementation(libs.mockito.core)
     androidTestImplementation(libs.mockito.android)
     androidTestImplementation(libs.robolectric)
@@ -174,6 +182,8 @@ dependencies {
 
 //    implementation("androidx.navigation:navigation-compose:2.7.4")
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(project(":shared"))
 
 //    implementation("androidx.constraintlayout:constraintlayout-compose:1.0.1")
     implementation(libs.androidx.constraintlayout.compose)

@@ -43,6 +43,7 @@ import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
+import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.JobState
 import me.rosuh.easywatermark.data.model.Result
@@ -51,6 +52,7 @@ import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.ViewInfo
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.data.repo.MemorySettingRepo
 import me.rosuh.easywatermark.data.repo.TemplateRepository
@@ -63,8 +65,8 @@ import me.rosuh.easywatermark.utils.bitmap.decodeBitmapFromUri
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.utils.ktx.applyConfig
 import me.rosuh.easywatermark.utils.ktx.formatDate
+import me.rosuh.easywatermark.utils.ktx.toCompressFormat
 import me.rosuh.easywatermark.utils.ktx.launch
-import org.koin.java.KoinJavaComponent.get
 import org.koin.java.KoinJavaComponent.inject
 import java.io.File
 import java.io.FileNotFoundException
@@ -118,21 +120,27 @@ class MainViewModel (
 
     private var compressedJob: Job? = null
 
-    private var userPreferences: StateFlow<UserPreferences> = userRepo.userPreferences.stateIn(
+    private var _userPreferences: StateFlow<UserPreferences> = userRepo.userPreferences.stateIn(
         viewModelScope,
         SharingStarted.Eagerly,
         UserPreferences.DEFAULT
     )
 
-    val outputFormat: Bitmap.CompressFormat
-        get() = userPreferences.value.outputFormat
+    val userPreferences: StateFlow<UserPreferences> = _userPreferences
+
+    val outputFormat: ImageFormat
+        get() = _userPreferences.value.outputFormat
 
     val compressLevel: Int
-        get() = userPreferences.value.compressLevel
+        get() = _userPreferences.value.compressLevel
 
     val colorPalette: MutableLiveData<Palette> = MutableLiveData()
 
     private var matrixValues = FloatArray(9)
+
+    private var _viewInfoStateFlow: MutableStateFlow<ViewInfo> = MutableStateFlow(ViewInfo.Empty)
+
+    val viewInfoStateFlow: StateFlow<ViewInfo> = _viewInfoStateFlow
 
     private val projection = arrayOf(
         MediaStore.Images.Media._ID,
@@ -211,7 +219,7 @@ class MainViewModel (
         imageList: List<ImageInfo>,
     ) {
         viewModelScope.launch {
-            if (this@MainViewModel.imageList.value?.first.isNullOrEmpty()) {
+            if (imageList.isEmpty()) {
                 saveResult.value = Result.failure(null, code = TYPE_ERROR_NOT_IMG)
                 return@launch
             }
@@ -401,7 +409,7 @@ class MainViewModel (
                 val imageContentUri = contentResolver.insert(imageCollection, imageDetail)
                 contentResolver.openFileDescriptor(imageContentUri!!, "w", null).use { pfd ->
                     mutableBitmap.compress(
-                        outputFormat,
+                        outputFormat.toCompressFormat(),
                         compressLevel,
                         FileOutputStream(pfd!!.fileDescriptor)
                     )
@@ -432,7 +440,7 @@ class MainViewModel (
                     File(mediaDir, generateOutputName())
                 outputFile.outputStream().use { fileOutputStream ->
                     mutableBitmap.compress(
-                        outputFormat,
+                        outputFormat.toCompressFormat(),
                         compressLevel,
                         fileOutputStream
                     )
@@ -457,7 +465,7 @@ class MainViewModel (
     }
 
     private fun trapOutputExtension(): String {
-        return if (outputFormat == Bitmap.CompressFormat.PNG) "png" else "jpg"
+        return if (outputFormat == ImageFormat.PNG) "png" else "jpg"
     }
 
     fun selectImage(uri: Uri) {
@@ -559,7 +567,7 @@ class MainViewModel (
         }
     }
 
-    fun updateTileMode(tileMode: Shader.TileMode) {
+    fun updateTileMode(tileMode: WatermarkTileMode) {
         launch {
             autoScroll = false
             waterMarkRepo.updateTileMode(tileMode)
@@ -573,7 +581,14 @@ class MainViewModel (
         }
     }
 
-    fun saveOutput(format: Bitmap.CompressFormat, level: Int) {
+    fun updateViewInfo(viewInfo: ViewInfo) {
+        _viewInfoStateFlow.value = viewInfo
+    }
+
+    fun saveOutput(
+        format: ImageFormat = _userPreferences.value.outputFormat,
+        level: Int = _userPreferences.value.compressLevel
+    ) {
         viewModelScope.launch {
             userRepo.updateFormat(format)
             userRepo.updateCompressLevel(level)
@@ -1099,7 +1114,7 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
             }
 
             FuncTitleModel.FuncType.TileMode -> {
-                updateTileMode(any as Shader.TileMode)
+                updateTileMode(any as WatermarkTileMode)
             }
 
             FuncTitleModel.FuncType.Horizon -> {

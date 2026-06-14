@@ -14,6 +14,18 @@ data class ViewInfo(
     val matrix: Matrix,
 ) {
     companion object {
+
+        val Empty = ViewInfo(
+            width = 0,
+            height = 0,
+            paddingLeft = 0,
+            paddingTop = 0,
+            paddingRight = 0,
+            paddingBottom = 0,
+            scaleType = ImageView.ScaleType.MATRIX,
+            Matrix()
+        )
+
         fun from(imageView: ImageView): ViewInfo {
             return ViewInfo(
                 imageView.width,
@@ -23,7 +35,7 @@ data class ViewInfo(
                 imageView.paddingRight,
                 imageView.paddingBottom,
                 imageView.scaleType,
-                imageView.matrix
+                Matrix(imageView.imageMatrix)
             )
         }
     }
