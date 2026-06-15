@@ -15,7 +15,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.WaterMark
-import me.rosuh.easywatermark.ui.widget.WaterMarkImageView
 import me.rosuh.easywatermark.ui.widget.utils.WaterMarkShader
 import me.rosuh.easywatermark.utils.ktx.applyConfig
 import org.junit.Assert.assertEquals
@@ -78,7 +77,7 @@ class WatermarkExportInstrumentedGoldenTest {
         val shader = runBlocking {
             if (spec.text != null) {
                 val paint = TextPaint().applyConfig(imageInfo, config, isScale = false)
-                WaterMarkImageView.buildTextBitmapShader(
+                WatermarkRenderer.buildTextShader(
                     imageInfo, config, paint,
                     androidTextMeasureEnv(InstrumentationRegistry.getInstrumentation().targetContext),
                     Dispatchers.Unconfined,
@@ -89,7 +88,7 @@ class WatermarkExportInstrumentedGoldenTest {
                     Canvas(this).drawRect(0f, 0f, spec.iconW / 2f, spec.iconH.toFloat(),
                         Paint().apply { color = Color.RED })
                 }
-                WaterMarkImageView.buildIconBitmapShader(
+                WatermarkRenderer.buildIconShader(
                     imageInfo, src, config, Paint(), /* scale = */ false, Dispatchers.Unconfined,
                 )
             }

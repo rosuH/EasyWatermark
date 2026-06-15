@@ -34,7 +34,8 @@ import org.robolectric.annotation.GraphicsMode
  *  - the PREVIEW branch in `WaterMarkImageView.onDraw` (`withSave`, translate by drawable bounds).
  *
  * The cell-builder extraction (`buildTextShader`/`buildIconShader`) is guarded separately by the S0
- * strict export golden via the retained `WaterMarkImageView.build*BitmapShader` wrappers.
+ * strict export golden, which calls [WatermarkRenderer.buildTextShader]/[WatermarkRenderer.buildIconShader]
+ * directly (S3c-3 retired the legacy `WaterMarkImageView` companion wrappers the goldens used to call).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)

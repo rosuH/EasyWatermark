@@ -14,7 +14,6 @@ import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.render.androidTextMeasureEnv
-import me.rosuh.easywatermark.ui.widget.WaterMarkImageView
 import me.rosuh.easywatermark.ui.widget.utils.WaterMarkShader
 import me.rosuh.easywatermark.utils.ktx.applyConfig
 import org.junit.Assert.assertEquals
@@ -39,8 +38,8 @@ import java.io.ByteArrayOutputStream
  * It is the safety net that must be GREEN and trusted before any `WatermarkRenderer` extraction.
  * It captures current behavior; it does not improve it.
  *
- * Oracle: the production cell builders [WaterMarkImageView.buildTextBitmapShader] /
- * [WaterMarkImageView.buildIconBitmapShader] (called directly — they are `companion` + public),
+ * Oracle: the production cell builders [WatermarkRenderer.buildTextShader] /
+ * [WatermarkRenderer.buildIconShader] (called directly — they are `object` functions),
  * plus a test-local FAITHFUL COPY of the `generateImage` composition tail (see [composite]).
  */
 @RunWith(RobolectricTestRunner::class)
@@ -89,7 +88,7 @@ class WatermarkExportGoldenTest {
         val shader = runBlocking {
             if (spec.text != null) {
                 val paint = TextPaint().applyConfig(imageInfo, config, isScale = false)
-                WaterMarkImageView.buildTextBitmapShader(
+                WatermarkRenderer.buildTextShader(
                     imageInfo, config, paint,
                     androidTextMeasureEnv(RuntimeEnvironment.getApplication()), Dispatchers.Unconfined,
                 )
@@ -100,7 +99,7 @@ class WatermarkExportGoldenTest {
                     Canvas(this).drawRect(0f, 0f, spec.iconW / 2f, spec.iconH.toFloat(),
                         Paint().apply { color = Color.RED })
                 }
-                WaterMarkImageView.buildIconBitmapShader(
+                WatermarkRenderer.buildIconShader(
                     imageInfo, src, config, Paint(), /* scale = */ false, Dispatchers.Unconfined,
                 )
             }

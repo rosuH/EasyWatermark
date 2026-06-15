@@ -18,10 +18,11 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.math.max
 
 /**
- * Android-only watermark renderer seam (CMP plan S2a). Centralizes the CURRENT preview/export
- * watermark logic that was duplicated across [me.rosuh.easywatermark.ui.widget.WaterMarkImageView]
- * (preview `onDraw` + companion cell builders) and
- * [me.rosuh.easywatermark.ui.MainViewModel] `generateImage` (export):
+ * Android-only watermark renderer seam (CMP plan S2a). The single home for the CURRENT preview/export
+ * watermark logic that was formerly duplicated across the legacy `WaterMarkImageView` preview View
+ * (preview `onDraw` + companion cell builders, retired in S3c-3) and
+ * [me.rosuh.easywatermark.ui.MainViewModel] `generateImage` (export). The Compose Canvas preview
+ * (`EditorScreen.WaterMarkCanvas`) and `generateImage` now both call into here:
  *
  *  - [buildTextShader] / [buildIconShader] — build one watermark cell + its tiling [BitmapShader]
  *    (legacy Android `StaticLayout` / scaled-bitmap path; cell sizing via commonMain
@@ -167,8 +168,8 @@ object WatermarkRenderer {
 
     /**
      * Build the icon watermark cell + REPEAT/CLAMP [BitmapShader]. Verbatim extraction of the former
-     * `WaterMarkImageView.buildIconBitmapShader` (which now delegates here). Preserves the legacy
-     * nearest-neighbor `Bitmap.createScaledBitmap(..., false)` behavior.
+     * legacy `WaterMarkImageView.buildIconBitmapShader` (that View was retired in S3c-3). Preserves the
+     * legacy nearest-neighbor `Bitmap.createScaledBitmap(..., false)` behavior.
      */
     suspend fun buildIconShader(
         @Suppress("UNUSED_PARAMETER") imageInfo: ImageInfo, // S3a: icon no longer reads scaleX; kept for API compatibility

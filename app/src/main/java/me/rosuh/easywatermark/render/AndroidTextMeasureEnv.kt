@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.sp
  * [TextMeasureEnv] / drives [WatermarkTextMeasurer] (both in `TextMeasureEnv.kt`) from Android
  * `Context` / `TextPaint`. Now called by the product text path
  * ([me.rosuh.easywatermark.render.WatermarkRenderer.buildTextShader]) via the preview/export call
- * sites (`WaterMarkImageView`, `MainViewModel.generateImage`); drawing stays legacy `StaticLayout`.
+ * sites (`EditorScreen.WaterMarkCanvas`, `MainViewModel.generateImage`); drawing stays legacy `StaticLayout`.
  *
  * These two declarations are the parts that MUST stay Android-side (they touch `Context` and the legacy
  * `TextPaint`); the neutral seam in `TextMeasureEnv.kt` stays free of them so it can move to

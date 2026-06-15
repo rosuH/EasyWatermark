@@ -13,7 +13,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.WaterMark
-import me.rosuh.easywatermark.ui.widget.WaterMarkImageView
 import me.rosuh.easywatermark.utils.ktx.applyConfig
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -38,7 +37,7 @@ class WatermarkCellInstrumentedGoldenTest {
         val imageInfo = ImageInfo.empty().apply { width = 1000; height = 1000 }
         val paint = TextPaint().applyConfig(imageInfo, config, isScale = false)
         val shader = runBlocking {
-            WaterMarkImageView.buildTextBitmapShader(
+            WatermarkRenderer.buildTextShader(
                 imageInfo, config, paint,
                 androidTextMeasureEnv(InstrumentationRegistry.getInstrumentation().targetContext),
                 Dispatchers.Unconfined,

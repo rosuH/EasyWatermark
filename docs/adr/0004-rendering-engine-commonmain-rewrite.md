@@ -1,6 +1,6 @@
 # ADR-0004: Rendering engine — single commonMain rewrite with C2a/C2b split
 
-**Status:** Accepted; the image-space sizing portion is **Proposed** until C2b sign-off · **Plan ref:** D4, C2a/C2b
+**Status:** Accepted. C2a (extraction) landed; the originally-bundled "C2b" was executed as the S3a–S3c-3 sub-slices — image-space sizing (S3a), `TextMeasurer` measurement (S3b), Compose `Canvas` preview swap (S3c-2), and `WaterMarkImageView`/`ViewInfo` retirement (S3c-3) are all **done**. Still ahead: moving the composition itself into a commonMain renderer. · **Plan ref:** D4, C2a/C2b (C2b realized as S3a–S3c-3)
 
 ## Context
 The engine's portable core is ~400–500 LOC and every drawing primitive maps ~1:1 to `androidx.compose.ui.graphics`/`ui.text` common APIs (StaticLayout→TextMeasurer, BitmapShader(REPEAT)→ImageShader(Repeated), offscreen Bitmap+Canvas→ImageBitmap+CanvasDrawScope). Two design debts: preview/export composition is duplicated, and export scale derives from the preview View's matrix (`1/MSCALE_X`, both axes — bug) via `ViewInfo`, which is window-size-dependent (a correctness bug on Desktop).
@@ -8,7 +8,7 @@ The engine's portable core is ~400–500 LOC and every drawing primitive maps ~1
 ## Decision
 Rewrite ONCE in commonMain-compatible compose-ui graphics; do NOT keep per-platform engines. Split:
 - **C2a:** extract `WatermarkRenderer`; the existing View AND `generateImage` both delegate to it; zero behavior change; strict same-platform goldens gate the swap. Golden harness is built BEFORE C2a against the old engine (C1.7).
-- **C2b:** replace the AndroidView preview with a Compose Canvas; move to image-space watermark sizing with a one-time `textSize` config migration; delete `WaterMarkImageView`/`WaterMarkShader`/`ViewInfo`.
+- **C2b (executed as S3a–S3c-3):** replace the AndroidView preview with a Compose `Canvas` (S3c-2); move to image-space watermark sizing (S3a — adopted **Option A**, reinterpreting persisted `textSize` in image-space at `REF_WIDTH=1000` with **no** DataStore migration write, instead of the originally-planned one-time config migration); delete `WaterMarkImageView`/`ViewInfo` (S3c-3). **Deviation from the original plan:** `WaterMarkShader` is **retained**, not deleted — it is the current return type of `WatermarkRenderer.build*Shader` and the `compose` parameter, used live by the preview, export, and goldens. It can be revisited if/when the commonMain composition rewrite replaces the Android `BitmapShader` wrapper.
 Only decode/encode/EXIF-orientation/photo-store are expect/actual (behind interfaces, ADR-0005).
 
 ## Consequences

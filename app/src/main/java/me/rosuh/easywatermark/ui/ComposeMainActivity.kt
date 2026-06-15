@@ -343,9 +343,6 @@ class ComposeMainActivity : ComponentActivity() {
                                         onShowSaveDialog = {
                                             showSaveSheet = true
                                         },
-                                        onViewInfoChanged = { vi ->
-                                            viewModel.updateViewInfo(vi)
-                                        },
                                         templates = templates,
                                         onUseTemplate = { template ->
                                             template.content?.let { viewModel.updateText(it) }

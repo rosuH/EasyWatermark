@@ -11,13 +11,16 @@ import kotlin.math.sqrt
  * Pure-Kotlin watermark **cell geometry** — the portable core of the rendering engine
  * (CMP plan D4/C2: "the portable core is small… one composition rule + one scale rule").
  *
- * Extracted faithfully from the Android `WaterMarkImageView` companion math
- * (`adjustHorizonalGap`/`adjustVerticalGap`/`calculateMaxSize` + the rotated-cell AABB) so the
- * future commonMain renderer (C2) reuses identical formulas on Android, JVM/desktop and iOS.
+ * Extracted faithfully from the legacy Android watermark cell math
+ * (`adjustHorizonalGap`/`adjustVerticalGap`/`calculateMaxSize` + the rotated-cell AABB, formerly in
+ * the now-retired `WaterMarkImageView`) so the future commonMain renderer (C2) reuses identical
+ * formulas on Android, JVM/desktop and iOS.
  *
- * Wired in C2a: Android text and icon watermark-cell sizing now delegates here for both preview
- * (`WaterMarkImageView`) and export (`MainViewModel.generateImage`). C2b still owns the remaining
- * composition/export-scale migration: drawing, tiling, `ViewInfo` deletion, and image-space sizing.
+ * Wired in C2a: Android text and icon watermark-cell sizing delegates here for both preview
+ * (`EditorScreen.WaterMarkCanvas`) and export (`MainViewModel.generateImage`). Image-space sizing
+ * (S3a), the Compose Canvas preview swap (S3c-2), and `ViewInfo`/`WaterMarkImageView` retirement
+ * (S3c-3) are done; the remaining C2 work is moving the COMPOSITION (drawing, tiling) itself into
+ * a commonMain renderer.
  */
 object WatermarkGeometry {
 

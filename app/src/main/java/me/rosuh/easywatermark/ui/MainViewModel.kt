@@ -48,7 +48,6 @@ import me.rosuh.easywatermark.data.model.Result
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.UserPreferences
-import me.rosuh.easywatermark.data.model.ViewInfo
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.model.entity.Template
@@ -133,11 +132,6 @@ class MainViewModel (
         get() = _userPreferences.value.compressLevel
 
     val colorPalette: MutableLiveData<Palette> = MutableLiveData()
-
-
-    private var _viewInfoStateFlow: MutableStateFlow<ViewInfo> = MutableStateFlow(ViewInfo.Empty)
-
-    val viewInfoStateFlow: StateFlow<ViewInfo> = _viewInfoStateFlow
 
     private val projection = arrayOf(
         MediaStore.Images.Media._ID,
@@ -290,8 +284,8 @@ class MainViewModel (
             // Export sizing is image-space; preview matrix values are not needed here.
             val bitmapPaint = TextPaint().applyConfig(imageInfo, tmpConfig, isScale = false)
             val layoutPaint = Paint()
-            // S2a: build the cell shader through the Android renderer seam (same seam the preview
-            // path uses via WaterMarkImageView's companion wrappers).
+            // S2a: build the cell shader through the Android renderer seam (the same
+            // WatermarkRenderer the Compose preview uses).
             val shader = when (waterMark.value?.markMode) {
                 WaterMarkRepository.MarkMode.Text -> {
                     WatermarkRenderer.buildTextShader(
@@ -538,10 +532,6 @@ class MainViewModel (
             autoScroll = false
             waterMarkRepo.updateOffset(info)
         }
-    }
-
-    fun updateViewInfo(viewInfo: ViewInfo) {
-        _viewInfoStateFlow.value = viewInfo
     }
 
     fun saveOutput(

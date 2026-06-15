@@ -91,7 +91,6 @@ import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
 import me.rosuh.easywatermark.data.model.ImageInfo
-import me.rosuh.easywatermark.data.model.ViewInfo
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
@@ -124,7 +123,6 @@ fun EditorScreen(
     onAddMoreImages: () -> Unit = { },
     onShowSaveDialog: () -> Unit = { },
     onGoAboutScreen: () -> Unit = { },
-    onViewInfoChanged: (vi: ViewInfo) -> Unit = { },
     templates: List<Template> = emptyList(),
     onUseTemplate: (Template) -> Unit = {},
     onAddTemplate: (String) -> Unit = {},
@@ -149,7 +147,6 @@ fun EditorScreen(
             Modifier.weight(1f, true),
             waterMark,
             selectedImage ?: imageList.firstOrNull(),
-            onViewInfoChanged = onViewInfoChanged
         )
         // PreviewList — parity (ADR-0011): production shows the thumbnail strip even for a single image
         if (imageList.isNotEmpty()) {
@@ -698,7 +695,6 @@ fun WaterMarkView(
     onUpdateUriFailed: (SecurityException) -> Unit = { },
     onScaleEnd: (textSize: Float) -> Unit = { },
     onOffsetChanged: (info: ImageInfo) -> Unit = { },
-    onViewInfoChanged: (vi: ViewInfo) -> Unit = { },
     onBgReady: (palette: Palette) -> Unit = { },
 ) {
     Box(
@@ -709,8 +705,9 @@ fun WaterMarkView(
         if (selectedImage == null) {
             Text(text = "No Image Selected", Modifier.align(Alignment.Center))
         } else {
-            // S3c-2: Compose Canvas preview (replaces the legacy AndroidView { WaterMarkImageView }).
-            // Reuses the same renderer (WatermarkRenderer.build*Shader + compose) on the native canvas.
+            // Compose Canvas preview (S3c-2 replaced the former AndroidView-bridged legacy View;
+            // S3c-3 retired that View entirely). Reuses the same renderer (WatermarkRenderer.build*Shader
+            // + compose) on the native canvas.
             WaterMarkCanvas(
                 modifier = Modifier.fillMaxSize(),
                 waterMark = waterMark,
@@ -723,8 +720,9 @@ fun WaterMarkView(
 }
 
 /**
- * S3c-2 Compose Canvas watermark preview. Decodes the selected image, places it fit-center (matching
- * the legacy `WaterMarkImageView.adjustMatrix`), and draws the watermark by reusing
+ * S3c-2 Compose Canvas watermark preview. Decodes the selected image, places it fit-center (the same
+ * `scale = min(canvas/bitmap)`, centered, fit-center math the retired legacy preview View used), and
+ * draws the watermark by reusing
  * [WatermarkRenderer.compose] on the Compose canvas's native Android [android.graphics.Canvas] — so the
  * preview composition is byte-identical to export. REPEAT tiles the drawable region; CLAMP draws one
  * decal at the fractional offset and is draggable. Pinch is intentionally absent. The watermark cell is
@@ -757,7 +755,7 @@ private fun WaterMarkCanvas(
 
         val bmp = bitmap
         if (bmp != null && cw > 0 && ch > 0) {
-            // fit-center == adjustMatrix: scale = min(canvas/bitmap), centered.
+            // fit-center: scale = min(canvas/bitmap), centered (parity with the retired legacy preview).
             val scale = min(cw.toFloat() / bmp.width, ch.toFloat() / bmp.height)
             val drawW = bmp.width * scale
             val drawH = bmp.height * scale

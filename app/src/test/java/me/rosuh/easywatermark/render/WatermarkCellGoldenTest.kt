@@ -12,7 +12,6 @@ import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.render.androidTextMeasureEnv
-import me.rosuh.easywatermark.ui.widget.WaterMarkImageView
 import me.rosuh.easywatermark.utils.ktx.applyConfig
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -27,7 +26,7 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * Golden harness (CMP plan C1.7) — same-platform regression golden for the watermark TEXT cell
  * builder, rendered on the JVM via Robolectric NATIVE graphics (no device). Pins the cell
- * dimensions produced by [WaterMarkImageView.buildTextBitmapShader] for fixed configs; any
+ * dimensions produced by [WatermarkRenderer.buildTextShader] for fixed configs; any
  * change to the engine's cell sizing trips this. Baselines are Robolectric-environment values
  * (a regression net, NOT a device-pixel reference — plan D4 two-tier strategy).
  *
@@ -52,7 +51,7 @@ class WatermarkCellGoldenTest {
         val imageInfo = ImageInfo.empty().apply { width = 1000; height = 1000 }
         val paint = TextPaint().applyConfig(imageInfo, config, isScale = false)
         val shader = runBlocking {
-            WaterMarkImageView.buildTextBitmapShader(
+            WatermarkRenderer.buildTextShader(
                 imageInfo, config, paint,
                 androidTextMeasureEnv(RuntimeEnvironment.getApplication()), Dispatchers.Unconfined,
             )
@@ -92,7 +91,7 @@ class WatermarkCellGoldenTest {
         val imageInfo = ImageInfo.empty().apply { width = 1000; height = 1000 }
         val paint = TextPaint().applyConfig(imageInfo, config, isScale = false)
         val shader = runBlocking {
-            WaterMarkImageView.buildTextBitmapShader(
+            WatermarkRenderer.buildTextShader(
                 imageInfo, config, paint,
                 androidTextMeasureEnv(RuntimeEnvironment.getApplication()), Dispatchers.Unconfined,
             )
@@ -138,13 +137,13 @@ class WatermarkCellGoldenTest {
         val imageInfo = ImageInfo.empty().apply { width = 1000; height = 1000 }
         val src = Bitmap.createBitmap(iconW, iconH, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.WHITE) }
         val shader = runBlocking {
-            WaterMarkImageView.buildIconBitmapShader(imageInfo, src, config, Paint(), false, Dispatchers.Unconfined)
+            WatermarkRenderer.buildIconShader(imageInfo, src, config, Paint(), false, Dispatchers.Unconfined)
         }!!
         return shader.width to shader.height
     }
 
     /**
-     * Icon-cell golden: cross-checks `buildIconBitmapShader`'s sizing against commonMain
+     * Icon-cell golden: cross-checks `buildIconShader`'s sizing against commonMain
      * `WatermarkGeometry.diagonal`/`horizontalGap` — the equivalence proof that gates wiring the
      * icon path to commonMain (C2a). At textSize=14 (scaleRatio=1), gap=0: cell = maxSize square.
      */
