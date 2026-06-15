@@ -776,6 +776,8 @@ private fun WaterMarkCanvas(
 
             val imagePaint = remember { Paint(Paint.FILTER_BITMAP_FLAG) }
             val layoutPaint = remember { Paint() }
+            val imageMatrix = remember { Matrix() }
+            val shouldDrawWatermark = waterMark.text.isNotEmpty()
 
             val canvasModifier = if (tileMode == Shader.TileMode.CLAMP) {
                 Modifier
@@ -797,23 +799,28 @@ private fun WaterMarkCanvas(
             ) {
                 drawIntoCanvas { canvas ->
                     val nc = canvas.nativeCanvas
-                    val m = Matrix().apply {
+                    imageMatrix.apply {
+                        reset()
                         postScale(scale, scale)
                         postTranslate(left, top)
                     }
-                    nc.drawBitmap(bmp, m, imagePaint)
-                    WatermarkRenderer.compose(
-                        canvas = nc,
-                        shader = cellShader,
-                        tileMode = tileMode,
-                        paint = layoutPaint,
-                        left = left,
-                        top = top,
-                        regionWidth = drawW,
-                        regionHeight = drawH,
-                        offsetX = offsetX,
-                        offsetY = offsetY,
-                    )
+                    nc.drawBitmap(bmp, imageMatrix, imagePaint)
+
+                    val shader = cellShader
+                    if (shouldDrawWatermark && shader != null) {
+                        WatermarkRenderer.compose(
+                            canvas = nc,
+                            shader = shader,
+                            tileMode = tileMode,
+                            paint = layoutPaint,
+                            left = left,
+                            top = top,
+                            regionWidth = drawW,
+                            regionHeight = drawH,
+                            offsetX = offsetX,
+                            offsetY = offsetY,
+                        )
+                    }
                 }
             }
         }
