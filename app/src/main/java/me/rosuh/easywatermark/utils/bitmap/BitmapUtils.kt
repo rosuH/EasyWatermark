@@ -8,8 +8,6 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.graphics.Matrix.ScaleToFit
-import android.graphics.Rect
-import android.graphics.RectF
 import android.net.Uri
 import android.provider.MediaStore
 import android.util.Log
@@ -20,7 +18,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.data.model.Result
-import me.rosuh.easywatermark.data.model.ViewInfo
 import java.io.FileNotFoundException
 import java.io.InputStream
 import java.lang.ref.SoftReference
@@ -319,90 +316,6 @@ private fun getBytesInPixel(config: Bitmap.Config): Int {
     }
 }
 
-/**
- * @author hi@rosuh.me
- * @date 2021/10/16
- * Copy from [ImageView]
- */
-fun generateMatrix(
-    viewInfo: ViewInfo,
-    drawableWidth: Int,
-    drawableHeight: Int,
-    bounds: Rect,
-    tempSrc: RectF,
-    tempDst: RectF,
-): Matrix {
-    val dwidth: Int = drawableWidth
-    val dheight: Int = drawableHeight
-    val vwidth: Int = viewInfo.width - viewInfo.paddingLeft - viewInfo.paddingRight
-    val vheight: Int = viewInfo.height - viewInfo.paddingTop - viewInfo.paddingBottom
-    val fits = ((dwidth < 0 || vwidth == dwidth)
-            && (dheight < 0 || vheight == dheight))
-    var mDrawMatrix = Matrix()
-    if (dwidth <= 0 || dheight <= 0 || ScaleType.FIT_XY == viewInfo.scaleType) {
-        /* If the drawable has no intrinsic size, or we're told to
-                scaletofit, then we just fill our entire view.
-            */
-        bounds.set(0, 0, vwidth, vheight)
-    } else {
-        // We need to do the scaling ourself, so have the drawable
-        // use its native size.
-        bounds.set(0, 0, dwidth, dheight)
-        if (ScaleType.MATRIX == viewInfo.scaleType) {
-            // Use the specified matrix as-is.
-            if (!viewInfo.matrix.isIdentity) {
-                mDrawMatrix = viewInfo.matrix
-            }
-        } else if (fits) {
-            // The bitmap fits exactly, no transform needed.
-        } else if (ScaleType.CENTER == viewInfo.scaleType) {
-            // Center bitmap in view, no scaling.
-            mDrawMatrix = viewInfo.matrix
-            mDrawMatrix.setTranslate(
-                ((vwidth - dwidth) * 0.5f).roundToInt().toFloat(),
-                ((vheight - dheight) * 0.5f).roundToInt().toFloat()
-            )
-        } else if (ScaleType.CENTER_CROP == viewInfo.scaleType) {
-            mDrawMatrix = viewInfo.matrix
-            val scale: Float
-            var dx = 0f
-            var dy = 0f
-            if (dwidth * vheight > vwidth * dheight) {
-                scale = vheight.toFloat() / dheight.toFloat()
-                dx = (vwidth - dwidth * scale) * 0.5f
-            } else {
-                scale = vwidth.toFloat() / dwidth.toFloat()
-                dy = (vheight - dheight * scale) * 0.5f
-            }
-            mDrawMatrix.setScale(scale, scale)
-            mDrawMatrix.postTranslate(Math.round(dx).toFloat(), Math.round(dy).toFloat())
-        } else if (ScaleType.CENTER_INSIDE == viewInfo.scaleType) {
-            mDrawMatrix = viewInfo.matrix
-            val dx: Float
-            val dy: Float
-            val scale: Float = if (dwidth <= vwidth && dheight <= vheight) {
-                1.0f
-            } else {
-                (vwidth.toFloat() / dwidth.toFloat()).coerceAtMost(vheight.toFloat() / dheight.toFloat())
-            }
-            dx = ((vwidth - dwidth * scale) * 0.5f).roundToInt().toFloat()
-            dy = ((vheight - dheight * scale) * 0.5f).roundToInt().toFloat()
-            mDrawMatrix.setScale(scale, scale)
-            mDrawMatrix.postTranslate(dx, dy)
-        } else {
-            // Generate the required transform.
-            tempSrc.set(0f, 0f, dwidth.toFloat(), dheight.toFloat())
-            tempDst.set(0f, 0f, vwidth.toFloat(), vheight.toFloat())
-            mDrawMatrix = viewInfo.matrix
-            mDrawMatrix.setRectToRect(
-                tempSrc,
-                tempDst,
-                scaleTypeToScaleToFit(viewInfo.scaleType)
-            )
-        }
-    }
-    return mDrawMatrix
-}
 
 
 fun scaleTypeToScaleToFit(st: ScaleType): ScaleToFit {

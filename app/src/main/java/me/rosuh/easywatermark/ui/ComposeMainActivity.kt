@@ -60,7 +60,6 @@ import androidx.navigation.compose.rememberNavController
 import me.rosuh.easywatermark.R
 
 import me.rosuh.easywatermark.data.model.FuncTitleModel
-import me.rosuh.easywatermark.data.model.ViewInfo
 import android.widget.Toast
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.ui.about.AboutScreen
@@ -234,7 +233,6 @@ class ComposeMainActivity : ComponentActivity() {
                             val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
                             val state by viewModel.launchScreenUiStateFlow.collectAsStateWithLifecycle()
                             val context = LocalContext.current
-                            val viewInfo by viewModel.viewInfoStateFlow.collectAsStateWithLifecycle()
                             val templates by viewModel.templateListFlow.collectAsStateWithLifecycle()
 
                             // [DEBUG] temporary export instrumentation — remove after diagnosing
@@ -244,10 +242,9 @@ class ComposeMainActivity : ComponentActivity() {
                             }
 
                             val doExport: () -> Unit  = {
-                                Log.d("EXPORT", "doExport called imageList=${state.selectedImageList.size} viewInfo=$viewInfo")
+                                Log.d("EXPORT", "doExport called imageList=${state.selectedImageList.size}")
                                 viewModel.saveImage(
                                     context.contentResolver,
-                                    viewInfo,
                                     state.selectedImageList
                                 )
                             }
@@ -413,8 +410,8 @@ class ComposeMainActivity : ComponentActivity() {
                                         viewModel.saveOutput(level = q)
                                     },
                                     onExportClick = {
-                                        Log.d("EXPORT", "click viewInfo=$viewInfo isEmpty=${viewInfo == ViewInfo.Empty} sdk=${Build.VERSION.SDK_INT}")
-                                        if (viewInfo == ViewInfo.Empty) {
+                                        Log.d("EXPORT", "click selectedImages=${state.selectedImageList.size} sdk=${Build.VERSION.SDK_INT}")
+                                        if (state.selectedImageList.isEmpty()) {
                                             return@SaveExportSheet
                                         }
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
