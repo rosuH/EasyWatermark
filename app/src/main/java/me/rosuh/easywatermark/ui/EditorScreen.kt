@@ -1,19 +1,26 @@
 package me.rosuh.easywatermark.ui
 
+import android.graphics.Bitmap
+import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.Shader
+import android.text.TextPaint
 import android.util.Log
-import android.widget.ImageView
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -49,6 +56,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -58,6 +66,9 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -72,10 +83,10 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.palette.graphics.Palette
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
@@ -84,6 +95,8 @@ import me.rosuh.easywatermark.data.model.ViewInfo
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
+import me.rosuh.easywatermark.render.WatermarkRenderer
+import me.rosuh.easywatermark.render.androidTextMeasureEnv
 import me.rosuh.easywatermark.ui.compose.ColorOption
 import me.rosuh.easywatermark.ui.compose.IconOption
 import me.rosuh.easywatermark.ui.compose.SliderOption
@@ -91,8 +104,11 @@ import me.rosuh.easywatermark.ui.compose.TemplateListSheet
 import me.rosuh.easywatermark.ui.compose.TextContentOption
 import me.rosuh.easywatermark.ui.compose.TextTypeface
 import me.rosuh.easywatermark.ui.compose.TileMode
-import me.rosuh.easywatermark.ui.widget.WaterMarkImageView
+import me.rosuh.easywatermark.ui.widget.utils.WaterMarkShader
+import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
+import me.rosuh.easywatermark.utils.ktx.applyConfig
 import kotlin.math.absoluteValue
+import kotlin.math.min
 
 
 @Composable
@@ -693,64 +709,138 @@ fun WaterMarkView(
         if (selectedImage == null) {
             Text(text = "No Image Selected", Modifier.align(Alignment.Center))
         } else {
-            var componentHeight by remember { mutableStateOf(0.dp) }
+            // S3c-2: Compose Canvas preview (replaces the legacy AndroidView { WaterMarkImageView }).
+            // Reuses the same renderer (WatermarkRenderer.build*Shader + compose) on the native canvas.
+            WaterMarkCanvas(
+                modifier = Modifier.fillMaxSize(),
+                waterMark = waterMark,
+                selectedImage = selectedImage,
+                onOffsetChanged = onOffsetChanged,
+                onUpdateUriFailed = onUpdateUriFailed,
+            )
+        }
+    }
+}
 
-            // get local density from composable
-            val density = LocalDensity.current
-            AndroidView(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .onGloballyPositioned {
-                        componentHeight = with(density) { it.size.height.toDp() }
-                    },
-                factory = { context ->
-                    WaterMarkImageView(context).apply {
-                        scaleType = ImageView.ScaleType.MATRIX
-                    }.apply {
-                        onBgReady {
-                            onBgReady(it)
-                        }
-                        onScaleEnd {
-                            onScaleEnd(it)
-                        }
-                        onOffsetChanged {
-                            onOffsetChanged(it)
-                        }
-                        onViewInfoChanged {
-                            onViewInfoChanged(it)
-                        }
-                    }
-                },
-                update = {
-                    if (componentHeight > 0.dp) {
-                        with(it) {
-                            config = waterMark
-                            try {
-                                updateUri(false, selectedImage)
-                            } catch (se: SecurityException) {
-                                se.printStackTrace()
-                                onUpdateUriFailed(se)
-                            }
-                        }
-                    }
-                },
-                onReset = {
-                    with(it) {
-                        config = waterMark
-                        try {
-                            updateUri(true, selectedImage)
-                        } catch (se: SecurityException) {
-                            se.printStackTrace()
-                            onUpdateUriFailed(se)
-                        }
-                        reset()
-                    }
-                },
-                onRelease = {
-                    with(it) {
-                        reset()
-                    }
+/**
+ * S3c-2 Compose Canvas watermark preview. Decodes the selected image, places it fit-center (matching
+ * the legacy `WaterMarkImageView.adjustMatrix`), and draws the watermark by reusing
+ * [WatermarkRenderer.compose] on the Compose canvas's native Android [android.graphics.Canvas] — so the
+ * preview composition is byte-identical to export. REPEAT tiles the drawable region; CLAMP draws one
+ * decal at the fractional offset and is draggable. Pinch is intentionally absent. The watermark cell is
+ * sized in image-space (S3a): `imageInfo.width = displayed drawable width`.
+ */
+@Composable
+private fun WaterMarkCanvas(
+    modifier: Modifier = Modifier,
+    waterMark: WaterMark,
+    selectedImage: ImageInfo,
+    onOffsetChanged: (info: ImageInfo) -> Unit = { },
+    onUpdateUriFailed: (SecurityException) -> Unit = { },
+) {
+    val context = LocalContext.current
+    BoxWithConstraints(modifier) {
+        val cw = constraints.maxWidth
+        val ch = constraints.maxHeight
+
+        // Decode the selected image (EXIF + inSample baked in by the shared helper), bounded by the
+        // canvas size — the same decode the legacy preview used.
+        val bitmap by produceState<Bitmap?>(null, selectedImage.uri, cw, ch) {
+            value = if (cw > 0 && ch > 0) {
+                try {
+                    decodeSampledBitmapFromResource(context.contentResolver, selectedImage.uri, cw, ch).data?.bitmap
+                } catch (se: SecurityException) {
+                    onUpdateUriFailed(se); null
                 }
+            } else null
+        }
+
+        val bmp = bitmap
+        if (bmp != null && cw > 0 && ch > 0) {
+            // fit-center == adjustMatrix: scale = min(canvas/bitmap), centered.
+            val scale = min(cw.toFloat() / bmp.width, ch.toFloat() / bmp.height)
+            val drawW = bmp.width * scale
+            val drawH = bmp.height * scale
+            val left = (cw - drawW) / 2f
+            val top = (ch - drawH) / 2f
+
+            // Image-space sizing input: the displayed drawable width (S3a). Rebuilt when geometry/config change.
+            val cellShader by produceState<WaterMarkShader?>(null, waterMark, drawW.toInt(), drawH.toInt(), selectedImage.uri) {
+                value = buildPreviewShader(context, waterMark, selectedImage.uri, drawW.toInt(), drawH.toInt())
+            }
+
+            val tileMode = waterMark.obtainTileMode()
+            // CLAMP decal is draggable; offset is a fraction of the drawable region (parity with the View).
+            var offsetX by remember(selectedImage.uri) { mutableStateOf(selectedImage.offsetX) }
+            var offsetY by remember(selectedImage.uri) { mutableStateOf(selectedImage.offsetY) }
+
+            val imagePaint = remember { Paint(Paint.FILTER_BITMAP_FLAG) }
+            val layoutPaint = remember { Paint() }
+
+            val canvasModifier = if (tileMode == Shader.TileMode.CLAMP) {
+                Modifier
+                    .fillMaxSize()
+                    .pointerInput(drawW, drawH) {
+                        detectDragGestures { change, drag ->
+                            change.consume()
+                            offsetX = (offsetX + drag.x / drawW).coerceIn(0f, 1f)
+                            offsetY = (offsetY + drag.y / drawH).coerceIn(0f, 1f)
+                            onOffsetChanged(selectedImage.copy(offsetX = offsetX, offsetY = offsetY))
+                        }
+                    }
+            } else {
+                Modifier.fillMaxSize()
+            }
+
+            Canvas(
+                modifier = canvasModifier
+            ) {
+                drawIntoCanvas { canvas ->
+                    val nc = canvas.nativeCanvas
+                    val m = Matrix().apply {
+                        postScale(scale, scale)
+                        postTranslate(left, top)
+                    }
+                    nc.drawBitmap(bmp, m, imagePaint)
+                    WatermarkRenderer.compose(
+                        canvas = nc,
+                        shader = cellShader,
+                        tileMode = tileMode,
+                        paint = layoutPaint,
+                        left = left,
+                        top = top,
+                        regionWidth = drawW,
+                        regionHeight = drawH,
+                        offsetX = offsetX,
+                        offsetY = offsetY,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Build the text/icon cell shader for the preview, image-space sized to the displayed drawable. */
+private suspend fun buildPreviewShader(
+    context: android.content.Context,
+    waterMark: WaterMark,
+    imageUri: android.net.Uri,
+    drawWidth: Int,
+    drawHeight: Int,
+): WaterMarkShader? {
+    val imageInfo = ImageInfo(imageUri).apply { width = drawWidth; height = drawHeight }
+    val bitmapPaint = TextPaint().applyConfig(imageInfo, waterMark, isScale = false)
+    return when (waterMark.markMode) {
+        WaterMarkRepository.MarkMode.Text ->
+            WatermarkRenderer.buildTextShader(
+                imageInfo, waterMark, bitmapPaint, androidTextMeasureEnv(context), Dispatchers.IO
+            )
+        WaterMarkRepository.MarkMode.Image -> {
+            val icon = decodeSampledBitmapFromResource(
+                context.contentResolver, waterMark.iconUri, drawWidth, drawHeight
+            ).data?.bitmap ?: return null
+            WatermarkRenderer.buildIconShader(
+                imageInfo, icon, waterMark, bitmapPaint, scale = false, Dispatchers.IO
             )
         }
     }
