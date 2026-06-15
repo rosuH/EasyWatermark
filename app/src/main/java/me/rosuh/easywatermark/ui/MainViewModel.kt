@@ -9,7 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Matrix
 import android.graphics.Paint
 import android.net.Uri
 import android.os.Build
@@ -59,9 +58,7 @@ import me.rosuh.easywatermark.data.repo.MemorySettingRepo
 import me.rosuh.easywatermark.data.repo.TemplateRepository
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
-import me.rosuh.easywatermark.ui.widget.WaterMarkImageView
 import me.rosuh.easywatermark.utils.FileUtils.Companion.outPutFolderName
-import me.rosuh.easywatermark.utils.bitmap.calculateInSampleSize
 import me.rosuh.easywatermark.utils.bitmap.decodeBitmapFromUri
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.utils.ktx.applyConfig
@@ -137,7 +134,6 @@ class MainViewModel (
 
     val colorPalette: MutableLiveData<Palette> = MutableLiveData()
 
-    private var matrixValues = FloatArray(9)
 
     private var _viewInfoStateFlow: MutableStateFlow<ViewInfo> = MutableStateFlow(ViewInfo.Empty)
 
@@ -216,7 +212,6 @@ class MainViewModel (
 
     fun saveImage(
         contentResolver: ContentResolver,
-        viewInfo: ViewInfo,
         imageList: List<ImageInfo>,
     ) {
         viewModelScope.launch {
@@ -226,7 +221,7 @@ class MainViewModel (
             }
             saveResult.value =
                 Result.success(null, code = TYPE_SAVING)
-            val result = generateList(contentResolver, viewInfo, imageList)
+            val result = generateList(contentResolver, imageList)
             if (result.isFailure()) {
                 saveResult.value = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
                 return@launch
@@ -238,7 +233,6 @@ class MainViewModel (
 
     private suspend fun generateList(
         contentResolver: ContentResolver,
-        viewInfo: ViewInfo,
         infoList: List<ImageInfo>?,
     ): Result<List<ImageInfo>> =
         withContext(Dispatchers.Default) {
@@ -249,7 +243,7 @@ class MainViewModel (
                 try {
                     info.jobState = JobState.Ing
                     launch(Dispatchers.Main) { saveProcess.value = info }
-                    info.result = generateImage(contentResolver, viewInfo, info)
+                    info.result = generateImage(contentResolver, info)
                     info.jobState = JobState.Success(info.result!!)
                     launch(Dispatchers.Main) { saveProcess.value = info }
                 } catch (fne: FileNotFoundException) {
@@ -271,7 +265,6 @@ class MainViewModel (
 
     private suspend fun generateImage(
         contentResolver: ContentResolver,
-        viewInfo: ViewInfo,
         imageInfo: ImageInfo,
     ): Result<Uri> =
         withContext(Dispatchers.IO) {
@@ -286,12 +279,6 @@ class MainViewModel (
                     message = "Copy bitmap from uri failed."
                 )
 
-            val inSample = calculateInSampleSize(
-                mutableBitmap.width,
-                mutableBitmap.height,
-                WaterMarkImageView.calculateDrawLimitWidth(viewInfo.width, viewInfo.paddingLeft),
-                WaterMarkImageView.calculateDrawLimitHeight(viewInfo.height, viewInfo.paddingRight),
-            )
             imageInfo.width = mutableBitmap.width
             imageInfo.height = mutableBitmap.height
             val tmpConfig = waterMark.value ?: return@withContext Result.failure(
@@ -299,33 +286,8 @@ class MainViewModel (
                 code = "-1",
                 message = "config.value == null"
             )
-            imageInfo.inSample = inSample
             val canvas = Canvas(mutableBitmap)
-            // generate matrix of drawable
-            val imageMatrix = WaterMarkImageView.adjustMatrix(
-                Matrix(),
-                viewInfo.width,
-                viewInfo.height,
-                viewInfo.paddingLeft,
-                viewInfo.paddingTop,
-                imageInfo.width,
-                imageInfo.height
-            )
-            Log.i(
-                "generateImage",
-                """
-                    imageMatrix = $imageMatrix,
-                    inSample = $inSample,
-                    imageInfo = $imageInfo
-                    viewInfo = $viewInfo,
-                    bitmapW = ${mutableBitmap.width}
-                    bitmapH = ${mutableBitmap.height},
-                """.trimIndent()
-            )
-            // calculate the scale factor
-            imageMatrix.getValues(matrixValues)
-            imageInfo.scaleX = 1 / matrixValues[Matrix.MSCALE_X]
-            imageInfo.scaleY = 1 / matrixValues[Matrix.MSCALE_X]
+            // Export sizing is image-space; preview matrix values are not needed here.
             val bitmapPaint = TextPaint().applyConfig(imageInfo, tmpConfig, isScale = false)
             val layoutPaint = Paint()
             // S2a: build the cell shader through the Android renderer seam (same seam the preview
@@ -342,11 +304,12 @@ class MainViewModel (
                 }
 
                 WaterMarkRepository.MarkMode.Image -> {
+                    // Decode the icon against source-image bounds so export is independent of preview size.
                     val iconBitmapRect = decodeSampledBitmapFromResource(
                         contentResolver,
                         tmpConfig.iconUri,
-                        viewInfo.width,
-                        viewInfo.height
+                        imageInfo.width,
+                        imageInfo.height
                     )
                     if (iconBitmapRect.isFailure() || iconBitmapRect.data == null) {
                         return@withContext Result.failure(

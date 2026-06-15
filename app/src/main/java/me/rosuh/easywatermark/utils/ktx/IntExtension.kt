@@ -7,7 +7,8 @@ import android.content.res.Resources
 import android.graphics.Shader
 import android.os.Build
 import android.util.TypedValue
-import me.rosuh.easywatermark.ui.widget.WaterMarkImageView
+
+private const val DEFAULT_BG_ANIM_DURATION = 450L
 
 val Int.dp
     get() = TypedValue.applyDimension(
@@ -26,7 +27,7 @@ val Float.dp
 fun Int.toColor(
     toColor: Int,
     autoStart: Boolean = true,
-    duration: Long = WaterMarkImageView.ANIMATION_DURATION,
+    duration: Long = DEFAULT_BG_ANIM_DURATION,
     doOnUpdate: (it: ValueAnimator) -> Unit = {},
 ): ObjectAnimator? {
     return ObjectAnimator.ofInt(
