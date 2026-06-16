@@ -239,3 +239,9 @@ Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; 
 - Start S4a as a design-first renderer-commonization readiness task. The deliverable should reconcile ADR-0004 / the CMP plan with the actual S3a-S3d implementation and produce a precise next engineering slice.
 - S4a should answer: keep `WaterMarkShader` as an Android wrapper or introduce a neutral cell artifact; how to extend whole-composition goldens; how to treat REPEAT/CLAMP/CJK/emoji acceptance; and whether adding Compose graphics to `:shared` now is safe or should wait for the C4 module-lineage gate.
 - Do not start a broad commonMain renderer rewrite until S4a has a reviewed contract and verification matrix.
+
+## 2026-06-16 — Workflow routing update
+
+- Claude Code worker routing moved from fragile Codex/iTerm focus assumptions to tmux-first control. Current matched worker pane: `ewm-claude:0.0` / `%0`, TTY `/dev/ttys010`, cwd `/Users/rosu/Coding/EasyWatermark`, running `claude --resume e4b4c4b3-7e48-4deb-8645-39a49dac5f0f`.
+- `AGENTS.md` now records tmux enumeration/capture/send-keys as the preferred worker notification and polling path, with iTerm AppleScript and Codex terminal buffer only as fallbacks.
+- S4a ACSP session remains the next task to start: `/Users/rosu/.agent-cowork/sessions/EasyWatermark/inbox/20260616-081922--s4a-renderer-commonization-readiness`.
