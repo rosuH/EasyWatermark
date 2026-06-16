@@ -12,6 +12,8 @@ Treat this section as the current state. Older sections below preserve historica
 - The remaining C2 problem is therefore narrower than the original plan: move the composition/drawing model toward commonMain without destabilizing the shipped Android renderer.
 - S3d removed the last orphaned gallery layout (`item_image_gallery.xml`) and `AsyncSquareFrameLayout`; only historical docs mention them now.
 - Current verification expectations for renderer-adjacent work: run Android build/tests/goldens, visually inspect screenshots, grant `READ_MEDIA_IMAGES` on test devices, and prefer picker-based editor entry when validating preview behavior.
+- S4d-1 proved that adding Compose graphics/text to `:shared/commonMain` for iOS requires `org.jetbrains.compose`; raw `androidx.compose.*:1.10.6` lacks iOS klibs. Applying `org.jetbrains.compose` only to `:shared` is not sufficient because `:app` then sees a split Android runtime graph and version skew.
+- C4.3 design gate is accepted: before retrying commonMain renderer dependencies, unify `:app` + `:shared` onto one coherent Compose lineage. Try keeping and bumping the AndroidX Compose BOM in `:app` first, with `org.jetbrains.compose` in `:shared`, and prove zero `org.jetbrains.compose.*` nodes plus one AndroidX Compose version on `:app` runtime. Fall back to sourcing app core Compose through `compose.*` only if graph proof requires it.
 
 ## Repository State
 

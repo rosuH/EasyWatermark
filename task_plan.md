@@ -6,7 +6,7 @@ Create a file-based, PM-style migration plan that helps the developer incrementa
 
 ## Current Phase
 
-Phase J - C4.3 Compose-lineage unification before commonMain renderer implementation
+Phase J - C4.3 implementation: unify Compose lineage before commonMain renderer implementation
 
 ## Phases
 
@@ -70,13 +70,15 @@ Research and produce a phased, decision-complete plan to take EasyWatermark from
 - [x] Phase H — C1 parity stream / View-to-Compose closure DONE: production-parity theme/text/filmstrip/save-sheet work landed; About/OpenSource/recovery/share-in migrated; legacy stack deleted; Compose Canvas preview shipped; `WaterMarkImageView`/`ViewInfo` retired; S3d orphan layout cleanup completed.
 - [x] Phase I — S4/C2 remainder planning: reconcile the original C2a/C2b plan with the shipped S3a-S3d slices; design the next renderer-commonization task without regressing Android.
 - [x] Phase J — C4/CMP-9547/Compose-lineage gate before adding Compose graphics/text dependencies to `:shared`.
-- [ ] Phase J.1 — C4.3 single Compose-lineage unification (`:app` + `:shared`) before retrying commonMain renderer dependencies.
+- [x] Phase J.1 — C4.3 single Compose-lineage design gate (`:app` + `:shared`) before retrying commonMain renderer dependencies.
+- [ ] Phase J.2 — C4.3 implementation: land one clean Android Compose lineage (Option B first, Option A fallback) with strict golden + full UI parity gate.
 
 ### Key Decisions (CMP)
 
 - Model selection per task: haiku = mechanical inventories; sonnet = standard code analysis & doc research; fable (inherited) = graphics-core deep dive + final synthesis.
 - CMP planning builds ON TOP of the existing View→Compose milestones; finishing the single-platform Compose shell remains a prerequisite stream.
 - As of 2026-06-16, that single-platform Compose shell prerequisite is satisfied. The next meaningful CMP work is not more View cleanup; it is renderer commonization readiness and then C3 dependency de-Android-ization.
+- S4d-1 proved commonMain Compose cannot be introduced safely until `:app` and `:shared` share one coherent Compose lineage. C4.3 design was accepted: try Option B first (keep/bump AndroidX Compose BOM, add `org.jetbrains.compose` to `:shared`, eliminate Android runtime split), fall back to Option A (drop BOM and source app core Compose via `compose.*`) only if graph proof requires it.
 
 ## Errors Encountered
 
