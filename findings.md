@@ -1,5 +1,18 @@
 # Compose Migration Findings
 
+## Current State Addendum (2026-06-16)
+
+Treat this section as the current state. Older sections below preserve historical research and may describe files or risks that have since been resolved.
+
+- S3 closure checkpoint: branch `feat/migrate_to_compose` was clean and synced with `origin/feat/migrate_to_compose` at `86fa73e` before this planning-doc reconciliation.
+- View-to-Compose is functionally complete: `ComposeMainActivity` is the only Activity, Navigation Compose owns Launch/Gallery/Editor/About/OpenSource/recovery/share-in flows, and the legacy Activity/dialog/panel/adapter/base stack is gone.
+- `EditorScreen` preview no longer uses an `AndroidView` bridge. The preview is a Compose `Canvas` calling `WatermarkRenderer.build*Shader` + `WatermarkRenderer.compose` on the native canvas.
+- `WaterMarkImageView` and `ViewInfo` are deleted. Do not reintroduce either contract.
+- `WatermarkGeometry` lives in `:shared/commonMain` and already drives preview/export cell sizing. `WatermarkRenderer` is still Android-only for actual composition: text drawing via `StaticLayout`, icon drawing, rotation, `BitmapShader`, REPEAT tiling, and CLAMP single-decal composition.
+- The remaining C2 problem is therefore narrower than the original plan: move the composition/drawing model toward commonMain without destabilizing the shipped Android renderer.
+- S3d removed the last orphaned gallery layout (`item_image_gallery.xml`) and `AsyncSquareFrameLayout`; only historical docs mention them now.
+- Current verification expectations for renderer-adjacent work: run Android build/tests/goldens, visually inspect screenshots, grant `READ_MEDIA_IMAGES` on test devices, and prefer picker-based editor entry when validating preview behavior.
+
 ## Repository State
 
 - The launcher entry is already Compose-based in `app/src/main/AndroidManifest.xml`, where `.ui.ComposeMainActivity` is the `MAIN` / `LAUNCHER` activity.

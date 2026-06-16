@@ -226,8 +226,16 @@ Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; 
 - Files now modified this session (uncommitted): ui/Theme.kt, ui/Color.kt, ui/LaunchScreen.kt, ui/ComposeMainActivity.kt, ui/EditorScreen.kt, ui/save/SaveExportSheet.kt (6 files). All build-green.
 - UI verification of the thumbnail strip deferred to the next emulator batch (batch with other pending items to avoid repeat emulator spin-up).
 
+## 2026-06-16 — S3 closure and planning reconciliation
+
+- S3 closure checkpoint: `feat/migrate_to_compose` was clean and synced with `origin/feat/migrate_to_compose` at `86fa73e Polish compose preview interactions` before this planning-doc reconciliation.
+- View-to-Compose migration is now closed through S3d: `ComposeMainActivity` is the sole Activity; the legacy Activity/dialog/panel/adapter/base stack was deleted; `EditorScreen` renders the watermark preview with Compose `Canvas`; `WaterMarkImageView` and `ViewInfo` are retired; the remaining orphan `item_image_gallery.xml` and `AsyncSquareFrameLayout` were removed.
+- S3c/S3d verification passed before the current planning update: `:app:assembleDebug`, `:app:testDebugUnitTest`, `:app:compileDebugAndroidTestKotlin`, strict `WatermarkExportGoldenTest`, and emulator smoke for picker → Editor → REPEAT preview → Single/CLAMP drag.
+- ACSP state was reconciled: no inbox/active/review/blocked/failed sessions remain; stale blocked work was cancelled.
+- Important planning correction: older Phase H / parity backlog instructions in this file are historical. The next stream is S4 / C2 remainder, meaning renderer commonization readiness and design, not more View cleanup.
+
 ## Next Suggested Step
 
-- Remaining editor-internal parity items (verify on EMULATOR, adb push + picker): After theme fix, re-check whether editor/save-sheet color deviations self-resolved; then tackle P0-B filmstrip, save-sheet thumbnails, top-bar logo, text-edit sheet.
-- End-to-end real-device confirm of the text-input fix when the phone is awake/available.
-- Start Phase H (C1 parity stream) in the agreed work order: (1) P0-A theme tokens extracted from master themes.xml — also answers Verify-3 (is production forced-dark?); (2) the save-sheet quality-default 40-vs-80 bug (small, isolated); then filmstrip P0-B. Before coding, clear the backlog's 4 verify items (text-row rendering, default-emoji diff vs master, production light-mode behavior, Style-tab segmented strip identity). Execution mode per task type: mentor loop for core/state work, delegated agent or workflow batch for mechanical parity polish. The old "wire SaveExportSheet export action" task remains valid and folds into the save-sheet items.
+- Start S4a as a design-first renderer-commonization readiness task. The deliverable should reconcile ADR-0004 / the CMP plan with the actual S3a-S3d implementation and produce a precise next engineering slice.
+- S4a should answer: keep `WaterMarkShader` as an Android wrapper or introduce a neutral cell artifact; how to extend whole-composition goldens; how to treat REPEAT/CLAMP/CJK/emoji acceptance; and whether adding Compose graphics to `:shared` now is safe or should wait for the C4 module-lineage gate.
+- Do not start a broad commonMain renderer rewrite until S4a has a reviewed contract and verification matrix.

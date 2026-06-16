@@ -6,7 +6,7 @@ Create a file-based, PM-style migration plan that helps the developer incrementa
 
 ## Current Phase
 
-Phase 5 - Guided milestone execution and review loop
+Phase I - S4 renderer-commonization planning and task dispatch
 
 ## Phases
 
@@ -14,15 +14,19 @@ Phase 5 - Guided milestone execution and review loop
 - [x] Phase 2 - Capture findings and migration constraints
 - [x] Phase 3 - Write design spec and implementation plan files
 - [x] Phase 4 - Review with the user and refine milestones/tasks
-- [ ] Phase 5 - Expand the selected milestone into coding checklists
-- [ ] Phase 6 - Run chat-driven execution/review loop milestone by milestone
+- [x] Phase 5 - Guided milestone execution loop through the View-to-Compose closure
+- [x] Phase 6 - Run chat-driven execution/review loop through S3d cleanup
+- [ ] Phase I - Reconcile the CMP plan after S3a-S3d and design S4a renderer-commonization readiness
+- [ ] Phase J - Execute S4 slices toward moving watermark composition into commonMain
 
 ## Key Decisions
 
 - Use incremental migration, not a big-bang rewrite.
 - Prioritize parity and consolidation before purity.
-- Keep `WaterMarkImageView` bridged through `AndroidView` until entry, navigation, and editor state are stable.
-- Keep legacy `MainActivity` alive as a compatibility path until Compose fully covers `ACTION_SEND`.
+- View-to-Compose is now functionally complete: `ComposeMainActivity` is the sole Activity, the legacy Activity/dialog/panel/adapter/base stack is deleted, and `EditorScreen` renders preview through Compose `Canvas`.
+- Do not reintroduce a `ViewInfo` or `AndroidView`-bridged renderer contract. `WaterMarkImageView` and `ViewInfo` are deleted; new rendering work goes through `WatermarkRenderer` / `:shared` commonMain.
+- `WatermarkGeometry` is already commonMain and drives both preview and export cell sizing. The remaining C2 work is the actual cell composition/drawing rewrite into commonMain Compose graphics.
+- Keep Android shippable at every step. Renderer changes require goldens plus visual screenshot inspection, not byte-size inference.
 - Use project files as the shared source of truth for planning and iteration.
 - Use a chat-driven workflow: I assign the next task in chat, the developer implements it, then I review and update records before moving on.
 
@@ -36,9 +40,9 @@ Phase 5 - Guided milestone execution and review loop
 
 ## Open Questions
 
-- Should `MainActivity` become a thin trampoline, or should share-intent handling move directly into `ComposeMainActivity`?
-- How much automated regression coverage is realistic before migration starts?
-- How far should Milestone 0 go before we switch to Milestone 1?
+- What is the smallest S4a contract for a platform-neutral rendered cell artifact: keep `WaterMarkShader` as Android-only wrapper, introduce a common cell descriptor, or split cell pixels from tiling semantics?
+- Should S4a extend whole-composition export goldens before introducing commonMain Compose graphics dependencies?
+- Does introducing Compose graphics into `:shared` now create avoidable CMP/CMP-9547 or Compose-lineage risk, or should S4a stay design-only until the C4 gate?
 
 ## CMP Migration Planning (started 2026-06-12)
 
@@ -63,12 +67,14 @@ Research and produce a phased, decision-complete plan to take EasyWatermark from
 4. Continuously accumulate context during implementation → AI-friendly repository (CLAUDE.md + docs/adr/ + docs/CONTEXT.md + committed .claude/skills/ + docs-with-code review gate).
 
 - [x] Phase G — Execution kickoff DONE (2026-06-13): scaffolding shipped (CLAUDE.md, docs/CONTEXT.md, docs/adr/0001–0014 — only 0013 desktop-positioning still Proposed); UI-parity audit ran (8/8 screens, workflow wf_d279ab26-867) → backlog at docs/superpowers/research/2026-06-13-ui-parity-backlog.md
-- [ ] Phase H — C1 parity stream execution: work order = theme tokens (P0-A) → save-sheet quality-default bug → filmstrip (P0-B) → text-edit parity sheet → top bar/spacing/style polish → save-sheet remainder; plus the 4 verify items in the backlog
+- [x] Phase H — C1 parity stream / View-to-Compose closure DONE: production-parity theme/text/filmstrip/save-sheet work landed; About/OpenSource/recovery/share-in migrated; legacy stack deleted; Compose Canvas preview shipped; `WaterMarkImageView`/`ViewInfo` retired; S3d orphan layout cleanup completed.
+- [ ] Phase I — S4/C2 remainder planning: reconcile the original C2a/C2b plan with the shipped S3a-S3d slices; design the next renderer-commonization task without regressing Android.
 
 ### Key Decisions (CMP)
 
 - Model selection per task: haiku = mechanical inventories; sonnet = standard code analysis & doc research; fable (inherited) = graphics-core deep dive + final synthesis.
 - CMP planning builds ON TOP of the existing View→Compose milestones; finishing the single-platform Compose shell remains a prerequisite stream.
+- As of 2026-06-16, that single-platform Compose shell prerequisite is satisfied. The next meaningful CMP work is not more View cleanup; it is renderer commonization readiness and then C3 dependency de-Android-ization.
 
 ## Errors Encountered
 
