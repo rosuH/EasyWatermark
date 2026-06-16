@@ -264,3 +264,10 @@ Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; 
 ## Next Suggested Step
 
 - Commit/land S4b after final human approval, then start a C4/CMP-9547/Compose-lineage gate task before moving composition into commonMain. The next worker task should answer whether adding Compose graphics/text dependencies to `:shared` is safe now, what exact dependency coordinates/version lineage to use, and what rollback/golden criteria gate the first commonMain renderer implementation slice.
+
+## 2026-06-16 — S4c accepted; S4d-1 spike blocked as C4.3 lineage work
+
+- S4c C4/CMP-9547/Compose-lineage gate completed and accepted. Conclusion: commonMain Compose graphics/text should only proceed through a dependency topology spike, not a renderer rewrite.
+- S4d-1 topology spike ran and was accepted as a valid blocker. The preferred Shape B2 (`androidx.compose.*:1.10.6` in `commonMain`, no `org.jetbrains.compose` plugin) compiled Android + desktop but failed iOS because `ui-text:1.10.6` has no iOS klib.
+- Shape B1 (`org.jetbrains.compose` 1.11.1) proved the commonMain Compose types can compile on Android + desktop + iOS and kept `:app:assembleDebug`, unit tests, and forced strict renderer golden green. However it forced app Compose `1.10.6 -> 1.11.2`, introduced `org.jetbrains.compose.*` nodes into `:app` runtime, and left `foundation` at 1.10.6 while `ui/runtime` moved to 1.11.2.
+- Decision: do **not** land the S4d-1 patch. Treat this as C4.3 Compose-lineage unification work. The next task is a dedicated single-lineage migration plan/candidate that either moves `:app` + `:shared` coherently onto one CMP/Compose line with full UI/golden verification, or identifies a lower-risk no-bump pin if one exists.

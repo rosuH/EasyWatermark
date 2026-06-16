@@ -6,7 +6,7 @@ Create a file-based, PM-style migration plan that helps the developer incrementa
 
 ## Current Phase
 
-Phase J - C4/CMP-9547 gate before commonMain renderer implementation
+Phase J - C4.3 Compose-lineage unification before commonMain renderer implementation
 
 ## Phases
 
@@ -69,7 +69,8 @@ Research and produce a phased, decision-complete plan to take EasyWatermark from
 - [x] Phase G — Execution kickoff DONE (2026-06-13): scaffolding shipped (CLAUDE.md, docs/CONTEXT.md, docs/adr/0001–0014 — only 0013 desktop-positioning still Proposed); UI-parity audit ran (8/8 screens, workflow wf_d279ab26-867) → backlog at docs/superpowers/research/2026-06-13-ui-parity-backlog.md
 - [x] Phase H — C1 parity stream / View-to-Compose closure DONE: production-parity theme/text/filmstrip/save-sheet work landed; About/OpenSource/recovery/share-in migrated; legacy stack deleted; Compose Canvas preview shipped; `WaterMarkImageView`/`ViewInfo` retired; S3d orphan layout cleanup completed.
 - [x] Phase I — S4/C2 remainder planning: reconcile the original C2a/C2b plan with the shipped S3a-S3d slices; design the next renderer-commonization task without regressing Android.
-- [ ] Phase J — C4/CMP-9547/Compose-lineage gate before adding Compose graphics/text dependencies to `:shared`.
+- [x] Phase J — C4/CMP-9547/Compose-lineage gate before adding Compose graphics/text dependencies to `:shared`.
+- [ ] Phase J.1 — C4.3 single Compose-lineage unification (`:app` + `:shared`) before retrying commonMain renderer dependencies.
 
 ### Key Decisions (CMP)
 
