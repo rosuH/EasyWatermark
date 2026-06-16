@@ -6,7 +6,7 @@ Create a file-based, PM-style migration plan that helps the developer incrementa
 
 ## Current Phase
 
-Phase J - C4.3 accepted; next is S4d-2 commonMain renderer implementation slice
+Phase J - S4d-2 accepted; next is S4d-3 text raster bootstrap for the commonMain renderer
 
 ## Phases
 
@@ -40,9 +40,9 @@ Phase J - C4.3 accepted; next is S4d-2 commonMain renderer implementation slice
 
 ## Open Questions
 
-- What is the smallest S4d-2 implementation slice after the C4.3 lineage gate: text-cell-only commonMain proof, icon-cell proof, or a shared offscreen cell artifact consumed by Android first?
-- Should S4d-2 keep Android `WatermarkRenderer.compose` as the only tiling/composition seam while moving only cell construction first, or should it introduce a common draw contract now?
-- How should S4d-2 prove CJK/emoji/text baseline stability across Android and common Compose text without overfitting to one emulator?
+- How should S4d-3 bootstrap commonMain text measurement/rasterization without leaking Android `StaticLayout` assumptions into shared code?
+- Which acceptance shape should gate text raster adoption: desktop pixel proof only, Android-vs-common cell comparison, or a production preview/export screenshot pass after wiring?
+- Should icon cell rasterization wait until the text path is stable, or share the same offscreen artifact contract in the next slice?
 
 ## CMP Migration Planning (started 2026-06-12)
 
@@ -72,7 +72,8 @@ Research and produce a phased, decision-complete plan to take EasyWatermark from
 - [x] Phase J — C4/CMP-9547/Compose-lineage gate before adding Compose graphics/text dependencies to `:shared`.
 - [x] Phase J.1 — C4.3 single Compose-lineage design gate (`:app` + `:shared`) before retrying commonMain renderer dependencies.
 - [x] Phase J.2 — C4.3 implementation: land one clean Android Compose lineage (Option B first, Option A fallback) with strict golden + full UI parity gate.
-- [ ] Phase J.3 — S4d-2: start the first commonMain renderer implementation slice on top of the unified Compose lineage.
+- [x] Phase J.3 — S4d-2: first commonMain renderer implementation slice on top of the unified Compose lineage. Landed an offscreen `ImageBitmap` cell composer scaffold in `:shared/commonMain`, verified by `:shared:desktopTest`, and kept Android preview/export unwired.
+- [ ] Phase J.4 — S4d-3: add text raster / `TextMeasurer` bootstrap for the commonMain cell artifact, with explicit Android renderer parity gates before any production wiring.
 
 ### Key Decisions (CMP)
 

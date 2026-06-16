@@ -42,6 +42,15 @@ kotlin {
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
+        // S4d-2: Skiko desktop runtime, TEST-SCOPE ONLY, so WatermarkCellComposerTest can actually
+        // RENDER the commonMain Compose-graphics cell offscreen on the JVM host (ImageBitmap is
+        // Skia-backed on desktop). `compose.ui` provides the API; this provides the backend. Not in
+        // any production/`:app` artifact; desktopTest deps do not leak to consumers.
+        val desktopTest by getting {
+            dependencies {
+                implementation(compose.desktop.currentOs)
+            }
+        }
     }
 }
 
