@@ -245,3 +245,9 @@ Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; 
 - Claude Code worker routing moved from fragile Codex/iTerm focus assumptions to tmux-first control. Current matched worker pane: `ewm-claude:0.0` / `%0`, TTY `/dev/ttys010`, cwd `/Users/rosu/Coding/EasyWatermark`, running `claude --resume e4b4c4b3-7e48-4deb-8645-39a49dac5f0f`.
 - `AGENTS.md` now records tmux enumeration/capture/send-keys as the preferred worker notification and polling path, with iTerm AppleScript and Codex terminal buffer only as fallbacks.
 - S4a ACSP session remains the next task to start: `/Users/rosu/.agent-cowork/sessions/EasyWatermark/inbox/20260616-081922--s4a-renderer-commonization-readiness`.
+
+## 2026-06-16 — S4a worker review checkpoint
+
+- S4a ACSP session `20260616-081922--s4a-renderer-commonization-readiness` was claimed by Claude Code through tmux and moved to `review/` at 08:58 +0800. Worker heartbeat reports 7 deliverables present and repo clean.
+- Bounded polling rule added to `AGENTS.md`: after handing off to Claude Code, start a current-thread heartbeat that checks ACSP + visible worker state for at most 30 minutes (example cadence: every 5 minutes, 6 checks).
+- Current bounded heartbeat automation created: `poll-easywatermark-s4a-worker`. Coordinator spot-check confirmed required S4a outputs exist and key claims match current files (WatermarkRenderer seam, Editor/MainViewModel calls, `:shared` no Compose plugin, export golden local `composite`, CI not running strict).
