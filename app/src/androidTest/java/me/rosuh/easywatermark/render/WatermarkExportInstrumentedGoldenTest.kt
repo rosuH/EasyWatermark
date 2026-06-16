@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Shader
 import android.net.Uri
+import android.os.Build
 import android.text.TextPaint
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -27,15 +28,23 @@ import java.io.ByteArrayOutputStream
 /**
  * S0 / CMP plan C1.7 — DEVICE-AUTHORITY mirror of [WatermarkExportGoldenTest].
  *
- * Runs the SAME first corpus + the SAME faithful copy of the `MainViewModel.generateImage`
- * composition tail (REPEAT tile / CLAMP decal) on a real device, where emoji + CJK + rotation
- * rasterize with the device's actual fonts/Skia — the values Robolectric NATIVE cannot be trusted
- * to reproduce (ADR-0010 two-tier golden; CJK metrics are device-pinned).
+ * Runs the SAME first corpus through the SAME real [WatermarkRenderer.compose] seam (REPEAT tile /
+ * CLAMP decal) on a real device, where emoji + CJK + rotation rasterize with the device's actual
+ * fonts/Skia — the values Robolectric NATIVE cannot be trusted to reproduce (ADR-0010 two-tier
+ * golden; CJK metrics are device-pinned).
  *
- * Authority: `RFCT414QBMZ` / SM-S906E / API 36. `emulator-5554` is SUPPLEMENTARY smoke only — its
- * absolute pixel counts are NOT a CJK oracle. This tier asserts only device-independent STRUCTURE
- * (nonblank / decal-corner-background / encode roundtrip); it logs absolute signatures for a human
- * to pin against the authority device when one is attached.
+ * Two assertion tiers:
+ *  - [export_corpus_renders_nonblank_on_device] / [clamp_decal_corner_is_background_on_device] /
+ *    [export_encodes_jpeg_and_png_on_device] assert device-INDEPENDENT structure and run on ANY device.
+ *  - [export_corpus_matches_device_pinned_baseline] (S4b) asserts the exact cell dims + cell/CLAMP
+ *    FNV, but ONLY when the running device fingerprint (`MODEL/SDK`) matches a captured entry in
+ *    [baselinesByDevice]; on any other device it logs the captured signature for a human to pin
+ *    (so it never spuriously fails under the any-available-device policy, ADR-0014 device note).
+ *
+ * Pinned device(s): `sdk_gphone64_arm64/36` — emulator-5554 / Pixel_9_Pro_XL (AVD) / Android 16 /
+ * API 36, the S3b acceptance target, captured 2026-06-16 through the real `compose` seam. The
+ * SM-S906E (`RFCT414QBMZ`) authority pin is TBD when that device is attached. Re-baseline / add a
+ * fingerprint entry when the fleet changes; do NOT widen tolerance.
  */
 @RunWith(AndroidJUnit4::class)
 class WatermarkExportInstrumentedGoldenTest {
@@ -105,20 +114,24 @@ class WatermarkExportInstrumentedGoldenTest {
         return IntArray(w * h).also { out.getPixels(it, 0, w, 0, 0, w, h) }
     }
 
-    /** Faithful copy of the `MainViewModel.generateImage` composition tail (see JVM twin). */
+    /** S4b: composite through the REAL [WatermarkRenderer.compose] seam (see JVM twin). */
     private fun composite(
         imageW: Int, imageH: Int, shader: WaterMarkShader,
         tileMode: Shader.TileMode, offsetX: Float, offsetY: Float, bg: Int,
     ): IntArray {
         val bmp = Bitmap.createBitmap(imageW, imageH, Bitmap.Config.ARGB_8888).apply { eraseColor(bg) }
-        val canvas = Canvas(bmp)
-        val layoutPaint = Paint().apply { this.shader = shader.bitmapShader }
-        if (tileMode == Shader.TileMode.CLAMP) {
-            canvas.translate(offsetX * imageW, offsetY * imageH)
-            canvas.drawRect(0f, 0f, shader.width.toFloat(), shader.height.toFloat(), layoutPaint)
-        } else {
-            canvas.drawRect(0f, 0f, imageW.toFloat(), imageH.toFloat(), layoutPaint)
-        }
+        WatermarkRenderer.compose(
+            canvas = Canvas(bmp),
+            shader = shader,
+            tileMode = tileMode,
+            paint = Paint(),
+            left = 0f,
+            top = 0f,
+            regionWidth = imageW.toFloat(),
+            regionHeight = imageH.toFloat(),
+            offsetX = offsetX,
+            offsetY = offsetY,
+        )
         return IntArray(imageW * imageH).also { bmp.getPixels(it, 0, imageW, 0, 0, imageW, imageH) }
     }
 
@@ -126,6 +139,63 @@ class WatermarkExportInstrumentedGoldenTest {
         var h = -0x7ee3623b
         for (p in px) { h = h xor p; h *= 0x01000193 }
         return h
+    }
+
+    /** Device-pinned export signature for one corpus cell: cell dims + cell FNV + CLAMP-decal FNV. */
+    private data class Sig(val cellW: Int, val cellH: Int, val cellFnv: Int, val clampFnv: Int)
+
+    /** `"$MODEL/$SDK"` of the device under test (the baseline fingerprint key). */
+    private fun deviceKey(): String = "${Build.MODEL}/${Build.VERSION.SDK_INT}"
+
+    /**
+     * Device-pinned export baselines keyed by `MODEL/SDK`. Captured 2026-06-16 on
+     * emulator-5554 / Pixel_9_Pro_XL (AVD) / `sdk_gphone64_arm64` / Android 16 / API 36 through the
+     * real [WatermarkRenderer.compose] seam (`composite(256, 256, …)`, REPEAT cell + CLAMP @ 0.4/0.4).
+     * Absolutes are device-specific (Skia/font), so they are asserted only when [deviceKey] matches.
+     */
+    private val baselinesByDevice: Map<String, Map<String, Sig>> = mapOf(
+        "sdk_gphone64_arm64/36" to mapOf(
+            "ascii_0" to Sig(93, 33, -366281882, 1458584107),
+            "multiline" to Sig(110, 61, -1422790083, 765160644),
+            "emoji_default_315" to Sig(228, 228, -1575206964, -978270002),
+            "cjk" to Sig(96, 35, 180443926, -355393120),
+            "cjk_multiline_315" to Sig(83, 83, 646986396, -528585465),
+            "gap_h_extreme" to Sig(372, 33, 182695868, -965358109),
+            "gap_v_extreme" to Sig(93, 132, 3309160, 440425003),
+            "icon_40x20" to Sig(44, 44, 2099708661, 1766162126),
+            "icon_rot_315" to Sig(44, 44, 1454838001, -1638977274),
+        ),
+    )
+
+    /**
+     * S4b: assert the captured device-pinned export signatures (cell dims + cell/CLAMP FNV) so a
+     * renderer change that drifts pixels on the SAME device/API is caught. Guarded by [deviceKey]:
+     * on an unpinned device it logs the captured signature instead of failing (any-available-device
+     * policy). Structural nonblank/decal asserts live in [export_corpus_renders_nonblank_on_device]
+     * and run everywhere.
+     */
+    @Test
+    fun export_corpus_matches_device_pinned_baseline() {
+        val key = deviceKey()
+        val pinned = baselinesByDevice[key]
+        Log.i("INSTR-EXPORT", "=== device-pinned export baselines for $key (pinned=${pinned != null}) ===")
+        for (spec in corpus) {
+            val shader = buildShader(spec)
+            val cellFnv = fnv1a(renderCell(shader))
+            val clampPx = composite(256, 256, shader, Shader.TileMode.CLAMP, 0.4f, 0.4f, Color.DKGRAY)
+            val clampFnv = fnv1a(clampPx)
+            val sig = Sig(shader.width, shader.height, cellFnv, clampFnv)
+            Log.i("INSTR-EXPORT", "BASELINE ${spec.label} -> Sig(${sig.cellW}, ${sig.cellH}, ${sig.cellFnv}, ${sig.clampFnv})")
+            val b = pinned?.get(spec.label)
+            if (b == null) {
+                Log.i("INSTR-EXPORT", "no pinned baseline for '${spec.label}' on $key — logged for human pin")
+                continue
+            }
+            assertEquals("[pinned $key] '${spec.label}' cellW", b.cellW, sig.cellW)
+            assertEquals("[pinned $key] '${spec.label}' cellH", b.cellH, sig.cellH)
+            assertEquals("[pinned $key] '${spec.label}' cellFnv", b.cellFnv, sig.cellFnv)
+            assertEquals("[pinned $key] '${spec.label}' clampFnv", b.clampFnv, sig.clampFnv)
+        }
     }
 
     @Test

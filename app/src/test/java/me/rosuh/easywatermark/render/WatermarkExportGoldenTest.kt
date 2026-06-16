@@ -118,13 +118,13 @@ class WatermarkExportGoldenTest {
     }
 
     /**
-     * FAITHFUL COPY of the export composition tail in `MainViewModel.generateImage`
-     * (current `master` lines ~373-392): paint the cell's [BitmapShader] over an opaque image —
-     * REPEAT fills the whole image; CLAMP translates by the fractional offset and paints one
-     * cell-sized decal. The product method itself is `private` and needs a `ContentResolver` +
-     * MediaStore, so it cannot be invoked directly from a unit test; this mirror exercises the same
-     * canvas math at export scale 1:1. (Documented untested seams: the `1/MSCALE_X` preview-scale
-     * derivation and the MediaStore encode-to-disk — see harness-design.md.)
+     * S4b: composite through the REAL production seam [WatermarkRenderer.compose] — this was
+     * formerly a test-local copy of the `MainViewModel.generateImage` composition tail. Export
+     * composites at the bitmap origin (`left=top=0`, region = full bitmap): REPEAT fills the whole
+     * image; CLAMP translates by the fractional offset and paints one cell-sized decal.
+     * [WatermarkRendererCompositionTest] pins `compose` as pixel-identical to the former inline copy,
+     * so the recorded [baselines] stay unchanged. (Still not exercised by this unit harness: the
+     * MediaStore encode-to-disk tail of `generateImage`.)
      */
     private fun composite(
         imageW: Int,
@@ -136,14 +136,18 @@ class WatermarkExportGoldenTest {
         bg: Int,
     ): IntArray {
         val bmp = Bitmap.createBitmap(imageW, imageH, Bitmap.Config.ARGB_8888).apply { eraseColor(bg) }
-        val canvas = Canvas(bmp)
-        val layoutPaint = Paint().apply { this.shader = shader.bitmapShader }
-        if (tileMode == Shader.TileMode.CLAMP) {
-            canvas.translate(offsetX * imageW, offsetY * imageH)
-            canvas.drawRect(0f, 0f, shader.width.toFloat(), shader.height.toFloat(), layoutPaint)
-        } else {
-            canvas.drawRect(0f, 0f, imageW.toFloat(), imageH.toFloat(), layoutPaint)
-        }
+        WatermarkRenderer.compose(
+            canvas = Canvas(bmp),
+            shader = shader,
+            tileMode = tileMode,
+            paint = Paint(),
+            left = 0f,
+            top = 0f,
+            regionWidth = imageW.toFloat(),
+            regionHeight = imageH.toFloat(),
+            offsetX = offsetX,
+            offsetY = offsetY,
+        )
         return IntArray(imageW * imageH).also { bmp.getPixels(it, 0, imageW, 0, 0, imageW, imageH) }
     }
 

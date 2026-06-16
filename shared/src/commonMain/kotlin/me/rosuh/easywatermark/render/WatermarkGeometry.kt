@@ -74,10 +74,13 @@ object WatermarkGeometry {
      * The export **scale rule** (CMP plan D4): export scale = inverse of the preview fit-transform's
      * per-axis scale, computed **independently per axis**.
      *
-     * This is the *corrected* rule. The current Android code (`MainViewModel.kt:325-326`) derives
-     * BOTH axes from `MSCALE_X` (`scaleY = 1/MSCALE_X` — a latent bug, invisible for uniform
-     * fit-center scaling but wrong for non-uniform/resizable surfaces like a Desktop window). The
-     * C2b renderer wires this; until then this is the verified target, not yet driving export.
+     * Status (S4b): this rule is **latent / unwired today**. Since S3a, export sizing is image-space
+     * (`textPx = textSize * imageWidth / REF_WIDTH`) and `MainViewModel.generateImage` reads NO
+     * preview matrix — the old `ViewInfo` / `1/MSCALE_X` export-scale coupling was removed
+     * (S3c-1/S3c-3). For the current uniform fit-center preview both axes scale identically, so this
+     * helper would be a no-op; it becomes relevant only for non-uniform / resizable surfaces (e.g. a
+     * Desktop window), where it is the verified target for the future commonMain renderer (C2/C4).
+     * Kept as that target; it does not drive export today.
      */
     fun exportScale(previewScaleX: Float, previewScaleY: Float): ExportScale =
         ExportScale(x = 1f / previewScaleX, y = 1f / previewScaleY)

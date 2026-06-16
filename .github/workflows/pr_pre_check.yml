@@ -50,3 +50,8 @@ jobs:
         run: ./gradlew :shared:desktopTest
       - name: Run :app unit tests incl. watermark golden (Robolectric NATIVE, CMP plan C1.7/C1.8)
         run: ./gradlew :app:testDebugUnitTest
+      - name: Run STRICT watermark goldens (S4b renderer pixel/dim gate; pins FNV baselines)
+        # WATERMARK_GOLDEN_STRICT is not a Gradle-tracked input, so a warm cache could otherwise
+        # serve the prior non-strict :app:testDebugUnitTest result and skip the strict assertions.
+        # cleanTestDebugUnitTest + --no-build-cache + --rerun-tasks force the strict run to execute.
+        run: WATERMARK_GOLDEN_STRICT=true ./gradlew :app:cleanTestDebugUnitTest :app:testDebugUnitTest --no-build-cache --rerun-tasks

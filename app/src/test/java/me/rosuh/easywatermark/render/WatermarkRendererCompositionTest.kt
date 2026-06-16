@@ -63,7 +63,11 @@ class WatermarkRendererCompositionTest {
     private fun pixels(b: Bitmap): IntArray =
         IntArray(b.width * b.height).also { b.getPixels(it, 0, b.width, 0, 0, b.width, b.height) }
 
-    /** Verbatim copy of the PRE-S2a export composition (MainViewModel.generateImage ~lines 372-394). */
+    /**
+     * Verbatim copy of the PRE-S2a (legacy) export composition that lived inline in
+     * `MainViewModel.generateImage` before the `WatermarkRenderer.compose` extraction. Kept as the
+     * historical reference that pins the extracted seam; the inline original no longer exists.
+     */
     private fun oldExportCompose(
         canvas: Canvas, shader: WaterMarkShader?, tile: Shader.TileMode, paint: Paint,
         bmpW: Int, bmpH: Int, offsetX: Float, offsetY: Float,
@@ -77,7 +81,10 @@ class WatermarkRendererCompositionTest {
         }
     }
 
-    /** Verbatim copy of the PRE-S2a preview composition (WaterMarkImageView.onDraw ~lines 300-324). */
+    /**
+     * Verbatim copy of the PRE-S2a (legacy) preview composition from `WaterMarkImageView.onDraw` —
+     * that View was retired in S3c-3. Kept as the historical reference that pins the extracted seam.
+     */
     private fun oldPreviewCompose(
         canvas: Canvas, shader: WaterMarkShader?, tile: Shader.TileMode, paint: Paint,
         left: Float, top: Float, regionW: Float, regionH: Float, offsetX: Float, offsetY: Float,

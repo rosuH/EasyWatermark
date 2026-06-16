@@ -251,3 +251,16 @@ Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; 
 - S4a ACSP session `20260616-081922--s4a-renderer-commonization-readiness` was claimed by Claude Code through tmux and moved to `review/` at 08:58 +0800. Worker heartbeat reports 7 deliverables present and repo clean.
 - Bounded polling rule added to `AGENTS.md`: after handing off to Claude Code, start a current-thread heartbeat that checks ACSP + visible worker state for at most 30 minutes (example cadence: every 5 minutes, 6 checks).
 - Current bounded heartbeat automation created: `poll-easywatermark-s4a-worker`. Coordinator spot-check confirmed required S4a outputs exist and key claims match current files (WatermarkRenderer seam, Editor/MainViewModel calls, `:shared` no Compose plugin, export golden local `composite`, CI not running strict).
+
+## 2026-06-16 — S4a/S4b renderer gate accepted
+
+- S4a renderer-commonization readiness completed and accepted via ACSP. Decision: do **not** jump straight into commonMain composition rewrite; first pin the current Android renderer with stricter gates so the future rewrite has a real safety net.
+- S4b strict renderer gate completed and accepted after one coordinator revision. Export goldens now call the real `WatermarkRenderer.compose` seam, strict JVM baselines remained unchanged, and `.github/workflows/pr_pre_check.yml` now runs a forced strict step:
+  `WATERMARK_GOLDEN_STRICT=true ./gradlew :app:cleanTestDebugUnitTest :app:testDebugUnitTest --no-build-cache --rerun-tasks`.
+- The forced CI form was required because `WATERMARK_GOLDEN_STRICT` is not a Gradle-tracked input; without `cleanTestDebugUnitTest + --no-build-cache + --rerun-tasks`, a warm cache could serve a prior non-strict result and skip strict assertions.
+- Instrumented export baselines are now pinned for `sdk_gphone64_arm64/36` (Pixel_9_Pro_XL emulator / Android 16 / API 36). Other devices log signatures without spurious failure; SM-S906E authority-device pin remains a follow-up when available.
+- Coordinator re-review inspected the actual diff and artifacts and ran `git diff --check` clean. No production renderer logic changed; S4b is ready for commit/landing decision.
+
+## Next Suggested Step
+
+- Commit/land S4b after final human approval, then start a C4/CMP-9547/Compose-lineage gate task before moving composition into commonMain. The next worker task should answer whether adding Compose graphics/text dependencies to `:shared` is safe now, what exact dependency coordinates/version lineage to use, and what rollback/golden criteria gate the first commonMain renderer implementation slice.
