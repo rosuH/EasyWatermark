@@ -30,6 +30,9 @@ object BitmapCache {
     }
 
     fun addToCache(info: BitmapInfo, bitmapValue: BitmapValue?) {
+        if (bitmapValue?.bitmap == null) {
+            return
+        }
         memoryCache.put(info, bitmapValue)
     }
 

@@ -152,19 +152,25 @@ suspend fun decodeSampledBitmapFromResource(
     reqHeight: Int
 ): Result<BitmapCache.BitmapValue> = withContext(Dispatchers.IO) {
     val info = BitmapCache.BitmapInfo(uri, reqWidth, reqHeight)
-    var cacheValue = BitmapCache.getFromCache(info)
-    if (cacheValue?.bitmap == null) {
-        cacheValue = decodeSampledBitmapFromResourceSync(
-            resolver,
-            uri,
-            reqWidth,
-            reqHeight
-        ).data
-        BitmapCache.addToCache(info, cacheValue)
-    } else {
+    val cacheValue = BitmapCache.getFromCache(info)
+    if (cacheValue?.bitmap != null) {
         Log.i("BitmapUtils", "Hit the cache bitmap!")
+        return@withContext Result.success(data = cacheValue)
     }
-    return@withContext Result.success(data = cacheValue)
+
+    val decodeResult = decodeSampledBitmapFromResourceSync(
+        resolver,
+        uri,
+        reqWidth,
+        reqHeight
+    )
+    val decoded = decodeResult.data
+    if (decoded?.bitmap == null) {
+        return@withContext Result.failure(null, decodeResult.code, decodeResult.message)
+    }
+
+    BitmapCache.addToCache(info, decoded)
+    return@withContext Result.success(data = decoded)
 }
 
 fun decodeSampledBitmapFromResourceSync(
@@ -198,6 +204,11 @@ fun decodeSampledBitmapFromResourceSync(
         }
     } catch (fne: FileNotFoundException) {
         return Result.failure(null, "-1", fne.message)
+    } catch (se: SecurityException) {
+        throw se
+    } catch (e: Exception) {
+        Log.i("BitmapUtils", "Decoding sampled bitmap from resource failed", e)
+        return Result.failure(null, "-1", e.message)
     } catch (oom: OutOfMemoryError) {
         Log.i("BitmapUtils", "Decoding sampled bitmap from resource throw oom")
         return Result.failure(

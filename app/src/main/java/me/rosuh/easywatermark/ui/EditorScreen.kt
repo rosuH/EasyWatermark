@@ -775,17 +775,59 @@ private fun WaterMarkCanvas(
             val imagePaint = remember { Paint(Paint.FILTER_BITMAP_FLAG) }
             val layoutPaint = remember { Paint() }
             val imageMatrix = remember { Matrix() }
+            val scope = rememberCoroutineScope()
             val shouldDrawWatermark = waterMark.text.isNotEmpty()
 
             val canvasModifier = if (tileMode == Shader.TileMode.CLAMP) {
                 Modifier
                     .fillMaxSize()
-                    .pointerInput(drawW, drawH) {
-                        detectDragGestures { change, drag ->
-                            change.consume()
-                            offsetX = (offsetX + drag.x / drawW).coerceIn(0f, 1f)
-                            offsetY = (offsetY + drag.y / drawH).coerceIn(0f, 1f)
-                            onOffsetChanged(selectedImage.copy(offsetX = offsetX, offsetY = offsetY))
+                    .pointerInput(drawW, drawH, left, top, cellShader) {
+                        var draggingWatermark = false
+                        detectDragGestures(
+                            onDragStart = { start ->
+                                draggingWatermark = cellShader?.let { shader ->
+                                    isTouchingClampWatermark(
+                                        pointer = start,
+                                        left = left,
+                                        top = top,
+                                        regionWidth = drawW,
+                                        regionHeight = drawH,
+                                        offsetX = offsetX,
+                                        offsetY = offsetY,
+                                        shader = shader,
+                                    )
+                                } == true
+                            },
+                            onDragEnd = {
+                                if (draggingWatermark) {
+                                    val shader = cellShader
+                                    if (shader != null && isClampWatermarkOutOfDrawable(offsetX, offsetY, drawW, drawH, shader)) {
+                                        val startX = offsetX
+                                        val startY = offsetY
+                                        val centerX = ((drawW - shader.width) / 2f) / drawW
+                                        val centerY = ((drawH - shader.height) / 2f) / drawH
+                                        scope.launch {
+                                            Animatable(0f).animateTo(1f, animationSpec = tween(durationMillis = 300)) {
+                                                offsetX = startX + (centerX - startX) * value
+                                                offsetY = startY + (centerY - startY) * value
+                                            }
+                                            onOffsetChanged(selectedImage.copy(offsetX = centerX, offsetY = centerY))
+                                        }
+                                    } else {
+                                        onOffsetChanged(selectedImage.copy(offsetX = offsetX, offsetY = offsetY))
+                                    }
+                                }
+                                draggingWatermark = false
+                            },
+                            onDragCancel = {
+                                draggingWatermark = false
+                            },
+                        ) { change, drag ->
+                            if (draggingWatermark) {
+                                change.consume()
+                                offsetX += drag.x / drawW
+                                offsetY += drag.y / drawH
+                            }
                         }
                     }
             } else {
@@ -823,6 +865,39 @@ private fun WaterMarkCanvas(
             }
         }
     }
+}
+
+private fun isTouchingClampWatermark(
+    pointer: Offset,
+    left: Float,
+    top: Float,
+    regionWidth: Float,
+    regionHeight: Float,
+    offsetX: Float,
+    offsetY: Float,
+    shader: WaterMarkShader,
+): Boolean {
+    val waterMarkX = left + offsetX * regionWidth
+    val waterMarkY = top + offsetY * regionHeight
+    return pointer.x > waterMarkX
+            && pointer.x < waterMarkX + shader.width
+            && pointer.y > waterMarkY
+            && pointer.y < waterMarkY + shader.height
+}
+
+private fun isClampWatermarkOutOfDrawable(
+    offsetX: Float,
+    offsetY: Float,
+    regionWidth: Float,
+    regionHeight: Float,
+    shader: WaterMarkShader,
+): Boolean {
+    val waterMarkX = offsetX * regionWidth
+    val waterMarkY = offsetY * regionHeight
+    return waterMarkX + shader.width < 0f
+            || waterMarkX > regionWidth
+            || waterMarkY > regionHeight
+            || waterMarkY + shader.height < 0f
 }
 
 /** Build the text/icon cell shader for the preview, image-space sized to the displayed drawable. */
