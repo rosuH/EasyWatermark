@@ -17,6 +17,8 @@ plugins {
 //    alias(libs.plugins.hilt) apply false
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.compose.compiler) apply false
+    // C4.3: Compose Multiplatform plugin on the root classpath; applied only by :shared.
+    alias(libs.plugins.compose.multiplatform) apply false
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.kotlin.multiplatform) apply false
 //    alias(libs.plugins.spotless) apply false

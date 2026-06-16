@@ -39,8 +39,15 @@ extJunit = "1.3.0"
 mockito = "5.23.0"
 robolectric = "4.16.1"
 hamcrest = "3.0"
-androidxComposeBom = "2026.03.01"
+# C4.3: bumped 2026.03.01 (Compose 1.10.6) -> 2026.05.01 (Compose 1.11.2) so :app's AndroidX Compose
+# lineage matches what Compose Multiplatform 1.11.1 contributes on Android (androidx 1.11.2). The BOM
+# atomically aligns every androidx.compose group (incl. foundation) to one version, killing the
+# foundation/ui skew S4d-1 hit.
+androidxComposeBom = "2026.05.01"
 androidxComposeRuntimeTracing = "1.10.6"
+# C4.3: Compose Multiplatform (org.jetbrains.compose) — applied to :shared to deliver multiplatform
+# (incl. iOS) Compose graphics/text. 1.11.1's Android target maps to androidx Compose 1.11.2.
+composeMultiplatform = "1.11.1"
 accompanist = "0.37.3"
 coil = "2.7.0"
 material3 = "1.4.0"
@@ -56,6 +63,8 @@ kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref =
 #hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 #hilt-plugin = { id = "dagger.hilt.android.plugin", version.ref = "hilt" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+# C4.3: Compose Multiplatform plugin — applied to :shared only (delivers multiplatform Compose incl. iOS).
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

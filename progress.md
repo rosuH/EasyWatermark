@@ -258,6 +258,14 @@ Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; 
 - S4b strict renderer gate completed and accepted after one coordinator revision. Export goldens now call the real `WatermarkRenderer.compose` seam, strict JVM baselines remained unchanged, and `.github/workflows/pr_pre_check.yml` now runs a forced strict step:
   `WATERMARK_GOLDEN_STRICT=true ./gradlew :app:cleanTestDebugUnitTest :app:testDebugUnitTest --no-build-cache --rerun-tasks`.
 - The forced CI form was required because `WATERMARK_GOLDEN_STRICT` is not a Gradle-tracked input; without `cleanTestDebugUnitTest + --no-build-cache + --rerun-tasks`, a warm cache could serve a prior non-strict result and skip strict assertions.
+
+## 2026-06-16 — C4.3 Compose lineage implementation accepted
+
+- C4.3 implementation ACSP session `20260616-130421--c43-compose-lineage-impl` was accepted and moved to `done/` after one UI-evidence revision.
+- Accepted route: Option B. `:app` keeps AndroidX Compose BOM but bumps it to `2026.05.01` (core Compose `1.11.2`); `:shared` applies `org.jetbrains.compose` `1.11.1` with `compose.runtime` + `compose.ui` in `commonMain`; `:app` substitutes residual Android runtime `org.jetbrains.compose.*` requests to `androidx.compose.*:1.11.2`.
+- Coordinator-side verification: `git diff --check`; dependency graph review (`debugRuntimeClasspath` has no `FAILED`, residual `org.jetbrains.compose.*` requests are substituted, core `runtime`/`ui`/`ui-graphics`/`ui-text`/`foundation`/`animation` resolve to `1.11.2`, and `runtime-tracing` is absent from runtime); `:app:assembleDebug`; `:shared:compileKotlinDesktop`; `:shared:compileKotlinIosSimulatorArm64`; `WATERMARK_GOLDEN_STRICT=true :shared:desktopTest :app:testDebugUnitTest`.
+- UI revision evidence was accepted: worker re-captured production-first paired screenshots for Launch, same-image Editor, Text-edit modal, Save sheet, Template sheet, About, and OpenSource. Differences were classified as pre-existing migration deltas (`bg-palette`, ADR-0015 editor chrome, share-in export-list count), not Compose bump regressions. Recovery screen remains a documented low-risk residual for this build-config-only slice.
+- Next step: publish/execute S4d-2 as the first commonMain renderer implementation slice on top of the unified Compose lineage, keeping the Android renderer/golden safety net intact.
 - Instrumented export baselines are now pinned for `sdk_gphone64_arm64/36` (Pixel_9_Pro_XL emulator / Android 16 / API 36). Other devices log signatures without spurious failure; SM-S906E authority-device pin remains a follow-up when available.
 - Coordinator re-review inspected the actual diff and artifacts and ran `git diff --check` clean. No production renderer logic changed; S4b is ready for commit/landing decision.
 

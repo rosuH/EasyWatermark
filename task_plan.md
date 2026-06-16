@@ -6,7 +6,7 @@ Create a file-based, PM-style migration plan that helps the developer incrementa
 
 ## Current Phase
 
-Phase J - C4.3 implementation: unify Compose lineage before commonMain renderer implementation
+Phase J - C4.3 accepted; next is S4d-2 commonMain renderer implementation slice
 
 ## Phases
 
@@ -40,9 +40,9 @@ Phase J - C4.3 implementation: unify Compose lineage before commonMain renderer 
 
 ## Open Questions
 
-- What is the smallest S4a contract for a platform-neutral rendered cell artifact: keep `WaterMarkShader` as Android-only wrapper, introduce a common cell descriptor, or split cell pixels from tiling semantics?
-- Should S4a extend whole-composition export goldens before introducing commonMain Compose graphics dependencies?
-- Does introducing Compose graphics into `:shared` now create avoidable CMP/CMP-9547 or Compose-lineage risk, or should S4a stay design-only until the C4 gate?
+- What is the smallest S4d-2 implementation slice after the C4.3 lineage gate: text-cell-only commonMain proof, icon-cell proof, or a shared offscreen cell artifact consumed by Android first?
+- Should S4d-2 keep Android `WatermarkRenderer.compose` as the only tiling/composition seam while moving only cell construction first, or should it introduce a common draw contract now?
+- How should S4d-2 prove CJK/emoji/text baseline stability across Android and common Compose text without overfitting to one emulator?
 
 ## CMP Migration Planning (started 2026-06-12)
 
@@ -71,14 +71,15 @@ Research and produce a phased, decision-complete plan to take EasyWatermark from
 - [x] Phase I — S4/C2 remainder planning: reconcile the original C2a/C2b plan with the shipped S3a-S3d slices; design the next renderer-commonization task without regressing Android.
 - [x] Phase J — C4/CMP-9547/Compose-lineage gate before adding Compose graphics/text dependencies to `:shared`.
 - [x] Phase J.1 — C4.3 single Compose-lineage design gate (`:app` + `:shared`) before retrying commonMain renderer dependencies.
-- [ ] Phase J.2 — C4.3 implementation: land one clean Android Compose lineage (Option B first, Option A fallback) with strict golden + full UI parity gate.
+- [x] Phase J.2 — C4.3 implementation: land one clean Android Compose lineage (Option B first, Option A fallback) with strict golden + full UI parity gate.
+- [ ] Phase J.3 — S4d-2: start the first commonMain renderer implementation slice on top of the unified Compose lineage.
 
 ### Key Decisions (CMP)
 
 - Model selection per task: haiku = mechanical inventories; sonnet = standard code analysis & doc research; fable (inherited) = graphics-core deep dive + final synthesis.
 - CMP planning builds ON TOP of the existing View→Compose milestones; finishing the single-platform Compose shell remains a prerequisite stream.
 - As of 2026-06-16, that single-platform Compose shell prerequisite is satisfied. The next meaningful CMP work is not more View cleanup; it is renderer commonization readiness and then C3 dependency de-Android-ization.
-- S4d-1 proved commonMain Compose cannot be introduced safely until `:app` and `:shared` share one coherent Compose lineage. C4.3 design was accepted: try Option B first (keep/bump AndroidX Compose BOM, add `org.jetbrains.compose` to `:shared`, eliminate Android runtime split), fall back to Option A (drop BOM and source app core Compose via `compose.*`) only if graph proof requires it.
+- S4d-1 proved commonMain Compose cannot be introduced safely until `:app` and `:shared` share one coherent Compose lineage. C4.3 is now implemented and accepted via Option B: AndroidX Compose BOM bumped to `2026.05.01` / core Compose `1.11.2`, `org.jetbrains.compose` `1.11.1` applied to `:shared`, and `:app` substitutes residual `org.jetbrains.compose.*` Android runtime requests to `androidx.compose.*:1.11.2`.
 
 ## Errors Encountered
 
