@@ -296,9 +296,18 @@ Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; 
 - Production preview/export were not wired to the new icon primitive. Android rendering remains on `WatermarkRenderer`; no `:app` files changed, no commit/push/golden rebaseline happened inside the worker session.
 - Next step: S4d-5 should add the first Android-vs-commonMain parity gate before any draw-swap. Keep it test-only unless the parity evidence is strong: text/icon cell pixels, bundled-font decision for CJK/emoji, strict goldens, and production-first screenshots when UI is touched.
 
+## 2026-06-17 — S4d-5 Android-vs-commonMain parity gate accepted
+
+- S4d-5 ACSP session `20260617-231553--s4d5-common-renderer-parity-gate` was accepted and moved to `done/`.
+- Accepted route: add one test-only JVM/Robolectric NATIVE gate, `WatermarkRendererCommonParityTest`, comparing Android `WatermarkRenderer` against commonMain `WatermarkCellComposer` through the same Android graphics backend. No production code, commonMain code, build files, or golden baselines changed.
+- Icon cell gate is hard enough for the next decision: exact dimensions across 18 degree/gap/scale cases, alpha parity exact in the tested full/half-opacity cases, opaque-footprint IoU measured at 1.0 for degree 0/45/90 with a gate floor of 0.95, and centring structure on both paths.
+- Text cell gate is deliberately limited: exact cell dimensions for simple ASCII and nonblank ASCII @0. It does not claim text raster parity for `StaticLayout` vs `MultiParagraph`, CJK, emoji, or rotated text. That remains a bundled-font + on-device gate.
+- Coordinator-side verification reran the new parity test, full strict unit gate with `:shared:desktopTest`, dependency proof, `git diff --check`, and stopped Gradle. JUnit XML confirmed `WatermarkRendererCommonParityTest` 6/0, `WatermarkCellGoldenTest` 4/0, `WatermarkExportGoldenTest` 5/0 with `strict=true`, `WatermarkIconCellRasterTest` 7/0, and `WatermarkTextCellRasterTest` 4/0.
+- Next step: decide S4d-6. The lower-risk product-facing path is likely icon-first draw-swap candidate, but it should still add on-device/real-icon parity before any production flip. Text draw-swap should wait for bundled-font ADR and on-device raster parity.
+
 ## Next Suggested Step
 
-- Commit/land S4d-4 after final human approval, then publish S4d-5 as a narrow parity-gate task. It should stay additive/test-only unless Android-vs-commonMain text/icon cell evidence is strong enough to justify a later production draw-swap.
+- Commit/land S4d-5 after final human approval, then publish S4d-6 as a narrow decision/implementation slice: either icon-first draw-swap candidate with on-device proof, or bundled-font/on-device text raster parity.
 
 ## 2026-06-16 — S4c accepted; S4d-1 spike blocked as C4.3 lineage work
 
