@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.ImageBitmapConfig
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
@@ -13,6 +14,8 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 
 /**
@@ -35,8 +38,12 @@ import androidx.compose.ui.unit.LayoutDirection
  *  - [composeTextCell] (S4d-3) is the **text raster** follow-up: it measures + paints a real text
  *    cell offscreen using a platform-injected [TextRasterEnv] (the bootstrap ADR-0004 calls out).
  *    It is the commonMain analogue of the Android `WatermarkRenderer.buildTextShader` text path
- *    (measure via `TextMeasurer`, draw via `Paragraph.paint` instead of legacy `StaticLayout`). The
- *    icon raster (platform image decode) is still a later slice.
+ *    (measure via `TextMeasurer`, draw via `Paragraph.paint` instead of legacy `StaticLayout`).
+ *  - [composeIconCell] (S4d-4) is the **icon/image raster** follow-up: it scales/rotates/centres an
+ *    ALREADY-DECODED Compose [ImageBitmap] into the offscreen cell, the commonMain analogue of the
+ *    Android `WatermarkRenderer.buildIconShader`. Image DECODE (from `Uri`/`ContentResolver`/bytes/
+ *    EXIF/downsample) stays a platform boundary and is NOT in commonMain (see the S4d-4
+ *    `decode-boundary.md`).
  *  - **Not wired into production.** Android preview (`EditorScreen.WaterMarkCanvas`) and export
  *    (`MainViewModel.generateImage`) still use the Android-only `WatermarkRenderer` seam, so the
  *    strict renderer goldens and on-device behaviour are unchanged by this slice. These primitives
@@ -202,6 +209,115 @@ object WatermarkCellComposer {
                         layout.multiParagraph.paint(canvas, content.color)
                     }
                 }
+            }
+        }
+        return bitmap
+    }
+
+    /** Android `buildIconShader` derives the icon scale from `config.textSize / 14f` (14 ⇒ 1×). */
+    const val ICON_SCALE_REFERENCE_TEXT_SIZE: Float = 14f
+
+    /**
+     * S4d-4: compose ONE rotated, gap-spaced watermark **icon/image** cell into an offscreen
+     * [ImageBitmap] — the commonMain analogue of the Android `WatermarkRenderer.buildIconShader`.
+     *
+     * Takes an **already-decoded** Compose [icon] [ImageBitmap]; **decode is NOT done here**
+     * (`Uri`/`ContentResolver`/file bytes/EXIF/downsample stay a per-platform boundary — see the
+     * S4d-4 `decode-boundary.md`), so no `android.graphics.*` leaks into commonMain.
+     *
+     * Pipeline (mirrors the Android icon cell 1:1, `WatermarkRenderer.kt:187-234`):
+     *  1. raw dims = `icon.width`/`height`, each coerced to ≥ 1;
+     *  2. base cell is a **square** of side `WatermarkGeometry.diagonal(rawHeight, rawWidth)`
+     *     (`diagonal` is symmetric; the arg order mirrors the Android call), expanded by the gap
+     *     percents — identical to `buildIconShader`;
+     *  3. apply [scaleRatio] (production: `textSize / 14f`, see [ICON_SCALE_REFERENCE_TEXT_SIZE]) to
+     *     both the cell and the drawn image;
+     *  4. rotate about the cell centre and draw the image **scaled to `rawW*scale × rawH*scale`,
+     *     centred** in the cell.
+     *
+     * Scaling: Android pre-scales the source with `Bitmap.createScaledBitmap(..., filter=false)`
+     * (nearest-neighbor). The commonMain equivalent is `DrawScope.drawImage(dstSize = …,
+     * filterQuality = FilterQuality.None)` — nearest-neighbor (ADR-0014 "icon filter=false" parity).
+     * NOTE: `FilterQuality.None` ≈ nearest-neighbor but is NOT guaranteed pixel-identical to Android
+     * `createScaledBitmap`; cross-platform/cross-impl pixel parity is a parity-gate concern, not
+     * asserted by this bootstrap (see `parity-gate-plan.md`).
+     *
+     * Opacity: the Android icon path draws the scaled bitmap with a `Paint` whose
+     * `alpha = WaterMark.alpha` (0..255, see `PainKtx.applyConfig`), so image/icon watermarks honour
+     * the watermark opacity. The commonMain analogue takes a normalized [alpha] in `0f..1f` (clamped
+     * at the raster boundary) and passes it to `drawImage(alpha = …)`. The future Android adapter
+     * must pass `WaterMark.alpha / 255f` to reach parity (`alpha = 128` ⇒ `0.5f`). The default `1f`
+     * is a bootstrap convenience that matches the current default `WaterMark.alpha = 255`; future
+     * production wiring must still pass the actual configured alpha, not rely on this default.
+     *
+     * Bootstrap safety guard: Android allocates `(finalWidth*scaleRatio).toInt()` with no explicit
+     * min and would crash on a 0-size bitmap; this commonMain bootstrap coerces target/scaled dims to
+     * ≥ 1 (documented delta — it only affects degenerate `scaleRatio→0` / 0-size inputs).
+     *
+     * SCOPE (S4d-4): **not wired into production**. Android preview/export still use
+     * `WatermarkRenderer.buildIconShader`; this is verified test-scope-only on `:shared:desktopTest`
+     * (`WatermarkIconCellRasterTest`). Recycled-bitmap rejection (Android's `srcBitmap.isRecycled`)
+     * is not observable in commonMain — input validity is the caller/decode-boundary responsibility.
+     *
+     * @param icon         the already-decoded source image
+     * @param degree       rotation in degrees (matches `WaterMark.degree`)
+     * @param hGapPercent  horizontal gap percent (0 → adjacent, 100 → 2×); matches `WaterMark.hGap`
+     * @param vGapPercent  vertical gap percent; matches `WaterMark.vGap`
+     * @param scaleRatio   icon scale (production passes `textSize / ICON_SCALE_REFERENCE_TEXT_SIZE`)
+     * @param alpha        normalized watermark opacity in `0f..1f` (clamped); the Android adapter
+     *                     passes `WaterMark.alpha / 255f`. Default `1f` is a bootstrap convenience
+     *                     that matches `WaterMark.alpha = 255`; production wiring must pass the
+     *                     configured value, e.g. `128 / 255f`.
+     */
+    fun composeIconCell(
+        icon: ImageBitmap,
+        degree: Float,
+        hGapPercent: Int = 0,
+        vGapPercent: Int = 0,
+        scaleRatio: Float = 1f,
+        alpha: Float = 1f,
+    ): ImageBitmap {
+        val rawWidth = icon.width.coerceAtLeast(1).toFloat()
+        val rawHeight = icon.height.coerceAtLeast(1).toFloat()
+        val safeScale = if (scaleRatio > 0f) scaleRatio else 1f
+        val safeAlpha = alpha.coerceIn(0f, 1f)
+
+        // SAME math as WatermarkRenderer.buildIconShader: square base cell sized by the content
+        // diagonal (arg order mirrors Android; `diagonal` is symmetric), then gap expansion.
+        val maxSize = WatermarkGeometry.diagonal(rawHeight, rawWidth)
+        val finalWidth = WatermarkGeometry.horizontalGap(maxSize, hGapPercent)
+        val finalHeight = WatermarkGeometry.verticalGap(maxSize, vGapPercent)
+
+        val targetWidth = (finalWidth * safeScale).toInt().coerceAtLeast(1)
+        val targetHeight = (finalHeight * safeScale).toInt().coerceAtLeast(1)
+        val scaledWidth = (rawWidth * safeScale).toInt().coerceAtLeast(1)
+        val scaledHeight = (rawHeight * safeScale).toInt().coerceAtLeast(1)
+
+        val bitmap = ImageBitmap(targetWidth, targetHeight, ImageBitmapConfig.Argb8888)
+        CanvasDrawScope().draw(
+            density = Density(1f),
+            layoutDirection = LayoutDirection.Ltr,
+            canvas = Canvas(bitmap),
+            size = Size(targetWidth.toFloat(), targetHeight.toFloat()),
+        ) {
+            // Mirrors `canvas.rotate(degree, targetW/2, targetH/2)` then the centred `drawBitmap`.
+            rotate(degrees = degree, pivot = Offset(targetWidth / 2f, targetHeight / 2f)) {
+                drawImage(
+                    image = icon,
+                    srcOffset = IntOffset.Zero,
+                    srcSize = IntSize(icon.width, icon.height),
+                    // Centre the scaled image in the cell (integer placement; Android uses a float
+                    // top-left — sub-pixel delta is a parity-gate concern, not asserted here).
+                    dstOffset = IntOffset(
+                        (targetWidth - scaledWidth) / 2,
+                        (targetHeight - scaledHeight) / 2,
+                    ),
+                    dstSize = IntSize(scaledWidth, scaledHeight),
+                    // Watermark opacity: Android draws with Paint.alpha = WaterMark.alpha (0..255);
+                    // the normalized equivalent feeds drawImage's alpha. FilterQuality.None preserved.
+                    alpha = safeAlpha,
+                    filterQuality = FilterQuality.None,
+                )
             }
         }
         return bitmap

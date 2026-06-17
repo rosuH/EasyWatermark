@@ -287,9 +287,18 @@ Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; 
 - Production preview/export were not wired to the new text primitive. Android rendering remains on `WatermarkRenderer`; no `:app` files changed, no commit/push/golden rebaseline happened inside the worker session.
 - Next step: S4d-4 should add icon raster / image decode bootstrap for the commonMain cell artifact, still without production wiring. Before any draw-swap, require bundled-font strategy, Android-vs-commonMain pixel gates, strict goldens, and production-first paired screenshots.
 
+## 2026-06-17 — S4d-4 commonMain icon raster bootstrap accepted
+
+- S4d-4 ACSP session `20260617-090920--s4d4-icon-raster-bootstrap` was accepted and moved to `done/` after one coordinator revision.
+- Accepted route: add `WatermarkCellComposer.composeIconCell` to `:shared/commonMain`. The primitive accepts an already-decoded Compose `ImageBitmap`, keeps decode/EXIF/downsample/recycled-bitmap checks outside commonMain, uses the Android-equivalent icon scale reference (`textSize / 14f`), sizes through `WatermarkGeometry.diagonal` + gaps, rotates around the cell centre, centres the scaled image, uses `FilterQuality.None`, and applies normalized/clamped alpha.
+- Review correction: the first worker result missed the image watermark alpha contract. The revision added `alpha: Float = 1f`, clamps it to `0f..1f`, passes it to `drawImage(alpha = ...)`, and added tests that fail for a full-opacity-only implementation. Coordinator also corrected stale artifact wording: current production default `WaterMark.alpha` is `255`; `128` is only the nullable-config `Paint.applyConfig` fallback.
+- Verification: shared desktop/iOS compile, `:shared:desktopTest`, strict renderer golden gate, dependency proof, and `git diff --check` all passed; Gradle daemon was stopped. `WatermarkIconCellRasterTest` now covers visible pixels, geometry/scale, gap behavior, rotation, centring, alpha scaling, and alpha clamping.
+- Production preview/export were not wired to the new icon primitive. Android rendering remains on `WatermarkRenderer`; no `:app` files changed, no commit/push/golden rebaseline happened inside the worker session.
+- Next step: S4d-5 should add the first Android-vs-commonMain parity gate before any draw-swap. Keep it test-only unless the parity evidence is strong: text/icon cell pixels, bundled-font decision for CJK/emoji, strict goldens, and production-first screenshots when UI is touched.
+
 ## Next Suggested Step
 
-- Commit/land S4d-3 after final human approval, then publish S4d-4 as a narrow icon raster / image decode bootstrap task. Keep it additive in `:shared`, do not production-wire preview/export, and require dependency proof plus strict renderer golden preservation.
+- Commit/land S4d-4 after final human approval, then publish S4d-5 as a narrow parity-gate task. It should stay additive/test-only unless Android-vs-commonMain text/icon cell evidence is strong enough to justify a later production draw-swap.
 
 ## 2026-06-16 — S4c accepted; S4d-1 spike blocked as C4.3 lineage work
 

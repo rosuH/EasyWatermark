@@ -6,7 +6,7 @@ Create a file-based, PM-style migration plan that helps the developer incrementa
 
 ## Current Phase
 
-Phase J - S4d-3 accepted; next is S4d-4 icon raster / image decode bootstrap for the commonMain renderer
+Phase J - S4d-4 accepted; next is S4d-5 Android-vs-commonMain renderer parity gate planning/implementation
 
 ## Phases
 
@@ -40,9 +40,9 @@ Phase J - S4d-3 accepted; next is S4d-4 icon raster / image decode bootstrap for
 
 ## Open Questions
 
-- How should S4d-4 model icon/image raster input without pulling Android `Bitmap` or decode APIs into commonMain?
-- Should S4d-4 only prove a synthetic `ImageBitmap`/platform-decoded icon cell, or also define the production image-decode boundary for Android/Desktop/iOS?
-- Before production wiring, which bundled-font and Android-vs-commonMain pixel gates are mandatory for CJK/emoji parity?
+- Which Android-vs-commonMain cell parity gate should run before any production draw-swap: test-only Android adapter, instrumented screenshot/pixel capture, or both?
+- What is the minimum bundled-font strategy needed before comparing commonMain text against Android `StaticLayout` for CJK/emoji?
+- Should S4d-5 prove only text/icon cell parity, or also start REPEAT/CLAMP tiling composition in commonMain behind tests?
 
 ## CMP Migration Planning (started 2026-06-12)
 
@@ -74,7 +74,8 @@ Research and produce a phased, decision-complete plan to take EasyWatermark from
 - [x] Phase J.2 — C4.3 implementation: land one clean Android Compose lineage (Option B first, Option A fallback) with strict golden + full UI parity gate.
 - [x] Phase J.3 — S4d-2: first commonMain renderer implementation slice on top of the unified Compose lineage. Landed an offscreen `ImageBitmap` cell composer scaffold in `:shared/commonMain`, verified by `:shared:desktopTest`, and kept Android preview/export unwired.
 - [x] Phase J.4 — S4d-3: add text raster / `TextMeasurer` bootstrap for the commonMain cell artifact, with explicit Android renderer parity gates before any production wiring. Accepted via ACSP session `20260617-075849--s4d3-text-raster-bootstrap`.
-- [ ] Phase J.5 — S4d-4: add icon raster / image decode bootstrap for the commonMain cell artifact, still with no production preview/export wiring.
+- [x] Phase J.5 — S4d-4: add icon raster / image decode bootstrap for the commonMain cell artifact, still with no production preview/export wiring. Accepted via ACSP session `20260617-090920--s4d4-icon-raster-bootstrap`.
+- [ ] Phase J.6 — S4d-5: add the next parity gate before production wiring, most likely Android-vs-commonMain cell evidence for text/icon plus an explicit bundled-font/tiling decision.
 
 ### Key Decisions (CMP)
 
