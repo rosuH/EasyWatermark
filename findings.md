@@ -1,6 +1,6 @@
 # Compose Migration Findings
 
-## Current State Addendum (2026-06-16)
+## Current State Addendum (2026-06-17)
 
 Treat this section as the current state. Older sections below preserve historical research and may describe files or risks that have since been resolved.
 
@@ -17,7 +17,9 @@ Treat this section as the current state. Older sections below preserve historica
 - C4.3 verification found no Compose-bump renderer/UI regression: strict renderer tests stayed green, paired production/debug screenshots covered Launch, Editor, Text modal, Save sheet, Template, About, and OpenSource. Remaining visible differences are pre-existing migration deltas (`bg-palette`, ADR-0015 editor chrome, share-in export-list count). Recovery screen was not re-captured for this build-config-only slice and remains a low-risk residual.
 - S4d-2 is accepted: `:shared/commonMain` now has a narrow `WatermarkCellComposer` offscreen `ImageBitmap` cell scaffold that reuses `WatermarkGeometry` for rotated-AABB/gap sizing and is verified by `:shared:desktopTest`. It is intentionally not wired into Android preview/export yet; production still goes through the Android `WatermarkRenderer` seam.
 - S4d-2 adds `compose.desktop.currentOs` only to `desktopTest` so the commonMain cell can render on the JVM host. Coordinator dependency proof found no Skiko/desktop runtime leakage into `:app:debugRuntimeClasspath`; residual `org.jetbrains.compose.*` requests are substituted to AndroidX Compose `1.11.2`.
-- Next S4d work is text/icon raster content, not tiling or production replacement yet. The key risk is platform text measurement bootstrap (`FontFamily.Resolver` / `TextMeasurer`) and CJK/emoji baseline parity; wire-in to preview/export should remain gated by strict goldens plus production-first screenshots.
+- S4d-3 is accepted: commonMain now has text raster bootstrap behind `TextRasterEnv` (`FontFamily.Resolver`, `Density`, `LayoutDirection`) and `WatermarkTextContent`. `WatermarkCellComposer.composeTextCell` measures with `TextMeasurer`, paints with `MultiParagraph.paint`, sizes through `WatermarkGeometry`, and centres the measured text box with `((finalWidth - textWidth)/2, (finalHeight - textHeight)/2)`. `:shared:desktopTest` covers visible text, geometry sizing, gap behavior, and the degree-0/no-gap placement guard that catches the old `finalWidth/2` clipping bug.
+- S4d-3 remains deliberately unwired from Android preview/export. Production still goes through Android `WatermarkRenderer`, so commonMain text raster is a proofed primitive, not a shipped renderer path. Before production wiring, require bundled-font strategy, Android-vs-commonMain pixel gates, strict goldens, and production-first paired screenshots.
+- Next S4d work is icon raster/image decode bootstrap, not tiling or production replacement yet. The key risk is defining an image input/decode boundary that does not pull Android `Bitmap`/`ContentResolver` into commonMain while still producing a real offscreen icon cell artifact.
 
 ## Repository State
 

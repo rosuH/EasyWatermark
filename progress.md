@@ -276,11 +276,20 @@ Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; 
 - Evidence: `WatermarkCellComposerTest` passes 4 desktop-rendering assertions; `WatermarkExportGoldenTest` reports 5 tests, 0 failures, `strict=true`; app runtimeClasspath has no `skiko`/`compose.desktop` leakage and residual `org.jetbrains.compose.*` requests resolve to AndroidX Compose `1.11.2`.
 - Next step: S4d-3 should add the text raster / `TextMeasurer` bootstrap behind a parity-first gate. Do not replace the Android production renderer until the common cell content can be compared against existing strict goldens and production-first screenshots.
 - Instrumented export baselines are now pinned for `sdk_gphone64_arm64/36` (Pixel_9_Pro_XL emulator / Android 16 / API 36). Other devices log signatures without spurious failure; SM-S906E authority-device pin remains a follow-up when available.
-- Coordinator re-review inspected the actual diff and artifacts and ran `git diff --check` clean. No production renderer logic changed; S4b is ready for commit/landing decision.
+- Coordinator re-review inspected the actual diff and artifacts and ran `git diff --check` clean. No production renderer logic changed; S4d-2 was accepted for commit/landing decision.
+
+## 2026-06-17 — S4d-3 commonMain text raster bootstrap accepted
+
+- S4d-3 ACSP session `20260617-075849--s4d3-text-raster-bootstrap` was accepted and moved to `done/`.
+- Accepted route: add `TextRasterEnv` and `WatermarkTextContent` to `:shared/commonMain`, then add `WatermarkCellComposer.composeTextCell` as a proofed text-raster primitive. The platform font resolver is injected at the boundary instead of constructed in commonMain.
+- Placement correction from review: `MultiParagraph.paint` paints from the current canvas origin, so commonMain centres the measured text box by translating to `((finalWidth - textWidth)/2, (finalHeight - textHeight)/2)`. Android's `translate(finalW/2, ...)` remains correct only because the Android path uses CENTER-aligned `TextPaint`; the parity artifact now explicitly documents this distinction.
+- Verification: worker ran shared desktop/iOS compile, `:shared:desktopTest`, strict renderer goldens, app dependency proof, and `git diff --check`; coordinator re-ran `./gradlew :shared:desktopTest --max-workers=8` and `git diff --check`, then stopped Gradle daemons.
+- Production preview/export were not wired to the new text primitive. Android rendering remains on `WatermarkRenderer`; no `:app` files changed, no commit/push/golden rebaseline happened inside the worker session.
+- Next step: S4d-4 should add icon raster / image decode bootstrap for the commonMain cell artifact, still without production wiring. Before any draw-swap, require bundled-font strategy, Android-vs-commonMain pixel gates, strict goldens, and production-first paired screenshots.
 
 ## Next Suggested Step
 
-- Commit/land S4b after final human approval, then start a C4/CMP-9547/Compose-lineage gate task before moving composition into commonMain. The next worker task should answer whether adding Compose graphics/text dependencies to `:shared` is safe now, what exact dependency coordinates/version lineage to use, and what rollback/golden criteria gate the first commonMain renderer implementation slice.
+- Commit/land S4d-3 after final human approval, then publish S4d-4 as a narrow icon raster / image decode bootstrap task. Keep it additive in `:shared`, do not production-wire preview/export, and require dependency proof plus strict renderer golden preservation.
 
 ## 2026-06-16 — S4c accepted; S4d-1 spike blocked as C4.3 lineage work
 
