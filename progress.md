@@ -6,7 +6,7 @@
 - Confirmed PR #358 is still OPEN + Draft (`feat/migrate_to_compose` -> `master`) and should remain a Draft integration checkpoint, not a merge-ready PR.
 - Recorded that Android production v2.10.0 remains the only UI/UX source of truth; iOS and Desktop align to that baseline after code migration rather than defining a new design.
 - Reaffirmed the execution protocol: every non-trivial implementation slice goes through ACSP coordinator -> worker -> bounded poll -> coordinator review/accept/requeue. Direct coordinator edits are limited to tiny durable-context hygiene or explicit user requests.
-- Next action: publish S4d-65 as the next small C4.2 implementation slice: convert only `compressedResult` to nullable StateFlow. Keep `saveProcess`, `saveImageUri`, `imageList`, `galleryPickedImageList`, and 1:1 parity out of scope.
+- Next action: publish S4d-66 as the next small C4.2 implementation slice: convert only `saveProcess` to nullable StateFlow after preflighting its writers and any Compose consumer. Keep `saveImageUri`, `imageList`, `galleryPickedImageList`, and 1:1 parity out of scope.
 
 ## 2026-06-27 — S4d-59/S4d-61 code-migration readiness + WaterMark commonMain model/rules accepted
 
@@ -22,7 +22,8 @@
 - S4d-62 selected state-layer de-Androidization as the next lane. Coordinator narrowed the first implementation to the smallest useful step: retire duplicate `waterMark`/`selectedImage` LiveData consumers in favor of existing `waterMarkFlow`/`selectedImageFlow`; leave `galleryPickedImageList`, renderer, repos, DataStore, Room, deps, iOS/Desktop, and 1:1 parity untouched.
 - **S4d-63 (implementation, ACSP `20260627-020341--s4d63-stateflow-duplicate-retirement`, accepted):** retired the duplicate `MainViewModel.waterMark` and `selectedImage` LiveData wrappers and rewired the 7 internal `.value` reads to existing `waterMarkFlow`/`selectedImageFlow`. Only `MainViewModel.kt` changed. Coordinator reran `git diff --check` and `:app:compileDebugKotlin`; worker gates also passed strict unit/golden 48/0 with no rebaseline plus debug/release assemble; daemon stopped.
 - **S4d-64 (implementation, ACSP `20260627-021540--s4d64-save-result-stateflow`, accepted):** converted only `MainViewModel.saveResult` to nullable StateFlow and swapped the sole Compose consumer to `collectAsStateWithLifecycle`. Null initial/no-event semantics are preserved; `Result` is a normal class and writers create fresh instances. Coordinator reran `git diff --check` and `:app:compileDebugKotlin`; worker gates also passed strict unit/golden 48/0 with no rebaseline plus debug/release assemble; daemon stopped.
-- **Next:** S4d-65 should convert only `compressedResult`; keep every other LiveData survivor separate.
+- **S4d-65 (implementation, ACSP `20260627-022655--s4d65-compressed-result-stateflow`, accepted):** converted only `MainViewModel.compressedResult` to nullable StateFlow. It has no current consumer; all four `compressImg` writers now emit through `_compressedResult.value` with the same `Result` codes/messages and unchanged compression control flow. Coordinator reran `git diff --check` and `:app:compileDebugKotlin`; worker gates also passed strict unit/golden 48/0 with no rebaseline plus debug/release assemble; daemon stopped.
+- **Next:** S4d-66 should convert only `saveProcess`; keep every other LiveData survivor separate.
 
 ## 2026-06-19 — S4d-21: Desktop EXIF orientation decode pass (accepted, in `done/`)
 

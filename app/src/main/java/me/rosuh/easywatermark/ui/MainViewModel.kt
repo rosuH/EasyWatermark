@@ -91,7 +91,11 @@ class MainViewModel (
     private val _saveResult = MutableStateFlow<Result<*>?>(null)
     val saveResult: StateFlow<Result<*>?> = _saveResult.asStateFlow()
 
-    val compressedResult: MutableLiveData<Result<*>> = MutableLiveData()
+    // S4d-65: StateFlow-only (was MutableLiveData), mirroring saveResult (S4d-64). null initial = "no
+    // compress event yet" (old LiveData had no value before first emit). Distinct Result instances each
+    // emit, so StateFlow conflation never skips a real event.
+    private val _compressedResult = MutableStateFlow<Result<*>?>(null)
+    val compressedResult: StateFlow<Result<*>?> = _compressedResult.asStateFlow()
 
     val waterMarkFlow = waterMarkRepo.waterMark.stateIn(
         viewModelScope,
@@ -591,7 +595,7 @@ class MainViewModel (
     fun compressImg(activity: Activity) {
         compressedJob = viewModelScope.launch(Dispatchers.IO) {
             waterMarkFlow.value?.let {
-                compressedResult.postValue(Result.success(null, code = TYPE_COMPRESSING))
+                _compressedResult.value = Result.success(null, code = TYPE_COMPRESSING)
                 val tmpFile = File.createTempFile("easy_water_mark_", "_compressed")
                 activity.contentResolver.openInputStream(waterMarkRepo.imageInfoList.first().uri.toUri())
                     .use { input ->
@@ -611,24 +615,22 @@ class MainViewModel (
                         compressedFile
                     )
                     selectImage(compressedFileUri.toMediaRef())
-                    compressedResult.postValue(Result.success(null, code = TYPE_COMPRESS_OK))
+                    _compressedResult.value = Result.success(null, code = TYPE_COMPRESS_OK)
                 } catch (ie: IllegalArgumentException) {
-                    compressedResult.postValue(
+                    _compressedResult.value =
                         Result.failure(
                             null,
                             code = TYPE_COMPRESS_ERROR,
                             message = "Images creates uri failed."
                         )
-                    )
                 }
             } ?: kotlin.run {
-                compressedResult.postValue(
+                _compressedResult.value =
                     Result.failure(
                         null,
                         code = TYPE_COMPRESS_ERROR,
                         message = "Config value is null."
                     )
-                )
             }
         }
     }

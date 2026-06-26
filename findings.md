@@ -26,6 +26,12 @@
 - `Result` is a normal class, not a data class, so StateFlow conflation will not drop equal-looking repeated save events by structural equality.
 - Repeat this check for every event-like LiveData holder; do not assume StateFlow is behavior-identical if the payload is a data class or reused singleton.
 
+## Unobserved event holders still need future-consumer shape preserved (S4d-65, 2026-06-27)
+
+- `compressedResult` had no current consumer, but the public API still needs the same nullable event shape as `saveResult`: `StateFlow<Result<*>?>` with `null` as the no-event state.
+- A no-consumer holder can be migrated single-file only after proving there are no external reads and no same-class reads; preserve all writer payloads so a future consumer sees the same event codes/messages.
+- For `saveProcess`, preflight both writers and consumer expectations before conversion; it is an observed progress state, not an unobserved event placeholder.
+
 ## Watermark config rules can move without moving repositories (S4d-61, 2026-06-27)
 
 - `WatermarkConfigRules` in commonMain can own pure legacy normalization behavior while Android `WaterMarkRepository` remains the DataStore boundary. This extracts useful shared logic without forcing a repository rewrite.
