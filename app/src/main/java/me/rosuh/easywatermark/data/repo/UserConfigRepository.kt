@@ -62,8 +62,6 @@ class UserConfigRepository (private val dataStore: DataStore<Preferences>) {
 
     companion object {
         const val DEFAULT_COMPRESS_LEVEL = 80
-        val DEFAULT_OUTPUT_FORMAT = ImageFormat.JPEG
-
 
         const val SP_NAME = "sp_water_mark_user_config"
         const val SP_KEY_FORMAT = "${SP_NAME}_key_format"
