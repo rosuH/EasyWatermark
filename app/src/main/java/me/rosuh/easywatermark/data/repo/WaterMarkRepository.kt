@@ -1,8 +1,6 @@
 package me.rosuh.easywatermark.data.repo
 
-import android.graphics.Color
 import android.util.Log
-import androidx.collection.ArrayMap
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import kotlinx.coroutines.Dispatchers
@@ -73,7 +71,9 @@ class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
                 textSize = WatermarkConfigRules.clampTextSize(
                     it[KEY_TEXT_SIZE] ?: WatermarkConfigRules.DEFAULT_TEXT_SIZE
                 ),
-                textColor = it[KEY_TEXT_COLOR] ?: Color.parseColor("#FFB800"),
+                // S4d-84: platform-neutral opaque ARGB constant equal to Color.parseColor("#FFB800")
+                // (pinned by WaterMarkDefaultColorTest), removing the android.graphics.Color edge.
+                textColor = it[KEY_TEXT_COLOR] ?: 0xFFFFB800.toInt(),
                 textStyle = TextPaintStyle.obtainSealedClass(it[KEY_TEXT_STYLE] ?: 0),
                 textTypeface = TextTypeface.obtainSealedClass(it[KEY_TEXT_TYPEFACE] ?: 0),
                 alpha = it[KEY_ALPHA] ?: 255,
@@ -88,7 +88,7 @@ class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
         }
 
     private val _imageMapFlow: MutableStateFlow<List<ImageInfo>> = MutableStateFlow(emptyList())
-    private val imageInfoMap: MutableMap<MediaRef, Int> = ArrayMap(_imageMapFlow.value.size)
+    private val imageInfoMap: MutableMap<MediaRef, Int> = mutableMapOf()
 
     val imageInfoMapFlow = _imageMapFlow
 
