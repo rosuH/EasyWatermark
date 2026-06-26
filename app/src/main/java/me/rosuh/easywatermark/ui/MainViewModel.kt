@@ -36,6 +36,7 @@ import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
+import me.rosuh.easywatermark.data.model.WatermarkConfigChange
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.JobState
@@ -69,7 +70,6 @@ import org.koin.java.KoinJavaComponent.inject
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
-import kotlin.math.roundToInt
 import kotlin.time.Clock
 
 class MainViewModel (
@@ -1037,48 +1037,21 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
     }
 
     private fun onWaterMarkChanged(item: FuncTitleModel, any: Any) {
-        when (item.type) {
-            FuncTitleModel.FuncType.Alpha -> {
-                updateAlpha(any as Float)
-            }
-
-            FuncTitleModel.FuncType.Color -> {
-                updateTextColor(any as Int)
-            }
-
-            FuncTitleModel.FuncType.Degree -> {
-                updateDegree((any as Float))
-            }
-
-            FuncTitleModel.FuncType.Icon -> {
-                // S4d-50: IconOption converts the picker Uri to MediaRef at the edge; the reducer
-                // receives/casts MediaRef here.
-                updateIcon(any as MediaRef)
-            }
-
-            FuncTitleModel.FuncType.Text -> {
-                updateText(any as String)
-            }
-
-            FuncTitleModel.FuncType.TextSize -> {
-                updateTextSize(any as Float)
-            }
-
-            FuncTitleModel.FuncType.TextTypeFace -> {
-                updateTextTypeface(any as TextTypeface)
-            }
-
-            FuncTitleModel.FuncType.TileMode -> {
-                updateTileMode(any as WatermarkTileMode)
-            }
-
-            FuncTitleModel.FuncType.Horizon -> {
-                updateHorizon(((any as Float).roundToInt()))
-            }
-
-            FuncTitleModel.FuncType.Vertical -> {
-                updateVertical(((any as Float).roundToInt()))
-            }
+        // S4d-72: map (FuncType, raw value) to a typed command at one shared boundary
+        // (WatermarkConfigChange.from — fail-fast casts + gap rounding live there), then dispatch the
+        // typed command to the existing update* methods (unchanged behavior source).
+        when (val change = WatermarkConfigChange.from(item.type, any)) {
+            is WatermarkConfigChange.Text -> updateText(change.text)
+            // S4d-50: IconOption converts the picker Uri to MediaRef at the edge; here it is already MediaRef.
+            is WatermarkConfigChange.Icon -> updateIcon(change.icon)
+            is WatermarkConfigChange.Color -> updateTextColor(change.color)
+            is WatermarkConfigChange.AlphaPercent -> updateAlpha(change.percent)
+            is WatermarkConfigChange.Degree -> updateDegree(change.degree)
+            is WatermarkConfigChange.TextSize -> updateTextSize(change.size)
+            is WatermarkConfigChange.Typeface -> updateTextTypeface(change.typeface)
+            is WatermarkConfigChange.TileMode -> updateTileMode(change.tileMode)
+            is WatermarkConfigChange.HorizontalGap -> updateHorizon(change.gap)
+            is WatermarkConfigChange.VerticalGap -> updateVertical(change.gap)
         }
     }
 

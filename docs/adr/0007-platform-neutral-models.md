@@ -163,3 +163,19 @@ remain app-side edge models.
 
 **Remaining (optional, not model-layer):** flipping gallery `Image.uri`/`uriList` only if a non-Android (Desktop/iOS)
 gallery is ever built.
+
+## Implementation status — config command vocabulary (S4d-72, 2026-06-27)
+
+`FuncType` now lives in `shared/commonMain/.../data/model` as the platform-neutral editor-control vocabulary.
+`FuncTitleModel` remains app-side because it carries Android `@StringRes` / `@DrawableRes` metadata, but its
+`type` is the shared `FuncType` and the nested app-only type is gone.
+
+`WatermarkConfigChange` is the commonMain typed command seam for editor config changes. It covers text, icon
+`MediaRef`, color, alpha percent, degree, text size, typeface, tile mode, and h/v gaps.
+`WatermarkConfigChange.from(FuncType, Any)` intentionally keeps the temporary raw Android/UI edge in one place:
+it preserves the old fail-fast casts and h/v gap `(Float).roundToInt()` behavior. `MainViewModel.onWaterMarkChanged`
+now maps once through that seam and dispatches to the existing update methods.
+
+Verified by zero `FuncTitleModel.FuncType` hits, zero `any as` hits in `MainViewModel`, shared Desktop/iOS/iOS-sim
+compile, app compile, strict unit/golden 48/0 with no rebaseline, debug/release assemble, and a new common
+desktopTest covering typed construction, gap rounding, and fail-fast wrong types.

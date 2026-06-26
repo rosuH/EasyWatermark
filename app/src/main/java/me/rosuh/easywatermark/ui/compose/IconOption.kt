@@ -22,6 +22,7 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
+import me.rosuh.easywatermark.data.model.FuncType
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.utils.ktx.toMediaRef
@@ -33,7 +34,7 @@ import me.rosuh.easywatermark.utils.ktx.toUri
 fun IconOptionPreview() {
     IconOption(
         item = FuncTitleModel(
-            FuncTitleModel.FuncType.Icon,
+            FuncType.Icon,
             R.string.water_mark_mode_image,
             R.drawable.ic_func_sticker
         ),

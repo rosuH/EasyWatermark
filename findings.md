@@ -6,7 +6,7 @@
 - Final screenshot/recording-driven 1:1 UI/UX restoration starts only after the code migration is release-grade across Android, iOS, and Desktop. Until then, UI evidence is used to prevent regressions for a slice, not to declare global product parity.
 - Android production v2.10.0 is the single visual/behavioral truth. Android debug must match it first in the final parity phase; iOS/Desktop then align to that Android baseline with explicitly classified platform differences.
 - ACSP is the default execution mechanism for non-trivial work. Worker summaries are evidence leads only; coordinator acceptance requires reading artifacts, checking the real diff/current files, and rerunning or validating the relevant gate.
-- The StateFlow cleanup lane is now complete through S4d-69, S4d-70 selected the next code-migration slice, and S4d-71 moved `ImageInfo` to commonMain. The next safe implementation step is shared `ConfigChange` / neutral `FuncType`, not screenshot/recording parity or redesign work from the current branch state.
+- The StateFlow cleanup lane is now complete through S4d-69, S4d-70 selected the next code-migration slices, S4d-71 moved `ImageInfo` to commonMain, and S4d-72 moved the neutral config command vocabulary to commonMain. The next safe step is a read-only DataStore/Room/Koin readiness map, not screenshot/recording parity or dependency edits from the current branch state.
 
 ## ImageInfo can move to commonMain without bringing AndroidX annotation (S4d-70, 2026-06-27)
 
@@ -19,6 +19,12 @@
 - `ImageInfo` now lives in `shared/commonMain` with the same package/FQN, so consumers did not need import churn. Its field shape, defaults, `isSameItem`, and `empty()` semantics are unchanged.
 - The old `offsetX`/`offsetY` Android range annotation was only a doc/lint hint. It was removed instead of adding AndroidX annotation to `:shared`; the 0f..1f invariant remains documented in plain words and the retired symbol is grep-clean.
 - Do not overstate the milestone as "every app data model moved." `UserPreferences` (preference boundary), Room `Template`, and UI `FuncTitleModel` remain app-side edge models. The completed part is the image identity / watermark-config platform-neutral model set.
+
+## Config command vocabulary is now commonMain; keep raw UI edge temporary (S4d-72, 2026-06-27)
+
+- `FuncType` moved from the app-only `FuncTitleModel` nested type to `shared/commonMain`; `FuncTitleModel` stays app-side because it carries Android resource ids.
+- `WatermarkConfigChange.from(FuncType, Any)` centralizes the legacy fail-fast casts and h/v gap rounding; `MainViewModel.onWaterMarkChanged` dispatches typed commands to the existing `update*` methods.
+- `Action.WaterMarkChange(item, any)` remains the temporary Android/UI edge. Do not broaden this into a full action-system rewrite until shared editor/use-case extraction needs it.
 
 ## MainViewModel has no faithful pure WaterMark reducer yet (S4d-62, 2026-06-27)
 

@@ -37,6 +37,7 @@ import androidx.constraintlayout.compose.layoutId
 import kotlinx.coroutines.delay
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
+import me.rosuh.easywatermark.data.model.FuncType
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
@@ -116,7 +117,7 @@ private fun ColorOptionPreview() {
     )
     ColorOption(
         item = FuncTitleModel(
-            FuncTitleModel.FuncType.Color,
+            FuncType.Color,
             R.string.title_text_color,
             R.drawable.ic_func_color
         ), waterMark = waterMark

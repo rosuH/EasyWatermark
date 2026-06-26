@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
+import me.rosuh.easywatermark.data.model.FuncType
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WaterMark
 
@@ -26,7 +27,7 @@ import me.rosuh.easywatermark.data.model.WaterMark
 private fun TextStylePreview() {
     TextTypeface(
         item = FuncTitleModel(
-            FuncTitleModel.FuncType.TextTypeFace,
+            FuncType.TextTypeFace,
             R.string.title_text_style,
             R.drawable.ic_func_typeface
         ),

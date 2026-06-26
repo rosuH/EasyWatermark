@@ -21,13 +21,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
+import me.rosuh.easywatermark.data.model.FuncType
 
 
 @Preview
 @Composable
 private fun SliderOptionPreview() {
     val item = FuncTitleModel(
-        FuncTitleModel.FuncType.Alpha,
+        FuncType.Alpha,
         R.string.style_alpha,
         R.drawable.ic_func_opacity
     )

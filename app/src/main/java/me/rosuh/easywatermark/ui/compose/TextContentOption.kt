@@ -30,6 +30,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
+import me.rosuh.easywatermark.data.model.FuncType
 import me.rosuh.easywatermark.data.model.WaterMark
 
 @Preview
@@ -37,7 +38,7 @@ import me.rosuh.easywatermark.data.model.WaterMark
 private fun TextContentOptionPreview() {
     TextContentOption(
         item = FuncTitleModel(
-            FuncTitleModel.FuncType.Text,
+            FuncType.Text,
             R.string.water_mark_mode_text,
             R.drawable.ic_func_text
         ),

@@ -19,6 +19,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.util.packInts
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
+import me.rosuh.easywatermark.data.model.FuncType
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 
@@ -27,7 +28,7 @@ import me.rosuh.easywatermark.data.model.WatermarkTileMode
 private fun TileModePreview() {
     TileMode(
         item = FuncTitleModel(
-            FuncTitleModel.FuncType.TileMode,
+            FuncType.TileMode,
             R.string.title_tile_mode,
             R.drawable.ic_tile_mode
         ),

@@ -90,6 +90,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
+import me.rosuh.easywatermark.data.model.FuncType
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.entity.Template
@@ -457,7 +458,7 @@ fun OptionControl(
 ) {
     val configuration = LocalWindowInfo.current.containerSize
     val screenHeight = configuration.height.dp
-    val isColor = item.type == FuncTitleModel.FuncType.Color
+    val isColor = item.type == FuncType.Color
     val height = if (isColor) {
         screenHeight / 3
     } else {
@@ -471,7 +472,7 @@ fun OptionControl(
             .fillMaxWidth()
             .padding(16.dp)
         when (item.type) {
-            FuncTitleModel.FuncType.Alpha -> {
+            FuncType.Alpha -> {
                 SliderOption(
                     item = item,
                     modifier = innerModifier,
@@ -480,7 +481,7 @@ fun OptionControl(
                 )
             }
 
-            FuncTitleModel.FuncType.TextSize -> {
+            FuncType.TextSize -> {
                 SliderOption(
                     item = item,
                     modifier = innerModifier,
@@ -489,7 +490,7 @@ fun OptionControl(
                 )
             }
 
-            FuncTitleModel.FuncType.Vertical -> {
+            FuncType.Vertical -> {
                 SliderOption(
                     item = item,
                     modifier = innerModifier,
@@ -498,7 +499,7 @@ fun OptionControl(
                 )
             }
 
-            FuncTitleModel.FuncType.Horizon -> {
+            FuncType.Horizon -> {
                 SliderOption(
                     item = item,
                     modifier = innerModifier,
@@ -507,7 +508,7 @@ fun OptionControl(
                 )
             }
 
-            FuncTitleModel.FuncType.Degree -> {
+            FuncType.Degree -> {
                 SliderOption(
                     item = item,
                     modifier = innerModifier,
@@ -516,7 +517,7 @@ fun OptionControl(
                 )
             }
 
-            FuncTitleModel.FuncType.Color -> {
+            FuncType.Color -> {
                 ColorOption(
                     item = item,
                     waterMark = waterMark,
@@ -525,7 +526,7 @@ fun OptionControl(
                 )
             }
 
-            FuncTitleModel.FuncType.Icon -> {
+            FuncType.Icon -> {
                 IconOption(
                     item = item,
                     waterMark = waterMark,
@@ -534,7 +535,7 @@ fun OptionControl(
                 )
             }
 
-            FuncTitleModel.FuncType.Text -> {
+            FuncType.Text -> {
                 TextContentOption(
                     item = item,
                     waterMark = waterMark,
@@ -544,7 +545,7 @@ fun OptionControl(
                 )
             }
 
-            FuncTitleModel.FuncType.TextTypeFace -> {
+            FuncType.TextTypeFace -> {
                 TextTypeface(
                     item = item,
                     waterMark = waterMark,
@@ -553,7 +554,7 @@ fun OptionControl(
                 )
             }
 
-            FuncTitleModel.FuncType.TileMode ->
+            FuncType.TileMode ->
                 TileMode(
                     item = item,
                     waterMark = waterMark,
@@ -568,12 +569,12 @@ fun OptionControl(
 private val contentFunList: List<FuncTitleModel> by lazy {
     listOf(
         FuncTitleModel(
-            FuncTitleModel.FuncType.Text,
+            FuncType.Text,
             R.string.water_mark_mode_text,
             R.drawable.ic_func_text
         ),
         FuncTitleModel(
-            FuncTitleModel.FuncType.Icon,
+            FuncType.Icon,
             R.string.water_mark_mode_image,
             R.drawable.ic_func_sticker
         )
@@ -583,33 +584,33 @@ private val contentFunList: List<FuncTitleModel> by lazy {
 private val styleFunList: List<FuncTitleModel> by lazy {
     listOf(
         FuncTitleModel(
-            FuncTitleModel.FuncType.TileMode,
+            FuncType.TileMode,
             R.string.title_tile_mode,
             R.drawable.ic_tile_mode
         ),
         FuncTitleModel(
-            FuncTitleModel.FuncType.TextSize,
+            FuncType.TextSize,
             R.string.title_text_size,
             R.drawable.ic_func_size,
             valueRange = 1f..WaterMarkRepository.MAX_TEXT_SIZE,
         ),
         FuncTitleModel(
-            FuncTitleModel.FuncType.TextTypeFace,
+            FuncType.TextTypeFace,
             R.string.title_text_style,
             R.drawable.ic_func_typeface
         ),
         FuncTitleModel(
-            FuncTitleModel.FuncType.Color,
+            FuncType.Color,
             R.string.title_text_color,
             R.drawable.ic_func_color
         ),
         FuncTitleModel(
-            FuncTitleModel.FuncType.Alpha,
+            FuncType.Alpha,
             R.string.style_alpha,
             R.drawable.ic_func_opacity,
         ),
         FuncTitleModel(
-            FuncTitleModel.FuncType.Degree,
+            FuncType.Degree,
             R.string.title_text_rotate,
             R.drawable.ic_func_angle,
             valueRange = 0f..WaterMarkRepository.MAX_DEGREE,
@@ -620,13 +621,13 @@ private val styleFunList: List<FuncTitleModel> by lazy {
 private val layoutFunList: List<FuncTitleModel> by lazy {
     listOf(
         FuncTitleModel(
-            FuncTitleModel.FuncType.Horizon,
+            FuncType.Horizon,
             R.string.title_horizon_layout,
             R.drawable.ic_func_layour_horizontal,
             valueRange = 0f..WaterMarkRepository.MAX_VERTICAL_GAP.toFloat(),
         ),
         FuncTitleModel(
-            FuncTitleModel.FuncType.Vertical,
+            FuncType.Vertical,
             R.string.title_vertical_layout,
             R.drawable.ic_func_layout_vertical,
             valueRange = 0f..WaterMarkRepository.MAX_VERTICAL_GAP.toFloat(),
