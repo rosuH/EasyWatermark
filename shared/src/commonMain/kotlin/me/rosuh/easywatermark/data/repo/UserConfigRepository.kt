@@ -5,21 +5,21 @@ import androidx.datastore.preferences.core.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
-import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.repo.UserConfigRepository.PreferenceKeys.KEY_CHANGE_LOG
 import me.rosuh.easywatermark.data.repo.UserConfigRepository.PreferenceKeys.KEY_COMPRESS_LEVEL
 import me.rosuh.easywatermark.data.repo.UserConfigRepository.PreferenceKeys.KEY_OUTPUT_FORMAT
-import java.io.IOException
+import okio.IOException
 
-class UserConfigRepository (private val dataStore: DataStore<Preferences>) {
+class UserConfigRepository(private val dataStore: DataStore<Preferences>) {
     private object PreferenceKeys {
         val KEY_OUTPUT_FORMAT = intPreferencesKey(SP_KEY_FORMAT)
 
         val KEY_COMPRESS_LEVEL = intPreferencesKey(SP_KEY_COMPRESS_LEVEL)
 
-        val KEY_CHANGE_LOG = stringPreferencesKey(WaterMarkRepository.SP_KEY_CHANGE_LOG)
+        // Mirrors WaterMarkRepository.SP_KEY_CHANGE_LOG; keep persisted key byte-identical.
+        val KEY_CHANGE_LOG = stringPreferencesKey("sp_water_mark_config_key_change_log")
     }
 
     val userPreferences: Flow<UserPreferences> = dataStore.data
@@ -54,9 +54,9 @@ class UserConfigRepository (private val dataStore: DataStore<Preferences>) {
         }
     }
 
-    suspend fun saveVersionCode() {
+    suspend fun saveVersionCode(versionCode: Int) {
         dataStore.edit {
-            it[KEY_CHANGE_LOG] = BuildConfig.VERSION_CODE.toString()
+            it[KEY_CHANGE_LOG] = versionCode.toString()
         }
     }
 

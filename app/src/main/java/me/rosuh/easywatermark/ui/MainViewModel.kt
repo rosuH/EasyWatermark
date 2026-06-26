@@ -691,7 +691,7 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
     }
 
     fun saveUpgradeInfo() {
-        launch { userRepo.saveVersionCode() }
+        launch { userRepo.saveVersionCode(BuildConfig.VERSION_CODE) }
     }
 
     fun query(contentResolver: ContentResolver) {
