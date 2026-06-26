@@ -7,7 +7,15 @@
 - **`okio.IOException` resolves in commonMain with NO dependency change** — confirmed by the compile gate on desktop + both iOS + app (okio is reachable via the transitive `datastore-core-okio`). It is a JVM `typealias` to `java.io.IOException`, so the `.catch{}` swallow-IO behavior is byte-identical on Android. (The S4d-75 classpath inference was correct; the compile is the authoritative proof.)
 - **`BuildConfig.VERSION_CODE` stays at the Android caller edge** via `saveVersionCode(versionCode: Int)` (sole caller `MainViewModel.saveUpgradeInfo()`); the repo carries no Android `BuildConfig`.
 - **Changelog key inlined byte-identical** (`"sp_water_mark_config_key_change_log"`) so Android-side `WaterMarkRepository` is not a commonMain dependency; persisted bytes/keys unchanged (no migration, strict goldens 48/0).
-- Next: iOS/desktop store creation + `expect/actual createDataStore` promotion are now justified but still future/gated; `WaterMarkRepository`/Room/templates remain Android-side.
+- Next (now done): iOS/desktop store creation landed in S4d-78 (see below). NO `expect/actual createDataStore` was taken — plain per-platform functions. `WaterMarkRepository`/Room/templates remain Android-side.
+
+## Desktop + iOS DataStore store creation via public createWithPath, no expect/actual (S4d-78, 2026-06-27)
+
+- `PreferenceDataStoreFactory.createWithPath(produceFile: () -> okio.Path)` is **public and serializer-free** in `datastore-preferences-core` 1.2.1 (verified by `javap`), so desktop/iOS create a preferences `DataStore<Preferences>` without the internal `PreferencesSerializer` and **without any dependency change** (okio comes via the S4d-74 `datastore-core-okio`). commonMain exposes `createPreferencesDataStore(producePath)`; desktop/iOS supply the okio path (desktop a `File` dir; iOS `NSDocumentDirectory`).
+- **No `expect`/`actual createDataStore`** — kept as plain per-platform functions because the platform creators have genuinely different signatures (Android: Context+migration; desktop: dir; iOS: derives a dir). An `expect` would be a forced fit; this is intentional, not a stepping stone.
+- **Android store creation stayed byte-faithful and untouched** (`androidMain` not edited; strict goldens 48/0).
+- Proof: all-target compile + a **Desktop** `UserConfigRepository` roundtrip test (`:shared:desktopTest`, 1/0). **iOS is compile/link-proven only** — no iOS runtime roundtrip was run.
+- Next: wire the Desktop/iOS app DI to `createUserConfigDataStore(...)` at C4/C5 app bring-up.
 
 ## First DataStore KMP code uses common helper + androidMain function, NOT `commonMain expect` (S4d-73/S4d-74, 2026-06-27)
 
@@ -15,7 +23,7 @@
 - **A `commonMain expect` DataStore factory is the wrong shape for this module:** `:shared` targets androidTarget + desktop + iosArm64 + iosSimulatorArm64, so a `commonMain expect` requires `actual` on every target. With no iOS/desktop consumer yet, that forces empty/fake actuals and breaks the `:shared` desktop/iOS compile gates. S4d-74 instead uses a plain `commonMain` helper `createDataStore(storage: Storage<Preferences>)` + a plain `androidMain` function `createPreferencesDataStore(context, name)` (NOT `actual`).
 - **Android keeps byte-identical preferences creation via `PreferenceDataStoreFactory.create(produceFile = preferencesDataStoreFile(name), migrations = SharedPreferencesMigration(context, name))`** — the same path/format/migration the old `by preferencesDataStore(...)` delegate ran. Android does NOT route through the common storage helper because building a byte-identical `Storage<Preferences>` would need the internal preferences serializer; the common helper is the desktop/iOS forward seam.
 - `di/DataStoreModule.kt` preserved the `Context.userDataStore`/`waterMarkDataStore` property names so `RepositoryModule`/`AppModule` were untouched; one store per file in-process is kept via `@Volatile` double-checked locking. Repos stay Android-side. Stored bytes unchanged; strict goldens 48/0, no rebaseline.
-- The true `expect/actual` promotion + iOS/desktop store creation should land WITH a real common prefs consumer (e.g. shared `UserConfigRepository` extraction), not speculatively. Room KMP and the Koin common/platform split remain later milestones.
+- iOS/desktop store creation landed WITH the real common prefs consumer (S4d-77 repo move → S4d-78 store creation), not speculatively — and as plain per-platform functions, NOT an `expect/actual` promotion (that was deliberately not taken). Room KMP and the Koin common/platform split remain later milestones.
 
 ## Full-platform code migration precedes final 1:1 UI parity (2026-06-27)
 
@@ -23,7 +31,7 @@
 - Final screenshot/recording-driven 1:1 UI/UX restoration starts only after the code migration is release-grade across Android, iOS, and Desktop. Until then, UI evidence is used to prevent regressions for a slice, not to declare global product parity.
 - Android production v2.10.0 is the single visual/behavioral truth. Android debug must match it first in the final parity phase; iOS/Desktop then align to that Android baseline with explicitly classified platform differences.
 - ACSP is the default execution mechanism for non-trivial work. Worker summaries are evidence leads only; coordinator acceptance requires reading artifacts, checking the real diff/current files, and rerunning or validating the relevant gate.
-- The StateFlow cleanup lane is now complete through S4d-69, S4d-70 selected the next code-migration slices, S4d-71 moved `ImageInfo` to commonMain, S4d-72 moved the neutral config command vocabulary to commonMain, S4d-73 mapped DataStore/Room/Koin KMP readiness, S4d-74 landed the first DataStore KMP code in `:shared`, and S4d-76/S4d-77 moved `UserPreferences` + `UserConfigRepository` to commonMain (the first real common DataStore Preferences consumer). The next safe step is the now-justified iOS/desktop store creation + `expect/actual createDataStore` promotion (still future/gated); not screenshot/recording parity or Room/Koin edits from the current branch state.
+- The StateFlow cleanup lane is now complete through S4d-69, S4d-70 selected the next code-migration slices, S4d-71 moved `ImageInfo` to commonMain, S4d-72 moved the neutral config command vocabulary to commonMain, S4d-73 mapped DataStore/Room/Koin KMP readiness, S4d-74 landed the first DataStore KMP code in `:shared`, S4d-76/S4d-77 moved `UserPreferences` + `UserConfigRepository` to commonMain (the first real common DataStore Preferences consumer), and S4d-78 landed desktop+iOS store creation (plain per-platform functions; no `expect/actual`). The next safe step is wiring the Desktop/iOS app DI to those factories at C4/C5 app bring-up; not screenshot/recording parity or Room/Koin edits from the current branch state.
 
 ## ImageInfo can move to commonMain without bringing AndroidX annotation (S4d-70, 2026-06-27)
 
