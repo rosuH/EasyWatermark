@@ -1,7 +1,5 @@
 package me.rosuh.easywatermark.data.model
 
-import androidx.annotation.FloatRange
-
 data class ImageInfo(
     // S4d-52: platform-neutral image identity (ADR-0007). Android `Uri` is converted at the edges
     // (picker/share-in/gallery construction, decode/Coil/save) via `MediaRefExt`.
@@ -14,8 +12,11 @@ data class ImageInfo(
     var result: Result<*>? = null,
     var jobState: JobState = JobState.Ready,
     var isInDelModel: Boolean = false,
-    @param:FloatRange(from = 0.0, to = 1.0) val offsetX: Float = 0.5f,
-    @param:FloatRange(from = 0.0, to = 1.0) val offsetY: Float = 0.5f,
+    // S4d-71: offsetX/offsetY are the normalized watermark offset; expected range 0f..1f (documented
+    // invariant, unenforced). An Android-only doc/lint range annotation was dropped on the move to
+    // commonMain (it had no runtime effect).
+    val offsetX: Float = 0.5f,
+    val offsetY: Float = 0.5f,
 ) {
     // S4d-53: the dead `shareUri: Uri?` computed accessor (`result?.data as? Uri?`) was removed —
     // it had zero call sites/reflection/tests, and the share-out button is an unwired empty lambda.

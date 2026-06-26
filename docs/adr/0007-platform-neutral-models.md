@@ -143,5 +143,23 @@ readiness map.
   `:shared:compileKotlinIosArm64`, `:app:compileDebugKotlin`, strict `:app:testDebugUnitTest` (48/0, no
   golden rebaseline), and `:app:assembleDebug :app:assembleRelease` all passed with `--max-workers=8`.
 
+## Implementation status — ImageInfo moved to commonMain (S4d-71, 2026-06-27)
+
+`ImageInfo` now lives in `shared/src/commonMain/.../data/model` with the same package/FQN; the app copy was
+deleted. This was safe after S4d-52/S4d-53 because `ImageInfo.uri` is already `MediaRef`, `shareUri` is gone,
+and `Result` / `JobState` are commonMain.
+
+- The only removed coupling was the Android-only range annotation on `offsetX` / `offsetY`. It had no runtime
+  check; the normalized 0f..1f invariant is now plain documentation and the retired annotation symbol is
+  source-grep-clean.
+- Field order, names, defaults, mutability, `isSameItem`, and `empty()` semantics were preserved.
+- Verification: shared Desktop/iOS/iOS-sim compile, `:app:compileDebugKotlin`, strict unit/golden 48/0 with no
+  rebaseline, and debug/release assemble all passed; the r1 comment-only cleanup reran zero-hit grep,
+  `git diff --check`, and app compile.
+
+This completes the image identity / watermark-config platform-neutral model set. It does **not** mean every
+app-side data class moved: `UserPreferences` (preference boundary), Room `Template`, and UI `FuncTitleModel`
+remain app-side edge models.
+
 **Remaining (optional, not model-layer):** flipping gallery `Image.uri`/`uriList` only if a non-Android (Desktop/iOS)
 gallery is ever built.
