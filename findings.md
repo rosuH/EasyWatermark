@@ -6,7 +6,13 @@
 - Final screenshot/recording-driven 1:1 UI/UX restoration starts only after the code migration is release-grade across Android, iOS, and Desktop. Until then, UI evidence is used to prevent regressions for a slice, not to declare global product parity.
 - Android production v2.10.0 is the single visual/behavioral truth. Android debug must match it first in the final parity phase; iOS/Desktop then align to that Android baseline with explicitly classified platform differences.
 - ACSP is the default execution mechanism for non-trivial work. Worker summaries are evidence leads only; coordinator acceptance requires reading artifacts, checking the real diff/current files, and rerunning or validating the relevant gate.
-- The next safe step is read-only: map current C3/C4/C5/C6 gaps and choose the next smallest implementation slice. Do not start screenshot/recording parity or redesign work from the current branch state.
+- The next safe step after S4d-61 is another narrow C4.2 slice, not screenshot/recording parity or redesign work from the current branch state.
+
+## Watermark config rules can move without moving repositories (S4d-61, 2026-06-27)
+
+- `WatermarkConfigRules` in commonMain can own pure legacy normalization behavior while Android `WaterMarkRepository` remains the DataStore boundary. This extracts useful shared logic without forcing a repository rewrite.
+- The safe rule surface is small and testable: text-size clamp, alpha percent-to-byte conversion, alpha byte clamp, horizontal/vertical gap clamp, degree clamp, and text/icon mode transitions. These are value transforms, not renderer changes.
+- Keep claims precise: release debug/release gates prove build/R8 health; same APK size is not byte identity unless hashes are compared. S4d-61 artifacts were corrected to avoid that overclaim before acceptance.
 
 ## Desktop EXIF orientation is doable with pure JDK — no metadata dependency (S4d-21, 2026-06-19)
 

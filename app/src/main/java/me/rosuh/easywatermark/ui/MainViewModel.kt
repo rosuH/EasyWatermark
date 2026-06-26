@@ -49,6 +49,7 @@ import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkConfigRules
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.model.entity.Template
@@ -492,7 +493,7 @@ class MainViewModel (
 
     fun updateAlpha(alpha: Float) {
         launch {
-            val finalAlpha = (alpha / 100 * 255).toInt()
+            val finalAlpha = WatermarkConfigRules.alphaPercentToByte(alpha)
             waterMarkRepo.updateAlpha(finalAlpha)
         }
     }

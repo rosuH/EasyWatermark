@@ -15,6 +15,7 @@ import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkConfigRules
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_ALPHA
@@ -69,7 +70,9 @@ class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
             WaterMark(
                 text = it[KEY_TEXT]
                     ?: MyApp.instance.getString(R.string.config_default_water_mark_text),
-                textSize = (it[KEY_TEXT_SIZE] ?: 14f).coerceAtLeast(1f),
+                textSize = WatermarkConfigRules.clampTextSize(
+                    it[KEY_TEXT_SIZE] ?: WatermarkConfigRules.DEFAULT_TEXT_SIZE
+                ),
                 textColor = it[KEY_TEXT_COLOR] ?: Color.parseColor("#FFB800"),
                 textStyle = TextPaintStyle.obtainSealedClass(it[KEY_TEXT_STYLE] ?: 0),
                 textTypeface = TextTypeface.obtainSealedClass(it[KEY_TEXT_TYPEFACE] ?: 0),
@@ -101,7 +104,7 @@ class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
 
     suspend fun updateText(text: String) {
         dataStore.edit {
-            it[KEY_MODE] = WatermarkMode.Text.value
+            it[KEY_MODE] = WatermarkConfigRules.MODE_ON_TEXT_UPDATE.value
             it[KEY_TEXT] = text
         }
     }
@@ -123,26 +126,26 @@ class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
     }
 
     suspend fun updateAlpha(alpha: Int) {
-        dataStore.edit { it[KEY_ALPHA] = alpha.coerceAtLeast(0).coerceAtMost(255) }
+        dataStore.edit { it[KEY_ALPHA] = WatermarkConfigRules.clampAlphaByte(alpha) }
     }
 
     suspend fun updateHorizon(gap: Int) {
-        dataStore.edit { it[KEY_HORIZON_GAP] = gap.coerceAtLeast(0).coerceAtMost(MAX_HORIZON_GAP) }
+        dataStore.edit { it[KEY_HORIZON_GAP] = WatermarkConfigRules.clampHorizontalGap(gap) }
     }
 
     suspend fun updateVertical(gap: Int) {
         dataStore.edit {
-            it[KEY_VERTICAL_GAP] = gap.coerceAtLeast(0).coerceAtMost(MAX_VERTICAL_GAP)
+            it[KEY_VERTICAL_GAP] = WatermarkConfigRules.clampVerticalGap(gap)
         }
     }
 
     suspend fun updateDegree(degree: Float) {
-        dataStore.edit { it[KEY_DEGREE] = degree.coerceAtLeast(0f).coerceAtMost(MAX_DEGREE) }
+        dataStore.edit { it[KEY_DEGREE] = WatermarkConfigRules.clampDegree(degree) }
     }
 
     suspend fun updateIcon(iconUri: MediaRef) {
         dataStore.edit {
-            it[KEY_MODE] = WatermarkMode.Image.value
+            it[KEY_MODE] = WatermarkConfigRules.MODE_ON_ICON_UPDATE.value
             it[KEY_ICON_URI] = iconUri.value
         }
     }
@@ -205,12 +208,14 @@ class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
         const val SP_KEY_TILE_MODEL = "${SP_NAME}_key_tile_model"
         const val SP_KEY_OFFSET_X = "${SP_NAME}_key_offset_x"
         const val SP_KEY_OFFSET_Y = "${SP_NAME}_key_offset_y"
-        const val MAX_TEXT_SIZE = 100f
-        const val MIN_TEXT_SIZE = 1f
-        const val DEFAULT_TEXT_SIZE = 14f
-        const val MAX_DEGREE = 360f
-        const val MAX_HORIZON_GAP = 500
-        const val MAX_VERTICAL_GAP = 500
+        // Single source of truth = commonMain WatermarkConfigRules (S4d-61); these aliases stay so the
+        // editor sliders (EditorScreen reads WaterMarkRepository.MAX_*) keep their public references.
+        const val MAX_TEXT_SIZE = WatermarkConfigRules.MAX_TEXT_SIZE
+        const val MIN_TEXT_SIZE = WatermarkConfigRules.MIN_TEXT_SIZE
+        const val DEFAULT_TEXT_SIZE = WatermarkConfigRules.DEFAULT_TEXT_SIZE
+        const val MAX_DEGREE = WatermarkConfigRules.MAX_DEGREE
+        const val MAX_HORIZON_GAP = WatermarkConfigRules.MAX_HORIZONTAL_GAP
+        const val MAX_VERTICAL_GAP = WatermarkConfigRules.MAX_VERTICAL_GAP
 
     }
 }

@@ -122,7 +122,7 @@ behavior change** — `KEY_ICON_URI` and all real watermark prefs are untouched,
 platform-neutral model layer is now `Uri`-free** — the C3 model-`Uri` de-Androidization (ADR-0007: `TileMode`,
 `ImageFormat`, `MediaRef`) is complete; all remaining `Uri` is at genuine Android edges.
 
-## Implementation status — WaterMark config moved to commonMain (S4d-60, 2026-06-27)
+## Implementation status — WaterMark config moved to commonMain (S4d-60/S4d-61, 2026-06-27)
 
 `WaterMark`, `TextTypeface`, `TextPaintStyle`, and the new neutral `WatermarkMode` now live in
 `shared/src/commonMain/.../data/model`. This clears the first C4.2 model-neutralization slice after the S4d-59
@@ -135,7 +135,11 @@ readiness map.
   `SerializableSealClass<Int>` / `java.io.Serializable` base was deleted.
 - Android render types stay outside commonMain: `WaterMark.obtainTileMode()` is now an Android extension in
   `TileModeExt.kt`; `TextPaintStyle.obtainSysStyle()` is an Android extension in `TextStyleExt.kt`.
-- Verification: `:shared:compileKotlinDesktop`, `:shared:compileKotlinIosSimulatorArm64`,
+- `WatermarkConfigRules` (S4d-61) now owns the pure legacy normalization rules in commonMain: text-size clamp,
+  alpha percent-to-byte conversion, alpha byte clamp, h/v gap clamp, degree clamp, and text/icon mode transitions.
+  `WaterMarkRepository` and `MainViewModel.updateAlpha` delegate to those rules, but repositories, DataStore keys,
+  Android render adapters, and render algorithms stay Android-side and unchanged.
+- Verification: `WatermarkConfigRulesTest` 8/0; `:shared:compileKotlinDesktop`, `:shared:compileKotlinIosSimulatorArm64`,
   `:shared:compileKotlinIosArm64`, `:app:compileDebugKotlin`, strict `:app:testDebugUnitTest` (48/0, no
   golden rebaseline), and `:app:assembleDebug :app:assembleRelease` all passed with `--max-workers=8`.
 
