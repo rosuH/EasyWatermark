@@ -6,7 +6,7 @@
 - Confirmed PR #358 is still OPEN + Draft (`feat/migrate_to_compose` -> `master`) and should remain a Draft integration checkpoint, not a merge-ready PR.
 - Recorded that Android production v2.10.0 remains the only UI/UX source of truth; iOS and Desktop align to that baseline after code migration rather than defining a new design.
 - Reaffirmed the execution protocol: every non-trivial implementation slice goes through ACSP coordinator -> worker -> bounded poll -> coordinator review/accept/requeue. Direct coordinator edits are limited to tiny durable-context hygiene or explicit user requests.
-- Next action: choose/publish S4d-62 as the next small C4.2 slice. Keep it narrower than a `MainViewModel` rewrite; likely candidates are a read-only state/use-case map or one tiny commonMain reducer boundary with Android behavior unchanged.
+- Next action: publish S4d-63 as the next small C4.2 implementation slice: retire the duplicate `waterMark`/`selectedImage` LiveData observers in favor of existing StateFlows, then stop unless the diff stays tiny.
 
 ## 2026-06-27 — S4d-59/S4d-61 code-migration readiness + WaterMark commonMain model/rules accepted
 
@@ -18,7 +18,9 @@
 - **S4d-61 (implementation, ACSP `20260627-012805--s4d61-watermark-config-rules`, accepted after one narrow artifact/comment requeue):** extracted legacy watermark-config normalization constants/rules to commonMain `WatermarkConfigRules` and routed Android repo/VM write paths through it. Covered behavior: text-size clamp, alpha percent→byte, alpha byte clamp, horizontal/vertical gap clamp, degree clamp, and text/icon mode transitions.
 - S4d-61 kept Android persistence/render semantics unchanged: repositories remain Android-side, DataStore keys/bytes are unchanged, render algorithms are untouched, `KEY_ICON_URI`/`MediaRef` is untouched, and screenshot/recording 1:1 parity remains deferred.
 - Coordinator S4d-61 verification: `WatermarkConfigRulesTest` **8/0**; `:shared:desktopTest`, shared iOS simulator/arm64 compile, `:app:compileDebugKotlin`, strict `:app:testDebugUnitTest --rerun-tasks`, and `:app:assembleDebug :app:assembleRelease` all passed with `--max-workers=8`; daemon stopped.
-- **Next:** S4d-62 should stay small and ACSP-managed. Do not rewrite `MainViewModel` wholesale, move repositories, alter render algorithms, or start screenshot 1:1 parity.
+- **S4d-62 (read-only decision pack, ACSP `20260627-015207--s4d62-state-usecase-map`, accepted):** mapped `MainViewModel` state/action surfaces and rejected a broad/premature pure `WaterMark` reducer: config writes are currently DataStore field writes, and `onWaterMarkChanged` takes Android-annotated `FuncTitleModel` plus side-effects through repo methods.
+- S4d-62 selected state-layer de-Androidization as the next lane. Coordinator narrowed the first implementation to the smallest useful step: retire duplicate `waterMark`/`selectedImage` LiveData consumers in favor of existing `waterMarkFlow`/`selectedImageFlow`; leave `galleryPickedImageList`, renderer, repos, DataStore, Room, deps, iOS/Desktop, and 1:1 parity untouched.
+- **Next:** S4d-63 should implement that narrow duplicate-retirement slice under ACSP.
 
 ## 2026-06-19 — S4d-21: Desktop EXIF orientation decode pass (accepted, in `done/`)
 

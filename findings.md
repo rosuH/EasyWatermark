@@ -6,7 +6,13 @@
 - Final screenshot/recording-driven 1:1 UI/UX restoration starts only after the code migration is release-grade across Android, iOS, and Desktop. Until then, UI evidence is used to prevent regressions for a slice, not to declare global product parity.
 - Android production v2.10.0 is the single visual/behavioral truth. Android debug must match it first in the final parity phase; iOS/Desktop then align to that Android baseline with explicitly classified platform differences.
 - ACSP is the default execution mechanism for non-trivial work. Worker summaries are evidence leads only; coordinator acceptance requires reading artifacts, checking the real diff/current files, and rerunning or validating the relevant gate.
-- The next safe step after S4d-61 is another narrow C4.2 slice, not screenshot/recording parity or redesign work from the current branch state.
+- The next safe implementation step after S4d-62 is narrow StateFlow cleanup, not screenshot/recording parity or redesign work from the current branch state.
+
+## MainViewModel has no faithful pure WaterMark reducer yet (S4d-62, 2026-06-27)
+
+- `update*` config methods are thin neutral pass-throughs to `WaterMarkRepository`, but the actual product behavior is still field-by-field DataStore writes followed by repo re-emission. A pure in-memory `WaterMark` reducer would be new behavior, not an extraction.
+- `onWaterMarkChanged` is only a dispatch edge today: it takes Android-annotated `FuncTitleModel`, casts `Any`, and side-effects through repo-backed update methods. Do not move it wholesale to commonMain as a reducer.
+- The smallest useful next step is StateFlow-only cleanup: use existing `waterMarkFlow`/`selectedImageFlow` instead of duplicate `LiveData` wrappers first; leave Android-coupled `galleryPickedImageList` and broader save/compress state conversion for separate slices.
 
 ## Watermark config rules can move without moving repositories (S4d-61, 2026-06-27)
 
