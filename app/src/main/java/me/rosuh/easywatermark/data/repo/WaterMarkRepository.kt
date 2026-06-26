@@ -30,7 +30,7 @@ import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_T
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TILE_MODE
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_VERTICAL_GAP
 import me.rosuh.easywatermark.utils.ktx.toWatermarkTileMode
-import java.io.IOException
+import okio.IOException
 
 class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
 
