@@ -6,7 +6,7 @@
 - Confirmed PR #358 is still OPEN + Draft (`feat/migrate_to_compose` -> `master`) and should remain a Draft integration checkpoint, not a merge-ready PR.
 - Recorded that Android production v2.10.0 remains the only UI/UX source of truth; iOS and Desktop align to that baseline after code migration rather than defining a new design.
 - Reaffirmed the execution protocol: every non-trivial implementation slice goes through ACSP coordinator -> worker -> bounded poll -> coordinator review/accept/requeue. Direct coordinator edits are limited to tiny durable-context hygiene or explicit user requests.
-- Next action: publish S4d-63 as the next small C4.2 implementation slice: retire the duplicate `waterMark`/`selectedImage` LiveData observers in favor of existing StateFlows, then stop unless the diff stays tiny.
+- Next action: publish S4d-64 as the next small C4.2 implementation slice: convert only remaining neutral-payload LiveData holders after pinning today's initial/no-value semantics. Keep `galleryPickedImageList` and 1:1 parity out of scope.
 
 ## 2026-06-27 — S4d-59/S4d-61 code-migration readiness + WaterMark commonMain model/rules accepted
 
@@ -20,7 +20,8 @@
 - Coordinator S4d-61 verification: `WatermarkConfigRulesTest` **8/0**; `:shared:desktopTest`, shared iOS simulator/arm64 compile, `:app:compileDebugKotlin`, strict `:app:testDebugUnitTest --rerun-tasks`, and `:app:assembleDebug :app:assembleRelease` all passed with `--max-workers=8`; daemon stopped.
 - **S4d-62 (read-only decision pack, ACSP `20260627-015207--s4d62-state-usecase-map`, accepted):** mapped `MainViewModel` state/action surfaces and rejected a broad/premature pure `WaterMark` reducer: config writes are currently DataStore field writes, and `onWaterMarkChanged` takes Android-annotated `FuncTitleModel` plus side-effects through repo methods.
 - S4d-62 selected state-layer de-Androidization as the next lane. Coordinator narrowed the first implementation to the smallest useful step: retire duplicate `waterMark`/`selectedImage` LiveData consumers in favor of existing `waterMarkFlow`/`selectedImageFlow`; leave `galleryPickedImageList`, renderer, repos, DataStore, Room, deps, iOS/Desktop, and 1:1 parity untouched.
-- **Next:** S4d-63 should implement that narrow duplicate-retirement slice under ACSP.
+- **S4d-63 (implementation, ACSP `20260627-020341--s4d63-stateflow-duplicate-retirement`, accepted):** retired the duplicate `MainViewModel.waterMark` and `selectedImage` LiveData wrappers and rewired the 7 internal `.value` reads to existing `waterMarkFlow`/`selectedImageFlow`. Only `MainViewModel.kt` changed. Coordinator reran `git diff --check` and `:app:compileDebugKotlin`; worker gates also passed strict unit/golden 48/0 with no rebaseline plus debug/release assemble; daemon stopped.
+- **Next:** S4d-64 should convert only the remaining neutral-payload LiveData holders after pinning null/idle initial semantics; keep `galleryPickedImageList` separate.
 
 ## 2026-06-19 — S4d-21: Desktop EXIF orientation decode pass (accepted, in `done/`)
 

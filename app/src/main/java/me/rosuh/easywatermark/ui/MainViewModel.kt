@@ -89,8 +89,6 @@ class MainViewModel (
 
     val compressedResult: MutableLiveData<Result<*>> = MutableLiveData()
 
-    val waterMark: LiveData<WaterMark> = waterMarkRepo.waterMark.asLiveData()
-
     val waterMarkFlow = waterMarkRepo.waterMark.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000L),
@@ -111,8 +109,6 @@ class MainViewModel (
         waterMarkRepo.imageInfoMapFlow.asLiveData().map { Pair(it, autoScroll) }
 
     val galleryPickedImageList: MutableLiveData<List<Image>> = MutableLiveData()
-
-    val selectedImage: LiveData<ImageInfo> = waterMarkRepo.selectedImage.asLiveData()
 
     val selectedImageFlow = waterMarkRepo.selectedImage
 
@@ -278,7 +274,7 @@ class MainViewModel (
 
             imageInfo.width = mutableBitmap.width
             imageInfo.height = mutableBitmap.height
-            val tmpConfig = waterMark.value ?: return@withContext Result.failure(
+            val tmpConfig = waterMarkFlow.value ?: return@withContext Result.failure(
                 null,
                 code = "-1",
                 message = "config.value == null"
@@ -289,11 +285,11 @@ class MainViewModel (
             val layoutPaint = Paint()
             // S2a: build the cell shader through the Android renderer seam (the same
             // WatermarkRenderer the Compose preview uses).
-            val shader = when (waterMark.value?.markMode) {
+            val shader = when (waterMarkFlow.value?.markMode) {
                 WatermarkMode.Text -> {
                     WatermarkRenderer.buildTextShader(
                         imageInfo,
-                        waterMark.value!!,
+                        waterMarkFlow.value!!,
                         bitmapPaint,
                         androidTextMeasureEnv(applicationContext),
                         Dispatchers.IO
@@ -426,7 +422,7 @@ class MainViewModel (
     }
 
     fun selectImage(ref: MediaRef) {
-        if (selectedImage.value?.uri == ref) {
+        if (selectedImageFlow.value?.uri == ref) {
             return
         }
         launch {
@@ -590,7 +586,7 @@ class MainViewModel (
 
     fun compressImg(activity: Activity) {
         compressedJob = viewModelScope.launch(Dispatchers.IO) {
-            waterMark.value?.let {
+            waterMarkFlow.value?.let {
                 compressedResult.postValue(Result.success(null, code = TYPE_COMPRESSING))
                 val tmpFile = File.createTempFile("easy_water_mark_", "_compressed")
                 activity.contentResolver.openInputStream(waterMarkRepo.imageInfoList.first().uri.toUri())
@@ -837,7 +833,7 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
                     uiState = LaunchScreenUiState.Editor,
                     imageList = galleryPickedImageList.value ?: emptyList(),
                     selectedImageList = imageList,
-                    waterMark = waterMark.value ?: WaterMark.default,
+                    waterMark = waterMarkFlow.value ?: WaterMark.default,
                     curImageInfo = imageList.firstOrNull()
                 )
                 withContext(Dispatchers.Main) {
@@ -1020,7 +1016,7 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
                         uiState = LaunchScreenUiState.Editor,
                         imageList = imageList,
                         selectedImageList = imageInfoList,
-                        waterMark = waterMark.value ?: WaterMark.default,
+                        waterMark = waterMarkFlow.value ?: WaterMark.default,
                         curImageInfo = imageInfoList.firstOrNull()
                     )
                     withContext(Dispatchers.Main) {

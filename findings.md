@@ -14,6 +14,12 @@
 - `onWaterMarkChanged` is only a dispatch edge today: it takes Android-annotated `FuncTitleModel`, casts `Any`, and side-effects through repo-backed update methods. Do not move it wholesale to commonMain as a reducer.
 - The smallest useful next step is StateFlow-only cleanup: use existing `waterMarkFlow`/`selectedImageFlow` instead of duplicate `LiveData` wrappers first; leave Android-coupled `galleryPickedImageList` and broader save/compress state conversion for separate slices.
 
+## Duplicate state wrappers can have internal consumers (S4d-63, 2026-06-27)
+
+- `viewModel.waterMark`/`viewModel.selectedImage` had no external Compose consumers, but `MainViewModel` still read the duplicate wrappers internally via bare `waterMark.value`/`selectedImage.value`.
+- The safe retirement was not just deleting the wrapper declarations; it also required renaming those internal reads to existing `waterMarkFlow.value`/`selectedImageFlow.value`.
+- For the next LiveData cleanup, grep both external `viewModel.foo` consumers and bare same-class `foo.value` reads before declaring a holder dead.
+
 ## Watermark config rules can move without moving repositories (S4d-61, 2026-06-27)
 
 - `WatermarkConfigRules` in commonMain can own pure legacy normalization behavior while Android `WaterMarkRepository` remains the DataStore boundary. This extracts useful shared logic without forcing a repository rewrite.
