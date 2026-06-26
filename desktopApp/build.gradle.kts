@@ -15,6 +15,12 @@ kotlin {
 
 dependencies {
     implementation(project(":shared"))
+    // S4d-80: `:shared` exposes `createUserConfigDataStore`/`UserConfigRepository` whose public types
+    // (`DataStore<Preferences>`, `Flow`, suspend) come from datastore + coroutines, declared
+    // `implementation` in `:shared` so they do not transit. A consumer that uses those APIs must
+    // declare them itself (as `:app` does). Existing catalog aliases only, no new versions.
+    implementation(libs.kotlin.coroutine.core)
+    implementation(libs.datastore.preference)
 }
 
 application {

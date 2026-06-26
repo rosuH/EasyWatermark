@@ -1,8 +1,12 @@
 package me.rosuh.easywatermark.desktop
 
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import me.rosuh.easywatermark.data.datastore.createUserConfigDataStore
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.Result
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
+import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.render.DesktopWatermarkComposer
 import me.rosuh.easywatermark.render.DesktopWatermarkTextRenderer
 import me.rosuh.easywatermark.render.WatermarkGeometry
@@ -87,6 +91,21 @@ fun main() {
     )
     val realFile = File(realDir, "real_image_watermark.png").apply { writeBytes(realWatermarked.png) }
     println("  real_image_watermark.png: ${realWatermarked.width}x${realWatermarked.height} -> ${realFile.path} (${realWatermarked.png.size} B)")
+
+    // S4d-80: first APP-ENTRY construction of the common `UserConfigRepository` over the S4d-78 Desktop
+    // DataStore factory — read -> update -> read against a real on-disk preferences store. This is an
+    // app-level smoke/witness (the real Compose Desktop editor consuming prefs is C4); the read/write
+    // roundtrip itself is already gated by `:shared:desktopTest`. Uses a repo-local build dir (NOT
+    // ~/.easywatermark) so the smoke leaves no state in the user's home.
+    val userConfigDir = File("build/s4d80-desktop-userconfig")
+    val userRepo = UserConfigRepository(createUserConfigDataStore(dir = userConfigDir))
+    println("Desktop UserConfigRepository (store dir: ${userConfigDir.path}):")
+    runBlocking {
+        println("  userPreferences (initial): ${userRepo.userPreferences.first()}")
+        userRepo.updateFormat(ImageFormat.PNG)
+        userRepo.updateCompressLevel(60)
+        println("  userPreferences (after update): ${userRepo.userPreferences.first()}")
+    }
 
     println("OK — shared KMP engine core + Desktop text renderer + Desktop composition + real-image decode run on Desktop.")
 }
