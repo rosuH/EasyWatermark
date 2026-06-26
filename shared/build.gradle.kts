@@ -47,6 +47,13 @@ kotlin {
             // ui-text + ui-unit; on Android → androidx.compose.ui:* 1.11.2, on iOS/desktop → klibs.
             implementation(compose.runtime)
             implementation(compose.ui)
+            // S4d-74: KMP DataStore Preferences. `datastore` (base/datastore-core) supplies the
+            // platform-neutral DataStoreFactory/Storage the commonMain helper builds on; the
+            // `-preferences` artifact supplies Preferences + the Android store creation used in
+            // androidMain. Both publish KMP artifacts (android/jvm/ios) at 1.2.1. No expect/actual,
+            // no iOS/desktop store creation yet — Android creation lives in androidMain.
+            implementation(libs.datastore)
+            implementation(libs.datastore.preference)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

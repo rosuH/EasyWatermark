@@ -119,6 +119,7 @@ material = { group = "com.google.android.material", name = "material", version.r
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+datastore = { group = "androidx.datastore", name = "datastore", version.ref = "datastorePreference" }
 datastore-preference = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreference" }
 asynclayout-inflater = { group = "androidx.asynclayoutinflater", name = "asynclayoutinflater", version.ref = "asyncLayoutInflater" }
 viewpager2 = { group = "androidx.viewpager2", name = "viewpager2", version.ref = "viewpager2" }
