@@ -10,6 +10,7 @@ import android.text.TextPaint
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.utils.ktx.applyConfig
 import kotlinx.coroutines.Dispatchers
@@ -114,7 +115,7 @@ class WatermarkRendererCommonParityTest {
         Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).apply { eraseColor(color) }
 
     private fun iconConfig(degree: Float, hGap: Int, vGap: Int, textSize: Float): WaterMark =
-        WaterMark.default.copy(degree = degree, hGap = hGap, vGap = vGap, textSize = textSize, iconUri = Uri.EMPTY)
+        WaterMark.default.copy(degree = degree, hGap = hGap, vGap = vGap, textSize = textSize, iconUri = MediaRef.Empty)
 
     // ---- ICON: hard dimension gate --------------------------------------------------------
 
@@ -199,7 +200,7 @@ class WatermarkRendererCommonParityTest {
 
     private fun textShaderDims(text: String, degree: Float, hGap: Int, vGap: Int): Pair<Int, Int> {
         val config = WaterMark.default.copy(
-            text = text, degree = degree, hGap = hGap, vGap = vGap, textSize = 24f, iconUri = Uri.EMPTY,
+            text = text, degree = degree, hGap = hGap, vGap = vGap, textSize = 24f, iconUri = MediaRef.Empty,
         )
         val ctx = RuntimeEnvironment.getApplication()
         val paint = TextPaint().applyConfig(imageInfo, config, isScale = false)
@@ -212,7 +213,7 @@ class WatermarkRendererCommonParityTest {
 
     private fun commonTextCellDims(text: String, degree: Float, hGap: Int, vGap: Int): Pair<Int, Int> {
         val ctx = RuntimeEnvironment.getApplication()
-        val config = WaterMark.default.copy(text = text, textSize = 24f, iconUri = Uri.EMPTY)
+        val config = WaterMark.default.copy(text = text, textSize = 24f, iconUri = MediaRef.Empty)
         val paint = TextPaint().applyConfig(imageInfo, config, isScale = false)
         val env = androidTextMeasureEnv(ctx)
         val rasterEnv = TextRasterEnv(env.fontFamilyResolver, env.density, env.layoutDirection)
@@ -237,7 +238,7 @@ class WatermarkRendererCommonParityTest {
         // Simple ASCII @ degree 0 — the case Robolectric NATIVE can raster (emoji/rotated is blank,
         // see WatermarkCellGoldenTest). Text RASTER parity (StaticLayout vs MultiParagraph) is NOT
         // asserted; only that neither path produces an empty cell for the safe case.
-        val config = WaterMark.default.copy(text = "GOLDEN", textSize = 24f, textColor = Color.WHITE, iconUri = Uri.EMPTY)
+        val config = WaterMark.default.copy(text = "GOLDEN", textSize = 24f, textColor = Color.WHITE, iconUri = MediaRef.Empty)
         val ctx = RuntimeEnvironment.getApplication()
         val paint = TextPaint().applyConfig(imageInfo, config, isScale = false)
         val shader = runBlocking {

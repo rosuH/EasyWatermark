@@ -12,6 +12,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.utils.ktx.applyConfig
 import org.junit.Assert.assertTrue
@@ -32,7 +33,7 @@ class WatermarkCellInstrumentedGoldenTest {
     private fun renderTiledPixels(text: String, degree: Float): IntArray {
         val config = WaterMark.default.copy(
             text = text, degree = degree, hGap = 0, vGap = 0,
-            textSize = 24f, textColor = Color.WHITE, iconUri = Uri.EMPTY,
+            textSize = 24f, textColor = Color.WHITE, iconUri = MediaRef.Empty,
         )
         val imageInfo = ImageInfo.empty().apply { width = 1000; height = 1000 }
         val paint = TextPaint().applyConfig(imageInfo, config, isScale = false)

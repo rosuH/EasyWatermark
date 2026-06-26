@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.utils.ktx.applyConfig
@@ -89,7 +90,7 @@ class WatermarkCellParityGateTest {
     private fun paintFor(b: Baseline): TextPaint {
         val config = WaterMark.default.copy(
             text = b.text, textSize = b.size,
-            textTypeface = TextTypeface.obtainSealedClass(b.typeface), iconUri = Uri.EMPTY,
+            textTypeface = TextTypeface.obtainSealedClass(b.typeface), iconUri = MediaRef.Empty,
         )
         val imageInfo = ImageInfo.empty().apply { width = 1000; height = 1000 }
         return TextPaint().applyConfig(imageInfo, config, isScale = false)

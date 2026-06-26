@@ -144,9 +144,15 @@ object WatermarkRenderer {
         )
         // draw text
         canvas.withSave {
+            // S4d-14C (owner-approved S4d-13 Option C): centre the FULL StaticLayout block, not just
+            // line 0. The legacy `(finalHeight - getLineBottom(0) - getLineTop(0))/2` used only the
+            // first line's height — for a single line that equals `staticLayout.height` (so single-line
+            // output is byte-identical), but for multiline it shifted the whole block down and clipped
+            // the bottom (S4d-11). `(finalHeight - staticLayout.height)/2` centres the whole block,
+            // converging with the commonMain text primitive's full-block centring.
             this.translate(
                 ((finalWidth) / 2).toFloat(),
-                ((finalHeight - staticLayout.getLineBottom(0) - staticLayout.getLineTop(0)) / 2).toFloat()
+                ((finalHeight - staticLayout.height) / 2).toFloat()
             )
             staticLayout.draw(canvas)
         }

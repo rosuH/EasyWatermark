@@ -15,6 +15,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.ui.widget.utils.WaterMarkShader
 import me.rosuh.easywatermark.utils.ktx.applyConfig
@@ -81,7 +82,7 @@ class WatermarkExportInstrumentedGoldenTest {
             vGap = spec.vGap,
             textSize = spec.textSize,
             textColor = Color.WHITE,
-            iconUri = Uri.EMPTY,
+            iconUri = MediaRef.Empty,
         )
         val shader = runBlocking {
             if (spec.text != null) {
@@ -156,10 +157,14 @@ class WatermarkExportInstrumentedGoldenTest {
     private val baselinesByDevice: Map<String, Map<String, Sig>> = mapOf(
         "sdk_gphone64_arm64/36" to mapOf(
             "ascii_0" to Sig(93, 33, -366281882, 1458584107),
-            "multiline" to Sig(110, 61, -1422790083, 765160644),
+            // S4d-14C (owner-approved S4d-13 Option C): full-block vertical centring in buildTextShader
+            // (no more bottom clipping) — multiline-only device rebaseline on sdk_gphone64_arm64/36.
+            "multiline" to Sig(110, 61, 1069584506, -926274294),
             "emoji_default_315" to Sig(228, 228, -1575206964, -978270002),
             "cjk" to Sig(96, 35, 180443926, -355393120),
-            "cjk_multiline_315" to Sig(83, 83, 646986396, -528585465),
+            // S4d-14C: multiline vertical-centring fix relocates the block (dims 83x83 unchanged) —
+            // multiline-only device rebaseline on sdk_gphone64_arm64/36.
+            "cjk_multiline_315" to Sig(83, 83, -1335209525, 1264444789),
             "gap_h_extreme" to Sig(372, 33, 182695868, -965358109),
             "gap_v_extreme" to Sig(93, 132, 3309160, 440425003),
             "icon_40x20" to Sig(44, 44, 2099708661, 1766162126),

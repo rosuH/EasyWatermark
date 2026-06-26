@@ -2,7 +2,6 @@ package me.rosuh.easywatermark.data.model
 
 import android.graphics.Color
 import android.graphics.Shader
-import android.net.Uri
 import android.os.Build
 import androidx.annotation.Keep
 import me.rosuh.easywatermark.MyApp
@@ -21,7 +20,7 @@ data class WaterMark(
     val degree: Float,
     val hGap: Int,
     val vGap: Int,
-    val iconUri: Uri,
+    val iconUri: MediaRef,
     val markMode: WaterMarkRepository.MarkMode,
     val enableBounds: Boolean,
     val tileMode: WatermarkTileMode,
@@ -34,7 +33,7 @@ data class WaterMark(
     fun obtainTileMode(): Shader.TileMode {
         return tileMode.toShaderTileMode()
 	}
-    
+
 	companion object {
         val default = WaterMark(
             text = "\uD83D\uDC4B DO NOT REDISTRIBUTE",
@@ -46,7 +45,7 @@ data class WaterMark(
             degree = 315f,
             hGap = 0,
             vGap = 0,
-            iconUri = Uri.parse(""),
+            iconUri = MediaRef.Empty,
             markMode = WaterMarkRepository.MarkMode.Text,
             enableBounds = false,
             tileMode = WatermarkTileMode.REPEAT,

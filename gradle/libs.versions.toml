@@ -25,8 +25,6 @@ viewpager2 = "1.1.0"
 recyclerview = "1.4.0"
 constraintLayout = "2.2.1"
 exifInterface = "1.4.2"
-paletteKtx = "1.0.0"
-glide = "5.0.5"
 compressor = "3.0.1"
 colorpicker = "2.4.0"
 benchmark = "1.4.1"
@@ -49,7 +47,9 @@ androidxComposeRuntimeTracing = "1.10.6"
 # (incl. iOS) Compose graphics/text. 1.11.1's Android target maps to androidx Compose 1.11.2.
 composeMultiplatform = "1.11.1"
 accompanist = "0.37.3"
-coil = "2.7.0"
+# C3 Tier-2a (S4d-38): Coil 3 (io.coil-kt.coil3, package coil3). Compose-only; no network artifact
+# (all image models are local Uris); coil-svg dropped (SvgDecoder was never registered).
+coil = "3.4.0"
 material3 = "1.4.0"
 
 [plugins]
@@ -103,9 +103,7 @@ androidx-constraintlayout-compose = { group = "androidx.constraintlayout", name 
 
 
 
-coil-kt = { group = "io.coil-kt", name = "coil", version.ref = "coil" }
-coil-kt-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
-coil-kt-svg = { group = "io.coil-kt", name = "coil-svg", version.ref = "coil" }
+coil-kt-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 
 kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlin" }
 kotlin-coroutine-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
@@ -127,7 +125,6 @@ viewpager2 = { group = "androidx.viewpager2", name = "viewpager2", version.ref =
 recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintLayout" }
 exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifInterface" }
-palette-ktx = { group = "androidx.palette", name = "palette-ktx", version.ref = "paletteKtx" }
 
 #hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 #hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
@@ -137,9 +134,6 @@ palette-ktx = { group = "androidx.palette", name = "palette-ktx", version.ref = 
 koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin-bom" }
 koin-core = { module = "io.insert-koin:koin-core" }
 koin-android = { module = "io.insert-koin:koin-android" }
-
-glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
-glide-compiler = { group = "com.github.bumptech.glide", name = "compiler", version.ref = "glide" }
 compressor = { group = "id.zelory", name = "compressor", version.ref = "compressor" }
 colorpicker = { group = "com.github.skydoves", name = "colorpickerview", version.ref = "colorpicker" }
 benchmark = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmark" }

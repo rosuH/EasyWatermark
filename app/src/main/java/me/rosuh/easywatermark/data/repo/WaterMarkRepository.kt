@@ -1,7 +1,6 @@
 package me.rosuh.easywatermark.data.repo
 
 import android.graphics.Color
-import android.net.Uri
 import android.util.Log
 import androidx.collection.ArrayMap
 import androidx.datastore.core.DataStore
@@ -12,6 +11,7 @@ import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WaterMark
@@ -45,7 +45,6 @@ class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
         val KEY_VERTICAL_GAP = intPreferencesKey(SP_KEY_VERTICAL_GAP)
         val KEY_DEGREE = floatPreferencesKey(SP_KEY_DEGREE)
         val KEY_ICON_URI = stringPreferencesKey(SP_KEY_ICON_URI)
-        val KEY_URI = stringPreferencesKey(SP_KEY_URI)
         val KEY_MODE = intPreferencesKey(SP_KEY_WATERMARK_MODE)
         val KEY_ENABLE_BOUNDS = booleanPreferencesKey(SP_KEY_ENABLE_BOUNDS)
         val KEY_TILE_MODE = intPreferencesKey(SP_KEY_TILE_MODEL)
@@ -77,7 +76,7 @@ class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
                 degree = it[KEY_DEGREE] ?: 315f,
                 hGap = it[KEY_HORIZON_GAP] ?: 0,
                 vGap = it[KEY_VERTICAL_GAP] ?: 0,
-                iconUri = Uri.parse(it[KEY_ICON_URI] ?: ""),
+                iconUri = MediaRef.parse(it[KEY_ICON_URI] ?: ""),
                 markMode = if (it[KEY_MODE] == MarkMode.Image.value) MarkMode.Image else MarkMode.Text,
                 tileMode = it[KEY_TILE_MODE].toWatermarkTileMode(),
                 enableBounds = it[KEY_ENABLE_BOUNDS] ?: false
@@ -85,7 +84,7 @@ class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
         }
 
     private val _imageMapFlow: MutableStateFlow<List<ImageInfo>> = MutableStateFlow(emptyList())
-    private val imageInfoMap: MutableMap<Uri, Int> = ArrayMap(_imageMapFlow.value.size)
+    private val imageInfoMap: MutableMap<MediaRef, Int> = ArrayMap(_imageMapFlow.value.size)
 
     val imageInfoMapFlow = _imageMapFlow
 
@@ -140,10 +139,10 @@ class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
         dataStore.edit { it[KEY_DEGREE] = degree.coerceAtLeast(0f).coerceAtMost(MAX_DEGREE) }
     }
 
-    suspend fun updateIcon(iconUri: Uri) {
+    suspend fun updateIcon(iconUri: MediaRef) {
         dataStore.edit {
             it[KEY_MODE] = MarkMode.Image.value
-            it[KEY_ICON_URI] = iconUri.toString()
+            it[KEY_ICON_URI] = iconUri.value
         }
     }
 
@@ -180,8 +179,8 @@ class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
         updateImageList(emptyList())
     }
 
-    suspend fun select(uri: Uri) = withContext(Dispatchers.Default) {
-        val info = imageInfoList.find { it.uri == uri } ?: ImageInfo(uri)
+    suspend fun select(ref: MediaRef) = withContext(Dispatchers.Default) {
+        val info = imageInfoList.find { it.uri == ref } ?: ImageInfo(ref)
         _selectedImage.emit(info)
     }
 
@@ -206,7 +205,6 @@ class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
         const val SP_KEY_CHANGE_LOG = "${SP_NAME}_key_change_log"
         const val SP_KEY_ENABLE_BOUNDS = "${SP_NAME}_key_enable_bounds"
         const val SP_KEY_ICON_URI = "${SP_NAME}_key_icon_uri"
-        const val SP_KEY_URI = "${SP_NAME}_key_uri"
         const val SP_KEY_WATERMARK_MODE = "${SP_NAME}_key_watermark_mode"
         const val SP_KEY_IMAGE_ROTATION = "${SP_NAME}_key_watermark_mode"
         const val SP_KEY_TILE_MODEL = "${SP_NAME}_key_tile_model"

@@ -1,6 +1,5 @@
 package me.rosuh.easywatermark.ui.compose
 
-import android.net.Uri
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
@@ -38,6 +37,7 @@ import androidx.constraintlayout.compose.layoutId
 import kotlinx.coroutines.delay
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
+import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WaterMark
@@ -109,7 +109,7 @@ private fun ColorOptionPreview() {
         degree = 315f,
         hGap = 0,
         vGap = 0,
-        iconUri = Uri.parse(""),
+        iconUri = MediaRef.Empty,
         markMode = WaterMarkRepository.MarkMode.Text,
         enableBounds = false,
         tileMode = WatermarkTileMode.CLAMP,

@@ -83,9 +83,9 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
-import androidx.palette.graphics.Palette
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.R
@@ -106,6 +106,8 @@ import me.rosuh.easywatermark.ui.compose.TileMode
 import me.rosuh.easywatermark.ui.widget.utils.WaterMarkShader
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.utils.ktx.applyConfig
+import me.rosuh.easywatermark.utils.ktx.toMediaRef
+import me.rosuh.easywatermark.utils.ktx.toUri
 import kotlin.math.absoluteValue
 import kotlin.math.min
 
@@ -695,7 +697,6 @@ fun WaterMarkView(
     onUpdateUriFailed: (SecurityException) -> Unit = { },
     onScaleEnd: (textSize: Float) -> Unit = { },
     onOffsetChanged: (info: ImageInfo) -> Unit = { },
-    onBgReady: (palette: Palette) -> Unit = { },
 ) {
     Box(
         modifier = modifier
@@ -746,7 +747,7 @@ private fun WaterMarkCanvas(
         val bitmap by produceState<Bitmap?>(null, selectedImage.uri, cw, ch) {
             value = if (cw > 0 && ch > 0) {
                 try {
-                    decodeSampledBitmapFromResource(context.contentResolver, selectedImage.uri, cw, ch).data?.bitmap
+                    decodeSampledBitmapFromResource(context.contentResolver, selectedImage.uri.toUri(), cw, ch).data?.bitmap
                 } catch (se: SecurityException) {
                     onUpdateUriFailed(se); null
                 }
@@ -764,7 +765,7 @@ private fun WaterMarkCanvas(
 
             // Image-space sizing input: the displayed drawable width (S3a). Rebuilt when geometry/config change.
             val cellShader by produceState<WaterMarkShader?>(null, waterMark, drawW.toInt(), drawH.toInt(), selectedImage.uri) {
-                value = buildPreviewShader(context, waterMark, selectedImage.uri, drawW.toInt(), drawH.toInt())
+                value = buildPreviewShader(context, waterMark, selectedImage.uri.toUri(), drawW.toInt(), drawH.toInt())
             }
 
             val tileMode = waterMark.obtainTileMode()
@@ -908,7 +909,7 @@ private suspend fun buildPreviewShader(
     drawWidth: Int,
     drawHeight: Int,
 ): WaterMarkShader? {
-    val imageInfo = ImageInfo(imageUri).apply { width = drawWidth; height = drawHeight }
+    val imageInfo = ImageInfo(imageUri.toMediaRef()).apply { width = drawWidth; height = drawHeight }
     val bitmapPaint = TextPaint().applyConfig(imageInfo, waterMark, isScale = false)
     return when (waterMark.markMode) {
         WaterMarkRepository.MarkMode.Text ->
@@ -916,8 +917,9 @@ private suspend fun buildPreviewShader(
                 imageInfo, waterMark, bitmapPaint, androidTextMeasureEnv(context), Dispatchers.IO
             )
         WaterMarkRepository.MarkMode.Image -> {
+            // S4d-50: iconUri is now a platform-neutral MediaRef; convert to Uri at the decode edge.
             val icon = decodeSampledBitmapFromResource(
-                context.contentResolver, waterMark.iconUri, drawWidth, drawHeight
+                context.contentResolver, waterMark.iconUri.toUri(), drawWidth, drawHeight
             ).data?.bitmap ?: return null
             WatermarkRenderer.buildIconShader(
                 imageInfo, icon, waterMark, bitmapPaint, scale = false, Dispatchers.IO
@@ -999,7 +1001,7 @@ fun PhotoItem(
     ) {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
-                .data(imageInfo.uri)
+                .data(imageInfo.uri.toUri())
                 .crossfade(true)
                 .build(),
             contentDescription = "image",

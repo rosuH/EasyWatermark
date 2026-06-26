@@ -129,4 +129,73 @@ class WatermarkTextCellRasterTest {
         assertTrue(leftOfCenter, "text must have visible pixels LEFT of the cell centre (not painted from centre onward)")
         assertTrue(rightOfCenter, "text must have visible pixels RIGHT of the cell centre (not clipped)")
     }
+
+    /**
+     * S4d-12 lock (root cause #1, S4d-11): with `TextAlign.Center` baked into the measured style, a
+     * SHORT first line in a multiline cell must be **horizontally centred**, not left-aligned at the
+     * box edge. Uses a deliberately narrow top line ("I") over a wide bottom line so the difference is
+     * unambiguous: before the fix the top line's ink sat flush-left (centre ≈ small x); after it, the
+     * top line's ink is centred in the cell (centre ≈ cell mid, with a left margin). Mirrors the
+     * Android CENTER `TextPaint` behaviour the renderer uses for multiline.
+     */
+    @Test
+    fun multiline_short_line_is_horizontally_centred() {
+        val content = WatermarkTextContent(
+            text = "I\nWWWWWWWWWW",
+            style = TextStyle(fontSize = 24.sp),
+            color = Color.White,
+        )
+        val cell = WatermarkCellComposer.composeTextCell(env, content, degree = 0f, hGapPercent = 0, vGapPercent = 0)
+        val px = cell.toPixelMap()
+        val midX = cell.width / 2
+        // Top third is safely within line 1 of a 2-line, full-box-centred (degree 0) cell.
+        val topBand = (cell.height / 3).coerceAtLeast(1)
+        var minX = Int.MAX_VALUE
+        var maxX = -1
+        for (y in 0 until topBand) {
+            for (x in 0 until cell.width) {
+                if (px[x, y].alpha > 0) {
+                    if (x < minX) minX = x
+                    if (x > maxX) maxX = x
+                }
+            }
+        }
+        assertTrue(maxX >= 0, "short top line must render visible pixels")
+        val centreX = (minX + maxX) / 2
+        val tol = (cell.width / 8).coerceAtLeast(2)
+        assertTrue(
+            kotlin.math.abs(centreX - midX) <= tol,
+            "short top line must be horizontally centred (centreX=$centreX vs midX=$midX, tol=$tol)",
+        )
+        assertTrue(
+            minX > tol,
+            "short top line must have a left margin (centred, not Start-aligned): minX=$minX, width=${cell.width}",
+        )
+    }
+
+    /**
+     * S4d-16 (owner-approved C2, test-only): proves the commonMain text raster renders **CJK** with the
+     * **bundled Noto Sans SC** font on the JVM/Skiko host — the cross-platform value of the bundle (the
+     * desktop system font may lack full CJK; the bundled SC guarantees coverage). The font is injected
+     * via `WatermarkTextContent.style.fontFamily = bundledLatinCjkFontFamily()` through the existing
+     * `TextRasterEnv` boundary (no compose-resources / CMP-9547). NOT a production path.
+     */
+    @Test
+    fun cjk_cell_renders_with_bundled_font() {
+        val content = WatermarkTextContent(
+            text = "请勿转载",
+            // CJK-first so Han glyphs are guaranteed to resolve from Noto Sans SC (a Compose FontFamily
+            // does not guarantee per-glyph fallback from a Latin-first face to the CJK face); this test
+            // only proves the bundle CAN render CJK on the JVM host. Order/fallback behaviour for the
+            // Latin+CJK case is measured/reported by the Android parity test (S4d-16 round 2).
+            style = TextStyle(fontSize = 24.sp, fontFamily = bundledLatinCjkFontFamily(latinFirst = false)),
+            color = Color.White,
+        )
+        val cell = WatermarkCellComposer.composeTextCell(env, content, degree = 0f)
+        assertTrue(cell.width > 0 && cell.height > 0, "bundled CJK cell must have positive dims")
+        val px = cell.toPixelMap()
+        var nonBlank = 0
+        for (y in 0 until px.height) for (x in 0 until px.width) if (px[x, y].alpha > 0) nonBlank++
+        assertTrue(nonBlank > 0, "bundled CJK text must render visible pixels on the JVM host")
+    }
 }

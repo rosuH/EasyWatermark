@@ -4,7 +4,6 @@ import org.gradle.api.artifacts.component.ModuleComponentSelector
 plugins {
     id(libs.plugins.android.application.get().pluginId)
     id(libs.plugins.kotlin.android.get().pluginId)
-    id(libs.plugins.kotlin.parcelize.get().pluginId)
     id(libs.plugins.kotlin.serialization.get().pluginId)
     id(libs.plugins.ksp.get().pluginId)
 //    id(libs.plugins.hilt.plugin.get().pluginId)
@@ -123,9 +122,6 @@ dependencies {
 
     implementation(libs.asynclayout.inflater)
 
-    implementation(libs.glide)
-    ksp(libs.glide.compiler)
-
     implementation(libs.compressor)
 
     implementation(libs.kotlin.stdlib)
@@ -143,7 +139,6 @@ dependencies {
     implementation(libs.recyclerview)
     implementation(libs.constraintlayout)
     implementation(libs.exifinterface)
-    implementation(libs.palette.ktx)
     implementation(libs.profileinstaller)
 
     implementation(libs.colorpicker)
@@ -193,10 +188,9 @@ dependencies {
 
 //    implementation("com.google.accompanist:accompanist-permissions:0.33.2-alpha")
     implementation(libs.accompanist.permissions)
-//    implementation("io.coil-kt:coil-compose:2.3.0")
-    implementation(libs.coil.kt)
+    // S4d-38: Coil 3 Compose only (io.coil-kt.coil3:coil-compose). ImageRequest comes transitively from
+    // coil-core; no coil base/View artifact, no coil-svg (SvgDecoder unused), no coil-network (local Uris).
     implementation(libs.coil.kt.compose)
-    implementation(libs.coil.kt.svg)
 
 //    implementation("androidx.compose.runtime:runtime-livedata:1.5.3")
     implementation(libs.androidx.compose.runtime.livedata)

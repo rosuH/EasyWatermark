@@ -9,6 +9,7 @@ import android.text.TextPaint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.ui.widget.utils.WaterMarkShader
 import me.rosuh.easywatermark.utils.ktx.applyConfig
@@ -40,7 +41,7 @@ class WatermarkImageSpaceSizingTest {
 
     private fun config(size: Float = 24f) = WaterMark.default.copy(
         text = "GOLDEN", degree = 0f, hGap = 0, vGap = 0,
-        textSize = size, textColor = Color.WHITE, iconUri = Uri.EMPTY,
+        textSize = size, textColor = Color.WHITE, iconUri = MediaRef.Empty,
     )
 
     private fun imageInfo(width: Int, scaleX: Float = 1f) =

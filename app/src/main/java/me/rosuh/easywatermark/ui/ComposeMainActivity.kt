@@ -1,6 +1,7 @@
 package me.rosuh.easywatermark.ui
 
-import me.rosuh.cmonet.CMonet
+import me.rosuh.easywatermark.platform.DynamicColorCapability
+import org.koin.android.ext.android.inject
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -66,6 +67,7 @@ import me.rosuh.easywatermark.ui.about.AboutScreen
 import me.rosuh.easywatermark.ui.about.AboutViewModel
 import me.rosuh.easywatermark.ui.about.OpenSourceScreen
 import me.rosuh.easywatermark.utils.ktx.openLink
+import me.rosuh.easywatermark.utils.ktx.toUri
 import me.rosuh.easywatermark.ui.compose.GalleryDialog
 import me.rosuh.easywatermark.ui.save.SaveExportSheet
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -81,6 +83,10 @@ class ComposeMainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModel()
 
     private val aboutViewModel: AboutViewModel by viewModel()
+
+    // S4d-43 (ADR-0007): live dynamic-color reads route through the platform capability (Android
+    // delegates to the :cmonet module). Replaces the prior direct isDynamicColorAvailable() calls.
+    private val dynamicColorCapability: DynamicColorCapability by inject()
 
     // ACTION_SEND share-in bridge (ADR-0016): set from intent, observed in setContent → navigate.
     private var pendingShareUris by mutableStateOf<List<Uri>?>(null)
@@ -186,9 +192,9 @@ class ComposeMainActivity : ComponentActivity() {
                     this
                 )
             ) {
-                // Parity (ADR-0011): production applies Material You on CMonet-allowed devices.
-                // Bridge via cmonet until ADR-0007's platform capability replaces it.
-                AppTheme(dynamicColor = CMonet.isDynamicColorAvailable()) {
+                // Parity (ADR-0011): production applies Material You on dynamic-color-allowed devices.
+                // S4d-43: routed through the ADR-0007 DynamicColorCapability (Android delegates to :cmonet).
+                AppTheme(dynamicColor = dynamicColorCapability.isAvailable()) {
                     val surfaceColor = MaterialTheme.colorScheme.surface
                     val isDark = surfaceColor.luminance() < 0.5f
 
@@ -363,7 +369,7 @@ class ComposeMainActivity : ComponentActivity() {
                                     AboutScreen(
                                         versionName = BuildConfig.VERSION_NAME,
                                         showBounds = wm?.enableBounds ?: false,
-                                        dynamicColorOn = CMonet.isDynamicColorAvailable(),
+                                        dynamicColorOn = dynamicColorCapability.isAvailable(),
                                         onBack = { navController.popBackStack() },
                                         onOpenLink = { url -> this@ComposeMainActivity.openLink(url) },
                                         onOpenSource = {
@@ -391,7 +397,7 @@ class ComposeMainActivity : ComponentActivity() {
                             if (showSaveSheet) {
                                 SaveExportSheet(
                                     imageCount = state.selectedImageList.size,
-                                    imageUris = state.selectedImageList.map { it.uri },
+                                    imageUris = state.selectedImageList.map { it.uri.toUri() },
                                     selectedFormatLabel = userPreferences.outputFormat,
                                     quality = userPreferences.compressLevel,
                                     isSaving = false,

@@ -12,6 +12,7 @@ import androidx.core.graphics.withSave
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.ui.widget.utils.WaterMarkShader
@@ -46,7 +47,7 @@ class WatermarkRendererCompositionTest {
         val imageInfo = ImageInfo.empty().apply { width = 1000; height = 1000 }
         val config = WaterMark.default.copy(
             text = "GOLDEN", degree = 0f, hGap = 0, vGap = 0,
-            textSize = 24f, textColor = Color.WHITE, iconUri = Uri.EMPTY, tileMode = tile,
+            textSize = 24f, textColor = Color.WHITE, iconUri = MediaRef.Empty, tileMode = tile,
         )
         val paint = TextPaint().applyConfig(imageInfo, config, isScale = false)
         return runBlocking {

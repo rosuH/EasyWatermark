@@ -1,49 +1,7 @@
 package me.rosuh.easywatermark.utils.ktx
 
-import android.animation.ArgbEvaluator
-import android.animation.ObjectAnimator
-import android.animation.ValueAnimator
-import android.content.res.Resources
 import android.graphics.Shader
 import android.os.Build
-import android.util.TypedValue
-
-private const val DEFAULT_BG_ANIM_DURATION = 450L
-
-val Int.dp
-    get() = TypedValue.applyDimension(
-        TypedValue.COMPLEX_UNIT_DIP,
-        this.toFloat(),
-        Resources.getSystem().displayMetrics
-    ).toInt()
-
-val Float.dp
-    get() = TypedValue.applyDimension(
-        TypedValue.COMPLEX_UNIT_DIP,
-        this,
-        Resources.getSystem().displayMetrics
-    )
-
-fun Int.toColor(
-    toColor: Int,
-    autoStart: Boolean = true,
-    duration: Long = DEFAULT_BG_ANIM_DURATION,
-    doOnUpdate: (it: ValueAnimator) -> Unit = {},
-): ObjectAnimator? {
-    return ObjectAnimator.ofInt(
-        this,
-        "backgroundColor",
-        this,
-        toColor
-    ).apply {
-        setEvaluator(ArgbEvaluator())
-        addUpdateListener {
-            doOnUpdate.invoke(it)
-        }
-        this.duration = duration
-        if (autoStart) start()
-    }
-}
 
 fun Int?.toTileMode(): Shader.TileMode {
     return when {

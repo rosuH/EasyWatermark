@@ -37,7 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.entity.Template
-import java.util.Date
+import kotlin.time.Clock
 
 /**
  * Compose replacement for the legacy text-template surface — `TextContentTemplateListFragment`
@@ -147,7 +147,7 @@ fun TemplateListSheet(
             onConfirm = { text ->
                 val t = target.template
                 if (t != null) {
-                    onUpdate(t.copy(content = text, lastModifiedDate = Date()))
+                    onUpdate(t.copy(content = text, lastModifiedDate = Clock.System.now()))
                 } else {
                     onAdd(text)
                 }

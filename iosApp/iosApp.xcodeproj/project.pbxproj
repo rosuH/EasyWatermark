@@ -1,0 +1,464 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		EW0000000000000000000041 /* iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000031 /* iOSApp.swift */; };
+		EW0000000000000000000042 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000032 /* ContentView.swift */; };
+		EW0000000000000000000048 /* KotlinInterop.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000038 /* KotlinInterop.swift */; };
+		EW0000000000000000000049 /* WatermarkWorkflow.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000039 /* WatermarkWorkflow.swift */; };
+		EW000000000000000000004A /* ImageExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW000000000000000000003A /* ImageExport.swift */; };
+		EW0000000000000000000044 /* NotoSans-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000034 /* NotoSans-Regular.ttf */; };
+		EW0000000000000000000045 /* NotoSansSC-Regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000035 /* NotoSansSC-Regular.otf */; };
+		EW0000000000000000000046 /* OFL-NotoSans.txt in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000036 /* OFL-NotoSans.txt */; };
+		EW0000000000000000000047 /* OFL-NotoSansCJK.txt in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000037 /* OFL-NotoSansCJK.txt */; };
+		EW0000000000000000000072 /* PickerFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000071 /* PickerFlowUITests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		EW0000000000000000000030 /* iosApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iosApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EW0000000000000000000031 /* iOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSApp.swift; sourceTree = "<group>"; };
+		EW0000000000000000000032 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		EW0000000000000000000038 /* KotlinInterop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KotlinInterop.swift; sourceTree = "<group>"; };
+		EW0000000000000000000039 /* WatermarkWorkflow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatermarkWorkflow.swift; sourceTree = "<group>"; };
+		EW000000000000000000003A /* ImageExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageExport.swift; sourceTree = "<group>"; };
+		EW0000000000000000000034 /* NotoSans-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "NotoSans-Regular.ttf"; sourceTree = "<group>"; };
+		EW0000000000000000000035 /* NotoSansSC-Regular.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "NotoSansSC-Regular.otf"; sourceTree = "<group>"; };
+		EW0000000000000000000036 /* OFL-NotoSans.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OFL-NotoSans.txt"; sourceTree = "<group>"; };
+		EW0000000000000000000037 /* OFL-NotoSansCJK.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OFL-NotoSansCJK.txt"; sourceTree = "<group>"; };
+		EW0000000000000000000070 /* iosAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iosAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		EW0000000000000000000071 /* PickerFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickerFlowUITests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		EW0000000000000000000051 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EW0000000000000000000055 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		EW0000000000000000000010 = {
+			isa = PBXGroup;
+			children = (
+				EW0000000000000000000011 /* iosApp */,
+				EW0000000000000000000015 /* iosAppUITests */,
+				EW0000000000000000000012 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		EW0000000000000000000015 /* iosAppUITests */ = {
+			isa = PBXGroup;
+			children = (
+				EW0000000000000000000071 /* PickerFlowUITests.swift */,
+			);
+			path = iosAppUITests;
+			sourceTree = "<group>";
+		};
+		EW0000000000000000000011 /* iosApp */ = {
+			isa = PBXGroup;
+			children = (
+				EW0000000000000000000031 /* iOSApp.swift */,
+				EW0000000000000000000032 /* ContentView.swift */,
+				EW0000000000000000000038 /* KotlinInterop.swift */,
+				EW0000000000000000000039 /* WatermarkWorkflow.swift */,
+				EW000000000000000000003A /* ImageExport.swift */,
+				EW0000000000000000000013 /* Resources */,
+			);
+			path = iosApp;
+			sourceTree = "<group>";
+		};
+		EW0000000000000000000013 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				EW0000000000000000000014 /* Fonts */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		EW0000000000000000000014 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				EW0000000000000000000034 /* NotoSans-Regular.ttf */,
+				EW0000000000000000000035 /* NotoSansSC-Regular.otf */,
+				EW0000000000000000000036 /* OFL-NotoSans.txt */,
+				EW0000000000000000000037 /* OFL-NotoSansCJK.txt */,
+			);
+			path = Fonts;
+			sourceTree = "<group>";
+		};
+		EW0000000000000000000012 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				EW0000000000000000000030 /* iosApp.app */,
+				EW0000000000000000000070 /* iosAppUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		EW0000000000000000000020 /* iosApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EW0000000000000000000063 /* Build configuration list for PBXNativeTarget "iosApp" */;
+			buildPhases = (
+				EW0000000000000000000053 /* Build Shared.framework (Kotlin/Native) */,
+				EW0000000000000000000050 /* Sources */,
+				EW0000000000000000000051 /* Frameworks */,
+				EW0000000000000000000052 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = iosApp;
+			productName = iosApp;
+			productReference = EW0000000000000000000030 /* iosApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+		EW0000000000000000000021 /* iosAppUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EW0000000000000000000066 /* Build configuration list for PBXNativeTarget "iosAppUITests" */;
+			buildPhases = (
+				EW0000000000000000000054 /* Sources */,
+				EW0000000000000000000055 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				EW0000000000000000000080 /* PBXTargetDependency */,
+			);
+			name = iosAppUITests;
+			productName = iosAppUITests;
+			productReference = EW0000000000000000000070 /* iosAppUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		EW0000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					EW0000000000000000000020 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+					EW0000000000000000000021 = {
+						CreatedOnToolsVersion = 15.0;
+						TestTargetID = EW0000000000000000000020;
+					};
+				};
+			};
+			buildConfigurationList = EW0000000000000000000060 /* Build configuration list for PBXProject "iosApp" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = EW0000000000000000000010;
+			productRefGroup = EW0000000000000000000012 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				EW0000000000000000000020 /* iosApp */,
+				EW0000000000000000000021 /* iosAppUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		EW0000000000000000000052 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EW0000000000000000000044 /* NotoSans-Regular.ttf in Resources */,
+				EW0000000000000000000045 /* NotoSansSC-Regular.otf in Resources */,
+				EW0000000000000000000046 /* OFL-NotoSans.txt in Resources */,
+				EW0000000000000000000047 /* OFL-NotoSansCJK.txt in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		EW0000000000000000000053 /* Build Shared.framework (Kotlin/Native) */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Build Shared.framework (Kotlin/Native)";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# C5.1 (S4d-25): build + stage the :shared Kotlin/Native framework for the current Xcode\n# CONFIGURATION/SDK/ARCH, into shared/build/xcode-frameworks/$CONFIGURATION/$SDK_NAME (the path the\n# FRAMEWORK_SEARCH_PATHS build setting points at). Runs before the Sources phase so `import Shared`\n# resolves. Capped at --max-workers=8 per the repo's automation policy.\nif [ \"$EW_SKIP_KOTLIN_FRAMEWORK\" = \"1\" ]; then\n  echo \"note: EW_SKIP_KOTLIN_FRAMEWORK=1 -> skipping gradle embedAndSign (framework assumed prebuilt)\"\n  exit 0\nfi\ncd \"$SRCROOT/..\"\n./gradlew :shared:embedAndSignAppleFrameworkForXcode --max-workers=8\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		EW0000000000000000000050 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EW0000000000000000000041 /* iOSApp.swift in Sources */,
+				EW0000000000000000000042 /* ContentView.swift in Sources */,
+				EW0000000000000000000048 /* KotlinInterop.swift in Sources */,
+				EW0000000000000000000049 /* WatermarkWorkflow.swift in Sources */,
+				EW000000000000000000004A /* ImageExport.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EW0000000000000000000054 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EW0000000000000000000072 /* PickerFlowUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		EW0000000000000000000080 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EW0000000000000000000020 /* iosApp */;
+			targetProxy = EW0000000000000000000081 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXContainerItemProxy section */
+		EW0000000000000000000081 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EW0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EW0000000000000000000020;
+			remoteInfo = iosApp;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin XCBuildConfiguration section */
+		EW0000000000000000000061 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		EW0000000000000000000062 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		EW0000000000000000000064 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
+				);
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save your watermarked photo to your library.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					Shared,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = me.rosuh.easywatermark.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		EW0000000000000000000065 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
+				);
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save your watermarked photo to your library.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					Shared,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = me.rosuh.easywatermark.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		EW0000000000000000000067 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = me.rosuh.easywatermark.iosUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = iosApp;
+			};
+			name = Debug;
+		};
+		EW0000000000000000000068 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = me.rosuh.easywatermark.iosUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = iosApp;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		EW0000000000000000000060 /* Build configuration list for PBXProject "iosApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EW0000000000000000000061 /* Debug */,
+				EW0000000000000000000062 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		EW0000000000000000000063 /* Build configuration list for PBXNativeTarget "iosApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EW0000000000000000000064 /* Debug */,
+				EW0000000000000000000065 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		EW0000000000000000000066 /* Build configuration list for PBXNativeTarget "iosAppUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EW0000000000000000000067 /* Debug */,
+				EW0000000000000000000068 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = EW0000000000000000000001 /* Project object */;
+}

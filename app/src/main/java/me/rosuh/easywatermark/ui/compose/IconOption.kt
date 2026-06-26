@@ -1,7 +1,6 @@
 package me.rosuh.easywatermark.ui.compose
 
 import android.Manifest
-import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -17,14 +16,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.graphics.drawable.toIcon
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
+import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.utils.ktx.toMediaRef
+import me.rosuh.easywatermark.utils.ktx.toUri
 
 
 @Preview
@@ -46,16 +47,19 @@ fun IconOption(
     item: FuncTitleModel,
     waterMark: WaterMark,
     modifier: Modifier = Modifier,
-    onIconSelected: (item: FuncTitleModel, Uri) -> Unit,
+    // S4d-50: IconOption is the Android edge. The picker launcher still returns android.net.Uri;
+    // it is converted to a platform-neutral MediaRef HERE at the picker-result boundary, so Uri
+    // never escapes into the model/ViewModel layer.
+    onIconSelected: (item: FuncTitleModel, MediaRef) -> Unit,
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier,
         verticalArrangement = Arrangement.Center
     ) {
-        if (waterMark.iconUri.toString().isNotBlank()) {
+        if (!waterMark.iconUri.isEmpty()) {
             AsyncImage(
-                model = waterMark.iconUri,
+                model = waterMark.iconUri.toUri(),
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                 contentDescription = stringResource(id = R.string.water_mark_mode_image)
             )
@@ -71,7 +75,7 @@ fun IconOption(
         }
         val singlePhotoPickerLauncher = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.PickVisualMedia(),
-            onResult = { uri -> uri?.let { onIconSelected(item, it) } })
+            onResult = { uri -> uri?.let { onIconSelected(item, it.toMediaRef()) } })
         Button(onClick = {
             if (mediaPermissionState.status.isGranted) {
                 singlePhotoPickerLauncher.launch(

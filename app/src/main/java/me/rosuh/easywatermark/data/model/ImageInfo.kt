@@ -1,10 +1,11 @@
 package me.rosuh.easywatermark.data.model
 
-import android.net.Uri
 import androidx.annotation.FloatRange
 
 data class ImageInfo(
-    val uri: Uri,
+    // S4d-52: platform-neutral image identity (ADR-0007). Android `Uri` is converted at the edges
+    // (picker/share-in/gallery construction, decode/Coil/save) via `MediaRefExt`.
+    val uri: MediaRef,
     var width: Int = 1,
     var height: Int = 1,
     var inSample: Int = 1,
@@ -16,9 +17,9 @@ data class ImageInfo(
     @param:FloatRange(from = 0.0, to = 1.0) val offsetX: Float = 0.5f,
     @param:FloatRange(from = 0.0, to = 1.0) val offsetY: Float = 0.5f,
 ) {
-    val shareUri: Uri?
-        get() = result?.data as? Uri?
-
+    // S4d-53: the dead `shareUri: Uri?` computed accessor (`result?.data as? Uri?`) was removed —
+    // it had zero call sites/reflection/tests, and the share-out button is an unwired empty lambda.
+    // The actual export result still lives in `result`/`jobState` (untouched).
     fun isSameItem(other: ImageInfo): Boolean {
         return uri == other.uri
                 && result == other.result
@@ -29,7 +30,7 @@ data class ImageInfo(
     companion object {
         fun empty(): ImageInfo {
             return ImageInfo(
-                Uri.EMPTY,
+                MediaRef.Empty,
                 1,
                 1,
                 1,

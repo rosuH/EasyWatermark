@@ -1,31 +1,10 @@
 package me.rosuh.easywatermark.data.repo
 
-import androidx.palette.graphics.Palette
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
-import me.rosuh.easywatermark.MyApp
-
 /**
- * hold memory data for across business usage
+ * Holds in-memory settings shared across business usage.
+ *
+ * S4d-41: the dormant image-tint background-color members were removed — the Compose build never
+ * generated or consumed them (S4d-40 Option B). The class is intentionally kept (still DI-provided) as
+ * the home for future in-memory settings; it has no members today.
  */
-class MemorySettingRepo {
-    private val scope = CoroutineScope(Dispatchers.Main)
-
-    /**
-     * 从图片中提取的调色板，用于修改整体的主题配色
-     * The color palette extracted from the picture, used to modify the overall theme color
-     */
-    private val _palette: MutableStateFlow<Palette?> = MutableStateFlow(null)
-
-    val paletteFlow = _palette.stateIn(MyApp.applicationScope, SharingStarted.Eagerly, null)
-
-    fun updatePalette(palette: Palette?) {
-        scope.launch {
-            _palette.emit(palette)
-        }
-    }
-}
+class MemorySettingRepo

@@ -29,8 +29,17 @@ kotlin {
         }
     }
     jvm("desktop")
-    iosArm64()
-    iosSimulatorArm64()
+    // C5.1 (S4d-25): declare a `Shared` framework on both iOS targets so the iOS app target
+    // (`iosApp/`) can link `:shared`. A dynamic framework (the canonical KMP template choice) is used
+    // so the framework self-contains skiko's transitive system-framework links — the consuming app
+    // just does `import Shared` + `-framework Shared`, and `embedAndSignAppleFrameworkForXcode` picks
+    // the right CONFIGURATION/SDK/ARCH from Xcode's environment. This is framework PACKAGING wiring
+    // only: no renderer logic, no new dependency, no commonMain/Android change.
+    listOf(iosArm64(), iosSimulatorArm64()).forEach { iosTarget ->
+        iosTarget.binaries.framework {
+            baseName = "Shared"
+        }
+    }
 
     sourceSets {
         commonMain.dependencies {
@@ -42,10 +51,24 @@ kotlin {
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
-        // S4d-2: Skiko desktop runtime, TEST-SCOPE ONLY, so WatermarkCellComposerTest can actually
-        // RENDER the commonMain Compose-graphics cell offscreen on the JVM host (ImageBitmap is
-        // Skia-backed on desktop). `compose.ui` provides the API; this provides the backend. Not in
-        // any production/`:app` artifact; desktopTest deps do not leak to consumers.
+        // S4d-18: Skiko desktop runtime for the DESKTOP target's MAIN source set, so the desktop
+        // watermark text renderer (`DesktopWatermarkTextRenderer`) can RENDER `composeTextCell`
+        // offscreen (Skia-backed `ImageBitmap`) and AWT-encode it to PNG at runtime — the first
+        // production-ish Desktop use of the bundled commonMain text path (S4d-17 Option C: Android
+        // text stays native; commonMain text is Desktop/iOS-first). DESKTOP (jvm) target ONLY — KMP
+        // keeps it off the Android target, so it does NOT reach `:app` (`:app` consumes `:shared`'s
+        // android variant; the dependency proof asserts 0 skiko in `:app:debugRuntimeClasspath`). It
+        // IS exposed transitively to `:desktopApp`'s runtime classpath (where the rendering runs).
+        val desktopMain by getting {
+            dependencies {
+                implementation(compose.desktop.currentOs)
+            }
+        }
+        // S4d-2: Skiko desktop runtime, TEST-SCOPE, so WatermarkCellComposerTest can RENDER the
+        // commonMain Compose-graphics cell offscreen on the JVM host (ImageBitmap is Skia-backed on
+        // desktop). `compose.ui` provides the API; this provides the backend. desktopTest already
+        // inherits desktopMain's deps; kept explicit for the standalone test-render intent. Not in
+        // any production/`:app` artifact; desktop deps do not leak to the Android consumer.
         val desktopTest by getting {
             dependencies {
                 implementation(compose.desktop.currentOs)

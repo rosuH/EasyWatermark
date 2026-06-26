@@ -2,6 +2,8 @@ package me.rosuh.easywatermark.di
 
 import androidx.room.Room
 import me.rosuh.easywatermark.data.db.AppDatabase
+import me.rosuh.easywatermark.platform.AndroidDynamicColorCapability
+import me.rosuh.easywatermark.platform.DynamicColorCapability
 import me.rosuh.easywatermark.ui.MainViewModel
 import me.rosuh.easywatermark.ui.about.AboutViewModel
 import org.koin.core.module.dsl.viewModel
@@ -28,10 +30,13 @@ val appModule = module {
         }
     }
     includes(repositoryModule)
+    single<DynamicColorCapability> {
+        AndroidDynamicColorCapability()
+    }
     viewModel {
         MainViewModel(get(), get(), get(), get())
     }
     viewModel {
-        AboutViewModel(get(), get())
+        AboutViewModel(get(), get(), get())
     }
 }

@@ -10,6 +10,7 @@ import android.text.TextPaint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.render.androidTextMeasureEnv
 import me.rosuh.easywatermark.utils.ktx.applyConfig
@@ -46,7 +47,7 @@ class WatermarkCellGoldenTest {
             hGap = hGap,
             vGap = vGap,
             textSize = 24f,
-            iconUri = Uri.EMPTY,
+            iconUri = MediaRef.Empty,
         )
         val imageInfo = ImageInfo.empty().apply { width = 1000; height = 1000 }
         val paint = TextPaint().applyConfig(imageInfo, config, isScale = false)
@@ -86,7 +87,7 @@ class WatermarkCellGoldenTest {
     private fun renderTiledPixels(text: String, degree: Float): IntArray {
         val config = WaterMark.default.copy(
             text = text, degree = degree, hGap = 0, vGap = 0,
-            textSize = 24f, textColor = Color.WHITE, iconUri = Uri.EMPTY,
+            textSize = 24f, textColor = Color.WHITE, iconUri = MediaRef.Empty,
         )
         val imageInfo = ImageInfo.empty().apply { width = 1000; height = 1000 }
         val paint = TextPaint().applyConfig(imageInfo, config, isScale = false)
@@ -132,7 +133,7 @@ class WatermarkCellGoldenTest {
      */
     private fun iconCellDims(iconW: Int, iconH: Int, degree: Float, hGap: Int, vGap: Int): Pair<Int, Int> {
         val config = WaterMark.default.copy(
-            degree = degree, hGap = hGap, vGap = vGap, textSize = 14f, iconUri = Uri.EMPTY,
+            degree = degree, hGap = hGap, vGap = vGap, textSize = 14f, iconUri = MediaRef.Empty,
         )
         val imageInfo = ImageInfo.empty().apply { width = 1000; height = 1000 }
         val src = Bitmap.createBitmap(iconW, iconH, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.WHITE) }

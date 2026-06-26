@@ -61,8 +61,8 @@ fun OpenSourceScreen(
         OssCard("ColorPickerView", stringResource(R.string.open_source_desc_color_picker)) {
             onOpenLink("https://github.com/skydoves/ColorPickerView")
         }
-        OssCard("Glide", stringResource(R.string.open_source_desc_about_lib)) {
-            onOpenLink("https://github.com/bumptech/glide")
+        OssCard("Coil", stringResource(R.string.open_source_desc_about_lib)) {
+            onOpenLink("https://github.com/coil-kt/coil")
         }
         OssCard("Material Components for Android", stringResource(R.string.open_source_desc_material_components)) {
             onOpenLink("https://github.com/material-components/material-components-android")

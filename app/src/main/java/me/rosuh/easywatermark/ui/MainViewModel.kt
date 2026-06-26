@@ -25,7 +25,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
-import androidx.palette.graphics.Palette
 
 import id.zelory.compressor.Compressor
 import kotlinx.coroutines.Dispatchers
@@ -44,6 +43,7 @@ import me.rosuh.easywatermark.data.model.FuncTitleModel
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.JobState
+import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.Result
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
@@ -63,13 +63,15 @@ import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.utils.ktx.applyConfig
 import me.rosuh.easywatermark.utils.ktx.formatDate
 import me.rosuh.easywatermark.utils.ktx.toCompressFormat
+import me.rosuh.easywatermark.utils.ktx.toMediaRef
+import me.rosuh.easywatermark.utils.ktx.toUri
 import me.rosuh.easywatermark.utils.ktx.launch
 import org.koin.java.KoinJavaComponent.inject
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
-import java.util.Date
 import kotlin.math.roundToInt
+import kotlin.time.Clock
 
 class MainViewModel (
     private val userRepo: UserConfigRepository,
@@ -131,8 +133,6 @@ class MainViewModel (
     val compressLevel: Int
         get() = _userPreferences.value.compressLevel
 
-    val colorPalette: MutableLiveData<Palette> = MutableLiveData()
-
     private val projection = arrayOf(
         MediaStore.Images.Media._ID,
         MediaStore.Images.Media.BUCKET_ID,
@@ -185,8 +185,8 @@ class MainViewModel (
             val template = Template(
                 0,
                 content = content,
-                creationDate = Date(),
-                lastModifiedDate = Date()
+                creationDate = Clock.System.now(),
+                lastModifiedDate = Clock.System.now()
             )
             templateRepo.insertTemplate(template)
         }
@@ -262,7 +262,7 @@ class MainViewModel (
         imageInfo: ImageInfo,
     ): Result<Uri> =
         withContext(Dispatchers.IO) {
-            val rect = decodeBitmapFromUri(contentResolver, imageInfo.uri)
+            val rect = decodeBitmapFromUri(contentResolver, imageInfo.uri.toUri())
             if (rect.isFailure()) {
                 return@withContext Result.extendMsg(rect)
             }
@@ -299,9 +299,10 @@ class MainViewModel (
 
                 WaterMarkRepository.MarkMode.Image -> {
                     // Decode the icon against source-image bounds so export is independent of preview size.
+                    // S4d-50: iconUri is now a platform-neutral MediaRef; convert to Uri at the decode edge.
                     val iconBitmapRect = decodeSampledBitmapFromResource(
                         contentResolver,
-                        tmpConfig.iconUri,
+                        tmpConfig.iconUri.toUri(),
                         imageInfo.width,
                         imageInfo.height
                     )
@@ -421,12 +422,12 @@ class MainViewModel (
         return if (outputFormat == ImageFormat.PNG) "png" else "jpg"
     }
 
-    fun selectImage(uri: Uri) {
-        if (selectedImage.value?.uri == uri) {
+    fun selectImage(ref: MediaRef) {
+        if (selectedImage.value?.uri == ref) {
             return
         }
         launch {
-            waterMarkRepo.select(uri)
+            waterMarkRepo.select(ref)
         }
     }
 
@@ -450,7 +451,7 @@ class MainViewModel (
     private suspend fun generateImageInfoList(list: List<Uri>) =
         withContext(Dispatchers.Default) {
             return@withContext list.toSet()
-                .map { ImageInfo(it) }
+                .map { ImageInfo(it.toMediaRef()) }
                 .takeIf {
                     it.isNotEmpty()
                 }
@@ -512,9 +513,9 @@ class MainViewModel (
         }
     }
 
-    fun updateIcon(iconUri: Uri) {
+    fun updateIcon(iconUri: MediaRef) {
         launch {
-            if (iconUri.toString().isNotEmpty()) {
+            if (iconUri.value.isNotEmpty()) {
                 waterMarkRepo.updateIcon(iconUri)
             }
         }
@@ -570,11 +571,6 @@ class MainViewModel (
         }
     }
 
-    fun updateColorPalette(palette: Palette) {
-        colorPalette.postValue(palette)
-        memorySettingRepo.updatePalette(palette)
-    }
-
     fun resetJobStatus() {
         saveResult.postValue(Result.success(null))
         imageList.value?.first?.forEach {
@@ -585,7 +581,7 @@ class MainViewModel (
 
     fun clearData() {
         launch {
-            waterMarkRepo.select(Uri.EMPTY)
+            waterMarkRepo.select(MediaRef.Empty)
         }
     }
 
@@ -594,7 +590,7 @@ class MainViewModel (
             waterMark.value?.let {
                 compressedResult.postValue(Result.success(null, code = TYPE_COMPRESSING))
                 val tmpFile = File.createTempFile("easy_water_mark_", "_compressed")
-                activity.contentResolver.openInputStream(waterMarkRepo.imageInfoList.first().uri)
+                activity.contentResolver.openInputStream(waterMarkRepo.imageInfoList.first().uri.toUri())
                     .use { input ->
                         tmpFile.outputStream().use { output ->
                             input?.copyTo(output)
@@ -611,7 +607,7 @@ class MainViewModel (
                         "${BuildConfig.APPLICATION_ID}.fileprovider",
                         compressedFile
                     )
-                    selectImage(compressedFileUri)
+                    selectImage(compressedFileUri.toMediaRef())
                     compressedResult.postValue(Result.success(null, code = TYPE_COMPRESS_OK))
                 } catch (ie: IllegalArgumentException) {
                     compressedResult.postValue(
@@ -764,7 +760,7 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
             withContext(Dispatchers.Default) {
                 selectedList
                     .map {
-                        ImageInfo(it.uri)
+                        ImageInfo(it.uri.toMediaRef())
                     }
                     .takeIf {
                         it.isNotEmpty()
@@ -831,7 +827,7 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
                 val newList =
                     galleryPickedImageList.value?.filter { it.check } ?: return@launch
                 val imageList = newList.map {
-                    ImageInfo(it.uri)
+                    ImageInfo(it.uri.toMediaRef())
                 }
                 updateImageListInternal(imageList)
                 val nextState = launchScreenUiStateFlow.value.copy(
@@ -1014,7 +1010,7 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
                         }
                     }
                     val imageInfoList = newList.map {
-                        ImageInfo(it)
+                        ImageInfo(it.toMediaRef())
                     }
                     updateImageListInternal(imageInfoList)
                     val nextState = launchScreenUiStateFlow.value.copy(
@@ -1047,7 +1043,9 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
             }
 
             FuncTitleModel.FuncType.Icon -> {
-                updateIcon(any as Uri)
+                // S4d-50: IconOption converts the picker Uri to MediaRef at the edge; the reducer
+                // receives/casts MediaRef here.
+                updateIcon(any as MediaRef)
             }
 
             FuncTitleModel.FuncType.Text -> {
