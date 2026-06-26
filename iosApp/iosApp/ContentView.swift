@@ -56,6 +56,9 @@ struct ContentView: View {
         }
         // S4d-58 UI-test seam (DEBUG only): see `runUITestFixtureIfRequested`.
         .task { await runUITestFixtureIfRequested() }
+        // S4d-82: one-shot read-only exercise of the retained iOS UserConfig prefs bridge on launch
+        // (link/async-interop witness; no prefs UI, writes nothing).
+        .task { await workflow.loadUserConfigWitness() }
     }
 
 #if DEBUG

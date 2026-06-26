@@ -45,6 +45,25 @@ final class WatermarkWorkflow: ObservableObject {
     /// Watermark text composed over the photo (Latin + CJK to exercise both packaged faces).
     var watermarkText: String = "EasyWatermark 水印"
 
+    /// S4d-82: the single retained iOS UserConfig prefs bridge (S4d-81), over the app's default
+    /// `NSDocumentDirectory` store. One instance per process (DataStore forbids a second active store
+    /// for the same file), so it is created once here and held for the workflow's lifetime.
+    private let userConfigBridge = IosUserConfigBridgeKt.defaultIosUserConfigBridge()
+    /// Non-visible link/async-interop witness: the launch-time `currentPreferences()` result (or an
+    /// error string). Published only for testability — there is intentionally NO prefs/settings UI.
+    @Published private(set) var userConfigWitness: String?
+
+    /// S4d-82: exercise the Swift↔Kotlin bridge once on launch — a read-only `currentPreferences()`
+    /// snapshot (writes no prefs). Stores the result/error in `userConfigWitness` for future use.
+    func loadUserConfigWitness() async {
+        do {
+            let prefs = try await userConfigBridge.currentPreferences()
+            userConfigWitness = "\(prefs.outputFormat)/\(prefs.compressLevel)"
+        } catch {
+            userConfigWitness = "userConfig error: \(error.localizedDescription)"
+        }
+    }
+
     /// Render `imageData` (the encoded bytes of a picked photo) into a watermarked PNG.
     func render(imageData: Data) async {
         state = .rendering
