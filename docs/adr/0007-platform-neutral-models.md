@@ -212,7 +212,16 @@ Desktop and iOS now have real preferences `DataStore<Preferences>` creation, usi
 
 **No `expect`/`actual createDataStore`** — this stays plain per-platform functions on purpose. The platform creators have genuinely different signatures (Android: `Context` + `SharedPreferencesMigration`; desktop: a `File` dir; iOS: derives `NSDocumentDirectory`), so a single `expect` would be a forced/contorted fit. **Android store creation is unchanged and byte-faithful** (`androidMain` untouched; strict goldens 48/0).
 
-Proof: all-target compile (`:shared` desktop + iosSimulatorArm64 + iosArm64 + `:app`) + a **Desktop** `UserConfigRepository` roundtrip test (`:shared:desktopTest`, 1/0: empty-store defaults `(JPEG, 80)` → write `(PNG, 60)` → read back → `saveVersionCode(123)`). **iOS store creation is compile/link-proven only** — no iOS runtime roundtrip was run. Desktop app-entry wiring landed in S4d-80 (below); iOS app DI wiring is next (S4d-81). Room KMP, `WaterMarkRepository`, templates, and the Koin split remain later milestones.
+Proof: all-target compile (`:shared` desktop + iosSimulatorArm64 + iosArm64 + `:app`) + a **Desktop** `UserConfigRepository` roundtrip test (`:shared:desktopTest`, 1/0: empty-store defaults `(JPEG, 80)` → write `(PNG, 60)` → read back → `saveVersionCode(123)`). **iOS store creation is compile/link-proven only** — no iOS runtime roundtrip was run. Desktop app-entry wiring landed in S4d-80 (below); the iOS Swift-facing prefs bridge + iOS runtime roundtrip landed in S4d-81 (below). Room KMP, `WaterMarkRepository`, templates, and the Koin split remain later milestones.
+
+## Implementation status — iOS UserConfig prefs bridge (S4d-81, 2026-06-27, commit `6408a27`)
+
+`shared/src/iosMain/.../data/repo/IosUserConfigBridge.kt` is a thin Swift-facing wrapper over the common `UserConfigRepository`, so Swift can consume prefs without touching a Kotlin `Flow`:
+- `suspend currentPreferences(): UserPreferences` — a one-shot snapshot via `repo.userPreferences.first()`.
+- `suspend setOutputFormat(ImageFormat)` / `setCompressLevel(Int)` / `saveVersionCode(Int)` — write through the repo; `suspend` bridges to Swift `async`, so a write failure surfaces as a Swift error (not a raw Kotlin/Native crash). The read flow's own `IOException` fallback means the snapshot returns defaults on a read error.
+- `defaultIosUserConfigBridge()` — builds over the iOS `createUserConfigDataStore()` (`NSDocumentDirectory`) store.
+
+**No `Flow`/`DataStore` in the public signatures** (only `UserPreferences`/`ImageFormat`/`Int`; `Flow`/`DataStore` are implementation/KDoc only). **iOS runtime-proven:** `shared/src/iosTest/.../IosUserConfigBridgeTest.kt` RAN on `iosSimulatorArm64Test` — empty store defaults `(JPEG, 80)` → set `(PNG, 60)` → read back `(PNG, 60)` → `saveVersionCode(123)` ok (iOS suite 53/0). **Scope: Kotlin-only** — no Swift app retention yet, no prefs UI, no iOS UI test, no 1:1 parity. Retaining the bridge in Swift once (link/async-interop witness) is the next slice (S4d-82); the optional `:shared` `api`-exposure cleanup stays separate.
 
 ## Implementation status — Desktop app-entry UserConfigRepository wiring (S4d-80, 2026-06-27, commit `3daa7c4`)
 
