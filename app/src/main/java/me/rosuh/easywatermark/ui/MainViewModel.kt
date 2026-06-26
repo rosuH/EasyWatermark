@@ -120,8 +120,6 @@ class MainViewModel (
 
     val selectedImageFlow = waterMarkRepo.selectedImage
 
-    private val saveImageUri: MutableLiveData<List<ImageInfo>> = MutableLiveData()
-
     // S4d-66: StateFlow-only (was MutableLiveData). null initial = "no save in progress", matching the old
     // LiveData (no value before first emit). `ImageInfo` is a MUTABLE data class and the writers mutate the
     // SAME instance (jobState/result) then emit it; a StateFlow set of the same reference would be conflated
@@ -237,7 +235,6 @@ class MainViewModel (
                 _saveResult.value = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
                 return@launch
             }
-            saveImageUri.value = result.data!!
             _saveResult.value = Result.success(code = TYPE_JOB_FINISH, data = result.data)
         }
     }

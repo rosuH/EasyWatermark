@@ -38,6 +38,12 @@
 - Non-null progress emissions must store `copy()` snapshots so StateFlow equality cannot conflate mutated-in-place updates.
 - When a snapshot is emitted from a later dispatcher (`launch(Dispatchers.Main)`), capture the snapshot before dispatch; copying inside the lambda can observe a later mutation and lose the intended progress state.
 
+## Private write-only LiveData should be deleted, not converted (S4d-67, 2026-06-27)
+
+- `saveImageUri` had one private declaration and one write, with zero readers, reflection hits, or tests. Converting it to StateFlow would preserve dead code.
+- The observable save completion already flows through `_saveResult.value = Result.success(code = TYPE_JOB_FINISH, data = result.data)`, so the dead write carried no product behavior.
+- For remaining LiveData cleanup, first prove liveness. Delete write-only private holders; convert only state that has real consumers.
+
 ## Watermark config rules can move without moving repositories (S4d-61, 2026-06-27)
 
 - `WatermarkConfigRules` in commonMain can own pure legacy normalization behavior while Android `WaterMarkRepository` remains the DataStore boundary. This extracts useful shared logic without forcing a repository rewrite.
