@@ -19,7 +19,6 @@ import android.text.TextPaint
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 
@@ -108,7 +107,11 @@ class MainViewModel (
         MutableStateFlow(LaunchScreenState.default())
     val launchScreenUiStateFlow = _launchScreenUiStateFlow.asStateFlow()
 
-    val galleryPickedImageList: MutableLiveData<List<Image>> = MutableLiveData()
+    // S4d-69: StateFlow-only (was the last MutableLiveData). Nullable with null initial preserves the old
+    // LiveData "no value yet" vs empty-list distinction that the `value ?: return` / `?: emptyList()` reads
+    // rely on. Android Image/Uri payload stays at this Android UI edge (only read internally in MainViewModel).
+    private val _galleryPickedImageList = MutableStateFlow<List<Image>?>(null)
+    val galleryPickedImageList: StateFlow<List<Image>?> = _galleryPickedImageList.asStateFlow()
 
     val selectedImageFlow = waterMarkRepo.selectedImage
 
@@ -749,7 +752,7 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
                 val image = Image(imageId, contentUri, bucketName, size, dateTaken)
                 list += image
             }
-            galleryPickedImageList.postValue(list)
+            _galleryPickedImageList.value = list
             withContext(Dispatchers.Main) {
                 val state = _launchScreenUiStateFlow.value.copy(
                     uiState = LaunchScreenUiState.GalleryDialog,
@@ -778,7 +781,7 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
 
     fun resetGalleryData() {
         launch {
-            galleryPickedImageList.postValue(emptyList())
+            _galleryPickedImageList.value = emptyList()
         }
     }
 
@@ -817,7 +820,7 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
             withContext(Dispatchers.Default) {
                 val newList = galleryPickedImageList.value?.toMutableList() ?: return@withContext
                 newList[index] = image.copy(check = checked)
-                galleryPickedImageList.postValue(newList)
+                _galleryPickedImageList.value = newList
                 val newLaunchScreenState = launchScreenUiStateFlow.value.copy(
                     imageList = newList,
                 )
