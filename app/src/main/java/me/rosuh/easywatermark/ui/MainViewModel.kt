@@ -19,11 +19,8 @@ import android.text.TextPaint
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.asLiveData
-import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 
 import id.zelory.compressor.Compressor
@@ -110,11 +107,6 @@ class MainViewModel (
     private val _launchScreenUiStateFlow: MutableStateFlow<LaunchScreenState> =
         MutableStateFlow(LaunchScreenState.default())
     val launchScreenUiStateFlow = _launchScreenUiStateFlow.asStateFlow()
-
-    private var autoScroll = true
-
-    val imageList: LiveData<Pair<List<ImageInfo>, Boolean>> =
-        waterMarkRepo.imageInfoMapFlow.asLiveData().map { Pair(it, autoScroll) }
 
     val galleryPickedImageList: MutableLiveData<List<Image>> = MutableLiveData()
 
@@ -461,7 +453,6 @@ class MainViewModel (
 
     private fun updateImageListInternal(list: List<ImageInfo>) {
         launch {
-            autoScroll = true
             waterMarkRepo.select(list.first().uri)
             nextSelectedPos = 0
             waterMarkRepo.updateImageList(list)
@@ -543,14 +534,12 @@ class MainViewModel (
 
     fun updateTileMode(tileMode: WatermarkTileMode) {
         launch {
-            autoScroll = false
             waterMarkRepo.updateTileMode(tileMode)
         }
     }
 
     fun updateOffset(info: ImageInfo) {
         launch {
-            autoScroll = false
             waterMarkRepo.updateOffset(info)
         }
     }
@@ -570,19 +559,17 @@ class MainViewModel (
         imageInfo: ImageInfo?,
         curSelectedPos: Int,
     ) {
-        val list = imageList.value?.first?.toMutableList() ?: return
+        val list = waterMarkRepo.imageInfoList.toMutableList()
         val removePos = list.indexOf(imageInfo)
         list.removeAt(removePos)
         val selectedPos =
-            if (removePos < curSelectedPos || removePos >= (imageList.value?.first?.size
-                    ?: 0) - 1
+            if (removePos < curSelectedPos || removePos >= waterMarkRepo.imageInfoList.size - 1
             ) {
                 (curSelectedPos - 1).coerceAtLeast(0)
             } else {
                 curSelectedPos
             }
         launch {
-            autoScroll = false
             nextSelectedPos = selectedPos
             waterMarkRepo.updateImageList(list)
             if (removePos == curSelectedPos) {
@@ -593,7 +580,7 @@ class MainViewModel (
 
     fun resetJobStatus() {
         _saveResult.value = Result.success(null)
-        imageList.value?.first?.forEach {
+        waterMarkRepo.imageInfoList.forEach {
             it.jobState = JobState.Ready
             emitSaveProcess(it)
         }
