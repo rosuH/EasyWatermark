@@ -32,6 +32,12 @@
 - A no-consumer holder can be migrated single-file only after proving there are no external reads and no same-class reads; preserve all writer payloads so a future consumer sees the same event codes/messages.
 - For `saveProcess`, preflight both writers and consumer expectations before conversion; it is an observed progress state, not an unobserved event placeholder.
 
+## Mutable data-class progress state needs snapshot-before-dispatch (S4d-66, 2026-06-27)
+
+- `saveProcess` proved that StateFlow migration is not just replacing `.postValue`: `ImageInfo` is a mutable data class and `generateList` mutates the same instance through `jobState`/`result`.
+- Non-null progress emissions must store `copy()` snapshots so StateFlow equality cannot conflate mutated-in-place updates.
+- When a snapshot is emitted from a later dispatcher (`launch(Dispatchers.Main)`), capture the snapshot before dispatch; copying inside the lambda can observe a later mutation and lose the intended progress state.
+
 ## Watermark config rules can move without moving repositories (S4d-61, 2026-06-27)
 
 - `WatermarkConfigRules` in commonMain can own pure legacy normalization behavior while Android `WaterMarkRepository` remains the DataStore boundary. This extracts useful shared logic without forcing a repository rewrite.
