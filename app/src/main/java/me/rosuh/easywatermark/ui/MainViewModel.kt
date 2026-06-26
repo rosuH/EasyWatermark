@@ -49,6 +49,7 @@ import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.render.WatermarkRenderer
@@ -66,6 +67,7 @@ import me.rosuh.easywatermark.utils.ktx.toCompressFormat
 import me.rosuh.easywatermark.utils.ktx.toMediaRef
 import me.rosuh.easywatermark.utils.ktx.toUri
 import me.rosuh.easywatermark.utils.ktx.launch
+import me.rosuh.easywatermark.utils.ktx.obtainTileMode
 import org.koin.java.KoinJavaComponent.inject
 import java.io.File
 import java.io.FileNotFoundException
@@ -287,7 +289,7 @@ class MainViewModel (
             // S2a: build the cell shader through the Android renderer seam (the same
             // WatermarkRenderer the Compose preview uses).
             val shader = when (waterMark.value?.markMode) {
-                WaterMarkRepository.MarkMode.Text -> {
+                WatermarkMode.Text -> {
                     WatermarkRenderer.buildTextShader(
                         imageInfo,
                         waterMark.value!!,
@@ -297,7 +299,7 @@ class MainViewModel (
                     )
                 }
 
-                WaterMarkRepository.MarkMode.Image -> {
+                WatermarkMode.Image -> {
                     // Decode the icon against source-image bounds so export is independent of preview size.
                     // S4d-50: iconUri is now a platform-neutral MediaRef; convert to Uri at the decode edge.
                     val iconBitmapRect = decodeSampledBitmapFromResource(

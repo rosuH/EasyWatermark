@@ -14,6 +14,7 @@ import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.ui.widget.utils.WaterMarkShader
+import me.rosuh.easywatermark.utils.ktx.obtainTileMode
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.max
 

@@ -2,6 +2,7 @@ package me.rosuh.easywatermark.utils.ktx
 
 import android.graphics.Shader
 import android.os.Build
+import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 
 /**
@@ -17,6 +18,14 @@ import me.rosuh.easywatermark.data.model.WatermarkTileMode
  * i.e. the new neutral read path produces the identical `Shader.TileMode` the old read path did, so
  * no render/export behavior changes.
  */
+/**
+ * Android render/edge bridge for [WaterMark] (S4d-60). The neutral [WaterMark] model (commonMain) holds
+ * [WatermarkTileMode]; render/export code still asks for an `android.graphics.Shader.TileMode`. This was
+ * the former `WaterMark.obtainTileMode()` member — kept as an extension so all call sites
+ * (`WatermarkRenderer`, `MainViewModel.generateImage`, `EditorScreen`) are unchanged aside from the import.
+ */
+fun WaterMark.obtainTileMode(): Shader.TileMode = tileMode.toShaderTileMode()
+
 fun WatermarkTileMode.toShaderTileMode(): Shader.TileMode = when (this) {
     WatermarkTileMode.CLAMP -> Shader.TileMode.CLAMP
     WatermarkTileMode.REPEAT -> Shader.TileMode.REPEAT

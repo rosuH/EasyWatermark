@@ -1,5 +1,22 @@
 # Progress Log
 
+## 2026-06-27 — Execution order reset: code migration before 1:1 UI parity
+
+- Adopted the user-approved global order for the remaining migration: finish release-grade full-platform KMP/CMP code migration first; start screenshot/recording-driven 1:1 UI/UX restoration only after that.
+- Confirmed PR #358 is still OPEN + Draft (`feat/migrate_to_compose` -> `master`) and should remain a Draft integration checkpoint, not a merge-ready PR.
+- Recorded that Android production v2.10.0 remains the only UI/UX source of truth; iOS and Desktop align to that baseline after code migration rather than defining a new design.
+- Reaffirmed the execution protocol: every non-trivial implementation slice goes through ACSP coordinator -> worker -> bounded poll -> coordinator review/accept/requeue. Direct coordinator edits are limited to tiny durable-context hygiene or explicit user requests.
+- Next action: publish S4d-61 as the next small C4.2 implementation slice: extract a watermark-config reducer/use-case boundary to commonMain while keeping Android repo/render/persistence behavior unchanged and golden-gated.
+
+## 2026-06-27 — S4d-59/S4d-60 code-migration readiness + WaterMark commonMain model accepted
+
+- **S4d-59 (read-only readiness/gap map, ACSP `20260627-004104--s4d59-code-migration-readiness`, accepted):** confirmed the updated global order — finish release-grade full-platform KMP/CMP code migration before final 1:1 UI/UX parity — and selected the next smallest implementation slice from current repo evidence. The chosen slice was S4d-60: move `WaterMark` + style/mode value types into commonMain after clearing three blockers (`android.graphics.*`, app-repo nested `MarkMode`, and `SerializableSealClass<Int>` / `java.io.Serializable`).
+- **S4d-60 (implementation, ACSP `20260627-010311--s4d60-watermark-model-common`, accepted):** moved `WaterMark`, `TextTypeface`, and `TextPaintStyle` from `:app` to `shared/commonMain/data/model`, added neutral `WatermarkMode(Text=0, Image=1)`, and deleted the app originals plus `SerializableSealClass` and `WaterMarkRepository.MarkMode`.
+- Android-specific behavior stayed at the edge: `WaterMark.obtainTileMode()` now lives in `TileModeExt.kt`, and `TextPaintStyle.obtainSysStyle()` lives in new `TextStyleExt.kt`. `TextTypeface.obtainSysTypeface()` remains a plain `Int` matching Android `Typeface` constants, avoiding out-of-scope androidTest edits.
+- Storage is byte-identical: `KEY_MODE` still stores 0/1, typeface/style serialize keys are unchanged, `WatermarkTileMode.storageId` is unchanged, `KEY_ICON_URI`/`MediaRef` is unchanged, and no DataStore migration was added.
+- Coordinator verification: `git diff --check` clean; `./gradlew :shared:compileKotlinDesktop :shared:compileKotlinIosSimulatorArm64 :shared:compileKotlinIosArm64 :app:compileDebugKotlin --max-workers=8` passed; `WATERMARK_GOLDEN_STRICT=true ./gradlew :app:testDebugUnitTest --rerun-tasks --max-workers=8` passed **48/0** with no golden rebaseline; `./gradlew :app:assembleDebug :app:assembleRelease --max-workers=8` passed including release/R8; daemon stopped. No iOS/Desktop/cmonet/dependency/resource/golden/renderer-algorithm change.
+- **Next:** S4d-61 should be a narrow commonMain watermark-config reducer/use-case extraction. It must not rewrite `MainViewModel` wholesale, move repositories, alter render algorithms, or start screenshot 1:1 parity.
+
 ## 2026-06-19 — S4d-21: Desktop EXIF orientation decode pass (accepted, in `done/`)
 
 - **S4d-21 (ACSP `20260619-234634--s4d21-desktop-exif-orientation`):** `DesktopImageDecoder` now bakes JPEG **EXIF orientation** into the decoded `ImageBitmap` at the Desktop decode edge, matching the Android product policy (Android bakes EXIF via `androidx.exifinterface`/`BitmapUtils`). commonMain stays decode-free; Android untouched.

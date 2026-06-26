@@ -105,7 +105,9 @@ import me.rosuh.easywatermark.ui.compose.TextTypeface
 import me.rosuh.easywatermark.ui.compose.TileMode
 import me.rosuh.easywatermark.ui.widget.utils.WaterMarkShader
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
+import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.utils.ktx.applyConfig
+import me.rosuh.easywatermark.utils.ktx.obtainTileMode
 import me.rosuh.easywatermark.utils.ktx.toMediaRef
 import me.rosuh.easywatermark.utils.ktx.toUri
 import kotlin.math.absoluteValue
@@ -912,11 +914,11 @@ private suspend fun buildPreviewShader(
     val imageInfo = ImageInfo(imageUri.toMediaRef()).apply { width = drawWidth; height = drawHeight }
     val bitmapPaint = TextPaint().applyConfig(imageInfo, waterMark, isScale = false)
     return when (waterMark.markMode) {
-        WaterMarkRepository.MarkMode.Text ->
+        WatermarkMode.Text ->
             WatermarkRenderer.buildTextShader(
                 imageInfo, waterMark, bitmapPaint, androidTextMeasureEnv(context), Dispatchers.IO
             )
-        WaterMarkRepository.MarkMode.Image -> {
+        WatermarkMode.Image -> {
             // S4d-50: iconUri is now a platform-neutral MediaRef; convert to Uri at the decode edge.
             val icon = decodeSampledBitmapFromResource(
                 context.contentResolver, waterMark.iconUri.toUri(), drawWidth, drawHeight

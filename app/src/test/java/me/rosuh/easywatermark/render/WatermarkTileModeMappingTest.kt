@@ -4,6 +4,7 @@ import android.app.Application
 import android.graphics.Shader
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
+import me.rosuh.easywatermark.utils.ktx.obtainTileMode
 import me.rosuh.easywatermark.utils.ktx.toShaderTileMode
 import me.rosuh.easywatermark.utils.ktx.toTileMode
 import me.rosuh.easywatermark.utils.ktx.toWatermarkTileMode

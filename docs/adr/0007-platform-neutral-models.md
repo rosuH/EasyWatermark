@@ -3,7 +3,7 @@
 **Status:** Accepted (2026-06-13) · **Plan ref:** D7
 
 ## Context
-Android types leak into the domain: `WaterMark.tileMode: Shader.TileMode` (persisted as android enum **ordinal** in DataStore), `iconUri`/`ImageInfo.uri: android.net.Uri`, `UserPreferences.outputFormat: Bitmap.CompressFormat`, `ViewInfo: Matrix+ScaleType`. Cross-enum ordinal equality is fragile and blocks commonMain.
+Android types leaked into the domain: `WaterMark.tileMode: Shader.TileMode` (persisted as android enum **ordinal** in DataStore), `iconUri`/`ImageInfo.uri: android.net.Uri`, `UserPreferences.outputFormat: Bitmap.CompressFormat`, `ViewInfo: Matrix+ScaleType`. Cross-enum ordinal equality is fragile and blocks commonMain. The status blocks below record which leaks have since been closed.
 
 ## Decision
 Introduce app-owned `TileMode` and `ImageFormat` enums with explicit ordinal-compatible mappers (+ DataStore migration for the persisted ordinal), a `MediaRef` value class for image identity, kotlinx-datetime for time. `ViewInfo` is deleted by ADR-0004 C2b, not ported. The recent `Bitmap.CompressFormat` standardization in `SaveExportSheet` was a deliberate stepping stone; it swaps to `ImageFormat` in ONE move (sheet + prefs + repo together, plan C3.5). `:cmonet` is replaced by an `isDynamicColorAvailable()` capability (Android actual keeps the OEM allowlist; iOS/Desktop return false; static color schemes in Theme.kt are the fallback).
@@ -121,6 +121,23 @@ behavior change** — `KEY_ICON_URI` and all real watermark prefs are untouched,
 `git diff --check` clean; `:app:compileDebugKotlin` + `:app:testDebugUnitTest` green; daemon stopped. **The
 platform-neutral model layer is now `Uri`-free** — the C3 model-`Uri` de-Androidization (ADR-0007: `TileMode`,
 `ImageFormat`, `MediaRef`) is complete; all remaining `Uri` is at genuine Android edges.
+
+## Implementation status — WaterMark config moved to commonMain (S4d-60, 2026-06-27)
+
+`WaterMark`, `TextTypeface`, `TextPaintStyle`, and the new neutral `WatermarkMode` now live in
+`shared/src/commonMain/.../data/model`. This clears the first C4.2 model-neutralization slice after the S4d-59
+readiness map.
+
+- `WatermarkMode.Text(0)` / `Image(1)` replaces the deleted `WaterMarkRepository.MarkMode` and preserves the
+  exact `KEY_MODE` persisted ints. Missing/unknown values still map to `Text`, matching the old
+  `if (value == Image) Image else Text` rule.
+- `TextTypeface.serializeKey()` keeps 0-3, and `TextPaintStyle.serializeKey()` keeps 0-1. The old
+  `SerializableSealClass<Int>` / `java.io.Serializable` base was deleted.
+- Android render types stay outside commonMain: `WaterMark.obtainTileMode()` is now an Android extension in
+  `TileModeExt.kt`; `TextPaintStyle.obtainSysStyle()` is an Android extension in `TextStyleExt.kt`.
+- Verification: `:shared:compileKotlinDesktop`, `:shared:compileKotlinIosSimulatorArm64`,
+  `:shared:compileKotlinIosArm64`, `:app:compileDebugKotlin`, strict `:app:testDebugUnitTest` (48/0, no
+  golden rebaseline), and `:app:assembleDebug :app:assembleRelease` all passed with `--max-workers=8`.
 
 **Remaining (optional, not model-layer):** flipping gallery `Image.uri`/`uriList` only if a non-Android (Desktop/iOS)
 gallery is ever built.

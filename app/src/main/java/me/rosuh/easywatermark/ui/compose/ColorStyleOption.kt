@@ -41,8 +41,8 @@ import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
-import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import java.util.EnumSet
 import kotlin.math.abs
 
@@ -110,7 +110,7 @@ private fun ColorOptionPreview() {
         hGap = 0,
         vGap = 0,
         iconUri = MediaRef.Empty,
-        markMode = WaterMarkRepository.MarkMode.Text,
+        markMode = WatermarkMode.Text,
         enableBounds = false,
         tileMode = WatermarkTileMode.CLAMP,
     )

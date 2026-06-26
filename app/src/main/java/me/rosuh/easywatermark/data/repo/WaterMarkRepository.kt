@@ -15,6 +15,7 @@ import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_ALPHA
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_DEGREE
@@ -77,7 +78,7 @@ class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
                 hGap = it[KEY_HORIZON_GAP] ?: 0,
                 vGap = it[KEY_VERTICAL_GAP] ?: 0,
                 iconUri = MediaRef.parse(it[KEY_ICON_URI] ?: ""),
-                markMode = if (it[KEY_MODE] == MarkMode.Image.value) MarkMode.Image else MarkMode.Text,
+                markMode = WatermarkMode.fromValue(it[KEY_MODE] ?: WatermarkMode.Text.value),
                 tileMode = it[KEY_TILE_MODE].toWatermarkTileMode(),
                 enableBounds = it[KEY_ENABLE_BOUNDS] ?: false
             )
@@ -100,7 +101,7 @@ class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
 
     suspend fun updateText(text: String) {
         dataStore.edit {
-            it[KEY_MODE] = MarkMode.Text.value
+            it[KEY_MODE] = WatermarkMode.Text.value
             it[KEY_TEXT] = text
         }
     }
@@ -141,7 +142,7 @@ class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
 
     suspend fun updateIcon(iconUri: MediaRef) {
         dataStore.edit {
-            it[KEY_MODE] = MarkMode.Image.value
+            it[KEY_MODE] = WatermarkMode.Image.value
             it[KEY_ICON_URI] = iconUri.value
         }
     }
@@ -168,7 +169,7 @@ class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
     }
 
     suspend fun resetModeToText() {
-        dataStore.edit { it[KEY_MODE] = MarkMode.Text.value }
+        dataStore.edit { it[KEY_MODE] = WatermarkMode.Text.value }
     }
 
     suspend fun toggleBounds(enable: Boolean) {
@@ -182,12 +183,6 @@ class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
     suspend fun select(ref: MediaRef) = withContext(Dispatchers.Default) {
         val info = imageInfoList.find { it.uri == ref } ?: ImageInfo(ref)
         _selectedImage.emit(info)
-    }
-
-    sealed class MarkMode(val value: Int) {
-        object Text : MarkMode(0)
-
-        object Image : MarkMode(1)
     }
 
     companion object {
