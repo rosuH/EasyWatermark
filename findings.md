@@ -1,12 +1,20 @@
 # Compose Migration Findings
 
+## First DataStore KMP code uses common helper + androidMain function, NOT `commonMain expect` (S4d-73/S4d-74, 2026-06-27)
+
+- DataStore 1.2.1 (already on the repo) is KMP-capable (floor 1.1.0, Preferences-only) — it was the smallest useful next KMP slice over Room (bigger) and the Koin split (premature).
+- **A `commonMain expect` DataStore factory is the wrong shape for this module:** `:shared` targets androidTarget + desktop + iosArm64 + iosSimulatorArm64, so a `commonMain expect` requires `actual` on every target. With no iOS/desktop consumer yet, that forces empty/fake actuals and breaks the `:shared` desktop/iOS compile gates. S4d-74 instead uses a plain `commonMain` helper `createDataStore(storage: Storage<Preferences>)` + a plain `androidMain` function `createPreferencesDataStore(context, name)` (NOT `actual`).
+- **Android keeps byte-identical preferences creation via `PreferenceDataStoreFactory.create(produceFile = preferencesDataStoreFile(name), migrations = SharedPreferencesMigration(context, name))`** — the same path/format/migration the old `by preferencesDataStore(...)` delegate ran. Android does NOT route through the common storage helper because building a byte-identical `Storage<Preferences>` would need the internal preferences serializer; the common helper is the desktop/iOS forward seam.
+- `di/DataStoreModule.kt` preserved the `Context.userDataStore`/`waterMarkDataStore` property names so `RepositoryModule`/`AppModule` were untouched; one store per file in-process is kept via `@Volatile` double-checked locking. Repos stay Android-side. Stored bytes unchanged; strict goldens 48/0, no rebaseline.
+- The true `expect/actual` promotion + iOS/desktop store creation should land WITH a real common prefs consumer (e.g. shared `UserConfigRepository` extraction), not speculatively. Room KMP and the Koin common/platform split remain later milestones.
+
 ## Full-platform code migration precedes final 1:1 UI parity (2026-06-27)
 
 - The remaining work is not "make current Draft PR visually merge-ready." PR #358 stays a Draft integration checkpoint while KMP/CMP migration continues in small slices.
 - Final screenshot/recording-driven 1:1 UI/UX restoration starts only after the code migration is release-grade across Android, iOS, and Desktop. Until then, UI evidence is used to prevent regressions for a slice, not to declare global product parity.
 - Android production v2.10.0 is the single visual/behavioral truth. Android debug must match it first in the final parity phase; iOS/Desktop then align to that Android baseline with explicitly classified platform differences.
 - ACSP is the default execution mechanism for non-trivial work. Worker summaries are evidence leads only; coordinator acceptance requires reading artifacts, checking the real diff/current files, and rerunning or validating the relevant gate.
-- The StateFlow cleanup lane is now complete through S4d-69, S4d-70 selected the next code-migration slices, S4d-71 moved `ImageInfo` to commonMain, and S4d-72 moved the neutral config command vocabulary to commonMain. The next safe step is a read-only DataStore/Room/Koin readiness map, not screenshot/recording parity or dependency edits from the current branch state.
+- The StateFlow cleanup lane is now complete through S4d-69, S4d-70 selected the next code-migration slices, S4d-71 moved `ImageInfo` to commonMain, S4d-72 moved the neutral config command vocabulary to commonMain, S4d-73 mapped DataStore/Room/Koin KMP readiness, and S4d-74 landed the first DataStore KMP code in `:shared`. The next safe step is a real common prefs consumer (start `UserConfigRepository` extraction) before iOS/desktop store creation; not screenshot/recording parity or Room/Koin edits from the current branch state.
 
 ## ImageInfo can move to commonMain without bringing AndroidX annotation (S4d-70, 2026-06-27)
 

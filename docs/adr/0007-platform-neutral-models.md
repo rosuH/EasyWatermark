@@ -179,3 +179,14 @@ now maps once through that seam and dispatches to the existing update methods.
 Verified by zero `FuncTitleModel.FuncType` hits, zero `any as` hits in `MainViewModel`, shared Desktop/iOS/iOS-sim
 compile, app compile, strict unit/golden 48/0 with no rebaseline, debug/release assemble, and a new common
 desktopTest covering typed construction, gap rounding, and fail-fast wrong types.
+
+## Implementation status — DataStore creation seam (S4d-74, 2026-06-27, commit `59eb6e0`)
+
+First DataStore KMP code in `:shared` — the *store-creation* infrastructure (not a model). `shared/commonMain/.../data/datastore/CreateDataStore.kt` is a driver-free helper
+`createDataStore(storage: Storage<Preferences>) = DataStoreFactory.create(storage)` (no Android imports);
+`shared/androidMain/.../CreateDataStore.android.kt` is a plain function (NOT an `actual`)
+`createPreferencesDataStore(context, name)` = `PreferenceDataStoreFactory.create(produceFile = preferencesDataStoreFile(name), migrations = SharedPreferencesMigration(context, name))`.
+`:app` `di/DataStoreModule.kt` keeps the `Context.userDataStore`/`waterMarkDataStore` property names (so `RepositoryModule`/`AppModule` are unchanged) with one store per file in-process. New catalog alias
+`datastore = androidx.datastore:datastore` (version `datastorePreference = 1.2.1`); `:shared` `commonMain` depends on both `datastore` + `datastore-preferences`.
+
+**Deliberately deferred (matches the S4d-73 readiness decision):** NO `commonMain expect` DataStore factory (would force empty actuals on all four targets and fail the desktop/iOS compile gates); NO iOS/desktop store creation; Android does **not** route through the common storage helper (byte-identical legacy preferences creation needs `PreferenceDataStoreFactory.create(produceFile, migrations)` — a byte-identical `Storage<Preferences>` would need the internal preferences serializer). Repositories (`UserConfigRepository`, `WaterMarkRepository`) stay Android-side. Stored path/format/migration are byte-equivalent (same `filesDir/datastore/<SP_NAME>.preferences_pb`); no DataStore migration, no golden rebaseline. The true `expect/actual` promotion + iOS/desktop store creation is a later slice that needs a real common prefs consumer; Room KMP and the Koin common/platform split remain later milestones.
