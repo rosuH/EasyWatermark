@@ -15,7 +15,7 @@
 - **No `expect`/`actual createDataStore`** — kept as plain per-platform functions because the platform creators have genuinely different signatures (Android: Context+migration; desktop: dir; iOS: derives a dir). An `expect` would be a forced fit; this is intentional, not a stepping stone.
 - **Android store creation stayed byte-faithful and untouched** (`androidMain` not edited; strict goldens 48/0).
 - Proof: all-target compile + a **Desktop** `UserConfigRepository` roundtrip test (`:shared:desktopTest`, 1/0). **iOS is compile/link-proven only** — no iOS runtime roundtrip was run.
-- Next: wire the Desktop/iOS app DI to `createUserConfigDataStore(...)` at C4/C5 app bring-up.
+- Next: wire the Desktop/iOS app DI to `createUserConfigDataStore(...)` — Desktop app-entry wiring landed in S4d-80 (`:desktopApp` `Main.kt` smoke); iOS is next (S4d-81). Note: a JVM/Native consumer must declare coroutines + datastore itself (S4d-80 added them to `:desktopApp`), because `:shared` exposes those public-API types as `implementation`, not `api`.
 
 ## First DataStore KMP code uses common helper + androidMain function, NOT `commonMain expect` (S4d-73/S4d-74, 2026-06-27)
 
@@ -31,7 +31,7 @@
 - Final screenshot/recording-driven 1:1 UI/UX restoration starts only after the code migration is release-grade across Android, iOS, and Desktop. Until then, UI evidence is used to prevent regressions for a slice, not to declare global product parity.
 - Android production v2.10.0 is the single visual/behavioral truth. Android debug must match it first in the final parity phase; iOS/Desktop then align to that Android baseline with explicitly classified platform differences.
 - ACSP is the default execution mechanism for non-trivial work. Worker summaries are evidence leads only; coordinator acceptance requires reading artifacts, checking the real diff/current files, and rerunning or validating the relevant gate.
-- The StateFlow cleanup lane is now complete through S4d-69, S4d-70 selected the next code-migration slices, S4d-71 moved `ImageInfo` to commonMain, S4d-72 moved the neutral config command vocabulary to commonMain, S4d-73 mapped DataStore/Room/Koin KMP readiness, S4d-74 landed the first DataStore KMP code in `:shared`, S4d-76/S4d-77 moved `UserPreferences` + `UserConfigRepository` to commonMain (the first real common DataStore Preferences consumer), and S4d-78 landed desktop+iOS store creation (plain per-platform functions; no `expect/actual`). The next safe step is wiring the Desktop/iOS app DI to those factories at C4/C5 app bring-up; not screenshot/recording parity or Room/Koin edits from the current branch state.
+- The StateFlow cleanup lane is now complete through S4d-69, S4d-70 selected the next code-migration slices, S4d-71 moved `ImageInfo` to commonMain, S4d-72 moved the neutral config command vocabulary to commonMain, S4d-73 mapped DataStore/Room/Koin KMP readiness, S4d-74 landed the first DataStore KMP code in `:shared`, S4d-76/S4d-77 moved `UserPreferences` + `UserConfigRepository` to commonMain (the first real common DataStore Preferences consumer), S4d-78 landed desktop+iOS store creation (plain per-platform functions; no `expect/actual`), and S4d-80 wired the Desktop app-entry (`:desktopApp` smoke). The next safe step is the iOS `UserConfigPrefsBridge` + iOS store-roundtrip smoke (S4d-81); not screenshot/recording parity or Room/Koin edits from the current branch state.
 
 ## ImageInfo can move to commonMain without bringing AndroidX annotation (S4d-70, 2026-06-27)
 
