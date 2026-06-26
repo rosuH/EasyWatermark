@@ -35,7 +35,6 @@ import me.rosuh.easywatermark.utils.FileUtils
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -242,7 +241,7 @@ class ComposeMainActivity : ComponentActivity() {
                             val templates by viewModel.templateListFlow.collectAsStateWithLifecycle()
 
                             // [DEBUG] temporary export instrumentation — remove after diagnosing
-                            val saveResult by viewModel.saveResult.observeAsState()
+                            val saveResult by viewModel.saveResult.collectAsStateWithLifecycle()
                             LaunchedEffect(saveResult) {
                                 Log.d("EXPORT", "saveResult code=${saveResult?.code} data=${saveResult?.data}")
                             }

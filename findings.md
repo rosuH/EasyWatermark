@@ -20,6 +20,12 @@
 - The safe retirement was not just deleting the wrapper declarations; it also required renaming those internal reads to existing `waterMarkFlow.value`/`selectedImageFlow.value`.
 - For the next LiveData cleanup, grep both external `viewModel.foo` consumers and bare same-class `foo.value` reads before declaring a holder dead.
 
+## LiveData event holders need equality semantics checked before StateFlow (S4d-64, 2026-06-27)
+
+- `saveResult` was safe to convert to `MutableStateFlow<Result<*>?>(null)` because the old no-value state maps to nullable `null`, and each writer creates a fresh `Result`.
+- `Result` is a normal class, not a data class, so StateFlow conflation will not drop equal-looking repeated save events by structural equality.
+- Repeat this check for every event-like LiveData holder; do not assume StateFlow is behavior-identical if the payload is a data class or reused singleton.
+
 ## Watermark config rules can move without moving repositories (S4d-61, 2026-06-27)
 
 - `WatermarkConfigRules` in commonMain can own pure legacy normalization behavior while Android `WaterMarkRepository` remains the DataStore boundary. This extracts useful shared logic without forcing a repository rewrite.

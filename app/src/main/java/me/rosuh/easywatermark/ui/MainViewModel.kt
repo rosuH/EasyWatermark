@@ -85,7 +85,11 @@ class MainViewModel (
 
     var nextSelectedPos: Int = 0
 
-    val saveResult: MutableLiveData<Result<*>> = MutableLiveData()
+    // S4d-64: StateFlow-only (was MutableLiveData). null initial = "no save event yet", matching the old
+    // LiveData (no value until first emit). Distinct Result instances each emit, so StateFlow conflation
+    // never skips a real event.
+    private val _saveResult = MutableStateFlow<Result<*>?>(null)
+    val saveResult: StateFlow<Result<*>?> = _saveResult.asStateFlow()
 
     val compressedResult: MutableLiveData<Result<*>> = MutableLiveData()
 
@@ -209,18 +213,18 @@ class MainViewModel (
     ) {
         viewModelScope.launch {
             if (imageList.isEmpty()) {
-                saveResult.value = Result.failure(null, code = TYPE_ERROR_NOT_IMG)
+                _saveResult.value = Result.failure(null, code = TYPE_ERROR_NOT_IMG)
                 return@launch
             }
-            saveResult.value =
+            _saveResult.value =
                 Result.success(null, code = TYPE_SAVING)
             val result = generateList(contentResolver, imageList)
             if (result.isFailure()) {
-                saveResult.value = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
+                _saveResult.value = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
                 return@launch
             }
             saveImageUri.value = result.data!!
-            saveResult.value = Result.success(code = TYPE_JOB_FINISH, data = result.data)
+            _saveResult.value = Result.success(code = TYPE_JOB_FINISH, data = result.data)
         }
     }
 
@@ -571,7 +575,7 @@ class MainViewModel (
     }
 
     fun resetJobStatus() {
-        saveResult.postValue(Result.success(null))
+        _saveResult.value = Result.success(null)
         imageList.value?.first?.forEach {
             it.jobState = JobState.Ready
             saveProcess.value = it
