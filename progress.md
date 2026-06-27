@@ -1,5 +1,14 @@
 # Progress Log
 
+## 2026-06-28 — S4d-141/143b Desktop templates persistence lane accepted
+
+- **S4d-141 (read-only readiness, accepted):** mapped Desktop templates after Save-As and chose the smallest non-speculative path: prove an empty Desktop Room builder first, then app-level witness, then decide seed packaging separately. This avoided bundling Room builder, seed DB packaging, and a templates UI into one review unit.
+- **S4d-142 (implementation, accepted; commit `ed9e38e`):** added Desktop `buildTemplateDatabase(dir)` in `shared/desktopMain` using `BundledSQLiteDriver` and a Desktop `TemplateRepository`/`TemplateEditor` empty-store roundtrip test. Coordinator verified the filtered Desktop template tests, app dependency hygiene, debug APK, no Android `sqlite-bundled`/native sqlite leak, `git diff --check`, and daemon stop.
+- **S4d-143a (implementation, accepted; commit `07ac7b6`):** added the `:desktopApp --headless` templates witness. The app builds a Desktop DB under `build/s4d143a-desktop-templates`, constructs `TemplateRepository` + `TemplateEditor`, proves empty count, add/list/delete, and closes the DB. `desktopApp` now declares the existing `room.runtime` dependency because it directly consumes the public `RoomDatabase` supertype exposed by `AppDatabase`; Android remains `sqlite-bundled`/native-sqlite clean.
+- **S4d-143b (read-only seed decision, accepted):** proved Desktop seed parity is viable but still optional. Both Android seed DB assets (`ewm-db-eng.db`, `ewm-db-ch.db`) contain one template row and `room_master_table` identity hash `72366f557b971b39675d0f26cbc46e0a`, matching generated Room `AppDatabase_Impl` for Android, Desktop, and both iOS targets. The worker-created SQLite WAL/SHM sidecars under `app/src/main/assets` were generated artifacts and were explicitly removed before acceptance.
+- **Decision:** do not implement Desktop seed packaging yet. The empty-store builder and app witness are enough for current Desktop release-code migration; `createFromFile` seed packaging should be a separate gated slice only if default templates or a visible templates UI become product priority.
+- **Next:** choose the next Desktop product gap explicitly. Conservative options are a read-only preview/editor gap map, share-substitute decision, drag/drop readiness, or templates UI/seed packaging if the owner wants templates surfaced next. Android v2.10.0 screenshot/recording 1:1 parity remains deferred until release-grade code migration completes.
+
 ## 2026-06-28 — S4d-140 Desktop Save-As destination accepted
 
 - **S4d-140 (implementation, accepted; ACSP `20260628-002526...`):** added the Desktop window's minimal **"Save as..."** destination control in `DesktopWindow.kt`. It opens a native AWT `FileDialog.SAVE`, treats cancel as a no-op, and passes the selected path into the existing `DesktopWatermarkFlow.runSaveFlow(..., outputFile = target)`.
