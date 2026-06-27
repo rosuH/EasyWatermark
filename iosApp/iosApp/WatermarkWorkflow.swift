@@ -42,8 +42,19 @@ final class WatermarkWorkflow: ObservableObject {
     /// Save-to-Photos state for the current result.
     @Published private(set) var saveState: SaveState = .idle
 
-    /// Watermark text composed over the photo (Latin + CJK to exercise both packaged faces).
-    var watermarkText: String = "EasyWatermark 水印"
+    /// Watermark text composed over the photo. S4d-102: now sourced from the shared
+    /// `WaterMarkRepository` via `watermarkConfigBridge` (loaded on launch, edited through the shared
+    /// `WatermarkConfigEditor`) instead of a Swift-only constant. Default matches the prior constant.
+    @Published private(set) var watermarkText: String = "EasyWatermark 水印"
+
+    /// S4d-102: the single retained iOS watermark-config bridge over the common `WaterMarkRepository`
+    /// (the first off-Android consumer of the shared watermark editor). One instance per process
+    /// (DataStore forbids a second active store for the same file), mirroring `userConfigBridge`.
+    private let watermarkConfigBridge = IosWatermarkConfigBridgeKt.defaultIosWatermarkConfigBridge()
+
+    /// S4d-102: the last picked photo's encoded bytes, kept so a watermark-text edit can re-render the
+    /// same image without re-picking. Nil until the first render.
+    private var lastImageData: Data?
 
     /// S4d-82: the single retained iOS UserConfig prefs bridge (S4d-81), over the app's default
     /// `NSDocumentDirectory` store. One instance per process (DataStore forbids a second active store
@@ -64,12 +75,39 @@ final class WatermarkWorkflow: ObservableObject {
         }
     }
 
+    /// S4d-102: load the persisted watermark text from the shared `WaterMarkRepository` (one-shot
+    /// snapshot). On an empty store this returns the repository's default ("EasyWatermark 水印"), so the
+    /// visible default is preserved. A read error keeps the current value.
+    func loadWatermarkText() async {
+        do {
+            watermarkText = try await watermarkConfigBridge.currentText()
+        } catch {
+            // keep the current default; a read failure must not break the editor
+        }
+    }
+
+    /// S4d-102: persist a new watermark `text` through the shared `WatermarkConfigEditor` use-case, then
+    /// re-render the last image (if any) so the preview reflects the edit. A write failure surfaces as a
+    /// `.failure` state without changing the persisted value.
+    func setWatermarkText(_ text: String) async {
+        do {
+            try await watermarkConfigBridge.setText(text: text)
+            watermarkText = text
+            if let data = lastImageData {
+                await render(imageData: data)
+            }
+        } catch {
+            state = .failure("Could not save watermark text: \(error.localizedDescription)")
+        }
+    }
+
     /// Render `imageData` (the encoded bytes of a picked photo) into a watermarked PNG.
     func render(imageData: Data) async {
         state = .rendering
         resultPNG = nil
         resultFileURL = nil
         saveState = .idle
+        lastImageData = imageData
 
         // Off the main actor: decode + render + encode are CPU/Skia heavy. Only `Data`/`Int` (Sendable)
         // cross the boundary; the Kotlin objects live and die inside the detached task.

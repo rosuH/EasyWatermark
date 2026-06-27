@@ -14,6 +14,8 @@ import Shared
 struct ContentView: View {
     @StateObject private var workflow = WatermarkWorkflow()
     @State private var pickedItem: PhotosPickerItem?
+    /// S4d-102: editable draft of the watermark text; applied to the shared `WaterMarkRepository`.
+    @State private var draftText: String = ""
 
     private let linkWitness = WatermarkGeometry().diagonal(w: 100, h: 100)
 
@@ -27,6 +29,20 @@ struct ContentView: View {
             }
             .buttonStyle(.borderedProminent)
             .accessibilityIdentifier("pickPhotoButton")
+
+            // S4d-102: edit the watermark text through the shared `WaterMarkRepository` +
+            // `WatermarkConfigEditor` (persisted in an iOS DataStore). Minimal control — not the final
+            // 1:1 editor. Applying re-renders the current image (if one is picked).
+            HStack(spacing: 8) {
+                TextField("Watermark text", text: $draftText)
+                    .textFieldStyle(.roundedBorder)
+                    .submitLabel(.done)
+                    .accessibilityIdentifier("watermarkTextField")
+                    .onSubmit { Task { await workflow.setWatermarkText(draftText) } }
+                Button("Apply") { Task { await workflow.setWatermarkText(draftText) } }
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("applyWatermarkText")
+            }
 
             statusView
 
@@ -59,6 +75,11 @@ struct ContentView: View {
         // S4d-82: one-shot read-only exercise of the retained iOS UserConfig prefs bridge on launch
         // (link/async-interop witness; no prefs UI, writes nothing).
         .task { await workflow.loadUserConfigWitness() }
+        // S4d-102: load the persisted watermark text from the shared repo on launch and seed the draft.
+        .task {
+            await workflow.loadWatermarkText()
+            draftText = workflow.watermarkText
+        }
     }
 
 #if DEBUG
