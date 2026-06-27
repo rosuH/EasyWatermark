@@ -15,10 +15,11 @@ import java.io.File
  * ([launchDesktopWindow]) drive the **same** open → edit → render → save flow over the committed shared
  * APIs — the window does NOT fake a preview.
  *
- * Honest limitation (unchanged from S4d-120): [DesktopWatermarkComposer.composeOverRealImage] currently
- * honors only `text`, `tileMode`, `textSize`, `degree`, `hGap`, `vGap`, and `alpha`. It ignores
- * `WaterMark.textColor` and has no `TextTypeface`/`TextPaintStyle`/icon, and always emits PNG. This slice
- * does NOT change the renderer; color/typeface/style/icon/output-format are later parity slices.
+ * S4d-122: this flow now passes `WaterMark.textColor`, `textTypeface`, and `textStyle` into
+ * [DesktopWatermarkComposer.composeOverRealImage]. `textColor` and `textTypeface` are **raster-honored**;
+ * the `textStyle` mapping is wired (like iOS S4d-113) but currently **inert** at the raster (commonMain
+ * `composeTextCell` drops `drawStyle` — see `DesktopTextParityTest`). Still out of scope: icon watermark
+ * and output-format/compress (PNG only).
  */
 object DesktopWatermarkFlow {
 
@@ -81,6 +82,10 @@ object DesktopWatermarkFlow {
             hGapPercent = wm.hGap,
             vGapPercent = wm.vGap,
             alpha = wm.alpha / 255f,
+            // S4d-122: drive the persisted text color / typeface / paint style.
+            colorArgb = wm.textColor,
+            typeface = wm.textTypeface,
+            textStyle = wm.textStyle,
         )
         outputFile.parentFile?.mkdirs()
         outputFile.writeBytes(result.png)
@@ -98,5 +103,7 @@ object DesktopWatermarkFlow {
 
     private fun describe(wm: WaterMark): String =
         "text='${wm.text}' size=${wm.textSize} degree=${wm.degree} tile=${wm.tileMode} " +
-            "hGap=${wm.hGap} vGap=${wm.vGap} alpha=${wm.alpha}"
+            "hGap=${wm.hGap} vGap=${wm.vGap} alpha=${wm.alpha} " +
+            "color=0x${(wm.textColor.toLong() and 0xFFFFFFFFL).toString(16).uppercase()} " +
+            "typeface=${wm.textTypeface::class.simpleName} style=${wm.textStyle::class.simpleName}"
 }

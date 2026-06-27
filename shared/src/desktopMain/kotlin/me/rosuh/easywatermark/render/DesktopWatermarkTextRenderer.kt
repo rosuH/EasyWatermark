@@ -2,6 +2,9 @@ package me.rosuh.easywatermark.render
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawStyle
+import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -12,6 +15,8 @@ import androidx.compose.ui.text.platform.Font
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.sp
+import me.rosuh.easywatermark.data.model.TextPaintStyle
+import me.rosuh.easywatermark.data.model.TextTypeface
 import java.io.ByteArrayOutputStream
 import javax.imageio.ImageIO
 
@@ -43,6 +48,36 @@ object DesktopWatermarkTextRenderer {
 
     /** The reference width used for image-space text sizing (mirrors `WatermarkRenderer.REF_WIDTH`). */
     const val REF_WIDTH: Int = 1000
+
+    /**
+     * S4d-122: map the platform-neutral [TextTypeface] to Compose `(fontWeight, fontStyle)` — the SAME
+     * mapping the accepted iOS renderer uses (`IosWatermarkRenderer`, S4d-112). Bold/italic are
+     * **synthetic** (the bundled Noto faces are regular-only; ADR-0010), mirroring Android's
+     * `Typeface.create(base, …)` synthesis. Perceptual, not byte-parity with Android.
+     */
+    private fun TextTypeface.toCompose(): Pair<FontWeight, FontStyle> = when (this) {
+        TextTypeface.Normal -> FontWeight.Normal to FontStyle.Normal
+        TextTypeface.Italic -> FontWeight.Normal to FontStyle.Italic
+        TextTypeface.Bold -> FontWeight.Bold to FontStyle.Normal
+        TextTypeface.BoldItalic -> FontWeight.Bold to FontStyle.Italic
+    }
+
+    /**
+     * S4d-122: map the platform-neutral [TextPaintStyle] to a Compose text [DrawStyle] — the SAME mapping
+     * the accepted iOS renderer uses (S4d-113). `Fill` is the explicit fill; `Stroke` uses [Stroke] with
+     * its default width `0f` (Skia hairline).
+     *
+     * **Currently INERT at the raster (S4d-122 finding):** commonMain `WatermarkCellComposer.composeTextCell`
+     * paints with `multiParagraph.paint(canvas, color)`, which passes only the colour and drops the
+     * measured `TextStyle.drawStyle` (the override path defaults to Fill). So this mapping is wired
+     * identically to iOS but does NOT yet change the raster — Stroke renders the same as Fill. Activating
+     * it needs a commonMain change to thread `drawStyle` into that paint call (out of scope here; pinned by
+     * `DesktopTextParityTest`). `textColor` and `textTypeface` ARE honored (colour + measurement).
+     */
+    private fun TextPaintStyle.toDrawStyle(): DrawStyle = when (this) {
+        TextPaintStyle.Fill -> Fill
+        TextPaintStyle.Stroke -> Stroke()
+    }
 
     /**
      * The bundled Latin + CJK watermark [FontFamily] for Desktop, loaded from
@@ -79,6 +114,8 @@ object DesktopWatermarkTextRenderer {
      * @param color       fill colour (default white, like the production text cell)
      * @param hGapPercent horizontal gap percent; @param vGapPercent vertical gap percent
      * @param latinFirst  font fallback order (see [bundledLatinCjkFontFamily])
+     * @param typeface    S4d-122: text typeface → Compose `fontWeight`/`fontStyle` (default Normal)
+     * @param textStyle   S4d-122: paint style → Compose text `drawStyle` (default Fill)
      */
     fun renderTextCell(
         text: String,
@@ -89,11 +126,20 @@ object DesktopWatermarkTextRenderer {
         hGapPercent: Int = 0,
         vGapPercent: Int = 0,
         latinFirst: Boolean = true,
+        typeface: TextTypeface = TextTypeface.Normal,
+        textStyle: TextPaintStyle = TextPaintStyle.Fill,
     ): ImageBitmap {
         val fontPx = textSize * imageWidth / REF_WIDTH
+        val (fontWeight, fontStyle) = typeface.toCompose()
         val content = WatermarkTextContent(
             text = text,
-            style = TextStyle(fontSize = fontPx.sp, fontFamily = bundledLatinCjkFontFamily(latinFirst)),
+            style = TextStyle(
+                fontSize = fontPx.sp,
+                fontFamily = bundledLatinCjkFontFamily(latinFirst),
+                fontWeight = fontWeight,
+                fontStyle = fontStyle,
+                drawStyle = textStyle.toDrawStyle(),
+            ),
             color = color,
         )
         return WatermarkCellComposer.composeTextCell(

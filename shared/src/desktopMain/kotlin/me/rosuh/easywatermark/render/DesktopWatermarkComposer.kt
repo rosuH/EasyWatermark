@@ -9,6 +9,9 @@ import androidx.compose.ui.graphics.ImageBitmapConfig
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
+import me.rosuh.easywatermark.data.model.TextPaintStyle
+import me.rosuh.easywatermark.data.model.TextTypeface
+import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 
 /**
@@ -160,6 +163,12 @@ object DesktopWatermarkComposer {
      *
      * This is the realistic Desktop pipeline: decode (platform) → render cell (commonMain) → compose
      * (commonMain) → encode (platform). Decode/encode stay platform-side; commonMain stays decode-free.
+     *
+     * S4d-122: drives the persisted text fields [colorArgb] (ARGB) and [typeface] ([TextTypeface]) — both
+     * **raster-honored** — and threads [textStyle] ([TextPaintStyle]) through the same way iOS does, though
+     * `textStyle` is currently **inert** at the raster (commonMain `composeTextCell` drops `drawStyle`; see
+     * `DesktopWatermarkTextRenderer.toDrawStyle` / `DesktopTextParityTest`). Defaults are the shared
+     * `WaterMark.default` values. Icon watermark and output-format remain out of scope (PNG only).
      */
     fun composeOverRealImage(
         imageBytes: ByteArray,
@@ -173,6 +182,9 @@ object DesktopWatermarkComposer {
         offsetY: Float = 0.5f,
         alpha: Float = 1f,
         latinFirst: Boolean = true,
+        colorArgb: Int = WaterMark.default.textColor,
+        typeface: TextTypeface = TextTypeface.Normal,
+        textStyle: TextPaintStyle = TextPaintStyle.Fill,
     ): ComposedImage {
         val background = DesktopImageDecoder.decode(imageBytes) // genuine ImageIO decode
         val cell = DesktopWatermarkTextRenderer.renderTextCell(
@@ -180,10 +192,12 @@ object DesktopWatermarkComposer {
             textSize = textSize,
             imageWidth = background.width,
             degree = degree,
-            color = Color.White,
+            color = Color(colorArgb),
             hGapPercent = hGapPercent,
             vGapPercent = vGapPercent,
             latinFirst = latinFirst,
+            typeface = typeface,
+            textStyle = textStyle,
         )
         val composed = WatermarkCellComposer.composeOverBackground(
             background = background,

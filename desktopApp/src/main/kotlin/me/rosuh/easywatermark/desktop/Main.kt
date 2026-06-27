@@ -24,8 +24,9 @@ import java.io.File
  *
  * History: S4d-18 added the Desktop text-renderer witness; S4d-19/20A the composition + real-image decode
  * witnesses; S4d-80 the UserConfig smoke; S4d-120 the headless save spine (now extracted to
- * [DesktopWatermarkFlow] so the window reuses it). Renderer parity (color/typeface/style/icon/output
- * format) is a later slice — `composeOverRealImage` honors only text/tileMode/textSize/degree/gaps/alpha.
+ * [DesktopWatermarkFlow] so the window reuses it); S4d-122 made `composeOverRealImage` honor the persisted
+ * text color + typeface (the paint-style mapping is wired but currently inert — see `DesktopTextParityTest`),
+ * so the flow drives those too. Icon watermark and output-format/compress remain later slices.
  */
 fun main(args: Array<String>) {
     if (args.none { it == "--headless" }) {
