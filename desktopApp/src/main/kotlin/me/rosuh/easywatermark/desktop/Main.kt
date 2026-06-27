@@ -3,12 +3,10 @@ package me.rosuh.easywatermark.desktop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.datastore.createUserConfigDataStore
-import me.rosuh.easywatermark.data.datastore.createWaterMarkDataStore
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.Result
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
-import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopWatermarkComposer
 import me.rosuh.easywatermark.render.DesktopWatermarkTextRenderer
@@ -16,14 +14,36 @@ import me.rosuh.easywatermark.render.WatermarkGeometry
 import java.io.File
 
 /**
- * Desktop (JVM) entry point. Runs the SHARED commonMain engine core on the desktop platform AND, as of
- * S4d-18, renders real watermark **text** artifacts through the shared
- * [me.rosuh.easywatermark.render.WatermarkCellComposer.composeTextCell] path via
- * [DesktopWatermarkTextRenderer] (bundled Latin+CJK font). This is the Desktop half of S4d-17 Option C
- * (Android text stays native; commonMain text is Desktop/iOS-first). The full Compose Desktop editor UI
- * (`Window`, live preview, tiling) is still C4 — this `main` is the renderer scaffold, not the editor.
+ * Desktop (JVM) entry point.
+ *
+ * S4d-121: a no-arg launch opens the minimal **Compose Desktop window** ([launchDesktopWindow]); the
+ * `--headless` flag runs the bounded console witnesses + the S4d-120 save spine ([runHeadless]) and
+ * **exits** — the automation path (`:desktopApp:run --args='--headless'`). Both the window and
+ * `--headless` drive the SAME shared save spine ([DesktopWatermarkFlow]); the window does not fake a
+ * preview.
+ *
+ * History: S4d-18 added the Desktop text-renderer witness; S4d-19/20A the composition + real-image decode
+ * witnesses; S4d-80 the UserConfig smoke; S4d-120 the headless save spine (now extracted to
+ * [DesktopWatermarkFlow] so the window reuses it). Renderer parity (color/typeface/style/icon/output
+ * format) is a later slice — `composeOverRealImage` honors only text/tileMode/textSize/degree/gaps/alpha.
  */
 fun main(args: Array<String>) {
+    if (args.none { it == "--headless" }) {
+        // Default (no-arg) launch -> the Compose Desktop window (S4d-121).
+        launchDesktopWindow()
+        return
+    }
+    // --headless -> the console witnesses + the S4d-120 save spine; runs and EXITS (automation path).
+    runHeadless(args.filter { it != "--headless" }.toTypedArray())
+}
+
+/**
+ * The bounded console path (S4d-18..S4d-120 witnesses + the S4d-120 save spine). Reachable via
+ * `--headless`; it runs to completion and returns so the JVM exits (no window).
+ *
+ * Any non-flag positional args are forwarded as `args[0]` = input image path, `args[1]` = output PNG path.
+ */
+private fun runHeadless(args: Array<String>) {
     println("EasyWatermark — Desktop (JVM) target, running :shared/commonMain engine core")
 
     // domain types from commonMain
@@ -97,9 +117,8 @@ fun main(args: Array<String>) {
 
     // S4d-80: first APP-ENTRY construction of the common `UserConfigRepository` over the S4d-78 Desktop
     // DataStore factory — read -> update -> read against a real on-disk preferences store. This is an
-    // app-level smoke/witness (the real Compose Desktop editor consuming prefs is C4); the read/write
-    // roundtrip itself is already gated by `:shared:desktopTest`. Uses a repo-local build dir (NOT
-    // ~/.easywatermark) so the smoke leaves no state in the user's home.
+    // app-level smoke/witness (the read/write roundtrip itself is already gated by `:shared:desktopTest`).
+    // Uses a repo-local build dir (NOT ~/.easywatermark) so the smoke leaves no state in the user's home.
     val userConfigDir = File("build/s4d80-desktop-userconfig")
     val userRepo = UserConfigRepository(createUserConfigDataStore(dir = userConfigDir))
     println("Desktop UserConfigRepository (store dir: ${userConfigDir.path}):")
@@ -110,68 +129,24 @@ fun main(args: Array<String>) {
         println("  userPreferences (after update): ${userRepo.userPreferences.first()}")
     }
 
-    // S4d-120: the Desktop **headless config-driven save spine** (open → edit → render → save) on the
-    // committed shared APIs — NO window/UI/Compose-Desktop dependency. A real common WaterMarkRepository
-    // persists the watermark config in a desktop DataStore (the new createWaterMarkDataStore); the shared
+    // S4d-120 save spine, extracted to DesktopWatermarkFlow (S4d-121) so the Compose window reuses it.
+    // A real common WaterMarkRepository persists the watermark config in a desktop DataStore; the shared
     // WatermarkConfigEditor edits it; the persisted WaterMark drives composeOverRealImage over a real
-    // (ImageIO-decoded) input image; the watermarked PNG is written to disk. This is the first non-witness
-    // Desktop product step — the Compose Desktop window/preview is a later slice (S4d-121).
-    //
-    // HONEST LIMITATION: composeOverRealImage currently honors ONLY text/tileMode/textSize/degree/hGap/
-    // vGap/alpha. It ignores WaterMark.textColor and has no TextTypeface/TextPaintStyle/icon, and always
-    // emits PNG. So this slice drives only the honored fields; color/typeface/style/icon/output-format are
-    // later Desktop renderer-parity slices (the renderer is NOT edited here).
-    val waterMarkStoreDir = File("build/s4d120-desktop-watermark-config")
-    val waterMarkRepo = WaterMarkRepository(
-        dataStore = createWaterMarkDataStore(dir = waterMarkStoreDir),
-        defaultTextProvider = { "EasyWatermark 水印" },
-        // Desktop uses the PURE storage-id mapper; the Android SDK-gated legacy DECAL-id-3→REPEAT mapper
-        // is Android-only (there is no legacy desktop data).
-        tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-        logError = { println("WaterMarkRepository: $it") },
-    )
-    val configEditor = WatermarkConfigEditor(waterMarkRepo)
-
-    // Input bytes: a CLI input path if provided (args[0]); otherwise the deterministic in-code fixture
-    // (no binary asset). Output: a CLI path (args[1]) or a deterministic repo-local build/ path.
+    // (ImageIO-decoded) input; the watermarked PNG is written to disk.
     val inputPath = args.getOrNull(0)
-    val inputBytes = if (inputPath != null) File(inputPath).readBytes()
-    else DesktopWatermarkComposer.sampleBackgroundPng(width = 640, height = 480)
+    val inputBytes = inputPath?.let { File(it).readBytes() }
     val inputLabel = inputPath ?: "<generated 640x480 fixture>"
-    val headlessOutDir = File("build/s4d120-desktop-headless").apply { mkdirs() }
-    val outFile = args.getOrNull(1)?.let { File(it) } ?: File(headlessOutDir, "watermarked.png")
-
+    val outputFile = args.getOrNull(1)?.let { File(it) } ?: DesktopWatermarkFlow.defaultOutputFile
+    val waterMarkRepo = DesktopWatermarkFlow.buildRepository()
+    val configEditor = WatermarkConfigEditor(waterMarkRepo)
     println("Desktop headless config-driven save flow (S4d-120):")
-    runBlocking {
-        // Demonstrate a persisted edit through the shared editor, then re-read the persisted WaterMark.
-        val initial = waterMarkRepo.waterMark.first()
-        println(
-            "  config (initial): text='${initial.text}' size=${initial.textSize} degree=${initial.degree} " +
-                "tile=${initial.tileMode} hGap=${initial.hGap} vGap=${initial.vGap} alpha=${initial.alpha}",
-        )
-        configEditor.updateText("请勿转载 DO NOT REDISTRIBUTE")
-        configEditor.updateDegree(330f)
-        val wm = waterMarkRepo.waterMark.first()
-        println(
-            "  config (after edit, persisted): text='${wm.text}' size=${wm.textSize} degree=${wm.degree} " +
-                "tile=${wm.tileMode} hGap=${wm.hGap} vGap=${wm.vGap} alpha=${wm.alpha}",
-        )
-
-        // Render with ONLY the fields composeOverRealImage honors today, driven by the persisted config.
-        val result = DesktopWatermarkComposer.composeOverRealImage(
-            imageBytes = inputBytes,
-            text = wm.text,
-            tileMode = wm.tileMode,
-            textSize = wm.textSize,
-            degree = wm.degree,
-            hGapPercent = wm.hGap,
-            vGapPercent = wm.vGap,
-            alpha = wm.alpha / 255f,
-        )
-        outFile.writeBytes(result.png)
-        println("  input:  $inputLabel (${inputBytes.size} B)")
-        println("  output: ${outFile.path} (${result.width}x${result.height}, ${result.png.size} B)")
+    val outcome = runBlocking {
+        DesktopWatermarkFlow.runSaveFlow(waterMarkRepo, configEditor, inputBytes, inputLabel, outputFile)
     }
+    println("  config (initial): ${outcome.configInitial}")
+    println("  config (after edit, persisted): ${outcome.configAfterEdit}")
+    println("  input:  ${outcome.inputLabel} (${outcome.inputByteCount} B)")
+    println("  output: ${outcome.outputPath} (${outcome.width}x${outcome.height}, ${outcome.pngByteCount} B)")
 
     println("OK — shared KMP engine core + Desktop text renderer + Desktop composition + real-image decode run on Desktop.")
 }

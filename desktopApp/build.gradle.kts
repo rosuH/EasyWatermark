@@ -1,5 +1,9 @@
 plugins {
     id(libs.plugins.kotlin.jvm.get().pluginId)
+    // S4d-121: Compose Desktop for the minimal window. Existing catalog plugin aliases + versions only
+    // (`:shared` already applies both); NO version bump. Desktop-target-only — does not affect Android/iOS.
+    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.compose.multiplatform)
     application
 }
 
@@ -21,6 +25,9 @@ dependencies {
     // declare them itself (as `:app` does). Existing catalog aliases only, no new versions.
     implementation(libs.kotlin.coroutine.core)
     implementation(libs.datastore.preference)
+    // S4d-121: Compose Desktop UI + windowing (Skiko backend) for the minimal window. Same version the
+    // `:shared` desktopMain already uses (composeMultiplatform 1.11.1) — no version bump, no catalog change.
+    implementation(compose.desktop.currentOs)
 }
 
 application {
