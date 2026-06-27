@@ -1,5 +1,14 @@
 # Progress Log
 
+## 2026-06-27 — S4d-103/S4d-104/S4d-105 iOS watermark editor fields accepted
+
+- **S4d-103 (implementation, accepted; commit `a6090b5d Wire iOS watermark degree editor`):** `IosWatermarkConfigBridge` gained degree read/write over `WatermarkConfigEditor.updateDegree`, with an iOS simulator bridge test for empty-store default `315f` and persisted `123.5f`. Swift now loads persisted degree, exposes a 0...360 slider, persists on release, and re-renders the last selected/fixture image using the edited value. Scope stayed to the iOS config bridge/test and existing Swift UI/workflow files.
+- **S4d-104 (implementation, accepted; commit `bf7551b Wire iOS watermark tile mode editor`):** the bridge gained `currentTileMode()`/`setTileMode(...)`; the iOS test pins default `REPEAT`, then `CLAMP`, then `REPEAT`. Swift passes the persisted tile mode into `IosWatermarkRenderBridge` and exposes only the product-supported `REPEAT`/`CLAMP` choices in a segmented picker. `MIRROR`/`DECAL` remain non-UI storage values, not newly exposed behavior.
+- **S4d-105 (implementation, accepted; commit `e34508a Wire iOS watermark alpha editor`):** the bridge gained `currentAlphaByte()`/`setAlphaPercent(percent)`, reusing `WatermarkConfigEditor.updateAlpha` and the shared alpha conversion rule. The iOS test pins `255`, `50f -> 127`, `0f -> 0`, `100f -> 255`. Swift stores normalized alpha as a 0...1 slider, renders the live value immediately, and persists through byte storage on release; restart reloads the stored byte (`127 / 255`) by design.
+- **Coordinator verification:** for S4d-104 and S4d-105, the coordinator reviewed the ACSP artifacts plus the real diff, reran `git diff --check`, `./gradlew :shared:iosSimulatorArm64Test --max-workers=8 --console=plain`, and the iOS simulator `xcodebuild` build, then stopped Gradle daemons. Both sessions were accepted and moved to `done/`; bounded poll automations were deleted.
+- **Boundary:** iOS text + degree + tileMode + alpha now consume the shared editor path. This is release-migration state-flow/runtime proof, not Android v2.10.0 1:1 UI/UX parity. Real PHPicker grid-cell selection remains the existing beta/system-UI automation gap.
+- **Next:** wire the next iOS editor field only after a narrow readiness check proves renderer support and default compatibility. Text color is the likely next candidate; textSize/hGap/vGap/typeface/icon/offsets need separate default reconciliation or renderer/UI design before implementation.
+
 ## 2026-06-27 — S4d-83..S4d-89 WaterMarkRepository moved to commonMain accepted
 
 - **S4d-83 (read-only readiness, accepted):** mapped the 6 Android edges in `WaterMarkRepository` (Color default, ArrayMap, java.io.IOException, MyApp/R default text, the SDK-gated `toWatermarkTileMode`, android.util.Log) and recommended a staged Option A (trivial constants first, then the harder default-text/tile-gate decisions, then the move).
