@@ -164,10 +164,8 @@ object DesktopWatermarkComposer {
      * This is the realistic Desktop pipeline: decode (platform) → render cell (commonMain) → compose
      * (commonMain) → encode (platform). Decode/encode stay platform-side; commonMain stays decode-free.
      *
-     * S4d-122: drives the persisted text fields [colorArgb] (ARGB) and [typeface] ([TextTypeface]) — both
-     * **raster-honored** — and threads [textStyle] ([TextPaintStyle]) through the same way iOS does, though
-     * `textStyle` is currently **inert** at the raster (commonMain `composeTextCell` drops `drawStyle`; see
-     * `DesktopWatermarkTextRenderer.toDrawStyle` / `DesktopTextParityTest`). Defaults are the shared
+     * S4d-122/123: drives the persisted text fields [colorArgb] (ARGB), [typeface] ([TextTypeface]), and
+     * [textStyle] ([TextPaintStyle]) through the shared text renderer. Defaults are the shared
      * `WaterMark.default` values. Icon watermark and output-format remain out of scope (PNG only).
      */
     fun composeOverRealImage(

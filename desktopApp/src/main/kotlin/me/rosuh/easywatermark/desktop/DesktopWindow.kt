@@ -29,9 +29,8 @@ import me.rosuh.easywatermark.domain.WatermarkConfigEditor
  * Honest, not faked: the "Render & Save sample" button runs the SAME shared spine the headless path uses
  * ([DesktopWatermarkFlow.runSaveFlow] → common `WaterMarkRepository` + `WatermarkConfigEditor` persist a
  * config edit, then `DesktopWatermarkComposer.composeOverRealImage` renders the deterministic fixture and
- * writes a PNG) and shows the persisted config + output path/dims/size. S4d-122: it honors text color and
- * typeface too (the paint-style mapping is wired but currently inert at the raster — see
- * `DesktopTextParityTest`); no icon / output-format yet. There is deliberately no file picker / drag-drop /
+ * writes a PNG) and shows the persisted config + output path/dims/size. It honors text color, typeface, and
+ * paint style; no icon / output-format yet. There is deliberately no file picker / drag-drop /
  * templates / share substitute / preview-image in this slice.
  */
 fun launchDesktopWindow() = application {
@@ -53,8 +52,8 @@ fun launchDesktopWindow() = application {
                 Text("EasyWatermark — Desktop", style = MaterialTheme.typography.h6)
                 Text(
                     "Renders the deterministic sample through the shared engine and saves a PNG. " +
-                        "Honors text / color / typeface / tileMode / textSize / degree / gaps / alpha. " +
-                        "(textStyle is wired but currently inert; no icon or output-format yet.)",
+                        "Honors text / color / typeface / textStyle / tileMode / textSize / degree / gaps / alpha. " +
+                        "(No icon or output-format yet.)",
                     style = MaterialTheme.typography.body2,
                 )
                 Button(

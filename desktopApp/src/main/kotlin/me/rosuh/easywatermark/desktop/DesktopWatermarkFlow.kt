@@ -15,11 +15,9 @@ import java.io.File
  * ([launchDesktopWindow]) drive the **same** open → edit → render → save flow over the committed shared
  * APIs — the window does NOT fake a preview.
  *
- * S4d-122: this flow now passes `WaterMark.textColor`, `textTypeface`, and `textStyle` into
- * [DesktopWatermarkComposer.composeOverRealImage]. `textColor` and `textTypeface` are **raster-honored**;
- * the `textStyle` mapping is wired (like iOS S4d-113) but currently **inert** at the raster (commonMain
- * `composeTextCell` drops `drawStyle` — see `DesktopTextParityTest`). Still out of scope: icon watermark
- * and output-format/compress (PNG only).
+ * S4d-122/123: this flow passes `WaterMark.textColor`, `textTypeface`, and `textStyle` into
+ * [DesktopWatermarkComposer.composeOverRealImage]; all three are raster-honored on Desktop Skiko. Still out
+ * of scope: icon watermark and output-format/compress (PNG only).
  */
 object DesktopWatermarkFlow {
 
@@ -82,7 +80,7 @@ object DesktopWatermarkFlow {
             hGapPercent = wm.hGap,
             vGapPercent = wm.vGap,
             alpha = wm.alpha / 255f,
-            // S4d-122: drive the persisted text color / typeface / paint style.
+            // Drive the persisted text color / typeface / paint style.
             colorArgb = wm.textColor,
             typeface = wm.textTypeface,
             textStyle = wm.textStyle,
