@@ -228,7 +228,12 @@ object WatermarkCellComposer {
                     // measured with TextAlign.Center (S4d-12), so each line is also centred WITHIN the
                     // box — matching the Android CENTER TextPaint for multiline.
                     drawIntoCanvas { canvas ->
-                        layout.multiParagraph.paint(canvas, content.color)
+                        // Pass the measured drawStyle so Fill/Stroke is honored (null/Fill render alike).
+                        layout.multiParagraph.paint(
+                            canvas = canvas,
+                            color = content.color,
+                            drawStyle = content.style.drawStyle,
+                        )
                     }
                 }
             }

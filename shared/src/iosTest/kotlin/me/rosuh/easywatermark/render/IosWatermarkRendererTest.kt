@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
+import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -146,5 +147,22 @@ class IosWatermarkRendererTest {
         var changed = 0
         for (y in 0 until before.height) for (x in 0 until before.width) if (before[x, y] != after[x, y]) changed++
         assertTrue(changed > 0, "icon composition must change pixels vs the decoded background (changed=$changed)")
+    }
+
+    /** `TextPaintStyle.Stroke` renders a hairline outline that differs from the solid Fill cell. */
+    @Test
+    fun renderTextCell_honors_stroke_vs_fill() {
+        val fill = IosWatermarkRenderer.renderTextCell(text = "Ag", textSize = 48f, textStyle = TextPaintStyle.Fill)
+        val stroke = IosWatermarkRenderer.renderTextCell(text = "Ag", textSize = 48f, textStyle = TextPaintStyle.Stroke)
+        assertTrue(nonBlank(fill) > 0 && nonBlank(stroke) > 0, "both styles must render visible ink")
+        assertTrue(rastersDiffer(fill, stroke), "Stroke must change the raster vs Fill")
+    }
+
+    private fun rastersDiffer(a: ImageBitmap, b: ImageBitmap): Boolean {
+        if (a.width != b.width || a.height != b.height) return true
+        val pa = a.toPixelMap()
+        val pb = b.toPixelMap()
+        for (y in 0 until pa.height) for (x in 0 until pa.width) if (pa[x, y] != pb[x, y]) return true
+        return false
     }
 }

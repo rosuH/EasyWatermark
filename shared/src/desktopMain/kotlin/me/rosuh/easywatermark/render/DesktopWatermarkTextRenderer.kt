@@ -63,16 +63,9 @@ object DesktopWatermarkTextRenderer {
     }
 
     /**
-     * S4d-122: map the platform-neutral [TextPaintStyle] to a Compose text [DrawStyle] — the SAME mapping
-     * the accepted iOS renderer uses (S4d-113). `Fill` is the explicit fill; `Stroke` uses [Stroke] with
-     * its default width `0f` (Skia hairline).
-     *
-     * **Currently INERT at the raster (S4d-122 finding):** commonMain `WatermarkCellComposer.composeTextCell`
-     * paints with `multiParagraph.paint(canvas, color)`, which passes only the colour and drops the
-     * measured `TextStyle.drawStyle` (the override path defaults to Fill). So this mapping is wired
-     * identically to iOS but does NOT yet change the raster — Stroke renders the same as Fill. Activating
-     * it needs a commonMain change to thread `drawStyle` into that paint call (out of scope here; pinned by
-     * `DesktopTextParityTest`). `textColor` and `textTypeface` ARE honored (colour + measurement).
+     * Map the platform-neutral [TextPaintStyle] to a Compose text [DrawStyle]: `Fill` → [Fill]; `Stroke` →
+     * [Stroke] (default width `0f`, Skia hairline). Synthetic/perceptual Skiko honoring, not byte-parity
+     * with Android (whose production text stays native).
      */
     private fun TextPaintStyle.toDrawStyle(): DrawStyle = when (this) {
         TextPaintStyle.Fill -> Fill
