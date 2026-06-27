@@ -58,6 +58,12 @@ final class WatermarkWorkflow: ObservableObject {
     /// offers only REPEAT and CLAMP (single decal).
     @Published private(set) var watermarkTileMode: WatermarkTileMode = .repeat
 
+    /// S4d-105: watermark opacity as the **normalized render alpha** (0…1) the render bridge expects.
+    /// Sourced from the shared `WaterMarkRepository` (stored as a 0…255 byte) via `watermarkConfigBridge`
+    /// and edited through `WatermarkConfigEditor.updateAlpha` (percent). Default 1.0 (opaque) matches
+    /// `WaterMark.default.alpha == 255` and the prior hardcoded render arg.
+    @Published private(set) var watermarkAlpha: Float = 1.0
+
     /// S4d-102: the single retained iOS watermark-config bridge over the common `WaterMarkRepository`
     /// (the first off-Android consumer of the shared watermark editor). One instance per process
     /// (DataStore forbids a second active store for the same file), mirroring `userConfigBridge`.
@@ -164,6 +170,34 @@ final class WatermarkWorkflow: ObservableObject {
         }
     }
 
+    /// S4d-105: load the persisted alpha **byte** (0…255) from the shared repo (one-shot) and normalize
+    /// to 0…1 for rendering. On an empty store this yields 1.0 (`WaterMark.default.alpha == 255`),
+    /// preserving the visible default. A read error keeps the current value.
+    func loadWatermarkAlpha() async {
+        do {
+            // A Kotlin `suspend fun` returning a primitive bridges to Swift as a boxed `KotlinInt`.
+            let byte = try await watermarkConfigBridge.currentAlphaByte()
+            watermarkAlpha = byte.floatValue / 255.0
+        } catch {
+            // keep the current default; a read failure must not break the editor
+        }
+    }
+
+    /// S4d-105: persist a new normalized opacity (`normalized` 0…1) by converting to a 0…100 percent and
+    /// writing through the shared `WatermarkConfigEditor` (which truncates to a 0…255 byte), then
+    /// re-render the last image (if any). A write failure surfaces as `.failure` without persisting.
+    func setWatermarkAlpha(_ normalized: Float) async {
+        do {
+            try await watermarkConfigBridge.setAlphaPercent(percent: normalized * 100.0)
+            watermarkAlpha = normalized
+            if let data = lastImageData {
+                await render(imageData: data)
+            }
+        } catch {
+            state = .failure("Could not save watermark opacity: \(error.localizedDescription)")
+        }
+    }
+
     /// Render `imageData` (the encoded bytes of a picked photo) into a watermarked PNG.
     func render(imageData: Data) async {
         state = .rendering
@@ -177,8 +211,9 @@ final class WatermarkWorkflow: ObservableObject {
         let text = watermarkText
         let degree = watermarkDegree
         let tileMode = watermarkTileMode
+        let alpha = watermarkAlpha
         let outcome = await Task.detached(priority: .userInitiated) {
-            WatermarkWorkflow.renderBlocking(imageData: imageData, text: text, degree: degree, tileMode: tileMode)
+            WatermarkWorkflow.renderBlocking(imageData: imageData, text: text, degree: degree, tileMode: tileMode, alpha: alpha)
         }.value
 
         switch outcome {
@@ -226,7 +261,7 @@ final class WatermarkWorkflow: ObservableObject {
     // boundary that wraps `bundledFontFamily → composeOverImage → encodePng`. Any font/decode/render/
     // encode failure arrives here as a Swift-catchable error (an `IosRenderException` bridged to
     // `NSError`) instead of a fatal Kotlin/Native crash, and is surfaced as `.failure(...)`.
-    private nonisolated static func renderBlocking(imageData: Data, text: String, degree: Float, tileMode: WatermarkTileMode) -> Outcome {
+    private nonisolated static func renderBlocking(imageData: Data, text: String, degree: Float, tileMode: WatermarkTileMode, alpha: Float) -> Outcome {
         do {
             // `composeOverImage` (inside the bridge) uses opaque white internally; `tileMode` must be
             // REPEAT or CLAMP (REPEAT is the product tiling). Kotlin default params don't generate Swift
@@ -241,7 +276,7 @@ final class WatermarkWorkflow: ObservableObject {
                 vGapPercent: 40,
                 offsetX: 0.5,
                 offsetY: 0.5,
-                alpha: 1.0,
+                alpha: alpha,
                 latinFirst: true,
                 bundle: Bundle.main
             )

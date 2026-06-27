@@ -18,6 +18,8 @@ struct ContentView: View {
     @State private var draftText: String = ""
     /// S4d-103: editable draft of the watermark rotation degree; applied to the shared `WaterMarkRepository`.
     @State private var draftDegree: Double = 315
+    /// S4d-105: editable draft of the watermark opacity (0…1); applied to the shared `WaterMarkRepository`.
+    @State private var draftAlpha: Double = 1.0
 
     private let linkWitness = WatermarkGeometry().diagonal(w: 100, h: 100)
 
@@ -72,6 +74,18 @@ struct ContentView: View {
             .pickerStyle(.segmented)
             .accessibilityIdentifier("watermarkTileModePicker")
 
+            // S4d-105: edit the watermark opacity through the same shared editor path. Commits on release
+            // (avoids re-rendering mid-drag). Minimal control — not the final 1:1 editor.
+            VStack(spacing: 4) {
+                Text("Opacity: \(Int(draftAlpha * 100))%")
+                    .font(.caption)
+                    .accessibilityIdentifier("watermarkAlphaLabel")
+                Slider(value: $draftAlpha, in: 0...1) { editing in
+                    if !editing { Task { await workflow.setWatermarkAlpha(Float(draftAlpha)) } }
+                }
+                .accessibilityIdentifier("watermarkAlphaSlider")
+            }
+
             statusView
 
             if let png = workflow.resultPNG, let uiImage = UIImage(data: png) {
@@ -111,6 +125,8 @@ struct ContentView: View {
             await workflow.loadWatermarkDegree()
             draftDegree = Double(workflow.watermarkDegree)
             await workflow.loadWatermarkTileMode()
+            await workflow.loadWatermarkAlpha()
+            draftAlpha = Double(workflow.watermarkAlpha)
         }
     }
 

@@ -9,9 +9,9 @@ import kotlin.test.assertEquals
 
 /**
  * S4d-102: iOS runtime proof that the common [WaterMarkRepository], behind the Swift-facing
- * [IosWatermarkConfigBridge], reads/writes the watermark text (S4d-102), rotation degree (S4d-103), and
- * tile mode (S4d-104) through the iOS [createWaterMarkDataStore] (`NSDocumentDirectory`) store. RUNS on
- * `iosSimulatorArm64Test`.
+ * [IosWatermarkConfigBridge], reads/writes the watermark text (S4d-102), rotation degree (S4d-103),
+ * tile mode (S4d-104), and alpha (S4d-105) through the iOS [createWaterMarkDataStore]
+ * (`NSDocumentDirectory`) store. RUNS on `iosSimulatorArm64Test`.
  *
  * A unique store name (NSUUID) is used so the initial read is the true default and the test does not
  * collide with the app's default store or other runs (the simulator data container is ephemeral).
@@ -77,5 +77,23 @@ class IosWatermarkConfigBridgeTest {
         // Switch back to prove repeated edits persist.
         b.setTileMode(WatermarkTileMode.REPEAT)
         assertEquals(WatermarkTileMode.REPEAT, b.currentTileMode(), "tile mode must persist on re-edit")
+    }
+
+    @Test
+    fun bridge_watermark_alpha_roundtrip() = runBlocking {
+        val b = bridge("s4d105_alpha_" + NSUUID().UUIDString())
+
+        // Empty store -> WaterMark.default.alpha (255 = fully opaque; matches the prior Swift 1.0).
+        assertEquals(255, b.currentAlphaByte(), "default alpha byte must be 255 (opaque)")
+
+        // 50% -> byte 127 because alphaPercentToByte = (percent/100*255).toInt() truncates 127.5 -> 127.
+        b.setAlphaPercent(50f)
+        assertEquals(127, b.currentAlphaByte(), "50% must persist as byte 127 (truncating)")
+
+        // Edges: 0% -> 0, 100% -> 255.
+        b.setAlphaPercent(0f)
+        assertEquals(0, b.currentAlphaByte(), "0% must persist as byte 0")
+        b.setAlphaPercent(100f)
+        assertEquals(255, b.currentAlphaByte(), "100% must persist as byte 255")
     }
 }
