@@ -55,8 +55,10 @@ private class LastImage(val bytes: ByteArray, val label: String)
  * "Use text watermark" button flips persisted mode back to Text (via `WatermarkConfigEditor.updateText`,
  * preserving the current text), so Image mode is not one-way. S4d-137: the window remembers the last
  * "Open image…" selection (bytes + label), so "Render & Save sample" composites over that real photo
- * instead of the fixture (null → fixture, as before). Still no drag-drop / preview-image / templates /
- * share substitute in this slice.
+ * instead of the fixture (null → fixture, as before). S4d-140: a "Save as…" button opens a native AWT
+ * SAVE dialog and passes the chosen path as `runSaveFlow(outputFile = …)`, so saves can land outside the
+ * fixed `build/` default (same render decision; destination-only). Still no drag-drop / preview-image /
+ * templates / share substitute in this slice.
  */
 fun launchDesktopWindow() = application {
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
@@ -143,6 +145,52 @@ fun launchDesktopWindow() = application {
                     },
                 ) {
                     Text(if (busy) "Working…" else "Render & Save sample")
+                }
+                Button(
+                    enabled = !busy,
+                    onClick = {
+                        // S4d-140: native AWT SAVE dialog to choose the OUTPUT path (modal on the EDT). The
+                        // flow already accepts outputFile; the window simply supplies it here. Same render
+                        // path/decision as "Render & Save sample" — destination-only.
+                        val dialog = FileDialog(window, "Save image", FileDialog.SAVE).apply {
+                            isVisible = true
+                        }
+                        val dir = dialog.directory
+                        val name = dialog.file
+                        if (dir != null && name != null) {
+                            val target = File(dir, name)
+                            // Snapshot the remembered image on the UI thread; render off it (or the fixture).
+                            val current = lastImage
+                            scope.launch {
+                                busy = true
+                                status = "Saving to ${target.name}…"
+                                val next = withContext(Dispatchers.IO) {
+                                    try {
+                                        val o = if (current != null) {
+                                            DesktopWatermarkFlow.runSaveFlow(
+                                                repo, editor, userConfigRepo,
+                                                inputBytes = current.bytes, inputLabel = current.label,
+                                                outputFile = target,
+                                            )
+                                        } else {
+                                            DesktopWatermarkFlow.runSaveFlow(
+                                                repo, editor, userConfigRepo, outputFile = target,
+                                            )
+                                        }
+                                        "Saved: ${o.outputPath}\n  ${o.format}, ${o.width}x${o.height}, ${o.outputByteCount} B\n" +
+                                            "  input: ${o.inputLabel} (${o.inputByteCount} B)\n  config: ${o.configAfterEdit}"
+                                    } catch (t: Throwable) {
+                                        "Failed: ${t.message}"
+                                    }
+                                }
+                                status = next
+                                busy = false
+                            }
+                        }
+                        // Cancelled (null dir/file) → no save, no status change, no remembered-image change (no-op).
+                    },
+                ) {
+                    Text("Save as…")
                 }
                 Button(
                     enabled = !busy,

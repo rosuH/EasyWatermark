@@ -1,5 +1,12 @@
 # Progress Log
 
+## 2026-06-28 — S4d-140 Desktop Save-As destination accepted
+
+- **S4d-140 (implementation, accepted; ACSP `20260628-002526...`):** added the Desktop window's minimal **"Save as..."** destination control in `DesktopWindow.kt`. It opens a native AWT `FileDialog.SAVE`, treats cancel as a no-op, and passes the selected path into the existing `DesktopWatermarkFlow.runSaveFlow(..., outputFile = target)`.
+- **Scope/behavior:** this is destination-only. It reuses the same render decision path as "Render & Save sample", including the remembered `lastImage` bytes when present and the deterministic fixture when no image has been opened. It does not touch `DesktopWatermarkFlow`, shared renderer/model/repo code, dependencies, Android/iOS/cmonet, goldens, templates, preview/editor, drag/drop, share substitute, or final 1:1 parity.
+- **Coordinator verification:** reviewed the worker artifacts and real diff; `git diff --check` clean; `:desktopApp:compileKotlin` and `:desktopApp:run --args='--headless'` passed with `--max-workers=8`; daemon stopped. Headless output stayed stable (`watermarked.jpg` 45,192 B; image-mode output 26,061 B), so the modal Save-As path is compile/manual-proven while bounded automation stays on `--headless`.
+- **Next:** S4d-141 should be a read-only Desktop templates readiness decision pack before any Room/templates builder or UI implementation. Keep live preview/editor, batch, drag/drop, share substitute, and Android v2.10.0 screenshot/recording parity out of the next slice.
+
 ## 2026-06-28 — S4d-139 Desktop save-flow decision seam accepted
 
 - **S4d-139 (implementation, accepted after one narrow requeue; ACSP `20260628-000323...`):** extracted the pure Desktop save-flow decisions from `DesktopWatermarkFlow.runSaveFlow` into `shared/src/desktopMain/.../DesktopSaveDecision.kt` and covered them with `DesktopSaveDecisionTest` in `shared/src/desktopTest`.
