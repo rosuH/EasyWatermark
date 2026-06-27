@@ -16,6 +16,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,13 +37,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import me.rosuh.easywatermark.data.db.buildTemplateDatabase
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
+import me.rosuh.easywatermark.data.repo.TemplateRepository
 import me.rosuh.easywatermark.domain.OutputPrefsEditor
+import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopImageDecoder
 import java.awt.Desktop
@@ -137,7 +141,9 @@ private class LastImage(val bytes: ByteArray, val label: String)
  * the Render & Save / Save as… / Open image… success paths, NOT Preview). S4d-158: dropping an image file
  * onto the window loads it through the same Open-image save spine (`Modifier.dragAndDropTarget` + the AWT
  * file-list flavor; updates `lastImage` + `lastSavedFile`; unsupported/empty/while-busy drops fail softly).
- * Still no REACTIVE/live preview or templates UI in this slice.
+ * S4d-160: a minimal "Templates" section over the shared Desktop Room path saves the current watermark
+ * text, lists saved templates, and applies (Use → `WatermarkConfigEditor.updateText`) or deletes them.
+ * Still no REACTIVE/live preview in this slice.
  */
 fun launchDesktopWindow() = application {
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
@@ -147,6 +153,14 @@ fun launchDesktopWindow() = application {
     val userConfigRepo = remember { DesktopWatermarkFlow.buildUserConfigRepository() }
     // S4d-130: the shared output-prefs write use-case over the SAME store the save flow reads.
     val outputEditor = remember { OutputPrefsEditor(userConfigRepo) }
+    // S4d-160: the Desktop templates path (commonMain Room via the desktopMain BundledSQLiteDriver builder).
+    // ONE DB/repo/editor for the window lifetime — Room is single-instance-per-file, so this uses its OWN dir,
+    // separate from the S4d-143a headless witness dir. The process exits on window close, releasing the DB.
+    val templateDb = remember { buildTemplateDatabase(File("build/s4d160-desktop-templates")) }
+    val templateRepo = remember { TemplateRepository(templateDb.templateDao(), Dispatchers.IO) }
+    val templateEditor = remember { TemplateEditor(templateRepo) }
+    // Collect the saved templates into state (remember the Flow so collection is stable across recompositions).
+    val templates by remember { templateRepo.getAllTemplate() }.collectAsState(emptyList())
     val scope = rememberCoroutineScope()
     var status by remember {
         mutableStateOf("Ready. Click “Render & Save sample” to run the shared save flow.")
@@ -934,6 +948,87 @@ fun launchDesktopWindow() = application {
                             }
                         },
                     ) { Text("Copy output path") }
+                }
+                // S4d-160: minimal Templates section over the shared Desktop Room template path. "Save current
+                // text" stores the edited watermark text (templateEditor.add); each saved row applies it (Use →
+                // WatermarkConfigEditor.updateText + sync the text field) or deletes it. Preview stays manual —
+                // Use sets a status telling the user to click Preview/Render. `content` is the watermark TEXT (S4d-159).
+                Text("Templates", style = MaterialTheme.typography.subtitle1)
+                Button(
+                    enabled = !busy,
+                    onClick = {
+                        val text = watermarkText
+                        scope.launch {
+                            busy = true
+                            val next = withContext(Dispatchers.IO) {
+                                try {
+                                    templateEditor.add(text)
+                                    "Saved template: \"$text\""
+                                } catch (t: Throwable) {
+                                    "Failed: ${t.message}"
+                                }
+                            }
+                            status = next
+                            busy = false
+                        }
+                    },
+                ) { Text("Save current text as template") }
+                if (templates.isEmpty()) {
+                    Text("No templates yet — save one above.", style = MaterialTheme.typography.body2)
+                } else {
+                    templates.forEach { template ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text(
+                                template.content ?: "",
+                                style = MaterialTheme.typography.body2,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Button(
+                                enabled = !busy && template.content != null,
+                                onClick = {
+                                    val content = template.content
+                                    if (content != null) {
+                                        scope.launch {
+                                            busy = true
+                                            val (next, ok) = withContext(Dispatchers.IO) {
+                                                try {
+                                                    editor.updateText(content)
+                                                    "Template applied: \"$content\". Click Preview or Render to see it." to true
+                                                } catch (t: Throwable) {
+                                                    "Failed: ${t.message}" to false
+                                                }
+                                            }
+                                            // Sync the editable text field to the applied template on success.
+                                            if (ok) watermarkText = content
+                                            status = next
+                                            busy = false
+                                        }
+                                    }
+                                },
+                            ) { Text("Use") }
+                            Button(
+                                enabled = !busy,
+                                onClick = {
+                                    scope.launch {
+                                        busy = true
+                                        val next = withContext(Dispatchers.IO) {
+                                            try {
+                                                templateEditor.delete(template)
+                                                "Template deleted."
+                                            } catch (t: Throwable) {
+                                                "Failed: ${t.message}"
+                                            }
+                                        }
+                                        status = next
+                                        busy = false
+                                    }
+                                },
+                            ) { Text("Delete") }
+                        }
+                    }
                 }
                 Text(status, style = MaterialTheme.typography.body2)
                 preview?.let {
