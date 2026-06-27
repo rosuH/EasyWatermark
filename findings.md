@@ -1,5 +1,11 @@
 # Compose Migration Findings
 
+## First off-Android consumer of the shared watermark editor: iOS watermark text (S4d-101/S4d-102, 2026-06-27)
+
+- **A real platform consumer beats a deferred framework move.** S4d-99 deferred the AboutViewModel lifecycle move (adds a `:shared` dep, no second consumer); S4d-101/102 instead wired the **existing** iOS product flow to consume `WaterMarkRepository` + `WatermarkConfigEditor` for editable+persisted watermark **text** — a genuine consumer of already-shared editor code, with **no new dependency**. That is the higher-value, lower-risk next step when a real product surface exists.
+- **Off-Android `WaterMarkRepository` wiring pattern.** A non-Android consumer supplies the 3 repo edges with platform-neutral values: a default-text string, the **pure** `WatermarkTileMode.fromStorageId` (the Android `toWatermarkTileMode` SDK gate — pre-Android-12 stored DECAL id 3 → REPEAT — is Android **legacy-data** handling and does **not** apply to a fresh iOS/desktop store; it isn't importable off-Android anyway), and a `println`/NSLog logger. The DataStore is a `createWaterMarkDataStore()` mirror of `createUserConfigDataStore()` (NSDocumentDirectory). Swift-facing bridges expose only value types (`String`), never `Flow`/`DataStore` — mirroring `IosUserConfigBridge`.
+- **Build/runtime-proof ≠ parity.** The slice proves the editor *state* flow (edit→persist→re-render, plus an iOS-sim roundtrip + the `xcodebuild` app build); it is explicitly **not** 1:1 visual parity with Android v2.10.0, and only the **text** field is wired (the rest of `WaterMark` is incremental). Real PHPicker grid-cell selection stays the pre-existing beta-toolchain limit, independent of this work.
+
 ## First shared editor use-case: an immediate consumer is what makes extraction non-speculative (S4d-94/95/96, 2026-06-27)
 
 - **Use-case extraction ≠ a Koin module.** S4d-94 deferred the Koin commonMain split because it would have **zero** consumers (Koin is Android-only; desktop/iOS build their one repo by hand). S4d-96's `WatermarkConfigEditor` is the opposite: the Android `MainViewModel` consumes it **immediately**, so it's a behavior-preserving refactor with a caller — not dead abstraction. The criterion for extraction is *does something call it today*, not *will it be reusable someday*.
