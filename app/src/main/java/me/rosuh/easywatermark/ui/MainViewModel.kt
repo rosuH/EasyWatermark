@@ -46,7 +46,6 @@ import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WaterMark
-import me.rosuh.easywatermark.data.model.WatermarkConfigRules
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.model.entity.Template
@@ -56,6 +55,7 @@ import me.rosuh.easywatermark.data.repo.MemorySettingRepo
 import me.rosuh.easywatermark.data.repo.TemplateRepository
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
+import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.utils.FileUtils.Companion.outPutFolderName
 import me.rosuh.easywatermark.utils.bitmap.decodeBitmapFromUri
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
@@ -80,6 +80,10 @@ class MainViewModel (
 ) : ViewModel() {
 
     var nextSelectedPos: Int = 0
+
+    // S4d-96: the neutral watermark config-edit logic now lives in the commonMain use-case; this VM
+    // just owns the coroutine scope and delegates. Built from the already-injected repo (no DI change).
+    private val configEditor = WatermarkConfigEditor(waterMarkRepo)
 
     // S4d-64: StateFlow-only (was MutableLiveData). null initial = "no save event yet", matching the old
     // LiveData (no value until first emit). Distinct Result instances each emit, so StateFlow conflation
@@ -473,77 +477,73 @@ class MainViewModel (
 
     fun updateText(text: String) {
         launch {
-            waterMarkRepo.updateText(text)
+            configEditor.updateText(text)
         }
     }
 
     fun updateTextSize(textSize: Float) {
         launch {
-            val finalTextSize = textSize.coerceAtLeast(0f)
-            waterMarkRepo.updateTextSize(finalTextSize)
+            configEditor.updateTextSize(textSize)
         }
     }
 
     fun updateTextColor(color: Int) {
         launch {
-            waterMarkRepo.updateColor(color)
+            configEditor.updateTextColor(color)
         }
     }
 
     fun updateTextStyle(style: TextPaintStyle) {
         launch {
-            waterMarkRepo.updateTextStyle(style)
+            configEditor.updateTextStyle(style)
         }
     }
 
     fun updateTextTypeface(typeface: TextTypeface) {
         launch {
-            waterMarkRepo.updateTypeFace(typeface)
+            configEditor.updateTextTypeface(typeface)
         }
     }
 
     fun updateAlpha(alpha: Float) {
         launch {
-            val finalAlpha = WatermarkConfigRules.alphaPercentToByte(alpha)
-            waterMarkRepo.updateAlpha(finalAlpha)
+            configEditor.updateAlpha(alpha)
         }
     }
 
     fun updateHorizon(gap: Int) {
         launch {
-            waterMarkRepo.updateHorizon(gap)
+            configEditor.updateHorizon(gap)
         }
     }
 
     fun updateVertical(gap: Int) {
         launch {
-            waterMarkRepo.updateVertical(gap)
+            configEditor.updateVertical(gap)
         }
     }
 
     fun updateDegree(degree: Float) {
         launch {
-            waterMarkRepo.updateDegree(degree)
+            configEditor.updateDegree(degree)
         }
     }
 
     fun updateIcon(iconUri: MediaRef) {
         launch {
-            if (iconUri.value.isNotEmpty()) {
-                waterMarkRepo.updateIcon(iconUri)
-            }
+            configEditor.updateIcon(iconUri)
         }
     }
 
     fun updateTileMode(tileMode: WatermarkTileMode) {
         launch {
-            waterMarkRepo.updateTileMode(tileMode)
+            configEditor.updateTileMode(tileMode)
         }
     }
 
     fun updateOffset(info: ImageInfo) {
         launch {
-            waterMarkRepo.updateOffset(info)
+            configEditor.updateOffset(info)
         }
     }
 
