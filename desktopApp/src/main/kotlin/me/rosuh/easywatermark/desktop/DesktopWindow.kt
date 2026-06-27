@@ -69,9 +69,10 @@ private class LastImage(val bytes: ByteArray, val label: String)
  * S4d-147: a "Preview" button renders the current config through `runSaveFlow` to a repo-local temp file,
  * decodes the bytes (`DesktopImageDecoder`, generic JPEG/PNG), and shows the result on-screen — ending the
  * blind-edit loop. S4d-148: an "Apply degree" field edits rotation (`updateDegree`, 0..360). S4d-149: an
- * "Apply color" field edits the text color (hex `#AARRGGBB`/`#RRGGBB`, via `WatermarkConfigEditor.updateTextColor`).
- * Still no REACTIVE/live preview, gaps/alpha/tile/typeface/style controls, templates UI, drag-drop, or share
- * substitute in this slice.
+ * "Apply color" field edits the text color (hex, via `WatermarkConfigEditor.updateTextColor`). S4d-150: an
+ * "Apply opacity" field edits the alpha as a 0..100 percent (via `WatermarkConfigEditor.updateAlpha`). Still
+ * no REACTIVE/live preview, gaps/tile/typeface/style controls, templates UI, drag-drop, or share substitute
+ * in this slice.
  */
 fun launchDesktopWindow() = application {
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
@@ -97,11 +98,15 @@ fun launchDesktopWindow() = application {
     var degreeText by remember { mutableStateOf("") }
     // S4d-149: the watermark text COLOR being edited (hex string; parsed on "Apply color"). Loaded on launch.
     var colorText by remember { mutableStateOf("") }
+    // S4d-150: the watermark opacity (alpha) being edited as a 0..100 percent (parsed on "Apply opacity").
+    var alphaText by remember { mutableStateOf("") }
     LaunchedEffect(Unit) {
         outputPref = describePref(userConfigRepo.userPreferences.first())
         watermarkText = repo.waterMark.first().text
         degreeText = repo.waterMark.first().degree.toString()
         colorText = "#%08X".format(repo.waterMark.first().textColor)
+        // Persisted alpha is a 0..255 byte; display as a percent (Android editor semantics).
+        alphaText = (repo.waterMark.first().alpha * 100f / 255f).toString()
     }
 
     Window(onCloseRequest = ::exitApplication, title = "EasyWatermark — Desktop (S4d-121)") {
@@ -236,6 +241,45 @@ fun launchDesktopWindow() = application {
                     },
                 ) {
                     Text("Apply color")
+                }
+                // S4d-150: the watermark OPACITY (alpha) input as a 0..100 percent (Android editor semantics).
+                // Parsed on an explicit "Apply opacity" click (toFloatOrNull + isFinite; invalid → status only,
+                // no persist); coerced to 0..100; persisted via WatermarkConfigEditor.updateAlpha(percent),
+                // which converts to the 0..255 byte. The field snaps to the applied value. No auto-preview.
+                OutlinedTextField(
+                    value = alphaText,
+                    onValueChange = { alphaText = it },
+                    enabled = !busy,
+                    label = { Text("Opacity (0–100%)") },
+                )
+                Button(
+                    enabled = !busy,
+                    onClick = {
+                        val parsed = alphaText.trim().toFloatOrNull()?.takeIf { it.isFinite() }
+                        if (parsed == null) {
+                            // Invalid/non-finite → short failure status; do NOT call the editor.
+                            status = "Invalid opacity: \"$alphaText\" — enter a number (0–100)."
+                        } else {
+                            scope.launch {
+                                busy = true
+                                val applied = parsed.coerceIn(0f, 100f)
+                                val (next, ok) = withContext(Dispatchers.IO) {
+                                    try {
+                                        editor.updateAlpha(applied)
+                                        "Opacity applied: $applied%. Click Preview to see it." to true
+                                    } catch (t: Throwable) {
+                                        "Failed: ${t.message}" to false
+                                    }
+                                }
+                                // Snap the field to the applied/coerced value on a successful apply.
+                                if (ok) alphaText = applied.toString()
+                                status = next
+                                busy = false
+                            }
+                        }
+                    },
+                ) {
+                    Text("Apply opacity")
                 }
                 // S4d-130: choose the output preference (two presets) through the shared OutputPrefsEditor,
                 // persisted to the SAME store runSaveFlow reads — so the next sample/Open render uses it.
