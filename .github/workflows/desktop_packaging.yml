@@ -1,0 +1,53 @@
+name: Desktop packaging
+
+# S4d-166: the smallest Desktop CI packaging gate (S4d-165 decision). Proves `:desktopApp` packages in CI —
+# a headless run witness + an UNSIGNED app image (`createDistributable`) — reusing the same Zulu 17 /
+# ubuntu-latest setup the Android workflows already use. Narrowly triggered (manual + Desktop-affecting PRs)
+# so it does not burden or block unrelated PRs. No signing / installer formats / app icon / version source /
+# macOS runner; no `compose.desktop.packaging.checkJdkVendor=false`. Zulu is the existing non-Homebrew CI
+# provisioning; the workflow run is the proof that it satisfies Compose Desktop's vendor guard (the local
+# Homebrew JDK is the known failing case).
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx3072m -Dfile.encoding=UTF-8 -XX:+HeapDumpOnOutOfMemoryError -XX:MaxMetaspaceSize=1g" -Dkotlin.daemon.jvm.options="-Xmx2560m" -Dkotlin.incremental=false
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches:
+      - master
+    paths:
+      - 'desktopApp/**'
+      - 'shared/**'
+      - 'buildSrc/**'
+      - 'gradle/**'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - 'gradle.properties'
+      - 'gradlew'
+      - 'gradlew.bat'
+      - '.github/workflows/desktop_packaging.yml'
+
+jobs:
+  package:
+    name: Desktop run + unsigned app image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: 17
+          cache: 'gradle'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: wrapper
+          gradle-home-cache-cleanup: true
+      # Cheap witness first: the shared engine + Desktop entry run headlessly (same gate every Desktop slice uses).
+      - name: Desktop headless run witness
+        run: ./gradlew :desktopApp:run --args='--headless'
+      # Unsigned Desktop app image (Linux app image + bundled JRE via jpackage). App-image mode needs only the
+      # JDK — no installer/system packages, no signing.
+      - name: Build unsigned Desktop app image (createDistributable)
+        run: ./gradlew :desktopApp:createDistributable

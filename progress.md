@@ -1,5 +1,12 @@
 # Progress Log
 
+## 2026-06-28 — S4d-166 Desktop CI packaging workflow accepted
+
+- **S4d-165 (read-only decision, accepted):** current CI uses Ubuntu + Zulu 17 but never builds/packages `:desktopApp`; local Homebrew JDK failure is not a CI blocker because the known failing vendor is Homebrew. The first gate should be isolated, path-filtered, and non-required until green.
+- **S4d-166 (implementation, accepted after one wording requeue):** added `.github/workflows/desktop_packaging.yml` only. It runs on `workflow_dispatch` and PRs to `master` touching Desktop/build-affecting files (`desktopApp/**`, `shared/**`, `buildSrc/**`, `gradle/**`, root Gradle/settings/properties/wrapper files, and itself). The job uses `ubuntu-latest`, `actions/setup-java@v4` Zulu 17, `setup-gradle@v4`, then runs `:desktopApp:run --args='--headless'` before `:desktopApp:createDistributable`.
+- **Boundary:** no local Gradle/packaging was run; the workflow's packaging proof is still a future green Actions run. No signing, installers, icon, version-source, macOS runner, or 1:1 parity work.
+- **Next:** push/run the workflow and accept the CI log only when `:desktopApp:run --args='--headless'` and `:desktopApp:createDistributable` both succeed.
+
 ## 2026-06-28 — S4d-162/S4d-163 Desktop release hygiene + packaging proof accepted
 
 - **S4d-161 (read-only decision, accepted):** chose Desktop release-grade hygiene + a packaging proof over speculative UI widening (reactive preview, template edit-in-place, batch were deferred). Evidence: no Compose Desktop packaging task existed, and the window title still carried a dev marker.
