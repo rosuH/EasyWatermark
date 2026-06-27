@@ -55,6 +55,7 @@ import me.rosuh.easywatermark.data.repo.MemorySettingRepo
 import me.rosuh.easywatermark.data.repo.TemplateRepository
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
+import me.rosuh.easywatermark.domain.OutputPrefsEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.utils.FileUtils.Companion.outPutFolderName
 import me.rosuh.easywatermark.utils.bitmap.decodeBitmapFromUri
@@ -84,6 +85,10 @@ class MainViewModel (
     // S4d-96: the neutral watermark config-edit logic now lives in the commonMain use-case; this VM
     // just owns the coroutine scope and delegates. Built from the already-injected repo (no DI change).
     private val configEditor = WatermarkConfigEditor(waterMarkRepo)
+
+    // S4d-97: the output-preference write (format + compress level) lives in a commonMain use-case too,
+    // built from the already-injected user repo (no DI change).
+    private val outputPrefsEditor = OutputPrefsEditor(userRepo)
 
     // S4d-64: StateFlow-only (was MutableLiveData). null initial = "no save event yet", matching the old
     // LiveData (no value until first emit). Distinct Result instances each emit, so StateFlow conflation
@@ -552,8 +557,7 @@ class MainViewModel (
         level: Int = _userPreferences.value.compressLevel
     ) {
         viewModelScope.launch {
-            userRepo.updateFormat(format)
-            userRepo.updateCompressLevel(level)
+            outputPrefsEditor.save(format, level)
         }
         resetJobStatus()
     }
