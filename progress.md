@@ -1,5 +1,12 @@
 # Progress Log
 
+## 2026-06-28 — S4d-139 Desktop save-flow decision seam accepted
+
+- **S4d-139 (implementation, accepted after one narrow requeue; ACSP `20260628-000323...`):** extracted the pure Desktop save-flow decisions from `DesktopWatermarkFlow.runSaveFlow` into `shared/src/desktopMain/.../DesktopSaveDecision.kt` and covered them with `DesktopSaveDecisionTest` in `shared/src/desktopTest`.
+- **What is now tested without a `:desktopApp` test source set:** Text vs Image render plan, Image-mode blank-icon loud-fail message, default output filename extension (`watermarked.jpg` / `watermarked.png`), and caller-input vs fixture selection. The r1 requeue wired `runSaveFlow` through `DesktopSaveDecision.usesCallerInput(inputBytes)`, so every helper rule is used by production flow, not only tested.
+- **Coordinator verification:** `git diff --check` clean; `:shared:compileKotlinDesktop`, `:shared:desktopTest --tests "*DesktopSaveDecision*"`, `:desktopApp:compileKotlin`, and `:desktopApp:run --args='--headless'` all passed with `--max-workers=8`; daemon stopped. Headless output stayed behavior-equivalent (`watermarked.jpg` 45,192 B; image-mode output 26,061 B; same missing-icon guard).
+- **Next:** S4d-140 should add real Desktop "Save as..." destination selection only. Keep live preview/editor, templates, batch, drag/drop, and final Android v2.10.0 1:1 parity out of this next slice.
+
 ## 2026-06-28 — S4d-138 Desktop product-readiness map accepted
 
 - **S4d-138 (read-only decision pack, accepted; ACSP `20260627-234930...`):** mapped Desktop after S4d-137. Current functional coverage: headless text/image save spine, missing-icon guard, minimal window controls for render/open-image memory/open-icon/use-text/output presets, Desktop text/icon/encode/decode/DataStore primitives in `shared/src/desktopMain`, and 13 `shared/src/desktopTest` files covering renderer/encode/decode/DataStore structurally.

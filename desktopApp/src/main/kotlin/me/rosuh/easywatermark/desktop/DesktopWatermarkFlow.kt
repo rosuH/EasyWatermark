@@ -10,6 +10,8 @@ import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
+import me.rosuh.easywatermark.render.DesktopRenderPlan
+import me.rosuh.easywatermark.render.DesktopSaveDecision
 import me.rosuh.easywatermark.render.DesktopWatermarkComposer
 import java.io.File
 
@@ -44,9 +46,9 @@ object DesktopWatermarkFlow {
     /** Output dir (repo-local `build/`); the filename extension follows the chosen [ImageFormat]. */
     val outputDir: File = File("build/s4d120-desktop-headless")
 
-    /** Default output file for [format]: JPEG → `.jpg`, PNG → `.png`. */
+    /** Default output file for [format]: JPEG → `.jpg`, PNG → `.png` (filename via [DesktopSaveDecision]). */
     fun defaultOutputFile(format: ImageFormat): File =
-        File(outputDir, "watermarked." + if (format == ImageFormat.JPEG) "jpg" else "png")
+        File(outputDir, DesktopSaveDecision.defaultOutputFileName(format))
 
     /**
      * Build ONE common [WaterMarkRepository] over the desktop watermark-config store. DataStore forbids a
@@ -95,7 +97,13 @@ object DesktopWatermarkFlow {
         inputLabel: String = "<generated 640x480 fixture>",
         outputFile: File? = null,
     ): SaveOutcome {
-        val bytes = inputBytes ?: DesktopWatermarkComposer.sampleBackgroundPng(width = 640, height = 480)
+        // S4d-139: the caller-input vs fixture choice is the pure DesktopSaveDecision.usesCallerInput rule
+        // (true ⟺ inputBytes != null, so the !! is safe). Fixture generation stays here (IO/rendering).
+        val bytes = if (DesktopSaveDecision.usesCallerInput(inputBytes)) {
+            inputBytes!!
+        } else {
+            DesktopWatermarkComposer.sampleBackgroundPng(width = 640, height = 480)
+        }
         val prefs = userConfigRepo.userPreferences.first() // empty store -> (JPEG, 80) (shared default)
         val initial = repo.waterMark.first()
         // S4d-134: branch on the PERSISTED watermark mode.
@@ -109,52 +117,51 @@ object DesktopWatermarkFlow {
             editor.updateDegree(330f)
             repo.waterMark.first()
         }
-        val result: DesktopWatermarkComposer.ComposedImage = when (wm.markMode) {
-            WatermarkMode.Image -> {
-                // Desktop icon ref is a plain file path (S4d-132). Read the bytes here; a missing/empty/
-                // unreadable icon fails LOUDLY (IllegalArgumentException) — never a silent fallback to Text.
-                // The file read is `suspend`-context IO: the window calls runSaveFlow inside
-                // withContext(Dispatchers.IO); headless uses runBlocking — so no extra dispatch is needed here.
-                val iconPath = wm.iconUri.value
-                require(iconPath.isNotEmpty()) {
-                    "Image-mode watermark has no persisted iconUri; refusing to render (no silent fallback to Text)."
+        // S4d-139: the PURE render decision is the testable DesktopSaveDecision.renderPlan (Text vs Icon,
+        // with the blank-icon loud-fail). The icon FILE-existence check + bytes read + composer calls stay
+        // here (IO). Behavior is unchanged vs the prior inline branch.
+        val result: DesktopWatermarkComposer.ComposedImage =
+            when (val plan = DesktopSaveDecision.renderPlan(wm.markMode, wm.iconUri.value)) {
+                is DesktopRenderPlan.Icon -> {
+                    // renderPlan already loud-failed on a BLANK icon path; the FILE-existence check is IO and
+                    // stays here. The read is `suspend`-context IO: the window calls runSaveFlow inside
+                    // withContext(Dispatchers.IO); headless uses runBlocking — so no extra dispatch is needed.
+                    val iconFile = File(plan.iconPath)
+                    require(iconFile.isFile) {
+                        "Image-mode icon file is missing or not a regular file: '${plan.iconPath}'"
+                    }
+                    DesktopWatermarkComposer.composeIconOverRealImage(
+                        imageBytes = bytes,
+                        iconBytes = iconFile.readBytes(),
+                        tileMode = wm.tileMode,
+                        textSize = wm.textSize,
+                        degree = wm.degree,
+                        hGapPercent = wm.hGap,
+                        vGapPercent = wm.vGap,
+                        alpha = wm.alpha / 255f,
+                        // S4d-128: output format + quality from the persisted user prefs (default JPEG/80).
+                        format = prefs.outputFormat,
+                        quality = prefs.compressLevel,
+                    )
                 }
-                val iconFile = File(iconPath)
-                require(iconFile.isFile) {
-                    "Image-mode icon file is missing or not a regular file: '$iconPath'"
-                }
-                DesktopWatermarkComposer.composeIconOverRealImage(
+                DesktopRenderPlan.Text -> DesktopWatermarkComposer.composeOverRealImage(
                     imageBytes = bytes,
-                    iconBytes = iconFile.readBytes(),
+                    text = wm.text,
                     tileMode = wm.tileMode,
                     textSize = wm.textSize,
                     degree = wm.degree,
                     hGapPercent = wm.hGap,
                     vGapPercent = wm.vGap,
                     alpha = wm.alpha / 255f,
+                    // Drive the persisted text color / typeface / paint style.
+                    colorArgb = wm.textColor,
+                    typeface = wm.textTypeface,
+                    textStyle = wm.textStyle,
                     // S4d-128: output format + quality from the persisted user prefs (default JPEG/80).
                     format = prefs.outputFormat,
                     quality = prefs.compressLevel,
                 )
             }
-            WatermarkMode.Text -> DesktopWatermarkComposer.composeOverRealImage(
-                imageBytes = bytes,
-                text = wm.text,
-                tileMode = wm.tileMode,
-                textSize = wm.textSize,
-                degree = wm.degree,
-                hGapPercent = wm.hGap,
-                vGapPercent = wm.vGap,
-                alpha = wm.alpha / 255f,
-                // Drive the persisted text color / typeface / paint style.
-                colorArgb = wm.textColor,
-                typeface = wm.textTypeface,
-                textStyle = wm.textStyle,
-                // S4d-128: output format + quality from the persisted user prefs (default JPEG/80).
-                format = prefs.outputFormat,
-                quality = prefs.compressLevel,
-            )
-        }
         val target = outputFile ?: defaultOutputFile(prefs.outputFormat)
         target.parentFile?.mkdirs()
         target.writeBytes(result.png)
