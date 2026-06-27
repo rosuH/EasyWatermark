@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
@@ -92,8 +94,9 @@ private class LastImage(val bytes: ByteArray, val label: String)
  * S4d-152: an "Apply text size" field edits the text size (1..100, via `updateTextSize`). S4d-153: two buttons
  * persist the tile mode REPEAT (grid tile) / CLAMP (single decal) via `updateTileMode` (MIRROR/DECAL not exposed).
  * S4d-154: per-value buttons persist the typeface (Normal/Italic/Bold/BoldItalic) and text style (Fill/Stroke) via
- * `updateTextTypeface`/`updateTextStyle`. Still no REACTIVE/live preview, templates UI, drag-drop, or share
- * substitute in this slice.
+ * `updateTextTypeface`/`updateTextStyle`. S4d-155: the main content `Column` is `verticalScroll`-able so the
+ * growing control surface + preview stay reachable on constrained window heights (control order/behavior
+ * unchanged). Still no REACTIVE/live preview, templates UI, drag-drop, or share substitute in this slice.
  */
 fun launchDesktopWindow() = application {
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
@@ -153,7 +156,10 @@ fun launchDesktopWindow() = application {
     Window(onCloseRequest = ::exitApplication, title = "EasyWatermark — Desktop (S4d-121)") {
         MaterialTheme {
             Column(
-                modifier = Modifier.fillMaxSize().padding(16.dp),
+                // S4d-155: vertical scroll so the growing single-column control surface stays reachable
+                // on constrained window heights. verticalScroll after fillMaxSize makes the column fill the
+                // viewport and scroll when its content is taller; padding stays inside (scrolls with content).
+                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text("EasyWatermark — Desktop", style = MaterialTheme.typography.h6)
