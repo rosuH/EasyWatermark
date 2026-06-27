@@ -1,33 +1,19 @@
 package me.rosuh.easywatermark.di
 
-import androidx.room.Room
 import me.rosuh.easywatermark.data.db.AppDatabase
+import me.rosuh.easywatermark.data.db.buildTemplateDatabase
 import me.rosuh.easywatermark.platform.AndroidDynamicColorCapability
 import me.rosuh.easywatermark.platform.DynamicColorCapability
 import me.rosuh.easywatermark.ui.MainViewModel
 import me.rosuh.easywatermark.ui.about.AboutViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
-import java.util.Locale
 
 val appModule = module {
     single<AppDatabase> {
-        val builder = Room.databaseBuilder(
-            get(),
-            AppDatabase::class.java,
-            "ewm-db"
-        )
-        val isCh = Locale.getDefault().language.contains("zh")
-        builder.createFromAsset(if (isCh) "ewm-db-ch.db" else "ewm-db-eng.db")
-        try {
-            builder.build()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Room.inMemoryDatabaseBuilder(
-                get(),
-                AppDatabase::class.java
-            ).build()
-        }
+        // S4d-92: Android creation moved to :shared androidMain (locale createFromAsset + in-memory
+        // fallback preserved, byte-identical). See data/db/TemplateDatabaseBuilder.android.kt.
+        buildTemplateDatabase(get())
     }
     includes(repositoryModule)
     single<DynamicColorCapability> {

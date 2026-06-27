@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import kotlinx.coroutines.Dispatchers
 import me.rosuh.easywatermark.data.db.AppDatabase
 import me.rosuh.easywatermark.data.db.dao.TemplateDao
 import me.rosuh.easywatermark.data.repo.MemorySettingRepo
@@ -35,7 +36,9 @@ val repositoryModule = module {
     }
 
     single<TemplateRepository> {
-        TemplateRepository((getOrNull<AppDatabase>())?.templateDao())
+        // S4d-92: nullable-DAO fallback unchanged; Dispatchers.IO injected here (commonMain repo can't
+        // reference it on Native) so Android write threading stays byte-identical.
+        TemplateRepository((getOrNull<AppDatabase>())?.templateDao(), Dispatchers.IO)
     }
 
 }

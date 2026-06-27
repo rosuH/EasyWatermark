@@ -59,17 +59,13 @@ kotlin {
             // no iOS/desktop store creation yet — Android creation lives in androidMain.
             implementation(libs.datastore)
             implementation(libs.datastore.preference)
-            // S4d-91 (r1 confinement): Room KMP runtime + bundled SQLite (the all-platform driver).
-            // The proof DB (data/db/proof/**) lives in commonMain so Room codegen runs per target.
-            // These are compileOnly in commonMain so they do NOT transit onto the consumer's runtime
-            // classpath: the Android variant of :shared therefore carries no Room/SQLite runtime, and
-            // :app (which consumes that variant) no longer packages the unused libsqliteJni.so. The
-            // targets that actually link/run the proof (desktop, iOS) re-declare them as runtime
-            // implementation in their own source sets below. sqlite-bundled is the only SQLite
-            // artifact this slice adds — BundledSQLiteDriver() on every target, no sqlite-framework,
-            // no iOS -lsqlite3.
-            compileOnly(libs.room.runtime)
-            compileOnly(libs.androidx.sqlite.bundled)
+            // S4d-92: production templates Room path (data/db/**, data/repo/TemplateRepository,
+            // data/model/entity/Template) lives in commonMain. room-runtime is a real runtime
+            // dependency (the database is instantiated on Android). It transits onto :app's runtime,
+            // but :app already declares room-runtime, so no NEW payload — and crucially NO sqlite
+            // driver artifact is added: Android stays in Room compatibility mode on the framework
+            // SupportSQLite open-helper (no .setDriver), so no libsqliteJni.so/sqlite-framework ships.
+            implementation(libs.room.runtime)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
@@ -85,19 +81,7 @@ kotlin {
         val desktopMain by getting {
             dependencies {
                 implementation(compose.desktop.currentOs)
-                // S4d-91 (r1): desktop actually links/runs the proof DB, so it needs the Room/SQLite
-                // runtime (compileOnly in commonMain). Desktop deps do not reach :app.
-                implementation(libs.room.runtime)
-                implementation(libs.androidx.sqlite.bundled)
             }
-        }
-        // S4d-91 (r1): iOS links the proof DB into its test executable, so the Room/SQLite runtime
-        // must be a real implementation dep on the iOS source set (compileOnly in commonMain is
-        // compile-classpath only and would not link on Native). iosMain is the shared intermediate
-        // source set (default hierarchy) for both iosArm64 + iosSimulatorArm64. Does not reach :app.
-        iosMain.dependencies {
-            implementation(libs.room.runtime)
-            implementation(libs.androidx.sqlite.bundled)
         }
         // S4d-2: Skiko desktop runtime, TEST-SCOPE, so WatermarkCellComposerTest can RENDER the
         // commonMain Compose-graphics cell offscreen on the JVM host (ImageBitmap is Skia-backed on
