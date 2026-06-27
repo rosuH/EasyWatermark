@@ -257,7 +257,7 @@ fun launchDesktopWindow() = application {
         }
     }
 
-    Window(onCloseRequest = ::exitApplication, title = "EasyWatermark — Desktop (S4d-121)") {
+    Window(onCloseRequest = ::exitApplication, title = "EasyWatermark — Desktop") {
         MaterialTheme {
             Column(
                 // S4d-155: vertical scroll so the growing single-column control surface stays reachable
@@ -955,7 +955,8 @@ fun launchDesktopWindow() = application {
                 // Use sets a status telling the user to click Preview/Render. `content` is the watermark TEXT (S4d-159).
                 Text("Templates", style = MaterialTheme.typography.subtitle1)
                 Button(
-                    enabled = !busy,
+                    // S4d-162: require nonblank text so an empty template can't be saved.
+                    enabled = !busy && watermarkText.isNotBlank(),
                     onClick = {
                         val text = watermarkText
                         scope.launch {
