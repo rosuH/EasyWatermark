@@ -30,6 +30,7 @@ import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.UserPreferences
+import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.domain.OutputPrefsEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopImageDecoder
@@ -72,8 +73,9 @@ private class LastImage(val bytes: ByteArray, val label: String)
  * "Apply color" field edits the text color (hex, via `WatermarkConfigEditor.updateTextColor`). S4d-150: an
  * "Apply opacity" field edits the alpha as a 0..100 percent (via `WatermarkConfigEditor.updateAlpha`). S4d-151:
  * "Apply gaps" fields edit the horizontal/vertical gaps (0..500) atomically (via `updateHorizon`/`updateVertical`).
- * S4d-152: an "Apply text size" field edits the text size (1..100, via `updateTextSize`). Still no REACTIVE/live
- * preview, tile/typeface/style controls, templates UI, drag-drop, or share substitute in this slice.
+ * S4d-152: an "Apply text size" field edits the text size (1..100, via `updateTextSize`). S4d-153: two buttons
+ * persist the tile mode REPEAT (grid tile) / CLAMP (single decal) via `updateTileMode` (MIRROR/DECAL not exposed).
+ * Still no REACTIVE/live preview, typeface/style controls, templates UI, drag-drop, or share substitute in this slice.
  */
 fun launchDesktopWindow() = application {
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
@@ -106,6 +108,8 @@ fun launchDesktopWindow() = application {
     var vGapText by remember { mutableStateOf("") }
     // S4d-152: the watermark TEXT SIZE being edited (string; parsed on "Apply text size"). Loaded on launch.
     var textSizeText by remember { mutableStateOf("") }
+    // S4d-153: the current persisted tile mode label (REPEAT grid-tile vs CLAMP single-decal). Loaded on launch.
+    var tileModeLabel by remember { mutableStateOf("loading…") }
     LaunchedEffect(Unit) {
         outputPref = describePref(userConfigRepo.userPreferences.first())
         watermarkText = repo.waterMark.first().text
@@ -118,6 +122,8 @@ fun launchDesktopWindow() = application {
         vGapText = repo.waterMark.first().vGap.toString()
         // S4d-152: load the persisted text size into the editable field.
         textSizeText = repo.waterMark.first().textSize.toString()
+        // S4d-153: load the persisted tile mode (only REPEAT/CLAMP are exposed in the UI).
+        tileModeLabel = repo.waterMark.first().tileMode.name
     }
 
     Window(onCloseRequest = ::exitApplication, title = "EasyWatermark — Desktop (S4d-121)") {
@@ -382,6 +388,52 @@ fun launchDesktopWindow() = application {
                     },
                 ) {
                     Text("Apply text size")
+                }
+                // S4d-153: the watermark TILE MODE control. Two buttons persist REPEAT (grid-tile across the
+                // photo) or CLAMP (a single decal at a fractional offset) via WatermarkConfigEditor.updateTileMode.
+                // Only these two product values are exposed — MIRROR/DECAL are legacy read-only storage ids, not
+                // UI choices. After each apply the label is re-read from the persisted config (so it reflects what
+                // actually persisted, even on a write failure). No auto-preview — click "Preview" to see it.
+                Text("Tile mode: $tileModeLabel", style = MaterialTheme.typography.body2)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        enabled = !busy,
+                        onClick = {
+                            scope.launch {
+                                busy = true
+                                val next = withContext(Dispatchers.IO) {
+                                    try {
+                                        editor.updateTileMode(WatermarkTileMode.REPEAT)
+                                        "Tile mode → REPEAT (grid tile). Click Preview to see it."
+                                    } catch (t: Throwable) {
+                                        "Failed: ${t.message}"
+                                    }
+                                }
+                                tileModeLabel = repo.waterMark.first().tileMode.name
+                                status = next
+                                busy = false
+                            }
+                        },
+                    ) { Text("Tile / REPEAT") }
+                    Button(
+                        enabled = !busy,
+                        onClick = {
+                            scope.launch {
+                                busy = true
+                                val next = withContext(Dispatchers.IO) {
+                                    try {
+                                        editor.updateTileMode(WatermarkTileMode.CLAMP)
+                                        "Tile mode → CLAMP (single decal). Click Preview to see it."
+                                    } catch (t: Throwable) {
+                                        "Failed: ${t.message}"
+                                    }
+                                }
+                                tileModeLabel = repo.waterMark.first().tileMode.name
+                                status = next
+                                busy = false
+                            }
+                        },
+                    ) { Text("Decal / CLAMP") }
                 }
                 // S4d-130: choose the output preference (two presets) through the shared OutputPrefsEditor,
                 // persisted to the SAME store runSaveFlow reads — so the next sample/Open render uses it.
