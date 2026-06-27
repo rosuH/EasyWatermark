@@ -6,8 +6,6 @@ import androidx.datastore.preferences.core.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
-import me.rosuh.easywatermark.MyApp
-import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.TextPaintStyle
@@ -32,7 +30,13 @@ import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_V
 import me.rosuh.easywatermark.utils.ktx.toWatermarkTileMode
 import okio.IOException
 
-class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
+class WaterMarkRepository(
+    private val dataStore: DataStore<Preferences>,
+    // S4d-86: the localized default watermark text is injected from the Android Koin edge
+    // (RepositoryModule), removing the app-resource coupling. A provider lambda (not a precomputed
+    // String) preserves the original per-emission resolution inside the flow `.map`.
+    private val defaultTextProvider: () -> String,
+) {
 
     private object PreferenceKeys {
         val KEY_TEXT = stringPreferencesKey(SP_KEY_TEXT)
@@ -66,8 +70,7 @@ class WaterMarkRepository (private val dataStore: DataStore<Preferences>) {
         }
         .map {
             WaterMark(
-                text = it[KEY_TEXT]
-                    ?: MyApp.instance.getString(R.string.config_default_water_mark_text),
+                text = it[KEY_TEXT] ?: defaultTextProvider(),
                 textSize = WatermarkConfigRules.clampTextSize(
                     it[KEY_TEXT_SIZE] ?: WatermarkConfigRules.DEFAULT_TEXT_SIZE
                 ),
