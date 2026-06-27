@@ -29,6 +29,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.MediaRef
+import me.rosuh.easywatermark.data.model.TextPaintStyle
+import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.domain.OutputPrefsEditor
@@ -42,6 +44,20 @@ private val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "webp", "bmp", "gif")
 
 /** Short label for the current output preference, e.g. "JPEG / 80". */
 private fun describePref(p: UserPreferences): String = "${p.outputFormat} / ${p.compressLevel}"
+
+/** Stable UI label for a [TextTypeface] — explicit map (no reflection / object-name dependency). */
+private fun typefaceLabelOf(t: TextTypeface): String = when (t) {
+    TextTypeface.Normal -> "Normal"
+    TextTypeface.Italic -> "Italic"
+    TextTypeface.Bold -> "Bold"
+    TextTypeface.BoldItalic -> "BoldItalic"
+}
+
+/** Stable UI label for a [TextPaintStyle] — explicit map (no reflection / object-name dependency). */
+private fun styleLabelOf(s: TextPaintStyle): String = when (s) {
+    TextPaintStyle.Fill -> "Fill"
+    TextPaintStyle.Stroke -> "Stroke"
+}
 
 private class LastImage(val bytes: ByteArray, val label: String)
 
@@ -75,7 +91,9 @@ private class LastImage(val bytes: ByteArray, val label: String)
  * "Apply gaps" fields edit the horizontal/vertical gaps (0..500) atomically (via `updateHorizon`/`updateVertical`).
  * S4d-152: an "Apply text size" field edits the text size (1..100, via `updateTextSize`). S4d-153: two buttons
  * persist the tile mode REPEAT (grid tile) / CLAMP (single decal) via `updateTileMode` (MIRROR/DECAL not exposed).
- * Still no REACTIVE/live preview, typeface/style controls, templates UI, drag-drop, or share substitute in this slice.
+ * S4d-154: per-value buttons persist the typeface (Normal/Italic/Bold/BoldItalic) and text style (Fill/Stroke) via
+ * `updateTextTypeface`/`updateTextStyle`. Still no REACTIVE/live preview, templates UI, drag-drop, or share
+ * substitute in this slice.
  */
 fun launchDesktopWindow() = application {
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
@@ -110,6 +128,9 @@ fun launchDesktopWindow() = application {
     var textSizeText by remember { mutableStateOf("") }
     // S4d-153: the current persisted tile mode label (REPEAT grid-tile vs CLAMP single-decal). Loaded on launch.
     var tileModeLabel by remember { mutableStateOf("loading…") }
+    // S4d-154: the current persisted typeface + text-style labels (explicit label maps). Loaded on launch.
+    var typefaceLabel by remember { mutableStateOf("loading…") }
+    var styleLabel by remember { mutableStateOf("loading…") }
     LaunchedEffect(Unit) {
         outputPref = describePref(userConfigRepo.userPreferences.first())
         watermarkText = repo.waterMark.first().text
@@ -124,6 +145,9 @@ fun launchDesktopWindow() = application {
         textSizeText = repo.waterMark.first().textSize.toString()
         // S4d-153: load the persisted tile mode (only REPEAT/CLAMP are exposed in the UI).
         tileModeLabel = repo.waterMark.first().tileMode.name
+        // S4d-154: load the persisted typeface + text style (explicit label maps — no reflection).
+        typefaceLabel = typefaceLabelOf(repo.waterMark.first().textTypeface)
+        styleLabel = styleLabelOf(repo.waterMark.first().textStyle)
     }
 
     Window(onCloseRequest = ::exitApplication, title = "EasyWatermark — Desktop (S4d-121)") {
@@ -434,6 +458,71 @@ fun launchDesktopWindow() = application {
                             }
                         },
                     ) { Text("Decal / CLAMP") }
+                }
+                // S4d-154: the watermark TYPEFACE control. One button per TextTypeface (Normal/Italic/Bold/
+                // BoldItalic) persists via WatermarkConfigEditor.updateTextTypeface; the current persisted value
+                // shows in the label (re-read after each apply, truthful on a write failure). These four are the
+                // only typeface choices. Both enums are render-honored on Desktop Skiko (S4d-122/123). Manual preview.
+                Text("Typeface: $typefaceLabel", style = MaterialTheme.typography.body2)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(
+                        TextTypeface.Normal,
+                        TextTypeface.Italic,
+                        TextTypeface.Bold,
+                        TextTypeface.BoldItalic,
+                    ).forEach { tf ->
+                        val name = typefaceLabelOf(tf)
+                        Button(
+                            enabled = !busy,
+                            onClick = {
+                                scope.launch {
+                                    busy = true
+                                    val next = withContext(Dispatchers.IO) {
+                                        try {
+                                            editor.updateTextTypeface(tf)
+                                            "Typeface → $name. Click Preview to see it."
+                                        } catch (t: Throwable) {
+                                            "Failed: ${t.message}"
+                                        }
+                                    }
+                                    typefaceLabel = typefaceLabelOf(repo.waterMark.first().textTypeface)
+                                    status = next
+                                    busy = false
+                                }
+                            },
+                        ) { Text(name) }
+                    }
+                }
+                // S4d-154: the watermark TEXT STYLE control. One button per TextPaintStyle (Fill/Stroke) persists
+                // via WatermarkConfigEditor.updateTextStyle; the current persisted value shows in the label (re-read
+                // after each apply). These two are the only style choices. Manual preview — click "Preview".
+                Text("Text style: $styleLabel", style = MaterialTheme.typography.body2)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(
+                        TextPaintStyle.Fill,
+                        TextPaintStyle.Stroke,
+                    ).forEach { st ->
+                        val name = styleLabelOf(st)
+                        Button(
+                            enabled = !busy,
+                            onClick = {
+                                scope.launch {
+                                    busy = true
+                                    val next = withContext(Dispatchers.IO) {
+                                        try {
+                                            editor.updateTextStyle(st)
+                                            "Text style → $name. Click Preview to see it."
+                                        } catch (t: Throwable) {
+                                            "Failed: ${t.message}"
+                                        }
+                                    }
+                                    styleLabel = styleLabelOf(repo.waterMark.first().textStyle)
+                                    status = next
+                                    busy = false
+                                }
+                            },
+                        ) { Text(name) }
+                    }
                 }
                 // S4d-130: choose the output preference (two presets) through the shared OutputPrefsEditor,
                 // persisted to the SAME store runSaveFlow reads — so the next sample/Open render uses it.
