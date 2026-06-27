@@ -49,9 +49,10 @@ private fun describePref(p: UserPreferences): String = "${p.outputFormat} / ${p.
  * the SAME spine over those bytes. S4d-130: two output-preference presets (JPEG/80, PNG/100) persist through
  * the shared `OutputPrefsEditor`, so the save flow encodes in the chosen format. S4d-135: an "Open icon…"
  * button persists a picked icon path via `WatermarkConfigEditor.updateIcon` (flipping persisted mode to
- * Image), so the existing Render/Open-image saves then render through the S4d-134 Image branch. Still no
- * drag-drop / preview-image / templates / share substitute / Text-toggle in this slice (returning to Text
- * mode uses a fresh store, the default — there is no regression of the existing Text behavior).
+ * Image), so the existing Render/Open-image saves then render through the S4d-134 Image branch. S4d-136: a
+ * "Use text watermark" button flips persisted mode back to Text (via `WatermarkConfigEditor.updateText`,
+ * preserving the current text), so Image mode is not one-way. Still no drag-drop / preview-image / templates
+ * / share substitute / current-image memory in this slice.
  */
 fun launchDesktopWindow() = application {
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
@@ -212,6 +213,30 @@ fun launchDesktopWindow() = application {
                     },
                 ) {
                     Text("Open icon…")
+                }
+                Button(
+                    enabled = !busy,
+                    onClick = {
+                        scope.launch {
+                            busy = true
+                            status = "Switching to Text mode…"
+                            val next = withContext(Dispatchers.IO) {
+                                try {
+                                    // updateText flips persisted mode to Text, so preserve the existing text value.
+                                    val currentText = repo.waterMark.first().text
+                                    editor.updateText(currentText)
+                                    "Watermark mode → Text. " +
+                                        "Next “Render & Save sample” / “Open image…” renders text."
+                                } catch (t: Throwable) {
+                                    "Failed: ${t.message}"
+                                }
+                            }
+                            status = next
+                            busy = false
+                        }
+                    },
+                ) {
+                    Text("Use text watermark")
                 }
                 Text(status, style = MaterialTheme.typography.body2)
             }
