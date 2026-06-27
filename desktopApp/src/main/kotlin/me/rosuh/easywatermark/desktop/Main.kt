@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.datastore.createUserConfigDataStore
 import me.rosuh.easywatermark.data.model.ImageFormat
+import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.Result
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
@@ -150,6 +151,53 @@ private fun runHeadless(args: Array<String>) {
     println("  config (after edit, persisted): ${outcome.configAfterEdit}")
     println("  input:  ${outcome.inputLabel} (${outcome.inputByteCount} B)")
     println("  output: ${outcome.outputPath} (${outcome.format}, ${outcome.width}x${outcome.height}, ${outcome.outputByteCount} B)")
+
+    // S4d-134: Image-mode headless witness (no picker). Persist a generated icon as a Desktop FILE PATH
+    // (MediaRef) and render through the new icon branch -> S4d-133 composeIconOverRealImage. Uses a
+    // SEPARATE watermark-config store dir so it can never flip the text witness's store to Image mode on a
+    // later run (DataStore is single-instance-per-file; different files are independent).
+    val iconFlowDir = File("build/s4d134-desktop-icon-flow").apply { mkdirs() }
+    val iconFile = File(iconFlowDir, "icon.png").apply {
+        writeBytes(DesktopWatermarkComposer.sampleBackgroundPng(width = 64, height = 64))
+    }
+    val iconRepo = DesktopWatermarkFlow.buildRepository(dir = File(iconFlowDir, "config"))
+    val iconEditor = WatermarkConfigEditor(iconRepo)
+    // prefs default to (JPEG, 80) from the empty userconfig store, so a .jpg name matches; the printed
+    // format is the source of truth either way.
+    val iconOutputFile = File(iconFlowDir, "image_mode_watermarked.jpg")
+    println("Desktop headless Image-mode save flow (S4d-134):")
+    val iconOutcome = runBlocking {
+        // updateIcon persists the icon path AND flips persisted markMode to Image.
+        iconEditor.updateIcon(MediaRef(iconFile.absolutePath))
+        DesktopWatermarkFlow.runSaveFlow(
+            iconRepo, iconEditor, saveFlowUserConfig, inputBytes, inputLabel, iconOutputFile,
+        )
+    }
+    println("  config (rendered): ${iconOutcome.configAfterEdit}")
+    println("  icon:   ${iconFile.path} (${iconFile.length()} B)")
+    println("  output: ${iconOutcome.outputPath} (${iconOutcome.format}, ${iconOutcome.width}x${iconOutcome.height}, ${iconOutcome.outputByteCount} B)")
+
+    // S4d-134: prove the loud-fail contract — Image mode with a MISSING icon file must THROW, not silently
+    // render text. Own store dir; the bad path is never created, so no output is written.
+    val missingRepo = DesktopWatermarkFlow.buildRepository(dir = File(iconFlowDir, "config-missing"))
+    val missingEditor = WatermarkConfigEditor(missingRepo)
+    val missingIconPath = File(iconFlowDir, "does-not-exist.png").absolutePath
+    print("Desktop headless Image-mode missing-icon guard (S4d-134): ")
+    runBlocking {
+        missingEditor.updateIcon(MediaRef(missingIconPath)) // mode=Image, icon points at a non-existent file
+        try {
+            DesktopWatermarkFlow.runSaveFlow(
+                missingRepo, missingEditor, saveFlowUserConfig, inputBytes, inputLabel,
+                File(iconFlowDir, "missing_icon_should_not_be_written.jpg"),
+            )
+            // Reaching here means Image mode did NOT throw on a missing icon → the guard regressed
+            // (a silent fallback). HARD-fail the headless run so the gate catches it (error() throws an
+            // IllegalStateException, which the IllegalArgumentException catch below does NOT swallow).
+            error("S4d-134 guard regressed: Image-mode missing icon must throw, but render succeeded")
+        } catch (e: IllegalArgumentException) {
+            println("OK, threw as expected: ${e.message}")
+        }
+    }
 
     println("OK — shared KMP engine core + Desktop text renderer + Desktop composition + real-image decode run on Desktop.")
 }

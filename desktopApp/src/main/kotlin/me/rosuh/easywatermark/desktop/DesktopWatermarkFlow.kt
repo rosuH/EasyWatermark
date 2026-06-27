@@ -5,6 +5,7 @@ import me.rosuh.easywatermark.data.datastore.createUserConfigDataStore
 import me.rosuh.easywatermark.data.datastore.createWaterMarkDataStore
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
@@ -24,7 +25,12 @@ import java.io.File
  * S4d-128: the output **format + quality** are read from a provided [UserConfigRepository] (an empty
  * store yields the shared default `UserPreferences.DEFAULT == (JPEG, 80)` — matching Android, no
  * Desktop-only PNG default) and passed to the composer; the output filename extension follows the format.
- * Still out of scope: icon watermark.
+ *
+ * S4d-134: [runSaveFlow] now honors the persisted [WatermarkMode]. **Image** mode renders the persisted
+ * `WaterMark.iconUri` (a Desktop file path) through [DesktopWatermarkComposer.composeIconOverRealImage]
+ * and does NOT apply the demo text edit (which would reset the mode back to Text); **Text** mode keeps the
+ * existing demo-edit + text path. A missing/empty/unreadable icon fails loudly (no silent Text fallback).
+ * Still out of scope: the window icon picker (S4d-135).
  */
 object DesktopWatermarkFlow {
 
@@ -92,26 +98,63 @@ object DesktopWatermarkFlow {
         val bytes = inputBytes ?: DesktopWatermarkComposer.sampleBackgroundPng(width = 640, height = 480)
         val prefs = userConfigRepo.userPreferences.first() // empty store -> (JPEG, 80) (shared default)
         val initial = repo.waterMark.first()
-        editor.updateText("请勿转载 DO NOT REDISTRIBUTE")
-        editor.updateDegree(330f)
-        val wm = repo.waterMark.first()
-        val result = DesktopWatermarkComposer.composeOverRealImage(
-            imageBytes = bytes,
-            text = wm.text,
-            tileMode = wm.tileMode,
-            textSize = wm.textSize,
-            degree = wm.degree,
-            hGapPercent = wm.hGap,
-            vGapPercent = wm.vGap,
-            alpha = wm.alpha / 255f,
-            // Drive the persisted text color / typeface / paint style.
-            colorArgb = wm.textColor,
-            typeface = wm.textTypeface,
-            textStyle = wm.textStyle,
-            // S4d-128: output format + quality from the persisted user prefs (default JPEG/80).
-            format = prefs.outputFormat,
-            quality = prefs.compressLevel,
-        )
+        // S4d-134: branch on the PERSISTED watermark mode.
+        //  - Text mode keeps the existing demo edit (updateText resets KEY_MODE to Text — harmless here).
+        //  - Image mode renders the persisted config AS-IS and must NOT call updateText, which would reset
+        //    KEY_MODE back to Text and silently erase the icon choice (the root cause this slice fixes).
+        val wm: WaterMark = if (initial.markMode == WatermarkMode.Image) {
+            initial
+        } else {
+            editor.updateText("请勿转载 DO NOT REDISTRIBUTE")
+            editor.updateDegree(330f)
+            repo.waterMark.first()
+        }
+        val result: DesktopWatermarkComposer.ComposedImage = when (wm.markMode) {
+            WatermarkMode.Image -> {
+                // Desktop icon ref is a plain file path (S4d-132). Read the bytes here; a missing/empty/
+                // unreadable icon fails LOUDLY (IllegalArgumentException) — never a silent fallback to Text.
+                // The file read is `suspend`-context IO: the window calls runSaveFlow inside
+                // withContext(Dispatchers.IO); headless uses runBlocking — so no extra dispatch is needed here.
+                val iconPath = wm.iconUri.value
+                require(iconPath.isNotEmpty()) {
+                    "Image-mode watermark has no persisted iconUri; refusing to render (no silent fallback to Text)."
+                }
+                val iconFile = File(iconPath)
+                require(iconFile.isFile) {
+                    "Image-mode icon file is missing or not a regular file: '$iconPath'"
+                }
+                DesktopWatermarkComposer.composeIconOverRealImage(
+                    imageBytes = bytes,
+                    iconBytes = iconFile.readBytes(),
+                    tileMode = wm.tileMode,
+                    textSize = wm.textSize,
+                    degree = wm.degree,
+                    hGapPercent = wm.hGap,
+                    vGapPercent = wm.vGap,
+                    alpha = wm.alpha / 255f,
+                    // S4d-128: output format + quality from the persisted user prefs (default JPEG/80).
+                    format = prefs.outputFormat,
+                    quality = prefs.compressLevel,
+                )
+            }
+            WatermarkMode.Text -> DesktopWatermarkComposer.composeOverRealImage(
+                imageBytes = bytes,
+                text = wm.text,
+                tileMode = wm.tileMode,
+                textSize = wm.textSize,
+                degree = wm.degree,
+                hGapPercent = wm.hGap,
+                vGapPercent = wm.vGap,
+                alpha = wm.alpha / 255f,
+                // Drive the persisted text color / typeface / paint style.
+                colorArgb = wm.textColor,
+                typeface = wm.textTypeface,
+                textStyle = wm.textStyle,
+                // S4d-128: output format + quality from the persisted user prefs (default JPEG/80).
+                format = prefs.outputFormat,
+                quality = prefs.compressLevel,
+            )
+        }
         val target = outputFile ?: defaultOutputFile(prefs.outputFormat)
         target.parentFile?.mkdirs()
         target.writeBytes(result.png)
@@ -129,8 +172,9 @@ object DesktopWatermarkFlow {
     }
 
     private fun describe(wm: WaterMark): String =
-        "text='${wm.text}' size=${wm.textSize} degree=${wm.degree} tile=${wm.tileMode} " +
+        "mode=${wm.markMode} text='${wm.text}' size=${wm.textSize} degree=${wm.degree} tile=${wm.tileMode} " +
             "hGap=${wm.hGap} vGap=${wm.vGap} alpha=${wm.alpha} " +
             "color=0x${(wm.textColor.toLong() and 0xFFFFFFFFL).toString(16).uppercase()} " +
-            "typeface=${wm.textTypeface::class.simpleName} style=${wm.textStyle::class.simpleName}"
+            "typeface=${wm.textTypeface::class.simpleName} style=${wm.textStyle::class.simpleName} " +
+            "icon='${wm.iconUri.value}'"
 }
