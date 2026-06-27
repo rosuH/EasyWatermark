@@ -27,7 +27,6 @@ import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_T
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TEXT_TYPEFACE
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TILE_MODE
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_VERTICAL_GAP
-import me.rosuh.easywatermark.utils.ktx.toWatermarkTileMode
 import okio.IOException
 
 class WaterMarkRepository(
@@ -36,6 +35,12 @@ class WaterMarkRepository(
     // (RepositoryModule), removing the app-resource coupling. A provider lambda (not a precomputed
     // String) preserves the original per-emission resolution inside the flow `.map`.
     private val defaultTextProvider: () -> String,
+    // S4d-87: the persisted-tile-id -> WatermarkTileMode read mapper is injected from the Android edge
+    // (RepositoryModule passes the SDK-gated legacy mapper), so the repository no longer depends on the
+    // Android `Build.VERSION`-gated extension. The injected mapper preserves the legacy behavior
+    // (pre-Android-12 stored DECAL id 3 -> REPEAT), pinned by WatermarkTileModeMappingTest. NOT the pure
+    // `WatermarkTileMode.fromStorageId`, which lacks the SDK gate.
+    private val tileModeFromStorageId: (Int?) -> WatermarkTileMode,
 ) {
 
     private object PreferenceKeys {
@@ -85,7 +90,7 @@ class WaterMarkRepository(
                 vGap = it[KEY_VERTICAL_GAP] ?: 0,
                 iconUri = MediaRef.parse(it[KEY_ICON_URI] ?: ""),
                 markMode = WatermarkMode.fromValue(it[KEY_MODE] ?: WatermarkMode.Text.value),
-                tileMode = it[KEY_TILE_MODE].toWatermarkTileMode(),
+                tileMode = tileModeFromStorageId(it[KEY_TILE_MODE]),
                 enableBounds = it[KEY_ENABLE_BOUNDS] ?: false
             )
         }
