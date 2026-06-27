@@ -217,4 +217,74 @@ object DesktopWatermarkComposer {
             DesktopWatermarkTextRenderer.encode(composed, format, quality),
         )
     }
+
+    // ---- S4d-133: real-image ICON composition (Desktop/iOS icon path) ----------------------------
+
+    /**
+     * S4d-133: watermark a **real, `ImageIO`-decoded** image with an **icon/image** watermark — the icon
+     * analogue of [composeOverRealImage] and the desktopMain mirror of iOS
+     * `IosWatermarkRenderer.composeIconOverImage`. Both [imageBytes] (background) and [iconBytes] are
+     * decoded via [DesktopImageDecoder] (the platform decode boundary, EXIF baked); the icon cell is
+     * rastered by the shared [WatermarkCellComposer.composeIconCell] and composited over the decoded
+     * background by [WatermarkCellComposer.composeOverBackground]. Output is sized to the decoded
+     * background and encoded via [DesktopWatermarkTextRenderer.encode] (PNG default; JPEG on request).
+     *
+     * Pipeline: decode (platform) → render icon cell (commonMain) → compose (commonMain) → encode
+     * (platform). commonMain stays **decode-free** (already-decoded `ImageBitmap` in, composed out).
+     *
+     * **Perceptual Desktop/Skiko, NOT Android byte parity.** commonMain has no float-placement +
+     * nearest-filter draw overload, so a rotated non-uniform icon is not byte-identical to Android's
+     * `WatermarkRenderer.buildIconShader` (`Canvas.drawBitmap`) — Android icon production stays native
+     * (S4d-8 / the ADR-0004 addendum). This is the Desktop/iOS icon renderer.
+     *
+     * **Alpha is applied ONCE, at composition.** The icon cell is rendered **opaque** (`alpha = 1f`) and
+     * the watermark [alpha] is applied by [WatermarkCellComposer.composeOverBackground] — mirroring the
+     * accepted iOS `composeIconOverImage` rule (single application is the visually-correct behavior;
+     * Android's native path double-applies). [scaleRatio][WatermarkCellComposer.composeIconCell] follows
+     * production: `textSize / ICON_SCALE_REFERENCE_TEXT_SIZE` (14 ⇒ 1×).
+     *
+     * SCOPE (S4d-133): the render **primitive** only — NOT wired into the Desktop save flow
+     * (`DesktopWatermarkFlow.runSaveFlow`); the persisted `markMode == Image` branch is a later slice.
+     * [tileMode] must be REPEAT or CLAMP (commonMain rejects MIRROR/DECAL).
+     */
+    fun composeIconOverRealImage(
+        imageBytes: ByteArray,
+        iconBytes: ByteArray,
+        tileMode: WatermarkTileMode = WatermarkTileMode.REPEAT,
+        textSize: Float = 24f,
+        degree: Float = 315f,
+        hGapPercent: Int = 40,
+        vGapPercent: Int = 40,
+        offsetX: Float = 0.5f,
+        offsetY: Float = 0.5f,
+        alpha: Float = 1f,
+        format: ImageFormat = ImageFormat.PNG,
+        quality: Int = 100,
+    ): ComposedImage {
+        val background = DesktopImageDecoder.decode(imageBytes) // genuine ImageIO decode (EXIF baked)
+        val icon = DesktopImageDecoder.decode(iconBytes)
+        val cell = WatermarkCellComposer.composeIconCell(
+            icon = icon,
+            degree = degree,
+            hGapPercent = hGapPercent,
+            vGapPercent = vGapPercent,
+            scaleRatio = textSize / WatermarkCellComposer.ICON_SCALE_REFERENCE_TEXT_SIZE,
+            // Opaque cell; the watermark alpha is applied once at the composition step below
+            // (mirrors iOS composeIconOverImage — see this function's KDoc).
+            alpha = 1f,
+        )
+        val composed = WatermarkCellComposer.composeOverBackground(
+            background = background,
+            cell = cell,
+            tileMode = tileMode,
+            offsetX = offsetX,
+            offsetY = offsetY,
+            alpha = alpha,
+        )
+        return ComposedImage(
+            composed.width,
+            composed.height,
+            DesktopWatermarkTextRenderer.encode(composed, format, quality),
+        )
+    }
 }

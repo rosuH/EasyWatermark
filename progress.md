@@ -1,5 +1,12 @@
 # Progress Log
 
+## 2026-06-27 — S4d-132/133 Desktop icon render primitive accepted
+
+- **S4d-132 (read-only readiness, accepted; ACSP `20260627-220037...`):** mapped the Desktop icon-watermark gap. Desktop production had no `markMode`/`iconUri`/`composeIcon` usage; `DesktopWatermarkFlow.runSaveFlow` was still text-only. Reusable primitives were already available (`composeIconCell`, `composeOverBackground`, `DesktopImageDecoder`, `DesktopWatermarkTextRenderer.encode`). Persistence decision for later: Desktop can persist a picked file path directly as `MediaRef(file.absolutePath)`; no iOS-style byte copy until a source-moved/deleted requirement exists.
+- **S4d-133 (implementation, accepted; ACSP `20260627-221116...`):** added `DesktopWatermarkComposer.composeIconOverRealImage(...)` plus `DesktopIconCompositionTest` (4/0). This is a reusable Desktop/Skiko icon-composition primitive, not a user-reachable Desktop icon-watermark flow yet; `runSaveFlow` and the window still need a `markMode == Image` branch and an icon picker.
+- **Verification:** worker and coordinator ran `git diff --check`, `:shared:compileKotlinDesktop`, filtered `:shared:desktopTest --tests "*DesktopIconComposition*"`, and stopped Gradle daemons. Coordinator also confirmed the test XML reports 4 cases with 0 failures/errors. Only the Desktop composer and one new Desktop test file changed in the implementation slice.
+- **Next:** S4d-134 should wire `DesktopWatermarkFlow.runSaveFlow` to branch on persisted `WatermarkMode.Image`, read the persisted `MediaRef` icon path, and call `composeIconOverRealImage`. Keep window picker/UI and arbitrary preview work separate.
+
 ## 2026-06-27 — S4d-119 readiness + S4d-130 Desktop output prefs UI accepted
 
 - **S4d-119 (read-only readiness, accepted; ACSP `20260627-175640...`):** mapped the Desktop product-flow surface after the iOS image-watermark lane closed. Finding: `:desktopApp` was still a plain Kotlin/JVM console witness with renderer samples + `UserConfigRepository` smoke only — no Compose Desktop plugin/window, no file picker/drag-drop, no save/share substitute, and no desktop `WaterMarkRepository` store. Recommended the smallest non-speculative product-flow slice: prove a headless config-driven open -> edit -> render -> save path before adding a UI dependency.
