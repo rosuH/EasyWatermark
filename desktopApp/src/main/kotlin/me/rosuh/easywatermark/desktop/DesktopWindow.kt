@@ -36,6 +36,8 @@ private val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "webp", "bmp", "gif")
 /** Short label for the current output preference, e.g. "JPEG / 80". */
 private fun describePref(p: UserPreferences): String = "${p.outputFormat} / ${p.compressLevel}"
 
+private class LastImage(val bytes: ByteArray, val label: String)
+
 /**
  * S4d-121: the smallest useful **Compose Desktop window** over the S4d-120 save spine. A no-arg
  * `:desktopApp` launch opens this window (`Main.kt` dispatches); the `--headless` flag keeps a bounded
@@ -51,8 +53,10 @@ private fun describePref(p: UserPreferences): String = "${p.outputFormat} / ${p.
  * button persists a picked icon path via `WatermarkConfigEditor.updateIcon` (flipping persisted mode to
  * Image), so the existing Render/Open-image saves then render through the S4d-134 Image branch. S4d-136: a
  * "Use text watermark" button flips persisted mode back to Text (via `WatermarkConfigEditor.updateText`,
- * preserving the current text), so Image mode is not one-way. Still no drag-drop / preview-image / templates
- * / share substitute / current-image memory in this slice.
+ * preserving the current text), so Image mode is not one-way. S4d-137: the window remembers the last
+ * "Open image…" selection (bytes + label), so "Render & Save sample" composites over that real photo
+ * instead of the fixture (null → fixture, as before). Still no drag-drop / preview-image / templates /
+ * share substitute in this slice.
  */
 fun launchDesktopWindow() = application {
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
@@ -67,6 +71,7 @@ fun launchDesktopWindow() = application {
         mutableStateOf("Ready. Click “Render & Save sample” to run the shared save flow.")
     }
     var busy by remember { mutableStateOf(false) }
+    var lastImage by remember { mutableStateOf<LastImage?>(null) }
     // S4d-130: the current/effective output preference, loaded on launch + refreshed after each preset save.
     var outputPref by remember { mutableStateOf("loading…") }
     LaunchedEffect(Unit) { outputPref = describePref(userConfigRepo.userPreferences.first()) }
@@ -115,11 +120,19 @@ fun launchDesktopWindow() = application {
                         scope.launch {
                             busy = true
                             status = "Rendering…"
+                            val current = lastImage
                             val next = withContext(Dispatchers.IO) {
                                 try {
-                                    val o = DesktopWatermarkFlow.runSaveFlow(repo, editor, userConfigRepo)
+                                    val o = if (current != null) {
+                                        DesktopWatermarkFlow.runSaveFlow(
+                                            repo, editor, userConfigRepo,
+                                            inputBytes = current.bytes, inputLabel = current.label,
+                                        )
+                                    } else {
+                                        DesktopWatermarkFlow.runSaveFlow(repo, editor, userConfigRepo)
+                                    }
                                     "Saved: ${o.outputPath}\n  ${o.format}, ${o.width}x${o.height}, ${o.outputByteCount} B\n" +
-                                        "  config: ${o.configAfterEdit}"
+                                        "  input: ${o.inputLabel} (${o.inputByteCount} B)\n  config: ${o.configAfterEdit}"
                                 } catch (t: Throwable) {
                                     "Failed: ${t.message}"
                                 }
@@ -150,9 +163,11 @@ fun launchDesktopWindow() = application {
                             scope.launch {
                                 busy = true
                                 status = "Rendering ${selected.name}…"
+                                var picked: LastImage? = null
                                 val next = withContext(Dispatchers.IO) {
                                     try {
                                         val bytes = selected.readBytes()
+                                        picked = LastImage(bytes, selected.path)
                                         val o = DesktopWatermarkFlow.runSaveFlow(
                                             repo, editor, userConfigRepo, inputBytes = bytes, inputLabel = selected.path,
                                         )
@@ -162,6 +177,7 @@ fun launchDesktopWindow() = application {
                                         "Failed: ${t.message}"
                                     }
                                 }
+                                picked?.let { lastImage = it }
                                 status = next
                                 busy = false
                             }
