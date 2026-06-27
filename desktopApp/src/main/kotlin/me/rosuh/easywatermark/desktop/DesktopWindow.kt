@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.data.model.ImageFormat
+import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.domain.OutputPrefsEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
@@ -46,8 +47,11 @@ private fun describePref(p: UserPreferences): String = "${p.outputFormat} / ${p.
  * writes an image) and shows the persisted config + output path/dims/size. It honors text color, typeface,
  * and paint style. S4d-125: an "Open image…" button picks a real file via a native AWT [FileDialog] and runs
  * the SAME spine over those bytes. S4d-130: two output-preference presets (JPEG/80, PNG/100) persist through
- * the shared `OutputPrefsEditor`, so the save flow encodes in the chosen format. Still no icon / drag-drop /
- * preview-image / templates / share substitute in this slice.
+ * the shared `OutputPrefsEditor`, so the save flow encodes in the chosen format. S4d-135: an "Open icon…"
+ * button persists a picked icon path via `WatermarkConfigEditor.updateIcon` (flipping persisted mode to
+ * Image), so the existing Render/Open-image saves then render through the S4d-134 Image branch. Still no
+ * drag-drop / preview-image / templates / share substitute / Text-toggle in this slice (returning to Text
+ * mode uses a fresh store, the default — there is no regression of the existing Text behavior).
  */
 fun launchDesktopWindow() = application {
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
@@ -76,7 +80,7 @@ fun launchDesktopWindow() = application {
                 Text(
                     "Renders the deterministic sample through the shared engine and saves an image. " +
                         "Honors text / color / typeface / textStyle / tileMode / textSize / degree / gaps / alpha. " +
-                        "(No icon yet.)",
+                        "Pick an icon to switch to Image mode.",
                     style = MaterialTheme.typography.body2,
                 )
                 // S4d-130: choose the output preference (two presets) through the shared OutputPrefsEditor,
@@ -165,6 +169,49 @@ fun launchDesktopWindow() = application {
                     },
                 ) {
                     Text("Open image…")
+                }
+                Button(
+                    enabled = !busy,
+                    onClick = {
+                        // S4d-135: native AWT Open dialog for the watermark ICON (same modal pattern + filter
+                        // as "Open image…"). `window` is the FrameWindowScope's AWT frame.
+                        val dialog = FileDialog(window, "Open icon", FileDialog.LOAD).apply {
+                            setFilenameFilter { _, fileName ->
+                                fileName.substringAfterLast('.', "").lowercase() in IMAGE_EXTENSIONS
+                            }
+                            isVisible = true
+                        }
+                        val dir = dialog.directory
+                        val name = dialog.file
+                        if (dir != null && name != null) {
+                            val selected = File(dir, name)
+                            // Persist ONLY the icon PATH (off the UI thread). editor.updateIcon flips persisted
+                            // markMode to Image (S4d-134), so the next "Render & Save sample" / "Open image…"
+                            // save renders through the Image branch (composeIconOverRealImage) over that path.
+                            // No render here — this control just sets the icon; the existing save buttons render.
+                            scope.launch {
+                                busy = true
+                                status = "Setting icon ${selected.name}…"
+                                // Mirror the render buttons: try/catch INSIDE withContext returns the status
+                                // string, so a DataStore/updateIcon failure becomes "Failed: …" and the
+                                // `status = next; busy = false` below ALWAYS run (window never stuck busy).
+                                val next = withContext(Dispatchers.IO) {
+                                    try {
+                                        editor.updateIcon(MediaRef(selected.absolutePath))
+                                        "Icon set: ${selected.path}\n  Watermark mode → Image. " +
+                                            "Next “Render & Save sample” / “Open image…” renders this icon."
+                                    } catch (t: Throwable) {
+                                        "Failed: ${t.message}"
+                                    }
+                                }
+                                status = next
+                                busy = false
+                            }
+                        }
+                        // Cancelled (null file/directory) → leave the status + stored icon unchanged (no-op).
+                    },
+                ) {
+                    Text("Open icon…")
                 }
                 Text(status, style = MaterialTheme.typography.body2)
             }
