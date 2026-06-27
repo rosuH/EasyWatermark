@@ -1,5 +1,13 @@
 # Progress Log
 
+## 2026-06-28 — S4d-145/157 Desktop window controls and share substitute accepted
+
+- **S4d-145..S4d-155 (accepted):** widened the Desktop window in small one-file slices: manual text editing, preview output, degree, color, opacity, gaps, text size, tile mode, typeface/style controls, and scrolling so the growing control surface stays reachable.
+- **S4d-156 (read-only decision, accepted):** selected a no-new-dependency Desktop share substitute before drag/drop: expose the last successful real saved file with "Show in folder" and "Copy output path", while keeping preview temp output out of share state.
+- **S4d-157 (implementation, accepted; ACSP `20260628-045258...`):** added the Desktop window's minimal share substitute in `DesktopWindow.kt` only. Successful "Render & Save sample", "Save as...", and "Open image..." saves update `lastSavedFile`; Preview does not. "Show in folder" uses guarded `java.awt.Desktop.open(parent)` and "Copy output path" uses Compose clipboard text.
+- **Coordinator verification:** reviewed worker artifacts and the real diff; `git diff --check` clean; `:desktopApp:compileKotlin` and `:desktopApp:run --args='--headless'` passed with `--max-workers=8`; Gradle daemon stopped. No Android/iOS/shared model/repo/dependency/golden or 1:1 parity work occurred.
+- **Next:** S4d-158 should be Desktop drag/drop input using the existing open-image/save spine. Keep templates UI, reactive preview/editor polish, batch, and Android v2.10.0 screenshot/recording parity out of that slice.
+
 ## 2026-06-28 — S4d-141/143b Desktop templates persistence lane accepted
 
 - **S4d-141 (read-only readiness, accepted):** mapped Desktop templates after Save-As and chose the smallest non-speculative path: prove an empty Desktop Room builder first, then app-level witness, then decide seed packaging separately. This avoided bundling Room builder, seed DB packaging, and a templates UI into one review unit.

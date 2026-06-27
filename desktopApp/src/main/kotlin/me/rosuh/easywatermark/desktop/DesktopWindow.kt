@@ -22,6 +22,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -38,6 +40,7 @@ import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.domain.OutputPrefsEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopImageDecoder
+import java.awt.Desktop
 import java.awt.FileDialog
 import java.io.File
 
@@ -96,7 +99,10 @@ private class LastImage(val bytes: ByteArray, val label: String)
  * S4d-154: per-value buttons persist the typeface (Normal/Italic/Bold/BoldItalic) and text style (Fill/Stroke) via
  * `updateTextTypeface`/`updateTextStyle`. S4d-155: the main content `Column` is `verticalScroll`-able so the
  * growing control surface + preview stay reachable on constrained window heights (control order/behavior
- * unchanged). Still no REACTIVE/live preview, templates UI, drag-drop, or share substitute in this slice.
+ * unchanged). S4d-157: a "share substitute" — "Show in folder" (guarded `java.awt.Desktop.open(parentFile)`)
+ * + "Copy output path" (Compose `LocalClipboardManager`) acting on the last REAL saved output file (set by
+ * the Render & Save / Save as… / Open image… success paths, NOT Preview). Still no REACTIVE/live preview,
+ * templates UI, or drag-drop (S4d-158) in this slice.
  */
 fun launchDesktopWindow() = application {
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
@@ -112,6 +118,9 @@ fun launchDesktopWindow() = application {
     }
     var busy by remember { mutableStateOf(false) }
     var lastImage by remember { mutableStateOf<LastImage?>(null) }
+    // S4d-157: the last REAL saved output file (set only by the Render & Save / Save as… / Open image…
+    // success paths — NOT Preview, which writes a temp file). Drives the share-substitute buttons.
+    var lastSavedFile by remember { mutableStateOf<File?>(null) }
     // S4d-130: the current/effective output preference, loaded on launch + refreshed after each preset save.
     var outputPref by remember { mutableStateOf("loading…") }
     // S4d-145: the watermark text being edited; loaded from the persisted config on launch, persisted on Apply.
@@ -562,6 +571,7 @@ fun launchDesktopWindow() = application {
                             busy = true
                             status = "Rendering…"
                             val current = lastImage
+                            var savedFile: File? = null
                             val next = withContext(Dispatchers.IO) {
                                 try {
                                     val o = if (current != null) {
@@ -572,12 +582,15 @@ fun launchDesktopWindow() = application {
                                     } else {
                                         DesktopWatermarkFlow.runSaveFlow(repo, editor, userConfigRepo)
                                     }
+                                    // S4d-157: remember the real saved output for the share-substitute buttons.
+                                    savedFile = File(o.outputPath)
                                     "Saved: ${o.outputPath}\n  ${o.format}, ${o.width}x${o.height}, ${o.outputByteCount} B\n" +
                                         "  input: ${o.inputLabel} (${o.inputByteCount} B)\n  config: ${o.configAfterEdit}"
                                 } catch (t: Throwable) {
                                     "Failed: ${t.message}"
                                 }
                             }
+                            savedFile?.let { lastSavedFile = it }
                             status = next
                             busy = false
                         }
@@ -603,6 +616,7 @@ fun launchDesktopWindow() = application {
                             scope.launch {
                                 busy = true
                                 status = "Saving to ${target.name}…"
+                                var savedFile: File? = null
                                 val next = withContext(Dispatchers.IO) {
                                     try {
                                         val o = if (current != null) {
@@ -616,12 +630,15 @@ fun launchDesktopWindow() = application {
                                                 repo, editor, userConfigRepo, outputFile = target,
                                             )
                                         }
+                                        // S4d-157: remember the real saved output for the share-substitute buttons.
+                                        savedFile = File(o.outputPath)
                                         "Saved: ${o.outputPath}\n  ${o.format}, ${o.width}x${o.height}, ${o.outputByteCount} B\n" +
                                             "  input: ${o.inputLabel} (${o.inputByteCount} B)\n  config: ${o.configAfterEdit}"
                                     } catch (t: Throwable) {
                                         "Failed: ${t.message}"
                                     }
                                 }
+                                savedFile?.let { lastSavedFile = it }
                                 status = next
                                 busy = false
                             }
@@ -651,6 +668,7 @@ fun launchDesktopWindow() = application {
                                 busy = true
                                 status = "Rendering ${selected.name}…"
                                 var picked: LastImage? = null
+                                var savedFile: File? = null
                                 val next = withContext(Dispatchers.IO) {
                                     try {
                                         val bytes = selected.readBytes()
@@ -658,6 +676,8 @@ fun launchDesktopWindow() = application {
                                         val o = DesktopWatermarkFlow.runSaveFlow(
                                             repo, editor, userConfigRepo, inputBytes = bytes, inputLabel = selected.path,
                                         )
+                                        // S4d-157: remember the real saved output for the share-substitute buttons.
+                                        savedFile = File(o.outputPath)
                                         "Saved: ${o.outputPath}\n  ${o.format}, ${o.width}x${o.height}, ${o.outputByteCount} B\n" +
                                             "  input: ${o.inputLabel} (${o.inputByteCount} B)\n  config: ${o.configAfterEdit}"
                                     } catch (t: Throwable) {
@@ -665,6 +685,7 @@ fun launchDesktopWindow() = application {
                                     }
                                 }
                                 picked?.let { lastImage = it }
+                                savedFile?.let { lastSavedFile = it }
                                 status = next
                                 busy = false
                             }
@@ -783,6 +804,52 @@ fun launchDesktopWindow() = application {
                     },
                 ) {
                     Text("Preview")
+                }
+                // S4d-157: Desktop "share substitute" over the last REAL saved output file (set only by the
+                // Render & Save / Save as… / Open image… success paths — Preview writes a temp file and does NOT
+                // set it). "Show in folder" reveals the saved file's folder via guarded java.awt.Desktop (AWT IO
+                // off the UI thread); "Copy output path" puts the path on the Compose clipboard. Both are enabled
+                // only when a real save exists and the window isn't busy.
+                val clipboard = LocalClipboardManager.current
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        enabled = !busy && lastSavedFile != null,
+                        onClick = {
+                            val file = lastSavedFile
+                            if (file != null) {
+                                scope.launch {
+                                    busy = true
+                                    // AWT Desktop IO off the Compose UI thread; result reported via status.
+                                    val next = withContext(Dispatchers.IO) {
+                                        try {
+                                            val desktop = if (Desktop.isDesktopSupported()) Desktop.getDesktop() else null
+                                            val folder = file.parentFile
+                                            if (desktop != null && folder != null && desktop.isSupported(Desktop.Action.OPEN)) {
+                                                desktop.open(folder)
+                                                "Opened folder: ${folder.path}"
+                                            } else {
+                                                "Show in folder isn’t supported on this platform."
+                                            }
+                                        } catch (t: Throwable) {
+                                            "Couldn’t open folder: ${t.message}"
+                                        }
+                                    }
+                                    status = next
+                                    busy = false
+                                }
+                            }
+                        },
+                    ) { Text("Show in folder") }
+                    Button(
+                        enabled = !busy && lastSavedFile != null,
+                        onClick = {
+                            val file = lastSavedFile
+                            if (file != null) {
+                                clipboard.setText(AnnotatedString(file.path))
+                                status = "Copied path: ${file.path}"
+                            }
+                        },
+                    ) { Text("Copy output path") }
                 }
                 Text(status, style = MaterialTheme.typography.body2)
                 preview?.let {
