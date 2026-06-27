@@ -68,9 +68,10 @@ private class LastImage(val bytes: ByteArray, val label: String)
  * forces a demo string — so the window finally renders user-chosen text (the first real edit control).
  * S4d-147: a "Preview" button renders the current config through `runSaveFlow` to a repo-local temp file,
  * decodes the bytes (`DesktopImageDecoder`, generic JPEG/PNG), and shows the result on-screen — ending the
- * blind-edit loop. S4d-148: an "Apply degree" field edits the rotation via `WatermarkConfigEditor.updateDegree`
- * (parsed/coerced 0..360). Still no REACTIVE/live preview, color/gaps/alpha/tile controls, templates UI,
- * drag-drop, or share substitute in this slice.
+ * blind-edit loop. S4d-148: an "Apply degree" field edits rotation (`updateDegree`, 0..360). S4d-149: an
+ * "Apply color" field edits the text color (hex `#AARRGGBB`/`#RRGGBB`, via `WatermarkConfigEditor.updateTextColor`).
+ * Still no REACTIVE/live preview, gaps/alpha/tile/typeface/style controls, templates UI, drag-drop, or share
+ * substitute in this slice.
  */
 fun launchDesktopWindow() = application {
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
@@ -94,10 +95,13 @@ fun launchDesktopWindow() = application {
     var preview by remember { mutableStateOf<ImageBitmap?>(null) }
     // S4d-148: the watermark rotation degree being edited (string; parsed on "Apply degree"). Loaded on launch.
     var degreeText by remember { mutableStateOf("") }
+    // S4d-149: the watermark text COLOR being edited (hex string; parsed on "Apply color"). Loaded on launch.
+    var colorText by remember { mutableStateOf("") }
     LaunchedEffect(Unit) {
         outputPref = describePref(userConfigRepo.userPreferences.first())
         watermarkText = repo.waterMark.first().text
         degreeText = repo.waterMark.first().degree.toString()
+        colorText = "#%08X".format(repo.waterMark.first().textColor)
     }
 
     Window(onCloseRequest = ::exitApplication, title = "EasyWatermark — Desktop (S4d-121)") {
@@ -183,6 +187,55 @@ fun launchDesktopWindow() = application {
                     },
                 ) {
                     Text("Apply degree")
+                }
+                // S4d-149: the watermark TEXT COLOR input (hex). Accepts #RRGGBB / RRGGBB / #AARRGGBB /
+                // AARRGGBB; RGB-only uses opaque alpha 0xFF. Parsed on an explicit "Apply color" click
+                // (invalid → status only, no persist); persisted via WatermarkConfigEditor.updateTextColor;
+                // the field is normalized to #AARRGGBB on success. No auto-preview — click "Preview" to see it.
+                OutlinedTextField(
+                    value = colorText,
+                    onValueChange = { colorText = it },
+                    enabled = !busy,
+                    label = { Text("Text color (#AARRGGBB)") },
+                )
+                Button(
+                    enabled = !busy,
+                    onClick = {
+                        val raw = colorText.trim().removePrefix("#")
+                        // r1: reject any non-hex char (incl. a leading +/-, which toLongOrNull(16) WOULD
+                        // accept — e.g. "-FFFFF"/"+FFFFF" parse to valid Longs) BEFORE the length/parse, so
+                        // signed/garbage input never reaches updateTextColor.
+                        val isHex = raw.isNotEmpty() && raw.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }
+                        val parsedColor: Int? = when {
+                            !isHex -> null
+                            raw.length == 6 -> raw.toLongOrNull(16)?.let { (0xFF000000L or it).toInt() } // RRGGBB → opaque
+                            raw.length == 8 -> raw.toLongOrNull(16)?.toInt()                              // AARRGGBB
+                            else -> null
+                        }
+                        if (parsedColor == null) {
+                            // Invalid hex → short failure status; do NOT call the editor.
+                            status = "Invalid color: \"$colorText\" — use #RRGGBB or #AARRGGBB hex."
+                        } else {
+                            val normalized = "#%08X".format(parsedColor)
+                            scope.launch {
+                                busy = true
+                                val (next, ok) = withContext(Dispatchers.IO) {
+                                    try {
+                                        editor.updateTextColor(parsedColor)
+                                        "Color applied: $normalized. Click Preview to see it." to true
+                                    } catch (t: Throwable) {
+                                        "Failed: ${t.message}" to false
+                                    }
+                                }
+                                // Normalize the field to the stable #AARRGGBB display on a successful apply.
+                                if (ok) colorText = normalized
+                                status = next
+                                busy = false
+                            }
+                        }
+                    },
+                ) {
+                    Text("Apply color")
                 }
                 // S4d-130: choose the output preference (two presets) through the shared OutputPrefsEditor,
                 // persisted to the SAME store runSaveFlow reads — so the next sample/Open render uses it.
