@@ -1,5 +1,12 @@
 # Progress Log
 
+## 2026-06-28 — S4d-159/S4d-160 Desktop templates UI accepted
+
+- **S4d-159 (read-only decision, accepted; ACSP `20260628-052647...`):** chose a minimal Desktop templates UI over reactive/live preview. Evidence: Android `Template.content` is watermark text applied through `updateText`, Desktop already had `buildTemplateDatabase`, `TemplateRepository`, and `TemplateEditor`, while reactive preview would reverse the current manual Preview/Render contract.
+- **S4d-160 (implementation, accepted; commit `66f6e08 Add Desktop templates UI`):** added the minimal Templates section to `DesktopWindow.kt` only: one remembered Desktop template DB/repo/editor under `build/s4d160-desktop-templates`, `getAllTemplate().collectAsState(emptyList())`, **"Save current text as template"**, row display, **Use** (`WatermarkConfigEditor.updateText` + text-field sync), and **Delete**. Preview remains manual; no reactive preview, seed packaging, edit-in-place, Android/iOS/shared model/repo/dependency/golden, or 1:1 parity work occurred.
+- **Coordinator verification:** accepted after reviewing worker artifacts and the real diff, then rerunning `git diff --check`, `:desktopApp:compileKotlin`, `:desktopApp:run --args='--headless'`, and `./gradlew --stop` with `--max-workers=8`. Headless output stayed stable and the templates witness still proved add/list/delete in its own directory.
+- **Next:** Desktop functional product flow now covers picker/drop -> edit -> preview -> save/save-as -> share substitute -> templates. Remaining Desktop code-migration gaps include reactive preview/editor polish, template edit-in-place/default seeding if product-priority, batch, broader packaging/runtime proof, and final Android v2.10.0 screenshot/recording parity after release-grade migration.
+
 ## 2026-06-28 — S4d-145/158 Desktop window product-flow controls accepted
 
 - **S4d-145..S4d-155 (accepted):** widened the Desktop window in small one-file slices: manual text editing, preview output, degree, color, opacity, gaps, text size, tile mode, typeface/style controls, and scrolling so the growing control surface stays reachable.
