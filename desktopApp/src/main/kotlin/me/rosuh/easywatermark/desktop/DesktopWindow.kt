@@ -1,6 +1,7 @@
 package me.rosuh.easywatermark.desktop
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,7 +21,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.awtTransferable
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
@@ -42,6 +47,7 @@ import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopImageDecoder
 import java.awt.Desktop
 import java.awt.FileDialog
+import java.awt.datatransfer.DataFlavor
 import java.io.File
 
 /** Best-effort Open-dialog filename filter (honored on macOS; ignored on some platforms — harmless). */
@@ -49,6 +55,33 @@ private val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "webp", "bmp", "gif")
 
 /** Short label for the current output preference, e.g. "JPEG / 80". */
 private fun describePref(p: UserPreferences): String = "${p.outputFormat} / ${p.compressLevel}"
+
+/**
+ * S4d-158: drop-target file extraction. [hasFileList] is the cheap drag-over predicate (flavor only);
+ * [firstSupportedImageFile] does the real extraction on drop — reads the dropped file list and picks the
+ * first file whose extension is in [IMAGE_EXTENSIONS]. Both swallow AWT failures → false/null (soft-fail,
+ * never crash). The AWT file-list flavor is the desktop drag-drop interop; commonMain is untouched.
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+private fun hasFileList(event: DragAndDropEvent): Boolean = try {
+    event.awtTransferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)
+} catch (t: Throwable) {
+    false
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+private fun firstSupportedImageFile(event: DragAndDropEvent): File? = try {
+    val transferable = event.awtTransferable
+    if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+        @Suppress("UNCHECKED_CAST")
+        (transferable.getTransferData(DataFlavor.javaFileListFlavor) as? List<File>)
+            ?.firstOrNull { it.extension.lowercase() in IMAGE_EXTENSIONS }
+    } else {
+        null
+    }
+} catch (t: Throwable) {
+    null
+}
 
 /** Stable UI label for a [TextTypeface] — explicit map (no reflection / object-name dependency). */
 private fun typefaceLabelOf(t: TextTypeface): String = when (t) {
@@ -101,8 +134,10 @@ private class LastImage(val bytes: ByteArray, val label: String)
  * growing control surface + preview stay reachable on constrained window heights (control order/behavior
  * unchanged). S4d-157: a "share substitute" — "Show in folder" (guarded `java.awt.Desktop.open(parentFile)`)
  * + "Copy output path" (Compose `LocalClipboardManager`) acting on the last REAL saved output file (set by
- * the Render & Save / Save as… / Open image… success paths, NOT Preview). Still no REACTIVE/live preview,
- * templates UI, or drag-drop (S4d-158) in this slice.
+ * the Render & Save / Save as… / Open image… success paths, NOT Preview). S4d-158: dropping an image file
+ * onto the window loads it through the same Open-image save spine (`Modifier.dragAndDropTarget` + the AWT
+ * file-list flavor; updates `lastImage` + `lastSavedFile`; unsupported/empty/while-busy drops fail softly).
+ * Still no REACTIVE/live preview or templates UI in this slice.
  */
 fun launchDesktopWindow() = application {
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
@@ -162,13 +197,62 @@ fun launchDesktopWindow() = application {
         styleLabel = styleLabelOf(repo.waterMark.first().textStyle)
     }
 
+    // S4d-158: drop an image file onto the window to load it through the SAME save spine as "Open image…"
+    // (read off the UI thread → lastImage + lastSavedFile + status). onDrop runs on the Compose UI thread, so
+    // it reads/sets state directly and launches the heavy render on `scope`. A drop while busy or an
+    // unsupported/empty drop fails softly with a status (no crash). Remembered so the target identity is stable.
+    val dropTarget = remember {
+        object : DragAndDropTarget {
+            override fun onDrop(event: DragAndDropEvent): Boolean {
+                if (busy) {
+                    status = "Busy — wait for the current render before dropping another image."
+                    return false
+                }
+                val file = firstSupportedImageFile(event)
+                if (file == null) {
+                    status = "Unsupported drop — drop a single image file (${IMAGE_EXTENSIONS.joinToString(", ")})."
+                    return false
+                }
+                scope.launch {
+                    busy = true
+                    status = "Rendering ${file.name}…"
+                    var picked: LastImage? = null
+                    var savedFile: File? = null
+                    val next = withContext(Dispatchers.IO) {
+                        try {
+                            val bytes = file.readBytes()
+                            picked = LastImage(bytes, file.path)
+                            val o = DesktopWatermarkFlow.runSaveFlow(
+                                repo, editor, userConfigRepo, inputBytes = bytes, inputLabel = file.path,
+                            )
+                            // S4d-157: remember the real saved output for the share-substitute buttons.
+                            savedFile = File(o.outputPath)
+                            "Saved: ${o.outputPath}\n  ${o.format}, ${o.width}x${o.height}, ${o.outputByteCount} B\n" +
+                                "  input: ${o.inputLabel} (${o.inputByteCount} B)\n  config: ${o.configAfterEdit}"
+                        } catch (t: Throwable) {
+                            "Failed: ${t.message}"
+                        }
+                    }
+                    picked?.let { lastImage = it }
+                    savedFile?.let { lastSavedFile = it }
+                    status = next
+                    busy = false
+                }
+                return true
+            }
+        }
+    }
+
     Window(onCloseRequest = ::exitApplication, title = "EasyWatermark — Desktop (S4d-121)") {
         MaterialTheme {
             Column(
                 // S4d-155: vertical scroll so the growing single-column control surface stays reachable
                 // on constrained window heights. verticalScroll after fillMaxSize makes the column fill the
                 // viewport and scroll when its content is taller; padding stays inside (scrolls with content).
-                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                    // S4d-158: accept a dropped image file anywhere on the window content.
+                    .dragAndDropTarget(shouldStartDragAndDrop = { hasFileList(it) }, target = dropTarget)
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text("EasyWatermark — Desktop", style = MaterialTheme.typography.h6)
