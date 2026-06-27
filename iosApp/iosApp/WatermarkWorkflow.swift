@@ -106,10 +106,15 @@ final class WatermarkWorkflow: ObservableObject {
     @Published private(set) var watermarkTextStyleKey: Int32 = 0
 
     /// S4d-117: the persisted watermark mode (Text vs Image/icon), loaded from the shared
-    /// `WaterMarkRepository` via `watermarkConfigBridge.currentMarkMode()` at render time and retained here.
-    /// Image mode is reached by persisting an icon (`setIconFromBytes`, S4d-116) — there is no Swift toggle
-    /// in this slice (the icon picker is a later slice). Default `.text` keeps the current behavior.
+    /// `WaterMarkRepository` via `watermarkConfigBridge.currentMarkMode()` (at launch via
+    /// `loadWatermarkMarkMode()` and at render time) and retained here. Image mode is reached by selecting
+    /// an icon (`setWatermarkIcon` → `setIconFromBytes`, S4d-118/S4d-116). Default `.text`.
     @Published private(set) var watermarkMarkMode: WatermarkMode = .text
+
+    /// S4d-118: a **transient, in-memory** thumbnail of the most recently selected icon's bytes — a UI
+    /// indication only, NOT a durable Swift-side icon store (the durable bytes live in the app-private file
+    /// via `IosIconPersistence`). Nil until an icon is selected this session; not reconstructed on launch.
+    @Published private(set) var iconThumbnail: Data?
 
     /// S4d-102: the single retained iOS watermark-config bridge over the common `WaterMarkRepository`
     /// (the first off-Android consumer of the shared watermark editor). One instance per process
@@ -388,6 +393,33 @@ final class WatermarkWorkflow: ObservableObject {
             }
         } catch {
             state = .failure("Could not save watermark text style: \(error.localizedDescription)")
+        }
+    }
+
+    /// S4d-118: load the persisted watermark mode on launch (one-shot) so the UI can show Text/Image
+    /// accurately. A read error keeps the current value. (`render` also refreshes this at render time.)
+    func loadWatermarkMarkMode() async {
+        do {
+            watermarkMarkMode = try await watermarkConfigBridge.currentMarkMode()
+        } catch {
+            // keep the current default; a read failure must not break the editor
+        }
+    }
+
+    /// S4d-118: select an image-watermark icon from picked [data]. Persists the **bytes** through the shared
+    /// editor (`setIconFromBytes` → app-private file + `markMode` = Image; Swift passes bytes only and never
+    /// sees the persisted file path), updates the visible mode + transient thumbnail, then re-renders the
+    /// last source photo (if any) through the S4d-117 Image branch. A write failure surfaces as `.failure`.
+    func setWatermarkIcon(_ data: Data) async {
+        do {
+            try await watermarkConfigBridge.setIconFromBytes(bytes: data.toKotlinByteArray())
+            watermarkMarkMode = .image
+            iconThumbnail = data
+            if let image = lastImageData {
+                await render(imageData: image)
+            }
+        } catch {
+            state = .failure("Could not set the watermark icon: \(error.localizedDescription)")
         }
     }
 

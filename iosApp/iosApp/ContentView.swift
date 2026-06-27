@@ -14,6 +14,8 @@ import Shared
 struct ContentView: View {
     @StateObject private var workflow = WatermarkWorkflow()
     @State private var pickedItem: PhotosPickerItem?
+    /// S4d-118: the selected ICON for image-watermark mode (separate from the source photo above).
+    @State private var pickedIconItem: PhotosPickerItem?
     /// S4d-102: editable draft of the watermark text; applied to the shared `WaterMarkRepository`.
     @State private var draftText: String = ""
     /// S4d-103: editable draft of the watermark rotation degree; applied to the shared `WaterMarkRepository`.
@@ -38,6 +40,30 @@ struct ContentView: View {
             }
             .buttonStyle(.borderedProminent)
             .accessibilityIdentifier("pickPhotoButton")
+
+            // S4d-118: pick an ICON for image-watermark mode (separate from the source photo). Selecting an
+            // icon persists its bytes via `setIconFromBytes` (flips persisted mode → Image) and re-renders.
+            // Minimal affordance — not the final 1:1 editor. Image mode without a readable icon stays a loud
+            // `.failure` (S4d-117); it never silently renders text.
+            HStack(spacing: 8) {
+                PhotosPicker(selection: $pickedIconItem, matching: .images, photoLibrary: .shared()) {
+                    Label("Pick icon", systemImage: "seal")
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("pickIconButton")
+
+                Text("Mode: \(workflow.watermarkMarkMode == .image ? "Image" : "Text")")
+                    .font(.caption)
+                    .accessibilityIdentifier("watermarkModeLabel")
+
+                if let iconData = workflow.iconThumbnail, let iconImage = UIImage(data: iconData) {
+                    Image(uiImage: iconImage)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 32, height: 32)
+                        .accessibilityIdentifier("watermarkIconThumbnail")
+                }
+            }
 
             // S4d-102: edit the watermark text through the shared `WaterMarkRepository` +
             // `WatermarkConfigEditor` (persisted in an iOS DataStore). Minimal control — not the final
@@ -193,6 +219,12 @@ struct ContentView: View {
             guard let item = pickedItem else { return }
             await load(item)
         }
+        // S4d-118: when an icon is picked, load its bytes and hand them to the workflow (persists +
+        // flips mode → Image + re-renders). Cancels/restarts cleanly on reselection.
+        .task(id: pickedIconItem) {
+            guard let item = pickedIconItem else { return }
+            await loadIcon(item)
+        }
         // S4d-58 UI-test seam (DEBUG only): see `runUITestFixtureIfRequested`.
         .task { await runUITestFixtureIfRequested() }
         // S4d-82: one-shot read-only exercise of the retained iOS UserConfig prefs bridge on launch
@@ -216,6 +248,7 @@ struct ContentView: View {
             draftVGap = Double(workflow.watermarkVGap)
             await workflow.loadWatermarkTypeface()
             await workflow.loadWatermarkTextStyle()
+            await workflow.loadWatermarkMarkMode()
         }
     }
 
@@ -314,6 +347,21 @@ struct ContentView: View {
                 return
             }
             await workflow.render(imageData: data)
+        } catch {
+            workflow.reportFailure(error.localizedDescription)
+        }
+    }
+
+    /// S4d-118: load the picked ICON's encoded bytes and hand them to the workflow, which persists them via
+    /// `setIconFromBytes` (→ app-private file + mode = Image) and re-renders. Swift passes bytes only; it
+    /// never parses or persists the icon file path.
+    private func loadIcon(_ item: PhotosPickerItem) async {
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self) else {
+                workflow.reportFailure("no icon data")
+                return
+            }
+            await workflow.setWatermarkIcon(data)
         } catch {
             workflow.reportFailure(error.localizedDescription)
         }
