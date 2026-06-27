@@ -1,5 +1,12 @@
 # Progress Log
 
+## 2026-06-27 — S4d-108 iOS render default mismatch decision accepted
+
+- **S4d-108 (read-only decision pack, accepted):** mapped the remaining iOS render default mismatches after S4d-107. Key finding: `textSize`, `hGap`, and `vGap` are not renderer-capability gaps because `IosWatermarkRenderBridge.renderWatermarkedPng` already exposes those params; they are hardcoded at the Swift call site (`24.0`, `40`, `40`) while shared defaults are `14f`, `0`, `0`.
+- **Decision options:** Option A is the coordinator recommendation: split the visible alignment into S4d-109 `textSize` (`24 -> 14`) and S4d-110 gaps (`40/40 -> 0/0`). Option B is to deliberately keep the current iOS render values and document that choice until the later Android v2.10.0 parity phase. Option C is textSize only.
+- **Accepted boundaries:** `textStyle`, `textTypeface`, `iconUri`/`markMode`, and `enableBounds` are larger renderer-capability gaps, not simple field wiring. `offsetX/offsetY` are per-image `ImageInfo`, not `WaterMark` defaults. The existing iOS default text provider (`EasyWatermark 水印`) remains the accepted S4d-102 platform-text boundary.
+- **Coordinator review:** accepted the read-only package after checking artifacts, clean repo status at `9da981a`, source facts for defaults and Swift hardcoded values, and the no-build/no-git-mutation scope proof. No implementation was started from S4d-108 automatically.
+
 ## 2026-06-27 — S4d-106/S4d-107 iOS textColor alignment accepted
 
 - **S4d-106 (read-only readiness, accepted):** confirmed the simple default-preserving iOS editor fields were exhausted after text/degree/tileMode/alpha. `WaterMark.textColor` was selected as the next slice because it has a clear shared editor rule, but it is **not default-preserving**: the old Swift render path was hardcoded white while `WaterMark.default.textColor` is amber `#FFB800`.
