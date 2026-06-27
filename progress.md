@@ -1,5 +1,14 @@
 # Progress Log
 
+## 2026-06-28 — S4d-162/S4d-163 Desktop release hygiene + packaging proof accepted
+
+- **S4d-161 (read-only decision, accepted):** chose Desktop release-grade hygiene + a packaging proof over speculative UI widening (reactive preview, template edit-in-place, batch were deferred). Evidence: no Compose Desktop packaging task existed, and the window title still carried a dev marker.
+- **S4d-162 (implementation, accepted; commit `bb5e770f Polish Desktop release hygiene`, `DesktopWindow.kt` only):** the window title is now release-facing `EasyWatermark — Desktop` (dropped the `(S4d-121)` marker), and the Templates "Save current text" button is disabled when the watermark text is blank. Headless witnesses unchanged.
+- **S4d-163 (implementation, accepted; commit `ccc9f3f7 Add Desktop packaging proof`, `desktopApp/build.gradle.kts` only):** replaced the plain Gradle `application` plugin with the Compose Desktop `compose.desktop { application { mainClass; nativeDistributions { packageName = "EasyWatermark"; packageVersion = "1.0.0" } } }` DSL. `createDistributable`/`runDistributable`/`packageDistributionForCurrentOS` now exist; `:desktopApp:run --args='--headless'` still works (the Compose `run` forwards `--args`); `createDistributable` builds an unsigned `EasyWatermark.app` (native launcher + `Info.plist` + bundled JRE + app jars) under `desktopApp/build/compose/binaries/main/app/`.
+- **JDK caveat (recorded honestly):** `createDistributable` fails under the jenv/Homebrew OpenJDK (Compose Desktop's `checkRuntime` rejects Homebrew vendors — CMP #3107) and succeeds under the already-installed Amazon Corretto 17 (`/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home`). The accepted path is a supported packaging JDK; `compose.desktop.packaging.checkJdkVendor=false` was NOT used. `packageVersion = "1.0.0"` is a placeholder.
+- **Scope guard (no overclaim):** unsigned app-image proof only — no installer formats, signing/notarization, app icon, CI packaging gate, real product-version source, or Android v2.10.0 1:1 UI/UX parity.
+- **Next:** Desktop is functionally complete (picker/drop -> edit -> preview -> save/save-as -> share substitute -> templates) AND minimally packageable. Remaining gaps: packaging hardening (real version, installer formats, signing, app icon, CI gate), reactive preview/editor polish, template edit-in-place/default seeding, batch, and final Android v2.10.0 screenshot/recording parity after release-grade migration.
+
 ## 2026-06-28 — S4d-159/S4d-160 Desktop templates UI accepted
 
 - **S4d-159 (read-only decision, accepted; ACSP `20260628-052647...`):** chose a minimal Desktop templates UI over reactive/live preview. Evidence: Android `Template.content` is watermark text applied through `updateText`, Desktop already had `buildTemplateDatabase`, `TemplateRepository`, and `TemplateEditor`, while reactive preview would reverse the current manual Preview/Render contract.
