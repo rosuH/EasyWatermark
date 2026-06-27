@@ -3,6 +3,7 @@ package me.rosuh.easywatermark.data.datastore
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import okio.Path.Companion.toOkioPath
 import java.io.File
 
@@ -17,6 +18,21 @@ import java.io.File
 fun createUserConfigDataStore(
     dir: File = defaultDesktopDataDir(),
     name: String = UserConfigRepository.SP_NAME,
+): DataStore<Preferences> = createPreferencesDataStore {
+    dir.apply { mkdirs() }.resolve("$name.preferences_pb").toOkioPath()
+}
+
+/**
+ * S4d-120: Desktop (JVM) **watermark-config** DataStore creation, mirroring [createUserConfigDataStore]
+ * but keyed on [WaterMarkRepository.SP_NAME] — the Desktop analogue of the iOS `createWaterMarkDataStore`.
+ * It lets `:desktopApp` construct the common [WaterMarkRepository] over a real on-disk preferences store.
+ * Real public APIs only (`java.io.File` + the common okio-path factory) — no Android types, no `Context`,
+ * no migration. Caller owns single-instance-per-file semantics (DataStore forbids a second active store
+ * for the same file).
+ */
+fun createWaterMarkDataStore(
+    dir: File = defaultDesktopDataDir(),
+    name: String = WaterMarkRepository.SP_NAME,
 ): DataStore<Preferences> = createPreferencesDataStore {
     dir.apply { mkdirs() }.resolve("$name.preferences_pb").toOkioPath()
 }
