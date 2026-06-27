@@ -1,5 +1,13 @@
 # Progress Log
 
+## 2026-06-27 — S4d-109 iOS textSize alignment accepted
+
+- **S4d-109 (implementation, accepted):** wired `WaterMark.textSize` through `IosWatermarkConfigBridge.currentTextSize()/setTextSize(...)`, `WatermarkWorkflow.watermarkTextSize`, and the existing `IosWatermarkRenderBridge.renderWatermarkedPng(textSize:)` argument. The prior Swift hardcoded `24.0` render size is gone; fresh iOS renders now use the shared `WaterMark.default.textSize = 14f`.
+- **Visible alignment boundary:** this is explicitly **not default-preserving** and not final 1:1 UI/UX parity. It changes fresh-install iOS text from 24 to 14 (smaller/dense relative to the prior placeholder) to align with the shared/Android product default. Android renderer and goldens were untouched.
+- **UI and bridge proof:** Swift gained a minimal `Size: N` slider (`1...100`, commit-on-release) and launch loading for persisted text size. The iOS bridge roundtrip test pins default `14f`, `setTextSize(30f)`, and the read clamp after `setTextSize(0f) -> 1f`.
+- **Coordinator review:** accepted after reading ACSP result/verification/artifacts and the real diff, confirming only the four allowed files changed and no gaps/render-edge/Android/Desktop/build/docs/golden files were touched. Coordinator reran `git diff --check` and `./gradlew :shared:iosSimulatorArm64Test --max-workers=8 --console=plain`, then stopped Gradle daemons. Worker evidence also covered iOS `xcodebuild`, strict Android goldens 51/0, and debug+release APK.
+- **Next:** S4d-110 gaps alignment (`hGap/vGap` hardcoded `40/40` -> shared defaults `0/0`) is the remaining simple param-exists/default-hardcoded slice from S4d-108. Renderer-capability gaps (`textStyle`, `textTypeface`, `iconUri`/`markMode`, `enableBounds`) stay separate.
+
 ## 2026-06-27 — S4d-108 iOS render default mismatch decision accepted
 
 - **S4d-108 (read-only decision pack, accepted):** mapped the remaining iOS render default mismatches after S4d-107. Key finding: `textSize`, `hGap`, and `vGap` are not renderer-capability gaps because `IosWatermarkRenderBridge.renderWatermarkedPng` already exposes those params; they are hardcoded at the Swift call site (`24.0`, `40`, `40`) while shared defaults are `14f`, `0`, `0`.

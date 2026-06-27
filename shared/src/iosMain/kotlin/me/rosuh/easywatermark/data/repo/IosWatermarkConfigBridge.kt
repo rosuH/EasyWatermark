@@ -16,8 +16,9 @@ import me.rosuh.easywatermark.domain.WatermarkConfigEditor
  * Swift error rather than a fatal crash. Only value types cross to Swift — `String` (text), `Float`
  * (degree, S4d-103, clamped by `WatermarkConfigRules.clampDegree`), the `WatermarkTileMode` enum
  * (S4d-104; the iOS UI uses REPEAT/CLAMP only), the alpha byte/percent (S4d-105; read as the stored
- * 0..255 byte, written as a 0..100 percent via `WatermarkConfigRules.alphaPercentToByte`), and the ARGB
- * text color `Int` (S4d-107). All writes route through the shared editor.
+ * 0..255 byte, written as a 0..100 percent via `WatermarkConfigRules.alphaPercentToByte`), the ARGB
+ * text color `Int` (S4d-107), and the text size `Float` (S4d-109). All writes route through the shared
+ * editor.
  *
  * Single-instance-per-file: DataStore forbids a second active store for the same file, so a real iOS app
  * retains ONE bridge (e.g. in a Swift `ObservableObject`), exactly as [IosUserConfigBridge] is retained.
@@ -67,6 +68,15 @@ class IosWatermarkConfigBridge(private val repo: WaterMarkRepository) {
     /** S4d-107: persist the ARGB text [color] through the shared editor use-case. */
     suspend fun setTextColor(color: Int) {
         editor.updateTextColor(color)
+    }
+
+    /** S4d-109: one-shot snapshot of the persisted text size (default 14, read-clamped to >= 1). */
+    suspend fun currentTextSize(): Float = repo.waterMark.first().textSize
+
+    /** S4d-109: persist the text [size] through the shared editor use-case (clamped >= 0 on write, the
+     *  repo read clamps to >= 1). */
+    suspend fun setTextSize(size: Float) {
+        editor.updateTextSize(size)
     }
 }
 

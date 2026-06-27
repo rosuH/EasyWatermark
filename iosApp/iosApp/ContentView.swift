@@ -20,6 +20,8 @@ struct ContentView: View {
     @State private var draftDegree: Double = 315
     /// S4d-105: editable draft of the watermark opacity (0…1); applied to the shared `WaterMarkRepository`.
     @State private var draftAlpha: Double = 1.0
+    /// S4d-109: editable draft of the watermark text size; applied to the shared `WaterMarkRepository`.
+    @State private var draftTextSize: Double = 14
 
     private let linkWitness = WatermarkGeometry().diagonal(w: 100, h: 100)
 
@@ -103,6 +105,19 @@ struct ContentView: View {
             .pickerStyle(.segmented)
             .accessibilityIdentifier("watermarkColorPicker")
 
+            // S4d-109: edit the watermark text size through the same shared editor path. Commits on
+            // release (avoids re-rendering mid-drag). Range matches the shared MIN/MAX_TEXT_SIZE (1…100).
+            // Minimal control — not the final 1:1 editor.
+            VStack(spacing: 4) {
+                Text("Size: \(Int(draftTextSize))")
+                    .font(.caption)
+                    .accessibilityIdentifier("watermarkTextSizeLabel")
+                Slider(value: $draftTextSize, in: 1...100, step: 1) { editing in
+                    if !editing { Task { await workflow.setWatermarkTextSize(Float(draftTextSize)) } }
+                }
+                .accessibilityIdentifier("watermarkTextSizeSlider")
+            }
+
             statusView
 
             if let png = workflow.resultPNG, let uiImage = UIImage(data: png) {
@@ -145,6 +160,8 @@ struct ContentView: View {
             await workflow.loadWatermarkAlpha()
             draftAlpha = Double(workflow.watermarkAlpha)
             await workflow.loadWatermarkTextColor()
+            await workflow.loadWatermarkTextSize()
+            draftTextSize = Double(workflow.watermarkTextSize)
         }
     }
 

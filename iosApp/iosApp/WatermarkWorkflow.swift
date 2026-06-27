@@ -71,6 +71,12 @@ final class WatermarkWorkflow: ObservableObject {
     /// this shared/Android product default.
     @Published private(set) var watermarkColorArgb: Int32 = Int32(bitPattern: 0xFFFFB800)
 
+    /// S4d-109: watermark text size, sourced from the shared `WaterMarkRepository` via
+    /// `watermarkConfigBridge` and edited through `WatermarkConfigEditor.updateTextSize`. Default `14.0`
+    /// is `WaterMark.default.textSize` — an ALIGNMENT: the fresh-install iOS render changes from the
+    /// prior hardcoded `24` to this shared/Android product default (smaller text).
+    @Published private(set) var watermarkTextSize: Float = 14.0
+
     /// S4d-102: the single retained iOS watermark-config bridge over the common `WaterMarkRepository`
     /// (the first off-Android consumer of the shared watermark editor). One instance per process
     /// (DataStore forbids a second active store for the same file), mirroring `userConfigBridge`.
@@ -230,6 +236,31 @@ final class WatermarkWorkflow: ObservableObject {
         }
     }
 
+    /// S4d-109: load the persisted text size from the shared repo (one-shot). On an empty store this
+    /// yields `14` (`WaterMark.default.textSize`). A read error keeps the current value.
+    func loadWatermarkTextSize() async {
+        do {
+            // A Kotlin `suspend fun` returning a primitive bridges to Swift as a boxed `KotlinFloat`.
+            watermarkTextSize = try await watermarkConfigBridge.currentTextSize().floatValue
+        } catch {
+            // keep the current default; a read failure must not break the editor
+        }
+    }
+
+    /// S4d-109: persist a new text `size` through the shared `WatermarkConfigEditor`, then re-render the
+    /// last image (if any). A write failure surfaces as `.failure` without changing the persisted value.
+    func setWatermarkTextSize(_ size: Float) async {
+        do {
+            try await watermarkConfigBridge.setTextSize(size: size)
+            watermarkTextSize = size
+            if let data = lastImageData {
+                await render(imageData: data)
+            }
+        } catch {
+            state = .failure("Could not save watermark text size: \(error.localizedDescription)")
+        }
+    }
+
     /// Render `imageData` (the encoded bytes of a picked photo) into a watermarked PNG.
     func render(imageData: Data) async {
         state = .rendering
@@ -245,8 +276,9 @@ final class WatermarkWorkflow: ObservableObject {
         let tileMode = watermarkTileMode
         let alpha = watermarkAlpha
         let colorArgb = watermarkColorArgb
+        let textSize = watermarkTextSize
         let outcome = await Task.detached(priority: .userInitiated) {
-            WatermarkWorkflow.renderBlocking(imageData: imageData, text: text, degree: degree, tileMode: tileMode, alpha: alpha, colorArgb: colorArgb)
+            WatermarkWorkflow.renderBlocking(imageData: imageData, text: text, degree: degree, tileMode: tileMode, alpha: alpha, colorArgb: colorArgb, textSize: textSize)
         }.value
 
         switch outcome {
@@ -294,7 +326,7 @@ final class WatermarkWorkflow: ObservableObject {
     // boundary that wraps `bundledFontFamily → composeOverImage → encodePng`. Any font/decode/render/
     // encode failure arrives here as a Swift-catchable error (an `IosRenderException` bridged to
     // `NSError`) instead of a fatal Kotlin/Native crash, and is surfaced as `.failure(...)`.
-    private nonisolated static func renderBlocking(imageData: Data, text: String, degree: Float, tileMode: WatermarkTileMode, alpha: Float, colorArgb: Int32) -> Outcome {
+    private nonisolated static func renderBlocking(imageData: Data, text: String, degree: Float, tileMode: WatermarkTileMode, alpha: Float, colorArgb: Int32, textSize: Float) -> Outcome {
         do {
             // `composeOverImage` (inside the bridge) renders the text in the passed `colorArgb` ARGB
             // color (S4d-107); `tileMode` must be REPEAT or CLAMP (REPEAT is the product tiling). Kotlin
@@ -303,7 +335,7 @@ final class WatermarkWorkflow: ObservableObject {
                 imageBytes: imageData.toKotlinByteArray(),
                 text: text,
                 tileMode: tileMode,
-                textSize: 24.0,
+                textSize: textSize,
                 degree: degree,
                 hGapPercent: 40,
                 vGapPercent: 40,

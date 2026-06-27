@@ -10,7 +10,7 @@ import kotlin.test.assertEquals
 /**
  * S4d-102: iOS runtime proof that the common [WaterMarkRepository], behind the Swift-facing
  * [IosWatermarkConfigBridge], reads/writes the watermark text (S4d-102), rotation degree (S4d-103),
- * tile mode (S4d-104), alpha (S4d-105), and text color (S4d-107) through the iOS
+ * tile mode (S4d-104), alpha (S4d-105), text color (S4d-107), and text size (S4d-109) through the iOS
  * [createWaterMarkDataStore] (`NSDocumentDirectory`) store. RUNS on `iosSimulatorArm64Test`.
  *
  * A unique store name (NSUUID) is used so the initial read is the true default and the test does not
@@ -113,5 +113,22 @@ class IosWatermarkConfigBridgeTest {
         // Second value to prove repeated edits persist.
         b.setTextColor(0xFF000000.toInt())
         assertEquals(0xFF000000.toInt(), b.currentTextColor(), "text color must persist as black on re-edit")
+    }
+
+    @Test
+    fun bridge_watermark_textsize_roundtrip() = runBlocking {
+        val b = bridge("s4d109_size_" + NSUUID().UUIDString())
+
+        // Empty store -> WaterMark.default.textSize (14). NOTE: this is the value the iOS render now uses
+        // on a fresh install, replacing the prior hardcoded 24 (an alignment, not default-preserving).
+        assertEquals(14f, b.currentTextSize(), "default text size must be 14 (fresh-install render size)")
+
+        // Write through the shared editor use-case, then read back.
+        b.setTextSize(30f)
+        assertEquals(30f, b.currentTextSize(), "text size must persist after setTextSize")
+
+        // Clamp floor: a 0 write is stored 0 (editor coerceAtLeast(0f)) but the repo read clamps to >= 1.
+        b.setTextSize(0f)
+        assertEquals(1f, b.currentTextSize(), "text size read must clamp to the 1 floor (MIN_TEXT_SIZE)")
     }
 }
