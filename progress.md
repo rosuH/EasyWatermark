@@ -1,11 +1,18 @@
 # Progress Log
 
+## 2026-06-27 — S4d-114 iOS iconUri/markMode readiness accepted
+
+- **S4d-114 (read-only decision pack, accepted; ACSP `20260627-162247...`):** mapped the iOS image-watermark mini-epic after the text-field lane closed in S4d-113. CommonMain already has `WaterMark.iconUri: MediaRef`, `WaterMark.markMode: WatermarkMode`, repo `updateIcon` (sets mode=Image + icon), and `WatermarkConfigEditor.updateIcon`; there is no `updateMode`.
+- **Decision:** iOS icon support is not a one-field wire-up. `PhotosPickerItem` only yields transient `Data`, so `MediaRef` is not enough as a durable iOS identifier. Accepted persistence direction for a later slice is Option A: copy icon bytes into app-private `NSDocumentDirectory` and persist `MediaRef(path)`.
+- **Next:** S4d-115 should be Kotlin-only render foundation: add iOS icon cell/composition path by reusing commonMain `composeIconCell` and iosMain `IosImageDecoder`, proven by `iosSimulatorArm64Test`. No Swift UI, picker, persistence, markMode workflow branch, Android/Desktop, goldens, or 1:1 parity.
+- **Coordinator review:** accepted after reading all artifacts and source-fact checks (`updateMode` absent; iOS icon/markMode refs absent; `composeIconCell` and `IosImageDecoder` present). Repo stayed at `4b0f24f` with a clean worktree; S4d-114 moved to `done/`; heartbeat deleted.
+
 ## 2026-06-27 — S4d-113 iOS textStyle honoring accepted
 
 - **S4d-113 (implementation, accepted; ACSP `20260627-155702...`; commit `8e42680 Honor iOS watermark text style`):** iOS now honors persisted `WaterMark.textStyle`. `IosWatermarkRenderer.renderTextCell` accepts `TextPaintStyle` and maps `Fill` to the default Compose fill draw style and `Stroke` to `DrawStyle.Stroke`; `IosWatermarkRenderBridge.renderWatermarkedPng` forwards the value; `IosWatermarkConfigBridge` adds `currentTextStyle()`/`setTextStyle()` through `WatermarkConfigEditor.updateTextStyle`; `WatermarkWorkflow` stores the persisted storage-id key, reconstructs the Kotlin sealed object at the render edge, and re-renders after edits; `ContentView` adds a minimal Fill/Stroke Picker.
 - **Verification:** worker evidence covered `:shared:iosSimulatorArm64Test`, iosApp simulator `xcodebuild`, strict Android goldens, and daemon stop. Coordinator reviewed the real 6-file diff and all artifacts, reran `git diff --check`, `./gradlew :shared:iosSimulatorArm64Test --rerun-tasks --max-workers=8 --console=plain`, `xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build`, `WATERMARK_GOLDEN_STRICT=true ./gradlew :app:testDebugUnitTest --rerun-tasks --max-workers=8 --console=plain`, and `./gradlew --stop --max-workers=8 --console=plain`; all passed. No Android/Desktop/commonMain renderer/build/dependency/golden/docs files were touched by the implementation slice.
 - **Boundary:** default `Fill` preserves the prior iOS regular-fill output; `Stroke` is Compose/Skiko hairline/perceptual honoring, **not** Android native `Paint.Style.STROKE` byte parity. This completes the small text-field iOS editor/render lane after S4d-112; it is still release-migration proof, not final Android v2.10.0 1:1 UI/UX parity.
-- **Next:** S4d-114 should be a read-only `iconUri`/`markMode` readiness/decision pack before implementation, because image-watermark support spans icon pick, icon bytes persistence, decode, a text/image render branch, and UI. `enableBounds` remains deferred.
+- **Next:** completed by S4d-114 (`iconUri`/`markMode` readiness accepted). S4d-115 should implement only the Kotlin-side iOS icon render foundation; `enableBounds` remains deferred.
 
 ## 2026-06-27 — S4d-110 iOS h/v gap alignment accepted
 
