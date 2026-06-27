@@ -141,6 +141,19 @@ class IosWatermarkConfigBridge(private val repo: WaterMarkRepository) {
         editor.updateIcon(MediaRef(path))
         IosIconPersistence.deleteIfOwned(previousRef.value)
     }
+
+    /**
+     * S4d-117: read the **bytes** of the currently persisted icon (image-watermark mode), or `null` when no
+     * icon is set ([MediaRef.Empty]). The persisted [MediaRef] path is resolved via
+     * [IosIconPersistence.readIconBytes] **inside Kotlin** — Swift never sees or parses the file path; the
+     * render workflow gets bytes only. A non-empty ref whose file is missing/unreadable **throws** (loud),
+     * so the caller surfaces a failure instead of silently rendering text while persisted mode is Image.
+     */
+    suspend fun currentIconBytes(): ByteArray? {
+        val ref = repo.waterMark.first().iconUri
+        if (ref.isEmpty()) return null
+        return IosIconPersistence.readIconBytes(ref)
+    }
 }
 
 /** Default watermark text on a fresh iOS store — matches the prior hardcoded Swift constant. */

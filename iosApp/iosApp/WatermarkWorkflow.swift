@@ -105,6 +105,12 @@ final class WatermarkWorkflow: ObservableObject {
     /// state stays a plain `Int32`.
     @Published private(set) var watermarkTextStyleKey: Int32 = 0
 
+    /// S4d-117: the persisted watermark mode (Text vs Image/icon), loaded from the shared
+    /// `WaterMarkRepository` via `watermarkConfigBridge.currentMarkMode()` at render time and retained here.
+    /// Image mode is reached by persisting an icon (`setIconFromBytes`, S4d-116) — there is no Swift toggle
+    /// in this slice (the icon picker is a later slice). Default `.text` keeps the current behavior.
+    @Published private(set) var watermarkMarkMode: WatermarkMode = .text
+
     /// S4d-102: the single retained iOS watermark-config bridge over the common `WaterMarkRepository`
     /// (the first off-Android consumer of the shared watermark editor). One instance per process
     /// (DataStore forbids a second active store for the same file), mirroring `userConfigBridge`.
@@ -405,8 +411,43 @@ final class WatermarkWorkflow: ObservableObject {
         let vGap = watermarkVGap
         let typefaceKey = watermarkTypefaceKey
         let textStyleKey = watermarkTextStyleKey
+
+        // S4d-117: read the persisted watermark mode at render time and retain it. Text mode keeps the
+        // existing path; Image mode renders the persisted icon. A mode-read failure falls back to text
+        // (the safe existing behavior); it must not break rendering.
+        let mode: WatermarkMode
+        do {
+            mode = try await watermarkConfigBridge.currentMarkMode()
+        } catch {
+            mode = .text
+        }
+        watermarkMarkMode = mode
+
+        // Image mode: fetch the persisted icon bytes up front (Swift never sees the file path). Fail LOUD —
+        // never silently render text when the persisted mode is Image: a read error or a missing/empty icon
+        // becomes a user-visible `.failure`.
+        var iconData: Data? = nil
+        if mode == .image {
+            do {
+                if let bytes = try await watermarkConfigBridge.currentIconBytes() {
+                    iconData = bytes.toData()
+                }
+            } catch {
+                state = .failure("Could not read the saved icon: \(error.localizedDescription)")
+                return
+            }
+            guard iconData != nil else {
+                state = .failure("Image watermark mode is set but no icon has been selected.")
+                return
+            }
+        }
+
         let outcome = await Task.detached(priority: .userInitiated) {
-            WatermarkWorkflow.renderBlocking(imageData: imageData, text: text, degree: degree, tileMode: tileMode, alpha: alpha, colorArgb: colorArgb, textSize: textSize, hGap: hGap, vGap: vGap, typefaceKey: typefaceKey, textStyleKey: textStyleKey)
+            if mode == .image, let iconData {
+                WatermarkWorkflow.renderIconBlocking(imageData: imageData, iconData: iconData, tileMode: tileMode, textSize: textSize, degree: degree, hGap: hGap, vGap: vGap, alpha: alpha)
+            } else {
+                WatermarkWorkflow.renderBlocking(imageData: imageData, text: text, degree: degree, tileMode: tileMode, alpha: alpha, colorArgb: colorArgb, textSize: textSize, hGap: hGap, vGap: vGap, typefaceKey: typefaceKey, textStyleKey: textStyleKey)
+            }
         }.value
 
         switch outcome {
@@ -478,6 +519,35 @@ final class WatermarkWorkflow: ObservableObject {
                 textStyle: TextPaintStyle.companion.obtainSealedClass(key: textStyleKey),
                 latinFirst: true,
                 bundle: Bundle.main
+            )
+            return .success(rendered.png.toData(), Int(rendered.width), Int(rendered.height))
+        } catch {
+            return .failure(describe(error))
+        }
+    }
+
+    /// S4d-117: the Image-mode analogue of `renderBlocking` — watermarks the photo with the persisted icon
+    /// bytes via `IosWatermarkRenderBridge.renderIconWatermarkedPng`. `nonisolated` so it runs in the
+    /// detached task off the main actor; only `Data`/`Int`/`Float` and the `tileMode` enum cross in (same
+    /// boundary as `renderBlocking`). The bridge wraps any decode/render/encode failure as an
+    /// `IosRenderException` (RENDER/ENCODE), surfaced here as `.failure`.
+    private nonisolated static func renderIconBlocking(imageData: Data, iconData: Data, tileMode: WatermarkTileMode, textSize: Float, degree: Float, hGap: Int32, vGap: Int32, alpha: Float) -> Outcome {
+        do {
+            // `composeIconOverImage` (inside the bridge) decodes the background + icon, renders the icon
+            // cell at `scaleRatio = textSize / 14f` (computed in Kotlin), and tiles it. Image watermarks
+            // carry no text/color/typeface/style. Kotlin default params don't generate Swift overloads, so
+            // every argument is passed explicitly.
+            let rendered = try IosWatermarkRenderBridge.shared.renderIconWatermarkedPng(
+                imageBytes: imageData.toKotlinByteArray(),
+                iconBytes: iconData.toKotlinByteArray(),
+                tileMode: tileMode,
+                textSize: textSize,
+                degree: degree,
+                hGapPercent: hGap,
+                vGapPercent: vGap,
+                offsetX: 0.5,
+                offsetY: 0.5,
+                alpha: alpha
             )
             return .success(rendered.png.toData(), Int(rendered.width), Int(rendered.height))
         } catch {

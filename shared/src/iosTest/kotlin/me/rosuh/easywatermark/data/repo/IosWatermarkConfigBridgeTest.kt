@@ -15,6 +15,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -323,5 +324,24 @@ class IosWatermarkConfigBridgeTest {
             NSFileManager.defaultManager.fileExistsAtPath(ownedPath),
             "deleteIfOwned must remove a genuinely owned file",
         )
+    }
+
+    /**
+     * S4d-117: the render workflow reads the persisted icon as **bytes** through the bridge (the file path
+     * never crosses to Swift). Null when no icon is set; the exact persisted bytes after `setIconFromBytes`.
+     */
+    @Test
+    fun bridge_currentIconBytes_reads_persisted_bytes() = runBlocking {
+        val b = bridge("s4d117_iconbytes_" + NSUUID().UUIDString())
+
+        // No icon set -> null (Swift then surfaces a failure in Image mode rather than rendering text).
+        assertNull(b.currentIconBytes(), "currentIconBytes must be null when no icon is persisted")
+
+        // Persist icon bytes -> currentIconBytes returns exactly those bytes (mode also flips to Image).
+        val bytes = byteArrayOf(10, 20, 30, 40, 50, 60)
+        b.setIconFromBytes(bytes)
+        assertEquals(WatermarkMode.Image, b.currentMarkMode(), "mode must be Image after setIconFromBytes")
+        val read = b.currentIconBytes()
+        assertTrue(read != null && read.contentEquals(bytes), "currentIconBytes must return the persisted icon bytes")
     }
 }

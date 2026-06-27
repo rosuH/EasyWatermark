@@ -104,6 +104,60 @@ object IosWatermarkRenderBridge {
 
         return IosRenderedPng(png = png, width = composed.width, height = composed.height)
     }
+
+    /**
+     * S4d-117: the **icon (image-watermark) variant** of [renderWatermarkedPng]. Watermarks [imageBytes]
+     * with the persisted icon [iconBytes] via the S4d-115 [IosWatermarkRenderer.composeIconOverImage]
+     * (decode background + icon → render the icon cell → compose), then Skia-encodes to PNG. There is **no
+     * FONT stage** (image watermarks have no text). A decode/render failure is rethrown as
+     * [IosRenderException]`(RENDER, …)` and an encode failure as `(ENCODE, …)` — Swift-catchable, never a
+     * raw Kotlin/Native crash.
+     *
+     * Icon scale follows the renderer contract: `scaleRatio = textSize / ICON_SCALE_REFERENCE_TEXT_SIZE`
+     * (14f ⇒ 1×) is computed **here** from [textSize], so the 14f reference constant stays in Kotlin and
+     * Swift passes only the persisted `WaterMark.textSize`. [tileMode] must be REPEAT or CLAMP. iOS icon
+     * rendering is **perceptual, not byte-parity** with Android `buildIconShader` (S4d-8).
+     */
+    @Throws(IosRenderException::class)
+    fun renderIconWatermarkedPng(
+        imageBytes: ByteArray,
+        iconBytes: ByteArray,
+        tileMode: WatermarkTileMode = WatermarkTileMode.REPEAT,
+        textSize: Float = 24f,
+        degree: Float = 315f,
+        hGapPercent: Int = 40,
+        vGapPercent: Int = 40,
+        offsetX: Float = 0.5f,
+        offsetY: Float = 0.5f,
+        alpha: Float = 1f,
+    ): IosRenderedPng {
+        val composed: ImageBitmap = try {
+            IosWatermarkRenderer.composeIconOverImage(
+                imageBytes = imageBytes,
+                iconBytes = iconBytes,
+                tileMode = tileMode,
+                degree = degree,
+                hGapPercent = hGapPercent,
+                vGapPercent = vGapPercent,
+                offsetX = offsetX,
+                offsetY = offsetY,
+                scaleRatio = textSize / WatermarkCellComposer.ICON_SCALE_REFERENCE_TEXT_SIZE,
+                alpha = alpha,
+            )
+        } catch (t: Throwable) {
+            // RENDER covers decode (background + icon via IosImageDecoder, inside composeIconOverImage),
+            // icon-cell rasterization, tile-mode validation, and composition.
+            throw IosRenderException(IosRenderStage.RENDER, t.message ?: "icon watermark render failed", t)
+        }
+
+        val png: ByteArray = try {
+            IosWatermarkRenderer.encodePng(composed)
+        } catch (t: Throwable) {
+            throw IosRenderException(IosRenderStage.ENCODE, t.message ?: "PNG encode failed", t)
+        }
+
+        return IosRenderedPng(png = png, width = composed.width, height = composed.height)
+    }
 }
 
 /** The render-pipeline stage that failed — tags an [IosRenderException] for diagnostics/UI. */
