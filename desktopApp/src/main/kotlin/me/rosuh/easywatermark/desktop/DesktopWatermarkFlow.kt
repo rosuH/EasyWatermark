@@ -5,7 +5,6 @@ import me.rosuh.easywatermark.data.datastore.createUserConfigDataStore
 import me.rosuh.easywatermark.data.datastore.createWaterMarkDataStore
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.WaterMark
-import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
@@ -28,11 +27,14 @@ import java.io.File
  * store yields the shared default `UserPreferences.DEFAULT == (JPEG, 80)` — matching Android, no
  * Desktop-only PNG default) and passed to the composer; the output filename extension follows the format.
  *
- * S4d-134: [runSaveFlow] now honors the persisted [WatermarkMode]. **Image** mode renders the persisted
- * `WaterMark.iconUri` (a Desktop file path) through [DesktopWatermarkComposer.composeIconOverRealImage]
- * and does NOT apply the demo text edit (which would reset the mode back to Text); **Text** mode keeps the
- * existing demo-edit + text path. A missing/empty/unreadable icon fails loudly (no silent Text fallback).
- * Still out of scope: the window icon picker (S4d-135).
+ * S4d-134: [runSaveFlow] honors the persisted [WatermarkMode]. **Image** mode renders the persisted
+ * `WaterMark.iconUri` (a Desktop file path) through [DesktopWatermarkComposer.composeIconOverRealImage];
+ * a missing/empty/unreadable icon fails loudly (no silent Text fallback).
+ *
+ * S4d-145: [runSaveFlow] renders the **persisted** `WaterMark` as-is for BOTH modes — it no longer forces a
+ * demo text/degree for Text mode. The Desktop window's "Apply text" field sets the text via
+ * `WatermarkConfigEditor.updateText`, and the `--headless` witness sets its demo text/degree itself
+ * (`Main.kt`) so its output stays deterministic. The `editor` param is retained for call-site stability.
  */
 object DesktopWatermarkFlow {
 
@@ -106,17 +108,13 @@ object DesktopWatermarkFlow {
         }
         val prefs = userConfigRepo.userPreferences.first() // empty store -> (JPEG, 80) (shared default)
         val initial = repo.waterMark.first()
-        // S4d-134: branch on the PERSISTED watermark mode.
-        //  - Text mode keeps the existing demo edit (updateText resets KEY_MODE to Text — harmless here).
-        //  - Image mode renders the persisted config AS-IS and must NOT call updateText, which would reset
-        //    KEY_MODE back to Text and silently erase the icon choice (the root cause this slice fixes).
-        val wm: WaterMark = if (initial.markMode == WatermarkMode.Image) {
-            initial
-        } else {
-            editor.updateText("请勿转载 DO NOT REDISTRIBUTE")
-            editor.updateDegree(330f)
-            repo.waterMark.first()
-        }
+        // S4d-145: render the PERSISTED WaterMark as-is for BOTH modes — no forced demo edit. Callers set
+        // the config first: the Desktop window's text field via WatermarkConfigEditor.updateText, and the
+        // headless witness sets demo text/degree before calling runSaveFlow (Main.kt). (S4d-134's Image
+        // branch already rendered the persisted config as-is; Text mode now matches it, so the window can
+        // finally render user-chosen text.) The `editor` param is retained for call-site stability — callers
+        // still hold one for their own edits — so the existing call sites are unchanged.
+        val wm: WaterMark = initial
         // S4d-139: the PURE render decision is the testable DesktopSaveDecision.renderPlan (Text vs Icon,
         // with the blank-icon loud-fail). The icon FILE-existence check + bytes read + composer calls stay
         // here (IO). Behavior is unchanged vs the prior inline branch.

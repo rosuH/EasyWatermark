@@ -149,6 +149,10 @@ private fun runHeadless(args: Array<String>) {
     val saveFlowUserConfig = DesktopWatermarkFlow.buildUserConfigRepository()
     println("Desktop headless config-driven save flow (S4d-120):")
     val outcome = runBlocking {
+        // S4d-145: the demo text/degree now live in the witness — runSaveFlow no longer forces them (so the
+        // window can render user-set text), so set them here to keep --headless output deterministic.
+        configEditor.updateText("请勿转载 DO NOT REDISTRIBUTE")
+        configEditor.updateDegree(330f)
         DesktopWatermarkFlow.runSaveFlow(waterMarkRepo, configEditor, saveFlowUserConfig, inputBytes, inputLabel, outputFile)
     }
     println("  config (initial): ${outcome.configInitial}")

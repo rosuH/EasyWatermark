@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -57,8 +58,10 @@ private class LastImage(val bytes: ByteArray, val label: String)
  * "Open image…" selection (bytes + label), so "Render & Save sample" composites over that real photo
  * instead of the fixture (null → fixture, as before). S4d-140: a "Save as…" button opens a native AWT
  * SAVE dialog and passes the chosen path as `runSaveFlow(outputFile = …)`, so saves can land outside the
- * fixed `build/` default (same render decision; destination-only). Still no drag-drop / preview-image /
- * templates / share substitute in this slice.
+ * fixed `build/` default (same render decision; destination-only). S4d-145: a "Watermark text" field +
+ * "Apply text" button persist user text via `WatermarkConfigEditor.updateText`, and `runSaveFlow` no longer
+ * forces a demo string — so the window finally renders user-chosen text (the first real edit control). Still
+ * no live preview / color-gaps-alpha controls / templates UI / drag-drop / share substitute in this slice.
  */
 fun launchDesktopWindow() = application {
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
@@ -76,7 +79,12 @@ fun launchDesktopWindow() = application {
     var lastImage by remember { mutableStateOf<LastImage?>(null) }
     // S4d-130: the current/effective output preference, loaded on launch + refreshed after each preset save.
     var outputPref by remember { mutableStateOf("loading…") }
-    LaunchedEffect(Unit) { outputPref = describePref(userConfigRepo.userPreferences.first()) }
+    // S4d-145: the watermark text being edited; loaded from the persisted config on launch, persisted on Apply.
+    var watermarkText by remember { mutableStateOf("") }
+    LaunchedEffect(Unit) {
+        outputPref = describePref(userConfigRepo.userPreferences.first())
+        watermarkText = repo.waterMark.first().text
+    }
 
     Window(onCloseRequest = ::exitApplication, title = "EasyWatermark — Desktop (S4d-121)") {
         MaterialTheme {
@@ -91,6 +99,37 @@ fun launchDesktopWindow() = application {
                         "Pick an icon to switch to Image mode.",
                     style = MaterialTheme.typography.body2,
                 )
+                // S4d-145: the watermark TEXT input — the first real Desktop edit control. Persisted via
+                // WatermarkConfigEditor.updateText on an explicit "Apply text" click (NOT per keystroke);
+                // updateText flips persisted mode to Text, so the next Render/Open-image save renders this
+                // text (runSaveFlow no longer forces a demo string). Initialized from the persisted config.
+                OutlinedTextField(
+                    value = watermarkText,
+                    onValueChange = { watermarkText = it },
+                    enabled = !busy,
+                    label = { Text("Watermark text") },
+                )
+                Button(
+                    enabled = !busy,
+                    onClick = {
+                        scope.launch {
+                            busy = true
+                            val applied = watermarkText
+                            val next = withContext(Dispatchers.IO) {
+                                try {
+                                    editor.updateText(applied)
+                                    "Watermark text applied (Text mode). Next render uses: \"$applied\""
+                                } catch (t: Throwable) {
+                                    "Failed: ${t.message}"
+                                }
+                            }
+                            status = next
+                            busy = false
+                        }
+                    },
+                ) {
+                    Text("Apply text")
+                }
                 // S4d-130: choose the output preference (two presets) through the shared OutputPrefsEditor,
                 // persisted to the SAME store runSaveFlow reads — so the next sample/Open render uses it.
                 Text("Output preference: $outputPref", style = MaterialTheme.typography.body2)
