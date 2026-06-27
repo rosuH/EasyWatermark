@@ -1,5 +1,13 @@
 # Progress Log
 
+## 2026-06-27 — S4d-115 iOS icon render path accepted
+
+- **S4d-115 (implementation, accepted; ACSP `20260627-163630...`; commit `d8e71bb Add iOS icon render path`):** added the Kotlin-only iOS icon render foundation in `IosWatermarkRenderer`: `renderIconCell(...)` wraps commonMain `WatermarkCellComposer.composeIconCell`, and `composeIconOverImage(...)` decodes background+icon bytes via `IosImageDecoder`, renders an icon cell, then composes through `composeOverBackground`.
+- **Scope:** exactly two allowed files changed (`shared/src/iosMain/.../IosWatermarkRenderer.kt`, `shared/src/iosTest/.../IosWatermarkRendererTest.kt`), additive only. No Swift `WatermarkWorkflow`/`ContentView`, no `IosWatermarkRenderBridge`, no picker, no persistence/file IO, no `markMode` workflow, no Android/Desktop/commonMain signature/build/dependency/docs/golden changes.
+- **Alpha/render boundary:** iOS renders the icon cell opaque and applies watermark alpha once at composition, mirroring the text `composeOverImage` path. This deliberately does not byte-match Android's native icon path, which bakes alpha into the cell and reuses the same alpha-bearing paint in `compose`; iOS icon output is perceptual Skiko honoring, not Android `Canvas.drawBitmap` byte parity.
+- **Verification:** worker ran `:shared:iosSimulatorArm64Test` (new icon tests in `IosWatermarkRendererTest`, 7/0), strict Android goldens (`WATERMARK_GOLDEN_STRICT=true :app:testDebugUnitTest`, 51/0), and stopped Gradle daemons. Coordinator reviewed artifacts + real diff, reran `git diff --check`, `./gradlew :shared:iosSimulatorArm64Test --max-workers=8 --console=plain`, `WATERMARK_GOLDEN_STRICT=true ./gradlew :app:testDebugUnitTest --rerun-tasks --max-workers=8 --console=plain`, then `./gradlew --stop --max-workers=8 --console=plain`; all passed. Session moved to `done/`; bounded poll deleted.
+- **Next:** S4d-116 should handle iOS icon-byte persistence (Option A from S4d-114): copy picked icon bytes to an app-private `NSDocumentDirectory` file and persist `MediaRef(path)` before any Swift `markMode` render branch or picker UI flips users into Image mode.
+
 ## 2026-06-27 — S4d-114 iOS iconUri/markMode readiness accepted
 
 - **S4d-114 (read-only decision pack, accepted; ACSP `20260627-162247...`):** mapped the iOS image-watermark mini-epic after the text-field lane closed in S4d-113. CommonMain already has `WaterMark.iconUri: MediaRef`, `WaterMark.markMode: WatermarkMode`, repo `updateIcon` (sets mode=Image + icon), and `WatermarkConfigEditor.updateIcon`; there is no `updateMode`.
