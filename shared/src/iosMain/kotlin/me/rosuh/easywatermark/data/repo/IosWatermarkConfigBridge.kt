@@ -2,6 +2,7 @@ package me.rosuh.easywatermark.data.repo
 
 import kotlinx.coroutines.flow.first
 import me.rosuh.easywatermark.data.datastore.createWaterMarkDataStore
+import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 
@@ -17,8 +18,8 @@ import me.rosuh.easywatermark.domain.WatermarkConfigEditor
  * (degree, S4d-103, clamped by `WatermarkConfigRules.clampDegree`), the `WatermarkTileMode` enum
  * (S4d-104; the iOS UI uses REPEAT/CLAMP only), the alpha byte/percent (S4d-105; read as the stored
  * 0..255 byte, written as a 0..100 percent via `WatermarkConfigRules.alphaPercentToByte`), the ARGB
- * text color `Int` (S4d-107), the text size `Float` (S4d-109), and the horizontal/vertical gap percents
- * `Int` (S4d-110). All writes route through the shared editor.
+ * text color `Int` (S4d-107), the text size `Float` (S4d-109), the horizontal/vertical gap percents
+ * `Int` (S4d-110), and the `TextTypeface` enum (S4d-112). All writes route through the shared editor.
  *
  * Single-instance-per-file: DataStore forbids a second active store for the same file, so a real iOS app
  * retains ONE bridge (e.g. in a Swift `ObservableObject`), exactly as [IosUserConfigBridge] is retained.
@@ -93,6 +94,14 @@ class IosWatermarkConfigBridge(private val repo: WaterMarkRepository) {
     /** S4d-110: persist the vertical [gap] percent through the shared editor (clamped 0..500). */
     suspend fun setVGap(gap: Int) {
         editor.updateVertical(gap)
+    }
+
+    /** S4d-112: one-shot snapshot of the persisted text typeface (default Normal). */
+    suspend fun currentTextTypeface(): TextTypeface = repo.waterMark.first().textTypeface
+
+    /** S4d-112: persist the text [typeface] through the shared editor use-case. */
+    suspend fun setTextTypeface(typeface: TextTypeface) {
+        editor.updateTextTypeface(typeface)
     }
 }
 

@@ -137,6 +137,22 @@ struct ContentView: View {
                 .accessibilityIdentifier("watermarkVGapSlider")
             }
 
+            // S4d-112: pick the text typeface through the same shared editor path. The tags are the
+            // storage-id keys (0=Normal,1=Italic,2=Bold,3=BoldItalic). Bound straight to the workflow (its
+            // `set` persists + re-renders), so there is no spurious launch write. Default Normal preserves
+            // the current output; bold/italic are Compose synthetic (perceptual, not 1:1 with Android).
+            Picker("Typeface", selection: Binding(
+                get: { workflow.watermarkTypefaceKey },
+                set: { newKey in Task { await workflow.setWatermarkTypeface(newKey) } }
+            )) {
+                Text("Normal").tag(Int32(0))
+                Text("Italic").tag(Int32(1))
+                Text("Bold").tag(Int32(2))
+                Text("BoldItalic").tag(Int32(3))
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("watermarkTypefacePicker")
+
             statusView
 
             if let png = workflow.resultPNG, let uiImage = UIImage(data: png) {
@@ -184,6 +200,7 @@ struct ContentView: View {
             await workflow.loadWatermarkGaps()
             draftHGap = Double(workflow.watermarkHGap)
             draftVGap = Double(workflow.watermarkVGap)
+            await workflow.loadWatermarkTypeface()
         }
     }
 

@@ -1,11 +1,15 @@
 package me.rosuh.easywatermark.data.repo
 
+import androidx.compose.ui.graphics.toPixelMap
 import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.datastore.createWaterMarkDataStore
+import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
+import me.rosuh.easywatermark.render.IosWatermarkRenderer
 import platform.Foundation.NSUUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * S4d-102: iOS runtime proof that the common [WaterMarkRepository], behind the Swift-facing
@@ -153,5 +157,35 @@ class IosWatermarkConfigBridgeTest {
         assertEquals(0, b.currentHGap(), "hGap must clamp negative to 0")
         b.setVGap(600)
         assertEquals(500, b.currentVGap(), "vGap must clamp over-max to 500")
+    }
+
+    @Test
+    fun bridge_watermark_typeface_roundtrip() = runBlocking {
+        val b = bridge("s4d112_typeface_" + NSUUID().UUIDString())
+
+        // Empty store -> WaterMark.default.textTypeface (Normal; preserves the prior regular iOS output).
+        assertEquals(TextTypeface.Normal, b.currentTextTypeface(), "default typeface must be Normal")
+
+        // Each of the four values persists and reads back through the shared editor.
+        for (tf in listOf(TextTypeface.Italic, TextTypeface.Bold, TextTypeface.BoldItalic, TextTypeface.Normal)) {
+            b.setTextTypeface(tf)
+            assertEquals(tf, b.currentTextTypeface(), "typeface must persist as $tf")
+        }
+    }
+
+    /**
+     * S4d-112: the iOS renderer honors all four typefaces — each renders a visible (non-blank) text cell.
+     * Uses the system font (FontFamily.Default) so bold/italic are Compose **synthetic** (faux-bold/italic),
+     * mirroring Android's synthesis intent; this is perceptual, not byte-parity. Cheap: one small cell each.
+     */
+    @Test
+    fun renderer_honors_each_typeface_nonblank() {
+        for (tf in listOf(TextTypeface.Normal, TextTypeface.Italic, TextTypeface.Bold, TextTypeface.BoldItalic)) {
+            val cell = IosWatermarkRenderer.renderTextCell(text = "Ag", textSize = 48f, typeface = tf)
+            val pixels = cell.toPixelMap()
+            var visible = 0
+            for (y in 0 until pixels.height) for (x in 0 until pixels.width) if (pixels[x, y].alpha > 0f) visible++
+            assertTrue(visible > 0, "typeface $tf must render visible text pixels (visible=$visible)")
+        }
     }
 }

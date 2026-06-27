@@ -5,7 +5,10 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import org.jetbrains.skia.EncodedImageFormat
@@ -30,6 +33,20 @@ object IosWatermarkRenderer {
     /** Mirrors `WatermarkRenderer.REF_WIDTH` / the desktop renderer: image-space text sizing reference. */
     const val REF_WIDTH: Int = 1000
 
+    /**
+     * S4d-112: map the platform-neutral [TextTypeface] to Compose `(fontWeight, fontStyle)`. Bold/italic
+     * are **synthetic** (faux-bold emboldening / faux-italic skew) when the bundled font has no matching
+     * face, which mirrors Android's `Typeface.create(base, NORMAL/ITALIC/BOLD/BOLD_ITALIC)` synthesis from
+     * the regular base. This is **perceptual, not byte-parity** with Android's `StaticLayout` raster
+     * (consistent with the iOS-text-is-Skiko policy, S4d-17 Option C).
+     */
+    private fun TextTypeface.toCompose(): Pair<FontWeight, FontStyle> = when (this) {
+        TextTypeface.Normal -> FontWeight.Normal to FontStyle.Normal
+        TextTypeface.Italic -> FontWeight.Normal to FontStyle.Italic
+        TextTypeface.Bold -> FontWeight.Bold to FontStyle.Normal
+        TextTypeface.BoldItalic -> FontWeight.Bold to FontStyle.Italic
+    }
+
     /** Render ONE watermark text cell via the shared [WatermarkCellComposer.composeTextCell] on iOS. */
     fun renderTextCell(
         text: String,
@@ -40,11 +57,19 @@ object IosWatermarkRenderer {
         color: Color = Color.White,
         hGapPercent: Int = 0,
         vGapPercent: Int = 0,
+        // S4d-112: persisted text typeface; default Normal preserves the prior (regular) output.
+        typeface: TextTypeface = TextTypeface.Normal,
     ): ImageBitmap {
         val fontPx = textSize * imageWidth / REF_WIDTH
+        val (fontWeight, fontStyle) = typeface.toCompose()
         val content = WatermarkTextContent(
             text = text,
-            style = TextStyle(fontSize = fontPx.sp, fontFamily = fontFamily),
+            style = TextStyle(
+                fontSize = fontPx.sp,
+                fontFamily = fontFamily,
+                fontWeight = fontWeight,
+                fontStyle = fontStyle,
+            ),
             color = color,
         )
         return WatermarkCellComposer.composeTextCell(
@@ -84,6 +109,8 @@ object IosWatermarkRenderer {
         // S4d-107: ARGB text color (default amber #FFB800), converted to a Compose Color below. Replaces
         // the prior hardcoded white so the iOS render honors the shared WaterMark.textColor default.
         colorArgb: Int = WaterMark.default.textColor,
+        // S4d-112: persisted text typeface; default Normal preserves the prior (regular) output.
+        typeface: TextTypeface = TextTypeface.Normal,
     ): ImageBitmap {
         val background = IosImageDecoder.decode(imageBytes)
         val cell = renderTextCell(
@@ -95,6 +122,7 @@ object IosWatermarkRenderer {
             color = Color(colorArgb),
             hGapPercent = hGapPercent,
             vGapPercent = vGapPercent,
+            typeface = typeface,
         )
         return WatermarkCellComposer.composeOverBackground(
             background = background,
