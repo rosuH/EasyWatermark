@@ -1,5 +1,11 @@
 # Progress Log
 
+## 2026-06-28 — S4d-138 Desktop product-readiness map accepted
+
+- **S4d-138 (read-only decision pack, accepted; ACSP `20260627-234930...`):** mapped Desktop after S4d-137. Current functional coverage: headless text/image save spine, missing-icon guard, minimal window controls for render/open-image memory/open-icon/use-text/output presets, Desktop text/icon/encode/decode/DataStore primitives in `shared/src/desktopMain`, and 13 `shared/src/desktopTest` files covering renderer/encode/decode/DataStore structurally.
+- **Remaining Desktop release-code gaps, not final 1:1 parity:** real Save-As destination, live preview/interactive editor, interactive config editing, decal offset, templates, `:desktopApp` automated flow-glue coverage, and batch. The big test gap is that `DesktopWatermarkFlow.runSaveFlow`'s mode/format/current-image decision is only `--headless` witnessed, not assertion-tested.
+- **Next:** S4d-139 should add the smallest no-dependency harness seam: extract the pure Desktop save decision into `desktopMain`, test it in `desktopTest`, and keep `runSaveFlow` behavior unchanged. Then S4d-140 can add Save-As; S4d-141 should be a read-only templates readiness pass.
+
 ## 2026-06-27 — S4d-132/137 Desktop icon/text/source controls accepted
 
 - **S4d-132 (read-only readiness, accepted; ACSP `20260627-220037...`):** mapped the Desktop icon-watermark gap. Desktop production had no `markMode`/`iconUri`/`composeIcon` usage; `DesktopWatermarkFlow.runSaveFlow` was still text-only. Reusable primitives were already available (`composeIconCell`, `composeOverBackground`, `DesktopImageDecoder`, `DesktopWatermarkTextRenderer.encode`). Persistence decision for later: Desktop can persist a picked file path directly as `MediaRef(file.absolutePath)`; no iOS-style byte copy until a source-moved/deleted requirement exists.
