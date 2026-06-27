@@ -81,6 +81,11 @@ kotlin {
         val desktopMain by getting {
             dependencies {
                 implementation(compose.desktop.currentOs)
+                // S4d-142: bundled SQLite driver so Room can build AppDatabase on JVM/Desktop
+                // (BundledSQLiteDriver — JVM has no compatibility mode, an explicit driver is required).
+                // DESKTOP target ONLY: it ships a host-native libsqliteJni and must NOT reach `:app`
+                // (verified by the :app no-native-leak check; Android Room stays on framework SupportSQLite).
+                implementation(libs.sqlite.bundled)
             }
         }
         // S4d-2: Skiko desktop runtime, TEST-SCOPE, so WatermarkCellComposerTest can RENDER the
