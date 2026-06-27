@@ -1,5 +1,12 @@
 # Progress Log
 
+## 2026-06-27 — S4d-106/S4d-107 iOS textColor alignment accepted
+
+- **S4d-106 (read-only readiness, accepted):** confirmed the simple default-preserving iOS editor fields were exhausted after text/degree/tileMode/alpha. `WaterMark.textColor` was selected as the next slice because it has a clear shared editor rule, but it is **not default-preserving**: the old Swift render path was hardcoded white while `WaterMark.default.textColor` is amber `#FFB800`.
+- **S4d-107 (implementation, accepted):** `IosWatermarkConfigBridge` gained `currentTextColor()`/`setTextColor(...)` over `WatermarkConfigEditor.updateTextColor`; `IosWatermarkRenderBridge`/`IosWatermarkRenderer` gained `colorArgb` and now render via `Color(colorArgb)`; `WatermarkWorkflow` loads/persists/re-renders a packed ARGB `Int32`; `ContentView` exposes a minimal Amber/White/Black/Red segmented picker. The r1 review fixed a stale Swift comment that still claimed the render bridge used opaque white internally.
+- **Verification:** worker evidence covered shared/iOS/app compile and link, `:shared:iosSimulatorArm64Test` 60/0, iOS `xcodebuild` build, strict Android goldens 51/0, debug+release APK, `git diff --check`, and daemon stop. Coordinator reviewed the ACSP artifacts plus real diff, checked the 6-file scope, reran `git diff --check`, grepped the stale comment, inspected the Swift/Kotlin render path, accepted the session, moved it to `done/`, and deleted the bounded poll automation.
+- **Boundary:** this advances the release-grade iOS editor state/render path, but it is explicitly not 1:1 parity. The visible fresh-install iOS watermark color changes from prior placeholder white to shared/Android amber. Text size/gaps/typeface/icon/offsets still need separate readiness or renderer/default reconciliation; real PHPicker grid-cell selection remains the existing system-UI automation gap.
+
 ## 2026-06-27 — S4d-103/S4d-104/S4d-105 iOS watermark editor fields accepted
 
 - **S4d-103 (implementation, accepted; commit `a6090b5d Wire iOS watermark degree editor`):** `IosWatermarkConfigBridge` gained degree read/write over `WatermarkConfigEditor.updateDegree`, with an iOS simulator bridge test for empty-store default `315f` and persisted `123.5f`. Swift now loads persisted degree, exposes a 0...360 slider, persists on release, and re-renders the last selected/fixture image using the edited value. Scope stayed to the iOS config bridge/test and existing Swift UI/workflow files.

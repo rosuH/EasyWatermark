@@ -64,6 +64,13 @@ final class WatermarkWorkflow: ObservableObject {
     /// `WaterMark.default.alpha == 255` and the prior hardcoded render arg.
     @Published private(set) var watermarkAlpha: Float = 1.0
 
+    /// S4d-107: watermark text color as a packed ARGB `Int32` (matching the Kotlin 32-bit `Int`), sourced
+    /// from the shared `WaterMarkRepository` via `watermarkConfigBridge` and edited through
+    /// `WatermarkConfigEditor.updateTextColor`. Default `0xFFFFB800` (amber) is `WaterMark.default
+    /// .textColor` — an ALIGNMENT: the fresh-install iOS render changes from the prior hardcoded white to
+    /// this shared/Android product default.
+    @Published private(set) var watermarkColorArgb: Int32 = Int32(bitPattern: 0xFFFFB800)
+
     /// S4d-102: the single retained iOS watermark-config bridge over the common `WaterMarkRepository`
     /// (the first off-Android consumer of the shared watermark editor). One instance per process
     /// (DataStore forbids a second active store for the same file), mirroring `userConfigBridge`.
@@ -198,6 +205,31 @@ final class WatermarkWorkflow: ObservableObject {
         }
     }
 
+    /// S4d-107: load the persisted ARGB text color from the shared repo (one-shot). On an empty store
+    /// this yields `0xFFFFB800` (amber, `WaterMark.default.textColor`). A read error keeps the current value.
+    func loadWatermarkTextColor() async {
+        do {
+            // A Kotlin `suspend fun` returning a primitive bridges to Swift as a boxed `KotlinInt`.
+            watermarkColorArgb = try await watermarkConfigBridge.currentTextColor().int32Value
+        } catch {
+            // keep the current default; a read failure must not break the editor
+        }
+    }
+
+    /// S4d-107: persist a new ARGB text `color` through the shared `WatermarkConfigEditor`, then re-render
+    /// the last image (if any). A write failure surfaces as `.failure` without changing the persisted value.
+    func setWatermarkTextColor(_ color: Int32) async {
+        do {
+            try await watermarkConfigBridge.setTextColor(color: color)
+            watermarkColorArgb = color
+            if let data = lastImageData {
+                await render(imageData: data)
+            }
+        } catch {
+            state = .failure("Could not save watermark color: \(error.localizedDescription)")
+        }
+    }
+
     /// Render `imageData` (the encoded bytes of a picked photo) into a watermarked PNG.
     func render(imageData: Data) async {
         state = .rendering
@@ -212,8 +244,9 @@ final class WatermarkWorkflow: ObservableObject {
         let degree = watermarkDegree
         let tileMode = watermarkTileMode
         let alpha = watermarkAlpha
+        let colorArgb = watermarkColorArgb
         let outcome = await Task.detached(priority: .userInitiated) {
-            WatermarkWorkflow.renderBlocking(imageData: imageData, text: text, degree: degree, tileMode: tileMode, alpha: alpha)
+            WatermarkWorkflow.renderBlocking(imageData: imageData, text: text, degree: degree, tileMode: tileMode, alpha: alpha, colorArgb: colorArgb)
         }.value
 
         switch outcome {
@@ -261,11 +294,11 @@ final class WatermarkWorkflow: ObservableObject {
     // boundary that wraps `bundledFontFamily → composeOverImage → encodePng`. Any font/decode/render/
     // encode failure arrives here as a Swift-catchable error (an `IosRenderException` bridged to
     // `NSError`) instead of a fatal Kotlin/Native crash, and is surfaced as `.failure(...)`.
-    private nonisolated static func renderBlocking(imageData: Data, text: String, degree: Float, tileMode: WatermarkTileMode, alpha: Float) -> Outcome {
+    private nonisolated static func renderBlocking(imageData: Data, text: String, degree: Float, tileMode: WatermarkTileMode, alpha: Float, colorArgb: Int32) -> Outcome {
         do {
-            // `composeOverImage` (inside the bridge) uses opaque white internally; `tileMode` must be
-            // REPEAT or CLAMP (REPEAT is the product tiling). Kotlin default params don't generate Swift
-            // overloads, so every argument is passed explicitly.
+            // `composeOverImage` (inside the bridge) renders the text in the passed `colorArgb` ARGB
+            // color (S4d-107); `tileMode` must be REPEAT or CLAMP (REPEAT is the product tiling). Kotlin
+            // default params don't generate Swift overloads, so every argument is passed explicitly.
             let rendered = try IosWatermarkRenderBridge.shared.renderWatermarkedPng(
                 imageBytes: imageData.toKotlinByteArray(),
                 text: text,
@@ -277,6 +310,7 @@ final class WatermarkWorkflow: ObservableObject {
                 offsetX: 0.5,
                 offsetY: 0.5,
                 alpha: alpha,
+                colorArgb: colorArgb,
                 latinFirst: true,
                 bundle: Bundle.main
             )

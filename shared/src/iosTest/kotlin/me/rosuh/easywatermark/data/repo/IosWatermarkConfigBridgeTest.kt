@@ -10,8 +10,8 @@ import kotlin.test.assertEquals
 /**
  * S4d-102: iOS runtime proof that the common [WaterMarkRepository], behind the Swift-facing
  * [IosWatermarkConfigBridge], reads/writes the watermark text (S4d-102), rotation degree (S4d-103),
- * tile mode (S4d-104), and alpha (S4d-105) through the iOS [createWaterMarkDataStore]
- * (`NSDocumentDirectory`) store. RUNS on `iosSimulatorArm64Test`.
+ * tile mode (S4d-104), alpha (S4d-105), and text color (S4d-107) through the iOS
+ * [createWaterMarkDataStore] (`NSDocumentDirectory`) store. RUNS on `iosSimulatorArm64Test`.
  *
  * A unique store name (NSUUID) is used so the initial read is the true default and the test does not
  * collide with the app's default store or other runs (the simulator data container is ephemeral).
@@ -95,5 +95,23 @@ class IosWatermarkConfigBridgeTest {
         assertEquals(0, b.currentAlphaByte(), "0% must persist as byte 0")
         b.setAlphaPercent(100f)
         assertEquals(255, b.currentAlphaByte(), "100% must persist as byte 255")
+    }
+
+    @Test
+    fun bridge_watermark_textcolor_roundtrip() = runBlocking {
+        val b = bridge("s4d107_color_" + NSUUID().UUIDString())
+
+        // Empty store -> WaterMark.default.textColor (#FFB800 amber). NOTE: this is the value the iOS
+        // render now uses on a fresh install, replacing the prior hardcoded white (an alignment, not a
+        // default-preserving change).
+        assertEquals(0xFFFFB800.toInt(), b.currentTextColor(), "default text color must be amber #FFB800")
+
+        // Write through the shared editor use-case, then read back.
+        b.setTextColor(0xFFFFFFFF.toInt())
+        assertEquals(0xFFFFFFFF.toInt(), b.currentTextColor(), "text color must persist as white")
+
+        // Second value to prove repeated edits persist.
+        b.setTextColor(0xFF000000.toInt())
+        assertEquals(0xFF000000.toInt(), b.currentTextColor(), "text color must persist as black on re-edit")
     }
 }

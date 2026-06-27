@@ -86,6 +86,23 @@ struct ContentView: View {
                 .accessibilityIdentifier("watermarkAlphaSlider")
             }
 
+            // S4d-107: pick the text color through the same shared editor path. Minimal preset row only
+            // (Amber/White/Black/Red) — not a full color wheel, not the final 1:1 editor. Bound straight
+            // to the workflow (its `set` persists + re-renders), so there is no spurious launch write.
+            // NOTE: the fresh-install default is amber (#FFB800, the shared default) — an alignment from
+            // the prior hardcoded white.
+            Picker("Text color", selection: Binding(
+                get: { workflow.watermarkColorArgb },
+                set: { newColor in Task { await workflow.setWatermarkTextColor(newColor) } }
+            )) {
+                Text("Amber").tag(Int32(bitPattern: 0xFFFFB800))
+                Text("White").tag(Int32(bitPattern: 0xFFFFFFFF))
+                Text("Black").tag(Int32(bitPattern: 0xFF000000))
+                Text("Red").tag(Int32(bitPattern: 0xFFFF0000))
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("watermarkColorPicker")
+
             statusView
 
             if let png = workflow.resultPNG, let uiImage = UIImage(data: png) {
@@ -127,6 +144,7 @@ struct ContentView: View {
             await workflow.loadWatermarkTileMode()
             await workflow.loadWatermarkAlpha()
             draftAlpha = Double(workflow.watermarkAlpha)
+            await workflow.loadWatermarkTextColor()
         }
     }
 

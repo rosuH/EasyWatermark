@@ -1,6 +1,7 @@
 package me.rosuh.easywatermark.render
 
 import androidx.compose.ui.graphics.ImageBitmap
+import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import platform.Foundation.NSBundle
 
@@ -52,6 +53,9 @@ object IosWatermarkRenderBridge {
         offsetX: Float = 0.5f,
         offsetY: Float = 0.5f,
         alpha: Float = 1f,
+        // S4d-107: ARGB text color (default amber #FFB800 = WaterMark.default.textColor); aligns the iOS
+        // render to the shared default, replacing the prior hardcoded white.
+        colorArgb: Int = WaterMark.default.textColor,
         latinFirst: Boolean = true,
         bundle: NSBundle = NSBundle.mainBundle,
     ): IosRenderedPng {
@@ -74,6 +78,7 @@ object IosWatermarkRenderBridge {
                 offsetX = offsetX,
                 offsetY = offsetY,
                 alpha = alpha,
+                colorArgb = colorArgb,
             )
         } catch (t: Throwable) {
             // RENDER covers decode (IosImageDecoder, inside composeOverImage), cell rasterization,

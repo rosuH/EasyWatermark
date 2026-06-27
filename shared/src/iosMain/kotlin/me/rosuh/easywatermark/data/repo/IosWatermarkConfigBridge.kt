@@ -15,9 +15,9 @@ import me.rosuh.easywatermark.domain.WatermarkConfigEditor
  * Kotlin/Native importer bridges `suspend` to Swift `async`, so a DataStore write failure surfaces as a
  * Swift error rather than a fatal crash. Only value types cross to Swift — `String` (text), `Float`
  * (degree, S4d-103, clamped by `WatermarkConfigRules.clampDegree`), the `WatermarkTileMode` enum
- * (S4d-104; the iOS UI uses REPEAT/CLAMP only), and the alpha byte/percent (S4d-105; read as the stored
- * 0..255 byte, written as a 0..100 percent via `WatermarkConfigRules.alphaPercentToByte`). All writes
- * route through the shared editor.
+ * (S4d-104; the iOS UI uses REPEAT/CLAMP only), the alpha byte/percent (S4d-105; read as the stored
+ * 0..255 byte, written as a 0..100 percent via `WatermarkConfigRules.alphaPercentToByte`), and the ARGB
+ * text color `Int` (S4d-107). All writes route through the shared editor.
  *
  * Single-instance-per-file: DataStore forbids a second active store for the same file, so a real iOS app
  * retains ONE bridge (e.g. in a Swift `ObservableObject`), exactly as [IosUserConfigBridge] is retained.
@@ -59,6 +59,14 @@ class IosWatermarkConfigBridge(private val repo: WaterMarkRepository) {
      */
     suspend fun setAlphaPercent(percent: Float) {
         editor.updateAlpha(percent)
+    }
+
+    /** S4d-107: one-shot snapshot of the persisted ARGB text color (default `0xFFFFB800` amber). */
+    suspend fun currentTextColor(): Int = repo.waterMark.first().textColor
+
+    /** S4d-107: persist the ARGB text [color] through the shared editor use-case. */
+    suspend fun setTextColor(color: Int) {
+        editor.updateTextColor(color)
     }
 }
 

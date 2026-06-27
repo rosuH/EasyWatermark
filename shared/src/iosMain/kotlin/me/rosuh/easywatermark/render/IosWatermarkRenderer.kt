@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.sp
+import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image as SkiaImage
@@ -80,6 +81,9 @@ object IosWatermarkRenderer {
         offsetX: Float = 0.5f,
         offsetY: Float = 0.5f,
         alpha: Float = 1f,
+        // S4d-107: ARGB text color (default amber #FFB800), converted to a Compose Color below. Replaces
+        // the prior hardcoded white so the iOS render honors the shared WaterMark.textColor default.
+        colorArgb: Int = WaterMark.default.textColor,
     ): ImageBitmap {
         val background = IosImageDecoder.decode(imageBytes)
         val cell = renderTextCell(
@@ -88,7 +92,7 @@ object IosWatermarkRenderer {
             textSize = textSize,
             imageWidth = background.width,
             degree = degree,
-            color = Color.White,
+            color = Color(colorArgb),
             hGapPercent = hGapPercent,
             vGapPercent = vGapPercent,
         )
