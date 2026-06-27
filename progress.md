@@ -1,11 +1,18 @@
 # Progress Log
 
+## 2026-06-27 — S4d-118 iOS icon picker UI accepted
+
+- **S4d-118 (implementation, accepted; ACSP `20260627-174116...`; commit `02beb95 Add iOS icon picker UI`):** made iOS Image watermark mode reachable from the SwiftUI app. `ContentView` now has a separate icon `PhotosPicker` (`pickIconButton`), a Text/Image mode label, an optional transient icon thumbnail, and `.task(id: pickedIconItem)` loading icon bytes. `WatermarkWorkflow.setWatermarkIcon(_:)` calls the existing `IosWatermarkConfigBridge.setIconFromBytes(bytes:)`, updates visible mode to Image, stores only an in-memory thumbnail, and re-renders the current source image when present.
+- **Scope/behavior:** exactly two Swift files changed. Swift passes bytes only; it never parses or persists the icon file path. Durable icon storage and Image-mode flipping stay in Kotlin via S4d-116; the S4d-117 loud failure for Image mode without a readable icon remains intact. This completes the iOS image-watermark mini-epic as a functional app path, not as 1:1 UI parity.
+- **Verification:** worker ran `git diff --check` and iOS simulator `xcodebuild`; coordinator reviewed artifacts + real diff, reran `git diff --check` and `xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build`, then stopped Gradle daemons. Real PHPicker grid-cell automation remains the known Xcode-27-beta/iOS-27 limitation; no automated picker-cell claim was made.
+- **Next:** pause the iOS image-watermark mini-epic here unless owner wants a tiny clear-icon/return-to-text affordance. Otherwise move to the next planned migration surface with a fresh readiness pack.
+
 ## 2026-06-27 — S4d-117 iOS markMode render branch accepted
 
 - **S4d-117 (implementation, accepted; ACSP `20260627-171954...`; commit `5c3afc8 Add iOS mark mode render branch`):** iOS `WatermarkWorkflow.render` now reads persisted `WatermarkMode` at render time and branches Text/Image. Text mode still calls the existing `renderBlocking(...)` path; Image mode reads persisted icon bytes through `IosWatermarkConfigBridge.currentIconBytes()` and calls the new Swift-catchable `IosWatermarkRenderBridge.renderIconWatermarkedPng(...)` wrapper over S4d-115 `composeIconOverImage`.
 - **Scope/behavior:** Swift never parses icon paths; `currentIconBytes()` resolves `MediaRef(path)` in Kotlin via S4d-116 `IosIconPersistence`. Image mode with missing/unreadable icon fails visibly (`.failure`) and does not silently render text. Picker UI/`ContentView` remains untouched.
 - **Verification:** worker and coordinator both ran `./gradlew :shared:compileKotlinIosArm64 :shared:iosSimulatorArm64Test --max-workers=8 --console=plain` and `xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build`; coordinator also reran `git diff --check` and stopped Gradle daemons. New iOS tests prove icon bridge render/error wrapping and `currentIconBytes` roundtrip.
-- **Next:** S4d-118 should make Image mode reachable from the iOS UI: icon `PhotosPicker` -> `setIconFromBytes`, minimal mode/thumbnail affordance, and launch-load of `markMode`. Real PHPicker grid-cell automation remains the known toolchain limitation; this is still code migration, not 1:1 parity.
+- **Next:** completed by S4d-118 (iOS icon picker UI accepted).
 
 ## 2026-06-27 — S4d-116 iOS icon persistence accepted
 
