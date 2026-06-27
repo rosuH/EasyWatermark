@@ -2,8 +2,10 @@ package me.rosuh.easywatermark.data.repo
 
 import kotlinx.coroutines.flow.first
 import me.rosuh.easywatermark.data.datastore.createWaterMarkDataStore
+import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
+import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 
@@ -21,7 +23,9 @@ import me.rosuh.easywatermark.domain.WatermarkConfigEditor
  * 0..255 byte, written as a 0..100 percent via `WatermarkConfigRules.alphaPercentToByte`), the ARGB
  * text color `Int` (S4d-107), the text size `Float` (S4d-109), the horizontal/vertical gap percents
  * `Int` (S4d-110), the `TextTypeface` enum (S4d-112), and the `TextPaintStyle` enum (S4d-113). All
- * writes route through the shared editor.
+ * writes route through the shared editor. S4d-116 adds the image-watermark **icon**: a `MediaRef`
+ * (app-private file path) read, the `WatermarkMode` enum read, and a `setIconFromBytes(ByteArray)` write
+ * that persists picked icon bytes via [IosIconPersistence] (Option A) before flipping the mode to Image.
  *
  * Single-instance-per-file: DataStore forbids a second active store for the same file, so a real iOS app
  * retains ONE bridge (e.g. in a Swift `ObservableObject`), exactly as [IosUserConfigBridge] is retained.
@@ -112,6 +116,30 @@ class IosWatermarkConfigBridge(private val repo: WaterMarkRepository) {
     /** S4d-113: persist the text paint [style] (Fill/Stroke) through the shared editor use-case. */
     suspend fun setTextStyle(style: TextPaintStyle) {
         editor.updateTextStyle(style)
+    }
+
+    /**
+     * S4d-116: one-shot snapshot of the persisted icon reference. On iOS this is an app-private file path
+     * written by [setIconFromBytes] (default [MediaRef.Empty] = no icon). The bytes are read back via
+     * [IosIconPersistence.readIconBytes] at render time (the S4d-117 wiring), keeping commonMain decode-free.
+     */
+    suspend fun currentIconRef(): MediaRef = repo.waterMark.first().iconUri
+
+    /** S4d-116: one-shot snapshot of the persisted watermark mode (Text/Image; default Text). */
+    suspend fun currentMarkMode(): WatermarkMode = repo.waterMark.first().markMode
+
+    /**
+     * S4d-116: persist picked icon [bytes] for image-watermark mode. Order matters: the bytes are written
+     * to an app-private file **first** (so the stored ref always points at real bytes), then the file path
+     * is persisted as the icon [MediaRef] via the shared [WatermarkConfigEditor.updateIcon] — which also
+     * flips persisted `markMode` to Image — and finally the **prior** helper-owned icon file is cleaned up
+     * best-effort. Empty [bytes] fail loudly (no unusable icon file is created and no ref is changed).
+     */
+    suspend fun setIconFromBytes(bytes: ByteArray) {
+        val previousRef = repo.waterMark.first().iconUri
+        val path = IosIconPersistence.writeIconBytes(bytes)
+        editor.updateIcon(MediaRef(path))
+        IosIconPersistence.deleteIfOwned(previousRef.value)
     }
 }
 

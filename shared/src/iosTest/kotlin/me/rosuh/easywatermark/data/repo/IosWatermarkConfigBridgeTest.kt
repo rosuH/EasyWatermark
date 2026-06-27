@@ -3,13 +3,18 @@ package me.rosuh.easywatermark.data.repo
 import androidx.compose.ui.graphics.toPixelMap
 import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.datastore.createWaterMarkDataStore
+import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
+import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.render.IosWatermarkRenderer
+import platform.Foundation.NSFileManager
 import platform.Foundation.NSUUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -221,5 +226,102 @@ class IosWatermarkConfigBridgeTest {
             for (y in 0 until pixels.height) for (x in 0 until pixels.width) if (pixels[x, y].alpha > 0f) visible++
             assertTrue(visible > 0, "text style $style must render visible text pixels (visible=$visible)")
         }
+    }
+
+    /**
+     * S4d-116: persist picked icon bytes (Option A) and prove the full durable-icon contract on the iOS
+     * runtime: empty-store defaults → write copies bytes to an app-private path + flips mode to Image →
+     * the bytes read back identically → replacement stores new bytes AND cleans up the prior owned file.
+     */
+    @Test
+    fun bridge_icon_persistence_roundtrip_and_replacement_cleanup() = runBlocking {
+        val b = bridge("s4d116_icon_" + NSUUID().UUIDString())
+
+        // Empty store -> no icon, Text mode.
+        assertEquals(MediaRef.Empty, b.currentIconRef(), "default icon ref must be Empty")
+        assertEquals(WatermarkMode.Text, b.currentMarkMode(), "default mark mode must be Text")
+
+        // Persist icon bytes -> ref becomes a non-empty, helper-owned app-private path; mode flips to Image.
+        val first = byteArrayOf(1, 2, 3, 4, 5, 6, 7, 8)
+        b.setIconFromBytes(first)
+        val ref1 = b.currentIconRef()
+        assertTrue(ref1.value.isNotEmpty(), "icon ref must be non-empty after setIconFromBytes")
+        assertTrue(IosIconPersistence.isOwned(ref1.value), "persisted path must be helper-owned")
+        assertEquals(WatermarkMode.Image, b.currentMarkMode(), "mark mode must be Image after setIconFromBytes")
+        assertTrue(
+            NSFileManager.defaultManager.fileExistsAtPath(ref1.value),
+            "persisted icon file must exist on disk (durable app-private path)",
+        )
+        // The bytes read back from the persisted MediaRef path are byte-identical.
+        assertTrue(
+            IosIconPersistence.readIconBytes(ref1).contentEquals(first),
+            "persisted icon bytes must read back identically from the MediaRef path",
+        )
+
+        // Replace with new bytes -> a NEW path holding the new bytes, and the prior owned file is removed.
+        val second = byteArrayOf(9, 8, 7, 6, 5)
+        b.setIconFromBytes(second)
+        val ref2 = b.currentIconRef()
+        assertTrue(ref2.value.isNotEmpty() && ref2.value != ref1.value, "replacement must store a NEW path")
+        assertTrue(
+            IosIconPersistence.readIconBytes(ref2).contentEquals(second),
+            "replacement bytes must read back from the new path",
+        )
+        assertFalse(
+            NSFileManager.defaultManager.fileExistsAtPath(ref1.value),
+            "the prior helper-owned icon file must be cleaned up on replacement",
+        )
+    }
+
+    /** S4d-116: empty icon bytes fail loudly (no unusable file, no ref change). */
+    @Test
+    fun bridge_setIconFromBytes_rejects_empty() = runBlocking {
+        val b = bridge("s4d116_empty_" + NSUUID().UUIDString())
+        assertFailsWith<IllegalArgumentException> { b.setIconFromBytes(ByteArray(0)) }
+        // The empty write must not have changed the persisted state.
+        assertEquals(MediaRef.Empty, b.currentIconRef(), "icon ref must stay Empty after a rejected empty write")
+        assertEquals(WatermarkMode.Text, b.currentMarkMode(), "mark mode must stay Text after a rejected empty write")
+    }
+
+    /**
+     * S4d-116 (revision): ownership is more than a prefix match. A real generated path is owned, but a
+     * traversal (`icon_/../../foreign`) or a nested/sibling path (`icon_x/foreign`) — which share the
+     * `icon_` prefix but add a path separator — and an empty-filename path are NOT owned, so
+     * `deleteIfOwned` ignores them and can never delete an arbitrary path. Proven on the iOS runtime.
+     */
+    @Test
+    fun iconPersistence_ownership_rejects_traversal_and_nested_suffixes() {
+        // A normal generated path is owned.
+        val ownedPath = IosIconPersistence.writeIconBytes(byteArrayOf(1, 2, 3))
+        assertTrue(IosIconPersistence.isOwned(ownedPath), "a normal generated icon path must be owned")
+
+        // Derive the helper prefix (`…/watermark_icons/icon_`) from the generated path to craft siblings.
+        val marker = "icon_"
+        val prefix = ownedPath.substring(0, ownedPath.lastIndexOf(marker) + marker.length)
+        val traversal = prefix + "/../../foreign"   // …/watermark_icons/icon_/../../foreign
+        val nested = prefix + "x/foreign"            // …/watermark_icons/icon_x/foreign
+        val emptySuffix = prefix                     // …/watermark_icons/icon_   (no filename)
+
+        assertFalse(IosIconPersistence.isOwned(traversal), "a '..' traversal suffix must NOT be owned")
+        assertFalse(IosIconPersistence.isOwned(nested), "a nested-path suffix (extra '/') must NOT be owned")
+        assertFalse(IosIconPersistence.isOwned(emptySuffix), "an empty filename suffix must NOT be owned")
+        assertFalse(IosIconPersistence.isOwned(""), "an empty path must NOT be owned")
+
+        // deleteIfOwned must ignore every non-owned shape (no throw) and leave the real owned file intact.
+        IosIconPersistence.deleteIfOwned(traversal)
+        IosIconPersistence.deleteIfOwned(nested)
+        IosIconPersistence.deleteIfOwned(emptySuffix)
+        IosIconPersistence.deleteIfOwned("")
+        assertTrue(
+            NSFileManager.defaultManager.fileExistsAtPath(ownedPath),
+            "deleteIfOwned on non-owned paths must not delete anything (the real icon file survives)",
+        )
+
+        // The owned path IS deletable (sanity: the predicate is not simply rejecting everything) + tidy up.
+        IosIconPersistence.deleteIfOwned(ownedPath)
+        assertFalse(
+            NSFileManager.defaultManager.fileExistsAtPath(ownedPath),
+            "deleteIfOwned must remove a genuinely owned file",
+        )
     }
 }
