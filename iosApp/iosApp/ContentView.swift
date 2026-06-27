@@ -22,6 +22,9 @@ struct ContentView: View {
     @State private var draftAlpha: Double = 1.0
     /// S4d-109: editable draft of the watermark text size; applied to the shared `WaterMarkRepository`.
     @State private var draftTextSize: Double = 14
+    /// S4d-110: editable drafts of the watermark h/v gaps; applied to the shared `WaterMarkRepository`.
+    @State private var draftHGap: Double = 0
+    @State private var draftVGap: Double = 0
 
     private let linkWitness = WatermarkGeometry().diagonal(w: 100, h: 100)
 
@@ -118,6 +121,22 @@ struct ContentView: View {
                 .accessibilityIdentifier("watermarkTextSizeSlider")
             }
 
+            // S4d-110: edit the watermark horizontal/vertical gaps through the same shared editor path.
+            // Commits on release. Range matches the shared clamp (0…500). Minimal control — not 1:1 UI.
+            VStack(spacing: 4) {
+                Text("Gaps: H \(Int(draftHGap))  V \(Int(draftVGap))")
+                    .font(.caption)
+                    .accessibilityIdentifier("watermarkGapLabel")
+                Slider(value: $draftHGap, in: 0...500, step: 1) { editing in
+                    if !editing { Task { await workflow.setWatermarkHGap(Int32(draftHGap)) } }
+                }
+                .accessibilityIdentifier("watermarkHGapSlider")
+                Slider(value: $draftVGap, in: 0...500, step: 1) { editing in
+                    if !editing { Task { await workflow.setWatermarkVGap(Int32(draftVGap)) } }
+                }
+                .accessibilityIdentifier("watermarkVGapSlider")
+            }
+
             statusView
 
             if let png = workflow.resultPNG, let uiImage = UIImage(data: png) {
@@ -162,6 +181,9 @@ struct ContentView: View {
             await workflow.loadWatermarkTextColor()
             await workflow.loadWatermarkTextSize()
             draftTextSize = Double(workflow.watermarkTextSize)
+            await workflow.loadWatermarkGaps()
+            draftHGap = Double(workflow.watermarkHGap)
+            draftVGap = Double(workflow.watermarkVGap)
         }
     }
 

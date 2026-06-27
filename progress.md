@@ -1,5 +1,13 @@
 # Progress Log
 
+## 2026-06-27 — S4d-110 iOS h/v gap alignment accepted
+
+- **S4d-110 (implementation, accepted):** wired `WaterMark.hGap/vGap` through `IosWatermarkConfigBridge.currentHGap()/setHGap(...)` and `currentVGap()/setVGap(...)`, Swift `WatermarkWorkflow.watermarkHGap/watermarkVGap`, and the existing `renderWatermarkedPng(hGapPercent:, vGapPercent:)` arguments. The prior Swift hardcoded `40/40` render gaps are gone; fresh iOS renders now use the shared `WaterMark.default` gaps `0/0`.
+- **Visible alignment boundary:** this is explicitly **not default-preserving** and not final 1:1 UI/UX parity. It changes fresh-install iOS tiling from 40/40 gaps to 0/0 (denser tiling) to align with the shared/Android product defaults. Android renderer and goldens were untouched.
+- **UI and bridge proof:** Swift gained minimal h/v gap sliders (`0...500`, commit-on-release) and launch loading for persisted gaps. The iOS bridge roundtrip test pins default `0/0`, representative `40/40`, and clamp behavior (`-5 -> 0`, `600 -> 500`).
+- **Coordinator review:** accepted after reading ACSP result/verification/artifacts/messages/events and the real diff, confirming only four allowed files changed and no render-edge/Android/Desktop/build/docs/golden files were touched. Coordinator reran `git diff --check` and `./gradlew :shared:iosSimulatorArm64Test --max-workers=8 --console=plain`, then stopped Gradle daemons. Worker evidence also covered iOS `xcodebuild`, strict Android goldens 51/0, and debug+release APK.
+- **Next:** simple param-exists/default-hardcoded iOS render alignment is now complete with S4d-109 + S4d-110. The next iOS editor/render work should be a read-only decision pack for renderer-capability fields: `textStyle`, `textTypeface`, `iconUri`/`markMode`, and `enableBounds`.
+
 ## 2026-06-27 — S4d-109 iOS textSize alignment accepted
 
 - **S4d-109 (implementation, accepted):** wired `WaterMark.textSize` through `IosWatermarkConfigBridge.currentTextSize()/setTextSize(...)`, `WatermarkWorkflow.watermarkTextSize`, and the existing `IosWatermarkRenderBridge.renderWatermarkedPng(textSize:)` argument. The prior Swift hardcoded `24.0` render size is gone; fresh iOS renders now use the shared `WaterMark.default.textSize = 14f`.

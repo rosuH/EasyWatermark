@@ -10,8 +10,9 @@ import kotlin.test.assertEquals
 /**
  * S4d-102: iOS runtime proof that the common [WaterMarkRepository], behind the Swift-facing
  * [IosWatermarkConfigBridge], reads/writes the watermark text (S4d-102), rotation degree (S4d-103),
- * tile mode (S4d-104), alpha (S4d-105), text color (S4d-107), and text size (S4d-109) through the iOS
- * [createWaterMarkDataStore] (`NSDocumentDirectory`) store. RUNS on `iosSimulatorArm64Test`.
+ * tile mode (S4d-104), alpha (S4d-105), text color (S4d-107), text size (S4d-109), and h/v gaps
+ * (S4d-110) through the iOS [createWaterMarkDataStore] (`NSDocumentDirectory`) store. RUNS on
+ * `iosSimulatorArm64Test`.
  *
  * A unique store name (NSUUID) is used so the initial read is the true default and the test does not
  * collide with the app's default store or other runs (the simulator data container is ephemeral).
@@ -130,5 +131,27 @@ class IosWatermarkConfigBridgeTest {
         // Clamp floor: a 0 write is stored 0 (editor coerceAtLeast(0f)) but the repo read clamps to >= 1.
         b.setTextSize(0f)
         assertEquals(1f, b.currentTextSize(), "text size read must clamp to the 1 floor (MIN_TEXT_SIZE)")
+    }
+
+    @Test
+    fun bridge_watermark_gap_roundtrip() = runBlocking {
+        val b = bridge("s4d110_gap_" + NSUUID().UUIDString())
+
+        // Empty store -> WaterMark.default gaps (0/0). NOTE: this is what the iOS render now uses on a
+        // fresh install, replacing the prior hardcoded 40/40 (an alignment, denser tiling).
+        assertEquals(0, b.currentHGap(), "default hGap must be 0 (fresh-install render)")
+        assertEquals(0, b.currentVGap(), "default vGap must be 0 (fresh-install render)")
+
+        // Write a representative non-default value through the shared editor, then read back.
+        b.setHGap(40)
+        b.setVGap(40)
+        assertEquals(40, b.currentHGap(), "hGap must persist as 40")
+        assertEquals(40, b.currentVGap(), "vGap must persist as 40")
+
+        // Clamp: negative -> 0, over max -> 500 (WatermarkConfigRules clamps 0..500).
+        b.setHGap(-5)
+        assertEquals(0, b.currentHGap(), "hGap must clamp negative to 0")
+        b.setVGap(600)
+        assertEquals(500, b.currentVGap(), "vGap must clamp over-max to 500")
     }
 }

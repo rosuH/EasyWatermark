@@ -17,8 +17,8 @@ import me.rosuh.easywatermark.domain.WatermarkConfigEditor
  * (degree, S4d-103, clamped by `WatermarkConfigRules.clampDegree`), the `WatermarkTileMode` enum
  * (S4d-104; the iOS UI uses REPEAT/CLAMP only), the alpha byte/percent (S4d-105; read as the stored
  * 0..255 byte, written as a 0..100 percent via `WatermarkConfigRules.alphaPercentToByte`), the ARGB
- * text color `Int` (S4d-107), and the text size `Float` (S4d-109). All writes route through the shared
- * editor.
+ * text color `Int` (S4d-107), the text size `Float` (S4d-109), and the horizontal/vertical gap percents
+ * `Int` (S4d-110). All writes route through the shared editor.
  *
  * Single-instance-per-file: DataStore forbids a second active store for the same file, so a real iOS app
  * retains ONE bridge (e.g. in a Swift `ObservableObject`), exactly as [IosUserConfigBridge] is retained.
@@ -77,6 +77,22 @@ class IosWatermarkConfigBridge(private val repo: WaterMarkRepository) {
      *  repo read clamps to >= 1). */
     suspend fun setTextSize(size: Float) {
         editor.updateTextSize(size)
+    }
+
+    /** S4d-110: one-shot snapshot of the persisted horizontal gap percent (default 0; clamped 0..500). */
+    suspend fun currentHGap(): Int = repo.waterMark.first().hGap
+
+    /** S4d-110: persist the horizontal [gap] percent through the shared editor (clamped 0..500). */
+    suspend fun setHGap(gap: Int) {
+        editor.updateHorizon(gap)
+    }
+
+    /** S4d-110: one-shot snapshot of the persisted vertical gap percent (default 0; clamped 0..500). */
+    suspend fun currentVGap(): Int = repo.waterMark.first().vGap
+
+    /** S4d-110: persist the vertical [gap] percent through the shared editor (clamped 0..500). */
+    suspend fun setVGap(gap: Int) {
+        editor.updateVertical(gap)
     }
 }
 

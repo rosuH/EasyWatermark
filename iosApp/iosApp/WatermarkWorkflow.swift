@@ -77,6 +77,14 @@ final class WatermarkWorkflow: ObservableObject {
     /// prior hardcoded `24` to this shared/Android product default (smaller text).
     @Published private(set) var watermarkTextSize: Float = 14.0
 
+    /// S4d-110: watermark horizontal/vertical gap percents (`Int32` matching the Kotlin `Int`), sourced
+    /// from the shared `WaterMarkRepository` via `watermarkConfigBridge` and edited through
+    /// `WatermarkConfigEditor.updateHorizon`/`updateVertical`. Default `0`/`0` is `WaterMark.default` —
+    /// an ALIGNMENT: the fresh-install iOS render changes from the prior hardcoded `40`/`40` to these
+    /// shared/Android product defaults (denser tiling). Clamped 0..500 by the shared rules.
+    @Published private(set) var watermarkHGap: Int32 = 0
+    @Published private(set) var watermarkVGap: Int32 = 0
+
     /// S4d-102: the single retained iOS watermark-config bridge over the common `WaterMarkRepository`
     /// (the first off-Android consumer of the shared watermark editor). One instance per process
     /// (DataStore forbids a second active store for the same file), mirroring `userConfigBridge`.
@@ -261,6 +269,46 @@ final class WatermarkWorkflow: ObservableObject {
         }
     }
 
+    /// S4d-110: load the persisted horizontal/vertical gaps from the shared repo (one-shot). On an empty
+    /// store both are `0` (`WaterMark.default`). A read error keeps the current values.
+    func loadWatermarkGaps() async {
+        do {
+            // A Kotlin `suspend fun` returning a primitive bridges to Swift as a boxed `KotlinInt`.
+            watermarkHGap = try await watermarkConfigBridge.currentHGap().int32Value
+            watermarkVGap = try await watermarkConfigBridge.currentVGap().int32Value
+        } catch {
+            // keep the current defaults; a read failure must not break the editor
+        }
+    }
+
+    /// S4d-110: persist a new horizontal gap through the shared `WatermarkConfigEditor` (clamped 0..500),
+    /// then re-render the last image (if any). Failures surface as `.failure` without persisting.
+    func setWatermarkHGap(_ gap: Int32) async {
+        do {
+            try await watermarkConfigBridge.setHGap(gap: gap)
+            watermarkHGap = gap
+            if let data = lastImageData {
+                await render(imageData: data)
+            }
+        } catch {
+            state = .failure("Could not save watermark horizontal gap: \(error.localizedDescription)")
+        }
+    }
+
+    /// S4d-110: persist a new vertical gap through the shared `WatermarkConfigEditor` (clamped 0..500),
+    /// then re-render the last image (if any). Failures surface as `.failure` without persisting.
+    func setWatermarkVGap(_ gap: Int32) async {
+        do {
+            try await watermarkConfigBridge.setVGap(gap: gap)
+            watermarkVGap = gap
+            if let data = lastImageData {
+                await render(imageData: data)
+            }
+        } catch {
+            state = .failure("Could not save watermark vertical gap: \(error.localizedDescription)")
+        }
+    }
+
     /// Render `imageData` (the encoded bytes of a picked photo) into a watermarked PNG.
     func render(imageData: Data) async {
         state = .rendering
@@ -277,8 +325,10 @@ final class WatermarkWorkflow: ObservableObject {
         let alpha = watermarkAlpha
         let colorArgb = watermarkColorArgb
         let textSize = watermarkTextSize
+        let hGap = watermarkHGap
+        let vGap = watermarkVGap
         let outcome = await Task.detached(priority: .userInitiated) {
-            WatermarkWorkflow.renderBlocking(imageData: imageData, text: text, degree: degree, tileMode: tileMode, alpha: alpha, colorArgb: colorArgb, textSize: textSize)
+            WatermarkWorkflow.renderBlocking(imageData: imageData, text: text, degree: degree, tileMode: tileMode, alpha: alpha, colorArgb: colorArgb, textSize: textSize, hGap: hGap, vGap: vGap)
         }.value
 
         switch outcome {
@@ -326,7 +376,7 @@ final class WatermarkWorkflow: ObservableObject {
     // boundary that wraps `bundledFontFamily → composeOverImage → encodePng`. Any font/decode/render/
     // encode failure arrives here as a Swift-catchable error (an `IosRenderException` bridged to
     // `NSError`) instead of a fatal Kotlin/Native crash, and is surfaced as `.failure(...)`.
-    private nonisolated static func renderBlocking(imageData: Data, text: String, degree: Float, tileMode: WatermarkTileMode, alpha: Float, colorArgb: Int32, textSize: Float) -> Outcome {
+    private nonisolated static func renderBlocking(imageData: Data, text: String, degree: Float, tileMode: WatermarkTileMode, alpha: Float, colorArgb: Int32, textSize: Float, hGap: Int32, vGap: Int32) -> Outcome {
         do {
             // `composeOverImage` (inside the bridge) renders the text in the passed `colorArgb` ARGB
             // color (S4d-107); `tileMode` must be REPEAT or CLAMP (REPEAT is the product tiling). Kotlin
@@ -337,8 +387,8 @@ final class WatermarkWorkflow: ObservableObject {
                 tileMode: tileMode,
                 textSize: textSize,
                 degree: degree,
-                hGapPercent: 40,
-                vGapPercent: 40,
+                hGapPercent: hGap,
+                vGapPercent: vGap,
                 offsetX: 0.5,
                 offsetY: 0.5,
                 alpha: alpha,
