@@ -68,8 +68,9 @@ private class LastImage(val bytes: ByteArray, val label: String)
  * forces a demo string — so the window finally renders user-chosen text (the first real edit control).
  * S4d-147: a "Preview" button renders the current config through `runSaveFlow` to a repo-local temp file,
  * decodes the bytes (`DesktopImageDecoder`, generic JPEG/PNG), and shows the result on-screen — ending the
- * blind-edit loop. Still no REACTIVE/live preview, color-gaps-alpha controls, templates UI, drag-drop, or
- * share substitute in this slice.
+ * blind-edit loop. S4d-148: an "Apply degree" field edits the rotation via `WatermarkConfigEditor.updateDegree`
+ * (parsed/coerced 0..360). Still no REACTIVE/live preview, color/gaps/alpha/tile controls, templates UI,
+ * drag-drop, or share substitute in this slice.
  */
 fun launchDesktopWindow() = application {
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
@@ -91,9 +92,12 @@ fun launchDesktopWindow() = application {
     var watermarkText by remember { mutableStateOf("") }
     // S4d-147: the rendered preview image (null until the first "Preview" click).
     var preview by remember { mutableStateOf<ImageBitmap?>(null) }
+    // S4d-148: the watermark rotation degree being edited (string; parsed on "Apply degree"). Loaded on launch.
+    var degreeText by remember { mutableStateOf("") }
     LaunchedEffect(Unit) {
         outputPref = describePref(userConfigRepo.userPreferences.first())
         watermarkText = repo.waterMark.first().text
+        degreeText = repo.waterMark.first().degree.toString()
     }
 
     Window(onCloseRequest = ::exitApplication, title = "EasyWatermark — Desktop (S4d-121)") {
@@ -139,6 +143,46 @@ fun launchDesktopWindow() = application {
                     },
                 ) {
                     Text("Apply text")
+                }
+                // S4d-148: the watermark ROTATION DEGREE input. Parsed on an explicit "Apply degree" click
+                // (toFloatOrNull; invalid → status only, no persist); coerced to 0..360 at the edge (the repo
+                // also clamps via WatermarkConfigRules.clampDegree). No auto-preview — click "Preview" to see it.
+                OutlinedTextField(
+                    value = degreeText,
+                    onValueChange = { degreeText = it },
+                    enabled = !busy,
+                    label = { Text("Degree (0–360)") },
+                )
+                Button(
+                    enabled = !busy,
+                    onClick = {
+                        // r1: reject blank/non-numeric AND non-finite (NaN/Infinity parse as Floats) before persisting.
+                        val parsed = degreeText.trim().toFloatOrNull()?.takeIf { it.isFinite() }
+                        if (parsed == null) {
+                            // Invalid number → short failure status; do NOT call the editor.
+                            status = "Invalid degree: \"$degreeText\" — enter a number (0–360)."
+                        } else {
+                            scope.launch {
+                                busy = true
+                                val applied = parsed.coerceIn(0f, 360f)
+                                val (next, ok) = withContext(Dispatchers.IO) {
+                                    try {
+                                        editor.updateDegree(applied)
+                                        "Degree applied: $applied. Click Preview to see it." to true
+                                    } catch (t: Throwable) {
+                                        "Failed: ${t.message}" to false
+                                    }
+                                }
+                                // r1: on a successful apply, snap the field to the clamped value actually
+                                // persisted (a typed 400 now shows 360.0, not the rejected 400).
+                                if (ok) degreeText = applied.toString()
+                                status = next
+                                busy = false
+                            }
+                        }
+                    },
+                ) {
+                    Text("Apply degree")
                 }
                 // S4d-130: choose the output preference (two presets) through the shared OutputPrefsEditor,
                 // persisted to the SAME store runSaveFlow reads — so the next sample/Open render uses it.
