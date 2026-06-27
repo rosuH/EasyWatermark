@@ -46,6 +46,21 @@ class IosWatermarkRendererTest {
         return n
     }
 
+    /**
+     * S4d-115: a small deterministic, **opaque, non-uniform** icon (magenta field + a white inner square)
+     * so the icon raster is clearly visible and asymmetric under rotation. Drawn via commonMain Compose
+     * graphics; encoded to PNG by the test when bytes are needed (exercising the [IosImageDecoder] path).
+     */
+    private fun makeIcon(): ImageBitmap {
+        val s = 24
+        val bmp = ImageBitmap(s, s, ImageBitmapConfig.Argb8888)
+        CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(bmp), Size(s.toFloat(), s.toFloat())) {
+            drawRect(color = Color(0xFFEE22AA))
+            drawRect(color = Color(0xFFFFFFFF), topLeft = Offset(6f, 6f), size = Size(8f, 8f))
+        }
+        return bmp
+    }
+
     @Test
     fun env_builds() {
         val env = IosTextRasterEnv.textRasterEnv()
@@ -94,5 +109,42 @@ class IosWatermarkRendererTest {
     @Test
     fun decoder_rejects_undecodable_bytes() {
         assertFailsWith<IllegalStateException> { IosImageDecoder.decode(byteArrayOf(1, 2, 3, 4, 5)) }
+    }
+
+    /**
+     * S4d-115: [IosWatermarkRenderer.renderIconCell] (wrapping commonMain `composeIconCell`) rasters a
+     * visible icon cell on the iOS Skiko backend. Rotated 315° (the production default) at 2× scale to
+     * exercise rotation + scaling. Perceptual proof (non-blank), not byte-parity with Android.
+     */
+    @Test
+    fun renderIconCell_produces_nonblank_cell() {
+        val cell = IosWatermarkRenderer.renderIconCell(
+            icon = makeIcon(), degree = 315f, scaleRatio = 2f,
+        )
+        assertTrue(cell.width > 0 && cell.height > 0, "icon cell must have positive dimensions")
+        assertTrue(nonBlank(cell) > 0, "icon cell must have visible (non-transparent) pixels")
+    }
+
+    /**
+     * S4d-115: [IosWatermarkRenderer.composeIconOverImage] decodes the background + icon bytes
+     * ([IosImageDecoder]), renders the icon cell, and tiles it over the background — sized to the
+     * background and changing pixels. The icon bytes are PNG-encoded then re-decoded, exercising the full
+     * decode path. REPEAT tiling so at least one icon tile lands on the image.
+     */
+    @Test
+    fun composeIconOverImage_is_sized_and_changes_pixels() {
+        val bgPng = IosWatermarkRenderer.encodePng(makeBackground())
+        val iconPng = IosWatermarkRenderer.encodePng(makeIcon())
+        val decoded = IosImageDecoder.decode(bgPng)
+        val composed = IosWatermarkRenderer.composeIconOverImage(
+            imageBytes = bgPng, iconBytes = iconPng, tileMode = WatermarkTileMode.REPEAT, scaleRatio = 2f,
+        )
+        assertEquals(decoded.width, composed.width, "composed width == background width")
+        assertEquals(decoded.height, composed.height, "composed height == background height")
+        val before = decoded.toPixelMap()
+        val after = composed.toPixelMap()
+        var changed = 0
+        for (y in 0 until before.height) for (x in 0 until before.width) if (before[x, y] != after[x, y]) changed++
+        assertTrue(changed > 0, "icon composition must change pixels vs the decoded background (changed=$changed)")
     }
 }

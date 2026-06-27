@@ -101,6 +101,39 @@ object IosWatermarkRenderer {
         )
     }
 
+    /**
+     * S4d-115: render ONE watermark **icon** cell via the shared [WatermarkCellComposer.composeIconCell]
+     * on iOS — the icon analogue of [renderTextCell], and the iOS/Skiko icon renderer (the accepted
+     * Desktop/iOS icon path per S4d-8 / the ADR-0004 addendum). Takes an **already-decoded** [icon]; image
+     * **decode stays the [IosImageDecoder] boundary** and commonMain stays decode-free.
+     *
+     * **Perceptual, NOT byte-parity** with Android `WatermarkRenderer.buildIconShader`: commonMain has no
+     * float-placement + nearest-filter draw overload, so the rotated non-uniform icon raster is not
+     * byte-identical to Android's `Canvas.drawBitmap` (S4d-8). This is the deliberate Desktop/iOS icon
+     * path — do not reopen the Android byte-exact icon swap.
+     *
+     * @param scaleRatio icon scale; production passes
+     *                   `WaterMark.textSize / WatermarkCellComposer.ICON_SCALE_REFERENCE_TEXT_SIZE` (14f ⇒ 1×)
+     * @param alpha      icon opacity baked into the cell (0f..1f, default opaque). NOTE:
+     *                   [composeIconOverImage] leaves this at the default and instead applies the watermark
+     *                   alpha ONCE at the composition step (see its KDoc), mirroring [composeOverImage].
+     */
+    fun renderIconCell(
+        icon: ImageBitmap,
+        degree: Float = 0f,
+        hGapPercent: Int = 0,
+        vGapPercent: Int = 0,
+        scaleRatio: Float = 1f,
+        alpha: Float = 1f,
+    ): ImageBitmap = WatermarkCellComposer.composeIconCell(
+        icon = icon,
+        degree = degree,
+        hGapPercent = hGapPercent,
+        vGapPercent = vGapPercent,
+        scaleRatio = scaleRatio,
+        alpha = alpha,
+    )
+
     /** Encode an [ImageBitmap] to PNG bytes via Skia (the iOS analogue of the desktop AWT encode). */
     fun encodePng(bitmap: ImageBitmap): ByteArray {
         val data = SkiaImage.makeFromBitmap(bitmap.asSkiaBitmap()).encodeToData(EncodedImageFormat.PNG)
@@ -146,6 +179,58 @@ object IosWatermarkRenderer {
             vGapPercent = vGapPercent,
             typeface = typeface,
             textStyle = textStyle,
+        )
+        return WatermarkCellComposer.composeOverBackground(
+            background = background,
+            cell = cell,
+            tileMode = tileMode,
+            offsetX = offsetX,
+            offsetY = offsetY,
+            alpha = alpha,
+        )
+    }
+
+    /**
+     * S4d-115: full iOS **icon** pipeline — the icon analogue of [composeOverImage]: **decode**
+     * [imageBytes] + [iconBytes] ([IosImageDecoder]) → **render** the icon cell ([renderIconCell] →
+     * [WatermarkCellComposer.composeIconCell]) → **compose** over the decoded background
+     * ([WatermarkCellComposer.composeOverBackground]) → composed [ImageBitmap] sized to the background.
+     * [tileMode] must be REPEAT or CLAMP (commonMain rejects MIRROR/DECAL). commonMain stays decode-free;
+     * decode is the [IosImageDecoder] boundary for both the background and the icon.
+     *
+     * **Alpha is applied ONCE, at the composition step** (the icon cell is rendered opaque), exactly as
+     * [composeOverImage] applies text alpha. (Android bakes alpha into the icon cell in `buildIconShader`
+     * **and** re-applies it via the shared paint in `compose`, i.e. double-applies; iOS applies it once —
+     * single application is the visually-correct behavior, and iOS icon rendering is perceptual, not
+     * byte-parity with Android.)
+     *
+     * @param scaleRatio production passes
+     *                   `WaterMark.textSize / WatermarkCellComposer.ICON_SCALE_REFERENCE_TEXT_SIZE` (14f ⇒ 1×)
+     * @param alpha      normalized watermark opacity 0f..1f, applied at composition
+     */
+    fun composeIconOverImage(
+        imageBytes: ByteArray,
+        iconBytes: ByteArray,
+        tileMode: WatermarkTileMode = WatermarkTileMode.REPEAT,
+        degree: Float = 315f,
+        hGapPercent: Int = 40,
+        vGapPercent: Int = 40,
+        offsetX: Float = 0.5f,
+        offsetY: Float = 0.5f,
+        scaleRatio: Float = 1f,
+        alpha: Float = 1f,
+    ): ImageBitmap {
+        val background = IosImageDecoder.decode(imageBytes)
+        val icon = IosImageDecoder.decode(iconBytes)
+        val cell = renderIconCell(
+            icon = icon,
+            degree = degree,
+            hGapPercent = hGapPercent,
+            vGapPercent = vGapPercent,
+            scaleRatio = scaleRatio,
+            // Opaque cell; the watermark alpha is applied once at the composition step below
+            // (mirrors composeOverImage for text — see this function's KDoc).
+            alpha = 1f,
         )
         return WatermarkCellComposer.composeOverBackground(
             background = background,
