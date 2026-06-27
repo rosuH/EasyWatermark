@@ -4,7 +4,6 @@ plugins {
     // (`:shared` already applies both); NO version bump. Desktop-target-only — does not affect Android/iOS.
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.compose.multiplatform)
-    application
 }
 
 /**
@@ -37,6 +36,13 @@ dependencies {
     implementation(compose.desktop.currentOs)
 }
 
-application {
-    mainClass.set("me.rosuh.easywatermark.desktop.MainKt")
+// S4d-163: minimal unsigned app-image packaging; installer formats/signing later.
+compose.desktop {
+    application {
+        mainClass = "me.rosuh.easywatermark.desktop.MainKt"
+        nativeDistributions {
+            packageName = "EasyWatermark"
+            packageVersion = "1.0.0"
+        }
+    }
 }
