@@ -16,6 +16,8 @@ struct ContentView: View {
     @State private var pickedItem: PhotosPickerItem?
     /// S4d-102: editable draft of the watermark text; applied to the shared `WaterMarkRepository`.
     @State private var draftText: String = ""
+    /// S4d-103: editable draft of the watermark rotation degree; applied to the shared `WaterMarkRepository`.
+    @State private var draftDegree: Double = 315
 
     private let linkWitness = WatermarkGeometry().diagonal(w: 100, h: 100)
 
@@ -42,6 +44,18 @@ struct ContentView: View {
                 Button("Apply") { Task { await workflow.setWatermarkText(draftText) } }
                     .buttonStyle(.bordered)
                     .accessibilityIdentifier("applyWatermarkText")
+            }
+
+            // S4d-103: edit the watermark rotation degree through the same shared editor path. Minimal
+            // control — not the final 1:1 editor. Commits on release (avoids re-rendering mid-drag).
+            VStack(spacing: 4) {
+                Text("Rotation: \(Int(draftDegree))°")
+                    .font(.caption)
+                    .accessibilityIdentifier("watermarkDegreeLabel")
+                Slider(value: $draftDegree, in: 0...360, step: 1) { editing in
+                    if !editing { Task { await workflow.setWatermarkDegree(Float(draftDegree)) } }
+                }
+                .accessibilityIdentifier("watermarkDegreeSlider")
             }
 
             statusView
@@ -75,10 +89,13 @@ struct ContentView: View {
         // S4d-82: one-shot read-only exercise of the retained iOS UserConfig prefs bridge on launch
         // (link/async-interop witness; no prefs UI, writes nothing).
         .task { await workflow.loadUserConfigWitness() }
-        // S4d-102: load the persisted watermark text from the shared repo on launch and seed the draft.
+        // S4d-102/S4d-103: load the persisted watermark text + degree from the shared repo on launch and
+        // seed the drafts.
         .task {
             await workflow.loadWatermarkText()
             draftText = workflow.watermarkText
+            await workflow.loadWatermarkDegree()
+            draftDegree = Double(workflow.watermarkDegree)
         }
     }
 

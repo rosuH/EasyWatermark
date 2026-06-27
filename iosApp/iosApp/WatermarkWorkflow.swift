@@ -47,6 +47,11 @@ final class WatermarkWorkflow: ObservableObject {
     /// `WatermarkConfigEditor`) instead of a Swift-only constant. Default matches the prior constant.
     @Published private(set) var watermarkText: String = "EasyWatermark 水印"
 
+    /// S4d-103: watermark rotation degree, also sourced from the shared `WaterMarkRepository` via
+    /// `watermarkConfigBridge` (loaded on launch, edited through `WatermarkConfigEditor.updateDegree`).
+    /// Default 315° matches `WaterMark.default.degree` and the prior hardcoded render arg.
+    @Published private(set) var watermarkDegree: Float = 315.0
+
     /// S4d-102: the single retained iOS watermark-config bridge over the common `WaterMarkRepository`
     /// (the first off-Android consumer of the shared watermark editor). One instance per process
     /// (DataStore forbids a second active store for the same file), mirroring `userConfigBridge`.
@@ -101,6 +106,33 @@ final class WatermarkWorkflow: ObservableObject {
         }
     }
 
+    /// S4d-103: load the persisted rotation degree from the shared `WaterMarkRepository` (one-shot). On
+    /// an empty store this returns `WaterMark.default.degree` (315°), preserving the visible default. A
+    /// read error keeps the current value.
+    func loadWatermarkDegree() async {
+        do {
+            // A Kotlin `suspend fun` returning a primitive bridges to Swift as a boxed `KotlinFloat`.
+            watermarkDegree = try await watermarkConfigBridge.currentDegree().floatValue
+        } catch {
+            // keep the current default; a read failure must not break the editor
+        }
+    }
+
+    /// S4d-103: persist a new rotation `degree` through the shared `WatermarkConfigEditor` (clamped
+    /// 0..360 by the shared rules), then re-render the last image (if any). A write failure surfaces as
+    /// a `.failure` without changing the persisted value.
+    func setWatermarkDegree(_ degree: Float) async {
+        do {
+            try await watermarkConfigBridge.setDegree(degree: degree)
+            watermarkDegree = degree
+            if let data = lastImageData {
+                await render(imageData: data)
+            }
+        } catch {
+            state = .failure("Could not save watermark rotation: \(error.localizedDescription)")
+        }
+    }
+
     /// Render `imageData` (the encoded bytes of a picked photo) into a watermarked PNG.
     func render(imageData: Data) async {
         state = .rendering
@@ -112,8 +144,9 @@ final class WatermarkWorkflow: ObservableObject {
         // Off the main actor: decode + render + encode are CPU/Skia heavy. Only `Data`/`Int` (Sendable)
         // cross the boundary; the Kotlin objects live and die inside the detached task.
         let text = watermarkText
+        let degree = watermarkDegree
         let outcome = await Task.detached(priority: .userInitiated) {
-            WatermarkWorkflow.renderBlocking(imageData: imageData, text: text)
+            WatermarkWorkflow.renderBlocking(imageData: imageData, text: text, degree: degree)
         }.value
 
         switch outcome {
@@ -161,7 +194,7 @@ final class WatermarkWorkflow: ObservableObject {
     // boundary that wraps `bundledFontFamily → composeOverImage → encodePng`. Any font/decode/render/
     // encode failure arrives here as a Swift-catchable error (an `IosRenderException` bridged to
     // `NSError`) instead of a fatal Kotlin/Native crash, and is surfaced as `.failure(...)`.
-    private nonisolated static func renderBlocking(imageData: Data, text: String) -> Outcome {
+    private nonisolated static func renderBlocking(imageData: Data, text: String, degree: Float) -> Outcome {
         do {
             // `composeOverImage` (inside the bridge) uses opaque white internally; `tileMode` must be
             // REPEAT or CLAMP (REPEAT is the product tiling). Kotlin default params don't generate Swift
@@ -171,7 +204,7 @@ final class WatermarkWorkflow: ObservableObject {
                 text: text,
                 tileMode: WatermarkTileMode.repeat,
                 textSize: 24.0,
-                degree: 315.0,
+                degree: degree,
                 hGapPercent: 40,
                 vGapPercent: 40,
                 offsetX: 0.5,

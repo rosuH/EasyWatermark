@@ -9,8 +9,8 @@ import kotlin.test.assertEquals
 
 /**
  * S4d-102: iOS runtime proof that the common [WaterMarkRepository], behind the Swift-facing
- * [IosWatermarkConfigBridge], reads/writes the watermark text through the iOS
- * [createWaterMarkDataStore] (`NSDocumentDirectory`) store. RUNS on `iosSimulatorArm64Test`.
+ * [IosWatermarkConfigBridge], reads/writes the watermark text (S4d-102) and rotation degree (S4d-103)
+ * through the iOS [createWaterMarkDataStore] (`NSDocumentDirectory`) store. RUNS on `iosSimulatorArm64Test`.
  *
  * A unique store name (NSUUID) is used so the initial read is the true default and the test does not
  * collide with the app's default store or other runs (the simulator data container is ephemeral).
@@ -40,5 +40,25 @@ class IosWatermarkConfigBridgeTest {
         // Overwrite again to prove repeated edits persist.
         b.setText("DO NOT REDISTRIBUTE")
         assertEquals("DO NOT REDISTRIBUTE", b.currentText(), "watermark text must persist on re-edit")
+    }
+
+    @Test
+    fun bridge_watermark_degree_roundtrip() = runBlocking {
+        val b = bridge("s4d103_degree_" + NSUUID().UUIDString())
+
+        // Empty store -> WaterMark.default.degree (matches the prior Swift hardcoded 315.0).
+        assertEquals(315f, b.currentDegree(), "default degree must be 315 (fresh-install default)")
+
+        // Write through the shared editor use-case, then read back.
+        b.setDegree(90f)
+        assertEquals(90f, b.currentDegree(), "degree must persist after setDegree")
+
+        // Repeated edit persists.
+        b.setDegree(0f)
+        assertEquals(0f, b.currentDegree(), "degree must persist on re-edit")
+
+        // Out-of-range write is clamped by the shared WatermarkConfigRules.clampDegree (0..360).
+        b.setDegree(400f)
+        assertEquals(360f, b.currentDegree(), "degree must clamp to 360 (shared clamp)")
     }
 }

@@ -13,7 +13,9 @@ import me.rosuh.easywatermark.domain.WatermarkConfigEditor
  * persisted watermark text (`repo.waterMark.first().text`), and [setText] is a plain `suspend` write
  * routed through the shared [WatermarkConfigEditor] use-case (not a parallel Swift field). The
  * Kotlin/Native importer bridges `suspend` to Swift `async`, so a DataStore write failure surfaces as a
- * Swift error rather than a fatal crash. Only `String` crosses to Swift.
+ * Swift error rather than a fatal crash. Only value types (`String`, `Float`) cross to Swift. S4d-103
+ * extends this to the rotation [currentDegree]/[setDegree] field (writes via the shared editor, clamped
+ * by `WatermarkConfigRules.clampDegree`).
  *
  * Single-instance-per-file: DataStore forbids a second active store for the same file, so a real iOS app
  * retains ONE bridge (e.g. in a Swift `ObservableObject`), exactly as [IosUserConfigBridge] is retained.
@@ -28,6 +30,14 @@ class IosWatermarkConfigBridge(private val repo: WaterMarkRepository) {
     /** Persist the watermark [text] through the shared editor use-case. Failures surface to Swift. */
     suspend fun setText(text: String) {
         editor.updateText(text)
+    }
+
+    /** S4d-103: one-shot snapshot of the current persisted rotation degree (default 315°). */
+    suspend fun currentDegree(): Float = repo.waterMark.first().degree
+
+    /** S4d-103: persist the rotation [degree] through the shared editor use-case (clamped 0..360). */
+    suspend fun setDegree(degree: Float) {
+        editor.updateDegree(degree)
     }
 }
 
