@@ -58,6 +58,20 @@ struct ContentView: View {
                 .accessibilityIdentifier("watermarkDegreeSlider")
             }
 
+            // S4d-104: pick the tile mode through the same shared editor path. Only the two product
+            // modes common composition supports are exposed: REPEAT (tiled) and CLAMP (single decal).
+            // The Picker is bound straight to the workflow (its `set` persists + re-renders), so there is
+            // no spurious launch write. Minimal control — not the final 1:1 editor.
+            Picker("Tile mode", selection: Binding(
+                get: { workflow.watermarkTileMode },
+                set: { newMode in Task { await workflow.setWatermarkTileMode(newMode) } }
+            )) {
+                Text("Repeat").tag(WatermarkTileMode.repeat)
+                Text("Single").tag(WatermarkTileMode.clamp)
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("watermarkTileModePicker")
+
             statusView
 
             if let png = workflow.resultPNG, let uiImage = UIImage(data: png) {
@@ -96,6 +110,7 @@ struct ContentView: View {
             draftText = workflow.watermarkText
             await workflow.loadWatermarkDegree()
             draftDegree = Double(workflow.watermarkDegree)
+            await workflow.loadWatermarkTileMode()
         }
     }
 

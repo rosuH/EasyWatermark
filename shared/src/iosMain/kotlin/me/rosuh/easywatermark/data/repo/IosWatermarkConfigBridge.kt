@@ -13,9 +13,9 @@ import me.rosuh.easywatermark.domain.WatermarkConfigEditor
  * persisted watermark text (`repo.waterMark.first().text`), and [setText] is a plain `suspend` write
  * routed through the shared [WatermarkConfigEditor] use-case (not a parallel Swift field). The
  * Kotlin/Native importer bridges `suspend` to Swift `async`, so a DataStore write failure surfaces as a
- * Swift error rather than a fatal crash. Only value types (`String`, `Float`) cross to Swift. S4d-103
- * extends this to the rotation [currentDegree]/[setDegree] field (writes via the shared editor, clamped
- * by `WatermarkConfigRules.clampDegree`).
+ * Swift error rather than a fatal crash. Only value types cross to Swift — `String` (text), `Float`
+ * (degree, S4d-103, clamped by `WatermarkConfigRules.clampDegree`), and the `WatermarkTileMode` enum
+ * (S4d-104; the iOS UI uses REPEAT/CLAMP only). All writes route through the shared editor.
  *
  * Single-instance-per-file: DataStore forbids a second active store for the same file, so a real iOS app
  * retains ONE bridge (e.g. in a Swift `ObservableObject`), exactly as [IosUserConfigBridge] is retained.
@@ -38,6 +38,14 @@ class IosWatermarkConfigBridge(private val repo: WaterMarkRepository) {
     /** S4d-103: persist the rotation [degree] through the shared editor use-case (clamped 0..360). */
     suspend fun setDegree(degree: Float) {
         editor.updateDegree(degree)
+    }
+
+    /** S4d-104: one-shot snapshot of the current persisted tile mode (default REPEAT). */
+    suspend fun currentTileMode(): WatermarkTileMode = repo.waterMark.first().tileMode
+
+    /** S4d-104: persist the [tileMode] through the shared editor use-case. UI uses REPEAT/CLAMP only. */
+    suspend fun setTileMode(tileMode: WatermarkTileMode) {
+        editor.updateTileMode(tileMode)
     }
 }
 

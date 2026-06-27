@@ -52,6 +52,12 @@ final class WatermarkWorkflow: ObservableObject {
     /// Default 315° matches `WaterMark.default.degree` and the prior hardcoded render arg.
     @Published private(set) var watermarkDegree: Float = 315.0
 
+    /// S4d-104: watermark tile mode, also sourced from the shared `WaterMarkRepository` via
+    /// `watermarkConfigBridge` (loaded on launch, edited through `WatermarkConfigEditor.updateTileMode`).
+    /// Default REPEAT matches `WaterMark.default.tileMode` and the prior hardcoded render arg. The UI
+    /// offers only REPEAT and CLAMP (single decal).
+    @Published private(set) var watermarkTileMode: WatermarkTileMode = .repeat
+
     /// S4d-102: the single retained iOS watermark-config bridge over the common `WaterMarkRepository`
     /// (the first off-Android consumer of the shared watermark editor). One instance per process
     /// (DataStore forbids a second active store for the same file), mirroring `userConfigBridge`.
@@ -133,6 +139,31 @@ final class WatermarkWorkflow: ObservableObject {
         }
     }
 
+    /// S4d-104: load the persisted tile mode from the shared `WaterMarkRepository` (one-shot). On an
+    /// empty store this returns `WaterMark.default.tileMode` (REPEAT), preserving the visible default. A
+    /// read error keeps the current value.
+    func loadWatermarkTileMode() async {
+        do {
+            watermarkTileMode = try await watermarkConfigBridge.currentTileMode()
+        } catch {
+            // keep the current default; a read failure must not break the editor
+        }
+    }
+
+    /// S4d-104: persist a new tile `mode` through the shared `WatermarkConfigEditor`, then re-render the
+    /// last image (if any). A write failure surfaces as a `.failure` without changing the persisted value.
+    func setWatermarkTileMode(_ mode: WatermarkTileMode) async {
+        do {
+            try await watermarkConfigBridge.setTileMode(tileMode: mode)
+            watermarkTileMode = mode
+            if let data = lastImageData {
+                await render(imageData: data)
+            }
+        } catch {
+            state = .failure("Could not save watermark tile mode: \(error.localizedDescription)")
+        }
+    }
+
     /// Render `imageData` (the encoded bytes of a picked photo) into a watermarked PNG.
     func render(imageData: Data) async {
         state = .rendering
@@ -145,8 +176,9 @@ final class WatermarkWorkflow: ObservableObject {
         // cross the boundary; the Kotlin objects live and die inside the detached task.
         let text = watermarkText
         let degree = watermarkDegree
+        let tileMode = watermarkTileMode
         let outcome = await Task.detached(priority: .userInitiated) {
-            WatermarkWorkflow.renderBlocking(imageData: imageData, text: text, degree: degree)
+            WatermarkWorkflow.renderBlocking(imageData: imageData, text: text, degree: degree, tileMode: tileMode)
         }.value
 
         switch outcome {
@@ -194,7 +226,7 @@ final class WatermarkWorkflow: ObservableObject {
     // boundary that wraps `bundledFontFamily → composeOverImage → encodePng`. Any font/decode/render/
     // encode failure arrives here as a Swift-catchable error (an `IosRenderException` bridged to
     // `NSError`) instead of a fatal Kotlin/Native crash, and is surfaced as `.failure(...)`.
-    private nonisolated static func renderBlocking(imageData: Data, text: String, degree: Float) -> Outcome {
+    private nonisolated static func renderBlocking(imageData: Data, text: String, degree: Float, tileMode: WatermarkTileMode) -> Outcome {
         do {
             // `composeOverImage` (inside the bridge) uses opaque white internally; `tileMode` must be
             // REPEAT or CLAMP (REPEAT is the product tiling). Kotlin default params don't generate Swift
@@ -202,7 +234,7 @@ final class WatermarkWorkflow: ObservableObject {
             let rendered = try IosWatermarkRenderBridge.shared.renderWatermarkedPng(
                 imageBytes: imageData.toKotlinByteArray(),
                 text: text,
-                tileMode: WatermarkTileMode.repeat,
+                tileMode: tileMode,
                 textSize: 24.0,
                 degree: degree,
                 hGapPercent: 40,
