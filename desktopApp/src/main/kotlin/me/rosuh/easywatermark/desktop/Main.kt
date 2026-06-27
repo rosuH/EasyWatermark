@@ -1,13 +1,17 @@
 package me.rosuh.easywatermark.desktop
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.datastore.createUserConfigDataStore
+import me.rosuh.easywatermark.data.db.buildTemplateDatabase
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.Result
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
+import me.rosuh.easywatermark.data.repo.TemplateRepository
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
+import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopWatermarkComposer
 import me.rosuh.easywatermark.render.DesktopWatermarkTextRenderer
@@ -198,6 +202,25 @@ private fun runHeadless(args: Array<String>) {
             println("OK, threw as expected: ${e.message}")
         }
     }
+
+    // S4d-143a: Desktop templates headless witness — the first :desktopApp consumer of the S4d-142 Desktop
+    // template DB builder (bundled SQLite driver) + commonMain TemplateRepository/TemplateEditor. Builds an
+    // EMPTY repo-local DB, then add → list → delete roundtrips one template and ends empty. No seeding, no UI.
+    // It deletes all rows at the end, so the persistent store is empty on the next run (deterministic output).
+    val templatesDir = File("build/s4d143a-desktop-templates").apply { mkdirs() }
+    val templateDb = buildTemplateDatabase(templatesDir)
+    val templateRepo = TemplateRepository(templateDb.templateDao(), Dispatchers.IO)
+    val templateEditor = TemplateEditor(templateRepo)
+    println("Desktop headless templates witness (S4d-143a) [store dir: ${templatesDir.path}]:")
+    runBlocking {
+        println("  daoNull=${templateRepo.checkIfIsDaoNull()} initial count=${templateRepo.getAllTemplate().first().size}")
+        templateEditor.add("S4d-143a desktop template")
+        val afterAdd = templateRepo.getAllTemplate().first()
+        println("  after add: count=${afterAdd.size} content='${afterAdd.firstOrNull()?.content}' id=${afterAdd.firstOrNull()?.id}")
+        afterAdd.forEach { templateEditor.delete(it) }
+        println("  after delete: count=${templateRepo.getAllTemplate().first().size} (final empty)")
+    }
+    templateDb.close()
 
     println("OK — shared KMP engine core + Desktop text renderer + Desktop composition + real-image decode run on Desktop.")
 }

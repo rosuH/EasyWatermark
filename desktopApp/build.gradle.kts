@@ -25,6 +25,13 @@ dependencies {
     // declare them itself (as `:app` does). Existing catalog aliases only, no new versions.
     implementation(libs.kotlin.coroutine.core)
     implementation(libs.datastore.preference)
+    // S4d-143a: `:shared` exposes the commonMain Room API (`AppDatabase`/`buildTemplateDatabase`) whose
+    // supertype `androidx.room.RoomDatabase` comes from `room-runtime`, declared `implementation` in
+    // `:shared` so it does not transit. The templates witness in `Main.kt` consumes that API, so `:desktopApp`
+    // must declare it itself — the same consumer-classpath pattern as coroutines/DataStore above (and as
+    // `:app`). Existing catalog alias only; NO new library/version, and NO sqlite native payload (the bundled
+    // SQLite driver stays the `:shared` desktopMain-only `sqlite-bundled`, S4d-142).
+    implementation(libs.room.runtime)
     // S4d-121: Compose Desktop UI + windowing (Skiko backend) for the minimal window. Same version the
     // `:shared` desktopMain already uses (composeMultiplatform 1.11.1) — no version bump, no catalog change.
     implementation(compose.desktop.currentOs)
