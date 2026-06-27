@@ -95,6 +95,16 @@ final class WatermarkWorkflow: ObservableObject {
     /// `TextTypeface.companion.obtainSealedClass(key:)`, so the SwiftUI Picker state stays a plain `Int32`.
     @Published private(set) var watermarkTypefaceKey: Int32 = 0
 
+    /// S4d-113: watermark text paint style as the storage-id key (0=Fill, 1=Stroke), matching
+    /// `TextPaintStyle.serializeKey()` / the persisted int. Sourced from the shared `WaterMarkRepository`
+    /// via `watermarkConfigBridge` and edited through `WatermarkConfigEditor.updateTextStyle`. Default `0`
+    /// (Fill) is `WaterMark.default.textStyle` — an ADDITION, not an alignment: the fresh-install iOS
+    /// render is unchanged (filled text); Stroke is Compose hairline (perceptual, not byte-parity with
+    /// Android's `Paint.Style.STROKE`). The Kotlin `TextPaintStyle` sealed object is constructed only at
+    /// the bridge/render edge via `TextPaintStyle.companion.obtainSealedClass(key:)`, so the SwiftUI Picker
+    /// state stays a plain `Int32`.
+    @Published private(set) var watermarkTextStyleKey: Int32 = 0
+
     /// S4d-102: the single retained iOS watermark-config bridge over the common `WaterMarkRepository`
     /// (the first off-Android consumer of the shared watermark editor). One instance per process
     /// (DataStore forbids a second active store for the same file), mirroring `userConfigBridge`.
@@ -347,6 +357,34 @@ final class WatermarkWorkflow: ObservableObject {
         }
     }
 
+    /// S4d-113: load the persisted text paint style from the shared repo (one-shot) as its storage-id key.
+    /// On an empty store this yields `0` (Fill, `WaterMark.default.textStyle`). `serializeKey()` is a plain
+    /// (non-suspend) Int accessor on the returned object, so it bridges directly to `Int32`. A read error
+    /// keeps the current value.
+    func loadWatermarkTextStyle() async {
+        do {
+            watermarkTextStyleKey = try await watermarkConfigBridge.currentTextStyle().serializeKey()
+        } catch {
+            // keep the current default; a read failure must not break the editor
+        }
+    }
+
+    /// S4d-113: persist a new paint-style `key` (0=Fill, 1=Stroke) through the shared `WatermarkConfigEditor`
+    /// — the Kotlin `TextPaintStyle` sealed object is reconstructed from the key via the companion — then
+    /// re-render the last image (if any). A write failure surfaces as `.failure` without persisting.
+    func setWatermarkTextStyle(_ key: Int32) async {
+        do {
+            let style = TextPaintStyle.companion.obtainSealedClass(key: key)
+            try await watermarkConfigBridge.setTextStyle(style: style)
+            watermarkTextStyleKey = key
+            if let data = lastImageData {
+                await render(imageData: data)
+            }
+        } catch {
+            state = .failure("Could not save watermark text style: \(error.localizedDescription)")
+        }
+    }
+
     /// Render `imageData` (the encoded bytes of a picked photo) into a watermarked PNG.
     func render(imageData: Data) async {
         state = .rendering
@@ -366,8 +404,9 @@ final class WatermarkWorkflow: ObservableObject {
         let hGap = watermarkHGap
         let vGap = watermarkVGap
         let typefaceKey = watermarkTypefaceKey
+        let textStyleKey = watermarkTextStyleKey
         let outcome = await Task.detached(priority: .userInitiated) {
-            WatermarkWorkflow.renderBlocking(imageData: imageData, text: text, degree: degree, tileMode: tileMode, alpha: alpha, colorArgb: colorArgb, textSize: textSize, hGap: hGap, vGap: vGap, typefaceKey: typefaceKey)
+            WatermarkWorkflow.renderBlocking(imageData: imageData, text: text, degree: degree, tileMode: tileMode, alpha: alpha, colorArgb: colorArgb, textSize: textSize, hGap: hGap, vGap: vGap, typefaceKey: typefaceKey, textStyleKey: textStyleKey)
         }.value
 
         switch outcome {
@@ -415,13 +454,14 @@ final class WatermarkWorkflow: ObservableObject {
     // boundary that wraps `bundledFontFamily → composeOverImage → encodePng`. Any font/decode/render/
     // encode failure arrives here as a Swift-catchable error (an `IosRenderException` bridged to
     // `NSError`) instead of a fatal Kotlin/Native crash, and is surfaced as `.failure(...)`.
-    private nonisolated static func renderBlocking(imageData: Data, text: String, degree: Float, tileMode: WatermarkTileMode, alpha: Float, colorArgb: Int32, textSize: Float, hGap: Int32, vGap: Int32, typefaceKey: Int32) -> Outcome {
+    private nonisolated static func renderBlocking(imageData: Data, text: String, degree: Float, tileMode: WatermarkTileMode, alpha: Float, colorArgb: Int32, textSize: Float, hGap: Int32, vGap: Int32, typefaceKey: Int32, textStyleKey: Int32) -> Outcome {
         do {
             // `composeOverImage` (inside the bridge) renders the text in the passed `colorArgb` ARGB
-            // color (S4d-107) and the passed `typeface` (S4d-112, mapped to Compose fontWeight/fontStyle);
-            // `tileMode` must be REPEAT or CLAMP (REPEAT is the product tiling). Kotlin default params don't
-            // generate Swift overloads, so every argument is passed explicitly. The `TextTypeface` sealed
-            // object is reconstructed from the storage-id key via the companion.
+            // color (S4d-107), the passed `typeface` (S4d-112, mapped to Compose fontWeight/fontStyle), and
+            // the passed `textStyle` (S4d-113, mapped to a Compose text drawStyle); `tileMode` must be
+            // REPEAT or CLAMP (REPEAT is the product tiling). Kotlin default params don't generate Swift
+            // overloads, so every argument is passed explicitly. The `TextTypeface`/`TextPaintStyle` sealed
+            // objects are reconstructed from their storage-id keys via the companion.
             let rendered = try IosWatermarkRenderBridge.shared.renderWatermarkedPng(
                 imageBytes: imageData.toKotlinByteArray(),
                 text: text,
@@ -435,6 +475,7 @@ final class WatermarkWorkflow: ObservableObject {
                 alpha: alpha,
                 colorArgb: colorArgb,
                 typeface: TextTypeface.companion.obtainSealedClass(key: typefaceKey),
+                textStyle: TextPaintStyle.companion.obtainSealedClass(key: textStyleKey),
                 latinFirst: true,
                 bundle: Bundle.main
             )

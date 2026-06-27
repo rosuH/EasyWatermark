@@ -1,6 +1,7 @@
 package me.rosuh.easywatermark.render
 
 import androidx.compose.ui.graphics.ImageBitmap
+import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
@@ -60,6 +61,9 @@ object IosWatermarkRenderBridge {
         // S4d-112: persisted text typeface (default Normal = WaterMark.default.textTypeface preserves the
         // prior regular output); mapped to Compose fontWeight/fontStyle in IosWatermarkRenderer.
         typeface: TextTypeface = WaterMark.default.textTypeface,
+        // S4d-113: persisted text paint style (default Fill = WaterMark.default.textStyle preserves the
+        // prior filled output); mapped to a Compose text drawStyle in IosWatermarkRenderer.
+        textStyle: TextPaintStyle = WaterMark.default.textStyle,
         latinFirst: Boolean = true,
         bundle: NSBundle = NSBundle.mainBundle,
     ): IosRenderedPng {
@@ -84,6 +88,7 @@ object IosWatermarkRenderBridge {
                 alpha = alpha,
                 colorArgb = colorArgb,
                 typeface = typeface,
+                textStyle = textStyle,
             )
         } catch (t: Throwable) {
             // RENDER covers decode (IosImageDecoder, inside composeOverImage), cell rasterization,

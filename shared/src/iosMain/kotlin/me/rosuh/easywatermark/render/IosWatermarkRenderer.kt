@@ -3,11 +3,15 @@ package me.rosuh.easywatermark.render
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asSkiaBitmap
+import androidx.compose.ui.graphics.drawscope.DrawStyle
+import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
@@ -47,6 +51,19 @@ object IosWatermarkRenderer {
         TextTypeface.BoldItalic -> FontWeight.Bold to FontStyle.Italic
     }
 
+    /**
+     * S4d-113: map the platform-neutral [TextPaintStyle] to a Compose text [DrawStyle]. `Fill` is the
+     * explicit fill (identical to the prior unset default, so it preserves current output); `Stroke` uses
+     * the Compose [Stroke] with its **default width `0f`** — Skia treats width-0 as a 1px **hairline**,
+     * matching Android's stroked watermark text (`Paint.Style.STROKE` at the Paint default `strokeWidth`
+     * `0`, since the text paint never sets a stroke width). This is **perceptual Skiko honoring, not
+     * byte-parity** with Android's `StaticLayout` raster (iOS-text-is-Skiko policy, S4d-17 Option C).
+     */
+    private fun TextPaintStyle.toDrawStyle(): DrawStyle = when (this) {
+        TextPaintStyle.Fill -> Fill
+        TextPaintStyle.Stroke -> Stroke()
+    }
+
     /** Render ONE watermark text cell via the shared [WatermarkCellComposer.composeTextCell] on iOS. */
     fun renderTextCell(
         text: String,
@@ -59,6 +76,8 @@ object IosWatermarkRenderer {
         vGapPercent: Int = 0,
         // S4d-112: persisted text typeface; default Normal preserves the prior (regular) output.
         typeface: TextTypeface = TextTypeface.Normal,
+        // S4d-113: persisted text paint style; default Fill preserves the prior (filled) output.
+        textStyle: TextPaintStyle = TextPaintStyle.Fill,
     ): ImageBitmap {
         val fontPx = textSize * imageWidth / REF_WIDTH
         val (fontWeight, fontStyle) = typeface.toCompose()
@@ -69,6 +88,7 @@ object IosWatermarkRenderer {
                 fontFamily = fontFamily,
                 fontWeight = fontWeight,
                 fontStyle = fontStyle,
+                drawStyle = textStyle.toDrawStyle(),
             ),
             color = color,
         )
@@ -111,6 +131,8 @@ object IosWatermarkRenderer {
         colorArgb: Int = WaterMark.default.textColor,
         // S4d-112: persisted text typeface; default Normal preserves the prior (regular) output.
         typeface: TextTypeface = TextTypeface.Normal,
+        // S4d-113: persisted text paint style; default Fill preserves the prior (filled) output.
+        textStyle: TextPaintStyle = TextPaintStyle.Fill,
     ): ImageBitmap {
         val background = IosImageDecoder.decode(imageBytes)
         val cell = renderTextCell(
@@ -123,6 +145,7 @@ object IosWatermarkRenderer {
             hGapPercent = hGapPercent,
             vGapPercent = vGapPercent,
             typeface = typeface,
+            textStyle = textStyle,
         )
         return WatermarkCellComposer.composeOverBackground(
             background = background,

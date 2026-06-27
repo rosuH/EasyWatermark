@@ -3,6 +3,7 @@ package me.rosuh.easywatermark.data.repo
 import androidx.compose.ui.graphics.toPixelMap
 import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.datastore.createWaterMarkDataStore
+import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.render.IosWatermarkRenderer
@@ -186,6 +187,39 @@ class IosWatermarkConfigBridgeTest {
             var visible = 0
             for (y in 0 until pixels.height) for (x in 0 until pixels.width) if (pixels[x, y].alpha > 0f) visible++
             assertTrue(visible > 0, "typeface $tf must render visible text pixels (visible=$visible)")
+        }
+    }
+
+    @Test
+    fun bridge_watermark_textstyle_roundtrip() = runBlocking {
+        val b = bridge("s4d113_textstyle_" + NSUUID().UUIDString())
+
+        // Empty store -> WaterMark.default.textStyle (Fill; preserves the prior filled iOS output).
+        assertEquals(TextPaintStyle.Fill, b.currentTextStyle(), "default text style must be Fill")
+
+        // Stroke persists and reads back through the shared editor.
+        b.setTextStyle(TextPaintStyle.Stroke)
+        assertEquals(TextPaintStyle.Stroke, b.currentTextStyle(), "text style must persist as Stroke")
+
+        // Switch back to prove repeated edits persist.
+        b.setTextStyle(TextPaintStyle.Fill)
+        assertEquals(TextPaintStyle.Fill, b.currentTextStyle(), "text style must persist as Fill on re-edit")
+    }
+
+    /**
+     * S4d-113: the iOS renderer honors both paint styles — each renders a visible (non-blank) text cell.
+     * Stroke maps to a Compose `Stroke()` (default width 0 = Skia hairline), mirroring Android's stroked
+     * text (`Paint.Style.STROKE` at the default strokeWidth 0); this is perceptual Skiko honoring, not
+     * byte-parity. Cheap: one small cell each.
+     */
+    @Test
+    fun renderer_honors_each_textstyle_nonblank() {
+        for (style in listOf(TextPaintStyle.Fill, TextPaintStyle.Stroke)) {
+            val cell = IosWatermarkRenderer.renderTextCell(text = "Ag", textSize = 48f, textStyle = style)
+            val pixels = cell.toPixelMap()
+            var visible = 0
+            for (y in 0 until pixels.height) for (x in 0 until pixels.width) if (pixels[x, y].alpha > 0f) visible++
+            assertTrue(visible > 0, "text style $style must render visible text pixels (visible=$visible)")
         }
     }
 }

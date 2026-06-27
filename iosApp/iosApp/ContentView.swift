@@ -153,6 +153,20 @@ struct ContentView: View {
             .pickerStyle(.segmented)
             .accessibilityIdentifier("watermarkTypefacePicker")
 
+            // S4d-113: pick the text paint style through the same shared editor path. Tags are the storage-id
+            // keys (0=Fill,1=Stroke). Bound straight to the workflow (its `set` persists + re-renders), so
+            // there is no spurious launch write. Default Fill preserves the current filled output; Stroke is
+            // a Compose hairline outline (perceptual, not 1:1 with Android's Paint.Style.STROKE).
+            Picker("Style", selection: Binding(
+                get: { workflow.watermarkTextStyleKey },
+                set: { newKey in Task { await workflow.setWatermarkTextStyle(newKey) } }
+            )) {
+                Text("Fill").tag(Int32(0))
+                Text("Stroke").tag(Int32(1))
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("watermarkTextStylePicker")
+
             statusView
 
             if let png = workflow.resultPNG, let uiImage = UIImage(data: png) {
@@ -201,6 +215,7 @@ struct ContentView: View {
             draftHGap = Double(workflow.watermarkHGap)
             draftVGap = Double(workflow.watermarkVGap)
             await workflow.loadWatermarkTypeface()
+            await workflow.loadWatermarkTextStyle()
         }
     }
 
