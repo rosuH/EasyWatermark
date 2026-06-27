@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.ImageBitmapConfig
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
+import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WaterMark
@@ -183,6 +184,11 @@ object DesktopWatermarkComposer {
         colorArgb: Int = WaterMark.default.textColor,
         typeface: TextTypeface = TextTypeface.Normal,
         textStyle: TextPaintStyle = TextPaintStyle.Fill,
+        // S4d-127: output encoding. Defaults to PNG (quality ignored for PNG) so existing callers + the
+        // PNG-magic goldens get byte-identical output; pass ImageFormat.JPEG + a quality (0..100) for JPEG.
+        // The Desktop save flow does NOT yet consume this (persisted-config wiring is S4d-128).
+        format: ImageFormat = ImageFormat.PNG,
+        quality: Int = 100,
     ): ComposedImage {
         val background = DesktopImageDecoder.decode(imageBytes) // genuine ImageIO decode
         val cell = DesktopWatermarkTextRenderer.renderTextCell(
@@ -205,6 +211,10 @@ object DesktopWatermarkComposer {
             offsetY = offsetY,
             alpha = alpha,
         )
-        return ComposedImage(composed.width, composed.height, DesktopWatermarkTextRenderer.encodePng(composed))
+        return ComposedImage(
+            composed.width,
+            composed.height,
+            DesktopWatermarkTextRenderer.encode(composed, format, quality),
+        )
     }
 }

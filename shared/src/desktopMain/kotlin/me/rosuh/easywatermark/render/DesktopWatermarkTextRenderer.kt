@@ -15,10 +15,14 @@ import androidx.compose.ui.text.platform.Font
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.sp
+import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
+import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
+import javax.imageio.IIOImage
 import javax.imageio.ImageIO
+import javax.imageio.ImageWriteParam
 
 /**
  * S4d-18: the **Desktop (JVM/Skiko) production watermark text renderer** — the first non-test use of
@@ -148,6 +152,50 @@ object DesktopWatermarkTextRenderer {
     fun encodePng(bitmap: ImageBitmap): ByteArray {
         val out = ByteArrayOutputStream()
         ImageIO.write(bitmap.toAwtImage(), "png", out)
+        return out.toByteArray()
+    }
+
+    /**
+     * S4d-127: encode an [ImageBitmap] to [format] bytes. **PNG delegates to [encodePng]** (lossless,
+     * byte-identical to the existing path). **JPEG** flattens the ARGB `toAwtImage()` onto an opaque
+     * `TYPE_INT_RGB` canvas first — the JDK ImageIO JPEG writer cannot encode alpha, so a naive
+     * `ImageIO.write(argb, "jpg", …)` produces wrong/black output — then encodes at [quality]
+     * (0..100 → `ImageWriteParam.compressionQuality` 0f..1f). JDK ImageIO only; **no new dependency**.
+     *
+     * Capability-only (S4d-127): this does NOT change the Desktop save-flow default, the persisted-config
+     * consumption, or any witness/golden — those default to PNG and are wired in a later slice (S4d-128).
+     */
+    fun encode(bitmap: ImageBitmap, format: ImageFormat, quality: Int = 100): ByteArray = when (format) {
+        ImageFormat.PNG -> encodePng(bitmap)
+        ImageFormat.JPEG -> encodeJpeg(bitmap, quality)
+    }
+
+    /** JPEG encode with alpha flattened onto opaque white (JPEG has no alpha) + explicit quality. */
+    private fun encodeJpeg(bitmap: ImageBitmap, quality: Int): ByteArray {
+        val argb = bitmap.toAwtImage()
+        val rgb = BufferedImage(argb.width, argb.height, BufferedImage.TYPE_INT_RGB)
+        val g = rgb.createGraphics()
+        try {
+            g.color = java.awt.Color.WHITE
+            g.fillRect(0, 0, rgb.width, rgb.height)
+            g.drawImage(argb, 0, 0, null)
+        } finally {
+            g.dispose()
+        }
+        val writer = ImageIO.getImageWritersByFormatName("jpeg").next()
+        val out = ByteArrayOutputStream()
+        ImageIO.createImageOutputStream(out).use { ios ->
+            writer.output = ios
+            val param = writer.defaultWriteParam.apply {
+                compressionMode = ImageWriteParam.MODE_EXPLICIT
+                compressionQuality = quality.coerceIn(0, 100) / 100f
+            }
+            try {
+                writer.write(null, IIOImage(rgb, null, null), param)
+            } finally {
+                writer.dispose()
+            }
+        }
         return out.toByteArray()
     }
 
