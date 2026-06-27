@@ -1,6 +1,7 @@
 package me.rosuh.easywatermark.di
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import me.rosuh.easywatermark.data.db.AppDatabase
@@ -25,6 +26,7 @@ val repositoryModule = module {
             defaultTextProvider = { context.getString(R.string.config_default_water_mark_text) },
             // S4d-87: Android edge passes the SDK-gated legacy tile-id mapper (pre-S DECAL -> REPEAT).
             tileModeFromStorageId = { it.toWatermarkTileMode() },
+            logError = { message -> Log.e("WaterMarkRepository", message) },
         )
     }
 

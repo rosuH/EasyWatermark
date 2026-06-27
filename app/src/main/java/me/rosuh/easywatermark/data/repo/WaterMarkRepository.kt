@@ -1,6 +1,5 @@
 package me.rosuh.easywatermark.data.repo
 
-import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import kotlinx.coroutines.Dispatchers
@@ -41,6 +40,7 @@ class WaterMarkRepository(
     // (pre-Android-12 stored DECAL id 3 -> REPEAT), pinned by WatermarkTileModeMappingTest. NOT the pure
     // `WatermarkTileMode.fromStorageId`, which lacks the SDK gate.
     private val tileModeFromStorageId: (Int?) -> WatermarkTileMode,
+    private val logError: (String) -> Unit,
 ) {
 
     private object PreferenceKeys {
@@ -169,7 +169,7 @@ class WaterMarkRepository(
             return
         }
         val index = imageInfoMap[selectedImage.value.uri] ?: kotlin.run {
-            Log.e("WaterMarkRepository", "updateOffset: imageInfo not found, uri = ${selectedImage.value.uri}")
+            logError("updateOffset: imageInfo not found, uri = ${selectedImage.value.uri}")
             return
         }
         val list = ArrayList(imageInfoList)
