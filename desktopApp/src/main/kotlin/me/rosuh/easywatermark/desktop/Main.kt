@@ -136,17 +136,20 @@ private fun runHeadless(args: Array<String>) {
     val inputPath = args.getOrNull(0)
     val inputBytes = inputPath?.let { File(it).readBytes() }
     val inputLabel = inputPath ?: "<generated 640x480 fixture>"
-    val outputFile = args.getOrNull(1)?.let { File(it) } ?: DesktopWatermarkFlow.defaultOutputFile
+    // S4d-128: an explicit CLI output path wins; otherwise null lets the flow pick the format-aware default.
+    val outputFile = args.getOrNull(1)?.let { File(it) }
     val waterMarkRepo = DesktopWatermarkFlow.buildRepository()
     val configEditor = WatermarkConfigEditor(waterMarkRepo)
+    // S4d-128: the output prefs the flow reads (empty store -> the shared (JPEG, 80) default).
+    val saveFlowUserConfig = DesktopWatermarkFlow.buildUserConfigRepository()
     println("Desktop headless config-driven save flow (S4d-120):")
     val outcome = runBlocking {
-        DesktopWatermarkFlow.runSaveFlow(waterMarkRepo, configEditor, inputBytes, inputLabel, outputFile)
+        DesktopWatermarkFlow.runSaveFlow(waterMarkRepo, configEditor, saveFlowUserConfig, inputBytes, inputLabel, outputFile)
     }
     println("  config (initial): ${outcome.configInitial}")
     println("  config (after edit, persisted): ${outcome.configAfterEdit}")
     println("  input:  ${outcome.inputLabel} (${outcome.inputByteCount} B)")
-    println("  output: ${outcome.outputPath} (${outcome.width}x${outcome.height}, ${outcome.pngByteCount} B)")
+    println("  output: ${outcome.outputPath} (${outcome.format}, ${outcome.width}x${outcome.height}, ${outcome.outputByteCount} B)")
 
     println("OK — shared KMP engine core + Desktop text renderer + Desktop composition + real-image decode run on Desktop.")
 }

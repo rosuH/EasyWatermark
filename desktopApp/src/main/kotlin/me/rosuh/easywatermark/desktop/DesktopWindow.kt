@@ -43,6 +43,8 @@ fun launchDesktopWindow() = application {
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
     val repo = remember { DesktopWatermarkFlow.buildRepository() }
     val editor = remember { WatermarkConfigEditor(repo) }
+    // S4d-128: the output-prefs repo the save flow reads (empty store → the shared (JPEG, 80) default).
+    val userConfigRepo = remember { DesktopWatermarkFlow.buildUserConfigRepository() }
     val scope = rememberCoroutineScope()
     var status by remember {
         mutableStateOf("Ready. Click “Render & Save sample” to run the shared save flow.")
@@ -72,8 +74,8 @@ fun launchDesktopWindow() = application {
                             status = "Rendering…"
                             val next = withContext(Dispatchers.IO) {
                                 try {
-                                    val o = DesktopWatermarkFlow.runSaveFlow(repo, editor)
-                                    "Saved: ${o.outputPath}\n  ${o.width}x${o.height}, ${o.pngByteCount} B\n" +
+                                    val o = DesktopWatermarkFlow.runSaveFlow(repo, editor, userConfigRepo)
+                                    "Saved: ${o.outputPath}\n  ${o.format}, ${o.width}x${o.height}, ${o.outputByteCount} B\n" +
                                         "  config: ${o.configAfterEdit}"
                                 } catch (t: Throwable) {
                                     "Failed: ${t.message}"
@@ -109,9 +111,9 @@ fun launchDesktopWindow() = application {
                                     try {
                                         val bytes = selected.readBytes()
                                         val o = DesktopWatermarkFlow.runSaveFlow(
-                                            repo, editor, inputBytes = bytes, inputLabel = selected.path,
+                                            repo, editor, userConfigRepo, inputBytes = bytes, inputLabel = selected.path,
                                         )
-                                        "Saved: ${o.outputPath}\n  ${o.width}x${o.height}, ${o.pngByteCount} B\n" +
+                                        "Saved: ${o.outputPath}\n  ${o.format}, ${o.width}x${o.height}, ${o.outputByteCount} B\n" +
                                             "  input: ${o.inputLabel} (${o.inputByteCount} B)\n  config: ${o.configAfterEdit}"
                                     } catch (t: Throwable) {
                                         "Failed: ${t.message}"
