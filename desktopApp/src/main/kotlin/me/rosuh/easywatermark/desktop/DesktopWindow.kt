@@ -72,8 +72,8 @@ private class LastImage(val bytes: ByteArray, val label: String)
  * "Apply color" field edits the text color (hex, via `WatermarkConfigEditor.updateTextColor`). S4d-150: an
  * "Apply opacity" field edits the alpha as a 0..100 percent (via `WatermarkConfigEditor.updateAlpha`). S4d-151:
  * "Apply gaps" fields edit the horizontal/vertical gaps (0..500) atomically (via `updateHorizon`/`updateVertical`).
- * Still no REACTIVE/live preview, tile/typeface/style controls, templates UI, drag-drop, or share substitute
- * in this slice.
+ * S4d-152: an "Apply text size" field edits the text size (1..100, via `updateTextSize`). Still no REACTIVE/live
+ * preview, tile/typeface/style controls, templates UI, drag-drop, or share substitute in this slice.
  */
 fun launchDesktopWindow() = application {
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
@@ -104,6 +104,8 @@ fun launchDesktopWindow() = application {
     // S4d-151: the horizontal/vertical watermark GAPS being edited (parsed together on "Apply gaps").
     var hGapText by remember { mutableStateOf("") }
     var vGapText by remember { mutableStateOf("") }
+    // S4d-152: the watermark TEXT SIZE being edited (string; parsed on "Apply text size"). Loaded on launch.
+    var textSizeText by remember { mutableStateOf("") }
     LaunchedEffect(Unit) {
         outputPref = describePref(userConfigRepo.userPreferences.first())
         watermarkText = repo.waterMark.first().text
@@ -114,6 +116,8 @@ fun launchDesktopWindow() = application {
         // S4d-151: load the persisted horizontal/vertical gaps into the editable fields.
         hGapText = repo.waterMark.first().hGap.toString()
         vGapText = repo.waterMark.first().vGap.toString()
+        // S4d-152: load the persisted text size into the editable field.
+        textSizeText = repo.waterMark.first().textSize.toString()
     }
 
     Window(onCloseRequest = ::exitApplication, title = "EasyWatermark — Desktop (S4d-121)") {
@@ -339,6 +343,45 @@ fun launchDesktopWindow() = application {
                     },
                 ) {
                     Text("Apply gaps")
+                }
+                // S4d-152: the watermark TEXT SIZE input. Parsed on an explicit "Apply text size" click
+                // (toFloatOrNull + isFinite; invalid → status only, no persist); coerced to 1f..100f at the
+                // edge (the repo also clamps); persisted via WatermarkConfigEditor.updateTextSize. The field
+                // snaps to the applied value. No auto-preview — click "Preview" to see it.
+                OutlinedTextField(
+                    value = textSizeText,
+                    onValueChange = { textSizeText = it },
+                    enabled = !busy,
+                    label = { Text("Text size (1–100)") },
+                )
+                Button(
+                    enabled = !busy,
+                    onClick = {
+                        val parsed = textSizeText.trim().toFloatOrNull()?.takeIf { it.isFinite() }
+                        if (parsed == null) {
+                            // Invalid/non-finite → short failure status; do NOT call the editor.
+                            status = "Invalid text size: \"$textSizeText\" — enter a number (1–100)."
+                        } else {
+                            scope.launch {
+                                busy = true
+                                val applied = parsed.coerceIn(1f, 100f)
+                                val (next, ok) = withContext(Dispatchers.IO) {
+                                    try {
+                                        editor.updateTextSize(applied)
+                                        "Text size applied: $applied. Click Preview to see it." to true
+                                    } catch (t: Throwable) {
+                                        "Failed: ${t.message}" to false
+                                    }
+                                }
+                                // Snap the field to the applied/coerced value on a successful apply.
+                                if (ok) textSizeText = applied.toString()
+                                status = next
+                                busy = false
+                            }
+                        }
+                    },
+                ) {
+                    Text("Apply text size")
                 }
                 // S4d-130: choose the output preference (two presets) through the shared OutputPrefsEditor,
                 // persisted to the SAME store runSaveFlow reads — so the next sample/Open render uses it.
