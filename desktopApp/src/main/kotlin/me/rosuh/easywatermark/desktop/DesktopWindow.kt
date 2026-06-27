@@ -1,9 +1,12 @@
 package me.rosuh.easywatermark.desktop
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
@@ -16,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -28,6 +32,7 @@ import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.domain.OutputPrefsEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
+import me.rosuh.easywatermark.render.DesktopImageDecoder
 import java.awt.FileDialog
 import java.io.File
 
@@ -60,8 +65,11 @@ private class LastImage(val bytes: ByteArray, val label: String)
  * SAVE dialog and passes the chosen path as `runSaveFlow(outputFile = …)`, so saves can land outside the
  * fixed `build/` default (same render decision; destination-only). S4d-145: a "Watermark text" field +
  * "Apply text" button persist user text via `WatermarkConfigEditor.updateText`, and `runSaveFlow` no longer
- * forces a demo string — so the window finally renders user-chosen text (the first real edit control). Still
- * no live preview / color-gaps-alpha controls / templates UI / drag-drop / share substitute in this slice.
+ * forces a demo string — so the window finally renders user-chosen text (the first real edit control).
+ * S4d-147: a "Preview" button renders the current config through `runSaveFlow` to a repo-local temp file,
+ * decodes the bytes (`DesktopImageDecoder`, generic JPEG/PNG), and shows the result on-screen — ending the
+ * blind-edit loop. Still no REACTIVE/live preview, color-gaps-alpha controls, templates UI, drag-drop, or
+ * share substitute in this slice.
  */
 fun launchDesktopWindow() = application {
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
@@ -81,6 +89,8 @@ fun launchDesktopWindow() = application {
     var outputPref by remember { mutableStateOf("loading…") }
     // S4d-145: the watermark text being edited; loaded from the persisted config on launch, persisted on Apply.
     var watermarkText by remember { mutableStateOf("") }
+    // S4d-147: the rendered preview image (null until the first "Preview" click).
+    var preview by remember { mutableStateOf<ImageBitmap?>(null) }
     LaunchedEffect(Unit) {
         outputPref = describePref(userConfigRepo.userPreferences.first())
         watermarkText = repo.waterMark.first().text
@@ -341,7 +351,57 @@ fun launchDesktopWindow() = application {
                 ) {
                     Text("Use text watermark")
                 }
+                Button(
+                    enabled = !busy,
+                    onClick = {
+                        // S4d-147: manual preview — render the CURRENT persisted config over the remembered
+                        // image (or fixture) through the SAME runSaveFlow spine the save buttons use, to a
+                        // repo-local temp file, then decode those bytes and show them on-screen. Heavy work
+                        // (render + decode) runs off the EDT; the ImageBitmap is set back on the UI dispatcher.
+                        scope.launch {
+                            busy = true
+                            status = "Rendering preview…"
+                            val current = lastImage
+                            val previewFile = File("build/s4d147-desktop-preview/preview.img")
+                                .apply { parentFile?.mkdirs() }
+                            val next: Pair<ImageBitmap?, String> = withContext(Dispatchers.IO) {
+                                try {
+                                    val o = if (current != null) {
+                                        DesktopWatermarkFlow.runSaveFlow(
+                                            repo, editor, userConfigRepo,
+                                            inputBytes = current.bytes, inputLabel = current.label,
+                                            outputFile = previewFile,
+                                        )
+                                    } else {
+                                        DesktopWatermarkFlow.runSaveFlow(
+                                            repo, editor, userConfigRepo, outputFile = previewFile,
+                                        )
+                                    }
+                                    // Decode the GENERIC encoded output (JPEG/80 by default, or PNG when prefs
+                                    // select PNG) — DesktopImageDecoder (ImageIO) handles both, not PNG-only.
+                                    DesktopImageDecoder.decode(previewFile.readBytes()) to
+                                        "Preview: ${o.format}, ${o.width}x${o.height} (${o.outputByteCount} B)"
+                                } catch (t: Throwable) {
+                                    null to "Failed: ${t.message}"
+                                }
+                            }
+                            // Keep the last good preview on failure (only replace on success).
+                            next.first?.let { preview = it }
+                            status = next.second
+                            busy = false
+                        }
+                    },
+                ) {
+                    Text("Preview")
+                }
                 Text(status, style = MaterialTheme.typography.body2)
+                preview?.let {
+                    Image(
+                        bitmap = it,
+                        contentDescription = "Watermark preview",
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp),
+                    )
+                }
             }
         }
     }
