@@ -70,8 +70,9 @@ private class LastImage(val bytes: ByteArray, val label: String)
  * decodes the bytes (`DesktopImageDecoder`, generic JPEG/PNG), and shows the result on-screen — ending the
  * blind-edit loop. S4d-148: an "Apply degree" field edits rotation (`updateDegree`, 0..360). S4d-149: an
  * "Apply color" field edits the text color (hex, via `WatermarkConfigEditor.updateTextColor`). S4d-150: an
- * "Apply opacity" field edits the alpha as a 0..100 percent (via `WatermarkConfigEditor.updateAlpha`). Still
- * no REACTIVE/live preview, gaps/tile/typeface/style controls, templates UI, drag-drop, or share substitute
+ * "Apply opacity" field edits the alpha as a 0..100 percent (via `WatermarkConfigEditor.updateAlpha`). S4d-151:
+ * "Apply gaps" fields edit the horizontal/vertical gaps (0..500) atomically (via `updateHorizon`/`updateVertical`).
+ * Still no REACTIVE/live preview, tile/typeface/style controls, templates UI, drag-drop, or share substitute
  * in this slice.
  */
 fun launchDesktopWindow() = application {
@@ -100,6 +101,9 @@ fun launchDesktopWindow() = application {
     var colorText by remember { mutableStateOf("") }
     // S4d-150: the watermark opacity (alpha) being edited as a 0..100 percent (parsed on "Apply opacity").
     var alphaText by remember { mutableStateOf("") }
+    // S4d-151: the horizontal/vertical watermark GAPS being edited (parsed together on "Apply gaps").
+    var hGapText by remember { mutableStateOf("") }
+    var vGapText by remember { mutableStateOf("") }
     LaunchedEffect(Unit) {
         outputPref = describePref(userConfigRepo.userPreferences.first())
         watermarkText = repo.waterMark.first().text
@@ -107,6 +111,9 @@ fun launchDesktopWindow() = application {
         colorText = "#%08X".format(repo.waterMark.first().textColor)
         // Persisted alpha is a 0..255 byte; display as a percent (Android editor semantics).
         alphaText = (repo.waterMark.first().alpha * 100f / 255f).toString()
+        // S4d-151: load the persisted horizontal/vertical gaps into the editable fields.
+        hGapText = repo.waterMark.first().hGap.toString()
+        vGapText = repo.waterMark.first().vGap.toString()
     }
 
     Window(onCloseRequest = ::exitApplication, title = "EasyWatermark — Desktop (S4d-121)") {
@@ -280,6 +287,58 @@ fun launchDesktopWindow() = application {
                     },
                 ) {
                     Text("Apply opacity")
+                }
+                // S4d-151: the horizontal/vertical GAP inputs. Both are parsed together on an explicit
+                // "Apply gaps" click (toIntOrNull); if EITHER is invalid the apply is rejected atomically
+                // (status only, NEITHER value persisted). Valid values are coerced to 0..500 at the edge
+                // (the repo also clamps via WatermarkConfigRules) and persisted through updateHorizon /
+                // updateVertical; both fields snap to the coerced values. No auto-preview — click "Preview".
+                OutlinedTextField(
+                    value = hGapText,
+                    onValueChange = { hGapText = it },
+                    enabled = !busy,
+                    label = { Text("Horizontal gap (0–500%)") },
+                )
+                OutlinedTextField(
+                    value = vGapText,
+                    onValueChange = { vGapText = it },
+                    enabled = !busy,
+                    label = { Text("Vertical gap (0–500%)") },
+                )
+                Button(
+                    enabled = !busy,
+                    onClick = {
+                        val h = hGapText.trim().toIntOrNull()
+                        val v = vGapText.trim().toIntOrNull()
+                        if (h == null || v == null) {
+                            // Either field invalid → reject BOTH; persist nothing (atomic apply).
+                            status = "Invalid gaps: H=\"$hGapText\" V=\"$vGapText\" — enter whole numbers (0–500)."
+                        } else {
+                            scope.launch {
+                                busy = true
+                                val appliedH = h.coerceIn(0, 500)
+                                val appliedV = v.coerceIn(0, 500)
+                                val (next, ok) = withContext(Dispatchers.IO) {
+                                    try {
+                                        editor.updateHorizon(appliedH)
+                                        editor.updateVertical(appliedV)
+                                        "Gaps applied: H=$appliedH V=$appliedV. Click Preview to see it." to true
+                                    } catch (t: Throwable) {
+                                        "Failed: ${t.message}" to false
+                                    }
+                                }
+                                // Snap both fields to the coerced values on a successful apply.
+                                if (ok) {
+                                    hGapText = appliedH.toString()
+                                    vGapText = appliedV.toString()
+                                }
+                                status = next
+                                busy = false
+                            }
+                        }
+                    },
+                ) {
+                    Text("Apply gaps")
                 }
                 // S4d-130: choose the output preference (two presets) through the shared OutputPrefsEditor,
                 // persisted to the SAME store runSaveFlow reads — so the next sample/Open render uses it.
