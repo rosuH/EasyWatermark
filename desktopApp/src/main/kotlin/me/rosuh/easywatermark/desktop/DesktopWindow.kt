@@ -20,6 +20,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
+import java.awt.FileDialog
+import java.io.File
+
+/** Best-effort Open-dialog filename filter (honored on macOS; ignored on some platforms — harmless). */
+private val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "webp", "bmp", "gif")
 
 /**
  * S4d-121: the smallest useful **Compose Desktop window** over the S4d-120 save spine. A no-arg
@@ -30,8 +35,9 @@ import me.rosuh.easywatermark.domain.WatermarkConfigEditor
  * ([DesktopWatermarkFlow.runSaveFlow] → common `WaterMarkRepository` + `WatermarkConfigEditor` persist a
  * config edit, then `DesktopWatermarkComposer.composeOverRealImage` renders the deterministic fixture and
  * writes a PNG) and shows the persisted config + output path/dims/size. It honors text color, typeface, and
- * paint style; no icon / output-format yet. There is deliberately no file picker / drag-drop /
- * templates / share substitute / preview-image in this slice.
+ * paint style; no icon / output-format yet. S4d-125: an "Open image…" button picks a real file via a native
+ * AWT [FileDialog] and runs the SAME spine over those bytes. Still no drag-drop / preview-image / templates /
+ * share substitute in this slice.
  */
 fun launchDesktopWindow() = application {
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
@@ -79,6 +85,46 @@ fun launchDesktopWindow() = application {
                     },
                 ) {
                     Text(if (busy) "Working…" else "Render & Save sample")
+                }
+                Button(
+                    enabled = !busy,
+                    onClick = {
+                        // Native AWT Open dialog on the EDT (the Compose Desktop UI thread); it is modal, so
+                        // it returns the selection synchronously. `window` is the FrameWindowScope's AWT frame.
+                        val dialog = FileDialog(window, "Open image", FileDialog.LOAD).apply {
+                            setFilenameFilter { _, fileName ->
+                                fileName.substringAfterLast('.', "").lowercase() in IMAGE_EXTENSIONS
+                            }
+                            isVisible = true
+                        }
+                        val dir = dialog.directory
+                        val name = dialog.file
+                        if (dir != null && name != null) {
+                            val selected = File(dir, name)
+                            // Read + render off the UI thread, then write Compose state back on the UI dispatcher.
+                            scope.launch {
+                                busy = true
+                                status = "Rendering ${selected.name}…"
+                                val next = withContext(Dispatchers.IO) {
+                                    try {
+                                        val bytes = selected.readBytes()
+                                        val o = DesktopWatermarkFlow.runSaveFlow(
+                                            repo, editor, inputBytes = bytes, inputLabel = selected.path,
+                                        )
+                                        "Saved: ${o.outputPath}\n  ${o.width}x${o.height}, ${o.pngByteCount} B\n" +
+                                            "  input: ${o.inputLabel} (${o.inputByteCount} B)\n  config: ${o.configAfterEdit}"
+                                    } catch (t: Throwable) {
+                                        "Failed: ${t.message}"
+                                    }
+                                }
+                                status = next
+                                busy = false
+                            }
+                        }
+                        // Cancelled (null file/directory) → leave the status unchanged and do no work.
+                    },
+                ) {
+                    Text("Open image…")
                 }
                 Text(status, style = MaterialTheme.typography.body2)
             }
