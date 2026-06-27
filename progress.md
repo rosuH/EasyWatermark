@@ -1,12 +1,19 @@
 # Progress Log
 
+## 2026-06-27 — S4d-117 iOS markMode render branch accepted
+
+- **S4d-117 (implementation, accepted; ACSP `20260627-171954...`; commit `5c3afc8 Add iOS mark mode render branch`):** iOS `WatermarkWorkflow.render` now reads persisted `WatermarkMode` at render time and branches Text/Image. Text mode still calls the existing `renderBlocking(...)` path; Image mode reads persisted icon bytes through `IosWatermarkConfigBridge.currentIconBytes()` and calls the new Swift-catchable `IosWatermarkRenderBridge.renderIconWatermarkedPng(...)` wrapper over S4d-115 `composeIconOverImage`.
+- **Scope/behavior:** Swift never parses icon paths; `currentIconBytes()` resolves `MediaRef(path)` in Kotlin via S4d-116 `IosIconPersistence`. Image mode with missing/unreadable icon fails visibly (`.failure`) and does not silently render text. Picker UI/`ContentView` remains untouched.
+- **Verification:** worker and coordinator both ran `./gradlew :shared:compileKotlinIosArm64 :shared:iosSimulatorArm64Test --max-workers=8 --console=plain` and `xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build`; coordinator also reran `git diff --check` and stopped Gradle daemons. New iOS tests prove icon bridge render/error wrapping and `currentIconBytes` roundtrip.
+- **Next:** S4d-118 should make Image mode reachable from the iOS UI: icon `PhotosPicker` -> `setIconFromBytes`, minimal mode/thumbnail affordance, and launch-load of `markMode`. Real PHPicker grid-cell automation remains the known toolchain limitation; this is still code migration, not 1:1 parity.
+
 ## 2026-06-27 — S4d-116 iOS icon persistence accepted
 
 - **S4d-116 (implementation, accepted; ACSP `20260627-165540...`; commit `676b741 Add iOS icon persistence`):** added iOS app-private icon-byte persistence (S4d-114 Option A). New `IosIconPersistence` writes non-empty picked icon bytes under `NSDocumentDirectory/watermark_icons/icon_<NSUUID>`, reads bytes back, and deletes replaced helper-owned files only after an ownership check. `IosWatermarkConfigBridge` now exposes `currentIconRef()`, `currentMarkMode()`, and `setIconFromBytes(bytes)`; the write order is file first, then `WatermarkConfigEditor.updateIcon(MediaRef(path))`, which flips `markMode` to Image, then best-effort cleanup of the prior owned file.
 - **Scope:** exactly three allowed files changed (`IosIconPersistence.kt`, `IosWatermarkConfigBridge.kt`, `IosWatermarkConfigBridgeTest.kt`). No Swift `WatermarkWorkflow`/`ContentView`, no picker UI, no render branch, no `IosWatermarkRenderer`/`IosWatermarkRenderBridge`, no commonMain/model/Android/Desktop/build/dependency/resource/golden/docs change in the implementation slice.
 - **Safety revision:** coordinator requeued once because prefix-only ownership was too weak for `deleteIfOwned`. r1 hardened ownership to `prefix + non-empty filename suffix with no "/"`, so traversal/nested suffixes like `icon_/../../foreign` and `icon_x/foreign` are not owned and never deleted. `iconPersistence_ownership_rejects_traversal_and_nested_suffixes` proves the negative cases on the iOS runtime.
 - **Verification:** worker ran `:shared:compileKotlinIosArm64 :shared:iosSimulatorArm64Test` and stopped Gradle daemons; coordinator reran `git diff --check`, `./gradlew :shared:compileKotlinIosArm64 :shared:iosSimulatorArm64Test --max-workers=8 --console=plain`, verified `IosWatermarkConfigBridgeTest` 14/0 with all three icon-persistence tests present, then `./gradlew --stop --max-workers=8 --console=plain`. Session moved to `done/`; bounded poll deleted.
-- **Next:** S4d-117 should wire the markMode Text/Image render branch: expose/read persisted icon bytes at the iOS bridge edge, add a dedicated Swift-catchable `renderIconWatermarkedPng` path over S4d-115's `composeIconOverImage`, and update `WatermarkWorkflow`. Picker UI remains a later S4d-118 slice.
+- **Next:** completed by S4d-117 (iOS markMode Text/Image render branch accepted). Picker UI remains S4d-118.
 
 ## 2026-06-27 — S4d-115 iOS icon render path accepted
 
