@@ -56,6 +56,7 @@ import me.rosuh.easywatermark.data.repo.TemplateRepository
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.domain.OutputPrefsEditor
+import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.utils.FileUtils.Companion.outPutFolderName
 import me.rosuh.easywatermark.utils.bitmap.decodeBitmapFromUri
@@ -71,7 +72,6 @@ import org.koin.java.KoinJavaComponent.inject
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
-import kotlin.time.Clock
 
 class MainViewModel (
     private val userRepo: UserConfigRepository,
@@ -89,6 +89,11 @@ class MainViewModel (
     // S4d-97: the output-preference write (format + compress level) lives in a commonMain use-case too,
     // built from the already-injected user repo (no DI change).
     private val outputPrefsEditor = OutputPrefsEditor(userRepo)
+
+    // S4d-98: template add/update/delete business logic lives in a commonMain use-case; the VM keeps
+    // UiState mapping (the null-DAO -> UiState.DatabaseError branch stays here). Built from the
+    // already-injected template repo (no DI change).
+    private val templateEditor = TemplateEditor(templateRepo)
 
     // S4d-64: StateFlow-only (was MutableLiveData). null initial = "no save event yet", matching the old
     // LiveData (no value until first emit). Distinct Result instances each emit, so StateFlow conflation
@@ -194,32 +199,26 @@ class MainViewModel (
     }
 
     fun addTemplate(content: String) {
-        if (templateRepo.checkIfIsDaoNull()) {
+        if (templateEditor.isDaoNull()) {
             launch {
                 uiState.emit(UiState.DatabaseError)
             }
             return
         }
         viewModelScope.launch {
-            val template = Template(
-                0,
-                content = content,
-                creationDate = Clock.System.now(),
-                lastModifiedDate = Clock.System.now()
-            )
-            templateRepo.insertTemplate(template)
+            templateEditor.add(content)
         }
     }
 
     fun updateTemplate(template: Template) {
         viewModelScope.launch {
-            templateRepo.updateTemplate(template)
+            templateEditor.update(template)
         }
     }
 
     fun deleteTemplate(template: Template) {
         viewModelScope.launch {
-            templateRepo.deleteTemplate(template)
+            templateEditor.delete(template)
         }
     }
 
