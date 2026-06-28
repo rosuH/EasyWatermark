@@ -41,8 +41,8 @@ android {
         applicationId = "me.rosuh.easywatermark"
         minSdk = (Apps.minSdk)
         targetSdk = (Apps.targetSdk)
-        versionCode = 21000
-        versionName = "2.10.0"
+        versionCode = (Apps.versionCode)
+        versionName = (Apps.versionName)
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

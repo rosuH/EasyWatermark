@@ -42,10 +42,8 @@ compose.desktop {
         mainClass = "me.rosuh.easywatermark.desktop.MainKt"
         nativeDistributions {
             packageName = "EasyWatermark"
-            // S4d-174: mirror the Android app's real versionName (app/build.gradle.kts -> versionName = "2.10.0"),
-            // not a standalone Desktop version. Single-source via a shared buildSrc version constant referenced by
-            // both `:app` and `:desktopApp` is the next slice (needs app + buildSrc edits, out of this one-file scope).
-            packageVersion = "2.10.0"
+            // S4d-175: single-sourced from the Android app version (buildSrc Apps.versionName), shared with :app.
+            packageVersion = Apps.versionName
         }
     }
 }
