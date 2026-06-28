@@ -1,5 +1,13 @@
 # Progress Log
 
+## 2026-06-28 — S4d-215 Desktop window stable persistence accepted (+S4d-215b docs)
+
+- **S4d-215 (implementation, accepted; commit `873dbcbd Route Desktop window state to user data dir`, `DesktopWindow.kt` only, +31/-6):** the interactive Compose Desktop window now persists its user state — watermark config, output prefs, and the templates Room DB — under the stable per-user dir `~/.easywatermark` instead of repo-local `build/` dev paths. A new same-file helper `resolveDesktopAppDataDir()` returns `~/.easywatermark` (matching the `CreateDataStore.desktop.kt` convention) and is passed to `DesktopWatermarkFlow.buildRepository(dir = appDataDir)`, `buildUserConfigRepository(dir = appDataDir)`, and `buildTemplateDatabase(appDataDir)`. If `user.home` is null/blank it falls back to a repo-local `build/desktop-app-data` dir with a `System.err` warning (no crash).
+- **Intentionally unchanged (do NOT "fix"):** `DesktopWatermarkFlow` build-local *defaults* and `Main.kt`'s headless/demo witness paths stay build-local by design (the `--headless` run confirmed it still uses `build/s4d80-desktop-userconfig` + `build/s4d143a-desktop-templates`), and the transient preview temp stays `build/s4d147-desktop-preview/preview.img`.
+- **Verification:** `:desktopApp:compileKotlin` + `:desktopApp:run --args='--headless'` green (`--max-workers=8`, daemon stopped). Runtime-proven via a bounded interactive launch: the window created `~/.easywatermark/ewm-db` (+wal/shm/lck) and did NOT create `build/s4d160-desktop-templates` (`~/.easywatermark` was absent beforehand). The two DataStore preference files (`sp_water_mark_config`, `sp_water_mark_user_config`) write **lazily on first GUI edit**, so they are diff-proven + left as a manual GUI acceptance check (type text → save template → restart-persistence), **not** claimed as automated.
+- **Boundary (no overclaim):** release-grade Desktop persistence correctness, **not** Android v2.10.0 1:1 UI/UX parity; default-template seeding remains deferred/owner-priority-gated (not landed). PR #358 stays Draft.
+- **S4d-215b (this entry):** docs-only closeout — recorded the above in `progress.md`, `task_plan.md`, and the `docs/CONTEXT.md` Desktop-window row.
+
 ## 2026-06-28 — S4d-209→212 watermark density thread CLOSED (no regression) + S4d-213 docs
 
 - **S4d-209 (accepted):** Android editor/picker baseline (production system Photo Picker vs debug in-app GalleryDialog) — accepted real UI deltas (logo vs back-arrow, filmstrip caption, Text/Icon selected state, background tone, picker mechanism). Its apparent watermark-size concern was later narrowed.
