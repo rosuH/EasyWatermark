@@ -1,5 +1,12 @@
 # Progress Log
 
+## 2026-06-28 — S4d-189/190 Android composition routing decided NO-GO (stays native)
+
+- **S4d-189 (read-only selector, accepted):** the small constant/default de-dup vein is exhausted (alpha `/255f` is intra-file churn; `ColorStyleOption` is a UI sample; `degree=315f` are convenience defaults; default text is per-platform); selected a read-only readiness pack on the C2 Android-composition routing.
+- **S4d-190 (read-only decision pack, accepted):** **NO-GO** — Android production composition stays native on `WatermarkRenderer.compose`. Android tiles via `BitmapShader(REPEAT/CLAMP)` + `drawRect`; commonMain `WatermarkCellComposer.composeOverBackground` uses a `drawImage` grid/decal loop. Export is origin-aligned but **byte identity is unproven without a same-platform pixel measurement** (blit-loop vs shader-fill + byte-vs-float alpha); preview is a live-canvas sub-region that does not map. Value is low (the cell raster stays native by S4d-8 icon / S4d-17 text), and export-only routing would add preview/export divergence. Skiko risk is low (`composeOverBackground` is android.graphics-backed on the android target; `:app` stays skiko-clean) — not the blocker.
+- **`composeOverBackground` remains the Desktop/iOS composition path.** Reopening Android composition needs an explicit owner decision and must start with a **test-only Robolectric NATIVE FNV measurement** (compose both ways with the native cell `.asImageBitmap()`); no production routing without that gate.
+- **Boundary:** does not reopen the closed text/icon cell draw-swap (S4d-8/S4d-17). PR #358 stays Draft; no 1:1 parity. S4d-190b (this entry) is the docs closeout.
+
 ## 2026-06-28 — S4d-181/182/184/186 sizing + config-default single-sourcing accepted
 
 - **S4d-181 (accepted):** added commonMain `WatermarkGeometry.REF_WIDTH` + `fontPx(textSize, imageWidth)` and migrated the Desktop + iOS text renderers onto it (byte-identical; Skiko perceptual golden + iOS link gates; `WatermarkGeometryTest` fontPx pin).

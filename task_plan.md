@@ -37,7 +37,7 @@ Phase J - Desktop EXIF orientation done (S4d-21/22); iOS EXIF = Skia decode bake
 - Prioritize parity and consolidation before purity.
 - View-to-Compose is now functionally complete: `ComposeMainActivity` is the sole Activity, the legacy Activity/dialog/panel/adapter/base stack is deleted, and `EditorScreen` renders preview through Compose `Canvas`.
 - Do not reintroduce a `ViewInfo` or `AndroidView`-bridged renderer contract. `WaterMarkImageView` and `ViewInfo` are deleted; new rendering work goes through `WatermarkRenderer` / `:shared` commonMain.
-- `WatermarkGeometry` is already commonMain and drives both preview and export cell sizing. The remaining C2 work is the actual cell composition/drawing rewrite into commonMain Compose graphics.
+- `WatermarkGeometry` is already commonMain and drives both preview and export cell sizing. The remaining C2 work is the cell composition/drawing rewrite into commonMain Compose graphics — **for Desktop/iOS** (`composeOverBackground`, done); **Android composition was decided NO-GO (S4d-190)** and stays native (`WatermarkRenderer.compose`).
 - Keep Android shippable at every step. Renderer changes require goldens plus visual screenshot inspection, not byte-size inference.
 - Use project files as the shared source of truth for planning and iteration.
 - Use the ACSP cowork workflow for non-trivial work: coordinator publishes a filesystem session, worker executes, coordinator reviews untrusted artifacts/diff, then accepts or narrowly requeues before moving on.
@@ -54,7 +54,7 @@ Phase J - Desktop EXIF orientation done (S4d-21/22); iOS EXIF = Skia decode bake
 
 - Should S4d-6 attempt an icon-first production draw-swap candidate behind the existing Android-vs-commonMain gate, or first add an on-device real-icon parity gate?
 - What is the minimum bundled-font strategy needed before comparing commonMain text raster against Android `StaticLayout` for CJK/emoji?
-- When should REPEAT/CLAMP tiling composition move into commonMain: after icon draw-swap, after text bundled-font parity, or as a separate test-only composition gate?
+- ~~When should REPEAT/CLAMP tiling composition move into commonMain~~ **Answered — S4d-190 (No-Go):** Android production composition stays native (`WatermarkRenderer.compose`); `composeOverBackground` is the Desktop/iOS path. Reopening Android needs an owner decision + a test-only Robolectric NATIVE FNV measurement first.
 
 ## CMP Migration Planning (started 2026-06-12)
 
