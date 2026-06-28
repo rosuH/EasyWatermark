@@ -3,13 +3,8 @@ package me.rosuh.easywatermark.render
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asSkiaBitmap
-import androidx.compose.ui.graphics.drawscope.DrawStyle
-import androidx.compose.ui.graphics.drawscope.Fill
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
@@ -34,33 +29,6 @@ import org.jetbrains.skia.Image as SkiaImage
  */
 object IosWatermarkRenderer {
 
-    /**
-     * S4d-112: map the platform-neutral [TextTypeface] to Compose `(fontWeight, fontStyle)`. Bold/italic
-     * are **synthetic** (faux-bold emboldening / faux-italic skew) when the bundled font has no matching
-     * face, which mirrors Android's `Typeface.create(base, NORMAL/ITALIC/BOLD/BOLD_ITALIC)` synthesis from
-     * the regular base. This is **perceptual, not byte-parity** with Android's `StaticLayout` raster
-     * (consistent with the iOS-text-is-Skiko policy, S4d-17 Option C).
-     */
-    private fun TextTypeface.toCompose(): Pair<FontWeight, FontStyle> = when (this) {
-        TextTypeface.Normal -> FontWeight.Normal to FontStyle.Normal
-        TextTypeface.Italic -> FontWeight.Normal to FontStyle.Italic
-        TextTypeface.Bold -> FontWeight.Bold to FontStyle.Normal
-        TextTypeface.BoldItalic -> FontWeight.Bold to FontStyle.Italic
-    }
-
-    /**
-     * S4d-113: map the platform-neutral [TextPaintStyle] to a Compose text [DrawStyle]. `Fill` is the
-     * explicit fill (identical to the prior unset default, so it preserves current output); `Stroke` uses
-     * the Compose [Stroke] with its **default width `0f`** — Skia treats width-0 as a 1px **hairline**,
-     * matching Android's stroked watermark text (`Paint.Style.STROKE` at the Paint default `strokeWidth`
-     * `0`, since the text paint never sets a stroke width). This is **perceptual Skiko honoring, not
-     * byte-parity** with Android's `StaticLayout` raster (iOS-text-is-Skiko policy, S4d-17 Option C).
-     */
-    private fun TextPaintStyle.toDrawStyle(): DrawStyle = when (this) {
-        TextPaintStyle.Fill -> Fill
-        TextPaintStyle.Stroke -> Stroke()
-    }
-
     /** Render ONE watermark text cell via the shared [WatermarkCellComposer.composeTextCell] on iOS. */
     fun renderTextCell(
         text: String,
@@ -77,7 +45,7 @@ object IosWatermarkRenderer {
         textStyle: TextPaintStyle = TextPaintStyle.Fill,
     ): ImageBitmap {
         val fontPx = WatermarkGeometry.fontPx(textSize, imageWidth)
-        val (fontWeight, fontStyle) = typeface.toCompose()
+        val (fontWeight, fontStyle) = typeface.toComposeFontStyle()
         val content = WatermarkTextContent(
             text = text,
             style = TextStyle(
@@ -85,7 +53,7 @@ object IosWatermarkRenderer {
                 fontFamily = fontFamily,
                 fontWeight = fontWeight,
                 fontStyle = fontStyle,
-                drawStyle = textStyle.toDrawStyle(),
+                drawStyle = textStyle.toComposeDrawStyle(),
             ),
             color = color,
         )

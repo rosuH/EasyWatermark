@@ -2,9 +2,6 @@ package me.rosuh.easywatermark.render
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.drawscope.DrawStyle
-import androidx.compose.ui.graphics.drawscope.Fill
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -49,29 +46,6 @@ import javax.imageio.ImageWriteParam
  * by `:desktopApp`.
  */
 object DesktopWatermarkTextRenderer {
-
-    /**
-     * S4d-122: map the platform-neutral [TextTypeface] to Compose `(fontWeight, fontStyle)` — the SAME
-     * mapping the accepted iOS renderer uses (`IosWatermarkRenderer`, S4d-112). Bold/italic are
-     * **synthetic** (the bundled Noto faces are regular-only; ADR-0010), mirroring Android's
-     * `Typeface.create(base, …)` synthesis. Perceptual, not byte-parity with Android.
-     */
-    private fun TextTypeface.toCompose(): Pair<FontWeight, FontStyle> = when (this) {
-        TextTypeface.Normal -> FontWeight.Normal to FontStyle.Normal
-        TextTypeface.Italic -> FontWeight.Normal to FontStyle.Italic
-        TextTypeface.Bold -> FontWeight.Bold to FontStyle.Normal
-        TextTypeface.BoldItalic -> FontWeight.Bold to FontStyle.Italic
-    }
-
-    /**
-     * Map the platform-neutral [TextPaintStyle] to a Compose text [DrawStyle]: `Fill` → [Fill]; `Stroke` →
-     * [Stroke] (default width `0f`, Skia hairline). Synthetic/perceptual Skiko honoring, not byte-parity
-     * with Android (whose production text stays native).
-     */
-    private fun TextPaintStyle.toDrawStyle(): DrawStyle = when (this) {
-        TextPaintStyle.Fill -> Fill
-        TextPaintStyle.Stroke -> Stroke()
-    }
 
     /**
      * The bundled Latin + CJK watermark [FontFamily] for Desktop, loaded from
@@ -124,7 +98,7 @@ object DesktopWatermarkTextRenderer {
         textStyle: TextPaintStyle = TextPaintStyle.Fill,
     ): ImageBitmap {
         val fontPx = WatermarkGeometry.fontPx(textSize, imageWidth)
-        val (fontWeight, fontStyle) = typeface.toCompose()
+        val (fontWeight, fontStyle) = typeface.toComposeFontStyle()
         val content = WatermarkTextContent(
             text = text,
             style = TextStyle(
@@ -132,7 +106,7 @@ object DesktopWatermarkTextRenderer {
                 fontFamily = bundledLatinCjkFontFamily(latinFirst),
                 fontWeight = fontWeight,
                 fontStyle = fontStyle,
-                drawStyle = textStyle.toDrawStyle(),
+                drawStyle = textStyle.toComposeDrawStyle(),
             ),
             color = color,
         )
