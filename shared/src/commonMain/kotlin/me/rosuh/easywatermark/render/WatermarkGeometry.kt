@@ -28,8 +28,8 @@ object WatermarkGeometry {
      * S3a image-space text-sizing reference width. `textSize` is a fraction (`textSize / REF_WIDTH`)
      * of the target image width, so the watermark is a constant fraction of the image on every
      * platform; at the reference width 1000 the size equals the legacy unscaled value
-     * (`fontPx(t, 1000) == t`). Shared source for the Desktop/iOS renderers (S4d-181); Android keeps its
-     * own `WatermarkRenderer.REF_WIDTH` for now (a follow-up may route Android through this too).
+     * (`fontPx(t, 1000) == t`). The single shared source for image-space text sizing on all platforms —
+     * Desktop, iOS, and Android `PainKtx.applyConfig` (S4d-181/182).
      */
     const val REF_WIDTH: Float = 1000f
 

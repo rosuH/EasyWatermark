@@ -24,7 +24,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * S3a — image-space `textSize` behavior. `textPx = textSize * imageInfo.width / REF_WIDTH`
- * (`WatermarkRenderer.REF_WIDTH = 1000`). These tests pin the NEW behavior and **fail on the old
+ * (`WatermarkGeometry.REF_WIDTH = 1000`). These tests pin the NEW behavior and **fail on the old
  * view-scale-dependent behavior**:
  *  - old text: `textSize` raw (preview) / `textSize * imageInfo.scaleX` (export) — depended on the
  *    preview matrix and ignored image width;
