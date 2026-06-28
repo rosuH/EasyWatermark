@@ -24,6 +24,22 @@ import kotlin.math.sqrt
  */
 object WatermarkGeometry {
 
+    /**
+     * S3a image-space text-sizing reference width. `textSize` is a fraction (`textSize / REF_WIDTH`)
+     * of the target image width, so the watermark is a constant fraction of the image on every
+     * platform; at the reference width 1000 the size equals the legacy unscaled value
+     * (`fontPx(t, 1000) == t`). Shared source for the Desktop/iOS renderers (S4d-181); Android keeps its
+     * own `WatermarkRenderer.REF_WIDTH` for now (a follow-up may route Android through this too).
+     */
+    const val REF_WIDTH: Float = 1000f
+
+    /**
+     * Image-space font size in px: `textSize * imageWidth / REF_WIDTH` (S3a). Byte-identical to the
+     * per-renderer inline formula it replaces — the dividend is `Float`, so dividing by `REF_WIDTH`
+     * (1000f) equals the old `/ 1000` (Int) divisor exactly.
+     */
+    fun fontPx(textSize: Float, imageWidth: Int): Float = textSize * imageWidth / REF_WIDTH
+
     /** Cell size expanded by the horizontal gap percent: 0 → 1× (adjacent), 100 → 2×. */
     fun horizontalGap(maxSize: Int, hGapPercent: Int): Int =
         (maxSize * ((hGapPercent / 100f) + 1)).toInt()

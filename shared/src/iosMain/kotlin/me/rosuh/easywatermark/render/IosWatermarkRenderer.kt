@@ -34,9 +34,6 @@ import org.jetbrains.skia.Image as SkiaImage
  */
 object IosWatermarkRenderer {
 
-    /** Mirrors `WatermarkRenderer.REF_WIDTH` / the desktop renderer: image-space text sizing reference. */
-    const val REF_WIDTH: Int = 1000
-
     /**
      * S4d-112: map the platform-neutral [TextTypeface] to Compose `(fontWeight, fontStyle)`. Bold/italic
      * are **synthetic** (faux-bold emboldening / faux-italic skew) when the bundled font has no matching
@@ -69,7 +66,7 @@ object IosWatermarkRenderer {
         text: String,
         fontFamily: FontFamily = FontFamily.Default,
         textSize: Float = 24f,
-        imageWidth: Int = REF_WIDTH,
+        imageWidth: Int = WatermarkGeometry.REF_WIDTH.toInt(),
         degree: Float = 0f,
         color: Color = Color.White,
         hGapPercent: Int = 0,
@@ -79,7 +76,7 @@ object IosWatermarkRenderer {
         // S4d-113: persisted text paint style; default Fill preserves the prior (filled) output.
         textStyle: TextPaintStyle = TextPaintStyle.Fill,
     ): ImageBitmap {
-        val fontPx = textSize * imageWidth / REF_WIDTH
+        val fontPx = WatermarkGeometry.fontPx(textSize, imageWidth)
         val (fontWeight, fontStyle) = typeface.toCompose()
         val content = WatermarkTextContent(
             text = text,

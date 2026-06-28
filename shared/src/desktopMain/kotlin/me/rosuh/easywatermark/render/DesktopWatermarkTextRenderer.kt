@@ -50,9 +50,6 @@ import javax.imageio.ImageWriteParam
  */
 object DesktopWatermarkTextRenderer {
 
-    /** The reference width used for image-space text sizing (mirrors `WatermarkRenderer.REF_WIDTH`). */
-    const val REF_WIDTH: Int = 1000
-
     /**
      * S4d-122: map the platform-neutral [TextTypeface] to Compose `(fontWeight, fontStyle)` — the SAME
      * mapping the accepted iOS renderer uses (`IosWatermarkRenderer`, S4d-112). Bold/italic are
@@ -106,7 +103,7 @@ object DesktopWatermarkTextRenderer {
      *
      * @param text        watermark text (may contain `\n` for multiline and CJK)
      * @param textSize    the `WaterMark.textSize` value (image-space fraction of [imageWidth])
-     * @param imageWidth  target image width; `fontPx = textSize * imageWidth / REF_WIDTH` (S3a)
+     * @param imageWidth  target image width; `fontPx = WatermarkGeometry.fontPx(textSize, imageWidth)` (S3a)
      * @param degree      rotation in degrees (matches `WaterMark.degree`)
      * @param color       fill colour (default white, like the production text cell)
      * @param hGapPercent horizontal gap percent; @param vGapPercent vertical gap percent
@@ -117,7 +114,7 @@ object DesktopWatermarkTextRenderer {
     fun renderTextCell(
         text: String,
         textSize: Float = 24f,
-        imageWidth: Int = REF_WIDTH,
+        imageWidth: Int = WatermarkGeometry.REF_WIDTH.toInt(),
         degree: Float = 0f,
         color: Color = Color.White,
         hGapPercent: Int = 0,
@@ -126,7 +123,7 @@ object DesktopWatermarkTextRenderer {
         typeface: TextTypeface = TextTypeface.Normal,
         textStyle: TextPaintStyle = TextPaintStyle.Fill,
     ): ImageBitmap {
-        val fontPx = textSize * imageWidth / REF_WIDTH
+        val fontPx = WatermarkGeometry.fontPx(textSize, imageWidth)
         val (fontWeight, fontStyle) = typeface.toCompose()
         val content = WatermarkTextContent(
             text = text,
@@ -203,7 +200,7 @@ object DesktopWatermarkTextRenderer {
     fun renderTextCellPng(
         text: String,
         textSize: Float = 24f,
-        imageWidth: Int = REF_WIDTH,
+        imageWidth: Int = WatermarkGeometry.REF_WIDTH.toInt(),
         degree: Float = 0f,
         color: Color = Color.White,
         hGapPercent: Int = 0,
@@ -238,7 +235,7 @@ object DesktopWatermarkTextRenderer {
     fun renderTextCellResult(
         text: String,
         textSize: Float = 24f,
-        imageWidth: Int = REF_WIDTH,
+        imageWidth: Int = WatermarkGeometry.REF_WIDTH.toInt(),
         degree: Float = 0f,
         hGapPercent: Int = 0,
         vGapPercent: Int = 0,
