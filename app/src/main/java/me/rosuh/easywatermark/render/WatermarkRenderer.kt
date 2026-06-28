@@ -202,7 +202,7 @@ object WatermarkRenderer {
         // S3a: `textSize` is the icon scale ratio (textSize/14 ⇒ 14 = 1×), preserved from legacy.
         // The old preview-matrix `imageInfo.scaleX` factor (applied only at export, `scale=true`) is
         // REMOVED so preview and export size icons identically and independent of view scale (D2c).
-        val scaleRatio = config.textSize / 14f
+        val scaleRatio = config.textSize / WatermarkCellComposer.ICON_SCALE_REFERENCE_TEXT_SIZE
 
         val targetBitmap = Bitmap.createBitmap(
             (finalWidth * scaleRatio).toInt(),
