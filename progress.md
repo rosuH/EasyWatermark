@@ -1,5 +1,14 @@
 # Progress Log
 
+## 2026-06-28 — S4d-181/182/184/186 sizing + config-default single-sourcing accepted
+
+- **S4d-181 (accepted):** added commonMain `WatermarkGeometry.REF_WIDTH` + `fontPx(textSize, imageWidth)` and migrated the Desktop + iOS text renderers onto it (byte-identical; Skiko perceptual golden + iOS link gates; `WatermarkGeometryTest` fontPx pin).
+- **S4d-182 (accepted):** migrated Android `PainKtx.applyConfig` text sizing onto `WatermarkGeometry.fontPx` (byte-identical — `WatermarkRenderer.REF_WIDTH == WatermarkGeometry.REF_WIDTH == 1000f`; `WatermarkImageSpaceSizingTest` 8/0 + watermark goldens, non-strict, no rebaseline). Text image-space sizing is now single-sourced across Android/Desktop/iOS.
+- **S4d-184 (accepted):** routed Android `WatermarkRenderer.buildIconShader` icon scale through the shared `WatermarkCellComposer.ICON_SCALE_REFERENCE_TEXT_SIZE` (already consumed by Desktop + iOS); byte-identical (const inlines to 14f), icon-ratio tests + goldens green. Icon-scale reference now single-sourced across all three platforms.
+- **S4d-186 (accepted):** single-sourced the `WaterMarkRepository` persisted-read default fallbacks (`textColor`, `alpha`, `degree`, `hGap`, `vGap`) to `WaterMark.default` (byte-identical; `DesktopWaterMarkStoreRoundtripTest` + `WaterMarkDefaultColorTest` green; no DataStore key/format/migration change).
+- **S4d-185 (read-only selector)** chose S4d-186 and flagged the durable-docs gap; **S4d-187 (this entry)** is the docs closeout.
+- **Boundaries:** behavior-preserving single-sourcing slices, **not** draw-swaps — Android text/icon production renderers stay native (`StaticLayout` / `buildIconShader`; ADR-0004/S4d-8/S4d-17). `WatermarkRenderer.REF_WIDTH` is now orphaned (zero code refs; deletion is a deferred optional cleanup). Not 1:1 UI parity; PR #358 stays Draft.
+
 ## 2026-06-28 — S4d-169..S4d-172 PR #358 CI unblock accepted
 
 - **S4d-168 (read-only decision, accepted):** diagnosed that PR #358's checks were not running because the PR was conflicted (`mergeStateStatus` DIRTY → GitHub cannot compute a merge ref), not because the workflows were misconfigured. The fix was to resolve the conflicts on-branch, not to touch the workflows.
