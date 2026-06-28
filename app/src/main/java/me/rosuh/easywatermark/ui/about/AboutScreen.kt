@@ -1,9 +1,13 @@
 package me.rosuh.easywatermark.ui.about
 
+import android.widget.ImageView
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,9 +15,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -23,12 +30,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import me.rosuh.easywatermark.R
+import me.rosuh.easywatermark.ui.widget.ColoredImageVIew
 
 /**
  * Compose replacement for the legacy [AboutActivity] (View→Compose migration).
@@ -47,30 +57,53 @@ fun AboutScreen(
     onToggleDynamicColor: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+    Box(modifier = modifier.fillMaxSize()) {
+        // D2 (S4d-206): production v2.10.0 shows a soft lavender radial glow at the top behind the centered
+        // logo. A fixed decorative layer behind the scrolling content (theme primary → transparent).
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .height(280.dp)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
+                            Color.Transparent,
+                        )
+                    )
+                )
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
         ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_back),
-                    contentDescription = "back",
-                    tint = MaterialTheme.colorScheme.onSurface
+            // D1 (S4d-206): back arrow at start + the brand mark CENTERED and dynamic-colored/animated
+            // (ColoredImageVIew, the same widget LaunchScreen uses), matching production — was a static,
+            // left-aligned Image(ic_logo_about_page).
+            Box(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
+                IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart)) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_back),
+                        contentDescription = "back",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                AndroidView(
+                    modifier = Modifier.align(Alignment.Center).height(28.dp),
+                    factory = { ctx ->
+                        ColoredImageVIew(ctx).apply {
+                            adjustViewBounds = true
+                            scaleType = ImageView.ScaleType.FIT_CENTER
+                            setImageResource(R.drawable.ic_logo_about_page)
+                            start()
+                        }
+                    }
                 )
             }
-            Image(
-                painter = painterResource(id = R.drawable.ic_logo_about_page),
-                contentDescription = null,
-                modifier = Modifier.padding(start = 8.dp).height(28.dp)
-            )
-        }
 
-        SectionHeader(stringResource(R.string.about_title_info))
+            SectionHeader(stringResource(R.string.about_title_info))
         AboutRow(R.drawable.ic_version, stringResource(R.string.about_title_version), trailing = versionName) {
             onOpenLink(URL_RELEASES)
         }
@@ -95,12 +128,16 @@ fun AboutScreen(
             onOpenLink(URL_PRIVACY_EN)
         }
 
-        SwitchRow("Force Open Dynamic Color Support", dynamicColorOn, onToggleDynamicColor)
-        SwitchRow("Show Bounds", showBounds, onToggleBounds)
-
+        // Parity (S4d-205): production v2.10.0 places the developer footer ABOVE the toggles, with the
+        // two switches at the very bottom of the screen. Match that order (footer → switches).
         Spacer(Modifier.height(24.dp))
         DevFooter(onOpenLink = onOpenLink)
         Spacer(Modifier.height(24.dp))
+
+        SwitchRow("Force Open Dynamic Color Support", dynamicColorOn, onToggleDynamicColor)
+        SwitchRow("Show Bounds", showBounds, onToggleBounds)
+            Spacer(Modifier.height(24.dp))
+        }
     }
 }
 
@@ -168,39 +205,65 @@ private fun SwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean
     }
 }
 
+private data class DevCardData(val title: String, val desc: String, val avatar: Int, val url: String)
+
 @Composable
 private fun DevFooter(onOpenLink: (String) -> Unit) {
+    // D4 (S4d-206): production v2.10.0 shows a horizontal card pager (developer card + designer card, the
+    // next one peeking) with a SINGLE centered avatar below that tracks the current page — replacing the
+    // simplified one-quote + two-avatar-row layout.
+    val cards = listOf(
+        DevCardData(
+            title = "Developed with ♥ by rosu",
+            desc = stringResource(R.string.dev_comment),
+            avatar = R.drawable.bg_avatar_dev,
+            url = URL_DEV,
+        ),
+        DevCardData(
+            title = "Designed with ♥ by tovi",
+            desc = "A Designer.",
+            avatar = R.drawable.ic_avatar_tovi,
+            url = URL_DESIGNER,
+        ),
+    )
+    val pagerState = rememberPagerState(pageCount = { cards.size })
     Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+        modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(
-            text = stringResource(R.string.dev_comment),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-            Image(
-                painter = painterResource(id = R.drawable.bg_avatar_dev),
-                contentDescription = "developer",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(28.dp))
-                    .clickable { onOpenLink(URL_DEV) }
-            )
-            Image(
-                painter = painterResource(id = R.drawable.ic_avatar_tovi),
-                contentDescription = "designer",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(28.dp))
-                    .clickable { onOpenLink(URL_DESIGNER) }
-            )
+        HorizontalPager(
+            state = pagerState,
+            contentPadding = PaddingValues(horizontal = 48.dp),
+            pageSpacing = 12.dp,
+        ) { page ->
+            val c = cards[page]
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text(
+                        text = c.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = c.desc,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
+        val current = cards[pagerState.currentPage]
+        Image(
+            painter = painterResource(id = current.avatar),
+            contentDescription = current.title,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(56.dp)
+                .clip(RoundedCornerShape(28.dp))
+                .clickable { onOpenLink(current.url) }
+        )
     }
 }
 
