@@ -208,16 +208,17 @@ private fun runHeadless(args: Array<String>) {
         }
     }
 
-    // S4d-143a / S4d-224: Desktop templates headless witness — the first :desktopApp consumer of the S4d-142
-    // Desktop template DB builder (bundled SQLite driver) + commonMain TemplateRepository/TemplateEditor.
-    // Builds a fresh SEEDED repo-local DB via the shared desktopMain seed resource, verifies the seeded
-    // templates, then add → list → delete roundtrips one more template and ends empty. No UI. The witness
-    // directory is deleted before each run so the seeded-first-creation path is exercised repeatedly.
+    // S4d-143a / S4d-224 / S4d-225: Desktop templates headless witness — the first :desktopApp consumer of
+    // the S4d-142 Desktop template DB builder (bundled SQLite driver) + commonMain TemplateRepository/
+    // TemplateEditor. Builds a fresh SEEDED repo-local DB via the shared desktopMain seed resource,
+    // verifies the seeded templates, then add → list → delete roundtrips one more template and ends empty.
+    // No UI. The witness directory is deleted before each run so the seeded-first-creation path is exercised
+    // repeatedly. The seed language is selected by JVM locale (Chinese for `zh`, English otherwise).
     val templatesDir = File("build/s4d143a-desktop-templates").apply {
         deleteRecursively()
         mkdirs()
     }
-    val seedFile = File(templatesDir, "seed-ewm-db-eng.db")
+    val seedFile = File(templatesDir, "seed-ewm-db-default.db")
     unpackDefaultTemplateSeed(seedFile)
     val templateDb = buildTemplateDatabase(templatesDir, seedFile)
     val templateRepo = TemplateRepository(templateDb.templateDao(), Dispatchers.IO)

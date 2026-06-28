@@ -16,14 +16,14 @@ import java.io.File
  * `:app` no-native-leak check). The query coroutine context is `Dispatchers.IO`, matching the Android
  * `TemplateRepository` threading.
  *
- * SCOPE (S4d-142 / S4d-224): the builder supports both an **empty** store (original S4d-142 behavior)
- * and an optional seeded store. Because Room KMP's `createFromFile`/`createFromAsset` APIs are not
- * available off-Android, seeding is performed by copying the seed file to the DB path before Room opens
- * it; Room validates the `room_master_table` identity hash. The Android prepackaged `ewm-db-{ch,eng}.db`
- * assets are the seed source; the English seed is used for Desktop default seeding (locale-aware selection
- * is deferred). Room creates the schema on first open when no seed is supplied; the DB file is `ewm-db`
- * under the caller-supplied [dir]. Schema (`Template`, version 1, `exportSchema=false`) is the unchanged
- * commonMain one — the per-target impl comes from the KSP-generated [AppDatabaseConstructor].
+ * SCOPE (S4d-142 / S4d-224 / S4d-225): the builder supports both an **empty** store (original S4d-142
+ * behavior) and an optional seeded store. Because Room KMP's `createFromFile`/`createFromAsset` APIs are
+ * not available off-Android, seeding is performed by copying the seed file to the DB path before Room
+ * opens it; Room validates the `room_master_table` identity hash. The Android prepackaged
+ * `ewm-db-{ch,eng}.db` assets are the seed source; [TemplateDatabaseSeeds] selects the seed by JVM locale
+ * (`ch` for `zh`, `eng` otherwise). Room creates the schema on first open when no seed is supplied; the DB
+ * file is `ewm-db` under the caller-supplied [dir]. Schema (`Template`, version 1, `exportSchema=false`)
+ * is the unchanged commonMain one — the per-target impl comes from the KSP-generated [AppDatabaseConstructor].
  */
 /**
  * S4d-224: build an empty Desktop template database. This existing signature is preserved so tests and
