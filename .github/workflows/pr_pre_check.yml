@@ -24,14 +24,19 @@ concurrency:
 
 jobs:
   build:
-    name: Compile + migration safety net (assembleDebug, :shared:desktopTest, strict goldens)
+    name: Compile + migration safety net (assembleDebug, :shared:desktopTest, app unit tests)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # S4d-169 (merge of origin/master): adopt master's scaffolding (paths-ignore, workflow_dispatch,
     # permissions, concurrency, wrapper validation, setup-android) BUT keep the migration safety net
     # (full tests, not master's compile-only `-x test`). The master `if: !github.event.pull_request.draft`
-    # guard is deliberately DROPPED so Draft PR #358 still runs :shared:desktopTest + the strict watermark
-    # goldens (the renderer pixel/dim gate the migration depends on).
+    # guard is deliberately DROPPED so Draft PR #358 still runs :shared:desktopTest + the non-strict
+    # watermark golden net (device-independent nonblank/geometry/decal/encode structure).
+    # S4d-172: the pinned-environment `WATERMARK_GOLDEN_STRICT=true` FNV gate was REMOVED from CI - its
+    # baselines are Robolectric-environment pixel hashes captured on a pinned host (see
+    # WatermarkExportGoldenTest's policy comment + ADR-0010) and cannot pass on GitHub Ubuntu/Temurin. The
+    # strict gate stays a LOCAL / pinned-env gate, run on the capture env or an intentional
+    # Robolectric/Skia/font bump via `WATERMARK_GOLDEN_STRICT=true ./gradlew :app:testDebugUnitTest`.
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -69,9 +74,3 @@ jobs:
 
       - name: Run :app unit tests incl. watermark golden (Robolectric NATIVE, CMP plan C1.7/C1.8)
         run: ./gradlew :app:testDebugUnitTest
-
-      - name: Run STRICT watermark goldens (S4b renderer pixel/dim gate; pins FNV baselines)
-        # WATERMARK_GOLDEN_STRICT is not a Gradle-tracked input, so a warm cache could otherwise
-        # serve the prior non-strict :app:testDebugUnitTest result and skip the strict assertions.
-        # cleanTestDebugUnitTest + --no-build-cache + --rerun-tasks force the strict run to execute.
-        run: WATERMARK_GOLDEN_STRICT=true ./gradlew :app:cleanTestDebugUnitTest :app:testDebugUnitTest --no-build-cache --rerun-tasks
