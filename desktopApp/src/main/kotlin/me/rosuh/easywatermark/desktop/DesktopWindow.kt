@@ -144,7 +144,15 @@ private class LastImage(val bytes: ByteArray, val label: String)
  * file-list flavor; updates `lastImage` + `lastSavedFile`; unsupported/empty/while-busy drops fail softly).
  * S4d-160: a minimal "Templates" section over the shared Desktop Room path saves the current watermark
  * text, lists saved templates, and applies (Use → `WatermarkConfigEditor.updateText`) or deletes them.
- * Still no REACTIVE/live preview in this slice.
+ * S4d-198: REACTIVE preview — every successful explicit editor action (Apply text/degree/color/opacity/
+ * gaps/text-size, the tile/typeface/style buttons, "Use text watermark", and template "Use") now
+ * auto-refreshes the on-screen preview through the SAME `refreshPreview()` → `runSaveFlow` temp-file spine
+ * the manual "Preview" button uses (bounded to explicit clicks, NOT per keystroke). Preview stays a
+ * temp render: it never sets `lastSavedFile`, so the share-substitute buttons remain bound to real saves;
+ * a preview-refresh failure keeps the last good preview and reports it in the status. S4d-198-r1: the
+ * source-change actions "Open image…" and image **drop** ALSO auto-refresh the preview over the just-loaded
+ * image (after their real save sets `lastImage`/`lastSavedFile`; the extra refresh still writes only the temp
+ * file). "Render & Save sample" / "Save as…" remain real-save-only (they don't change the source/config).
  */
 fun launchDesktopWindow() = application {
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
@@ -214,6 +222,40 @@ fun launchDesktopWindow() = application {
         styleLabel = styleLabelOf(repo.waterMark.first().textStyle)
     }
 
+    // S4d-198: reactive preview. Render the CURRENT persisted config over the remembered image (or the
+    // deterministic fixture) through the SAME DesktopWatermarkFlow.runSaveFlow spine the manual "Preview"
+    // button uses, decode the bytes (DesktopImageDecoder, generic JPEG/PNG), and update the on-screen
+    // `preview`. Writes ONLY the repo-local temp preview path and never sets `lastSavedFile` — a preview is
+    // NOT a real save (the share-substitute buttons stay bound to real saves). Keeps the last good preview on
+    // failure (only replaces it on a successful decode). Heavy render+decode runs off the EDT inside
+    // withContext(IO); the Compose `preview` state is set after, on the caller's UI dispatcher. Returns a
+    // short status line. Callers invoke this inside their own `busy = true … busy = false` span (after a
+    // successful explicit edit/mode/source change, or from the manual Preview button), so renders stay
+    // serialized. Defined before the drop target so the S4d-198-r1 drop refresh can call it.
+    suspend fun refreshPreview(): String {
+        val current = lastImage
+        val previewFile = File("build/s4d147-desktop-preview/preview.img").apply { parentFile?.mkdirs() }
+        val (img, msg) = withContext(Dispatchers.IO) {
+            try {
+                val o = if (current != null) {
+                    DesktopWatermarkFlow.runSaveFlow(
+                        repo, editor, userConfigRepo,
+                        inputBytes = current.bytes, inputLabel = current.label, outputFile = previewFile,
+                    )
+                } else {
+                    DesktopWatermarkFlow.runSaveFlow(repo, editor, userConfigRepo, outputFile = previewFile)
+                }
+                DesktopImageDecoder.decode(previewFile.readBytes()) to
+                    "Preview: ${o.format}, ${o.width}x${o.height} (${o.outputByteCount} B)"
+            } catch (t: Throwable) {
+                null to "Preview refresh failed (kept last preview): ${t.message}"
+            }
+        }
+        // Only replace the visible preview on a successful decode (keep the last good one on failure).
+        img?.let { preview = it }
+        return msg
+    }
+
     // S4d-158: drop an image file onto the window to load it through the SAME save spine as "Open image…"
     // (read off the UI thread → lastImage + lastSavedFile + status). onDrop runs on the Compose UI thread, so
     // it reads/sets state directly and launches the heavy render on `scope`. A drop while busy or an
@@ -252,7 +294,10 @@ fun launchDesktopWindow() = application {
                     }
                     picked?.let { lastImage = it }
                     savedFile?.let { lastSavedFile = it }
-                    status = next
+                    // S4d-198-r1: a successful drop is an explicit source change → auto-refresh the preview
+                    // over the just-loaded image (lastImage is set above). savedFile != null ⟺ the real save
+                    // succeeded; refreshPreview writes ONLY the temp preview file (never lastSavedFile).
+                    status = if (savedFile != null) "$next · ${refreshPreview()}" else next
                     busy = false
                 }
                 return true
@@ -295,15 +340,16 @@ fun launchDesktopWindow() = application {
                         scope.launch {
                             busy = true
                             val applied = watermarkText
-                            val next = withContext(Dispatchers.IO) {
+                            val (msg, ok) = withContext(Dispatchers.IO) {
                                 try {
                                     editor.updateText(applied)
-                                    "Watermark text applied (Text mode). Next render uses: \"$applied\""
+                                    "Watermark text applied (Text mode): \"$applied\"" to true
                                 } catch (t: Throwable) {
-                                    "Failed: ${t.message}"
+                                    "Failed: ${t.message}" to false
                                 }
                             }
-                            status = next
+                            // S4d-198: auto-refresh the preview on a successful apply (no manual click).
+                            status = if (ok) "$msg · ${refreshPreview()}" else msg
                             busy = false
                         }
                     },
@@ -312,7 +358,7 @@ fun launchDesktopWindow() = application {
                 }
                 // S4d-148: the watermark ROTATION DEGREE input. Parsed on an explicit "Apply degree" click
                 // (toFloatOrNull; invalid → status only, no persist); coerced to 0..360 at the edge (the repo
-                // also clamps via WatermarkConfigRules.clampDegree). No auto-preview — click "Preview" to see it.
+                // also clamps via WatermarkConfigRules.clampDegree). S4d-198: a successful apply auto-refreshes the preview (manual "Preview" still available).
                 OutlinedTextField(
                     value = degreeText,
                     onValueChange = { degreeText = it },
@@ -334,7 +380,7 @@ fun launchDesktopWindow() = application {
                                 val (next, ok) = withContext(Dispatchers.IO) {
                                     try {
                                         editor.updateDegree(applied)
-                                        "Degree applied: $applied. Click Preview to see it." to true
+                                        "Degree applied: $applied" to true
                                     } catch (t: Throwable) {
                                         "Failed: ${t.message}" to false
                                     }
@@ -342,7 +388,8 @@ fun launchDesktopWindow() = application {
                                 // r1: on a successful apply, snap the field to the clamped value actually
                                 // persisted (a typed 400 now shows 360.0, not the rejected 400).
                                 if (ok) degreeText = applied.toString()
-                                status = next
+                                // S4d-198: auto-refresh the preview on success (no manual Preview click).
+                                status = if (ok) "$next · ${refreshPreview()}" else next
                                 busy = false
                             }
                         }
@@ -353,7 +400,7 @@ fun launchDesktopWindow() = application {
                 // S4d-149: the watermark TEXT COLOR input (hex). Accepts #RRGGBB / RRGGBB / #AARRGGBB /
                 // AARRGGBB; RGB-only uses opaque alpha 0xFF. Parsed on an explicit "Apply color" click
                 // (invalid → status only, no persist); persisted via WatermarkConfigEditor.updateTextColor;
-                // the field is normalized to #AARRGGBB on success. No auto-preview — click "Preview" to see it.
+                // the field is normalized to #AARRGGBB on success. S4d-198: a successful apply auto-refreshes the preview (manual "Preview" still available).
                 OutlinedTextField(
                     value = colorText,
                     onValueChange = { colorText = it },
@@ -384,14 +431,15 @@ fun launchDesktopWindow() = application {
                                 val (next, ok) = withContext(Dispatchers.IO) {
                                     try {
                                         editor.updateTextColor(parsedColor)
-                                        "Color applied: $normalized. Click Preview to see it." to true
+                                        "Color applied: $normalized" to true
                                     } catch (t: Throwable) {
                                         "Failed: ${t.message}" to false
                                     }
                                 }
                                 // Normalize the field to the stable #AARRGGBB display on a successful apply.
                                 if (ok) colorText = normalized
-                                status = next
+                                // S4d-198: auto-refresh the preview on success (no manual Preview click).
+                                status = if (ok) "$next · ${refreshPreview()}" else next
                                 busy = false
                             }
                         }
@@ -402,7 +450,7 @@ fun launchDesktopWindow() = application {
                 // S4d-150: the watermark OPACITY (alpha) input as a 0..100 percent (Android editor semantics).
                 // Parsed on an explicit "Apply opacity" click (toFloatOrNull + isFinite; invalid → status only,
                 // no persist); coerced to 0..100; persisted via WatermarkConfigEditor.updateAlpha(percent),
-                // which converts to the 0..255 byte. The field snaps to the applied value. No auto-preview.
+                // which converts to the 0..255 byte. The field snaps to the applied value. S4d-198: auto-preview.
                 OutlinedTextField(
                     value = alphaText,
                     onValueChange = { alphaText = it },
@@ -423,14 +471,15 @@ fun launchDesktopWindow() = application {
                                 val (next, ok) = withContext(Dispatchers.IO) {
                                     try {
                                         editor.updateAlpha(applied)
-                                        "Opacity applied: $applied%. Click Preview to see it." to true
+                                        "Opacity applied: $applied%" to true
                                     } catch (t: Throwable) {
                                         "Failed: ${t.message}" to false
                                     }
                                 }
                                 // Snap the field to the applied/coerced value on a successful apply.
                                 if (ok) alphaText = applied.toString()
-                                status = next
+                                // S4d-198: auto-refresh the preview on success (no manual Preview click).
+                                status = if (ok) "$next · ${refreshPreview()}" else next
                                 busy = false
                             }
                         }
@@ -442,7 +491,7 @@ fun launchDesktopWindow() = application {
                 // "Apply gaps" click (toIntOrNull); if EITHER is invalid the apply is rejected atomically
                 // (status only, NEITHER value persisted). Valid values are coerced to 0..500 at the edge
                 // (the repo also clamps via WatermarkConfigRules) and persisted through updateHorizon /
-                // updateVertical; both fields snap to the coerced values. No auto-preview — click "Preview".
+                // updateVertical; both fields snap to the coerced values. S4d-198: a successful apply auto-previews.
                 OutlinedTextField(
                     value = hGapText,
                     onValueChange = { hGapText = it },
@@ -472,7 +521,7 @@ fun launchDesktopWindow() = application {
                                     try {
                                         editor.updateHorizon(appliedH)
                                         editor.updateVertical(appliedV)
-                                        "Gaps applied: H=$appliedH V=$appliedV. Click Preview to see it." to true
+                                        "Gaps applied: H=$appliedH V=$appliedV" to true
                                     } catch (t: Throwable) {
                                         "Failed: ${t.message}" to false
                                     }
@@ -482,7 +531,8 @@ fun launchDesktopWindow() = application {
                                     hGapText = appliedH.toString()
                                     vGapText = appliedV.toString()
                                 }
-                                status = next
+                                // S4d-198: auto-refresh the preview on success (no manual Preview click).
+                                status = if (ok) "$next · ${refreshPreview()}" else next
                                 busy = false
                             }
                         }
@@ -493,7 +543,7 @@ fun launchDesktopWindow() = application {
                 // S4d-152: the watermark TEXT SIZE input. Parsed on an explicit "Apply text size" click
                 // (toFloatOrNull + isFinite; invalid → status only, no persist); coerced to 1f..100f at the
                 // edge (the repo also clamps); persisted via WatermarkConfigEditor.updateTextSize. The field
-                // snaps to the applied value. No auto-preview — click "Preview" to see it.
+                // snaps to the applied value. S4d-198: a successful apply auto-refreshes the preview (manual "Preview" still available).
                 OutlinedTextField(
                     value = textSizeText,
                     onValueChange = { textSizeText = it },
@@ -514,14 +564,15 @@ fun launchDesktopWindow() = application {
                                 val (next, ok) = withContext(Dispatchers.IO) {
                                     try {
                                         editor.updateTextSize(applied)
-                                        "Text size applied: $applied. Click Preview to see it." to true
+                                        "Text size applied: $applied" to true
                                     } catch (t: Throwable) {
                                         "Failed: ${t.message}" to false
                                     }
                                 }
                                 // Snap the field to the applied/coerced value on a successful apply.
                                 if (ok) textSizeText = applied.toString()
-                                status = next
+                                // S4d-198: auto-refresh the preview on success (no manual Preview click).
+                                status = if (ok) "$next · ${refreshPreview()}" else next
                                 busy = false
                             }
                         }
@@ -533,7 +584,7 @@ fun launchDesktopWindow() = application {
                 // photo) or CLAMP (a single decal at a fractional offset) via WatermarkConfigEditor.updateTileMode.
                 // Only these two product values are exposed — MIRROR/DECAL are legacy read-only storage ids, not
                 // UI choices. After each apply the label is re-read from the persisted config (so it reflects what
-                // actually persisted, even on a write failure). No auto-preview — click "Preview" to see it.
+                // actually persisted, even on a write failure). S4d-198: a successful apply auto-refreshes the preview (manual "Preview" still available).
                 Text("Tile mode: $tileModeLabel", style = MaterialTheme.typography.body2)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
@@ -541,16 +592,17 @@ fun launchDesktopWindow() = application {
                         onClick = {
                             scope.launch {
                                 busy = true
-                                val next = withContext(Dispatchers.IO) {
+                                val (msg, ok) = withContext(Dispatchers.IO) {
                                     try {
                                         editor.updateTileMode(WatermarkTileMode.REPEAT)
-                                        "Tile mode → REPEAT (grid tile). Click Preview to see it."
+                                        "Tile mode → REPEAT (grid tile)" to true
                                     } catch (t: Throwable) {
-                                        "Failed: ${t.message}"
+                                        "Failed: ${t.message}" to false
                                     }
                                 }
                                 tileModeLabel = repo.waterMark.first().tileMode.name
-                                status = next
+                                // S4d-198: auto-refresh the preview on success (no manual Preview click).
+                                status = if (ok) "$msg · ${refreshPreview()}" else msg
                                 busy = false
                             }
                         },
@@ -560,16 +612,17 @@ fun launchDesktopWindow() = application {
                         onClick = {
                             scope.launch {
                                 busy = true
-                                val next = withContext(Dispatchers.IO) {
+                                val (msg, ok) = withContext(Dispatchers.IO) {
                                     try {
                                         editor.updateTileMode(WatermarkTileMode.CLAMP)
-                                        "Tile mode → CLAMP (single decal). Click Preview to see it."
+                                        "Tile mode → CLAMP (single decal)" to true
                                     } catch (t: Throwable) {
-                                        "Failed: ${t.message}"
+                                        "Failed: ${t.message}" to false
                                     }
                                 }
                                 tileModeLabel = repo.waterMark.first().tileMode.name
-                                status = next
+                                // S4d-198: auto-refresh the preview on success (no manual Preview click).
+                                status = if (ok) "$msg · ${refreshPreview()}" else msg
                                 busy = false
                             }
                         },
@@ -578,7 +631,7 @@ fun launchDesktopWindow() = application {
                 // S4d-154: the watermark TYPEFACE control. One button per TextTypeface (Normal/Italic/Bold/
                 // BoldItalic) persists via WatermarkConfigEditor.updateTextTypeface; the current persisted value
                 // shows in the label (re-read after each apply, truthful on a write failure). These four are the
-                // only typeface choices. Both enums are render-honored on Desktop Skiko (S4d-122/123). Manual preview.
+                // only typeface choices. Both enums are render-honored on Desktop Skiko (S4d-122/123). S4d-198: auto-preview.
                 Text("Typeface: $typefaceLabel", style = MaterialTheme.typography.body2)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(
@@ -593,16 +646,17 @@ fun launchDesktopWindow() = application {
                             onClick = {
                                 scope.launch {
                                     busy = true
-                                    val next = withContext(Dispatchers.IO) {
+                                    val (msg, ok) = withContext(Dispatchers.IO) {
                                         try {
                                             editor.updateTextTypeface(tf)
-                                            "Typeface → $name. Click Preview to see it."
+                                            "Typeface → $name" to true
                                         } catch (t: Throwable) {
-                                            "Failed: ${t.message}"
+                                            "Failed: ${t.message}" to false
                                         }
                                     }
                                     typefaceLabel = typefaceLabelOf(repo.waterMark.first().textTypeface)
-                                    status = next
+                                    // S4d-198: auto-refresh the preview on success (no manual Preview click).
+                                    status = if (ok) "$msg · ${refreshPreview()}" else msg
                                     busy = false
                                 }
                             },
@@ -611,7 +665,7 @@ fun launchDesktopWindow() = application {
                 }
                 // S4d-154: the watermark TEXT STYLE control. One button per TextPaintStyle (Fill/Stroke) persists
                 // via WatermarkConfigEditor.updateTextStyle; the current persisted value shows in the label (re-read
-                // after each apply). These two are the only style choices. Manual preview — click "Preview".
+                // after each apply). These two are the only style choices. S4d-198: a successful apply auto-previews.
                 Text("Text style: $styleLabel", style = MaterialTheme.typography.body2)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(
@@ -624,16 +678,17 @@ fun launchDesktopWindow() = application {
                             onClick = {
                                 scope.launch {
                                     busy = true
-                                    val next = withContext(Dispatchers.IO) {
+                                    val (msg, ok) = withContext(Dispatchers.IO) {
                                         try {
                                             editor.updateTextStyle(st)
-                                            "Text style → $name. Click Preview to see it."
+                                            "Text style → $name" to true
                                         } catch (t: Throwable) {
-                                            "Failed: ${t.message}"
+                                            "Failed: ${t.message}" to false
                                         }
                                     }
                                     styleLabel = styleLabelOf(repo.waterMark.first().textStyle)
-                                    status = next
+                                    // S4d-198: auto-refresh the preview on success (no manual Preview click).
+                                    status = if (ok) "$msg · ${refreshPreview()}" else msg
                                     busy = false
                                 }
                             },
@@ -787,7 +842,11 @@ fun launchDesktopWindow() = application {
                                 }
                                 picked?.let { lastImage = it }
                                 savedFile?.let { lastSavedFile = it }
-                                status = next
+                                // S4d-198-r1: a successful "Open image…" is an explicit source change →
+                                // auto-refresh the preview over the just-loaded image (lastImage is set above).
+                                // savedFile != null ⟺ the real save succeeded; refreshPreview writes ONLY the
+                                // temp preview file (never lastSavedFile, so share-substitute stays real-save-bound).
+                                status = if (savedFile != null) "$next · ${refreshPreview()}" else next
                                 busy = false
                             }
                         }
@@ -814,23 +873,24 @@ fun launchDesktopWindow() = application {
                             // Persist ONLY the icon PATH (off the UI thread). editor.updateIcon flips persisted
                             // markMode to Image (S4d-134), so the next "Render & Save sample" / "Open image…"
                             // save renders through the Image branch (composeIconOverRealImage) over that path.
-                            // No render here — this control just sets the icon; the existing save buttons render.
+                            // S4d-198: this is a mode+input change (→ Image), so it auto-refreshes the preview
+                            // (the icon-over-fixture/last-image render) — symmetric with "Use text watermark".
                             scope.launch {
                                 busy = true
                                 status = "Setting icon ${selected.name}…"
                                 // Mirror the render buttons: try/catch INSIDE withContext returns the status
                                 // string, so a DataStore/updateIcon failure becomes "Failed: …" and the
-                                // `status = next; busy = false` below ALWAYS run (window never stuck busy).
-                                val next = withContext(Dispatchers.IO) {
+                                // `status = …; busy = false` below ALWAYS run (window never stuck busy).
+                                val (msg, ok) = withContext(Dispatchers.IO) {
                                     try {
                                         editor.updateIcon(MediaRef(selected.absolutePath))
-                                        "Icon set: ${selected.path}\n  Watermark mode → Image. " +
-                                            "Next “Render & Save sample” / “Open image…” renders this icon."
+                                        ("Icon set: ${selected.path}\n  Watermark mode → Image.") to true
                                     } catch (t: Throwable) {
-                                        "Failed: ${t.message}"
+                                        "Failed: ${t.message}" to false
                                     }
                                 }
-                                status = next
+                                // S4d-198: auto-refresh the preview on success (no manual Preview click).
+                                status = if (ok) "$msg · ${refreshPreview()}" else msg
                                 busy = false
                             }
                         }
@@ -845,18 +905,19 @@ fun launchDesktopWindow() = application {
                         scope.launch {
                             busy = true
                             status = "Switching to Text mode…"
-                            val next = withContext(Dispatchers.IO) {
+                            val (msg, ok) = withContext(Dispatchers.IO) {
                                 try {
                                     // updateText flips persisted mode to Text, so preserve the existing text value.
                                     val currentText = repo.waterMark.first().text
                                     editor.updateText(currentText)
-                                    "Watermark mode → Text. " +
-                                        "Next “Render & Save sample” / “Open image…” renders text."
+                                    ("Watermark mode → Text. " +
+                                        "Next “Render & Save sample” / “Open image…” renders text.") to true
                                 } catch (t: Throwable) {
-                                    "Failed: ${t.message}"
+                                    "Failed: ${t.message}" to false
                                 }
                             }
-                            status = next
+                            // S4d-198: auto-refresh the preview on success (no manual Preview click).
+                            status = if (ok) "$msg · ${refreshPreview()}" else msg
                             busy = false
                         }
                     },
@@ -866,40 +927,14 @@ fun launchDesktopWindow() = application {
                 Button(
                     enabled = !busy,
                     onClick = {
-                        // S4d-147: manual preview — render the CURRENT persisted config over the remembered
-                        // image (or fixture) through the SAME runSaveFlow spine the save buttons use, to a
-                        // repo-local temp file, then decode those bytes and show them on-screen. Heavy work
-                        // (render + decode) runs off the EDT; the ImageBitmap is set back on the UI dispatcher.
+                        // S4d-147/S4d-198: manual preview — render the CURRENT persisted config through the
+                        // shared refreshPreview() spine (the SAME path the post-edit auto-refresh uses) and show
+                        // it on-screen. Still available as an explicit user command even though edits now
+                        // auto-refresh.
                         scope.launch {
                             busy = true
                             status = "Rendering preview…"
-                            val current = lastImage
-                            val previewFile = File("build/s4d147-desktop-preview/preview.img")
-                                .apply { parentFile?.mkdirs() }
-                            val next: Pair<ImageBitmap?, String> = withContext(Dispatchers.IO) {
-                                try {
-                                    val o = if (current != null) {
-                                        DesktopWatermarkFlow.runSaveFlow(
-                                            repo, editor, userConfigRepo,
-                                            inputBytes = current.bytes, inputLabel = current.label,
-                                            outputFile = previewFile,
-                                        )
-                                    } else {
-                                        DesktopWatermarkFlow.runSaveFlow(
-                                            repo, editor, userConfigRepo, outputFile = previewFile,
-                                        )
-                                    }
-                                    // Decode the GENERIC encoded output (JPEG/80 by default, or PNG when prefs
-                                    // select PNG) — DesktopImageDecoder (ImageIO) handles both, not PNG-only.
-                                    DesktopImageDecoder.decode(previewFile.readBytes()) to
-                                        "Preview: ${o.format}, ${o.width}x${o.height} (${o.outputByteCount} B)"
-                                } catch (t: Throwable) {
-                                    null to "Failed: ${t.message}"
-                                }
-                            }
-                            // Keep the last good preview on failure (only replace on success).
-                            next.first?.let { preview = it }
-                            status = next.second
+                            status = refreshPreview()
                             busy = false
                         }
                     },
@@ -954,8 +989,8 @@ fun launchDesktopWindow() = application {
                 }
                 // S4d-160: minimal Templates section over the shared Desktop Room template path. "Save current
                 // text" stores the edited watermark text (templateEditor.add); each saved row applies it (Use →
-                // WatermarkConfigEditor.updateText + sync the text field) or deletes it. Preview stays manual —
-                // Use sets a status telling the user to click Preview/Render. `content` is the watermark TEXT (S4d-159).
+                // WatermarkConfigEditor.updateText + sync the text field) or deletes it. S4d-198: Use auto-refreshes
+                // the preview after a successful apply. `content` is the watermark TEXT (S4d-159).
                 Text("Templates", style = MaterialTheme.typography.subtitle1)
                 Button(
                     // S4d-162: require nonblank text so an empty template can't be saved.
@@ -997,17 +1032,18 @@ fun launchDesktopWindow() = application {
                                     if (content != null) {
                                         scope.launch {
                                             busy = true
-                                            val (next, ok) = withContext(Dispatchers.IO) {
+                                            val (msg, ok) = withContext(Dispatchers.IO) {
                                                 try {
                                                     editor.updateText(content)
-                                                    "Template applied: \"$content\". Click Preview or Render to see it." to true
+                                                    "Template applied: \"$content\"" to true
                                                 } catch (t: Throwable) {
                                                     "Failed: ${t.message}" to false
                                                 }
                                             }
                                             // Sync the editable text field to the applied template on success.
                                             if (ok) watermarkText = content
-                                            status = next
+                                            // S4d-198: auto-refresh the preview on success (no manual Preview click).
+                                            status = if (ok) "$msg · ${refreshPreview()}" else msg
                                             busy = false
                                         }
                                     }
