@@ -10,8 +10,10 @@ import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
+import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
@@ -137,5 +139,113 @@ class IosWatermarkRendererGoldenTest {
         assertRendersNonblankAndStable("icon_315") {
             IosWatermarkRenderer.renderIconCell(icon = makeIcon(), degree = 315f, scaleRatio = 2f)
         }
+    }
+
+    // --- S4d-193: composition gate (cells tiled/placed over a decoded background) ---
+
+    /** A small deterministic OPAQUE background (dark base + one lighter band) — the composition target. */
+    private fun makeBackground(): ImageBitmap {
+        val w = 128; val h = 96
+        val bmp = ImageBitmap(w, h, ImageBitmapConfig.Argb8888)
+        CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(bmp), Size(w.toFloat(), h.toFloat())) {
+            drawRect(color = Color(0xFF1E2630))
+            drawRect(color = Color(0xFF2C3846), topLeft = Offset(0f, 0f), size = Size(w / 3f, h.toFloat()))
+        }
+        return bmp
+    }
+
+    /**
+     * Coarse 8×8 grid of quantized **changed-pixel** levels vs [before] (per bucket: 0 = <1%, 1 = <10%,
+     * 2 = <30%, 3 = ≥30% of its pixels differ). On an opaque background "non-blank" is meaningless, so the
+     * gate measures *where the watermark changed the image* — robust to sub-pixel AA, catches a no-op
+     * composition, and distinguishes a broadly-tiled REPEAT from a single localized CLAMP decal.
+     */
+    private fun changedSignature(before: ImageBitmap, after: ImageBitmap): List<Int> {
+        val pb = before.toPixelMap(); val pa = after.toPixelMap()
+        val sig = ArrayList<Int>(gridN * gridN)
+        val cellW = (pb.width + gridN - 1) / gridN
+        val cellH = (pb.height + gridN - 1) / gridN
+        for (gy in 0 until gridN) {
+            for (gx in 0 until gridN) {
+                var changed = 0; var total = 0
+                val x0 = gx * cellW; val y0 = gy * cellH
+                var y = y0
+                while (y < minOf(y0 + cellH, pb.height)) {
+                    var x = x0
+                    while (x < minOf(x0 + cellW, pb.width)) {
+                        total++
+                        if (pb[x, y] != pa[x, y]) changed++
+                        x++
+                    }
+                    y++
+                }
+                val frac = if (total > 0) changed.toDouble() / total else 0.0
+                sig.add(if (frac >= 0.30) 3 else if (frac >= 0.10) 2 else if (frac >= 0.01) 1 else 0)
+            }
+        }
+        return sig
+    }
+
+    @Test
+    fun text_composition_repeat_changes_background_and_is_stable() {
+        val bgPng = IosWatermarkRenderer.encodePng(makeBackground())
+        val decoded = IosImageDecoder.decode(bgPng)
+        fun render() = IosWatermarkRenderer.composeOverImage(
+            imageBytes = bgPng, text = "请勿转载\nDO NOT", tileMode = WatermarkTileMode.REPEAT,
+        )
+        val a = render()
+        assertEquals(decoded.width, a.width, "composed width == background width")
+        assertEquals(decoded.height, a.height, "composed height == background height")
+        val sigA = changedSignature(decoded, a)
+        assertTrue(sigA.any { it > 0 }, "REPEAT composition must change pixels vs the background")
+        assertEquals(sigA, changedSignature(decoded, render()), "REPEAT composition must be deterministic")
+    }
+
+    @Test
+    fun text_composition_clamp_changes_background_and_is_stable() {
+        val bgPng = IosWatermarkRenderer.encodePng(makeBackground())
+        val decoded = IosImageDecoder.decode(bgPng)
+        fun render() = IosWatermarkRenderer.composeOverImage(
+            imageBytes = bgPng, text = "请勿转载\nDO NOT", tileMode = WatermarkTileMode.CLAMP,
+        )
+        val a = render()
+        assertEquals(decoded.width, a.width, "composed width == background width")
+        assertEquals(decoded.height, a.height, "composed height == background height")
+        val sigA = changedSignature(decoded, a)
+        assertTrue(sigA.any { it > 0 }, "CLAMP composition must change pixels vs the background")
+        assertEquals(sigA, changedSignature(decoded, render()), "CLAMP composition must be deterministic")
+    }
+
+    @Test
+    fun text_composition_repeat_differs_from_clamp() {
+        val bgPng = IosWatermarkRenderer.encodePng(makeBackground())
+        val decoded = IosImageDecoder.decode(bgPng)
+        val repeatSig = changedSignature(
+            decoded,
+            IosWatermarkRenderer.composeOverImage(bgPng, "请勿转载\nDO NOT", tileMode = WatermarkTileMode.REPEAT),
+        )
+        val clampSig = changedSignature(
+            decoded,
+            IosWatermarkRenderer.composeOverImage(bgPng, "请勿转载\nDO NOT", tileMode = WatermarkTileMode.CLAMP),
+        )
+        // REPEAT tiles across the whole image; CLAMP places one decal at the fractional offset — the changed
+        // regions must differ at the coarse signature.
+        assertNotEquals(repeatSig, clampSig, "REPEAT (tiled) and CLAMP (single decal) must change different regions")
+    }
+
+    @Test
+    fun icon_composition_changes_background_and_is_stable() {
+        val bgPng = IosWatermarkRenderer.encodePng(makeBackground())
+        val iconPng = IosWatermarkRenderer.encodePng(makeIcon())
+        val decoded = IosImageDecoder.decode(bgPng)
+        fun render() = IosWatermarkRenderer.composeIconOverImage(
+            imageBytes = bgPng, iconBytes = iconPng, tileMode = WatermarkTileMode.REPEAT, scaleRatio = 2f,
+        )
+        val a = render()
+        assertEquals(decoded.width, a.width, "composed width == background width")
+        assertEquals(decoded.height, a.height, "composed height == background height")
+        val sigA = changedSignature(decoded, a)
+        assertTrue(sigA.any { it > 0 }, "icon composition must change pixels vs the background")
+        assertEquals(sigA, changedSignature(decoded, render()), "icon composition must be deterministic")
     }
 }
