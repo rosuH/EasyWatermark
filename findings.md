@@ -1,5 +1,12 @@
 # Compose Migration Findings
 
+## Do not manufacture shared MainViewModel/IO layers without a consumer (S4d-191, 2026-06-28)
+
+- **No-Go: `MainViewModel` business-IO extraction is not a current implementation lane.** S4d-191 found the useful, consumed business logic has already moved to commonMain (`WatermarkConfigEditor`, `OutputPrefsEditor`, `TemplateEditor`) and is consumed by Desktop/iOS. What remains in `MainViewModel` is either Android UI state (`UiState` navigation/dialog events) or Android platform IO/render (`ContentResolver`, `MediaStore`, `Bitmap`/`Canvas`, `Compressor`, `FileProvider`, native `WatermarkRenderer` dispatch).
+- **A pure-looking method is not shareable if no second platform consumes it.** Moving `goTemplate`/`resetEditDialog`-style methods would only create a shared navigation/reducer layer over Android-only `UiState`; Desktop/iOS have their own flows. That violates the consumer-first extraction rule from S4d-94/S4d-99.
+- **An IO abstraction without a shared caller is dead weight.** Desktop/iOS already own their decode/save paths. The only meaningful shared caller would be a moved `generateImage`, but Android export cannot move while Android text/icon/composition stay native by S4d-8/S4d-17/S4d-190. Therefore a decode/save `expect`/`actual` layer is speculative until an owner explicitly signs up for the larger export abstraction.
+- **The only semi-candidate is not worth the risk by default.** Promoting `DesktopSaveDecision.renderPlan` to commonMain and routing Android through it touches the golden-protected export path for a two-branch decision whose Image-mode guard differs by platform (Android decode-failure vs Desktop empty-icon `require`). Keep it owner-gated, not a default next slice.
+
 ## Don't trade a renderer risk for a trivial tiling loop when the raster stays native (S4d-190, 2026-06-28)
 
 - **No-Go: route Android production composition into commonMain.** Android `WatermarkRenderer.compose` tiles via `BitmapShader(REPEAT/CLAMP)` + `drawRect`; commonMain `composeOverBackground` uses a `drawImage` grid/decal loop. The two are *mathematically* equivalent for export-REPEAT + CLAMP, but **byte identity cannot be proven read-only** (shader-fill vs blit-loop on android.graphics, plus byte-`0..255` vs float-`/255f` alpha) — it needs a same-platform pixel measurement.

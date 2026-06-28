@@ -1,5 +1,12 @@
 # Progress Log
 
+## 2026-06-28 — S4d-191 MainViewModel business-IO lane accepted as NO-GO/defer
+
+- **S4d-191 (read-only decision pack, accepted):** mapped the remaining `MainViewModel` / business-IO surface and found no safe non-speculative implementation slice in this lane right now. The cross-platform-consumed business logic is already extracted into commonMain and consumed off-Android (`WatermarkConfigEditor`, `OutputPrefsEditor`, `TemplateEditor`). The remaining pure-looking methods emit Android `UiState` only, and the rest is Android platform IO/render (`ContentResolver`, `MediaStore`, `Bitmap`/`Canvas`, `Compressor`, `FileProvider`, native `WatermarkRenderer` dispatch).
+- **Rejected candidates:** a shared navigation/VM reducer would be consumerless; an IO `expect`/`actual` layer has no shared caller because Android `generateImage` cannot move while Android raster/composition stays native; promoting `DesktopSaveDecision.renderPlan` into commonMain and wiring Android through it is renderer-adjacent, semantically divergent (Android Image-mode guard is decode-failure, Desktop is empty-icon `require`), and low value.
+- **Decision:** do not open a `MainViewModel` shared-VM/business-IO abstraction slice without a named real off-Android consumer or an explicit owner decision to fund a larger IO abstraction. Keep PR #358 Draft and keep 1:1 parity deferred.
+- **Next:** resume from a separate release-migration lane with a real consumer/value signal, such as release safety-net/golden harness widening or remaining Desktop/iOS product/runtime gaps. Do not keep manufacturing tiny MainViewModel slices.
+
 ## 2026-06-28 — S4d-189/190 Android composition routing decided NO-GO (stays native)
 
 - **S4d-189 (read-only selector, accepted):** the small constant/default de-dup vein is exhausted (alpha `/255f` is intra-file churn; `ColorStyleOption` is a UI sample; `degree=315f` are convenience defaults; default text is per-platform); selected a read-only readiness pack on the C2 Android-composition routing.
