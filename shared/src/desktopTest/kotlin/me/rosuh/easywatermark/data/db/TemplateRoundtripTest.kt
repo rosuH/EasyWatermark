@@ -12,6 +12,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Clock
 
 /**
  * S4d-142: Desktop (JVM) templates roundtrip over the commonMain Room path, built by the new desktopMain
@@ -50,5 +51,24 @@ class TemplateRoundtripTest {
 
         editor.delete(afterAdd[0])
         assertTrue(repo.getAllTemplate().first().isEmpty(), "store is empty again after delete")
+    }
+
+    @Test
+    fun update_preserves_id_and_creation_date() = runBlocking {
+        editor.add("original content")
+        val afterAdd = repo.getAllTemplate().first()
+        assertEquals(1, afterAdd.size, "exactly one template after add")
+
+        val original = afterAdd[0]
+        val originalId = original.id
+        val originalCreationDate = original.creationDate
+        assertTrue(originalId != 0, "autoGenerate assigned a row id")
+
+        editor.update(original.copy(content = "updated content", lastModifiedDate = Clock.System.now()))
+        val afterUpdate = repo.getAllTemplate().first()
+        assertEquals(1, afterUpdate.size, "still exactly one template after update")
+        assertEquals(originalId, afterUpdate[0].id, "update preserves the row id")
+        assertEquals("updated content", afterUpdate[0].content, "update changes the content")
+        assertEquals(originalCreationDate, afterUpdate[0].creationDate, "update preserves the creation date")
     }
 }

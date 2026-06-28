@@ -37,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.time.Clock
 import me.rosuh.easywatermark.data.db.buildTemplateDatabase
 import me.rosuh.easywatermark.data.db.unpackDefaultTemplateSeed
 import me.rosuh.easywatermark.data.model.ImageFormat
@@ -179,7 +180,8 @@ private fun resolveDesktopOutputDir(): File {
  * onto the window loads it through the same Open-image save spine (`Modifier.dragAndDropTarget` + the AWT
  * file-list flavor; updates `lastImage` + `lastSavedFile`; unsupported/empty/while-busy drops fail softly).
  * S4d-160: a minimal "Templates" section over the shared Desktop Room path saves the current watermark
- * text, lists saved templates, and applies (Use → `WatermarkConfigEditor.updateText`) or deletes them.
+ * text, lists saved templates, and applies (Use → `WatermarkConfigEditor.updateText`), updates in place
+ * (Update → `TemplateEditor.update`), or deletes them.
  * S4d-198: REACTIVE preview — every successful explicit editor action (Apply text/degree/color/opacity/
  * gaps/text-size, the tile/typeface/style buttons, "Use text watermark", and template "Use") now
  * auto-refreshes the on-screen preview through the SAME `refreshPreview()` → `runSaveFlow` temp-file spine
@@ -1059,10 +1061,12 @@ fun launchDesktopWindow() = application {
                         },
                     ) { Text("Copy output path") }
                 }
-                // S4d-160: minimal Templates section over the shared Desktop Room template path. "Save current
-                // text" stores the edited watermark text (templateEditor.add); each saved row applies it (Use →
-                // WatermarkConfigEditor.updateText + sync the text field) or deletes it. S4d-198: Use auto-refreshes
-                // the preview after a successful apply. `content` is the watermark TEXT (S4d-159).
+                // S4d-160/S4d-226: minimal Templates section over the shared Desktop Room template path. "Save
+                // current text" stores the edited watermark text (templateEditor.add); each saved row applies it
+                // (Use → WatermarkConfigEditor.updateText + sync the text field), updates in place from the
+                // current watermark text (Update → TemplateEditor.update, preserving id/creationDate), or deletes
+                // it. S4d-198: Use auto-refreshes the preview after a successful apply. `content` is the watermark
+                // TEXT (S4d-159).
                 Text("Templates", style = MaterialTheme.typography.subtitle1)
                 Button(
                     // S4d-162: require nonblank text so an empty template can't be saved.
@@ -1121,6 +1125,31 @@ fun launchDesktopWindow() = application {
                                     }
                                 },
                             ) { Text("Use") }
+                            Button(
+                                // S4d-226: update the existing row from the current watermark text.
+                                enabled = !busy && watermarkText.isNotBlank(),
+                                onClick = {
+                                    val text = watermarkText
+                                    scope.launch {
+                                        busy = true
+                                        val next = withContext(Dispatchers.IO) {
+                                            try {
+                                                templateEditor.update(
+                                                    template.copy(
+                                                        content = text,
+                                                        lastModifiedDate = Clock.System.now(),
+                                                    )
+                                                )
+                                                "Updated template to: \"$text\""
+                                            } catch (t: Throwable) {
+                                                "Failed: ${t.message}"
+                                            }
+                                        }
+                                        status = next
+                                        busy = false
+                                    }
+                                },
+                            ) { Text("Update") }
                             Button(
                                 enabled = !busy,
                                 onClick = {
