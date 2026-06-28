@@ -6,7 +6,7 @@ import android.graphics.Typeface
 import android.text.TextPaint
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.WaterMark
-import me.rosuh.easywatermark.render.WatermarkRenderer
+import me.rosuh.easywatermark.render.WatermarkGeometry
 
 /**
  * S3a image-space sizing: the text paint size is `textSize * imageInfo.width / REF_WIDTH`, i.e.
@@ -28,7 +28,7 @@ fun Paint.applyConfig(
     @Suppress("UNUSED_PARAMETER") isScale: Boolean = true
 ): Paint {
     val size = config?.textSize ?: 14f
-    textSize = size * imageInfo.width / WatermarkRenderer.REF_WIDTH
+    textSize = WatermarkGeometry.fontPx(size, imageInfo.width)
     color = config?.textColor ?: Color.RED
     alpha = config?.alpha ?: 128
     style = config?.textStyle?.obtainSysStyle() ?: Paint.Style.FILL
