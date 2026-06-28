@@ -43,6 +43,7 @@ import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.UserPreferences
+import me.rosuh.easywatermark.data.model.WatermarkConfigRules
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.repo.TemplateRepository
 import me.rosuh.easywatermark.domain.OutputPrefsEditor
@@ -198,7 +199,9 @@ fun launchDesktopWindow() = application {
         degreeText = repo.waterMark.first().degree.toString()
         colorText = "#%08X".format(repo.waterMark.first().textColor)
         // Persisted alpha is a 0..255 byte; display as a percent (Android editor semantics).
-        alphaText = (repo.waterMark.first().alpha * 100f / 255f).toString()
+        // S4d-179: shared WatermarkConfigRules.alphaByteToPercent (Android baseline order); the displayed
+        // value may differ from the old `alpha * 100f / 255f` by a final float ULP (display only).
+        alphaText = WatermarkConfigRules.alphaByteToPercent(repo.waterMark.first().alpha).toString()
         // S4d-151: load the persisted horizontal/vertical gaps into the editable fields.
         hGapText = repo.waterMark.first().hGap.toString()
         vGapText = repo.waterMark.first().vGap.toString()

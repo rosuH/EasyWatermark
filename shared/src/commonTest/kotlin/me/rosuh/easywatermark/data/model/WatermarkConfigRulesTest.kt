@@ -27,6 +27,14 @@ class WatermarkConfigRulesTest {
     }
 
     @Test
+    fun alpha_byte_to_percent_inverts_with_android_baseline_order() {
+        // alpha.toFloat() / 255 * 100 (the bit-identical Android EditorScreen expression).
+        assertEquals(0f, WatermarkConfigRules.alphaByteToPercent(0))
+        assertEquals(100f, WatermarkConfigRules.alphaByteToPercent(255))
+        assertEquals(128f / 255 * 100, WatermarkConfigRules.alphaByteToPercent(128)) // ~50.196
+    }
+
+    @Test
     fun horizontal_gap_clamps_to_0_max() {
         assertEquals(0, WatermarkConfigRules.clampHorizontalGap(-5))
         assertEquals(250, WatermarkConfigRules.clampHorizontalGap(250))

@@ -106,6 +106,7 @@ import me.rosuh.easywatermark.ui.compose.TextTypeface
 import me.rosuh.easywatermark.ui.compose.TileMode
 import me.rosuh.easywatermark.ui.widget.utils.WaterMarkShader
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
+import me.rosuh.easywatermark.data.model.WatermarkConfigRules
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.utils.ktx.applyConfig
 import me.rosuh.easywatermark.utils.ktx.obtainTileMode
@@ -476,7 +477,7 @@ fun OptionControl(
                 SliderOption(
                     item = item,
                     modifier = innerModifier,
-                    currentValue = waterMark.alpha.toFloat() / 255 * 100,
+                    currentValue = WatermarkConfigRules.alphaByteToPercent(waterMark.alpha),
                     onValueChange = onChange
                 )
             }
