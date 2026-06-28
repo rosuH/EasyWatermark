@@ -50,6 +50,7 @@ import me.rosuh.easywatermark.domain.OutputPrefsEditor
 import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopImageDecoder
+import me.rosuh.easywatermark.render.DesktopSaveDecision
 import java.awt.Desktop
 import java.awt.FileDialog
 import java.awt.datatransfer.DataFlavor
@@ -124,6 +125,20 @@ private fun resolveDesktopAppDataDir(): File {
 }
 
 /**
+ * S4d-217: the user-facing output dir for the interactive window's REAL saves (drop / Render & Save /
+ * Open image) — `~/Pictures` when it exists, else `~/.easywatermark/output` (reusing the S4d-215
+ * app-data dir). Saved watermarked images must not land in the repo-local `build/` dir. The
+ * headless/demo witness (`Main.kt`), the `DesktopWatermarkFlow` default `outputDir`, and the preview
+ * temp deliberately stay build-local — NOT routed here. (Full per-OS XDG/AppData handling is a
+ * separate deferred refinement.) The dir is created if missing.
+ */
+private fun resolveDesktopOutputDir(): File {
+    val pictures = System.getProperty("user.home")?.takeIf { it.isNotBlank() }?.let { File(it, "Pictures") }
+    return (pictures?.takeIf { it.isDirectory } ?: File(resolveDesktopAppDataDir(), "output"))
+        .apply { mkdirs() }
+}
+
+/**
  * S4d-121: the smallest useful **Compose Desktop window** over the S4d-120 save spine. A no-arg
  * `:desktopApp` launch opens this window (`Main.kt` dispatches); the `--headless` flag keeps a bounded
  * console automation path that exits.
@@ -180,6 +195,10 @@ fun launchDesktopWindow() = application {
     // DesktopWatermarkFlow defaults). All three persistence files (the two DataStores named by their
     // SP_NAME + the Room "ewm-db") share this dir; distinct filenames, no collision.
     val appDataDir = remember { resolveDesktopAppDataDir() }
+    // S4d-217: where the window's REAL saves (drop / Render & Save / Open image) write — a user dir, not
+    // the repo-local build/ default. "Save as…" still uses its chosen path; the preview temp + headless
+    // witness stay build-local.
+    val outputDir = remember { resolveDesktopOutputDir() }
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
     val repo = remember { DesktopWatermarkFlow.buildRepository(dir = appDataDir) }
     val editor = remember { WatermarkConfigEditor(repo) }
@@ -306,8 +325,12 @@ fun launchDesktopWindow() = application {
                         try {
                             val bytes = file.readBytes()
                             picked = LastImage(bytes, file.path)
+                            // S4d-217: write the real save to the user output dir (not the build/ default).
+                            val fmt = userConfigRepo.userPreferences.first().outputFormat
+                            val out = File(outputDir, DesktopSaveDecision.defaultOutputFileName(fmt))
                             val o = DesktopWatermarkFlow.runSaveFlow(
                                 repo, editor, userConfigRepo, inputBytes = bytes, inputLabel = file.path,
+                                outputFile = out,
                             )
                             // S4d-157: remember the real saved output for the share-substitute buttons.
                             savedFile = File(o.outputPath)
@@ -755,13 +778,19 @@ fun launchDesktopWindow() = application {
                             var savedFile: File? = null
                             val next = withContext(Dispatchers.IO) {
                                 try {
+                                    // S4d-217: write the real save to the user output dir (not the build/ default).
+                                    val fmt = userConfigRepo.userPreferences.first().outputFormat
+                                    val out = File(outputDir, DesktopSaveDecision.defaultOutputFileName(fmt))
                                     val o = if (current != null) {
                                         DesktopWatermarkFlow.runSaveFlow(
                                             repo, editor, userConfigRepo,
                                             inputBytes = current.bytes, inputLabel = current.label,
+                                            outputFile = out,
                                         )
                                     } else {
-                                        DesktopWatermarkFlow.runSaveFlow(repo, editor, userConfigRepo)
+                                        DesktopWatermarkFlow.runSaveFlow(
+                                            repo, editor, userConfigRepo, outputFile = out,
+                                        )
                                     }
                                     // S4d-157: remember the real saved output for the share-substitute buttons.
                                     savedFile = File(o.outputPath)
@@ -854,8 +883,12 @@ fun launchDesktopWindow() = application {
                                     try {
                                         val bytes = selected.readBytes()
                                         picked = LastImage(bytes, selected.path)
+                                        // S4d-217: write the real save to the user output dir (not the build/ default).
+                                        val fmt = userConfigRepo.userPreferences.first().outputFormat
+                                        val out = File(outputDir, DesktopSaveDecision.defaultOutputFileName(fmt))
                                         val o = DesktopWatermarkFlow.runSaveFlow(
                                             repo, editor, userConfigRepo, inputBytes = bytes, inputLabel = selected.path,
+                                            outputFile = out,
                                         )
                                         // S4d-157: remember the real saved output for the share-substitute buttons.
                                         savedFile = File(o.outputPath)
