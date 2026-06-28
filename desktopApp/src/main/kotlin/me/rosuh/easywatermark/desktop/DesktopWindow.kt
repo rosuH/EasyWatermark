@@ -328,7 +328,7 @@ fun launchDesktopWindow() = application {
                             picked = LastImage(bytes, file.path)
                             // S4d-217: write the real save to the user output dir (not the build/ default).
                             val fmt = userConfigRepo.userPreferences.first().outputFormat
-                            val out = File(outputDir, DesktopSaveDecision.defaultOutputFileName(fmt))
+                            val out = DesktopSaveDecision.resolveUniqueOutputFile(outputDir, fmt)
                             val o = DesktopWatermarkFlow.runSaveFlow(
                                 repo, editor, userConfigRepo, inputBytes = bytes, inputLabel = file.path,
                                 outputFile = out,
@@ -781,7 +781,7 @@ fun launchDesktopWindow() = application {
                                 try {
                                     // S4d-217: write the real save to the user output dir (not the build/ default).
                                     val fmt = userConfigRepo.userPreferences.first().outputFormat
-                                    val out = File(outputDir, DesktopSaveDecision.defaultOutputFileName(fmt))
+                                    val out = DesktopSaveDecision.resolveUniqueOutputFile(outputDir, fmt)
                                     val o = if (current != null) {
                                         DesktopWatermarkFlow.runSaveFlow(
                                             repo, editor, userConfigRepo,
@@ -886,7 +886,7 @@ fun launchDesktopWindow() = application {
                                         picked = LastImage(bytes, selected.path)
                                         // S4d-217: write the real save to the user output dir (not the build/ default).
                                         val fmt = userConfigRepo.userPreferences.first().outputFormat
-                                        val out = File(outputDir, DesktopSaveDecision.defaultOutputFileName(fmt))
+                                        val out = DesktopSaveDecision.resolveUniqueOutputFile(outputDir, fmt)
                                         val o = DesktopWatermarkFlow.runSaveFlow(
                                             repo, editor, userConfigRepo, inputBytes = bytes, inputLabel = selected.path,
                                             outputFile = out,
