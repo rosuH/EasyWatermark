@@ -941,8 +941,37 @@ fun launchDesktopWindow() = application {
                                 // `status = …; busy = false` below ALWAYS run (window never stuck busy).
                                 val (msg, ok) = withContext(Dispatchers.IO) {
                                     try {
-                                        editor.updateIcon(MediaRef(selected.absolutePath))
-                                        ("Icon set: ${selected.path}\n  Watermark mode → Image.") to true
+                                        // S4d-219: copy the picked icon into app-private storage and persist THAT
+                                        // path (not the user's original absolute path), so Image-mode survives the
+                                        // source icon moving/renaming/deleting and is machine-portable — parity with
+                                        // iOS `IosIconPersistence` (S4d-116). Preserve the picked extension.
+                                        val iconsDir = File(appDataDir, "watermark_icons").apply { mkdirs() }
+                                        val ext = selected.extension.lowercase().ifBlank { "png" }
+                                        val copied = File(iconsDir, "icon.$ext")
+                                        // r1: COPY-THEN-PRUNE (never clear-before-copy). If the user re-picked the
+                                        // existing helper-owned copy, it's a no-op — don't delete/recopy it. Else copy
+                                        // to a temp, then ATOMICALLY move into place, so a failed read never destroys
+                                        // the prior copy (the persisted config keeps pointing at a valid file).
+                                        if (selected.canonicalFile != copied.canonicalFile) {
+                                            val tmp = File(iconsDir, "incoming.tmp")
+                                            selected.copyTo(tmp, overwrite = true)
+                                            // ATOMIC_MOVE so `copied` is never left half-written; if the OS
+                                            // rejects atomic moves it throws → caught below as "Failed: …" with
+                                            // the prior copy untouched (pruning hasn't run yet). REPLACE_EXISTING
+                                            // overwrites the previous same-ext copy.
+                                            java.nio.file.Files.move(
+                                                tmp.toPath(), copied.toPath(),
+                                                java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                                                java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                                            )
+                                        }
+                                        // Bounded: only AFTER `copied` exists, drop OTHER helper-owned files
+                                        // (File.delete() returns false on failure, never throws → no spurious Failed).
+                                        iconsDir.listFiles()?.forEach {
+                                            if (it.canonicalFile != copied.canonicalFile) it.delete()
+                                        }
+                                        editor.updateIcon(MediaRef(copied.absolutePath))
+                                        ("Icon set: ${selected.name}\n  Copied to ${copied.path}\n  Watermark mode → Image.") to true
                                     } catch (t: Throwable) {
                                         "Failed: ${t.message}" to false
                                     }
