@@ -2,7 +2,6 @@ Securely, easily add a watermark to your sensitive photos.
 To prevent them from being leaked or exploited by the BAD GUY.
 
 Of course, it is also suitable for making emojis.
-After all, it supports image watermarking with very ghostly effects. 
 
 ## Characteristics
 ### Exciting 👓
@@ -17,8 +16,7 @@ The watermark repeats all over the picture, and it's a little hard for the bad g
 - Security:
 The code is completely open source and uses a loose MIT protocol, you are free to Fork yourself to modify and remove code you think is problematic ;)
 No network requests, no network request permissions, no fear of your photos being compromised. users with API >= 29 don't even need to request any permissions. (28 and below users need to apply for storage permissions to access and store photos)
-And of course there are no stats, buried points or Device IDs, or even crash reporting (so if you get a crash, please share the crash info with us >_<).
-We're forgoing the convenient third-party collection SDK and various stats just so you can use it with confidence. What's yours is yours.
+No stats, no Device IDs, no crash reporting, no third-party SDK — what's yours is yours.
 - Layout: support for horizontal and vertical intervals between the watermark, automatically repeat the full picture.
 - Style: font color, transparency, size and rotation angle can be adjusted.
 - Content: Support text watermark and image watermark.
@@ -34,9 +32,7 @@ This photo is for xx for xxx purposes only, no other use.
 
 You can turn down the transparency, just don't block the key information.
 
-(For now) we can't (temporarily) prevent information from being uploaded, or even (temporarily) prevent information from being leaked, but we can reduce the value of the information being leaked.
-
-Even if it's (probably) useless in the end, at least you can disgust the leaker a bit.
+We can't prevent leaks, but we can reduce their value — and at least annoy the leaker.
 
 ## UI
 Designed by renowned UI guru @tovi (👏🤪)

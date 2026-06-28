@@ -114,3 +114,5 @@ hs_err_pid*
 .alma-snapshots
 .DS_Store
 .kotlin
+.weblate
+.weblate.ini
