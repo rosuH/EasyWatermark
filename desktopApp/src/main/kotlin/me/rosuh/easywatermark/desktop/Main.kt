@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.datastore.createUserConfigDataStore
 import me.rosuh.easywatermark.data.db.buildTemplateDatabase
+import me.rosuh.easywatermark.data.db.unpackDefaultTemplateSeed
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.Result
@@ -207,17 +208,24 @@ private fun runHeadless(args: Array<String>) {
         }
     }
 
-    // S4d-143a: Desktop templates headless witness — the first :desktopApp consumer of the S4d-142 Desktop
-    // template DB builder (bundled SQLite driver) + commonMain TemplateRepository/TemplateEditor. Builds an
-    // EMPTY repo-local DB, then add → list → delete roundtrips one template and ends empty. No seeding, no UI.
-    // It deletes all rows at the end, so the persistent store is empty on the next run (deterministic output).
-    val templatesDir = File("build/s4d143a-desktop-templates").apply { mkdirs() }
-    val templateDb = buildTemplateDatabase(templatesDir)
+    // S4d-143a / S4d-224: Desktop templates headless witness — the first :desktopApp consumer of the S4d-142
+    // Desktop template DB builder (bundled SQLite driver) + commonMain TemplateRepository/TemplateEditor.
+    // Builds a fresh SEEDED repo-local DB via the shared desktopMain seed resource, verifies the seeded
+    // templates, then add → list → delete roundtrips one more template and ends empty. No UI. The witness
+    // directory is deleted before each run so the seeded-first-creation path is exercised repeatedly.
+    val templatesDir = File("build/s4d143a-desktop-templates").apply {
+        deleteRecursively()
+        mkdirs()
+    }
+    val seedFile = File(templatesDir, "seed-ewm-db-eng.db")
+    unpackDefaultTemplateSeed(seedFile)
+    val templateDb = buildTemplateDatabase(templatesDir, seedFile)
     val templateRepo = TemplateRepository(templateDb.templateDao(), Dispatchers.IO)
     val templateEditor = TemplateEditor(templateRepo)
-    println("Desktop headless templates witness (S4d-143a) [store dir: ${templatesDir.path}]:")
+    println("Desktop headless templates witness (S4d-143a/S4d-224) [store dir: ${templatesDir.path}]:")
     runBlocking {
-        println("  daoNull=${templateRepo.checkIfIsDaoNull()} initial count=${templateRepo.getAllTemplate().first().size}")
+        val seeded = templateRepo.getAllTemplate().first()
+        println("  daoNull=${templateRepo.checkIfIsDaoNull()} seeded count=${seeded.size} first='${seeded.firstOrNull()?.content}'")
         templateEditor.add("S4d-143a desktop template")
         val afterAdd = templateRepo.getAllTemplate().first()
         println("  after add: count=${afterAdd.size} content='${afterAdd.firstOrNull()?.content}' id=${afterAdd.firstOrNull()?.id}")

@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.data.db.buildTemplateDatabase
+import me.rosuh.easywatermark.data.db.unpackDefaultTemplateSeed
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.TextPaintStyle
@@ -207,10 +208,14 @@ fun launchDesktopWindow() = application {
     val userConfigRepo = remember { DesktopWatermarkFlow.buildUserConfigRepository(dir = appDataDir) }
     // S4d-130: the shared output-prefs write use-case over the SAME store the save flow reads.
     val outputEditor = remember { OutputPrefsEditor(userConfigRepo) }
-    // S4d-160/S4d-215: the Desktop templates Room DB (commonMain Room via the desktopMain BundledSQLiteDriver
-    // builder), now under the stable app-data dir. Room is single-instance-per-file; the process exits on
-    // window close, releasing the DB.
-    val templateDb = remember { buildTemplateDatabase(appDataDir) }
+    // S4d-160/S4d-215/S4d-224: the Desktop templates Room DB (commonMain Room via the desktopMain
+    // BundledSQLiteDriver builder), now under the stable app-data dir and seeded from the shared desktopMain
+    // English seed resource on first creation. Room is single-instance-per-file; the process exits on window
+    // close, releasing the DB.
+    val templateDb = remember {
+        val seedFile = File(appDataDir, "seed-ewm-db-eng.db").also { unpackDefaultTemplateSeed(it) }
+        buildTemplateDatabase(appDataDir, seedFile)
+    }
     val templateRepo = remember { TemplateRepository(templateDb.templateDao(), Dispatchers.IO) }
     val templateEditor = remember { TemplateEditor(templateRepo) }
     // Collect the saved templates into state (remember the Flow so collection is stable across recompositions).
