@@ -81,13 +81,13 @@ class WaterMarkRepository(
                 ),
                 // S4d-84: platform-neutral opaque ARGB constant equal to Color.parseColor("#FFB800")
                 // (pinned by WaterMarkDefaultColorTest), removing the android.graphics.Color edge.
-                textColor = it[KEY_TEXT_COLOR] ?: 0xFFFFB800.toInt(),
+                textColor = it[KEY_TEXT_COLOR] ?: WaterMark.default.textColor,
                 textStyle = TextPaintStyle.obtainSealedClass(it[KEY_TEXT_STYLE] ?: 0),
                 textTypeface = TextTypeface.obtainSealedClass(it[KEY_TEXT_TYPEFACE] ?: 0),
-                alpha = it[KEY_ALPHA] ?: 255,
-                degree = it[KEY_DEGREE] ?: 315f,
-                hGap = it[KEY_HORIZON_GAP] ?: 0,
-                vGap = it[KEY_VERTICAL_GAP] ?: 0,
+                alpha = it[KEY_ALPHA] ?: WaterMark.default.alpha,
+                degree = it[KEY_DEGREE] ?: WaterMark.default.degree,
+                hGap = it[KEY_HORIZON_GAP] ?: WaterMark.default.hGap,
+                vGap = it[KEY_VERTICAL_GAP] ?: WaterMark.default.vGap,
                 iconUri = MediaRef.parse(it[KEY_ICON_URI] ?: ""),
                 markMode = WatermarkMode.fromValue(it[KEY_MODE] ?: WatermarkMode.Text.value),
                 tileMode = tileModeFromStorageId(it[KEY_TILE_MODE]),
