@@ -105,6 +105,25 @@ private fun styleLabelOf(s: TextPaintStyle): String = when (s) {
 private class LastImage(val bytes: ByteArray, val label: String)
 
 /**
+ * S4d-215: the stable per-user app-data dir the interactive Desktop window persists into —
+ * `~/.easywatermark` (matching the `CreateDataStore.desktop.kt` store-creation convention), NOT the
+ * repo-local `build/` dev paths the headless/demo witness (`Main.kt`) deliberately uses. If
+ * `user.home` is unavailable, fall back to a repo-local `build/` dir and warn instead of crashing.
+ * The dir is created if missing.
+ */
+private fun resolveDesktopAppDataDir(): File {
+    val home = System.getProperty("user.home")?.takeIf { it.isNotBlank() }
+    return if (home != null) {
+        File(home, ".easywatermark")
+    } else {
+        System.err.println(
+            "S4d-215: user.home unavailable; persisting window state under repo-local build/desktop-app-data"
+        )
+        File("build/desktop-app-data")
+    }.apply { mkdirs() }
+}
+
+/**
  * S4d-121: the smallest useful **Compose Desktop window** over the S4d-120 save spine. A no-arg
  * `:desktopApp` launch opens this window (`Main.kt` dispatches); the `--headless` flag keeps a bounded
  * console automation path that exits.
@@ -155,17 +174,23 @@ private class LastImage(val bytes: ByteArray, val label: String)
  * file). "Render & Save sample" / "Save as…" remain real-save-only (they don't change the source/config).
  */
 fun launchDesktopWindow() = application {
+    // S4d-215: persist the window's user state (watermark config, output prefs, templates DB) under the
+    // stable per-user app-data dir ~/.easywatermark (the CreateDataStore.desktop.kt convention), NOT the
+    // repo-local build/ dev paths — those stay the intentional headless/demo witness layout (Main.kt +
+    // DesktopWatermarkFlow defaults). All three persistence files (the two DataStores named by their
+    // SP_NAME + the Room "ewm-db") share this dir; distinct filenames, no collision.
+    val appDataDir = remember { resolveDesktopAppDataDir() }
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
-    val repo = remember { DesktopWatermarkFlow.buildRepository() }
+    val repo = remember { DesktopWatermarkFlow.buildRepository(dir = appDataDir) }
     val editor = remember { WatermarkConfigEditor(repo) }
     // S4d-128: the output-prefs repo the save flow reads (empty store → the shared (JPEG, 80) default).
-    val userConfigRepo = remember { DesktopWatermarkFlow.buildUserConfigRepository() }
+    val userConfigRepo = remember { DesktopWatermarkFlow.buildUserConfigRepository(dir = appDataDir) }
     // S4d-130: the shared output-prefs write use-case over the SAME store the save flow reads.
     val outputEditor = remember { OutputPrefsEditor(userConfigRepo) }
-    // S4d-160: the Desktop templates path (commonMain Room via the desktopMain BundledSQLiteDriver builder).
-    // ONE DB/repo/editor for the window lifetime — Room is single-instance-per-file, so this uses its OWN dir,
-    // separate from the S4d-143a headless witness dir. The process exits on window close, releasing the DB.
-    val templateDb = remember { buildTemplateDatabase(File("build/s4d160-desktop-templates")) }
+    // S4d-160/S4d-215: the Desktop templates Room DB (commonMain Room via the desktopMain BundledSQLiteDriver
+    // builder), now under the stable app-data dir. Room is single-instance-per-file; the process exits on
+    // window close, releasing the DB.
+    val templateDb = remember { buildTemplateDatabase(appDataDir) }
     val templateRepo = remember { TemplateRepository(templateDb.templateDao(), Dispatchers.IO) }
     val templateEditor = remember { TemplateEditor(templateRepo) }
     // Collect the saved templates into state (remember the Flow so collection is stable across recompositions).
