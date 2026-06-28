@@ -133,8 +133,11 @@ object DesktopWatermarkTextRenderer {
      * `ImageIO.write(argb, "jpg", …)` produces wrong/black output — then encodes at [quality]
      * (0..100 → `ImageWriteParam.compressionQuality` 0f..1f). JDK ImageIO only; **no new dependency**.
      *
-     * Capability-only (S4d-127): this does NOT change the Desktop save-flow default, the persisted-config
-     * consumption, or any witness/golden — those default to PNG and are wired in a later slice (S4d-128).
+     * S4d-127 added this as a capability; **S4d-128 wired it into the Desktop save flow** —
+     * `DesktopWatermarkFlow.runSaveFlow` reads the persisted `UserConfigRepository` prefs and passes the
+     * `outputFormat`/`compressLevel` through to the composer (empty store → the shared `(JPEG, 80)` default).
+     * The `composeOverRealImage`/`composeIconOverRealImage` composer goldens still default to PNG for
+     * byte-identical output.
      */
     fun encode(bitmap: ImageBitmap, format: ImageFormat, quality: Int = 100): ByteArray = when (format) {
         ImageFormat.PNG -> encodePng(bitmap)

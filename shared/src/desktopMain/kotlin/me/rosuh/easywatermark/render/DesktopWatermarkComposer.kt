@@ -186,7 +186,8 @@ object DesktopWatermarkComposer {
         textStyle: TextPaintStyle = TextPaintStyle.Fill,
         // S4d-127: output encoding. Defaults to PNG (quality ignored for PNG) so existing callers + the
         // PNG-magic goldens get byte-identical output; pass ImageFormat.JPEG + a quality (0..100) for JPEG.
-        // The Desktop save flow does NOT yet consume this (persisted-config wiring is S4d-128).
+        // S4d-128 wired the Desktop save flow to this: DesktopWatermarkFlow.runSaveFlow reads the persisted
+        // UserConfigRepository prefs and passes outputFormat/compressLevel here (empty store → (JPEG, 80)).
         format: ImageFormat = ImageFormat.PNG,
         quality: Int = 100,
     ): ComposedImage {
@@ -243,8 +244,9 @@ object DesktopWatermarkComposer {
      * Android's native path double-applies). [scaleRatio][WatermarkCellComposer.composeIconCell] follows
      * production: `textSize / ICON_SCALE_REFERENCE_TEXT_SIZE` (14 ⇒ 1×).
      *
-     * SCOPE (S4d-133): the render **primitive** only — NOT wired into the Desktop save flow
-     * (`DesktopWatermarkFlow.runSaveFlow`); the persisted `markMode == Image` branch is a later slice.
+     * S4d-133 added this render **primitive**; **S4d-134 wired it into the Desktop save flow** —
+     * `DesktopWatermarkFlow.runSaveFlow` renders the persisted `markMode == Image` branch through this
+     * (a missing/empty/unreadable icon fails loudly, no silent Text fallback).
      * [tileMode] must be REPEAT or CLAMP (commonMain rejects MIRROR/DECAL).
      */
     fun composeIconOverRealImage(
