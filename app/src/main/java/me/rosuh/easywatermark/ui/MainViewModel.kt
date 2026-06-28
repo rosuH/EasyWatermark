@@ -442,7 +442,9 @@ class MainViewModel (
     }
 
     private fun trapOutputExtension(): String {
-        return if (outputFormat == ImageFormat.PNG) "png" else "jpg"
+        // S4d-177: single-sourced on the shared ImageFormat enum (JPEG->"jpg", PNG->"png"). Byte-identical
+        // to the old `if (PNG) "png" else "jpg"`; the `image/<ext>` MIME shape at the call site is unchanged.
+        return outputFormat.fileExtension
     }
 
     fun selectImage(ref: MediaRef) {

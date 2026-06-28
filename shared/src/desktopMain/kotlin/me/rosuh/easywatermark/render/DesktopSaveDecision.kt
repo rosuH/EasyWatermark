@@ -44,9 +44,12 @@ object DesktopSaveDecision {
         WatermarkMode.Text -> DesktopRenderPlan.Text
     }
 
-    /** The default output filename for [format]: JPEG → `watermarked.jpg`, PNG → `watermarked.png`. Pure. */
+    /**
+     * The default output filename for [format]: JPEG → `watermarked.jpg`, PNG → `watermarked.png`. Pure.
+     * S4d-177: extension single-sourced on [ImageFormat.fileExtension] (was an inline `if` here).
+     */
     fun defaultOutputFileName(format: ImageFormat): String =
-        "watermarked." + if (format == ImageFormat.JPEG) "jpg" else "png"
+        "watermarked." + format.fileExtension
 
     /**
      * Whether the save composites over caller-provided bytes (`true`) or the generated fixture (`false`).
