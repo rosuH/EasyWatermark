@@ -1,5 +1,13 @@
 # Progress Log
 
+## 2026-06-29 — S4d-221 Desktop icon persistence extracted to a tested shared helper (+S4d-221b docs)
+
+- **S4d-221 (implementation, accepted; commit `1fe8ab9e Test Desktop icon persistence helper`, 3 files):** the S4d-219 Desktop "Open icon…" copy-then-prune logic moved out of `DesktopWindow.kt` into a tested `shared/desktopMain` helper `DesktopIconPersistence.persistIcon(source, iconsDir): File` — verbatim semantics (`~/.easywatermark/watermark_icons/icon.<ext>`, extension preserved blank→png, same-copy no-op via `canonicalFile`, copy→`incoming.tmp` then atomic `Files.move(ATOMIC_MOVE, REPLACE_EXISTING)`, prune others only after the target exists → bounded one file, throws on failure so the prior copy survives a failed source read). `DesktopWindow.kt` now just calls the helper before `editor.updateIcon(MediaRef(copied.absolutePath))`, with the `IMAGE_EXTENSIONS` filter, mode→Image flip, S4d-198 preview refresh, and `try/catch → "Failed: …"` status **unchanged** (behavior-identical).
+- **CI-covered now:** new `DesktopIconPersistenceTest` (`shared/desktopTest`) ran **5/0** under `:shared:desktopTest` (which runs in `pr_pre_check`) — pins bounded one-file, different-ext prune, same-copy no-op, failed-source-read-no-data-loss, blank-ext→png; it does NOT assert the env-dependent `ATOMIC_MOVE` flag. Parity with the tested iOS `IosIconPersistence`.
+- **Verification:** `:shared:desktopTest` + `:desktopApp:compileKotlin` + `:desktopApp:run --args='--headless'` green (`--max-workers=8`, daemon stopped); `Main.kt` witness unaffected. Exactly the 3 files changed.
+- **Boundary (no overclaim):** release-grade Desktop persistence safety net, **not** Android v2.10.0 1:1 UI/UX parity; the GUI icon-picker click stays a thin manual/UI-wiring acceptance path (the copy/prune correctness is now unit-tested). PR #358 stays Draft.
+- **S4d-221b (this entry):** docs-only closeout — recorded the above in `progress.md`, `task_plan.md`, and the `docs/CONTEXT.md` Desktop-window row.
+
 ## 2026-06-29 — S4d-219 Desktop durable watermark-icon persistence accepted (+S4d-219b docs)
 
 - **S4d-219 (implementation, accepted; commit `97baa9d2 Persist Desktop icons in app storage`, `DesktopWindow.kt` only, +31/-2):** the interactive Desktop window's "Open icon…" no longer persists the user's original absolute icon path. It copies the picked icon into app-private storage `~/.easywatermark/watermark_icons/icon.<ext>` (preserving the picked extension) and persists THAT copy path, so Image-mode no longer hard-fails (`DesktopWatermarkFlow.require(iconFile.isFile)`) when the source icon moves/renames/deletes or the config opens on another machine — parity with iOS `IosIconPersistence` (S4d-116) at the release-grade persistence level.
