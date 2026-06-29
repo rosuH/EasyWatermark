@@ -900,54 +900,79 @@ fun launchDesktopWindow() = application {
                 Button(
                     enabled = !busy,
                     onClick = {
-                        // Native AWT Open dialog on the EDT (the Compose Desktop UI thread); it is modal, so
-                        // it returns the selection synchronously. `window` is the FrameWindowScope's AWT frame.
+                        // S4d-229: native AWT Open dialog with MULTI-SELECT on the EDT (modal → returns the
+                        // selection synchronously). `window` is the FrameWindowScope's AWT frame.
                         val dialog = FileDialog(window, "Open image", FileDialog.LOAD).apply {
+                            isMultipleMode = true
                             setFilenameFilter { _, fileName ->
                                 fileName.substringAfterLast('.', "").lowercase() in IMAGE_EXTENSIONS
                             }
                             isVisible = true
                         }
-                        val dir = dialog.directory
-                        val name = dialog.file
-                        if (dir != null && name != null) {
-                            val selected = File(dir, name)
+                        // S4d-229: take ALL selected supported images via the existing pure filter (cancel →
+                        // empty `files`). A single selection is just a one-element list, so single-select still works.
+                        val files = DesktopSaveDecision.supportedImageFiles(dialog.files.toList(), IMAGE_EXTENSIONS)
+                        if (files.isNotEmpty()) {
                             // Read + render off the UI thread, then write Compose state back on the UI dispatcher.
                             scope.launch {
                                 busy = true
-                                status = "Rendering ${selected.name}…"
-                                var picked: LastImage? = null
-                                var savedFile: File? = null
-                                val next = withContext(Dispatchers.IO) {
-                                    try {
-                                        val bytes = selected.readBytes()
-                                        picked = LastImage(bytes, selected.path)
-                                        // S4d-217: write the real save to the user output dir (not the build/ default).
-                                        val fmt = userConfigRepo.userPreferences.first().outputFormat
-                                        val out = DesktopSaveDecision.resolveUniqueOutputFile(outputDir, fmt)
-                                        val o = DesktopWatermarkFlow.runSaveFlow(
-                                            repo, editor, userConfigRepo, inputBytes = bytes, inputLabel = selected.path,
-                                            outputFile = out,
-                                        )
-                                        // S4d-157: remember the real saved output for the share-substitute buttons.
-                                        savedFile = File(o.outputPath)
-                                        "Saved: ${o.outputPath}\n  ${o.format}, ${o.width}x${o.height}, ${o.outputByteCount} B\n" +
-                                            "  input: ${o.inputLabel} (${o.inputByteCount} B)\n  config: ${o.configAfterEdit}"
-                                    } catch (t: Throwable) {
-                                        "Failed: ${t.message}"
+                                status = "Rendering ${files.size} image(s)…"
+                                // Remember the LAST successful image/output (for reuse + the share-substitute buttons).
+                                var lastPicked: LastImage? = null
+                                var lastSaved: File? = null
+                                // S4d-229: mirror the S4d-228 drop batch exactly — the whole batch span is in
+                                // try/finally so `busy` ALWAYS resets, and the withContext body is in try/catch so a
+                                // setup-level failure (e.g. userConfigRepo.userPreferences.first()) surfaces as a
+                                // "Failed: …" status instead of leaving the UI stuck busy.
+                                try {
+                                    val next = withContext(Dispatchers.IO) {
+                                        try {
+                                            // S4d-217: read the output format ONCE per batch; saves go to the user dir.
+                                            val fmt = userConfigRepo.userPreferences.first().outputFormat
+                                            var successCount = 0
+                                            var failCount = 0
+                                            var firstFailure: String? = null
+                                            // STRICTLY SEQUENTIAL: resolveUniqueOutputFile is existence-check-only and
+                                            // does NOT create the file, and runSaveFlow writes synchronously before
+                                            // returning, so resolving the NEXT path only after the previous save has
+                                            // written yields collision-free names. Read one file's bytes per iteration
+                                            // (never all up front). A per-file failure never aborts the batch.
+                                            for (file in files) {
+                                                try {
+                                                    val bytes = file.readBytes()
+                                                    val out = DesktopSaveDecision.resolveUniqueOutputFile(outputDir, fmt)
+                                                    val o = DesktopWatermarkFlow.runSaveFlow(
+                                                        repo, editor, userConfigRepo, inputBytes = bytes, inputLabel = file.path,
+                                                        outputFile = out,
+                                                    )
+                                                    lastPicked = LastImage(bytes, file.path)
+                                                    lastSaved = File(o.outputPath)
+                                                    successCount++
+                                                } catch (t: Throwable) {
+                                                    failCount++
+                                                    if (firstFailure == null) firstFailure = "${file.name}: ${t.message}"
+                                                }
+                                            }
+                                            buildString {
+                                                append("Saved $successCount/${files.size} images to ${outputDir.path}")
+                                                if (failCount > 0) append(" · $failCount failed: $firstFailure")
+                                            }
+                                        } catch (t: Throwable) {
+                                            "Failed: ${t.message}"
+                                        }
                                     }
+                                    lastPicked?.let { lastImage = it }
+                                    lastSaved?.let { lastSavedFile = it }
+                                    // Auto-refresh the preview AT MOST ONCE after the batch, only when ≥1 save
+                                    // succeeded (over the last successful image). refreshPreview writes ONLY the temp
+                                    // preview file (never lastSavedFile, so share-substitute stays real-save-bound).
+                                    status = if (lastSaved != null) "$next · ${refreshPreview()}" else next
+                                } finally {
+                                    busy = false
                                 }
-                                picked?.let { lastImage = it }
-                                savedFile?.let { lastSavedFile = it }
-                                // S4d-198-r1: a successful "Open image…" is an explicit source change →
-                                // auto-refresh the preview over the just-loaded image (lastImage is set above).
-                                // savedFile != null ⟺ the real save succeeded; refreshPreview writes ONLY the
-                                // temp preview file (never lastSavedFile, so share-substitute stays real-save-bound).
-                                status = if (savedFile != null) "$next · ${refreshPreview()}" else next
-                                busy = false
                             }
                         }
-                        // Cancelled (null file/directory) → leave the status unchanged and do no work.
+                        // Cancelled / no supported selection (empty `files`) → no work, status unchanged (no-op).
                     },
                 ) {
                     Text("Open image…")
