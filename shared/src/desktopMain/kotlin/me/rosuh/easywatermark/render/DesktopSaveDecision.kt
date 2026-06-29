@@ -17,6 +17,9 @@ import java.io.File
  * S4d-222 adds [resolveUniqueOutputFile], a desktopMain filesystem helper that performs existence
  * checks only and does not create, write, or delete files.
  *
+ * S4d-228 adds [supportedImageFiles], the pure multi-file selection used by the Desktop window's
+ * multi-image drag/drop batch (the AWT file-list extraction stays in `:desktopApp`).
+ *
  * The Image-mode blank-icon loud-fail message is moved here **verbatim** from the inline `require` it
  * replaces, so the flow's behavior is byte-for-byte the same (the missing-FILE check, which is IO,
  * stays in the flow and keeps its own message). See `DesktopSaveDecisionTest`.
@@ -86,4 +89,15 @@ object DesktopSaveDecision {
      * testable without IO. Pure.
      */
     fun usesCallerInput(inputBytes: ByteArray?): Boolean = inputBytes != null
+
+    /**
+     * The supported image files among [files] — those whose extension (lower-cased) is in [extensions],
+     * with the original order preserved. Pure (no IO).
+     *
+     * S4d-228: the Desktop window's multi-file drag/drop batch selects every supported dropped image (was
+     * a single-file `.firstOrNull`). This pure filter lives here so the selection is unit-testable in
+     * `:shared:desktopTest`; the AWT `javaFileListFlavor` extraction stays in `:desktopApp`.
+     */
+    fun supportedImageFiles(files: List<File>, extensions: Set<String>): List<File> =
+        files.filter { it.extension.lowercase() in extensions }
 }

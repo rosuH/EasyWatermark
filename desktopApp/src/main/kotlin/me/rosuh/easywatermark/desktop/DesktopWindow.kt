@@ -66,10 +66,11 @@ private val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "webp", "bmp", "gif")
 private fun describePref(p: UserPreferences): String = "${p.outputFormat} / ${p.compressLevel}"
 
 /**
- * S4d-158: drop-target file extraction. [hasFileList] is the cheap drag-over predicate (flavor only);
- * [firstSupportedImageFile] does the real extraction on drop — reads the dropped file list and picks the
- * first file whose extension is in [IMAGE_EXTENSIONS]. Both swallow AWT failures → false/null (soft-fail,
- * never crash). The AWT file-list flavor is the desktop drag-drop interop; commonMain is untouched.
+ * S4d-158 / S4d-228: drop-target file extraction. [hasFileList] is the cheap drag-over predicate (flavor
+ * only); [supportedImageFiles] does the real extraction on drop — reads the dropped file list and returns
+ * ALL files whose extension is in [IMAGE_EXTENSIONS] (order preserved), via the pure, unit-tested
+ * [DesktopSaveDecision.supportedImageFiles]. Both swallow AWT failures → false/empty (soft-fail, never
+ * crash). The AWT file-list flavor is the desktop drag-drop interop; commonMain is untouched.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 private fun hasFileList(event: DragAndDropEvent): Boolean = try {
@@ -79,17 +80,17 @@ private fun hasFileList(event: DragAndDropEvent): Boolean = try {
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
-private fun firstSupportedImageFile(event: DragAndDropEvent): File? = try {
+private fun supportedImageFiles(event: DragAndDropEvent): List<File> = try {
     val transferable = event.awtTransferable
     if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
         @Suppress("UNCHECKED_CAST")
-        (transferable.getTransferData(DataFlavor.javaFileListFlavor) as? List<File>)
-            ?.firstOrNull { it.extension.lowercase() in IMAGE_EXTENSIONS }
+        val files = (transferable.getTransferData(DataFlavor.javaFileListFlavor) as? List<File>).orEmpty()
+        DesktopSaveDecision.supportedImageFiles(files, IMAGE_EXTENSIONS)
     } else {
-        null
+        emptyList()
     }
 } catch (t: Throwable) {
-    null
+    emptyList()
 }
 
 /** Stable UI label for a [TextTypeface] — explicit map (no reflection / object-name dependency). */
@@ -308,10 +309,12 @@ fun launchDesktopWindow() = application {
         return msg
     }
 
-    // S4d-158: drop an image file onto the window to load it through the SAME save spine as "Open image…"
-    // (read off the UI thread → lastImage + lastSavedFile + status). onDrop runs on the Compose UI thread, so
-    // it reads/sets state directly and launches the heavy render on `scope`. A drop while busy or an
-    // unsupported/empty drop fails softly with a status (no crash). Remembered so the target identity is stable.
+    // S4d-158: drop image file(s) onto the window to load them through the SAME save spine as "Open image…".
+    // S4d-228: a multi-file drop now watermarks and saves EVERY supported dropped image (was first-only),
+    // sequentially, to the user output dir with collision-free names. onDrop runs on the Compose UI thread,
+    // so it reads/sets state directly and launches the heavy render loop on `scope`. A drop while busy or a
+    // drop with no supported image fails softly with a status (no crash). Remembered so the target identity
+    // is stable.
     val dropTarget = remember {
         object : DragAndDropTarget {
             override fun onDrop(event: DragAndDropEvent): Boolean {
@@ -319,42 +322,70 @@ fun launchDesktopWindow() = application {
                     status = "Busy — wait for the current render before dropping another image."
                     return false
                 }
-                val file = firstSupportedImageFile(event)
-                if (file == null) {
-                    status = "Unsupported drop — drop a single image file (${IMAGE_EXTENSIONS.joinToString(", ")})."
+                // S4d-228: take ALL supported dropped images (pure DesktopSaveDecision.supportedImageFiles).
+                val files = supportedImageFiles(event)
+                if (files.isEmpty()) {
+                    status = "Unsupported drop — no supported image files in drop (${IMAGE_EXTENSIONS.joinToString(", ")})."
                     return false
                 }
                 scope.launch {
                     busy = true
-                    status = "Rendering ${file.name}…"
-                    var picked: LastImage? = null
-                    var savedFile: File? = null
-                    val next = withContext(Dispatchers.IO) {
-                        try {
-                            val bytes = file.readBytes()
-                            picked = LastImage(bytes, file.path)
-                            // S4d-217: write the real save to the user output dir (not the build/ default).
-                            val fmt = userConfigRepo.userPreferences.first().outputFormat
-                            val out = DesktopSaveDecision.resolveUniqueOutputFile(outputDir, fmt)
-                            val o = DesktopWatermarkFlow.runSaveFlow(
-                                repo, editor, userConfigRepo, inputBytes = bytes, inputLabel = file.path,
-                                outputFile = out,
-                            )
-                            // S4d-157: remember the real saved output for the share-substitute buttons.
-                            savedFile = File(o.outputPath)
-                            "Saved: ${o.outputPath}\n  ${o.format}, ${o.width}x${o.height}, ${o.outputByteCount} B\n" +
-                                "  input: ${o.inputLabel} (${o.inputByteCount} B)\n  config: ${o.configAfterEdit}"
-                        } catch (t: Throwable) {
-                            "Failed: ${t.message}"
+                    status = "Rendering ${files.size} image(s)…"
+                    // Remember the LAST successful image/output (for reuse + the share-substitute buttons).
+                    var lastPicked: LastImage? = null
+                    var lastSaved: File? = null
+                    // S4d-228-r1: the whole batch span is wrapped in try/finally so `busy` is ALWAYS reset —
+                    // even if setup (notably reading the output prefs) throws BEFORE the per-file loop. This
+                    // restores the old single-file drop's recovery: a setup failure must not leave the UI stuck.
+                    try {
+                        val next = withContext(Dispatchers.IO) {
+                            // S4d-228-r1: a setup-level failure (e.g. userConfigRepo.userPreferences.first())
+                            // surfaces as a "Failed: …" status instead of an uncaught throw. The per-file loop
+                            // keeps its OWN try/catch so one bad image still does not abort the batch.
+                            try {
+                                // S4d-228 / S4d-217: read the output format ONCE per batch; saves go to the user dir.
+                                val fmt = userConfigRepo.userPreferences.first().outputFormat
+                                var successCount = 0
+                                var failCount = 0
+                                var firstFailure: String? = null
+                                // S4d-228: STRICTLY SEQUENTIAL. resolveUniqueOutputFile is existence-check-only and does
+                                // NOT create the file, and runSaveFlow writes its output synchronously before returning,
+                                // so resolving the NEXT path only after the previous save has written yields collision-
+                                // free names (watermarked.<ext>, watermarked_1.<ext>, …). Read one file's bytes per
+                                // iteration (never all up front). A per-file failure never aborts the batch.
+                                for (file in files) {
+                                    try {
+                                        val bytes = file.readBytes()
+                                        val out = DesktopSaveDecision.resolveUniqueOutputFile(outputDir, fmt)
+                                        val o = DesktopWatermarkFlow.runSaveFlow(
+                                            repo, editor, userConfigRepo, inputBytes = bytes, inputLabel = file.path,
+                                            outputFile = out,
+                                        )
+                                        lastPicked = LastImage(bytes, file.path)
+                                        lastSaved = File(o.outputPath)
+                                        successCount++
+                                    } catch (t: Throwable) {
+                                        failCount++
+                                        if (firstFailure == null) firstFailure = "${file.name}: ${t.message}"
+                                    }
+                                }
+                                buildString {
+                                    append("Saved $successCount/${files.size} images to ${outputDir.path}")
+                                    if (failCount > 0) append(" · $failCount failed: $firstFailure")
+                                }
+                            } catch (t: Throwable) {
+                                "Failed: ${t.message}"
+                            }
                         }
+                        lastPicked?.let { lastImage = it }
+                        lastSaved?.let { lastSavedFile = it }
+                        // S4d-228: refresh the preview AT MOST ONCE after the batch, only when ≥1 save succeeded
+                        // (over the last successful image). refreshPreview writes ONLY the temp preview file
+                        // (never lastSavedFile, so the share-substitute buttons stay bound to real saves).
+                        status = if (lastSaved != null) "$next · ${refreshPreview()}" else next
+                    } finally {
+                        busy = false
                     }
-                    picked?.let { lastImage = it }
-                    savedFile?.let { lastSavedFile = it }
-                    // S4d-198-r1: a successful drop is an explicit source change → auto-refresh the preview
-                    // over the just-loaded image (lastImage is set above). savedFile != null ⟺ the real save
-                    // succeeded; refreshPreview writes ONLY the temp preview file (never lastSavedFile).
-                    status = if (savedFile != null) "$next · ${refreshPreview()}" else next
-                    busy = false
                 }
                 return true
             }

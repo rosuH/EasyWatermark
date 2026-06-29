@@ -109,4 +109,47 @@ class DesktopSaveDecisionTest {
         val pngResult = DesktopSaveDecision.resolveUniqueOutputFile(dir, ImageFormat.PNG)
         assertEquals(File(dir, "watermarked.png"), pngResult)
     }
+
+    // --- S4d-228: multi-file drag/drop batch selection + sequential-naming contract ---
+
+    @Test
+    fun supported_image_files_keeps_supported_subset_in_order() {
+        val exts = setOf("png", "jpg", "jpeg", "webp", "bmp", "gif")
+        val files = listOf(
+            File("/a/photo.png"),
+            File("/a/notes.txt"),
+            File("/a/PIC.JPG"), // mixed-case extension still matches (lower-cased), order preserved
+            File("/a/clip.gif"),
+            File("/a/archive.zip"),
+        )
+        val result = DesktopSaveDecision.supportedImageFiles(files, exts)
+        assertEquals(
+            listOf(File("/a/photo.png"), File("/a/PIC.JPG"), File("/a/clip.gif")),
+            result,
+        )
+    }
+
+    @Test
+    fun supported_image_files_empty_when_none_match() {
+        val exts = setOf("png", "jpg")
+        assertTrue(DesktopSaveDecision.supportedImageFiles(emptyList(), exts).isEmpty(), "empty input → empty")
+        assertTrue(
+            DesktopSaveDecision.supportedImageFiles(listOf(File("/a/x.txt"), File("/a/y.doc")), exts).isEmpty(),
+            "no supported extensions → empty",
+        )
+    }
+
+    @Test
+    fun sequential_resolve_then_create_yields_distinct_names() {
+        val dir = createTempDirectory().toFile()
+        // Model the batch loop contract: resolve, WRITE the returned file, then resolve the next. Because
+        // resolveUniqueOutputFile is existence-check-only, this sequence (mirroring runSaveFlow writing its
+        // output before the next resolve) must produce distinct, collision-free names.
+        val names = (1..3).map {
+            val f = DesktopSaveDecision.resolveUniqueOutputFile(dir, ImageFormat.JPEG)
+            f.createNewFile()
+            f.name
+        }
+        assertEquals(listOf("watermarked.jpg", "watermarked_1.jpg", "watermarked_2.jpg"), names)
+    }
 }
