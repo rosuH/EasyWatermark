@@ -16,6 +16,8 @@
 		EW0000000000000000000045 /* NotoSansSC-Regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000035 /* NotoSansSC-Regular.otf */; };
 		EW0000000000000000000046 /* OFL-NotoSans.txt in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000036 /* OFL-NotoSans.txt */; };
 		EW0000000000000000000047 /* OFL-NotoSansCJK.txt in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000037 /* OFL-NotoSansCJK.txt */; };
+		EW0000000000000000000092 /* ewm-db-ch.db in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000090 /* ewm-db-ch.db */; };
+		EW0000000000000000000093 /* ewm-db-eng.db in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000091 /* ewm-db-eng.db */; };
 		EW0000000000000000000072 /* PickerFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000071 /* PickerFlowUITests.swift */; };
 /* End PBXBuildFile section */
 
@@ -30,6 +32,8 @@
 		EW0000000000000000000035 /* NotoSansSC-Regular.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "NotoSansSC-Regular.otf"; sourceTree = "<group>"; };
 		EW0000000000000000000036 /* OFL-NotoSans.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OFL-NotoSans.txt"; sourceTree = "<group>"; };
 		EW0000000000000000000037 /* OFL-NotoSansCJK.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OFL-NotoSansCJK.txt"; sourceTree = "<group>"; };
+		EW0000000000000000000090 /* ewm-db-ch.db */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ewm-db-ch.db"; sourceTree = "<group>"; };
+		EW0000000000000000000091 /* ewm-db-eng.db */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ewm-db-eng.db"; sourceTree = "<group>"; };
 		EW0000000000000000000070 /* iosAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iosAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		EW0000000000000000000071 /* PickerFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickerFlowUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -86,6 +90,7 @@
 			isa = PBXGroup;
 			children = (
 				EW0000000000000000000014 /* Fonts */,
+				EW0000000000000000000094 /* Seed */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -99,6 +104,15 @@
 				EW0000000000000000000037 /* OFL-NotoSansCJK.txt */,
 			);
 			path = Fonts;
+			sourceTree = "<group>";
+		};
+		EW0000000000000000000094 /* Seed */ = {
+			isa = PBXGroup;
+			children = (
+				EW0000000000000000000090 /* ewm-db-ch.db */,
+				EW0000000000000000000091 /* ewm-db-eng.db */,
+			);
+			path = Seed;
 			sourceTree = "<group>";
 		};
 		EW0000000000000000000012 /* Products */ = {
@@ -195,6 +209,8 @@
 				EW0000000000000000000045 /* NotoSansSC-Regular.otf in Resources */,
 				EW0000000000000000000046 /* OFL-NotoSans.txt in Resources */,
 				EW0000000000000000000047 /* OFL-NotoSansCJK.txt in Resources */,
+				EW0000000000000000000092 /* ewm-db-ch.db in Resources */,
+				EW0000000000000000000093 /* ewm-db-eng.db in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
