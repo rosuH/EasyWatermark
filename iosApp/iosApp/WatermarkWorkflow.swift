@@ -423,6 +423,58 @@ final class WatermarkWorkflow: ObservableObject {
         }
     }
 
+    // MARK: - S4d-233 templates
+
+    /// S4d-233: the single retained iOS templates bridge over the **seeded** common templates Room DB —
+    /// the no-arg `buildTemplateDatabase()` (S4d-232: `NSDocumentDirectory` store + the bundled Android seed
+    /// on first creation). One instance per process (single DB file), mirroring `watermarkConfigBridge` /
+    /// `userConfigBridge`. The bridge owns only template-DB ops; applying a template reuses `setWatermarkText`.
+    private let templateBridge = IosTemplateBridgeKt.defaultIosTemplateBridge()
+
+    /// S4d-233: the persisted templates as flat `IosTemplate` values (id + content), loaded on launch and
+    /// refreshed after save/delete. On a fresh install these are the bundled default templates (S4d-232 seed).
+    @Published private(set) var templates: [IosTemplate] = []
+
+    /// S4d-233: one-shot snapshot of the persisted templates through the bridge. A read error keeps the
+    /// current list (must not break the editor).
+    func loadTemplates() async {
+        do {
+            templates = try await templateBridge.currentTemplates()
+        } catch {
+            // keep the current list; a read failure must not break the editor
+        }
+    }
+
+    /// S4d-233: save the current watermark text as a new template, then refresh the list. No-op on empty
+    /// text. A write failure surfaces as `.failure` without changing the list.
+    func saveCurrentTextAsTemplate() async {
+        let text = watermarkText
+        guard !text.isEmpty else { return }
+        do {
+            try await templateBridge.addTemplate(content: text)
+            await loadTemplates()
+        } catch {
+            state = .failure("Could not save template: \(error.localizedDescription)")
+        }
+    }
+
+    /// S4d-233: apply a template by REUSING the existing watermark-text setter (`setWatermarkText` persists
+    /// through the shared `WatermarkConfigEditor` and re-renders) — the template bridge never touches the
+    /// watermark config store.
+    func applyTemplate(_ template: IosTemplate) async {
+        await setWatermarkText(template.content)
+    }
+
+    /// S4d-233: delete a template by id, then refresh the list. A write failure surfaces as `.failure`.
+    func deleteTemplate(_ template: IosTemplate) async {
+        do {
+            try await templateBridge.deleteTemplate(id: template.id)
+            await loadTemplates()
+        } catch {
+            state = .failure("Could not delete template: \(error.localizedDescription)")
+        }
+    }
+
     /// Render `imageData` (the encoded bytes of a picked photo) into a watermarked PNG.
     func render(imageData: Data) async {
         state = .rendering

@@ -79,6 +79,43 @@ struct ContentView: View {
                     .accessibilityIdentifier("applyWatermarkText")
             }
 
+            // S4d-233: minimal Templates UI over the seeded iOS Template Room DB (the no-arg
+            // `buildTemplateDatabase()` consumed via `IosTemplateBridge`; on a fresh install the rows are the
+            // bundled default templates from S4d-232). Save the current text, apply a template (reuses
+            // `setWatermarkText`, which persists + re-renders), or delete one. Minimal — not the final 1:1 editor.
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("Templates")
+                        .font(.caption.bold())
+                    Spacer()
+                    Button("Save current") { Task { await workflow.saveCurrentTextAsTemplate() } }
+                        .buttonStyle(.bordered)
+                        .disabled(draftText.isEmpty)
+                        .accessibilityIdentifier("saveTemplateButton")
+                }
+                ForEach(workflow.templates, id: \.id) { template in
+                    HStack {
+                        Button(template.content) {
+                            Task {
+                                await workflow.applyTemplate(template)
+                                draftText = workflow.watermarkText
+                            }
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityIdentifier("templateRow")
+                        Spacer()
+                        Button(role: .destructive) {
+                            Task { await workflow.deleteTemplate(template) }
+                        } label: {
+                            Image(systemName: "trash")
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityIdentifier("deleteTemplateButton")
+                    }
+                }
+            }
+            .accessibilityIdentifier("templatesSection")
+
             // S4d-103: edit the watermark rotation degree through the same shared editor path. Minimal
             // control — not the final 1:1 editor. Commits on release (avoids re-rendering mid-drag).
             VStack(spacing: 4) {
@@ -249,6 +286,7 @@ struct ContentView: View {
             await workflow.loadWatermarkTypeface()
             await workflow.loadWatermarkTextStyle()
             await workflow.loadWatermarkMarkMode()
+            await workflow.loadTemplates()
         }
     }
 
