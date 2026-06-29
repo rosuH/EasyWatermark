@@ -88,6 +88,23 @@ kotlin {
                 implementation(libs.sqlite.bundled)
             }
         }
+        // S4d-231: bundled SQLite driver for the iOS targets, so Room can build AppDatabase on iOS
+        // (BundledSQLiteDriver — like Desktop, iOS/Native has no Room compatibility mode, an explicit
+        // driver is required). iOS-TARGET-ONLY: it must NOT reach `:app`, which consumes `:shared`'s
+        // android variant (Android stays on framework SupportSQLite, no driver). Verified by the
+        // :app:assembleDebug no-sqlite-leak check. Attached to each iOS target's main source set
+        // (created eagerly with the target, like `desktopMain`) rather than the hierarchy-template
+        // intermediate `iosMain`, which is not yet resolvable via eager `by getting` at this point.
+        val iosArm64Main by getting {
+            dependencies {
+                implementation(libs.sqlite.bundled)
+            }
+        }
+        val iosSimulatorArm64Main by getting {
+            dependencies {
+                implementation(libs.sqlite.bundled)
+            }
+        }
         // S4d-2: Skiko desktop runtime, TEST-SCOPE, so WatermarkCellComposerTest can RENDER the
         // commonMain Compose-graphics cell offscreen on the JVM host (ImageBitmap is Skia-backed on
         // desktop). `compose.ui` provides the API; this provides the backend. desktopTest already
