@@ -194,7 +194,7 @@ private fun BottomView(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OptionControl(
+private fun OptionControl(
     item: FuncTitleModel,
     waterMark: WaterMark,
     modifier: Modifier = Modifier,
@@ -384,7 +384,7 @@ private val layoutFunList: List<FuncTitleModel> by lazy {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditorTopBar(
+private fun EditorTopBar(
     modifier: Modifier = Modifier,
     onBack: () -> Unit = { },
     onAddMoreImages: () -> Unit = { },
@@ -409,7 +409,7 @@ fun EditorTopBar(
 }
 
 @Composable
-fun WaterMarkView(
+private fun WaterMarkView(
     modifier: Modifier = Modifier,
     waterMark: WaterMark,
     selectedImage: ImageInfo?,
@@ -642,7 +642,7 @@ private suspend fun buildPreviewShader(
 }
 
 @Composable
-fun PhotoList(
+private fun PhotoList(
     imaList: List<ImageInfo>,
     selectedImage: ImageInfo?,
     modifier: Modifier = Modifier,

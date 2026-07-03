@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Tighten wrapper visibility after call-graph proof (S4d-311, 2026-07-03)
+
+- After a screen shell is split into shared CMP plus Android edge wrappers, keep only the route-level composable public. File-local wrappers should become private once a whole-repo grep proves every caller is in the same file.
+- Visibility-only cleanup is still worth compile-gating because Kotlin default arguments, previews, and package-private test access can hide accidental API consumers.
+
 ## Remove stale wrapper API after shared-shell extraction (S4d-310, 2026-07-03)
 
 - Shared CMP shell moves can leave Android wrapper parameters that no longer feed any UI affordance. Treat them like public state cleanup: prove no external caller first, then delete the parameter and the local pass-through together.
