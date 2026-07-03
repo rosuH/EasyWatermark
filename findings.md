@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Let shared shells own their experimental opt-ins (S4d-315, 2026-07-03)
+
+- Once experimental Material3 calls move behind shared CMP shell functions that opt in internally, app wrapper functions should drop stale `@OptIn` annotations. The call site no longer needs to advertise implementation details it does not directly use.
+- Compile is the proof here: if a shared shell exposes an experimental API requirement through its signature, removing the app opt-in fails immediately. If it compiles, the opt-in boundary is correctly localized inside shared UI.
+
 ## Separate stale app callbacks from real shared dismiss callbacks (S4d-314, 2026-07-03)
 
 - A callback name can be stale in an app wrapper while live in shared shells. Remove only the app pass-through after proving the function body ignores it and the caller supplies an empty lambda.
