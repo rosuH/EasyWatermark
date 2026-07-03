@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Delete orphan menu XML without deleting shared labels (S4d-305, 2026-07-03)
+
+- Toolbar `res/menu` files are dead when there is no `R.menu`, `@menu/`, filename, or menu-id consumer. Deleting those XML files is separate from deleting strings/drawables referenced inside them.
+- Do not hand-edit translated strings as part of resource cleanup. If labels like `action_pick` still feed Compose UI, keep every locale entry unchanged.
+
 ## Disable ViewBinding only after layout and binding consumers are both gone (S4d-304, 2026-07-03)
 
 - `viewBinding = true` can survive long after View code is gone; prove deletion with both sides: no `res/layout` inputs and no generated binding / `R.layout` consumers in source/tests.
