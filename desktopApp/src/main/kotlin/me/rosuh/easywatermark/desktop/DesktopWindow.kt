@@ -54,6 +54,7 @@ import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopImageDecoder
 import me.rosuh.easywatermark.render.DesktopSaveDecision
+import me.rosuh.easywatermark.ui.compose.IconWatermarkOption
 import me.rosuh.easywatermark.ui.compose.TextTypefaceLabels
 import me.rosuh.easywatermark.ui.compose.TileModeLabels
 import me.rosuh.easywatermark.ui.compose.TextTypeface as TextTypefaceOption
@@ -980,9 +981,13 @@ fun launchDesktopWindow() = application {
                 ) {
                     Text("Open image…")
                 }
-                Button(
+                // S4d-281: Desktop consumes the shared icon-watermark picker shell. The platform edge stays
+                // here: AWT picker, private icon copy, persisted MediaRef, and mode switch remain unchanged.
+                IconWatermarkOption(
+                    hasIcon = false,
+                    pickLabel = "Open icon…",
                     enabled = !busy,
-                    onClick = {
+                    onPick = {
                         // S4d-135: native AWT Open dialog for the watermark ICON (same modal pattern + filter
                         // as "Open image…"). `window` is the FrameWindowScope's AWT frame.
                         val dialog = FileDialog(window, "Open icon", FileDialog.LOAD).apply {
@@ -1029,9 +1034,8 @@ fun launchDesktopWindow() = application {
                         }
                         // Cancelled (null file/directory) → leave the status + stored icon unchanged (no-op).
                     },
-                ) {
-                    Text("Open icon…")
-                }
+                    preview = {},
+                )
                 Button(
                     enabled = !busy,
                     onClick = {

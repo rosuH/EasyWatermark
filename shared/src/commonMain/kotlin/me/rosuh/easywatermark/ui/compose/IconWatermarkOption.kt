@@ -18,6 +18,7 @@ fun IconWatermarkOption(
     hasIcon: Boolean,
     pickLabel: String,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     onPick: () -> Unit,
     preview: @Composable () -> Unit,
 ) {
@@ -29,7 +30,10 @@ fun IconWatermarkOption(
         if (hasIcon) {
             preview()
         }
-        Button(onClick = onPick) {
+        Button(
+            enabled = enabled,
+            onClick = onPick,
+        ) {
             Text(text = pickLabel)
         }
     }

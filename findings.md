@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Desktop icon picker can consume the shared icon option shell (S4d-281, 2026-07-03)
+
+- `IconWatermarkOption` can wrap Desktop's icon-pick entry without moving picker, permission, path-copy, or persistence behavior into commonMain.
+- A defaulted `enabled` parameter preserves Desktop busy-state disabling while leaving the Android picker call site source-compatible.
+
 ## Desktop typeface can consume the shared segmented option (S4d-280, 2026-07-03)
 
 - `TextTypeface` is a safe off-Android shared UI consumer because Desktop already persists `TextTypeface` through `WatermarkConfigEditor`.
