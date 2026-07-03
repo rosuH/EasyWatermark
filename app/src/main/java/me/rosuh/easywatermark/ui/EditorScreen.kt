@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -50,7 +49,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabPosition
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -675,51 +673,20 @@ fun EditorTopBar(
     onShowSaveDialog: () -> Unit = { },
     onGoAboutScreen: () -> Unit = { },
 ) {
-    TopAppBar(
+    EditorTopBarShell(
+        backIcon = painterResource(R.drawable.ic_back),
+        addMoreImagesIcon = painterResource(R.drawable.ic_picker_image),
+        saveIcon = painterResource(R.drawable.ic_save),
+        aboutIcon = painterResource(R.drawable.ic_about),
+        backContentDescription = "back",
+        addMoreImagesContentDescription = "add more images",
+        saveContentDescription = "save",
+        aboutContentDescription = "about",
         modifier = modifier,
-        windowInsets = WindowInsets(0),
-        title = {},
-        navigationIcon = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = {
-                    onBack()
-                }) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_back),
-                        contentDescription = "back"
-                    )
-                }
-            }
-        },
-        actions = {
-            IconButton(onClick = {
-                onAddMoreImages()
-            }) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_picker_image),
-                    contentDescription = "add more images"
-                )
-            }
-            IconButton(onClick = {
-                onShowSaveDialog()
-            }) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_save),
-                    contentDescription = "save"
-                )
-            }
-            IconButton(onClick = {
-                onGoAboutScreen()
-            }) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_about),
-                    contentDescription = "about"
-                )
-            }
-        }
+        onBack = onBack,
+        onAddMoreImages = onAddMoreImages,
+        onShowSaveDialog = onShowSaveDialog,
+        onGoAboutScreen = onGoAboutScreen,
     )
 }
 

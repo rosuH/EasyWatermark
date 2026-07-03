@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Editor top-bar shell can move without moving picker/save behavior (S4d-256, 2026-07-03)
+
+- The editor top bar is a safe shared CMP shell only if it receives icons, content descriptions, and callbacks from the platform caller. The app-level callback meanings remain Android-owned today: add-more-images launches the system picker, save opens `SaveExportSheet`, and about navigates through the Android NavHost.
+- Keep this extraction narrower than `EditorScreen`: the preview canvas, `WatermarkRenderer`, `ContentResolver` decode edge, `ImageInfo.uri.toUri()`, thumbnail `AsyncImage`, and template/resource wiring are still Android or existing shared-component boundaries and need separate slices.
+
 ## Launch screen shell can move by injecting platform edges (S4d-255, 2026-07-03)
 
 - The Launch screen's stable layout is platform-neutral: logo placement, "Choose Images" button placement, about button placement, and sharp-corner button shape. The Android-specific parts are permission request state, resource lookup, and the legacy animated `ColoredImageVIew` logo implementation.
