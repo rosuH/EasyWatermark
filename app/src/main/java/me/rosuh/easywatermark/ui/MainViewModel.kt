@@ -906,14 +906,6 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
 
     fun process(action: Action) {
         when (action) {
-            is Action.ChooseImage -> {
-                launch {
-                    val nextState =
-                        launchScreenUiStateFlow.value.copy(uiState = LaunchScreenUiState.GalleryDialog)
-                    _launchScreenUiStateFlow.emit(nextState)
-                }
-            }
-
             is Action.DialogDismiss -> {
                 onGalleryDismiss(action.isSelected)
             }

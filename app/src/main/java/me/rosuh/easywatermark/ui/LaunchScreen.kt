@@ -143,7 +143,6 @@ fun LogoView(modifier: Modifier = Modifier, startLogoAnimation: Boolean) {
 }
 
 sealed class Action {
-    data class ChooseImage(val resolver: ContentResolver) : Action()
     data class DialogDismiss(val isSelected: Boolean) : Action()
 
     data class GalleryImageSelected(val image: Image, val index: Int, val isCheck: Boolean) : Action()

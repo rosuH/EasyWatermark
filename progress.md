@@ -3,7 +3,8 @@
 ## 2026-07-03 — Codex direct implementation mode
 
 - **Process update:** `codex-goal.md` is now the standing mission/process file for this branch. It supersedes the ACSP/cowork workflow for process only: Codex implements directly, historical ACSP sessions stay read-only evidence, and non-trivial work proceeds as smallest verified local slices with plan/progress/findings updates.
-- **Immediate work order:** checkpoint-commit the accepted but uncommitted S4d-235..S4d-251 CMP UI migration backlog, then implement S4d-252 (`Action.ChooseImage` dead-code removal) without moving `Action` or Android `Uri`/`ContentResolver` edges to commonMain.
+- **Milestone 0 checkpoint:** the accepted but uncommitted S4d-235..S4d-251 CMP UI migration backlog is now split into local commits (direct process contract, shared CMP UI foundations, Desktop shared theme, shared launch UI state/routes, shared utility screens, shared editor controls, iOS Templates UI XCUITest). No push.
+- **S4d-252:** removed the dead `Action.ChooseImage` declaration and its `MainViewModel.process` branch after confirming it had no producer. This is deletion-only cleanup; `Action`, Android `Uri`, `ContentResolver`, `FuncTitleModel`, and raw `Any` payloads remain app-side edges.
 
 ## 2026-06-29 — S4d-233 iOS template bridge UI (+docs)
 

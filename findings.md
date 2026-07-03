@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Dead app-side actions should be deleted before broadening the action boundary (S4d-252, 2026-07-03)
+
+- `Action.ChooseImage` had no producer after gallery navigation moved to typed Navigation Compose (`navController.navigate(GalleryDialogRoute)`). Keeping it around made the app-side `Action` boundary look larger and more platform-coupled than it really is.
+- The safe cleanup is deletion only: remove the data class and its `MainViewModel.process` branch. Do **not** use this as a reason to move `Action`, `ContentResolver`, `Uri`, `FuncTitleModel`, or raw `Any` payloads into commonMain.
+
 ## Watermark density thread is CLOSED — no regression (S4d-209→212, authoritative S4d-212, 2026-06-28)
 
 - **Withdrawn:** the S4d-210 headline that the debug build exports a ~2× denser watermark, and the suspected debug preview/export "WYSIWYG density bug." **S4d-212 is the authoritative correction; do not carry the 2× / WYSIWYG-bug claim forward.**
