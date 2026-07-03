@@ -112,7 +112,7 @@ class MainViewModel (
     val uiStateFlow: StateFlow<UiState> = uiState.asStateFlow()
 
     private val _launchScreenUiStateFlow: MutableStateFlow<LaunchScreenState> =
-        MutableStateFlow(LaunchScreenState.default())
+        MutableStateFlow(LaunchScreenState())
     val launchScreenUiStateFlow = _launchScreenUiStateFlow.asStateFlow()
 
     // S4d-69: StateFlow-only (was the last MutableLiveData). Nullable with null initial preserves the old

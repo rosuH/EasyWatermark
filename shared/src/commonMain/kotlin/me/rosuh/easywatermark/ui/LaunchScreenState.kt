@@ -9,8 +9,4 @@ data class LaunchScreenState(
     val selectedImageList: List<ImageInfo> = emptyList(),
     val waterMark: WaterMark = WaterMark.default,
     val curImageInfo: ImageInfo? = selectedImageList.firstOrNull(),
-) {
-    companion object {
-        fun default() = LaunchScreenState()
-    }
-}
+)

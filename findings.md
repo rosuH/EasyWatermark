@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Prefer constructor defaults over duplicate state factories (S4d-317, 2026-07-03)
+
+- Shared UI state data classes should keep their empty/default state in constructor defaults when no alternate construction logic exists. A companion `default()` that only returns the constructor creates a second API surface for future drift.
+- Grep the full repo before deleting even tiny state factories. Once all callers are local or constructor-compatible, compile across Android/Desktop/iOS is enough to prove the API cleanup did not change routing or persistence behavior.
+
 ## Keep iOS shared hosts Kotlin-owned until real replacement is ready (S4d-316, 2026-07-03)
 
 - A `ComposeUIViewController` host can exercise nested shared CMP screen shells on iOS without moving SwiftUI system edges. Keep the actual shared shell composition in Kotlin (`iosMain`) and let Swift own only the `UIViewControllerRepresentable` bridge.
