@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Delete unused wrappers instead of migrating them (S4d-272, 2026-07-03)
+
+- `AnimatedTransitionDialog` had no callers; the live gallery path uses `AnimatedTransitionView`.
+- When a wrapper is dead, deletion is cleaner than promoting it to commonMain. Keep the remaining live wrapper scoped to its real Android edge (`BackHandler`) until that edge has a shared-screen design.
+
 ## Gallery animation primitives can move below Android BackHandler (S4d-271, 2026-07-03)
 
 - The slide/fade transition, dismiss delay, and dismiss helper are pure Compose/coroutines and can live in commonMain.

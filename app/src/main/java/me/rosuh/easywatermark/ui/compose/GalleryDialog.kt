@@ -24,7 +24,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.allowRgb565
@@ -52,47 +51,6 @@ import me.rosuh.easywatermark.utils.ktx.toUri
 @Composable
 fun GalleryDialogPreview() {
     GalleryDialog(emptyList(), {}, {}, { _, _, _ -> })
-}
-
-@Composable
-fun AnimatedTransitionDialog(
-    onDismissRequest: () -> Unit,
-    contentAlignment: Alignment = Alignment.Center,
-    content: @Composable (AnimatedTransitionDialogHelper) -> Unit,
-) {
-    val animateTrigger = remember {
-        mutableStateOf(false)
-    }
-    val onDismissSharedFlow: MutableSharedFlow<Any> = remember { MutableSharedFlow() }
-    val coroutineScope: CoroutineScope = rememberCoroutineScope()
-    LaunchedEffect(Unit) {
-        launch {
-            delay(ANIMATION_DURATION)
-            animateTrigger.value = true
-        }
-        launch {
-            onDismissSharedFlow.asSharedFlow().collectLatest {
-                startDismissWithExitAnimation(animateTrigger, onDismissRequest)
-            }
-        }
-    }
-    val scope = rememberCoroutineScope()
-    Dialog(onDismissRequest = {
-        scope.launch {
-            startDismissWithExitAnimation(
-                animateTrigger = animateTrigger,
-                onDismiss = {
-                    onDismissRequest()
-                }
-            )
-        }
-    }) {
-        Box(contentAlignment = contentAlignment, modifier = Modifier.fillMaxSize()) {
-            AnimatedSlideInTransition(visible = animateTrigger.value) {
-                content(AnimatedTransitionDialogHelper(coroutineScope, onDismissSharedFlow))
-            }
-        }
-    }
 }
 
 @Composable
