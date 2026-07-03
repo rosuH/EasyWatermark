@@ -1,9 +1,14 @@
 # Compose Migration Findings
 
+## Gallery selected-count FAB can move without moving dismissal state (S4d-259, 2026-07-03)
+
+- The reusable part is the visible `selectedCount > 0` animation and extended FAB shape/text/icon layout. It can live in shared CMP if the platform caller injects the icon painter, content description, count, and click callback.
+- Keep selected-count calculation, gallery selection mutation, and `dialogHelper.triggerDismiss()` app-owned. Those are current Android dialog/navigation behavior, not reusable screen layout.
+
 ## Gallery top-bar shell can move while dismissal/search stay app-owned (S4d-258, 2026-07-03)
 
 - The GalleryDialog top bar row is neutral layout: close icon, localized title, search icon, and spacing. The behavior behind those icons is still Android-owned because close drives the current dialog animation helper and search launches the Android system picker before dismissing.
-- Keep this as a separate shell from the selected-count FAB and dialog animation. Those still combine UI state, transition timing, and navigation effects and need their own slice if moved.
+- Keep this as a separate shell from the selected-count FAB and dialog animation. S4d-259 moved only the FAB's visual shell; dialog animation and navigation effects still need their own slice if moved.
 
 ## Gallery grid can move only below the image-loading edge (S4d-257, 2026-07-03)
 

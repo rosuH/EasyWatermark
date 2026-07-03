@@ -14,11 +14,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -54,6 +51,7 @@ import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ui.GalleryDialogTopBarShell
 import me.rosuh.easywatermark.ui.GalleryImageGrid
+import me.rosuh.easywatermark.ui.GallerySelectedCountFab
 import me.rosuh.easywatermark.ui.Image
 import me.rosuh.easywatermark.utils.ktx.toUri
 
@@ -229,25 +227,15 @@ fun GalleryDialog(
                     onImageSelected(image, index, isChecked)
                 }
 
-                AnimatedVisibility(
-                    visible = selectedCount > 0,
-                    enter = slideInVertically { fullHeight -> fullHeight } + fadeIn(),
-                    exit = slideOutVertically { fullHeight -> fullHeight } + fadeOut(),
+                GallerySelectedCountFab(
+                    selectedCount = selectedCount,
+                    icon = painterResource(R.drawable.ic_save_done),
+                    contentDescription = "add",
                     modifier = Modifier.align(Alignment.BottomCenter),
-                ) {
-                    ExtendedFloatingActionButton(
-                        modifier = Modifier.padding(64.dp),
-                        onClick = {
-                            dialogHelper.triggerDismiss()
-                        }
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_save_done),
-                            contentDescription = "add"
-                        )
-                        Text(text = "$selectedCount")
-                    }
-                }
+                    onClick = {
+                        dialogHelper.triggerDismiss()
+                    },
+                )
             }
         }
     }
