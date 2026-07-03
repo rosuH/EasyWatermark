@@ -10,10 +10,8 @@ androidxConstraintLayoutCompose = "1.1.1"
 androidxNavigationCompose = "2.9.7"
 kotlinxSerialization = "1.9.0"
 coroutines = "1.10.2"
-fragmentKtx = "1.8.9"
 activityKtx = "1.13.0"
 lifecycle = "2.10.0"
-lifecycleLiveData = "2.10.0"
 lifecycleViewModel = "2.10.0"
 coreKtx = "1.18.0"
 appcompat = "1.7.1"
@@ -24,9 +22,6 @@ room = "2.8.4"
 # Desktop/iOS target source sets; Android stays on framework SupportSQLite compatibility mode.
 sqlite = "2.6.2"
 datastorePreference = "1.2.1"
-asyncLayoutInflater = "1.1.0"
-viewpager2 = "1.1.0"
-recyclerview = "1.4.0"
 exifInterface = "1.4.2"
 compressor = "3.0.1"
 colorpicker = "2.4.0"
@@ -88,7 +83,6 @@ androidx-compose-material-iconsExtended = { group = "androidx.compose.material",
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 androidx-compose-material3-windowSizeClass = { group = "androidx.compose.material3", name = "material3-window-size-class" }
 androidx-compose-runtime = { group = "androidx.compose.runtime", name = "runtime" }
-androidx-compose-runtime-livedata = { group = "androidx.compose.runtime", name = "runtime-livedata" }
 androidx-compose-runtime-tracing = { group = "androidx.compose.runtime", name = "runtime-tracing", version.ref = "androidxComposeRuntimeTracing" }
 androidx-compose-ui-test = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-ui-ui = { group = "androidx.compose.ui", name = "ui" }
@@ -114,10 +108,8 @@ coil-kt-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.r
 kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlin" }
 kotlin-coroutine-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlin-coroutine-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
-fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", version.ref = "fragmentKtx" }
 activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activityKtx" }
 lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
-lifecycle-livedata-ktx = { group = "androidx.lifecycle", name = "lifecycle-livedata-ktx", version.ref = "lifecycleLiveData" }
 lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycleViewModel" }
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
@@ -131,9 +123,6 @@ room-compiler = { group = "androidx.room", name = "room-compiler", version.ref =
 sqlite-bundled = { group = "androidx.sqlite", name = "sqlite-bundled", version.ref = "sqlite" }
 datastore = { group = "androidx.datastore", name = "datastore", version.ref = "datastorePreference" }
 datastore-preference = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreference" }
-asynclayout-inflater = { group = "androidx.asynclayoutinflater", name = "asynclayoutinflater", version.ref = "asyncLayoutInflater" }
-viewpager2 = { group = "androidx.viewpager2", name = "viewpager2", version.ref = "viewpager2" }
-recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
 exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifInterface" }
 
 #hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }

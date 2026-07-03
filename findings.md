@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Group dead View-stack dependency removal by consumer class (S4d-303, 2026-07-03)
+
+- After View/LiveData consumers are gone, remove the direct dependencies and catalog aliases together: `asynclayoutinflater`, Fragment KTX, lifecycle LiveData KTX, Compose runtime-livedata, ViewPager2, and RecyclerView had no source/resource consumers beyond comments.
+- Do not infer all Android UI support libs are dead. AppCompat remains live through `ColoredImageVIew`, and Material Components remains live through XML style parents, so those need separate owner/visual slices rather than bulk removal.
+
 ## Nullable cleanup should follow StateFlow type ownership (S4d-302, 2026-07-03)
 
 - Once `waterMarkFlow` is `stateIn(..., WaterMark.default)` and `selectedImageFlow` is a `StateFlow<ImageInfo>`, null-defense branches around `.value` are dead code. Remove them as a follow-up to event-state cleanup, but keep the live export/compression result writes untouched.

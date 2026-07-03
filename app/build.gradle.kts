@@ -119,8 +119,6 @@ dependencies {
 //    androidTestImplementation(libs.hilt.testing)
 //    kspAndroidTest(libs.hilt.compiler)
 
-    implementation(libs.asynclayout.inflater)
-
     implementation(libs.compressor)
 
     implementation(libs.kotlin.stdlib)
@@ -129,13 +127,9 @@ dependencies {
 
     implementation(libs.appcompat)
     implementation(libs.material)
-    implementation(libs.fragment.ktx)
     implementation(libs.activity.ktx)
     implementation(libs.lifecycle.runtime.ktx)
-    implementation(libs.lifecycle.livedata.ktx)
     implementation(libs.lifecycle.viewmodel.ktx)
-    implementation(libs.viewpager2)
-    implementation(libs.recyclerview)
     implementation(libs.exifinterface)
     implementation(libs.profileinstaller)
 
@@ -189,9 +183,6 @@ dependencies {
     // S4d-38: Coil 3 Compose only (io.coil-kt.coil3:coil-compose). ImageRequest comes transitively from
     // coil-core; no coil base/View artifact, no coil-svg (SvgDecoder unused), no coil-network (local Uris).
     implementation(libs.coil.kt.compose)
-
-//    implementation("androidx.compose.runtime:runtime-livedata:1.5.3")
-    implementation(libs.androidx.compose.runtime.livedata)
 
 //    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
     implementation(libs.androidx.lifecycle.runtime.compose)
