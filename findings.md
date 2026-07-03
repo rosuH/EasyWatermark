@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Template-sheet visibility can move below injected resources (S4d-276, 2026-07-03)
+
+- `TemplateListSheet` and `Template` are already commonMain, so the editor can share the sheet host state without moving Android resources or repositories.
+- Keep localized strings, edit/delete painters, template callbacks, and the `TextContentOption` trigger at the Android edge.
+
 ## Bottom-control tab state can be generic below resource-backed options (S4d-275, 2026-07-03)
 
 - The editor's selected tab/selected option state is reusable CMP UI once the option model is generic and Android injects labels, item content, and option-control content.

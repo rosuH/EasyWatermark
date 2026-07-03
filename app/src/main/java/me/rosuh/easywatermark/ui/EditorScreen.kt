@@ -54,7 +54,6 @@ import me.rosuh.easywatermark.render.androidTextMeasureEnv
 import me.rosuh.easywatermark.ui.compose.ColorOption
 import me.rosuh.easywatermark.ui.compose.IconOption
 import me.rosuh.easywatermark.ui.compose.SliderOption
-import me.rosuh.easywatermark.ui.compose.TemplateListSheet
 import me.rosuh.easywatermark.ui.compose.TemplateListSheetStrings
 import me.rosuh.easywatermark.ui.compose.TextContentOption
 import me.rosuh.easywatermark.ui.compose.TextContentOptionStrings
@@ -92,66 +91,62 @@ fun EditorScreen(
     onUpdateTemplate: (Template) -> Unit = {},
     onDeleteTemplate: (Template) -> Unit = {},
 ) {
-    var showTemplateSheet by remember { mutableStateOf(false) }
-    EditorScreenShell(
-        modifier = modifier,
-        // PreviewList parity (ADR-0011): production shows the thumbnail strip even for one image.
-        showPhotoStrip = imageList.isNotEmpty(),
-        topBar = { topBarModifier ->
-            EditorTopBar(
-                topBarModifier,
-                onBack = onBack,
-                onAddMoreImages = onAddMoreImages,
-                onShowSaveDialog = onShowSaveDialog,
-                onGoAboutScreen = onGoAboutScreen,
-            )
-        },
-        preview = { previewModifier ->
-            WaterMarkView(
-                previewModifier,
-                waterMark,
-                selectedImage ?: imageList.firstOrNull(),
-            )
-        },
-        photoStrip = { photoStripModifier ->
-            PhotoList(
-                imageList,
-                selectedImage,
-                modifier = photoStripModifier,
-                onImageSelected,
-                onImageDelete,
-            )
-        },
-        bottomControls = {
-            BottomView(
-                waterMark,
-                onChange = onWaterMrkChange,
-                onGoTemplateList = { showTemplateSheet = true },
-            )
-        },
-    )
-
-    if (showTemplateSheet) {
-        TemplateListSheet(
-            templates = templates,
-            strings = TemplateListSheetStrings(
-                title = stringResource(R.string.dialog_title_template_title),
-                addButton = stringResource(R.string.dialog_button_add_template),
-                empty = stringResource(R.string.tips_list_empty),
-                editTitle = stringResource(R.string.dialog_title_edit_watermark),
-                deleteConfirm = stringResource(R.string.tips_delete_template),
-                existConfirmTitle = stringResource(R.string.dialog_title_exist_confirm),
-                useThisTemplate = stringResource(R.string.tips_use_this_template),
-                confirm = stringResource(R.string.tips_confirm_dialog),
-                cancel = stringResource(R.string.tips_cancel_dialog),
-            ),
-            editIcon = painterResource(R.drawable.ic_template_list_item_edit),
-            deleteIcon = painterResource(R.drawable.ic_template_list_item_remove),
-            onDismiss = { showTemplateSheet = false },
-            onUse = onUseTemplate,
-            onAdd = onAddTemplate,
-            onUpdate = onUpdateTemplate,
-            onDelete = onDeleteTemplate,
+    EditorTemplateSheetHost(
+        templates = templates,
+        strings = TemplateListSheetStrings(
+            title = stringResource(R.string.dialog_title_template_title),
+            addButton = stringResource(R.string.dialog_button_add_template),
+            empty = stringResource(R.string.tips_list_empty),
+            editTitle = stringResource(R.string.dialog_title_edit_watermark),
+            deleteConfirm = stringResource(R.string.tips_delete_template),
+            existConfirmTitle = stringResource(R.string.dialog_title_exist_confirm),
+            useThisTemplate = stringResource(R.string.tips_use_this_template),
+            confirm = stringResource(R.string.tips_confirm_dialog),
+            cancel = stringResource(R.string.tips_cancel_dialog),
+        ),
+        editIcon = painterResource(R.drawable.ic_template_list_item_edit),
+        deleteIcon = painterResource(R.drawable.ic_template_list_item_remove),
+        onUse = onUseTemplate,
+        onAdd = onAddTemplate,
+        onUpdate = onUpdateTemplate,
+        onDelete = onDeleteTemplate,
+    ) { showTemplateSheet ->
+        EditorScreenShell(
+            modifier = modifier,
+            // PreviewList parity (ADR-0011): production shows the thumbnail strip even for one image.
+            showPhotoStrip = imageList.isNotEmpty(),
+            topBar = { topBarModifier ->
+                EditorTopBar(
+                    topBarModifier,
+                    onBack = onBack,
+                    onAddMoreImages = onAddMoreImages,
+                    onShowSaveDialog = onShowSaveDialog,
+                    onGoAboutScreen = onGoAboutScreen,
+                )
+            },
+            preview = { previewModifier ->
+                WaterMarkView(
+                    previewModifier,
+                    waterMark,
+                    selectedImage ?: imageList.firstOrNull(),
+                )
+            },
+            photoStrip = { photoStripModifier ->
+                PhotoList(
+                    imageList,
+                    selectedImage,
+                    modifier = photoStripModifier,
+                    onImageSelected,
+                    onImageDelete,
+                )
+            },
+            bottomControls = {
+                BottomView(
+                    waterMark,
+                    onChange = onWaterMrkChange,
+                    onGoTemplateList = showTemplateSheet,
+                )
+            },
         )
     }
 }
