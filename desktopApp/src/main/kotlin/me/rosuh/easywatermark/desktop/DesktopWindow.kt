@@ -196,7 +196,7 @@ private fun resolveDesktopOutputDir(): File {
  * text, lists saved templates, and applies (Use → `WatermarkConfigEditor.updateText`), updates in place
  * (Update → `TemplateEditor.update`), or deletes them.
  * S4d-198: REACTIVE preview — every successful explicit editor action (text sheet confirm,
- * Apply color/gaps, opacity/text-size/degree slider release, the tile/typeface/style buttons,
+ * Apply color, opacity/text-size/degree/gap slider release, the tile/typeface/style buttons,
  * "Use text watermark", and template "Use") now
  * auto-refreshes the on-screen preview through the SAME `refreshPreview()` → `runSaveFlow` temp-file spine
  * the manual "Preview" button uses (bounded to explicit clicks, NOT per keystroke). Preview stays a
@@ -209,6 +209,7 @@ private fun resolveDesktopOutputDir(): File {
  * consumers that persist on slider release and re-read the repository value.
  * S4d-287 replaced the watermark-text Apply field with the shared `TextContentOption` sheet shell while
  * keeping persistence/preview refresh at the Desktop edge.
+ * S4d-288 replaced the horizontal/vertical gap Apply fields with two shared `SliderOption` consumers.
  */
 fun launchDesktopWindow() = application {
     // S4d-215: persist the window's user state (watermark config, output prefs, templates DB) under the
@@ -262,9 +263,9 @@ fun launchDesktopWindow() = application {
     var colorText by remember { mutableStateOf("") }
     // S4d-284: watermark opacity edited through the shared SliderOption (0..100 percent).
     var alphaPercent by remember { mutableStateOf(100f) }
-    // S4d-151: the horizontal/vertical watermark GAPS being edited (parsed together on "Apply gaps").
-    var hGapText by remember { mutableStateOf("") }
-    var vGapText by remember { mutableStateOf("") }
+    // S4d-288: horizontal/vertical watermark gaps edited through shared SliderOption shells.
+    var hGapValue by remember { mutableStateOf(0f) }
+    var vGapValue by remember { mutableStateOf(0f) }
     // S4d-285: watermark text size edited through the shared SliderOption (1..100).
     var textSizeValue by remember { mutableStateOf(14f) }
     // S4d-279: current persisted tile mode consumed through the shared segmented tile-mode option.
@@ -285,9 +286,9 @@ fun launchDesktopWindow() = application {
         // S4d-179: shared WatermarkConfigRules.alphaByteToPercent (Android baseline order); the displayed
         // value may differ from the old `alpha * 100f / 255f` by a final float ULP (display only).
         alphaPercent = WatermarkConfigRules.alphaByteToPercent(repo.waterMark.first().alpha)
-        // S4d-151: load the persisted horizontal/vertical gaps into the editable fields.
-        hGapText = repo.waterMark.first().hGap.toString()
-        vGapText = repo.waterMark.first().vGap.toString()
+        // S4d-288: load the persisted horizontal/vertical gaps into the shared slider state.
+        hGapValue = repo.waterMark.first().hGap.toFloat()
+        vGapValue = repo.waterMark.first().vGap.toFloat()
         // S4d-152: load the persisted text size into the editable field.
         textSizeValue = repo.waterMark.first().textSize
         // S4d-153/S4d-279: load the persisted tile mode (only REPEAT/CLAMP are exposed in the UI).
@@ -569,59 +570,58 @@ fun launchDesktopWindow() = application {
                         }
                     },
                 )
-                // S4d-151: the horizontal/vertical GAP inputs. Both are parsed together on an explicit
-                // "Apply gaps" click (toIntOrNull); if EITHER is invalid the apply is rejected atomically
-                // (status only, NEITHER value persisted). Valid values are coerced to 0..500 at the edge
-                // (the repo also clamps via WatermarkConfigRules) and persisted through updateHorizon /
-                // updateVertical; both fields snap to the coerced values. S4d-198: a successful apply auto-previews.
-                OutlinedTextField(
-                    value = hGapText,
-                    onValueChange = { hGapText = it },
+                // S4d-288: Desktop consumes the shared slider shell for each gap independently, matching
+                // Android's separate horizontal/vertical option controls. Persistence happens on release.
+                Text("Horizontal gap", style = MaterialTheme.typography.bodyMedium)
+                SliderOption(
+                    currentValue = hGapValue,
+                    valueRange = 0f..500f,
                     enabled = !busy,
-                    label = { Text("Horizontal gap (0–500%)") },
-                )
-                OutlinedTextField(
-                    value = vGapText,
-                    onValueChange = { vGapText = it },
-                    enabled = !busy,
-                    label = { Text("Vertical gap (0–500%)") },
-                )
-                Button(
-                    enabled = !busy,
-                    onClick = {
-                        val h = hGapText.trim().toIntOrNull()
-                        val v = vGapText.trim().toIntOrNull()
-                        if (h == null || v == null) {
-                            // Either field invalid → reject BOTH; persist nothing (atomic apply).
-                            status = "Invalid gaps: H=\"$hGapText\" V=\"$vGapText\" — enter whole numbers (0–500)."
-                        } else {
-                            scope.launch {
-                                busy = true
-                                val appliedH = h.coerceIn(0, 500)
-                                val appliedV = v.coerceIn(0, 500)
-                                val (next, ok) = withContext(Dispatchers.IO) {
-                                    try {
-                                        editor.updateHorizon(appliedH)
-                                        editor.updateVertical(appliedV)
-                                        "Gaps applied: H=$appliedH V=$appliedV" to true
-                                    } catch (t: Throwable) {
-                                        "Failed: ${t.message}" to false
-                                    }
+                    onValueChange = { hGapValue = it.coerceIn(0f, 500f) },
+                    onValueChangeFinished = {
+                        scope.launch {
+                            busy = true
+                            val applied = hGapValue.coerceIn(0f, 500f).toInt()
+                            val (next, ok) = withContext(Dispatchers.IO) {
+                                try {
+                                    editor.updateHorizon(applied)
+                                    "Horizontal gap applied: $applied" to true
+                                } catch (t: Throwable) {
+                                    "Failed: ${t.message}" to false
                                 }
-                                // Snap both fields to the coerced values on a successful apply.
-                                if (ok) {
-                                    hGapText = appliedH.toString()
-                                    vGapText = appliedV.toString()
-                                }
-                                // S4d-198: auto-refresh the preview on success (no manual Preview click).
-                                status = if (ok) "$next · ${refreshPreview()}" else next
-                                busy = false
                             }
+                            if (ok) hGapValue = repo.waterMark.first().hGap.toFloat()
+                            // S4d-198: auto-refresh the preview on success (no manual Preview click).
+                            status = if (ok) "$next · ${refreshPreview()}" else next
+                            busy = false
                         }
                     },
-                ) {
-                    Text("Apply gaps")
-                }
+                )
+                Text("Vertical gap", style = MaterialTheme.typography.bodyMedium)
+                SliderOption(
+                    currentValue = vGapValue,
+                    valueRange = 0f..500f,
+                    enabled = !busy,
+                    onValueChange = { vGapValue = it.coerceIn(0f, 500f) },
+                    onValueChangeFinished = {
+                        scope.launch {
+                            busy = true
+                            val applied = vGapValue.coerceIn(0f, 500f).toInt()
+                            val (next, ok) = withContext(Dispatchers.IO) {
+                                try {
+                                    editor.updateVertical(applied)
+                                    "Vertical gap applied: $applied" to true
+                                } catch (t: Throwable) {
+                                    "Failed: ${t.message}" to false
+                                }
+                            }
+                            if (ok) vGapValue = repo.waterMark.first().vGap.toFloat()
+                            // S4d-198: auto-refresh the preview on success (no manual Preview click).
+                            status = if (ok) "$next · ${refreshPreview()}" else next
+                            busy = false
+                        }
+                    },
+                )
                 // S4d-285: Desktop consumes the shared slider shell for text size. Persistence still happens
                 // only on slider-release through WatermarkConfigEditor.updateTextSize.
                 Text("Text size", style = MaterialTheme.typography.bodyMedium)

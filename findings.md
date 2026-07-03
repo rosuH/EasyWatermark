@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Desktop gaps should match Android's independent sliders (S4d-288, 2026-07-03)
+
+- Android already exposes horizontal and vertical gap as separate `SliderOption` controls, so Desktop should not keep a special two-field atomic Apply flow.
+- Persist each Desktop gap on slider release through the existing shared editor method, then re-read that repository value. This preserves the shared clamp/storage owner while reducing Desktop-only parsing logic.
+
 ## TextContentOption can serve Desktop without a template icon (S4d-287, 2026-07-03)
 
 - The text editor shell is reusable off-Android once template-list affordance is optional and busy-state disabling is a defaulted parameter. Android keeps passing the resource-backed template icon and callback unchanged.
