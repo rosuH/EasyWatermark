@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Remove aggregate save returns only after event consumers are gone (S4d-300, 2026-07-03)
+
+- `generateList` no longer needs an aggregate `Result<List<ImageInfo>>` once `saveResult` is gone. Keep the function as the export loop and preserve per-image `ImageInfo.result` / `JobState` records; only the ignored aggregate success/empty-list error return should disappear.
+- Error-code cleanup must follow the real reader. `TYPE_ERROR_NOT_IMG` was aggregate-event-only and safe to delete; `TYPE_ERROR_FILE_NOT_FOUND` / `TYPE_ERROR_SAVE_OOM` still populate per-image results and remain.
+
 ## Progress event wrappers are removable separately from result records (S4d-299, 2026-07-03)
 
 - `saveProcess` had become an event wrapper with no source consumer; the useful export facts are the per-image `ImageInfo.jobState` and `ImageInfo.result` mutations. Remove the unused stream and snapshot dispatches without erasing those records.

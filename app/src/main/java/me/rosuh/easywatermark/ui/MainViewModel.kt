@@ -216,10 +216,10 @@ class MainViewModel (
     private suspend fun generateList(
         contentResolver: ContentResolver,
         infoList: List<ImageInfo>?,
-    ): Result<List<ImageInfo>> =
+    ) {
         withContext(Dispatchers.Default) {
             if (infoList.isNullOrEmpty()) {
-                return@withContext Result.failure(null, TYPE_ERROR_NOT_IMG)
+                return@withContext
             }
             infoList.forEach { info ->
                 try {
@@ -236,8 +236,8 @@ class MainViewModel (
                 }
                 Log.i("generateList", "${info.uri} : ${info.result}")
             }
-            return@withContext Result.success(infoList)
         }
+    }
 
     private suspend fun generateImage(
         contentResolver: ContentResolver,
@@ -1010,7 +1010,6 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
     }
 
     companion object {
-        const val TYPE_ERROR_NOT_IMG = "type_error_not_img"
         const val TYPE_ERROR_FILE_NOT_FOUND = "type_error_file_not_found"
         const val TYPE_ERROR_SAVE_OOM = "type_error_save_oom"
         const val TYPE_COMPRESS_ERROR = "type_CompressError"
