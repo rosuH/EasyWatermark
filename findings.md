@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Remove View-era dependencies only after separating sibling Compose artifacts (S4d-301, 2026-07-03)
+
+- `androidx.constraintlayout:constraintlayout` and `androidx.constraintlayout:constraintlayout-compose` are separate cleanup decisions. The View artifact was declaration-only after the View migration; the Compose artifact remains live through the Android-only MotionLayout color option.
+- Do not migrate Android's radial `ColorOption` to shared UI just to delete `constraintlayout-compose`. It is a visible interaction change and still depends on Android resources; keep that as a product/visual slice with screenshot proof, not a blind dependency cleanup.
+
 ## Remove aggregate save returns only after event consumers are gone (S4d-300, 2026-07-03)
 
 - `generateList` no longer needs an aggregate `Result<List<ImageInfo>>` once `saveResult` is gone. Keep the function as the export loop and preserve per-image `ImageInfo.result` / `JobState` records; only the ignored aggregate success/empty-list error return should disappear.

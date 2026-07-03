@@ -27,7 +27,6 @@ datastorePreference = "1.2.1"
 asyncLayoutInflater = "1.1.0"
 viewpager2 = "1.1.0"
 recyclerview = "1.4.0"
-constraintLayout = "2.2.1"
 exifInterface = "1.4.2"
 compressor = "3.0.1"
 colorpicker = "2.4.0"
@@ -135,7 +134,6 @@ datastore-preference = { group = "androidx.datastore", name = "datastore-prefere
 asynclayout-inflater = { group = "androidx.asynclayoutinflater", name = "asynclayoutinflater", version.ref = "asyncLayoutInflater" }
 viewpager2 = { group = "androidx.viewpager2", name = "viewpager2", version.ref = "viewpager2" }
 recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintLayout" }
 exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifInterface" }
 
 #hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }

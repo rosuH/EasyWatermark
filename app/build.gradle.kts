@@ -136,7 +136,6 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.ktx)
     implementation(libs.viewpager2)
     implementation(libs.recyclerview)
-    implementation(libs.constraintlayout)
     implementation(libs.exifinterface)
     implementation(libs.profileinstaller)
 
