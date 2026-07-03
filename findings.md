@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Shared sliders need a release callback for Desktop persistence (S4d-284, 2026-07-03)
+
+- The Android editor can keep using `SliderOption` as an immediate value callback, but Desktop persistence should write on slider release to avoid a DataStore/render pass for every drag frame.
+- Defaulted `enabled` and `onValueChangeFinished` parameters let Desktop reuse the shared shell without changing Android call sites. After writing, Desktop should re-read the repository value because alpha is stored as a byte and displayed as percent through `WatermarkConfigRules.alphaByteToPercent`.
+
 ## Desktop text-style can consume a shared segmented option (S4d-283, 2026-07-03)
 
 - `TextPaintStyle` is already a commonMain model and Desktop already persists it through `WatermarkConfigEditor`, so the Fill/Stroke control can be a shared CMP shell without changing renderer behavior.

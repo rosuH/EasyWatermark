@@ -55,6 +55,7 @@ import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopImageDecoder
 import me.rosuh.easywatermark.render.DesktopSaveDecision
 import me.rosuh.easywatermark.ui.compose.IconWatermarkOption
+import me.rosuh.easywatermark.ui.compose.SliderOption
 import me.rosuh.easywatermark.ui.compose.TextPaintStyleLabels
 import me.rosuh.easywatermark.ui.compose.TextPaintStyleOption
 import me.rosuh.easywatermark.ui.compose.TextTypefaceLabels
@@ -252,8 +253,8 @@ fun launchDesktopWindow() = application {
     var degreeText by remember { mutableStateOf("") }
     // S4d-149: the watermark text COLOR being edited (hex string; parsed on "Apply color"). Loaded on launch.
     var colorText by remember { mutableStateOf("") }
-    // S4d-150: the watermark opacity (alpha) being edited as a 0..100 percent (parsed on "Apply opacity").
-    var alphaText by remember { mutableStateOf("") }
+    // S4d-284: watermark opacity edited through the shared SliderOption (0..100 percent).
+    var alphaPercent by remember { mutableStateOf(100f) }
     // S4d-151: the horizontal/vertical watermark GAPS being edited (parsed together on "Apply gaps").
     var hGapText by remember { mutableStateOf("") }
     var vGapText by remember { mutableStateOf("") }
@@ -276,7 +277,7 @@ fun launchDesktopWindow() = application {
         // Persisted alpha is a 0..255 byte; display as a percent (Android editor semantics).
         // S4d-179: shared WatermarkConfigRules.alphaByteToPercent (Android baseline order); the displayed
         // value may differ from the old `alpha * 100f / 255f` by a final float ULP (display only).
-        alphaText = WatermarkConfigRules.alphaByteToPercent(repo.waterMark.first().alpha).toString()
+        alphaPercent = WatermarkConfigRules.alphaByteToPercent(repo.waterMark.first().alpha)
         // S4d-151: load the persisted horizontal/vertical gaps into the editable fields.
         hGapText = repo.waterMark.first().hGap.toString()
         vGapText = repo.waterMark.first().vGap.toString()
@@ -548,46 +549,35 @@ fun launchDesktopWindow() = application {
                 ) {
                     Text("Apply color")
                 }
-                // S4d-150: the watermark OPACITY (alpha) input as a 0..100 percent (Android editor semantics).
-                // Parsed on an explicit "Apply opacity" click (toFloatOrNull + isFinite; invalid → status only,
-                // no persist); coerced to 0..100; persisted via WatermarkConfigEditor.updateAlpha(percent),
-                // which converts to the 0..255 byte. The field snaps to the applied value. S4d-198: auto-preview.
-                OutlinedTextField(
-                    value = alphaText,
-                    onValueChange = { alphaText = it },
+                // S4d-284: Desktop consumes the shared slider shell for opacity. Persistence still happens
+                // only on slider-release through WatermarkConfigEditor.updateAlpha, not on every drag frame.
+                Text("Opacity", style = MaterialTheme.typography.bodyMedium)
+                SliderOption(
+                    currentValue = alphaPercent,
+                    valueRange = 0f..100f,
                     enabled = !busy,
-                    label = { Text("Opacity (0–100%)") },
-                )
-                Button(
-                    enabled = !busy,
-                    onClick = {
-                        val parsed = alphaText.trim().toFloatOrNull()?.takeIf { it.isFinite() }
-                        if (parsed == null) {
-                            // Invalid/non-finite → short failure status; do NOT call the editor.
-                            status = "Invalid opacity: \"$alphaText\" — enter a number (0–100)."
-                        } else {
-                            scope.launch {
-                                busy = true
-                                val applied = parsed.coerceIn(0f, 100f)
-                                val (next, ok) = withContext(Dispatchers.IO) {
-                                    try {
-                                        editor.updateAlpha(applied)
-                                        "Opacity applied: $applied%" to true
-                                    } catch (t: Throwable) {
-                                        "Failed: ${t.message}" to false
-                                    }
+                    onValueChange = { alphaPercent = it.coerceIn(0f, 100f) },
+                    onValueChangeFinished = {
+                        scope.launch {
+                            busy = true
+                            val applied = alphaPercent.coerceIn(0f, 100f)
+                            val (next, ok) = withContext(Dispatchers.IO) {
+                                try {
+                                    editor.updateAlpha(applied)
+                                    "Opacity applied: $applied%" to true
+                                } catch (t: Throwable) {
+                                    "Failed: ${t.message}" to false
                                 }
-                                // Snap the field to the applied/coerced value on a successful apply.
-                                if (ok) alphaText = applied.toString()
-                                // S4d-198: auto-refresh the preview on success (no manual Preview click).
-                                status = if (ok) "$next · ${refreshPreview()}" else next
-                                busy = false
                             }
+                            if (ok) {
+                                alphaPercent = WatermarkConfigRules.alphaByteToPercent(repo.waterMark.first().alpha)
+                            }
+                            // S4d-198: auto-refresh the preview on success (no manual Preview click).
+                            status = if (ok) "$next · ${refreshPreview()}" else next
+                            busy = false
                         }
                     },
-                ) {
-                    Text("Apply opacity")
-                }
+                )
                 // S4d-151: the horizontal/vertical GAP inputs. Both are parsed together on an explicit
                 // "Apply gaps" click (toIntOrNull); if EITHER is invalid the apply is rejected atomically
                 // (status only, NEITHER value persisted). Valid values are coerced to 0..500 at the edge

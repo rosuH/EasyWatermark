@@ -26,6 +26,8 @@ fun SliderOption(
     currentValue: Float,
     valueRange: ClosedFloatingPointRange<Float>,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onValueChangeFinished: (() -> Unit)? = null,
     onValueChange: (Float) -> Unit,
 ) {
     Column(
@@ -40,12 +42,14 @@ fun SliderOption(
             onValueChange = {
                 onValueChange(it.toInt().toFloat())
             },
+            onValueChangeFinished = onValueChangeFinished,
+            enabled = enabled,
             steps = (valueRange.endInclusive - valueRange.start).toInt(),
             thumb = {
                 SliderDefaults.Thumb(
                     interactionSource = interactionSource,
                     colors = colors,
-                    enabled = true
+                    enabled = enabled
                 )
             },
             track = { sliderState ->
@@ -54,7 +58,7 @@ fun SliderOption(
                         activeTickColor = Color.Transparent,
                         inactiveTickColor = Color.Transparent,
                     ),
-                    enabled = true,
+                    enabled = enabled,
                     sliderState = sliderState
                 )
             },
