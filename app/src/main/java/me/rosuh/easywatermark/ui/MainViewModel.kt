@@ -754,7 +754,7 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
 
                 // Stores column values and the contentUri in a local object
                 // that represents the media file.
-                val image = Image(imageId, contentUri, bucketName, size, dateTaken)
+                val image = Image(imageId, contentUri.toMediaRef(), bucketName, size, dateTaken)
                 list += image
             }
             _galleryPickedImageList.value = list
@@ -773,7 +773,7 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
             withContext(Dispatchers.Default) {
                 selectedList
                     .map {
-                        ImageInfo(it.uri.toMediaRef())
+                        ImageInfo(it.uri)
                     }
                     .takeIf {
                         it.isNotEmpty()
@@ -840,7 +840,7 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
                 val newList =
                     galleryPickedImageList.value?.filter { it.check } ?: return@launch
                 val imageList = newList.map {
-                    ImageInfo(it.uri.toMediaRef())
+                    ImageInfo(it.uri)
                 }
                 updateImageListInternal(imageList)
                 val nextState = launchScreenUiStateFlow.value.copy(
@@ -1013,7 +1013,7 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
                             // that represents the media file.
                             val image = Image(
                                 imageId,
-                                contentUri,
+                                contentUri.toMediaRef(),
                                 bucketName,
                                 size,
                                 dateTaken,

@@ -75,6 +75,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.ui.Image
+import me.rosuh.easywatermark.utils.ktx.toUri
 
 
 @Preview
@@ -330,7 +331,7 @@ fun ImageCard(
         val clip by animateDpAsState(targetValue = if (image.check) 10.dp else 0.dp, label = "clip")
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
-                .data(image.uri)
+                .data(image.uri.toUri())
                 .allowRgb565(true)
                 .crossfade(true)
                 .placeholder(R.drawable.ic_gallery_item_placeholder_container)

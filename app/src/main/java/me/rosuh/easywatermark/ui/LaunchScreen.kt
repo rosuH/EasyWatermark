@@ -34,7 +34,6 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import me.rosuh.easywatermark.data.model.FuncTitleModel
 import me.rosuh.easywatermark.data.model.ImageInfo
-import me.rosuh.easywatermark.data.model.WaterMark
 
 @BuildCompat.PrereleaseSdkCheck
 @Composable
@@ -141,24 +140,6 @@ fun LogoView(modifier: Modifier = Modifier, startLogoAnimation: Boolean) {
             placeable.placeRelative(0, 0)
         }
     }, modifier = modifier)
-}
-
-data class LaunchScreenState(
-    val uiState: LaunchScreenUiState = LaunchScreenUiState.Launch,
-    val imageList: List<Image> = emptyList(),
-    val selectedImageList: List<ImageInfo> = emptyList(),
-    val waterMark: WaterMark = WaterMark.default,
-    val curImageInfo: ImageInfo? = selectedImageList.firstOrNull(),
-) {
-    companion object {
-        fun default() = LaunchScreenState()
-    }
-}
-
-sealed class LaunchScreenUiState {
-    object Launch : LaunchScreenUiState()
-    object GalleryDialog : LaunchScreenUiState()
-    object Editor : LaunchScreenUiState()
 }
 
 sealed class Action {
