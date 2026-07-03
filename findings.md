@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Desktop tile mode can consume the shared segmented option (S4d-279, 2026-07-03)
+
+- `TileMode` is a safe off-Android shared UI consumer because Desktop already persists `WatermarkTileMode` through `WatermarkConfigEditor`.
+- Preserve busy-state behavior with a defaulted `enabled` parameter instead of forking Desktop-only controls or changing Android callers.
+
 ## Desktop can consume shared output-options UI without renderer changes (S4d-278, 2026-07-03)
 
 - `SaveExportOptionsSection` is a real off-Android CMP UI consumer when wired to Desktop's existing `OutputPrefsEditor` and user-config store.

@@ -54,6 +54,8 @@ import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopImageDecoder
 import me.rosuh.easywatermark.render.DesktopSaveDecision
+import me.rosuh.easywatermark.ui.compose.TileModeLabels
+import me.rosuh.easywatermark.ui.compose.TileMode as TileModeOption
 import me.rosuh.easywatermark.ui.save.SaveExportOptionsSection
 import me.rosuh.easywatermark.ui.theme.AppTheme
 import java.awt.Desktop
@@ -252,8 +254,8 @@ fun launchDesktopWindow() = application {
     var vGapText by remember { mutableStateOf("") }
     // S4d-152: the watermark TEXT SIZE being edited (string; parsed on "Apply text size"). Loaded on launch.
     var textSizeText by remember { mutableStateOf("") }
-    // S4d-153: the current persisted tile mode label (REPEAT grid-tile vs CLAMP single-decal). Loaded on launch.
-    var tileModeLabel by remember { mutableStateOf("loading…") }
+    // S4d-279: current persisted tile mode consumed through the shared segmented tile-mode option.
+    var tileMode by remember { mutableStateOf(WatermarkTileMode.REPEAT) }
     // S4d-154: the current persisted typeface + text-style labels (explicit label maps). Loaded on launch.
     var typefaceLabel by remember { mutableStateOf("loading…") }
     var styleLabel by remember { mutableStateOf("loading…") }
@@ -274,8 +276,8 @@ fun launchDesktopWindow() = application {
         vGapText = repo.waterMark.first().vGap.toString()
         // S4d-152: load the persisted text size into the editable field.
         textSizeText = repo.waterMark.first().textSize.toString()
-        // S4d-153: load the persisted tile mode (only REPEAT/CLAMP are exposed in the UI).
-        tileModeLabel = repo.waterMark.first().tileMode.name
+        // S4d-153/S4d-279: load the persisted tile mode (only REPEAT/CLAMP are exposed in the UI).
+        tileMode = repo.waterMark.first().tileMode
         // S4d-154: load the persisted typeface + text style (explicit label maps — no reflection).
         typefaceLabel = typefaceLabelOf(repo.waterMark.first().textTypeface)
         styleLabel = styleLabelOf(repo.waterMark.first().textStyle)
@@ -673,54 +675,40 @@ fun launchDesktopWindow() = application {
                 ) {
                     Text("Apply text size")
                 }
-                // S4d-153: the watermark TILE MODE control. Two buttons persist REPEAT (grid-tile across the
-                // photo) or CLAMP (a single decal at a fractional offset) via WatermarkConfigEditor.updateTileMode.
-                // Only these two product values are exposed — MIRROR/DECAL are legacy read-only storage ids, not
-                // UI choices. After each apply the label is re-read from the persisted config (so it reflects what
-                // actually persisted, even on a write failure). S4d-198: a successful apply auto-refreshes the preview (manual "Preview" still available).
-                Text("Tile mode: $tileModeLabel", style = MaterialTheme.typography.bodyMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        enabled = !busy,
-                        onClick = {
+                // S4d-279: Desktop consumes the shared segmented tile-mode option. Persistence remains the
+                // existing WatermarkConfigEditor path; no renderer behavior changes.
+                Text("Tile mode: ${tileMode.name}", style = MaterialTheme.typography.bodyMedium)
+                TileModeOption(
+                    labels = TileModeLabels(
+                        repeat = "Tile / REPEAT",
+                        decal = "Decal / CLAMP",
+                    ),
+                    mode = tileMode,
+                    enabled = !busy,
+                    onValueChange = { selectedMode ->
+                        if (selectedMode != tileMode) {
                             scope.launch {
                                 busy = true
                                 val (msg, ok) = withContext(Dispatchers.IO) {
                                     try {
-                                        editor.updateTileMode(WatermarkTileMode.REPEAT)
-                                        "Tile mode → REPEAT (grid tile)" to true
+                                        editor.updateTileMode(selectedMode)
+                                        when (selectedMode) {
+                                            WatermarkTileMode.REPEAT -> "Tile mode → REPEAT (grid tile)"
+                                            WatermarkTileMode.CLAMP -> "Tile mode → CLAMP (single decal)"
+                                            else -> "Tile mode → ${selectedMode.name}"
+                                        } to true
                                     } catch (t: Throwable) {
                                         "Failed: ${t.message}" to false
                                     }
                                 }
-                                tileModeLabel = repo.waterMark.first().tileMode.name
+                                tileMode = repo.waterMark.first().tileMode
                                 // S4d-198: auto-refresh the preview on success (no manual Preview click).
                                 status = if (ok) "$msg · ${refreshPreview()}" else msg
                                 busy = false
                             }
-                        },
-                    ) { Text("Tile / REPEAT") }
-                    Button(
-                        enabled = !busy,
-                        onClick = {
-                            scope.launch {
-                                busy = true
-                                val (msg, ok) = withContext(Dispatchers.IO) {
-                                    try {
-                                        editor.updateTileMode(WatermarkTileMode.CLAMP)
-                                        "Tile mode → CLAMP (single decal)" to true
-                                    } catch (t: Throwable) {
-                                        "Failed: ${t.message}" to false
-                                    }
-                                }
-                                tileModeLabel = repo.waterMark.first().tileMode.name
-                                // S4d-198: auto-refresh the preview on success (no manual Preview click).
-                                status = if (ok) "$msg · ${refreshPreview()}" else msg
-                                busy = false
-                            }
-                        },
-                    ) { Text("Decal / CLAMP") }
-                }
+                        }
+                    },
+                )
                 // S4d-154: the watermark TYPEFACE control. One button per TextTypeface (Normal/Italic/Bold/
                 // BoldItalic) persists via WatermarkConfigEditor.updateTextTypeface; the current persisted value
                 // shows in the label (re-read after each apply, truthful on a write failure). These four are the

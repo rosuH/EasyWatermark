@@ -29,6 +29,7 @@ fun TileMode(
     labels: TileModeLabels,
     mode: WatermarkTileMode,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     onValueChange: (WatermarkTileMode) -> Unit,
 ) {
     // Product modes only: "repeat" and the single-decal "decal" mode (backed by CLAMP at the
@@ -41,6 +42,7 @@ fun TileMode(
         options.forEachIndexed { index, pair ->
             SegmentedButton(
                 selected = mode == pair.second,
+                enabled = enabled,
                 onClick = {
                     onValueChange(pair.second)
                 },
