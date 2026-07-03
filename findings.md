@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Remove stale visible link witnesses once stronger runtime proof exists (S4d-324, 2026-07-03)
+
+- An on-screen `:shared linked ... geometry.diagonal(...)` label was useful during early iOS bring-up, but after fixture render/export XCUITests and gated CMP host witnesses it is only product-surface noise. Prefer deleting visible proof text over hiding it behind another UI affordance.
+- Historical proof can stay documented in progress/findings. Current UI should prove linkage through tests and real surfaces, not by showing diagnostics to users in normal DEBUG launches.
+
 ## Keep iOS shared witnesses test-only unless they are real replacements (S4d-323, 2026-07-03)
 
 - Placeholder CMP host witnesses are useful runtime/link proof, but showing them in normal DEBUG UI makes the iOS bring-up surface look like a new product screen. Gate them behind an explicit launch argument (`-sharedComposeWitnesses`) and add a default-hidden UI test whenever the witness surface is not the real replacement.

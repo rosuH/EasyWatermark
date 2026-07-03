@@ -8,9 +8,6 @@ import Shared
 // `UIImage(data:)`. Export is a `ShareLink` (system share sheet over a temp .png) plus Save to Photos.
 // S4d-58 proves render + export via the DEBUG-only fixture seam below; real PHPicker cell selection is
 // the only step still blocked by Xcode-27-beta / iOS-27 system UI automation.
-//
-// `WatermarkGeometry().diagonal(...)` is kept as a cheap, eagerly-evaluated `:shared` link witness so
-// the framework link is exercised even before any photo is picked.
 #if DEBUG
 struct SharedComposeLaunchShellWitness: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
@@ -66,7 +63,6 @@ struct ContentView: View {
     @State private var draftHGap: Double = 0
     @State private var draftVGap: Double = 0
 
-    private let linkWitness = WatermarkGeometry().diagonal(w: 100, h: 100)
 #if DEBUG
     private var showSharedComposeWitnesses: Bool {
         ProcessInfo.processInfo.arguments.contains("-sharedComposeWitnesses")
@@ -289,10 +285,6 @@ struct ContentView: View {
             }
 
             Spacer()
-
-                Text(":shared linked ✓  geometry.diagonal(100×100) = \(linkWitness)")
-                    .font(.caption2.monospaced())
-                    .foregroundStyle(.secondary)
 
 #if DEBUG
                 if showSharedComposeWitnesses {
