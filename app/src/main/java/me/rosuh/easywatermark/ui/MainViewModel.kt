@@ -257,22 +257,18 @@ class MainViewModel (
 
             imageInfo.width = mutableBitmap.width
             imageInfo.height = mutableBitmap.height
-            val tmpConfig = waterMarkFlow.value ?: return@withContext Result.failure(
-                null,
-                code = "-1",
-                message = "config.value == null"
-            )
+            val tmpConfig = waterMarkFlow.value
             val canvas = Canvas(mutableBitmap)
             // Export sizing is image-space; preview matrix values are not needed here.
             val bitmapPaint = TextPaint().applyConfig(imageInfo, tmpConfig, isScale = false)
             val layoutPaint = Paint()
             // S2a: build the cell shader through the Android renderer seam (the same
             // WatermarkRenderer the Compose preview uses).
-            val shader = when (waterMarkFlow.value?.markMode) {
+            val shader = when (tmpConfig.markMode) {
                 WatermarkMode.Text -> {
                     WatermarkRenderer.buildTextShader(
                         imageInfo,
-                        waterMarkFlow.value!!,
+                        tmpConfig,
                         bitmapPaint,
                         androidTextMeasureEnv(applicationContext),
                         Dispatchers.IO
@@ -305,12 +301,6 @@ class MainViewModel (
                         Dispatchers.IO
                     )
                 }
-
-                null -> return@withContext Result.failure(
-                    null,
-                    code = "-1",
-                    message = "Unknown markmode"
-                )
             }
 
             // S2a: composition delegated to the shared renderer seam (same helper as preview).
@@ -407,7 +397,7 @@ class MainViewModel (
     }
 
     fun selectImage(ref: MediaRef) {
-        if (selectedImageFlow.value?.uri == ref) {
+        if (selectedImageFlow.value.uri == ref) {
             return
         }
         launch {
@@ -559,42 +549,33 @@ class MainViewModel (
 
     fun compressImg(activity: Activity) {
         compressedJob = viewModelScope.launch(Dispatchers.IO) {
-            waterMarkFlow.value?.let {
-                _compressedResult.value = Result.success(null, code = TYPE_COMPRESSING)
-                val tmpFile = File.createTempFile("easy_water_mark_", "_compressed")
-                activity.contentResolver.openInputStream(waterMarkRepo.imageInfoList.first().uri.toUri())
-                    .use { input ->
-                        tmpFile.outputStream().use { output ->
-                            input?.copyTo(output)
-                        }
+            _compressedResult.value = Result.success(null, code = TYPE_COMPRESSING)
+            val tmpFile = File.createTempFile("easy_water_mark_", "_compressed")
+            activity.contentResolver.openInputStream(waterMarkRepo.imageInfoList.first().uri.toUri())
+                .use { input ->
+                    tmpFile.outputStream().use { output ->
+                        input?.copyTo(output)
                     }
-                val compressedFile = Compressor.compress(activity, tmpFile)
-                // clear tmp files
-                if (tmpFile.exists()) {
-                    tmpFile.delete()
                 }
-                try {
-                    val compressedFileUri = FileProvider.getUriForFile(
-                        activity,
-                        "${BuildConfig.APPLICATION_ID}.fileprovider",
-                        compressedFile
-                    )
-                    selectImage(compressedFileUri.toMediaRef())
-                    _compressedResult.value = Result.success(null, code = TYPE_COMPRESS_OK)
-                } catch (ie: IllegalArgumentException) {
-                    _compressedResult.value =
-                        Result.failure(
-                            null,
-                            code = TYPE_COMPRESS_ERROR,
-                            message = "Images creates uri failed."
-                        )
-                }
-            } ?: kotlin.run {
+            val compressedFile = Compressor.compress(activity, tmpFile)
+            // clear tmp files
+            if (tmpFile.exists()) {
+                tmpFile.delete()
+            }
+            try {
+                val compressedFileUri = FileProvider.getUriForFile(
+                    activity,
+                    "${BuildConfig.APPLICATION_ID}.fileprovider",
+                    compressedFile
+                )
+                selectImage(compressedFileUri.toMediaRef())
+                _compressedResult.value = Result.success(null, code = TYPE_COMPRESS_OK)
+            } catch (ie: IllegalArgumentException) {
                 _compressedResult.value =
                     Result.failure(
                         null,
                         code = TYPE_COMPRESS_ERROR,
-                        message = "Config value is null."
+                        message = "Images creates uri failed."
                     )
             }
         }
@@ -804,7 +785,7 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
                     uiState = LaunchScreenUiState.Editor,
                     imageList = galleryPickedImageList.value ?: emptyList(),
                     selectedImageList = imageList,
-                    waterMark = waterMarkFlow.value ?: WaterMark.default,
+                    waterMark = waterMarkFlow.value,
                     curImageInfo = imageList.firstOrNull()
                 )
                 withContext(Dispatchers.Main) {
@@ -979,7 +960,7 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
                         uiState = LaunchScreenUiState.Editor,
                         imageList = imageList,
                         selectedImageList = imageInfoList,
-                        waterMark = waterMarkFlow.value ?: WaterMark.default,
+                        waterMark = waterMarkFlow.value,
                         curImageInfo = imageInfoList.firstOrNull()
                     )
                     withContext(Dispatchers.Main) {

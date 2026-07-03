@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Nullable cleanup should follow StateFlow type ownership (S4d-302, 2026-07-03)
+
+- Once `waterMarkFlow` is `stateIn(..., WaterMark.default)` and `selectedImageFlow` is a `StateFlow<ImageInfo>`, null-defense branches around `.value` are dead code. Remove them as a follow-up to event-state cleanup, but keep the live export/compression result writes untouched.
+- Snapshot the non-null `WaterMark` once per render path (`tmpConfig`) and use it for both branch selection and renderer calls. That avoids re-reading the flow and prevents old `?.` / `!!` patterns from drifting back into export logic.
+
 ## Remove View-era dependencies only after separating sibling Compose artifacts (S4d-301, 2026-07-03)
 
 - `androidx.constraintlayout:constraintlayout` and `androidx.constraintlayout:constraintlayout-compose` are separate cleanup decisions. The View artifact was declaration-only after the View migration; the Compose artifact remains live through the Android-only MotionLayout color option.
