@@ -74,8 +74,6 @@ android {
         resources.excludes.add("DebugProbesKt.bin")
     }
 
-    android.buildFeatures.viewBinding = true
-    
     namespace = "me.rosuh.easywatermark"
 
     buildFeatures {

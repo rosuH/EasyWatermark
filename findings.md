@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Disable ViewBinding only after layout and binding consumers are both gone (S4d-304, 2026-07-03)
+
+- `viewBinding = true` can survive long after View code is gone; prove deletion with both sides: no `res/layout` inputs and no generated binding / `R.layout` consumers in source/tests.
+- Menu XML and value styles are not ViewBinding consumers. Keep them out of the liveness decision and let debug/release builds prove the generated-binding task removal.
+
 ## Group dead View-stack dependency removal by consumer class (S4d-303, 2026-07-03)
 
 - After View/LiveData consumers are gone, remove the direct dependencies and catalog aliases together: `asynclayoutinflater`, Fragment KTX, lifecycle LiveData KTX, Compose runtime-livedata, ViewPager2, and RecyclerView had no source/resource consumers beyond comments.
