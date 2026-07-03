@@ -1,12 +1,10 @@
 package me.rosuh.easywatermark.desktop
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -72,6 +70,7 @@ import me.rosuh.easywatermark.ui.save.SavedOutputActionsLabels
 import me.rosuh.easywatermark.ui.save.SaveCommandActions
 import me.rosuh.easywatermark.ui.save.SaveCommandActionsLabels
 import me.rosuh.easywatermark.ui.save.SaveExportOptionsSection
+import me.rosuh.easywatermark.ui.save.SavePreviewStatus
 import me.rosuh.easywatermark.ui.theme.AppTheme
 import java.awt.Desktop
 import java.awt.FileDialog
@@ -221,6 +220,7 @@ private fun resolveDesktopOutputDir(): File {
  * S4d-290 replaced the inline Desktop templates section with shared `EditorTemplateSheetHost`.
  * S4d-291 replaced the share-substitute button row with shared `SavedOutputActions`.
  * S4d-292 replaced the Render/Save-as/Open-image command buttons with shared `SaveCommandActions`.
+ * S4d-293 replaced the status text + optional rendered preview image with shared `SavePreviewStatus`.
  */
 fun launchDesktopWindow() = application {
     // S4d-215: persist the window's user state (watermark config, output prefs, templates DB) under the
@@ -1188,14 +1188,11 @@ fun launchDesktopWindow() = application {
                         Text("Templates")
                     }
                 }
-                Text(status, style = MaterialTheme.typography.bodyMedium)
-                preview?.let {
-                    Image(
-                        bitmap = it,
-                        contentDescription = "Watermark preview",
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp),
-                    )
-                }
+                SavePreviewStatus(
+                    status = status,
+                    preview = preview,
+                    previewContentDescription = "Watermark preview",
+                )
             }
         }
     }

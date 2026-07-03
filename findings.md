@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Preview status display can share UI without moving rendering (S4d-293, 2026-07-03)
+
+- The Desktop status text plus optional preview bitmap is a pure display shell once the caller supplies `ImageBitmap` and labels. Move the visual layout to commonMain.
+- Keep `refreshPreview()`, temp-file output, `DesktopImageDecoder`, `preview` state ownership, and status string production in Desktop. The shared shell must not learn about file paths or render flow.
+
 ## Save command buttons can share layout while Desktop owns dialogs (S4d-292, 2026-07-03)
 
 - The Render & Save / Save as / Open image cluster is pure button layout once the actions are callbacks. Move labels and busy-disabled state to commonMain.
