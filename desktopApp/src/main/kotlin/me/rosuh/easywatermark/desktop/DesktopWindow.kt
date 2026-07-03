@@ -258,8 +258,8 @@ fun launchDesktopWindow() = application {
     // S4d-151: the horizontal/vertical watermark GAPS being edited (parsed together on "Apply gaps").
     var hGapText by remember { mutableStateOf("") }
     var vGapText by remember { mutableStateOf("") }
-    // S4d-152: the watermark TEXT SIZE being edited (string; parsed on "Apply text size"). Loaded on launch.
-    var textSizeText by remember { mutableStateOf("") }
+    // S4d-285: watermark text size edited through the shared SliderOption (1..100).
+    var textSizeValue by remember { mutableStateOf(14f) }
     // S4d-279: current persisted tile mode consumed through the shared segmented tile-mode option.
     var tileMode by remember { mutableStateOf(WatermarkTileMode.REPEAT) }
     // S4d-280: current persisted typeface consumed through the shared segmented typeface option.
@@ -282,7 +282,7 @@ fun launchDesktopWindow() = application {
         hGapText = repo.waterMark.first().hGap.toString()
         vGapText = repo.waterMark.first().vGap.toString()
         // S4d-152: load the persisted text size into the editable field.
-        textSizeText = repo.waterMark.first().textSize.toString()
+        textSizeValue = repo.waterMark.first().textSize
         // S4d-153/S4d-279: load the persisted tile mode (only REPEAT/CLAMP are exposed in the UI).
         tileMode = repo.waterMark.first().tileMode
         // S4d-154/S4d-280: load the persisted typeface + text style.
@@ -631,46 +631,33 @@ fun launchDesktopWindow() = application {
                 ) {
                     Text("Apply gaps")
                 }
-                // S4d-152: the watermark TEXT SIZE input. Parsed on an explicit "Apply text size" click
-                // (toFloatOrNull + isFinite; invalid → status only, no persist); coerced to 1f..100f at the
-                // edge (the repo also clamps); persisted via WatermarkConfigEditor.updateTextSize. The field
-                // snaps to the applied value. S4d-198: a successful apply auto-refreshes the preview (manual "Preview" still available).
-                OutlinedTextField(
-                    value = textSizeText,
-                    onValueChange = { textSizeText = it },
+                // S4d-285: Desktop consumes the shared slider shell for text size. Persistence still happens
+                // only on slider-release through WatermarkConfigEditor.updateTextSize.
+                Text("Text size", style = MaterialTheme.typography.bodyMedium)
+                SliderOption(
+                    currentValue = textSizeValue,
+                    valueRange = 1f..100f,
                     enabled = !busy,
-                    label = { Text("Text size (1–100)") },
-                )
-                Button(
-                    enabled = !busy,
-                    onClick = {
-                        val parsed = textSizeText.trim().toFloatOrNull()?.takeIf { it.isFinite() }
-                        if (parsed == null) {
-                            // Invalid/non-finite → short failure status; do NOT call the editor.
-                            status = "Invalid text size: \"$textSizeText\" — enter a number (1–100)."
-                        } else {
-                            scope.launch {
-                                busy = true
-                                val applied = parsed.coerceIn(1f, 100f)
-                                val (next, ok) = withContext(Dispatchers.IO) {
-                                    try {
-                                        editor.updateTextSize(applied)
-                                        "Text size applied: $applied" to true
-                                    } catch (t: Throwable) {
-                                        "Failed: ${t.message}" to false
-                                    }
+                    onValueChange = { textSizeValue = it.coerceIn(1f, 100f) },
+                    onValueChangeFinished = {
+                        scope.launch {
+                            busy = true
+                            val applied = textSizeValue.coerceIn(1f, 100f)
+                            val (next, ok) = withContext(Dispatchers.IO) {
+                                try {
+                                    editor.updateTextSize(applied)
+                                    "Text size applied: $applied" to true
+                                } catch (t: Throwable) {
+                                    "Failed: ${t.message}" to false
                                 }
-                                // Snap the field to the applied/coerced value on a successful apply.
-                                if (ok) textSizeText = applied.toString()
-                                // S4d-198: auto-refresh the preview on success (no manual Preview click).
-                                status = if (ok) "$next · ${refreshPreview()}" else next
-                                busy = false
                             }
+                            if (ok) textSizeValue = repo.waterMark.first().textSize
+                            // S4d-198: auto-refresh the preview on success (no manual Preview click).
+                            status = if (ok) "$next · ${refreshPreview()}" else next
+                            busy = false
                         }
                     },
-                ) {
-                    Text("Apply text size")
-                }
+                )
                 // S4d-279: Desktop consumes the shared segmented tile-mode option. Persistence remains the
                 // existing WatermarkConfigEditor path; no renderer behavior changes.
                 Text("Tile mode: ${tileMode.name}", style = MaterialTheme.typography.bodyMedium)

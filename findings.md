@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Desktop numeric sliders should re-read persisted values after release (S4d-285, 2026-07-03)
+
+- Reusing `SliderOption` for Desktop text size follows the opacity pattern: keep drag-local UI state, persist on release, then re-read the repository value because the shared editor/repository still owns coercion and storage semantics.
+- This avoids carrying Desktop-only "Apply" text fields for values that already have a product slider shell, while keeping invalid-text parsing out of the shared component.
+
 ## Shared sliders need a release callback for Desktop persistence (S4d-284, 2026-07-03)
 
 - The Android editor can keep using `SliderOption` as an immediate value callback, but Desktop persistence should write on slider release to avoid a DataStore/render pass for every drag frame.
