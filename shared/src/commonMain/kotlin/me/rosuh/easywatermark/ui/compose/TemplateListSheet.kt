@@ -57,8 +57,10 @@ import kotlin.time.Clock
 fun TemplateListSheet(
     templates: List<Template>,
     strings: TemplateListSheetStrings,
-    editIcon: Painter,
-    deleteIcon: Painter,
+    editIcon: Painter? = null,
+    deleteIcon: Painter? = null,
+    enabled: Boolean = true,
+    newTemplateInitialText: String = "",
     onDismiss: () -> Unit,
     onUse: (Template) -> Unit,
     onAdd: (String) -> Unit,
@@ -94,7 +96,10 @@ fun TemplateListSheet(
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                TextButton(onClick = { editTarget = TemplateEditTarget(null) }) {
+                TextButton(
+                    enabled = enabled,
+                    onClick = { editTarget = TemplateEditTarget(null) },
+                ) {
                     Text(text = strings.addButton)
                 }
             }
@@ -124,20 +129,44 @@ fun TemplateListSheet(
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier
                                     .weight(1f)
-                                    .clickable { confirmUse = template }
+                                    .clickable(enabled = enabled) { confirmUse = template }
                                     .padding(vertical = 16.dp)
                             )
-                            IconButton(onClick = { editTarget = TemplateEditTarget(template) }) {
-                                Icon(
-                                    painter = editIcon,
-                                    contentDescription = strings.editTitle,
-                                )
+                            if (editIcon != null) {
+                                IconButton(
+                                    enabled = enabled,
+                                    onClick = { editTarget = TemplateEditTarget(template) },
+                                ) {
+                                    Icon(
+                                        painter = editIcon,
+                                        contentDescription = strings.editTitle,
+                                    )
+                                }
+                            } else {
+                                TextButton(
+                                    enabled = enabled,
+                                    onClick = { editTarget = TemplateEditTarget(template) },
+                                ) {
+                                    Text(strings.editButton)
+                                }
                             }
-                            IconButton(onClick = { confirmDelete = template }) {
-                                Icon(
-                                    painter = deleteIcon,
-                                    contentDescription = strings.deleteConfirm,
-                                )
+                            if (deleteIcon != null) {
+                                IconButton(
+                                    enabled = enabled,
+                                    onClick = { confirmDelete = template },
+                                ) {
+                                    Icon(
+                                        painter = deleteIcon,
+                                        contentDescription = strings.deleteConfirm,
+                                    )
+                                }
+                            } else {
+                                TextButton(
+                                    enabled = enabled,
+                                    onClick = { confirmDelete = template },
+                                ) {
+                                    Text(strings.deleteButton)
+                                }
                             }
                         }
                         HorizontalDivider()
@@ -150,9 +179,10 @@ fun TemplateListSheet(
     // add / edit content sheet
     editTarget?.let { target ->
         TemplateEditSheet(
-            initialText = target.template?.content ?: "",
+            initialText = target.template?.content ?: newTemplateInitialText,
             editTitle = strings.editTitle,
             confirmButton = strings.confirm,
+            enabled = enabled,
             onConfirm = { text ->
                 val t = target.template
                 if (t != null) {
@@ -172,11 +202,14 @@ fun TemplateListSheet(
             title = { Text(strings.existConfirmTitle) },
             text = { Text(strings.useThisTemplate) },
             confirmButton = {
-                TextButton(onClick = {
-                    onUse(template)
-                    confirmUse = null
-                    onDismiss()
-                }) { Text(strings.confirm) }
+                TextButton(
+                    enabled = enabled,
+                    onClick = {
+                        onUse(template)
+                        confirmUse = null
+                        onDismiss()
+                    },
+                ) { Text(strings.confirm) }
             },
             dismissButton = {
                 TextButton(onClick = { confirmUse = null }) {
@@ -192,10 +225,13 @@ fun TemplateListSheet(
             title = { Text(strings.existConfirmTitle) },
             text = { Text(strings.deleteConfirm) },
             confirmButton = {
-                TextButton(onClick = {
-                    onDelete(template)
-                    confirmDelete = null
-                }) { Text(strings.confirm) }
+                TextButton(
+                    enabled = enabled,
+                    onClick = {
+                        onDelete(template)
+                        confirmDelete = null
+                    },
+                ) { Text(strings.confirm) }
             },
             dismissButton = {
                 TextButton(onClick = { confirmDelete = null }) {
@@ -221,6 +257,8 @@ data class TemplateListSheetStrings(
     val useThisTemplate: String,
     val confirm: String,
     val cancel: String,
+    val editButton: String = "Edit",
+    val deleteButton: String = "Delete",
 )
 
 /** Distinguishes "add" (template == null) from "edit" (template != null). */
@@ -232,6 +270,7 @@ private fun TemplateEditSheet(
     initialText: String,
     editTitle: String,
     confirmButton: String,
+    enabled: Boolean,
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -257,6 +296,7 @@ private fun TemplateEditSheet(
             OutlinedTextField(
                 value = draft,
                 onValueChange = { draft = it },
+                enabled = enabled,
                 modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentHeight(),
@@ -264,7 +304,7 @@ private fun TemplateEditSheet(
             )
             Button(
                 onClick = { onConfirm(draft) },
-                enabled = draft.isNotBlank(),
+                enabled = enabled && draft.isNotBlank(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 24.dp),

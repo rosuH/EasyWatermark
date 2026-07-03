@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## TemplateListSheet can host Desktop with optional icon edges (S4d-290, 2026-07-03)
+
+- The shared template sheet was already a pure UI surface over `Template` callbacks; Desktop can consume it once edit/delete painters are optional and text-button fallbacks exist.
+- Keep repository writes at the platform edge. Desktop passes `TemplateEditor`/`WatermarkConfigEditor` callbacks and a current-text initial value, while the shared host owns sheet visibility, add/edit/use/delete UI, and confirmations. Android keeps resource-backed icons unchanged.
+
 ## Color shell can move without importing Android MotionLayout (S4d-289, 2026-07-03)
 
 - Do not move the existing Android `ColorOption` to commonMain as-is: it depends on `painterResource`, Android drawable ids, `FuncTitleModel`, and `constraintlayout-compose`/MotionLayout. Adding that dependency to `:shared` would violate the current narrow dependency surface.

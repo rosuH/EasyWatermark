@@ -36,7 +36,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.time.Clock
 import me.rosuh.easywatermark.data.db.buildTemplateDatabase
 import me.rosuh.easywatermark.data.db.unpackDefaultTemplateSeed
 import me.rosuh.easywatermark.data.model.ImageFormat
@@ -53,6 +52,7 @@ import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopImageDecoder
 import me.rosuh.easywatermark.render.DesktopSaveDecision
+import me.rosuh.easywatermark.ui.EditorTemplateSheetHost
 import me.rosuh.easywatermark.ui.compose.IconWatermarkOption
 import me.rosuh.easywatermark.ui.compose.SliderOption
 import me.rosuh.easywatermark.ui.compose.TextColorOption
@@ -63,6 +63,7 @@ import me.rosuh.easywatermark.ui.compose.TextPaintStyleLabels
 import me.rosuh.easywatermark.ui.compose.TextPaintStyleOption
 import me.rosuh.easywatermark.ui.compose.TextTypefaceLabels
 import me.rosuh.easywatermark.ui.compose.TileModeLabels
+import me.rosuh.easywatermark.ui.compose.TemplateListSheetStrings
 import me.rosuh.easywatermark.ui.compose.formatArgbHexColor
 import me.rosuh.easywatermark.ui.compose.parseArgbHexColor
 import me.rosuh.easywatermark.ui.compose.TextTypeface as TextTypefaceOption
@@ -214,6 +215,7 @@ private fun resolveDesktopOutputDir(): File {
  * keeping persistence/preview refresh at the Desktop edge.
  * S4d-288 replaced the horizontal/vertical gap Apply fields with two shared `SliderOption` consumers.
  * S4d-289 replaced the text-color Apply field with a shared palette + custom-hex `TextColorOption`.
+ * S4d-290 replaced the inline Desktop templates section with shared `EditorTemplateSheetHost`.
  */
 fun launchDesktopWindow() = application {
     // S4d-215: persist the window's user state (watermark config, output prefs, templates DB) under the
@@ -1094,18 +1096,47 @@ fun launchDesktopWindow() = application {
                         },
                     ) { Text("Copy output path") }
                 }
-                // S4d-160/S4d-226: minimal Templates section over the shared Desktop Room template path. "Save
-                // current text" stores the edited watermark text (templateEditor.add); each saved row applies it
-                // (Use → WatermarkConfigEditor.updateText + sync the text field), updates in place from the
-                // current watermark text (Update → TemplateEditor.update, preserving id/creationDate), or deletes
-                // it. S4d-198: Use auto-refreshes the preview after a successful apply. `content` is the watermark
-                // TEXT (S4d-159).
-                Text("Templates", style = MaterialTheme.typography.titleMedium)
-                Button(
-                    // S4d-162: require nonblank text so an empty template can't be saved.
-                    enabled = !busy && watermarkText.isNotBlank(),
-                    onClick = {
-                        val text = watermarkText
+                // S4d-290: Desktop consumes the shared template sheet host. Desktop still owns the Room-backed
+                // repository/editor callbacks; the shared host owns sheet visibility, add/edit/use/delete UI,
+                // confirmations, and no-icon text fallbacks.
+                EditorTemplateSheetHost(
+                    templates = templates,
+                    strings = TemplateListSheetStrings(
+                        title = "Templates",
+                        addButton = "Add",
+                        empty = "No templates yet.",
+                        editTitle = "Edit template",
+                        deleteConfirm = "Delete this template?",
+                        existConfirmTitle = "Confirm",
+                        useThisTemplate = "Use this template?",
+                        confirm = "OK",
+                        cancel = "Cancel",
+                        editButton = "Edit",
+                        deleteButton = "Delete",
+                    ),
+                    enabled = !busy,
+                    newTemplateInitialText = watermarkText,
+                    onUse = { template ->
+                        val content = template.content
+                        if (content != null) {
+                            scope.launch {
+                                busy = true
+                                val (msg, ok) = withContext(Dispatchers.IO) {
+                                    try {
+                                        editor.updateText(content)
+                                        "Template applied: \"$content\"" to true
+                                    } catch (t: Throwable) {
+                                        "Failed: ${t.message}" to false
+                                    }
+                                }
+                                if (ok) watermarkText = content
+                                // S4d-198: auto-refresh the preview on success (no manual Preview click).
+                                status = if (ok) "$msg · ${refreshPreview()}" else msg
+                                busy = false
+                            }
+                        }
+                    },
+                    onAdd = { text ->
                         scope.launch {
                             busy = true
                             val next = withContext(Dispatchers.IO) {
@@ -1120,88 +1151,42 @@ fun launchDesktopWindow() = application {
                             busy = false
                         }
                     },
-                ) { Text("Save current text as template") }
-                if (templates.isEmpty()) {
-                    Text("No templates yet — save one above.", style = MaterialTheme.typography.bodyMedium)
-                } else {
-                    templates.forEach { template ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Text(
-                                template.content ?: "",
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.weight(1f),
-                            )
-                            Button(
-                                enabled = !busy && template.content != null,
-                                onClick = {
-                                    val content = template.content
-                                    if (content != null) {
-                                        scope.launch {
-                                            busy = true
-                                            val (msg, ok) = withContext(Dispatchers.IO) {
-                                                try {
-                                                    editor.updateText(content)
-                                                    "Template applied: \"$content\"" to true
-                                                } catch (t: Throwable) {
-                                                    "Failed: ${t.message}" to false
-                                                }
-                                            }
-                                            // Sync the editable text field to the applied template on success.
-                                            if (ok) watermarkText = content
-                                            // S4d-198: auto-refresh the preview on success (no manual Preview click).
-                                            status = if (ok) "$msg · ${refreshPreview()}" else msg
-                                            busy = false
-                                        }
-                                    }
-                                },
-                            ) { Text("Use") }
-                            Button(
-                                // S4d-226: update the existing row from the current watermark text.
-                                enabled = !busy && watermarkText.isNotBlank(),
-                                onClick = {
-                                    val text = watermarkText
-                                    scope.launch {
-                                        busy = true
-                                        val next = withContext(Dispatchers.IO) {
-                                            try {
-                                                templateEditor.update(
-                                                    template.copy(
-                                                        content = text,
-                                                        lastModifiedDate = Clock.System.now(),
-                                                    )
-                                                )
-                                                "Updated template to: \"$text\""
-                                            } catch (t: Throwable) {
-                                                "Failed: ${t.message}"
-                                            }
-                                        }
-                                        status = next
-                                        busy = false
-                                    }
-                                },
-                            ) { Text("Update") }
-                            Button(
-                                enabled = !busy,
-                                onClick = {
-                                    scope.launch {
-                                        busy = true
-                                        val next = withContext(Dispatchers.IO) {
-                                            try {
-                                                templateEditor.delete(template)
-                                                "Template deleted."
-                                            } catch (t: Throwable) {
-                                                "Failed: ${t.message}"
-                                            }
-                                        }
-                                        status = next
-                                        busy = false
-                                    }
-                                },
-                            ) { Text("Delete") }
+                    onUpdate = { template ->
+                        scope.launch {
+                            busy = true
+                            val next = withContext(Dispatchers.IO) {
+                                try {
+                                    templateEditor.update(template)
+                                    "Updated template to: \"${template.content.orEmpty()}\""
+                                } catch (t: Throwable) {
+                                    "Failed: ${t.message}"
+                                }
+                            }
+                            status = next
+                            busy = false
                         }
+                    },
+                    onDelete = { template ->
+                        scope.launch {
+                            busy = true
+                            val next = withContext(Dispatchers.IO) {
+                                try {
+                                    templateEditor.delete(template)
+                                    "Template deleted."
+                                } catch (t: Throwable) {
+                                    "Failed: ${t.message}"
+                                }
+                            }
+                            status = next
+                            busy = false
+                        }
+                    },
+                ) { showTemplateSheet ->
+                    Button(
+                        enabled = !busy,
+                        onClick = showTemplateSheet,
+                    ) {
+                        Text("Templates")
                     }
                 }
                 Text(status, style = MaterialTheme.typography.bodyMedium)
