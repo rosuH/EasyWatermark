@@ -18,19 +18,24 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
-import me.rosuh.easywatermark.R
 
 /**
  * Compose replacement for the legacy [OpenSourceActivity] (View→Compose migration).
  * A simple scrollable list of open-source library cards; each opens its repo link.
+ *
+ * S4d-238 resource strategy: all text is passed as [OpenSourceScreenStrings] (the Android
+ * caller resolves `stringResource` at the edge); the back icon is passed as a [Painter]
+ * (the Android caller resolves `painterResource` at the edge). This composable has no
+ * `R.string`/`R.drawable`/`stringResource`/`painterResource` dependencies.
  */
 @Composable
 fun OpenSourceScreen(
     onBack: () -> Unit,
     onOpenLink: (String) -> Unit,
+    backIcon: Painter,
+    strings: OpenSourceScreenStrings,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -44,35 +49,43 @@ fun OpenSourceScreen(
         ) {
             IconButton(onClick = onBack) {
                 Icon(
-                    painter = painterResource(id = R.drawable.ic_back),
+                    painter = backIcon,
                     contentDescription = "back",
                     tint = MaterialTheme.colorScheme.onSurface
                 )
             }
             Text(
-                text = stringResource(R.string.about_title_open_source),
+                text = strings.title,
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(start = 8.dp)
             )
         }
 
-        OssCard("ColorPickerView", stringResource(R.string.open_source_desc_color_picker)) {
+        OssCard("ColorPickerView", strings.colorPickerDesc) {
             onOpenLink("https://github.com/skydoves/ColorPickerView")
         }
-        OssCard("Coil", stringResource(R.string.open_source_desc_about_lib)) {
+        OssCard("Coil", strings.aboutLibDesc) {
             onOpenLink("https://github.com/coil-kt/coil")
         }
-        OssCard("Material Components for Android", stringResource(R.string.open_source_desc_material_components)) {
+        OssCard("Material Components for Android", strings.materialComponentsDesc) {
             onOpenLink("https://github.com/material-components/material-components-android")
         }
-        OssCard("Compressor", stringResource(R.string.open_source_desc_compressor)) {
+        OssCard("Compressor", strings.compressorDesc) {
             onOpenLink("https://github.com/zetbaitsu/Compressor/")
         }
 
         Spacer(Modifier.height(24.dp))
     }
 }
+
+data class OpenSourceScreenStrings(
+    val title: String,
+    val colorPickerDesc: String,
+    val aboutLibDesc: String,
+    val materialComponentsDesc: String,
+    val compressorDesc: String,
+)
 
 @Composable
 private fun OssCard(name: String, desc: String, onClick: () -> Unit) {

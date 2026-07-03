@@ -19,20 +19,24 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import me.rosuh.easywatermark.R
 
 /**
  * Compose replacement for the legacy `activity_recovery.xml` crash-recovery screen
- * (View→Compose migration, ADR-0016). Shown by [ComposeMainActivity] when
- * `MyApp.recoveryMode` is true — the crash-loop self-heal surface. Pure UI + callbacks;
+ * (View→Compose migration, ADR-0016). Shown by [me.rosuh.easywatermark.ui.ComposeMainActivity]
+ * when `MyApp.recoveryMode` is true — the crash-loop self-heal surface. Pure UI + callbacks;
  * the host wires clipboard, email, links, and recovery-mode reset.
+ *
+ * Moved to `:shared/commonMain` in S4d-241. S4d-238 resource strategy: all visible labels are
+ * passed as [RecoveryScreenStrings] (the Android caller resolves `stringResource` at the edge,
+ * and passes the previously-hardcoded button literals through unchanged). This composable has
+ * no `R.string`/`stringResource`/`painterResource` or Android-package dependencies.
  */
 @Composable
 fun RecoveryScreen(
     crashInfo: String,
+    strings: RecoveryScreenStrings,
     onCopy: () -> Unit,
     onSendEmail: () -> Unit,
     onTelegram: () -> Unit,
@@ -48,13 +52,13 @@ fun RecoveryScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = stringResource(R.string.recovery_title),
+            text = strings.title,
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(top = 16.dp)
         )
         Text(
-            text = stringResource(R.string.recovery_mode_tips),
+            text = strings.tips,
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
@@ -78,18 +82,34 @@ fun RecoveryScreen(
         }
         Spacer(Modifier.height(12.dp))
         Button(onClick = onCopy) {
-            Text(stringResource(R.string.copy))
+            Text(strings.copy)
         }
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            TextButton(onClick = onSendEmail) { Text("Send email") }
-            TextButton(onClick = onTelegram) { Text("Send Telegram") }
-            TextButton(onClick = onStore) { Text("Jump to Store") }
+            TextButton(onClick = onSendEmail) { Text(strings.sendEmail) }
+            TextButton(onClick = onTelegram) { Text(strings.sendTelegram) }
+            TextButton(onClick = onStore) { Text(strings.jumpToStore) }
         }
         TextButton(onClick = onCloseRecovery) {
-            Text(stringResource(R.string.turn_off_recovery_mode))
+            Text(strings.turnOffRecovery)
         }
     }
 }
+
+/**
+ * Resolved string values for [RecoveryScreen]. The Android caller constructs this at the edge
+ * using `stringResource(R.string.*)` for the localized labels and passes the previously
+ * hardcoded button literals (`sendEmail`/`sendTelegram`/`jumpToStore`) through unchanged.
+ * Desktop/iOS pass hard-coded English strings. See S4d-238 resource strategy.
+ */
+data class RecoveryScreenStrings(
+    val title: String,
+    val tips: String,
+    val copy: String,
+    val sendEmail: String,
+    val sendTelegram: String,
+    val jumpToStore: String,
+    val turnOffRecovery: String,
+)

@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.os.BuildCompat
@@ -65,6 +66,7 @@ import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.ui.about.AboutScreen
 import me.rosuh.easywatermark.ui.about.AboutViewModel
 import me.rosuh.easywatermark.ui.about.OpenSourceScreen
+import me.rosuh.easywatermark.ui.about.OpenSourceScreenStrings
 import me.rosuh.easywatermark.utils.ktx.openLink
 import me.rosuh.easywatermark.utils.ktx.toUri
 import me.rosuh.easywatermark.ui.compose.GalleryDialog
@@ -152,6 +154,15 @@ class ComposeMainActivity : ComponentActivity() {
                     Surface(modifier = Modifier.fillMaxSize()) {
                         RecoveryScreen(
                             crashInfo = crashStackTrace(),
+                            strings = RecoveryScreenStrings(
+                                title = stringResource(R.string.recovery_title),
+                                tips = stringResource(R.string.recovery_mode_tips),
+                                copy = stringResource(R.string.copy),
+                                sendEmail = "Send email",
+                                sendTelegram = "Send Telegram",
+                                jumpToStore = "Jump to Store",
+                                turnOffRecovery = stringResource(R.string.turn_off_recovery_mode),
+                            ),
                             onCopy = { copyCrashInfo(crashStackTrace()) },
                             onSendEmail = {
                                 viewModel.extraCrashInfo(this@ComposeMainActivity, crashStackTrace())
@@ -388,7 +399,15 @@ class ComposeMainActivity : ComponentActivity() {
                                 composable<OpenSourceRoute> {
                                     OpenSourceScreen(
                                         onBack = { navController.popBackStack() },
-                                        onOpenLink = { url -> this@ComposeMainActivity.openLink(url) }
+                                        onOpenLink = { url -> this@ComposeMainActivity.openLink(url) },
+                                        backIcon = painterResource(R.drawable.ic_back),
+                                        strings = OpenSourceScreenStrings(
+                                            title = stringResource(R.string.about_title_open_source),
+                                            colorPickerDesc = stringResource(R.string.open_source_desc_color_picker),
+                                            aboutLibDesc = stringResource(R.string.open_source_desc_about_lib),
+                                            materialComponentsDesc = stringResource(R.string.open_source_desc_material_components),
+                                            compressorDesc = stringResource(R.string.open_source_desc_compressor),
+                                        ),
                                     )
                                 }
                             }
