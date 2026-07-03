@@ -23,7 +23,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-const val ANIMATION_DURATION = 50L
+private const val ANIMATION_DURATION = 50L
 
 class AnimatedTransitionDialogHelper(
     private val coroutineScope: CoroutineScope,
@@ -79,7 +79,7 @@ fun AnimatedTransitionHost(
 }
 
 @Composable
-fun AnimatedSlideInTransition(
+private fun AnimatedSlideInTransition(
     visible: Boolean,
     content: @Composable AnimatedVisibilityScope.() -> Unit,
 ) {
@@ -91,7 +91,7 @@ fun AnimatedSlideInTransition(
     )
 }
 
-suspend fun startDismissWithExitAnimation(
+private suspend fun startDismissWithExitAnimation(
     animateTrigger: MutableState<Boolean>,
     onDismiss: () -> Unit,
 ) {

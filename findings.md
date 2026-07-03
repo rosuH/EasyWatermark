@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Keep transition internals behind the host boundary (S4d-319, 2026-07-03)
+
+- Shared transition hosts should expose the host and dismiss helper, not their timing constants or inner animation functions, unless another platform genuinely needs those pieces as API.
+- A helper can stay public only if it appears in a public signature or has a real external caller. Here `AnimatedTransitionDialogHelper` remains public because `AnimatedTransitionHost` passes it to content, while the timing and slide/dismiss implementation stay private.
+
 ## Keep shared shell child components private when file-local (S4d-318, 2026-07-03)
 
 - Parent shell APIs should be the stable shared CMP boundary. Child composables such as gallery cards, checkboxes, and strip items should stay private when all callers are in the same file, so future platform code binds to the shell instead of its implementation pieces.
