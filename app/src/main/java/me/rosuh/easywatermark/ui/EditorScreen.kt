@@ -9,7 +9,6 @@ import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -52,7 +51,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -261,21 +259,9 @@ fun OptionControl(
     onGoTemplateList: () -> Unit = {},
     onDismissRequest: () -> Unit,
 ) {
-    val configuration = LocalWindowInfo.current.containerSize
-    val screenHeight = configuration.height.dp
-    val isColor = item.type == FuncType.Color
-    val height = if (isColor) {
-        screenHeight / 3
-    } else {
-        screenHeight / 4
-    }
-    Box(
-        modifier = modifier
-            .background(MaterialTheme.colorScheme.surface)
-    ) {
-        val innerModifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
+    EditorOptionControlFrame(
+        modifier = modifier,
+    ) { innerModifier ->
         when (item.type) {
             FuncType.Alpha -> {
                 SliderOption(

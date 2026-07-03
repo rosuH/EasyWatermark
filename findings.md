@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Option-control frame can move while option content stays app-side (S4d-270, 2026-07-03)
+
+- The option-control surface and 16dp inner padding are pure shared UI; the selected option body remains Android-owned until Color/MotionLayout and Icon picker boundaries are handled.
+- Removing dead local sizing is safe when the value has no consumer. The old `showSheet`/`onDismissRequest` parameters are still a separate API-cleanup question, but the unused screen-height-derived `height` variable had zero effect.
+
 ## Editor bottom tab row can move with labels and logging injected (S4d-269, 2026-07-03)
 
 - The tab-row shell, divider, animated indicator, and tab text layout are pure CMP UI once Android injects the three localized labels.
