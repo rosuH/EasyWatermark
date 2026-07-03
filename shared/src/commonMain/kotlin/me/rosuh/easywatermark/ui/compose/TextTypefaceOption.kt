@@ -32,6 +32,7 @@ fun TextTypeface(
     labels: TextTypefaceLabels,
     typeface: TextTypeface,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     onValueChange: (TextTypeface) -> Unit,
 ) {
     val options = listOf(
@@ -44,6 +45,7 @@ fun TextTypeface(
         options.forEachIndexed { index, textTypefacePair ->
             SegmentedButton(
                 selected = typeface == textTypefacePair.second,
+                enabled = enabled,
                 onClick = {
                     onValueChange(textTypefacePair.second)
                 },

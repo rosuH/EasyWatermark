@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Desktop typeface can consume the shared segmented option (S4d-280, 2026-07-03)
+
+- `TextTypeface` is a safe off-Android shared UI consumer because Desktop already persists `TextTypeface` through `WatermarkConfigEditor`.
+- Keep Desktop's truth source as the persisted enum value, not a display label string; labels stay edge-provided through `TextTypefaceLabels`.
+
 ## Desktop tile mode can consume the shared segmented option (S4d-279, 2026-07-03)
 
 - `TileMode` is a safe off-Android shared UI consumer because Desktop already persists `WatermarkTileMode` through `WatermarkConfigEditor`.

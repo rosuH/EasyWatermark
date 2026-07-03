@@ -54,7 +54,9 @@ import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopImageDecoder
 import me.rosuh.easywatermark.render.DesktopSaveDecision
+import me.rosuh.easywatermark.ui.compose.TextTypefaceLabels
 import me.rosuh.easywatermark.ui.compose.TileModeLabels
+import me.rosuh.easywatermark.ui.compose.TextTypeface as TextTypefaceOption
 import me.rosuh.easywatermark.ui.compose.TileMode as TileModeOption
 import me.rosuh.easywatermark.ui.save.SaveExportOptionsSection
 import me.rosuh.easywatermark.ui.theme.AppTheme
@@ -256,8 +258,9 @@ fun launchDesktopWindow() = application {
     var textSizeText by remember { mutableStateOf("") }
     // S4d-279: current persisted tile mode consumed through the shared segmented tile-mode option.
     var tileMode by remember { mutableStateOf(WatermarkTileMode.REPEAT) }
-    // S4d-154: the current persisted typeface + text-style labels (explicit label maps). Loaded on launch.
-    var typefaceLabel by remember { mutableStateOf("loading…") }
+    // S4d-280: current persisted typeface consumed through the shared segmented typeface option.
+    var typeface by remember { mutableStateOf<TextTypeface>(TextTypeface.Normal) }
+    // S4d-154: the current persisted text-style label (explicit label map). Loaded on launch.
     var styleLabel by remember { mutableStateOf("loading…") }
     LaunchedEffect(Unit) {
         userConfigRepo.userPreferences.first().let {
@@ -278,8 +281,8 @@ fun launchDesktopWindow() = application {
         textSizeText = repo.waterMark.first().textSize.toString()
         // S4d-153/S4d-279: load the persisted tile mode (only REPEAT/CLAMP are exposed in the UI).
         tileMode = repo.waterMark.first().tileMode
-        // S4d-154: load the persisted typeface + text style (explicit label maps — no reflection).
-        typefaceLabel = typefaceLabelOf(repo.waterMark.first().textTypeface)
+        // S4d-154/S4d-280: load the persisted typeface + text style.
+        typeface = repo.waterMark.first().textTypeface
         styleLabel = styleLabelOf(repo.waterMark.first().textStyle)
     }
 
@@ -709,41 +712,38 @@ fun launchDesktopWindow() = application {
                         }
                     },
                 )
-                // S4d-154: the watermark TYPEFACE control. One button per TextTypeface (Normal/Italic/Bold/
-                // BoldItalic) persists via WatermarkConfigEditor.updateTextTypeface; the current persisted value
-                // shows in the label (re-read after each apply, truthful on a write failure). These four are the
-                // only typeface choices. Both enums are render-honored on Desktop Skiko (S4d-122/123). S4d-198: auto-preview.
-                Text("Typeface: $typefaceLabel", style = MaterialTheme.typography.bodyMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(
-                        TextTypeface.Normal,
-                        TextTypeface.Italic,
-                        TextTypeface.Bold,
-                        TextTypeface.BoldItalic,
-                    ).forEach { tf ->
-                        val name = typefaceLabelOf(tf)
-                        Button(
-                            enabled = !busy,
-                            onClick = {
-                                scope.launch {
-                                    busy = true
-                                    val (msg, ok) = withContext(Dispatchers.IO) {
-                                        try {
-                                            editor.updateTextTypeface(tf)
-                                            "Typeface → $name" to true
-                                        } catch (t: Throwable) {
-                                            "Failed: ${t.message}" to false
-                                        }
+                // S4d-280: Desktop consumes the shared segmented typeface option. Persistence remains the
+                // existing WatermarkConfigEditor path; no renderer behavior changes.
+                Text("Typeface: ${typefaceLabelOf(typeface)}", style = MaterialTheme.typography.bodyMedium)
+                TextTypefaceOption(
+                    labels = TextTypefaceLabels(
+                        normal = "Normal",
+                        bold = "Bold",
+                        italic = "Italic",
+                        boldItalic = "BoldItalic",
+                    ),
+                    typeface = typeface,
+                    enabled = !busy,
+                    onValueChange = { selectedTypeface ->
+                        if (selectedTypeface != typeface) {
+                            scope.launch {
+                                busy = true
+                                val (msg, ok) = withContext(Dispatchers.IO) {
+                                    try {
+                                        editor.updateTextTypeface(selectedTypeface)
+                                        "Typeface → ${typefaceLabelOf(selectedTypeface)}" to true
+                                    } catch (t: Throwable) {
+                                        "Failed: ${t.message}" to false
                                     }
-                                    typefaceLabel = typefaceLabelOf(repo.waterMark.first().textTypeface)
-                                    // S4d-198: auto-refresh the preview on success (no manual Preview click).
-                                    status = if (ok) "$msg · ${refreshPreview()}" else msg
-                                    busy = false
                                 }
-                            },
-                        ) { Text(name) }
-                    }
-                }
+                                typeface = repo.waterMark.first().textTypeface
+                                // S4d-198: auto-refresh the preview on success (no manual Preview click).
+                                status = if (ok) "$msg · ${refreshPreview()}" else msg
+                                busy = false
+                            }
+                        }
+                    },
+                )
                 // S4d-154: the watermark TEXT STYLE control. One button per TextPaintStyle (Fill/Stroke) persists
                 // via WatermarkConfigEditor.updateTextStyle; the current persisted value shows in the label (re-read
                 // after each apply). These two are the only style choices. S4d-198: a successful apply auto-previews.
