@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Mode action controls can share layout while Desktop owns mode effects (S4d-294, 2026-07-03)
+
+- The Open icon / Use text watermark / Preview cluster is pure action layout once the actions are callbacks. Move labels, grouping, and busy-disabled state to commonMain.
+- Keep AWT icon picking, private icon copy, `MediaRef` persistence, Text-mode switching, preview rendering, and status messages in Desktop. This preserves the platform edges while removing another hand-built Desktop control cluster.
+
 ## Preview status display can share UI without moving rendering (S4d-293, 2026-07-03)
 
 - The Desktop status text plus optional preview bitmap is a pure display shell once the caller supplies `ImageBitmap` and labels. Move the visual layout to commonMain.

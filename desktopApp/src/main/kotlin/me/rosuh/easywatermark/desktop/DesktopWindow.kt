@@ -50,7 +50,6 @@ import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopImageDecoder
 import me.rosuh.easywatermark.render.DesktopSaveDecision
 import me.rosuh.easywatermark.ui.EditorTemplateSheetHost
-import me.rosuh.easywatermark.ui.compose.IconWatermarkOption
 import me.rosuh.easywatermark.ui.compose.SliderOption
 import me.rosuh.easywatermark.ui.compose.TextColorOption
 import me.rosuh.easywatermark.ui.compose.TextColorOptionStrings
@@ -61,6 +60,8 @@ import me.rosuh.easywatermark.ui.compose.TextPaintStyleOption
 import me.rosuh.easywatermark.ui.compose.TextTypefaceLabels
 import me.rosuh.easywatermark.ui.compose.TileModeLabels
 import me.rosuh.easywatermark.ui.compose.TemplateListSheetStrings
+import me.rosuh.easywatermark.ui.compose.WatermarkModeActions
+import me.rosuh.easywatermark.ui.compose.WatermarkModeActionsLabels
 import me.rosuh.easywatermark.ui.compose.formatArgbHexColor
 import me.rosuh.easywatermark.ui.compose.parseArgbHexColor
 import me.rosuh.easywatermark.ui.compose.TextTypeface as TextTypefaceOption
@@ -221,6 +222,7 @@ private fun resolveDesktopOutputDir(): File {
  * S4d-291 replaced the share-substitute button row with shared `SavedOutputActions`.
  * S4d-292 replaced the Render/Save-as/Open-image command buttons with shared `SaveCommandActions`.
  * S4d-293 replaced the status text + optional rendered preview image with shared `SavePreviewStatus`.
+ * S4d-294 replaced the Open-icon / Use-text / Preview action cluster with shared `WatermarkModeActions`.
  */
 fun launchDesktopWindow() = application {
     // S4d-215: persist the window's user state (watermark config, output prefs, templates DB) under the
@@ -952,13 +954,17 @@ fun launchDesktopWindow() = application {
                         // Cancelled / no supported selection (empty `files`) → no work, status unchanged (no-op).
                     },
                 )
-                // S4d-281: Desktop consumes the shared icon-watermark picker shell. The platform edge stays
-                // here: AWT picker, private icon copy, persisted MediaRef, and mode switch remain unchanged.
-                IconWatermarkOption(
+                // S4d-294: Desktop consumes a shared mode-action shell. The platform edges stay here: AWT icon
+                // picker, private icon copy, persisted MediaRef, Text-mode switch, and preview refresh.
+                WatermarkModeActions(
+                    labels = WatermarkModeActionsLabels(
+                        pickIcon = "Open icon…",
+                        useTextWatermark = "Use text watermark",
+                        preview = "Preview",
+                    ),
                     hasIcon = false,
-                    pickLabel = "Open icon…",
-                    enabled = !busy,
-                    onPick = {
+                    busy = busy,
+                    onPickIcon = {
                         // S4d-135: native AWT Open dialog for the watermark ICON (same modal pattern + filter
                         // as "Open image…"). `window` is the FrameWindowScope's AWT frame.
                         val dialog = FileDialog(window, "Open icon", FileDialog.LOAD).apply {
@@ -1005,11 +1011,7 @@ fun launchDesktopWindow() = application {
                         }
                         // Cancelled (null file/directory) → leave the status + stored icon unchanged (no-op).
                     },
-                    preview = {},
-                )
-                Button(
-                    enabled = !busy,
-                    onClick = {
+                    onUseTextWatermark = {
                         scope.launch {
                             busy = true
                             status = "Switching to Text mode…"
@@ -1029,12 +1031,7 @@ fun launchDesktopWindow() = application {
                             busy = false
                         }
                     },
-                ) {
-                    Text("Use text watermark")
-                }
-                Button(
-                    enabled = !busy,
-                    onClick = {
+                    onPreview = {
                         // S4d-147/S4d-198: manual preview — render the CURRENT persisted config through the
                         // shared refreshPreview() spine (the SAME path the post-edit auto-refresh uses) and show
                         // it on-screen. Still available as an explicit user command even though edits now
@@ -1046,9 +1043,8 @@ fun launchDesktopWindow() = application {
                             busy = false
                         }
                     },
-                ) {
-                    Text("Preview")
-                }
+                    iconPreview = {},
+                )
                 // S4d-157: Desktop "share substitute" over the last REAL saved output file (set only by the
                 // Render & Save / Save as… / Open image… success paths — Preview writes a temp file and does NOT
                 // set it). "Show in folder" reveals the saved file's folder via guarded java.awt.Desktop (AWT IO
