@@ -95,13 +95,7 @@ class MainViewModel (
     // already-injected template repo (no DI change).
     private val templateEditor = TemplateEditor(templateRepo)
 
-    // S4d-64: StateFlow-only (was MutableLiveData). null initial = "no save event yet", matching the old
-    // LiveData (no value until first emit). Distinct Result instances each emit, so StateFlow conflation
-    // never skips a real event.
-    private val _saveResult = MutableStateFlow<Result<*>?>(null)
-    val saveResult: StateFlow<Result<*>?> = _saveResult.asStateFlow()
-
-    // S4d-65: StateFlow-only (was MutableLiveData), mirroring saveResult (S4d-64). null initial = "no
+    // S4d-65: StateFlow-only (was MutableLiveData). null initial = "no
     // compress event yet" (old LiveData had no value before first emit). Distinct Result instances each
     // emit, so StateFlow conflation never skips a real event.
     private val _compressedResult = MutableStateFlow<Result<*>?>(null)
@@ -227,18 +221,7 @@ class MainViewModel (
         imageList: List<ImageInfo>,
     ) {
         viewModelScope.launch {
-            if (imageList.isEmpty()) {
-                _saveResult.value = Result.failure(null, code = TYPE_ERROR_NOT_IMG)
-                return@launch
-            }
-            _saveResult.value =
-                Result.success(null, code = TYPE_SAVING)
-            val result = generateList(contentResolver, imageList)
-            if (result.isFailure()) {
-                _saveResult.value = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
-                return@launch
-            }
-            _saveResult.value = Result.success(code = TYPE_JOB_FINISH, data = result.data)
+            generateList(contentResolver, imageList)
         }
     }
 
@@ -587,7 +570,6 @@ class MainViewModel (
     }
 
     fun resetJobStatus() {
-        _saveResult.value = Result.success(null)
         waterMarkRepo.imageInfoList.forEach {
             it.jobState = JobState.Ready
             emitSaveProcess(it)
@@ -1059,7 +1041,5 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
         const val TYPE_COMPRESS_ERROR = "type_CompressError"
         const val TYPE_COMPRESS_OK = "type_CompressOK"
         const val TYPE_COMPRESSING = "type_Compressing"
-        const val TYPE_SAVING = "type_saving"
-        const val TYPE_JOB_FINISH = "type_job_finish"
     }
 }

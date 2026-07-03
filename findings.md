@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Retire event state only after the last consumer disappears (S4d-298, 2026-07-03)
+
+- `saveResult` became dead only after S4d-297 removed the temporary `ComposeMainActivity` debug collector. At that point the event stream and the `TYPE_SAVING` / `TYPE_JOB_FINISH` codes had no source consumers, while the real export work remained in `generateList` and per-image `ImageInfo.result` / `jobState`.
+- Do not generalize this to the compression lane. The parity backlog explicitly keeps `compressImg()` / `compressedResult` / `cancelCompressJob()` as the reference implementation for the removed legacy compression dialog, so that flow needs a replacement decision before deletion.
+
 ## Trim wrapper API after shared shell migration (S4d-297, 2026-07-03)
 
 - Once a shared shell owns the real UI shape, revisit the Android wrapper and call site for stale pass-through arguments. `isSaving`, `finishedCount`, `totalCount`, and `onShareClick` were no longer consumed after `SaveExportSheetShell` landed, so keeping them only made the API imply behavior that did not exist.
