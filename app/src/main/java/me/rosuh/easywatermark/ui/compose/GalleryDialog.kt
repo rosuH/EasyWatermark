@@ -1,20 +1,7 @@
 package me.rosuh.easywatermark.ui.compose
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -28,11 +15,7 @@ import coil3.request.allowRgb565
 import coil3.request.crossfade
 import coil3.request.placeholder
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.ui.AnimatedTransitionDialogHelper
-import me.rosuh.easywatermark.ui.AnimatedTransitionHost
-import me.rosuh.easywatermark.ui.GalleryDialogTopBarShell
-import me.rosuh.easywatermark.ui.GalleryImageGrid
-import me.rosuh.easywatermark.ui.GallerySelectedCountFab
+import me.rosuh.easywatermark.ui.GalleryDialogShell
 import me.rosuh.easywatermark.ui.Image
 import me.rosuh.easywatermark.utils.ktx.toUri
 
@@ -44,22 +27,6 @@ fun GalleryDialogPreview() {
 }
 
 @Composable
-fun AnimatedTransitionView(
-    onDismissRequest: () -> Unit,
-    contentAlignment: Alignment = Alignment.Center,
-    content: @Composable (AnimatedTransitionDialogHelper) -> Unit,
-) {
-    AnimatedTransitionHost(
-        onDismissRequest = onDismissRequest,
-        contentAlignment = contentAlignment,
-        backHandler = { onBack ->
-            BackHandler(onBack = onBack)
-        },
-        content = content,
-    )
-}
-
-@Composable
 fun GalleryDialog(
     images: List<Image>,
     onLoaImages: () -> Unit,
@@ -67,79 +34,47 @@ fun GalleryDialog(
     onImageSelected: (image: Image, index: Int, isSelected: Boolean) -> Unit,
     onPickImageViaSystem: () -> Unit = {},
 ) {
-    var selectedCount by remember {
-        mutableIntStateOf(0)
+    GalleryDialogShell(
+        images = images,
+        title = stringResource(R.string.action_pick),
+        closeIcon = painterResource(R.drawable.ic_close_24dp),
+        searchIcon = painterResource(R.drawable.ic_baseline_image_search_24),
+        checkIcon = painterResource(R.drawable.ic_gallery_radio_button),
+        selectedCountIcon = painterResource(R.drawable.ic_save_done),
+        closeContentDescription = "close dialog",
+        searchContentDescription = "search",
+        selectedCountContentDescription = "add",
+        backHandler = { onBack ->
+            BackHandler(onBack = onBack)
+        },
+        onLoadImages = onLoaImages,
+        onDismiss = onDismiss,
+        onImageSelected = onImageSelected,
+        onPickImageViaSystem = onPickImageViaSystem,
+    ) { image, contentDescription, modifier ->
+        GalleryThumbnail(
+            image = image,
+            contentDescription = contentDescription,
+            modifier = modifier,
+        )
     }
-    AnimatedTransitionView(onDismissRequest = {
-        onDismiss(selectedCount > 0)
-    }) { dialogHelper ->
-        LaunchedEffect(key1 = images.size) {
-            onLoaImages()
-        }
-        Scaffold(
-            Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
-            topBar = {
-                GalleryDialogTopBarShell(
-                    title = stringResource(R.string.action_pick),
-                    closeIcon = painterResource(R.drawable.ic_close_24dp),
-                    searchIcon = painterResource(R.drawable.ic_baseline_image_search_24),
-                    closeContentDescription = "close dialog",
-                    searchContentDescription = "search",
-                    onClose = {
-                        dialogHelper.triggerDismiss()
-                    },
-                    onSearch = {
-                        onPickImageViaSystem.invoke()
-                        dialogHelper.triggerDismiss()
-                    },
-                )
-            }
-        ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
-                // gallery list
-                GalleryImageList(images = images) { image, index, isChecked ->
-                    selectedCount += if (isChecked) +1 else -1
-                    onImageSelected(image, index, isChecked)
-                }
-
-                GallerySelectedCountFab(
-                    selectedCount = selectedCount,
-                    icon = painterResource(R.drawable.ic_save_done),
-                    contentDescription = "add",
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                    onClick = {
-                        dialogHelper.triggerDismiss()
-                    },
-                )
-            }
-        }
-    }
-
 }
 
 @Composable
-fun GalleryImageList(images: List<Image>, onImageSelected: (Image, Int, Boolean) -> Unit) {
-    GalleryImageGrid(
-        images = images,
-        checkIcon = painterResource(R.drawable.ic_gallery_radio_button),
-        onImageSelected = onImageSelected,
-    ) { image, contentDescription, modifier ->
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(image.uri.toUri())
-                .allowRgb565(true)
-                .crossfade(true)
-                .placeholder(R.drawable.ic_gallery_item_placeholder_container)
-                .build(),
-            contentDescription = contentDescription,
-            modifier = modifier,
-            contentScale = ContentScale.Crop,
-        )
-    }
+private fun GalleryThumbnail(
+    image: Image,
+    contentDescription: String,
+    modifier: Modifier,
+) {
+    AsyncImage(
+        model = ImageRequest.Builder(LocalContext.current)
+            .data(image.uri.toUri())
+            .allowRgb565(true)
+            .crossfade(true)
+            .placeholder(R.drawable.ic_gallery_item_placeholder_container)
+            .build(),
+        contentDescription = contentDescription,
+        modifier = modifier,
+        contentScale = ContentScale.Crop,
+    )
 }

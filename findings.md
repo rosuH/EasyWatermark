@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Gallery dialog state can move once BackHandler and thumbnails are injected (S4d-274, 2026-07-03)
+
+- The gallery dialog's selected-count state and scaffold orchestration are pure shared UI after the animation host, grid, top bar, and FAB live in commonMain.
+- Keep Android-specific edges injected: `BackHandler`, painter/string resources, system picker launch, dismiss callback, Coil thumbnail loading, and `MediaRef.toUri()`.
+
 ## Shared hosts need Unit-typed platform callbacks (S4d-273, 2026-07-03)
 
 - `AnimatedTransitionHost` can own the transition state machine while Android injects `BackHandler` as a composable callback.
