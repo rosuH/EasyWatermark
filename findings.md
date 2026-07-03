@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Separate stale app callbacks from real shared dismiss callbacks (S4d-314, 2026-07-03)
+
+- A callback name can be stale in an app wrapper while live in shared shells. Remove only the app pass-through after proving the function body ignores it and the caller supplies an empty lambda.
+- Preserve shared `onDismissRequest` hooks that are wired into `ModalBottomSheet`, `AlertDialog`, dropdowns, and animated dialogs; those are real behavior, not wrapper residue.
+
 ## Keep preview/local wrappers private after shell extraction (S4d-313, 2026-07-03)
 
 - Shared CMP shell extraction leaves some Android wrappers public only by habit. If a wrapper is file-local (`LogoView`) or a tooling-only `@Preview`, make it private after grep proof so future consumers do not bind to Android-only implementation details.

@@ -176,7 +176,6 @@ private fun BottomView(
                 waterMark = waterMark,
                 onChange = onChange,
                 onGoTemplateList = onGoTemplateList,
-                onDismissRequest = { }
             )
         },
         optionItem = { item ->
@@ -200,7 +199,6 @@ private fun OptionControl(
     modifier: Modifier = Modifier,
     onChange: (item: FuncTitleModel, any: Any) -> Unit = { _, _ -> },
     onGoTemplateList: () -> Unit = {},
-    onDismissRequest: () -> Unit,
 ) {
     EditorOptionControlFrame(
         modifier = modifier,
