@@ -1,21 +1,14 @@
 package me.rosuh.easywatermark.ui.save
 
 import android.net.Uri
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import androidx.compose.material3.Button
@@ -208,42 +201,16 @@ fun SaveExportSheet(
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 23.dp)
-                    .height(145.dp)
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
-                        shape = RectangleShape
-                    )
-                    .padding(horizontal = 5.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                if (imageUris.isEmpty()) {
-                    Text(
-                        text = "$imageCount image(s) selected",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    LazyRow(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        items(imageUris) { uri ->
-                            AsyncImage(
-                                model = uri,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.size(120.dp)
-                            )
-                        }
-                    }
-                }
+            SaveExportPreviewBox(
+                items = imageUris,
+                emptyText = "$imageCount image(s) selected",
+            ) { uri, thumbnailModifier ->
+                AsyncImage(
+                    model = uri,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = thumbnailModifier,
+                )
             }
 
             Button(
@@ -270,8 +237,6 @@ fun SaveExportSheet(
         }
     }
 }
-
-
 
 
 

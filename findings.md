@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Save/export preview box can be generic while URI loading stays Android-owned (S4d-264, 2026-07-03)
+
+- The reusable surface is the bordered preview container, selected-count fallback, and horizontal thumbnail-row layout. A generic `items: List<T>` plus thumbnail slot lets commonMain own layout without importing `android.net.Uri`.
+- Keep the modal sheet, localized labels, output-format/quality controls, export/open-gallery actions, and Coil `AsyncImage` in Android until Desktop/iOS have real consumers of the same save/export flow.
+
 ## Icon option shell can move without moving picker permission edges (S4d-263, 2026-07-03)
 
 - The common UI is just the centered column, optional preview, and pick button label. Android must keep `READ_MEDIA_IMAGES`/`READ_EXTERNAL_STORAGE`, `rememberLauncherForActivityResult`, Photo Picker contracts, `Uri -> MediaRef`, and Coil preview loading.
