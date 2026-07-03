@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Delete superseded shared shells once they become declaration-only (S4d-296, 2026-07-03)
+
+- `BottomSurface` was an intermediate shared wrapper from S4d-267, but the later bottom-controls host path now owns the relevant structure and no source call sites remain.
+- Keep historical notes, but remove the stale commonMain file rather than preserving a misleading shell that no platform consumes.
+
 ## Editor option items can share presentation while Android owns resources (S4d-295, 2026-07-03)
 
 - The bottom option carousel item layout is just an icon at 24dp plus a title label once the caller supplies the `Painter`, content description, and localized text. Move that presentation to commonMain.
