@@ -109,6 +109,17 @@ final class PickerFlowUITests: XCTestCase {
         attach(app, "31-shared-compose-gallery-witness")
     }
 
+    /// S4d-322: proves the DEBUG-only iOS shared CMP About-shell witness is embedded in the SwiftUI
+    /// surface. This is a host/link/runtime proof only; it does not replace production navigation.
+    func testSharedComposeAboutWitnessVisible() {
+        let app = XCUIApplication()
+        app.launch()
+        let witness = app.descendants(matching: .any)["sharedComposeAboutShellWitness"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(witness, in: app, timeout: 12),
+                      "sharedComposeAboutShellWitness was not reachable in the iOS bring-up surface.")
+        attach(app, "32-shared-compose-about-witness")
+    }
+
     /// S4d-234: proves the S4d-233 Templates UI works end-to-end through the app:
     ///   1. Save current creates a visible template row for a unique marker string.
     ///   2. Apply (tapping the saved row) updates the watermark text field back to that marker.

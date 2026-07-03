@@ -18,6 +18,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
+import me.rosuh.easywatermark.ui.about.AboutDevCard
+import me.rosuh.easywatermark.ui.about.AboutScreenIcons
+import me.rosuh.easywatermark.ui.about.AboutScreenShell
+import me.rosuh.easywatermark.ui.about.AboutScreenStrings
 import me.rosuh.easywatermark.ui.theme.AppTheme
 import platform.UIKit.UIViewController
 
@@ -91,6 +95,70 @@ object IosSharedComposeHost {
                 }
                 Box(thumbnailModifier.background(color))
             }
+        }
+    }
+
+    fun aboutScreenShellWitness(): UIViewController = ComposeUIViewController {
+        AppTheme {
+            val accent = ColorPainter(MaterialTheme.colorScheme.primary)
+            val avatar = ColorPainter(MaterialTheme.colorScheme.primaryContainer)
+
+            AboutScreenShell(
+                versionName = "iOS shared witness",
+                showBounds = false,
+                dynamicColorOn = false,
+                strings = AboutScreenStrings(
+                    infoTitle = "Info",
+                    versionTitle = "Version",
+                    ratingTitle = "Rate",
+                    feedbackTitle = "Feedback",
+                    aboutTitle = "About",
+                    updateLogTitle = "Update log",
+                    openSourceTitle = "Open source",
+                    privacyZhTitle = "Privacy zh",
+                    privacyEnTitle = "Privacy en",
+                    dynamicColorLabel = "Dynamic color",
+                    showBoundsLabel = "Show bounds",
+                ),
+                icons = AboutScreenIcons(
+                    back = accent,
+                    version = accent,
+                    rating = accent,
+                    feedback = accent,
+                    updateLog = accent,
+                    openSource = accent,
+                    privacyZh = accent,
+                    privacyEn = accent,
+                ),
+                developerCard = AboutDevCard(
+                    title = "Developer",
+                    description = "Shared CMP about shell",
+                    avatar = avatar,
+                ),
+                designerCard = AboutDevCard(
+                    title = "Designer",
+                    description = "Shared CMP about shell",
+                    avatar = avatar,
+                ),
+                onBack = {},
+                onVersion = {},
+                onRate = {},
+                onFeedback = {},
+                onUpdateLog = {},
+                onOpenSource = {},
+                onPrivacyZh = {},
+                onPrivacyEn = {},
+                onDeveloper = {},
+                onDesigner = {},
+                onToggleBounds = {},
+                onToggleDynamicColor = {},
+                modifier = Modifier.fillMaxSize(),
+                logo = { logoModifier ->
+                    Box(logoModifier, contentAlignment = Alignment.Center) {
+                        Text("EW", style = MaterialTheme.typography.labelMedium)
+                    }
+                },
+            )
         }
     }
 

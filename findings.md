@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Keep iOS shared screen witnesses broad enough to catch real runtime issues (S4d-322, 2026-07-03)
+
+- The iOS DEBUG witness lane now renders shared launch, gallery, editor, and about screen shells through Kotlin-owned `ComposeUIViewController` hosts. This is enough to prove framework export, runtime composition, scrolling reachability, and nested shared-shell rendering without claiming production SwiftUI replacement.
+- Continue requiring XCUITest screenshots for each new visible witness. The S4d-321 `LocalSafeArea` crash proved compile is not enough; S4d-322 shows a non-Scaffold shell can reuse the same host pattern cleanly when the system UI edges stay in SwiftUI.
+
 ## Avoid Material3 default iOS insets until Compose versions are aligned (S4d-321, 2026-07-03)
 
 - `GalleryDialogShell` crashed on iOS when embedded through `ComposeUIViewController` because Material3 `ScaffoldDefaults.contentWindowInsets` reached Compose iOS `LocalSafeArea` and hit `IrLinkageError` under the repo's current Compose/Skiko version mismatch. Keep Android/Desktop defaults intact, but let iOS host witnesses pass explicit `WindowInsets()` until dependency alignment is an owner-approved slice.
