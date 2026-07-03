@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Compose iOS hosts need a packaged frame-duration plist key (S4d-282, 2026-07-03)
+
+- Embedding shared CMP UI in SwiftUI through `ComposeUIViewController` works as the iOS app-entry bridge, but the app bundle must actually package `CADisableMinimumFrameDurationOnPhone = true`; a target `INFOPLIST_KEY_CADisableMinimumFrameDurationOnPhone = YES` build setting was visible in `xcodebuild -showBuildSettings` yet absent from the built `Info.plist`, and the UI test app crashed on launch.
+- The reliable fix for this project is an explicit iosApp `Info.plist` with the Compose key plus the existing generated plist entries. Keep SwiftUI as the system-UI glue and use Kotlin `UIViewController` hosts for real shared CMP surfaces; this is a host witness, not a final iOS product-screen replacement by itself.
+
 ## Desktop icon picker can consume the shared icon option shell (S4d-281, 2026-07-03)
 
 - `IconWatermarkOption` can wrap Desktop's icon-pick entry without moving picker, permission, path-copy, or persistence behavior into commonMain.
