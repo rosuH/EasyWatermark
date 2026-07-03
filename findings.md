@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Editor bottom surface can move before bottom controls (S4d-267, 2026-07-03)
+
+- The `BottomSurface` wrapper is pure Material3 surface plumbing and can move independently of `BottomView`.
+- Keep the stateful bottom controls Android-side for now: tab selection, Android resource icons/strings, `FuncTitleModel`, template navigation, and raw option-change dispatch are a larger shared-screen slice.
+
 ## Save/export modal shell can move after its child sections are shared (S4d-266, 2026-07-03)
 
 - Once the output-options section and preview-list box live in commonMain, the remaining modal sheet can be a generic shared shell that wires those children together without importing Android `Uri` or Coil.

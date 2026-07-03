@@ -43,7 +43,6 @@ import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabPosition
 import androidx.compose.material3.Text
@@ -951,15 +950,5 @@ fun PhotoList(
                 modifier = thumbnailModifier,
             )
         },
-    )
-}
-
-@Composable
-fun BottomSurface(modifier: Modifier, content: @Composable () -> Unit) {
-    Surface(
-        modifier = modifier,
-        color = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        content = content
     )
 }
