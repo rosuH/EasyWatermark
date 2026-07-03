@@ -1,5 +1,11 @@
 # Compose Migration Findings
 
+## Editor photo strip can move below the thumbnail-loading edge (S4d-260, 2026-07-03)
+
+- The reusable strip behavior is layout/state-local UI: measured centering, item size, selected border/padding animation, click-to-select, and scroll-to-clicked-item. Moving it to shared CMP does not require moving Android bitmap decode, Coil, or `MediaRef.toUri()`.
+- Keep the thumbnail renderer injected. Android still owns `AsyncImage`, `ImageRequest`, crop scaling, and URI conversion; future Desktop/iOS callers can provide their own decoded-image thumbnail surface.
+- The old `onImageDelete` path is still not backed by a visible delete affordance. Do not present S4d-260 as a delete-flow migration.
+
 ## Gallery selected-count FAB can move without moving dismissal state (S4d-259, 2026-07-03)
 
 - The reusable part is the visible `selectedCount > 0` animation and extended FAB shape/text/icon layout. It can live in shared CMP if the platform caller injects the icon painter, content description, count, and click callback.

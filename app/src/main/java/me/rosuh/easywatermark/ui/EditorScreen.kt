@@ -9,13 +9,11 @@ import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.VectorConverter
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -938,82 +936,24 @@ fun PhotoList(
     onImageSelected: (ImageInfo) -> Unit = {},
     onImageDelete: () -> Unit = {},
 ) {
-    val listState = rememberLazyListState()
-    val coroutineScope = rememberCoroutineScope()
-
-    var optionWidth by remember {
-        mutableStateOf(0.dp)
-    }
-    val itemWidth = 40.dp
-    val density = LocalDensity.current
-    LazyRow(
+    EditorPhotoStrip(
+        images = imaList,
+        selectedImage = selectedImage,
         modifier = modifier
-            .onGloballyPositioned {
-                optionWidth = with(density) {
-                    it.size.width.toDp()
-                }
-            },
-        contentPadding = PaddingValues(
-            start = (optionWidth - itemWidth).coerceAtLeast(0.dp) / 2,
-            end = (optionWidth - itemWidth).coerceAtLeast(0.dp) / 2
-        ),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        state = listState
-    ) {
-        items(imaList.size) {
-            val imageInfo = imaList[it]
-            PhotoItem(
-                modifier = Modifier
-                    .size(itemWidth)
-                    .padding(4.dp)
-                    .animateItem(),
-                imageInfo = imageInfo,
-                isSelected = imageInfo == selectedImage,
-                onImageClick = { selectedImageInfo ->
-                    coroutineScope.launch {
-                        listState.animateScrollToItem(it)
-                    }
-                    onImageSelected.invoke(selectedImageInfo)
-                },
-                onImageDelete = onImageDelete
+            .fillMaxWidth(),
+        onImageSelected = onImageSelected,
+        thumbnail = { imageInfo, contentDescription, thumbnailModifier ->
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(imageInfo.uri.toUri())
+                    .crossfade(true)
+                    .build(),
+                contentDescription = contentDescription,
+                contentScale = ContentScale.Crop,
+                modifier = thumbnailModifier,
             )
-        }
-    }
-}
-
-@Composable
-fun PhotoItem(
-    imageInfo: ImageInfo,
-    modifier: Modifier,
-    isSelected: Boolean = false,
-    onImageClick: (ImageInfo) -> Unit = {},
-    onImageDelete: () -> Unit = {},
-) {
-    val border by animateDpAsState(targetValue = if (isSelected) 2.dp else 0.dp, label = "")
-    val padding by animateDpAsState(targetValue = if (isSelected) 2.dp else 0.dp, label = "")
-    val borderColor = MaterialTheme.colorScheme.primary
-    Box(
-        modifier = modifier
-            .border(
-                width = border,
-                color = borderColor
-            )
-            .padding(padding)
-    ) {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(imageInfo.uri.toUri())
-                .crossfade(true)
-                .build(),
-            contentDescription = "image",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxSize()
-                .clickable {
-                    onImageClick(imageInfo)
-                },
-        )
-    }
+        },
+    )
 }
 
 @Composable
