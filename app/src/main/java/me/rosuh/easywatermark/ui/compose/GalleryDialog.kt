@@ -10,17 +10,12 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -57,6 +52,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.R
+import me.rosuh.easywatermark.ui.GalleryDialogTopBarShell
 import me.rosuh.easywatermark.ui.GalleryImageGrid
 import me.rosuh.easywatermark.ui.Image
 import me.rosuh.easywatermark.utils.ktx.toUri
@@ -206,38 +202,20 @@ fun GalleryDialog(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background),
             topBar = {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    IconButton(
-                        onClick = {
-                            dialogHelper.triggerDismiss()
-                        }
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_close_24dp),
-                            contentDescription = "close dialog",
-                        )
-                    }
-                    Text(
-                        text = stringResource(id = R.string.action_pick),
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                    IconButton(onClick = {
+                GalleryDialogTopBarShell(
+                    title = stringResource(R.string.action_pick),
+                    closeIcon = painterResource(R.drawable.ic_close_24dp),
+                    searchIcon = painterResource(R.drawable.ic_baseline_image_search_24),
+                    closeContentDescription = "close dialog",
+                    searchContentDescription = "search",
+                    onClose = {
+                        dialogHelper.triggerDismiss()
+                    },
+                    onSearch = {
                         onPickImageViaSystem.invoke()
                         dialogHelper.triggerDismiss()
-                    }) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_baseline_image_search_24),
-                            contentDescription = "search"
-                        )
-                    }
-                }
-
+                    },
+                )
             }
         ) { innerPadding ->
             Box(

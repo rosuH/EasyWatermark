@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Gallery top-bar shell can move while dismissal/search stay app-owned (S4d-258, 2026-07-03)
+
+- The GalleryDialog top bar row is neutral layout: close icon, localized title, search icon, and spacing. The behavior behind those icons is still Android-owned because close drives the current dialog animation helper and search launches the Android system picker before dismissing.
+- Keep this as a separate shell from the selected-count FAB and dialog animation. Those still combine UI state, transition timing, and navigation effects and need their own slice if moved.
+
 ## Gallery grid can move only below the image-loading edge (S4d-257, 2026-07-03)
 
 - The reusable part of the gallery is the grid/card/checkmark shell: fixed four-column grid, crop-card aspect ratio, selected-card padding/clip animation, and circular checkmark. The Android-specific part is thumbnail decoding/loading (`AsyncImage`, `ImageRequest`, placeholder resource, `MediaRef.toUri()`), so keep it injected as a thumbnail slot.
