@@ -1,9 +1,19 @@
 package me.rosuh.easywatermark.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.ComposeUIViewController
+import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.ui.theme.AppTheme
 import platform.UIKit.UIViewController
 
@@ -14,14 +24,73 @@ import platform.UIKit.UIViewController
  * render a real commonMain CMP shell from the `Shared.framework`.
  */
 object IosSharedComposeHost {
-    fun editorPreviewFrameWitness(): UIViewController = ComposeUIViewController {
+    fun editorScreenShellWitness(): UIViewController = ComposeUIViewController {
         AppTheme {
-            EditorPreviewFrame(
-                hasImage = true,
-                emptyText = "No preview",
+            val images = remember {
+                listOf(
+                    ImageInfo(MediaRef("ios-cmp-witness-1")),
+                    ImageInfo(MediaRef("ios-cmp-witness-2")),
+                    ImageInfo(MediaRef("ios-cmp-witness-3")),
+                )
+            }
+            var selectedImage by remember { mutableStateOf(images.first()) }
+
+            EditorScreenShell(
+                showPhotoStrip = true,
                 modifier = Modifier.fillMaxSize(),
-                preview = {
-                    Text("Shared CMP preview frame")
+                topBar = { modifier ->
+                    Box(modifier, contentAlignment = Alignment.Center) {
+                        Text("Shared CMP editor shell", style = MaterialTheme.typography.labelMedium)
+                    }
+                },
+                preview = { modifier ->
+                    EditorPreviewFrame(
+                        hasImage = true,
+                        emptyText = "No preview",
+                        modifier = modifier,
+                    ) { previewModifier ->
+                        Box(
+                            modifier = previewModifier
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text("Preview slot", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                },
+                photoStrip = { modifier ->
+                    EditorPhotoStrip(
+                        images = images,
+                        selectedImage = selectedImage,
+                        modifier = modifier,
+                        onImageSelected = { selectedImage = it },
+                    ) { imageInfo, _, thumbnailModifier ->
+                        val color = if (imageInfo == selectedImage) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        }
+                        Box(thumbnailModifier.background(color))
+                    }
+                },
+                bottomControls = {
+                    EditorBottomControlsShell(
+                        tabs = listOf(
+                            EditorBottomControlTab("Content", listOf("Text", "Icon")),
+                            EditorBottomControlTab("Style", listOf("Size", "Opacity"), useCompactPadding = true),
+                            EditorBottomControlTab("Layout", listOf("Gap", "Degree")),
+                        ),
+                        optionControl = { option, modifier ->
+                            EditorOptionControlFrame(modifier) { innerModifier ->
+                                Box(innerModifier, contentAlignment = Alignment.Center) {
+                                    Text("$option option", style = MaterialTheme.typography.labelMedium)
+                                }
+                            }
+                        },
+                        optionItem = { option ->
+                            Text(option, style = MaterialTheme.typography.labelSmall)
+                        },
+                    )
                 },
             )
         }

@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Keep iOS shared hosts Kotlin-owned until real replacement is ready (S4d-316, 2026-07-03)
+
+- A `ComposeUIViewController` host can exercise nested shared CMP screen shells on iOS without moving SwiftUI system edges. Keep the actual shared shell composition in Kotlin (`iosMain`) and let Swift own only the `UIViewControllerRepresentable` bridge.
+- Treat debug witnesses as runtime/link proof, not product-screen replacement. Promoting SwiftUI controls to shared CMP needs the same XCUITest/accessibility coverage as any visible iOS UI change; otherwise leave PhotosPicker, Share/Save, and current bring-up controls in SwiftUI.
+
 ## Let shared shells own their experimental opt-ins (S4d-315, 2026-07-03)
 
 - Once experimental Material3 calls move behind shared CMP shell functions that opt in internally, app wrapper functions should drop stale `@OptIn` annotations. The call site no longer needs to advertise implementation details it does not directly use.
