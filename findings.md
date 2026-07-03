@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Editor top-level shell can move as slots, not state (S4d-262, 2026-07-03)
+
+- The reusable editor-screen shell is the vertical slot layout: top bar, weighted preview, optional photo strip, and bottom controls. Moving that shell does not require moving template-sheet state, editor option state, renderer state, or Android navigation callbacks.
+- Keep `showTemplateSheet`, `TemplateListSheet`, bottom controls, renderer, and thumbnail loading app-owned until Desktop/iOS consume the same screen contract. A slot shell is the conservative step before any shared screen state extraction.
+
 ## Editor preview frame can move while native rendering stays Android-owned (S4d-261, 2026-07-03)
 
 - The neutral shell is just the preview area's box, padding, empty-state placement, and renderer slot. That can live in shared CMP without touching image decode, native Android canvas composition, CLAMP drag handling, or export parity.

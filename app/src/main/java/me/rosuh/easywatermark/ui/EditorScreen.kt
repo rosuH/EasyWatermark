@@ -136,40 +136,43 @@ fun EditorScreen(
     onDeleteTemplate: (Template) -> Unit = {},
 ) {
     var showTemplateSheet by remember { mutableStateOf(false) }
-    Column(
-        modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // topBar
-        EditorTopBar(
-            Modifier.fillMaxWidth(),
-            onBack = onBack,
-            onAddMoreImages = onAddMoreImages,
-            onShowSaveDialog = onShowSaveDialog,
-            onGoAboutScreen = onGoAboutScreen
-        )
-        // WaterMarkView
-        WaterMarkView(
-            Modifier.weight(1f, true),
-            waterMark,
-            selectedImage ?: imageList.firstOrNull(),
-        )
-        // PreviewList — parity (ADR-0011): production shows the thumbnail strip even for a single image
-        if (imageList.isNotEmpty()) {
+    EditorScreenShell(
+        modifier = modifier,
+        // PreviewList parity (ADR-0011): production shows the thumbnail strip even for one image.
+        showPhotoStrip = imageList.isNotEmpty(),
+        topBar = { topBarModifier ->
+            EditorTopBar(
+                topBarModifier,
+                onBack = onBack,
+                onAddMoreImages = onAddMoreImages,
+                onShowSaveDialog = onShowSaveDialog,
+                onGoAboutScreen = onGoAboutScreen,
+            )
+        },
+        preview = { previewModifier ->
+            WaterMarkView(
+                previewModifier,
+                waterMark,
+                selectedImage ?: imageList.firstOrNull(),
+            )
+        },
+        photoStrip = { photoStripModifier ->
             PhotoList(
                 imageList,
                 selectedImage,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = photoStripModifier,
                 onImageSelected,
-                onImageDelete
+                onImageDelete,
             )
-        }
-        BottomView(
-            waterMark,
-            onChange = onWaterMrkChange,
-            onGoTemplateList = { showTemplateSheet = true }
-        )
-    }
+        },
+        bottomControls = {
+            BottomView(
+                waterMark,
+                onChange = onWaterMrkChange,
+                onGoTemplateList = { showTemplateSheet = true },
+            )
+        },
+    )
 
     if (showTemplateSheet) {
         TemplateListSheet(
