@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Editor preview frame can move while native rendering stays Android-owned (S4d-261, 2026-07-03)
+
+- The neutral shell is just the preview area's box, padding, empty-state placement, and renderer slot. That can live in shared CMP without touching image decode, native Android canvas composition, CLAMP drag handling, or export parity.
+- Keep `WaterMarkCanvas`, `buildPreviewShader`, `ContentResolver`, `Bitmap`, and `WatermarkRenderer` app-side. Moving the frame is not a renderer commonization step and does not reopen the Android-native-renderer policy.
+
 ## Editor photo strip can move below the thumbnail-loading edge (S4d-260, 2026-07-03)
 
 - The reusable strip behavior is layout/state-local UI: measured centering, item size, selected border/padding animation, click-to-select, and scroll-to-clicked-item. Moving it to shared CMP does not require moving Android bitmap decode, Coil, or `MediaRef.toUri()`.

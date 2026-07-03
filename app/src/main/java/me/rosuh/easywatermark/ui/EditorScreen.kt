@@ -697,21 +697,16 @@ fun WaterMarkView(
     onScaleEnd: (textSize: Float) -> Unit = { },
     onOffsetChanged: (info: ImageInfo) -> Unit = { },
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(12.dp)
-    ) {
-        if (selectedImage == null) {
-            Text(text = "No Image Selected", Modifier.align(Alignment.Center))
-        } else {
-            // Compose Canvas preview (S3c-2 replaced the former AndroidView-bridged legacy View;
-            // S3c-3 retired that View entirely). Reuses the same renderer (WatermarkRenderer.build*Shader
-            // + compose) on the native canvas.
+    EditorPreviewFrame(
+        hasImage = selectedImage != null,
+        emptyText = "No Image Selected",
+        modifier = modifier,
+    ) { previewModifier ->
+        selectedImage?.let {
             WaterMarkCanvas(
-                modifier = Modifier.fillMaxSize(),
+                modifier = previewModifier,
                 waterMark = waterMark,
-                selectedImage = selectedImage,
+                selectedImage = it,
                 onOffsetChanged = onOffsetChanged,
                 onUpdateUriFailed = onUpdateUriFailed,
             )
