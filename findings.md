@@ -1,5 +1,11 @@
 # Compose Migration Findings
 
+## AndroMeld smoke proof requires MCP control to be enabled (S4d-254, 2026-07-03)
+
+- The Android emulator smoke cannot be accepted from Gradle/Android CLI evidence alone. `:app:assembleDebug` and `android run` can prove current debug build/install/launch, but the requested debt also requires a visible AndroMeld walk with READ_MEDIA_IMAGES confirmation, gallery -> editor navigation, parameter adjustments, export, and screenshots that were actually viewed.
+- Current blocker: AndroMeld.app is installed and launchable, but the MCP policy gate returns `permissionDenied: MCP control is disabled in AndroMeld`. Do not replace this with raw `adb shell input` or Android CLI screenshots and call it equivalent; those may be useful setup checks, but the debt remains open until AndroMeld MCP control is enabled and the full UI path is captured there.
+- Once enabled, restart from `andromeld.devices.list` -> `andromeld.sessions.list` -> `andromeld.session.start` if needed, then act one step at a time and capture/view screenshots at launch, gallery permission/source selection, editor baseline, each control-adjustment cluster, and export result.
+
 ## iOS bring-up XCUITests must avoid stale seed-row assumptions (S4d-253, 2026-07-03)
 
 - The S4d-234 Templates test failed on a real booted simulator because it used a pre-existing `templateRow` as a launch-readiness proxy and then tried to drive controls that could be off-screen or covered by the keyboard. That assumption is brittle on a persistent simulator and was never a proof of Save/Apply/Delete.
