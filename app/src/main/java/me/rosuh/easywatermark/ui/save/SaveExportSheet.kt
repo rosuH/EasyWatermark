@@ -1,35 +1,21 @@
 package me.rosuh.easywatermark.ui.save
 
 import android.net.Uri
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
@@ -57,9 +43,6 @@ fun SaveExportSheet(
     onShareClick: () -> Unit,
     onOpenGalleryClick: () -> Unit,
 ) {
-    val isQualityVisible: Boolean = remember(selectedFormatLabel) {
-        selectedFormatLabel == ImageFormat.JPEG
-    }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(
@@ -69,9 +52,6 @@ fun SaveExportSheet(
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp
     ) {
-        var formatMenuExpanded by remember {
-            mutableStateOf(false)
-        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -79,115 +59,15 @@ fun SaveExportSheet(
                 .navigationBarsPadding()
                 .padding(bottom = 20.dp)
         ) {
-            Text(
-                text = stringResource(R.string.about_title_output),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 24.dp),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
+            SaveExportOptionsSection(
+                title = stringResource(R.string.about_title_output),
+                formatLabel = stringResource(R.string.dialog_save_config_format),
+                qualityLabel = stringResource(R.string.dialog_save_config_quality),
+                selectedFormat = selectedFormatLabel,
+                quality = quality,
+                onFormatClick = onFormatClick,
+                onQualityChange = onQualityChange,
             )
-
-            ExposedDropdownMenuBox(
-                expanded = formatMenuExpanded,
-                onExpandedChange = {
-                    formatMenuExpanded = formatMenuExpanded.not()
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 10.dp)
-            ) {
-                OutlinedTextField(
-                    value = selectedFormatLabel.toString(),
-                    onValueChange = {},
-                    readOnly = true,
-                    singleLine = true,
-                    label = {
-                        Text(text = stringResource(R.string.dialog_save_config_format))
-                    },
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = formatMenuExpanded)
-                    },
-                    shape = RectangleShape,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        focusedBorderColor = MaterialTheme.colorScheme.outline,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        focusedLabelColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        focusedTrailingIconColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTrailingIconColor = MaterialTheme.colorScheme.onSurface,
-                        ),
-                    modifier = Modifier
-                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                        .fillMaxWidth()
-                )
-
-                ExposedDropdownMenu(
-                    expanded = formatMenuExpanded,
-                    onDismissRequest = {
-                        formatMenuExpanded = false
-                    }
-                ) {
-                    DropdownMenuItem(
-                        text = {
-                            Text("JPEG")
-                        },
-                        onClick = {
-                            formatMenuExpanded = false
-                            onFormatClick(ImageFormat.JPEG)
-                        }
-                    )
-
-                    DropdownMenuItem(
-                        text = {
-                            Text("PNG")
-                        },
-                        onClick = {
-                            formatMenuExpanded = false
-                            onFormatClick(ImageFormat.PNG)
-                        }
-                    )
-                }
-            }
-
-            if (isQualityVisible) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 32.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = stringResource(R.string.dialog_save_config_quality),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    Text(
-                        text = quality.toString(),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                Slider(
-                    value = quality.toFloat(),
-                    onValueChange = {
-                        onQualityChange(it.toInt())
-                    },
-                    valueRange = 20f..100f,
-                    // 20, 40, 60, 80, 100
-                    steps = 3,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(20.dp)
-                )
-            }
 
             Text(
                 text = stringResource(
@@ -237,7 +117,6 @@ fun SaveExportSheet(
         }
     }
 }
-
 
 
 

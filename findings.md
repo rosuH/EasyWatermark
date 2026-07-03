@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Save/export options can move because ImageFormat is already shared (S4d-265, 2026-07-03)
+
+- The output-format dropdown and JPEG-quality slider are pure Compose UI over shared `ImageFormat`, so they can move to commonMain with localized strings injected by Android.
+- Keep modal-sheet ownership, export/open-gallery actions, result state, and thumbnail loading in Android. Moving the options section is not a save-flow or share-flow migration.
+
 ## Save/export preview box can be generic while URI loading stays Android-owned (S4d-264, 2026-07-03)
 
 - The reusable surface is the bordered preview container, selected-count fallback, and horizontal thumbnail-row layout. A generic `items: List<T>` plus thumbnail slot lets commonMain own layout without importing `android.net.Uri`.
