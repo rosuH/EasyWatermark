@@ -86,4 +86,111 @@ final class PickerFlowUITests: XCTestCase {
         // NOTE: grid-cell SELECTION is NOT asserted — unaddressable on this beta toolchain (S4d-57);
         // the render/export path is proven via the fixture seam in testFixtureRenderPreviewAndExport.
     }
+
+    /// S4d-234: proves the S4d-233 Templates UI works end-to-end through the app:
+    ///   1. Save current creates a visible template row for a unique marker string.
+    ///   2. Apply (tapping the saved row) updates the watermark text field back to that marker.
+    ///   3. Delete removes that row from the UI.
+    /// Uses the existing `-uiTestFixtureImage` DEBUG seam so the render path has a deterministic image
+    /// without addressing the blocked PHPicker grid cells. Not 1:1 Android v2.10.0 parity.
+    func testTemplatesSaveApplyDelete() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestFixtureImage", "1"]
+        app.launch()
+        attach(app, "20-launched-templates")
+
+        // Wait for the editor's launch `.task` to finish: a seeded template row appearing proves
+        // `loadTemplates()` ran, which means `loadWatermarkText()` + `draftText = watermarkText` also ran
+        // (they share the same `.task`). This avoids clearing the field before the default text is set.
+        let anyRow = app.buttons["templateRow"].firstMatch
+        XCTAssertTrue(anyRow.waitForExistence(timeout: 30),
+                      "No template rows appeared — launch load (watermark text + templates) did not complete.")
+
+        // Unique marker unlikely to collide with any seeded default template.
+        let marker = "S4d234-" + String(UUID().uuidString.prefix(8))
+
+        // 1. Replace the watermark text with the marker and Apply so the workflow's `watermarkText`
+        //    equals the marker. `Save current` reads `watermarkText` (not the draft), so Apply first.
+        let textField = app.textFields["watermarkTextField"].firstMatch
+        XCTAssertTrue(textField.waitForExistence(timeout: 10), "Watermark text field missing.")
+        clearAndType(in: textField, text: marker)
+        let applyBtn = app.buttons["applyWatermarkText"].firstMatch
+        XCTAssertTrue(applyBtn.waitForExistence(timeout: 5), "Apply button missing.")
+        applyBtn.tap()
+
+        // 2. Save current → a new template row labeled with the marker must appear.
+        let saveBtn = app.buttons["saveTemplateButton"].firstMatch
+        XCTAssertTrue(saveBtn.waitForExistence(timeout: 5), "Save current button missing.")
+        let saveEnabled = expectation(for: NSPredicate(format: "isEnabled == YES"), evaluatedWith: saveBtn, handler: nil)
+        wait(for: [saveEnabled], timeout: 5)
+        saveBtn.tap()
+        attach(app, "21-after-save-current")
+
+        let rowPredicate = NSPredicate(format: "identifier == %@ AND label == %@", "templateRow", marker)
+        let savedRow = app.buttons.matching(rowPredicate).firstMatch
+        XCTAssertTrue(savedRow.waitForExistence(timeout: 10),
+                      "Saved template row with label \(marker) never appeared.")
+
+        // 3. Apply: change the text to a different baseline, Apply, then tap the saved row.
+        //    The text field must revert to the marker (applyTemplate → setWatermarkText → draftText sync).
+        clearAndType(in: textField, text: "otherValue")
+        applyBtn.tap()
+        XCTAssertTrue(wait(forTextField: textField, toEqual: "otherValue", timeout: 10),
+                      "Text field did not reflect 'otherValue' after Apply (pre-template baseline).")
+
+        savedRow.tap()
+        XCTAssertTrue(wait(forTextField: textField, toEqual: marker, timeout: 10),
+                      "Tapping the saved template row did not update the watermark text field to \(marker).")
+        attach(app, "22-after-apply-template")
+
+        // 4. Delete the saved row → it must disappear from the UI.
+        guard let deleteBtn = deleteButtonOnSameRow(as: savedRow, in: app) else {
+            XCTFail("Delete button not found on the same row as the saved template (label \(marker)).")
+            return
+        }
+        deleteBtn.tap()
+        attach(app, "23-after-delete")
+
+        let goneRow = app.buttons.matching(rowPredicate).firstMatch
+        let removed = expectation(for: NSPredicate(format: "exists == NO"), evaluatedWith: goneRow, handler: nil)
+        wait(for: [removed], timeout: 10)
+        XCTAssertFalse(goneRow.exists,
+                      "Saved template row was not removed by Delete (still present after tap).")
+    }
+
+    // MARK: - S4d-234 helpers
+
+    /// Clear `field` and type `text`. Taps near the right edge first so the cursor sits at the end of any
+    /// existing text, then deletes backward before typing. Works for SwiftUI `TextField` with
+    /// `.roundedBorder` (no reliance on the optional clear-button or edit menu).
+    private func clearAndType(in field: XCUIElement, text: String) {
+        field.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        if let current = field.value as? String {
+            for _ in 0..<current.count {
+                field.typeText(XCUIKeyboardKey.delete.rawValue)
+            }
+        }
+        field.typeText(text)
+    }
+
+    /// Poll until `field.value` equals `expected` or `timeout` elapses.
+    @discardableResult
+    private func wait(forTextField field: XCUIElement, toEqual expected: String, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if (field.value as? String) == expected { return true }
+            Thread.sleep(forTimeInterval: 0.3)
+        }
+        return (field.value as? String) == expected
+    }
+
+    /// Find the `deleteTemplateButton` whose vertical center matches `row`'s — they are siblings in the
+    /// same HStack, so they share the same mid-Y. Falls back to nil if none is on the same line.
+    private func deleteButtonOnSameRow(as row: XCUIElement, in app: XCUIApplication) -> XCUIElement? {
+        let rowY = row.frame.midY
+        let candidates = app.buttons.matching(
+            NSPredicate(format: "identifier == %@", "deleteTemplateButton")
+        ).allElementsBoundByIndex
+        return candidates.first { abs($0.frame.midY - rowY) < 12 }
+    }
 }
