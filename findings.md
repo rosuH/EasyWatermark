@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Icon option shell can move without moving picker permission edges (S4d-263, 2026-07-03)
+
+- The common UI is just the centered column, optional preview, and pick button label. Android must keep `READ_MEDIA_IMAGES`/`READ_EXTERNAL_STORAGE`, `rememberLauncherForActivityResult`, Photo Picker contracts, `Uri -> MediaRef`, and Coil preview loading.
+- This mirrors the gallery/photo-strip boundary: put layout in shared CMP, keep system UI and media loading at the platform edge.
+
 ## Editor top-level shell can move as slots, not state (S4d-262, 2026-07-03)
 
 - The reusable editor-screen shell is the vertical slot layout: top bar, weighted preview, optional photo strip, and bottom controls. Moving that shell does not require moving template-sheet state, editor option state, renderer state, or Android navigation callbacks.

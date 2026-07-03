@@ -5,17 +5,10 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.core.graphics.drawable.toIcon
 import coil3.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -53,31 +46,23 @@ fun IconOption(
     // never escapes into the model/ViewModel layer.
     onIconSelected: (item: FuncTitleModel, MediaRef) -> Unit,
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
+    val mediaPermissionState = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        rememberPermissionState(
+            Manifest.permission.READ_MEDIA_IMAGES
+        )
+    } else {
+        rememberPermissionState(
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        )
+    }
+    val singlePhotoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri -> uri?.let { onIconSelected(item, it.toMediaRef()) } })
+    IconWatermarkOption(
+        hasIcon = waterMark.iconUri.isEmpty().not(),
+        pickLabel = stringResource(id = R.string.action_pick),
         modifier = modifier,
-        verticalArrangement = Arrangement.Center
-    ) {
-        if (!waterMark.iconUri.isEmpty()) {
-            AsyncImage(
-                model = waterMark.iconUri.toUri(),
-                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                contentDescription = stringResource(id = R.string.water_mark_mode_image)
-            )
-        }
-        val mediaPermissionState = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            rememberPermissionState(
-                Manifest.permission.READ_MEDIA_IMAGES
-            )
-        } else {
-            rememberPermissionState(
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            )
-        }
-        val singlePhotoPickerLauncher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.PickVisualMedia(),
-            onResult = { uri -> uri?.let { onIconSelected(item, it.toMediaRef()) } })
-        Button(onClick = {
+        onPick = {
             if (mediaPermissionState.status.isGranted) {
                 singlePhotoPickerLauncher.launch(
                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -85,8 +70,13 @@ fun IconOption(
             } else {
                 mediaPermissionState.launchPermissionRequest()
             }
-        }) {
-            Text(text = stringResource(id = R.string.action_pick))
-        }
-    }
+        },
+        preview = {
+            AsyncImage(
+                model = waterMark.iconUri.toUri(),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                contentDescription = stringResource(id = R.string.water_mark_mode_image)
+            )
+        },
+    )
 }
