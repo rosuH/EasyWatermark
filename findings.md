@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Prove iOS shared hosts with a narrow DEBUG surface first (S4d-320, 2026-07-03)
+
+- A new iOS shared CMP screen shell should first land as a Kotlin-owned `ComposeUIViewController` DEBUG witness when replacing the production SwiftUI surface would mix in system-picker/share/save concerns. This keeps the platform edge stable while proving framework export, runtime composition, and UI reachability.
+- Visible iOS host witnesses need XCUITest coverage and screenshots, not just compile. Scroll to the witness by accessibility id and keep an attachment so the proof distinguishes "linked" from "actually rendered."
+
 ## Keep transition internals behind the host boundary (S4d-319, 2026-07-03)
 
 - Shared transition hosts should expose the host and dismiss helper, not their timing constants or inner animation functions, unless another platform genuinely needs those pieces as API.

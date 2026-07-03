@@ -12,6 +12,15 @@ import Shared
 // `WatermarkGeometry().diagonal(...)` is kept as a cheap, eagerly-evaluated `:shared` link witness so
 // the framework link is exercised even before any photo is picked.
 #if DEBUG
+struct SharedComposeLaunchShellWitness: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> UIViewController {
+        IosSharedComposeHost.shared.launchScreenShellWitness()
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+    }
+}
+
 struct SharedComposeEditorShellWitness: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
         IosSharedComposeHost.shared.editorScreenShellWitness()
@@ -263,6 +272,10 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
 
 #if DEBUG
+                SharedComposeLaunchShellWitness()
+                    .frame(height: 128)
+                    .accessibilityIdentifier("sharedComposeLaunchShellWitness")
+
                 SharedComposeEditorShellWitness()
                     .frame(height: 180)
                     .accessibilityIdentifier("sharedComposeEditorShellWitness")

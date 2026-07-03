@@ -87,6 +87,17 @@ final class PickerFlowUITests: XCTestCase {
         // the render/export path is proven via the fixture seam in testFixtureRenderPreviewAndExport.
     }
 
+    /// S4d-320: proves the DEBUG-only iOS shared CMP launch-shell witness is embedded in the SwiftUI
+    /// surface. This is a host/link/runtime proof only; it does not replace the SwiftUI picker/export UI.
+    func testSharedComposeLaunchWitnessVisible() {
+        let app = XCUIApplication()
+        app.launch()
+        let witness = app.descendants(matching: .any)["sharedComposeLaunchShellWitness"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(witness, in: app, timeout: 12),
+                      "sharedComposeLaunchShellWitness was not reachable in the iOS bring-up surface.")
+        attach(app, "30-shared-compose-launch-witness")
+    }
+
     /// S4d-234: proves the S4d-233 Templates UI works end-to-end through the app:
     ///   1. Save current creates a visible template row for a unique marker string.
     ///   2. Apply (tapping the saved row) updates the watermark text field back to that marker.

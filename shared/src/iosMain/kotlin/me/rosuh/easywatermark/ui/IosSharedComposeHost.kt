@@ -2,6 +2,7 @@ package me.rosuh.easywatermark.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
@@ -11,6 +12,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
@@ -24,6 +27,24 @@ import platform.UIKit.UIViewController
  * render a real commonMain CMP shell from the `Shared.framework`.
  */
 object IosSharedComposeHost {
+    fun launchScreenShellWitness(): UIViewController = ComposeUIViewController {
+        AppTheme {
+            LaunchScreenShell(
+                pickImageLabel = "Choose Images",
+                aboutContentDescription = "About EasyWatermark",
+                aboutIcon = ColorPainter(MaterialTheme.colorScheme.primary),
+                startLogoAnimation = false,
+                logo = { modifier, _ ->
+                    Box(modifier.size(44.dp), contentAlignment = Alignment.Center) {
+                        Text("EW", style = MaterialTheme.typography.labelMedium)
+                    }
+                },
+                onPickImageClick = {},
+                onGoAbout = {},
+            )
+        }
+    }
+
     fun editorScreenShellWitness(): UIViewController = ComposeUIViewController {
         AppTheme {
             val images = remember {
