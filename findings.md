@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Save/export modal shell can move after its child sections are shared (S4d-266, 2026-07-03)
+
+- Once the output-options section and preview-list box live in commonMain, the remaining modal sheet can be a generic shared shell that wires those children together without importing Android `Uri` or Coil.
+- Keep side effects and platform payloads at the Android edge: localized resources, `Uri` items, thumbnail loading, export/open-gallery callbacks, and the currently unused `onShareClick` pass-through. This is a screen-shell migration, not save/share-flow migration.
+
 ## Save/export options can move because ImageFormat is already shared (S4d-265, 2026-07-03)
 
 - The output-format dropdown and JPEG-quality slider are pure Compose UI over shared `ImageFormat`, so they can move to commonMain with localized strings injected by Android.
