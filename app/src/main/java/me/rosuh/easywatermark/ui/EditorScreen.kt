@@ -74,7 +74,6 @@ fun EditorScreen(
     selectedImage: ImageInfo? = null,
     onBack: () -> Unit,
     onImageSelected: (ImageInfo) -> Unit = {},
-    onImageDelete: () -> Unit = {},
     onWaterMrkChange: (item: FuncTitleModel, any: Any) -> Unit = { _, _ -> },
     onAddMoreImages: () -> Unit = { },
     onShowSaveDialog: () -> Unit = { },
@@ -131,7 +130,6 @@ fun EditorScreen(
                     selectedImage,
                     modifier = photoStripModifier,
                     onImageSelected,
-                    onImageDelete,
                 )
             },
             bottomControls = {
@@ -200,7 +198,6 @@ fun OptionControl(
     item: FuncTitleModel,
     waterMark: WaterMark,
     modifier: Modifier = Modifier,
-    showSheet: Boolean = true,
     onChange: (item: FuncTitleModel, any: Any) -> Unit = { _, _ -> },
     onGoTemplateList: () -> Unit = {},
     onDismissRequest: () -> Unit,
@@ -417,7 +414,6 @@ fun WaterMarkView(
     waterMark: WaterMark,
     selectedImage: ImageInfo?,
     onUpdateUriFailed: (SecurityException) -> Unit = { },
-    onScaleEnd: (textSize: Float) -> Unit = { },
     onOffsetChanged: (info: ImageInfo) -> Unit = { },
 ) {
     EditorPreviewFrame(
@@ -651,7 +647,6 @@ fun PhotoList(
     selectedImage: ImageInfo?,
     modifier: Modifier = Modifier,
     onImageSelected: (ImageInfo) -> Unit = {},
-    onImageDelete: () -> Unit = {},
 ) {
     EditorPhotoStrip(
         images = imaList,

@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Remove stale wrapper API after shared-shell extraction (S4d-310, 2026-07-03)
+
+- Shared CMP shell moves can leave Android wrapper parameters that no longer feed any UI affordance. Treat them like public state cleanup: prove no external caller first, then delete the parameter and the local pass-through together.
+- A removed affordance hook is safe only when the shared shell truly has no slot for it. Here `EditorPhotoStrip` has no delete action, `EditorOptionControlFrame` has no sheet toggle input, and `EditorPreviewFrame`/`WaterMarkCanvas` do not consume scale-end callbacks.
+
 ## Version-catalog cleanup must respect alternate Compose accessors (S4d-309, 2026-07-03)
 
 - An unused AndroidX Compose catalog alias can be removed without removing the underlying capability when live modules consume Compose through the BOM, explicit live aliases, or JetBrains `compose.*` plugin accessors. Prove this at the Gradle-reference level, not by source imports like `androidx.compose.foundation.*`.
