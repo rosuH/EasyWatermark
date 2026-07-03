@@ -12,9 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,21 +27,13 @@ import coil3.request.ImageRequest
 import coil3.request.allowRgb565
 import coil3.request.crossfade
 import coil3.request.placeholder
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.ui.ANIMATION_DURATION
-import me.rosuh.easywatermark.ui.AnimatedSlideInTransition
 import me.rosuh.easywatermark.ui.AnimatedTransitionDialogHelper
+import me.rosuh.easywatermark.ui.AnimatedTransitionHost
 import me.rosuh.easywatermark.ui.GalleryDialogTopBarShell
 import me.rosuh.easywatermark.ui.GalleryImageGrid
 import me.rosuh.easywatermark.ui.GallerySelectedCountFab
 import me.rosuh.easywatermark.ui.Image
-import me.rosuh.easywatermark.ui.startDismissWithExitAnimation
 import me.rosuh.easywatermark.utils.ktx.toUri
 
 
@@ -59,38 +49,14 @@ fun AnimatedTransitionView(
     contentAlignment: Alignment = Alignment.Center,
     content: @Composable (AnimatedTransitionDialogHelper) -> Unit,
 ) {
-    val animateTrigger = remember {
-        mutableStateOf(false)
-    }
-    val onDismissSharedFlow: MutableSharedFlow<Any> = remember { MutableSharedFlow() }
-    val coroutineScope: CoroutineScope = rememberCoroutineScope()
-    LaunchedEffect(Unit) {
-        launch {
-            delay(ANIMATION_DURATION)
-            animateTrigger.value = true
-        }
-        launch {
-            onDismissSharedFlow.asSharedFlow().collectLatest {
-                startDismissWithExitAnimation(animateTrigger, onDismissRequest)
-            }
-        }
-    }
-    val scope = rememberCoroutineScope()
-    BackHandler {
-        scope.launch {
-            startDismissWithExitAnimation(
-                animateTrigger = animateTrigger,
-                onDismiss = {
-                    onDismissRequest()
-                }
-            )
-        }
-    }
-    Box(contentAlignment = contentAlignment, modifier = Modifier.fillMaxSize()) {
-        AnimatedSlideInTransition(visible = animateTrigger.value) {
-            content(AnimatedTransitionDialogHelper(coroutineScope, onDismissSharedFlow))
-        }
-    }
+    AnimatedTransitionHost(
+        onDismissRequest = onDismissRequest,
+        contentAlignment = contentAlignment,
+        backHandler = { onBack ->
+            BackHandler(onBack = onBack)
+        },
+        content = content,
+    )
 }
 
 @Composable

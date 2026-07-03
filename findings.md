@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Shared hosts need Unit-typed platform callbacks (S4d-273, 2026-07-03)
+
+- `AnimatedTransitionHost` can own the transition state machine while Android injects `BackHandler` as a composable callback.
+- Be explicit when a callback launches coroutines: `scope.launch { ... }` otherwise infers `() -> Job`, which does not satisfy a platform callback shaped as `() -> Unit`.
+
 ## Delete unused wrappers instead of migrating them (S4d-272, 2026-07-03)
 
 - `AnimatedTransitionDialog` had no callers; the live gallery path uses `AnimatedTransitionView`.
