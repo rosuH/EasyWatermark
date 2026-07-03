@@ -2,8 +2,9 @@ package me.rosuh.easywatermark.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
@@ -42,6 +43,54 @@ object IosSharedComposeHost {
                 onPickImageClick = {},
                 onGoAbout = {},
             )
+        }
+    }
+
+    fun galleryDialogShellWitness(): UIViewController = ComposeUIViewController {
+        AppTheme {
+            var images by remember {
+                mutableStateOf(
+                    List(8) { index ->
+                        Image(
+                            id = index,
+                            uri = MediaRef("ios-gallery-witness-$index"),
+                            name = "Gallery witness ${index + 1}",
+                            size = 0L,
+                            date = 0L,
+                        )
+                    }
+                )
+            }
+
+            GalleryDialogShell(
+                images = images,
+                title = "Photos",
+                closeIcon = ColorPainter(MaterialTheme.colorScheme.onSurface),
+                searchIcon = ColorPainter(MaterialTheme.colorScheme.primary),
+                checkIcon = ColorPainter(MaterialTheme.colorScheme.onSecondary),
+                selectedCountIcon = ColorPainter(MaterialTheme.colorScheme.onPrimary),
+                closeContentDescription = "Close gallery witness",
+                searchContentDescription = "Open system picker",
+                selectedCountContentDescription = "Selected image count",
+                modifier = Modifier.fillMaxSize(),
+                contentWindowInsets = WindowInsets(),
+                onLoadImages = {},
+                onDismiss = {},
+                onImageSelected = { _, index, isSelected ->
+                    images = images.mapIndexed { itemIndex, image ->
+                        if (itemIndex == index) image.copy(check = isSelected) else image
+                    }
+                },
+                onPickImageViaSystem = {},
+            ) { image, _, thumbnailModifier ->
+                val color = when (image.id % 4) {
+                    0 -> MaterialTheme.colorScheme.primaryContainer
+                    1 -> MaterialTheme.colorScheme.secondaryContainer
+                    2 -> MaterialTheme.colorScheme.tertiaryContainer
+                    else -> MaterialTheme.colorScheme.surfaceVariant
+                }
+                Box(thumbnailModifier.background(color))
+            }
         }
     }
 

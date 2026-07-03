@@ -21,6 +21,15 @@ struct SharedComposeLaunchShellWitness: UIViewControllerRepresentable {
     }
 }
 
+struct SharedComposeGalleryShellWitness: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> UIViewController {
+        IosSharedComposeHost.shared.galleryDialogShellWitness()
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+    }
+}
+
 struct SharedComposeEditorShellWitness: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
         IosSharedComposeHost.shared.editorScreenShellWitness()
@@ -275,6 +284,10 @@ struct ContentView: View {
                 SharedComposeLaunchShellWitness()
                     .frame(height: 128)
                     .accessibilityIdentifier("sharedComposeLaunchShellWitness")
+
+                SharedComposeGalleryShellWitness()
+                    .frame(height: 220)
+                    .accessibilityIdentifier("sharedComposeGalleryShellWitness")
 
                 SharedComposeEditorShellWitness()
                     .frame(height: 180)

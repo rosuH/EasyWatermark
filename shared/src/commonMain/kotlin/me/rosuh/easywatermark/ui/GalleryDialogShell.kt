@@ -4,8 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,6 +36,7 @@ fun GalleryDialogShell(
     searchContentDescription: String,
     selectedCountContentDescription: String,
     modifier: Modifier = Modifier,
+    contentWindowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
     backHandler: @Composable (onBack: () -> Unit) -> Unit = {},
     onLoadImages: () -> Unit,
     onDismiss: (selected: Boolean) -> Unit = {},
@@ -57,6 +60,7 @@ fun GalleryDialogShell(
             modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background),
+            contentWindowInsets = contentWindowInsets,
             topBar = {
                 GalleryDialogTopBarShell(
                     title = title,
