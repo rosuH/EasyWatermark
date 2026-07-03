@@ -4,22 +4,13 @@ import android.Manifest
 import android.content.ContentResolver
 import android.net.Uri
 import android.os.Build
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -75,44 +66,27 @@ private fun LaunchScreenContent(
         )
     }
 
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        LogoView(
-            modifier = Modifier
-                .padding(top = maxHeight * 0.2f)
-                .align(Alignment.TopCenter),
-            startLogoAnimation
-        )
-
-        Button(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .padding(top = maxHeight * 0.3f),
-            // Parity (ADR-0011): production buttons are sharp-cornered (ShapeAppearance.App.SmallComponent = 0dp)
-            shape = RectangleShape,
-            onClick = {
-                startLogoAnimation = false
-                if (mediaPermissionState.status.isGranted) {
-                    onShowGalleryDialog()
-                } else {
-                    mediaPermissionState.launchPermissionRequest()
-                }
-            }) {
-            Text(stringResource(R.string.tips_pick_image))
-        }
-
-        IconButton(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = maxHeight * 0.03f),
-            onClick = { onGoAbout() }) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_about),
-                contentDescription = stringResource(
-                    id = R.string.about_title_about
-                )
+    LaunchScreenShell(
+        pickImageLabel = stringResource(R.string.tips_pick_image),
+        aboutContentDescription = stringResource(R.string.about_title_about),
+        aboutIcon = painterResource(R.drawable.ic_about),
+        startLogoAnimation = startLogoAnimation,
+        logo = { modifier, shouldAnimate ->
+            LogoView(
+                modifier = modifier,
+                startLogoAnimation = shouldAnimate,
             )
-        }
-    }
+        },
+        onPickImageClick = {
+            startLogoAnimation = false
+            if (mediaPermissionState.status.isGranted) {
+                onShowGalleryDialog()
+            } else {
+                mediaPermissionState.launchPermissionRequest()
+            }
+        },
+        onGoAbout = onGoAbout,
+    )
 }
 
 @Composable

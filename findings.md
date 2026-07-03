@@ -1,5 +1,11 @@
 # Compose Migration Findings
 
+## Launch screen shell can move by injecting platform edges (S4d-255, 2026-07-03)
+
+- The Launch screen's stable layout is platform-neutral: logo placement, "Choose Images" button placement, about button placement, and sharp-corner button shape. The Android-specific parts are permission request state, resource lookup, and the legacy animated `ColoredImageVIew` logo implementation.
+- The safe extraction shape is a shared shell with injected strings, `Painter`, and a logo slot that receives `startLogoAnimation`. Do not move permission launchers, `Manifest.permission.*`, `Build.VERSION`, `stringResource`, `painterResource`, or `AndroidView` into commonMain.
+- This pattern should guide the next screen-shell slices: extract layout/control composition only after the platform edges are explicit, and keep behavior callbacks at the Android/activity boundary until Desktop/iOS are real consumers of the same screen.
+
 ## AndroMeld smoke proof requires MCP control to be enabled (S4d-254, 2026-07-03)
 
 - The Android emulator smoke cannot be accepted from Gradle/Android CLI evidence alone. `:app:assembleDebug` and `android run` can prove current debug build/install/launch, but the requested debt also requires a visible AndroMeld walk with READ_MEDIA_IMAGES confirmation, gallery -> editor navigation, parameter adjustments, export, and screenshots that were actually viewed.
