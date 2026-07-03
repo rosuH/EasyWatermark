@@ -14,8 +14,9 @@ plugins {
 // C4.3 Compose lineage unification: :shared (Compose Multiplatform) transitively brings
 // `org.jetbrains.compose.*` coordinates onto :app's Android classpath. On Android these are the same
 // classes as `androidx.compose.*` (CMP delegates to Jetpack Compose), so we substitute them to the
-// AndroidX coordinates and let the Compose BOM (2026.05.01 -> 1.11.2) pick the version. Result: a
-// single AndroidX Compose lineage on the Android runtime graph, zero `org.jetbrains.compose.*` nodes.
+// AndroidX coordinates. S4d-236: use the original dependency's version (not a hard-coded one) so
+// artifacts on different version lines (material3 at 1.4.0, annotation-internal, etc.) resolve
+// correctly; the Compose BOM (2026.05.01 -> 1.11.2) aligns the core compose.* artifacts.
 // Build-config only; no source/renderer/UI behavior change.
 configurations.all {
     resolutionStrategy.dependencySubstitution {
@@ -23,11 +24,9 @@ configurations.all {
             val selector = requested
             if (selector is ModuleComponentSelector && selector.group.startsWith("org.jetbrains.compose.")) {
                 val androidxGroup = selector.group.replaceFirst("org.jetbrains.compose", "androidx.compose")
-                // Version pinned to the Compose BOM's line (2026.05.01 -> 1.11.2). Must equal the BOM
-                // Compose version; the dependency-graph proof asserts a single 1.11.2 lineage.
                 useTarget(
-                    "$androidxGroup:${selector.module}:1.11.2",
-                    "C4.3: unify Compose lineage to AndroidX 1.11.2 on Android",
+                    "$androidxGroup:${selector.module}:${selector.version}",
+                    "C4.3: unify Compose lineage to AndroidX on Android",
                 )
             }
         }
@@ -161,8 +160,8 @@ dependencies {
 //    val composeBom = platform("androidx.compose:compose-bom:2023.10.00")
 //    implementation(composeBom)
 //    androidTestImplementation(composeBom)
-    implementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(platform(libs.androidx.compose.bom))
+    implementation(enforcedPlatform(libs.androidx.compose.bom))
+    androidTestImplementation(enforcedPlatform(libs.androidx.compose.bom))
     //    implementation("androidx.compose.material3:material3:1.2.0-alpha09")
 //    implementation("androidx.compose.material3:material3-window-size-class:1.1.2")
 //    implementation(libs.material)

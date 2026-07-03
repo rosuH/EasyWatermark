@@ -1,4 +1,4 @@
-package me.rosuh.easywatermark.ui
+package me.rosuh.easywatermark.ui.theme
 import androidx.compose.ui.graphics.Color
 
 val md_theme_light_primary = Color(0xFF6E5E00)
@@ -73,4 +73,3 @@ val dark_CustomColor1 = Color(0xFFFFA9FC)
 val dark_onCustomColor1 = Color(0xFF590060)
 val dark_CustomColor1Container = Color(0xFF7E0088)
 val dark_onCustomColor1Container = Color(0xFFFFD6F9)
-

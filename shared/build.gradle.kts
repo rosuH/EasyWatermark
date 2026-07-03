@@ -4,9 +4,11 @@ plugins {
     id(libs.plugins.kotlin.multiplatform.get().pluginId)
     id(libs.plugins.android.library.get().pluginId)
     // C4.3: Kotlin-bundled Compose compiler + Compose Multiplatform. The latter delivers the
-    // multiplatform (incl. iOS) androidx.compose graphics/text artifacts the future commonMain
-    // renderer needs. Use ONLY compose.runtime/compose.ui — NO compose-resources / compose.components
-    // (CMP-9547 stays out of scope). On Android these map to androidx.compose 1.11.2 (== :app's BOM).
+    // multiplatform (incl. iOS) androidx.compose graphics/text/material3 artifacts the shared
+    // commonMain renderer and the shared CMP UI route need. compose.runtime/compose.ui/
+    // compose.material3 are allowed; compose-resources / compose.components are NOT
+    // (CMP-9547 stays out of scope). On Android these map to androidx.compose (BOM-aligned via
+    // :app's dependency substitution + enforcedPlatform).
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.compose.multiplatform)
     // S4d-91: Room KMP toolchain proof — KSP (multiplatform) + Room Gradle plugin, applied to
@@ -14,17 +16,21 @@ plugins {
     // the production templates path in :app stays on classic Android Room/KSP, untouched.
     alias(libs.plugins.ksp)
     alias(libs.plugins.androidx.room)
+    // S4d-247: explicit Kotlin serialization compiler plugin so :shared owns generation for
+    // @Serializable route objects in commonMain. App-side plugin remains intact.
+    alias(libs.plugins.kotlin.serialization)
 }
 
 /**
  * `:shared` — the KMP module (plan C4). Platform-neutral domain types + the watermark geometry core
  * in `commonMain`, compiling for Android + JVM(desktop) + iOS.
  *
- * C4.3 lineage unification: commonMain now also carries the multiplatform Compose graphics/text/
- * runtime types (via the Compose Multiplatform plugin) so the future commonMain renderer (S4d-2+)
- * can be written against them. This slice adds NO renderer logic — only a tiny compile probe
- * ([me.rosuh.easywatermark.render.ComposeTypeProbe]). On Android, CMP resolves to androidx.compose
- * 1.11.2, matching :app's bumped Compose BOM; :app substitutes any org.jetbrains.compose.* nodes to
+ * C4.3 lineage unification: commonMain carries the multiplatform Compose graphics/text/runtime/
+ * material3 types (via the Compose Multiplatform plugin) so the shared commonMain renderer
+ * (S4d-2+: `WatermarkCellComposer`, `TextRasterEnv`, etc.) and the shared CMP UI route
+ * (S4d-236+: `ui/theme/Color.kt`, `ui/theme/Theme.kt`, future shared screens) can be written
+ * against them. On Android, CMP resolves to androidx.compose (BOM-aligned via :app's dependency
+ * substitution + enforcedPlatform); :app substitutes any org.jetbrains.compose.* nodes to
  * androidx so the Android runtime graph is single-lineage.
  */
 kotlin {
@@ -52,6 +58,14 @@ kotlin {
             // ui-text + ui-unit; on Android → androidx.compose.ui:* 1.11.2, on iOS/desktop → klibs.
             implementation(compose.runtime)
             implementation(compose.ui)
+            // S4d-236: Material3 components for the shared CMP UI route. On Android →
+            // androidx.compose.material3 (the :app dependency substitution converts the group
+            // org.jetbrains.compose.* → androidx.compose.* preserving the original version, then the
+            // enforcedPlatform Compose BOM aligns each AndroidX artifact; material3 is on its own
+            // AndroidX version line, NOT 1.11.2); on iOS/desktop → the CMP material3 klib
+            // (Skiko-backed). Same CMP plugin accessor as compose.runtime/compose.ui — no version
+            // bump, no catalog change.
+            implementation(compose.material3)
             // S4d-74: KMP DataStore Preferences. `datastore` (base/datastore-core) supplies the
             // platform-neutral DataStoreFactory/Storage the commonMain helper builds on; the
             // `-preferences` artifact supplies Preferences + the Android store creation used in
@@ -66,6 +80,9 @@ kotlin {
             // driver artifact is added: Android stays in Room compatibility mode on the framework
             // SupportSQLite open-helper (no .setDriver), so no libsqliteJni.so/sqlite-framework ships.
             implementation(libs.room.runtime)
+            // S4d-247: explicit kotlinx-serialization-json so :shared commonMain owns the
+            // runtime for @Serializable route objects. App-side dependency remains intact.
+            implementation(libs.kotlinx.serialization.json)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
