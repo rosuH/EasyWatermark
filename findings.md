@@ -1,5 +1,11 @@
 # Compose Migration Findings
 
+## Pair hidden iOS witness IDs with positive single-witness proof (S4d-325, 2026-07-03)
+
+- If a normal-launch hidden-default test lists a DEBUG-only CMP witness id, keep a matching positive XCUITest that proves the same id can actually render. Hidden-only coverage proves absence from product UI, not runtime reachability.
+- Prefer rendering one requested witness per positive test (`-sharedComposeWitness launch|gallery|about|editor`) over stacking many placeholder hosts in a long scroll surface. Stacking made the editor host exist but not become hittable; single-witness mode keeps the proof deterministic without exposing test UI to normal launches.
+- Swift test-only `UIViewControllerRepresentable` witness wrappers should be file-private. The public boundary is the Kotlin-owned `IosSharedComposeHost`, not ad hoc Swift wrapper types.
+
 ## Remove stale visible link witnesses once stronger runtime proof exists (S4d-324, 2026-07-03)
 
 - An on-screen `:shared linked ... geometry.diagonal(...)` label was useful during early iOS bring-up, but after fixture render/export XCUITests and gated CMP host witnesses it is only product-surface noise. Prefer deleting visible proof text over hiding it behind another UI affordance.

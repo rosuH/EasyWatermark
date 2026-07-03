@@ -111,7 +111,7 @@ final class PickerFlowUITests: XCTestCase {
     /// surface. This is a host/link/runtime proof only; it does not replace the SwiftUI picker/export UI.
     func testSharedComposeLaunchWitnessVisible() {
         let app = XCUIApplication()
-        app.launchArguments += ["-sharedComposeWitnesses", "1"]
+        app.launchArguments += ["-sharedComposeWitnesses", "1", "-sharedComposeWitness", "launch"]
         app.launch()
         let witness = app.descendants(matching: .any)["sharedComposeLaunchShellWitness"].firstMatch
         XCTAssertTrue(scrollUntilHittable(witness, in: app, timeout: 12),
@@ -123,7 +123,7 @@ final class PickerFlowUITests: XCTestCase {
     /// surface. This is a host/link/runtime proof only; it does not replace the system PhotosPicker.
     func testSharedComposeGalleryWitnessVisible() {
         let app = XCUIApplication()
-        app.launchArguments += ["-sharedComposeWitnesses", "1"]
+        app.launchArguments += ["-sharedComposeWitnesses", "1", "-sharedComposeWitness", "gallery"]
         app.launch()
         let witness = app.descendants(matching: .any)["sharedComposeGalleryShellWitness"].firstMatch
         XCTAssertTrue(scrollUntilHittable(witness, in: app, timeout: 12),
@@ -135,12 +135,24 @@ final class PickerFlowUITests: XCTestCase {
     /// surface. This is a host/link/runtime proof only; it does not replace production navigation.
     func testSharedComposeAboutWitnessVisible() {
         let app = XCUIApplication()
-        app.launchArguments += ["-sharedComposeWitnesses", "1"]
+        app.launchArguments += ["-sharedComposeWitnesses", "1", "-sharedComposeWitness", "about"]
         app.launch()
         let witness = app.descendants(matching: .any)["sharedComposeAboutShellWitness"].firstMatch
         XCTAssertTrue(scrollUntilHittable(witness, in: app, timeout: 12),
                       "sharedComposeAboutShellWitness was not reachable in the iOS bring-up surface.")
         attach(app, "32-shared-compose-about-witness")
+    }
+
+    /// S4d-325: proves the DEBUG-only iOS shared CMP editor-shell witness is embedded in the SwiftUI
+    /// surface. This is a host/link/runtime proof only; it does not replace the SwiftUI editor controls.
+    func testSharedComposeEditorWitnessVisible() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-sharedComposeWitnesses", "1", "-sharedComposeWitness", "editor"]
+        app.launch()
+        let witness = app.descendants(matching: .any)["sharedComposeEditorShellWitness"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(witness, in: app, timeout: 12),
+                      "sharedComposeEditorShellWitness was not reachable in the iOS bring-up surface.")
+        attach(app, "33-shared-compose-editor-witness")
     }
 
     /// S4d-234: proves the S4d-233 Templates UI works end-to-end through the app:
@@ -241,12 +253,14 @@ final class PickerFlowUITests: XCTestCase {
     private func scrollUntilHittable(_ element: XCUIElement, in app: XCUIApplication, timeout: TimeInterval) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         let scrollView = app.scrollViews.firstMatch
-        var shouldSwipeUp = true
         while Date() < deadline {
             if element.exists && element.isHittable { return true }
             if scrollView.exists {
-                shouldSwipeUp ? scrollView.swipeUp() : scrollView.swipeDown()
-                shouldSwipeUp.toggle()
+                if element.exists && element.frame.minY < app.frame.minY {
+                    scrollView.swipeDown()
+                } else {
+                    scrollView.swipeUp()
+                }
             } else {
                 app.swipeUp()
             }

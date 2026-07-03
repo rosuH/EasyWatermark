@@ -9,7 +9,7 @@ import Shared
 // S4d-58 proves render + export via the DEBUG-only fixture seam below; real PHPicker cell selection is
 // the only step still blocked by Xcode-27-beta / iOS-27 system UI automation.
 #if DEBUG
-struct SharedComposeLaunchShellWitness: UIViewControllerRepresentable {
+private struct SharedComposeLaunchShellWitness: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
         IosSharedComposeHost.shared.launchScreenShellWitness()
     }
@@ -18,7 +18,7 @@ struct SharedComposeLaunchShellWitness: UIViewControllerRepresentable {
     }
 }
 
-struct SharedComposeGalleryShellWitness: UIViewControllerRepresentable {
+private struct SharedComposeGalleryShellWitness: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
         IosSharedComposeHost.shared.galleryDialogShellWitness()
     }
@@ -27,7 +27,7 @@ struct SharedComposeGalleryShellWitness: UIViewControllerRepresentable {
     }
 }
 
-struct SharedComposeAboutShellWitness: UIViewControllerRepresentable {
+private struct SharedComposeAboutShellWitness: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
         IosSharedComposeHost.shared.aboutScreenShellWitness()
     }
@@ -36,7 +36,7 @@ struct SharedComposeAboutShellWitness: UIViewControllerRepresentable {
     }
 }
 
-struct SharedComposeEditorShellWitness: UIViewControllerRepresentable {
+private struct SharedComposeEditorShellWitness: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
         IosSharedComposeHost.shared.editorScreenShellWitness()
     }
@@ -66,6 +66,15 @@ struct ContentView: View {
 #if DEBUG
     private var showSharedComposeWitnesses: Bool {
         ProcessInfo.processInfo.arguments.contains("-sharedComposeWitnesses")
+    }
+
+    private func shouldShowSharedComposeWitness(_ name: String) -> Bool {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard showSharedComposeWitnesses else { return false }
+        guard let index = arguments.firstIndex(of: "-sharedComposeWitness"), arguments.indices.contains(index + 1) else {
+            return true
+        }
+        return arguments[index + 1] == name
     }
 #endif
 
@@ -288,21 +297,29 @@ struct ContentView: View {
 
 #if DEBUG
                 if showSharedComposeWitnesses {
-                    SharedComposeLaunchShellWitness()
-                        .frame(height: 128)
-                        .accessibilityIdentifier("sharedComposeLaunchShellWitness")
+                    if shouldShowSharedComposeWitness("launch") {
+                        SharedComposeLaunchShellWitness()
+                            .frame(height: 128)
+                            .accessibilityIdentifier("sharedComposeLaunchShellWitness")
+                    }
 
-                    SharedComposeGalleryShellWitness()
-                        .frame(height: 220)
-                        .accessibilityIdentifier("sharedComposeGalleryShellWitness")
+                    if shouldShowSharedComposeWitness("gallery") {
+                        SharedComposeGalleryShellWitness()
+                            .frame(height: 220)
+                            .accessibilityIdentifier("sharedComposeGalleryShellWitness")
+                    }
 
-                    SharedComposeAboutShellWitness()
-                        .frame(height: 260)
-                        .accessibilityIdentifier("sharedComposeAboutShellWitness")
+                    if shouldShowSharedComposeWitness("about") {
+                        SharedComposeAboutShellWitness()
+                            .frame(height: 260)
+                            .accessibilityIdentifier("sharedComposeAboutShellWitness")
+                    }
 
-                    SharedComposeEditorShellWitness()
-                        .frame(height: 180)
-                        .accessibilityIdentifier("sharedComposeEditorShellWitness")
+                    if shouldShowSharedComposeWitness("editor") {
+                        SharedComposeEditorShellWitness()
+                            .frame(height: 180)
+                            .accessibilityIdentifier("sharedComposeEditorShellWitness")
+                    }
                 }
 #endif
             }
