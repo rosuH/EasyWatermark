@@ -14,16 +14,12 @@ fun SaveExportSheet(
     imageUris: List<Uri> = emptyList(),
     selectedFormatLabel: ImageFormat,
     quality: Int,
-    isSaving: Boolean,
-    finishedCount: Int,
-    totalCount: Int,
     resultSummaryText: String,
     primaryActionLabel: String,
     onDismiss: () -> Unit,
     onFormatClick: (newFormat: ImageFormat) -> Unit,
     onQualityChange: (Int) -> Unit,
     onExportClick: () -> Unit,
-    onShareClick: () -> Unit,
     onOpenGalleryClick: () -> Unit,
 ) {
     SaveExportSheetShell(

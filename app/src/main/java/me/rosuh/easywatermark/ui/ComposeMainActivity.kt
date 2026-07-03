@@ -251,14 +251,7 @@ class ComposeMainActivity : ComponentActivity() {
                             val context = LocalContext.current
                             val templates by viewModel.templateListFlow.collectAsStateWithLifecycle()
 
-                            // [DEBUG] temporary export instrumentation — remove after diagnosing
-                            val saveResult by viewModel.saveResult.collectAsStateWithLifecycle()
-                            LaunchedEffect(saveResult) {
-                                Log.d("EXPORT", "saveResult code=${saveResult?.code} data=${saveResult?.data}")
-                            }
-
-                            val doExport: () -> Unit  = {
-                                Log.d("EXPORT", "doExport called imageList=${state.selectedImageList.size}")
+                            val doExport: () -> Unit = {
                                 viewModel.saveImage(
                                     context.contentResolver,
                                     state.selectedImageList
@@ -418,9 +411,6 @@ class ComposeMainActivity : ComponentActivity() {
                                     imageUris = state.selectedImageList.map { it.uri.toUri() },
                                     selectedFormatLabel = userPreferences.outputFormat,
                                     quality = userPreferences.compressLevel,
-                                    isSaving = false,
-                                    finishedCount = 0,
-                                    totalCount = state.selectedImageList.size,
                                     resultSummaryText = "0/${state.selectedImageList.size}",
                                     primaryActionLabel = stringResource(R.string.dialog_export_to_gallery),
                                     onDismiss = { showSaveSheet = false },
@@ -431,7 +421,6 @@ class ComposeMainActivity : ComponentActivity() {
                                         viewModel.saveOutput(level = q)
                                     },
                                     onExportClick = {
-                                        Log.d("EXPORT", "click selectedImages=${state.selectedImageList.size} sdk=${Build.VERSION.SDK_INT}")
                                         if (state.selectedImageList.isEmpty()) {
                                             return@SaveExportSheet
                                         }
@@ -441,7 +430,6 @@ class ComposeMainActivity : ComponentActivity() {
                                             permissionLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
                                         }
                                     },
-                                    onShareClick = {},
                                     onOpenGalleryClick = {}
                                 )
                             }

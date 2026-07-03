@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Trim wrapper API after shared shell migration (S4d-297, 2026-07-03)
+
+- Once a shared shell owns the real UI shape, revisit the Android wrapper and call site for stale pass-through arguments. `isSaving`, `finishedCount`, `totalCount`, and `onShareClick` were no longer consumed after `SaveExportSheetShell` landed, so keeping them only made the API imply behavior that did not exist.
+- Temporary debug observers are not product evidence. Remove one-off `EXPORT` logging and `saveResult` collection once the compile/test gates cover the save/export surface; keep actual export permission and `saveImage` behavior at the Android edge.
+
 ## Delete superseded shared shells once they become declaration-only (S4d-296, 2026-07-03)
 
 - `BottomSurface` was an intermediate shared wrapper from S4d-267, but the later bottom-controls host path now owns the relevant structure and no source call sites remain.
