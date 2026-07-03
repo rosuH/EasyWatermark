@@ -13,7 +13,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -56,12 +55,16 @@ import me.rosuh.easywatermark.render.DesktopImageDecoder
 import me.rosuh.easywatermark.render.DesktopSaveDecision
 import me.rosuh.easywatermark.ui.compose.IconWatermarkOption
 import me.rosuh.easywatermark.ui.compose.SliderOption
+import me.rosuh.easywatermark.ui.compose.TextColorOption
+import me.rosuh.easywatermark.ui.compose.TextColorOptionStrings
 import me.rosuh.easywatermark.ui.compose.TextContentOption
 import me.rosuh.easywatermark.ui.compose.TextContentOptionStrings
 import me.rosuh.easywatermark.ui.compose.TextPaintStyleLabels
 import me.rosuh.easywatermark.ui.compose.TextPaintStyleOption
 import me.rosuh.easywatermark.ui.compose.TextTypefaceLabels
 import me.rosuh.easywatermark.ui.compose.TileModeLabels
+import me.rosuh.easywatermark.ui.compose.formatArgbHexColor
+import me.rosuh.easywatermark.ui.compose.parseArgbHexColor
 import me.rosuh.easywatermark.ui.compose.TextTypeface as TextTypefaceOption
 import me.rosuh.easywatermark.ui.compose.TileMode as TileModeOption
 import me.rosuh.easywatermark.ui.save.SaveExportOptionsSection
@@ -210,6 +213,7 @@ private fun resolveDesktopOutputDir(): File {
  * S4d-287 replaced the watermark-text Apply field with the shared `TextContentOption` sheet shell while
  * keeping persistence/preview refresh at the Desktop edge.
  * S4d-288 replaced the horizontal/vertical gap Apply fields with two shared `SliderOption` consumers.
+ * S4d-289 replaced the text-color Apply field with a shared palette + custom-hex `TextColorOption`.
  */
 fun launchDesktopWindow() = application {
     // S4d-215: persist the window's user state (watermark config, output prefs, templates DB) under the
@@ -259,7 +263,8 @@ fun launchDesktopWindow() = application {
     var preview by remember { mutableStateOf<ImageBitmap?>(null) }
     // S4d-286: watermark rotation degree edited through the shared SliderOption (0..360).
     var degreeValue by remember { mutableStateOf(315f) }
-    // S4d-149: the watermark text COLOR being edited (hex string; parsed on "Apply color"). Loaded on launch.
+    // S4d-289: text color edited through the shared TextColorOption shell.
+    var textColorValue by remember { mutableStateOf(0xFFFFB800.toInt()) }
     var colorText by remember { mutableStateOf("") }
     // S4d-284: watermark opacity edited through the shared SliderOption (0..100 percent).
     var alphaPercent by remember { mutableStateOf(100f) }
@@ -281,7 +286,9 @@ fun launchDesktopWindow() = application {
         }
         watermarkText = repo.waterMark.first().text
         degreeValue = repo.waterMark.first().degree
-        colorText = "#%08X".format(repo.waterMark.first().textColor)
+        val loadedColor = repo.waterMark.first().textColor
+        textColorValue = loadedColor
+        colorText = formatArgbHexColor(loadedColor)
         // Persisted alpha is a 0..255 byte; display as a percent (Android editor semantics).
         // S4d-179: shared WatermarkConfigRules.alphaByteToPercent (Android baseline order); the displayed
         // value may differ from the old `alpha * 100f / 255f` by a final float ULP (display only).
@@ -330,6 +337,28 @@ fun launchDesktopWindow() = application {
         // Only replace the visible preview on a successful decode (keep the last good one on failure).
         img?.let { preview = it }
         return msg
+    }
+
+    fun applyTextColor(color: Int) {
+        scope.launch {
+            busy = true
+            val normalized = formatArgbHexColor(color)
+            val (next, ok, persistedColor) = withContext(Dispatchers.IO) {
+                try {
+                    editor.updateTextColor(color)
+                    Triple("Color applied: $normalized", true, repo.waterMark.first().textColor)
+                } catch (t: Throwable) {
+                    Triple("Failed: ${t.message}", false, null)
+                }
+            }
+            if (ok && persistedColor != null) {
+                textColorValue = persistedColor
+                colorText = formatArgbHexColor(persistedColor)
+            }
+            // S4d-198: auto-refresh the preview on success (no manual Preview click).
+            status = if (ok) "$next · ${refreshPreview()}" else next
+            busy = false
+        }
     }
 
     // S4d-158: drop image file(s) onto the window to load them through the SAME save spine as "Open image…".
@@ -491,56 +520,28 @@ fun launchDesktopWindow() = application {
                         }
                     },
                 )
-                // S4d-149: the watermark TEXT COLOR input (hex). Accepts #RRGGBB / RRGGBB / #AARRGGBB /
-                // AARRGGBB; RGB-only uses opaque alpha 0xFF. Parsed on an explicit "Apply color" click
-                // (invalid → status only, no persist); persisted via WatermarkConfigEditor.updateTextColor;
-                // the field is normalized to #AARRGGBB on success. S4d-198: a successful apply auto-refreshes the preview (manual "Preview" still available).
-                OutlinedTextField(
-                    value = colorText,
-                    onValueChange = { colorText = it },
+                // S4d-289: Desktop consumes a shared color shell with preset swatches plus the previous
+                // custom #RRGGBB/#AARRGGBB path. Persistence and preview refresh stay at the Desktop edge.
+                Text("Text color", style = MaterialTheme.typography.bodyMedium)
+                TextColorOption(
+                    currentColor = textColorValue,
+                    customText = colorText,
+                    strings = TextColorOptionStrings(
+                        customLabel = "Text color (#AARRGGBB)",
+                        applyCustomButton = "Apply color",
+                    ),
                     enabled = !busy,
-                    label = { Text("Text color (#AARRGGBB)") },
-                )
-                Button(
-                    enabled = !busy,
-                    onClick = {
-                        val raw = colorText.trim().removePrefix("#")
-                        // r1: reject any non-hex char (incl. a leading +/-, which toLongOrNull(16) WOULD
-                        // accept — e.g. "-FFFFF"/"+FFFFF" parse to valid Longs) BEFORE the length/parse, so
-                        // signed/garbage input never reaches updateTextColor.
-                        val isHex = raw.isNotEmpty() && raw.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }
-                        val parsedColor: Int? = when {
-                            !isHex -> null
-                            raw.length == 6 -> raw.toLongOrNull(16)?.let { (0xFF000000L or it).toInt() } // RRGGBB → opaque
-                            raw.length == 8 -> raw.toLongOrNull(16)?.toInt()                              // AARRGGBB
-                            else -> null
-                        }
+                    onColorSelected = { applyTextColor(it) },
+                    onCustomTextChange = { colorText = it },
+                    onApplyCustomText = {
+                        val parsedColor = parseArgbHexColor(colorText)
                         if (parsedColor == null) {
-                            // Invalid hex → short failure status; do NOT call the editor.
-                            status = "Invalid color: \"$colorText\" — use #RRGGBB or #AARRGGBB hex."
+                            status = "Invalid color: \"$colorText\" - use #RRGGBB or #AARRGGBB hex."
                         } else {
-                            val normalized = "#%08X".format(parsedColor)
-                            scope.launch {
-                                busy = true
-                                val (next, ok) = withContext(Dispatchers.IO) {
-                                    try {
-                                        editor.updateTextColor(parsedColor)
-                                        "Color applied: $normalized" to true
-                                    } catch (t: Throwable) {
-                                        "Failed: ${t.message}" to false
-                                    }
-                                }
-                                // Normalize the field to the stable #AARRGGBB display on a successful apply.
-                                if (ok) colorText = normalized
-                                // S4d-198: auto-refresh the preview on success (no manual Preview click).
-                                status = if (ok) "$next · ${refreshPreview()}" else next
-                                busy = false
-                            }
+                            applyTextColor(parsedColor)
                         }
                     },
-                ) {
-                    Text("Apply color")
-                }
+                )
                 // S4d-284: Desktop consumes the shared slider shell for opacity. Persistence still happens
                 // only on slider-release through WatermarkConfigEditor.updateAlpha, not on every drag frame.
                 Text("Opacity", style = MaterialTheme.typography.bodyMedium)
