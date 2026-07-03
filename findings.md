@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Desktop degree can follow the shared slider-release pattern (S4d-286, 2026-07-03)
+
+- Degree is the same control shape as opacity and text size on Desktop: keep drag-local UI state, persist on slider release, then re-read the repository value because `WatermarkConfigEditor.updateDegree` and the repository own clamp/storage semantics.
+- This removes another Desktop-only numeric Apply field without changing Android renderer behavior, the shared degree rule, or output semantics.
+
 ## Desktop numeric sliders should re-read persisted values after release (S4d-285, 2026-07-03)
 
 - Reusing `SliderOption` for Desktop text size follows the opacity pattern: keep drag-local UI state, persist on release, then re-read the repository value because the shared editor/repository still owns coercion and storage semantics.

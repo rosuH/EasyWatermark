@@ -193,8 +193,9 @@ private fun resolveDesktopOutputDir(): File {
  * S4d-160: a minimal "Templates" section over the shared Desktop Room path saves the current watermark
  * text, lists saved templates, and applies (Use → `WatermarkConfigEditor.updateText`), updates in place
  * (Update → `TemplateEditor.update`), or deletes them.
- * S4d-198: REACTIVE preview — every successful explicit editor action (Apply text/degree/color/opacity/
- * gaps/text-size, the tile/typeface/style buttons, "Use text watermark", and template "Use") now
+ * S4d-198: REACTIVE preview — every successful explicit editor action (Apply text/color/gaps,
+ * opacity/text-size/degree slider release, the tile/typeface/style buttons, "Use text watermark",
+ * and template "Use") now
  * auto-refreshes the on-screen preview through the SAME `refreshPreview()` → `runSaveFlow` temp-file spine
  * the manual "Preview" button uses (bounded to explicit clicks, NOT per keystroke). Preview stays a
  * temp render: it never sets `lastSavedFile`, so the share-substitute buttons remain bound to real saves;
@@ -202,6 +203,8 @@ private fun resolveDesktopOutputDir(): File {
  * source-change actions "Open image…" and image **drop** ALSO auto-refresh the preview over the just-loaded
  * image (after their real save sets `lastImage`/`lastSavedFile`; the extra refresh still writes only the temp
  * file). "Render & Save sample" / "Save as…" remain real-save-only (they don't change the source/config).
+ * S4d-284..S4d-286 then replaced the opacity/text-size/degree Apply fields with shared `SliderOption`
+ * consumers that persist on slider release and re-read the repository value.
  */
 fun launchDesktopWindow() = application {
     // S4d-215: persist the window's user state (watermark config, output prefs, templates DB) under the
@@ -249,8 +252,8 @@ fun launchDesktopWindow() = application {
     var watermarkText by remember { mutableStateOf("") }
     // S4d-147: the rendered preview image (null until the first "Preview" click).
     var preview by remember { mutableStateOf<ImageBitmap?>(null) }
-    // S4d-148: the watermark rotation degree being edited (string; parsed on "Apply degree"). Loaded on launch.
-    var degreeText by remember { mutableStateOf("") }
+    // S4d-286: watermark rotation degree edited through the shared SliderOption (0..360).
+    var degreeValue by remember { mutableStateOf(315f) }
     // S4d-149: the watermark text COLOR being edited (hex string; parsed on "Apply color"). Loaded on launch.
     var colorText by remember { mutableStateOf("") }
     // S4d-284: watermark opacity edited through the shared SliderOption (0..100 percent).
@@ -272,7 +275,7 @@ fun launchDesktopWindow() = application {
             outputQuality = it.compressLevel
         }
         watermarkText = repo.waterMark.first().text
-        degreeText = repo.waterMark.first().degree.toString()
+        degreeValue = repo.waterMark.first().degree
         colorText = "#%08X".format(repo.waterMark.first().textColor)
         // Persisted alpha is a 0..255 byte; display as a percent (Android editor semantics).
         // S4d-179: shared WatermarkConfigRules.alphaByteToPercent (Android baseline order); the displayed
@@ -458,47 +461,33 @@ fun launchDesktopWindow() = application {
                 ) {
                     Text("Apply text")
                 }
-                // S4d-148: the watermark ROTATION DEGREE input. Parsed on an explicit "Apply degree" click
-                // (toFloatOrNull; invalid → status only, no persist); coerced to 0..360 at the edge (the repo
-                // also clamps via WatermarkConfigRules.clampDegree). S4d-198: a successful apply auto-refreshes the preview (manual "Preview" still available).
-                OutlinedTextField(
-                    value = degreeText,
-                    onValueChange = { degreeText = it },
+                // S4d-286: Desktop consumes the shared slider shell for rotation degree. Persistence still
+                // happens only on slider-release through WatermarkConfigEditor.updateDegree.
+                Text("Degree", style = MaterialTheme.typography.bodyMedium)
+                SliderOption(
+                    currentValue = degreeValue,
+                    valueRange = 0f..360f,
                     enabled = !busy,
-                    label = { Text("Degree (0–360)") },
-                )
-                Button(
-                    enabled = !busy,
-                    onClick = {
-                        // r1: reject blank/non-numeric AND non-finite (NaN/Infinity parse as Floats) before persisting.
-                        val parsed = degreeText.trim().toFloatOrNull()?.takeIf { it.isFinite() }
-                        if (parsed == null) {
-                            // Invalid number → short failure status; do NOT call the editor.
-                            status = "Invalid degree: \"$degreeText\" — enter a number (0–360)."
-                        } else {
-                            scope.launch {
-                                busy = true
-                                val applied = parsed.coerceIn(0f, 360f)
-                                val (next, ok) = withContext(Dispatchers.IO) {
-                                    try {
-                                        editor.updateDegree(applied)
-                                        "Degree applied: $applied" to true
-                                    } catch (t: Throwable) {
-                                        "Failed: ${t.message}" to false
-                                    }
+                    onValueChange = { degreeValue = it.coerceIn(0f, 360f) },
+                    onValueChangeFinished = {
+                        scope.launch {
+                            busy = true
+                            val applied = degreeValue.coerceIn(0f, 360f)
+                            val (next, ok) = withContext(Dispatchers.IO) {
+                                try {
+                                    editor.updateDegree(applied)
+                                    "Degree applied: $applied" to true
+                                } catch (t: Throwable) {
+                                    "Failed: ${t.message}" to false
                                 }
-                                // r1: on a successful apply, snap the field to the clamped value actually
-                                // persisted (a typed 400 now shows 360.0, not the rejected 400).
-                                if (ok) degreeText = applied.toString()
-                                // S4d-198: auto-refresh the preview on success (no manual Preview click).
-                                status = if (ok) "$next · ${refreshPreview()}" else next
-                                busy = false
                             }
+                            if (ok) degreeValue = repo.waterMark.first().degree
+                            // S4d-198: auto-refresh the preview on success (no manual Preview click).
+                            status = if (ok) "$next · ${refreshPreview()}" else next
+                            busy = false
                         }
                     },
-                ) {
-                    Text("Apply degree")
-                }
+                )
                 // S4d-149: the watermark TEXT COLOR input (hex). Accepts #RRGGBB / RRGGBB / #AARRGGBB /
                 // AARRGGBB; RGB-only uses opaque alpha 0xFF. Parsed on an explicit "Apply color" click
                 // (invalid → status only, no persist); persisted via WatermarkConfigEditor.updateTextColor;
