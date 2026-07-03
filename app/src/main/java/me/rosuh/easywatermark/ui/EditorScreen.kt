@@ -101,9 +101,13 @@ import me.rosuh.easywatermark.ui.compose.ColorOption
 import me.rosuh.easywatermark.ui.compose.IconOption
 import me.rosuh.easywatermark.ui.compose.SliderOption
 import me.rosuh.easywatermark.ui.compose.TemplateListSheet
+import me.rosuh.easywatermark.ui.compose.TemplateListSheetStrings
 import me.rosuh.easywatermark.ui.compose.TextContentOption
+import me.rosuh.easywatermark.ui.compose.TextContentOptionStrings
 import me.rosuh.easywatermark.ui.compose.TextTypeface
+import me.rosuh.easywatermark.ui.compose.TextTypefaceLabels
 import me.rosuh.easywatermark.ui.compose.TileMode
+import me.rosuh.easywatermark.ui.compose.TileModeLabels
 import me.rosuh.easywatermark.ui.widget.utils.WaterMarkShader
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.data.model.WatermarkConfigRules
@@ -174,6 +178,19 @@ fun EditorScreen(
     if (showTemplateSheet) {
         TemplateListSheet(
             templates = templates,
+            strings = TemplateListSheetStrings(
+                title = stringResource(R.string.dialog_title_template_title),
+                addButton = stringResource(R.string.dialog_button_add_template),
+                empty = stringResource(R.string.tips_list_empty),
+                editTitle = stringResource(R.string.dialog_title_edit_watermark),
+                deleteConfirm = stringResource(R.string.tips_delete_template),
+                existConfirmTitle = stringResource(R.string.dialog_title_exist_confirm),
+                useThisTemplate = stringResource(R.string.tips_use_this_template),
+                confirm = stringResource(R.string.tips_confirm_dialog),
+                cancel = stringResource(R.string.tips_cancel_dialog),
+            ),
+            editIcon = painterResource(R.drawable.ic_template_list_item_edit),
+            deleteIcon = painterResource(R.drawable.ic_template_list_item_remove),
             onDismiss = { showTemplateSheet = false },
             onUse = onUseTemplate,
             onAdd = onAddTemplate,
@@ -475,46 +492,46 @@ fun OptionControl(
         when (item.type) {
             FuncType.Alpha -> {
                 SliderOption(
-                    item = item,
                     modifier = innerModifier,
                     currentValue = WatermarkConfigRules.alphaByteToPercent(waterMark.alpha),
-                    onValueChange = onChange
+                    valueRange = item.valueRange,
+                    onValueChange = { onChange(item, it) }
                 )
             }
 
             FuncType.TextSize -> {
                 SliderOption(
-                    item = item,
                     modifier = innerModifier,
                     currentValue = waterMark.textSize,
-                    onValueChange = onChange
+                    valueRange = item.valueRange,
+                    onValueChange = { onChange(item, it) }
                 )
             }
 
             FuncType.Vertical -> {
                 SliderOption(
-                    item = item,
                     modifier = innerModifier,
                     currentValue = waterMark.vGap.toFloat(),
-                    onValueChange = onChange
+                    valueRange = item.valueRange,
+                    onValueChange = { onChange(item, it) }
                 )
             }
 
             FuncType.Horizon -> {
                 SliderOption(
-                    item = item,
                     modifier = innerModifier,
                     currentValue = waterMark.hGap.toFloat(),
-                    onValueChange = onChange
+                    valueRange = item.valueRange,
+                    onValueChange = { onChange(item, it) }
                 )
             }
 
             FuncType.Degree -> {
                 SliderOption(
-                    item = item,
                     modifier = innerModifier,
                     currentValue = waterMark.degree,
-                    onValueChange = onChange
+                    valueRange = item.valueRange,
+                    onValueChange = { onChange(item, it) }
                 )
             }
 
@@ -538,8 +555,13 @@ fun OptionControl(
 
             FuncType.Text -> {
                 TextContentOption(
-                    item = item,
-                    waterMark = waterMark,
+                    text = waterMark.text,
+                    strings = TextContentOptionStrings(
+                        templateIconContentDescription = stringResource(R.string.dialog_title_template_title),
+                        editSheetTitle = stringResource(R.string.dialog_title_edit_watermark),
+                        confirmButton = stringResource(R.string.tips_confirm_dialog),
+                    ),
+                    templateIcon = painterResource(R.drawable.ic_go_template_list),
                     modifier = innerModifier,
                     onTextChange = { onChange(item, it) },
                     onGoTemplateList = onGoTemplateList
@@ -548,19 +570,27 @@ fun OptionControl(
 
             FuncType.TextTypeFace -> {
                 TextTypeface(
-                    item = item,
-                    waterMark = waterMark,
+                    labels = TextTypefaceLabels(
+                        normal = stringResource(R.string.text_typeface_normal),
+                        bold = stringResource(R.string.text_typeface_bold),
+                        italic = stringResource(R.string.text_typeface_italic),
+                        boldItalic = stringResource(R.string.text_typeface_bold_italic),
+                    ),
+                    typeface = waterMark.textTypeface,
                     modifier = innerModifier,
-                    onValueChange = onChange
+                    onValueChange = { onChange(item, it) }
                 )
             }
 
             FuncType.TileMode ->
                 TileMode(
-                    item = item,
-                    waterMark = waterMark,
+                    labels = TileModeLabels(
+                        repeat = stringResource(R.string.tile_mode_title_repeat),
+                        decal = stringResource(R.string.tile_mode_title_decal),
+                    ),
+                    mode = waterMark.tileMode,
                     modifier = innerModifier,
-                    onValueChange = onChange
+                    onValueChange = { onChange(item, it) }
                 )
         }
     }

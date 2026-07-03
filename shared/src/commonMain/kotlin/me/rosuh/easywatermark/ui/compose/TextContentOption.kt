@@ -23,35 +23,29 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.data.model.FuncTitleModel
-import me.rosuh.easywatermark.data.model.FuncType
-import me.rosuh.easywatermark.data.model.WaterMark
 
-@Preview
-@Composable
-private fun TextContentOptionPreview() {
-    TextContentOption(
-        item = FuncTitleModel(
-            FuncType.Text,
-            R.string.water_mark_mode_text,
-            R.drawable.ic_func_text
-        ),
-        waterMark = WaterMark.default,
-        onTextChange = {},
-        onGoTemplateList = {}
-    )
-}
+/**
+ * Shared (commonMain) text-content option for the watermark editor.
+ *
+ * S4d-238 resource strategy: all text and the template-list icon are passed from the caller.
+ * Android resolves `stringResource`/`painterResource` in [EditorScreen.kt]; Desktop/iOS pass
+ * hard-coded/localized strings and a Painter. This composable has no `R`, `stringResource`,
+ * `painterResource`, `Preview`, `FuncTitleModel`, `FuncType`, `WaterMark`, or Android imports.
+ */
+data class TextContentOptionStrings(
+    val templateIconContentDescription: String,
+    val editSheetTitle: String,
+    val confirmButton: String,
+)
 
 @Composable
 fun TextContentOption(
-    item: FuncTitleModel,
-    waterMark: WaterMark,
+    text: String,
+    strings: TextContentOptionStrings,
+    templateIcon: Painter,
     modifier: Modifier = Modifier,
     onTextChange: (String) -> Unit,
     onGoTemplateList: () -> Unit,
@@ -65,7 +59,7 @@ fun TextContentOption(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = waterMark.text,
+            text = text,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
@@ -76,8 +70,8 @@ fun TextContentOption(
                 .padding(vertical = 16.dp)
         )
         Icon(
-            painter = painterResource(id = R.drawable.ic_go_template_list),
-            contentDescription = stringResource(id = R.string.dialog_title_template_title),
+            painter = templateIcon,
+            contentDescription = strings.templateIconContentDescription,
             modifier = Modifier
                 .clickable { onGoTemplateList() }
                 .padding(start = 16.dp)
@@ -86,7 +80,8 @@ fun TextContentOption(
 
     if (showEditSheet) {
         WatermarkTextEditSheet(
-            initialText = waterMark.text,
+            initialText = text,
+            strings = strings,
             onConfirm = {
                 onTextChange(it)
                 showEditSheet = false
@@ -100,6 +95,7 @@ fun TextContentOption(
 @Composable
 private fun WatermarkTextEditSheet(
     initialText: String,
+    strings: TextContentOptionStrings,
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -117,7 +113,7 @@ private fun WatermarkTextEditSheet(
                 .padding(bottom = 20.dp)
         ) {
             Text(
-                text = stringResource(id = R.string.dialog_title_edit_watermark),
+                text = strings.editSheetTitle,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(top = 24.dp, bottom = 12.dp)
@@ -137,7 +133,7 @@ private fun WatermarkTextEditSheet(
                     .padding(top = 24.dp),
                 shape = RectangleShape,
             ) {
-                Text(text = stringResource(id = R.string.tips_confirm_dialog))
+                Text(text = strings.confirmButton)
             }
         }
     }

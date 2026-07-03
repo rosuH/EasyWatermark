@@ -29,29 +29,36 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.entity.Template
 import kotlin.time.Clock
 
 /**
- * Compose replacement for the legacy text-template surface — `TextContentTemplateListFragment`
- * (the list) + `EditTemplateContentFragment` (add/edit). View→Compose migration, ADR-0016.
+ * Shared (commonMain) replacement for the legacy text-template surface —
+ * `TextContentTemplateListFragment` (the list) + `EditTemplateContentFragment` (add/edit).
+ * View→Compose migration, ADR-0016. Moved to commonMain in S4d-239.
  *
  * The template CRUD already lives in [me.rosuh.easywatermark.ui.MainViewModel]
  * (`templateListFlow` + add/update/delete); this is a pure UI port over those callbacks.
  * "Use" applies the template content via the same `updateText` path the text editor uses,
  * so it doesn't depend on the legacy `UiState.UseTemplate` plumbing.
+ *
+ * S4d-238 resource strategy: all text is passed as [TemplateListSheetStrings] (the Android
+ * caller resolves `stringResource` at the edge); both icons are passed as [Painter] parameters
+ * (the Android caller resolves `painterResource` at the edge). This composable has no
+ * `R.string`/`R.drawable`/`stringResource`/`painterResource` dependencies.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TemplateListSheet(
     templates: List<Template>,
+    strings: TemplateListSheetStrings,
+    editIcon: Painter,
+    deleteIcon: Painter,
     onDismiss: () -> Unit,
     onUse: (Template) -> Unit,
     onAdd: (String) -> Unit,
@@ -83,18 +90,18 @@ fun TemplateListSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = stringResource(id = R.string.dialog_title_template_title),
+                    text = strings.title,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 TextButton(onClick = { editTarget = TemplateEditTarget(null) }) {
-                    Text(text = stringResource(id = R.string.dialog_button_add_template))
+                    Text(text = strings.addButton)
                 }
             }
 
             if (templates.isEmpty()) {
                 Text(
-                    text = stringResource(id = R.string.tips_list_empty),
+                    text = strings.empty,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -122,14 +129,14 @@ fun TemplateListSheet(
                             )
                             IconButton(onClick = { editTarget = TemplateEditTarget(template) }) {
                                 Icon(
-                                    painter = painterResource(id = R.drawable.ic_template_list_item_edit),
-                                    contentDescription = stringResource(id = R.string.dialog_title_edit_watermark),
+                                    painter = editIcon,
+                                    contentDescription = strings.editTitle,
                                 )
                             }
                             IconButton(onClick = { confirmDelete = template }) {
                                 Icon(
-                                    painter = painterResource(id = R.drawable.ic_template_list_item_remove),
-                                    contentDescription = stringResource(id = R.string.tips_delete_template),
+                                    painter = deleteIcon,
+                                    contentDescription = strings.deleteConfirm,
                                 )
                             }
                         }
@@ -144,6 +151,8 @@ fun TemplateListSheet(
     editTarget?.let { target ->
         TemplateEditSheet(
             initialText = target.template?.content ?: "",
+            editTitle = strings.editTitle,
+            confirmButton = strings.confirm,
             onConfirm = { text ->
                 val t = target.template
                 if (t != null) {
@@ -160,18 +169,18 @@ fun TemplateListSheet(
     confirmUse?.let { template ->
         AlertDialog(
             onDismissRequest = { confirmUse = null },
-            title = { Text(stringResource(id = R.string.dialog_title_exist_confirm)) },
-            text = { Text(stringResource(id = R.string.tips_use_this_template)) },
+            title = { Text(strings.existConfirmTitle) },
+            text = { Text(strings.useThisTemplate) },
             confirmButton = {
                 TextButton(onClick = {
                     onUse(template)
                     confirmUse = null
                     onDismiss()
-                }) { Text(stringResource(id = R.string.tips_confirm_dialog)) }
+                }) { Text(strings.confirm) }
             },
             dismissButton = {
                 TextButton(onClick = { confirmUse = null }) {
-                    Text(stringResource(id = R.string.tips_cancel_dialog))
+                    Text(strings.cancel)
                 }
             }
         )
@@ -180,22 +189,39 @@ fun TemplateListSheet(
     confirmDelete?.let { template ->
         AlertDialog(
             onDismissRequest = { confirmDelete = null },
-            title = { Text(stringResource(id = R.string.dialog_title_exist_confirm)) },
-            text = { Text(stringResource(id = R.string.tips_delete_template)) },
+            title = { Text(strings.existConfirmTitle) },
+            text = { Text(strings.deleteConfirm) },
             confirmButton = {
                 TextButton(onClick = {
                     onDelete(template)
                     confirmDelete = null
-                }) { Text(stringResource(id = R.string.tips_confirm_dialog)) }
+                }) { Text(strings.confirm) }
             },
             dismissButton = {
                 TextButton(onClick = { confirmDelete = null }) {
-                    Text(stringResource(id = R.string.tips_cancel_dialog))
+                    Text(strings.cancel)
                 }
             }
         )
     }
 }
+
+/**
+ * Resolved string values for [TemplateListSheet]. The Android caller constructs this at the
+ * edge using `stringResource(R.string.*)`; Desktop/iOS pass hard-coded English strings.
+ * See S4d-238 resource strategy.
+ */
+data class TemplateListSheetStrings(
+    val title: String,
+    val addButton: String,
+    val empty: String,
+    val editTitle: String,
+    val deleteConfirm: String,
+    val existConfirmTitle: String,
+    val useThisTemplate: String,
+    val confirm: String,
+    val cancel: String,
+)
 
 /** Distinguishes "add" (template == null) from "edit" (template != null). */
 private data class TemplateEditTarget(val template: Template?)
@@ -204,6 +230,8 @@ private data class TemplateEditTarget(val template: Template?)
 @Composable
 private fun TemplateEditSheet(
     initialText: String,
+    editTitle: String,
+    confirmButton: String,
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -221,7 +249,7 @@ private fun TemplateEditSheet(
                 .padding(bottom = 20.dp)
         ) {
             Text(
-                text = stringResource(id = R.string.dialog_title_edit_watermark),
+                text = editTitle,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(top = 24.dp, bottom = 12.dp)
@@ -242,7 +270,7 @@ private fun TemplateEditSheet(
                     .padding(top = 24.dp),
                 shape = RectangleShape,
             ) {
-                Text(text = stringResource(id = R.string.tips_confirm_dialog))
+                Text(text = confirmButton)
             }
         }
     }
