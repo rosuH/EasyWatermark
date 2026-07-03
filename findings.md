@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Bottom-control tab state can be generic below resource-backed options (S4d-275, 2026-07-03)
+
+- The editor's selected tab/selected option state is reusable CMP UI once the option model is generic and Android injects labels, item content, and option-control content.
+- Keep `FuncTitleModel`, localized strings, drawable painters, `OptionControl`, template navigation, raw `onChange`, and the existing `Log.i` side effect at the Android edge.
+
 ## Gallery dialog state can move once BackHandler and thumbnails are injected (S4d-274, 2026-07-03)
 
 - The gallery dialog's selected-count state and scaffold orchestration are pure shared UI after the animation host, grid, top bar, and FAB live in commonMain.

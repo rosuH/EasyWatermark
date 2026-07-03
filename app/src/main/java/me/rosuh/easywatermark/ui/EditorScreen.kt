@@ -10,47 +10,30 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Divider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -87,7 +70,6 @@ import me.rosuh.easywatermark.utils.ktx.applyConfig
 import me.rosuh.easywatermark.utils.ktx.obtainTileMode
 import me.rosuh.easywatermark.utils.ktx.toMediaRef
 import me.rosuh.easywatermark.utils.ktx.toUri
-import kotlin.math.absoluteValue
 import kotlin.math.min
 
 
@@ -183,44 +165,34 @@ private fun BottomView(
     onGoTemplateList: () -> Unit = {},
 ) {
     // StylePreview
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val optionList = remember(selectedTabIndex) { mutableStateListOf(*(when (selectedTabIndex) {
-            0 -> {
-                contentFunList
-            }
-
-            1 -> {
-                styleFunList
-            }
-
-            2 -> {
-                layoutFunList
-            }
-
-            else -> {
-                throw IllegalStateException("Unexpected value: $selectedTabIndex")
-            }
-        }).toTypedArray())
-    }
-    var selectedOption by remember(selectedTabIndex) { mutableStateOf(optionList.first()) }
-    val coroutineScope = rememberCoroutineScope()
-
-    Column(modifier = modifier.fillMaxWidth()) {
-        OptionControl(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            item = selectedOption,
-            waterMark = waterMark,
-            onChange = onChange,
-            onGoTemplateList = onGoTemplateList,
-            onDismissRequest = {  }
-        )
-        EditorOptionCarousel(
-            options = optionList,
-            useCompactPadding = selectedTabIndex == 1,
-            onOptionSelected = { selectedOption = it },
-        ) { item ->
+    EditorBottomControlsShell(
+        tabs = listOf(
+            EditorBottomControlTab(
+                label = stringResource(R.string.title_content),
+                options = contentFunList,
+            ),
+            EditorBottomControlTab(
+                label = stringResource(R.string.title_style),
+                options = styleFunList,
+                useCompactPadding = true,
+            ),
+            EditorBottomControlTab(
+                label = stringResource(R.string.title_layout),
+                options = layoutFunList,
+            ),
+        ),
+        modifier = modifier,
+        optionControl = { selectedOption, optionModifier ->
+            OptionControl(
+                modifier = optionModifier,
+                item = selectedOption,
+                waterMark = waterMark,
+                onChange = onChange,
+                onGoTemplateList = onGoTemplateList,
+                onDismissRequest = { }
+            )
+        },
+        optionItem = { item ->
             Icon(
                 painter = painterResource(id = item.iconRes),
                 contentDescription = stringResource(id = item.title),
@@ -231,21 +203,11 @@ private fun BottomView(
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(top = 8.dp)
             )
-        }
-
-        EditorBottomTabRow(
-            selectedTabIndex = selectedTabIndex,
-            labels = listOf(
-                stringResource(R.string.title_content),
-                stringResource(R.string.title_style),
-                stringResource(R.string.title_layout),
-            ),
-            onTabSelected = { selectedTabIndex = it },
-            onIndicatorPosition = { startPx, endPx ->
-                Log.i("TabRow", "indicator: $startPx - $endPx")
-            },
-        )
-    }
+        },
+        onIndicatorPosition = { startPx, endPx ->
+            Log.i("TabRow", "indicator: $startPx - $endPx")
+        },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
