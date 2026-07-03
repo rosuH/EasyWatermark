@@ -54,6 +54,7 @@ import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopImageDecoder
 import me.rosuh.easywatermark.render.DesktopSaveDecision
+import me.rosuh.easywatermark.ui.save.SaveExportOptionsSection
 import me.rosuh.easywatermark.ui.theme.AppTheme
 import java.awt.Desktop
 import java.awt.FileDialog
@@ -233,8 +234,9 @@ fun launchDesktopWindow() = application {
     // S4d-157: the last REAL saved output file (set only by the Render & Save / Save as… / Open image…
     // success paths — NOT Preview, which writes a temp file). Drives the share-substitute buttons.
     var lastSavedFile by remember { mutableStateOf<File?>(null) }
-    // S4d-130: the current/effective output preference, loaded on launch + refreshed after each preset save.
-    var outputPref by remember { mutableStateOf("loading…") }
+    // S4d-278: current/effective output preference consumed through the shared save/export options section.
+    var outputFormat by remember { mutableStateOf(ImageFormat.JPEG) }
+    var outputQuality by remember { mutableStateOf(80) }
     // S4d-145: the watermark text being edited; loaded from the persisted config on launch, persisted on Apply.
     var watermarkText by remember { mutableStateOf("") }
     // S4d-147: the rendered preview image (null until the first "Preview" click).
@@ -256,7 +258,10 @@ fun launchDesktopWindow() = application {
     var typefaceLabel by remember { mutableStateOf("loading…") }
     var styleLabel by remember { mutableStateOf("loading…") }
     LaunchedEffect(Unit) {
-        outputPref = describePref(userConfigRepo.userPreferences.first())
+        userConfigRepo.userPreferences.first().let {
+            outputFormat = it.outputFormat
+            outputQuality = it.compressLevel
+        }
         watermarkText = repo.waterMark.first().text
         degreeText = repo.waterMark.first().degree.toString()
         colorText = "#%08X".format(repo.waterMark.first().textColor)
@@ -783,29 +788,38 @@ fun launchDesktopWindow() = application {
                         ) { Text(name) }
                     }
                 }
-                // S4d-130: choose the output preference (two presets) through the shared OutputPrefsEditor,
-                // persisted to the SAME store runSaveFlow reads — so the next sample/Open render uses it.
-                Text("Output preference: $outputPref", style = MaterialTheme.typography.bodyMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        enabled = !busy,
-                        onClick = {
-                            scope.launch {
-                                outputEditor.save(ImageFormat.JPEG, 80)
-                                outputPref = describePref(userConfigRepo.userPreferences.first())
+                // S4d-278: first Desktop consumer of the shared save/export options UI. Persisted through
+                // the SAME OutputPrefsEditor/store that runSaveFlow reads; no Desktop renderer change.
+                SaveExportOptionsSection(
+                    title = "Output preference",
+                    formatLabel = "Format",
+                    qualityLabel = "JPEG quality",
+                    selectedFormat = outputFormat,
+                    quality = outputQuality,
+                    enabled = !busy,
+                    onFormatClick = { newFormat ->
+                        scope.launch {
+                            val nextQuality = if (newFormat == ImageFormat.PNG) 100 else outputQuality
+                            outputEditor.save(newFormat, nextQuality)
+                            userConfigRepo.userPreferences.first().let {
+                                outputFormat = it.outputFormat
+                                outputQuality = it.compressLevel
+                                status = "Output preference: ${describePref(it)}"
                             }
-                        },
-                    ) { Text("JPEG / 80") }
-                    Button(
-                        enabled = !busy,
-                        onClick = {
-                            scope.launch {
-                                outputEditor.save(ImageFormat.PNG, 100)
-                                outputPref = describePref(userConfigRepo.userPreferences.first())
+                        }
+                    },
+                    onQualityChange = { newQuality ->
+                        scope.launch {
+                            val nextQuality = newQuality.coerceIn(20, 100)
+                            outputEditor.save(ImageFormat.JPEG, nextQuality)
+                            userConfigRepo.userPreferences.first().let {
+                                outputFormat = it.outputFormat
+                                outputQuality = it.compressLevel
+                                status = "Output preference: ${describePref(it)}"
                             }
-                        },
-                    ) { Text("PNG / 100") }
-                }
+                        }
+                    },
+                )
                 Button(
                     enabled = !busy,
                     onClick = {

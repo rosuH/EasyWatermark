@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Desktop can consume shared output-options UI without renderer changes (S4d-278, 2026-07-03)
+
+- `SaveExportOptionsSection` is a real off-Android CMP UI consumer when wired to Desktop's existing `OutputPrefsEditor` and user-config store.
+- Add shared UI affordance flags as defaulted parameters when needed by another platform; this keeps Android call sites source-compatible while preserving Desktop busy-state behavior.
+
 ## About layout can move with Android logo and URL edges injected (S4d-277, 2026-07-03)
 
 - The About screen's rows, switches, pager footer, glow layer, and layout are shared CMP UI once Android injects localized strings, painters, link callbacks, and the logo slot.

@@ -41,6 +41,7 @@ fun SaveExportOptionsSection(
     selectedFormat: ImageFormat,
     quality: Int,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     onFormatClick: (newFormat: ImageFormat) -> Unit,
     onQualityChange: (Int) -> Unit,
 ) {
@@ -63,7 +64,9 @@ fun SaveExportOptionsSection(
         ExposedDropdownMenuBox(
             expanded = formatMenuExpanded,
             onExpandedChange = {
-                formatMenuExpanded = formatMenuExpanded.not()
+                if (enabled) {
+                    formatMenuExpanded = formatMenuExpanded.not()
+                }
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -73,6 +76,7 @@ fun SaveExportOptionsSection(
                 value = selectedFormat.toString(),
                 onValueChange = {},
                 readOnly = true,
+                enabled = enabled,
                 singleLine = true,
                 label = {
                     Text(text = formatLabel)
@@ -108,6 +112,7 @@ fun SaveExportOptionsSection(
                     text = {
                         Text("JPEG")
                     },
+                    enabled = enabled,
                     onClick = {
                         formatMenuExpanded = false
                         onFormatClick(ImageFormat.JPEG)
@@ -118,6 +123,7 @@ fun SaveExportOptionsSection(
                     text = {
                         Text("PNG")
                     },
+                    enabled = enabled,
                     onClick = {
                         formatMenuExpanded = false
                         onFormatClick(ImageFormat.PNG)
@@ -152,6 +158,7 @@ fun SaveExportOptionsSection(
                 onValueChange = {
                     onQualityChange(it.toInt())
                 },
+                enabled = enabled,
                 valueRange = 20f..100f,
                 // 20, 40, 60, 80, 100
                 steps = 3,
