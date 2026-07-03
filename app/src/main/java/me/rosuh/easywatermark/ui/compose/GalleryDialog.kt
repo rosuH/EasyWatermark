@@ -29,7 +29,7 @@ fun GalleryDialogPreview() {
 @Composable
 fun GalleryDialog(
     images: List<Image>,
-    onLoaImages: () -> Unit,
+    onLoadImages: () -> Unit,
     onDismiss: (selected: Boolean) -> Unit = {},
     onImageSelected: (image: Image, index: Int, isSelected: Boolean) -> Unit,
     onPickImageViaSystem: () -> Unit = {},
@@ -47,7 +47,7 @@ fun GalleryDialog(
         backHandler = { onBack ->
             BackHandler(onBack = onBack)
         },
-        onLoadImages = onLoaImages,
+        onLoadImages = onLoadImages,
         onDismiss = onDismiss,
         onImageSelected = onImageSelected,
         onPickImageViaSystem = onPickImageViaSystem,

@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Align wrapper naming with shared shell contracts (S4d-312, 2026-07-03)
+
+- When an Android wrapper delegates directly to a shared CMP shell, keep callback names aligned so future call sites do not preserve stale Android-only typos. This is a small API hygiene slice, but it reduces friction for later shared consumer moves.
+- If a named parameter is part of a production call site, grep all `Composable` callers before renaming and let compile prove previews/positional calls still bind correctly.
+
 ## Tighten wrapper visibility after call-graph proof (S4d-311, 2026-07-03)
 
 - After a screen shell is split into shared CMP plus Android edge wrappers, keep only the route-level composable public. File-local wrappers should become private once a whole-repo grep proves every caller is in the same file.

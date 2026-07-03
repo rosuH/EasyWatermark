@@ -299,7 +299,7 @@ class ComposeMainActivity : ComponentActivity() {
                                 ) {
                                     GalleryDialog(
                                         state.imageList,
-                                        onLoaImages = {
+                                        onLoadImages = {
                                             viewModel.process(Action.LoadImages(context.contentResolver))
                                         },
                                         onDismiss = { selected ->
