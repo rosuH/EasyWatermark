@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Version-catalog cleanup must respect alternate Compose accessors (S4d-309, 2026-07-03)
+
+- An unused AndroidX Compose catalog alias can be removed without removing the underlying capability when live modules consume Compose through the BOM, explicit live aliases, or JetBrains `compose.*` plugin accessors. Prove this at the Gradle-reference level, not by source imports like `androidx.compose.foundation.*`.
+- Keep the small live alias set visible. Here the app still declares BOM/Material3/window-size-class/UI/tooling/activity/lifecycle/navigation/constraintlayout, while shared/Desktop use `compose.runtime`, `compose.ui`, `compose.material3`, and `compose.desktop.currentOs`.
+
 ## Compile app androidTest when pruning test dependencies (S4d-308, 2026-07-03)
 
 - Source greps are necessary but not sufficient for Android test dependency cleanup. If an app `androidTestImplementation` line is removed, include `:app:compileDebugAndroidTestKotlin` in the gate so transitive `AndroidJUnit4` / `InstrumentationRegistry` assumptions are proven rather than guessed.
