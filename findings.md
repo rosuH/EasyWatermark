@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Save command buttons can share layout while Desktop owns dialogs (S4d-292, 2026-07-03)
+
+- The Render & Save / Save as / Open image cluster is pure button layout once the actions are callbacks. Move labels and busy-disabled state to commonMain.
+- Keep AWT dialogs, batch file loop, output naming, remembered image/output state, and status text in Desktop. That is the smallest useful split; no save-flow abstraction needed.
+
 ## Saved-output actions can share UI while Desktop owns IO (S4d-291, 2026-07-03)
 
 - The share-substitute row is a pure two-button shell once the platform actions are callbacks. Move labels/enabled state into commonMain, but keep `Desktop.open`, clipboard writes, `lastSavedFile`, and status messages in Desktop.

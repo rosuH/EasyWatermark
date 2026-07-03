@@ -69,6 +69,8 @@ import me.rosuh.easywatermark.ui.compose.TextTypeface as TextTypefaceOption
 import me.rosuh.easywatermark.ui.compose.TileMode as TileModeOption
 import me.rosuh.easywatermark.ui.save.SavedOutputActions
 import me.rosuh.easywatermark.ui.save.SavedOutputActionsLabels
+import me.rosuh.easywatermark.ui.save.SaveCommandActions
+import me.rosuh.easywatermark.ui.save.SaveCommandActionsLabels
 import me.rosuh.easywatermark.ui.save.SaveExportOptionsSection
 import me.rosuh.easywatermark.ui.theme.AppTheme
 import java.awt.Desktop
@@ -218,6 +220,7 @@ private fun resolveDesktopOutputDir(): File {
  * S4d-289 replaced the text-color Apply field with a shared palette + custom-hex `TextColorOption`.
  * S4d-290 replaced the inline Desktop templates section with shared `EditorTemplateSheetHost`.
  * S4d-291 replaced the share-substitute button row with shared `SavedOutputActions`.
+ * S4d-292 replaced the Render/Save-as/Open-image command buttons with shared `SaveCommandActions`.
  */
 fun launchDesktopWindow() = application {
     // S4d-215: persist the window's user state (watermark config, output prefs, templates DB) under the
@@ -783,9 +786,15 @@ fun launchDesktopWindow() = application {
                         }
                     },
                 )
-                Button(
-                    enabled = !busy,
-                    onClick = {
+                SaveCommandActions(
+                    labels = SaveCommandActionsLabels(
+                        renderAndSave = "Render & Save sample",
+                        working = "Working…",
+                        saveAs = "Save as…",
+                        openImage = "Open image…",
+                    ),
+                    busy = busy,
+                    onRenderAndSave = {
                         // Launch on the UI-bound scope; do the heavy render off the UI thread, then write
                         // Compose state back on the UI dispatcher.
                         scope.launch {
@@ -822,12 +831,7 @@ fun launchDesktopWindow() = application {
                             busy = false
                         }
                     },
-                ) {
-                    Text(if (busy) "Working…" else "Render & Save sample")
-                }
-                Button(
-                    enabled = !busy,
-                    onClick = {
+                    onSaveAs = {
                         // S4d-140: native AWT SAVE dialog to choose the OUTPUT path (modal on the EDT). The
                         // flow already accepts outputFile; the window simply supplies it here. Same render
                         // path/decision as "Render & Save sample" — destination-only.
@@ -872,12 +876,7 @@ fun launchDesktopWindow() = application {
                         }
                         // Cancelled (null dir/file) → no save, no status change, no remembered-image change (no-op).
                     },
-                ) {
-                    Text("Save as…")
-                }
-                Button(
-                    enabled = !busy,
-                    onClick = {
+                    onOpenImage = {
                         // S4d-229: native AWT Open dialog with MULTI-SELECT on the EDT (modal → returns the
                         // selection synchronously). `window` is the FrameWindowScope's AWT frame.
                         val dialog = FileDialog(window, "Open image", FileDialog.LOAD).apply {
@@ -952,9 +951,7 @@ fun launchDesktopWindow() = application {
                         }
                         // Cancelled / no supported selection (empty `files`) → no work, status unchanged (no-op).
                     },
-                ) {
-                    Text("Open image…")
-                }
+                )
                 // S4d-281: Desktop consumes the shared icon-watermark picker shell. The platform edge stays
                 // here: AWT picker, private icon copy, persisted MediaRef, and mode switch remain unchanged.
                 IconWatermarkOption(
