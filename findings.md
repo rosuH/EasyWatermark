@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Do not conflate core artifacts with KTX add-ons (S4d-307, 2026-07-03)
+
+- `androidx.activity:activity-ktx` can be removed when no KTX helpers are used, even if source still imports `androidx.activity.*`; `activity-compose`/core Activity may still supply those types.
+- Keep sibling KTX dependencies with real call sites. Here `lifecycle-runtime-ktx` stays because `lifecycleScope` is live in `ComposeMainActivity`.
+
 ## Keep Open Source credits consistent with packaged dependencies (S4d-306, 2026-07-03)
 
 - Removing a dead library dependency should also remove its Open Source screen card; otherwise the app keeps crediting software it no longer packages.

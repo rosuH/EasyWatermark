@@ -10,7 +10,6 @@ androidxConstraintLayoutCompose = "1.1.1"
 androidxNavigationCompose = "2.9.7"
 kotlinxSerialization = "1.9.0"
 coroutines = "1.10.2"
-activityKtx = "1.13.0"
 lifecycle = "2.10.0"
 lifecycleViewModel = "2.10.0"
 coreKtx = "1.18.0"
@@ -107,7 +106,6 @@ coil-kt-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.r
 kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlin" }
 kotlin-coroutine-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlin-coroutine-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activityKtx" }
 lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
 lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycleViewModel" }
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
