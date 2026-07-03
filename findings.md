@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Gallery animation primitives can move below Android BackHandler (S4d-271, 2026-07-03)
+
+- The slide/fade transition, dismiss delay, and dismiss helper are pure Compose/coroutines and can live in commonMain.
+- Keep wrappers with Android edges in app for now: `BackHandler`, platform `Dialog` behavior, system image loading, localized resources, selected-count state, and picker/dismiss callbacks.
+
 ## Option-control frame can move while option content stays app-side (S4d-270, 2026-07-03)
 
 - The option-control surface and 16dp inner padding are pure shared UI; the selected option body remains Android-owned until Color/MotionLayout and Icon picker boundaries are handled.

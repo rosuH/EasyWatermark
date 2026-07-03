@@ -1,14 +1,6 @@
 package me.rosuh.easywatermark.ui.compose
 
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,7 +10,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -29,14 +20,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogWindowProvider
-import androidx.constraintlayout.motion.widget.KeyTrigger
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.allowRgb565
@@ -49,10 +37,14 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.R
+import me.rosuh.easywatermark.ui.ANIMATION_DURATION
+import me.rosuh.easywatermark.ui.AnimatedSlideInTransition
+import me.rosuh.easywatermark.ui.AnimatedTransitionDialogHelper
 import me.rosuh.easywatermark.ui.GalleryDialogTopBarShell
 import me.rosuh.easywatermark.ui.GalleryImageGrid
 import me.rosuh.easywatermark.ui.GallerySelectedCountFab
 import me.rosuh.easywatermark.ui.Image
+import me.rosuh.easywatermark.ui.startDismissWithExitAnimation
 import me.rosuh.easywatermark.utils.ktx.toUri
 
 
@@ -60,19 +52,6 @@ import me.rosuh.easywatermark.utils.ktx.toUri
 @Composable
 fun GalleryDialogPreview() {
     GalleryDialog(emptyList(), {}, {}, { _, _, _ -> })
-}
-
-private const val ANIMATION_DURATION = 50L
-
-class AnimatedTransitionDialogHelper(
-    private val coroutineScope: CoroutineScope,
-    private val onDismissFlow: MutableSharedFlow<Any>,
-) {
-    fun triggerDismiss() {
-        coroutineScope.launch {
-            onDismissFlow.emit(Any())
-        }
-    }
 }
 
 @Composable
@@ -154,28 +133,6 @@ fun AnimatedTransitionView(
             content(AnimatedTransitionDialogHelper(coroutineScope, onDismissSharedFlow))
         }
     }
-}
-
-@Composable
-internal fun AnimatedSlideInTransition(
-    visible: Boolean,
-    content: @Composable AnimatedVisibilityScope.() -> Unit,
-) {
-    AnimatedVisibility(
-        visible = visible,
-        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-        content = content
-    )
-}
-
-suspend fun startDismissWithExitAnimation(
-    animateTrigger: MutableState<Boolean>,
-    onDismiss: () -> Unit,
-) {
-    animateTrigger.value = false
-    delay(300)
-    onDismiss()
 }
 
 @Composable
