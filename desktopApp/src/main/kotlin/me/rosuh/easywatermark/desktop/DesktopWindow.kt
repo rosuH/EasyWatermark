@@ -55,6 +55,8 @@ import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopImageDecoder
 import me.rosuh.easywatermark.render.DesktopSaveDecision
 import me.rosuh.easywatermark.ui.compose.IconWatermarkOption
+import me.rosuh.easywatermark.ui.compose.TextPaintStyleLabels
+import me.rosuh.easywatermark.ui.compose.TextPaintStyleOption
 import me.rosuh.easywatermark.ui.compose.TextTypefaceLabels
 import me.rosuh.easywatermark.ui.compose.TileModeLabels
 import me.rosuh.easywatermark.ui.compose.TextTypeface as TextTypefaceOption
@@ -261,8 +263,8 @@ fun launchDesktopWindow() = application {
     var tileMode by remember { mutableStateOf(WatermarkTileMode.REPEAT) }
     // S4d-280: current persisted typeface consumed through the shared segmented typeface option.
     var typeface by remember { mutableStateOf<TextTypeface>(TextTypeface.Normal) }
-    // S4d-154: the current persisted text-style label (explicit label map). Loaded on launch.
-    var styleLabel by remember { mutableStateOf("loading…") }
+    // S4d-283: current persisted text paint style consumed through the shared segmented option.
+    var textStyle by remember { mutableStateOf<TextPaintStyle>(TextPaintStyle.Fill) }
     LaunchedEffect(Unit) {
         userConfigRepo.userPreferences.first().let {
             outputFormat = it.outputFormat
@@ -284,7 +286,7 @@ fun launchDesktopWindow() = application {
         tileMode = repo.waterMark.first().tileMode
         // S4d-154/S4d-280: load the persisted typeface + text style.
         typeface = repo.waterMark.first().textTypeface
-        styleLabel = styleLabelOf(repo.waterMark.first().textStyle)
+        textStyle = repo.waterMark.first().textStyle
     }
 
     // S4d-198: reactive preview. Render the CURRENT persisted config over the remembered image (or the
@@ -745,38 +747,37 @@ fun launchDesktopWindow() = application {
                         }
                     },
                 )
-                // S4d-154: the watermark TEXT STYLE control. One button per TextPaintStyle (Fill/Stroke) persists
-                // via WatermarkConfigEditor.updateTextStyle; the current persisted value shows in the label (re-read
-                // after each apply). These two are the only style choices. S4d-198: a successful apply auto-previews.
-                Text("Text style: $styleLabel", style = MaterialTheme.typography.bodyMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(
-                        TextPaintStyle.Fill,
-                        TextPaintStyle.Stroke,
-                    ).forEach { st ->
-                        val name = styleLabelOf(st)
-                        Button(
-                            enabled = !busy,
-                            onClick = {
-                                scope.launch {
-                                    busy = true
-                                    val (msg, ok) = withContext(Dispatchers.IO) {
-                                        try {
-                                            editor.updateTextStyle(st)
-                                            "Text style → $name" to true
-                                        } catch (t: Throwable) {
-                                            "Failed: ${t.message}" to false
-                                        }
+                // S4d-283: Desktop consumes the shared segmented text-style option. Persistence remains the
+                // existing WatermarkConfigEditor path; no renderer behavior changes.
+                Text("Text style: ${styleLabelOf(textStyle)}", style = MaterialTheme.typography.bodyMedium)
+                TextPaintStyleOption(
+                    labels = TextPaintStyleLabels(
+                        fill = "Fill",
+                        stroke = "Stroke",
+                    ),
+                    style = textStyle,
+                    enabled = !busy,
+                    onValueChange = { selectedStyle ->
+                        if (selectedStyle != textStyle) {
+                            scope.launch {
+                                busy = true
+                                val name = styleLabelOf(selectedStyle)
+                                val (msg, ok) = withContext(Dispatchers.IO) {
+                                    try {
+                                        editor.updateTextStyle(selectedStyle)
+                                        "Text style → $name" to true
+                                    } catch (t: Throwable) {
+                                        "Failed: ${t.message}" to false
                                     }
-                                    styleLabel = styleLabelOf(repo.waterMark.first().textStyle)
-                                    // S4d-198: auto-refresh the preview on success (no manual Preview click).
-                                    status = if (ok) "$msg · ${refreshPreview()}" else msg
-                                    busy = false
                                 }
-                            },
-                        ) { Text(name) }
-                    }
-                }
+                                textStyle = repo.waterMark.first().textStyle
+                                // S4d-198: auto-refresh the preview on success (no manual Preview click).
+                                status = if (ok) "$msg · ${refreshPreview()}" else msg
+                                busy = false
+                            }
+                        }
+                    },
+                )
                 // S4d-278: first Desktop consumer of the shared save/export options UI. Persisted through
                 // the SAME OutputPrefsEditor/store that runSaveFlow reads; no Desktop renderer change.
                 SaveExportOptionsSection(

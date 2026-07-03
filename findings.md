@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Desktop text-style can consume a shared segmented option (S4d-283, 2026-07-03)
+
+- `TextPaintStyle` is already a commonMain model and Desktop already persists it through `WatermarkConfigEditor`, so the Fill/Stroke control can be a shared CMP shell without changing renderer behavior.
+- Keep UI state as the persisted enum, not just a label string. Labels are an edge concern (`TextPaintStyleLabels`), while the selected value should roundtrip through the repository after each write.
+
 ## Compose iOS hosts need a packaged frame-duration plist key (S4d-282, 2026-07-03)
 
 - Embedding shared CMP UI in SwiftUI through `ComposeUIViewController` works as the iOS app-entry bridge, but the app bundle must actually package `CADisableMinimumFrameDurationOnPhone = true`; a target `INFOPLIST_KEY_CADisableMinimumFrameDurationOnPhone = YES` build setting was visible in `xcodebuild -showBuildSettings` yet absent from the built `Info.plist`, and the UI test app crashed on launch.
