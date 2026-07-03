@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Editor option carousel can be generic below Android resource content (S4d-268, 2026-07-03)
+
+- The option row shell is movable when it is generic over item type: shared owns row sizing, padding, animation, and selection-click plumbing, while Android supplies drawable/string-backed item content.
+- A failed compile exposed stale opt-in cleanup from the earlier photo-strip migration: after moving animation-bearing list code to shared, remove `ExperimentalFoundationApi` opt-ins from Android callers that no longer need them.
+
 ## Editor bottom surface can move before bottom controls (S4d-267, 2026-07-03)
 
 - The `BottomSurface` wrapper is pure Material3 surface plumbing and can move independently of `BottomView`.

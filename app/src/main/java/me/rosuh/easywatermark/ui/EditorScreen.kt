@@ -12,15 +12,12 @@ import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,9 +26,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -66,7 +60,6 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Measurable
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -76,7 +69,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -198,7 +190,7 @@ fun EditorScreen(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BottomView(
     waterMark: WaterMark,
@@ -227,13 +219,7 @@ private fun BottomView(
         }).toTypedArray())
     }
     var selectedOption by remember(selectedTabIndex) { mutableStateOf(optionList.first()) }
-    var optionWidth by remember {
-        mutableStateOf(0.dp)
-    }
-
-    val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
-    val listState = rememberLazyListState()
 
     Column(modifier = modifier.fillMaxWidth()) {
         OptionControl(
@@ -246,51 +232,21 @@ private fun BottomView(
             onGoTemplateList = onGoTemplateList,
             onDismissRequest = {  }
         )
-        val itemWidth = 72.dp
-        val contentPadding = if (selectedTabIndex == 1) {
-            8.dp
-        } else {
-            (optionWidth - itemWidth).coerceAtLeast(0.dp) / 2
-        }
-        LazyRow(
-            Modifier
-                .fillMaxWidth()
-                .height(64.dp)
-                .onGloballyPositioned {
-                    optionWidth = with(density) {
-                        it.size.width.toDp()
-                    }
-                },
-            state = listState,
-            contentPadding = PaddingValues(
-                start = contentPadding,
-                end = contentPadding,
-            ),
-        ) {
-            itemsIndexed(optionList) { index, item ->
-                Column(
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .width(itemWidth)
-                        .fillMaxHeight()
-                        .clickable {
-                            selectedOption = item
-                        }
-                        .animateItem()
-                ) {
-                    Icon(
-                        painter = painterResource(id = item.iconRes),
-                        contentDescription = stringResource(id = item.title),
-                        modifier = Modifier.height(24.dp)
-                    )
-                    Text(
-                        text = stringResource(id = item.title),
-                        style = MaterialTheme.typography.titleSmall,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-            }
+        EditorOptionCarousel(
+            options = optionList,
+            useCompactPadding = selectedTabIndex == 1,
+            onOptionSelected = { selectedOption = it },
+        ) { item ->
+            Icon(
+                painter = painterResource(id = item.iconRes),
+                contentDescription = stringResource(id = item.title),
+                modifier = Modifier.height(24.dp)
+            )
+            Text(
+                text = stringResource(id = item.title),
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
 
         // Bottom Tab for contents, styles and layouts
@@ -924,7 +880,6 @@ private suspend fun buildPreviewShader(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PhotoList(
     imaList: List<ImageInfo>,
