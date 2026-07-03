@@ -45,10 +45,11 @@ data class TextContentOptionStrings(
 fun TextContentOption(
     text: String,
     strings: TextContentOptionStrings,
-    templateIcon: Painter,
+    templateIcon: Painter? = null,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     onTextChange: (String) -> Unit,
-    onGoTemplateList: () -> Unit,
+    onGoTemplateList: () -> Unit = {},
 ) {
     var showEditSheet by remember { mutableStateOf(false) }
     // Parity (ADR-0011 / ADR-0015 item B): production opens a modal "Edit watermark"
@@ -66,22 +67,25 @@ fun TextContentOption(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
                 .weight(1f)
-                .clickable { showEditSheet = true }
+                .clickable(enabled = enabled) { showEditSheet = true }
                 .padding(vertical = 16.dp)
         )
-        Icon(
-            painter = templateIcon,
-            contentDescription = strings.templateIconContentDescription,
-            modifier = Modifier
-                .clickable { onGoTemplateList() }
-                .padding(start = 16.dp)
-        )
+        if (templateIcon != null) {
+            Icon(
+                painter = templateIcon,
+                contentDescription = strings.templateIconContentDescription,
+                modifier = Modifier
+                    .clickable(enabled = enabled) { onGoTemplateList() }
+                    .padding(start = 16.dp)
+            )
+        }
     }
 
     if (showEditSheet) {
         WatermarkTextEditSheet(
             initialText = text,
             strings = strings,
+            enabled = enabled,
             onConfirm = {
                 onTextChange(it)
                 showEditSheet = false
@@ -96,6 +100,7 @@ fun TextContentOption(
 private fun WatermarkTextEditSheet(
     initialText: String,
     strings: TextContentOptionStrings,
+    enabled: Boolean,
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -121,6 +126,7 @@ private fun WatermarkTextEditSheet(
             OutlinedTextField(
                 value = draft,
                 onValueChange = { draft = it },
+                enabled = enabled,
                 modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentHeight(),
@@ -128,6 +134,7 @@ private fun WatermarkTextEditSheet(
             )
             Button(
                 onClick = { onConfirm(draft) },
+                enabled = enabled,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 24.dp),

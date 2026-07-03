@@ -56,6 +56,8 @@ import me.rosuh.easywatermark.render.DesktopImageDecoder
 import me.rosuh.easywatermark.render.DesktopSaveDecision
 import me.rosuh.easywatermark.ui.compose.IconWatermarkOption
 import me.rosuh.easywatermark.ui.compose.SliderOption
+import me.rosuh.easywatermark.ui.compose.TextContentOption
+import me.rosuh.easywatermark.ui.compose.TextContentOptionStrings
 import me.rosuh.easywatermark.ui.compose.TextPaintStyleLabels
 import me.rosuh.easywatermark.ui.compose.TextPaintStyleOption
 import me.rosuh.easywatermark.ui.compose.TextTypefaceLabels
@@ -193,9 +195,9 @@ private fun resolveDesktopOutputDir(): File {
  * S4d-160: a minimal "Templates" section over the shared Desktop Room path saves the current watermark
  * text, lists saved templates, and applies (Use → `WatermarkConfigEditor.updateText`), updates in place
  * (Update → `TemplateEditor.update`), or deletes them.
- * S4d-198: REACTIVE preview — every successful explicit editor action (Apply text/color/gaps,
- * opacity/text-size/degree slider release, the tile/typeface/style buttons, "Use text watermark",
- * and template "Use") now
+ * S4d-198: REACTIVE preview — every successful explicit editor action (text sheet confirm,
+ * Apply color/gaps, opacity/text-size/degree slider release, the tile/typeface/style buttons,
+ * "Use text watermark", and template "Use") now
  * auto-refreshes the on-screen preview through the SAME `refreshPreview()` → `runSaveFlow` temp-file spine
  * the manual "Preview" button uses (bounded to explicit clicks, NOT per keystroke). Preview stays a
  * temp render: it never sets `lastSavedFile`, so the share-substitute buttons remain bound to real saves;
@@ -205,6 +207,8 @@ private fun resolveDesktopOutputDir(): File {
  * file). "Render & Save sample" / "Save as…" remain real-save-only (they don't change the source/config).
  * S4d-284..S4d-286 then replaced the opacity/text-size/degree Apply fields with shared `SliderOption`
  * consumers that persist on slider release and re-read the repository value.
+ * S4d-287 replaced the watermark-text Apply field with the shared `TextContentOption` sheet shell while
+ * keeping persistence/preview refresh at the Desktop edge.
  */
 fun launchDesktopWindow() = application {
     // S4d-215: persist the window's user state (watermark config, output prefs, templates DB) under the
@@ -248,7 +252,7 @@ fun launchDesktopWindow() = application {
     // S4d-278: current/effective output preference consumed through the shared save/export options section.
     var outputFormat by remember { mutableStateOf(ImageFormat.JPEG) }
     var outputQuality by remember { mutableStateOf(80) }
-    // S4d-145: the watermark text being edited; loaded from the persisted config on launch, persisted on Apply.
+    // S4d-287: watermark text shown through the shared TextContentOption shell; loaded from persisted config.
     var watermarkText by remember { mutableStateOf("") }
     // S4d-147: the rendered preview image (null until the first "Preview" click).
     var preview by remember { mutableStateOf<ImageBitmap?>(null) }
@@ -429,22 +433,21 @@ fun launchDesktopWindow() = application {
                         "Pick an icon to switch to Image mode.",
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                // S4d-145: the watermark TEXT input — the first real Desktop edit control. Persisted via
-                // WatermarkConfigEditor.updateText on an explicit "Apply text" click (NOT per keystroke);
-                // updateText flips persisted mode to Text, so the next Render/Open-image save renders this
-                // text (runSaveFlow no longer forces a demo string). Initialized from the persisted config.
-                OutlinedTextField(
-                    value = watermarkText,
-                    onValueChange = { watermarkText = it },
+                // S4d-287: Desktop consumes the same text-content shell as Android. The shared composable
+                // owns the row + edit sheet; Desktop still owns persistence, mode flip, and preview refresh.
+                Text("Watermark text", style = MaterialTheme.typography.bodyMedium)
+                TextContentOption(
+                    text = watermarkText,
+                    strings = TextContentOptionStrings(
+                        templateIconContentDescription = "Templates",
+                        editSheetTitle = "Edit watermark text",
+                        confirmButton = "Apply text",
+                    ),
                     enabled = !busy,
-                    label = { Text("Watermark text") },
-                )
-                Button(
-                    enabled = !busy,
-                    onClick = {
+                    onTextChange = { nextText ->
                         scope.launch {
                             busy = true
-                            val applied = watermarkText
+                            val applied = nextText
                             val (msg, ok) = withContext(Dispatchers.IO) {
                                 try {
                                     editor.updateText(applied)
@@ -453,14 +456,13 @@ fun launchDesktopWindow() = application {
                                     "Failed: ${t.message}" to false
                                 }
                             }
+                            if (ok) watermarkText = repo.waterMark.first().text
                             // S4d-198: auto-refresh the preview on a successful apply (no manual click).
                             status = if (ok) "$msg · ${refreshPreview()}" else msg
                             busy = false
                         }
                     },
-                ) {
-                    Text("Apply text")
-                }
+                )
                 // S4d-286: Desktop consumes the shared slider shell for rotation degree. Persistence still
                 // happens only on slider-release through WatermarkConfigEditor.updateDegree.
                 Text("Degree", style = MaterialTheme.typography.bodyMedium)

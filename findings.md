@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## TextContentOption can serve Desktop without a template icon (S4d-287, 2026-07-03)
+
+- The text editor shell is reusable off-Android once template-list affordance is optional and busy-state disabling is a defaulted parameter. Android keeps passing the resource-backed template icon and callback unchanged.
+- Desktop should still own the side effects: confirmed text writes through `WatermarkConfigEditor.updateText`, then the UI re-reads repository text and refreshes preview. The shared composable remains UI shell only, not a persistence or template-navigation abstraction.
+
 ## Desktop degree can follow the shared slider-release pattern (S4d-286, 2026-07-03)
 
 - Degree is the same control shape as opacity and text size on Desktop: keep drag-local UI state, persist on slider release, then re-read the repository value because `WatermarkConfigEditor.updateDegree` and the repository own clamp/storage semantics.
