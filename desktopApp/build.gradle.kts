@@ -34,6 +34,11 @@ dependencies {
     // S4d-121: Compose Desktop UI + windowing (Skiko backend) for the minimal window. Same version the
     // `:shared` desktopMain already uses (composeMultiplatform 1.11.1) — no version bump, no catalog change.
     implementation(compose.desktop.currentOs)
+    // S4d-237: Material3 components (Button/OutlinedTextField/Text/MaterialTheme.typography) used directly
+    // by DesktopWindow.kt after the shared AppTheme swap. `:shared` declares compose.material3 as
+    // `implementation` so it does not transit; desktopApp must declare it itself. Same CMP plugin
+    // accessor — no version bump, no catalog change.
+    implementation(compose.material3)
 }
 
 // S4d-163: minimal unsigned app-image packaging; installer formats/signing later.

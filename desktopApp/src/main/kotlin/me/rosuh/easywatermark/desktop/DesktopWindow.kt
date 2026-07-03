@@ -11,10 +11,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.Button
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -54,6 +54,7 @@ import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopImageDecoder
 import me.rosuh.easywatermark.render.DesktopSaveDecision
+import me.rosuh.easywatermark.ui.theme.AppTheme
 import java.awt.Desktop
 import java.awt.FileDialog
 import java.awt.datatransfer.DataFlavor
@@ -393,7 +394,7 @@ fun launchDesktopWindow() = application {
     }
 
     Window(onCloseRequest = ::exitApplication, title = "EasyWatermark — Desktop") {
-        MaterialTheme {
+        AppTheme(darkTheme = true) {
             Column(
                 // S4d-155: vertical scroll so the growing single-column control surface stays reachable
                 // on constrained window heights. verticalScroll after fillMaxSize makes the column fill the
@@ -404,12 +405,12 @@ fun launchDesktopWindow() = application {
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text("EasyWatermark — Desktop", style = MaterialTheme.typography.h6)
+                Text("EasyWatermark — Desktop", style = MaterialTheme.typography.headlineSmall)
                 Text(
                     "Renders the deterministic sample through the shared engine and saves an image. " +
                         "Honors text / color / typeface / textStyle / tileMode / textSize / degree / gaps / alpha. " +
                         "Pick an icon to switch to Image mode.",
-                    style = MaterialTheme.typography.body2,
+                    style = MaterialTheme.typography.bodyMedium,
                 )
                 // S4d-145: the watermark TEXT input — the first real Desktop edit control. Persisted via
                 // WatermarkConfigEditor.updateText on an explicit "Apply text" click (NOT per keystroke);
@@ -672,7 +673,7 @@ fun launchDesktopWindow() = application {
                 // Only these two product values are exposed — MIRROR/DECAL are legacy read-only storage ids, not
                 // UI choices. After each apply the label is re-read from the persisted config (so it reflects what
                 // actually persisted, even on a write failure). S4d-198: a successful apply auto-refreshes the preview (manual "Preview" still available).
-                Text("Tile mode: $tileModeLabel", style = MaterialTheme.typography.body2)
+                Text("Tile mode: $tileModeLabel", style = MaterialTheme.typography.bodyMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         enabled = !busy,
@@ -719,7 +720,7 @@ fun launchDesktopWindow() = application {
                 // BoldItalic) persists via WatermarkConfigEditor.updateTextTypeface; the current persisted value
                 // shows in the label (re-read after each apply, truthful on a write failure). These four are the
                 // only typeface choices. Both enums are render-honored on Desktop Skiko (S4d-122/123). S4d-198: auto-preview.
-                Text("Typeface: $typefaceLabel", style = MaterialTheme.typography.body2)
+                Text("Typeface: $typefaceLabel", style = MaterialTheme.typography.bodyMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(
                         TextTypeface.Normal,
@@ -753,7 +754,7 @@ fun launchDesktopWindow() = application {
                 // S4d-154: the watermark TEXT STYLE control. One button per TextPaintStyle (Fill/Stroke) persists
                 // via WatermarkConfigEditor.updateTextStyle; the current persisted value shows in the label (re-read
                 // after each apply). These two are the only style choices. S4d-198: a successful apply auto-previews.
-                Text("Text style: $styleLabel", style = MaterialTheme.typography.body2)
+                Text("Text style: $styleLabel", style = MaterialTheme.typography.bodyMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(
                         TextPaintStyle.Fill,
@@ -784,7 +785,7 @@ fun launchDesktopWindow() = application {
                 }
                 // S4d-130: choose the output preference (two presets) through the shared OutputPrefsEditor,
                 // persisted to the SAME store runSaveFlow reads — so the next sample/Open render uses it.
-                Text("Output preference: $outputPref", style = MaterialTheme.typography.body2)
+                Text("Output preference: $outputPref", style = MaterialTheme.typography.bodyMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         enabled = !busy,
@@ -1123,7 +1124,7 @@ fun launchDesktopWindow() = application {
                 // current watermark text (Update → TemplateEditor.update, preserving id/creationDate), or deletes
                 // it. S4d-198: Use auto-refreshes the preview after a successful apply. `content` is the watermark
                 // TEXT (S4d-159).
-                Text("Templates", style = MaterialTheme.typography.subtitle1)
+                Text("Templates", style = MaterialTheme.typography.titleMedium)
                 Button(
                     // S4d-162: require nonblank text so an empty template can't be saved.
                     enabled = !busy && watermarkText.isNotBlank(),
@@ -1145,7 +1146,7 @@ fun launchDesktopWindow() = application {
                     },
                 ) { Text("Save current text as template") }
                 if (templates.isEmpty()) {
-                    Text("No templates yet — save one above.", style = MaterialTheme.typography.body2)
+                    Text("No templates yet — save one above.", style = MaterialTheme.typography.bodyMedium)
                 } else {
                     templates.forEach { template ->
                         Row(
@@ -1154,7 +1155,7 @@ fun launchDesktopWindow() = application {
                         ) {
                             Text(
                                 template.content ?: "",
-                                style = MaterialTheme.typography.body2,
+                                style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.weight(1f),
                             )
                             Button(
@@ -1227,7 +1228,7 @@ fun launchDesktopWindow() = application {
                         }
                     }
                 }
-                Text(status, style = MaterialTheme.typography.body2)
+                Text(status, style = MaterialTheme.typography.bodyMedium)
                 preview?.let {
                     Image(
                         bitmap = it,
