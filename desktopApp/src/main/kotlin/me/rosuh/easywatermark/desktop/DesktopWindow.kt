@@ -4,7 +4,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -68,6 +67,8 @@ import me.rosuh.easywatermark.ui.compose.formatArgbHexColor
 import me.rosuh.easywatermark.ui.compose.parseArgbHexColor
 import me.rosuh.easywatermark.ui.compose.TextTypeface as TextTypefaceOption
 import me.rosuh.easywatermark.ui.compose.TileMode as TileModeOption
+import me.rosuh.easywatermark.ui.save.SavedOutputActions
+import me.rosuh.easywatermark.ui.save.SavedOutputActionsLabels
 import me.rosuh.easywatermark.ui.save.SaveExportOptionsSection
 import me.rosuh.easywatermark.ui.theme.AppTheme
 import java.awt.Desktop
@@ -216,6 +217,7 @@ private fun resolveDesktopOutputDir(): File {
  * S4d-288 replaced the horizontal/vertical gap Apply fields with two shared `SliderOption` consumers.
  * S4d-289 replaced the text-color Apply field with a shared palette + custom-hex `TextColorOption`.
  * S4d-290 replaced the inline Desktop templates section with shared `EditorTemplateSheetHost`.
+ * S4d-291 replaced the share-substitute button row with shared `SavedOutputActions`.
  */
 fun launchDesktopWindow() = application {
     // S4d-215: persist the window's user state (watermark config, output prefs, templates DB) under the
@@ -1056,46 +1058,46 @@ fun launchDesktopWindow() = application {
                 // off the UI thread); "Copy output path" puts the path on the Compose clipboard. Both are enabled
                 // only when a real save exists and the window isn't busy.
                 val clipboard = LocalClipboardManager.current
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        enabled = !busy && lastSavedFile != null,
-                        onClick = {
-                            val file = lastSavedFile
-                            if (file != null) {
-                                scope.launch {
-                                    busy = true
-                                    // AWT Desktop IO off the Compose UI thread; result reported via status.
-                                    val next = withContext(Dispatchers.IO) {
-                                        try {
-                                            val desktop = if (Desktop.isDesktopSupported()) Desktop.getDesktop() else null
-                                            val folder = file.parentFile
-                                            if (desktop != null && folder != null && desktop.isSupported(Desktop.Action.OPEN)) {
-                                                desktop.open(folder)
-                                                "Opened folder: ${folder.path}"
-                                            } else {
-                                                "Show in folder isn’t supported on this platform."
-                                            }
-                                        } catch (t: Throwable) {
-                                            "Couldn’t open folder: ${t.message}"
+                SavedOutputActions(
+                    labels = SavedOutputActionsLabels(
+                        showInFolder = "Show in folder",
+                        copyPath = "Copy output path",
+                    ),
+                    hasSavedOutput = lastSavedFile != null,
+                    enabled = !busy,
+                    onShowInFolder = {
+                        val file = lastSavedFile
+                        if (file != null) {
+                            scope.launch {
+                                busy = true
+                                // AWT Desktop IO off the Compose UI thread; result reported via status.
+                                val next = withContext(Dispatchers.IO) {
+                                    try {
+                                        val desktop = if (Desktop.isDesktopSupported()) Desktop.getDesktop() else null
+                                        val folder = file.parentFile
+                                        if (desktop != null && folder != null && desktop.isSupported(Desktop.Action.OPEN)) {
+                                            desktop.open(folder)
+                                            "Opened folder: ${folder.path}"
+                                        } else {
+                                            "Show in folder isn’t supported on this platform."
                                         }
+                                    } catch (t: Throwable) {
+                                        "Couldn’t open folder: ${t.message}"
                                     }
-                                    status = next
-                                    busy = false
                                 }
+                                status = next
+                                busy = false
                             }
-                        },
-                    ) { Text("Show in folder") }
-                    Button(
-                        enabled = !busy && lastSavedFile != null,
-                        onClick = {
-                            val file = lastSavedFile
-                            if (file != null) {
-                                clipboard.setText(AnnotatedString(file.path))
-                                status = "Copied path: ${file.path}"
-                            }
-                        },
-                    ) { Text("Copy output path") }
-                }
+                        }
+                    },
+                    onCopyPath = {
+                        val file = lastSavedFile
+                        if (file != null) {
+                            clipboard.setText(AnnotatedString(file.path))
+                            status = "Copied path: ${file.path}"
+                        }
+                    },
+                )
                 // S4d-290: Desktop consumes the shared template sheet host. Desktop still owns the Room-backed
                 // repository/editor callbacks; the shared host owns sheet visibility, add/edit/use/delete UI,
                 // confirmations, and no-icon text fallbacks.

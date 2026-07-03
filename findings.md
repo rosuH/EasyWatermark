@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Saved-output actions can share UI while Desktop owns IO (S4d-291, 2026-07-03)
+
+- The share-substitute row is a pure two-button shell once the platform actions are callbacks. Move labels/enabled state into commonMain, but keep `Desktop.open`, clipboard writes, `lastSavedFile`, and status messages in Desktop.
+- This is the right boundary for Desktop utility actions: shared layout, platform IO at the edge, no filesystem abstraction in commonMain.
+
 ## TemplateListSheet can host Desktop with optional icon edges (S4d-290, 2026-07-03)
 
 - The shared template sheet was already a pure UI surface over `Template` callbacks; Desktop can consume it once edit/delete painters are optional and text-button fallbacks exist.
