@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Keep Open Source credits consistent with packaged dependencies (S4d-306, 2026-07-03)
+
+- Removing a dead library dependency should also remove its Open Source screen card; otherwise the app keeps crediting software it no longer packages.
+- For open-source description strings, check Weblate ownership before deletion. A `translatable="false"` default-only string can be removed with the card; locale files remain untouched.
+
 ## Delete orphan menu XML without deleting shared labels (S4d-305, 2026-07-03)
 
 - Toolbar `res/menu` files are dead when there is no `R.menu`, `@menu/`, filename, or menu-id consumer. Deleting those XML files is separate from deleting strings/drawables referenced inside them.

@@ -131,9 +131,6 @@ dependencies {
     implementation(libs.exifinterface)
     implementation(libs.profileinstaller)
 
-    implementation(libs.colorpicker)
-
-
     testImplementation(libs.test.junit)
     testImplementation(libs.test.rules)
     testImplementation(libs.test.runner)

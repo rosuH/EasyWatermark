@@ -62,9 +62,6 @@ fun OpenSourceScreen(
             )
         }
 
-        OssCard("ColorPickerView", strings.colorPickerDesc) {
-            onOpenLink("https://github.com/skydoves/ColorPickerView")
-        }
         OssCard("Coil", strings.aboutLibDesc) {
             onOpenLink("https://github.com/coil-kt/coil")
         }
@@ -81,7 +78,6 @@ fun OpenSourceScreen(
 
 data class OpenSourceScreenStrings(
     val title: String,
-    val colorPickerDesc: String,
     val aboutLibDesc: String,
     val materialComponentsDesc: String,
     val compressorDesc: String,

@@ -396,7 +396,6 @@ class ComposeMainActivity : ComponentActivity() {
                                         backIcon = painterResource(R.drawable.ic_back),
                                         strings = OpenSourceScreenStrings(
                                             title = stringResource(R.string.about_title_open_source),
-                                            colorPickerDesc = stringResource(R.string.open_source_desc_color_picker),
                                             aboutLibDesc = stringResource(R.string.open_source_desc_about_lib),
                                             materialComponentsDesc = stringResource(R.string.open_source_desc_material_components),
                                             compressorDesc = stringResource(R.string.open_source_desc_compressor),

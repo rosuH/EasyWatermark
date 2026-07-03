@@ -24,7 +24,6 @@ sqlite = "2.6.2"
 datastorePreference = "1.2.1"
 exifInterface = "1.4.2"
 compressor = "3.0.1"
-colorpicker = "2.4.0"
 benchmark = "1.4.1"
 profileinstaller = "1.4.1"
 test = "1.7.0"
@@ -134,7 +133,6 @@ koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin-bom" }
 koin-core = { module = "io.insert-koin:koin-core" }
 koin-android = { module = "io.insert-koin:koin-android" }
 compressor = { group = "id.zelory", name = "compressor", version.ref = "compressor" }
-colorpicker = { group = "com.github.skydoves", name = "colorpickerview", version.ref = "colorpicker" }
 benchmark = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmark" }
 profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
 test-core = { group = "androidx.test", name = "core", version.ref = "test" }
