@@ -67,6 +67,11 @@ struct ContentView: View {
     @State private var draftVGap: Double = 0
 
     private let linkWitness = WatermarkGeometry().diagonal(w: 100, h: 100)
+#if DEBUG
+    private var showSharedComposeWitnesses: Bool {
+        ProcessInfo.processInfo.arguments.contains("-sharedComposeWitnesses")
+    }
+#endif
 
     var body: some View {
         ScrollView {
@@ -290,21 +295,23 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
 
 #if DEBUG
-                SharedComposeLaunchShellWitness()
-                    .frame(height: 128)
-                    .accessibilityIdentifier("sharedComposeLaunchShellWitness")
+                if showSharedComposeWitnesses {
+                    SharedComposeLaunchShellWitness()
+                        .frame(height: 128)
+                        .accessibilityIdentifier("sharedComposeLaunchShellWitness")
 
-                SharedComposeGalleryShellWitness()
-                    .frame(height: 220)
-                    .accessibilityIdentifier("sharedComposeGalleryShellWitness")
+                    SharedComposeGalleryShellWitness()
+                        .frame(height: 220)
+                        .accessibilityIdentifier("sharedComposeGalleryShellWitness")
 
-                SharedComposeAboutShellWitness()
-                    .frame(height: 260)
-                    .accessibilityIdentifier("sharedComposeAboutShellWitness")
+                    SharedComposeAboutShellWitness()
+                        .frame(height: 260)
+                        .accessibilityIdentifier("sharedComposeAboutShellWitness")
 
-                SharedComposeEditorShellWitness()
-                    .frame(height: 180)
-                    .accessibilityIdentifier("sharedComposeEditorShellWitness")
+                    SharedComposeEditorShellWitness()
+                        .frame(height: 180)
+                        .accessibilityIdentifier("sharedComposeEditorShellWitness")
+                }
 #endif
             }
             .padding()

@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Keep iOS shared witnesses test-only unless they are real replacements (S4d-323, 2026-07-03)
+
+- Placeholder CMP host witnesses are useful runtime/link proof, but showing them in normal DEBUG UI makes the iOS bring-up surface look like a new product screen. Gate them behind an explicit launch argument (`-sharedComposeWitnesses`) and add a default-hidden UI test whenever the witness surface is not the real replacement.
+- Do not add another visible placeholder witness to ordinary debug UI. Future Lane 2 iOS slices should either replace a real SwiftUI product surface with shared CMP plus real state/resources, or keep witness-only proof behind the test flag with XCUITest screenshots.
+
 ## Keep iOS shared screen witnesses broad enough to catch real runtime issues (S4d-322, 2026-07-03)
 
 - The iOS DEBUG witness lane now renders shared launch, gallery, editor, and about screen shells through Kotlin-owned `ComposeUIViewController` hosts. This is enough to prove framework export, runtime composition, scrolling reachability, and nested shared-shell rendering without claiming production SwiftUI replacement.

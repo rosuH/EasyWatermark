@@ -87,10 +87,31 @@ final class PickerFlowUITests: XCTestCase {
         // the render/export path is proven via the fixture seam in testFixtureRenderPreviewAndExport.
     }
 
+    /// S4d-323: normal debug launches must not show the CMP host witnesses. They are test-only
+    /// runtime/link proof, enabled only by the `-sharedComposeWitnesses` launch argument.
+    func testSharedComposeWitnessesHiddenByDefault() {
+        let app = XCUIApplication()
+        app.launch()
+        let pickButton = app.buttons["pickPhotoButton"].firstMatch
+        XCTAssertTrue(pickButton.waitForExistence(timeout: 20), "Pick a photo button not found")
+
+        for id in [
+            "sharedComposeLaunchShellWitness",
+            "sharedComposeGalleryShellWitness",
+            "sharedComposeAboutShellWitness",
+            "sharedComposeEditorShellWitness",
+        ] {
+            XCTAssertFalse(app.descendants(matching: .any)[id].firstMatch.exists,
+                           "\(id) should be hidden unless -sharedComposeWitnesses is present.")
+        }
+        attach(app, "29-shared-compose-witnesses-hidden-default")
+    }
+
     /// S4d-320: proves the DEBUG-only iOS shared CMP launch-shell witness is embedded in the SwiftUI
     /// surface. This is a host/link/runtime proof only; it does not replace the SwiftUI picker/export UI.
     func testSharedComposeLaunchWitnessVisible() {
         let app = XCUIApplication()
+        app.launchArguments += ["-sharedComposeWitnesses", "1"]
         app.launch()
         let witness = app.descendants(matching: .any)["sharedComposeLaunchShellWitness"].firstMatch
         XCTAssertTrue(scrollUntilHittable(witness, in: app, timeout: 12),
@@ -102,6 +123,7 @@ final class PickerFlowUITests: XCTestCase {
     /// surface. This is a host/link/runtime proof only; it does not replace the system PhotosPicker.
     func testSharedComposeGalleryWitnessVisible() {
         let app = XCUIApplication()
+        app.launchArguments += ["-sharedComposeWitnesses", "1"]
         app.launch()
         let witness = app.descendants(matching: .any)["sharedComposeGalleryShellWitness"].firstMatch
         XCTAssertTrue(scrollUntilHittable(witness, in: app, timeout: 12),
@@ -113,6 +135,7 @@ final class PickerFlowUITests: XCTestCase {
     /// surface. This is a host/link/runtime proof only; it does not replace production navigation.
     func testSharedComposeAboutWitnessVisible() {
         let app = XCUIApplication()
+        app.launchArguments += ["-sharedComposeWitnesses", "1"]
         app.launch()
         let witness = app.descendants(matching: .any)["sharedComposeAboutShellWitness"].firstMatch
         XCTAssertTrue(scrollUntilHittable(witness, in: app, timeout: 12),
