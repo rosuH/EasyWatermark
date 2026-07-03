@@ -1,5 +1,10 @@
 # Progress Log
 
+## 2026-07-03 — Codex direct implementation mode
+
+- **Process update:** `codex-goal.md` is now the standing mission/process file for this branch. It supersedes the ACSP/cowork workflow for process only: Codex implements directly, historical ACSP sessions stay read-only evidence, and non-trivial work proceeds as smallest verified local slices with plan/progress/findings updates.
+- **Immediate work order:** checkpoint-commit the accepted but uncommitted S4d-235..S4d-251 CMP UI migration backlog, then implement S4d-252 (`Action.ChooseImage` dead-code removal) without moving `Action` or Android `Uri`/`ContentResolver` edges to commonMain.
+
 ## 2026-06-29 — S4d-233 iOS template bridge UI (+docs)
 
 - **S4d-233 (implementation, accepted; commit `86e28f8 Add iOS template bridge UI`):** added the first Swift-facing iOS Templates consumer over the seeded Room path. `shared/src/iosMain/.../IosTemplateBridge.kt` wraps `TemplateRepository(buildTemplateDatabase().templateDao(), Dispatchers.Default)` behind flat Swift-friendly APIs: `currentTemplates()`, `addTemplate(content)`, and `deleteTemplate(id)`, returning `IosTemplate(id, content)` so Swift does not see Room entities, `Instant`, `Flow`, or `DataStore`.
