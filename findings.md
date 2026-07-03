@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Editor option items can share presentation while Android owns resources (S4d-295, 2026-07-03)
+
+- The bottom option carousel item layout is just an icon at 24dp plus a title label once the caller supplies the `Painter`, content description, and localized text. Move that presentation to commonMain.
+- Keep `FuncTitleModel`, Android drawable/string resource lookup, and option selection behavior in Android. Do not move resource IDs or option model construction into shared UI.
+
 ## Mode action controls can share layout while Desktop owns mode effects (S4d-294, 2026-07-03)
 
 - The Open icon / Use text watermark / Preview cluster is pure action layout once the actions are callbacks. Move labels, grouping, and busy-disabled state to commonMain.

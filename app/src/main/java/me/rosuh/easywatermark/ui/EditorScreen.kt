@@ -14,12 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,7 +31,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
@@ -188,15 +182,10 @@ private fun BottomView(
             )
         },
         optionItem = { item ->
-            Icon(
-                painter = painterResource(id = item.iconRes),
+            EditorOptionItem(
+                icon = painterResource(id = item.iconRes),
                 contentDescription = stringResource(id = item.title),
-                modifier = Modifier.height(24.dp)
-            )
-            Text(
-                text = stringResource(id = item.title),
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.padding(top = 8.dp)
+                label = stringResource(id = item.title),
             )
         },
         onIndicatorPosition = { startPx, endPx ->
