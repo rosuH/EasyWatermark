@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Editor bottom tab row can move with labels and logging injected (S4d-269, 2026-07-03)
+
+- The tab-row shell, divider, animated indicator, and tab text layout are pure CMP UI once Android injects the three localized labels.
+- Preserve Android-only incidental behavior as callbacks instead of importing platform APIs into commonMain. Here the old `Log.i("TabRow", ...)` side effect remains app-side through `onIndicatorPosition`.
+
 ## Editor option carousel can be generic below Android resource content (S4d-268, 2026-07-03)
 
 - The option row shell is movable when it is generic over item type: shared owns row sizing, padding, animation, and selection-click plumbing, while Android supplies drawable/string-backed item content.
