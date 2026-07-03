@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## About layout can move with Android logo and URL edges injected (S4d-277, 2026-07-03)
+
+- The About screen's rows, switches, pager footer, glow layer, and layout are shared CMP UI once Android injects localized strings, painters, link callbacks, and the logo slot.
+- Keep `AndroidView`/`ColoredImageVIew`, URL selection, AboutViewModel toggles, and all Android resource lookup in the app wrapper.
+
 ## Template-sheet visibility can move below injected resources (S4d-276, 2026-07-03)
 
 - `TemplateListSheet` and `Template` are already commonMain, so the editor can share the sheet host state without moving Android resources or repositories.
