@@ -24,7 +24,7 @@ import me.rosuh.easywatermark.utils.ktx.toUri
 
 @Preview
 @Composable
-fun IconOptionPreview() {
+private fun IconOptionPreview() {
     IconOption(
         item = FuncTitleModel(
             FuncType.Icon,

@@ -22,7 +22,7 @@ import me.rosuh.easywatermark.utils.ktx.toUri
 
 @Preview
 @Composable
-fun GalleryDialogPreview() {
+private fun GalleryDialogPreview() {
     GalleryDialog(emptyList(), {}, {}, { _, _, _ -> })
 }
 

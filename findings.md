@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Keep preview/local wrappers private after shell extraction (S4d-313, 2026-07-03)
+
+- Shared CMP shell extraction leaves some Android wrappers public only by habit. If a wrapper is file-local (`LogoView`) or a tooling-only `@Preview`, make it private after grep proof so future consumers do not bind to Android-only implementation details.
+- Keep route-level product composables public. The useful boundary is `LaunchScreen`/`GalleryDialog`/`IconOption` as platform edges, with local preview/logo wrappers hidden behind them.
+
 ## Align wrapper naming with shared shell contracts (S4d-312, 2026-07-03)
 
 - When an Android wrapper delegates directly to a shared CMP shell, keep callback names aligned so future call sites do not preserve stale Android-only typos. This is a small API hygiene slice, but it reduces friction for later shared consumer moves.

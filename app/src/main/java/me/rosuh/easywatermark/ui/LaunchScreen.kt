@@ -90,7 +90,7 @@ private fun LaunchScreenContent(
 }
 
 @Composable
-fun LogoView(modifier: Modifier = Modifier, startLogoAnimation: Boolean) {
+private fun LogoView(modifier: Modifier = Modifier, startLogoAnimation: Boolean) {
     Layout({
         AndroidView(modifier = Modifier.size(Dp(180f), Dp(180f)), factory = { context ->
             ColoredImageVIew(context).apply {
@@ -136,6 +136,6 @@ sealed class Action {
 @OptIn(ExperimentalPermissionsApi::class)
 @Preview
 @Composable
-fun LaunchScreenPreview() {
+private fun LaunchScreenPreview() {
     LaunchScreenContent()
 }
