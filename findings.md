@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Compile app androidTest when pruning test dependencies (S4d-308, 2026-07-03)
+
+- Source greps are necessary but not sufficient for Android test dependency cleanup. If an app `androidTestImplementation` line is removed, include `:app:compileDebugAndroidTestKotlin` in the gate so transitive `AndroidJUnit4` / `InstrumentationRegistry` assumptions are proven rather than guessed.
+- Keep catalog aliases used by other modules even when app drops them. Here app no longer declares Espresso/UIAutomator, but cmonet and macrobenchmark still use those aliases; only Mockito, Hamcrest, and AndroidX test core/rules/runner became fully unreferenced.
+
 ## Do not conflate core artifacts with KTX add-ons (S4d-307, 2026-07-03)
 
 - `androidx.activity:activity-ktx` can be removed when no KTX helpers are used, even if source still imports `androidx.activity.*`; `activity-compose`/core Activity may still supply those types.

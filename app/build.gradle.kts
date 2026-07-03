@@ -131,15 +131,7 @@ dependencies {
     implementation(libs.profileinstaller)
 
     testImplementation(libs.test.junit)
-    testImplementation(libs.test.rules)
-    testImplementation(libs.test.runner)
     testImplementation(libs.robolectric)
-    androidTestImplementation(libs.mockito.core)
-    androidTestImplementation(libs.mockito.android)
-    androidTestImplementation(libs.robolectric)
-    androidTestImplementation(libs.hamcrest.library)
-    androidTestImplementation(libs.test.espresso.core)
-    androidTestImplementation(libs.test.uiautomator)
     androidTestImplementation(libs.test.ext.junit)
 
     // or only import the main APIs for the underlying toolkit systems,

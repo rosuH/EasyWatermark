@@ -25,14 +25,11 @@ exifInterface = "1.4.2"
 compressor = "3.0.1"
 benchmark = "1.4.1"
 profileinstaller = "1.4.1"
-test = "1.7.0"
 junit = "4.13.2"
 espressoCore = "3.7.0"
 uiautomator = "2.3.0"
 extJunit = "1.3.0"
-mockito = "5.23.0"
 robolectric = "4.16.1"
-hamcrest = "3.0"
 # C4.3: bumped 2026.03.01 (Compose 1.10.6) -> 2026.05.01 (Compose 1.11.2) so :app's AndroidX Compose
 # lineage matches what Compose Multiplatform 1.11.1 contributes on Android (androidx 1.11.2). The BOM
 # atomically aligns every androidx.compose group (incl. foundation) to one version, killing the
@@ -133,14 +130,8 @@ koin-android = { module = "io.insert-koin:koin-android" }
 compressor = { group = "id.zelory", name = "compressor", version.ref = "compressor" }
 benchmark = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmark" }
 profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
-test-core = { group = "androidx.test", name = "core", version.ref = "test" }
-test-rules = { group = "androidx.test", name = "rules", version.ref = "test" }
-test-runner = { group = "androidx.test", name = "runner", version.ref = "test" }
 test-junit = { group = "junit", name = "junit", version.ref = "junit" }
 test-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 test-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
 test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "extJunit" }
-mockito-core = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }
-mockito-android = { group = "org.mockito", name = "mockito-android", version.ref = "mockito" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
-hamcrest-library = { group = "org.hamcrest", name = "hamcrest-library", version.ref = "hamcrest" }
