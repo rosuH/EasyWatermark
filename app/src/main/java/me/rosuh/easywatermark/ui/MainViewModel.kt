@@ -123,18 +123,6 @@ class MainViewModel (
 
     val selectedImageFlow = waterMarkRepo.selectedImage
 
-    // S4d-66: StateFlow-only (was MutableLiveData). null initial = "no save in progress", matching the old
-    // LiveData (no value before first emit). `ImageInfo` is a MUTABLE data class and the writers mutate the
-    // SAME instance (jobState/result) then emit it; a StateFlow set of the same reference would be conflated
-    // (distinctUntilChanged) and SKIP progress updates. `emitSaveProcess` snapshots via `copy()` so every
-    // non-null progress update is a distinct value that StateFlow always emits.
-    private val _saveProcess = MutableStateFlow<ImageInfo?>(null)
-    val saveProcess: StateFlow<ImageInfo?> = _saveProcess.asStateFlow()
-
-    private fun emitSaveProcess(info: ImageInfo?) {
-        _saveProcess.value = info?.copy()
-    }
-
     private var compressedJob: Job? = null
 
     private var _userPreferences: StateFlow<UserPreferences> = userRepo.userPreferences.stateIn(
@@ -236,30 +224,18 @@ class MainViewModel (
             infoList.forEach { info ->
                 try {
                     info.jobState = JobState.Ing
-                    // S4d-66 r1: snapshot BEFORE dispatching to Main. `info` keeps mutating on this
-                    // (Default) dispatcher (to Success below), so copying inside the Main lambda could
-                    // capture the later state. Capture the Ing snapshot here so the progress update is
-                    // the intended value.
-                    val inProgress = info.copy()
-                    launch(Dispatchers.Main) { emitSaveProcess(inProgress) }
                     info.result = generateImage(contentResolver, info)
                     info.jobState = JobState.Success(info.result!!)
-                    val success = info.copy()
-                    launch(Dispatchers.Main) { emitSaveProcess(success) }
                 } catch (fne: FileNotFoundException) {
                     fne.printStackTrace()
                     info.result = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
                     info.jobState = JobState.Failure(info.result!!)
-                    emitSaveProcess(info)
                 } catch (oom: OutOfMemoryError) {
                     info.result = Result.failure(null, code = TYPE_ERROR_SAVE_OOM)
                     info.jobState = JobState.Failure(info.result!!)
-                    emitSaveProcess(info)
                 }
                 Log.i("generateList", "${info.uri} : ${info.result}")
             }
-            // reset process state
-            emitSaveProcess(null)
             return@withContext Result.success(infoList)
         }
 
@@ -572,7 +548,6 @@ class MainViewModel (
     fun resetJobStatus() {
         waterMarkRepo.imageInfoList.forEach {
             it.jobState = JobState.Ready
-            emitSaveProcess(it)
         }
     }
 

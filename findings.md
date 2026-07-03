@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Progress event wrappers are removable separately from result records (S4d-299, 2026-07-03)
+
+- `saveProcess` had become an event wrapper with no source consumer; the useful export facts are the per-image `ImageInfo.jobState` and `ImageInfo.result` mutations. Remove the unused stream and snapshot dispatches without erasing those records.
+- Treat progress-event deletion separately from event-result deletion. This kept S4d-298 and S4d-299 reviewable and avoided accidentally touching the still-deferred compression reference flow.
+
 ## Retire event state only after the last consumer disappears (S4d-298, 2026-07-03)
 
 - `saveResult` became dead only after S4d-297 removed the temporary `ComposeMainActivity` debug collector. At that point the event stream and the `TYPE_SAVING` / `TYPE_JOB_FINISH` codes had no source consumers, while the real export work remained in `generateList` and per-image `ImageInfo.result` / `jobState`.
