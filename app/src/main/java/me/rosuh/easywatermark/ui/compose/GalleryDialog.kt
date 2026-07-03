@@ -5,33 +5,18 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -50,8 +35,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -74,6 +57,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.R
+import me.rosuh.easywatermark.ui.GalleryImageGrid
 import me.rosuh.easywatermark.ui.Image
 import me.rosuh.easywatermark.utils.ktx.toUri
 
@@ -294,41 +278,11 @@ fun GalleryDialog(
 
 @Composable
 fun GalleryImageList(images: List<Image>, onImageSelected: (Image, Int, Boolean) -> Unit) {
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(4),
-        horizontalArrangement = Arrangement.spacedBy(1.5.dp),
-        verticalArrangement = Arrangement.spacedBy(1.5.dp),
-    ) {
-        itemsIndexed(images, key = { _: Int, item: Image ->
-            item.id
-        }) { index, image ->
-            ImageCard(image = image) {
-                onImageSelected(image, index, it)
-            }
-        }
-    }
-}
-
-@Composable
-fun ImageCard(
-    image: Image,
-    modifier: Modifier = Modifier,
-    onCheckedChange: (Boolean) -> Unit = {},
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .aspectRatio(1f)
-            .background(MaterialTheme.colorScheme.surface)
-            .clickable {
-                onCheckedChange(image.check.not())
-            }
-    ) {
-        val padding by animateDpAsState(
-            targetValue = if (image.check) 10.dp else 0.dp,
-            label = "padding"
-        )
-        val clip by animateDpAsState(targetValue = if (image.check) 10.dp else 0.dp, label = "clip")
+    GalleryImageGrid(
+        images = images,
+        checkIcon = painterResource(R.drawable.ic_gallery_radio_button),
+        onImageSelected = onImageSelected,
+    ) { image, contentDescription, modifier ->
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(image.uri.toUri())
@@ -336,58 +290,9 @@ fun ImageCard(
                 .crossfade(true)
                 .placeholder(R.drawable.ic_gallery_item_placeholder_container)
                 .build(),
-            contentDescription = image.name,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .clip(RoundedCornerShape(clip)),
+            contentDescription = contentDescription,
+            modifier = modifier,
             contentScale = ContentScale.Crop,
         )
-
-        CircleCheckBox(
-            selected = image.check,
-            onClick = {
-                onCheckedChange(image.check.not())
-            },
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(6.dp)
-                .size(19.dp)
-        )
-    }
-}
-
-@Composable
-fun CircleCheckBox(
-    selected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit = {},
-) {
-    val color = MaterialTheme.colorScheme
-    val border = if (selected) {
-        BorderStroke(0.dp, color.onSurface.copy(alpha = 0.6f))
-    } else {
-        BorderStroke(2.dp, color.onSurface.copy(alpha = 0.6f))
-    }
-    val m = if (selected) {
-        modifier.background(color.secondary, shape = CircleShape)
-    } else {
-        modifier.border(border, shape = CircleShape)
-    }
-    Box(
-        modifier = m
-            .clickable(
-                onClick = onClick,
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() },
-            )
-    ) {
-        AnimatedVisibility(visible = selected, enter = scaleIn() + fadeIn(), exit = scaleOut() + fadeOut()) {
-            Image(
-                painter = painterResource(id = R.drawable.ic_gallery_radio_button),
-                contentDescription = "check box",
-                modifier = Modifier.fillMaxSize()
-            )
-        }
     }
 }

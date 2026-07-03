@@ -1,5 +1,11 @@
 # Compose Migration Findings
 
+## Gallery grid can move only below the image-loading edge (S4d-257, 2026-07-03)
+
+- The reusable part of the gallery is the grid/card/checkmark shell: fixed four-column grid, crop-card aspect ratio, selected-card padding/clip animation, and circular checkmark. The Android-specific part is thumbnail decoding/loading (`AsyncImage`, `ImageRequest`, placeholder resource, `MediaRef.toUri()`), so keep it injected as a thumbnail slot.
+- Be explicit with composable lambda parameters when a shared shell has both an event callback and a content slot. The first S4d-257 compile failed because a trailing lambda was interpreted as the thumbnail slot, leaving `onCheckedChange` unset.
+- The selected-count FAB and dialog dismissal animation still live in app-side `GalleryDialog`; move them only with a separate shell slice because they are tied to current Android dialog/navigation behavior.
+
 ## Editor top-bar shell can move without moving picker/save behavior (S4d-256, 2026-07-03)
 
 - The editor top bar is a safe shared CMP shell only if it receives icons, content descriptions, and callbacks from the platform caller. The app-level callback meanings remain Android-owned today: add-more-images launches the system picker, save opens `SaveExportSheet`, and about navigates through the Android NavHost.
