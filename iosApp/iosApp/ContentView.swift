@@ -31,9 +31,10 @@ struct ContentView: View {
     private let linkWitness = WatermarkGeometry().diagonal(w: 100, h: 100)
 
     var body: some View {
-        VStack(spacing: 16) {
-            Text("EasyWatermark iOS")
-                .font(.title2.bold())
+        ScrollView {
+            VStack(spacing: 16) {
+                Text("EasyWatermark iOS")
+                    .font(.title2.bold())
 
             PhotosPicker(selection: $pickedItem, matching: .images, photoLibrary: .shared()) {
                 Label("Pick a photo", systemImage: "photo.on.rectangle")
@@ -110,6 +111,7 @@ struct ContentView: View {
                             Image(systemName: "trash")
                         }
                         .buttonStyle(.borderless)
+                        .accessibilityLabel("Delete template")
                         .accessibilityIdentifier("deleteTemplateButton")
                     }
                 }
@@ -245,11 +247,12 @@ struct ContentView: View {
 
             Spacer()
 
-            Text(":shared linked ✓  geometry.diagonal(100×100) = \(linkWitness)")
-                .font(.caption2.monospaced())
-                .foregroundStyle(.secondary)
+                Text(":shared linked ✓  geometry.diagonal(100×100) = \(linkWitness)")
+                    .font(.caption2.monospaced())
+                    .foregroundStyle(.secondary)
+            }
+            .padding()
         }
-        .padding()
         // Re-runs whenever a new photo is picked; `.task(id:)` (iOS 15+) avoids the deprecated
         // `onChange(of:perform:)` single-arg form. Cancels/restarts cleanly on reselection.
         .task(id: pickedItem) {

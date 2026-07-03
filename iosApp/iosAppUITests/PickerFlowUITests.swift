@@ -12,7 +12,7 @@ final class PickerFlowUITests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        continueAfterFailure = true
+        continueAfterFailure = false
     }
 
     private func attach(_ app: XCUIApplication, _ name: String) {
@@ -99,13 +99,6 @@ final class PickerFlowUITests: XCTestCase {
         app.launch()
         attach(app, "20-launched-templates")
 
-        // Wait for the editor's launch `.task` to finish: a seeded template row appearing proves
-        // `loadTemplates()` ran, which means `loadWatermarkText()` + `draftText = watermarkText` also ran
-        // (they share the same `.task`). This avoids clearing the field before the default text is set.
-        let anyRow = app.buttons["templateRow"].firstMatch
-        XCTAssertTrue(anyRow.waitForExistence(timeout: 30),
-                      "No template rows appeared — launch load (watermark text + templates) did not complete.")
-
         // Unique marker unlikely to collide with any seeded default template.
         let marker = "S4d234-" + String(UUID().uuidString.prefix(8))
 
@@ -114,30 +107,35 @@ final class PickerFlowUITests: XCTestCase {
         let textField = app.textFields["watermarkTextField"].firstMatch
         XCTAssertTrue(textField.waitForExistence(timeout: 10), "Watermark text field missing.")
         clearAndType(in: textField, text: marker)
+        dismissKeyboard(in: app)
         let applyBtn = app.buttons["applyWatermarkText"].firstMatch
         XCTAssertTrue(applyBtn.waitForExistence(timeout: 5), "Apply button missing.")
         applyBtn.tap()
 
         // 2. Save current → a new template row labeled with the marker must appear.
-        let saveBtn = app.buttons["saveTemplateButton"].firstMatch
-        XCTAssertTrue(saveBtn.waitForExistence(timeout: 5), "Save current button missing.")
+        let saveBtn = app.buttons["Save current"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(saveBtn, in: app, timeout: 10), "Save current button missing.")
         let saveEnabled = expectation(for: NSPredicate(format: "isEnabled == YES"), evaluatedWith: saveBtn, handler: nil)
         wait(for: [saveEnabled], timeout: 5)
         saveBtn.tap()
         attach(app, "21-after-save-current")
 
-        let rowPredicate = NSPredicate(format: "identifier == %@ AND label == %@", "templateRow", marker)
-        let savedRow = app.buttons.matching(rowPredicate).firstMatch
-        XCTAssertTrue(savedRow.waitForExistence(timeout: 10),
+        let rowPredicate = NSPredicate(format: "label == %@", marker)
+        let savedRow = app.buttons[marker].firstMatch
+        XCTAssertTrue(scrollUntilHittable(savedRow, in: app, timeout: 10),
                       "Saved template row with label \(marker) never appeared.")
 
         // 3. Apply: change the text to a different baseline, Apply, then tap the saved row.
         //    The text field must revert to the marker (applyTemplate → setWatermarkText → draftText sync).
+        XCTAssertTrue(scrollUntilHittable(textField, in: app, timeout: 10), "Watermark text field not reachable.")
         clearAndType(in: textField, text: "otherValue")
+        dismissKeyboard(in: app)
         applyBtn.tap()
         XCTAssertTrue(wait(forTextField: textField, toEqual: "otherValue", timeout: 10),
                       "Text field did not reflect 'otherValue' after Apply (pre-template baseline).")
 
+        XCTAssertTrue(scrollUntilHittable(savedRow, in: app, timeout: 10),
+                      "Saved template row with label \(marker) was not reachable for Apply.")
         savedRow.tap()
         XCTAssertTrue(wait(forTextField: textField, toEqual: marker, timeout: 10),
                       "Tapping the saved template row did not update the watermark text field to \(marker).")
@@ -173,6 +171,33 @@ final class PickerFlowUITests: XCTestCase {
         field.typeText(text)
     }
 
+    private func dismissKeyboard(in app: XCUIApplication) {
+        if app.keyboards.count == 0 { return }
+        let returnKey = app.keyboards.buttons["Return"].firstMatch
+        if returnKey.exists {
+            returnKey.tap()
+        } else {
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap()
+        }
+    }
+
+    @discardableResult
+    private func scrollUntilHittable(_ element: XCUIElement, in app: XCUIApplication, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        let scrollView = app.scrollViews.firstMatch
+        var shouldSwipeUp = true
+        while Date() < deadline {
+            if element.exists && element.isHittable { return true }
+            if scrollView.exists {
+                shouldSwipeUp ? scrollView.swipeUp() : scrollView.swipeDown()
+                shouldSwipeUp.toggle()
+            } else {
+                app.swipeUp()
+            }
+        }
+        return element.exists && element.isHittable
+    }
+
     /// Poll until `field.value` equals `expected` or `timeout` elapses.
     @discardableResult
     private func wait(forTextField field: XCUIElement, toEqual expected: String, timeout: TimeInterval) -> Bool {
@@ -189,7 +214,7 @@ final class PickerFlowUITests: XCTestCase {
     private func deleteButtonOnSameRow(as row: XCUIElement, in app: XCUIApplication) -> XCUIElement? {
         let rowY = row.frame.midY
         let candidates = app.buttons.matching(
-            NSPredicate(format: "identifier == %@", "deleteTemplateButton")
+            NSPredicate(format: "identifier == %@ OR label == %@", "deleteTemplateButton", "Delete template")
         ).allElementsBoundByIndex
         return candidates.first { abs($0.frame.midY - rowY) < 12 }
     }

@@ -1,5 +1,11 @@
 # Compose Migration Findings
 
+## iOS bring-up XCUITests must avoid stale seed-row assumptions (S4d-253, 2026-07-03)
+
+- The S4d-234 Templates test failed on a real booted simulator because it used a pre-existing `templateRow` as a launch-readiness proxy and then tried to drive controls that could be off-screen or covered by the keyboard. That assumption is brittle on a persistent simulator and was never a proof of Save/Apply/Delete.
+- The reliable UI contract for the current SwiftUI bring-up surface is: start from a fresh unique marker, apply it through the text field, scroll to the visible "Save current" control, locate the saved row by its visible marker label, dismiss the keyboard before lower-screen taps, and scroll to the row/delete controls before interacting. This tests the real bridge path without depending on seed data.
+- The iOS bring-up screen is taller than one phone viewport, so it must remain scrollable while it is still a temporary product surface. This is a reachability fix for the current SwiftUI edge, not a final 1:1 UI design decision.
+
 ## Dead app-side actions should be deleted before broadening the action boundary (S4d-252, 2026-07-03)
 
 - `Action.ChooseImage` had no producer after gallery navigation moved to typed Navigation Compose (`navController.navigate(GalleryDialogRoute)`). Keeping it around made the app-side `Action` boundary look larger and more platform-coupled than it really is.
