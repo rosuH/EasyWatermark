@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## Keep shared shell child components private when file-local (S4d-318, 2026-07-03)
+
+- Parent shell APIs should be the stable shared CMP boundary. Child composables such as gallery cards, checkboxes, and strip items should stay private when all callers are in the same file, so future platform code binds to the shell instead of its implementation pieces.
+- Do not use visibility cleanup to remove visible controls. A no-op callback on a visible button is a product/behavior slice; only private file-local implementation components fit this low-risk cleanup pattern.
+
 ## Prefer constructor defaults over duplicate state factories (S4d-317, 2026-07-03)
 
 - Shared UI state data classes should keep their empty/default state in constructor defaults when no alternate construction logic exists. A companion `default()` that only returns the constructor creates a second API surface for future drift.

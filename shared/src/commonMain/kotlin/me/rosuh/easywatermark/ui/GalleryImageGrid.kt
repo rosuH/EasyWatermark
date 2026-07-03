@@ -70,7 +70,7 @@ fun GalleryImageGrid(
 }
 
 @Composable
-fun GalleryImageCard(
+private fun GalleryImageCard(
     image: Image,
     checkIcon: Painter,
     modifier: Modifier = Modifier,
@@ -115,7 +115,7 @@ fun GalleryImageCard(
 }
 
 @Composable
-fun CircleCheckBox(
+private fun CircleCheckBox(
     selected: Boolean,
     checkIcon: Painter,
     modifier: Modifier = Modifier,

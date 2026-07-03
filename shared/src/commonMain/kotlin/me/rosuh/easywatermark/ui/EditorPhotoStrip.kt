@@ -84,7 +84,7 @@ fun EditorPhotoStrip(
 }
 
 @Composable
-fun EditorPhotoStripItem(
+private fun EditorPhotoStripItem(
     imageInfo: ImageInfo,
     isSelected: Boolean,
     modifier: Modifier = Modifier,
