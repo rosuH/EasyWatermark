@@ -1192,3 +1192,10 @@ Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; 
 - **Decision: NO-GO** for wiring iOS production to the **existing** shared host/sheet. Sheet packages S4d-338 runtime crash families: `ModalBottomSheet`, Compose `Dialog`/`AlertDialog`, and focused `OutlinedTextField`. Hiding Add/Edit does not clear list sheet or confirms. **Retain SwiftUI Templates** (List / Use / Delete / Save current already proven). No code, dependency, persistence, renderer, or product UI change.
 - **Reviews / verification:** Kimi and OpenCode read-only reviews **PASS**. `git diff --check` clean on readiness note. **No build** applies (read-only evidence only). Not Phase A/B/parity complete.
 - **Next: S4d-347** bounded iOS About production-root readiness investigation — no shared CMP text/sheet/dialog; verify current host/root/routes before any implementation code.
+
+## 2026-07-11 — S4d-347 iOS About production-root readiness NO-GO (accepted)
+
+- **S4d-347:** read-only readiness at `docs/superpowers/research/2026-07-11-s4d347-ios-about-production-readiness.md`. Evidence: Android `AboutRoute`/`AboutScreen` is production; iOS has **no** production About UI; only DEBUG `IosSharedComposeHost.aboutScreenShellWitness()` + ContentView witness under `-sharedComposeWitnesses`. Desktop has no About root.
+- **Decision: consumer-first NO-GO.** Shared `AboutScreenShell` avoids S4d-338 APIs (no ModalBottomSheet/Dialog/OutlinedTextField), but adding a production About route/entry is **owner-level product scope**, not an automatic A3 wire-up. No product code.
+- **Reviews / verification:** Kimi + OpenCode read-only reviews **PASS**. `git diff --check` clean on readiness note. **No build** applies (read-only). Not Phase A/B/parity complete.
+- **Next: A1 Android wrapper-thinning readiness** (not A2 Desktop About, not A3 iOS About implementation).

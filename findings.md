@@ -1,5 +1,12 @@
 # Compose Migration Findings
 
+## iOS About is a product-scope NO-GO, not an S4d-338 shell crash (S4d-347, 2026-07-11)
+
+- Production iOS `ContentView` has **no About route** — only DEBUG `aboutScreenShellWitness` under the shared-compose witness launch flag. Witness XCUITest ≠ production consumer.
+- commonMain `AboutScreenShell` does **not** use S4d-338 families (`ModalBottomSheet` / `Dialog` / focused `OutlinedTextField`). Technical host wiring is plausible; the block is **no existing production root** + **owner product-scope** (entry point, which rows, URL edges).
+- Consumer-first: do not invent an iOS About product surface to create a second consumer. Owner must order product About before any code.
+- After this NO-GO, prefer **A1 Android wrapper-thinning readiness** over A2/A3 About. Not Phase A/B/parity complete. Kimi + OpenCode read-only PASS; no build for read-only evidence.
+
 ## Existing shared template sheet is fully S4d-338-blocked on iOS (S4d-346, 2026-07-11)
 
 - `EditorTemplateSheetHost` / `TemplateListSheet` is **not** a safe iOS production drop-in under the current Compose/Skiko mix. The sheet uses **all three** S4d-338 crash families: `ModalBottomSheet` (list + edit), Compose `AlertDialog` (use/delete confirms), and focused `OutlinedTextField` (add/edit).
