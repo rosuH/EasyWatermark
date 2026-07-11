@@ -1,5 +1,12 @@
 # Compose Migration Findings
 
+## A0 production-only matrix before parallel lane work (S4d-345, 2026-07-11)
+
+- Classify surfaces from **production** consumers only (Android Nav wrappers, Desktop window, iOS ContentView hosts). DEBUG witnesses, tests, and theoretical callers do not make a shared root “done” on a platform.
+- **A4 is not automatic after A0:** the three editors (`WatermarkConfigEditor`, `OutputPrefsEditor`, `TemplateEditor`) already have multi-platform production consumers; no *new* pure extraction qualifies under §6.12 (≥2 named production platforms, no platform types) until a residual creates a real dual consumer. Do not invent a shared ViewModel.
+- **S4d-338 is lane-local:** it blocks iOS focused CMP text / full-root text embedding only — not A1 thinning, A2 optional roots, non-text A3 controls, or template work that avoids focused `OutlinedTextField`.
+- Residual dependency order after A0: **A1 → A2 optional → A3 iOS root/templates → A4 only if dual consumer appears → A5**. Not Phase A/B/parity complete.
+
 ## Independent primary/secondary enables on shared output actions (S4d-344, 2026-07-11)
 
 - A single `hasSavedOutput`/`enabled` gate on commonMain `SavedOutputActions` regresses iOS: `WatermarkWorkflow` stages a temp PNG for Share only; if that write fails, `resultPNG` and Save-to-Photos must still work. Independent `primaryEnabled` / `secondaryEnabled` (defaults still `enabled && hasOutput` for Desktop) preserve Desktop’s combined gate and iOS Share-only failure semantics.
