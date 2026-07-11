@@ -1,5 +1,12 @@
 # Compose Migration Findings
 
+## Desktop editor root is already shared — do not invent Launch/Gallery/About (S4d-349, 2026-07-11)
+
+- Production Desktop UI is only `Main.kt` → `launchDesktopWindow` → `DesktopWindow` with `EditorScreenShell` and shared controls already wired.
+- Absence of Launch/Gallery/About is **not** a migration gap: those product surfaces do not exist on Desktop; multi-file acquisition is FileDialog/drop at the editor edge.
+- `--headless` is automation (`runHeadless`), not a missing product root.
+- Consumer-first: do not schedule A2 implementation that invents Desktop product screens without an owner product decision. Prefer **A1 residual** Android wrapper assessment next. S4d-338 is iOS-only and irrelevant here. Not Phase A/B/parity complete.
+
 ## Thin Android About edge: private activity helper, no public wrapper (S4d-348, 2026-07-11)
 
 - Once a screen is fully a shared shell + resource/URL edge, a public app `AboutScreen` type adds no product value. Prefer a **file-private** `@Composable` on `ComposeMainActivity` over a standalone wrapper package file.

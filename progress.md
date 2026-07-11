@@ -1206,3 +1206,10 @@ Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; 
 - **Proof:** `git diff --check` clean. `./gradlew :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest --max-workers=8 --console=plain` → **BUILD SUCCESSFUL in 52s**, **218 actionable tasks: 28 executed, 190 up-to-date**, unit tests **53 failures 0** (`build/s4d348-about-inline-gradle.log`). `./gradlew --stop --max-workers=8` stopped daemons.
 - **AndroMeld visual gate:** MCP tool search exposed **no `andromeld.*` tool** (session only had tasks list tools). **No screenshot** captured; **no raw adb substitute**. About UI visual evidence remains **environment-blocked / not verified**.
 - **Reviews:** coordinator source review + Kimi PASS. Not Phase A/B/parity complete. **Next: S4d-349** A2/Desktop root readiness or A1 residual investigation.
+
+## 2026-07-11 — S4d-349 Desktop A2 root readiness NO-GO (accepted)
+
+- **S4d-349:** read-only readiness at `docs/superpowers/research/2026-07-11-s4d349-desktop-root-readiness.md`. Production inventory: `Main.kt` default launch → `launchDesktopWindow()` → `DesktopWindow` already consumes `EditorScreenShell` and shared primitives. No Desktop product Launch/Gallery/About. `--headless` is non-UI automation only.
+- **Decision: consumer-first NO-GO** for further A2 “shared root” work that would invent those surfaces. S4d-338 not relevant. No product code.
+- **Reviews / verification:** Kimi source review **PASS**. `git diff --check` clean on readiness note. **No build** applies (read-only). Not Phase A/B/parity complete.
+- **Next: A1 residual Android wrapper assessment** (not A2 Desktop Launch/Gallery/About implementation).
