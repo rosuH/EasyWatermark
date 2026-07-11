@@ -1199,3 +1199,10 @@ Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; 
 - **Decision: consumer-first NO-GO.** Shared `AboutScreenShell` avoids S4d-338 APIs (no ModalBottomSheet/Dialog/OutlinedTextField), but adding a production About route/entry is **owner-level product scope**, not an automatic A3 wire-up. No product code.
 - **Reviews / verification:** Kimi + OpenCode read-only reviews **PASS**. `git diff --check` clean on readiness note. **No build** applies (read-only). Not Phase A/B/parity complete.
 - **Next: A1 Android wrapper-thinning readiness** (not A2 Desktop About, not A3 iOS About implementation).
+
+## 2026-07-11 — S4d-348 A1 Android About wrapper inline (accepted)
+
+- **S4d-348:** deleted standalone `app/.../ui/about/AboutScreen.kt`. `ComposeMainActivity` now hosts private `AboutScreenAndroid` that wires existing shared `AboutScreenShell` with the same resources, hard-coded labels (`Force Open Dynamic Color Support` / `Show Bounds`), URL callbacks, OpenSource navigation, AboutViewModel toggles, and `AndroidView` + `ColoredImageVIew` logo edge. No route, dependency, shared ViewModel, persistence, renderer, picker/share/permission change.
+- **Proof:** `git diff --check` clean. `./gradlew :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest --max-workers=8 --console=plain` → **BUILD SUCCESSFUL in 52s**, **218 actionable tasks: 28 executed, 190 up-to-date**, unit tests **53 failures 0** (`build/s4d348-about-inline-gradle.log`). `./gradlew --stop --max-workers=8` stopped daemons.
+- **AndroMeld visual gate:** MCP tool search exposed **no `andromeld.*` tool** (session only had tasks list tools). **No screenshot** captured; **no raw adb substitute**. About UI visual evidence remains **environment-blocked / not verified**.
+- **Reviews:** coordinator source review + Kimi PASS. Not Phase A/B/parity complete. **Next: S4d-349** A2/Desktop root readiness or A1 residual investigation.

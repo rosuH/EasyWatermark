@@ -1,5 +1,11 @@
 # Compose Migration Findings
 
+## Thin Android About edge: private activity helper, no public wrapper (S4d-348, 2026-07-11)
+
+- Once a screen is fully a shared shell + resource/URL edge, a public app `AboutScreen` type adds no product value. Prefer a **file-private** `@Composable` on `ComposeMainActivity` over a standalone wrapper package file.
+- Preserve hard-coded English labels and URL constants at the Android edge when migrating wrappers; do not “fix” them into `strings.xml` in a thinning slice.
+- AndroMeld visual gates require an available `andromeld.*` MCP tool. If MCP search returns no such tool, record the environment block and **do not** substitute raw adb screenshots as visual proof.
+
 ## iOS About is a product-scope NO-GO, not an S4d-338 shell crash (S4d-347, 2026-07-11)
 
 - Production iOS `ContentView` has **no About route** — only DEBUG `aboutScreenShellWitness` under the shared-compose witness launch flag. Witness XCUITest ≠ production consumer.
