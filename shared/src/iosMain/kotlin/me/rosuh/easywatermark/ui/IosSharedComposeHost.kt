@@ -193,6 +193,39 @@ class IosTextSizeSliderHost(
     }
 }
 
+/** Production host for the shared rotation slider; Swift still owns persistence and re-rendering. */
+class IosWatermarkDegreeSliderHost(
+    private val onValueChangeFinished: (Float) -> Unit,
+) {
+    private var degree by mutableStateOf(315f)
+    private var pendingDegree: Float? = null
+
+    fun viewController(): UIViewController = ComposeUIViewController {
+        AppTheme {
+            SliderOption(
+                currentValue = degree,
+                valueRange = 0f..360f,
+                modifier = Modifier.fillMaxWidth(),
+                onValueChangeFinished = {
+                    onValueChangeFinished(degree)
+                },
+                onValueChange = { value ->
+                    degree = value
+                    // Ignore an older async workflow update while the user is still dragging a newer value.
+                    pendingDegree = value
+                },
+            )
+        }
+    }
+
+    fun update(degree: Float) {
+        if (pendingDegree == null || pendingDegree == degree) {
+            this.degree = degree
+            pendingDegree = null
+        }
+    }
+}
+
 object IosSharedComposeHost {
     fun launchScreenShellWitness(): UIViewController = ComposeUIViewController {
         AppTheme {

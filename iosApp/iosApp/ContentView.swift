@@ -190,6 +190,41 @@ private struct SharedComposeTextSizeControl: UIViewControllerRepresentable {
     }
 }
 
+private struct SharedComposeWatermarkDegreeControl: UIViewControllerRepresentable {
+    let degree: Float
+    let workflow: WatermarkWorkflow
+
+    final class Coordinator {
+        weak var workflow: WatermarkWorkflow?
+        lazy var host = IosWatermarkDegreeSliderHost(onValueChangeFinished: { [weak self] degree in
+            self?.setWatermarkDegree(degree.floatValue)
+        })
+
+        init(workflow: WatermarkWorkflow) {
+            self.workflow = workflow
+        }
+
+        func setWatermarkDegree(_ degree: Float) {
+            Task { @MainActor [weak workflow] in
+                guard let workflow else { return }
+                await workflow.setWatermarkDegree(degree)
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(workflow: workflow) }
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        context.coordinator.host.update(degree: degree)
+        return context.coordinator.host.viewController()
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        context.coordinator.workflow = workflow
+        context.coordinator.host.update(degree: degree)
+    }
+}
+
 #if DEBUG
 private struct SharedComposeLaunchShellWitness: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
@@ -235,8 +270,6 @@ struct ContentView: View {
     @State private var pickedIconItem: PhotosPickerItem?
     /// S4d-102: editable draft of the watermark text; applied to the shared `WaterMarkRepository`.
     @State private var draftText: String = ""
-    /// S4d-103: editable draft of the watermark rotation degree; applied to the shared `WaterMarkRepository`.
-    @State private var draftDegree: Double = 315
     /// S4d-105: editable draft of the watermark opacity (0…1); applied to the shared `WaterMarkRepository`.
     @State private var draftAlpha: Double = 1.0
     /// S4d-110: editable drafts of the watermark h/v gaps; applied to the shared `WaterMarkRepository`.
@@ -346,17 +379,11 @@ struct ContentView: View {
             }
             .accessibilityIdentifier("templatesSection")
 
-            // S4d-103: edit the watermark rotation degree through the same shared editor path. Minimal
-            // control — not the final 1:1 editor. Commits on release (avoids re-rendering mid-drag).
-            VStack(spacing: 4) {
-                Text("Rotation: \(Int(draftDegree))°")
-                    .font(.caption)
-                    .accessibilityIdentifier("watermarkDegreeLabel")
-                Slider(value: $draftDegree, in: 0...360, step: 1) { editing in
-                    if !editing { Task { await workflow.setWatermarkDegree(Float(draftDegree)) } }
-                }
-                .accessibilityIdentifier("watermarkDegreeSlider")
-            }
+            // S4d-333: shared CMP control; Swift keeps the workflow write and rerender boundary.
+            SharedComposeWatermarkDegreeControl(degree: workflow.watermarkDegree, workflow: workflow)
+                .frame(height: 72)
+                .accessibilityIdentifier("sharedComposeWatermarkDegree")
+                .accessibilityLabel("Rotation \(Int(workflow.watermarkDegree))")
 
             // S4d-329: shared CMP control; Swift keeps the workflow write and rerender boundary.
             SharedComposeTileModeControl(mode: workflow.watermarkTileMode, workflow: workflow)
@@ -493,7 +520,6 @@ struct ContentView: View {
             await workflow.loadWatermarkText()
             draftText = workflow.watermarkText
             await workflow.loadWatermarkDegree()
-            draftDegree = Double(workflow.watermarkDegree)
             await workflow.loadWatermarkTileMode()
             await workflow.loadWatermarkAlpha()
             draftAlpha = Double(workflow.watermarkAlpha)

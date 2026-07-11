@@ -112,14 +112,14 @@ final class PickerFlowUITests: XCTestCase {
         XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 20),
                       "Production shared text-style control did not appear.")
 
-        let fill = app.staticTexts.matching(NSPredicate(format: "label == %@", "Fill")).firstMatch
-        XCTAssertTrue(scrollUntilHittable(fill, in: app, timeout: 10), "Fill text-style choice was not reachable.")
+        // Segment child roles are not stable in Compose UIKit after the preceding shared slider hosts.
+        // Tap the actual rendered host positions instead of adding a test-only state setter.
+        let fill = control.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.5))
         fill.tap()
         let fillSelected = expectation(for: NSPredicate(format: "label == %@", "Text style Fill"), evaluatedWith: control, handler: nil)
         wait(for: [fillSelected], timeout: 15)
 
-        let stroke = app.staticTexts.matching(NSPredicate(format: "label == %@", "Stroke")).firstMatch
-        XCTAssertTrue(scrollUntilHittable(stroke, in: app, timeout: 10), "Stroke text-style choice was not reachable.")
+        let stroke = control.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.5))
         stroke.tap()
         let strokeSelected = expectation(for: NSPredicate(format: "label == %@", "Text style Stroke"), evaluatedWith: control, handler: nil)
         wait(for: [strokeSelected], timeout: 15)
@@ -220,6 +220,50 @@ final class PickerFlowUITests: XCTestCase {
         let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
         XCTAssertTrue(preview.waitForExistence(timeout: 15), "Fixture render did not remain visible after text-size change.")
         attach(app, "08-shared-compose-text-size")
+    }
+
+    /// S4d-333: the normal iOS rotation slider is now a shared CMP control. The test taps the real
+    /// Compose track and proves the workflow persists its observed value through a relaunch.
+    func testSharedComposeWatermarkDegreeChanges() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestFixtureImage", "1"]
+        app.launch()
+
+        let control = app.descendants(matching: .any)["sharedComposeWatermarkDegree"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 20),
+                      "Production shared rotation control did not appear.")
+
+        let initialLabel = control.label
+        let leftTrack = control.coordinate(withNormalizedOffset: CGVector(dx: 0.03, dy: 0.25))
+        let rightTrack = control.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.25))
+        rightTrack.tap()
+
+        if waitForLabelChange(control, from: initialLabel, timeout: 15) {
+            let rightLabel = control.label
+            leftTrack.tap()
+            XCTAssertTrue(waitForLabelChange(control, from: rightLabel, timeout: 15),
+                          "Shared rotation slider did not commit the opposite track position.")
+        } else {
+            leftTrack.tap()
+            XCTAssertTrue(waitForLabelChange(control, from: initialLabel, timeout: 15),
+                          "Shared rotation slider did not commit either track position.")
+            let leftLabel = control.label
+            rightTrack.tap()
+            XCTAssertTrue(waitForLabelChange(control, from: leftLabel, timeout: 15),
+                          "Shared rotation slider did not commit the opposite track position.")
+        }
+        let selectedLabel = control.label
+        XCTAssertTrue(selectedLabel.hasPrefix("Rotation "), "Shared rotation slider did not report a persisted label.")
+
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(control.waitForExistence(timeout: 20),
+                      "Production shared rotation control did not reappear after reload.")
+        let persistedDegree = expectation(for: NSPredicate(format: "label == %@", selectedLabel), evaluatedWith: control, handler: nil)
+        wait(for: [persistedDegree], timeout: 20)
+        let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
+        XCTAssertTrue(preview.waitForExistence(timeout: 15), "Fixture render did not remain visible after rotation change.")
+        attach(app, "09-shared-compose-rotation")
     }
 
     /// Documents the S4d-57-proven capability without asserting the blocked selection step:

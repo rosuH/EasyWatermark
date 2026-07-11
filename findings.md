@@ -1,5 +1,12 @@
 # Compose Migration Findings
 
+## Exercise nested Compose UIKit controls through their platform wrapper (S4d-333, 2026-07-11)
+
+- A normal iOS `UIViewControllerRepresentable` can consume commonMain `SliderOption` for rotation (`0f..360f`) without moving `WatermarkWorkflow`, DataStore, renderer, picker, or export ownership. The Kotlin `Float` callback is imported as `KotlinFloat`, so convert with `degree.floatValue` at the Swift edge.
+- The stale-update guard used for text size applies unchanged to degree: write the pending value on every local `onValueChange`, reject a callback update that does not match it, and clear the marker only after the matching persisted workflow value returns. This prevents an older completed write from replacing a newer in-progress drag.
+- After stacking more Compose UIKit hosts, an inner Material segmented control's `StaticText` children are not a stable XCUITest contract. Test actual pointer input against the labeled `UIViewControllerRepresentable` wrapper coordinates and assert its workflow-backed accessibility label after each action and relaunch. This is real product interaction, not a setter seam; it remains geometry-sensitive, so preserve the wrapper-level label and revalidate coordinates whenever that shared layout changes.
+- The screenshot and 13/0 iOS suite prove this specific Phase A shared-consumer flow only. They do not establish dynamic type, localization, dark mode, final Android v2.10.0 visual parity, or unblock the AndroMeld Android device smoke.
+
 ## Guard a newer CMP slider drag from an older async workflow update (S4d-332, 2026-07-11)
 
 - An iosMain `ComposeUIViewController` host can consume commonMain `SliderOption` while Swift retains the existing `WatermarkWorkflow` DataStore/rerender boundary. Kotlin `(Float) -> Unit` is imported by Swift as `(KotlinFloat) -> Void`, so use `size.floatValue` before calling the Swift `Float` workflow API.
