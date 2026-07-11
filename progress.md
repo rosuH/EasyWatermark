@@ -1220,3 +1220,10 @@ Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; 
 - **Proof:** `git diff --check` clean. `./gradlew :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest --max-workers=8 --console=plain` → **BUILD SUCCESSFUL in 43s**, **215 actionable tasks: 28 executed, 187 up-to-date**, unit tests **53/0** (`build/s4d350-save-export-inline-gradle.log`). `./gradlew --stop --max-workers=8` stopped daemons.
 - **AndroMeld visual gate:** MCP tool search exposed **no `andromeld.*` tools**; **no raw adb substitute**. Save/export sheet UI screenshots remain **environment-blocked / not verified**.
 - **Reviews:** coordinator source review + Kimi PASS + OpenCode no P0/P1; cosmetic import ordering non-actionable. Not Phase A/B/parity complete. **Next: S4d-351** residual Android wrapper inventory/decision.
+
+## 2026-07-11 — S4d-351 A1 residual Android wrapper closeout (accepted)
+
+- **S4d-351:** read-only residual audit + closeout at `docs/superpowers/research/2026-07-11-s4d351-android-wrapper-closeout.md`. Inventory: remaining Launch/Gallery/Editor/IconOption/ColorStyleOption/Theme own real Android edges; About + SaveExport were the **final safe pure adapters** (already inlined S4d-348/350); OpenSource/Recovery already commonMain + Activity edge; direct multi-platform commonMain consumers unchanged from A0.
+- **Decision:** **A1 pure-adapter thinning has no more safe candidates.** A1 closeout means stop pure wrapper inlines; residual Android work is non-A1 edge ownership only. Explicitly **not Phase A complete**.
+- **Reviews / verification:** Kimi residual audit **PASS** (confirmed). `git diff --check` clean on closeout + plan files. **No build** applies (read-only). No product code. Protected untracked `2026-07-11-project-branch-goals-progress.md` not staged.
+- **Next: S4d-352** assess real iOS production non-text controls versus shared CMP — **not** add a product root, **not** touch S4d-338 text/sheet/dialog.

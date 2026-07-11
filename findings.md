@@ -1,5 +1,13 @@
 # Compose Migration Findings
 
+## A1 pure Android wrapper thinning is exhausted (S4d-351, 2026-07-11)
+
+- After S4d-348 (About) and S4d-350 (SaveExport), **no remaining safe pure A1 candidates**: public wrappers that only map resources/slots into shared shells are gone or already private Activity helpers.
+- Residual Android surfaces (`LaunchScreen`, `GalleryDialog`, `EditorScreen`, `IconOption`, `ColorStyleOption`, `Theme`) own **real edges** (permissions, Coil/`Uri`, native renderer, pickers, dynamic color, `FuncTitleModel`). Do not schedule them as pure adapter inlines.
+- OpenSource/Recovery already live in commonMain with Activity string/callback edges — no public pure wrapper left to delete.
+- **A1 closeout ≠ Phase A complete.** Next residual value is consumer-first: S4d-352 assess real iOS production **non-text** controls vs shared CMP — not inventing a product root, not reopening S4d-338 text/sheet/dialog.
+- Read-only closeout: Kimi residual audit **PASS**; `git diff --check`; no build. Evidence: `docs/superpowers/research/2026-07-11-s4d351-android-wrapper-closeout.md`.
+
 ## Save/export sheet wrapper is only strings + Coil; export IO stays on Activity (S4d-350, 2026-07-11)
 
 - A thin `SaveExportSheet` that only builds `SaveExportSheetStrings` and a Coil `AsyncImage` content slot is safe to collapse into a private `ComposeMainActivity` helper; layout remains commonMain `SaveExportSheetShell`.
