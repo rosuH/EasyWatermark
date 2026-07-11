@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -49,6 +50,7 @@ import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopImageDecoder
 import me.rosuh.easywatermark.render.DesktopSaveDecision
+import me.rosuh.easywatermark.ui.EditorScreenShell
 import me.rosuh.easywatermark.ui.EditorTemplateSheetHost
 import me.rosuh.easywatermark.ui.compose.SliderOption
 import me.rosuh.easywatermark.ui.compose.TextColorOption
@@ -455,23 +457,46 @@ fun launchDesktopWindow() = application {
 
     Window(onCloseRequest = ::exitApplication, title = "EasyWatermark — Desktop") {
         AppTheme(darkTheme = true) {
-            Column(
-                // S4d-155: vertical scroll so the growing single-column control surface stays reachable
-                // on constrained window heights. verticalScroll after fillMaxSize makes the column fill the
-                // viewport and scroll when its content is taller; padding stays inside (scrolls with content).
-                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-                    // S4d-158: accept a dropped image file anywhere on the window content.
-                    .dragAndDropTarget(shouldStartDragAndDrop = { hasFileList(it) }, target = dropTarget)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Text("EasyWatermark — Desktop", style = MaterialTheme.typography.headlineSmall)
-                Text(
-                    "Renders the deterministic sample through the shared engine and saves an image. " +
-                        "Honors text / color / typeface / textStyle / tileMode / textSize / degree / gaps / alpha. " +
-                        "Pick an icon to switch to Image mode.",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+            EditorScreenShell(
+                showPhotoStrip = false,
+                // S4d-326: the shared editor shell owns the Desktop screen structure; Desktop keeps the
+                // file-drop edge and all edit/save callbacks in the injected slots below.
+                modifier = Modifier.fillMaxSize()
+                    .dragAndDropTarget(shouldStartDragAndDrop = { hasFileList(it) }, target = dropTarget),
+                topBar = { topBarModifier ->
+                    Column(
+                        modifier = topBarModifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text("EasyWatermark — Desktop", style = MaterialTheme.typography.headlineSmall)
+                        Text(
+                            "Renders the deterministic sample through the shared engine and saves an image. " +
+                                "Honors text / color / typeface / textStyle / tileMode / textSize / degree / gaps / alpha. " +
+                                "Pick an icon to switch to Image mode.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                },
+                preview = { previewModifier ->
+                    SavePreviewStatus(
+                        status = status,
+                        preview = preview,
+                        previewContentDescription = "Watermark preview",
+                        modifier = previewModifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    )
+                },
+                photoStrip = {},
+                bottomControls = {
+                    // Keep the Desktop-only control surface bounded and scrollable while the shared shell
+                    // reserves a live preview area above it.
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 360.dp)
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
                 // S4d-287: Desktop consumes the same text-content shell as Android. The shared composable
                 // owns the row + edit sheet; Desktop still owns persistence, mode flip, and preview refresh.
                 Text("Watermark text", style = MaterialTheme.typography.bodyMedium)
@@ -1184,12 +1209,9 @@ fun launchDesktopWindow() = application {
                         Text("Templates")
                     }
                 }
-                SavePreviewStatus(
-                    status = status,
-                    preview = preview,
-                    previewContentDescription = "Watermark preview",
-                )
-            }
+                    }
+                },
+            )
         }
     }
 }

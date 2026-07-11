@@ -1,5 +1,11 @@
 # Compose Migration Findings
 
+## Reuse the editor shell for Desktop structure without inventing Desktop state (S4d-326, 2026-07-11)
+
+- `EditorScreenShell` can be a real Desktop route owner even when Desktop retains every editor action at its platform edge: title/description use `topBar`, the existing shared preview-status component uses `preview`, and the existing Desktop controls live in `bottomControls`.
+- Keep a Desktop-only long control surface bounded and vertically scrollable inside the shared shell. Do not fabricate a photo strip or move AWT dialogs, drag/drop, persistence, renderer calls, or callback state into commonMain solely to fill every shared slot.
+- A no-arg Desktop launch plus a viewed screenshot is necessary for this layout move; headless render proof alone cannot show whether the shared preview/control regions are framed and reachable.
+
 ## Pair hidden iOS witness IDs with positive single-witness proof (S4d-325, 2026-07-03)
 
 - If a normal-launch hidden-default test lists a DEBUG-only CMP witness id, keep a matching positive XCUITest that proves the same id can actually render. Hidden-only coverage proves absence from product UI, not runtime reachability.
