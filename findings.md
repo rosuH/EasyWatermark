@@ -1,11 +1,19 @@
 # Compose Migration Findings
 
+## iOS non-text shared controls are already covered; Phase A gate is S4d-338 (S4d-352, 2026-07-11)
+
+- Production iOS interactive **non-text** editor axes (sliders, tile/style/typeface, color swatches with custom input off, icon shell, preview, `SavedOutputActions`, launch shell) already consume commonMain via iosMain hosts. **No new safe non-text candidate.**
+- Remaining pure SwiftUI is not a discrete CMP win: system `PhotosPicker`, display captions/status, **S4d-338** watermark `TextField`, **S4d-346** templates list. Do not wire `TextContentOption` or `TemplateListSheet` under current Compose/Skiko.
+- **`WatermarkModeActions` is Desktop-shaped** (pick icon + Use text + Preview). iOS already has icon CMP; Use-text/Preview would invent product UX — consumer-first non-GO.
+- **Phase A gate** for further iOS CMP control migration is **owner Compose/Skiko alignment (S4d-338)**, not another host. Next is S4d-353 decision pack, not product code. Not Phase A/B/parity complete.
+- Evidence: `docs/superpowers/research/2026-07-11-s4d352-ios-nontext-control-coverage.md`. Kimi PASS; no build; `git diff --check`.
+
 ## A1 pure Android wrapper thinning is exhausted (S4d-351, 2026-07-11)
 
 - After S4d-348 (About) and S4d-350 (SaveExport), **no remaining safe pure A1 candidates**: public wrappers that only map resources/slots into shared shells are gone or already private Activity helpers.
 - Residual Android surfaces (`LaunchScreen`, `GalleryDialog`, `EditorScreen`, `IconOption`, `ColorStyleOption`, `Theme`) own **real edges** (permissions, Coil/`Uri`, native renderer, pickers, dynamic color, `FuncTitleModel`). Do not schedule them as pure adapter inlines.
 - OpenSource/Recovery already live in commonMain with Activity string/callback edges — no public pure wrapper left to delete.
-- **A1 closeout ≠ Phase A complete.** Next residual value is consumer-first: S4d-352 assess real iOS production **non-text** controls vs shared CMP — not inventing a product root, not reopening S4d-338 text/sheet/dialog.
+- **A1 closeout ≠ Phase A complete.** Residual Phase A value moved to iOS S4d-338/templates gate (S4d-352), not more pure Android wrapper inlines.
 - Read-only closeout: Kimi residual audit **PASS**; `git diff --check`; no build. Evidence: `docs/superpowers/research/2026-07-11-s4d351-android-wrapper-closeout.md`.
 
 ## Save/export sheet wrapper is only strings + Coil; export IO stays on Activity (S4d-350, 2026-07-11)

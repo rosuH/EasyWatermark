@@ -1227,3 +1227,10 @@ Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; 
 - **Decision:** **A1 pure-adapter thinning has no more safe candidates.** A1 closeout means stop pure wrapper inlines; residual Android work is non-A1 edge ownership only. Explicitly **not Phase A complete**.
 - **Reviews / verification:** Kimi residual audit **PASS** (confirmed). `git diff --check` clean on closeout + plan files. **No build** applies (read-only). No product code. Protected untracked `2026-07-11-project-branch-goals-progress.md` not staged.
 - **Next: S4d-352** assess real iOS production non-text controls versus shared CMP — **not** add a product root, **not** touch S4d-338 text/sheet/dialog.
+
+## 2026-07-11 — S4d-352 iOS non-text control coverage NO-GO (accepted)
+
+- **S4d-352:** read-only coverage at `docs/superpowers/research/2026-07-11-s4d352-ios-nontext-control-coverage.md`. Production matrix: launch/icon/sliders/tile/typeface/style/color/preview/`SavedOutputActions` already shared CMP; remaining SwiftUI = PhotosPicker edges, captions/status, watermark `TextField`, Templates list.
+- **Decision: NO-GO** — **no new safe iOS non-text shared-control candidate.** `WatermarkModeActions` would invent Desktop Use-text/Preview UX on iOS. **S4d-338 text + S4d-346 templates remain the Phase A gate** for further iOS CMP control work. Not Phase A/B/parity complete.
+- **Reviews / verification:** Kimi **PASS** (confirmed). `git diff --check` clean on closeout + plan files. **No build** applies (read-only). No product code. Protected untracked `2026-07-11-project-branch-goals-progress.md` not staged.
+- **Next: S4d-353** owner-decision pack for Compose/Skiko alignment blocker — **not** product code.
