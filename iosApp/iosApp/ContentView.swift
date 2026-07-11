@@ -5,7 +5,8 @@ import Shared
 
 // C5.4 (S4d-27/29/58): a user picks a photo with `PhotosPicker`, the app loads the encoded bytes, and
 // `WatermarkWorkflow` runs the `:shared` render bridge to produce a watermarked PNG, shown via
-// the shared CMP preview host. Export is a `ShareLink` (system share sheet over a temp .png) plus Save to Photos.
+// the shared CMP preview host. Export is the shared CMP output action row, which delegates system
+// sharing to `UIActivityViewController` over the staged temp PNG plus Save to Photos.
 // S4d-58 proves render + export via the DEBUG-only fixture seam below; real PHPicker cell selection is
 // the only step still blocked by Xcode-27-beta / iOS-27 system UI automation.
 private struct SharedComposeWatermarkPreview: UIViewControllerRepresentable {
@@ -87,6 +88,74 @@ private struct SharedComposeIconWatermarkControl: UIViewControllerRepresentable 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
         context.coordinator.onPick = onPick
         context.coordinator.host.update(iconBytes: icon?.toKotlinByteArray())
+    }
+}
+
+private struct SharedComposeSavedOutputActions: UIViewControllerRepresentable {
+    let resultFileURL: URL?
+    let isSaving: Bool
+    let workflow: WatermarkWorkflow
+
+    final class Coordinator {
+        weak var workflow: WatermarkWorkflow?
+        weak var viewController: UIViewController?
+        var resultFileURL: URL?
+        lazy var host = IosSavedOutputActionsHost(
+            onShare: { [weak self] in self?.shareResult() },
+            onSaveToPhotos: { [weak self] in self?.saveResultToPhotos() },
+        )
+
+        init(resultFileURL: URL?, workflow: WatermarkWorkflow) {
+            self.resultFileURL = resultFileURL
+            self.workflow = workflow
+        }
+
+        func shareResult() {
+            guard let resultFileURL, let viewController else { return }
+            let shareSheet = UIActivityViewController(
+                activityItems: [resultFileURL],
+                applicationActivities: nil,
+            )
+            if let popover = shareSheet.popoverPresentationController {
+                popover.sourceView = viewController.view
+                popover.sourceRect = viewController.view.bounds
+            }
+            viewController.present(shareSheet, animated: true)
+        }
+
+        func saveResultToPhotos() {
+            Task { @MainActor [weak workflow] in
+                guard let workflow else { return }
+                await workflow.saveResultToPhotos()
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(resultFileURL: resultFileURL, workflow: workflow)
+    }
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        let coordinator = context.coordinator
+        // Share needs staged temp URL; Save uses in-memory resultPNG (host only when PNG exists).
+        coordinator.host.update(
+            canShare: resultFileURL != nil,
+            isSaving: isSaving,
+        )
+        let viewController = coordinator.host.viewController()
+        coordinator.viewController = viewController
+        return viewController
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        let coordinator = context.coordinator
+        coordinator.workflow = workflow
+        coordinator.resultFileURL = resultFileURL
+        coordinator.viewController = uiViewController
+        coordinator.host.update(
+            canShare: resultFileURL != nil,
+            isSaving: isSaving,
+        )
     }
 }
 
@@ -646,12 +715,20 @@ struct ContentView: View {
                 .accessibilityIdentifier("sharedComposeTextPaintStyle")
                 .accessibilityLabel(workflow.watermarkTextStyleKey == 1 ? "Text style Stroke" : "Text style Fill")
 
+            // Product order matches the retired exportBar slot: preview, then shared actions.
+            // S4d-344: commonMain owns the action row; UIKit remains Share/Photos system UI edge.
             if let png = workflow.resultPNG {
                 SharedComposeWatermarkPreview(png: png, status: renderedPreviewStatus)
                     .frame(height: 360)
                     .accessibilityIdentifier("sharedComposeWatermarkPreview")
 
-                exportBar
+                SharedComposeSavedOutputActions(
+                    resultFileURL: workflow.resultFileURL,
+                    isSaving: workflow.saveState == .saving,
+                    workflow: workflow,
+                )
+                .frame(height: 44)
+                .accessibilityIdentifier("sharedComposeSavedOutputActions")
                 saveStatusView
             } else {
                 statusView
@@ -764,25 +841,6 @@ struct ContentView: View {
         return image.pngData()
     }
 #endif
-
-    /// Share + Save-to-Photos actions for the rendered watermark (shown once a result exists).
-    @ViewBuilder
-    private var exportBar: some View {
-        HStack(spacing: 12) {
-            if let url = workflow.resultFileURL {
-                ShareLink(item: url) {
-                    Label("Share", systemImage: "square.and.arrow.up")
-                }
-            }
-            Button {
-                Task { await workflow.saveResultToPhotos() }
-            } label: {
-                Label("Save to Photos", systemImage: "square.and.arrow.down")
-            }
-            .disabled(workflow.saveState == .saving)
-        }
-        .buttonStyle(.bordered)
-    }
 
     @ViewBuilder
     private var saveStatusView: some View {

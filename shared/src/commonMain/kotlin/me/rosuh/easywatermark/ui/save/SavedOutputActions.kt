@@ -9,35 +9,44 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 data class SavedOutputActionsLabels(
-    val showInFolder: String,
-    val copyPath: String,
+    val primary: String,
+    val secondary: String,
 )
 
+/**
+ * Shared two-action row for a completed output.
+ *
+ * Callers that share one availability gate keep [hasOutput] + [enabled] (both buttons default
+ * to that combined state). Platforms that stage artifacts independently pass
+ * [primaryEnabled] / [secondaryEnabled] so a primary-only staging failure does not disable
+ * the secondary action (e.g. iOS Share temp file vs Save from in-memory PNG).
+ */
 @Composable
 fun SavedOutputActions(
     labels: SavedOutputActionsLabels,
-    hasSavedOutput: Boolean,
+    hasOutput: Boolean,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    onShowInFolder: () -> Unit,
-    onCopyPath: () -> Unit,
+    primaryEnabled: Boolean = enabled && hasOutput,
+    secondaryEnabled: Boolean = enabled && hasOutput,
+    onPrimaryAction: () -> Unit,
+    onSecondaryAction: () -> Unit,
 ) {
-    val actionEnabled = enabled && hasSavedOutput
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Button(
-            enabled = actionEnabled,
-            onClick = onShowInFolder,
+            enabled = primaryEnabled,
+            onClick = onPrimaryAction,
         ) {
-            Text(labels.showInFolder)
+            Text(labels.primary)
         }
         Button(
-            enabled = actionEnabled,
-            onClick = onCopyPath,
+            enabled = secondaryEnabled,
+            onClick = onSecondaryAction,
         ) {
-            Text(labels.copyPath)
+            Text(labels.secondary)
         }
     }
 }

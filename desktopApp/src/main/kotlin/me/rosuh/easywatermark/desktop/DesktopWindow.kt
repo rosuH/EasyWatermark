@@ -1088,12 +1088,12 @@ fun launchDesktopWindow() = application {
                 val clipboard = LocalClipboardManager.current
                 SavedOutputActions(
                     labels = SavedOutputActionsLabels(
-                        showInFolder = "Show in folder",
-                        copyPath = "Copy output path",
+                        primary = "Show in folder",
+                        secondary = "Copy output path",
                     ),
-                    hasSavedOutput = lastSavedFile != null,
+                    hasOutput = lastSavedFile != null,
                     enabled = !busy,
-                    onShowInFolder = {
+                    onPrimaryAction = {
                         val file = lastSavedFile
                         if (file != null) {
                             scope.launch {
@@ -1118,7 +1118,7 @@ fun launchDesktopWindow() = application {
                             }
                         }
                     },
-                    onCopyPath = {
+                    onSecondaryAction = {
                         val file = lastSavedFile
                         if (file != null) {
                             clipboard.setText(AnnotatedString(file.path))

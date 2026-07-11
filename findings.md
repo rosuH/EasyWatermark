@@ -1,5 +1,12 @@
 # Compose Migration Findings
 
+## Independent primary/secondary enables on shared output actions (S4d-344, 2026-07-11)
+
+- A single `hasSavedOutput`/`enabled` gate on commonMain `SavedOutputActions` regresses iOS: `WatermarkWorkflow` stages a temp PNG for Share only; if that write fails, `resultPNG` and Save-to-Photos must still work. Independent `primaryEnabled` / `secondaryEnabled` (defaults still `enabled && hasOutput` for Desktop) preserve Desktop’s combined gate and iOS Share-only failure semantics.
+- Neutral API names (`primary`/`secondary`, `hasOutput`, `onPrimaryAction`/`onSecondaryAction`) keep the shared component platform-agnostic; iOS maps primary=Share, secondary=Save to Photos without Desktop label/behavior change.
+- Nested Compose UIKit buttons often expose labels with a stale non-hittable Y after scroll. For XCUITest only: `scrollUntilHittable(host)`, assert Share/Save labels exist, then host-tap with **label-derived normalized X** and **visible host `dy=0.5`**. Do not move product layout (e.g. early top action row) to paper over coordinate geometry.
+- Do not add temp-file-write fault injection for proof; the workflow contract plus independent enables is the product fix. No Phase A / 1:1 completion claim from this slice.
+
 ## Preserve a platform's existing palette while reusing a richer shared color control (S4d-337, 2026-07-11)
 
 - `TextColorOption` can serve both Desktop's custom hexadecimal path and iOS's four-preset path when custom input is an explicit default-on opt-out. Keep the iOS `palette` byte values exactly Amber/White/Black/Red and leave Desktop on the default; this avoids expanding temporary iOS behavior only for migration convenience.

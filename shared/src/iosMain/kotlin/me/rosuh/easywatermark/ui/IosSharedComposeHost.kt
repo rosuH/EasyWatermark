@@ -41,6 +41,8 @@ import me.rosuh.easywatermark.ui.compose.TextTypeface as TextTypefaceOption
 import me.rosuh.easywatermark.ui.compose.TextTypefaceLabels
 import me.rosuh.easywatermark.ui.compose.SliderOption
 import me.rosuh.easywatermark.ui.save.SavePreviewStatus
+import me.rosuh.easywatermark.ui.save.SavedOutputActions
+import me.rosuh.easywatermark.ui.save.SavedOutputActionsLabels
 import me.rosuh.easywatermark.ui.theme.AppTheme
 import platform.UIKit.UIViewController
 import kotlin.math.abs
@@ -58,6 +60,12 @@ private data class IosWatermarkPreviewState(
 
 private data class IosWatermarkIconOptionState(
     val iconBytes: ByteArray? = null,
+)
+
+private data class IosSavedOutputActionsState(
+    /** Share needs a staged temp file; may be false while Save still works from [resultPNG]. */
+    val canShare: Boolean = false,
+    val isSaving: Boolean = false,
 )
 
 /** Production host for the rendered watermark preview; system picker/share/save stay in SwiftUI. */
@@ -143,6 +151,40 @@ class IosWatermarkIconOptionHost(
 
     fun update(iconBytes: ByteArray?) {
         state = IosWatermarkIconOptionState(iconBytes = iconBytes)
+    }
+}
+
+/** Production host for post-render output actions; Swift retains Share/Photos system UI. */
+class IosSavedOutputActionsHost(
+    private val onShare: () -> Unit,
+    private val onSaveToPhotos: () -> Unit,
+) {
+    private var state by mutableStateOf(IosSavedOutputActionsState())
+
+    fun viewController(): UIViewController = ComposeUIViewController {
+        AppTheme {
+            val current = state
+            // Host is only composed when resultPNG exists. Secondary (Save) stays enabled unless
+            // saving; primary (Share) independently requires a staged temp file (canShare).
+            SavedOutputActions(
+                labels = SavedOutputActionsLabels(
+                    primary = "Share",
+                    secondary = "Save to Photos",
+                ),
+                hasOutput = true,
+                primaryEnabled = current.canShare && !current.isSaving,
+                secondaryEnabled = !current.isSaving,
+                onPrimaryAction = onShare,
+                onSecondaryAction = onSaveToPhotos,
+            )
+        }
+    }
+
+    fun update(canShare: Boolean, isSaving: Boolean) {
+        state = IosSavedOutputActionsState(
+            canShare = canShare,
+            isSaving = isSaving,
+        )
     }
 }
 

@@ -33,12 +33,20 @@ final class PickerFlowUITests: XCTestCase {
         let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
         XCTAssertTrue(preview.waitForExistence(timeout: 30),
                       "Shared CMP watermark preview never appeared — fixture render did not reach the host.")
+        let outputActions = app.descendants(matching: .any)["sharedComposeSavedOutputActions"].firstMatch
+        XCTAssertTrue(outputActions.waitForExistence(timeout: 5),
+                      "Shared CMP saved-output action row never appeared after fixture render.")
+        // Product order keeps actions below the editor stack; scroll host first, then host-relative taps
+        // (nested Compose buttons often keep a stale non-hittable Y even when labels exist).
+        XCTAssertTrue(scrollUntilHittable(outputActions, in: app, timeout: 20),
+                      "Shared CMP saved-output action row was not hittable after scroll.")
         attach(app, "02-watermarked-preview")
 
-        // Export UI — Save to Photos (handles the add-only permission alert) then Share.
-        let saveButton = app.buttons["Save to Photos"].firstMatch
-        XCTAssertTrue(saveButton.waitForExistence(timeout: 5), "Save to Photos button missing.")
-        saveButton.tap()
+        let saveLabel = outputActions.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", "Save to Photos")).firstMatch
+        XCTAssertTrue(saveLabel.waitForExistence(timeout: 5), "Save to Photos label missing in action row.")
+        tapSharedOutputAction(labeled: saveLabel, in: outputActions)
+
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         for label in ["Allow Access to All Photos", "Allow Full Access", "Allow", "OK", "允许", "好"] {
             let b = springboard.buttons[label].firstMatch
@@ -52,11 +60,13 @@ final class PickerFlowUITests: XCTestCase {
         XCTAssertFalse(saveFailed.exists, "Save-to-Photos reported 'Save failed': \(saveFailed.label)")
         XCTAssertTrue(savedAppeared, "Save-to-Photos did not reach a 'Saved to Photos' confirmation.")
 
-        // Share — assert the ShareLink actually presents the system share sheet. The share sheet is
-        // hosted by the system; try the classic `ActivityListView` and the sheet's known actions.
-        let shareButton = app.buttons["Share"].firstMatch
-        XCTAssertTrue(shareButton.waitForExistence(timeout: 5), "Share button missing.")
-        shareButton.tap()
+        // Share — label existence for X, host dy=0.5 for current visible Y → UIKit share sheet.
+        XCTAssertTrue(scrollUntilHittable(outputActions, in: app, timeout: 10),
+                      "Shared CMP saved-output action row not hittable before Share.")
+        let shareLabel = outputActions.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", "Share")).firstMatch
+        XCTAssertTrue(shareLabel.waitForExistence(timeout: 5), "Share label missing in action row.")
+        tapSharedOutputAction(labeled: shareLabel, in: outputActions)
         let shareSheet = app.otherElements["ActivityListView"].firstMatch
         let copyAction = app.buttons["Copy"].firstMatch
         let shareSheetAppeared = shareSheet.waitForExistence(timeout: 10) || copyAction.waitForExistence(timeout: 5)
@@ -641,6 +651,16 @@ final class PickerFlowUITests: XCTestCase {
         } else {
             app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap()
         }
+    }
+
+    /// Tap a nested CMP action via label-derived host X and the currently-visible host Y.
+    private func tapSharedOutputAction(labeled labelElement: XCUIElement, in host: XCUIElement) {
+        let hostFrame = host.frame
+        let labelFrame = labelElement.frame
+        XCTAssertGreaterThan(hostFrame.width, 1, "Saved-output host has zero width.")
+        let normalizedX = (labelFrame.midX - hostFrame.minX) / hostFrame.width
+        let clampedX = min(max(normalizedX, 0.05), 0.95)
+        host.coordinate(withNormalizedOffset: CGVector(dx: clampedX, dy: 0.5)).tap()
     }
 
     @discardableResult
