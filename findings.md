@@ -862,3 +862,7 @@ Gaps found by adversarial review and now fixed in the plan — keep these in min
 
 - A shared screen can leave unsupported navigation affordances absent rather than accepting a no-op callback. `LaunchScreenShell` now renders the About icon only when its painter, label, and callback are all supplied. This preserves Android's existing named call unchanged and lets iOS consume the same launch shell while retaining only the real system picker edge.
 - Long bring-up forms make vertical geometry part of the regression surface. The initial S4d-340 editor-side source-picker row shifted Templates and lower sliders enough to fail the established full XCUITest suite. A source replacement affordance that does not belong to the shared launch screen should be a compact overlay when it must remain available during editing; the repaired right-corner `PhotosPicker` icon preserves interaction without moving tested content. Run the full UI suite after adding even a small control above a long scroll form.
+
+## Android smoke environment block (S4d-341, 2026-07-11)
+
+- Tool exposure is not a usable AndroMeld session. `andromeld.devices.list` can fail before device discovery with `AndroMeld MCP control socket was not found. Start AndroMeld first.` In that state there is no eligible Phone Screen session to observe or control, and the required Android visual smoke must remain open. Do not substitute raw `adb` interaction for the contract-mandated AndroMeld proof; resume only after the control service supplies the socket.
