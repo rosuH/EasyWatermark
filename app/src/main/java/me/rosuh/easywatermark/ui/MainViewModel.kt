@@ -73,6 +73,14 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 
+/** Android export-sheet presentation state; output URIs remain on the activity edge. */
+data class SaveExportUiState(
+    val isSaving: Boolean = false,
+    val isFinished: Boolean = false,
+    val completedCount: Int = 0,
+    val totalCount: Int = 0,
+)
+
 class MainViewModel (
     private val userRepo: UserConfigRepository,
     private val waterMarkRepo: WaterMarkRepository,
@@ -121,6 +129,9 @@ class MainViewModel (
     private val _galleryPickedImageList = MutableStateFlow<List<Image>?>(null)
     val galleryPickedImageList: StateFlow<List<Image>?> = _galleryPickedImageList.asStateFlow()
 
+    private val _saveExportUiState = MutableStateFlow(SaveExportUiState())
+    val saveExportUiState: StateFlow<SaveExportUiState> = _saveExportUiState.asStateFlow()
+
     val selectedImageFlow = waterMarkRepo.selectedImage
 
     private var compressedJob: Job? = null
@@ -163,6 +174,8 @@ class MainViewModel (
         launch {
             withContext(Dispatchers.Default) {
                 waterMarkFlow.collect {
+                    // Production v2.10 clears prior export results after any watermark edit.
+                    resetJobStatus()
                     val nextState = launchScreenUiStateFlow.value.copy(waterMark = it)
                     withContext(Dispatchers.Main) {
                         _launchScreenUiStateFlow.emit(nextState)
@@ -209,6 +222,15 @@ class MainViewModel (
         imageList: List<ImageInfo>,
     ) {
         viewModelScope.launch {
+            if (imageList.isEmpty()) {
+                _saveExportUiState.value = SaveExportUiState()
+                return@launch
+            }
+            resetJobStatus()
+            _saveExportUiState.value = SaveExportUiState(
+                isSaving = true,
+                totalCount = imageList.size,
+            )
             generateList(contentResolver, imageList)
         }
     }
@@ -235,7 +257,17 @@ class MainViewModel (
                     info.jobState = JobState.Failure(info.result!!)
                 }
                 Log.i("generateList", "${info.uri} : ${info.result}")
+                _saveExportUiState.value = SaveExportUiState(
+                    isSaving = true,
+                    completedCount = infoList.count { it.jobState is JobState.Success },
+                    totalCount = infoList.size,
+                )
             }
+            _saveExportUiState.value = SaveExportUiState(
+                isFinished = true,
+                completedCount = infoList.count { it.jobState is JobState.Success },
+                totalCount = infoList.size,
+            )
         }
     }
 
@@ -539,6 +571,7 @@ class MainViewModel (
         waterMarkRepo.imageInfoList.forEach {
             it.jobState = JobState.Ready
         }
+        _saveExportUiState.value = SaveExportUiState()
     }
 
     fun clearData() {

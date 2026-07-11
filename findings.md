@@ -869,8 +869,13 @@ Gaps found by adversarial review and now fixed in the plan — keep these in min
 
 ## Android smoke mirror freshness is a separate acceptance gate (S4d-254 reattempt, 2026-07-11)
 
-- A usable AndroMeld MCP control socket does not itself validate a visual assertion. The reattempt proved permission and editor interaction through the Phone Screen, but after launching Photos the session metadata moved to `com.google.android.apps.photos` while the returned image and visible macOS mirror still showed the old debug `SaveExportSheet`. Restarting the mirror session did not refresh the pixels or the UI hierarchy.
-- Treat foreground-package metadata, a fixed export count (`0/1`), and an empty `View in gallery` callback as non-evidence. The final Android export step remains unaccepted until a fresh frame visibly shows the exported artifact in a gallery, or a different owner-approved visible device driver is used. Do not replace it with raw `adb`/logcat or a source-only assertion.
+- A usable AndroMeld MCP control socket does not itself validate a visual assertion. The first reattempt proved permission and editor interaction through the Phone Screen, but after launching Photos the session metadata moved to `com.google.android.apps.photos` while the returned image and visible macOS mirror still showed the old debug `SaveExportSheet`. Restarting the mirror session did not refresh the pixels or the UI hierarchy.
+- Treat foreground-package metadata, a fixed export count (`0/1`), and an empty `View in gallery` callback as non-evidence. Rebuilding/reinstalling the debug APK refreshed this mirror; only then did the final gallery witness become valid. The accepted evidence is the actual Photos viewer showing the newly exported watermarked synthetic image. Do not replace a stale frame with raw `adb`/logcat or a source-only assertion.
+
+## Export state belongs at the Android edge while the sheet stays shared (S4d-343, 2026-07-11)
+
+- The v2.10 export flow has platform effects that commonMain must not own: output `Uri` results, `ACTION_VIEW`, and `ACTION_SEND`/`ACTION_SEND_MULTIPLE`. The smallest faithful repair is an Android `StateFlow` for counts/phase in `MainViewModel`, with URI extraction and Intent construction in `ComposeMainActivity`; do not use this as a reason to create a shared ViewModel or IO layer.
+- Shared `SaveExportSheetShell` can still express the state without carrying Android data: an enabled flag controls format/quality/primary action during export, and a gallery visibility flag prevents an empty navigation affordance before output exists. Device evidence must cover initial `0/n`, completed `n/n`, actual output viewer, and system share-sheet opening; compilation alone is insufficient.
 
 ## Desktop packaged preview boundary (S4d-342, 2026-07-11)
 

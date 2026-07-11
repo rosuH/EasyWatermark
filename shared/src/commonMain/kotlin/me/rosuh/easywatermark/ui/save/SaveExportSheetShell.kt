@@ -41,6 +41,8 @@ fun <T> SaveExportSheetShell(
     quality: Int,
     strings: SaveExportSheetStrings,
     primaryActionLabel: String,
+    primaryActionEnabled: Boolean = true,
+    showOpenGallery: Boolean = true,
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
     onFormatClick: (newFormat: ImageFormat) -> Unit,
@@ -71,6 +73,7 @@ fun <T> SaveExportSheetShell(
                 qualityLabel = strings.qualityLabel,
                 selectedFormat = selectedFormat,
                 quality = quality,
+                enabled = primaryActionEnabled,
                 onFormatClick = onFormatClick,
                 onQualityChange = onQualityChange,
             )
@@ -92,6 +95,7 @@ fun <T> SaveExportSheetShell(
 
             Button(
                 onClick = onExportClick,
+                enabled = primaryActionEnabled,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 43.dp),
@@ -100,14 +104,16 @@ fun <T> SaveExportSheetShell(
                 Text(primaryActionLabel)
             }
 
-            TextButton(
-                onClick = onOpenGalleryClick,
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .padding(bottom = 20.dp),
-                shape = RectangleShape,
-            ) {
-                Text(text = strings.openGalleryLabel)
+            if (showOpenGallery) {
+                TextButton(
+                    onClick = onOpenGalleryClick,
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(bottom = 20.dp),
+                    shape = RectangleShape,
+                ) {
+                    Text(text = strings.openGalleryLabel)
+                }
             }
         }
     }

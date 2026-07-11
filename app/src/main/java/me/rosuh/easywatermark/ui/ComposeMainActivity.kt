@@ -2,6 +2,7 @@ package me.rosuh.easywatermark.ui
 
 import me.rosuh.easywatermark.platform.DynamicColorCapability
 import org.koin.android.ext.android.inject
+import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -248,6 +249,7 @@ class ComposeMainActivity : ComponentActivity() {
                             var showSaveSheet by remember { mutableStateOf(false) }
                             val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
                             val state by viewModel.launchScreenUiStateFlow.collectAsStateWithLifecycle()
+                            val saveExportState by viewModel.saveExportUiState.collectAsStateWithLifecycle()
                             val context = LocalContext.current
                             val templates by viewModel.templateListFlow.collectAsStateWithLifecycle()
 
@@ -256,6 +258,45 @@ class ComposeMainActivity : ComponentActivity() {
                                     context.contentResolver,
                                     state.selectedImageList
                                 )
+                            }
+
+                            val outputUris = state.selectedImageList.mapNotNull { image ->
+                                image.result?.data as? Uri
+                            }
+                            val shareExports: () -> Unit = {
+                                if (outputUris.isNotEmpty()) {
+                                    val intent = Intent().apply {
+                                        type = "image/*"
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        if (outputUris.size == 1) {
+                                            action = Intent.ACTION_SEND
+                                            putExtra(Intent.EXTRA_STREAM, outputUris.single())
+                                        } else {
+                                            action = Intent.ACTION_SEND_MULTIPLE
+                                            putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(outputUris))
+                                        }
+                                    }
+                                    try {
+                                        context.startActivity(intent)
+                                    } catch (e: SecurityException) {
+                                        Toast.makeText(context, "Share error with ${e.message}", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                            val openFirstExport: () -> Unit = {
+                                outputUris.firstOrNull()?.let { outputUri ->
+                                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                                        setDataAndType(outputUri, "image/*")
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    try {
+                                        context.startActivity(intent)
+                                    } catch (e: ActivityNotFoundException) {
+                                        Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+                                    }
+                                }
                             }
 
                             val currentDoExport by rememberUpdatedState(doExport)
@@ -405,13 +446,22 @@ class ComposeMainActivity : ComponentActivity() {
                             }
 
                             if (showSaveSheet) {
+                                val exportTotalCount = saveExportState.totalCount
+                                    .takeIf { it > 0 }
+                                    ?: state.selectedImageList.size
                                 SaveExportSheet(
                                     imageCount = state.selectedImageList.size,
                                     imageUris = state.selectedImageList.map { it.uri.toUri() },
                                     selectedFormatLabel = userPreferences.outputFormat,
                                     quality = userPreferences.compressLevel,
-                                    resultSummaryText = "0/${state.selectedImageList.size}",
-                                    primaryActionLabel = stringResource(R.string.dialog_export_to_gallery),
+                                    resultSummaryText = "${saveExportState.completedCount}/${exportTotalCount}",
+                                    primaryActionLabel = when {
+                                        saveExportState.isSaving -> stringResource(R.string.dialog_save_exporting)
+                                        saveExportState.isFinished -> stringResource(R.string.share)
+                                        else -> stringResource(R.string.dialog_export_to_gallery)
+                                    },
+                                    primaryActionEnabled = !saveExportState.isSaving,
+                                    showOpenGallery = saveExportState.isFinished && outputUris.isNotEmpty(),
                                     onDismiss = { showSaveSheet = false },
                                     onFormatClick = { newFormat ->
                                         viewModel.saveOutput(newFormat)
@@ -420,16 +470,20 @@ class ComposeMainActivity : ComponentActivity() {
                                         viewModel.saveOutput(level = q)
                                     },
                                     onExportClick = {
-                                        if (state.selectedImageList.isEmpty()) {
-                                            return@SaveExportSheet
-                                        }
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                            doExport()
+                                        if (saveExportState.isFinished) {
+                                            shareExports()
                                         } else {
-                                            permissionLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                                            if (state.selectedImageList.isEmpty()) {
+                                                return@SaveExportSheet
+                                            }
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                                doExport()
+                                            } else {
+                                                permissionLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                                            }
                                         }
                                     },
-                                    onOpenGalleryClick = {}
+                                    onOpenGalleryClick = openFirstExport,
                                 )
                             }
                         }
