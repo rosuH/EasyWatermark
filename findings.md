@@ -1,5 +1,12 @@
 # Compose Migration Findings
 
+## Preserve a platform's existing palette while reusing a richer shared color control (S4d-337, 2026-07-11)
+
+- `TextColorOption` can serve both Desktop's custom hexadecimal path and iOS's four-preset path when custom input is an explicit default-on opt-out. Keep the iOS `palette` byte values exactly Amber/White/Black/Red and leave Desktop on the default; this avoids expanding temporary iOS behavior only for migration convenience.
+- Give shared color swatches a stable ARGB content description. Compose UIKit exposes the resulting swatches as real buttons, letting XCUITest exercise product pointer input without a coordinate guess or a test-only setter.
+- Persisted test state is valid state. A test that always taps the same swatch fails when a prior focused test or user state already selected it; attempt a different real swatch when the first selection is idempotent, then assert workflow-backed label change and relaunch persistence.
+- The final 17/0 runner and viewed swatch screenshot prove this shared control/persistence loop only. They do not settle locale, dark mode, typography, Android v2.10.0 pixel parity, or the blocked Android device smoke.
+
 ## Complete independent persisted slider axes as distinct iOS consumers (S4d-336, 2026-07-11)
 
 - The second gap slider can use the same direct `Int32` boundary and pending-value guard as the first without moving `WatermarkWorkflow` or turning two scalar configuration writes into shared screen state. Feed both visible labels from workflow values once their native draft states are gone.

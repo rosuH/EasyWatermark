@@ -30,6 +30,8 @@ import me.rosuh.easywatermark.ui.about.AboutScreenShell
 import me.rosuh.easywatermark.ui.about.AboutScreenStrings
 import me.rosuh.easywatermark.ui.compose.TileMode
 import me.rosuh.easywatermark.ui.compose.TileModeLabels
+import me.rosuh.easywatermark.ui.compose.TextColorOption
+import me.rosuh.easywatermark.ui.compose.TextColorOptionStrings
 import me.rosuh.easywatermark.ui.compose.TextPaintStyleLabels
 import me.rosuh.easywatermark.ui.compose.TextPaintStyleOption
 import me.rosuh.easywatermark.ui.compose.TextTypeface as TextTypefaceOption
@@ -327,6 +329,53 @@ class IosWatermarkVerticalGapSliderHost(
             this.verticalGap = persistedGap
             pendingVerticalGap = null
         }
+    }
+}
+
+/** Production host for the shared four-preset text-color palette; Swift still owns persistence and re-rendering. */
+class IosWatermarkTextColorHost(
+    private val onColorSelected: (Int) -> Unit,
+) {
+    private var color by mutableStateOf(0xFFFFB800.toInt())
+    private var pendingColor: Int? = null
+
+    fun viewController(): UIViewController = ComposeUIViewController {
+        AppTheme {
+            TextColorOption(
+                currentColor = color,
+                customText = "",
+                strings = TextColorOptionStrings(
+                    customLabel = "Custom color",
+                    applyCustomButton = "Apply color",
+                ),
+                modifier = Modifier.fillMaxWidth(),
+                palette = IOS_TEXT_COLOR_PALETTE,
+                showCustomInput = false,
+                onColorSelected = { selectedColor ->
+                    color = selectedColor
+                    pendingColor = selectedColor
+                    onColorSelected(selectedColor)
+                },
+                onCustomTextChange = {},
+                onApplyCustomText = {},
+            )
+        }
+    }
+
+    fun update(color: Int) {
+        if (pendingColor == null || pendingColor == color) {
+            this.color = color
+            pendingColor = null
+        }
+    }
+
+    private companion object {
+        val IOS_TEXT_COLOR_PALETTE = listOf(
+            0xFFFFB800.toInt(),
+            0xFFFFFFFF.toInt(),
+            0xFF000000.toInt(),
+            0xFFFF0000.toInt(),
+        )
     }
 }
 

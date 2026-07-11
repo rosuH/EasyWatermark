@@ -18,6 +18,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
 data class TextColorOptionStrings(
@@ -59,6 +61,7 @@ fun TextColorOption(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     palette: List<Int> = DefaultTextColorPalette,
+    showCustomInput: Boolean = true,
     onColorSelected: (Int) -> Unit,
     onCustomTextChange: (String) -> Unit,
     onApplyCustomText: () -> Unit,
@@ -83,18 +86,20 @@ fun TextColorOption(
                 )
             }
         }
-        OutlinedTextField(
-            value = customText,
-            onValueChange = onCustomTextChange,
-            enabled = enabled,
-            label = { Text(strings.customLabel) },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Button(
-            enabled = enabled,
-            onClick = onApplyCustomText,
-        ) {
-            Text(strings.applyCustomButton)
+        if (showCustomInput) {
+            OutlinedTextField(
+                value = customText,
+                onValueChange = onCustomTextChange,
+                enabled = enabled,
+                label = { Text(strings.customLabel) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Button(
+                enabled = enabled,
+                onClick = onApplyCustomText,
+            ) {
+                Text(strings.applyCustomButton)
+            }
         }
     }
 }
@@ -111,6 +116,7 @@ private fun ColorSwatch(
             .size(32.dp)
             .clip(CircleShape)
             .background(Color(color))
+            .semantics { contentDescription = "Text color ${formatArgbHexColor(color)}" }
             .border(
                 width = if (selected) 3.dp else 1.dp,
                 color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,

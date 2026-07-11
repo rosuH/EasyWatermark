@@ -330,6 +330,41 @@ private struct SharedComposeWatermarkVerticalGapControl: UIViewControllerReprese
     }
 }
 
+private struct SharedComposeTextColorControl: UIViewControllerRepresentable {
+    let color: Int32
+    let workflow: WatermarkWorkflow
+
+    final class Coordinator {
+        weak var workflow: WatermarkWorkflow?
+        lazy var host = IosWatermarkTextColorHost(onColorSelected: { [weak self] color in
+            self?.setWatermarkTextColor(color.int32Value)
+        })
+
+        init(workflow: WatermarkWorkflow) {
+            self.workflow = workflow
+        }
+
+        func setWatermarkTextColor(_ color: Int32) {
+            Task { @MainActor [weak workflow] in
+                guard let workflow else { return }
+                await workflow.setWatermarkTextColor(color)
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(workflow: workflow) }
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        context.coordinator.host.update(color: color)
+        return context.coordinator.host.viewController()
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        context.coordinator.workflow = workflow
+        context.coordinator.host.update(color: color)
+    }
+}
+
 #if DEBUG
 private struct SharedComposeLaunchShellWitness: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
@@ -496,22 +531,11 @@ struct ContentView: View {
                 .accessibilityIdentifier("sharedComposeWatermarkAlpha")
                 .accessibilityLabel("Opacity \(Int(workflow.watermarkAlpha * 100))%")
 
-            // S4d-107: pick the text color through the same shared editor path. Minimal preset row only
-            // (Amber/White/Black/Red) — not a full color wheel, not the final 1:1 editor. Bound straight
-            // to the workflow (its `set` persists + re-renders), so there is no spurious launch write.
-            // NOTE: the fresh-install default is amber (#FFB800, the shared default) — an alignment from
-            // the prior hardcoded white.
-            Picker("Text color", selection: Binding(
-                get: { workflow.watermarkColorArgb },
-                set: { newColor in Task { await workflow.setWatermarkTextColor(newColor) } }
-            )) {
-                Text("Amber").tag(Int32(bitPattern: 0xFFFFB800))
-                Text("White").tag(Int32(bitPattern: 0xFFFFFFFF))
-                Text("Black").tag(Int32(bitPattern: 0xFF000000))
-                Text("Red").tag(Int32(bitPattern: 0xFFFF0000))
-            }
-            .pickerStyle(.segmented)
-            .accessibilityIdentifier("watermarkColorPicker")
+            // S4d-337: shared CMP four-preset palette; Swift retains the workflow write and rerender boundary.
+            SharedComposeTextColorControl(color: workflow.watermarkColorArgb, workflow: workflow)
+                .frame(height: 40)
+                .accessibilityIdentifier("sharedComposeTextColor")
+                .accessibilityLabel("Text color \(workflow.watermarkColorArgb)")
 
             // S4d-332: shared CMP control; Swift keeps the workflow write and rerender boundary.
             SharedComposeTextSizeControl(textSize: workflow.watermarkTextSize, workflow: workflow)

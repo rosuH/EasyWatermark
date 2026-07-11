@@ -405,6 +405,48 @@ final class PickerFlowUITests: XCTestCase {
         attach(app, "12-shared-compose-vertical-gap")
     }
 
+    /// S4d-337: the normal iOS four-preset text-color picker is now a shared CMP palette. The test taps
+    /// a real exposed swatch and proves the workflow persists the changed ARGB value through a relaunch.
+    func testSharedComposeTextColorChanges() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestFixtureImage", "1"]
+        app.launch()
+
+        let control = app.descendants(matching: .any)["sharedComposeTextColor"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 20),
+                      "Production shared text-color control did not appear.")
+
+        let initialLabel = control.label
+        let blackSwatch = app.descendants(matching: .any)["Text color #FF000000"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(blackSwatch, in: app, timeout: 10),
+                      "Shared black text-color swatch was not reachable.")
+        blackSwatch.tap()
+        let selectedLabel: String
+        if waitForLabelChange(control, from: initialLabel, timeout: 3) {
+            selectedLabel = control.label
+        } else {
+            // A prior focused test or user state may already be black. Exercise the other real swatch
+            // instead of treating an idempotent selection as a product failure.
+            let whiteSwatch = app.descendants(matching: .any)["Text color #FFFFFFFF"].firstMatch
+            XCTAssertTrue(scrollUntilHittable(whiteSwatch, in: app, timeout: 10),
+                          "Shared white text-color swatch was not reachable.")
+            whiteSwatch.tap()
+            XCTAssertTrue(waitForLabelChange(control, from: initialLabel, timeout: 15),
+                          "Shared text-color palette did not commit either available swatch.")
+            selectedLabel = control.label
+        }
+
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(control.waitForExistence(timeout: 20),
+                      "Production shared text-color control did not reappear after reload.")
+        let persistedColor = expectation(for: NSPredicate(format: "label == %@", selectedLabel), evaluatedWith: control, handler: nil)
+        wait(for: [persistedColor], timeout: 20)
+        let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
+        XCTAssertTrue(preview.waitForExistence(timeout: 15), "Fixture render did not remain visible after text-color change.")
+        attach(app, "13-shared-compose-text-color")
+    }
+
     /// Documents the S4d-57-proven capability without asserting the blocked selection step:
     /// the out-of-process PHPicker OPENS from the app. Kept green (no selection assertion).
     func testPhotosPickerOpens() {
