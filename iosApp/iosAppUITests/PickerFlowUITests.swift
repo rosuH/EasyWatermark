@@ -148,14 +148,14 @@ final class PickerFlowUITests: XCTestCase {
         XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 20),
                       "Production shared typeface control did not appear.")
 
-        let normal = app.staticTexts.matching(NSPredicate(format: "label == %@", "Normal")).firstMatch
-        XCTAssertTrue(scrollUntilHittable(normal, in: app, timeout: 10), "Normal typeface choice was not reachable.")
+        // Segment child roles are not stable in Compose UIKit after the preceding shared slider hosts.
+        // Tap the actual rendered host positions instead of adding a test-only state setter.
+        let normal = control.coordinate(withNormalizedOffset: CGVector(dx: 0.125, dy: 0.5))
         normal.tap()
         let normalSelected = expectation(for: NSPredicate(format: "label == %@", "Typeface Normal"), evaluatedWith: control, handler: nil)
         wait(for: [normalSelected], timeout: 15)
 
-        let bold = app.staticTexts.matching(NSPredicate(format: "label == %@", "Bold")).firstMatch
-        XCTAssertTrue(scrollUntilHittable(bold, in: app, timeout: 10), "Bold typeface choice was not reachable.")
+        let bold = control.coordinate(withNormalizedOffset: CGVector(dx: 0.375, dy: 0.5))
         bold.tap()
         let boldSelected = expectation(for: NSPredicate(format: "label == %@", "Typeface Bold"), evaluatedWith: control, handler: nil)
         wait(for: [boldSelected], timeout: 15)
@@ -313,6 +313,51 @@ final class PickerFlowUITests: XCTestCase {
         let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
         XCTAssertTrue(preview.waitForExistence(timeout: 15), "Fixture render did not remain visible after opacity change.")
         attach(app, "10-shared-compose-opacity")
+    }
+
+    /// S4d-335: the normal iOS horizontal-gap slider is now a shared CMP control. The test taps the
+    /// real Compose track and proves the integer gap persists through a relaunch.
+    func testSharedComposeWatermarkHorizontalGapChanges() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestFixtureImage", "1"]
+        app.launch()
+
+        let control = app.descendants(matching: .any)["sharedComposeWatermarkHGap"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 20),
+                      "Production shared horizontal-gap control did not appear.")
+
+        let initialLabel = control.label
+        let leftTrack = control.coordinate(withNormalizedOffset: CGVector(dx: 0.03, dy: 0.25))
+        let rightTrack = control.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.25))
+        rightTrack.tap()
+
+        if waitForLabelChange(control, from: initialLabel, timeout: 15) {
+            let rightLabel = control.label
+            leftTrack.tap()
+            XCTAssertTrue(waitForLabelChange(control, from: rightLabel, timeout: 15),
+                          "Shared horizontal-gap slider did not commit the opposite track position.")
+        } else {
+            leftTrack.tap()
+            XCTAssertTrue(waitForLabelChange(control, from: initialLabel, timeout: 15),
+                          "Shared horizontal-gap slider did not commit either track position.")
+            let leftLabel = control.label
+            rightTrack.tap()
+            XCTAssertTrue(waitForLabelChange(control, from: leftLabel, timeout: 15),
+                          "Shared horizontal-gap slider did not commit the opposite track position.")
+        }
+        let selectedLabel = control.label
+        XCTAssertTrue(selectedLabel.hasPrefix("Horizontal gap "),
+                      "Shared horizontal-gap slider did not report a selected value.")
+
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(control.waitForExistence(timeout: 20),
+                      "Production shared horizontal-gap control did not reappear after reload.")
+        let persistedGap = expectation(for: NSPredicate(format: "label == %@", selectedLabel), evaluatedWith: control, handler: nil)
+        wait(for: [persistedGap], timeout: 20)
+        let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
+        XCTAssertTrue(preview.waitForExistence(timeout: 15), "Fixture render did not remain visible after horizontal-gap change.")
+        attach(app, "11-shared-compose-horizontal-gap")
     }
 
     /// Documents the S4d-57-proven capability without asserting the blocked selection step:

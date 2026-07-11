@@ -1,5 +1,12 @@
 # Compose Migration Findings
 
+## Keep integer KMP slider boundaries explicit and slice persisted axes separately (S4d-335, 2026-07-11)
+
+- A Kotlin `Int` parameter is exported to Swift as `Int32`, unlike a Swift `Int`. Keep `Int32` at an iOS `UIViewControllerRepresentable` boundary and convert the callback's `KotlinFloat` only once with `gap.floatValue` before constructing `Int32`; do not rely on implicit Swift numeric conversion.
+- Horizontal and vertical gap writes share the same configuration surface but are independent persisted values. Migrate one physical slider per slice so a stale-update guard, focused interaction, re-launch assertion, and visual screenshot prove one write path without masking the other.
+- With several Compose UIKit hosts stacked, nested Material segmented-control `StaticText` children are not a stable XCUITest contract. Use the labeled `UIViewControllerRepresentable` wrapper's real coordinate input, then assert its workflow-backed label after each action and after relaunch. This repaired the typeface test without adding a state setter or accessibility-only product behavior.
+- On Xcode 27 beta, a 15/0 full XCTest runner can finish while outer `xcodebuild` fails to write the `.xcresult` `Info.plist`. After a bounded wait, stop only that completed parent process, never the simulator, and describe the full run as runner evidence rather than a formal xcresult result.
+
 ## Keep alpha percentage as a display adapter over byte persistence (S4d-334, 2026-07-11)
 
 - `SliderOption` emits integral values, so alpha is a real shared consumer only when its iOS host displays `0..100` percent and Swift maps that callback to the existing normalized `0..1` workflow input. Do not change the common `WatermarkConfigEditor.updateAlpha` path or the stored 0..255 byte just to make host values round-trip exactly.
