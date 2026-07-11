@@ -1,5 +1,11 @@
 # Compose Migration Findings
 
+## Surface actual iOS mode state at the platform accessibility edge (S4d-329, 2026-07-11)
+
+- A normal iOS `UIViewControllerRepresentable` can be a real consumer of commonMain `TileMode` while Swift retains the `WatermarkWorkflow` write/rerender boundary. A Kotlin constructor lambda is sufficient for this one event; retain the host in a coordinator and capture that coordinator weakly from the lambda so the host, Kotlin block, and Swift workflow cannot form a cycle.
+- The current Compose UIKit mapping exposes the segment labels as `StaticText`, not XCUITest buttons, and does not export `SegmentedButton` selection as `isSelected`. Give common `TileMode` its already-provided per-option label rather than one generic description, then expose the actual Swift `watermarkTileMode` as the wrapper's accessibility label. This is product accessibility state, not a test-only diagnostic.
+- The strongest iOS proof is a full loop: choose Repeat, await the workflow-backed label; choose Single, await it; relaunch and await Single again before confirming the real shared preview remains. This proves Compose click -> Swift callback -> existing DataStore writer -> Swift reload -> shared host update without creating a shared ViewModel or test seam.
+
 ## Frame only real iOS output, not the picker or empty-state route (S4d-328, 2026-07-11)
 
 - `EditorPreviewFrame` is a valid production iOS consumer only after `IosWatermarkPreviewHost` receives a successful result PNG. Derive `hasImage` from the decoded PNG and pass the existing real `SavePreviewStatus` through its preview slot; do not use this frame to manufacture a shared launch/picker surface.

@@ -46,7 +46,7 @@ fun TileMode(
                 onClick = {
                     onValueChange(pair.second)
                 },
-                modifier = Modifier.semantics { contentDescription = "Localized Description" },
+                modifier = Modifier.semantics { contentDescription = pair.first },
                 shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size)
             ) {
                 Text(text = pair.first)

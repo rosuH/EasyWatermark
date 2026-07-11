@@ -37,6 +37,41 @@ private struct SharedComposeWatermarkPreview: UIViewControllerRepresentable {
     }
 }
 
+private struct SharedComposeTileModeControl: UIViewControllerRepresentable {
+    let mode: WatermarkTileMode
+    let workflow: WatermarkWorkflow
+
+    final class Coordinator {
+        weak var workflow: WatermarkWorkflow?
+        lazy var host = IosWatermarkTileModeHost(onValueChange: { [weak self] selectedMode in
+            self?.setTileMode(selectedMode)
+        })
+
+        init(workflow: WatermarkWorkflow) {
+            self.workflow = workflow
+        }
+
+        func setTileMode(_ mode: WatermarkTileMode) {
+            Task { @MainActor [weak workflow] in
+                guard let workflow else { return }
+                await workflow.setWatermarkTileMode(mode)
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(workflow: workflow) }
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        context.coordinator.host.update(mode: mode)
+        return context.coordinator.host.viewController()
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        context.coordinator.workflow = workflow
+        context.coordinator.host.update(mode: mode)
+    }
+}
+
 #if DEBUG
 private struct SharedComposeLaunchShellWitness: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
@@ -207,19 +242,11 @@ struct ContentView: View {
                 .accessibilityIdentifier("watermarkDegreeSlider")
             }
 
-            // S4d-104: pick the tile mode through the same shared editor path. Only the two product
-            // modes common composition supports are exposed: REPEAT (tiled) and CLAMP (single decal).
-            // The Picker is bound straight to the workflow (its `set` persists + re-renders), so there is
-            // no spurious launch write. Minimal control — not the final 1:1 editor.
-            Picker("Tile mode", selection: Binding(
-                get: { workflow.watermarkTileMode },
-                set: { newMode in Task { await workflow.setWatermarkTileMode(newMode) } }
-            )) {
-                Text("Repeat").tag(WatermarkTileMode.repeat)
-                Text("Single").tag(WatermarkTileMode.clamp)
-            }
-            .pickerStyle(.segmented)
-            .accessibilityIdentifier("watermarkTileModePicker")
+            // S4d-329: shared CMP control; Swift keeps the workflow write and rerender boundary.
+            SharedComposeTileModeControl(mode: workflow.watermarkTileMode, workflow: workflow)
+                .frame(height: 40)
+                .accessibilityIdentifier("sharedComposeTileMode")
+                .accessibilityLabel(workflow.watermarkTileMode == .clamp ? "Tile mode Single" : "Tile mode Repeat")
 
             // S4d-105: edit the watermark opacity through the same shared editor path. Commits on release
             // (avoids re-rendering mid-drag). Minimal control — not the final 1:1 editor.

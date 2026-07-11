@@ -65,6 +65,42 @@ final class PickerFlowUITests: XCTestCase {
                       "System share sheet did not appear after tapping Share (no ActivityListView / Copy action).")
     }
 
+    /// S4d-329: the normal iOS tile-mode picker is now a shared CMP control that still writes through
+    /// WatermarkWorkflow and re-renders the fixture image.
+    func testSharedComposeTileModeChanges() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestFixtureImage", "1"]
+        app.launch()
+
+        let control = app.descendants(matching: .any)["sharedComposeTileMode"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 20),
+                      "Production shared tile-mode control did not appear.")
+
+        let repeatChoice = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "Repeat")).firstMatch
+        XCTAssertTrue(scrollUntilHittable(repeatChoice, in: app, timeout: 10), "Repeat tile-mode choice was not reachable.")
+        repeatChoice.tap()
+        let repeatSelected = expectation(for: NSPredicate(format: "label == %@", "Tile mode Repeat"), evaluatedWith: control, handler: nil)
+        wait(for: [repeatSelected], timeout: 15)
+
+        let single = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "Single")).firstMatch
+        XCTAssertTrue(scrollUntilHittable(single, in: app, timeout: 10), "Single tile-mode choice was not reachable.")
+        single.tap()
+        let singleSelected = expectation(for: NSPredicate(format: "label == %@", "Tile mode Single"), evaluatedWith: control, handler: nil)
+        wait(for: [singleSelected], timeout: 15)
+
+        // Reload through the existing app entry to prove the Swift workflow write persisted and fed the
+        // current mode back into the production CMP host.
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(control.waitForExistence(timeout: 20),
+                      "Production shared tile-mode control did not reappear after reload.")
+        let persistedSingle = expectation(for: NSPredicate(format: "label == %@", "Tile mode Single"), evaluatedWith: control, handler: nil)
+        wait(for: [persistedSingle], timeout: 20)
+        let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
+        XCTAssertTrue(preview.waitForExistence(timeout: 15), "Fixture render did not remain visible after tile change.")
+        attach(app, "05-shared-compose-tile-single")
+    }
+
     /// Documents the S4d-57-proven capability without asserting the blocked selection step:
     /// the out-of-process PHPicker OPENS from the app. Kept green (no selection assertion).
     func testPhotosPickerOpens() {

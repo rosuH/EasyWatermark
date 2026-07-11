@@ -3,6 +3,7 @@ package me.rosuh.easywatermark.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.WindowInsets
@@ -19,11 +20,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
+import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.render.IosImageDecoder
 import me.rosuh.easywatermark.ui.about.AboutDevCard
 import me.rosuh.easywatermark.ui.about.AboutScreenIcons
 import me.rosuh.easywatermark.ui.about.AboutScreenShell
 import me.rosuh.easywatermark.ui.about.AboutScreenStrings
+import me.rosuh.easywatermark.ui.compose.TileMode
+import me.rosuh.easywatermark.ui.compose.TileModeLabels
 import me.rosuh.easywatermark.ui.save.SavePreviewStatus
 import me.rosuh.easywatermark.ui.theme.AppTheme
 import platform.UIKit.UIViewController
@@ -66,6 +70,31 @@ class IosWatermarkPreviewHost {
 
     fun update(png: ByteArray, status: String) {
         state = IosWatermarkPreviewState(png = png, status = status)
+    }
+}
+
+/** Production host for the shared tile-mode control; Swift still owns workflow writes and re-rendering. */
+class IosWatermarkTileModeHost(
+    private val onValueChange: (WatermarkTileMode) -> Unit,
+) {
+    private var mode by mutableStateOf(WatermarkTileMode.REPEAT)
+
+    fun viewController(): UIViewController = ComposeUIViewController {
+        AppTheme {
+            TileMode(
+                labels = TileModeLabels(repeat = "Repeat", decal = "Single"),
+                mode = mode,
+                modifier = Modifier.fillMaxWidth(),
+                onValueChange = { selectedMode ->
+                    mode = selectedMode
+                    onValueChange(selectedMode)
+                },
+            )
+        }
+    }
+
+    fun update(mode: WatermarkTileMode) {
+        this.mode = mode
     }
 }
 
