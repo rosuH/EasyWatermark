@@ -50,6 +50,7 @@ import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopImageDecoder
 import me.rosuh.easywatermark.render.DesktopSaveDecision
+import me.rosuh.easywatermark.ui.EditorPreviewFrame
 import me.rosuh.easywatermark.ui.EditorScreenShell
 import me.rosuh.easywatermark.ui.EditorTemplateSheetHost
 import me.rosuh.easywatermark.ui.compose.SliderOption
@@ -153,9 +154,10 @@ private fun resolveDesktopAppDataDir(): File {
  * S4d-217: the user-facing output dir for the interactive window's REAL saves (drop / Render & Save /
  * Open image) — `~/Pictures` when it exists, else `~/.easywatermark/output` (reusing the S4d-215
  * app-data dir). Saved watermarked images must not land in the repo-local `build/` dir. The
- * headless/demo witness (`Main.kt`), the `DesktopWatermarkFlow` default `outputDir`, and the preview
- * temp deliberately stay build-local — NOT routed here. (Full per-OS XDG/AppData handling is a
- * separate deferred refinement.) The dir is created if missing.
+ * headless/demo witness (`Main.kt`) and the `DesktopWatermarkFlow` default `outputDir` stay build-local.
+ * The interactive preview temp stays app-private so the packaged `.app` does not depend on its launch
+ * working directory. (Full per-OS XDG/AppData handling is a separate deferred refinement.) The dir is
+ * created if missing.
  */
 private fun resolveDesktopOutputDir(): File {
     val pictures = System.getProperty("user.home")?.takeIf { it.isNotBlank() }?.let { File(it, "Pictures") }
@@ -265,6 +267,9 @@ fun launchDesktopWindow() = application {
     // S4d-157: the last REAL saved output file (set only by the Render & Save / Save as… / Open image…
     // success paths — NOT Preview, which writes a temp file). Drives the share-substitute buttons.
     var lastSavedFile by remember { mutableStateOf<File?>(null) }
+    // S4d-342: packaged Desktop launches do not have the repository as their working directory. Keep the
+    // interactive preview temp beside the existing per-user config/DB state instead of under `build/`.
+    val previewFile = remember { File(appDataDir, "preview/preview.img").apply { parentFile?.mkdirs() } }
     // S4d-278: current/effective output preference consumed through the shared save/export options section.
     var outputFormat by remember { mutableStateOf(ImageFormat.JPEG) }
     var outputQuality by remember { mutableStateOf(80) }
@@ -319,16 +324,15 @@ fun launchDesktopWindow() = application {
     // S4d-198: reactive preview. Render the CURRENT persisted config over the remembered image (or the
     // deterministic fixture) through the SAME DesktopWatermarkFlow.runSaveFlow spine the manual "Preview"
     // button uses, decode the bytes (DesktopImageDecoder, generic JPEG/PNG), and update the on-screen
-    // `preview`. Writes ONLY the repo-local temp preview path and never sets `lastSavedFile` — a preview is
-    // NOT a real save (the share-substitute buttons stay bound to real saves). Keeps the last good preview on
-    // failure (only replaces it on a successful decode). Heavy render+decode runs off the EDT inside
+    // `preview`. Writes ONLY the app-private temp preview path and never sets `lastSavedFile` — a preview
+    // is NOT a real save (the share-substitute buttons stay bound to real saves). Keeps the last good preview
+    // on failure (only replaces it on a successful decode). Heavy render+decode runs off the EDT inside
     // withContext(IO); the Compose `preview` state is set after, on the caller's UI dispatcher. Returns a
     // short status line. Callers invoke this inside their own `busy = true … busy = false` span (after a
     // successful explicit edit/mode/source change, or from the manual Preview button), so renders stay
     // serialized. Defined before the drop target so the S4d-198-r1 drop refresh can call it.
     suspend fun refreshPreview(): String {
         val current = lastImage
-        val previewFile = File("build/s4d147-desktop-preview/preview.img").apply { parentFile?.mkdirs() }
         val (img, msg) = withContext(Dispatchers.IO) {
             try {
                 val o = if (current != null) {
@@ -478,12 +482,18 @@ fun launchDesktopWindow() = application {
                     }
                 },
                 preview = { previewModifier ->
-                    SavePreviewStatus(
-                        status = status,
-                        preview = preview,
-                        previewContentDescription = "Watermark preview",
-                        modifier = previewModifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    )
+                    EditorPreviewFrame(
+                        hasImage = preview != null,
+                        emptyText = status,
+                        modifier = previewModifier,
+                    ) { previewStatusModifier ->
+                        SavePreviewStatus(
+                            status = status,
+                            preview = preview,
+                            previewContentDescription = "Watermark preview",
+                            modifier = previewStatusModifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        )
+                    }
                 },
                 photoStrip = {},
                 bottomControls = {

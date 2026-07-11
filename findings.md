@@ -866,3 +866,8 @@ Gaps found by adversarial review and now fixed in the plan — keep these in min
 ## Android smoke environment block (S4d-341, 2026-07-11)
 
 - Tool exposure is not a usable AndroMeld session. `andromeld.devices.list` can fail before device discovery with `AndroMeld MCP control socket was not found. Start AndroMeld first.` In that state there is no eligible Phone Screen session to observe or control, and the required Android visual smoke must remain open. Do not substitute raw `adb` interaction for the contract-mandated AndroMeld proof; resume only after the control service supplies the socket.
+
+## Desktop packaged preview boundary (S4d-342, 2026-07-11)
+
+- `:desktopApp:run` inherits the repository working directory, but a real Compose Desktop `.app` does not. An interactive preview temp path under relative `build/` can therefore pass headless Gradle gates while failing the user-visible Preview action after Finder launch. Interactive-only scratch output belongs under the same existing per-user app-data root as the Desktop DataStores and Room DB; it must remain distinct from real save destinations so preview still cannot drive share/output actions.
+- `EditorPreviewFrame` can wrap an existing real preview child without changing renderer ownership. When preserving an established child inset, account for the shared frame's 12 dp padding at the edge rather than accepting a silent layout expansion; Desktop's child uses 4 dp after the frame to retain the old 16 dp effective horizontal inset.
