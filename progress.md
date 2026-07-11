@@ -1234,3 +1234,10 @@ Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; 
 - **Decision: NO-GO** — **no new safe iOS non-text shared-control candidate.** `WatermarkModeActions` would invent Desktop Use-text/Preview UX on iOS. **S4d-338 text + S4d-346 templates remain the Phase A gate** for further iOS CMP control work. Not Phase A/B/parity complete.
 - **Reviews / verification:** Kimi **PASS** (confirmed). `git diff --check` clean on closeout + plan files. **No build** applies (read-only). No product code. Protected untracked `2026-07-11-project-branch-goals-progress.md` not staged.
 - **Next: S4d-353** owner-decision pack for Compose/Skiko alignment blocker — **not** product code.
+
+## 2026-07-11 — S4d-353 Compose/Skiko owner decision pack (docs-only accepted)
+
+- **S4d-353:** decision pack at `docs/superpowers/research/2026-07-11-s4d353-compose-skiko-alignment-decision-pack.md`. Records S4d-338 crash family evidence, locked versions (CMP 1.11.1 / BOM 2026.05.01 / Kotlin 2.3.20), affected production text/templates surfaces, non-text exhaustion (S4d-352), and mutually exclusive options **A** align / **B** permanent native exception / **C** scoped substitute. **No option recommended or accepted.**
+- **Status:** **owner decision required (A/B/C/defer)** before remaining Phase A iOS text/templates. **Not** Phase A/B/parity complete; goal **not** complete.
+- **Reviews / verification:** Kimi factual/spec review **PASS**. Docs-only: **no** product code, **no** build, **no** dependency change. `git diff --check` clean on pack + plan files. Protected untracked `2026-07-11-project-branch-goals-progress.md` not staged.
+- **Next: awaits owner A/B/C/defer.**

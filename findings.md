@@ -1,11 +1,17 @@
 # Compose Migration Findings
 
+## Compose/Skiko Phase A gate needs owner A/B/C/defer (S4d-353, 2026-07-11)
+
+- Decision pack: `docs/superpowers/research/2026-07-11-s4d353-compose-skiko-alignment-decision-pack.md`. Options: **A** align CMP/Skiko (required Kotlin) so sheet/IME APIs run on iOS; **B** permanent SwiftUI exception for text + templates; **C** new sheet/IME-free shared substitute (dual-consumer/waiver). **No option accepted or recommended by Codex.**
+- **Owner decision required** before remaining Phase A iOS watermark text / templates CMP work. Codex must not bump Compose/Skiko/Kotlin, retry S4d-338 hosts, rebaseline goldens, or implement product code until signed choice.
+- Locked catalog context: CMP `1.11.1`, Compose BOM `2026.05.01` (Android UI 1.11.2), Kotlin `2.3.20`. S4d-338 runtime: missing `LocalKeyboardOverlapHeight` / `LocalSafeArea` / `unclippedTextOffsetInRoot`.
+- Docs-only closeout: Kimi factual/spec **PASS**; **no** code/build/dependency change. Not Phase A/B/parity complete; goal not complete. **Next awaits owner A/B/C/defer.**
+
 ## iOS non-text shared controls are already covered; Phase A gate is S4d-338 (S4d-352, 2026-07-11)
 
 - Production iOS interactive **non-text** editor axes (sliders, tile/style/typeface, color swatches with custom input off, icon shell, preview, `SavedOutputActions`, launch shell) already consume commonMain via iosMain hosts. **No new safe non-text candidate.**
-- Remaining pure SwiftUI is not a discrete CMP win: system `PhotosPicker`, display captions/status, **S4d-338** watermark `TextField`, **S4d-346** templates list. Do not wire `TextContentOption` or `TemplateListSheet` under current Compose/Skiko.
+- Remaining pure SwiftUI is not a discrete CMP win: system `PhotosPicker`, display captions/status, **S4d-338** watermark `TextField`, **S4d-346** templates list. Do not wire `TextContentOption` or `TemplateListSheet` under current Compose/Skiko until S4d-353 owner choice.
 - **`WatermarkModeActions` is Desktop-shaped** (pick icon + Use text + Preview). iOS already has icon CMP; Use-text/Preview would invent product UX — consumer-first non-GO.
-- **Phase A gate** for further iOS CMP control migration is **owner Compose/Skiko alignment (S4d-338)**, not another host. Next is S4d-353 decision pack, not product code. Not Phase A/B/parity complete.
 - Evidence: `docs/superpowers/research/2026-07-11-s4d352-ios-nontext-control-coverage.md`. Kimi PASS; no build; `git diff --check`.
 
 ## A1 pure Android wrapper thinning is exhausted (S4d-351, 2026-07-11)
