@@ -77,8 +77,12 @@ import me.rosuh.easywatermark.ui.about.OpenSourceScreenStrings
 import me.rosuh.easywatermark.ui.widget.ColoredImageVIew
 import me.rosuh.easywatermark.utils.ktx.openLink
 import me.rosuh.easywatermark.utils.ktx.toUri
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
+import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.ui.compose.GalleryDialog
-import me.rosuh.easywatermark.ui.save.SaveExportSheet
+import me.rosuh.easywatermark.ui.save.SaveExportSheetShell
+import me.rosuh.easywatermark.ui.save.SaveExportSheetStrings
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 @BuildCompat.PrereleaseSdkCheck
@@ -456,7 +460,7 @@ class ComposeMainActivity : ComponentActivity() {
                                 val exportTotalCount = saveExportState.totalCount
                                     .takeIf { it > 0 }
                                     ?: state.selectedImageList.size
-                                SaveExportSheet(
+                                SaveExportSheetAndroid(
                                     imageCount = state.selectedImageList.size,
                                     imageUris = state.selectedImageList.map { it.uri.toUri() },
                                     selectedFormatLabel = userPreferences.outputFormat,
@@ -481,7 +485,7 @@ class ComposeMainActivity : ComponentActivity() {
                                             shareExports()
                                         } else {
                                             if (state.selectedImageList.isEmpty()) {
-                                                return@SaveExportSheet
+                                                return@SaveExportSheetAndroid
                                             }
                                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                                                 doExport()
@@ -591,3 +595,56 @@ private const val ABOUT_URL_PRIVACY_ZH = "https://github.com/rosuH/EasyWatermark
 private const val ABOUT_URL_PRIVACY_EN = "https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy.md"
 private const val ABOUT_URL_DEV = "https://github.com/rosuH"
 private const val ABOUT_URL_DESIGNER = "https://tovi.fun/"
+
+/**
+ * Android edge for the shared save/export sheet (S4d-350): string resources + Coil URI thumbnails.
+ * Export/share/MediaStore/permission stay on the Activity call site.
+ */
+@Composable
+private fun SaveExportSheetAndroid(
+    imageCount: Int,
+    imageUris: List<Uri> = emptyList(),
+    selectedFormatLabel: ImageFormat,
+    quality: Int,
+    resultSummaryText: String,
+    primaryActionLabel: String,
+    primaryActionEnabled: Boolean = true,
+    showOpenGallery: Boolean = true,
+    onDismiss: () -> Unit,
+    onFormatClick: (newFormat: ImageFormat) -> Unit,
+    onQualityChange: (Int) -> Unit,
+    onExportClick: () -> Unit,
+    onOpenGalleryClick: () -> Unit,
+) {
+    SaveExportSheetShell(
+        items = imageUris,
+        selectedFormat = selectedFormatLabel,
+        quality = quality,
+        strings = SaveExportSheetStrings(
+            outputTitle = stringResource(R.string.about_title_output),
+            formatLabel = stringResource(R.string.dialog_save_config_format),
+            qualityLabel = stringResource(R.string.dialog_save_config_quality),
+            exportListTitle = stringResource(
+                R.string.dialog_save_export_list_title,
+                resultSummaryText,
+            ),
+            emptyPreviewText = "$imageCount image(s) selected",
+            openGalleryLabel = stringResource(R.string.dialog_open_in_gallery),
+        ),
+        primaryActionLabel = primaryActionLabel,
+        primaryActionEnabled = primaryActionEnabled,
+        showOpenGallery = showOpenGallery,
+        onDismiss = onDismiss,
+        onFormatClick = onFormatClick,
+        onQualityChange = onQualityChange,
+        onExportClick = onExportClick,
+        onOpenGalleryClick = onOpenGalleryClick,
+    ) { uri, thumbnailModifier ->
+        AsyncImage(
+            model = uri,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = thumbnailModifier,
+        )
+    }
+}

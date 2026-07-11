@@ -1213,3 +1213,10 @@ Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; 
 - **Decision: consumer-first NO-GO** for further A2 “shared root” work that would invent those surfaces. S4d-338 not relevant. No product code.
 - **Reviews / verification:** Kimi source review **PASS**. `git diff --check` clean on readiness note. **No build** applies (read-only). Not Phase A/B/parity complete.
 - **Next: A1 residual Android wrapper assessment** (not A2 Desktop Launch/Gallery/About implementation).
+
+## 2026-07-11 — S4d-350 A1 Android SaveExportSheet inline (accepted)
+
+- **S4d-350:** deleted `app/.../ui/save/SaveExportSheet.kt`. `ComposeMainActivity` private `SaveExportSheetAndroid` maps Android `stringResource` labels (incl. `"$imageCount image(s) selected"` and export-list title format) + Coil `Uri` thumbnails into existing commonMain `SaveExportSheetShell`. **Unchanged Activity edges:** pre-Q `WRITE_EXTERNAL_STORAGE` permission launcher branch, `doExport`/MediaStore, `shareExports`, `openFirstExport`, format/quality/export/open-gallery callbacks. No new dependency, common API, persistence, renderer, route, or permission-semantics change.
+- **Proof:** `git diff --check` clean. `./gradlew :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest --max-workers=8 --console=plain` → **BUILD SUCCESSFUL in 43s**, **215 actionable tasks: 28 executed, 187 up-to-date**, unit tests **53/0** (`build/s4d350-save-export-inline-gradle.log`). `./gradlew --stop --max-workers=8` stopped daemons.
+- **AndroMeld visual gate:** MCP tool search exposed **no `andromeld.*` tools**; **no raw adb substitute**. Save/export sheet UI screenshots remain **environment-blocked / not verified**.
+- **Reviews:** coordinator source review + Kimi PASS + OpenCode no P0/P1; cosmetic import ordering non-actionable. Not Phase A/B/parity complete. **Next: S4d-351** residual Android wrapper inventory/decision.

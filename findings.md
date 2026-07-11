@@ -1,5 +1,11 @@
 # Compose Migration Findings
 
+## Save/export sheet wrapper is only strings + Coil; export IO stays on Activity (S4d-350, 2026-07-11)
+
+- A thin `SaveExportSheet` that only builds `SaveExportSheetStrings` and a Coil `AsyncImage` content slot is safe to collapse into a private `ComposeMainActivity` helper; layout remains commonMain `SaveExportSheetShell`.
+- Keep pre-Q storage permission, MediaStore export, share, and open-in-gallery on the Activity boundary — do not pull them into the helper beyond callback parameters.
+- AndroMeld absence (no `andromeld.*` MCP tools) blocks visual proof; do not use raw adb as substitute. Cosmetic import reordering after inlines is non-actionable.
+
 ## Desktop editor root is already shared — do not invent Launch/Gallery/About (S4d-349, 2026-07-11)
 
 - Production Desktop UI is only `Main.kt` → `launchDesktopWindow` → `DesktopWindow` with `EditorScreenShell` and shared controls already wired.
