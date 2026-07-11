@@ -1,5 +1,12 @@
 # Compose Migration Findings
 
+## Keep alpha percentage as a display adapter over byte persistence (S4d-334, 2026-07-11)
+
+- `SliderOption` emits integral values, so alpha is a real shared consumer only when its iOS host displays `0..100` percent and Swift maps that callback to the existing normalized `0..1` workflow input. Do not change the common `WatermarkConfigEditor.updateAlpha` path or the stored 0..255 byte just to make host values round-trip exactly.
+- The existing storage conversion intentionally quantizes a selected percent: `percent -> (percent / 100 * 255).toInt()` on write, then reloads as `byte / 255`. A relaunch label can therefore differ by one from the pre-relaunch selected percent. Test that established quantization formula against the actual wrapper label instead of adding a new persistence normalizer or claiming the selected display value is byte-exact.
+- A pending alpha is integer percent while the workflow returns normalized floats. Compare a matching callback with a narrow float tolerance, but keep it far below one percentage point so an older completed write cannot overwrite a newer drag. The XCUITest still uses real pointer input and a workflow-backed wrapper label; it does not introduce a test setter.
+- On this Xcode 27 beta, the full iOS runner produced 14/0 twice but its outer `xcodebuild` process failed to finalize an `Info.plist` after the runner exited. Preserve the raw runner counts plus a formally readable focused `.xcresult`, stop only that completed parent after a bounded wait, and never present the full runs as formal result bundles.
+
 ## Exercise nested Compose UIKit controls through their platform wrapper (S4d-333, 2026-07-11)
 
 - A normal iOS `UIViewControllerRepresentable` can consume commonMain `SliderOption` for rotation (`0f..360f`) without moving `WatermarkWorkflow`, DataStore, renderer, picker, or export ownership. The Kotlin `Float` callback is imported as `KotlinFloat`, so convert with `degree.floatValue` at the Swift edge.

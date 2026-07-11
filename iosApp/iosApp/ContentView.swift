@@ -225,6 +225,41 @@ private struct SharedComposeWatermarkDegreeControl: UIViewControllerRepresentabl
     }
 }
 
+private struct SharedComposeWatermarkAlphaControl: UIViewControllerRepresentable {
+    let alpha: Float
+    let workflow: WatermarkWorkflow
+
+    final class Coordinator {
+        weak var workflow: WatermarkWorkflow?
+        lazy var host = IosWatermarkAlphaSliderHost(onValueChangeFinished: { [weak self] percent in
+            self?.setWatermarkAlpha(percent.floatValue / 100.0)
+        })
+
+        init(workflow: WatermarkWorkflow) {
+            self.workflow = workflow
+        }
+
+        func setWatermarkAlpha(_ alpha: Float) {
+            Task { @MainActor [weak workflow] in
+                guard let workflow else { return }
+                await workflow.setWatermarkAlpha(alpha)
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(workflow: workflow) }
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        context.coordinator.host.update(normalizedAlpha: alpha)
+        return context.coordinator.host.viewController()
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        context.coordinator.workflow = workflow
+        context.coordinator.host.update(normalizedAlpha: alpha)
+    }
+}
+
 #if DEBUG
 private struct SharedComposeLaunchShellWitness: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
@@ -270,8 +305,6 @@ struct ContentView: View {
     @State private var pickedIconItem: PhotosPickerItem?
     /// S4d-102: editable draft of the watermark text; applied to the shared `WaterMarkRepository`.
     @State private var draftText: String = ""
-    /// S4d-105: editable draft of the watermark opacity (0…1); applied to the shared `WaterMarkRepository`.
-    @State private var draftAlpha: Double = 1.0
     /// S4d-110: editable drafts of the watermark h/v gaps; applied to the shared `WaterMarkRepository`.
     @State private var draftHGap: Double = 0
     @State private var draftVGap: Double = 0
@@ -391,17 +424,11 @@ struct ContentView: View {
                 .accessibilityIdentifier("sharedComposeTileMode")
                 .accessibilityLabel(workflow.watermarkTileMode == .clamp ? "Tile mode Single" : "Tile mode Repeat")
 
-            // S4d-105: edit the watermark opacity through the same shared editor path. Commits on release
-            // (avoids re-rendering mid-drag). Minimal control — not the final 1:1 editor.
-            VStack(spacing: 4) {
-                Text("Opacity: \(Int(draftAlpha * 100))%")
-                    .font(.caption)
-                    .accessibilityIdentifier("watermarkAlphaLabel")
-                Slider(value: $draftAlpha, in: 0...1) { editing in
-                    if !editing { Task { await workflow.setWatermarkAlpha(Float(draftAlpha)) } }
-                }
-                .accessibilityIdentifier("watermarkAlphaSlider")
-            }
+            // S4d-334: shared CMP control; Swift retains the normalized-alpha workflow boundary.
+            SharedComposeWatermarkAlphaControl(alpha: workflow.watermarkAlpha, workflow: workflow)
+                .frame(height: 72)
+                .accessibilityIdentifier("sharedComposeWatermarkAlpha")
+                .accessibilityLabel("Opacity \(Int(workflow.watermarkAlpha * 100))%")
 
             // S4d-107: pick the text color through the same shared editor path. Minimal preset row only
             // (Amber/White/Black/Red) — not a full color wheel, not the final 1:1 editor. Bound straight
@@ -522,7 +549,6 @@ struct ContentView: View {
             await workflow.loadWatermarkDegree()
             await workflow.loadWatermarkTileMode()
             await workflow.loadWatermarkAlpha()
-            draftAlpha = Double(workflow.watermarkAlpha)
             await workflow.loadWatermarkTextColor()
             await workflow.loadWatermarkTextSize()
             await workflow.loadWatermarkGaps()

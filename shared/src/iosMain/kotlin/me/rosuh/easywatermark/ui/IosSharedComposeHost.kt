@@ -38,6 +38,7 @@ import me.rosuh.easywatermark.ui.compose.SliderOption
 import me.rosuh.easywatermark.ui.save.SavePreviewStatus
 import me.rosuh.easywatermark.ui.theme.AppTheme
 import platform.UIKit.UIViewController
+import kotlin.math.abs
 
 /**
  * iOS host boundary for shared Compose Multiplatform UI.
@@ -222,6 +223,41 @@ class IosWatermarkDegreeSliderHost(
         if (pendingDegree == null || pendingDegree == degree) {
             this.degree = degree
             pendingDegree = null
+        }
+    }
+}
+
+/** Production host for the shared opacity slider; Swift still owns persistence and re-rendering. */
+class IosWatermarkAlphaSliderHost(
+    private val onValueChangeFinished: (Float) -> Unit,
+) {
+    private var alphaPercent by mutableStateOf(100f)
+    private var pendingAlphaPercent: Float? = null
+
+    fun viewController(): UIViewController = ComposeUIViewController {
+        AppTheme {
+            SliderOption(
+                currentValue = alphaPercent,
+                valueRange = 0f..100f,
+                modifier = Modifier.fillMaxWidth(),
+                onValueChangeFinished = {
+                    onValueChangeFinished(alphaPercent)
+                },
+                onValueChange = { value ->
+                    alphaPercent = value
+                    // Ignore an older async workflow update while the user is still dragging a newer value.
+                    pendingAlphaPercent = value
+                },
+            )
+        }
+    }
+
+    fun update(normalizedAlpha: Float) {
+        val persistedPercent = normalizedAlpha.coerceIn(0f, 1f) * 100f
+        val pending = pendingAlphaPercent
+        if (pending == null || abs(pending - persistedPercent) < 0.001f) {
+            alphaPercent = persistedPercent
+            pendingAlphaPercent = null
         }
     }
 }

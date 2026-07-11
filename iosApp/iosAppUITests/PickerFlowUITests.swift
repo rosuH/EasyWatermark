@@ -266,6 +266,55 @@ final class PickerFlowUITests: XCTestCase {
         attach(app, "09-shared-compose-rotation")
     }
 
+    /// S4d-334: the normal iOS opacity slider is now a shared CMP control. Alpha persistence stores a
+    /// byte, so the relaunch assertion accounts for the established percent-to-byte quantization.
+    func testSharedComposeWatermarkAlphaChanges() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestFixtureImage", "1"]
+        app.launch()
+
+        let control = app.descendants(matching: .any)["sharedComposeWatermarkAlpha"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 20),
+                      "Production shared opacity control did not appear.")
+
+        let initialLabel = control.label
+        let leftTrack = control.coordinate(withNormalizedOffset: CGVector(dx: 0.03, dy: 0.25))
+        let rightTrack = control.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.25))
+        rightTrack.tap()
+
+        if waitForLabelChange(control, from: initialLabel, timeout: 15) {
+            let rightLabel = control.label
+            leftTrack.tap()
+            XCTAssertTrue(waitForLabelChange(control, from: rightLabel, timeout: 15),
+                          "Shared opacity slider did not commit the opposite track position.")
+        } else {
+            leftTrack.tap()
+            XCTAssertTrue(waitForLabelChange(control, from: initialLabel, timeout: 15),
+                          "Shared opacity slider did not commit either track position.")
+            let leftLabel = control.label
+            rightTrack.tap()
+            XCTAssertTrue(waitForLabelChange(control, from: leftLabel, timeout: 15),
+                          "Shared opacity slider did not commit the opposite track position.")
+        }
+
+        let selectedLabel = control.label
+        XCTAssertTrue(selectedLabel.hasPrefix("Opacity "), "Shared opacity slider did not report a selected value.")
+        let selectedPercent = Int(selectedLabel.dropFirst("Opacity ".count).dropLast())
+        XCTAssertNotNil(selectedPercent, "Shared opacity slider label did not contain an integer percent.")
+        let byte = Int(Float(selectedPercent!) / 100.0 * 255.0)
+        let persistedLabel = "Opacity \(Int(Float(byte) / 255.0 * 100.0))%"
+
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(control.waitForExistence(timeout: 20),
+                      "Production shared opacity control did not reappear after reload.")
+        let persistedAlpha = expectation(for: NSPredicate(format: "label == %@", persistedLabel), evaluatedWith: control, handler: nil)
+        wait(for: [persistedAlpha], timeout: 20)
+        let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
+        XCTAssertTrue(preview.waitForExistence(timeout: 15), "Fixture render did not remain visible after opacity change.")
+        attach(app, "10-shared-compose-opacity")
+    }
+
     /// Documents the S4d-57-proven capability without asserting the blocked selection step:
     /// the out-of-process PHPicker OPENS from the app. Kept green (no selection assertion).
     func testPhotosPickerOpens() {
