@@ -22,12 +22,12 @@ import androidx.compose.ui.graphics.painter.Painter
 @Composable
 fun LaunchScreenShell(
     pickImageLabel: String,
-    aboutContentDescription: String,
-    aboutIcon: Painter,
     startLogoAnimation: Boolean,
     logo: @Composable (modifier: Modifier, startLogoAnimation: Boolean) -> Unit,
     onPickImageClick: () -> Unit,
-    onGoAbout: () -> Unit = {},
+    aboutContentDescription: String? = null,
+    aboutIcon: Painter? = null,
+    onGoAbout: (() -> Unit)? = null,
 ) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         logo(
@@ -48,16 +48,18 @@ fun LaunchScreenShell(
             Text(pickImageLabel)
         }
 
-        IconButton(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = maxHeight * 0.03f),
-            onClick = onGoAbout,
-        ) {
-            Icon(
-                painter = aboutIcon,
-                contentDescription = aboutContentDescription,
-            )
+        if (aboutContentDescription != null && aboutIcon != null && onGoAbout != null) {
+            IconButton(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = maxHeight * 0.03f),
+                onClick = onGoAbout,
+            ) {
+                Icon(
+                    painter = aboutIcon,
+                    contentDescription = aboutContentDescription,
+                )
+            }
         }
     }
 }

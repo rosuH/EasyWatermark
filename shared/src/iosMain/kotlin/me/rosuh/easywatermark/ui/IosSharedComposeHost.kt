@@ -90,6 +90,26 @@ class IosWatermarkPreviewHost {
     }
 }
 
+/** Production host for the shared launch shell; Swift still presents the system source picker. */
+class IosLaunchScreenHost(
+    private val onPickImage: () -> Unit,
+) {
+    fun viewController(): UIViewController = ComposeUIViewController {
+        AppTheme {
+            LaunchScreenShell(
+                pickImageLabel = "Pick a photo",
+                startLogoAnimation = false,
+                logo = { modifier, _ ->
+                    Box(modifier.size(72.dp), contentAlignment = Alignment.Center) {
+                        Text("EW", style = MaterialTheme.typography.titleLarge)
+                    }
+                },
+                onPickImageClick = onPickImage,
+            )
+        }
+    }
+}
+
 /** Production host for the shared icon-option shell; Swift still presents the system picker. */
 class IosWatermarkIconOptionHost(
     private val onPick: () -> Unit,

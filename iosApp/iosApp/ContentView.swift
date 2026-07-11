@@ -37,6 +37,31 @@ private struct SharedComposeWatermarkPreview: UIViewControllerRepresentable {
     }
 }
 
+private struct SharedComposeLaunchScreen: UIViewControllerRepresentable {
+    let onPickImage: () -> Void
+
+    final class Coordinator {
+        var onPickImage: () -> Void
+        lazy var host = IosLaunchScreenHost(onPickImage: { [weak self] in
+            self?.onPickImage()
+        })
+
+        init(onPickImage: @escaping () -> Void) {
+            self.onPickImage = onPickImage
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(onPickImage: onPickImage) }
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        context.coordinator.host.viewController()
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        context.coordinator.onPickImage = onPickImage
+    }
+}
+
 private struct SharedComposeIconWatermarkControl: UIViewControllerRepresentable {
     let icon: Data?
     let onPick: () -> Void
@@ -434,6 +459,7 @@ private struct SharedComposeEditorShellWitness: UIViewControllerRepresentable {
 struct ContentView: View {
     @StateObject private var workflow = WatermarkWorkflow()
     @State private var pickedItem: PhotosPickerItem?
+    @State private var isPhotoPickerPresented = false
     /// S4d-118: the selected ICON for image-watermark mode (separate from the source photo above).
     @State private var pickedIconItem: PhotosPickerItem?
     @State private var isIconPickerPresented = false
@@ -454,17 +480,32 @@ struct ContentView: View {
     }
 #endif
 
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                Text("EasyWatermark iOS")
-                    .font(.title2.bold())
+    private var isShowingLaunchScreen: Bool {
+#if DEBUG
+        if showSharedComposeWitnesses { return false }
+#endif
+        guard pickedItem == nil else { return false }
+        if case .idle = workflow.state { return true }
+        return false
+    }
 
-            PhotosPicker(selection: $pickedItem, matching: .images, photoLibrary: .shared()) {
-                Label("Pick a photo", systemImage: "photo.on.rectangle")
-            }
-            .buttonStyle(.borderedProminent)
-            .accessibilityIdentifier("pickPhotoButton")
+    var body: some View {
+        Group {
+            if isShowingLaunchScreen {
+                SharedComposeLaunchScreen(onPickImage: { isPhotoPickerPresented = true })
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityIdentifier("sharedComposeLaunchScreen")
+                    .accessibilityLabel("Pick a photo")
+                    .photosPicker(
+                        isPresented: $isPhotoPickerPresented,
+                        selection: $pickedItem,
+                        matching: .images,
+                        photoLibrary: .shared(),
+                    )
+            } else {
+                ZStack(alignment: .topTrailing) {
+                    ScrollView {
+                        VStack(spacing: 16) {
 
             // S4d-118: pick an ICON for image-watermark mode (separate from the source photo). Selecting an
             // icon persists its bytes via `setIconFromBytes` (flips persisted mode → Image) and re-renders.
@@ -647,6 +688,18 @@ struct ContentView: View {
 #endif
             }
             .padding()
+                    }
+                    // The shared launch shell owns initial entry. Keep source replacement as a compact
+                    // SwiftUI system-picker edge without changing the editor's scroll layout.
+                    PhotosPicker(selection: $pickedItem, matching: .images, photoLibrary: .shared()) {
+                        Image(systemName: "photo.on.rectangle")
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("pickPhotoButton")
+                    .accessibilityLabel("Pick another photo")
+                    .padding()
+                }
+            }
         }
         // Re-runs whenever a new photo is picked; `.task(id:)` (iOS 15+) avoids the deprecated
         // `onChange(of:perform:)` single-arg form. Cancels/restarts cleanly on reselection.

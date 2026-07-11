@@ -447,19 +447,20 @@ final class PickerFlowUITests: XCTestCase {
         attach(app, "13-shared-compose-text-color")
     }
 
-    /// Documents the S4d-57-proven capability without asserting the blocked selection step:
-    /// the out-of-process PHPicker OPENS from the app. Kept green (no selection assertion).
+    /// S4d-340: the production shared CMP launch shell delegates only the system picker presentation.
+    /// Grid-cell selection remains the S4d-57 beta-toolchain block.
     func testPhotosPickerOpens() {
         let app = XCUIApplication()
         app.launch()
-        let pickButton = app.buttons["pickPhotoButton"].firstMatch
-        XCTAssertTrue(pickButton.waitForExistence(timeout: 20), "Pick a photo button not found")
-        pickButton.tap()
+        let launch = app.descendants(matching: .any)["sharedComposeLaunchScreen"].firstMatch
+        XCTAssertTrue(launch.waitForExistence(timeout: 20), "Shared launch screen did not appear")
+        attach(app, "09-shared-compose-launch-screen")
+        launch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         // The picker is exposed to XCUITest as a scrollView (S4d-57). Assert only that it opens.
         let pickerScroll = app.scrollViews.firstMatch
         XCTAssertTrue(pickerScroll.waitForExistence(timeout: 12),
-                      "PhotosPicker did not open.")
-        attach(app, "10-picker-opened")
+                      "PhotosPicker did not open from the shared launch screen.")
+        attach(app, "10-shared-compose-launch-picker-opened")
         // NOTE: grid-cell SELECTION is NOT asserted — unaddressable on this beta toolchain (S4d-57);
         // the render/export path is proven via the fixture seam in testFixtureRenderPreviewAndExport.
     }
@@ -468,6 +469,7 @@ final class PickerFlowUITests: XCTestCase {
     /// the out-of-process PhotosPicker. Grid-cell selection remains the S4d-57 beta-toolchain block.
     func testSharedComposeIconPickerOpens() {
         let app = XCUIApplication()
+        app.launchArguments += ["-uiTestFixtureImage", "1"]
         app.launch()
         let control = app.descendants(matching: .any)["sharedComposeIconWatermarkOption"].firstMatch
         XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 20),
@@ -484,8 +486,8 @@ final class PickerFlowUITests: XCTestCase {
     func testSharedComposeWitnessesHiddenByDefault() {
         let app = XCUIApplication()
         app.launch()
-        let pickButton = app.buttons["pickPhotoButton"].firstMatch
-        XCTAssertTrue(pickButton.waitForExistence(timeout: 20), "Pick a photo button not found")
+        let launch = app.descendants(matching: .any)["sharedComposeLaunchScreen"].firstMatch
+        XCTAssertTrue(launch.waitForExistence(timeout: 20), "Shared launch screen did not appear")
 
         for id in [
             "sharedComposeLaunchShellWitness",
