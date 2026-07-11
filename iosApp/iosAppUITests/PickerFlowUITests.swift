@@ -464,6 +464,21 @@ final class PickerFlowUITests: XCTestCase {
         // the render/export path is proven via the fixture seam in testFixtureRenderPreviewAndExport.
     }
 
+    /// S4d-339: the visible image-watermark option is shared CMP UI, while SwiftUI still presents
+    /// the out-of-process PhotosPicker. Grid-cell selection remains the S4d-57 beta-toolchain block.
+    func testSharedComposeIconPickerOpens() {
+        let app = XCUIApplication()
+        app.launch()
+        let control = app.descendants(matching: .any)["sharedComposeIconWatermarkOption"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 20),
+                      "Production shared icon-watermark option did not appear.")
+        control.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        let pickerScroll = app.scrollViews.firstMatch
+        XCTAssertTrue(pickerScroll.waitForExistence(timeout: 12),
+                      "PhotosPicker did not open from the shared icon option.")
+        attach(app, "14-shared-compose-icon-picker-opened")
+    }
+
     /// S4d-323: normal debug launches must not show the CMP host witnesses. They are test-only
     /// runtime/link proof, enabled only by the `-sharedComposeWitnesses` launch argument.
     func testSharedComposeWitnessesHiddenByDefault() {

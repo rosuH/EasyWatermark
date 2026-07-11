@@ -37,6 +37,34 @@ private struct SharedComposeWatermarkPreview: UIViewControllerRepresentable {
     }
 }
 
+private struct SharedComposeIconWatermarkControl: UIViewControllerRepresentable {
+    let icon: Data?
+    let onPick: () -> Void
+
+    final class Coordinator {
+        var onPick: () -> Void
+        lazy var host = IosWatermarkIconOptionHost(onPick: { [weak self] in
+            self?.onPick()
+        })
+
+        init(onPick: @escaping () -> Void) {
+            self.onPick = onPick
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(onPick: onPick) }
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        context.coordinator.host.update(iconBytes: icon?.toKotlinByteArray())
+        return context.coordinator.host.viewController()
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        context.coordinator.onPick = onPick
+        context.coordinator.host.update(iconBytes: icon?.toKotlinByteArray())
+    }
+}
+
 private struct SharedComposeTileModeControl: UIViewControllerRepresentable {
     let mode: WatermarkTileMode
     let workflow: WatermarkWorkflow
@@ -408,6 +436,7 @@ struct ContentView: View {
     @State private var pickedItem: PhotosPickerItem?
     /// S4d-118: the selected ICON for image-watermark mode (separate from the source photo above).
     @State private var pickedIconItem: PhotosPickerItem?
+    @State private var isIconPickerPresented = false
     /// S4d-102: editable draft of the watermark text; applied to the shared `WaterMarkRepository`.
     @State private var draftText: String = ""
 #if DEBUG
@@ -441,24 +470,23 @@ struct ContentView: View {
             // icon persists its bytes via `setIconFromBytes` (flips persisted mode → Image) and re-renders.
             // Minimal affordance — not the final 1:1 editor. Image mode without a readable icon stays a loud
             // `.failure` (S4d-117); it never silently renders text.
-            HStack(spacing: 8) {
-                PhotosPicker(selection: $pickedIconItem, matching: .images, photoLibrary: .shared()) {
-                    Label("Pick icon", systemImage: "seal")
-                }
-                .buttonStyle(.bordered)
-                .accessibilityIdentifier("pickIconButton")
-
+            VStack(spacing: 4) {
+                SharedComposeIconWatermarkControl(
+                    icon: workflow.iconThumbnail,
+                    onPick: { isIconPickerPresented = true },
+                )
+                .frame(height: 80)
+                .accessibilityIdentifier("sharedComposeIconWatermarkOption")
+                .accessibilityLabel(workflow.iconThumbnail == nil ? "Watermark icon not selected" : "Watermark icon selected")
+                .photosPicker(
+                    isPresented: $isIconPickerPresented,
+                    selection: $pickedIconItem,
+                    matching: .images,
+                    photoLibrary: .shared(),
+                )
                 Text("Mode: \(workflow.watermarkMarkMode == .image ? "Image" : "Text")")
                     .font(.caption)
                     .accessibilityIdentifier("watermarkModeLabel")
-
-                if let iconData = workflow.iconThumbnail, let iconImage = UIImage(data: iconData) {
-                    Image(uiImage: iconImage)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 32, height: 32)
-                        .accessibilityIdentifier("watermarkIconThumbnail")
-                }
             }
 
             // S4d-102: edit the watermark text through the shared `WaterMarkRepository` +

@@ -1,6 +1,7 @@
 package me.rosuh.easywatermark.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
@@ -30,6 +32,7 @@ import me.rosuh.easywatermark.ui.about.AboutScreenShell
 import me.rosuh.easywatermark.ui.about.AboutScreenStrings
 import me.rosuh.easywatermark.ui.compose.TileMode
 import me.rosuh.easywatermark.ui.compose.TileModeLabels
+import me.rosuh.easywatermark.ui.compose.IconWatermarkOption
 import me.rosuh.easywatermark.ui.compose.TextColorOption
 import me.rosuh.easywatermark.ui.compose.TextColorOptionStrings
 import me.rosuh.easywatermark.ui.compose.TextPaintStyleLabels
@@ -51,6 +54,10 @@ import kotlin.math.abs
 private data class IosWatermarkPreviewState(
     val png: ByteArray? = null,
     val status: String = "",
+)
+
+private data class IosWatermarkIconOptionState(
+    val iconBytes: ByteArray? = null,
 )
 
 /** Production host for the rendered watermark preview; system picker/share/save stay in SwiftUI. */
@@ -80,6 +87,42 @@ class IosWatermarkPreviewHost {
 
     fun update(png: ByteArray, status: String) {
         state = IosWatermarkPreviewState(png = png, status = status)
+    }
+}
+
+/** Production host for the shared icon-option shell; Swift still presents the system picker. */
+class IosWatermarkIconOptionHost(
+    private val onPick: () -> Unit,
+) {
+    private var state by mutableStateOf(IosWatermarkIconOptionState())
+
+    fun viewController(): UIViewController = ComposeUIViewController {
+        AppTheme {
+            val current = state
+            val icon = current.iconBytes?.let { bytes ->
+                remember(bytes) { IosImageDecoder.decode(bytes) }
+            }
+            IconWatermarkOption(
+                hasIcon = icon != null,
+                pickLabel = "Pick icon",
+                modifier = Modifier.fillMaxWidth(),
+                onPick = onPick,
+                preview = {
+                    icon?.let { bitmap ->
+                        Image(
+                            bitmap = bitmap,
+                            contentDescription = "Watermark icon",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(32.dp),
+                        )
+                    }
+                },
+            )
+        }
+    }
+
+    fun update(iconBytes: ByteArray?) {
+        state = IosWatermarkIconOptionState(iconBytes = iconBytes)
     }
 }
 
