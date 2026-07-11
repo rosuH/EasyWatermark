@@ -173,6 +173,55 @@ final class PickerFlowUITests: XCTestCase {
         attach(app, "07-shared-compose-typeface-bold")
     }
 
+    /// S4d-332: the normal iOS text-size slider is now a shared CMP control. Compose UIKit does not export
+    /// a Slider role on this dependency mix, so the test taps the real track coordinates and proves the
+    /// workflow persists the chosen value through a relaunch.
+    func testSharedComposeTextSizeChanges() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestFixtureImage", "1"]
+        app.launch()
+
+        let control = app.descendants(matching: .any)["sharedComposeTextSize"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 20),
+                      "Production shared text-size control did not appear.")
+
+        // The shared host is 72pt high: SliderOption's track occupies the upper portion, with its value
+        // text below. Tapping the track is actual Compose pointer input, not a test-only state setter.
+        let initialLabel = control.label
+        let leftTrack = control.coordinate(withNormalizedOffset: CGVector(dx: 0.03, dy: 0.25))
+        let rightTrack = control.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.25))
+        rightTrack.tap()
+
+        if waitForLabelChange(control, from: initialLabel, timeout: 15) {
+            let rightLabel = control.label
+            leftTrack.tap()
+            XCTAssertTrue(waitForLabelChange(control, from: rightLabel, timeout: 15),
+                          "Shared slider did not commit the opposite track position.")
+        } else {
+            leftTrack.tap()
+            XCTAssertTrue(waitForLabelChange(control, from: initialLabel, timeout: 15),
+                          "Shared slider did not commit either track position.")
+            let leftLabel = control.label
+            rightTrack.tap()
+            XCTAssertTrue(waitForLabelChange(control, from: leftLabel, timeout: 15),
+                          "Shared slider did not commit the opposite track position.")
+        }
+        let selectedLabel = control.label
+        XCTAssertTrue(selectedLabel.hasPrefix("Text size "), "Shared slider did not report a persisted text-size label.")
+
+        // Reload through the existing app entry to prove the shared slider's finish callback wrote through
+        // WatermarkWorkflow and the persisted value fed back into the production host.
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(control.waitForExistence(timeout: 20),
+                      "Production shared text-size control did not reappear after reload.")
+        let persistedSize = expectation(for: NSPredicate(format: "label == %@", selectedLabel), evaluatedWith: control, handler: nil)
+        wait(for: [persistedSize], timeout: 20)
+        let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
+        XCTAssertTrue(preview.waitForExistence(timeout: 15), "Fixture render did not remain visible after text-size change.")
+        attach(app, "08-shared-compose-text-size")
+    }
+
     /// Documents the S4d-57-proven capability without asserting the blocked selection step:
     /// the out-of-process PHPicker OPENS from the app. Kept green (no selection assertion).
     func testPhotosPickerOpens() {
@@ -380,6 +429,17 @@ final class PickerFlowUITests: XCTestCase {
             Thread.sleep(forTimeInterval: 0.3)
         }
         return (field.value as? String) == expected
+    }
+
+    /// Poll the wrapper accessibility label, which changes only after the Swift workflow persists a slider value.
+    @discardableResult
+    private func waitForLabelChange(_ element: XCUIElement, from previousLabel: String, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if element.label != previousLabel { return true }
+            Thread.sleep(forTimeInterval: 0.3)
+        }
+        return element.label != previousLabel
     }
 
     /// Find the `deleteTemplateButton` whose vertical center matches `row`'s — they are siblings in the

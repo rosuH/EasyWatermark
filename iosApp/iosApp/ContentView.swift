@@ -155,6 +155,41 @@ private func textTypefaceAccessibilityLabel(for key: Int32) -> String {
     }
 }
 
+private struct SharedComposeTextSizeControl: UIViewControllerRepresentable {
+    let textSize: Float
+    let workflow: WatermarkWorkflow
+
+    final class Coordinator {
+        weak var workflow: WatermarkWorkflow?
+        lazy var host = IosTextSizeSliderHost(onValueChangeFinished: { [weak self] size in
+            self?.setTextSize(size.floatValue)
+        })
+
+        init(workflow: WatermarkWorkflow) {
+            self.workflow = workflow
+        }
+
+        func setTextSize(_ size: Float) {
+            Task { @MainActor [weak workflow] in
+                guard let workflow else { return }
+                await workflow.setWatermarkTextSize(size)
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(workflow: workflow) }
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        context.coordinator.host.update(textSize: textSize)
+        return context.coordinator.host.viewController()
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        context.coordinator.workflow = workflow
+        context.coordinator.host.update(textSize: textSize)
+    }
+}
+
 #if DEBUG
 private struct SharedComposeLaunchShellWitness: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
@@ -204,8 +239,6 @@ struct ContentView: View {
     @State private var draftDegree: Double = 315
     /// S4d-105: editable draft of the watermark opacity (0…1); applied to the shared `WaterMarkRepository`.
     @State private var draftAlpha: Double = 1.0
-    /// S4d-109: editable draft of the watermark text size; applied to the shared `WaterMarkRepository`.
-    @State private var draftTextSize: Double = 14
     /// S4d-110: editable drafts of the watermark h/v gaps; applied to the shared `WaterMarkRepository`.
     @State private var draftHGap: Double = 0
     @State private var draftVGap: Double = 0
@@ -360,18 +393,11 @@ struct ContentView: View {
             .pickerStyle(.segmented)
             .accessibilityIdentifier("watermarkColorPicker")
 
-            // S4d-109: edit the watermark text size through the same shared editor path. Commits on
-            // release (avoids re-rendering mid-drag). Range matches the shared MIN/MAX_TEXT_SIZE (1…100).
-            // Minimal control — not the final 1:1 editor.
-            VStack(spacing: 4) {
-                Text("Size: \(Int(draftTextSize))")
-                    .font(.caption)
-                    .accessibilityIdentifier("watermarkTextSizeLabel")
-                Slider(value: $draftTextSize, in: 1...100, step: 1) { editing in
-                    if !editing { Task { await workflow.setWatermarkTextSize(Float(draftTextSize)) } }
-                }
-                .accessibilityIdentifier("watermarkTextSizeSlider")
-            }
+            // S4d-332: shared CMP control; Swift keeps the workflow write and rerender boundary.
+            SharedComposeTextSizeControl(textSize: workflow.watermarkTextSize, workflow: workflow)
+                .frame(height: 72)
+                .accessibilityIdentifier("sharedComposeTextSize")
+                .accessibilityLabel("Text size \(Int(workflow.watermarkTextSize))")
 
             // S4d-110: edit the watermark horizontal/vertical gaps through the same shared editor path.
             // Commits on release. Range matches the shared clamp (0…500). Minimal control — not 1:1 UI.
@@ -473,7 +499,6 @@ struct ContentView: View {
             draftAlpha = Double(workflow.watermarkAlpha)
             await workflow.loadWatermarkTextColor()
             await workflow.loadWatermarkTextSize()
-            draftTextSize = Double(workflow.watermarkTextSize)
             await workflow.loadWatermarkGaps()
             draftHGap = Double(workflow.watermarkHGap)
             draftVGap = Double(workflow.watermarkVGap)

@@ -34,6 +34,7 @@ import me.rosuh.easywatermark.ui.compose.TextPaintStyleLabels
 import me.rosuh.easywatermark.ui.compose.TextPaintStyleOption
 import me.rosuh.easywatermark.ui.compose.TextTypeface as TextTypefaceOption
 import me.rosuh.easywatermark.ui.compose.TextTypefaceLabels
+import me.rosuh.easywatermark.ui.compose.SliderOption
 import me.rosuh.easywatermark.ui.save.SavePreviewStatus
 import me.rosuh.easywatermark.ui.theme.AppTheme
 import platform.UIKit.UIViewController
@@ -156,6 +157,39 @@ class IosTextTypefaceHost(
 
     fun update(typeface: TextTypeface) {
         this.typeface = typeface
+    }
+}
+
+/** Production host for the shared text-size slider; Swift still owns persistence and re-rendering. */
+class IosTextSizeSliderHost(
+    private val onValueChangeFinished: (Float) -> Unit,
+) {
+    private var textSize by mutableStateOf(14f)
+    private var pendingTextSize: Float? = null
+
+    fun viewController(): UIViewController = ComposeUIViewController {
+        AppTheme {
+            SliderOption(
+                currentValue = textSize,
+                valueRange = 1f..100f,
+                modifier = Modifier.fillMaxWidth(),
+                onValueChangeFinished = {
+                    onValueChangeFinished(textSize)
+                },
+                onValueChange = { value ->
+                    textSize = value
+                    // Ignore an older async workflow update while the user is still dragging a newer value.
+                    pendingTextSize = value
+                },
+            )
+        }
+    }
+
+    fun update(textSize: Float) {
+        if (pendingTextSize == null || pendingTextSize == textSize) {
+            this.textSize = textSize
+            pendingTextSize = null
+        }
     }
 }
 

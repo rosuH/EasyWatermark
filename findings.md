@@ -1,5 +1,12 @@
 # Compose Migration Findings
 
+## Guard a newer CMP slider drag from an older async workflow update (S4d-332, 2026-07-11)
+
+- An iosMain `ComposeUIViewController` host can consume commonMain `SliderOption` while Swift retains the existing `WatermarkWorkflow` DataStore/rerender boundary. Kotlin `(Float) -> Unit` is imported by Swift as `(KotlinFloat) -> Void`, so use `size.floatValue` before calling the Swift `Float` workflow API.
+- Set the host's local pending value on **every** `onValueChange`, not only `onValueChangeFinished`. Otherwise, after a first release starts an async write, a second drag can be momentarily reset by the old workflow value when SwiftUI calls `updateUIViewController`. Ignore incoming values that do not match the local pending value and clear the marker only when the matching persisted value returns.
+- In this Compose UIKit dependency mix, the nested Material slider is not exposed as an XCUITest adjustable role. A real `coordinate(withNormalizedOffset:)` tap on the rendered track still delivers Compose pointer input; bind the outer platform wrapper's accessibility label to the workflow value and assert a label change plus process relaunch, rather than adding a test-only setter. Do not assume a physical endpoint maps to an exact numerical minimum because the Material track has internal insets.
+- This is Phase A proof of a real shared UI consumer and persistence loop only. The viewed iPhone screenshot does not settle localization, dynamic type, dark mode, typography, or Android v2.10.0 pixel parity; those remain Phase B.
+
 ## Preserve stable keys when shared typeface order is visual (S4d-331, 2026-07-11)
 
 - commonMain `TextTypeface` displays Normal/Bold/Italic/BoldItalic, but persisted `TextTypeface` keys are Normal=0, Italic=1, Bold=2, BoldItalic=3. An iOS host must update from `obtainSealedClass(key:)` and write back `serializeKey()`; never derive the stored key from the segment index.
