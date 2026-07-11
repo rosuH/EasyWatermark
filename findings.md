@@ -1,5 +1,12 @@
 # Compose Migration Findings
 
+## AndroMeld install can succeed while Phone Screen frames are non-evidence (S4d-354, 2026-07-12)
+
+- MCP `devices.list` + enabled control + Phone Screen session existence do **not** prove a visual gate. After a successful `./gradlew :app:installDebug` of HEAD debug APK, launch may report `foregroundVerified` while hierarchy shows Settings/Launcher and frames are **stale or black**.
+- Treat hierarchy/metadata vs pixel disagreement as **non-evidence**. Do **not** claim About or save/export visual gates passed; do **not** use pre-install or stale screenshots as proof; do **not** substitute raw adb for AndroMeld visual contract.
+- Home/setup/launcher UI is not product proof; leave the emulator running when only returning home.
+- **Next visual attempt only after a fresh/healthy Phone Screen frame** matches the debug app with live non-black pixels. Evidence: `docs/superpowers/research/2026-07-11-s4d354-android-mirror-backfill.md`, log `build/s4d354-install-debug.log`.
+
 ## Compose/Skiko Phase A gate needs owner A/B/C/defer (S4d-353, 2026-07-11)
 
 - Decision pack: `docs/superpowers/research/2026-07-11-s4d353-compose-skiko-alignment-decision-pack.md`. Options: **A** align CMP/Skiko (required Kotlin) so sheet/IME APIs run on iOS; **B** permanent SwiftUI exception for text + templates; **C** new sheet/IME-free shared substitute (dual-consumer/waiver). **No option accepted or recommended by Codex.**

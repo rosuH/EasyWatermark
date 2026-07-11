@@ -1241,3 +1241,13 @@ Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; 
 - **Status:** **owner decision required (A/B/C/defer)** before remaining Phase A iOS text/templates. **Not** Phase A/B/parity complete; goal **not** complete.
 - **Reviews / verification:** Kimi factual/spec review **PASS**. Docs-only: **no** product code, **no** build, **no** dependency change. `git diff --check` clean on pack + plan files. Protected untracked `2026-07-11-project-branch-goals-progress.md` not staged.
 - **Next: awaits owner A/B/C/defer.**
+
+## 2026-07-12 — S4d-354 Android AndroMeld mirror backfill (docs-only accepted; visual gates open)
+
+- **S4d-354:** evidence at `docs/superpowers/research/2026-07-11-s4d354-android-mirror-backfill.md`.
+- **AndroMeld:** `devices.list` succeeded for `emulator-5554` (SDK 36, MCP control enabled); Phone Screen session existed.
+- **Install:** `./gradlew :app:installDebug --max-workers=8` → `EasyWatermark-2.10.0-21000.apk` on Pixel_9_Pro_XL AVD; log `build/s4d354-install-debug.log`; **BUILD SUCCESSFUL in 12s**, 83 tasks / 2 executed; `./gradlew --stop` OK; **no adb**. HEAD at install `ef4028be`.
+- **Post-install observation:** launch reported `foregroundVerified`; UI hierarchy reported Settings/Launcher while metadata claimed debug app; frames **stale then black**. Home key returned Google setup/launcher **without** stopping device.
+- **Non-claims:** About visual gate **not** passed; save/export visual gate **not** passed; pre-install screenshots **not** proof.
+- **No** product code / full multiplatform rebuild for closeout. Protected untracked project-branch-goals-progress not staged.
+- **Next:** wait for **fresh/healthy** AndroMeld Phone Screen frame before About/save-export visual gates; **parallel owner A/B/C/defer** (S4d-353) remains open. Not Phase A/B/parity complete.
