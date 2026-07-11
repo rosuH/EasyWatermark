@@ -1,5 +1,11 @@
 # Compose Migration Findings
 
+## Frame only real iOS output, not the picker or empty-state route (S4d-328, 2026-07-11)
+
+- `EditorPreviewFrame` is a valid production iOS consumer only after `IosWatermarkPreviewHost` receives a successful result PNG. Derive `hasImage` from the decoded PNG and pass the existing real `SavePreviewStatus` through its preview slot; do not use this frame to manufacture a shared launch/picker surface.
+- This keeps `PhotosPicker`, ShareLink, Save-to-Photos, and `WatermarkWorkflow` as SwiftUI/system edges while moving a visible normal-render layout region into commonMain. It also avoids inventing cross-platform picker callbacks or shared ViewModel/IO before a real consumer requires them.
+- Focused and full XCUITest screenshots show the frame contains the actual 720x480 tiled image and still leaves Share, Save to Photos, and Saved reachable. Treat that as slice-local production evidence, not Android parity or a replacement for the pending device smoke.
+
 ## Make iOS preview a real Compose consumer with a retained host (S4d-327, 2026-07-11)
 
 - A `UIViewControllerRepresentable` coordinator can retain one iosMain `ComposeUIViewController` host and send it changed PNG/status values. Comparing the last `Data` and status first avoids re-copying/re-decoding the same rendered PNG during unrelated SwiftUI state updates.

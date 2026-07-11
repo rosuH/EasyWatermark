@@ -49,12 +49,18 @@ class IosWatermarkPreviewHost {
             val preview = current.png?.let { bytes ->
                 remember(bytes) { IosImageDecoder.decode(bytes) }
             }
-            SavePreviewStatus(
-                status = current.status,
-                preview = preview,
-                previewContentDescription = "Watermarked preview",
-                modifier = Modifier.fillMaxSize().padding(16.dp),
-            )
+            EditorPreviewFrame(
+                hasImage = preview != null,
+                emptyText = current.status,
+                modifier = Modifier.fillMaxSize(),
+            ) { previewModifier ->
+                SavePreviewStatus(
+                    status = current.status,
+                    preview = preview,
+                    previewContentDescription = "Watermarked preview",
+                    modifier = previewModifier.padding(16.dp),
+                )
+            }
         }
     }
 
