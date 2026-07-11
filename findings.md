@@ -867,6 +867,11 @@ Gaps found by adversarial review and now fixed in the plan — keep these in min
 
 - Tool exposure is not a usable AndroMeld session. `andromeld.devices.list` can fail before device discovery with `AndroMeld MCP control socket was not found. Start AndroMeld first.` In that state there is no eligible Phone Screen session to observe or control, and the required Android visual smoke must remain open. Do not substitute raw `adb` interaction for the contract-mandated AndroMeld proof; resume only after the control service supplies the socket.
 
+## Android smoke mirror freshness is a separate acceptance gate (S4d-254 reattempt, 2026-07-11)
+
+- A usable AndroMeld MCP control socket does not itself validate a visual assertion. The reattempt proved permission and editor interaction through the Phone Screen, but after launching Photos the session metadata moved to `com.google.android.apps.photos` while the returned image and visible macOS mirror still showed the old debug `SaveExportSheet`. Restarting the mirror session did not refresh the pixels or the UI hierarchy.
+- Treat foreground-package metadata, a fixed export count (`0/1`), and an empty `View in gallery` callback as non-evidence. The final Android export step remains unaccepted until a fresh frame visibly shows the exported artifact in a gallery, or a different owner-approved visible device driver is used. Do not replace it with raw `adb`/logcat or a source-only assertion.
+
 ## Desktop packaged preview boundary (S4d-342, 2026-07-11)
 
 - `:desktopApp:run` inherits the repository working directory, but a real Compose Desktop `.app` does not. An interactive preview temp path under relative `build/` can therefore pass headless Gradle gates while failing the user-visible Preview action after Finder launch. Interactive-only scratch output belongs under the same existing per-user app-data root as the Desktop DataStores and Room DB; it must remain distinct from real save destinations so preview still cannot drive share/output actions.
