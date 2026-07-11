@@ -3,6 +3,7 @@ package me.rosuh.easywatermark.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.Text
@@ -18,10 +19,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
+import me.rosuh.easywatermark.render.IosImageDecoder
 import me.rosuh.easywatermark.ui.about.AboutDevCard
 import me.rosuh.easywatermark.ui.about.AboutScreenIcons
 import me.rosuh.easywatermark.ui.about.AboutScreenShell
 import me.rosuh.easywatermark.ui.about.AboutScreenStrings
+import me.rosuh.easywatermark.ui.save.SavePreviewStatus
 import me.rosuh.easywatermark.ui.theme.AppTheme
 import platform.UIKit.UIViewController
 
@@ -31,6 +34,35 @@ import platform.UIKit.UIViewController
  * SwiftUI remains the app entry/system-UI glue, but it can now embed this UIViewController to
  * render a real commonMain CMP shell from the `Shared.framework`.
  */
+private data class IosWatermarkPreviewState(
+    val png: ByteArray? = null,
+    val status: String = "",
+)
+
+/** Production host for the rendered watermark preview; system picker/share/save stay in SwiftUI. */
+class IosWatermarkPreviewHost {
+    private var state by mutableStateOf(IosWatermarkPreviewState())
+
+    fun viewController(): UIViewController = ComposeUIViewController {
+        AppTheme {
+            val current = state
+            val preview = current.png?.let { bytes ->
+                remember(bytes) { IosImageDecoder.decode(bytes) }
+            }
+            SavePreviewStatus(
+                status = current.status,
+                preview = preview,
+                previewContentDescription = "Watermarked preview",
+                modifier = Modifier.fillMaxSize().padding(16.dp),
+            )
+        }
+    }
+
+    fun update(png: ByteArray, status: String) {
+        state = IosWatermarkPreviewState(png = png, status = status)
+    }
+}
+
 object IosSharedComposeHost {
     fun launchScreenShellWitness(): UIViewController = ComposeUIViewController {
         AppTheme {

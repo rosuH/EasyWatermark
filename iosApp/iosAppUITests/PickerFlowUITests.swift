@@ -29,15 +29,10 @@ final class PickerFlowUITests: XCTestCase {
         app.launch()
         attach(app, "01-launched-with-fixture")
 
-        // Render runs on launch via the fixture seam; wait for the real preview + status.
-        let preview = app.images["Watermarked preview"].firstMatch
+        // Render runs on launch via the fixture seam; wait for the real shared CMP preview host.
+        let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
         XCTAssertTrue(preview.waitForExistence(timeout: 30),
-                      "Watermarked preview never appeared — fixture render did not reach the preview.")
-        let status = app.staticTexts["renderStatus"].firstMatch
-        XCTAssertTrue(status.waitForExistence(timeout: 5),
-                      "renderStatus ('Watermarked …') text not found.")
-        XCTAssertTrue(status.label.localizedCaseInsensitiveContains("Watermarked"),
-                      "renderStatus did not report a watermarked result: \(status.label)")
+                      "Shared CMP watermark preview never appeared — fixture render did not reach the host.")
         attach(app, "02-watermarked-preview")
 
         // Export UI — Save to Photos (handles the add-only permission alert) then Share.

@@ -1,5 +1,11 @@
 # Compose Migration Findings
 
+## Make iOS preview a real Compose consumer with a retained host (S4d-327, 2026-07-11)
+
+- A `UIViewControllerRepresentable` coordinator can retain one iosMain `ComposeUIViewController` host and send it changed PNG/status values. Comparing the last `Data` and status first avoids re-copying/re-decoding the same rendered PNG during unrelated SwiftUI state updates.
+- The production host needs only the already-rendered PNG and status. It decodes through the existing `IosImageDecoder` and renders existing commonMain `SavePreviewStatus`; `PhotosPicker`, `ShareLink`, Save-to-Photos, and workflow state remain SwiftUI/system edges.
+- The focused simulator test passed and its viewed `03-after-save` screenshot shows the actual common preview status, watermarked image, Share, Save to Photos, and Saved state together. Do not describe this as a DEBUG witness: it has no launch-argument gate and is only inserted after a normal successful render.
+
 ## Reuse the editor shell for Desktop structure without inventing Desktop state (S4d-326, 2026-07-11)
 
 - `EditorScreenShell` can be a real Desktop route owner even when Desktop retains every editor action at its platform edge: title/description use `topBar`, the existing shared preview-status component uses `preview`, and the existing Desktop controls live in `bottomControls`.

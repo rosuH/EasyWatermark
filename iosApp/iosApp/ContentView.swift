@@ -5,9 +5,38 @@ import Shared
 
 // C5.4 (S4d-27/29/58): a user picks a photo with `PhotosPicker`, the app loads the encoded bytes, and
 // `WatermarkWorkflow` runs the `:shared` render bridge to produce a watermarked PNG, shown via
-// `UIImage(data:)`. Export is a `ShareLink` (system share sheet over a temp .png) plus Save to Photos.
+// the shared CMP preview host. Export is a `ShareLink` (system share sheet over a temp .png) plus Save to Photos.
 // S4d-58 proves render + export via the DEBUG-only fixture seam below; real PHPicker cell selection is
 // the only step still blocked by Xcode-27-beta / iOS-27 system UI automation.
+private struct SharedComposeWatermarkPreview: UIViewControllerRepresentable {
+    let png: Data
+    let status: String
+
+    final class Coordinator {
+        let host = IosWatermarkPreviewHost()
+        private var lastPNG: Data?
+        private var lastStatus: String?
+
+        func update(png: Data, status: String) {
+            guard png != lastPNG || status != lastStatus else { return }
+            host.update(png: png.toKotlinByteArray(), status: status)
+            lastPNG = png
+            lastStatus = status
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        context.coordinator.update(png: png, status: status)
+        return context.coordinator.host.viewController()
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        context.coordinator.update(png: png, status: status)
+    }
+}
+
 #if DEBUG
 private struct SharedComposeLaunchShellWitness: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
@@ -280,17 +309,15 @@ struct ContentView: View {
             .pickerStyle(.segmented)
             .accessibilityIdentifier("watermarkTextStylePicker")
 
-            statusView
-
-            if let png = workflow.resultPNG, let uiImage = UIImage(data: png) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxHeight: 360)
-                    .accessibilityLabel("Watermarked preview")
+            if let png = workflow.resultPNG {
+                SharedComposeWatermarkPreview(png: png, status: renderedPreviewStatus)
+                    .frame(height: 360)
+                    .accessibilityIdentifier("sharedComposeWatermarkPreview")
 
                 exportBar
                 saveStatusView
+            } else {
+                statusView
             }
 
             Spacer()
@@ -450,6 +477,13 @@ struct ContentView: View {
                 .foregroundStyle(.red)
                 .multilineTextAlignment(.center)
         }
+    }
+
+    private var renderedPreviewStatus: String {
+        guard case let .success(bytes, width, height) = workflow.state else {
+            return "Watermarked preview"
+        }
+        return "Watermarked \(width)×\(height), PNG \(bytes) B"
     }
 
     /// Load the picked item's encoded bytes and hand them to the renderer workflow.
