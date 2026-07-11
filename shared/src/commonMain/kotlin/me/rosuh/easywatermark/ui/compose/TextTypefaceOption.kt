@@ -7,6 +7,8 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -49,7 +51,8 @@ fun TextTypeface(
                 onClick = {
                     onValueChange(textTypefacePair.second)
                 },
-                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size)
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                modifier = Modifier.semantics { contentDescription = textTypefacePair.first },
             ) {
                 Text(
                     text = textTypefacePair.first,

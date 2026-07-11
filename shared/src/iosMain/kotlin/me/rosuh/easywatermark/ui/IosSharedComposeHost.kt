@@ -21,6 +21,7 @@ import androidx.compose.ui.window.ComposeUIViewController
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.TextPaintStyle
+import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.render.IosImageDecoder
 import me.rosuh.easywatermark.ui.about.AboutDevCard
@@ -31,6 +32,8 @@ import me.rosuh.easywatermark.ui.compose.TileMode
 import me.rosuh.easywatermark.ui.compose.TileModeLabels
 import me.rosuh.easywatermark.ui.compose.TextPaintStyleLabels
 import me.rosuh.easywatermark.ui.compose.TextPaintStyleOption
+import me.rosuh.easywatermark.ui.compose.TextTypeface as TextTypefaceOption
+import me.rosuh.easywatermark.ui.compose.TextTypefaceLabels
 import me.rosuh.easywatermark.ui.save.SavePreviewStatus
 import me.rosuh.easywatermark.ui.theme.AppTheme
 import platform.UIKit.UIViewController
@@ -123,6 +126,36 @@ class IosTextPaintStyleHost(
 
     fun update(style: TextPaintStyle) {
         this.style = style
+    }
+}
+
+/** Production host for the shared typeface control; Swift still owns workflow writes and re-rendering. */
+class IosTextTypefaceHost(
+    private val onValueChange: (TextTypeface) -> Unit,
+) {
+    private var typeface: TextTypeface by mutableStateOf(TextTypeface.Normal)
+
+    fun viewController(): UIViewController = ComposeUIViewController {
+        AppTheme {
+            TextTypefaceOption(
+                labels = TextTypefaceLabels(
+                    normal = "Normal",
+                    bold = "Bold",
+                    italic = "Italic",
+                    boldItalic = "BoldItalic",
+                ),
+                typeface = typeface,
+                modifier = Modifier.fillMaxWidth(),
+                onValueChange = { selectedTypeface ->
+                    typeface = selectedTypeface
+                    onValueChange(selectedTypeface)
+                },
+            )
+        }
+    }
+
+    fun update(typeface: TextTypeface) {
+        this.typeface = typeface
     }
 }
 

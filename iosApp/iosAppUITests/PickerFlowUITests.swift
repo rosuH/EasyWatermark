@@ -137,6 +137,42 @@ final class PickerFlowUITests: XCTestCase {
         attach(app, "06-shared-compose-text-style-stroke")
     }
 
+    /// S4d-331: the normal iOS typeface picker is now a shared CMP control that still writes through
+    /// WatermarkWorkflow and re-renders the fixture image.
+    func testSharedComposeTextTypefaceChanges() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestFixtureImage", "1"]
+        app.launch()
+
+        let control = app.descendants(matching: .any)["sharedComposeTextTypeface"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 20),
+                      "Production shared typeface control did not appear.")
+
+        let normal = app.staticTexts.matching(NSPredicate(format: "label == %@", "Normal")).firstMatch
+        XCTAssertTrue(scrollUntilHittable(normal, in: app, timeout: 10), "Normal typeface choice was not reachable.")
+        normal.tap()
+        let normalSelected = expectation(for: NSPredicate(format: "label == %@", "Typeface Normal"), evaluatedWith: control, handler: nil)
+        wait(for: [normalSelected], timeout: 15)
+
+        let bold = app.staticTexts.matching(NSPredicate(format: "label == %@", "Bold")).firstMatch
+        XCTAssertTrue(scrollUntilHittable(bold, in: app, timeout: 10), "Bold typeface choice was not reachable.")
+        bold.tap()
+        let boldSelected = expectation(for: NSPredicate(format: "label == %@", "Typeface Bold"), evaluatedWith: control, handler: nil)
+        wait(for: [boldSelected], timeout: 15)
+
+        // Reload through the existing app entry to prove the Swift workflow write persisted and fed the
+        // current typeface back into the production CMP host.
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(control.waitForExistence(timeout: 20),
+                      "Production shared typeface control did not reappear after reload.")
+        let persistedBold = expectation(for: NSPredicate(format: "label == %@", "Typeface Bold"), evaluatedWith: control, handler: nil)
+        wait(for: [persistedBold], timeout: 20)
+        let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
+        XCTAssertTrue(preview.waitForExistence(timeout: 15), "Fixture render did not remain visible after typeface change.")
+        attach(app, "07-shared-compose-typeface-bold")
+    }
+
     /// Documents the S4d-57-proven capability without asserting the blocked selection step:
     /// the out-of-process PHPicker OPENS from the app. Kept green (no selection assertion).
     func testPhotosPickerOpens() {

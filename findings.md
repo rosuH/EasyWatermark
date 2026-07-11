@@ -1,5 +1,11 @@
 # Compose Migration Findings
 
+## Preserve stable keys when shared typeface order is visual (S4d-331, 2026-07-11)
+
+- commonMain `TextTypeface` displays Normal/Bold/Italic/BoldItalic, but persisted `TextTypeface` keys are Normal=0, Italic=1, Bold=2, BoldItalic=3. An iOS host must update from `obtainSealedClass(key:)` and write back `serializeKey()`; never derive the stored key from the segment index.
+- The compose function and the domain model are both named `TextTypeface`. Keep the model's simple name and import the composable with a local alias (`TextTypefaceOption`) at the platform host boundary, rather than adding a duplicate wrapper or renaming shared API.
+- The four-option Material3 control fits on the 393pt iPhone 17 Pro test viewport in the viewed normal-flow screenshots. This verifies Phase A layout viability only; localized strings, dynamic type, dark mode, typography, and Android v2.10.0 pixel parity remain Phase B work.
+
 ## Keep the real persisted iOS style state at the Swift accessibility edge (S4d-330, 2026-07-11)
 
 - A normal `UIViewControllerRepresentable` can consume commonMain `TextPaintStyleOption` without moving `WatermarkWorkflow`, DataStore, or re-rendering across the platform boundary: the Kotlin host receives a `TextPaintStyle`, and its one output lambda passes `serializeKey()` to the existing Swift workflow method.

@@ -107,6 +107,54 @@ private struct SharedComposeTextPaintStyleControl: UIViewControllerRepresentable
     }
 }
 
+private struct SharedComposeTextTypefaceControl: UIViewControllerRepresentable {
+    let typefaceKey: Int32
+    let workflow: WatermarkWorkflow
+
+    final class Coordinator {
+        weak var workflow: WatermarkWorkflow?
+        lazy var host = IosTextTypefaceHost(onValueChange: { [weak self] selectedTypeface in
+            self?.setTextTypeface(selectedTypeface)
+        })
+
+        init(workflow: WatermarkWorkflow) {
+            self.workflow = workflow
+        }
+
+        func setTextTypeface(_ typeface: TextTypeface) {
+            Task { @MainActor [weak workflow] in
+                guard let workflow else { return }
+                await workflow.setWatermarkTypeface(typeface.serializeKey())
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(workflow: workflow) }
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        context.coordinator.host.update(typeface: TextTypeface.companion.obtainSealedClass(key: typefaceKey))
+        return context.coordinator.host.viewController()
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        context.coordinator.workflow = workflow
+        context.coordinator.host.update(typeface: TextTypeface.companion.obtainSealedClass(key: typefaceKey))
+    }
+}
+
+private func textTypefaceAccessibilityLabel(for key: Int32) -> String {
+    switch key {
+    case 1:
+        return "Typeface Italic"
+    case 2:
+        return "Typeface Bold"
+    case 3:
+        return "Typeface BoldItalic"
+    default:
+        return "Typeface Normal"
+    }
+}
+
 #if DEBUG
 private struct SharedComposeLaunchShellWitness: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
@@ -341,21 +389,11 @@ struct ContentView: View {
                 .accessibilityIdentifier("watermarkVGapSlider")
             }
 
-            // S4d-112: pick the text typeface through the same shared editor path. The tags are the
-            // storage-id keys (0=Normal,1=Italic,2=Bold,3=BoldItalic). Bound straight to the workflow (its
-            // `set` persists + re-renders), so there is no spurious launch write. Default Normal preserves
-            // the current output; bold/italic are Compose synthetic (perceptual, not 1:1 with Android).
-            Picker("Typeface", selection: Binding(
-                get: { workflow.watermarkTypefaceKey },
-                set: { newKey in Task { await workflow.setWatermarkTypeface(newKey) } }
-            )) {
-                Text("Normal").tag(Int32(0))
-                Text("Italic").tag(Int32(1))
-                Text("Bold").tag(Int32(2))
-                Text("BoldItalic").tag(Int32(3))
-            }
-            .pickerStyle(.segmented)
-            .accessibilityIdentifier("watermarkTypefacePicker")
+            // S4d-331: shared CMP control; Swift keeps the workflow write and rerender boundary.
+            SharedComposeTextTypefaceControl(typefaceKey: workflow.watermarkTypefaceKey, workflow: workflow)
+                .frame(height: 40)
+                .accessibilityIdentifier("sharedComposeTextTypeface")
+                .accessibilityLabel(textTypefaceAccessibilityLabel(for: workflow.watermarkTypefaceKey))
 
             // S4d-330: shared CMP control; Swift keeps the workflow write and rerender boundary.
             SharedComposeTextPaintStyleControl(styleKey: workflow.watermarkTextStyleKey, workflow: workflow)
