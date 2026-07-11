@@ -296,6 +296,40 @@ class IosWatermarkHorizontalGapSliderHost(
     }
 }
 
+/** Production host for the shared vertical-gap slider; Swift still owns persistence and re-rendering. */
+class IosWatermarkVerticalGapSliderHost(
+    private val onValueChangeFinished: (Float) -> Unit,
+) {
+    private var verticalGap by mutableStateOf(0f)
+    private var pendingVerticalGap: Float? = null
+
+    fun viewController(): UIViewController = ComposeUIViewController {
+        AppTheme {
+            SliderOption(
+                currentValue = verticalGap,
+                valueRange = 0f..500f,
+                modifier = Modifier.fillMaxWidth(),
+                onValueChangeFinished = {
+                    onValueChangeFinished(verticalGap)
+                },
+                onValueChange = { value ->
+                    verticalGap = value
+                    // Ignore an older async workflow update while the user is still dragging a newer value.
+                    pendingVerticalGap = value
+                },
+            )
+        }
+    }
+
+    fun update(verticalGap: Int) {
+        val persistedGap = verticalGap.coerceIn(0, 500).toFloat()
+        if (pendingVerticalGap == null || pendingVerticalGap == persistedGap) {
+            this.verticalGap = persistedGap
+            pendingVerticalGap = null
+        }
+    }
+}
+
 object IosSharedComposeHost {
     fun launchScreenShellWitness(): UIViewController = ComposeUIViewController {
         AppTheme {

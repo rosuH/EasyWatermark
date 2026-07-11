@@ -1,5 +1,11 @@
 # Compose Migration Findings
 
+## Complete independent persisted slider axes as distinct iOS consumers (S4d-336, 2026-07-11)
+
+- The second gap slider can use the same direct `Int32` boundary and pending-value guard as the first without moving `WatermarkWorkflow` or turning two scalar configuration writes into shared screen state. Feed both visible labels from workflow values once their native draft states are gone.
+- A real vertical-track XCUITest followed by relaunch proves the separate `setWatermarkVGap` persistence path. The viewed screenshot should show both H and V values simultaneously; it catches stacked-host height, label, and overlap regressions that a scalar assertion cannot.
+- Do not characterize both completed gap controls as final UI parity. They are concrete Phase A CMP consumers inside the temporary SwiftUI bring-up surface; Android v2.10.0 visual comparison remains Phase B.
+
 ## Keep integer KMP slider boundaries explicit and slice persisted axes separately (S4d-335, 2026-07-11)
 
 - A Kotlin `Int` parameter is exported to Swift as `Int32`, unlike a Swift `Int`. Keep `Int32` at an iOS `UIViewControllerRepresentable` boundary and convert the callback's `KotlinFloat` only once with `gap.floatValue` before constructing `Int32`; do not rely on implicit Swift numeric conversion.

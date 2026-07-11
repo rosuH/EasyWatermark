@@ -360,6 +360,51 @@ final class PickerFlowUITests: XCTestCase {
         attach(app, "11-shared-compose-horizontal-gap")
     }
 
+    /// S4d-336: the normal iOS vertical-gap slider is now a shared CMP control. The test taps the
+    /// real Compose track and proves the integer gap persists through a relaunch.
+    func testSharedComposeWatermarkVerticalGapChanges() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestFixtureImage", "1"]
+        app.launch()
+
+        let control = app.descendants(matching: .any)["sharedComposeWatermarkVGap"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 20),
+                      "Production shared vertical-gap control did not appear.")
+
+        let initialLabel = control.label
+        let leftTrack = control.coordinate(withNormalizedOffset: CGVector(dx: 0.03, dy: 0.25))
+        let rightTrack = control.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.25))
+        rightTrack.tap()
+
+        if waitForLabelChange(control, from: initialLabel, timeout: 15) {
+            let rightLabel = control.label
+            leftTrack.tap()
+            XCTAssertTrue(waitForLabelChange(control, from: rightLabel, timeout: 15),
+                          "Shared vertical-gap slider did not commit the opposite track position.")
+        } else {
+            leftTrack.tap()
+            XCTAssertTrue(waitForLabelChange(control, from: initialLabel, timeout: 15),
+                          "Shared vertical-gap slider did not commit either track position.")
+            let leftLabel = control.label
+            rightTrack.tap()
+            XCTAssertTrue(waitForLabelChange(control, from: leftLabel, timeout: 15),
+                          "Shared vertical-gap slider did not commit the opposite track position.")
+        }
+        let selectedLabel = control.label
+        XCTAssertTrue(selectedLabel.hasPrefix("Vertical gap "),
+                      "Shared vertical-gap slider did not report a selected value.")
+
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(control.waitForExistence(timeout: 20),
+                      "Production shared vertical-gap control did not reappear after reload.")
+        let persistedGap = expectation(for: NSPredicate(format: "label == %@", selectedLabel), evaluatedWith: control, handler: nil)
+        wait(for: [persistedGap], timeout: 20)
+        let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
+        XCTAssertTrue(preview.waitForExistence(timeout: 15), "Fixture render did not remain visible after vertical-gap change.")
+        attach(app, "12-shared-compose-vertical-gap")
+    }
+
     /// Documents the S4d-57-proven capability without asserting the blocked selection step:
     /// the out-of-process PHPicker OPENS from the app. Kept green (no selection assertion).
     func testPhotosPickerOpens() {

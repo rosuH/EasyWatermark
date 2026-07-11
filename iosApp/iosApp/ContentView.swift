@@ -295,6 +295,41 @@ private struct SharedComposeWatermarkHorizontalGapControl: UIViewControllerRepre
     }
 }
 
+private struct SharedComposeWatermarkVerticalGapControl: UIViewControllerRepresentable {
+    let verticalGap: Int32
+    let workflow: WatermarkWorkflow
+
+    final class Coordinator {
+        weak var workflow: WatermarkWorkflow?
+        lazy var host = IosWatermarkVerticalGapSliderHost(onValueChangeFinished: { [weak self] gap in
+            self?.setWatermarkVerticalGap(Int32(gap.floatValue))
+        })
+
+        init(workflow: WatermarkWorkflow) {
+            self.workflow = workflow
+        }
+
+        func setWatermarkVerticalGap(_ gap: Int32) {
+            Task { @MainActor [weak workflow] in
+                guard let workflow else { return }
+                await workflow.setWatermarkVGap(gap)
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(workflow: workflow) }
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        context.coordinator.host.update(verticalGap: verticalGap)
+        return context.coordinator.host.viewController()
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        context.coordinator.workflow = workflow
+        context.coordinator.host.update(verticalGap: verticalGap)
+    }
+}
+
 #if DEBUG
 private struct SharedComposeLaunchShellWitness: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
@@ -340,9 +375,6 @@ struct ContentView: View {
     @State private var pickedIconItem: PhotosPickerItem?
     /// S4d-102: editable draft of the watermark text; applied to the shared `WaterMarkRepository`.
     @State private var draftText: String = ""
-    /// S4d-110: editable drafts of the watermark h/v gaps; applied to the shared `WaterMarkRepository`.
-    @State private var draftVGap: Double = 0
-
 #if DEBUG
     private var showSharedComposeWitnesses: Bool {
         ProcessInfo.processInfo.arguments.contains("-sharedComposeWitnesses")
@@ -487,10 +519,9 @@ struct ContentView: View {
                 .accessibilityIdentifier("sharedComposeTextSize")
                 .accessibilityLabel("Text size \(Int(workflow.watermarkTextSize))")
 
-            // S4d-110: edit the watermark horizontal/vertical gaps through the same shared editor path.
-            // Commits on release. Range matches the shared clamp (0…500). Minimal control — not 1:1 UI.
+            // S4d-336: shared CMP controls; Swift keeps each workflow write and rerender boundary.
             VStack(spacing: 4) {
-                Text("Gaps: H \(workflow.watermarkHGap)  V \(Int(draftVGap))")
+                Text("Gaps: H \(workflow.watermarkHGap)  V \(workflow.watermarkVGap)")
                     .font(.caption)
                     .accessibilityIdentifier("watermarkGapLabel")
                 // S4d-335: shared CMP control; Swift retains the workflow write and rerender boundary.
@@ -501,10 +532,13 @@ struct ContentView: View {
                 .frame(height: 72)
                 .accessibilityIdentifier("sharedComposeWatermarkHGap")
                 .accessibilityLabel("Horizontal gap \(workflow.watermarkHGap)")
-                Slider(value: $draftVGap, in: 0...500, step: 1) { editing in
-                    if !editing { Task { await workflow.setWatermarkVGap(Int32(draftVGap)) } }
-                }
-                .accessibilityIdentifier("watermarkVGapSlider")
+                SharedComposeWatermarkVerticalGapControl(
+                    verticalGap: workflow.watermarkVGap,
+                    workflow: workflow,
+                )
+                .frame(height: 72)
+                .accessibilityIdentifier("sharedComposeWatermarkVGap")
+                .accessibilityLabel("Vertical gap \(workflow.watermarkVGap)")
             }
 
             // S4d-331: shared CMP control; Swift keeps the workflow write and rerender boundary.
@@ -590,7 +624,6 @@ struct ContentView: View {
             await workflow.loadWatermarkTextColor()
             await workflow.loadWatermarkTextSize()
             await workflow.loadWatermarkGaps()
-            draftVGap = Double(workflow.watermarkVGap)
             await workflow.loadWatermarkTypeface()
             await workflow.loadWatermarkTextStyle()
             await workflow.loadWatermarkMarkMode()
