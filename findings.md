@@ -1,11 +1,19 @@
 # Compose Migration Findings
 
+## Existing shared template sheet is fully S4d-338-blocked on iOS (S4d-346, 2026-07-11)
+
+- `EditorTemplateSheetHost` / `TemplateListSheet` is **not** a safe iOS production drop-in under the current Compose/Skiko mix. The sheet uses **all three** S4d-338 crash families: `ModalBottomSheet` (list + edit), Compose `AlertDialog` (use/delete confirms), and focused `OutlinedTextField` (add/edit).
+- Hiding Add/Edit is **not** a narrow escape — list + confirms still require sheet/dialog CMP APIs.
+- **Retain** the proven SwiftUI Templates section + `IosTemplateBridge` until owner Compose/Skiko alignment reopens S4d-338, or a **new** list-only shared API without sheet/dialog/text is explicitly designed.
+- Domain/persist already shared (`TemplateEditor` / Room); the gap is CMP UI packaging, not templates data.
+- Read-only readiness only: Kimi + OpenCode PASS; no build gate applies; no product code change from this decision.
+
 ## A0 production-only matrix before parallel lane work (S4d-345, 2026-07-11)
 
 - Classify surfaces from **production** consumers only (Android Nav wrappers, Desktop window, iOS ContentView hosts). DEBUG witnesses, tests, and theoretical callers do not make a shared root “done” on a platform.
 - **A4 is not automatic after A0:** the three editors (`WatermarkConfigEditor`, `OutputPrefsEditor`, `TemplateEditor`) already have multi-platform production consumers; no *new* pure extraction qualifies under §6.12 (≥2 named production platforms, no platform types) until a residual creates a real dual consumer. Do not invent a shared ViewModel.
-- **S4d-338 is lane-local:** it blocks iOS focused CMP text / full-root text embedding only — not A1 thinning, A2 optional roots, non-text A3 controls, or template work that avoids focused `OutlinedTextField`.
-- Residual dependency order after A0: **A1 → A2 optional → A3 iOS root/templates → A4 only if dual consumer appears → A5**. Not Phase A/B/parity complete.
+- **S4d-338 is broader than “text only” for some shared surfaces:** any host that embeds Material3 `ModalBottomSheet` / default-inset `Dialog` / focused `OutlinedTextField` is blocked on iOS until dependency alignment (templates sheet = full NO-GO; watermark text field = still blocked).
+- Residual dependency order after A0/S4d-346: **A1 → A2 optional → A3 non-text/non-sheet iOS roots (e.g. About readiness) → A4 only if dual consumer appears → A5**. Not Phase A/B/parity complete.
 
 ## Independent primary/secondary enables on shared output actions (S4d-344, 2026-07-11)
 

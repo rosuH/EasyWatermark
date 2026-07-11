@@ -1185,3 +1185,10 @@ Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; 
 - **S4d-338:** owner block remains **lane-local** to iOS focused CMP text / full-root text path only.
 - **Residual order:** A1 Android wrapper thinning → A2 optional Desktop product roots → A3 iOS editor root/templates → A4 only if a real dual consumer appears → A5. **Not** Phase A complete; **not** Phase B; **not** 1:1 parity.
 - **Verification:** read-only mapping; `git diff --check` clean on matrix file; two-axis review PASS (structure vs production code; consumer-first / hard-edge correctness). No code/build/dependency mutation. Protected untracked `2026-07-11-project-branch-goals-progress.md` not touched. **Next:** A1 wrapper thinning (or parallel non-text A3 / optional A2).
+
+## 2026-07-11 — S4d-346 iOS shared templates-sheet readiness NO-GO (accepted)
+
+- **S4d-346:** read-only readiness at `docs/superpowers/research/2026-07-11-s4d346-ios-template-sheet-readiness.md`. Source-verified against `EditorTemplateSheetHost` / `TemplateListSheet`, Android `EditorScreen` + Desktop `DesktopWindow` production call sites, iOS SwiftUI Templates + `WatermarkWorkflow` / `IosTemplateBridge`, and `testTemplatesSaveApplyDelete`.
+- **Decision: NO-GO** for wiring iOS production to the **existing** shared host/sheet. Sheet packages S4d-338 runtime crash families: `ModalBottomSheet`, Compose `Dialog`/`AlertDialog`, and focused `OutlinedTextField`. Hiding Add/Edit does not clear list sheet or confirms. **Retain SwiftUI Templates** (List / Use / Delete / Save current already proven). No code, dependency, persistence, renderer, or product UI change.
+- **Reviews / verification:** Kimi and OpenCode read-only reviews **PASS**. `git diff --check` clean on readiness note. **No build** applies (read-only evidence only). Not Phase A/B/parity complete.
+- **Next: S4d-347** bounded iOS About production-root readiness investigation — no shared CMP text/sheet/dialog; verify current host/root/routes before any implementation code.
