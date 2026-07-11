@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
+import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.render.IosImageDecoder
 import me.rosuh.easywatermark.ui.about.AboutDevCard
@@ -28,6 +29,8 @@ import me.rosuh.easywatermark.ui.about.AboutScreenShell
 import me.rosuh.easywatermark.ui.about.AboutScreenStrings
 import me.rosuh.easywatermark.ui.compose.TileMode
 import me.rosuh.easywatermark.ui.compose.TileModeLabels
+import me.rosuh.easywatermark.ui.compose.TextPaintStyleLabels
+import me.rosuh.easywatermark.ui.compose.TextPaintStyleOption
 import me.rosuh.easywatermark.ui.save.SavePreviewStatus
 import me.rosuh.easywatermark.ui.theme.AppTheme
 import platform.UIKit.UIViewController
@@ -95,6 +98,31 @@ class IosWatermarkTileModeHost(
 
     fun update(mode: WatermarkTileMode) {
         this.mode = mode
+    }
+}
+
+/** Production host for the shared text-style control; Swift still owns workflow writes and re-rendering. */
+class IosTextPaintStyleHost(
+    private val onValueChange: (TextPaintStyle) -> Unit,
+) {
+    private var style: TextPaintStyle by mutableStateOf(TextPaintStyle.Fill)
+
+    fun viewController(): UIViewController = ComposeUIViewController {
+        AppTheme {
+            TextPaintStyleOption(
+                labels = TextPaintStyleLabels(fill = "Fill", stroke = "Stroke"),
+                style = style,
+                modifier = Modifier.fillMaxWidth(),
+                onValueChange = { selectedStyle ->
+                    style = selectedStyle
+                    onValueChange(selectedStyle)
+                },
+            )
+        }
+    }
+
+    fun update(style: TextPaintStyle) {
+        this.style = style
     }
 }
 

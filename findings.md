@@ -1,5 +1,12 @@
 # Compose Migration Findings
 
+## Keep the real persisted iOS style state at the Swift accessibility edge (S4d-330, 2026-07-11)
+
+- A normal `UIViewControllerRepresentable` can consume commonMain `TextPaintStyleOption` without moving `WatermarkWorkflow`, DataStore, or re-rendering across the platform boundary: the Kotlin host receives a `TextPaintStyle`, and its one output lambda passes `serializeKey()` to the existing Swift workflow method.
+- On this Compose UIKit version, the segmented items export distinguishable text after caller labels are added as semantics, but not an XCUITest selected trait. Bind the wrapper accessibility label to the workflow's persisted `watermarkTextStyleKey`, which changes only after the existing write succeeds; do not add a test-only selection mirror.
+- `mutableStateOf(TextPaintStyle.Fill)` infers the singleton subtype. State that can later hold `Stroke` must be explicitly typed as `TextPaintStyle`.
+- The viewed normal-flow screenshots prove only the Phase A shared-consumer layout and interaction. Material3 typography, colour, dynamic type, dark mode, localization, and Android v2.10.0 visual parity remain Phase B work.
+
 ## Surface actual iOS mode state at the platform accessibility edge (S4d-329, 2026-07-11)
 
 - A normal iOS `UIViewControllerRepresentable` can be a real consumer of commonMain `TileMode` while Swift retains the `WatermarkWorkflow` write/rerender boundary. A Kotlin constructor lambda is sufficient for this one event; retain the host in a coordinator and capture that coordinator weakly from the lambda so the host, Kotlin block, and Swift workflow cannot form a cycle.

@@ -72,6 +72,41 @@ private struct SharedComposeTileModeControl: UIViewControllerRepresentable {
     }
 }
 
+private struct SharedComposeTextPaintStyleControl: UIViewControllerRepresentable {
+    let styleKey: Int32
+    let workflow: WatermarkWorkflow
+
+    final class Coordinator {
+        weak var workflow: WatermarkWorkflow?
+        lazy var host = IosTextPaintStyleHost(onValueChange: { [weak self] selectedStyle in
+            self?.setTextPaintStyle(selectedStyle)
+        })
+
+        init(workflow: WatermarkWorkflow) {
+            self.workflow = workflow
+        }
+
+        func setTextPaintStyle(_ style: TextPaintStyle) {
+            Task { @MainActor [weak workflow] in
+                guard let workflow else { return }
+                await workflow.setWatermarkTextStyle(style.serializeKey())
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(workflow: workflow) }
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        context.coordinator.host.update(style: TextPaintStyle.companion.obtainSealedClass(key: styleKey))
+        return context.coordinator.host.viewController()
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        context.coordinator.workflow = workflow
+        context.coordinator.host.update(style: TextPaintStyle.companion.obtainSealedClass(key: styleKey))
+    }
+}
+
 #if DEBUG
 private struct SharedComposeLaunchShellWitness: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
@@ -322,19 +357,11 @@ struct ContentView: View {
             .pickerStyle(.segmented)
             .accessibilityIdentifier("watermarkTypefacePicker")
 
-            // S4d-113: pick the text paint style through the same shared editor path. Tags are the storage-id
-            // keys (0=Fill,1=Stroke). Bound straight to the workflow (its `set` persists + re-renders), so
-            // there is no spurious launch write. Default Fill preserves the current filled output; Stroke is
-            // a Compose hairline outline (perceptual, not 1:1 with Android's Paint.Style.STROKE).
-            Picker("Style", selection: Binding(
-                get: { workflow.watermarkTextStyleKey },
-                set: { newKey in Task { await workflow.setWatermarkTextStyle(newKey) } }
-            )) {
-                Text("Fill").tag(Int32(0))
-                Text("Stroke").tag(Int32(1))
-            }
-            .pickerStyle(.segmented)
-            .accessibilityIdentifier("watermarkTextStylePicker")
+            // S4d-330: shared CMP control; Swift keeps the workflow write and rerender boundary.
+            SharedComposeTextPaintStyleControl(styleKey: workflow.watermarkTextStyleKey, workflow: workflow)
+                .frame(height: 40)
+                .accessibilityIdentifier("sharedComposeTextPaintStyle")
+                .accessibilityLabel(workflow.watermarkTextStyleKey == 1 ? "Text style Stroke" : "Text style Fill")
 
             if let png = workflow.resultPNG {
                 SharedComposeWatermarkPreview(png: png, status: renderedPreviewStatus)

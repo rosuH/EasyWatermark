@@ -101,6 +101,42 @@ final class PickerFlowUITests: XCTestCase {
         attach(app, "05-shared-compose-tile-single")
     }
 
+    /// S4d-330: the normal iOS text-style picker is now a shared CMP control that still writes through
+    /// WatermarkWorkflow and re-renders the fixture image.
+    func testSharedComposeTextPaintStyleChanges() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestFixtureImage", "1"]
+        app.launch()
+
+        let control = app.descendants(matching: .any)["sharedComposeTextPaintStyle"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 20),
+                      "Production shared text-style control did not appear.")
+
+        let fill = app.staticTexts.matching(NSPredicate(format: "label == %@", "Fill")).firstMatch
+        XCTAssertTrue(scrollUntilHittable(fill, in: app, timeout: 10), "Fill text-style choice was not reachable.")
+        fill.tap()
+        let fillSelected = expectation(for: NSPredicate(format: "label == %@", "Text style Fill"), evaluatedWith: control, handler: nil)
+        wait(for: [fillSelected], timeout: 15)
+
+        let stroke = app.staticTexts.matching(NSPredicate(format: "label == %@", "Stroke")).firstMatch
+        XCTAssertTrue(scrollUntilHittable(stroke, in: app, timeout: 10), "Stroke text-style choice was not reachable.")
+        stroke.tap()
+        let strokeSelected = expectation(for: NSPredicate(format: "label == %@", "Text style Stroke"), evaluatedWith: control, handler: nil)
+        wait(for: [strokeSelected], timeout: 15)
+
+        // Reload through the existing app entry to prove the Swift workflow write persisted and fed the
+        // current style back into the production CMP host.
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(control.waitForExistence(timeout: 20),
+                      "Production shared text-style control did not reappear after reload.")
+        let persistedStroke = expectation(for: NSPredicate(format: "label == %@", "Text style Stroke"), evaluatedWith: control, handler: nil)
+        wait(for: [persistedStroke], timeout: 20)
+        let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
+        XCTAssertTrue(preview.waitForExistence(timeout: 15), "Fixture render did not remain visible after text-style change.")
+        attach(app, "06-shared-compose-text-style-stroke")
+    }
+
     /// Documents the S4d-57-proven capability without asserting the blocked selection step:
     /// the out-of-process PHPicker OPENS from the app. Kept green (no selection assertion).
     func testPhotosPickerOpens() {
