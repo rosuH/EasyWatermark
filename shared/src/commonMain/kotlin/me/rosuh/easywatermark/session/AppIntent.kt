@@ -2,7 +2,9 @@ package me.rosuh.easywatermark.session
 
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
+import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkConfigChange
 import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.ui.Image
 
@@ -62,4 +64,11 @@ sealed class AppIntent {
     data class RequestExport(val images: List<ImageInfo>) : AppIntent()
 
     data object CancelExport : AppIntent()
+
+    /** Typed watermark config edit (Phase 5 — shared editor path). */
+    data class ApplyConfig(val change: WatermarkConfigChange) : AppIntent()
+
+    data class ApplyTextStyle(val style: TextPaintStyle) : AppIntent()
+
+    data class ApplyOffset(val info: ImageInfo) : AppIntent()
 }

@@ -116,6 +116,14 @@ private fun LogoView(modifier: Modifier = Modifier, startLogoAnimation: Boolean)
     }, modifier = modifier)
 }
 
+/**
+ * Android UI edge actions (ADR-0017 Phase 5).
+ *
+ * Carries [Uri]/[ContentResolver]/[FuncTitleModel] and is mapped once in
+ * [MainViewModel.process] → shared [me.rosuh.easywatermark.session.AppIntent].
+ * Prefer [AppIntent] for new hosts; do not grow this sealed hierarchy without an
+ * Android-only type that cannot live in commonMain.
+ */
 sealed class Action {
     data class DialogDismiss(val isSelected: Boolean) : Action()
 
@@ -130,7 +138,6 @@ sealed class Action {
     data class WaterMarkChange(val item: FuncTitleModel, val any: Any) : Action()
 
     data class EditorImageSelected(val image: ImageInfo) : Action()
-
 }
 
 @OptIn(ExperimentalPermissionsApi::class)

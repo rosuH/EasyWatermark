@@ -111,4 +111,14 @@ class SessionReducerTest {
             ).snapshot.dialogUi,
         )
     }
+
+    @Test
+    fun applyConfig_isNoOpOnUiSnapshot() {
+        val r = reduceSessionUi(
+            SessionUiSnapshot(),
+            AppIntent.ApplyConfig(me.rosuh.easywatermark.data.model.WatermarkConfigChange.Text("x")),
+        )
+        assertEquals(LaunchScreenUiState.Launch, r.snapshot.launch.uiState)
+        assertTrue(r.effects.isEmpty())
+    }
 }

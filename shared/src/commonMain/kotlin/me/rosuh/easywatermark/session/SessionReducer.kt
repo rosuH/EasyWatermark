@@ -176,7 +176,12 @@ fun reduceSessionUi(snapshot: SessionUiSnapshot, intent: AppIntent): SessionRedu
             )
         }
 
-        // Export orchestration is handled in WatermarkSessionViewModel (not pure UI reduce).
-        is AppIntent.RequestExport, AppIntent.CancelExport -> SessionReduceResult(snapshot)
+        // Side-effect intents handled in WatermarkSessionViewModel (not pure UI reduce).
+        is AppIntent.RequestExport,
+        AppIntent.CancelExport,
+        is AppIntent.ApplyConfig,
+        is AppIntent.ApplyTextStyle,
+        is AppIntent.ApplyOffset,
+        -> SessionReduceResult(snapshot)
     }
 }

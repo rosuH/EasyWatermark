@@ -16,10 +16,13 @@ import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.JobState
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.Result
+import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkConfigChange
 import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
+import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.ui.Image
 import me.rosuh.easywatermark.ui.LaunchScreenState
 import me.rosuh.easywatermark.ui.UiState
@@ -38,6 +41,9 @@ open class WatermarkSessionViewModel(
     protected val userConfigRepo: UserConfigRepository,
     exportPipeline: ExportPipelinePort? = null,
 ) : ViewModel() {
+
+    /** Shared config editor (Phase 5); Android hosts no longer own the update* loop. */
+    protected val configEditor = WatermarkConfigEditor(waterMarkRepo)
 
     private val _uiState: MutableStateFlow<UiState> = MutableStateFlow(UiState.None)
     val uiStateFlow: StateFlow<UiState> = _uiState.asStateFlow()
@@ -98,6 +104,15 @@ open class WatermarkSessionViewModel(
                 exportJob?.cancel()
                 exportJob = null
             }
+            is AppIntent.ApplyConfig -> {
+                applyConfigChange(intent.change)
+            }
+            is AppIntent.ApplyTextStyle -> {
+                configEditor.updateTextStyle(intent.style)
+            }
+            is AppIntent.ApplyOffset -> {
+                configEditor.updateOffset(intent.info)
+            }
             else -> {
                 sessionMutex.withLock {
                     val before = SessionUiSnapshot(
@@ -112,6 +127,21 @@ open class WatermarkSessionViewModel(
                     }
                 }
             }
+        }
+    }
+
+    private suspend fun applyConfigChange(change: WatermarkConfigChange) {
+        when (change) {
+            is WatermarkConfigChange.Text -> configEditor.updateText(change.text)
+            is WatermarkConfigChange.Icon -> configEditor.updateIcon(change.icon)
+            is WatermarkConfigChange.Color -> configEditor.updateTextColor(change.color)
+            is WatermarkConfigChange.AlphaPercent -> configEditor.updateAlpha(change.percent)
+            is WatermarkConfigChange.Degree -> configEditor.updateDegree(change.degree)
+            is WatermarkConfigChange.TextSize -> configEditor.updateTextSize(change.size)
+            is WatermarkConfigChange.Typeface -> configEditor.updateTextTypeface(change.typeface)
+            is WatermarkConfigChange.TileMode -> configEditor.updateTileMode(change.tileMode)
+            is WatermarkConfigChange.HorizontalGap -> configEditor.updateHorizon(change.gap)
+            is WatermarkConfigChange.VerticalGap -> configEditor.updateVertical(change.gap)
         }
     }
 
@@ -248,4 +278,10 @@ open class WatermarkSessionViewModel(
         gallerySnapshot: List<Image> = emptyList(),
         waterMark: WaterMark = _launchScreenUiStateFlow.value.waterMark,
     ) = dispatch(AppIntent.EnterEditor(selected, gallerySnapshot, waterMark))
+
+    fun applyConfig(change: WatermarkConfigChange) = dispatch(AppIntent.ApplyConfig(change))
+
+    fun applyTextStyle(style: TextPaintStyle) = dispatch(AppIntent.ApplyTextStyle(style))
+
+    fun applyOffset(info: ImageInfo) = dispatch(AppIntent.ApplyOffset(info))
 }

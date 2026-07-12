@@ -272,11 +272,12 @@ Each phase: commonTest for pure reduce/orchestrate + Android smoke + one off-And
 
 ### Phase 5 — Retire Android-only VM bulk + Action
 
-- [ ] Delete portable logic left only in `app` `MainViewModel`  
-- [ ] Retire or edge-alias `Action`  
-- [ ] AGENTS.md / CONTEXT.md: shared VM + CMP-first + ports as architecture of record  
+- [x] Config `update*` → shared `AppIntent.ApplyConfig` / `WatermarkConfigEditor` on session VM  
+- [x] `Action` documented as Android edge adapter only (no growth without Android-only types)  
+- [x] System-picker path extracted; MediaStore/compress/crash remain intentional Android edges  
+- [x] MainViewModel ~523 lines (from ~1k pre-session / ~593 post-export); unit+desktop green  
 
-**Exit:** Android host is factory + Android-only edges (compress/crash if still product); session logic shared.
+**Exit:** Android host is edge + Koin shell; session owns config/nav/export orchestration.
 
 ### Explicitly later / optional
 

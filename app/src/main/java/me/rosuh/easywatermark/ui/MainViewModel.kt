@@ -43,7 +43,6 @@ import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.domain.OutputPrefsEditor
 import me.rosuh.easywatermark.domain.TemplateEditor
-import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.session.AndroidExportPipelinePort
 import me.rosuh.easywatermark.session.AppIntent
 import me.rosuh.easywatermark.session.ExportErrorCodes
@@ -60,9 +59,9 @@ import java.io.File
 typealias SaveExportUiState = ExportJobState
 
 /**
- * Android product host (ADR-0017 Phase 1–2): extends shared [WatermarkSessionViewModel] for
- * launch/gallery/editor session + export orchestration; [AndroidExportPipelinePort] wraps native
- * generateImage; compress/crash remain Android-only edges.
+ * Android product host (ADR-0017 Phase 1–5): thin edge over shared [WatermarkSessionViewModel].
+ * Owns MediaStore gallery query, compress, crash export, and maps legacy [Action] → [AppIntent].
+ * Config edits go through session [applyConfig]; export through [AndroidExportPipelinePort].
  */
 class MainViewModel (
     private val userRepo: UserConfigRepository,
@@ -74,12 +73,7 @@ class MainViewModel (
     userConfigRepo = userRepo,
 ) {
 
-    // S4d-96: the neutral watermark config-edit logic now lives in the commonMain use-case; this VM
-    // just owns the coroutine scope and delegates. Built from the already-injected repo (no DI change).
-    private val configEditor = WatermarkConfigEditor(waterMarkRepo)
-
-    // S4d-97: the output-preference write (format + compress level) lives in a commonMain use-case too,
-    // built from the already-injected user repo (no DI change).
+    // S4d-97: output-preference write use-case (still Android-hosted launch wrapper).
     private val outputPrefsEditor = OutputPrefsEditor(userRepo)
 
     // S4d-98: template add/update/delete business logic lives in a commonMain use-case; the VM keeps
@@ -196,77 +190,39 @@ class MainViewModel (
                 }
         }
 
-    fun updateText(text: String) {
-        launch {
-            configEditor.updateText(text)
-        }
-    }
+    fun updateText(text: String) =
+        applyConfig(WatermarkConfigChange.Text(text))
 
-    fun updateTextSize(textSize: Float) {
-        launch {
-            configEditor.updateTextSize(textSize)
-        }
-    }
+    fun updateTextSize(textSize: Float) =
+        applyConfig(WatermarkConfigChange.TextSize(textSize))
 
-    fun updateTextColor(color: Int) {
-        launch {
-            configEditor.updateTextColor(color)
-        }
-    }
+    fun updateTextColor(color: Int) =
+        applyConfig(WatermarkConfigChange.Color(color))
 
-    fun updateTextStyle(style: TextPaintStyle) {
-        launch {
-            configEditor.updateTextStyle(style)
-        }
-    }
+    fun updateTextStyle(style: TextPaintStyle) = applyTextStyle(style)
 
-    fun updateTextTypeface(typeface: TextTypeface) {
-        launch {
-            configEditor.updateTextTypeface(typeface)
-        }
-    }
+    fun updateTextTypeface(typeface: TextTypeface) =
+        applyConfig(WatermarkConfigChange.Typeface(typeface))
 
-    fun updateAlpha(alpha: Float) {
-        launch {
-            configEditor.updateAlpha(alpha)
-        }
-    }
+    fun updateAlpha(alpha: Float) =
+        applyConfig(WatermarkConfigChange.AlphaPercent(alpha))
 
-    fun updateHorizon(gap: Int) {
-        launch {
-            configEditor.updateHorizon(gap)
-        }
-    }
+    fun updateHorizon(gap: Int) =
+        applyConfig(WatermarkConfigChange.HorizontalGap(gap))
 
-    fun updateVertical(gap: Int) {
-        launch {
-            configEditor.updateVertical(gap)
-        }
-    }
+    fun updateVertical(gap: Int) =
+        applyConfig(WatermarkConfigChange.VerticalGap(gap))
 
-    fun updateDegree(degree: Float) {
-        launch {
-            configEditor.updateDegree(degree)
-        }
-    }
+    fun updateDegree(degree: Float) =
+        applyConfig(WatermarkConfigChange.Degree(degree))
 
-    fun updateIcon(iconUri: MediaRef) {
-        launch {
-            configEditor.updateIcon(iconUri)
-        }
-    }
+    fun updateIcon(iconUri: MediaRef) =
+        applyConfig(WatermarkConfigChange.Icon(iconUri))
 
-    fun updateTileMode(tileMode: WatermarkTileMode) {
-        launch {
-            configEditor.updateTileMode(tileMode)
-        }
-    }
+    fun updateTileMode(tileMode: WatermarkTileMode) =
+        applyConfig(WatermarkConfigChange.TileMode(tileMode))
 
-    fun updateOffset(info: ImageInfo) {
-        launch {
-            configEditor.updateOffset(info)
-        }
-    }
+    fun updateOffset(info: ImageInfo) = applyOffset(info)
 
     fun saveOutput(
         format: ImageFormat = _userPreferences.value.outputFormat,
@@ -492,9 +448,8 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
             }
 
             is Action.WaterMarkChange -> {
-                launch {
-                    onWaterMarkChanged(action.item, action.any)
-                }
+                // Edge: FuncTitleModel + raw value → shared typed config command.
+                applyConfig(WatermarkConfigChange.from(action.item.type, action.any))
             }
 
             is Action.EditorImageSelected -> {
@@ -503,84 +458,59 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
 
             is Action.SystemPickerImageSelected -> {
                 launch(Dispatchers.Default) {
-                    val newList = action.uriList
-                    // map the uri to image (MediaStore metadata for gallerySnapshot optional)
-                    val imageList = ArrayList<Image>()
-                    val selection = "${MediaStore.Images.Media._ID} IN (${newList.joinToString(",") { "?" }})"
-                    val selectionArgs = newList.map { ContentUris.parseId(it).toString() }.toTypedArray()
-                    applicationContext.contentResolver.query(
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                        projection,
-                        selection,
-                        selectionArgs,
-                        (if (Build.VERSION.SDK_INT > 28) MediaStore.Images.Media.DATE_MODIFIED else MediaStore.Images.Media.DATE_TAKEN) + " DESC"
-                    )?.use { cursor ->
-                        val imageIdColumn = cursor.getColumnIndex(MediaStore.Images.Media._ID)
-                        val bucketNameColumn =
-                            cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
-                        val dataColumn = cursor.getColumnIndex(MediaStore.Images.Media.DATA)
-                        val dateColumn =
-                            cursor.getColumnIndex(if (Build.VERSION.SDK_INT > 28) MediaStore.Images.Media.DATE_MODIFIED else MediaStore.Images.Media.DATE_TAKEN)
-                        val sizeColumn = cursor.getColumnIndex(MediaStore.Images.Media.SIZE)
-
-                        while (cursor.moveToNext()) {
-                            val path = cursor.getString(dataColumn)
-                            if (path.isNullOrBlank()) {
-                                continue
-                            }
-
-                            val imageId = cursor.getInt(imageIdColumn)
-                            val bucketName =
-                                cursor.getString(bucketNameColumn) ?: ""
-                            val dateTaken = cursor.getLong(dateColumn)
-                            val size = cursor.getLong(sizeColumn)
-
-                            val contentUri: Uri = ContentUris.withAppendedId(
-                                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                                imageId.toLong()
-                            )
-
-                            val image = Image(
-                                imageId,
-                                contentUri.toMediaRef(),
-                                bucketName,
-                                size,
-                                dateTaken,
-                                check = true
-                            )
-                            imageList += image
-                        }
-                    }
-                    val imageInfoList = newList.map {
-                        ImageInfo(it.toMediaRef())
-                    }
-                    enterEditor(
-                        selected = imageInfoList,
-                        gallerySnapshot = imageList,
-                        waterMark = waterMarkFlow.value,
-                    )
+                    enterEditorFromSystemUris(action.uriList)
                 }
             }
         }
     }
 
-    private fun onWaterMarkChanged(item: FuncTitleModel, any: Any) {
-        // S4d-72: map (FuncType, raw value) to a typed command at one shared boundary
-        // (WatermarkConfigChange.from — fail-fast casts + gap rounding live there), then dispatch the
-        // typed command to the existing update* methods (unchanged behavior source).
-        when (val change = WatermarkConfigChange.from(item.type, any)) {
-            is WatermarkConfigChange.Text -> updateText(change.text)
-            // S4d-50: IconOption converts the picker Uri to MediaRef at the edge; here it is already MediaRef.
-            is WatermarkConfigChange.Icon -> updateIcon(change.icon)
-            is WatermarkConfigChange.Color -> updateTextColor(change.color)
-            is WatermarkConfigChange.AlphaPercent -> updateAlpha(change.percent)
-            is WatermarkConfigChange.Degree -> updateDegree(change.degree)
-            is WatermarkConfigChange.TextSize -> updateTextSize(change.size)
-            is WatermarkConfigChange.Typeface -> updateTextTypeface(change.typeface)
-            is WatermarkConfigChange.TileMode -> updateTileMode(change.tileMode)
-            is WatermarkConfigChange.HorizontalGap -> updateHorizon(change.gap)
-            is WatermarkConfigChange.VerticalGap -> updateVertical(change.gap)
+    /** MediaStore enrichment for system Photo Picker URIs (Android edge only). */
+    private suspend fun enterEditorFromSystemUris(uriList: List<Uri>) {
+        val imageList = ArrayList<Image>()
+        val selection = "${MediaStore.Images.Media._ID} IN (${uriList.joinToString(",") { "?" }})"
+        val selectionArgs = uriList.map { ContentUris.parseId(it).toString() }.toTypedArray()
+        applicationContext.contentResolver.query(
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            projection,
+            selection,
+            selectionArgs,
+            (if (Build.VERSION.SDK_INT > 28) MediaStore.Images.Media.DATE_MODIFIED else MediaStore.Images.Media.DATE_TAKEN) + " DESC"
+        )?.use { cursor ->
+            val imageIdColumn = cursor.getColumnIndex(MediaStore.Images.Media._ID)
+            val bucketNameColumn =
+                cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
+            val dataColumn = cursor.getColumnIndex(MediaStore.Images.Media.DATA)
+            val dateColumn =
+                cursor.getColumnIndex(if (Build.VERSION.SDK_INT > 28) MediaStore.Images.Media.DATE_MODIFIED else MediaStore.Images.Media.DATE_TAKEN)
+            val sizeColumn = cursor.getColumnIndex(MediaStore.Images.Media.SIZE)
+
+            while (cursor.moveToNext()) {
+                val path = cursor.getString(dataColumn)
+                if (path.isNullOrBlank()) continue
+                val imageId = cursor.getInt(imageIdColumn)
+                val bucketName = cursor.getString(bucketNameColumn) ?: ""
+                val dateTaken = cursor.getLong(dateColumn)
+                val size = cursor.getLong(sizeColumn)
+                val contentUri: Uri = ContentUris.withAppendedId(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    imageId.toLong(),
+                )
+                imageList += Image(
+                    imageId,
+                    contentUri.toMediaRef(),
+                    bucketName,
+                    size,
+                    dateTaken,
+                    check = true,
+                )
+            }
         }
+        val imageInfoList = uriList.map { ImageInfo(it.toMediaRef()) }
+        enterEditor(
+            selected = imageInfoList,
+            gallerySnapshot = imageList,
+            waterMark = waterMarkFlow.value,
+        )
     }
 
     companion object {
