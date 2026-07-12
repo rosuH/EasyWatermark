@@ -20,7 +20,7 @@
 | Surface (Android product) | Desktop Phase A | Classification | Reason / evidence |
 |---------------------------|-----------------|---------------|-------------------|
 | **Launch screen** | **Absent** | Platform window entry | No-arg `:desktopApp:run` opens `Window` titled `EasyWatermark — Desktop` via `launchDesktopWindow()` (`DesktopWindow.kt`). No `LaunchScreenShell` product route. |
-| **Gallery dialog** | **Absent** | File-dialog / drag-drop edge | Image input via AWT `FileDialog` multi-select (`Open image…`) + drag/drop multi-file (`supportedImageFiles` → sequential save). No `GalleryDialogShell`. |
+| **Gallery dialog** | **Absent** | File-dialog / drag-drop edge | Image input via AWT `FileDialog` multi-select (`Open image…`) + drag/drop multi-file (`supportedImageFiles` → sequential save). No `GalleryDialogShell`. **Owner 2026-07-12:** Desktop (like iOS) **defaults to system pick**, not in-app gallery — see `docs/parity/v2.10.0/protocol/image-pick-policy.md`. |
 | **Editor** | **Present (shared CMP)** | Product route of record | `EditorScreenShell` + shared options (`TextContentOption`, sliders, tile/typeface/style, color, templates sheet, save/share actions). `showPhotoStrip` not Android multi-photo strip — Desktop source is last opened/dropped file(s). |
 | **About** | **Absent** | Phase A exception | No `AboutScreenShell` in `desktopApp`. No `AboutViewModel` consumer. Do not invent for matrix symmetry (ticket text). |
 | **Share** | **Substitute edge** | OS / file edge | Last real-save file drives share-substitute actions (`SavedOutputActions`); not Android `Intent` share. Preview temp excluded from share state. |

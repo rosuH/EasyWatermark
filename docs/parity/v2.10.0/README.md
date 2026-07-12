@@ -8,6 +8,8 @@
 This tree holds **inventory + capture protocol + screenshot/recording evidence**.  
 It does **not** claim owner screen sign-off. Tickets **07/08** own sign-off.
 
+**Git tracking:** `docs/parity/**/captures/` is **tracked**. Root `.gitignore` only ignores `/captures/` (Android Studio). If a tool still greys out these files, refresh ignore indexes; files are in git (`git ls-files docs/parity/v2.10.0/captures`).
+
 ## Layout
 
 ```

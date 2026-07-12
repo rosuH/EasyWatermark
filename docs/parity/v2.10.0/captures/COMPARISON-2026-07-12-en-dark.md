@@ -30,14 +30,16 @@
 
 **Verdict (agent):** structurally close. **Logo color tint** is a visible delta. Owner may accept or request token alignment.
 
-### Gallery — path mismatch (P0)
+### Gallery — path mismatch (P0) — **owner policy recorded 2026-07-12**
 
-| Observation | Prod | Debug |
-|-------------|------|-------|
+| Observation | Prod (this capture session) | Debug |
+|-------------|----------------------------|-------|
 | After “Choose Images” | **System Photo Picker** (`com.google.android.photopicker`) with Photos/Albums chips + privacy banner | **In-app GalleryDialog** title **“Choose picture”**, X close, search icon, 4-col grid with empty selection circles |
 | Multi-select confirm | system **Done** + count | bottom floating **✓ 1** / add |
 
-**Verdict (agent):** **not 1:1.** Debug still ships product in-app gallery; production on this API/device entry path is system Photo Picker. Needs owner decision: restore/debug Photo Picker edge vs force in-app gallery on both, or document as intentional API-gated edge.
+**Owner product policy (binding):** Android **prioritizes in-app gallery**; **top-right** gallery action opens **system Photo Picker**. iOS/Desktop default to system picker / file dialog. See `protocol/image-pick-policy.md`.
+
+**Verdict (agent):** Debug primary path **matches product policy**. Production capture of system picker as primary may be API/device residual or legacy entry drift — **re-verify production** under same permission grants; do **not** “fix” debug by making system picker primary. Secondary pair still needed: gallery top-right → system Photo Picker on both apps.
 
 ### Editor — large deltas (P0)
 

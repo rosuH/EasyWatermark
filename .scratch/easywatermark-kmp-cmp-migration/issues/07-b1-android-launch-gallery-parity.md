@@ -26,14 +26,21 @@ See `docs/parity/v2.10.0/captures/COMPARISON-2026-07-12-en-dark.md` and:
 ## Grok findings (summary)
 
 - **Launch:** structure matches; logo tint slightly different.  
-- **Gallery:** **P0 path mismatch** — production opens **system Photo Picker**; debug opens **in-app GalleryDialog**.
+- **Gallery:** session capture showed prod → system Photo Picker, debug → in-app gallery.
 
-## Punch-list for owner
+## Owner product policy (2026-07-12) — **recorded**
+
+- **Android:** **in-app gallery first**; **top-right** entry launches **system Photo Picker**.  
+- **iOS / Desktop:** default **system** photo picker / file dialog (unchanged exceptions).  
+- Full text: `docs/parity/v2.10.0/protocol/image-pick-policy.md`.
+
+## Punch-list (updated)
 
 1. Accept launch as-is or require logo tint fix?  
-2. **Gallery target:** system Photo Picker (match current prod on API 36 emulator) vs in-app gallery (match debug / older product)?  
-3. After decision, re-capture and return for sign-off.
+2. ~~Gallery primary path~~ → **decided: in-app gallery primary**. Re-capture production under permissioned path; if prod still jumps to Photo Picker as primary, file as **prod residual / fix target**, not “make debug system-first”.  
+3. Capture **secondary** pair: gallery top-right → system Photo Picker (prod + debug).  
+4. Owner sign-off after re-capture.
 
 **Reply examples:**  
 - `OWNER SIGN-OFF 07 launch: approved`  
-- `OWNER 07 gallery: target system Photo Picker` / `target in-app gallery`
+- `OWNER SIGN-OFF 07 gallery primary: approved`

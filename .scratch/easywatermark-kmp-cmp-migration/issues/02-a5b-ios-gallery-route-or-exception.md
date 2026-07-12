@@ -19,6 +19,18 @@
 **Signed:** 2026-07-12 — owner selected *Sign both 02 + 03* via commander prompt.  
 **Text:** PhotosPicker-only Phase A exception for iOS gallery — **approved**.
 
+### Cross-platform pick policy (same day, Phase B)
+
+Owner clarified **platform matrix** (also in `docs/parity/v2.10.0/protocol/image-pick-policy.md`):
+
+| Platform | Primary | Secondary |
+|----------|---------|-----------|
+| Android | In-app gallery | Top-right → system Photo Picker |
+| **iOS** | **System PhotosPicker** (this ticket) | — |
+| Desktop | System file dialog / drop | — |
+
+iOS Phase A exception **unchanged** (no production `GalleryDialogShell`).
+
 ---
 
 ## Evidence pack (commander review)
