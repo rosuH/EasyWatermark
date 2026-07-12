@@ -304,16 +304,17 @@ Slice finish is **never** overall completion. All must be true:
 
 ---
 
-## 11. Current truth (2026-07-12, post ticket 10 audit)
+## 11. Current truth (2026-07-12, post ticket 10 residual re-run)
 
 Baseline only — always re-check `git status`. Full checklist: `docs/parity/v2.10.0/dod/s9-dod-audit-2026-07-12.md`.
 
 | Item | Value |
 |---|---|
-| Local tickets **01–10** | **01–09 complete**; **10** §9 audit + graduation proposal delivered |
+| Local tickets **01–10** | **01–09 complete**; **10** §9 audit + graduation proposal + **residual automated re-runs** delivered |
 | Phase A | **A5 PASS** (ticket 05) |
 | Phase B | Core Android launch/gallery/editor/export **owner-signed** (07/08); iOS/Desktop exceptions **registered** (09) |
-| **§9 overall** | **NOT MET** (strict goldens not re-run; iosSimulatorArm64Test RUN not in final audit; parity archive not exhaustive locale/theme matrix). **Not** “migration complete.” |
+| Residual r2 gates | **strict goldens 53/0** (`strict=true`); **iosSimulatorArm64Test 101/0** — `build/s4d383-dod-audit-r2/` |
+| **§9 overall** | **NOT MET** (parity archive not exhaustive locale/theme/recording matrix; Desktop unsigned; ADR renderer split intentional). Automated residual gates closed on lab host. **Not** “migration complete.” |
 | Graduation | Proposal: `docs/parity/v2.10.0/dod/graduation-proposal-pr358.md` — **owner chooses A/B/C**; **no auto-merge** |
 | Local process backend | `.scratch/easywatermark-kmp-cmp-migration/` |
 | Protect | User research doc `docs/superpowers/research/2026-07-11-project-branch-goals-progress.md` stays uncommitted unless owner allows |
@@ -324,7 +325,7 @@ Baseline only — always re-check `git status`. Full checklist: `docs/parity/v2.
 ### 11.1 Next on chain
 
 1. Owner decides graduation **A / B / C** (and push yes/no).  
-2. Optional residuals before any merge: strict goldens, full `iosSimulatorArm64Test` RUN, parity archive expansion.  
+2. Optional residual before any merge claim: parity archive expansion (zh / theme / recordings).  
 3. Do **not** claim three-platform 1:1 or PR merge-ready without owner override.
 
 ---
