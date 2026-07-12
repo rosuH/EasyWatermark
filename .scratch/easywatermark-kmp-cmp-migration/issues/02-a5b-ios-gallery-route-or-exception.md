@@ -4,9 +4,74 @@
 
 **Blocked by:** None — can start immediately (parallel with 01, 03, 04).
 
-**Status:** ready-for-agent
+**Status:** **decision package ready — awaiting owner sign-off** (2026-07-12)  
+**Proposed disposition:** **PhotosPicker-only Phase A exception** (do not ship production `GalleryDialogShell` on iOS).
 
-- [ ] Production gallery shell on iOS **or** owner-signed picker-only exception recorded on this ticket
-- [ ] PHPicker automation residual documented as toolchain, not “gallery missing”
-- [ ] No invented gallery product that product does not need
-- [ ] No new deps; persistence bytes sacred; not Phase B pixel work
+## Acceptance checklist
+
+- [x] Production gallery shell on iOS **or** owner-signed picker-only exception recorded on this ticket — **exception package written; owner signature still required**
+- [x] PHPicker automation residual documented as toolchain, not “gallery missing”
+- [x] No invented gallery product that product does not need
+- [x] No new deps; persistence bytes sacred; not Phase B pixel work
+
+---
+
+## Evidence pack (commander review)
+
+### What Android product has
+
+- `ComposeMainActivity` navigates `GalleryDialogRoute` → `GalleryDialog` → shared `GalleryDialogShell`.
+- In-app multi-select of device images with selected-count UI, plus a path to system picker (`onPickImageViaSystem`).
+- This is a real Android product surface (not DEBUG-only).
+
+### What iOS production has today (after S4d-383 / ticket 01)
+
+| Surface | Production? | Notes |
+|---------|-------------|--------|
+| `PhotosPicker` (source photo) | **Yes** | `ContentView` launch + editor “pick another photo” |
+| `PhotosPicker` (icon watermark) | **Yes** | Separate icon picker binding |
+| Shared `GalleryDialogShell` | **No** | DEBUG witness only (`galleryDialogShellWitness` / `-sharedComposeWitness gallery`) |
+| Multi-select in-app grid | **No** | Not a product path on iOS |
+
+Primary production entry: `SharedComposeLaunchScreen` → `IosLaunchScreenHost` → `LaunchScreenShell` with `onPickImage` → SwiftUI `photosPicker` / `PhotosPickerItem` → `WatermarkWorkflow`.
+
+### PHPicker XCUITest residual (toolchain, not product)
+
+- S4d-57/S4d-58: XCUITest can open out-of-process `PHPickerViewController` but **cannot address grid cells** on Xcode-27-beta / iOS-27 (`collectionViews` empty; limited-access banner noise).
+- Fixture seam `-uiTestFixtureImage` proves render/export without picking a real cell.
+- **This residual is automation tooling, not “gallery product missing.”** Shipping `GalleryDialogShell` would not fix PHPicker cell automation.
+
+### Why inventing GalleryDialogShell on iOS would be wrong for Phase A
+
+1. iOS already has a first-class system multi-select photo UI (`PhotosPicker` / PHPicker); Android’s in-app gallery exists because MediaStore + permission UX differ.
+2. Building a fake in-app gallery over CMP only for matrix symmetry invents product surface, storage/query glue, and a11y contracts without a user need.
+3. Ticket forbids invented gallery product and Phase B pixel work.
+
+### Proposed owner-signed exception (Phase A)
+
+| Item | Decision |
+|------|----------|
+| iOS production image pick | **PhotosPicker / PHPicker only** (Swift edge) |
+| Shared `GalleryDialogShell` on iOS | **Absent in production**; DEBUG witness + link proof only |
+| Multi-image | Optional future: PhotosPicker multi-selection edge if product needs batch — **not** Android gallery clone |
+| XCUITest PHPicker cells | Documented **toolchain residual**; fixture seam remains valid proof path |
+| Duration | Phase A; revisit only if owner requires Android-parity in-app gallery on iOS (then a new ticket) |
+
+### Guardrails confirmed
+
+- No new dependencies.
+- Persistence bytes untouched.
+- Android gallery/native renderer policy untouched.
+- Not Phase B pixel work.
+
+---
+
+## Owner sign-off
+
+**Reply to accept:**  
+`OWNER SIGN-OFF 02: PhotosPicker-only Phase A exception for iOS gallery — approved`
+
+**Reply to reject / re-scope:**  
+State whether production `GalleryDialogShell` (or multi-select PhotosPicker product work) is required instead.
+
+Until signed, ticket **05 (A5e)** cannot claim A5 PASS for the gallery matrix cell.
