@@ -2,13 +2,14 @@ import com.android.build.api.dsl.ManagedVirtualDevice
 
 plugins {
     id(libs.plugins.android.test.get().pluginId)
-    id(libs.plugins.kotlin.android.get().pluginId)
+    // S4d-360: AGP 9 built-in Kotlin — do not apply org.jetbrains.kotlin.android.
 }
 
 // [START macrobenchmark_setup_android]
 android {
     // [START_EXCLUDE]
-    compileSdk = 34
+    // S4d-363: align with project Apps.compileSdk (37); minSdk/targetSdk/managedDevices unchanged.
+    compileSdk = Apps.compileSdk
     namespace = "me.rosuh.macrobenchmark"
 
     defaultConfig {

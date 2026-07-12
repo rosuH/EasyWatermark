@@ -977,3 +977,11 @@ Gaps found by adversarial review and now fixed in the plan — keep these in min
 
 - `:desktopApp:run` inherits the repository working directory, but a real Compose Desktop `.app` does not. An interactive preview temp path under relative `build/` can therefore pass headless Gradle gates while failing the user-visible Preview action after Finder launch. Interactive-only scratch output belongs under the same existing per-user app-data root as the Desktop DataStores and Room DB; it must remain distinct from real save destinations so preview still cannot drive share/output actions.
 - `EditorPreviewFrame` can wrap an existing real preview child without changing renderer ownership. When preserving an established child inset, account for the shared frame's 12 dp padding at the edge rather than accepting a silent layout expansion; Desktop's child uses 4 dp after the frame to retain the old 16 dp effective horizontal inset.
+
+## 依赖升级收口（S4d-360…S4d-375，2026-07-12）
+
+- **KSP/Kotlin 上限：** 正常仓库最新 KSP 为 2.3.10；与 Kotlin **2.4.0** 配对。**无** 采用 Kotlin 2.4.20-Beta1（无匹配 KSP）。
+- **Compose Android 保真：** 稳定 `compose-bom` 会把 Material3 alpha 压回 1.4.0；必须用 **`compose-bom-alpha`** 才能保留声明的 Material3 最新 alpha。
+- **Android-KMP host 测试拓扑：** `commonTest` 中依赖 Compose `ImageBitmap` 的 cell 测试在 AGP host JVM 上会 `Bitmap not mocked`；应放到 **Desktop/iOS Skiko 路径**（`skikoTest` srcDir），保留 `commonPureTest` 纯逻辑门。
+- **XCUITest（Xcode 27 beta）：** 全量 18/0 与单测 1/0 的用例行可绿，但 **xcodebuild 在 suite 结束后常无法干净退出**（进程挂起、xcresult 不完整）——记 **HANG**，**不得** 标 PASS。属全局 runner finalization，非“仅全量 suite”副作用。
+- **Release 版本源：** `RELEASE_VERSION` / tag 必须读 `buildSrc` `Apps.versionName`，不可再 grep `app/build.gradle.kts`（该处已无引号字面量）。

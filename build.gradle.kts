@@ -21,6 +21,8 @@ plugins {
     alias(libs.plugins.compose.multiplatform) apply false
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.kotlin.multiplatform) apply false
+    // S4d-360: official Android-KMP library plugin for :shared (AGP 9).
+    alias(libs.plugins.android.kotlin.multiplatform.library) apply false
 //    alias(libs.plugins.spotless) apply false
 }
 

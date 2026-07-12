@@ -7,11 +7,13 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * S4d-2: verifies the commonMain offscreen cell composition primitive ([WatermarkCellComposer]).
- * Runs on every `:shared` target's test source set (executed on `:shared:desktopTest`); proves the
- * Compose-graphics offscreen -> draw -> rotate -> ImageBitmap pipeline actually renders in commonMain,
- * reusing the shared [WatermarkGeometry] sizing. (The Android production renderer + strict goldens
- * are independent and unaffected; this primitive is not wired into production yet.)
+ * S4d-2 / S4d-366: verifies the commonMain offscreen cell composition primitive
+ * ([WatermarkCellComposer]) — Desktop/iOS path only (`skikoTest` source set).
+ *
+ * Requires a real Compose ImageBitmap backend (Skiko). Not part of `commonTest` /
+ * `:shared:testAndroidHostTest` (AGP Android host JVM has no Bitmap implementation).
+ * Executed by `:shared:desktopTest` and `:shared:iosSimulatorArm64Test`.
+ * Android production renderer stays native; this primitive is not Android-production-wired.
  */
 class WatermarkCellComposerTest {
 

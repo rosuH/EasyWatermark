@@ -1,9 +1,20 @@
-import com.android.build.gradle.internal.api.ApkVariantOutputImpl
+import com.android.build.api.artifact.SingleArtifact
+import com.android.build.api.variant.ApplicationAndroidComponentsExtension
 import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
+import java.io.File
 
 plugins {
     id(libs.plugins.android.application.get().pluginId)
-    id(libs.plugins.kotlin.android.get().pluginId)
+    // S4d-360: AGP 9 built-in Kotlin — do not apply org.jetbrains.kotlin.android.
+    // Keep serialization + compose-compiler + ksp (still separate compiler plugins).
     id(libs.plugins.kotlin.serialization.get().pluginId)
     id(libs.plugins.ksp.get().pluginId)
 //    id(libs.plugins.hilt.plugin.get().pluginId)
@@ -87,18 +98,64 @@ android {
         }
     }
 
+    // AGP 9 built-in Kotlin: jvmToolchain stays on android.kotlin.
     kotlin {
         jvmToolchain(17)
     }
+}
 
-    applicationVariants.configureEach {
-        outputs.configureEach {
-            (this as? ApkVariantOutputImpl)?.outputFileName =
-                "EasyWatermark-$versionName-$versionCode.apk"
-        }
+/**
+ * S4d-360/S4d-362: public Android Components artifacts API for custom APK naming.
+ * Replaces removed `applicationVariants` + internal `ApkVariantOutputImpl` (no reflection).
+ * Listens to [SingleArtifact.APK] (directory) and copies the packaged APK under the release name.
+ *
+ * Deterministic output:
+ *   app/build/outputs/apk/<variant>/renamed/EasyWatermark-<versionName>-<versionCode>.apk
+ * assemble<Variant> is finalizedBy the matching copy task so the rename always runs with assemble.
+ */
+abstract class CopyRenamedApkTask : DefaultTask() {
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val apkFolder: DirectoryProperty
+
+    @get:OutputDirectory
+    abstract val outputFolder: DirectoryProperty
+
+    @get:Input
+    abstract val apkFileName: Property<String>
+
+    @TaskAction
+    fun copy() {
+        val apk = apkFolder.get().asFile
+            .listFiles()
+            ?.firstOrNull { it.isFile && it.extension.equals("apk", ignoreCase = true) }
+            ?: error("No APK found in ${apkFolder.get().asFile}")
+        val outDir = outputFolder.get().asFile.apply { mkdirs() }
+        apk.copyTo(File(outDir, apkFileName.get()), overwrite = true)
     }
 }
 
+val apkBaseName = "EasyWatermark-${Apps.versionName}-${Apps.versionCode}.apk"
+extensions.configure<ApplicationAndroidComponentsExtension>("androidComponents") {
+    onVariants { variant ->
+        val capitalized = variant.name.replaceFirstChar { it.uppercase() }
+        val copyTask = tasks.register<CopyRenamedApkTask>("copyRenamed${capitalized}Apk") {
+            // Deterministic renamed directory consumed by .github/workflows/release.yml
+            outputFolder.set(layout.buildDirectory.dir("outputs/apk/${variant.name}/renamed"))
+            apkFileName.set(apkBaseName)
+        }
+        // Public API: wire task input to packaged APK directory (SingleArtifact.APK is a Directory).
+        variant.artifacts.use(copyTask)
+            .wiredWith(CopyRenamedApkTask::apkFolder)
+            .toListenTo(SingleArtifact.APK)
+
+        // S4d-362: toListenTo alone does not schedule the listener; attach to assemble so the
+        // renamed APK is always produced for assembleRelease / assembleDebug / etc.
+        tasks.matching { it.name == "assemble$capitalized" }.configureEach {
+            finalizedBy(copyTask)
+        }
+    }
+}
 
 dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))

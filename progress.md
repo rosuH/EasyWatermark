@@ -1270,3 +1270,12 @@ Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; 
 - **S4d-357:** accepted docs audit at `docs/superpowers/research/2026-07-12-s4d357-data-layer-commonmain-closure.md` (Codex evidence revisions: exact repo-relative paths; `MemorySettingRepo` DI-injected into `MainViewModel`/`AboutViewModel` but empty; live `Action` finding preserved).
 - **Verdict:** **A4 pure extraction NO-GO** (§6.12). **Not** Phase A complete; **not** §9 DoD; no persisted-byte E2E claim. No product code/deps/Compose/Skiko.
 - **Tests:** none run / none claimed.
+
+## 2026-07-12 — S4d-360…S4d-375 依赖升级收口（本地提交）
+
+- **范围：** 构建工具链 / 依赖绝对最新（含预发布）+ AGP9 KMP 官方集成 + 回归矩阵；**无**产品行为变更。
+- **依赖与工具：** Kotlin **2.4.0** + KSP **2.3.10**（Maven 元数据最新且与 2.4.0 兼容；**禁止** 2.4.20-Beta1 无匹配 KSP）；AGP **9.4.0-alpha04**；CMP **1.12.0-beta01**；Compose **compose-bom-alpha 2026.06.01** + Material3 **1.5.0-alpha23**；Build Tools **37.0.0**（`android sdk install`，Apps + release.yml 对齐）；Gradle wrapper **9.6.1**。
+- **关键迁移：** `:shared` → `com.android.kotlin.multiplatform.library`；去掉临时 `builtInKotlin/newDsl`；普通 Android 模块内置 Kotlin；APK 命名改公开 Components API（`CopyRenamedApkTask` + `release/renamed`）；benchmark compileSdk=`Apps.compileSdk`；Baseline Profile → Benchmark 1.5 `collect`；`skikoTest` 拓扑（Composer 不进 Android host）；release 版本源读 `Apps.versionName`、签包路径对齐 renamed。
+- **证据（S4d-372/C2/S4d-371）：** A/B unit **53/0**（含 strict golden）；C2 pure **41/0** + desktop **132/0** + iosSim **101/0**；Desktop headless + `createDistributable`；benchmark assemble/compile；debug/release classpath **0 skiko / 0 sqlite-bundled**；release renamed APK 存在。
+- **XCUITest 残留（HANG，非 PASS）：** 全量 **18/0** 与单测 **1/0** 用例行均绿，但 Xcode 27 beta 下 `xcodebuild` **无法干净退出**（post-suite 挂起 / 不完整 xcresult）。
+- **下一切片：** Android 设备/AndroMeld 镜像恢复 → 继续 CMP 迁移（非依赖升级）。

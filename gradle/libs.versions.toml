@@ -1,53 +1,55 @@
 [versions]
-agp = "8.13.2"
-kotlin = "2.3.20"
-ksp = "2.3.6"
-koin-bom = "4.2.1"
+agp = "9.4.0-alpha04"
+# S4d-360: Kotlin 2.4.0 + KSP 2.3.10 — highest Maven-published KSP for this Kotlin line.
+# Official metadata (repo1.maven.org, symbol-processing-gradle-plugin): latest/release = 2.3.10
+# (lastUpdated 20260709). Hard rule: do NOT pair Kotlin 2.4.20-Beta1 with a KSP that only
+# targets 2.4.0; no KSP for 2.4.20-Beta1 is published. See build/s4d360-compatibility.md.
+kotlin = "2.4.0"
+ksp = "2.3.10"
+koin-bom = "4.2.2"
 toolsGradle = "7.4.2"
 ktlintGradle = "11.3.1"
 androidxActivity = "1.13.0"
 androidxConstraintLayoutCompose = "1.1.1"
-androidxNavigationCompose = "2.9.7"
-kotlinxSerialization = "1.9.0"
-coroutines = "1.10.2"
-lifecycle = "2.10.0"
-lifecycleViewModel = "2.10.0"
-coreKtx = "1.18.0"
-appcompat = "1.7.1"
-material = "1.13.0"
+androidxNavigationCompose = "2.10.0-alpha06"
+kotlinxSerialization = "1.11.0"
+coroutines = "1.11.0"
+lifecycle = "2.11.0"
+lifecycleViewModel = "2.11.0"
+coreKtx = "1.19.0"
+appcompat = "1.8.0-alpha01"
+material = "1.14.0"
 room = "2.8.4"
-# S4d-142/S4d-231: androidx.sqlite — pinned to the version Room 2.8.4 already resolves transitively
-# (2.6.2), so off-Android `sqlite-bundled` drivers align with no version conflict. Scoped to
-# Desktop/iOS target source sets; Android stays on framework SupportSQLite compatibility mode.
-sqlite = "2.6.2"
-datastorePreference = "1.2.1"
+# S4d-142/S4d-231: androidx.sqlite — off-Android BundledSQLiteDriver only (desktop/iOS).
+# Absolute latest published: 2.7.0. Android stays framework SupportSQLite compatibility mode.
+sqlite = "2.7.0"
+datastorePreference = "1.3.0-alpha09"
 exifInterface = "1.4.2"
 compressor = "3.0.1"
-benchmark = "1.4.1"
+benchmark = "1.5.0-alpha07"
 profileinstaller = "1.4.1"
 junit = "4.13.2"
 espressoCore = "3.7.0"
-uiautomator = "2.3.0"
+uiautomator = "2.4.0"
 extJunit = "1.3.0"
 robolectric = "4.16.1"
-# C4.3: bumped 2026.03.01 (Compose 1.10.6) -> 2026.05.01 (Compose 1.11.2) so :app's AndroidX Compose
-# lineage matches what Compose Multiplatform 1.11.1 contributes on Android (androidx 1.11.2). The BOM
-# atomically aligns every androidx.compose group (incl. foundation) to one version, killing the
-# foundation/ui skew S4d-1 hit.
-androidxComposeBom = "2026.05.01"
-# C4.3: Compose Multiplatform (org.jetbrains.compose) — applied to :shared to deliver multiplatform
-# (incl. iOS) Compose graphics/text. 1.11.1's Android target maps to androidx Compose 1.11.2.
-composeMultiplatform = "1.11.1"
+# Absolute latest Compose BOM (Google Maven). BOM governs compose UI/foundation/etc.
+# Material3 explicit pin may skew BOM — owner absolute-latest policy.
+androidxComposeBom = "2026.06.01"
+# Absolute latest CMP plugin (Maven Central), non-SNAPSHOT.
+composeMultiplatform = "1.12.0-beta01"
 accompanist = "0.37.3"
 # C3 Tier-2a (S4d-38): Coil 3 (io.coil-kt.coil3, package coil3). Compose-only; no network artifact
 # (all image models are local Uris); coil-svg dropped (SvgDecoder was never registered).
-coil = "3.4.0"
-material3 = "1.4.0"
+coil = "3.5.0"
+material3 = "1.5.0-alpha23"
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 android-test = { id = "com.android.test", version.ref = "agp" }
+# S4d-360: official Android-KMP library plugin (replaces com.android.library on :shared).
+android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
@@ -70,7 +72,9 @@ androidx-room = { id = "androidx.room", version.ref = "room" }
 agp = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
 ksp = { module = "com.google.devtools.ksp:symbol-processing", version.ref = "ksp" }
-androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "androidxComposeBom" }
+# S4d-361: use official alpha BOM so Material3 pre-release (catalog material3) is not forced to stable 1.4.0.
+# Alias name + call sites unchanged; artifact is compose-bom-alpha (Google Maven latest matching 2026.06.01).
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom-alpha", version.ref = "androidxComposeBom" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 androidx-compose-material3-windowSizeClass = { group = "androidx.compose.material3", name = "material3-window-size-class" }
 androidx-compose-ui-ui = { group = "androidx.compose.ui", name = "ui" }
@@ -85,7 +89,6 @@ androidx-activity-compose = { group = "androidx.activity", name = "activity-comp
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
 androidx-constraintlayout-compose = { group = "androidx.constraintlayout", name = "constraintlayout-compose", version.ref = "androidxConstraintLayoutCompose" }
 #androidx-motionlayoout-compose = { group = "androidx.constraintlayout", name = "constraintlayout-compose", version.ref = "androidxConstraintLayoutCompose" }
-
 
 
 
