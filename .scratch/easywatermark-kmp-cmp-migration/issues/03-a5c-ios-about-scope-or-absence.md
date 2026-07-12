@@ -4,14 +4,19 @@
 
 **Blocked by:** None — can start immediately (parallel with 01, 02, 04).
 
-**Status:** **decision package ready — awaiting owner sign-off** (2026-07-12)  
-**Proposed disposition:** **No About on iOS Phase A** (absence exception).
+**Status:** **complete** (S4d-383 / A5c accepted 2026-07-12)  
+**Disposition:** **No About on iOS Phase A** (absence exception).
 
 ## Acceptance checklist
 
-- [x] Production About route **or** owner-signed absence recorded on this ticket — **absence package written; owner signature still required**
+- [x] Production About route **or** owner-signed absence recorded on this ticket
 - [x] No speculative About feature expansion beyond shared shell content already used on Android
 - [x] No new deps; not Phase B pixel work; not Desktop About (see 04)
+
+## Owner sign-off (recorded)
+
+**Signed:** 2026-07-12 — owner selected *Sign both 02 + 03* via commander prompt.  
+**Text:** no About on iOS Phase A — **approved**.
 
 ---
 

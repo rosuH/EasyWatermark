@@ -4,15 +4,20 @@
 
 **Blocked by:** None — can start immediately (parallel with 01, 03, 04).
 
-**Status:** **decision package ready — awaiting owner sign-off** (2026-07-12)  
-**Proposed disposition:** **PhotosPicker-only Phase A exception** (do not ship production `GalleryDialogShell` on iOS).
+**Status:** **complete** (S4d-383 / A5b accepted 2026-07-12)  
+**Disposition:** **PhotosPicker-only Phase A exception** (do not ship production `GalleryDialogShell` on iOS).
 
 ## Acceptance checklist
 
-- [x] Production gallery shell on iOS **or** owner-signed picker-only exception recorded on this ticket — **exception package written; owner signature still required**
+- [x] Production gallery shell on iOS **or** owner-signed picker-only exception recorded on this ticket
 - [x] PHPicker automation residual documented as toolchain, not “gallery missing”
 - [x] No invented gallery product that product does not need
 - [x] No new deps; persistence bytes sacred; not Phase B pixel work
+
+## Owner sign-off (recorded)
+
+**Signed:** 2026-07-12 — owner selected *Sign both 02 + 03* via commander prompt.  
+**Text:** PhotosPicker-only Phase A exception for iOS gallery — **approved**.
 
 ---
 
