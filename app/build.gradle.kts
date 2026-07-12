@@ -175,6 +175,8 @@ dependencies {
 //    kspAndroidTest(libs.hilt.compiler)
 
     implementation(libs.compressor)
+    // Production-parity custom color dialog (ColorOption → ColorPickerDialog).
+    implementation(libs.colorpicker)
 
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlin.coroutine.android)
