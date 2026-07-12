@@ -236,12 +236,12 @@ Each phase: commonTest for pure reduce/orchestrate + Android smoke + one off-And
 
 ### Phase 1 — Shared ViewModel owns nav/selection (Android still green)
 
-- [ ] `AppIntent` / `ExportJobState` (from `SaveExportUiState`) in commonMain  
-- [ ] `WatermarkSessionViewModel` owns: route, gallery selection, back, template `UiState`; config → existing editors  
-- [ ] Android: map old `Action` → intent; Activity/CMP collects shared VM state  
-- [ ] MediaStore/export **still** may live in Android port stub or temporary Android-only methods  
+- [x] `AppIntent` / `ExportJobState` / pure `SessionReducer` in commonMain  
+- [x] `WatermarkSessionViewModel` owns: route, gallery selection, back, template `UiState`; selection commit via repo effects  
+- [x] Android `MainViewModel` **extends** session VM; maps `Action` → `AppIntent`; export still Android methods  
+- [x] commonTest `SessionReducerTest` + host/desktop compile green  
 
-**Exit:** Android UI behavior unchanged; commonTest for pure transitions (fake ports); goldens untouched.
+**Exit:** Android UI behavior unchanged; commonTest for pure transitions; goldens untouched (no render change).
 
 ### Phase 2 — Export orchestration in shared ViewModel
 

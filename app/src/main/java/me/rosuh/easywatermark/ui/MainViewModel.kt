@@ -19,7 +19,6 @@ import android.text.TextPaint
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 
 import id.zelory.compressor.Compressor
@@ -58,6 +57,9 @@ import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.domain.OutputPrefsEditor
 import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
+import me.rosuh.easywatermark.session.AppIntent
+import me.rosuh.easywatermark.session.ExportJobState
+import me.rosuh.easywatermark.session.WatermarkSessionViewModel
 import me.rosuh.easywatermark.utils.FileUtils.Companion.outPutFolderName
 import me.rosuh.easywatermark.utils.bitmap.decodeBitmapFromUri
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
@@ -73,22 +75,19 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 
-/** Android export-sheet presentation state; output URIs remain on the activity edge. */
-data class SaveExportUiState(
-    val isSaving: Boolean = false,
-    val isFinished: Boolean = false,
-    val completedCount: Int = 0,
-    val totalCount: Int = 0,
-)
+/** Android alias for shared [ExportJobState] (export-sheet presentation). */
+typealias SaveExportUiState = ExportJobState
 
+/**
+ * Android product host (ADR-0017 Phase 1): extends shared [WatermarkSessionViewModel] for
+ * launch/gallery/editor session state; keeps MediaStore/export/compress IO on this subclass.
+ */
 class MainViewModel (
     private val userRepo: UserConfigRepository,
-    private val waterMarkRepo: WaterMarkRepository,
+    waterMarkRepo: WaterMarkRepository,
     private val memorySettingRepo: MemorySettingRepo,
     private val templateRepo: TemplateRepository,
-) : ViewModel() {
-
-    var nextSelectedPos: Int = 0
+) : WatermarkSessionViewModel(waterMarkRepo) {
 
     // S4d-96: the neutral watermark config-edit logic now lives in the commonMain use-case; this VM
     // just owns the coroutine scope and delegates. Built from the already-injected repo (no DI change).
@@ -115,22 +114,8 @@ class MainViewModel (
         WaterMark.default
     )
 
-    private val uiState: MutableStateFlow<UiState> = MutableStateFlow(UiState.None)
-
-    val uiStateFlow: StateFlow<UiState> = uiState.asStateFlow()
-
-    private val _launchScreenUiStateFlow: MutableStateFlow<LaunchScreenState> =
-        MutableStateFlow(LaunchScreenState())
-    val launchScreenUiStateFlow = _launchScreenUiStateFlow.asStateFlow()
-
-    // S4d-69: StateFlow-only (was the last MutableLiveData). Nullable with null initial preserves the old
-    // LiveData "no value yet" vs empty-list distinction that the `value ?: return` / `?: emptyList()` reads
-    // rely on. Android Image/Uri payload stays at this Android UI edge (only read internally in MainViewModel).
-    private val _galleryPickedImageList = MutableStateFlow<List<Image>?>(null)
-    val galleryPickedImageList: StateFlow<List<Image>?> = _galleryPickedImageList.asStateFlow()
-
-    private val _saveExportUiState = MutableStateFlow(SaveExportUiState())
-    val saveExportUiState: StateFlow<SaveExportUiState> = _saveExportUiState.asStateFlow()
+    /** Android UI name for shared export progress [exportJobState]. */
+    val saveExportUiState: StateFlow<SaveExportUiState> get() = exportJobState
 
     val selectedImageFlow = waterMarkRepo.selectedImage
 
@@ -170,34 +155,9 @@ class MainViewModel (
 
     private val applicationContext: Context by inject(Context::class.java)
 
-    init {
-        launch {
-            withContext(Dispatchers.Default) {
-                waterMarkFlow.collect {
-                    // Production v2.10 clears prior export results after any watermark edit.
-                    resetJobStatus()
-                    val nextState = launchScreenUiStateFlow.value.copy(waterMark = it)
-                    withContext(Dispatchers.Main) {
-                        _launchScreenUiStateFlow.emit(nextState)
-                    }
-                }
-            }
-        }
-        launch(Dispatchers.Default) {
-            selectedImageFlow.collect {
-                val nextState = launchScreenUiStateFlow.value.copy(curImageInfo = it)
-                withContext(Dispatchers.Main) {
-                    _launchScreenUiStateFlow.emit(nextState)
-                }
-            }
-        }
-    }
-
     fun addTemplate(content: String) {
         if (templateEditor.isDaoNull()) {
-            launch {
-                uiState.emit(UiState.DatabaseError)
-            }
+            dispatch(AppIntent.DatabaseError)
             return
         }
         viewModelScope.launch {
@@ -223,13 +183,15 @@ class MainViewModel (
     ) {
         viewModelScope.launch {
             if (imageList.isEmpty()) {
-                _saveExportUiState.value = SaveExportUiState()
+                setExportJobState(ExportJobState())
                 return@launch
             }
             resetJobStatus()
-            _saveExportUiState.value = SaveExportUiState(
-                isSaving = true,
-                totalCount = imageList.size,
+            setExportJobState(
+                ExportJobState(
+                    isSaving = true,
+                    totalCount = imageList.size,
+                ),
             )
             generateList(contentResolver, imageList)
         }
@@ -257,16 +219,20 @@ class MainViewModel (
                     info.jobState = JobState.Failure(info.result!!)
                 }
                 Log.i("generateList", "${info.uri} : ${info.result}")
-                _saveExportUiState.value = SaveExportUiState(
-                    isSaving = true,
-                    completedCount = infoList.count { it.jobState is JobState.Success },
-                    totalCount = infoList.size,
+                setExportJobState(
+                    ExportJobState(
+                        isSaving = true,
+                        completedCount = infoList.count { it.jobState is JobState.Success },
+                        totalCount = infoList.size,
+                    ),
                 )
             }
-            _saveExportUiState.value = SaveExportUiState(
-                isFinished = true,
-                completedCount = infoList.count { it.jobState is JobState.Success },
-                totalCount = infoList.size,
+            setExportJobState(
+                ExportJobState(
+                    isFinished = true,
+                    completedCount = infoList.count { it.jobState is JobState.Success },
+                    totalCount = infoList.size,
+                ),
             )
         }
     }
@@ -428,28 +394,11 @@ class MainViewModel (
         return outputFormat.fileExtension
     }
 
-    fun selectImage(ref: MediaRef) {
-        if (selectedImageFlow.value.uri == ref) {
-            return
-        }
-        launch {
-            waterMarkRepo.select(ref)
-        }
-    }
-
     fun updateImageList(list: List<Uri>) {
         launch {
             generateImageInfoList(list)?.run {
-                updateImageListInternal(this)
+                enterEditor(selected = this, waterMark = waterMarkFlow.value)
             }
-        }
-    }
-
-    private fun updateImageListInternal(list: List<ImageInfo>) {
-        launch {
-            waterMarkRepo.select(list.first().uri)
-            nextSelectedPos = 0
-            waterMarkRepo.updateImageList(list)
         }
     }
 
@@ -565,13 +514,6 @@ class MainViewModel (
                 list.getOrNull(selectedPos)?.uri?.let { selectImage(it) }
             }
         }
-    }
-
-    fun resetJobStatus() {
-        waterMarkRepo.imageInfoList.forEach {
-            it.jobState = JobState.Ready
-        }
-        _saveExportUiState.value = SaveExportUiState()
     }
 
     fun clearData() {
@@ -728,157 +670,26 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
                 val image = Image(imageId, contentUri.toMediaRef(), bucketName, size, dateTaken)
                 list += image
             }
-            _galleryPickedImageList.value = list
-            withContext(Dispatchers.Main) {
-                val state = _launchScreenUiStateFlow.value.copy(
-                    uiState = LaunchScreenUiState.GalleryDialog,
-                    imageList = list
-                )
-                _launchScreenUiStateFlow.emit(state)
-            }
+            // Session owns gallery dialog state (ADR-0017 Phase 1).
+            openGalleryWithImages(list)
         }
     }
 
     fun selectGallery(selectedList: List<Image>) {
-        launch {
-            withContext(Dispatchers.Default) {
-                selectedList
-                    .map {
-                        ImageInfo(it.uri)
-                    }
-                    .takeIf {
-                        it.isNotEmpty()
-                    }?.let {
-                        updateImageListInternal(it)
-                    }
-            }
-        }
-    }
-
-    fun resetGalleryData() {
-        launch {
-            _galleryPickedImageList.value = emptyList()
-        }
-    }
-
-    fun goTemplate() {
-        viewModelScope.launch {
-            uiState.emit(UiState.GoTemplate)
-        }
-    }
-
-    fun resetEditDialog() {
-        viewModelScope.launch {
-            uiState.emit(UiState.None)
-        }
-    }
-
-    fun goTemplateEdit() {
-        viewModelScope.launch {
-            uiState.emit(UiState.GoEdit)
-        }
-    }
-
-    fun useTemplate(template: Template) {
-        viewModelScope.launch {
-            uiState.emit(UiState.UseTemplate(template))
-        }
-    }
-
-    fun goEditDialog() {
-        viewModelScope.launch {
-            uiState.emit(UiState.GoEditDialog)
-        }
-    }
-
-    private fun onCheckedInGallery(image: Image, index: Int, checked: Boolean) {
-        launch {
-            withContext(Dispatchers.Default) {
-                val newList = galleryPickedImageList.value?.toMutableList() ?: return@withContext
-                newList[index] = image.copy(check = checked)
-                _galleryPickedImageList.value = newList
-                val newLaunchScreenState = launchScreenUiStateFlow.value.copy(
-                    imageList = newList,
-                )
-                _launchScreenUiStateFlow.emit(newLaunchScreenState)
-            }
-        }
-    }
-
-    private fun onGalleryDismiss(selected: Boolean) {
-        launch(Dispatchers.Default) {
-            if (selected) {
-                val newList =
-                    galleryPickedImageList.value?.filter { it.check } ?: return@launch
-                val imageList = newList.map {
-                    ImageInfo(it.uri)
-                }
-                updateImageListInternal(imageList)
-                val nextState = launchScreenUiStateFlow.value.copy(
-                    uiState = LaunchScreenUiState.Editor,
-                    imageList = galleryPickedImageList.value ?: emptyList(),
-                    selectedImageList = imageList,
-                    waterMark = waterMarkFlow.value,
-                    curImageInfo = imageList.firstOrNull()
-                )
-                withContext(Dispatchers.Main) {
-                    _launchScreenUiStateFlow.emit(nextState)
-                }
-            } else {
-                resetGalleryData()
-                val newLaunchScreenState = launchScreenUiStateFlow.value.copy(
-                    uiState = LaunchScreenUiState.Launch,
-                    imageList = emptyList()
-                )
-                withContext(Dispatchers.Main) {
-                    _launchScreenUiStateFlow.emit(newLaunchScreenState)
-                }
-            }
-        }
-    }
-
-    fun onBackPressed() {
-        launch {
-            withContext(Dispatchers.Default) {
-                when (launchScreenUiStateFlow.value.uiState) {
-                    LaunchScreenUiState.Editor -> {
-                        val newLaunchScreenState = launchScreenUiStateFlow.value.copy(
-                            uiState = LaunchScreenUiState.Launch,
-                            imageList = emptyList()
-                        )
-                        withContext(Dispatchers.Main) {
-                            _launchScreenUiStateFlow.emit(newLaunchScreenState)
-                        }
-                    }
-
-                    LaunchScreenUiState.GalleryDialog -> {
-                        val newLaunchScreenState = launchScreenUiStateFlow.value.copy(
-                            uiState = LaunchScreenUiState.Launch,
-                            emptyList()
-                        )
-                        withContext(Dispatchers.Main) {
-                            _launchScreenUiStateFlow.emit(newLaunchScreenState)
-                        }
-                    }
-
-                    LaunchScreenUiState.Launch -> {
-                        val newLaunchScreenState = launchScreenUiStateFlow.value.copy(
-                            uiState = LaunchScreenUiState.Launch,
-                            imageList = emptyList()
-                        )
-                        withContext(Dispatchers.Main) {
-                            _launchScreenUiStateFlow.emit(newLaunchScreenState)
-                        }
-                    }
-                }
-            }
+        val imageInfoList = selectedList.map { ImageInfo(it.uri) }
+        if (imageInfoList.isNotEmpty()) {
+            enterEditor(
+                selected = imageInfoList,
+                gallerySnapshot = selectedList,
+                waterMark = waterMarkFlow.value,
+            )
         }
     }
 
     fun process(action: Action) {
         when (action) {
             is Action.DialogDismiss -> {
-                onGalleryDismiss(action.isSelected)
+                dispatch(AppIntent.DismissGallery(selected = action.isSelected))
             }
 
             is Action.LoadImages -> {
@@ -886,9 +697,13 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
             }
 
             is Action.GalleryImageSelected -> {
-                launch {
-                    onCheckedInGallery(action.image, action.index, action.isCheck)
-                }
+                dispatch(
+                    AppIntent.ToggleGalleryItem(
+                        image = action.image,
+                        index = action.index,
+                        checked = action.isCheck,
+                    ),
+                )
             }
 
             is Action.WaterMarkChange -> {
@@ -898,35 +713,13 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
             }
 
             is Action.EditorImageSelected -> {
-                launch {
-                    selectImage(action.image.uri)
-                }
+                selectImage(action.image.uri)
             }
 
             is Action.SystemPickerImageSelected -> {
                 launch(Dispatchers.Default) {
                     val newList = action.uriList
-
-                    /**
-                     * val projection = arrayOf(media-database-columns-to-retrieve)
-                     * val selection = sql-where-clause-with-placeholder-variables
-                     * val selectionArgs = values-of-placeholder-variables
-                     * val sortOrder = sql-order-by-clause
-                     *
-                     * applicationContext.contentResolver.query(
-                     *     MediaStore.media-type.Media.EXTERNAL_CONTENT_URI,
-                     *     projection,
-                     *     selection,
-                     *     selectionArgs,
-                     *     sortOrder
-                     * )?.use { cursor ->
-                     *     while (cursor.moveToNext()) {
-                     *         // Use an ID column from the projection to get
-                     *         // a URI representing the media item itself.
-                     *     }
-                     * }
-                     */
-                    // map the uri to image
+                    // map the uri to image (MediaStore metadata for gallerySnapshot optional)
                     val imageList = ArrayList<Image>()
                     val selection = "${MediaStore.Images.Media._ID} IN (${newList.joinToString(",") { "?" }})"
                     val selectionArgs = newList.map { ContentUris.parseId(it).toString() }.toTypedArray()
@@ -938,17 +731,11 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
                         (if (Build.VERSION.SDK_INT > 28) MediaStore.Images.Media.DATE_MODIFIED else MediaStore.Images.Media.DATE_TAKEN) + " DESC"
                     )?.use { cursor ->
                         val imageIdColumn = cursor.getColumnIndex(MediaStore.Images.Media._ID)
-                        val bucketIdColumn =
-                            cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_ID)
                         val bucketNameColumn =
                             cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
                         val dataColumn = cursor.getColumnIndex(MediaStore.Images.Media.DATA)
                         val dateColumn =
                             cursor.getColumnIndex(if (Build.VERSION.SDK_INT > 28) MediaStore.Images.Media.DATE_MODIFIED else MediaStore.Images.Media.DATE_TAKEN)
-                        val orientationColumn =
-                            cursor.getColumnIndex(MediaStore.Images.Media.ORIENTATION)
-                        val widthColumn = cursor.getColumnIndex(MediaStore.Images.Media.WIDTH)
-                        val heightColumn = cursor.getColumnIndex(MediaStore.Images.Media.HEIGHT)
                         val sizeColumn = cursor.getColumnIndex(MediaStore.Images.Media.SIZE)
 
                         while (cursor.moveToNext()) {
@@ -958,13 +745,9 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
                             }
 
                             val imageId = cursor.getInt(imageIdColumn)
-                            val bucketId = cursor.getInt(bucketIdColumn)
                             val bucketName =
                                 cursor.getString(bucketNameColumn) ?: ""
                             val dateTaken = cursor.getLong(dateColumn)
-                            val orientation = cursor.getInt(orientationColumn)
-                            val width = cursor.getInt(widthColumn)
-                            val height = cursor.getInt(heightColumn)
                             val size = cursor.getLong(sizeColumn)
 
                             val contentUri: Uri = ContentUris.withAppendedId(
@@ -972,8 +755,6 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
                                 imageId.toLong()
                             )
 
-                            // Stores column values and the contentUri in a local object
-                            // that represents the media file.
                             val image = Image(
                                 imageId,
                                 contentUri.toMediaRef(),
@@ -988,17 +769,11 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
                     val imageInfoList = newList.map {
                         ImageInfo(it.toMediaRef())
                     }
-                    updateImageListInternal(imageInfoList)
-                    val nextState = launchScreenUiStateFlow.value.copy(
-                        uiState = LaunchScreenUiState.Editor,
-                        imageList = imageList,
-                        selectedImageList = imageInfoList,
+                    enterEditor(
+                        selected = imageInfoList,
+                        gallerySnapshot = imageList,
                         waterMark = waterMarkFlow.value,
-                        curImageInfo = imageInfoList.firstOrNull()
                     )
-                    withContext(Dispatchers.Main) {
-                        _launchScreenUiStateFlow.emit(nextState)
-                    }
                 }
             }
         }
