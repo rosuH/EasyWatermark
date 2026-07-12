@@ -14,9 +14,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 
 /**
@@ -53,16 +60,31 @@ fun <T> SaveExportPreviewBox(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
+            val density = LocalDensity.current
+            var rowWidth by remember { mutableStateOf(0.dp) }
+            val itemSize = 96.dp
+            val spacing = 8.dp
+            val minPad = 8.dp
+            val contentWidth =
+                itemSize * items.size + spacing * (items.size - 1).coerceAtLeast(0)
+            // Horizontally center the thumbnail group when it is narrower than the box
+            // (single-image export list was flush-left before this).
+            val sidePad = ((rowWidth - contentWidth) / 2).coerceAtLeast(minPad)
+
             LazyRow(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .onGloballyPositioned {
+                        rowWidth = with(density) { it.size.width.toDp() }
+                    },
+                contentPadding = PaddingValues(horizontal = sidePad, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(spacing),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 items(items) { item ->
                     thumbnail(
                         item,
-                        Modifier.size(96.dp),
+                        Modifier.size(itemSize),
                     )
                 }
             }
