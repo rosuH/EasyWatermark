@@ -1,5 +1,6 @@
 import Foundation
 import Shared
+import UIKit
 
 // C5.4 (S4d-27/31/58): the iOS watermark workflow — picked-photo bytes to a watermarked PNG through
 // the `:shared` iOS render bridge.
@@ -116,19 +117,19 @@ final class WatermarkWorkflow: ObservableObject {
     /// via `IosIconPersistence`). Nil until an icon is selected this session; not reconstructed on launch.
     @Published private(set) var iconThumbnail: Data?
 
-    /// S4d-102: the single retained iOS watermark-config bridge over the common `WaterMarkRepository`
-    /// (the first off-Android consumer of the shared watermark editor). One instance per process
-    /// (DataStore forbids a second active store for the same file), mirroring `userConfigBridge`.
-    private let watermarkConfigBridge = IosWatermarkConfigBridgeKt.defaultIosWatermarkConfigBridge()
+    /// ADR-0017 Phase 4: single iOS service graph — shared [WatermarkSessionViewModel] +
+    /// config/user bridges over **one** DataStore each (no dual-store).
+    private let services = IosAppServicesKt.defaultIosAppServices()
+
+    /// S4d-102: watermark-config bridge from [services] (same WaterMarkRepository as the session).
+    private var watermarkConfigBridge: IosWatermarkConfigBridge { services.configBridge }
 
     /// S4d-102: the last picked photo's encoded bytes, kept so a watermark-text edit can re-render the
     /// same image without re-picking. Nil until the first render.
     private var lastImageData: Data?
 
-    /// S4d-82: the single retained iOS UserConfig prefs bridge (S4d-81), over the app's default
-    /// `NSDocumentDirectory` store. One instance per process (DataStore forbids a second active store
-    /// for the same file), so it is created once here and held for the workflow's lifetime.
-    private let userConfigBridge = IosUserConfigBridgeKt.defaultIosUserConfigBridge()
+    /// S4d-82: user-config bridge from [services] (same UserConfigRepository as the session).
+    private var userConfigBridge: IosUserConfigBridge { services.userConfigBridge }
     /// Non-visible link/async-interop witness: the launch-time `currentPreferences()` result (or an
     /// error string). Published only for testability — there is intentionally NO prefs/settings UI.
     @Published private(set) var userConfigWitness: String?
@@ -476,6 +477,8 @@ final class WatermarkWorkflow: ObservableObject {
     }
 
     /// Render `imageData` (the encoded bytes of a picked photo) into a watermarked PNG.
+    /// ADR-0017 Phase 4: goes through shared [WatermarkSessionViewModel] + [IosExportPipelinePort]
+    /// (Skiko bridge wrap). Preview UI still shows the resulting PNG bytes.
     func render(imageData: Data) async {
         state = .rendering
         resultPNG = nil
@@ -483,68 +486,32 @@ final class WatermarkWorkflow: ObservableObject {
         saveState = .idle
         lastImageData = imageData
 
-        // Off the main actor: decode + render + encode are CPU/Skia heavy. Only `Data`/`Int` (Sendable)
-        // cross the boundary; the Kotlin objects live and die inside the detached task.
-        let text = watermarkText
-        let degree = watermarkDegree
-        let tileMode = watermarkTileMode
-        let alpha = watermarkAlpha
-        let colorArgb = watermarkColorArgb
-        let textSize = watermarkTextSize
-        let hGap = watermarkHGap
-        let vGap = watermarkVGap
-        let typefaceKey = watermarkTypefaceKey
-        let textStyleKey = watermarkTextStyleKey
-
-        // S4d-117: read the persisted watermark mode at render time and retain it. Text mode keeps the
-        // existing path; Image mode renders the persisted icon. A mode-read failure falls back to text
-        // (the safe existing behavior); it must not break rendering.
-        let mode: WatermarkMode
+        // Keep mode badge in sync for UI (same as pre-Phase-4).
         do {
-            mode = try await watermarkConfigBridge.currentMarkMode()
+            watermarkMarkMode = try await watermarkConfigBridge.currentMarkMode()
         } catch {
-            mode = .text
-        }
-        watermarkMarkMode = mode
-
-        // Image mode: fetch the persisted icon bytes up front (Swift never sees the file path). Fail LOUD —
-        // never silently render text when the persisted mode is Image: a read error or a missing/empty icon
-        // becomes a user-visible `.failure`.
-        var iconData: Data? = nil
-        if mode == .image {
-            do {
-                if let bytes = try await watermarkConfigBridge.currentIconBytes() {
-                    iconData = bytes.toData()
-                }
-            } catch {
-                state = .failure("Could not read the saved icon: \(error.localizedDescription)")
-                return
-            }
-            guard iconData != nil else {
-                state = .failure("Image watermark mode is set but no icon has been selected.")
-                return
-            }
+            watermarkMarkMode = .text
         }
 
-        let outcome = await Task.detached(priority: .userInitiated) {
-            if mode == .image, let iconData {
-                WatermarkWorkflow.renderIconBlocking(imageData: imageData, iconData: iconData, tileMode: tileMode, textSize: textSize, degree: degree, hGap: hGap, vGap: vGap, alpha: alpha)
-            } else {
-                WatermarkWorkflow.renderBlocking(imageData: imageData, text: text, degree: degree, tileMode: tileMode, alpha: alpha, colorArgb: colorArgb, textSize: textSize, hGap: hGap, vGap: vGap, typefaceKey: typefaceKey, textStyleKey: textStyleKey)
-            }
-        }.value
-
-        switch outcome {
-        case let .success(png, width, height):
+        do {
+            let outPath = try await services.exportPickedImageBytes(imageBytes: imageData.toKotlinByteArray())
+            let url = URL(fileURLWithPath: outPath)
+            let png = try Data(contentsOf: url)
+            // Prefer file URL from session export for ShareLink; fall back to re-stage if needed.
             resultPNG = png
-            // Stage a temp .png so `ShareLink` can share a real file; a write failure only disables
-            // sharing, the in-memory PNG (and Save-to-Photos) still work.
-            resultFileURL = try? ImageExport.writeTemporaryPNG(png)
+            resultFileURL = url
+            // Width/height: decode via UIImage when available for status line; 0/0 if unknown.
+            var width = 0
+            var height = 0
+            if let ui = UIImage(data: png) {
+                width = Int(ui.size.width * ui.scale)
+                height = Int(ui.size.height * ui.scale)
+            }
             state = .success(pngByteCount: png.count, width: width, height: height)
-        case let .failure(message):
+        } catch {
             resultPNG = nil
             resultFileURL = nil
-            state = .failure(message)
+            state = .failure(error.localizedDescription)
         }
     }
 

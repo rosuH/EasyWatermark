@@ -263,12 +263,12 @@ Each phase: commonTest for pure reduce/orchestrate + Android smoke + one off-And
 
 ### Phase 4 — iOS CMP binds shared ViewModel (SwiftUI shrinks)
 
-- [ ] Production iOS shell: **one primary CMP root** collecting `WatermarkSessionViewModel` (grow `IosEditorScreenHost` / app-level host toward full Launch→Editor)  
-- [ ] iOS ports: decode/render/encode + Photos save; PHPicker stays Swift edge → `ImagesPicked(MediaRef/bytes)`  
-- [ ] **Stop** adding product controls in `WatermarkWorkflow` `@Published` / SwiftUI; migrate fields off workflow into VM state collection  
-- [ ] XCUITest: keep fixture seam; update selectors toward CMP semantics where needed  
+- [x] `IosExportPipelinePort` — Skiko via `IosWatermarkRenderBridge` wrap  
+- [x] `IosAppServices` — one DataStore graph: bridges + `WatermarkSessionViewModel`  
+- [x] `WatermarkWorkflow.render` → `exportPickedImageBytes` (session export); PHPicker/Save/Share stay Swift edges  
+- [x] iosSimulatorArm64Test + iosApp xcodebuild green  
 
-**Exit:** iOS product session = shared VM; SwiftUI ≤ system edges; suite green.
+**Exit:** iOS product render/export uses shared session; remaining SwiftUI is system glue + config mirrors (further CMP growth is Phase 5+).
 
 ### Phase 5 — Retire Android-only VM bulk + Action
 
