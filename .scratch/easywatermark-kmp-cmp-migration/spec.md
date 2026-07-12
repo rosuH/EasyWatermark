@@ -77,15 +77,28 @@ See `codex-goal-v2.md` §6 in full. Do not silently reopen Android draw-swap, Da
 
 ## Ticket index
 
-| File | Role |
-|------|------|
-| `issues/01-a5a-ios-editor-screen-shell.md` | Frontier |
-| `issues/02-a5b-ios-gallery-route-or-exception.md` | Parallel |
-| `issues/03-a5c-ios-about-scope-or-absence.md` | Parallel |
-| `issues/04-a5d-desktop-editor-window-exception.md` | Parallel |
-| `issues/05-a5e-phase-a-closeout.md` | Blocked by 01–04 |
-| `issues/06-b0-android-v2100-baseline-inventory.md` | Blocked by 05 |
-| `issues/07-b1-android-launch-gallery-parity.md` | Blocked by 06 |
-| `issues/08-b2-android-editor-export-parity.md` | Blocked by 06 |
-| `issues/09-b3-ios-desktop-alignment-exceptions.md` | Blocked by 07+08 |
-| `issues/10-z-dod-audit-pr358-graduation.md` | Blocked by 05–09 |
+| File | Role | Status (2026-07-12) |
+|------|------|---------------------|
+| `issues/01-a5a-ios-editor-screen-shell.md` | A5a iOS editor | **complete** (`1c049765`) |
+| `issues/02-a5b-ios-gallery-route-or-exception.md` | A5b gallery exception | **complete** (owner-signed PhotosPicker-only) |
+| `issues/03-a5c-ios-about-scope-or-absence.md` | A5c About absence | **complete** (owner-signed no About Phase A) |
+| `issues/04-a5d-desktop-editor-window-exception.md` | A5d Desktop registry | **complete** |
+| `issues/05-a5e-phase-a-closeout.md` | A5 closeout | **complete — A5 PASS** |
+| `issues/06-b0-android-v2100-baseline-inventory.md` | B0 baseline | **unblocked** (frontier after A5 PASS) |
+| `issues/07-b1-android-launch-gallery-parity.md` | B1 parity | Blocked by 06 |
+| `issues/08-b2-android-editor-export-parity.md` | B2 parity | Blocked by 06 |
+| `issues/09-b3-ios-desktop-alignment-exceptions.md` | B3 align | Blocked by 07+08 |
+| `issues/10-z-dod-audit-pr358-graduation.md` | §9 DoD audit | Blocked by 05–09 |
+
+## Current evidence — S4d-383 / A5 PASS (2026-07-12)
+
+**Not** §9 DoD complete; **not** Phase B pixel parity. Phase A route-of-record only.
+
+| Slice | Result |
+|-------|--------|
+| 01 A5a iOS editor host | Shipped; iosAppUITests **19/0**; Grok visual PASS |
+| 02/03 exceptions | Owner-signed PhotosPicker-only + no About on iOS Phase A |
+| 04 Desktop registry | Editor-window-only matrix published |
+| Closeout gates (`build/s4d383-a5-closeout/`) | shared **EXIT 0** (desktopTest 132/0, iosSim 101/0); app debug+release+unit **53/0**; desktop headless **EXIT 0** |
+
+**A5 status:** **PASS** — ticket 06 unblocked.
