@@ -279,12 +279,20 @@ Each phase: commonTest for pure reduce/orchestrate + Android smoke + one off-And
 
 **Exit:** Android host is edge + Koin shell; session owns config/nav/export orchestration.
 
+### Phase 6 — MediaLibraryPort (Android MediaStore)
+
+- [x] `MediaLibraryPort` + `AndroidMediaLibraryPort` (list + picker enrich)  
+- [x] Session `loadGallery()`; `MainViewModel.query` sets port + loads  
+- [x] System-picker path uses `enrichPickerRefs`  
+- [x] MainViewModel ~420 lines; unit green  
+
 ### Explicitly later / optional
 
 - Shared About session (needs product decision)  
 - In-app gallery on Desktop/iOS (product decision; Android gallery remains primary per pick policy)  
 - colorpicker-compose unification (UI, not session)  
-- Koin common module (still optional; constructor injection is enough)
+- Koin common module (still optional; constructor injection is enough)  
+- Further iOS `@Published` mirror reduction / full CMP root
 
 ---
 

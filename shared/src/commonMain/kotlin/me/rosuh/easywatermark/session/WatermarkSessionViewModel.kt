@@ -67,6 +67,11 @@ open class WatermarkSessionViewModel(
      */
     protected var exportPipeline: ExportPipelinePort? = exportPipeline
 
+    /**
+     * Optional media library (Android MediaStore). Null → [loadGallery] is a no-op.
+     */
+    protected var mediaLibrary: MediaLibraryPort? = null
+
     private val sessionMutex = Mutex()
     private var exportJob: Job? = null
 
@@ -272,6 +277,17 @@ open class WatermarkSessionViewModel(
     fun selectImage(ref: MediaRef) = dispatch(AppIntent.SelectCurrent(ref))
 
     fun openGalleryWithImages(images: List<Image>) = dispatch(AppIntent.GalleryLoaded(images))
+
+    /**
+     * Load gallery via [mediaLibrary] then open the dialog. Hosts without a library port skip.
+     */
+    fun loadGallery() {
+        val library = mediaLibrary ?: return
+        viewModelScope.launch(Dispatchers.Default) {
+            val images = library.listImages()
+            applyIntent(AppIntent.GalleryLoaded(images))
+        }
+    }
 
     fun enterEditor(
         selected: List<ImageInfo>,

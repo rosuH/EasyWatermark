@@ -3,12 +3,10 @@ package me.rosuh.easywatermark.ui
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.ContentResolver
-import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.provider.MediaStore
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewModelScope
@@ -44,9 +42,11 @@ import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.domain.OutputPrefsEditor
 import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.session.AndroidExportPipelinePort
+import me.rosuh.easywatermark.session.AndroidMediaLibraryPort
 import me.rosuh.easywatermark.session.AppIntent
 import me.rosuh.easywatermark.session.ExportErrorCodes
 import me.rosuh.easywatermark.session.ExportJobState
+import me.rosuh.easywatermark.session.MediaLibraryPort
 import me.rosuh.easywatermark.session.WatermarkSessionViewModel
 import me.rosuh.easywatermark.utils.ktx.formatDate
 import me.rosuh.easywatermark.utils.ktx.launch
@@ -114,18 +114,6 @@ class MainViewModel (
     val compressLevel: Int
         get() = _userPreferences.value.compressLevel
 
-    private val projection = arrayOf(
-        MediaStore.Images.Media._ID,
-        MediaStore.Images.Media.BUCKET_ID,
-        MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
-        MediaStore.Images.Media.DATA,
-        if (Build.VERSION.SDK_INT > 28) MediaStore.Images.Media.DATE_MODIFIED else MediaStore.Images.Media.DATE_TAKEN,
-        MediaStore.Images.Media.ORIENTATION,
-        MediaStore.Images.Media.WIDTH,
-        MediaStore.Images.Media.HEIGHT,
-        MediaStore.Images.Media.SIZE
-    )
-
     val templateListFlow: StateFlow<List<Template>> = templateRepo.getAllTemplate().stateIn(
         viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -137,6 +125,8 @@ class MainViewModel (
     init {
         // Phase 2: shared export loop uses Android port (wrap of legacy generateImage).
         exportPipeline = AndroidExportPipelinePort(appContext = applicationContext)
+        // Media library port for gallery listing / picker enrichment (default app ContentResolver).
+        mediaLibrary = AndroidMediaLibraryPort(applicationContext.contentResolver)
     }
 
     fun addTemplate(content: String) {
@@ -354,66 +344,9 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
     }
 
     fun query(contentResolver: ContentResolver) {
-        launch {
-            queryInternal(contentResolver)
-        }
-    }
-
-    private suspend fun queryInternal(
-        contentResolver: ContentResolver,
-        force: Boolean = true,
-    ) = withContext(Dispatchers.IO) {
-        if (!force) {
-            return@withContext
-        }
-        val list = ArrayList<Image>()
-        contentResolver.query(
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-            projection,
-            null,
-            null,
-            (if (Build.VERSION.SDK_INT > 28) MediaStore.Images.Media.DATE_MODIFIED else MediaStore.Images.Media.DATE_TAKEN) + " DESC"
-        )?.use { cursor ->
-            val imageIdColumn = cursor.getColumnIndex(MediaStore.Images.Media._ID)
-            val bucketIdColumn = cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_ID)
-            val bucketNameColumn =
-                cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
-            val dataColumn = cursor.getColumnIndex(MediaStore.Images.Media.DATA)
-            val dateColumn =
-                cursor.getColumnIndex(if (Build.VERSION.SDK_INT > 28) MediaStore.Images.Media.DATE_MODIFIED else MediaStore.Images.Media.DATE_TAKEN)
-            val orientationColumn = cursor.getColumnIndex(MediaStore.Images.Media.ORIENTATION)
-            val widthColumn = cursor.getColumnIndex(MediaStore.Images.Media.WIDTH)
-            val heightColumn = cursor.getColumnIndex(MediaStore.Images.Media.HEIGHT)
-            val sizeColumn = cursor.getColumnIndex(MediaStore.Images.Media.SIZE)
-
-            while (cursor.moveToNext()) {
-                val path = cursor.getString(dataColumn)
-                if (path.isNullOrBlank()) {
-                    continue
-                }
-
-                val imageId = cursor.getInt(imageIdColumn)
-                val bucketId = cursor.getInt(bucketIdColumn)
-                val bucketName = cursor.getString(bucketNameColumn) ?: ""
-                val dateTaken = cursor.getLong(dateColumn)
-                val orientation = cursor.getInt(orientationColumn)
-                val width = cursor.getInt(widthColumn)
-                val height = cursor.getInt(heightColumn)
-                val size = cursor.getLong(sizeColumn)
-
-                val contentUri: Uri = ContentUris.withAppendedId(
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                    imageId.toLong()
-                )
-
-                // Stores column values and the contentUri in a local object
-                // that represents the media file.
-                val image = Image(imageId, contentUri.toMediaRef(), bucketName, size, dateTaken)
-                list += image
-            }
-            // Session owns gallery dialog state (ADR-0017 Phase 1).
-            openGalleryWithImages(list)
-        }
+        // Prefer the caller’s ContentResolver (Activity); session loadGallery uses [mediaLibrary].
+        mediaLibrary = AndroidMediaLibraryPort(contentResolver)
+        loadGallery()
     }
 
     fun selectGallery(selectedList: List<Image>) {
@@ -464,51 +397,15 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
         }
     }
 
-    /** MediaStore enrichment for system Photo Picker URIs (Android edge only). */
+    /** System Photo Picker URIs → session editor (MediaStore enrichment via [MediaLibraryPort]). */
     private suspend fun enterEditorFromSystemUris(uriList: List<Uri>) {
-        val imageList = ArrayList<Image>()
-        val selection = "${MediaStore.Images.Media._ID} IN (${uriList.joinToString(",") { "?" }})"
-        val selectionArgs = uriList.map { ContentUris.parseId(it).toString() }.toTypedArray()
-        applicationContext.contentResolver.query(
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-            projection,
-            selection,
-            selectionArgs,
-            (if (Build.VERSION.SDK_INT > 28) MediaStore.Images.Media.DATE_MODIFIED else MediaStore.Images.Media.DATE_TAKEN) + " DESC"
-        )?.use { cursor ->
-            val imageIdColumn = cursor.getColumnIndex(MediaStore.Images.Media._ID)
-            val bucketNameColumn =
-                cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
-            val dataColumn = cursor.getColumnIndex(MediaStore.Images.Media.DATA)
-            val dateColumn =
-                cursor.getColumnIndex(if (Build.VERSION.SDK_INT > 28) MediaStore.Images.Media.DATE_MODIFIED else MediaStore.Images.Media.DATE_TAKEN)
-            val sizeColumn = cursor.getColumnIndex(MediaStore.Images.Media.SIZE)
-
-            while (cursor.moveToNext()) {
-                val path = cursor.getString(dataColumn)
-                if (path.isNullOrBlank()) continue
-                val imageId = cursor.getInt(imageIdColumn)
-                val bucketName = cursor.getString(bucketNameColumn) ?: ""
-                val dateTaken = cursor.getLong(dateColumn)
-                val size = cursor.getLong(sizeColumn)
-                val contentUri: Uri = ContentUris.withAppendedId(
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                    imageId.toLong(),
-                )
-                imageList += Image(
-                    imageId,
-                    contentUri.toMediaRef(),
-                    bucketName,
-                    size,
-                    dateTaken,
-                    check = true,
-                )
-            }
-        }
-        val imageInfoList = uriList.map { ImageInfo(it.toMediaRef()) }
+        val refs = uriList.map { it.toMediaRef() }
+        val library = mediaLibrary ?: AndroidMediaLibraryPort(applicationContext.contentResolver)
+        val gallerySnapshot = library.enrichPickerRefs(refs)
+        val imageInfoList = refs.map { ImageInfo(it) }
         enterEditor(
             selected = imageInfoList,
-            gallerySnapshot = imageList,
+            gallerySnapshot = gallerySnapshot,
             waterMark = waterMarkFlow.value,
         )
     }
