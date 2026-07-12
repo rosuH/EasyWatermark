@@ -4,46 +4,43 @@
 
 **Blocked by:** 06 B0 Android v2.10.0 baseline inventory/archive.
 
-**Status:** **editor + export P0/P1 code fixes landed — re-capture done; awaiting owner sign-off** (2026-07-12)  
-**Owner sign-off:** **none** (agent does not self-sign).
+**Status:** **complete — owner approved** (2026-07-12)  
+**Owner sign-off:** **yes** — owner replied *「ok，没问题」* after editor + export + centered export-list preview review.
 
 ## Acceptance checklist
 
 - [x] Archive complete for editor/save/export matrix
-- [ ] Owner sign-off comments **or** punch-list (no self-sign) — **awaiting owner**
+- [x] Owner sign-off comments **or** punch-list (no self-sign) — **owner approved**
 - [x] No S4d-8/17/190 draw-swap reopen; no silent golden rebaseline
 
-## Commits (this ticket)
+## Delivered
 
-| Change | Evidence |
-|--------|----------|
-| Editor logo / text sheet / selection | `188c413f`, `24097a48` · `editor-after-p0-fix.png`, `editor-text-sheet-open.png` |
-| Export sheet + quality slider | this commit · `export-after-p1-fix.png` |
+| Area | Behavior | Evidence |
+|------|----------|----------|
+| Editor top bar | Toolbar logo + `Navigate up` | `editor-after-p0-fix.png` |
+| Text watermark | Tap **Text** → **Edit watermark** sheet; template **top-end**; Confirm | `editor-text-sheet-open.png` |
+| Text/Icon selection | Selected chip highlight | editor captures |
+| Filmstrip | Larger thumbs (56dp) | editor captures |
+| Export sheet | Dimmed editor peek; continuous quality + 20-step snap on release | `export-after-p1-fix.png` |
+| Export list preview | Horizontally centered | `export-preview-centered.png` |
+| HTML board | `captures/compare-en-dark.html` | |
 
-## Editor (summary)
+## Commits (selected)
 
-- Logo leading (`Navigate up`), Text **button → Edit watermark sheet**, template **top-end** of sheet, Text chip selected, filmstrip 56dp.
-- Residual: logo monochrome vs prod yellow.
+- `188c413f` editor chrome  
+- `24097a48` Text → sheet + template top-end  
+- `33284980` export peek + continuous quality  
+- `72a19071` center export list preview  
 
-## Export P1 fix (landed)
+## Residual (non-blocking)
 
-| Issue | Fix |
-|-------|-----|
-| Full-screen sheet | Drop `fillMaxSize`; wrap-height content so dimmed editor peeks |
-| Discrete quality ticks | `steps=0` continuous track; **snap ×20 on release** (ADR-0014) |
-| CTA clipped | Tighter vertical padding; preview box 145→110dp; export button visible |
-| Layout density | Reduced title/export-list/top paddings |
-
-**Grok after fix:** sheet over dimmed watermark preview; continuous quality track at 80; Export list thumb; **Export to the album** CTA on-screen. Residual: M3 thumb shape (vertical cap) vs prod round thumb.
-
-## Punch-list for owner
-
-1. `OWNER SIGN-OFF 08 editor: approved` (or request logo color polish)  
-2. `OWNER SIGN-OFF 08 export: approved` (or request thumb style polish)  
-3. Optional Style/Layout/icon mode pairs  
-
-HTML: `docs/parity/v2.10.0/captures/compare-en-dark.html`
+- Logo monochrome vs prod yellow tint  
+- M3 quality thumb shape vs prod round thumb  
 
 ## Guardrails
 
-Android production raster/composition stays native. No commonMain cell draw-swap. No silent golden rebaseline. JPEG quality snap-to-20 retained on release (ADR-0014).
+Android production raster/composition stays native. No commonMain cell draw-swap. No silent golden rebaseline. JPEG quality snap-to-20 on release retained (ADR-0014).
+
+## Next
+
+Ticket **07** (launch/gallery) remains punch-list open if owner wants prod Choose-Images residual handled; otherwise Phase B can proceed to **09** only after **07** + **08** both closed — **08 is closed**.
