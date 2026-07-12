@@ -175,5 +175,8 @@ fun reduceSessionUi(snapshot: SessionUiSnapshot, intent: AppIntent): SessionRedu
                 snapshot.copy(launch = snapshot.launch.copy(curImageInfo = intent.info)),
             )
         }
+
+        // Export orchestration is handled in WatermarkSessionViewModel (not pure UI reduce).
+        is AppIntent.RequestExport, AppIntent.CancelExport -> SessionReduceResult(snapshot)
     }
 }

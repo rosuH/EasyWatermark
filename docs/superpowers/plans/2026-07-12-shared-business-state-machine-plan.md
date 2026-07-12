@@ -245,11 +245,12 @@ Each phase: commonTest for pure reduce/orchestrate + Android smoke + one off-And
 
 ### Phase 2 — Export orchestration in shared ViewModel
 
-- [ ] Export progress state machine in shared VM  
-- [ ] `ImagePipelinePort` + `ExportStorePort` Android impl = current `generateImage` / MediaStore  
-- [ ] `saveImage` path = VM + ports only  
+- [x] Export progress loop in `WatermarkSessionViewModel.requestExport` / `AppIntent.RequestExport`  
+- [x] `ExportPipelinePort` + Android `AndroidExportPipelinePort` wrap of legacy `generateImage` (native renderer + MediaStore)  
+- [x] `MainViewModel.saveImage` → `requestExport` only  
+- [x] `ExportOrchestrationTest` + full compile/unit green  
 
-**Exit:** Android export progress identical; fake-port commonTest.
+**Exit:** Android export path wrap-not-rewrite; shared progress state; goldens untouched (algorithm same).
 
 ### Phase 3 — Desktop CMP binds shared ViewModel
 

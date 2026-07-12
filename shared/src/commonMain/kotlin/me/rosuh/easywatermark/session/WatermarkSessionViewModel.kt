@@ -3,9 +3,11 @@ package me.rosuh.easywatermark.session
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -13,8 +15,10 @@ import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.JobState
 import me.rosuh.easywatermark.data.model.MediaRef
+import me.rosuh.easywatermark.data.model.Result
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.entity.Template
+import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.ui.Image
 import me.rosuh.easywatermark.ui.LaunchScreenState
@@ -23,15 +27,16 @@ import me.rosuh.easywatermark.ui.UiState
 /**
  * Shared product session host (ADR-0017).
  *
- * **Phase 1:** owns launch/gallery/editor route, gallery multi-select, template dialog [UiState],
- * and selection commit effects via [WaterMarkRepository]. Config edits still go through Editors
- * on the Android host; export orchestration is Phase 2.
+ * **Phase 1:** launch/gallery/editor route, gallery multi-select, template [UiState], selection commit.
+ * **Phase 2:** batch export orchestration via [ExportPipelinePort] (Android wraps native generateImage).
  *
- * Performance: state reduces on [Dispatchers.Default]; UI observes [StateFlow] only.
- * Android skill: UI events → [dispatch] → state; no business state only in Compose `remember`.
+ * Performance: reduce/export on [Dispatchers.Default]/[Dispatchers.IO] inside ports; UI only observes
+ * [StateFlow]. Android skill: UI → [dispatch] → state; no business state only in Compose `remember`.
  */
 open class WatermarkSessionViewModel(
     protected val waterMarkRepo: WaterMarkRepository,
+    protected val userConfigRepo: UserConfigRepository,
+    exportPipeline: ExportPipelinePort? = null,
 ) : ViewModel() {
 
     private val _uiState: MutableStateFlow<UiState> = MutableStateFlow(UiState.None)
@@ -50,7 +55,14 @@ open class WatermarkSessionViewModel(
     /** Mutable for Android filmstrip selection handoff (legacy nextSelectedPos). */
     var nextSelectedPos: Int = 0
 
+    /**
+     * Platform export implementation. Android sets this to [me.rosuh.easywatermark.session.AndroidExportPipelinePort]
+     * (or injects via constructor). Null disables [requestExport].
+     */
+    protected var exportPipeline: ExportPipelinePort? = exportPipeline
+
     private val sessionMutex = Mutex()
+    private var exportJob: Job? = null
 
     init {
         viewModelScope.launch(Dispatchers.Default) {
@@ -74,20 +86,31 @@ open class WatermarkSessionViewModel(
     }
 
     /**
-     * Apply [intent] on a background dispatcher; serialised so concurrent collects/dispatches
-     * do not interleave snapshot writes.
+     * Apply [intent]; export intents run outside the UI-snapshot mutex so long exports do not
+     * block gallery/nav reduces.
      */
     protected suspend fun applyIntent(intent: AppIntent) {
-        sessionMutex.withLock {
-            val before = SessionUiSnapshot(
-                launch = _launchScreenUiStateFlow.value,
-                galleryPicked = _galleryPickedImageList.value,
-                dialogUi = _uiState.value,
-            )
-            val result = reduceSessionUi(before, intent)
-            publishSnapshot(result.snapshot)
-            for (effect in result.effects) {
-                executeEffect(effect)
+        when (intent) {
+            is AppIntent.RequestExport -> {
+                startExport(intent.images)
+            }
+            AppIntent.CancelExport -> {
+                exportJob?.cancel()
+                exportJob = null
+            }
+            else -> {
+                sessionMutex.withLock {
+                    val before = SessionUiSnapshot(
+                        launch = _launchScreenUiStateFlow.value,
+                        galleryPicked = _galleryPickedImageList.value,
+                        dialogUi = _uiState.value,
+                    )
+                    val result = reduceSessionUi(before, intent)
+                    publishSnapshot(result.snapshot)
+                    for (effect in result.effects) {
+                        executeEffect(effect)
+                    }
+                }
             }
         }
     }
@@ -127,6 +150,73 @@ open class WatermarkSessionViewModel(
 
     protected fun setExportJobState(state: ExportJobState) {
         _exportJobState.value = state
+    }
+
+    /**
+     * Batch export: one [ExportPipelinePort.exportOne] per item, progress on [exportJobState].
+     * Wraps platform pipeline — does not reimplement raster.
+     */
+    fun requestExport(images: List<ImageInfo>) {
+        dispatch(AppIntent.RequestExport(images))
+    }
+
+    fun cancelExport() {
+        dispatch(AppIntent.CancelExport)
+    }
+
+    private fun startExport(images: List<ImageInfo>) {
+        val pipeline = exportPipeline ?: return
+        exportJob?.cancel()
+        exportJob = viewModelScope.launch(Dispatchers.Default) {
+            if (images.isEmpty()) {
+                setExportJobState(ExportJobState())
+                return@launch
+            }
+            resetJobStatus()
+            setExportJobState(
+                ExportJobState(
+                    isSaving = true,
+                    totalCount = images.size,
+                ),
+            )
+            val config = waterMarkRepo.waterMark.first()
+            val prefs = userConfigRepo.userPreferences.first()
+            for (info in images) {
+                try {
+                    info.jobState = JobState.Ing
+                    val result = pipeline.exportOne(info, config, prefs)
+                    info.result = result
+                    info.jobState = if (result.isSuccess()) {
+                        JobState.Success(result)
+                    } else {
+                        JobState.Failure(result)
+                    }
+                } catch (e: Exception) {
+                    // Ports should map known failures into Result; OOM is handled inside Android port.
+                    val failure = Result.failure<MediaRef>(
+                        null,
+                        code = ExportErrorCodes.FILE_NOT_FOUND,
+                        message = e.message ?: "export failed",
+                    )
+                    info.result = failure
+                    info.jobState = JobState.Failure(failure)
+                }
+                setExportJobState(
+                    ExportJobState(
+                        isSaving = true,
+                        completedCount = images.count { it.jobState is JobState.Success },
+                        totalCount = images.size,
+                    ),
+                )
+            }
+            setExportJobState(
+                ExportJobState(
+                    isFinished = true,
+                    completedCount = images.count { it.jobState is JobState.Success },
+                    totalCount = images.size,
+                ),
+            )
+        }
     }
 
     // --- Typed convenience API (mirrors legacy MainViewModel names for hosts) ---

@@ -54,4 +54,12 @@ sealed class AppIntent {
 
     /** Mirror repo selected image into launch state. */
     data class SyncCurrentImage(val info: ImageInfo?) : AppIntent()
+
+    /**
+     * Start batch export for [images] (defaults to current session selection when empty list
+     * is passed from hosts that want repo list — hosts should pass explicit list).
+     */
+    data class RequestExport(val images: List<ImageInfo>) : AppIntent()
+
+    data object CancelExport : AppIntent()
 }

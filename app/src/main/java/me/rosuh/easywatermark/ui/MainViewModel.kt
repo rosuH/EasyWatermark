@@ -4,23 +4,14 @@ import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.ContentResolver
 import android.content.ContentUris
-import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Paint
 import android.net.Uri
 import android.os.Build
-import android.os.Environment
 import android.provider.MediaStore
-import android.media.MediaScannerConnection
-import android.text.TextPaint
-import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewModelScope
-
 import id.zelory.compressor.Compressor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -35,21 +26,17 @@ import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
-import me.rosuh.easywatermark.data.model.WatermarkConfigChange
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.ImageInfo
-import me.rosuh.easywatermark.data.model.JobState
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.Result
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WaterMark
-import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.model.entity.Template
-import me.rosuh.easywatermark.render.WatermarkRenderer
-import me.rosuh.easywatermark.render.androidTextMeasureEnv
+import me.rosuh.easywatermark.data.model.WatermarkConfigChange
 import me.rosuh.easywatermark.data.repo.MemorySettingRepo
 import me.rosuh.easywatermark.data.repo.TemplateRepository
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
@@ -57,37 +44,35 @@ import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.domain.OutputPrefsEditor
 import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
+import me.rosuh.easywatermark.session.AndroidExportPipelinePort
 import me.rosuh.easywatermark.session.AppIntent
+import me.rosuh.easywatermark.session.ExportErrorCodes
 import me.rosuh.easywatermark.session.ExportJobState
 import me.rosuh.easywatermark.session.WatermarkSessionViewModel
-import me.rosuh.easywatermark.utils.FileUtils.Companion.outPutFolderName
-import me.rosuh.easywatermark.utils.bitmap.decodeBitmapFromUri
-import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
-import me.rosuh.easywatermark.utils.ktx.applyConfig
 import me.rosuh.easywatermark.utils.ktx.formatDate
-import me.rosuh.easywatermark.utils.ktx.toCompressFormat
+import me.rosuh.easywatermark.utils.ktx.launch
 import me.rosuh.easywatermark.utils.ktx.toMediaRef
 import me.rosuh.easywatermark.utils.ktx.toUri
-import me.rosuh.easywatermark.utils.ktx.launch
-import me.rosuh.easywatermark.utils.ktx.obtainTileMode
 import org.koin.java.KoinJavaComponent.inject
 import java.io.File
-import java.io.FileNotFoundException
-import java.io.FileOutputStream
 
 /** Android alias for shared [ExportJobState] (export-sheet presentation). */
 typealias SaveExportUiState = ExportJobState
 
 /**
- * Android product host (ADR-0017 Phase 1): extends shared [WatermarkSessionViewModel] for
- * launch/gallery/editor session state; keeps MediaStore/export/compress IO on this subclass.
+ * Android product host (ADR-0017 Phase 1–2): extends shared [WatermarkSessionViewModel] for
+ * launch/gallery/editor session + export orchestration; [AndroidExportPipelinePort] wraps native
+ * generateImage; compress/crash remain Android-only edges.
  */
 class MainViewModel (
     private val userRepo: UserConfigRepository,
     waterMarkRepo: WaterMarkRepository,
     private val memorySettingRepo: MemorySettingRepo,
     private val templateRepo: TemplateRepository,
-) : WatermarkSessionViewModel(waterMarkRepo) {
+) : WatermarkSessionViewModel(
+    waterMarkRepo = waterMarkRepo,
+    userConfigRepo = userRepo,
+) {
 
     // S4d-96: the neutral watermark config-edit logic now lives in the commonMain use-case; this VM
     // just owns the coroutine scope and delegates. Built from the already-injected repo (no DI change).
@@ -155,6 +140,11 @@ class MainViewModel (
 
     private val applicationContext: Context by inject(Context::class.java)
 
+    init {
+        // Phase 2: shared export loop uses Android port (wrap of legacy generateImage).
+        exportPipeline = AndroidExportPipelinePort(appContext = applicationContext)
+    }
+
     fun addTemplate(content: String) {
         if (templateEditor.isDaoNull()) {
             dispatch(AppIntent.DatabaseError)
@@ -177,221 +167,16 @@ class MainViewModel (
         }
     }
 
+    /**
+     * Batch export entry — orchestration lives in [WatermarkSessionViewModel.requestExport];
+     * [contentResolver] retained for API compatibility (port uses application ContentResolver).
+     */
+    @Suppress("UNUSED_PARAMETER")
     fun saveImage(
         contentResolver: ContentResolver,
         imageList: List<ImageInfo>,
     ) {
-        viewModelScope.launch {
-            if (imageList.isEmpty()) {
-                setExportJobState(ExportJobState())
-                return@launch
-            }
-            resetJobStatus()
-            setExportJobState(
-                ExportJobState(
-                    isSaving = true,
-                    totalCount = imageList.size,
-                ),
-            )
-            generateList(contentResolver, imageList)
-        }
-    }
-
-    private suspend fun generateList(
-        contentResolver: ContentResolver,
-        infoList: List<ImageInfo>?,
-    ) {
-        withContext(Dispatchers.Default) {
-            if (infoList.isNullOrEmpty()) {
-                return@withContext
-            }
-            infoList.forEach { info ->
-                try {
-                    info.jobState = JobState.Ing
-                    info.result = generateImage(contentResolver, info)
-                    info.jobState = JobState.Success(info.result!!)
-                } catch (fne: FileNotFoundException) {
-                    fne.printStackTrace()
-                    info.result = Result.failure(null, code = TYPE_ERROR_FILE_NOT_FOUND)
-                    info.jobState = JobState.Failure(info.result!!)
-                } catch (oom: OutOfMemoryError) {
-                    info.result = Result.failure(null, code = TYPE_ERROR_SAVE_OOM)
-                    info.jobState = JobState.Failure(info.result!!)
-                }
-                Log.i("generateList", "${info.uri} : ${info.result}")
-                setExportJobState(
-                    ExportJobState(
-                        isSaving = true,
-                        completedCount = infoList.count { it.jobState is JobState.Success },
-                        totalCount = infoList.size,
-                    ),
-                )
-            }
-            setExportJobState(
-                ExportJobState(
-                    isFinished = true,
-                    completedCount = infoList.count { it.jobState is JobState.Success },
-                    totalCount = infoList.size,
-                ),
-            )
-        }
-    }
-
-    private suspend fun generateImage(
-        contentResolver: ContentResolver,
-        imageInfo: ImageInfo,
-    ): Result<Uri> =
-        withContext(Dispatchers.IO) {
-            val rect = decodeBitmapFromUri(contentResolver, imageInfo.uri.toUri())
-            if (rect.isFailure()) {
-                return@withContext Result.extendMsg(rect)
-            }
-            val mutableBitmap = rect.data?.bitmap?.copy(Bitmap.Config.ARGB_8888, true)
-                ?: return@withContext Result.failure(
-                    null,
-                    code = "-1",
-                    message = "Copy bitmap from uri failed."
-                )
-
-            imageInfo.width = mutableBitmap.width
-            imageInfo.height = mutableBitmap.height
-            val tmpConfig = waterMarkFlow.value
-            val canvas = Canvas(mutableBitmap)
-            // Export sizing is image-space; preview matrix values are not needed here.
-            val bitmapPaint = TextPaint().applyConfig(imageInfo, tmpConfig, isScale = false)
-            val layoutPaint = Paint()
-            // S2a: build the cell shader through the Android renderer seam (the same
-            // WatermarkRenderer the Compose preview uses).
-            val shader = when (tmpConfig.markMode) {
-                WatermarkMode.Text -> {
-                    WatermarkRenderer.buildTextShader(
-                        imageInfo,
-                        tmpConfig,
-                        bitmapPaint,
-                        androidTextMeasureEnv(applicationContext),
-                        Dispatchers.IO
-                    )
-                }
-
-                WatermarkMode.Image -> {
-                    // Decode the icon against source-image bounds so export is independent of preview size.
-                    // S4d-50: iconUri is now a platform-neutral MediaRef; convert to Uri at the decode edge.
-                    val iconBitmapRect = decodeSampledBitmapFromResource(
-                        contentResolver,
-                        tmpConfig.iconUri.toUri(),
-                        imageInfo.width,
-                        imageInfo.height
-                    )
-                    if (iconBitmapRect.isFailure() || iconBitmapRect.data == null) {
-                        return@withContext Result.failure(
-                            null,
-                            code = "-1",
-                            message = "decodeSampledBitmapFromResource == null"
-                        )
-                    }
-                    val iconBitmap = iconBitmapRect.data!!.bitmap
-                    WatermarkRenderer.buildIconShader(
-                        imageInfo,
-                        iconBitmap,
-                        tmpConfig,
-                        bitmapPaint,
-                        scale = true,
-                        Dispatchers.IO
-                    )
-                }
-            }
-
-            // S2a: composition delegated to the shared renderer seam (same helper as preview).
-            // Export composites at the bitmap origin (left/top = 0, region = full bitmap); the old
-            // REPEAT branch had no canvas translate, which `compose` reproduces as translate(0,0).
-            WatermarkRenderer.compose(
-                canvas = canvas,
-                shader = shader,
-                tileMode = tmpConfig.obtainTileMode(),
-                paint = layoutPaint,
-                left = 0f,
-                top = 0f,
-                regionWidth = mutableBitmap.width.toFloat(),
-                regionHeight = mutableBitmap.height.toFloat(),
-                offsetX = imageInfo.offsetX,
-                offsetY = imageInfo.offsetY,
-            )
-
-            return@withContext if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val imageCollection =
-                    MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-                val imageDetail = ContentValues().apply {
-                    put(
-                        MediaStore.Images.Media.DISPLAY_NAME,
-                        generateOutputName()
-                    )
-                    put(MediaStore.Images.Media.MIME_TYPE, "image/${trapOutputExtension()}")
-                    put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/$outPutFolderName/")
-                    put(MediaStore.Images.Media.IS_PENDING, 1)
-                }
-
-                val imageContentUri = contentResolver.insert(imageCollection, imageDetail)
-                contentResolver.openFileDescriptor(imageContentUri!!, "w", null).use { pfd ->
-                    mutableBitmap.compress(
-                        outputFormat.toCompressFormat(),
-                        compressLevel,
-                        FileOutputStream(pfd!!.fileDescriptor)
-                    )
-                }
-                imageDetail.clear()
-                imageDetail.put(MediaStore.Images.Media.IS_PENDING, 0)
-                contentResolver.update(imageContentUri, imageDetail, null, null)
-                Result.success(imageContentUri)
-            } else {
-                // need request write_storage permission
-                // should check Pictures folder exist
-                val picturesFile: File =
-                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-                        ?: return@withContext Result.failure(
-                            null,
-                            code = "-1",
-                            message = "Can't get pictures directory."
-                        )
-                if (!picturesFile.exists()) {
-                    picturesFile.mkdir()
-                }
-                val mediaDir = File(picturesFile, outPutFolderName)
-
-                if (!mediaDir.exists()) {
-                    mediaDir.mkdirs()
-                }
-                val outputFile =
-                    File(mediaDir, generateOutputName())
-                outputFile.outputStream().use { fileOutputStream ->
-                    mutableBitmap.compress(
-                        outputFormat.toCompressFormat(),
-                        compressLevel,
-                        fileOutputStream
-                    )
-                }
-                val outputUri = FileProvider.getUriForFile(
-                    MyApp.instance,
-                    "${BuildConfig.APPLICATION_ID}.fileprovider",
-                    outputFile
-                )
-                MediaScannerConnection.scanFile(
-                    MyApp.instance,
-                    arrayOf(outputFile.absolutePath),
-                    null,
-                    null
-                )
-                Result.success(outputUri)
-            }
-        }
-
-    private fun generateOutputName(): String {
-        return "ewm_${System.currentTimeMillis()}.${trapOutputExtension()}"
-    }
-
-    private fun trapOutputExtension(): String {
-        // S4d-177: single-sourced on the shared ImageFormat enum (JPEG->"jpg", PNG->"png"). Byte-identical
-        // to the old `if (PNG) "png" else "jpg"`; the `image/<ext>` MIME shape at the call site is unchanged.
-        return outputFormat.fileExtension
+        requestExport(imageList)
     }
 
     fun updateImageList(list: List<Uri>) {
@@ -799,8 +584,8 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
     }
 
     companion object {
-        const val TYPE_ERROR_FILE_NOT_FOUND = "type_error_file_not_found"
-        const val TYPE_ERROR_SAVE_OOM = "type_error_save_oom"
+        const val TYPE_ERROR_FILE_NOT_FOUND = ExportErrorCodes.FILE_NOT_FOUND
+        const val TYPE_ERROR_SAVE_OOM = ExportErrorCodes.SAVE_OOM
         const val TYPE_COMPRESS_ERROR = "type_CompressError"
         const val TYPE_COMPRESS_OK = "type_CompressOK"
         const val TYPE_COMPRESSING = "type_Compressing"
