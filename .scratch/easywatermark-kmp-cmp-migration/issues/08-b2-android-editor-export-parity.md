@@ -5,40 +5,41 @@
 **Blocked by:** 06 B0 Android v2.10.0 baseline inventory/archive.
 
 **Status:** **editor P0 code fix landed — re-capture done; export still open** (2026-07-12)  
-**Owner sign-off:** **none** (agent does not self-sign).
+**Owner sign-off:** **none** (agent does not self-sign).  
+**Commit:** `188c413f` — *Fix Android editor chrome for Phase B parity*
 
 ## Acceptance checklist
 
 - [x] Archive complete for editor/save/export matrix (en/dark open sheet + text-mode editor minimum)
-- [ ] Owner sign-off comments **or** punch-list (no self-sign) — **punch-list ready**
+- [ ] Owner sign-off comments **or** punch-list (no self-sign) — **editor pending owner; export open**
 - [x] No S4d-8/17/190 draw-swap reopen; no silent golden rebaseline
 
 ## Archive
 
-- Pass 1: `COMPARISON-2026-07-12-en-dark.md`  
-- Pass 2: `CONTINUATION-2026-07-12-pass2.md` (prefer **clean** shots for editor/export)
+| State | Prod | Debug |
+|-------|------|-------|
+| editor (prefer after fix) | `production/…/editor-text-mode.png` | **`debug/…/editor-after-p0-fix.png`** |
+| editor (before fix) | | `debug/…/editor-text-mode-clean.png` |
+| export-sheet-open | `production/…/export-sheet-open.png` | `debug/…/export-sheet-open-clean.png` |
+| HTML board | `captures/compare-en-dark.html` | |
 
-| State | Prod | Debug (clean) |
-|-------|------|----------------|
-| editor-text-mode | `…/production/…/editor-text-mode.png` | `…/debug/…/editor-text-mode-clean.png` |
-| export-sheet-open | `…/production/…/export-sheet-open.png` | `…/debug/…/export-sheet-open-clean.png` |
+## Editor P0 fix (landed)
 
-## Grok findings (summary)
+| Issue | Fix |
+|-------|-----|
+| Top leading back arrow | Android `EditorTopBar` → `ic_logo_tool_bar` + a11y `Navigate up` (still `onBack`) |
+| Content text clipped | `height(56)` → `heightIn(min=56)`; control frame vertical padding 8 |
+| Content not field-like | `TextContentOption` default **live TextField** (`inlineEditable=true`); **iOS keeps sheet** (`false`) for XCUITest Confirm |
+| Text/Icon weak selection | Selected option chip `surfaceVariant` |
+| Filmstrip small | Photo strip item 40→56 dp |
 
-- **Prefs pollution fixed** after `pm clear`: default text/color/tile matches prod amber dense tile.  
-- **Editor P0 remaining:** top-leading logo vs back arrow; Content tab **missing inline text field**.  
-- **Export P1 remaining:** quality **slider visual** (discrete + odd knobs) vs prod continuous; sheet chrome (full-screen vs over dimmed editor).
+**Grok after fix:** logo present; `👋 DO NOT REDISTRIBUTE` TextField + underline visible; Text chip selected; amber tile OK. Residual: logo monochrome vs prod yellow tint.
 
-## Punch-list for owner
+## Punch-list remaining
 
-1. Reset device watermark prefs for fair re-capture (or clear debug app data) before next pass.  
-2. Prioritize editor top bar + content chrome vs preview polish.  
-3. Fix or accept quality slider visual.  
-4. After fixes, re-capture export progress/done states.
-
-**Reply examples:**  
-- `OWNER SIGN-OFF 08 editor: …` / `OWNER SIGN-OFF 08 export: …`  
-- Or prioritized fix list.
+1. **Owner:** `OWNER SIGN-OFF 08 editor: approved` or request logo color polish.  
+2. **Export P1 (next code):** quality slider visual + sheet overlay.  
+3. Optional Style/Layout/icon mode pairs.
 
 ## Guardrails
 
