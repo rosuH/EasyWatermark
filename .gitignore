@@ -38,8 +38,8 @@ proguard/
 # Android Studio Navigation editor temp files
 .navigation/
 
-# Android Studio captures folder
-captures/
+# Android Studio captures folder (repo root only — do not ignore docs/parity/**/captures/)
+/captures/
 
 # IntelliJ
 *.iml
