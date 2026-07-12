@@ -1,5 +1,10 @@
 # Compose Migration Findings
 
+## S4d-353 decision pack 简体中文 is presentation-only (S4d-355, 2026-07-12)
+
+- `docs/superpowers/research/2026-07-11-s4d353-compose-skiko-alignment-decision-pack.md` is fully translated to Simplified Chinese for owner readability. Filename, technical identifiers, paths, versions, commands, and **A/B/C/defer** labels are unchanged.
+- This is a **translation / decision-presentation** slice — **not** an owner decision, not option acceptance, not scope/risk/conclusion change. Remaining Phase A iOS text/templates still **awaits owner A/B/C/defer**.
+
 ## AndroMeld install can succeed while Phone Screen frames are non-evidence (S4d-354, 2026-07-12)
 
 - MCP `devices.list` + enabled control + Phone Screen session existence do **not** prove a visual gate. After a successful `./gradlew :app:installDebug` of HEAD debug APK, launch may report `foregroundVerified` while hierarchy shows Settings/Launcher and frames are **stale or black**.

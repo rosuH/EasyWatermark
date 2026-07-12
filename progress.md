@@ -1251,3 +1251,9 @@ Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; 
 - **Non-claims:** About visual gate **not** passed; save/export visual gate **not** passed; pre-install screenshots **not** proof.
 - **No** product code / full multiplatform rebuild for closeout. Protected untracked project-branch-goals-progress not staged.
 - **Next:** wait for **fresh/healthy** AndroMeld Phone Screen frame before About/save-export visual gates; **parallel owner A/B/C/defer** (S4d-353) remains open. Not Phase A/B/parity complete.
+
+## 2026-07-12 — S4d-355 S4d-353 decision pack 简体中文 translation (docs-only accepted)
+
+- **S4d-355:** full Simplified Chinese translation of `docs/superpowers/research/2026-07-11-s4d353-compose-skiko-alignment-decision-pack.md` for decision presentation. Filename unchanged; technical identifiers, code paths, versions, commands, and **A/B/C/defer** option labels preserved. Facts, scope, risks, and conclusion unchanged; **no** option accepted or recommended.
+- **Not an owner decision.** Translation / presentation slice only. **No** product code, dependency, or build change for this slice. Protected untracked `2026-07-11-project-branch-goals-progress.md` not staged.
+- **Next:** still **awaits owner A/B/C/defer** before Phase A iOS text/templates; parallel S4d-354 healthy AndroMeld frame before About/save-export visual gates. Not Phase A/B/parity complete.

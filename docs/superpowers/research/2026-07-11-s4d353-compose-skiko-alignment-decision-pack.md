@@ -1,111 +1,111 @@
-# S4d-353 — Owner decision pack: iOS Compose/Skiko Phase A gate
+# S4d-353 — 负责人决策包：iOS Compose/Skiko Phase A 门禁
 
-**Date:** 2026-07-11
-**Type:** decision pack only — **no option accepted or recommended**
-**Not** Phase A/B/parity complete. No implementation brief.
+**日期：** 2026-07-11
+**类型：** 仅决策包 — **未接受、未推荐任何选项**
+**并非** Phase A/B/parity 完成。不是实现简报。
 
-**Binding hard constraints:** `codex-goal-v2.md` §6 (Android native text/icon/composition stay; persisted bytes sacred; no silent golden rebaseline; new deps owner-gated; consumer-first ≥2 production consumers; **no S4d-338 retry / Compose–Skiko change without owner**); §7.3–7.4 (block = iOS text/full-root critical edge; lane-switch elsewhere open but non-text already exhausted). Forbidden without owner: change Compose/Skiko versions.
+**具有约束力的硬性规则：** `codex-goal-v2.md` §6（Android 原生 text/icon/composition 保持不变；持久化字节神圣不可擅自改；禁止静默 golden 重基线；新增依赖须负责人批准；consumer-first 且 ≥2 个生产消费者；**未经负责人批准不得重试 S4d-338 / 不得变更 Compose–Skiko**）；§7.3–7.4（阻塞 = iOS text/full-root 关键边；其他车道可切换，但 non-text 已耗尽）。未经负责人禁止：变更 Compose/Skiko 版本。
 
-Codex **must not** implement, bump versions, invent substitutes, or reorder plan until owner signs an option.
+在负责人签署某一选项之前，Codex **不得**实现、 bump 版本、发明替代方案或重排计划。
 
 ---
 
-## 1. Exact blocker
+## 1. 精确阻塞点
 
-### Runtime (S4d-338)
+### 运行时（S4d-338）
 
-Production attempt to host commonMain `TextContentOption` on iOS (then **fully reverted**). Evidence: `build/s4d338-text-xcuitest-r{2,3,4}.xcresult`; `findings.md` “iOS CMP text-input linker block”; `progress.md` S4d-338. iOS 27.0 XCUITest:
+在 iOS 上托管 commonMain `TextContentOption` 的生产尝试（随后**完全回滚**）。证据：`build/s4d338-text-xcuitest-r{2,3,4}.xcresult`；`findings.md` “iOS CMP text-input linker block”；`progress.md` S4d-338。iOS 27.0 XCUITest：
 
-| Run | Trigger | Failure |
+| 运行 | 触发 | 失败 |
 |---|---|---|
-| r2 | Material3 `ModalBottomSheet` | Missing `LocalKeyboardOverlapHeight` |
-| r3 | Compose `Dialog` + `navigationBarsPadding()` | Missing `LocalSafeArea` |
-| r4 | Insets bypassed; Compose text visible | Focus → `SkikoPlatformTextInputMethodRequest` lacks `unclippedTextOffsetInRoot` |
+| r2 | Material3 `ModalBottomSheet` | 缺失 `LocalKeyboardOverlapHeight` |
+| r3 | Compose `Dialog` + `navigationBarsPadding()` | 缺失 `LocalSafeArea` |
+| r4 | 绕过 insets；Compose 文本可见 | 聚焦 → `SkikoPlatformTextInputMethodRequest` 缺少 `unclippedTextOffsetInRoot` |
 
-Related: S4d-321 `GalleryDialogShell` default Scaffold insets → `LocalSafeArea` crash (witness uses explicit `WindowInsets()` only). **Compile ≠ iOS sheet/IME safety.** Non-text CMP already runs.
+相关：S4d-321 `GalleryDialogShell` 默认 Scaffold insets → `LocalSafeArea` 崩溃（witness 仅使用显式 `WindowInsets()`）。**编译成功 ≠ iOS sheet/IME 安全。** non-text CMP 已可运行。
 
-### Locked versions (`gradle/libs.versions.toml`)
+### 锁定版本（`gradle/libs.versions.toml`）
 
-| Item | Version |
+| 项 | 版本 |
 |---|---|
 | Kotlin | `2.3.20` |
 | Compose Multiplatform | `1.11.1` |
-| AndroidX Compose BOM | `2026.05.01` → UI **1.11.2** on Android (catalog note) |
-| Material3 (app catalog pin) | `1.4.0` |
+| AndroidX Compose BOM | `2026.05.01` → Android 上 UI **1.11.2**（catalog 注释） |
+| Material3（app catalog 钉死） | `1.4.0` |
 | AGP | `8.13.2` |
 
-`:shared` = CMP plugin + `compose.runtime/ui/material3`. `:app` = enforced BOM + `org.jetbrains.compose.*` → `androidx.compose.*` substitution. Skiko is **transitive** (iOS/desktop CMP); **no separate catalog pin**. Text/IME fix implies owner-approved **CMP (+ likely Kotlin) alignment**, not a host-only patch. Desktop Skiko must stay out of `:app` runtime.
+`:shared` = CMP 插件 + `compose.runtime/ui/material3`。`:app` = 强制 BOM + `org.jetbrains.compose.*` → `androidx.compose.*` 替换。Skiko 为**传递依赖**（iOS/desktop CMP）；**无单独 catalog 钉死**。文本/IME 修复意味着须负责人批准的 **CMP（并很可能含 Kotlin）对齐**，而非仅 host 补丁。Desktop Skiko 必须留在 `:app` runtime 之外。
 
 ---
 
-## 2. Affected production surfaces
+## 2. 受影响的生产界面
 
-| Surface | Shared API | Production today |
+| 界面 | 共享 API | 当前生产形态 |
 |---|---|---|
-| Watermark text | `TextContentOption` (sheet + `OutlinedTextField`) | SwiftUI `TextField` + Apply → `WatermarkWorkflow` / DataStore |
-| Templates | `TemplateListSheet` / host (sheet + `AlertDialog` + text) | SwiftUI + `IosTemplateBridge` — S4d-346 **drop-in NO-GO** |
+| 水印文本 | `TextContentOption`（sheet + `OutlinedTextField`） | SwiftUI `TextField` + Apply → `WatermarkWorkflow` / DataStore |
+| 模板 | `TemplateListSheet` / host（sheet + `AlertDialog` + text） | SwiftUI + `IosTemplateBridge` — S4d-346 **直接接入 NO-GO** |
 
-**Not blocked (already CMP or system):** launch, icon, sliders, tile/typeface/style, color swatches (`showCustomInput=false`), preview, `SavedOutputActions`, PhotosPicker — see S4d-352 matrix.
+**未阻塞（已是 CMP 或系统边）：** launch、icon、sliders、tile/typeface/style、color swatches（`showCustomInput=false`）、preview、`SavedOutputActions`、PhotosPicker — 见 S4d-352 矩阵。
 
-Separate product decisions: iOS About/gallery/full editor root. Android native renderer **not** reopened by this gate.
-
----
-
-## 3. Why safe non-text work is exhausted
-
-S4d-352: all production iOS **interactive non-text** controls with safe commonMain APIs already have iosMain hosts. Left: pickers, captions/status, **text**, **templates**. A1 pure Android wrappers closed (S4d-351). Further Phase A **control** progress on iOS needs A/B/C below.
+独立产品决策：iOS About/gallery/完整 editor root。本门禁**不**重开 Android 原生渲染器。
 
 ---
 
-## 4. Mutually exclusive owner options
+## 3. 为何安全的 non-text 工作已耗尽
 
-### A — Align Compose/Skiko (required Kotlin) so S4d-338 APIs work on iOS
-
-Unblock `ModalBottomSheet` / safe-area locals / focused `OutlinedTextField`.
-- **Android renderer / persistence:** must stay native + byte-identical.
-- **Goldens:** if Android Compose lineage moves, **re-run** local strict FNV; rebaseline **only** with owner sign-off. Re-run Desktop/iOS perceptual tests as needed.
-- **Deps:** named exception to §6.11 / S4d-338 ban; document pin + rollback.
-- **Gates:** full multiplatform Gradle; iOS XCUITest text (+ templates if drop-in later); Android assemble + non-strict tests; screenshots for unlocked paths.
-- **Rollback:** revert catalog pins; keep SwiftUI until green.
-
-### B — Permanent explicit native exception (formalize status quo)
-
-iOS watermark **text** + **templates UI** stay SwiftUI + bridges; shared text/sheet APIs remain Android+Desktop until reopen.
-- **Android / goldens / deps:** no change if policy-only.
-- **Gates:** existing SwiftUI XCUITest remains proof.
-- **Phase A:** this edge closed **with exception**, not “full shared UI.”
-- **Rollback:** N/A; reopen only via new owner decision.
-
-### C — Deliberately scoped new substitute (only if share without full IME)
-
-New commonMain APIs **without** sheet/dialog/focused text (e.g. list-only templates; display row + platform text slot). Not a drop-in of existing sheet APIs. Needs §6.12 dual production consumer or explicit waiver.
-- **Risk:** dual-API drift (Android/Desktop keep full sheet).
-- **Deps:** prefer no bump; design still owner-gated.
-- **Gates:** new hosts + XCUITest; no Android/Desktop sheet regression.
-- **Rollback:** delete new API; keep SwiftUI.
-
-**Non-options:** silent inset hacks without IME fix; invent product roots / `WatermarkModeActions` as progress; Android draw-swap; unapproved golden rebaseline.
+S4d-352：所有具备安全 commonMain API 的生产 iOS **交互式 non-text** 控件均已有 iosMain host。剩余：pickers、captions/status、**text**、**templates**。A1 纯 Android wrapper 已关闭（S4d-351）。iOS 上进一步的 Phase A **控件**进展需要下方 A/B/C。
 
 ---
 
-## 5. Owner must decide
+## 4. 互斥的负责人选项
 
-1. **A, B, C, or defer** (with reason/date)?
-2. If **A:** exact CMP/BOM/Kotlin targets; accept full iOS text XCUITest + multiplatform gates; authorize strict golden rebaseline **only if** hashes move?
-3. If **B:** durable home (ADR vs findings); stop scheduling iOS CMP text/templates without reopen?
-4. If **C:** minimal surface; second platform consumer or waiver; keep Android/Desktop sheets unchanged?
-5. Confirm **Android native renderer + persisted bytes untouched** under any choice.
+### A — 对齐 Compose/Skiko（所需 Kotlin），使 S4d-338 API 在 iOS 上可用
+
+解除 `ModalBottomSheet` / safe-area locals / 聚焦 `OutlinedTextField` 阻塞。
+- **Android 渲染器 / 持久化：** 必须保持 native + 字节一致。
+- **Goldens：** 若 Android Compose 血缘移动，**重跑**本地 strict FNV；重基线**仅**在负责人签字后。按需重跑 Desktop/iOS 感知测试。
+- **依赖：** 对 §6.11 / S4d-338 禁令的具名例外；记录 pin + 回滚。
+- **门禁：** 完整 multiplatform Gradle；iOS XCUITest 文本（若日后 drop-in 则含 templates）；Android assemble + non-strict 测试；已解锁路径的截图。
+- **回滚：** 还原 catalog pins；在变绿前保留 SwiftUI。
+
+### B — 永久显式原生例外（形式化现状）
+
+iOS 水印 **text** + **templates UI** 继续用 SwiftUI + bridges；共享 text/sheet API 在重开前仍仅 Android+Desktop。
+- **Android / goldens / 依赖：** 若仅政策则无变更。
+- **门禁：** 现有 SwiftUI XCUITest 仍为证明。
+- **Phase A：** 该边以**例外**关闭，并非“完整共享 UI”。
+- **回滚：** 不适用；仅能通过新的负责人决策重开。
+
+### C — 有意收窄的新替代（仅当要在无完整 IME 下增加共享）
+
+新的 commonMain API **不使用** sheet/dialog/聚焦 text（例如仅列表的 templates；展示行 + 平台 text slot）。不是现有 sheet API 的 drop-in。需要 §6.12 双生产消费者或显式豁免。
+- **风险：** 双 API 漂移（Android/Desktop 保留完整 sheet）。
+- **依赖：** 优先不 bump；设计仍须负责人批准。
+- **门禁：** 新 hosts + XCUITest；无 Android/Desktop sheet 回归。
+- **回滚：** 删除新 API；保留 SwiftUI。
+
+**非选项：** 无 IME 修复的静默 inset hack；把发明产品根 / `WatermarkModeActions` 当作进展；Android draw-swap；未批准的 golden 重基线。
 
 ---
 
-## 6. Codex must not
+## 5. 负责人必须决定
 
-Accept/implement A–C; bump Compose/Skiko/Kotlin in a UI slice; retry production iOS `TextContentOption` / `TemplateListSheet` on current mix; rebaseline goldens or touch DataStore/Room; invent roots; push/merge; treat this pack as product code.
+1. **A、B、C 或 defer**（附理由/日期）？
+2. 若 **A：** 精确的 CMP/BOM/Kotlin 目标；接受完整 iOS text XCUITest + multiplatform 门禁；**仅当** hash 变化时是否授权 strict golden 重基线？
+3. 若 **B：** 持久落点（ADR vs findings）；在未重开前停止安排 iOS CMP text/templates？
+4. 若 **C：** 最小表面；第二平台消费者或豁免；Android/Desktop sheets 保持不变？
+5. 确认在任一选择下 **Android 原生渲染器 + 持久化字节不受影响**。
 
 ---
 
-## 7. Recommendation
+## 6. Codex 不得
 
-**None accepted.** Evidence is decision-ready; residual iOS Phase A control progress waits on owner choice alone.
+接受/实现 A–C；在 UI 切片中 bump Compose/Skiko/Kotlin；在当前 mix 上重试生产 iOS `TextContentOption` / `TemplateListSheet`；重基线 goldens 或触碰 DataStore/Room；发明产品根；push/merge；将本决策包当作产品代码。
 
-**Refs:** `codex-goal-v2.md` §6–7; `findings.md` / `progress.md` S4d-338; S4d-346/352 research; `libs.versions.toml`; `ContentView.swift`; `TextContentOption.kt`; `TemplateListSheet.kt`.
+---
+
+## 7. 建议
+
+**未接受任何选项。** 证据已可决策；残余 iOS Phase A 控件进展仅等待负责人选择。
+
+**参考：** `codex-goal-v2.md` §6–7；`findings.md` / `progress.md` S4d-338；S4d-346/352 research；`libs.versions.toml`；`ContentView.swift`；`TextContentOption.kt`；`TemplateListSheet.kt`。
