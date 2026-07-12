@@ -1,5 +1,12 @@
 # Compose Migration Findings
 
+## Phone Screen control can vanish mid-recovery; stale launcher frames are non-evidence (S4d-356, 2026-07-12)
+
+- Session `CE8439F0-97F7-4474-889F-1FF0FE289499` on `emulator-5554` initially had MCP control, but frame 38 was launcher (SHA `15efa7d59ea1708d032e1c94ca6a3b2f9c49a2a050bae674ef67bcbcc3ffc273`) and stayed stale after debug app launch despite foreground metadata.
+- After an allowed `session.start` recovery (emulator not stopped), later `sessions.list` hit **MCP control socket connection refused** on `am-mcp.sock`. Do **not** assert causality from `session.start` alone.
+- Absence of AndroMeld tools in a Herdr agent session means **zero UI actions** — tool-surface limit, not product evidence. Do not substitute raw adb or shut down the emulator.
+- **S4d-348 About** and **S4d-350 SaveExport** visual gates remain **NOT VERIFIED** until a fresh frame visibly changes after action and UI/screenshot agree on the debug app. Evidence: `docs/superpowers/research/2026-07-12-s4d356-android-phone-screen-recovery.md`.
+
 ## S4d-353 decision pack 简体中文 is presentation-only (S4d-355, 2026-07-12)
 
 - `docs/superpowers/research/2026-07-11-s4d353-compose-skiko-alignment-decision-pack.md` is fully translated to Simplified Chinese for owner readability. Filename, technical identifiers, paths, versions, commands, and **A/B/C/defer** labels are unchanged.

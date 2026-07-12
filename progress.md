@@ -1257,3 +1257,10 @@ Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; 
 - **S4d-355:** full Simplified Chinese translation of `docs/superpowers/research/2026-07-11-s4d353-compose-skiko-alignment-decision-pack.md` for decision presentation. Filename unchanged; technical identifiers, code paths, versions, commands, and **A/B/C/defer** option labels preserved. Facts, scope, risks, and conclusion unchanged; **no** option accepted or recommended.
 - **Not an owner decision.** Translation / presentation slice only. **No** product code, dependency, or build change for this slice. Protected untracked `2026-07-11-project-branch-goals-progress.md` not staged.
 - **Next:** still **awaits owner A/B/C/defer** before Phase A iOS text/templates; parallel S4d-354 healthy AndroMeld frame before About/save-export visual gates. Not Phase A/B/parity complete.
+
+## 2026-07-12 — S4d-356 Android Phone Screen recovery BLOCKED (docs-only accepted)
+
+- **S4d-356:** evidence at `docs/superpowers/research/2026-07-12-s4d356-android-phone-screen-recovery.md`. Codex-reviewed: `emulator-5554` session `CE8439F0-97F7-4474-889F-1FF0FE289499` initially MCP-controllable; frame 38 launcher SHA `15efa7d59ea1708d032e1c94ca6a3b2f9c49a2a050bae674ef67bcbcc3ffc273`, stale after debug launch. Allowed `session.start` (no emulator stop); subsequent `sessions.list` → `am-mcp.sock` **connection refused** (causality not claimed). Herdr agent lacked AndroMeld tools → **zero UI actions** (tool-surface limit).
+- **Non-claims:** S4d-348 About **NOT VERIFIED**; S4d-350 SaveExport **NOT VERIFIED**; no parity; no S4d-356 `READ_MEDIA_IMAGES` recheck.
+- **No** product code / dependency / build. Protected project-branch-goals-progress not staged.
+- **Next:** only when AndroMeld control socket returns — `devices.list` → sessions → fresh frame that changes after action → debug launch UI/screenshot agreement → permission → limited About/SaveExport backfill; no raw adb; no emulator shutdown. Parallel **owner A/B/C/defer** (S4d-353). Not Phase A/B/parity complete.
