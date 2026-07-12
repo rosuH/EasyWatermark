@@ -4,7 +4,7 @@
 
 **Blocked by:** 05 A5e; 06 B0; 07 B1; 08 B2; 09 B3 — **all complete**.
 
-**Status:** **complete — audit + residual automated re-runs delivered; §9 still NOT MET; awaiting owner graduation decision** (2026-07-12)
+**Status:** **complete — audit + residual re-runs delivered; owner chose GRADUATION A** (keep Draft; no push; no merge). §9 still NOT MET. (2026-07-12)
 
 ## Acceptance checklist
 
@@ -39,13 +39,13 @@
 | iosAppUITests | Cite prior **19/0** (not re-run) |
 | Packaging CI | Historical green on #358 |
 
-## Owner decision needed
-
-Reply using the format in `graduation-proposal-pr358.md`:
+## Owner decision (recorded)
 
 ```text
-GRADUATION: A | B | C
-PUSH: yes | no
-MERGE: no | (only if B and explicit)
+GRADUATION: A
+PUSH: no   (default — owner only replied “A”)
+MERGE: no
 STRICT_GOLDENS: done (r2)
 ```
+
+**Effect:** PR #358 stays Draft. No push/merge. Next optional work under A: expand parity archive if owner requests polish; otherwise idle until new owner command.

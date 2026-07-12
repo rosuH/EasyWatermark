@@ -77,8 +77,20 @@ MERGE: no | (only if B and explicit)
 STRICT_GOLDENS: re-run | defer
 ```
 
+## Owner decision (recorded 2026-07-12)
+
+```text
+GRADUATION: A
+PUSH: no   (not authorized; only “A” replied)
+MERGE: no
+STRICT_GOLDENS: done (r2)
+```
+
+**Meaning in plain language:** keep PR **#358 as Draft**; do **not** push or merge; continue polish (mainly optional parity archive expansion). Re-open graduation only when owner says so.
+
 ## Commander recommendation
 
 **Option A** if expanding the parity archive still matters before any public ship claim; **Option B** if owner accepts core-screen sign-off + documented exceptions as enough for Draft→review / integration merge discussion.  
 **§9 still NOT MET** (archive breadth + intentional packaging/renderer exceptions) → **do not merge** without explicit owner command.  
-Automated residual gates from the initial audit (strict goldens, `iosSimulatorArm64Test`) are **closed on this lab host**.
+Automated residual gates from the initial audit (strict goldens, `iosSimulatorArm64Test`) are **closed on this lab host**.  
+**Owner accepted Option A** — branch stays Draft; next concrete residual is parity archive breadth if owner wants polish work.

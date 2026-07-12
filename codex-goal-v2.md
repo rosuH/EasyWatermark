@@ -315,18 +315,18 @@ Baseline only — always re-check `git status`. Full checklist: `docs/parity/v2.
 | Phase B | Core Android launch/gallery/editor/export **owner-signed** (07/08); iOS/Desktop exceptions **registered** (09) |
 | Residual r2 gates | **strict goldens 53/0** (`strict=true`); **iosSimulatorArm64Test 101/0** — `build/s4d383-dod-audit-r2/` |
 | **§9 overall** | **NOT MET** (parity archive not exhaustive locale/theme/recording matrix; Desktop unsigned; ADR renderer split intentional). Automated residual gates closed on lab host. **Not** “migration complete.” |
-| Graduation | Proposal: `docs/parity/v2.10.0/dod/graduation-proposal-pr358.md` — **owner chooses A/B/C**; **no auto-merge** |
+| Graduation | **Owner chose A** (2026-07-12): keep Draft; **no push**; **no merge**. Proposal: `docs/parity/v2.10.0/dod/graduation-proposal-pr358.md` |
 | Local process backend | `.scratch/easywatermark-kmp-cmp-migration/` |
 | Protect | User research doc `docs/superpowers/research/2026-07-11-project-branch-goals-progress.md` stays uncommitted unless owner allows |
-| Remote | Local may lead `origin/feat/migrate_to_compose`; PR #358 **Draft** |
+| Remote | Local may lead `origin/feat/migrate_to_compose`; PR #358 **Draft** (stay Draft under graduation A) |
 | Simulators | Do **not** shut down live Android + iOS simulators unless owner orders |
 | Process | Commander (Grok authorized); Herdr Grok > Kimi > OpenCode |
 
 ### 11.1 Next on chain
 
-1. Owner decides graduation **A / B / C** (and push yes/no).  
-2. Optional residual before any merge claim: parity archive expansion (zh / theme / recordings).  
-3. Do **not** claim three-platform 1:1 or PR merge-ready without owner override.
+1. ~~Owner graduation decision~~ → **A** recorded (push/merge not authorized).  
+2. Under A: optional polish residual = **parity archive expansion** (zh / theme / recordings) if owner asks to continue polish.  
+3. Do **not** push/merge/claim three-platform 1:1 or PR merge-ready without a new owner command.
 
 ---
 
