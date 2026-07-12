@@ -8,41 +8,39 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 /**
- * Shared (commonMain) text-content option for the watermark editor.
+ * Shared watermark **text** option.
  *
- * S4d-238 resource strategy: all text and the template-list icon are passed from the caller.
+ * Product interaction (owner, Phase B):
+ * 1. User taps the **Text** mode button in the Content carousel.
+ * 2. A modal sheet opens with a text field to edit the watermark.
+ * 3. **Template entry is top-end of the sheet** (not beside a permanent inline field).
  *
- * [inlineEditable]:
- * - `true` (Android Phase B default): always-visible live [TextField] matching production v2.10.0.
- * - `false` (iOS XCUITest / sheet contract): tappable row opens "Edit watermark" modal with Confirm.
+ * [openSignal]: incremented by the parent whenever the Text option is (re)activated via the
+ * carousel. Sheet opens on each positive signal so re-tapping Text reopens the dialog.
+ * `0` means "not opened by signal yet" (initial default selection shows summary only).
  */
 data class TextContentOptionStrings(
     val templateIconContentDescription: String,
@@ -57,94 +55,27 @@ fun TextContentOption(
     templateIcon: Painter? = null,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    inlineEditable: Boolean = true,
+    /**
+     * Bump when the Text carousel button is activated so the edit sheet opens.
+     * Keep `0` for passive display of the current text summary.
+     */
+    openSignal: Int = 0,
     onTextChange: (String) -> Unit,
     onGoTemplateList: () -> Unit = {},
 ) {
-    if (inlineEditable) {
-        InlineTextContentRow(
-            text = text,
-            strings = strings,
-            templateIcon = templateIcon,
-            modifier = modifier,
-            enabled = enabled,
-            onTextChange = onTextChange,
-            onGoTemplateList = onGoTemplateList,
-        )
-    } else {
-        SheetTextContentRow(
-            text = text,
-            strings = strings,
-            templateIcon = templateIcon,
-            modifier = modifier,
-            enabled = enabled,
-            onTextChange = onTextChange,
-            onGoTemplateList = onGoTemplateList,
-        )
-    }
-}
-
-@Composable
-private fun InlineTextContentRow(
-    text: String,
-    strings: TextContentOptionStrings,
-    templateIcon: Painter?,
-    modifier: Modifier,
-    enabled: Boolean,
-    onTextChange: (String) -> Unit,
-    onGoTemplateList: () -> Unit,
-) {
-    val focusManager = LocalFocusManager.current
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        TextField(
-            value = text,
-            onValueChange = onTextChange,
-            enabled = enabled,
-            singleLine = true,
-            textStyle = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier
-                .weight(1f)
-                .testTag(TEXT_CONTENT_ROW_TAG),
-            shape = RectangleShape,
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                disabledContainerColor = Color.Transparent,
-                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                unfocusedIndicatorColor = MaterialTheme.colorScheme.outline,
-            ),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(
-                onDone = { focusManager.clearFocus() },
-            ),
-        )
-        TemplateIcon(
-            templateIcon = templateIcon,
-            contentDescription = strings.templateIconContentDescription,
-            enabled = enabled,
-            onGoTemplateList = onGoTemplateList,
-        )
-    }
-}
-
-@Composable
-private fun SheetTextContentRow(
-    text: String,
-    strings: TextContentOptionStrings,
-    templateIcon: Painter?,
-    modifier: Modifier,
-    enabled: Boolean,
-    onTextChange: (String) -> Unit,
-    onGoTemplateList: () -> Unit,
-) {
     var showEditSheet by remember { mutableStateOf(false) }
+
+    LaunchedEffect(openSignal) {
+        if (openSignal > 0 && enabled) {
+            showEditSheet = true
+        }
+    }
+
+    // Summary row under the filmstrip: current text; tap re-opens the edit sheet.
+    // Template entry lives only in the sheet (top-end), not on this row.
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -159,43 +90,26 @@ private fun SheetTextContentRow(
                 .clickable(enabled = enabled) { showEditSheet = true }
                 .padding(vertical = 12.dp),
         )
-        TemplateIcon(
-            templateIcon = templateIcon,
-            contentDescription = strings.templateIconContentDescription,
-            enabled = enabled,
-            onGoTemplateList = onGoTemplateList,
-        )
     }
+
     if (showEditSheet) {
         WatermarkTextEditSheet(
             initialText = text,
             strings = strings,
+            templateIcon = templateIcon,
             enabled = enabled,
             onConfirm = {
                 onTextChange(it)
                 showEditSheet = false
             },
             onDismiss = { showEditSheet = false },
+            onGoTemplateList = {
+                // Leave sheet open or dismiss — templates host is separate; dismiss first for focus.
+                showEditSheet = false
+                onGoTemplateList()
+            },
         )
     }
-}
-
-@Composable
-private fun TemplateIcon(
-    templateIcon: Painter?,
-    contentDescription: String,
-    enabled: Boolean,
-    onGoTemplateList: () -> Unit,
-) {
-    if (templateIcon == null) return
-    Icon(
-        painter = templateIcon,
-        contentDescription = contentDescription,
-        modifier = Modifier
-            .clickable(enabled = enabled) { onGoTemplateList() }
-            .padding(start = 8.dp)
-            .testTag(TEXT_CONTENT_TEMPLATE_ICON_TAG),
-    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -203,9 +117,11 @@ private fun TemplateIcon(
 private fun WatermarkTextEditSheet(
     initialText: String,
     strings: TextContentOptionStrings,
+    templateIcon: Painter?,
     enabled: Boolean,
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
+    onGoTemplateList: () -> Unit,
 ) {
     var draft by remember { mutableStateOf(initialText) }
     ModalBottomSheet(
@@ -220,12 +136,33 @@ private fun WatermarkTextEditSheet(
                 .navigationBarsPadding()
                 .padding(bottom = 20.dp),
         ) {
-            Text(
-                text = strings.editSheetTitle,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(top = 24.dp, bottom = 12.dp),
-            )
+            // Title row + template entry (top-end / 右上角).
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp, bottom = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = strings.editSheetTitle,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                )
+                if (templateIcon != null) {
+                    IconButton(
+                        onClick = onGoTemplateList,
+                        enabled = enabled,
+                        modifier = Modifier.testTag(TEXT_CONTENT_TEMPLATE_ICON_TAG),
+                    ) {
+                        Icon(
+                            painter = templateIcon,
+                            contentDescription = strings.templateIconContentDescription,
+                        )
+                    }
+                }
+            }
             OutlinedTextField(
                 value = draft,
                 onValueChange = { draft = it },

@@ -167,11 +167,12 @@ private fun BottomView(
             ),
         ),
         modifier = modifier,
-        optionControl = { selectedOption, optionModifier ->
+        optionControl = { selectedOption, optionModifier, optionActivationSignal ->
             OptionControl(
                 modifier = optionModifier,
                 item = selectedOption,
                 waterMark = waterMark,
+                optionActivationSignal = optionActivationSignal,
                 onChange = onChange,
                 onGoTemplateList = onGoTemplateList,
             )
@@ -194,6 +195,7 @@ private fun OptionControl(
     item: FuncTitleModel,
     waterMark: WaterMark,
     modifier: Modifier = Modifier,
+    optionActivationSignal: Int = 0,
     onChange: (item: FuncTitleModel, any: Any) -> Unit = { _, _ -> },
     onGoTemplateList: () -> Unit = {},
 ) {
@@ -265,6 +267,7 @@ private fun OptionControl(
             }
 
             FuncType.Text -> {
+                // Owner UX: tap Text button → edit sheet; template entry is top-end of the sheet.
                 TextContentOption(
                     text = waterMark.text,
                     strings = TextContentOptionStrings(
@@ -274,8 +277,9 @@ private fun OptionControl(
                     ),
                     templateIcon = painterResource(R.drawable.ic_go_template_list),
                     modifier = innerModifier,
+                    openSignal = optionActivationSignal,
                     onTextChange = { onChange(item, it) },
-                    onGoTemplateList = onGoTemplateList
+                    onGoTemplateList = onGoTemplateList,
                 )
             }
 

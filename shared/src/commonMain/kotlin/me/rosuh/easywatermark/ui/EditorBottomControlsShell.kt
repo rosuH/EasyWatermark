@@ -23,12 +23,15 @@ data class EditorBottomControlTab<T>(
  *
  * Platform callers still provide resource-backed option models and option bodies; this shell owns
  * only tab/option selection state and the shared carousel/tab layout wiring.
+ *
+ * [optionControl] receives [optionActivationSignal]: increments on every carousel option click so
+ * Text mode can open its edit sheet when the user taps **Text** (including re-taps).
  */
 @Composable
 fun <T> EditorBottomControlsShell(
     tabs: List<EditorBottomControlTab<T>>,
     modifier: Modifier = Modifier,
-    optionControl: @Composable (option: T, modifier: Modifier) -> Unit,
+    optionControl: @Composable (option: T, modifier: Modifier, optionActivationSignal: Int) -> Unit,
     optionItem: @Composable (option: T) -> Unit,
     onIndicatorPosition: (startPx: Int, endPx: Int) -> Unit = { _, _ -> },
 ) {
@@ -41,23 +44,27 @@ fun <T> EditorBottomControlsShell(
     var selectedOption by remember(selectedTabIndex, selectedTab.options) {
         mutableStateOf(selectedTab.options.firstOrNull())
     }
+    // 0 = no user activation yet (default selection alone must not open the text sheet).
+    var optionActivationSignal by remember { mutableIntStateOf(0) }
 
     Column(modifier = modifier.fillMaxWidth()) {
         selectedOption?.let { option ->
-            // Phase B: wrap content (min 56) so TextContentOption is not clipped by a hard 56.dp
-            // height under 16.dp frame padding — that was hiding the watermark text row.
             optionControl(
                 option,
                 Modifier
                     .fillMaxWidth()
                     .heightIn(min = 56.dp),
+                optionActivationSignal,
             )
         }
         EditorOptionCarousel(
             options = selectedTab.options,
             selectedOption = selectedOption,
             useCompactPadding = selectedTab.useCompactPadding,
-            onOptionSelected = { selectedOption = it },
+            onOptionSelected = {
+                selectedOption = it
+                optionActivationSignal += 1
+            },
             itemContent = optionItem,
         )
 

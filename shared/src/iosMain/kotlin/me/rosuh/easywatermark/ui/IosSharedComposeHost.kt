@@ -472,8 +472,8 @@ class IosTextContentOptionHost(
                 ),
                 // Templates remain the proven SwiftUI section; do not open TemplateListSheet here.
                 templateIcon = null,
-                // Keep Confirm-sheet contract for iosAppUITests (watermarkTextConfirm).
-                inlineEditable = false,
+                // XCUITest taps the host row → sheet (openSignal left 0; row click opens sheet).
+                openSignal = 0,
                 modifier = Modifier.fillMaxWidth(),
                 onTextChange = { next ->
                     text = next
@@ -719,8 +719,7 @@ class IosEditorScreenHost(
                                         confirmButton = "Apply text",
                                     ),
                                     templateIcon = null,
-                                    // Keep Confirm-sheet contract for iosAppUITests (watermarkTextConfirm).
-                                    inlineEditable = false,
+                                    openSignal = 0,
                                     modifier = Modifier.fillMaxWidth(),
                                     onTextChange = { next ->
                                         pendingText = next
@@ -1210,7 +1209,7 @@ object IosSharedComposeHost {
                             EditorBottomControlTab("Style", listOf("Size", "Opacity"), useCompactPadding = true),
                             EditorBottomControlTab("Layout", listOf("Gap", "Degree")),
                         ),
-                        optionControl = { option, modifier ->
+                        optionControl = { option, modifier, _ ->
                             EditorOptionControlFrame(modifier) { innerModifier ->
                                 Box(innerModifier, contentAlignment = Alignment.Center) {
                                     Text("$option option", style = MaterialTheme.typography.labelMedium)
