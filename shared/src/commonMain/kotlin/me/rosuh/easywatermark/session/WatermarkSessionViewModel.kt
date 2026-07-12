@@ -164,10 +164,18 @@ open class WatermarkSessionViewModel(
         dispatch(AppIntent.CancelExport)
     }
 
-    private fun startExport(images: List<ImageInfo>) {
-        val pipeline = exportPipeline ?: return
+    /** Apply a UI intent and wait (Desktop/iOS hosts that need sequenced enter-then-export). */
+    suspend fun dispatchAndAwait(intent: AppIntent) = applyIntent(intent)
+
+    /** Run batch export and wait until the job completes (or is cancelled). */
+    suspend fun exportAndAwait(images: List<ImageInfo>) {
+        startExport(images)?.join()
+    }
+
+    private fun startExport(images: List<ImageInfo>): Job? {
+        val pipeline = exportPipeline ?: return null
         exportJob?.cancel()
-        exportJob = viewModelScope.launch(Dispatchers.Default) {
+        val job = viewModelScope.launch(Dispatchers.Default) {
             if (images.isEmpty()) {
                 setExportJobState(ExportJobState())
                 return@launch
@@ -217,6 +225,8 @@ open class WatermarkSessionViewModel(
                 ),
             )
         }
+        exportJob = job
+        return job
     }
 
     // --- Typed convenience API (mirrors legacy MainViewModel names for hosts) ---

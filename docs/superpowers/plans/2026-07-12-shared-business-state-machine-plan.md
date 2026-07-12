@@ -254,11 +254,12 @@ Each phase: commonTest for pure reduce/orchestrate + Android smoke + one off-And
 
 ### Phase 3 — Desktop CMP binds shared ViewModel
 
-- [ ] Replace DesktopWindow local config mirrors with VM + repo flows  
-- [ ] Desktop ports = existing ImageIO/Skiko save spine  
-- [ ] `viewModel` / retained VM instance in window scope  
+- [x] `DesktopExportPipelinePort` (desktopMain) — Skiko compose + unique output file  
+- [x] `DesktopWindow` retains `WatermarkSessionViewModel` + port; Open image / drop batches use `exportAndAwait`  
+- [x] Preview / Save-as / fixture sample still use `runSaveFlow` (in-memory bytes path)  
+- [x] desktopTest + headless green  
 
-**Exit:** one session implementation on Desktop product path.
+**Exit:** Desktop product open/drop export path shares session orchestration.
 
 ### Phase 4 — iOS CMP binds shared ViewModel (SwiftUI shrinks)
 

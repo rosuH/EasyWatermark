@@ -316,7 +316,7 @@ Baseline only — always re-check `git status`. Full checklist: `docs/parity/v2.
 | Residual r2 gates | **strict goldens 53/0** (`strict=true`); **iosSimulatorArm64Test 101/0** — `build/s4d383-dod-audit-r2/` |
 | **§9 overall** | **NOT MET** (parity archive not exhaustive locale/theme/recording matrix; Desktop unsigned; ADR renderer split intentional). Automated residual gates closed on lab host. **Not** “migration complete.” |
 | Graduation | **Owner chose A** (2026-07-12): keep Draft; **no push**; **no merge**. Proposal: `docs/parity/v2.10.0/dod/graduation-proposal-pr358.md` |
-| Shared session | **ADR-0017** Phase **0–2 landed** — session VM + export orchestration + `AndroidExportPipelinePort`. Next: **Phase 3** Desktop binds session VM |
+| Shared session | **ADR-0017** Phase **0–3 landed** — Android + Desktop session export. Next: **Phase 4** iOS CMP binds session VM |
 | Local process backend | `.scratch/easywatermark-kmp-cmp-migration/` |
 | Protect | User research doc `docs/superpowers/research/2026-07-11-project-branch-goals-progress.md` stays uncommitted unless owner allows |
 | Remote | Local may lead `origin/feat/migrate_to_compose`; PR #358 **Draft** (stay Draft under graduation A) |

@@ -37,6 +37,8 @@ import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.data.db.buildTemplateDatabase
 import me.rosuh.easywatermark.data.db.unpackDefaultTemplateSeed
 import me.rosuh.easywatermark.data.model.ImageFormat
+import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.JobState
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
@@ -50,6 +52,10 @@ import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopImageDecoder
 import me.rosuh.easywatermark.render.DesktopSaveDecision
+import me.rosuh.easywatermark.session.AppIntent
+import me.rosuh.easywatermark.session.DesktopExportPipelinePort
+import me.rosuh.easywatermark.session.WatermarkSessionViewModel
+import me.rosuh.easywatermark.ui.Image as GalleryImage
 import me.rosuh.easywatermark.ui.EditorPreviewFrame
 import me.rosuh.easywatermark.ui.EditorScreenShell
 import me.rosuh.easywatermark.ui.EditorTemplateSheetHost
@@ -244,6 +250,16 @@ fun launchDesktopWindow() = application {
     val editor = remember { WatermarkConfigEditor(repo) }
     // S4d-128: the output-prefs repo the save flow reads (empty store → the shared (JPEG, 80) default).
     val userConfigRepo = remember { DesktopWatermarkFlow.buildUserConfigRepository(dir = appDataDir) }
+    // ADR-0017 Phase 3: shared session VM + Desktop export port (Skiko spine). Open-image / drop batches
+    // use session.exportAndAwait; Preview / Save-as / fixture sample keep runSaveFlow (in-memory bytes).
+    val session = remember {
+        WatermarkSessionViewModel(
+            waterMarkRepo = repo,
+            userConfigRepo = userConfigRepo,
+            exportPipeline = DesktopExportPipelinePort(outputDirProvider = { outputDir }),
+        )
+    }
+    val exportJobState by session.exportJobState.collectAsState()
     // S4d-130: the shared output-prefs write use-case over the SAME store the save flow reads.
     val outputEditor = remember { OutputPrefsEditor(userConfigRepo) }
     // S4d-160/S4d-215/S4d-224/S4d-225: the Desktop templates Room DB (commonMain Room via the desktopMain
@@ -260,7 +276,13 @@ fun launchDesktopWindow() = application {
     val templates by remember { templateRepo.getAllTemplate() }.collectAsState(emptyList())
     val scope = rememberCoroutineScope()
     var status by remember {
-        mutableStateOf("Ready. Click “Render & Save sample” to run the shared save flow.")
+        mutableStateOf("Ready. Open/drop images use shared session export; sample/preview use runSaveFlow.")
+    }
+    // Surface shared export progress when a batch is running (Open image / drop).
+    LaunchedEffect(exportJobState.isSaving, exportJobState.completedCount, exportJobState.totalCount) {
+        if (exportJobState.isSaving && exportJobState.totalCount > 0) {
+            status = "Session export ${exportJobState.completedCount}/${exportJobState.totalCount}…"
+        }
     }
     var busy by remember { mutableStateOf(false) }
     var lastImage by remember { mutableStateOf<LastImage?>(null) }
@@ -405,39 +427,59 @@ fun launchDesktopWindow() = application {
                     // even if setup (notably reading the output prefs) throws BEFORE the per-file loop. This
                     // restores the old single-file drop's recovery: a setup failure must not leave the UI stuck.
                     try {
+                        // Phase 3: same shared session export path as Open image… (DesktopExportPipelinePort).
                         val next = withContext(Dispatchers.IO) {
-                            // S4d-228-r1: a setup-level failure (e.g. userConfigRepo.userPreferences.first())
-                            // surfaces as a "Failed: …" status instead of an uncaught throw. The per-file loop
-                            // keeps its OWN try/catch so one bad image still does not abort the batch.
                             try {
-                                // S4d-228 / S4d-217: read the output format ONCE per batch; saves go to the user dir.
-                                val fmt = userConfigRepo.userPreferences.first().outputFormat
+                                val infos = files.map { ImageInfo(MediaRef(it.absolutePath)) }
+                                val gallery = files.mapIndexed { i, f ->
+                                    GalleryImage(
+                                        id = i,
+                                        uri = MediaRef(f.absolutePath),
+                                        name = f.name,
+                                        size = f.length(),
+                                        date = f.lastModified(),
+                                        check = true,
+                                    )
+                                }
+                                session.dispatchAndAwait(
+                                    AppIntent.EnterEditor(
+                                        selected = infos,
+                                        gallerySnapshot = gallery,
+                                        waterMark = repo.waterMark.first(),
+                                    ),
+                                )
+                                session.exportAndAwait(infos)
                                 var successCount = 0
                                 var failCount = 0
                                 var firstFailure: String? = null
-                                // S4d-228: STRICTLY SEQUENTIAL. resolveUniqueOutputFile is existence-check-only and does
-                                // NOT create the file, and runSaveFlow writes its output synchronously before returning,
-                                // so resolving the NEXT path only after the previous save has written yields collision-
-                                // free names (watermarked.<ext>, watermarked_1.<ext>, …). Read one file's bytes per
-                                // iteration (never all up front). A per-file failure never aborts the batch.
-                                for (file in files) {
-                                    try {
-                                        val bytes = file.readBytes()
-                                        val out = DesktopSaveDecision.resolveUniqueOutputFile(outputDir, fmt)
-                                        val o = DesktopWatermarkFlow.runSaveFlow(
-                                            repo, editor, userConfigRepo, inputBytes = bytes, inputLabel = file.path,
-                                            outputFile = out,
-                                        )
-                                        lastPicked = LastImage(bytes, file.path)
-                                        lastSaved = File(o.outputPath)
-                                        successCount++
-                                    } catch (t: Throwable) {
-                                        failCount++
-                                        if (firstFailure == null) firstFailure = "${file.name}: ${t.message}"
+                                for ((file, info) in files.zip(infos)) {
+                                    when (val st = info.jobState) {
+                                        is JobState.Success -> {
+                                            successCount++
+                                            val outPath = (info.result?.data as? MediaRef)?.value
+                                            if (outPath != null) {
+                                                lastSaved = File(outPath)
+                                                lastPicked = LastImage(file.readBytes(), file.path)
+                                            }
+                                        }
+                                        is JobState.Failure -> {
+                                            failCount++
+                                            if (firstFailure == null) {
+                                                firstFailure = "${file.name}: ${st.result.message ?: st.result.code}"
+                                            }
+                                        }
+                                        else -> {
+                                            failCount++
+                                            if (firstFailure == null) firstFailure = "${file.name}: incomplete"
+                                        }
                                     }
                                 }
+                                val exp = session.exportJobState.value
                                 buildString {
-                                    append("Saved $successCount/${files.size} images to ${outputDir.path}")
+                                    append(
+                                        "Saved $successCount/${files.size} images to ${outputDir.path} " +
+                                            "(session export ${exp.completedCount}/${exp.totalCount})",
+                                    )
                                     if (failCount > 0) append(" · $failCount failed: $firstFailure")
                                 }
                             } catch (t: Throwable) {
@@ -941,34 +983,57 @@ fun launchDesktopWindow() = application {
                                 try {
                                     val next = withContext(Dispatchers.IO) {
                                         try {
-                                            // S4d-217: read the output format ONCE per batch; saves go to the user dir.
-                                            val fmt = userConfigRepo.userPreferences.first().outputFormat
+                                            // Phase 3: shared session export (DesktopExportPipelinePort) for on-disk picks.
+                                            val infos = files.map { ImageInfo(MediaRef(it.absolutePath)) }
+                                            val gallery = files.mapIndexed { i, f ->
+                                                GalleryImage(
+                                                    id = i,
+                                                    uri = MediaRef(f.absolutePath),
+                                                    name = f.name,
+                                                    size = f.length(),
+                                                    date = f.lastModified(),
+                                                    check = true,
+                                                )
+                                            }
+                                            session.dispatchAndAwait(
+                                                AppIntent.EnterEditor(
+                                                    selected = infos,
+                                                    gallerySnapshot = gallery,
+                                                    waterMark = repo.waterMark.first(),
+                                                ),
+                                            )
+                                            session.exportAndAwait(infos)
                                             var successCount = 0
                                             var failCount = 0
                                             var firstFailure: String? = null
-                                            // STRICTLY SEQUENTIAL: resolveUniqueOutputFile is existence-check-only and
-                                            // does NOT create the file, and runSaveFlow writes synchronously before
-                                            // returning, so resolving the NEXT path only after the previous save has
-                                            // written yields collision-free names. Read one file's bytes per iteration
-                                            // (never all up front). A per-file failure never aborts the batch.
-                                            for (file in files) {
-                                                try {
-                                                    val bytes = file.readBytes()
-                                                    val out = DesktopSaveDecision.resolveUniqueOutputFile(outputDir, fmt)
-                                                    val o = DesktopWatermarkFlow.runSaveFlow(
-                                                        repo, editor, userConfigRepo, inputBytes = bytes, inputLabel = file.path,
-                                                        outputFile = out,
-                                                    )
-                                                    lastPicked = LastImage(bytes, file.path)
-                                                    lastSaved = File(o.outputPath)
-                                                    successCount++
-                                                } catch (t: Throwable) {
-                                                    failCount++
-                                                    if (firstFailure == null) firstFailure = "${file.name}: ${t.message}"
+                                            for ((file, info) in files.zip(infos)) {
+                                                when (val st = info.jobState) {
+                                                    is JobState.Success -> {
+                                                        successCount++
+                                                        val outPath = (info.result?.data as? MediaRef)?.value
+                                                        if (outPath != null) {
+                                                            lastSaved = File(outPath)
+                                                            lastPicked = LastImage(file.readBytes(), file.path)
+                                                        }
+                                                    }
+                                                    is JobState.Failure -> {
+                                                        failCount++
+                                                        if (firstFailure == null) {
+                                                            firstFailure = "${file.name}: ${st.result.message ?: st.result.code}"
+                                                        }
+                                                    }
+                                                    else -> {
+                                                        failCount++
+                                                        if (firstFailure == null) firstFailure = "${file.name}: incomplete"
+                                                    }
                                                 }
                                             }
+                                            val exp = session.exportJobState.value
                                             buildString {
-                                                append("Saved $successCount/${files.size} images to ${outputDir.path}")
+                                                append(
+                                                    "Saved $successCount/${files.size} images to ${outputDir.path} " +
+                                                        "(session export ${exp.completedCount}/${exp.totalCount})",
+                                                )
                                                 if (failCount > 0) append(" · $failCount failed: $firstFailure")
                                             }
                                         } catch (t: Throwable) {
