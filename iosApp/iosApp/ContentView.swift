@@ -3,41 +3,10 @@ import PhotosUI
 import UIKit
 import Shared
 
-// C5.4 (S4d-27/29/58): a user picks a photo with `PhotosPicker`, the app loads the encoded bytes, and
-// `WatermarkWorkflow` runs the `:shared` render bridge to produce a watermarked PNG, shown via
-// the shared CMP preview host. Export is the shared CMP output action row, which delegates system
-// sharing to `UIActivityViewController` over the staged temp PNG plus Save to Photos.
-// S4d-58 proves render + export via the DEBUG-only fixture seam below; real PHPicker cell selection is
-// the only step still blocked by Xcode-27-beta / iOS-27 system UI automation.
-private struct SharedComposeWatermarkPreview: UIViewControllerRepresentable {
-    let png: Data
-    let status: String
-
-    final class Coordinator {
-        let host = IosWatermarkPreviewHost()
-        private var lastPNG: Data?
-        private var lastStatus: String?
-
-        func update(png: Data, status: String) {
-            guard png != lastPNG || status != lastStatus else { return }
-            host.update(png: png.toKotlinByteArray(), status: status)
-            lastPNG = png
-            lastStatus = status
-        }
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator() }
-
-    func makeUIViewController(context: Context) -> UIViewController {
-        context.coordinator.update(png: png, status: status)
-        return context.coordinator.host.viewController()
-    }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        context.coordinator.update(png: png, status: status)
-    }
-}
-
+// C5.4 (S4d-27/29/58) + S4d-383 (A5a): launch/system edges unchanged; the editor laundry-list of
+// per-control ComposeUIViewController hosts is one production `IosEditorScreenHost` shell.
+// PhotosPicker / Templates / Share / Save / `WatermarkWorkflow` stay Swift-owned.
+// S4d-58 DEBUG fixture seam still bypasses PHPicker grid-cell selection for XCUITest only.
 private struct SharedComposeLaunchScreen: UIViewControllerRepresentable {
     let onPickImage: () -> Void
 
@@ -63,53 +32,126 @@ private struct SharedComposeLaunchScreen: UIViewControllerRepresentable {
     }
 }
 
-private struct SharedComposeIconWatermarkControl: UIViewControllerRepresentable {
-    let icon: Data?
-    let onPick: () -> Void
-
-    final class Coordinator {
-        var onPick: () -> Void
-        lazy var host = IosWatermarkIconOptionHost(onPick: { [weak self] in
-            self?.onPick()
-        })
-
-        init(onPick: @escaping () -> Void) {
-            self.onPick = onPick
-        }
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator(onPick: onPick) }
-
-    func makeUIViewController(context: Context) -> UIViewController {
-        context.coordinator.host.update(iconBytes: icon?.toKotlinByteArray())
-        return context.coordinator.host.viewController()
-    }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        context.coordinator.onPick = onPick
-        context.coordinator.host.update(iconBytes: icon?.toKotlinByteArray())
-    }
-}
-
-private struct SharedComposeSavedOutputActions: UIViewControllerRepresentable {
-    let resultFileURL: URL?
+/// S4d-383 / A5a: one production ComposeUIViewController for EditorScreenShell + option column.
+/// Snapshot plain MainActor values into `update` so the representable stays nonisolated-safe.
+private struct SharedComposeEditorScreen: UIViewControllerRepresentable {
+    let text: String
+    let degree: Float
+    let tileMode: WatermarkTileMode
+    let alpha: Float
+    let colorArgb: Int32
+    let textSize: Float
+    let hGap: Int32
+    let vGap: Int32
+    let typefaceKey: Int32
+    let textStyleKey: Int32
+    let isImageMode: Bool
+    let iconBytes: Data?
+    let previewPng: Data?
+    let statusLine: String
+    let canShare: Bool
     let isSaving: Bool
+    let onPickIcon: () -> Void
     let workflow: WatermarkWorkflow
 
     final class Coordinator {
         weak var workflow: WatermarkWorkflow?
         weak var viewController: UIViewController?
+        var onPickIcon: () -> Void
         var resultFileURL: URL?
-        lazy var host = IosSavedOutputActionsHost(
+        lazy var host = IosEditorScreenHost(
+            onPickIcon: { [weak self] in self?.onPickIcon() },
+            onTextChange: { [weak self] text in self?.setText(text) },
+            onDegreeFinished: { [weak self] value in self?.setDegree(value.floatValue) },
+            onTileModeChange: { [weak self] mode in self?.setTileMode(mode) },
+            onAlphaFinished: { [weak self] percent in self?.setAlphaPercent(percent.floatValue) },
+            onColorSelected: { [weak self] color in self?.setColor(color.int32Value) },
+            onTextSizeFinished: { [weak self] size in self?.setTextSize(size.floatValue) },
+            onHorizontalGapFinished: { [weak self] gap in self?.setHGap(gap.floatValue) },
+            onVerticalGapFinished: { [weak self] gap in self?.setVGap(gap.floatValue) },
+            onTypefaceChange: { [weak self] typeface in self?.setTypeface(typeface) },
+            onTextStyleChange: { [weak self] style in self?.setTextStyle(style) },
             onShare: { [weak self] in self?.shareResult() },
-            onSaveToPhotos: { [weak self] in self?.saveResultToPhotos() },
+            onSaveToPhotos: { [weak self] in self?.saveToPhotos() },
         )
 
-        init(resultFileURL: URL?, workflow: WatermarkWorkflow) {
-            self.resultFileURL = resultFileURL
+        init(workflow: WatermarkWorkflow, onPickIcon: @escaping () -> Void, resultFileURL: URL?) {
             self.workflow = workflow
+            self.onPickIcon = onPickIcon
+            self.resultFileURL = resultFileURL
         }
 
+        func setText(_ text: String) {
+            Task { @MainActor [weak workflow] in
+                guard let workflow else { return }
+                await workflow.setWatermarkText(text)
+            }
+        }
+
+        func setDegree(_ degree: Float) {
+            Task { @MainActor [weak workflow] in
+                guard let workflow else { return }
+                await workflow.setWatermarkDegree(degree)
+            }
+        }
+
+        func setTileMode(_ mode: WatermarkTileMode) {
+            Task { @MainActor [weak workflow] in
+                guard let workflow else { return }
+                await workflow.setWatermarkTileMode(mode)
+            }
+        }
+
+        func setAlphaPercent(_ percent: Float) {
+            Task { @MainActor [weak workflow] in
+                guard let workflow else { return }
+                await workflow.setWatermarkAlpha(percent / 100.0)
+            }
+        }
+
+        func setColor(_ color: Int32) {
+            Task { @MainActor [weak workflow] in
+                guard let workflow else { return }
+                await workflow.setWatermarkTextColor(color)
+            }
+        }
+
+        func setTextSize(_ size: Float) {
+            Task { @MainActor [weak workflow] in
+                guard let workflow else { return }
+                await workflow.setWatermarkTextSize(size)
+            }
+        }
+
+        func setHGap(_ gap: Float) {
+            Task { @MainActor [weak workflow] in
+                guard let workflow else { return }
+                await workflow.setWatermarkHGap(Int32(gap.rounded()))
+            }
+        }
+
+        func setVGap(_ gap: Float) {
+            Task { @MainActor [weak workflow] in
+                guard let workflow else { return }
+                await workflow.setWatermarkVGap(Int32(gap.rounded()))
+            }
+        }
+
+        func setTypeface(_ typeface: TextTypeface) {
+            Task { @MainActor [weak workflow] in
+                guard let workflow else { return }
+                await workflow.setWatermarkTypeface(typeface.serializeKey())
+            }
+        }
+
+        func setTextStyle(_ style: TextPaintStyle) {
+            Task { @MainActor [weak workflow] in
+                guard let workflow else { return }
+                await workflow.setWatermarkTextStyle(style.serializeKey())
+            }
+        }
+
+        /// Same system-edge share path as the retired `SharedComposeSavedOutputActions` host.
         func shareResult() {
             guard let resultFileURL, let viewController else { return }
             let shareSheet = UIActivityViewController(
@@ -123,7 +165,7 @@ private struct SharedComposeSavedOutputActions: UIViewControllerRepresentable {
             viewController.present(shareSheet, animated: true)
         }
 
-        func saveResultToPhotos() {
+        func saveToPhotos() {
             Task { @MainActor [weak workflow] in
                 guard let workflow else { return }
                 await workflow.saveResultToPhotos()
@@ -132,394 +174,46 @@ private struct SharedComposeSavedOutputActions: UIViewControllerRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(resultFileURL: resultFileURL, workflow: workflow)
+        Coordinator(workflow: workflow, onPickIcon: onPickIcon, resultFileURL: workflow.resultFileURL)
     }
 
     func makeUIViewController(context: Context) -> UIViewController {
-        let coordinator = context.coordinator
-        // Share needs staged temp URL; Save uses in-memory resultPNG (host only when PNG exists).
+        push(context.coordinator)
+        let vc = context.coordinator.host.viewController()
+        context.coordinator.viewController = vc
+        return vc
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        context.coordinator.workflow = workflow
+        context.coordinator.onPickIcon = onPickIcon
+        context.coordinator.resultFileURL = workflow.resultFileURL
+        context.coordinator.viewController = uiViewController
+        push(context.coordinator)
+    }
+
+    private func push(_ coordinator: Coordinator) {
+        let typeface = TextTypeface.companion.obtainSealedClass(key: typefaceKey)
+        let style = TextPaintStyle.companion.obtainSealedClass(key: textStyleKey)
         coordinator.host.update(
-            canShare: resultFileURL != nil,
+            text: text,
+            degree: degree,
+            tileMode: tileMode,
+            normalizedAlpha: alpha,
+            textColor: colorArgb,
+            textSize: textSize,
+            horizontalGap: hGap,
+            verticalGap: vGap,
+            typeface: typeface,
+            textStyle: style,
+            isImageMode: isImageMode,
+            iconBytes: iconBytes?.toKotlinByteArray(),
+            previewPng: previewPng?.toKotlinByteArray(),
+            statusLine: statusLine,
+            hasOutput: previewPng != nil,
+            canShare: canShare,
             isSaving: isSaving,
         )
-        let viewController = coordinator.host.viewController()
-        coordinator.viewController = viewController
-        return viewController
-    }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        let coordinator = context.coordinator
-        coordinator.workflow = workflow
-        coordinator.resultFileURL = resultFileURL
-        coordinator.viewController = uiViewController
-        coordinator.host.update(
-            canShare: resultFileURL != nil,
-            isSaving: isSaving,
-        )
-    }
-}
-
-private struct SharedComposeTileModeControl: UIViewControllerRepresentable {
-    let mode: WatermarkTileMode
-    let workflow: WatermarkWorkflow
-
-    final class Coordinator {
-        weak var workflow: WatermarkWorkflow?
-        lazy var host = IosWatermarkTileModeHost(onValueChange: { [weak self] selectedMode in
-            self?.setTileMode(selectedMode)
-        })
-
-        init(workflow: WatermarkWorkflow) {
-            self.workflow = workflow
-        }
-
-        func setTileMode(_ mode: WatermarkTileMode) {
-            Task { @MainActor [weak workflow] in
-                guard let workflow else { return }
-                await workflow.setWatermarkTileMode(mode)
-            }
-        }
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator(workflow: workflow) }
-
-    func makeUIViewController(context: Context) -> UIViewController {
-        context.coordinator.host.update(mode: mode)
-        return context.coordinator.host.viewController()
-    }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        context.coordinator.workflow = workflow
-        context.coordinator.host.update(mode: mode)
-    }
-}
-
-private struct SharedComposeTextPaintStyleControl: UIViewControllerRepresentable {
-    let styleKey: Int32
-    let workflow: WatermarkWorkflow
-
-    final class Coordinator {
-        weak var workflow: WatermarkWorkflow?
-        lazy var host = IosTextPaintStyleHost(onValueChange: { [weak self] selectedStyle in
-            self?.setTextPaintStyle(selectedStyle)
-        })
-
-        init(workflow: WatermarkWorkflow) {
-            self.workflow = workflow
-        }
-
-        func setTextPaintStyle(_ style: TextPaintStyle) {
-            Task { @MainActor [weak workflow] in
-                guard let workflow else { return }
-                await workflow.setWatermarkTextStyle(style.serializeKey())
-            }
-        }
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator(workflow: workflow) }
-
-    func makeUIViewController(context: Context) -> UIViewController {
-        context.coordinator.host.update(style: TextPaintStyle.companion.obtainSealedClass(key: styleKey))
-        return context.coordinator.host.viewController()
-    }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        context.coordinator.workflow = workflow
-        context.coordinator.host.update(style: TextPaintStyle.companion.obtainSealedClass(key: styleKey))
-    }
-}
-
-private struct SharedComposeTextTypefaceControl: UIViewControllerRepresentable {
-    let typefaceKey: Int32
-    let workflow: WatermarkWorkflow
-
-    final class Coordinator {
-        weak var workflow: WatermarkWorkflow?
-        lazy var host = IosTextTypefaceHost(onValueChange: { [weak self] selectedTypeface in
-            self?.setTextTypeface(selectedTypeface)
-        })
-
-        init(workflow: WatermarkWorkflow) {
-            self.workflow = workflow
-        }
-
-        func setTextTypeface(_ typeface: TextTypeface) {
-            Task { @MainActor [weak workflow] in
-                guard let workflow else { return }
-                await workflow.setWatermarkTypeface(typeface.serializeKey())
-            }
-        }
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator(workflow: workflow) }
-
-    func makeUIViewController(context: Context) -> UIViewController {
-        context.coordinator.host.update(typeface: TextTypeface.companion.obtainSealedClass(key: typefaceKey))
-        return context.coordinator.host.viewController()
-    }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        context.coordinator.workflow = workflow
-        context.coordinator.host.update(typeface: TextTypeface.companion.obtainSealedClass(key: typefaceKey))
-    }
-}
-
-private func textTypefaceAccessibilityLabel(for key: Int32) -> String {
-    switch key {
-    case 1:
-        return "Typeface Italic"
-    case 2:
-        return "Typeface Bold"
-    case 3:
-        return "Typeface BoldItalic"
-    default:
-        return "Typeface Normal"
-    }
-}
-
-private struct SharedComposeTextSizeControl: UIViewControllerRepresentable {
-    let textSize: Float
-    let workflow: WatermarkWorkflow
-
-    final class Coordinator {
-        weak var workflow: WatermarkWorkflow?
-        lazy var host = IosTextSizeSliderHost(onValueChangeFinished: { [weak self] size in
-            self?.setTextSize(size.floatValue)
-        })
-
-        init(workflow: WatermarkWorkflow) {
-            self.workflow = workflow
-        }
-
-        func setTextSize(_ size: Float) {
-            Task { @MainActor [weak workflow] in
-                guard let workflow else { return }
-                await workflow.setWatermarkTextSize(size)
-            }
-        }
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator(workflow: workflow) }
-
-    func makeUIViewController(context: Context) -> UIViewController {
-        context.coordinator.host.update(textSize: textSize)
-        return context.coordinator.host.viewController()
-    }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        context.coordinator.workflow = workflow
-        context.coordinator.host.update(textSize: textSize)
-    }
-}
-
-private struct SharedComposeWatermarkDegreeControl: UIViewControllerRepresentable {
-    let degree: Float
-    let workflow: WatermarkWorkflow
-
-    final class Coordinator {
-        weak var workflow: WatermarkWorkflow?
-        lazy var host = IosWatermarkDegreeSliderHost(onValueChangeFinished: { [weak self] degree in
-            self?.setWatermarkDegree(degree.floatValue)
-        })
-
-        init(workflow: WatermarkWorkflow) {
-            self.workflow = workflow
-        }
-
-        func setWatermarkDegree(_ degree: Float) {
-            Task { @MainActor [weak workflow] in
-                guard let workflow else { return }
-                await workflow.setWatermarkDegree(degree)
-            }
-        }
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator(workflow: workflow) }
-
-    func makeUIViewController(context: Context) -> UIViewController {
-        context.coordinator.host.update(degree: degree)
-        return context.coordinator.host.viewController()
-    }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        context.coordinator.workflow = workflow
-        context.coordinator.host.update(degree: degree)
-    }
-}
-
-private struct SharedComposeWatermarkAlphaControl: UIViewControllerRepresentable {
-    let alpha: Float
-    let workflow: WatermarkWorkflow
-
-    final class Coordinator {
-        weak var workflow: WatermarkWorkflow?
-        lazy var host = IosWatermarkAlphaSliderHost(onValueChangeFinished: { [weak self] percent in
-            self?.setWatermarkAlpha(percent.floatValue / 100.0)
-        })
-
-        init(workflow: WatermarkWorkflow) {
-            self.workflow = workflow
-        }
-
-        func setWatermarkAlpha(_ alpha: Float) {
-            Task { @MainActor [weak workflow] in
-                guard let workflow else { return }
-                await workflow.setWatermarkAlpha(alpha)
-            }
-        }
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator(workflow: workflow) }
-
-    func makeUIViewController(context: Context) -> UIViewController {
-        context.coordinator.host.update(normalizedAlpha: alpha)
-        return context.coordinator.host.viewController()
-    }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        context.coordinator.workflow = workflow
-        context.coordinator.host.update(normalizedAlpha: alpha)
-    }
-}
-
-private struct SharedComposeWatermarkHorizontalGapControl: UIViewControllerRepresentable {
-    let horizontalGap: Int32
-    let workflow: WatermarkWorkflow
-
-    final class Coordinator {
-        weak var workflow: WatermarkWorkflow?
-        lazy var host = IosWatermarkHorizontalGapSliderHost(onValueChangeFinished: { [weak self] gap in
-            self?.setWatermarkHorizontalGap(Int32(gap.floatValue))
-        })
-
-        init(workflow: WatermarkWorkflow) {
-            self.workflow = workflow
-        }
-
-        func setWatermarkHorizontalGap(_ gap: Int32) {
-            Task { @MainActor [weak workflow] in
-                guard let workflow else { return }
-                await workflow.setWatermarkHGap(gap)
-            }
-        }
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator(workflow: workflow) }
-
-    func makeUIViewController(context: Context) -> UIViewController {
-        context.coordinator.host.update(horizontalGap: horizontalGap)
-        return context.coordinator.host.viewController()
-    }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        context.coordinator.workflow = workflow
-        context.coordinator.host.update(horizontalGap: horizontalGap)
-    }
-}
-
-private struct SharedComposeWatermarkVerticalGapControl: UIViewControllerRepresentable {
-    let verticalGap: Int32
-    let workflow: WatermarkWorkflow
-
-    final class Coordinator {
-        weak var workflow: WatermarkWorkflow?
-        lazy var host = IosWatermarkVerticalGapSliderHost(onValueChangeFinished: { [weak self] gap in
-            self?.setWatermarkVerticalGap(Int32(gap.floatValue))
-        })
-
-        init(workflow: WatermarkWorkflow) {
-            self.workflow = workflow
-        }
-
-        func setWatermarkVerticalGap(_ gap: Int32) {
-            Task { @MainActor [weak workflow] in
-                guard let workflow else { return }
-                await workflow.setWatermarkVGap(gap)
-            }
-        }
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator(workflow: workflow) }
-
-    func makeUIViewController(context: Context) -> UIViewController {
-        context.coordinator.host.update(verticalGap: verticalGap)
-        return context.coordinator.host.viewController()
-    }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        context.coordinator.workflow = workflow
-        context.coordinator.host.update(verticalGap: verticalGap)
-    }
-}
-
-private struct SharedComposeTextColorControl: UIViewControllerRepresentable {
-    let color: Int32
-    let workflow: WatermarkWorkflow
-
-    final class Coordinator {
-        weak var workflow: WatermarkWorkflow?
-        lazy var host = IosWatermarkTextColorHost(onColorSelected: { [weak self] color in
-            self?.setWatermarkTextColor(color.int32Value)
-        })
-
-        init(workflow: WatermarkWorkflow) {
-            self.workflow = workflow
-        }
-
-        func setWatermarkTextColor(_ color: Int32) {
-            Task { @MainActor [weak workflow] in
-                guard let workflow else { return }
-                await workflow.setWatermarkTextColor(color)
-            }
-        }
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator(workflow: workflow) }
-
-    func makeUIViewController(context: Context) -> UIViewController {
-        context.coordinator.host.update(color: color)
-        return context.coordinator.host.viewController()
-    }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        context.coordinator.workflow = workflow
-        context.coordinator.host.update(color: color)
-    }
-}
-
-/// S4d-378: production shared `TextContentOption` host. Swift keeps workflow write + re-render.
-private struct SharedComposeTextContentControl: UIViewControllerRepresentable {
-    let text: String
-    let workflow: WatermarkWorkflow
-
-    final class Coordinator {
-        weak var workflow: WatermarkWorkflow?
-        lazy var host = IosTextContentOptionHost(onTextChange: { [weak self] next in
-            self?.setWatermarkText(next)
-        })
-
-        init(workflow: WatermarkWorkflow) {
-            self.workflow = workflow
-        }
-
-        func setWatermarkText(_ text: String) {
-            Task { @MainActor [weak workflow] in
-                guard let workflow else { return }
-                await workflow.setWatermarkText(text)
-            }
-        }
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator(workflow: workflow) }
-
-    func makeUIViewController(context: Context) -> UIViewController {
-        context.coordinator.host.update(text: text)
-        return context.coordinator.host.viewController()
-    }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        context.coordinator.workflow = workflow
-        context.coordinator.host.update(text: text)
     }
 }
 
@@ -581,6 +275,46 @@ struct ContentView: View {
         }
         return arguments[index + 1] == name
     }
+
+    /// Full-screen DEBUG test surface for shell witnesses. Independent of the production
+    /// editor/Templates layout so XCUITest can reach named IDs without scrolling past a
+    /// fill-height CMP host. Named accessibility identifiers are preserved.
+    @ViewBuilder
+    private var sharedComposeWitnessSurface: some View {
+        // Independently scrollable so a single requested witness is immediately on-screen,
+        // and an unfiltered multi-witness dump remains reachable by scrolling this surface alone.
+        ScrollView {
+            VStack(spacing: 16) {
+                if shouldShowSharedComposeWitness("launch") {
+                    SharedComposeLaunchShellWitness()
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 220)
+                        .accessibilityIdentifier("sharedComposeLaunchShellWitness")
+                }
+                if shouldShowSharedComposeWitness("gallery") {
+                    SharedComposeGalleryShellWitness()
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 320)
+                        .accessibilityIdentifier("sharedComposeGalleryShellWitness")
+                }
+                if shouldShowSharedComposeWitness("about") {
+                    SharedComposeAboutShellWitness()
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 360)
+                        .accessibilityIdentifier("sharedComposeAboutShellWitness")
+                }
+                if shouldShowSharedComposeWitness("editor") {
+                    SharedComposeEditorShellWitness()
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 280)
+                        .accessibilityIdentifier("sharedComposeEditorShellWitness")
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
 #endif
 
     private var isShowingLaunchScreen: Bool {
@@ -592,231 +326,141 @@ struct ContentView: View {
         return false
     }
 
-    var body: some View {
-        Group {
-            if isShowingLaunchScreen {
-                SharedComposeLaunchScreen(onPickImage: { isPhotoPickerPresented = true })
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .accessibilityIdentifier("sharedComposeLaunchScreen")
-                    .accessibilityLabel("Pick a photo")
-                    .photosPicker(
-                        isPresented: $isPhotoPickerPresented,
-                        selection: $pickedItem,
-                        matching: .images,
-                        photoLibrary: .shared(),
-                    )
-            } else {
-                ZStack(alignment: .topTrailing) {
-                    ScrollView {
-                        VStack(spacing: 16) {
-
-            // S4d-118: pick an ICON for image-watermark mode (separate from the source photo). Selecting an
-            // icon persists its bytes via `setIconFromBytes` (flips persisted mode → Image) and re-renders.
-            // Minimal affordance — not the final 1:1 editor. Image mode without a readable icon stays a loud
-            // `.failure` (S4d-117); it never silently renders text.
-            VStack(spacing: 4) {
-                SharedComposeIconWatermarkControl(
-                    icon: workflow.iconThumbnail,
-                    onPick: { isIconPickerPresented = true },
-                )
-                .frame(height: 80)
-                .accessibilityIdentifier("sharedComposeIconWatermarkOption")
-                .accessibilityLabel(workflow.iconThumbnail == nil ? "Watermark icon not selected" : "Watermark icon selected")
+    /// Production launch + editor path (unchanged by the DEBUG witness route).
+    @ViewBuilder
+    private var productionContent: some View {
+        if isShowingLaunchScreen {
+            SharedComposeLaunchScreen(onPickImage: { isPhotoPickerPresented = true })
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityIdentifier("sharedComposeLaunchScreen")
+                .accessibilityLabel("Pick a photo")
                 .photosPicker(
-                    isPresented: $isIconPickerPresented,
-                    selection: $pickedIconItem,
+                    isPresented: $isPhotoPickerPresented,
+                    selection: $pickedItem,
                     matching: .images,
                     photoLibrary: .shared(),
                 )
-                Text("Mode: \(workflow.watermarkMarkMode == .image ? "Image" : "Text")")
-                    .font(.caption)
-                    .accessibilityIdentifier("watermarkModeLabel")
-            }
+        } else {
+            ZStack(alignment: .topTrailing) {
+                // A5a layout: fill-height single CMP host (options scroll inside host) + fixed
+                // Templates strip. Launch / Templates content / pickPhoto / tasks stay as before.
+                VStack(spacing: 0) {
+                    // S4d-383 / A5a: single production CMP editor host (EditorScreenShell + options +
+                    // preview + Share/Save). Replaces the per-control host laundry list only.
+                    SharedComposeEditorScreen(
+                        text: workflow.watermarkText,
+                        degree: workflow.watermarkDegree,
+                        tileMode: workflow.watermarkTileMode,
+                        alpha: workflow.watermarkAlpha,
+                        colorArgb: workflow.watermarkColorArgb,
+                        textSize: workflow.watermarkTextSize,
+                        hGap: workflow.watermarkHGap,
+                        vGap: workflow.watermarkVGap,
+                        typefaceKey: workflow.watermarkTypefaceKey,
+                        textStyleKey: workflow.watermarkTextStyleKey,
+                        isImageMode: workflow.watermarkMarkMode == .image,
+                        iconBytes: workflow.iconThumbnail,
+                        previewPng: workflow.resultPNG,
+                        statusLine: editorStatusLine,
+                        canShare: workflow.resultFileURL != nil,
+                        isSaving: workflow.saveState == .saving,
+                        onPickIcon: { isIconPickerPresented = true },
+                        workflow: workflow,
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityIdentifier("sharedComposeEditorScreen")
+                    .photosPicker(
+                        isPresented: $isIconPickerPresented,
+                        selection: $pickedIconItem,
+                        matching: .images,
+                        photoLibrary: .shared(),
+                    )
 
-            // S4d-378: watermark text via shared CMP `TextContentOption` (ModalBottomSheet + field).
-            // Swift retains WatermarkWorkflow write + re-render. Templates stay SwiftUI (not TemplateListSheet).
-            SharedComposeTextContentControl(text: workflow.watermarkText, workflow: workflow)
-                // Fixed height (like other CMP hosts): minHeight alone lets ComposeUIViewController
-                // expand in the ScrollView and push/cover the Templates section.
-                .frame(height: 56)
-                .accessibilityIdentifier("sharedComposeTextContent")
-                .accessibilityLabel("Watermark text \(workflow.watermarkText)")
-
-            // S4d-233: minimal Templates UI over the seeded iOS Template Room DB (the no-arg
-            // `buildTemplateDatabase()` consumed via `IosTemplateBridge`; on a fresh install the rows are the
-            // bundled default templates from S4d-232). Save the current text, apply a template (reuses
-            // `setWatermarkText`, which persists + re-renders), or delete one. Minimal — not the final 1:1 editor.
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text("Templates")
-                        .font(.caption.bold())
-                        .accessibilityAddTraits(.isHeader)
-                    Spacer()
-                    // S4d-378: stable production a11y id for XCUITest (semantic locator, not label).
-                    // Label stays the visible title "Save current"; action unchanged.
-                    Button {
-                        Task { await workflow.saveCurrentTextAsTemplate() }
-                    } label: {
-                        Text("Save current")
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(workflow.watermarkText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    .accessibilityIdentifier("saveTemplateButton")
-                }
-                ForEach(workflow.templates, id: \.id) { template in
-                    HStack {
-                        Button(template.content) {
-                            Task {
-                                await workflow.applyTemplate(template)
+                    // S4d-233: minimal Templates UI over the seeded iOS Template Room DB (the no-arg
+                    // `buildTemplateDatabase()` consumed via `IosTemplateBridge`; on a fresh install the rows are the
+                    // bundled default templates from S4d-232). Save the current text, apply a template (reuses
+                    // `setWatermarkText`, which persists + re-renders), or delete one. Minimal — not the final 1:1 editor.
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text("Templates")
+                                    .font(.caption.bold())
+                                    .accessibilityAddTraits(.isHeader)
+                                Spacer()
+                                // S4d-378: stable production a11y id for XCUITest (semantic locator, not label).
+                                // Label stays the visible title "Save current"; action unchanged.
+                                Button {
+                                    Task { await workflow.saveCurrentTextAsTemplate() }
+                                } label: {
+                                    Text("Save current")
+                                }
+                                .buttonStyle(.bordered)
+                                .disabled(workflow.watermarkText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                                .accessibilityIdentifier("saveTemplateButton")
+                            }
+                            ForEach(workflow.templates, id: \.id) { template in
+                                HStack {
+                                    Button(template.content) {
+                                        Task {
+                                            await workflow.applyTemplate(template)
+                                        }
+                                    }
+                                    .buttonStyle(.borderless)
+                                    // S4d-378: per-row id so XCUITest can pair Apply/Delete without Y-frame heuristics.
+                                    .accessibilityIdentifier("templateRow-\(template.id)")
+                                    .accessibilityLabel(template.content)
+                                    Spacer()
+                                    Button(role: .destructive) {
+                                        Task { await workflow.deleteTemplate(template) }
+                                    } label: {
+                                        Image(systemName: "trash")
+                                    }
+                                    .buttonStyle(.borderless)
+                                    .accessibilityLabel("Delete template")
+                                    .accessibilityIdentifier("deleteTemplateButton-\(template.id)")
+                                }
                             }
                         }
-                        .buttonStyle(.borderless)
-                        // S4d-378: per-row id so XCUITest can pair Apply/Delete without Y-frame heuristics.
-                        .accessibilityIdentifier("templateRow-\(template.id)")
-                        .accessibilityLabel(template.content)
-                        Spacer()
-                        Button(role: .destructive) {
-                            Task { await workflow.deleteTemplate(template) }
-                        } label: {
-                            Image(systemName: "trash")
-                        }
-                        .buttonStyle(.borderless)
-                        .accessibilityLabel("Delete template")
-                        .accessibilityIdentifier("deleteTemplateButton-\(template.id)")
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
                     }
+                    // Compact strip so EditorScreenShell preview retains usable height on small phones.
+                    .frame(maxHeight: 120)
+                    // children: .contain keeps Save/row/delete as separate AX elements (not one combined button).
+                    // Section id is on the container only — do not rely on it for the Save action.
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("templatesSection")
+
+                    // SwiftUI save confirmation remains outside the CMP host (system-edge status).
+                    saveStatusView
+                        .padding(.bottom, 4)
                 }
+                // The shared launch shell owns initial entry. Keep source replacement as a compact
+                // SwiftUI system-picker edge without changing the editor's scroll layout.
+                PhotosPicker(selection: $pickedItem, matching: .images, photoLibrary: .shared()) {
+                    Image(systemName: "photo.on.rectangle")
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("pickPhotoButton")
+                .accessibilityLabel("Pick another photo")
+                .padding()
             }
-            // children: .contain keeps Save/row/delete as separate AX elements (not one combined button).
-            // Section id is on the container only — do not rely on it for the Save action.
-            .accessibilityElement(children: .contain)
-            .accessibilityIdentifier("templatesSection")
+        }
+    }
 
-            // S4d-333: shared CMP control; Swift keeps the workflow write and rerender boundary.
-            SharedComposeWatermarkDegreeControl(degree: workflow.watermarkDegree, workflow: workflow)
-                .frame(height: 72)
-                .accessibilityIdentifier("sharedComposeWatermarkDegree")
-                .accessibilityLabel("Rotation \(Int(workflow.watermarkDegree))")
-
-            // S4d-329: shared CMP control; Swift keeps the workflow write and rerender boundary.
-            SharedComposeTileModeControl(mode: workflow.watermarkTileMode, workflow: workflow)
-                .frame(height: 40)
-                .accessibilityIdentifier("sharedComposeTileMode")
-                .accessibilityLabel(workflow.watermarkTileMode == .clamp ? "Tile mode Single" : "Tile mode Repeat")
-
-            // S4d-334: shared CMP control; Swift retains the normalized-alpha workflow boundary.
-            SharedComposeWatermarkAlphaControl(alpha: workflow.watermarkAlpha, workflow: workflow)
-                .frame(height: 72)
-                .accessibilityIdentifier("sharedComposeWatermarkAlpha")
-                .accessibilityLabel("Opacity \(Int(workflow.watermarkAlpha * 100))%")
-
-            // S4d-337: shared CMP four-preset palette; Swift retains the workflow write and rerender boundary.
-            SharedComposeTextColorControl(color: workflow.watermarkColorArgb, workflow: workflow)
-                .frame(height: 40)
-                .accessibilityIdentifier("sharedComposeTextColor")
-                .accessibilityLabel("Text color \(workflow.watermarkColorArgb)")
-
-            // S4d-332: shared CMP control; Swift keeps the workflow write and rerender boundary.
-            SharedComposeTextSizeControl(textSize: workflow.watermarkTextSize, workflow: workflow)
-                .frame(height: 72)
-                .accessibilityIdentifier("sharedComposeTextSize")
-                .accessibilityLabel("Text size \(Int(workflow.watermarkTextSize))")
-
-            // S4d-336: shared CMP controls; Swift keeps each workflow write and rerender boundary.
-            VStack(spacing: 4) {
-                Text("Gaps: H \(workflow.watermarkHGap)  V \(workflow.watermarkVGap)")
-                    .font(.caption)
-                    .accessibilityIdentifier("watermarkGapLabel")
-                // S4d-335: shared CMP control; Swift retains the workflow write and rerender boundary.
-                SharedComposeWatermarkHorizontalGapControl(
-                    horizontalGap: workflow.watermarkHGap,
-                    workflow: workflow,
-                )
-                .frame(height: 72)
-                .accessibilityIdentifier("sharedComposeWatermarkHGap")
-                .accessibilityLabel("Horizontal gap \(workflow.watermarkHGap)")
-                SharedComposeWatermarkVerticalGapControl(
-                    verticalGap: workflow.watermarkVGap,
-                    workflow: workflow,
-                )
-                .frame(height: 72)
-                .accessibilityIdentifier("sharedComposeWatermarkVGap")
-                .accessibilityLabel("Vertical gap \(workflow.watermarkVGap)")
-            }
-
-            // S4d-331: shared CMP control; Swift keeps the workflow write and rerender boundary.
-            SharedComposeTextTypefaceControl(typefaceKey: workflow.watermarkTypefaceKey, workflow: workflow)
-                .frame(height: 40)
-                .accessibilityIdentifier("sharedComposeTextTypeface")
-                .accessibilityLabel(textTypefaceAccessibilityLabel(for: workflow.watermarkTypefaceKey))
-
-            // S4d-330: shared CMP control; Swift keeps the workflow write and rerender boundary.
-            SharedComposeTextPaintStyleControl(styleKey: workflow.watermarkTextStyleKey, workflow: workflow)
-                .frame(height: 40)
-                .accessibilityIdentifier("sharedComposeTextPaintStyle")
-                .accessibilityLabel(workflow.watermarkTextStyleKey == 1 ? "Text style Stroke" : "Text style Fill")
-
-            // Product order matches the retired exportBar slot: preview, then shared actions.
-            // S4d-344: commonMain owns the action row; UIKit remains Share/Photos system UI edge.
-            if let png = workflow.resultPNG {
-                SharedComposeWatermarkPreview(png: png, status: renderedPreviewStatus)
-                    .frame(height: 360)
-                    .accessibilityIdentifier("sharedComposeWatermarkPreview")
-
-                SharedComposeSavedOutputActions(
-                    resultFileURL: workflow.resultFileURL,
-                    isSaving: workflow.saveState == .saving,
-                    workflow: workflow,
-                )
-                .frame(height: 44)
-                .accessibilityIdentifier("sharedComposeSavedOutputActions")
-                saveStatusView
-            } else {
-                statusView
-            }
-
-            Spacer()
-
+    var body: some View {
+        Group {
 #if DEBUG
-                if showSharedComposeWitnesses {
-                    if shouldShowSharedComposeWitness("launch") {
-                        SharedComposeLaunchShellWitness()
-                            .frame(height: 128)
-                            .accessibilityIdentifier("sharedComposeLaunchShellWitness")
-                    }
-
-                    if shouldShowSharedComposeWitness("gallery") {
-                        SharedComposeGalleryShellWitness()
-                            .frame(height: 220)
-                            .accessibilityIdentifier("sharedComposeGalleryShellWitness")
-                    }
-
-                    if shouldShowSharedComposeWitness("about") {
-                        SharedComposeAboutShellWitness()
-                            .frame(height: 260)
-                            .accessibilityIdentifier("sharedComposeAboutShellWitness")
-                    }
-
-                    if shouldShowSharedComposeWitness("editor") {
-                        SharedComposeEditorShellWitness()
-                            .frame(height: 180)
-                            .accessibilityIdentifier("sharedComposeEditorShellWitness")
-                    }
-                }
+            // DEBUG-only witness route: full-screen test surface so shell witnesses are not
+            // trapped below the production fill-height editor + Templates strip.
+            if showSharedComposeWitnesses {
+                sharedComposeWitnessSurface
+            } else {
+                productionContent
+            }
+#else
+            productionContent
 #endif
-            }
-            .padding()
-                    }
-                    // The shared launch shell owns initial entry. Keep source replacement as a compact
-                    // SwiftUI system-picker edge without changing the editor's scroll layout.
-                    PhotosPicker(selection: $pickedItem, matching: .images, photoLibrary: .shared()) {
-                        Image(systemName: "photo.on.rectangle")
-                    }
-                    .buttonStyle(.bordered)
-                    .accessibilityIdentifier("pickPhotoButton")
-                    .accessibilityLabel("Pick another photo")
-                    .padding()
-                }
-            }
         }
         // Re-runs whenever a new photo is picked; `.task(id:)` (iOS 15+) avoids the deprecated
         // `onChange(of:perform:)` single-arg form. Cancels/restarts cleanly on reselection.
@@ -917,6 +561,20 @@ struct ContentView: View {
                 .font(.footnote)
                 .foregroundStyle(.red)
                 .multilineTextAlignment(.center)
+        }
+    }
+
+    /// Status line for the A5a editor host top bar (same copy as the retired SwiftUI status views).
+    private var editorStatusLine: String {
+        switch workflow.state {
+        case .idle:
+            return "Pick a photo to watermark."
+        case .rendering:
+            return "Rendering…"
+        case let .success(bytes, width, height):
+            return "Watermarked \(width)×\(height), PNG \(bytes) B"
+        case let .failure(message):
+            return "Error: \(message)"
         }
     }
 

@@ -22,6 +22,29 @@ final class PickerFlowUITests: XCTestCase {
         add(a)
     }
 
+    /// Fresh app process with fixture image; terminates any prior instance first for isolation.
+    private func launchFixtureApp() -> XCUIApplication {
+        let app = XCUIApplication()
+        if app.state == .runningForeground || app.state == .runningBackground {
+            app.terminate()
+        }
+        app.launchArguments = ["-uiTestFixtureImage", "1"]
+        app.launch()
+        return app
+    }
+
+    /// Real ColorSwatch node (`contentDescription = "Text color #AARRGGBB"`), preferring descendants
+    /// of the palette host so we do not match an unrelated node.
+    private func colorSwatch(labeled label: String, under host: XCUIElement, in app: XCUIApplication) -> XCUIElement {
+        let underHost = host.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", label))
+            .firstMatch
+        if underHost.exists { return underHost }
+        return app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", label))
+            .firstMatch
+    }
+
     /// The real proof: fixture image → shared render → watermarked preview → export UI.
     func testFixtureRenderPreviewAndExport() {
         let app = XCUIApplication()
@@ -42,10 +65,9 @@ final class PickerFlowUITests: XCTestCase {
                       "Shared CMP saved-output action row was not hittable after scroll.")
         attach(app, "02-watermarked-preview")
 
-        let saveLabel = outputActions.descendants(matching: .any)
-            .matching(NSPredicate(format: "label == %@", "Save to Photos")).firstMatch
-        XCTAssertTrue(saveLabel.waitForExistence(timeout: 5), "Save to Photos label missing in action row.")
-        tapSharedOutputAction(labeled: saveLabel, in: outputActions)
+        // Single-host CMP: action Text nodes may be siblings of the testTag host (not nested
+        // descendants). Prefer descendants, then app-wide label, then host-relative coordinates.
+        tapSavedOutputAction(named: "Save to Photos", host: outputActions, in: app, normalizedX: 0.72)
 
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         for label in ["Allow Access to All Photos", "Allow Full Access", "Allow", "OK", "允许", "好"] {
@@ -63,10 +85,7 @@ final class PickerFlowUITests: XCTestCase {
         // Share — label existence for X, host dy=0.5 for current visible Y → UIKit share sheet.
         XCTAssertTrue(scrollUntilHittable(outputActions, in: app, timeout: 10),
                       "Shared CMP saved-output action row not hittable before Share.")
-        let shareLabel = outputActions.descendants(matching: .any)
-            .matching(NSPredicate(format: "label == %@", "Share")).firstMatch
-        XCTAssertTrue(shareLabel.waitForExistence(timeout: 5), "Share label missing in action row.")
-        tapSharedOutputAction(labeled: shareLabel, in: outputActions)
+        tapSavedOutputAction(named: "Share", host: outputActions, in: app, normalizedX: 0.28)
         let shareSheet = app.otherElements["ActivityListView"].firstMatch
         let copyAction = app.buttons["Copy"].firstMatch
         let shareSheetAppeared = shareSheet.waitForExistence(timeout: 10) || copyAction.waitForExistence(timeout: 5)
@@ -119,28 +138,38 @@ final class PickerFlowUITests: XCTestCase {
         app.launch()
 
         let control = app.descendants(matching: .any)["sharedComposeTextPaintStyle"].firstMatch
-        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 20),
+        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 25),
                       "Production shared text-style control did not appear.")
 
-        // Segment child roles are not stable in Compose UIKit after the preceding shared slider hosts.
-        // Tap the actual rendered host positions instead of adding a test-only state setter.
-        let fill = control.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.5))
-        fill.tap()
-        let fillSelected = expectation(for: NSPredicate(format: "label == %@", "Text style Fill"), evaluatedWith: control, handler: nil)
-        wait(for: [fillSelected], timeout: 15)
-
-        let stroke = control.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.5))
-        stroke.tap()
-        let strokeSelected = expectation(for: NSPredicate(format: "label == %@", "Text style Stroke"), evaluatedWith: control, handler: nil)
+        // Real segment nodes (segment contentDescription / label), not normalized host coordinates.
+        // Stroke first so we always leave the default Fill.
+        let strokeSeg = segmentChoice(named: "Stroke", in: app)
+        XCTAssertTrue(scrollUntilHittable(strokeSeg, in: app, timeout: 10), "Stroke segment was not reachable.")
+        tapIfPossible(strokeSeg)
+        let strokeSelected = expectation(for: NSPredicate(format: "label == %@", "Text style Stroke"),
+                                         evaluatedWith: control, handler: nil)
         wait(for: [strokeSelected], timeout: 15)
 
-        // Reload through the existing app entry to prove the Swift workflow write persisted and fed the
-        // current style back into the production CMP host.
+        let fillSeg = segmentChoice(named: "Fill", in: app)
+        XCTAssertTrue(scrollUntilHittable(fillSeg, in: app, timeout: 10), "Fill segment was not reachable.")
+        tapIfPossible(fillSeg)
+        let fillSelected = expectation(for: NSPredicate(format: "label == %@", "Text style Fill"),
+                                       evaluatedWith: control, handler: nil)
+        wait(for: [fillSelected], timeout: 15)
+
+        // End on Stroke for the relaunch persistence proof.
+        XCTAssertTrue(scrollUntilHittable(strokeSeg, in: app, timeout: 10), "Stroke segment not reachable for final select.")
+        tapIfPossible(strokeSeg)
+        let strokeAgain = expectation(for: NSPredicate(format: "label == %@", "Text style Stroke"),
+                                      evaluatedWith: control, handler: nil)
+        wait(for: [strokeAgain], timeout: 15)
+
         app.terminate()
         app.launch()
-        XCTAssertTrue(control.waitForExistence(timeout: 20),
+        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 20),
                       "Production shared text-style control did not reappear after reload.")
-        let persistedStroke = expectation(for: NSPredicate(format: "label == %@", "Text style Stroke"), evaluatedWith: control, handler: nil)
+        let persistedStroke = expectation(for: NSPredicate(format: "label == %@", "Text style Stroke"),
+                                          evaluatedWith: control, handler: nil)
         wait(for: [persistedStroke], timeout: 20)
         let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
         XCTAssertTrue(preview.waitForExistence(timeout: 15), "Fixture render did not remain visible after text-style change.")
@@ -155,28 +184,36 @@ final class PickerFlowUITests: XCTestCase {
         app.launch()
 
         let control = app.descendants(matching: .any)["sharedComposeTextTypeface"].firstMatch
-        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 20),
+        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 25),
                       "Production shared typeface control did not appear.")
 
-        // Segment child roles are not stable in Compose UIKit after the preceding shared slider hosts.
-        // Tap the actual rendered host positions instead of adding a test-only state setter.
-        let normal = control.coordinate(withNormalizedOffset: CGVector(dx: 0.125, dy: 0.5))
-        normal.tap()
-        let normalSelected = expectation(for: NSPredicate(format: "label == %@", "Typeface Normal"), evaluatedWith: control, handler: nil)
-        wait(for: [normalSelected], timeout: 15)
-
-        let bold = control.coordinate(withNormalizedOffset: CGVector(dx: 0.375, dy: 0.5))
-        bold.tap()
-        let boldSelected = expectation(for: NSPredicate(format: "label == %@", "Typeface Bold"), evaluatedWith: control, handler: nil)
+        // Real segment nodes; Bold first so we always leave default Normal.
+        let boldSeg = segmentChoice(named: "Bold", in: app)
+        XCTAssertTrue(scrollUntilHittable(boldSeg, in: app, timeout: 10), "Bold segment was not reachable.")
+        tapIfPossible(boldSeg)
+        let boldSelected = expectation(for: NSPredicate(format: "label == %@", "Typeface Bold"),
+                                       evaluatedWith: control, handler: nil)
         wait(for: [boldSelected], timeout: 15)
 
-        // Reload through the existing app entry to prove the Swift workflow write persisted and fed the
-        // current typeface back into the production CMP host.
+        let normalSeg = segmentChoice(named: "Normal", in: app)
+        XCTAssertTrue(scrollUntilHittable(normalSeg, in: app, timeout: 10), "Normal segment was not reachable.")
+        tapIfPossible(normalSeg)
+        let normalSelected = expectation(for: NSPredicate(format: "label == %@", "Typeface Normal"),
+                                         evaluatedWith: control, handler: nil)
+        wait(for: [normalSelected], timeout: 15)
+
+        XCTAssertTrue(scrollUntilHittable(boldSeg, in: app, timeout: 10), "Bold segment not reachable for final select.")
+        tapIfPossible(boldSeg)
+        let boldAgain = expectation(for: NSPredicate(format: "label == %@", "Typeface Bold"),
+                                    evaluatedWith: control, handler: nil)
+        wait(for: [boldAgain], timeout: 15)
+
         app.terminate()
         app.launch()
-        XCTAssertTrue(control.waitForExistence(timeout: 20),
+        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 20),
                       "Production shared typeface control did not reappear after reload.")
-        let persistedBold = expectation(for: NSPredicate(format: "label == %@", "Typeface Bold"), evaluatedWith: control, handler: nil)
+        let persistedBold = expectation(for: NSPredicate(format: "label == %@", "Typeface Bold"),
+                                        evaluatedWith: control, handler: nil)
         wait(for: [persistedBold], timeout: 20)
         let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
         XCTAssertTrue(preview.waitForExistence(timeout: 15), "Fixture render did not remain visible after typeface change.")
@@ -328,17 +365,18 @@ final class PickerFlowUITests: XCTestCase {
     /// S4d-335: the normal iOS horizontal-gap slider is now a shared CMP control. The test taps the
     /// real Compose track and proves the integer gap persists through a relaunch.
     func testSharedComposeWatermarkHorizontalGapChanges() {
-        let app = XCUIApplication()
-        app.launchArguments += ["-uiTestFixtureImage", "1"]
-        app.launch()
+        // Deterministic isolation: prior suite runs showed rare XCTest "Lost connection to the
+        // application" (mach_error=10000003) without product crash logs. Fresh terminate+launch
+        // avoids inter-test process contamination; behavior under test is unchanged.
+        let app = launchFixtureApp()
 
         let control = app.descendants(matching: .any)["sharedComposeWatermarkHGap"].firstMatch
-        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 20),
+        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 25),
                       "Production shared horizontal-gap control did not appear.")
 
         let initialLabel = control.label
-        let leftTrack = control.coordinate(withNormalizedOffset: CGVector(dx: 0.03, dy: 0.25))
-        let rightTrack = control.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.25))
+        let leftTrack = control.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.35))
+        let rightTrack = control.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.35))
         rightTrack.tap()
 
         if waitForLabelChange(control, from: initialLabel, timeout: 15) {
@@ -361,7 +399,7 @@ final class PickerFlowUITests: XCTestCase {
 
         app.terminate()
         app.launch()
-        XCTAssertTrue(control.waitForExistence(timeout: 20),
+        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 20),
                       "Production shared horizontal-gap control did not reappear after reload.")
         let persistedGap = expectation(for: NSPredicate(format: "label == %@", selectedLabel), evaluatedWith: control, handler: nil)
         wait(for: [persistedGap], timeout: 20)
@@ -378,12 +416,20 @@ final class PickerFlowUITests: XCTestCase {
         app.launch()
 
         let control = app.descendants(matching: .any)["sharedComposeWatermarkVGap"].firstMatch
-        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 20),
+        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 25),
                       "Production shared vertical-gap control did not appear.")
+        // Extra options nudge: V-gap sits near the end of the column and needs a full track hit.
+        let options = app.descendants(matching: .any)["sharedComposeEditorOptions"].firstMatch
+        if options.exists {
+            options.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85))
+                .press(forDuration: 0.05, thenDragTo: options.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25)))
+        }
+        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 10),
+                      "Vertical-gap control not fully on-screen after options nudge.")
 
         let initialLabel = control.label
-        let leftTrack = control.coordinate(withNormalizedOffset: CGVector(dx: 0.03, dy: 0.25))
-        let rightTrack = control.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.25))
+        let leftTrack = control.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.35))
+        let rightTrack = control.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.35))
         rightTrack.tap()
 
         if waitForLabelChange(control, from: initialLabel, timeout: 15) {
@@ -418,39 +464,46 @@ final class PickerFlowUITests: XCTestCase {
     /// S4d-337: the normal iOS four-preset text-color picker is now a shared CMP palette. The test taps
     /// a real exposed swatch and proves the workflow persists the changed ARGB value through a relaunch.
     func testSharedComposeTextColorChanges() {
-        let app = XCUIApplication()
-        app.launchArguments += ["-uiTestFixtureImage", "1"]
-        app.launch()
+        let app = launchFixtureApp()
 
         let control = app.descendants(matching: .any)["sharedComposeTextColor"].firstMatch
         XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 20),
                       "Production shared text-color control did not appear.")
 
-        let initialLabel = control.label
-        let blackSwatch = app.descendants(matching: .any)["Text color #FF000000"].firstMatch
-        XCTAssertTrue(scrollUntilHittable(blackSwatch, in: app, timeout: 10),
-                      "Shared black text-color swatch was not reachable.")
-        blackSwatch.tap()
-        let selectedLabel: String
-        if waitForLabelChange(control, from: initialLabel, timeout: 3) {
-            selectedLabel = control.label
-        } else {
-            // A prior focused test or user state may already be black. Exercise the other real swatch
-            // instead of treating an idempotent selection as a product failure.
-            let whiteSwatch = app.descendants(matching: .any)["Text color #FFFFFFFF"].firstMatch
+        // Production host + ColorSwatch share "Text color #AARRGGBB" (formatArgbHexColor).
+        // iOS palette order: amber #FFFFB800, white, black, red. Prefer red — never the default amber.
+        let redLabel = "Text color #FFFF0000"
+        let whiteLabel = "Text color #FFFFFFFF"
+        let redSwatch = colorSwatch(labeled: redLabel, under: control, in: app)
+        XCTAssertTrue(scrollUntilHittable(redSwatch, in: app, timeout: 15),
+                      "Red palette swatch (\(redLabel)) was not reachable.")
+        tapIfPossible(redSwatch)
+
+        let redSelected = expectation(for: NSPredicate(format: "label == %@", redLabel),
+                                      evaluatedWith: control, handler: nil)
+        if XCTWaiter.wait(for: [redSelected], timeout: 8) != .completed {
+            // If red was already selected (persisted), prove a different real swatch changes state.
+            let whiteSwatch = colorSwatch(labeled: whiteLabel, under: control, in: app)
             XCTAssertTrue(scrollUntilHittable(whiteSwatch, in: app, timeout: 10),
-                          "Shared white text-color swatch was not reachable.")
-            whiteSwatch.tap()
-            XCTAssertTrue(waitForLabelChange(control, from: initialLabel, timeout: 15),
-                          "Shared text-color palette did not commit either available swatch.")
-            selectedLabel = control.label
+                          "White palette swatch (\(whiteLabel)) was not reachable.")
+            tapIfPossible(whiteSwatch)
+            let whiteSelected = expectation(for: NSPredicate(format: "label == %@", whiteLabel),
+                                            evaluatedWith: control, handler: nil)
+            wait(for: [whiteSelected], timeout: 15)
         }
+
+        let selectedLabel = control.label
+        XCTAssertTrue(
+            selectedLabel == redLabel || selectedLabel == whiteLabel,
+            "Host label must equal a real palette hex string after swatch tap; label=\(selectedLabel)"
+        )
 
         app.terminate()
         app.launch()
-        XCTAssertTrue(control.waitForExistence(timeout: 20),
+        XCTAssertTrue(scrollUntilHittable(control, in: app, timeout: 20),
                       "Production shared text-color control did not reappear after reload.")
-        let persistedColor = expectation(for: NSPredicate(format: "label == %@", selectedLabel), evaluatedWith: control, handler: nil)
+        let persistedColor = expectation(for: NSPredicate(format: "label == %@", selectedLabel),
+                                         evaluatedWith: control, handler: nil)
         wait(for: [persistedColor], timeout: 20)
         let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
         XCTAssertTrue(preview.waitForExistence(timeout: 15), "Fixture render did not remain visible after text-color change.")
@@ -571,17 +624,17 @@ final class PickerFlowUITests: XCTestCase {
         XCTAssertTrue(preview.waitForExistence(timeout: 30),
                       "Shared CMP watermark preview never appeared — fixture render required for re-render proof.")
 
+        // Exact single-line marker (no embedded newlines). Product multi-line remains allowed;
+        // the helper clears the field fully so we can assert an exact production label.
         let marker = "S4d378-" + String(UUID().uuidString.prefix(8))
         applyWatermarkTextViaSharedCompose(marker, in: app)
         attach(app, "31-after-text-confirm")
 
-        // Unique marker evidence only — do not assert newline-free exact labels.
-        // OutlinedTextField is multi-line product behavior; Return (if used to expose Confirm)
-        // may leave '\n' in the confirmed draft.
         let host = app.descendants(matching: .any)["sharedComposeTextContent"].firstMatch
+        let expectedLabel = "Watermark text \(marker)"
         XCTAssertTrue(
-            wait(forLabel: host, toContain: marker, timeout: 15),
-            "Host accessibility label did not contain confirmed marker \(marker); label=\(host.label)"
+            wait(forLabel: host, toEqual: expectedLabel, timeout: 15),
+            "Host accessibility label must equal exact production string \(expectedLabel); label=\(host.label)"
         )
         XCTAssertTrue(preview.exists,
                       "Watermarked preview disappeared after shared text confirm (workflow re-render failed).")
@@ -638,16 +691,16 @@ final class PickerFlowUITests: XCTestCase {
         applyWatermarkTextViaSharedCompose("otherValue", in: app)
         let host = app.descendants(matching: .any)["sharedComposeTextContent"].firstMatch
         XCTAssertTrue(
-            wait(forLabel: host, toContain: "otherValue", timeout: 10),
-            "Host label did not contain 'otherValue' after edit; label=\(host.label)"
+            wait(forLabel: host, toEqual: "Watermark text otherValue", timeout: 10),
+            "Host label must equal exact 'Watermark text otherValue' after edit; label=\(host.label)"
         )
 
         XCTAssertTrue(scrollUntilHittable(rowById, in: app, timeout: 10),
                       "Saved template row id=\(rowId) was not reachable for Apply.")
         rowById.tap()
         XCTAssertTrue(
-            wait(forLabel: host, toContain: marker, timeout: 15),
-            "Tapping the saved template row did not put marker \(marker) into host label; label=\(host.label)"
+            wait(forLabel: host, toEqual: "Watermark text \(marker)", timeout: 15),
+            "Tapping the saved template row must restore exact host label Watermark text \(marker); label=\(host.label)"
         )
         attach(app, "22-after-apply-template")
 
@@ -669,15 +722,18 @@ final class PickerFlowUITests: XCTestCase {
 
     // MARK: - S4d-378 shared text helpers
 
-    /// Open production `TextContentOption` sheet, replace text, confirm. Crashes from the old
-    /// S4d-338 families surface as missing field/confirm or app death (test failure, not workaround).
+    /// Open production `TextContentOption` sheet, replace text exactly, confirm.
+    /// Does not trim product multi-line capability: the field may be multi-line, but this helper
+    /// fully clears prior content and types `text` without inserting Return/newlines.
     private func applyWatermarkTextViaSharedCompose(_ text: String, in app: XCUIApplication) {
+        // Callers pass exact markers without embedded newlines so the production host label can
+        // be asserted with full equality: "Watermark text \(text)".
+        XCTAssertFalse(text.contains("\n"), "Test helper must not inject multi-line watermark text.")
         let host = app.descendants(matching: .any)["sharedComposeTextContent"].firstMatch
         XCTAssertTrue(scrollUntilHittable(host, in: app, timeout: 20),
                       "Production shared text-content control did not appear.")
         host.tap()
 
-        // Prefer tagged Compose field; fall back to any text field/view after the sheet opens.
         let taggedField = app.descendants(matching: .any)["watermarkTextEditField"].firstMatch
         let anyField = app.textFields.firstMatch
         let anyTextView = app.textViews.firstMatch
@@ -696,18 +752,17 @@ final class PickerFlowUITests: XCTestCase {
             return
         }
 
-        clearAndType(in: field, text: text)
+        clearAndTypeExact(in: field, app: app, text: text)
 
-        // Prefer Confirm while IME remains (or an inside-sheet non-dismissal target).
-        // Do NOT tap outside the sheet — that dismisses ModalBottomSheet without confirm.
-        // Multi-line OutlinedTextField is product behavior; if Return is required to expose
-        // Confirm, accept possible '\n' in the draft and assert only CONTAINS(marker) upstream.
+        // Prefer Confirm while IME remains. Do NOT tap Return (inserts newline into multi-line field).
+        // If Confirm is off-screen, swipe the sheet scroll region, not the keyboard Return key.
         var confirm = resolveTextConfirmButton(in: app)
         if !confirm.waitForExistence(timeout: 3) || !confirm.isHittable {
-            // Last resort: Return may scroll/reveal Confirm; may insert newline into multi-line draft.
-            let returnKey = app.keyboards.buttons["Return"].firstMatch
-            if returnKey.exists && returnKey.isHittable {
-                returnKey.tap()
+            let sheetScroll = app.scrollViews.firstMatch
+            if sheetScroll.exists {
+                sheetScroll.swipeUp()
+            } else {
+                app.swipeUp()
             }
             confirm = resolveTextConfirmButton(in: app)
         }
@@ -716,17 +771,16 @@ final class PickerFlowUITests: XCTestCase {
         if confirm.isHittable {
             confirm.tap()
         } else {
-            // Inside-sheet coordinate tap — still on the Confirm control, not outside dismissal.
             confirm.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         }
 
-        // Sheet should dismiss after confirm; host label contains the typed text (not exact).
-        // ContentView: accessibilityLabel("Watermark text \(workflow.watermarkText)").
+        // Production host semantics: contentDescription = "Watermark text \(workflow.watermarkText)".
+        let expected = "Watermark text \(text)"
         XCTAssertTrue(scrollUntilHittable(host, in: app, timeout: 15),
                       "Shared text host not reachable after confirm.")
         XCTAssertTrue(
-            wait(forLabel: host, toContain: text, timeout: 15),
-            "Host label did not contain confirmed text \(text); label=\(host.label)"
+            wait(forLabel: host, toEqual: expected, timeout: 15),
+            "Host label must equal exact production string \(expected); label=\(host.label)"
         )
     }
 
@@ -736,20 +790,62 @@ final class PickerFlowUITests: XCTestCase {
         app.descendants(matching: .any)["watermarkTextConfirm"].firstMatch
     }
 
-    /// Clear `field` and type `text`. Works for SwiftUI TextField and Compose-backed text inputs.
-    /// Does not force single-line product behavior; Return is only used by the Confirm path if needed.
-    private func clearAndType(in field: XCUIElement, text: String) {
+    /// Named segment button/label under the production CMP host (Fill/Stroke/Normal/Bold/…).
+    /// Prefers exact accessibility label, then content-description-style matches.
+    private func segmentChoice(named name: String, in app: XCUIApplication) -> XCUIElement {
+        let exact = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", name))
+            .firstMatch
+        if exact.exists { return exact }
+        return app.staticTexts.matching(NSPredicate(format: "label == %@", name)).firstMatch
+    }
+
+    /// Tap an a11y node; if XCUITest reports not-hittable at the edge of the options viewport,
+    /// use the element's own mid-point coordinate (still the real swatch/segment node).
+    private func tapIfPossible(_ element: XCUIElement) {
+        if element.isHittable {
+            element.tap()
+        } else {
+            element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
+    }
+
+    /// Clear `field` completely and type `text` with no inserted Return/newlines.
+    /// Uses Select All when the edit menu is available; otherwise deletes the full `value` string.
+    private func clearAndTypeExact(in field: XCUIElement, app: XCUIApplication, text: String) {
         field.tap()
+        // Prefer Select All so multi-line drafts (including trailing newlines) are replaced exactly.
+        field.press(forDuration: 0.9)
+        let selectAll = app.menuItems["Select All"].firstMatch
+        if selectAll.waitForExistence(timeout: 2), selectAll.isHittable {
+            selectAll.tap()
+            field.typeText(text)
+            return
+        }
+        // Menu unavailable: delete every character of the current value (no +N cushion → no leftover \n).
         if let current = field.value as? String, !current.isEmpty {
-            // Select-all via long-press menu is flaky; delete char-by-char from end.
-            field.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
-            // current.count + 4 covers the value plus a small optional trailing-newline cushion.
-            let deleteCount = current.count + 4
-            for _ in 0..<deleteCount {
+            field.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
+            for _ in 0..<current.count {
                 field.typeText(XCUIKeyboardKey.delete.rawValue)
+            }
+            // Second pass if placeholder/value still non-empty after first wipe.
+            if let still = field.value as? String, !still.isEmpty, still != text {
+                for _ in 0..<still.count {
+                    field.typeText(XCUIKeyboardKey.delete.rawValue)
+                }
             }
         }
         field.typeText(text)
+    }
+
+    @discardableResult
+    private func wait(forLabel element: XCUIElement, toEqual expected: String, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if element.label == expected { return true }
+            Thread.sleep(forTimeInterval: 0.3)
+        }
+        return element.label == expected
     }
 
     @discardableResult
@@ -772,23 +868,143 @@ final class PickerFlowUITests: XCTestCase {
         host.coordinate(withNormalizedOffset: CGVector(dx: clampedX, dy: 0.5)).tap()
     }
 
+    /// Resolve Share / Save-to-Photos under the tagged host, app-wide, or via host X fallback.
+    private func tapSavedOutputAction(
+        named name: String,
+        host: XCUIElement,
+        in app: XCUIApplication,
+        normalizedX: CGFloat
+    ) {
+        let underHost = host.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", name)).firstMatch
+        if underHost.waitForExistence(timeout: 2) {
+            tapSharedOutputAction(labeled: underHost, in: host)
+            return
+        }
+        let appWide = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", name)).firstMatch
+        if appWide.waitForExistence(timeout: 3) {
+            tapSharedOutputAction(labeled: appWide, in: host)
+            return
+        }
+        // Last resort: primary (Share) is left, secondary (Save to Photos) is right in SavedOutputActions.
+        XCTAssertGreaterThan(host.frame.width, 1, "\(name): saved-output host has zero width.")
+        host.coordinate(withNormalizedOffset: CGVector(dx: normalizedX, dy: 0.5)).tap()
+    }
+
+    /// Scroll until [element] is on-screen enough to coordinate-tap.
+    ///
+    /// S4d-383 single-host CMP:
+    /// - `sharedCompose*` controls scroll via Compose `sharedComposeEditorOptions` (never the
+    ///   Templates-only SwiftUI ScrollView — swiping that strip cannot reveal CMP tags).
+    /// - Templates / witnesses use the templates strip ScrollView or app-level swipes.
+    /// - Nested Compose nodes often stay `isHittable == false`; a non-empty on-screen frame is enough.
     @discardableResult
     private func scrollUntilHittable(_ element: XCUIElement, in app: XCUIApplication, timeout: TimeInterval) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
-        let scrollView = app.scrollViews.firstMatch
+        let options = app.descendants(matching: .any)["sharedComposeEditorOptions"].firstMatch
+        let templatesScroll = app.descendants(matching: .any)["templatesSection"].firstMatch
         while Date() < deadline {
-            if element.exists && element.isHittable { return true }
-            if scrollView.exists {
-                if element.exists && element.frame.minY < app.frame.minY {
-                    scrollView.swipeDown()
-                } else {
-                    scrollView.swipeUp()
-                }
+            if elementIsOnScreen(element, in: app) {
+                return true
+            }
+            let dir: ScrollDir = {
+                if element.exists && element.frame.maxY < app.frame.minY + 8 { return .down }
+                return .up
+            }()
+            let id = element.identifier
+            if id.hasPrefix("sharedCompose") {
+                swipeComposeOptions(options: options, app: app, direction: dir)
+            } else if id.hasPrefix("saveTemplate") || id.hasPrefix("templateRow")
+                        || id.hasPrefix("deleteTemplate") || id == "templatesSection" {
+                swipeTemplates(templatesScroll: templatesScroll, app: app, direction: dir)
+            } else if id.contains("Witness") {
+                // Witnesses sit below the fill-height host; app swipe moves the root VStack if needed.
+                if dir == .up { app.swipeUp() } else { app.swipeDown() }
             } else {
-                app.swipeUp()
+                // Default: try options, then app.
+                if options.exists, options.frame.height > 20 {
+                    swipeComposeOptions(options: options, app: app, direction: dir)
+                } else {
+                    if dir == .up { app.swipeUp() } else { app.swipeDown() }
+                }
             }
         }
-        return element.exists && element.isHittable
+        return elementIsOnScreen(element, in: app)
+    }
+
+    private enum ScrollDir { case up, down }
+
+    private func elementIsOnScreen(_ element: XCUIElement, in app: XCUIApplication) -> Bool {
+        guard element.exists else { return false }
+        let frame = element.frame
+        // Reject empty/clipped stubs; allow short StaticText segment labels (~14–22pt).
+        guard frame.width > 6, frame.height > 6 else { return false }
+        let visible = app.frame.insetBy(dx: 0, dy: 4)
+        // For CMP editor options only: keep midpoints above the Templates strip so swatches/segments
+        // are not considered reachable when covered by the strip. Do NOT apply this to Templates /
+        // witnesses themselves (they live in or below that strip by design).
+        var usable = visible
+        let id = element.identifier
+        let isEditorOption =
+            id.hasPrefix("sharedCompose")
+            || id.hasPrefix("Text color #")
+            || id == "Fill" || id == "Stroke"
+            || id == "Normal" || id == "Bold" || id == "Italic" || id == "BoldItalic"
+            || id == "Repeat" || id == "Single"
+        if isEditorOption {
+            let templates = app.descendants(matching: .any)["templatesSection"].firstMatch
+            if templates.exists, templates.frame.height > 10 {
+                let topOfTemplates = templates.frame.minY
+                if topOfTemplates > usable.minY + 40 {
+                    usable = CGRect(
+                        x: usable.minX,
+                        y: usable.minY,
+                        width: usable.width,
+                        height: max(40, topOfTemplates - usable.minY - 4),
+                    )
+                }
+            }
+        }
+        let intersection = frame.intersection(usable)
+        guard !intersection.isNull, intersection.width > 4, intersection.height > 4 else { return false }
+        if frame.height >= 36, frame.width >= 80 {
+            // Large host/slider wrappers: nearly full height so track taps (dy≈0.25) hit the slider.
+            return intersection.height >= frame.height * 0.9 && intersection.width >= frame.width * 0.55
+        }
+        if isEditorOption {
+            return usable.contains(CGPoint(x: frame.midX, y: frame.midY))
+        }
+        return true
+    }
+
+    private func swipeTemplates(templatesScroll: XCUIElement, app: XCUIApplication, direction: ScrollDir) {
+        if templatesScroll.exists, templatesScroll.frame.height > 20 {
+            if direction == .up { templatesScroll.swipeUp() } else { templatesScroll.swipeDown() }
+            return
+        }
+        if direction == .up { app.swipeUp() } else { app.swipeDown() }
+    }
+
+    private func swipeComposeOptions(
+        options: XCUIElement,
+        app: XCUIApplication,
+        direction: ScrollDir
+    ) {
+        if options.exists, options.frame.height > 20 {
+            let startY: CGFloat = direction == .up ? 0.88 : 0.15
+            let endY: CGFloat = direction == .up ? 0.18 : 0.88
+            let start = options.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: startY))
+            let end = options.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: endY))
+            start.press(forDuration: 0.05, thenDragTo: end)
+            return
+        }
+        // Options not exposed yet — nudge the lower half of the screen (options live under preview).
+        let startY: CGFloat = direction == .up ? 0.78 : 0.45
+        let endY: CGFloat = direction == .up ? 0.40 : 0.78
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: startY))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: endY))
+        start.press(forDuration: 0.05, thenDragTo: end)
     }
 
     /// Poll the wrapper accessibility label, which changes only after the Swift workflow persists a slider value.

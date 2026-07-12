@@ -2,14 +2,20 @@ package me.rosuh.easywatermark.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -18,6 +24,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
 import me.rosuh.easywatermark.data.model.ImageInfo
@@ -35,6 +44,7 @@ import me.rosuh.easywatermark.ui.compose.TileModeLabels
 import me.rosuh.easywatermark.ui.compose.IconWatermarkOption
 import me.rosuh.easywatermark.ui.compose.TextColorOption
 import me.rosuh.easywatermark.ui.compose.TextColorOptionStrings
+import me.rosuh.easywatermark.ui.compose.formatArgbHexColor
 import me.rosuh.easywatermark.ui.compose.TextContentOption
 import me.rosuh.easywatermark.ui.compose.TextContentOptionStrings
 import me.rosuh.easywatermark.ui.compose.TextPaintStyleLabels
@@ -523,6 +533,488 @@ class IosWatermarkTextColorHost(
             0xFFFFFFFF.toInt(),
             0xFF000000.toInt(),
             0xFFFF0000.toInt(),
+        )
+    }
+}
+
+/**
+ * Production iOS editor route (S4d-383 / A5a): one [ComposeUIViewController] owning shared
+ * [EditorScreenShell] with a flat scrollable options column.
+ *
+ * Swift retains PhotosPicker, Templates, Share/Save system UI, and [WatermarkWorkflow] writes.
+ */
+class IosEditorScreenHost(
+    private val onPickIcon: () -> Unit,
+    private val onTextChange: (String) -> Unit,
+    private val onDegreeFinished: (Float) -> Unit,
+    private val onTileModeChange: (WatermarkTileMode) -> Unit,
+    private val onAlphaFinished: (Float) -> Unit,
+    private val onColorSelected: (Int) -> Unit,
+    private val onTextSizeFinished: (Float) -> Unit,
+    private val onHorizontalGapFinished: (Float) -> Unit,
+    private val onVerticalGapFinished: (Float) -> Unit,
+    private val onTypefaceChange: (TextTypeface) -> Unit,
+    private val onTextStyleChange: (TextPaintStyle) -> Unit,
+    private val onShare: () -> Unit,
+    private val onSaveToPhotos: () -> Unit,
+) {
+    private var state by mutableStateOf(IosEditorScreenState())
+
+    private var degree by mutableStateOf(315f)
+    private var pendingDegree: Float? = null
+    private var alphaPercent by mutableStateOf(100f)
+    private var pendingAlphaPercent: Float? = null
+    private var textSize by mutableStateOf(14f)
+    private var pendingTextSize: Float? = null
+    private var horizontalGap by mutableStateOf(0f)
+    private var pendingHorizontalGap: Float? = null
+    private var verticalGap by mutableStateOf(0f)
+    private var pendingVerticalGap: Float? = null
+    private var pendingText: String? = null
+    private var pendingColor: Int? = null
+    private var pendingTileMode: WatermarkTileMode? = null
+    private var pendingTypeface: TextTypeface? = null
+    private var pendingTextStyle: TextPaintStyle? = null
+
+    fun viewController(): UIViewController = ComposeUIViewController {
+        AppTheme {
+            val current = state
+            val previewBitmap = current.previewPng?.let { bytes ->
+                remember(bytes) { IosImageDecoder.decode(bytes) }
+            }
+            val iconBitmap = current.iconBytes?.let { bytes ->
+                remember(bytes) { IosImageDecoder.decode(bytes) }
+            }
+            val tileLabel =
+                if (current.tileMode == WatermarkTileMode.CLAMP) "Tile mode Single" else "Tile mode Repeat"
+            val styleLabel =
+                if (current.textStyle.serializeKey() == 1) "Text style Stroke" else "Text style Fill"
+            val typefaceLabel = when (current.typeface.serializeKey()) {
+                2 -> "Typeface Bold"
+                1 -> "Typeface Italic"
+                3 -> "Typeface BoldItalic"
+                else -> "Typeface Normal"
+            }
+            val modeLabel = if (current.isImageMode) "Image" else "Text"
+            val textHostLabel = "Watermark text ${current.text}"
+
+            EditorScreenShell(
+                showPhotoStrip = false,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .testTag("sharedComposeEditorScreen"),
+                topBar = { topBarModifier ->
+                    Column(
+                        modifier = topBarModifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(
+                            text = "Mode: $modeLabel",
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier
+                                .testTag("watermarkModeLabel")
+                                .semantics { contentDescription = "Mode: $modeLabel" },
+                        )
+                        Text(
+                            text = current.statusLine,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                },
+                preview = { previewModifier ->
+                    EditorPreviewFrame(
+                        hasImage = previewBitmap != null,
+                        emptyText = current.statusLine.ifBlank { "No preview" },
+                        modifier = previewModifier
+                            .fillMaxSize()
+                            .testTag("sharedComposeWatermarkPreview")
+                            .semantics { contentDescription = "Watermarked preview" },
+                    ) { frameModifier ->
+                        SavePreviewStatus(
+                            status = current.statusLine,
+                            preview = previewBitmap,
+                            previewContentDescription = "Watermarked preview",
+                            modifier = frameModifier.padding(8.dp),
+                        )
+                    }
+                },
+                photoStrip = {},
+                bottomControls = {
+                    // A5a: sticky saved-output (export stays visible) + bounded verticalScroll options.
+                    // Cap options ~300dp so weight(preview) keeps a usable image area on small phones
+                    // (560dp previously crushed the preview when SwiftUI Templates strip is present).
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        if (current.hasOutput) {
+                            SavedOutputActions(
+                                labels = SavedOutputActionsLabels(
+                                    primary = "Share",
+                                    secondary = "Save to Photos",
+                                ),
+                                hasOutput = true,
+                                primaryEnabled = current.canShare && !current.isSaving,
+                                secondaryEnabled = !current.isSaving,
+                                onPrimaryAction = onShare,
+                                onSecondaryAction = onSaveToPhotos,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                                    .testTag("sharedComposeSavedOutputActions"),
+                            )
+                        }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 300.dp)
+                                .verticalScroll(rememberScrollState())
+                                .testTag("sharedComposeEditorOptions")
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("sharedComposeIconWatermarkOption")
+                                    .semantics {
+                                        contentDescription = if (iconBitmap == null) {
+                                            "Watermark icon not selected"
+                                        } else {
+                                            "Watermark icon selected"
+                                        }
+                                    },
+                            ) {
+                                IconWatermarkOption(
+                                    hasIcon = iconBitmap != null,
+                                    pickLabel = "Pick icon",
+                                    modifier = Modifier.fillMaxWidth(),
+                                    onPick = onPickIcon,
+                                    preview = {
+                                        iconBitmap?.let { bitmap ->
+                                            Image(
+                                                bitmap = bitmap,
+                                                contentDescription = "Watermark icon",
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.size(32.dp),
+                                            )
+                                        }
+                                    },
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("sharedComposeTextContent")
+                                    .semantics { contentDescription = textHostLabel },
+                            ) {
+                                TextContentOption(
+                                    text = current.text,
+                                    strings = TextContentOptionStrings(
+                                        templateIconContentDescription = "Templates",
+                                        editSheetTitle = "Edit watermark text",
+                                        confirmButton = "Apply text",
+                                    ),
+                                    templateIcon = null,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    onTextChange = { next ->
+                                        pendingText = next
+                                        state = state.copy(text = next)
+                                        onTextChange(next)
+                                    },
+                                )
+                            }
+
+                            labeledEditorSlider(
+                                tag = "sharedComposeWatermarkDegree",
+                                label = "Rotation ${degree.toInt()}",
+                                value = degree,
+                                range = 0f..360f,
+                                onValueChange = {
+                                    degree = it
+                                    pendingDegree = it
+                                },
+                                onFinished = { onDegreeFinished(degree) },
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("sharedComposeTileMode")
+                                    .semantics { contentDescription = tileLabel },
+                            ) {
+                                TileMode(
+                                    labels = TileModeLabels(repeat = "Repeat", decal = "Single"),
+                                    mode = current.tileMode,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    onValueChange = { selected ->
+                                        pendingTileMode = selected
+                                        state = state.copy(tileMode = selected)
+                                        onTileModeChange(selected)
+                                    },
+                                )
+                            }
+                            labeledEditorSlider(
+                                tag = "sharedComposeWatermarkAlpha",
+                                label = "Opacity ${alphaPercent.toInt()}%",
+                                value = alphaPercent,
+                                range = 0f..100f,
+                                onValueChange = {
+                                    alphaPercent = it
+                                    pendingAlphaPercent = it
+                                },
+                                onFinished = { onAlphaFinished(alphaPercent) },
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("sharedComposeTextColor")
+                                    .semantics {
+                                        // Match ColorSwatch a11y: "Text color #AARRGGBB" (not signed Int).
+                                        contentDescription =
+                                            "Text color ${formatArgbHexColor(current.textColor)}"
+                                    },
+                            ) {
+                                TextColorOption(
+                                    currentColor = current.textColor,
+                                    customText = "",
+                                    strings = TextColorOptionStrings(
+                                        customLabel = "Custom color",
+                                        applyCustomButton = "Apply color",
+                                    ),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    palette = EDITOR_TEXT_COLOR_PALETTE,
+                                    showCustomInput = false,
+                                    onColorSelected = { selectedColor ->
+                                        pendingColor = selectedColor
+                                        state = state.copy(textColor = selectedColor)
+                                        onColorSelected(selectedColor)
+                                    },
+                                    onCustomTextChange = {},
+                                    onApplyCustomText = {},
+                                )
+                            }
+                            labeledEditorSlider(
+                                tag = "sharedComposeTextSize",
+                                label = "Text size ${textSize.toInt()}",
+                                value = textSize,
+                                range = 1f..100f,
+                                onValueChange = {
+                                    textSize = it
+                                    pendingTextSize = it
+                                },
+                                onFinished = { onTextSizeFinished(textSize) },
+                            )
+                            Text(
+                                text = "Gaps: H ${horizontalGap.toInt()}  V ${verticalGap.toInt()}",
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier
+                                    .testTag("watermarkGapLabel")
+                                    .semantics {
+                                        contentDescription =
+                                            "Gaps: H ${horizontalGap.toInt()}  V ${verticalGap.toInt()}"
+                                    },
+                            )
+                            labeledEditorSlider(
+                                tag = "sharedComposeWatermarkHGap",
+                                label = "Horizontal gap ${horizontalGap.toInt()}",
+                                value = horizontalGap,
+                                range = 0f..500f,
+                                onValueChange = {
+                                    horizontalGap = it
+                                    pendingHorizontalGap = it
+                                },
+                                onFinished = { onHorizontalGapFinished(horizontalGap) },
+                            )
+                            labeledEditorSlider(
+                                tag = "sharedComposeWatermarkVGap",
+                                label = "Vertical gap ${verticalGap.toInt()}",
+                                value = verticalGap,
+                                range = 0f..500f,
+                                onValueChange = {
+                                    verticalGap = it
+                                    pendingVerticalGap = it
+                                },
+                                onFinished = { onVerticalGapFinished(verticalGap) },
+                            )
+                            // No mergeDescendants: segment buttons keep individual a11y (Fill/Stroke,
+                            // Normal/Bold/…). Outer testTag + state description match tile-mode host.
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("sharedComposeTextTypeface")
+                                    .semantics { contentDescription = typefaceLabel },
+                            ) {
+                                TextTypefaceOption(
+                                    labels = TextTypefaceLabels(
+                                        normal = "Normal",
+                                        bold = "Bold",
+                                        italic = "Italic",
+                                        boldItalic = "BoldItalic",
+                                    ),
+                                    typeface = current.typeface,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    onValueChange = { selected ->
+                                        pendingTypeface = selected
+                                        state = state.copy(typeface = selected)
+                                        onTypefaceChange(selected)
+                                    },
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("sharedComposeTextPaintStyle")
+                                    .semantics { contentDescription = styleLabel },
+                            ) {
+                                TextPaintStyleOption(
+                                    labels = TextPaintStyleLabels(fill = "Fill", stroke = "Stroke"),
+                                    style = current.textStyle,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    onValueChange = { selected ->
+                                        pendingTextStyle = selected
+                                        state = state.copy(textStyle = selected)
+                                        onTextStyleChange(selected)
+                                    },
+                                )
+                            }
+                        }
+                    }
+                },
+            )
+        }
+    }
+
+    fun update(
+        text: String,
+        degree: Float,
+        tileMode: WatermarkTileMode,
+        normalizedAlpha: Float,
+        textColor: Int,
+        textSize: Float,
+        horizontalGap: Int,
+        verticalGap: Int,
+        typeface: TextTypeface,
+        textStyle: TextPaintStyle,
+        isImageMode: Boolean,
+        iconBytes: ByteArray?,
+        previewPng: ByteArray?,
+        statusLine: String,
+        hasOutput: Boolean,
+        canShare: Boolean,
+        isSaving: Boolean,
+    ) {
+        if (pendingText == null || pendingText == text) {
+            pendingText = null
+            state = state.copy(text = text)
+        }
+        if (pendingDegree == null || pendingDegree == degree) {
+            this.degree = degree
+            pendingDegree = null
+        }
+        val persistedAlpha = normalizedAlpha.coerceIn(0f, 1f) * 100f
+        if (pendingAlphaPercent == null ||
+            abs((pendingAlphaPercent ?: 0f) - persistedAlpha) < 0.001f
+        ) {
+            alphaPercent = persistedAlpha
+            pendingAlphaPercent = null
+        }
+        if (pendingTextSize == null || pendingTextSize == textSize) {
+            this.textSize = textSize
+            pendingTextSize = null
+        }
+        val hGap = horizontalGap.coerceIn(0, 500).toFloat()
+        if (pendingHorizontalGap == null || pendingHorizontalGap == hGap) {
+            this.horizontalGap = hGap
+            pendingHorizontalGap = null
+        }
+        val vGap = verticalGap.coerceIn(0, 500).toFloat()
+        if (pendingVerticalGap == null || pendingVerticalGap == vGap) {
+            this.verticalGap = vGap
+            pendingVerticalGap = null
+        }
+        if (pendingColor == null || pendingColor == textColor) {
+            pendingColor = null
+            state = state.copy(textColor = textColor)
+        }
+        val nextTile = if (pendingTileMode == null || pendingTileMode == tileMode) {
+            pendingTileMode = null
+            tileMode
+        } else {
+            state.tileMode
+        }
+        val nextTypeface = if (pendingTypeface == null || pendingTypeface == typeface) {
+            pendingTypeface = null
+            typeface
+        } else {
+            state.typeface
+        }
+        val nextTextStyle = if (pendingTextStyle == null || pendingTextStyle == textStyle) {
+            pendingTextStyle = null
+            textStyle
+        } else {
+            state.textStyle
+        }
+        state = state.copy(
+            tileMode = nextTile,
+            typeface = nextTypeface,
+            textStyle = nextTextStyle,
+            isImageMode = isImageMode,
+            iconBytes = iconBytes,
+            previewPng = previewPng,
+            statusLine = statusLine,
+            hasOutput = hasOutput,
+            canShare = canShare,
+            isSaving = isSaving,
+        )
+    }
+
+    private companion object {
+        val EDITOR_TEXT_COLOR_PALETTE = listOf(
+            0xFFFFB800.toInt(),
+            0xFFFFFFFF.toInt(),
+            0xFF000000.toInt(),
+            0xFFFF0000.toInt(),
+        )
+    }
+}
+
+private data class IosEditorScreenState(
+    val text: String = "EasyWatermark 水印",
+    val tileMode: WatermarkTileMode = WatermarkTileMode.REPEAT,
+    val textColor: Int = 0xFFFFB800.toInt(),
+    val typeface: TextTypeface = TextTypeface.Normal,
+    val textStyle: TextPaintStyle = TextPaintStyle.Fill,
+    val isImageMode: Boolean = false,
+    val iconBytes: ByteArray? = null,
+    val previewPng: ByteArray? = null,
+    val statusLine: String = "",
+    val hasOutput: Boolean = false,
+    val canShare: Boolean = false,
+    val isSaving: Boolean = false,
+)
+
+@Composable
+private fun labeledEditorSlider(
+    tag: String,
+    label: String,
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    onValueChange: (Float) -> Unit,
+    onFinished: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(tag)
+            .semantics { contentDescription = label },
+    ) {
+        SliderOption(
+            currentValue = value,
+            valueRange = range,
+            modifier = Modifier.fillMaxWidth(),
+            onValueChangeFinished = onFinished,
+            onValueChange = onValueChange,
         )
     }
 }
