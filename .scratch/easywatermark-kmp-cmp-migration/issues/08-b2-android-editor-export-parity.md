@@ -4,7 +4,7 @@
 
 **Blocked by:** 06 B0 Android v2.10.0 baseline inventory/archive.
 
-**Status:** **captures archived — punch-list open (awaiting owner)** (2026-07-12)  
+**Status:** **captures archived (pass 2 clean prefs) — punch-list open (awaiting owner)** (2026-07-12)  
 **Owner sign-off:** **none** (agent does not self-sign).
 
 ## Acceptance checklist
@@ -15,17 +15,19 @@
 
 ## Archive
 
-Full write-up: `docs/parity/v2.10.0/captures/COMPARISON-2026-07-12-en-dark.md`
+- Pass 1: `COMPARISON-2026-07-12-en-dark.md`  
+- Pass 2: `CONTINUATION-2026-07-12-pass2.md` (prefer **clean** shots for editor/export)
 
-| State | Prod | Debug |
-|-------|------|-------|
-| editor-text-mode | `captures/production/en/dark/editor-text-mode.png` | `captures/debug/en/dark/editor-text-mode.png` |
-| export-sheet-open | `captures/production/en/dark/export-sheet-open.png` | `captures/debug/en/dark/export-sheet-open.png` |
+| State | Prod | Debug (clean) |
+|-------|------|----------------|
+| editor-text-mode | `…/production/…/editor-text-mode.png` | `…/debug/…/editor-text-mode-clean.png` |
+| export-sheet-open | `…/production/…/export-sheet-open.png` | `…/debug/…/export-sheet-open-clean.png` |
 
 ## Grok findings (summary)
 
-- **Editor P0:** top-leading logo vs back arrow; preview density/color/text (debug prefs polluted with `S4d-254 smoke` green); Content tab text surface incomplete vs prod inline field.  
-- **Export P1:** same controls (JPEG/80/list/export CTA); quality **slider thumb position wrong vs value 80** on debug; sheet less overlaid on preview.
+- **Prefs pollution fixed** after `pm clear`: default text/color/tile matches prod amber dense tile.  
+- **Editor P0 remaining:** top-leading logo vs back arrow; Content tab **missing inline text field**.  
+- **Export P1 remaining:** quality **slider visual** (discrete + odd knobs) vs prod continuous; sheet chrome (full-screen vs over dimmed editor).
 
 ## Punch-list for owner
 

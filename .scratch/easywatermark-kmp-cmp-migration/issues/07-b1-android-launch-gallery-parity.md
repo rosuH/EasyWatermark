@@ -4,7 +4,7 @@
 
 **Blocked by:** 06 B0 Android v2.10.0 baseline inventory/archive.
 
-**Status:** **captures archived — punch-list open (awaiting owner)** (2026-07-12)  
+**Status:** **captures archived (pass 2) — punch-list open (awaiting owner)** (2026-07-12)  
 **Owner sign-off:** **none** (agent does not self-sign).
 
 ## Acceptance checklist
@@ -15,13 +15,14 @@
 
 ## Archive
 
-See `docs/parity/v2.10.0/captures/COMPARISON-2026-07-12-en-dark.md` and:
+- Pass 1: `docs/parity/v2.10.0/captures/COMPARISON-2026-07-12-en-dark.md`  
+- Pass 2: `docs/parity/v2.10.0/captures/CONTINUATION-2026-07-12-pass2.md`
 
 | State | Prod | Debug |
 |-------|------|-------|
-| launch-idle | `captures/production/en/dark/launch-idle.png` | `captures/debug/en/dark/launch-idle.png` |
-| gallery/picker | `…/gallery-or-picker.png` (system Photo Picker) | `…/gallery-or-picker.png` (in-app Choose picture) |
-| selected | `…/picker-selected.png` | `…/gallery-selected.png` |
+| launch-idle | `…/production/…/launch-idle.png` | `…/debug/…/launch-idle-clean.png` (after `pm clear`) |
+| gallery primary (policy) | *residual: Choose Images → system picker* | `gallery-inapp-primary.png` ✅ |
+| gallery secondary (policy) | *no in-app host on this prod path* | `gallery-topright-system-picker.png` ✅ system picker |
 
 ## Grok findings (summary)
 
