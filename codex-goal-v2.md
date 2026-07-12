@@ -16,7 +16,7 @@ Standing mission/process contract. **Read this file every session before work.**
 
 1. **This file is the sole process/mission contract.** Supersedes `codex-goal.md` and the retired ACSP/cowork loop. Historical ACSP under `~/.agent-cowork/sessions/EasyWatermark/` is **read-only** — never create/move/publish sessions there.
 2. **Technical constraints** in `AGENTS.md`, `docs/CONTEXT.md`, `docs/adr/*` remain binding. Process conflict → **this file wins**. Technical conflict → **`AGENTS.md` / ADRs win** until owner says otherwise.
-3. **Operational source of truth:** this file, the current GitHub issue/ticket referenced in `docs/agents/issue-tracker.md`, the accepted worker brief, and verified artifacts (diffs, test outputs, screenshots). `task_plan.md`, `progress.md`, and `findings.md` are **historical evidence only** — do not read them at session start, do not update them after slices, and do not use them to choose work.
+3. **Operational source of truth:** this file, the **local** Matt Pocock program under `.scratch/easywatermark-kmp-cmp-migration/` (`spec.md` + `issues/*.md`; see `docs/agents/issue-tracker.md`), the accepted worker brief, and verified artifacts (diffs, test outputs, screenshots). Public GitHub Issues are **not** the migration ops backend. `task_plan.md`, `progress.md`, and `findings.md` are **historical evidence only** — do not read them at session start, do not update them after slices, and do not use them to choose work.
 4. **Slice done ≠ mission done.** Overall completion requires **every** §9 DoD item. Never redefine goal as “almost done” or “PR merge-ready.”
 
 ---
@@ -56,13 +56,13 @@ All implementation, verification, docs updates, and local commits go through Her
 ### 2.3 Concurrency, commit, roles
 
 - **One primary editor per slice**; no concurrent writes to overlapping files. Others may **read-only** review.
-- Worker edits+verifies; **no commit** until Codex accepts. After accept, authorize CLI (normally **Grok**) to update durable docs if needed and record verified artifacts / GitHub issue comments. **Do not update `task_plan.md` / `progress.md` / `findings.md` as execution workflow.** Local commit only.
+- Worker edits+verifies; **no commit** until Codex accepts. After accept, authorize CLI (normally **Grok**) to update durable docs if needed and record verified artifacts / local ticket status under `.scratch/.../issues/`. **Do not** use `gh issue` for migration ops. **Do not update `task_plan.md` / `progress.md` / `findings.md` as execution workflow.** Local commit only.
 - **Never** push/merge/reset/rebase/stash/clean without owner.
 
 ```
   Owner → Codex (command/review/authorize; no default impl)
             → Herdr: Grok > Kimi > OpenCode
-              → worktree feat/migrate_to_compose + GitHub issue + verified artifacts
+              → worktree feat/migrate_to_compose + local .scratch tickets + verified artifacts
 ```
 
 ---
@@ -86,7 +86,7 @@ Flow: `wayfinder` (only when roadmap uncertainty exists) → `to-spec` (agreed s
 ## 4. Herdr lifecycle + Codex slice loop
 
 ```
-  1 INSPECT   git status -uall; HEAD; current GitHub issue + accepted brief; AGENTS; CLI availability
+  1 INSPECT   git status -uall; HEAD; current local ticket under .scratch/.../issues/ + accepted brief; AGENTS; CLI availability
   2 BRIEF     one primary editor; §5 template; exact allowed/forbidden paths
   3 SEND      Herdr dispatch; record agent id / start
   4 WAIT      no busy-loop; backoff/event wait; stall → one status check → escalate/requeue
@@ -116,7 +116,7 @@ Per slice: skill-route (§3) → smallest `S4d-NNN` → brief → lifecycle → 
 - path/...
 
 ## Forbidden files / actions
-- Do not edit: <paths>  # always exclude unbriefed S4d-344 + parked research (§11)
+- Do not edit: <paths>  # always exclude unbriefed paths + parked research (§11)
 - Do not: push/merge/reset/rebase/stash/clean, install deps, shut down Android/iOS
   simulators, change Compose/Skiko versions, add deps, edit Weblate locales, reopen §6
 - Default: NO commit (Codex reviews first)
@@ -150,7 +150,7 @@ READY FOR CODEX REVIEW | BLOCKED | NEEDS REVISION
 
 ## 6. Hard guardrails (do not reopen silently)
 
-Any reopen needs an **explicit owner decision**. Record **durable architecture/policy** changes in an ADR; record **active toolchain/runtime blockers** as GitHub issue comments / in the accepted brief, not in `findings.md`. “Share more” does not override.
+Any reopen needs an **explicit owner decision**. Record **durable architecture/policy** changes in an ADR; record **active toolchain/runtime blockers** on the local ticket file / in the accepted brief, not in `findings.md`. “Share more” does not override.
 
 1. **Android production raster/composition stays native:** text (`buildTextShader`/StaticLayout — S4d-17); icon (`buildIconShader` — S4d-8/ADR-0004); composition (`WatermarkRenderer.compose` — S4d-190 No-Go). `WatermarkCellComposer` / `composeTextCell` / `composeIconCell` / `composeOverBackground` = **Desktop/iOS only**. Shared geometry/constants (`WatermarkGeometry`, `ICON_SCALE_REFERENCE_TEXT_SIZE`) are the single sizing source for all platforms.
 2. **No `ViewInfo` / `AndroidView`-bridged renderer.** Preview = Compose `Canvas` over `WatermarkRenderer` (S3c-3).
@@ -169,7 +169,7 @@ Any reopen needs an **explicit owner decision**. Record **durable architecture/p
     - **Tests, DEBUG witnesses, and theoretical callers do not count.**
     - Otherwise keep platform-side or document as a **platform edge**.
     - Do **not** require (or claim) that whole `MainViewModel` must move; extract only dual-consumed pure slices. No speculative shared ViewModel / nav reducer / IO `expect` (S4d-191).
-13. **Do not retry iOS CMP focused text input (S4d-338)** or change Compose/Skiko versions without owner CMP dependency-alignment decision.
+13. **Do not reopen focused-text dependency troubleshooting or change Compose/Skiko versions without an owner dependency-alignment decision.** The shared CMP `TextContentOption` host is runtime-proven (S4d-378, `bf9a3825`, full iOS XCUITest 19/0); it is not blocked.
 
 ---
 
@@ -206,52 +206,44 @@ Any reopen needs an **explicit owner decision**. Record **durable architecture/p
   +------------+   +--------------+   +---------------------------+
 ```
 
-### 7.3 Explicit dependency chain (do in order; A1–A3 parallel after A0)
+### 7.3 Explicit dependency chain (local ticket order)
 
-```
-  [S4d-344 finish/park]
-       |  uncommitted iOS WIP: full suite + Gradle + docs + local commit
-       |  OR explicit park; do not strand half-proven WIP
-       v
-  [A0  Screen / state / event / platform-edge MATRIX]
-       |  inventory: which screens, shared vs edge, events, who owns IO
-       |  no large moves without this map
-       v
-  +----+------------------+------------------+
-  |    v                  v                  v
-  | [A1 Android]     [A2 Desktop]       [A3 iOS]
-  | wrapper thin     shared screen      shared screen
-  | retain edges:    root consumers     root consumers
-  | perm/Uri/render  (window = edge)    (picker/share =
-  | /picker/save                        system edge)
-  +----+------------------+------------------+
-       |                  |                  |
-       +--------+---------+---------+--------+
-                v
-  [A4 Consumer-driven shared state/use-cases]
-       |  only per §6.12 (≥2 production platform consumers; no platform types)
-       v
-  [A5 Phase A integration gate]
-       |  shared CMP = route of record on all 3 platforms
-       |  edges listed + reasoned; dual-consumed pure logic shared
-       |  green gates §8; NOT pixel 1:1 yet
-       v
-  [Phase B Android v2.10.0 1:1 archive + owner sign-off]
-       v
-  [iOS / Desktop align to signed Android baseline + exceptions]
-       v
-  [§9 DoD + PR #358 graduation proposal]
-```
+    [01 A5a]      [02 A5b]      [03 A5c]      [04 A5d]
+        |             |             |             |
+        +-------------+-------------+-------------+
+                      v
+              [05 A5 closeout]
+       NOT READY → return to 01–04
+                      |
+                    PASS
+                      |
+                      v
+            [06 B0 Android v2.10.0
+                baseline inventory]
+                      |
+                      v
+            +---------+---------+
+            v                   v
+    [07 B1 launch/gallery    [08 B2 editor/export
+        owner sign-off]          owner sign-off]
+            |                   |
+            +---------+---------+
+                      v
+        [09 B3 iOS/Desktop alignment
+                + exception registry]
+                      |
+                      v
+    [10 final DoD audit + PR #358 graduation proposal]
 
-**S4d-338 scope:** owner Compose/Skiko decision blocks **only** the iOS **text / full-root critical edge** (focused CMP text field / modal text path that needs dependency alignment). **Lane-switch elsewhere** (A1, A2, non-text A3, A0 matrix, export edges, dead code) remains open.
+**S4d-338 (historical):** the former focused-text dependency investigation is runtime-resolved by S4d-378; it does **not** block shared text or A5. Do not reopen that troubleshooting or change Compose/Skiko versions without an owner dependency-alignment decision.
 
 ### 7.4 Lane-switching on owner blocks
 
-Owner wall (S4d-338 text, golden rebaseline, new dep, §6 reopen, visible behavior):
+Owner wall (golden rebaseline, new dep, §6 reopen, visible behavior):
 
 1. Record question (authorized docs after Codex accepts block note).
 2. Park ticket; do not idle; do not decide unilaterally.
-3. Switch to another open chain node (A1/A2/non-text A3/A0/A4-eligible dual consumers).
+3. Switch to another ready local ticket; current frontier is 01 through 04, and later work follows the unblocked ticket chain in §7.3.
 
 ---
 
@@ -298,7 +290,7 @@ Slice finish is **never** overall completion. All must be true:
 - [ ] Shared CMP UI is route of record on all three platforms; platform-native UI only at allowed edges, each listed with a reason.
 - [ ] Data layer (models, repos, DataStore, Room, use-cases) is commonMain **except documented platform-edge implementations** (Android / Desktop / iOS factories, migrations, native IO, and other listed edges); persisted bytes unchanged end-to-end.
 - [ ] Android 1:1 parity archive complete (screens × states × locale × theme + recordings), **owner signed off** screen by screen; iOS/Desktop alignment documented with explicit exceptions.
-- [ ] `AGENTS.md`, `docs/CONTEXT.md`, ADRs, GitHub tickets, and verified evidence reflect final architecture (process contract = this file; ACSP retired).
+- [ ] `AGENTS.md`, `docs/CONTEXT.md`, ADRs, local `.scratch` program tickets, and verified evidence reflect final architecture (process contract = this file; ACSP retired).
 - [ ] Graduation proposal for PR #358 presented to owner (merge plan, not auto-merge).
 
 ---
@@ -312,36 +304,39 @@ Slice finish is **never** overall completion. All must be true:
 
 ---
 
-## 11. Current truth (2026-07-11)
+## 11. Current truth (2026-07-12)
 
 Baseline only — always re-check `git status`.
 
 | Item | Value |
 |---|---|
-| Accepted HEAD | `fc94e936` **S4d-343** Restore Android export state |
-| Also accepted | **S4d-342** Desktop `EditorPreviewFrame` + packaged preview path; **S4d-254** AndroMeld smoke (not 1:1) |
-| Owner-blocked | **S4d-338** iOS CMP focused text — Compose/Skiko align; blocks text/full-root edge only |
-| In-flight | **S4d-344** uncommitted; focused XCUITest **1/0** only; full suite/Gradle/docs/commit pending |
-| S4d-344 paths (do not touch unless briefed) | `iosApp/iosApp/ContentView.swift`, `iosApp/iosAppUITests/PickerFlowUITests.swift`, `shared/src/iosMain/kotlin/me/rosuh/easywatermark/ui/IosSharedComposeHost.kt` |
-| Unrelated / parked untracked | `docs/superpowers/research/2026-07-11-project-branch-goals-progress.md` — research note only; **not** part of activation or any slice |
-| Protect | **Forbidden** for activation/docs/local commits to stage/commit S4d-344 files or the research doc **unless a separate brief explicitly allows them** |
+| Accepted HEAD | `bf9a3825` **S4d-378** shared iOS text control |
+| Also accepted | **S4d-343** Restore Android export state; **S4d-342** Desktop `EditorPreviewFrame` + packaged preview path; **S4d-254** AndroMeld smoke (not 1:1); **S4d-379** historical process-backend commit (superseded by **S4d-381** local backend) |
+| Phase | **A** in progress. Phase A is **NOT complete**; Phase B not started |
+| Owner-blocked | No active global owner blocker; local tickets **02–04** contain owner-signed exception gates only if their non-code option is chosen |
+| Current frontier | Local ticket **01 A5a** under `.scratch/easywatermark-kmp-cmp-migration/` |
+| Parallel-ready gaps | Local tickets **02–04** (A5b/A5c/A5d gaps) |
+| A5 close gate | Local ticket **05** closes A5; do not claim A5 PASS until ticket `05` says PASS |
+| Post-A5 blocked | Local ticket **06** is blocked until ticket **05** A5 PASS; not an owner decision |
+| Local process backend | `.scratch/easywatermark-kmp-cmp-migration/` (S4d-381 local Matt Pocock program) |
+| Protect | **Forbidden** for activation/docs/local commits to stage/commit the research doc **unless a separate brief explicitly allows it** |
 | Remote | Local often ahead of `origin/feat/migrate_to_compose`; PR #358 Draft |
 | Simulators | Do **not** shut down live Android + iOS simulators |
-| Phase | **A** (chain §7.3). Phase B not started |
-| Process | Codex commander; Herdr Grok > Kimi > OpenCode |
+| Process | Codex commander; Herdr Grok > Kimi > OpenCode; Matt skills route every frontier ticket |
 
 ### 11.1 Next on chain
 
-1. Finish or explicitly park **S4d-344** (full gates → review → authorized docs+commit, or documented park).
-2. **A0** matrix if not already durable in GitHub issues / `docs/superpowers/research/`.
-3. Parallel **A1/A2/A3** (skip iOS text/full-root until S4d-338 unblocked).
-4. **A4** only under §6.12; then **A5**; only then Phase B.
+1. Work local ticket **01 A5a** (current frontier).
+2. In parallel, address local tickets **02–04** where they are independent gaps.
+3. Local ticket **05** closes A5; no A5 PASS claim until it says PASS.
+4. Local ticket **06** is gated by ticket **05** A5 PASS; do not route work through it until then.
+5. Phase B begins after ticket **05** PASS; owner screen sign-off occurs inside tickets **07/08**, not as an A5 prerequisite.
 
 ---
 
 ## 12. Overclaim guard
 
-Do not claim: migration complete; three-platform 1:1; PR merge-ready; Android pixel parity from smoke alone; Desktop packaging = public ship (ADR-0013 Proposed); focused XCUITest = full suite (S4d-344). Prefer the current GitHub issue state + verified artifacts + git HEAD over stale planning-file text.
+Do not claim: migration complete; three-platform 1:1; PR merge-ready; Android pixel parity from smoke alone; Desktop packaging = public ship (ADR-0013 Proposed); focused XCUITest = full suite; A5 pass without ticket `05`. Prefer the current **local** ticket state under `.scratch/easywatermark-kmp-cmp-migration/` + verified artifacts + git HEAD over stale planning-file text or revoked public GitHub migration issues.
 
 ---
 
@@ -353,7 +348,7 @@ Do not claim: migration complete; three-platform 1:1; PR merge-ready; Android pi
 | `codex-goal.md` | Historical process (superseded) |
 | `AGENTS.md` | Technical truth, closed decisions, commands |
 | `task_plan.md` / `progress.md` / `findings.md` | **Historical evidence only** — do not use for routing or session start |
-| GitHub issues (`docs/agents/issue-tracker.md`) | Operational ticket / task source of truth |
+| Local tickets (`.scratch/easywatermark-kmp-cmp-migration/`; `docs/agents/issue-tracker.md`) | Operational ticket / task source of truth (not public GitHub issues) |
 | Verified artifacts (diffs, test outputs, screenshots) | Acceptance evidence |
 | `docs/CONTEXT.md` / `docs/adr/*` | Domain + architecture |
 | CMP plan under `docs/superpowers/plans/` | C1–C6 blueprint context, not process |
