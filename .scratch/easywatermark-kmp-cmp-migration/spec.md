@@ -1,7 +1,7 @@
 # Spec — EasyWatermark KMP/CMP release-grade migration + Phase B parity
 
-**Local program slug:** `easywatermark-kmp-cmp-migration`  
-**Process contract:** `codex-goal-v2.md`  
+**Local program slug:** `easywatermark-kmp-cmp-migration`
+**Process contract:** `codex-goal-v2.md`
 **Tracker backend:** local files under `.scratch/easywatermark-kmp-cmp-migration/` (not GitHub issues)
 
 ---
