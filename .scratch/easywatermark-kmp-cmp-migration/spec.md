@@ -87,8 +87,8 @@ See `codex-goal-v2.md` §6 in full. Do not silently reopen Android draw-swap, Da
 | `issues/06-b0-android-v2100-baseline-inventory.md` | B0 baseline | **complete** — `docs/parity/v2.10.0/` scaffold |
 | `issues/07-b1-android-launch-gallery-parity.md` | B1 parity | **complete** — owner approved 2026-07-12 |
 | `issues/08-b2-android-editor-export-parity.md` | B2 parity | **complete** — owner approved 2026-07-12 |
-| `issues/09-b3-ios-desktop-alignment-exceptions.md` | B3 align | **unblocked** (frontier after 07+08) |
-| `issues/10-z-dod-audit-pr358-graduation.md` | §9 DoD audit | Blocked by 05–09 |
+| `issues/09-b3-ios-desktop-alignment-exceptions.md` | B3 align | **complete** — registry + green desktop/iOS-sim gates |
+| `issues/10-z-dod-audit-pr358-graduation.md` | §9 DoD audit | **unblocked** (frontier; graduation proposal only) |
 
 ## Current evidence — S4d-383 / A5 PASS (2026-07-12)
 

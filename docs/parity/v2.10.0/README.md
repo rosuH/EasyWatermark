@@ -36,6 +36,7 @@ Both may install side-by-side. Always open **production first**, then debug, sam
 | Ticket | Role |
 |--------|------|
 | **06** (this scaffold) | Inventory + protocol + empty archive |
-| **07** | Launch + gallery owner sign-off |
-| **08** | Editor + save/export owner sign-off |
-| **09** | iOS/Desktop align to **signed** Android baseline + exceptions |
+| **07** | Launch + gallery owner sign-off — **complete** |
+| **08** | Editor + save/export owner sign-off — **complete** |
+| **09** | iOS/Desktop align + exception registry — **complete** (`alignment/ios-desktop-exception-registry.md`) |
+| **10** | §9 DoD audit + PR #358 graduation proposal |
