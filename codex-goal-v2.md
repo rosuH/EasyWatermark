@@ -304,33 +304,28 @@ Slice finish is **never** overall completion. All must be true:
 
 ---
 
-## 11. Current truth (2026-07-12)
+## 11. Current truth (2026-07-12, post ticket 10 audit)
 
-Baseline only — always re-check `git status`.
+Baseline only — always re-check `git status`. Full checklist: `docs/parity/v2.10.0/dod/s9-dod-audit-2026-07-12.md`.
 
 | Item | Value |
 |---|---|
-| Accepted HEAD | `bf9a3825` **S4d-378** shared iOS text control |
-| Also accepted | **S4d-343** Restore Android export state; **S4d-342** Desktop `EditorPreviewFrame` + packaged preview path; **S4d-254** AndroMeld smoke (not 1:1); **S4d-379** historical process-backend commit (superseded by **S4d-381** local backend) |
-| Phase | **A** in progress. Phase A is **NOT complete**; Phase B not started |
-| Owner-blocked | No active global owner blocker; local tickets **02–04** contain owner-signed exception gates only if their non-code option is chosen |
-| Current frontier | Local ticket **01 A5a** under `.scratch/easywatermark-kmp-cmp-migration/` |
-| Parallel-ready gaps | Local tickets **02–04** (A5b/A5c/A5d gaps) |
-| A5 close gate | Local ticket **05** closes A5; do not claim A5 PASS until ticket `05` says PASS |
-| Post-A5 blocked | Local ticket **06** is blocked until ticket **05** A5 PASS; not an owner decision |
-| Local process backend | `.scratch/easywatermark-kmp-cmp-migration/` (S4d-381 local Matt Pocock program) |
-| Protect | **Forbidden** for activation/docs/local commits to stage/commit the research doc **unless a separate brief explicitly allows it** |
-| Remote | Local often ahead of `origin/feat/migrate_to_compose`; PR #358 Draft |
-| Simulators | Do **not** shut down live Android + iOS simulators |
-| Process | Codex commander; Herdr Grok > Kimi > OpenCode; Matt skills route every frontier ticket |
+| Local tickets **01–10** | **01–09 complete**; **10** §9 audit + graduation proposal delivered |
+| Phase A | **A5 PASS** (ticket 05) |
+| Phase B | Core Android launch/gallery/editor/export **owner-signed** (07/08); iOS/Desktop exceptions **registered** (09) |
+| **§9 overall** | **NOT MET** (strict goldens not re-run; iosSimulatorArm64Test RUN not in final audit; parity archive not exhaustive locale/theme matrix). **Not** “migration complete.” |
+| Graduation | Proposal: `docs/parity/v2.10.0/dod/graduation-proposal-pr358.md` — **owner chooses A/B/C**; **no auto-merge** |
+| Local process backend | `.scratch/easywatermark-kmp-cmp-migration/` |
+| Protect | User research doc `docs/superpowers/research/2026-07-11-project-branch-goals-progress.md` stays uncommitted unless owner allows |
+| Remote | Local may lead `origin/feat/migrate_to_compose`; PR #358 **Draft** |
+| Simulators | Do **not** shut down live Android + iOS simulators unless owner orders |
+| Process | Commander (Grok authorized); Herdr Grok > Kimi > OpenCode |
 
 ### 11.1 Next on chain
 
-1. Work local ticket **01 A5a** (current frontier).
-2. In parallel, address local tickets **02–04** where they are independent gaps.
-3. Local ticket **05** closes A5; no A5 PASS claim until it says PASS.
-4. Local ticket **06** is gated by ticket **05** A5 PASS; do not route work through it until then.
-5. Phase B begins after ticket **05** PASS; owner screen sign-off occurs inside tickets **07/08**, not as an A5 prerequisite.
+1. Owner decides graduation **A / B / C** (and push yes/no).  
+2. Optional residuals before any merge: strict goldens, full `iosSimulatorArm64Test` RUN, parity archive expansion.  
+3. Do **not** claim three-platform 1:1 or PR merge-ready without owner override.
 
 ---
 
