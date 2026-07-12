@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
@@ -67,6 +68,7 @@ fun TextContentOption(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
                 .weight(1f)
+                .testTag(TEXT_CONTENT_ROW_TAG)
                 .clickable(enabled = enabled) { showEditSheet = true }
                 .padding(vertical = 16.dp)
         )
@@ -129,7 +131,8 @@ private fun WatermarkTextEditSheet(
                 enabled = enabled,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .wrapContentHeight(),
+                    .wrapContentHeight()
+                    .testTag(TEXT_CONTENT_EDIT_FIELD_TAG),
                 shape = RectangleShape,
             )
             Button(
@@ -137,7 +140,8 @@ private fun WatermarkTextEditSheet(
                 enabled = enabled,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 24.dp),
+                    .padding(top = 24.dp)
+                    .testTag(TEXT_CONTENT_CONFIRM_TAG),
                 shape = RectangleShape,
             ) {
                 Text(text = strings.confirmButton)
@@ -145,3 +149,8 @@ private fun WatermarkTextEditSheet(
         }
     }
 }
+
+/** Stable Compose testTag ids for XCUITest (not user-facing accessibility strings). */
+const val TEXT_CONTENT_ROW_TAG = "watermarkTextContent"
+const val TEXT_CONTENT_EDIT_FIELD_TAG = "watermarkTextEditField"
+const val TEXT_CONTENT_CONFIRM_TAG = "watermarkTextConfirm"

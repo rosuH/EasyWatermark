@@ -559,12 +559,37 @@ final class PickerFlowUITests: XCTestCase {
         attach(app, "33-shared-compose-editor-witness")
     }
 
-    /// S4d-234: proves the S4d-233 Templates UI works end-to-end through the app:
-    ///   1. Save current creates a visible template row for a unique marker string.
-    ///   2. Apply (tapping the saved row) updates the watermark text field back to that marker.
-    ///   3. Delete removes that row from the UI.
-    /// Uses the existing `-uiTestFixtureImage` DEBUG seam so the render path has a deterministic image
-    /// without addressing the blocked PHPicker grid cells. Not 1:1 Android v2.10.0 parity.
+    /// S4d-378: production shared `TextContentOption` — open sheet, focus/type, confirm, observe
+    /// host label + watermarked preview still present after workflow re-render.
+    func testSharedComposeTextContentChanges() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-uiTestFixtureImage", "1"]
+        app.launch()
+        attach(app, "30-launched-text-content")
+
+        let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
+        XCTAssertTrue(preview.waitForExistence(timeout: 30),
+                      "Shared CMP watermark preview never appeared — fixture render required for re-render proof.")
+
+        let marker = "S4d378-" + String(UUID().uuidString.prefix(8))
+        applyWatermarkTextViaSharedCompose(marker, in: app)
+        attach(app, "31-after-text-confirm")
+
+        // Unique marker evidence only — do not assert newline-free exact labels.
+        // OutlinedTextField is multi-line product behavior; Return (if used to expose Confirm)
+        // may leave '\n' in the confirmed draft.
+        let host = app.descendants(matching: .any)["sharedComposeTextContent"].firstMatch
+        XCTAssertTrue(
+            wait(forLabel: host, toContain: marker, timeout: 15),
+            "Host accessibility label did not contain confirmed marker \(marker); label=\(host.label)"
+        )
+        XCTAssertTrue(preview.exists,
+                      "Watermarked preview disappeared after shared text confirm (workflow re-render failed).")
+        attach(app, "32-text-content-confirmed")
+    }
+
+    /// S4d-234 / S4d-378: Templates Save / Apply / Delete still work; text edits go through shared
+    /// `TextContentOption` instead of the retired SwiftUI TextField + Apply path.
     func testTemplatesSaveApplyDelete() {
         let app = XCUIApplication()
         app.launchArguments += ["-uiTestFixtureImage", "1"]
@@ -574,83 +599,167 @@ final class PickerFlowUITests: XCTestCase {
         // Unique marker unlikely to collide with any seeded default template.
         let marker = "S4d234-" + String(UUID().uuidString.prefix(8))
 
-        // 1. Replace the watermark text with the marker and Apply so the workflow's `watermarkText`
-        //    equals the marker. `Save current` reads `watermarkText` (not the draft), so Apply first.
-        let textField = app.textFields["watermarkTextField"].firstMatch
-        XCTAssertTrue(textField.waitForExistence(timeout: 10), "Watermark text field missing.")
-        clearAndType(in: textField, text: marker)
-        dismissKeyboard(in: app)
-        let applyBtn = app.buttons["applyWatermarkText"].firstMatch
-        XCTAssertTrue(applyBtn.waitForExistence(timeout: 5), "Apply button missing.")
-        applyBtn.tap()
+        // 1. Persist marker via shared TextContentOption so workflow.watermarkText == marker.
+        applyWatermarkTextViaSharedCompose(marker, in: app)
 
         // 2. Save current → a new template row labeled with the marker must appear.
-        let saveBtn = app.buttons["Save current"].firstMatch
-        XCTAssertTrue(scrollUntilHittable(saveBtn, in: app, timeout: 10), "Save current button missing.")
+        // Production ContentView sets accessibilityIdentifier("saveTemplateButton") on the real Button.
+        // Query by semantic id only — never match templatesSection / ambiguous "Save current" labels.
+        let saveBtn = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == %@", "saveTemplateButton"))
+            .firstMatch
+        XCTAssertTrue(
+            scrollUntilHittable(saveBtn, in: app, timeout: 15),
+            "Production saveTemplateButton missing (ContentView must set accessibilityIdentifier)."
+        )
+        XCTAssertEqual(saveBtn.label, "Save current",
+                       "saveTemplateButton has unexpected label=\(saveBtn.label) identifier=\(saveBtn.identifier)")
         let saveEnabled = expectation(for: NSPredicate(format: "isEnabled == YES"), evaluatedWith: saveBtn, handler: nil)
         wait(for: [saveEnabled], timeout: 5)
         saveBtn.tap()
         attach(app, "21-after-save-current")
 
-        let rowPredicate = NSPredicate(format: "label == %@", marker)
-        let savedRow = app.buttons[marker].firstMatch
-        XCTAssertTrue(scrollUntilHittable(savedRow, in: app, timeout: 10),
-                      "Saved template row with label \(marker) never appeared.")
+        // CONTAINS marker to find the new row; then use its per-id accessibilityIdentifier for delete.
+        // Multi-line draft / optional Return may append '\n' — unique marker is enough for discovery.
+        let rowByLabel = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", marker)).firstMatch
+        XCTAssertTrue(scrollUntilHittable(rowByLabel, in: app, timeout: 15),
+                      "Saved template row containing marker \(marker) never appeared.")
+        let rowId = rowByLabel.identifier
+        XCTAssertTrue(
+            rowId.hasPrefix("templateRow-"),
+            "Saved row identifier expected templateRow-<id>, got '\(rowId)' label=\(rowByLabel.label)"
+        )
+        let templateId = String(rowId.dropFirst("templateRow-".count))
+        XCTAssertFalse(templateId.isEmpty, "Empty template id parsed from row identifier \(rowId)")
+        let deleteId = "deleteTemplateButton-\(templateId)"
+        let rowById = app.buttons.matching(NSPredicate(format: "identifier == %@", rowId)).firstMatch
 
-        // 3. Apply: change the text to a different baseline, Apply, then tap the saved row.
-        //    The text field must revert to the marker (applyTemplate → setWatermarkText → draftText sync).
-        XCTAssertTrue(scrollUntilHittable(textField, in: app, timeout: 10), "Watermark text field not reachable.")
-        clearAndType(in: textField, text: "otherValue")
-        dismissKeyboard(in: app)
-        applyBtn.tap()
-        XCTAssertTrue(wait(forTextField: textField, toEqual: "otherValue", timeout: 10),
-                      "Text field did not reflect 'otherValue' after Apply (pre-template baseline).")
+        // 3. Apply: change text to a different baseline, then tap the saved row → host contains marker.
+        applyWatermarkTextViaSharedCompose("otherValue", in: app)
+        let host = app.descendants(matching: .any)["sharedComposeTextContent"].firstMatch
+        XCTAssertTrue(
+            wait(forLabel: host, toContain: "otherValue", timeout: 10),
+            "Host label did not contain 'otherValue' after edit; label=\(host.label)"
+        )
 
-        XCTAssertTrue(scrollUntilHittable(savedRow, in: app, timeout: 10),
-                      "Saved template row with label \(marker) was not reachable for Apply.")
-        savedRow.tap()
-        XCTAssertTrue(wait(forTextField: textField, toEqual: marker, timeout: 10),
-                      "Tapping the saved template row did not update the watermark text field to \(marker).")
+        XCTAssertTrue(scrollUntilHittable(rowById, in: app, timeout: 10),
+                      "Saved template row id=\(rowId) was not reachable for Apply.")
+        rowById.tap()
+        XCTAssertTrue(
+            wait(forLabel: host, toContain: marker, timeout: 15),
+            "Tapping the saved template row did not put marker \(marker) into host label; label=\(host.label)"
+        )
         attach(app, "22-after-apply-template")
 
-        // 4. Delete the saved row → it must disappear from the UI.
-        guard let deleteBtn = deleteButtonOnSameRow(as: savedRow, in: app) else {
-            XCTFail("Delete button not found on the same row as the saved template (label \(marker)).")
-            return
-        }
+        // 4. Delete via exact matching deleteTemplateButton-<id> (no Y-frame heuristic).
+        let deleteBtn = app.buttons.matching(NSPredicate(format: "identifier == %@", deleteId)).firstMatch
+        XCTAssertTrue(
+            scrollUntilHittable(deleteBtn, in: app, timeout: 10),
+            "Delete button \(deleteId) not found for saved template (marker \(marker), rowId \(rowId))."
+        )
         deleteBtn.tap()
         attach(app, "23-after-delete")
 
-        let goneRow = app.buttons.matching(rowPredicate).firstMatch
+        let goneRow = app.buttons.matching(NSPredicate(format: "identifier == %@", rowId)).firstMatch
         let removed = expectation(for: NSPredicate(format: "exists == NO"), evaluatedWith: goneRow, handler: nil)
         wait(for: [removed], timeout: 10)
         XCTAssertFalse(goneRow.exists,
-                      "Saved template row was not removed by Delete (still present after tap).")
+                      "Saved template row \(rowId) was not removed by Delete (still present after tap).")
     }
 
-    // MARK: - S4d-234 helpers
+    // MARK: - S4d-378 shared text helpers
 
-    /// Clear `field` and type `text`. Taps near the right edge first so the cursor sits at the end of any
-    /// existing text, then deletes backward before typing. Works for SwiftUI `TextField` with
-    /// `.roundedBorder` (no reliance on the optional clear-button or edit menu).
+    /// Open production `TextContentOption` sheet, replace text, confirm. Crashes from the old
+    /// S4d-338 families surface as missing field/confirm or app death (test failure, not workaround).
+    private func applyWatermarkTextViaSharedCompose(_ text: String, in app: XCUIApplication) {
+        let host = app.descendants(matching: .any)["sharedComposeTextContent"].firstMatch
+        XCTAssertTrue(scrollUntilHittable(host, in: app, timeout: 20),
+                      "Production shared text-content control did not appear.")
+        host.tap()
+
+        // Prefer tagged Compose field; fall back to any text field/view after the sheet opens.
+        let taggedField = app.descendants(matching: .any)["watermarkTextEditField"].firstMatch
+        let anyField = app.textFields.firstMatch
+        let anyTextView = app.textViews.firstMatch
+        let field: XCUIElement
+        if taggedField.waitForExistence(timeout: 8) {
+            field = taggedField
+        } else if anyField.waitForExistence(timeout: 3) {
+            field = anyField
+        } else if anyTextView.waitForExistence(timeout: 3) {
+            field = anyTextView
+        } else {
+            XCTFail(
+                "Shared text edit field never appeared after tapping TextContentOption " +
+                "(S4d-338 ModalBottomSheet / IME path may still be broken on this CMP stack)."
+            )
+            return
+        }
+
+        clearAndType(in: field, text: text)
+
+        // Prefer Confirm while IME remains (or an inside-sheet non-dismissal target).
+        // Do NOT tap outside the sheet — that dismisses ModalBottomSheet without confirm.
+        // Multi-line OutlinedTextField is product behavior; if Return is required to expose
+        // Confirm, accept possible '\n' in the draft and assert only CONTAINS(marker) upstream.
+        var confirm = resolveTextConfirmButton(in: app)
+        if !confirm.waitForExistence(timeout: 3) || !confirm.isHittable {
+            // Last resort: Return may scroll/reveal Confirm; may insert newline into multi-line draft.
+            let returnKey = app.keyboards.buttons["Return"].firstMatch
+            if returnKey.exists && returnKey.isHittable {
+                returnKey.tap()
+            }
+            confirm = resolveTextConfirmButton(in: app)
+        }
+        XCTAssertTrue(confirm.waitForExistence(timeout: 8),
+                      "watermarkTextConfirm testTag missing in TextContentOption sheet.")
+        if confirm.isHittable {
+            confirm.tap()
+        } else {
+            // Inside-sheet coordinate tap — still on the Confirm control, not outside dismissal.
+            confirm.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
+
+        // Sheet should dismiss after confirm; host label contains the typed text (not exact).
+        // ContentView: accessibilityLabel("Watermark text \(workflow.watermarkText)").
+        XCTAssertTrue(scrollUntilHittable(host, in: app, timeout: 15),
+                      "Shared text host not reachable after confirm.")
+        XCTAssertTrue(
+            wait(forLabel: host, toContain: text, timeout: 15),
+            "Host label did not contain confirmed text \(text); label=\(host.label)"
+        )
+    }
+
+    /// Locate shared TextContentOption Confirm via the stable `watermarkTextConfirm` testTag only.
+    /// Fail closed if the tag is missing — do not fall back to visible "Apply text" labels.
+    private func resolveTextConfirmButton(in app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any)["watermarkTextConfirm"].firstMatch
+    }
+
+    /// Clear `field` and type `text`. Works for SwiftUI TextField and Compose-backed text inputs.
+    /// Does not force single-line product behavior; Return is only used by the Confirm path if needed.
     private func clearAndType(in field: XCUIElement, text: String) {
-        field.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
-        if let current = field.value as? String {
-            for _ in 0..<current.count {
+        field.tap()
+        if let current = field.value as? String, !current.isEmpty {
+            // Select-all via long-press menu is flaky; delete char-by-char from end.
+            field.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+            // current.count + 4 covers the value plus a small optional trailing-newline cushion.
+            let deleteCount = current.count + 4
+            for _ in 0..<deleteCount {
                 field.typeText(XCUIKeyboardKey.delete.rawValue)
             }
         }
         field.typeText(text)
     }
 
-    private func dismissKeyboard(in app: XCUIApplication) {
-        if app.keyboards.count == 0 { return }
-        let returnKey = app.keyboards.buttons["Return"].firstMatch
-        if returnKey.exists {
-            returnKey.tap()
-        } else {
-            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap()
+    @discardableResult
+    private func wait(forLabel element: XCUIElement, toContain expected: String, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if element.label.contains(expected) { return true }
+            Thread.sleep(forTimeInterval: 0.3)
         }
+        return element.label.contains(expected)
     }
 
     /// Tap a nested CMP action via label-derived host X and the currently-visible host Y.
@@ -682,17 +791,6 @@ final class PickerFlowUITests: XCTestCase {
         return element.exists && element.isHittable
     }
 
-    /// Poll until `field.value` equals `expected` or `timeout` elapses.
-    @discardableResult
-    private func wait(forTextField field: XCUIElement, toEqual expected: String, timeout: TimeInterval) -> Bool {
-        let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline {
-            if (field.value as? String) == expected { return true }
-            Thread.sleep(forTimeInterval: 0.3)
-        }
-        return (field.value as? String) == expected
-    }
-
     /// Poll the wrapper accessibility label, which changes only after the Swift workflow persists a slider value.
     @discardableResult
     private func waitForLabelChange(_ element: XCUIElement, from previousLabel: String, timeout: TimeInterval) -> Bool {
@@ -704,13 +802,4 @@ final class PickerFlowUITests: XCTestCase {
         return element.label != previousLabel
     }
 
-    /// Find the `deleteTemplateButton` whose vertical center matches `row`'s — they are siblings in the
-    /// same HStack, so they share the same mid-Y. Falls back to nil if none is on the same line.
-    private func deleteButtonOnSameRow(as row: XCUIElement, in app: XCUIApplication) -> XCUIElement? {
-        let rowY = row.frame.midY
-        let candidates = app.buttons.matching(
-            NSPredicate(format: "identifier == %@ OR label == %@", "deleteTemplateButton", "Delete template")
-        ).allElementsBoundByIndex
-        return candidates.first { abs($0.frame.midY - rowY) < 12 }
-    }
 }

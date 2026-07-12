@@ -35,6 +35,8 @@ import me.rosuh.easywatermark.ui.compose.TileModeLabels
 import me.rosuh.easywatermark.ui.compose.IconWatermarkOption
 import me.rosuh.easywatermark.ui.compose.TextColorOption
 import me.rosuh.easywatermark.ui.compose.TextColorOptionStrings
+import me.rosuh.easywatermark.ui.compose.TextContentOption
+import me.rosuh.easywatermark.ui.compose.TextContentOptionStrings
 import me.rosuh.easywatermark.ui.compose.TextPaintStyleLabels
 import me.rosuh.easywatermark.ui.compose.TextPaintStyleOption
 import me.rosuh.easywatermark.ui.compose.TextTypeface as TextTypefaceOption
@@ -433,6 +435,47 @@ class IosWatermarkVerticalGapSliderHost(
         if (pendingVerticalGap == null || pendingVerticalGap == persistedGap) {
             this.verticalGap = persistedGap
             pendingVerticalGap = null
+        }
+    }
+}
+
+/**
+ * Production host for shared watermark text editing ([TextContentOption]).
+ *
+ * S4d-378: replaces the SwiftUI TextField + Apply path. Swift still owns
+ * [WatermarkWorkflow] persistence and re-render; no template icon (Templates stay SwiftUI).
+ */
+class IosTextContentOptionHost(
+    private val onTextChange: (String) -> Unit,
+) {
+    private var text by mutableStateOf("")
+    private var pendingText: String? = null
+
+    fun viewController(): UIViewController = ComposeUIViewController {
+        AppTheme {
+            TextContentOption(
+                text = text,
+                strings = TextContentOptionStrings(
+                    templateIconContentDescription = "Templates",
+                    editSheetTitle = "Edit watermark text",
+                    confirmButton = "Apply text",
+                ),
+                // Templates remain the proven SwiftUI section; do not open TemplateListSheet here.
+                templateIcon = null,
+                modifier = Modifier.fillMaxWidth(),
+                onTextChange = { next ->
+                    text = next
+                    pendingText = next
+                    onTextChange(next)
+                },
+            )
+        }
+    }
+
+    fun update(text: String) {
+        if (pendingText == null || pendingText == text) {
+            this.text = text
+            pendingText = null
         }
     }
 }

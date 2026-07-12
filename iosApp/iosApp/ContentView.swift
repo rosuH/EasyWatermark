@@ -487,6 +487,42 @@ private struct SharedComposeTextColorControl: UIViewControllerRepresentable {
     }
 }
 
+/// S4d-378: production shared `TextContentOption` host. Swift keeps workflow write + re-render.
+private struct SharedComposeTextContentControl: UIViewControllerRepresentable {
+    let text: String
+    let workflow: WatermarkWorkflow
+
+    final class Coordinator {
+        weak var workflow: WatermarkWorkflow?
+        lazy var host = IosTextContentOptionHost(onTextChange: { [weak self] next in
+            self?.setWatermarkText(next)
+        })
+
+        init(workflow: WatermarkWorkflow) {
+            self.workflow = workflow
+        }
+
+        func setWatermarkText(_ text: String) {
+            Task { @MainActor [weak workflow] in
+                guard let workflow else { return }
+                await workflow.setWatermarkText(text)
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(workflow: workflow) }
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        context.coordinator.host.update(text: text)
+        return context.coordinator.host.viewController()
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        context.coordinator.workflow = workflow
+        context.coordinator.host.update(text: text)
+    }
+}
+
 #if DEBUG
 private struct SharedComposeLaunchShellWitness: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
@@ -532,8 +568,6 @@ struct ContentView: View {
     /// S4d-118: the selected ICON for image-watermark mode (separate from the source photo above).
     @State private var pickedIconItem: PhotosPickerItem?
     @State private var isIconPickerPresented = false
-    /// S4d-102: editable draft of the watermark text; applied to the shared `WaterMarkRepository`.
-    @State private var draftText: String = ""
 #if DEBUG
     private var showSharedComposeWitnesses: Bool {
         ProcessInfo.processInfo.arguments.contains("-sharedComposeWitnesses")
@@ -599,19 +633,14 @@ struct ContentView: View {
                     .accessibilityIdentifier("watermarkModeLabel")
             }
 
-            // S4d-102: edit the watermark text through the shared `WaterMarkRepository` +
-            // `WatermarkConfigEditor` (persisted in an iOS DataStore). Minimal control — not the final
-            // 1:1 editor. Applying re-renders the current image (if one is picked).
-            HStack(spacing: 8) {
-                TextField("Watermark text", text: $draftText)
-                    .textFieldStyle(.roundedBorder)
-                    .submitLabel(.done)
-                    .accessibilityIdentifier("watermarkTextField")
-                    .onSubmit { Task { await workflow.setWatermarkText(draftText) } }
-                Button("Apply") { Task { await workflow.setWatermarkText(draftText) } }
-                    .buttonStyle(.bordered)
-                    .accessibilityIdentifier("applyWatermarkText")
-            }
+            // S4d-378: watermark text via shared CMP `TextContentOption` (ModalBottomSheet + field).
+            // Swift retains WatermarkWorkflow write + re-render. Templates stay SwiftUI (not TemplateListSheet).
+            SharedComposeTextContentControl(text: workflow.watermarkText, workflow: workflow)
+                // Fixed height (like other CMP hosts): minHeight alone lets ComposeUIViewController
+                // expand in the ScrollView and push/cover the Templates section.
+                .frame(height: 56)
+                .accessibilityIdentifier("sharedComposeTextContent")
+                .accessibilityLabel("Watermark text \(workflow.watermarkText)")
 
             // S4d-233: minimal Templates UI over the seeded iOS Template Room DB (the no-arg
             // `buildTemplateDatabase()` consumed via `IosTemplateBridge`; on a fresh install the rows are the
@@ -621,22 +650,30 @@ struct ContentView: View {
                 HStack {
                     Text("Templates")
                         .font(.caption.bold())
+                        .accessibilityAddTraits(.isHeader)
                     Spacer()
-                    Button("Save current") { Task { await workflow.saveCurrentTextAsTemplate() } }
-                        .buttonStyle(.bordered)
-                        .disabled(draftText.isEmpty)
-                        .accessibilityIdentifier("saveTemplateButton")
+                    // S4d-378: stable production a11y id for XCUITest (semantic locator, not label).
+                    // Label stays the visible title "Save current"; action unchanged.
+                    Button {
+                        Task { await workflow.saveCurrentTextAsTemplate() }
+                    } label: {
+                        Text("Save current")
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(workflow.watermarkText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .accessibilityIdentifier("saveTemplateButton")
                 }
                 ForEach(workflow.templates, id: \.id) { template in
                     HStack {
                         Button(template.content) {
                             Task {
                                 await workflow.applyTemplate(template)
-                                draftText = workflow.watermarkText
                             }
                         }
                         .buttonStyle(.borderless)
-                        .accessibilityIdentifier("templateRow")
+                        // S4d-378: per-row id so XCUITest can pair Apply/Delete without Y-frame heuristics.
+                        .accessibilityIdentifier("templateRow-\(template.id)")
+                        .accessibilityLabel(template.content)
                         Spacer()
                         Button(role: .destructive) {
                             Task { await workflow.deleteTemplate(template) }
@@ -645,10 +682,13 @@ struct ContentView: View {
                         }
                         .buttonStyle(.borderless)
                         .accessibilityLabel("Delete template")
-                        .accessibilityIdentifier("deleteTemplateButton")
+                        .accessibilityIdentifier("deleteTemplateButton-\(template.id)")
                     }
                 }
             }
+            // children: .contain keeps Save/row/delete as separate AX elements (not one combined button).
+            // Section id is on the container only — do not rely on it for the Save action.
+            .accessibilityElement(children: .contain)
             .accessibilityIdentifier("templatesSection")
 
             // S4d-333: shared CMP control; Swift keeps the workflow write and rerender boundary.
@@ -795,11 +835,10 @@ struct ContentView: View {
         // S4d-82: one-shot read-only exercise of the retained iOS UserConfig prefs bridge on launch
         // (link/async-interop witness; no prefs UI, writes nothing).
         .task { await workflow.loadUserConfigWitness() }
-        // S4d-102/S4d-103: load the persisted watermark text + degree from the shared repo on launch and
-        // seed the drafts.
+        // S4d-102/S4d-103: load persisted watermark config from the shared repo on launch.
+        // S4d-378: text is owned by the CMP host + workflow.watermarkText (no SwiftUI draft field).
         .task {
             await workflow.loadWatermarkText()
-            draftText = workflow.watermarkText
             await workflow.loadWatermarkDegree()
             await workflow.loadWatermarkTileMode()
             await workflow.loadWatermarkAlpha()
