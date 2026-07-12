@@ -385,12 +385,13 @@ private fun EditorTopBar(
     onShowSaveDialog: () -> Unit = { },
     onGoAboutScreen: () -> Unit = { },
 ) {
+    // Phase B ticket 08: production leading affordance is the toolbar logo (still navigates up).
     EditorTopBarShell(
-        backIcon = painterResource(R.drawable.ic_back),
+        backIcon = painterResource(R.drawable.ic_logo_tool_bar),
         addMoreImagesIcon = painterResource(R.drawable.ic_picker_image),
         saveIcon = painterResource(R.drawable.ic_save),
         aboutIcon = painterResource(R.drawable.ic_about),
-        backContentDescription = "back",
+        backContentDescription = "Navigate up",
         addMoreImagesContentDescription = "add more images",
         saveContentDescription = "save",
         aboutContentDescription = "about",

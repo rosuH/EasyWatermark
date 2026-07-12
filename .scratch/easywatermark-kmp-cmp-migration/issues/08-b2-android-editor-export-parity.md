@@ -4,7 +4,7 @@
 
 **Blocked by:** 06 B0 Android v2.10.0 baseline inventory/archive.
 
-**Status:** **captures archived (pass 2 clean prefs) — punch-list open (awaiting owner)** (2026-07-12)  
+**Status:** **editor P0 code fix landed — re-capture done; export still open** (2026-07-12)  
 **Owner sign-off:** **none** (agent does not self-sign).
 
 ## Acceptance checklist

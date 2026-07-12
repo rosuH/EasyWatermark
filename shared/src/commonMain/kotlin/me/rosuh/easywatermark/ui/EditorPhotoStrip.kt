@@ -47,7 +47,8 @@ fun EditorPhotoStrip(
     var stripWidth by remember {
         mutableStateOf(0.dp)
     }
-    val itemWidth = 40.dp
+    // Phase B: closer to production filmstrip thumb size (was 40.dp; looked undersized).
+    val itemWidth = 56.dp
     val density = LocalDensity.current
     LazyRow(
         modifier = modifier

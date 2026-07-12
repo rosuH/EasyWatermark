@@ -2,7 +2,7 @@ package me.rosuh.easywatermark.ui
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -44,15 +44,18 @@ fun <T> EditorBottomControlsShell(
 
     Column(modifier = modifier.fillMaxWidth()) {
         selectedOption?.let { option ->
+            // Phase B: wrap content (min 56) so TextContentOption is not clipped by a hard 56.dp
+            // height under 16.dp frame padding — that was hiding the watermark text row.
             optionControl(
                 option,
                 Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .heightIn(min = 56.dp),
             )
         }
         EditorOptionCarousel(
             options = selectedTab.options,
+            selectedOption = selectedOption,
             useCompactPadding = selectedTab.useCompactPadding,
             onOptionSelected = { selectedOption = it },
             itemContent = optionItem,

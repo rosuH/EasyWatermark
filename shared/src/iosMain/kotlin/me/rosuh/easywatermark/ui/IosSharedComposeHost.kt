@@ -472,6 +472,8 @@ class IosTextContentOptionHost(
                 ),
                 // Templates remain the proven SwiftUI section; do not open TemplateListSheet here.
                 templateIcon = null,
+                // Keep Confirm-sheet contract for iosAppUITests (watermarkTextConfirm).
+                inlineEditable = false,
                 modifier = Modifier.fillMaxWidth(),
                 onTextChange = { next ->
                     text = next
@@ -717,6 +719,8 @@ class IosEditorScreenHost(
                                         confirmButton = "Apply text",
                                     ),
                                     templateIcon = null,
+                                    // Keep Confirm-sheet contract for iosAppUITests (watermarkTextConfirm).
+                                    inlineEditable = false,
                                     modifier = Modifier.fillMaxWidth(),
                                     onTextChange = { next ->
                                         pendingText = next

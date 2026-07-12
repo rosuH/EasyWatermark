@@ -329,16 +329,16 @@
     </section>
 
     <section id="editor">
-      <h2><span class="tag tag-bad">P0</span> Editor text mode</h2>
+      <h2><span class="tag tag-ok">P0 已修</span> Editor text mode</h2>
       <p class="note">
-        Debug 使用 <code>pm clear</code> 后 clean 截图（默认 <code>👋 DO NOT REDISTRIBUTE</code> 琥珀密铺）。
-        仍差：顶栏 logo vs 返回箭头；Content 行内文本框缺失；Text 选中态偏弱。
+        Pass 3（editor-after-p0-fix）：顶栏改 toolbar logo（Navigate up）；Content 行内
+        <code>TextField</code>；Text 选中灰底；胶卷略放大。仍可能有 logo 配色/细间距差异。
       </p>
       <table class="compare">
         <thead>
           <tr>
             <th>Production<span class="sub">editor-text-mode.png</span></th>
-            <th>Debug (clean)<span class="sub">editor-text-mode-clean.png</span></th>
+            <th>Debug after P0 fix<span class="sub">editor-after-p0-fix.png</span></th>
           </tr>
         </thead>
         <tbody>
@@ -351,8 +351,33 @@
             </td>
             <td>
               <figure>
-                <img src="debug/en/dark/editor-text-mode-clean.png" alt="debug editor clean" loading="lazy" />
-                <figcaption>返回箭头 · 无行内文本条 · 模板入口 · 密铺已恢复</figcaption>
+                <img src="debug/en/dark/editor-after-p0-fix.png" alt="debug editor after fix" loading="lazy" />
+                <figcaption>logo · 行内 TextField · Text 选中 · 模板入口</figcaption>
+              </figure>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="note" style="margin-top:0.75rem">修复前（对照）：</p>
+      <table class="compare">
+        <thead>
+          <tr>
+            <th>Debug before (clean)<span class="sub">editor-text-mode-clean.png</span></th>
+            <th>Debug after P0<span class="sub">editor-after-p0-fix.png</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <figure>
+                <img src="debug/en/dark/editor-text-mode-clean.png" alt="debug before" loading="lazy" />
+                <figcaption>返回箭头 · 文本几乎不可见</figcaption>
+              </figure>
+            </td>
+            <td>
+              <figure>
+                <img src="debug/en/dark/editor-after-p0-fix.png" alt="debug after" loading="lazy" />
+                <figcaption>logo · 可见文本行 · Text 选中</figcaption>
               </figure>
             </td>
           </tr>

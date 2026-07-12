@@ -21,7 +21,9 @@ fun EditorOptionControlFrame(
         content(
             Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                // Tighter vertical padding so Content text field / sliders remain fully visible
+                // under the previous hard 56.dp clip (Phase B ticket 08).
+                .padding(horizontal = 16.dp, vertical = 8.dp),
         )
     }
 }
