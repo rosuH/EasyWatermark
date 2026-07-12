@@ -4,8 +4,36 @@
 
 **Blocked by:** 06 B0 Android v2.10.0 baseline inventory/archive.
 
-**Status:** ready-for-agent
+**Status:** **captures archived — punch-list open (awaiting owner)** (2026-07-12)  
+**Owner sign-off:** **none** (agent does not self-sign).
 
-- [ ] Archived production/debug pairs for launch/gallery matrix
-- [ ] Owner comment approving sign-off **or** punch-list of remaining deltas (no silent pass)
-- [ ] Out of scope: editor/export pixels; Desktop/iOS; renderer policy changes
+## Acceptance checklist
+
+- [x] Archived production/debug pairs for launch/gallery matrix (en/dark minimum set)
+- [ ] Owner comment approving sign-off **or** punch-list of remaining deltas (no silent pass) — **punch-list ready**
+- [x] Out of scope: editor/export pixels; Desktop/iOS; renderer policy changes
+
+## Archive
+
+See `docs/parity/v2.10.0/captures/COMPARISON-2026-07-12-en-dark.md` and:
+
+| State | Prod | Debug |
+|-------|------|-------|
+| launch-idle | `captures/production/en/dark/launch-idle.png` | `captures/debug/en/dark/launch-idle.png` |
+| gallery/picker | `…/gallery-or-picker.png` (system Photo Picker) | `…/gallery-or-picker.png` (in-app Choose picture) |
+| selected | `…/picker-selected.png` | `…/gallery-selected.png` |
+
+## Grok findings (summary)
+
+- **Launch:** structure matches; logo tint slightly different.  
+- **Gallery:** **P0 path mismatch** — production opens **system Photo Picker**; debug opens **in-app GalleryDialog**.
+
+## Punch-list for owner
+
+1. Accept launch as-is or require logo tint fix?  
+2. **Gallery target:** system Photo Picker (match current prod on API 36 emulator) vs in-app gallery (match debug / older product)?  
+3. After decision, re-capture and return for sign-off.
+
+**Reply examples:**  
+- `OWNER SIGN-OFF 07 launch: approved`  
+- `OWNER 07 gallery: target system Photo Picker` / `target in-app gallery`
