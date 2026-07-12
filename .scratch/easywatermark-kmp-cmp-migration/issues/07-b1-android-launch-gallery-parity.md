@@ -4,44 +4,42 @@
 
 **Blocked by:** 06 B0 Android v2.10.0 baseline inventory/archive.
 
-**Status:** **captures archived (pass 2) — punch-list open (awaiting owner)** (2026-07-12)  
-**Owner sign-off:** **none** (agent does not self-sign).
+**Status:** **complete — owner approved** (2026-07-12)  
+**Owner sign-off:** **yes** — owner: *「7 都 approved」* (launch + gallery).
 
 ## Acceptance checklist
 
 - [x] Archived production/debug pairs for launch/gallery matrix (en/dark minimum set)
-- [ ] Owner comment approving sign-off **or** punch-list of remaining deltas (no silent pass) — **punch-list ready**
+- [x] Owner comment approving sign-off **or** punch-list of remaining deltas (no silent pass) — **owner approved both**
 - [x] Out of scope: editor/export pixels; Desktop/iOS; renderer policy changes
 
 ## Archive
 
 - Pass 1: `docs/parity/v2.10.0/captures/COMPARISON-2026-07-12-en-dark.md`  
-- Pass 2: `docs/parity/v2.10.0/captures/CONTINUATION-2026-07-12-pass2.md`
+- Pass 2: `docs/parity/v2.10.0/captures/CONTINUATION-2026-07-12-pass2.md`  
+- HTML: `docs/parity/v2.10.0/captures/compare-en-dark.html`  
+- Pick policy: `docs/parity/v2.10.0/protocol/image-pick-policy.md`
 
 | State | Prod | Debug |
 |-------|------|-------|
-| launch-idle | `…/production/…/launch-idle.png` | `…/debug/…/launch-idle-clean.png` (after `pm clear`) |
-| gallery primary (policy) | *residual: Choose Images → system picker* | `gallery-inapp-primary.png` ✅ |
-| gallery secondary (policy) | *no in-app host on this prod path* | `gallery-topright-system-picker.png` ✅ system picker |
+| launch-idle | `production/…/launch-idle.png` | `debug/…/launch-idle-clean.png` |
+| gallery primary (product policy) | *API36 residual: Choose Images → system picker* | `gallery-inapp-primary.png` |
+| gallery secondary | — | `gallery-topright-system-picker.png` |
 
-## Grok findings (summary)
+## Owner product policy (binding)
 
-- **Launch:** structure matches; logo tint slightly different.  
-- **Gallery:** session capture showed prod → system Photo Picker, debug → in-app gallery.
+| Platform | Primary | Secondary |
+|----------|---------|-----------|
+| Android | In-app gallery | Top-right → system Photo Picker |
+| iOS / Desktop | System pick / file dialog | — |
 
-## Owner product policy (2026-07-12) — **recorded**
+**Launch logo animation:** same `ColoredImageVIew` as production; owner confirmed OK.
 
-- **Android:** **in-app gallery first**; **top-right** entry launches **system Photo Picker**.  
-- **iOS / Desktop:** default **system** photo picker / file dialog (unchanged exceptions).  
-- Full text: `docs/parity/v2.10.0/protocol/image-pick-policy.md`.
+## Residuals (accepted with sign-off)
 
-## Punch-list (updated)
+- Production Choose Images may open system Photo Picker on this emulator/API while **product target** remains gallery-first (debug). Documented; not a reason to flip debug to system-first.
+- Minor launch logo tint differences under dynamic color.
 
-1. Accept launch as-is or require logo tint fix?  
-2. ~~Gallery primary path~~ → **decided: in-app gallery primary**. Re-capture production under permissioned path; if prod still jumps to Photo Picker as primary, file as **prod residual / fix target**, not “make debug system-first”.  
-3. Capture **secondary** pair: gallery top-right → system Photo Picker (prod + debug).  
-4. Owner sign-off after re-capture.
+## Next
 
-**Reply examples:**  
-- `OWNER SIGN-OFF 07 launch: approved`  
-- `OWNER SIGN-OFF 07 gallery primary: approved`
+**07 + 08 both complete** → ticket **09** (iOS/Desktop alignment + exception registry) is **unblocked**.
