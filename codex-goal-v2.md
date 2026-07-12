@@ -16,7 +16,7 @@ Standing mission/process contract. **Read this file every session before work.**
 
 1. **This file is the sole process/mission contract.** Supersedes `codex-goal.md` and the retired ACSP/cowork loop. Historical ACSP under `~/.agent-cowork/sessions/EasyWatermark/` is **read-only** — never create/move/publish sessions there.
 2. **Technical constraints** in `AGENTS.md`, `docs/CONTEXT.md`, `docs/adr/*` remain binding. Process conflict → **this file wins**. Technical conflict → **`AGENTS.md` / ADRs win** until owner says otherwise.
-3. Session memory (`task_plan.md`, `progress.md`, `findings.md`): Codex reads at start; CLI updates only **after** Codex accepts and **authorizes** docs+commit.
+3. **Operational source of truth:** this file, the current GitHub issue/ticket referenced in `docs/agents/issue-tracker.md`, the accepted worker brief, and verified artifacts (diffs, test outputs, screenshots). `task_plan.md`, `progress.md`, and `findings.md` are **historical evidence only** — do not read them at session start, do not update them after slices, and do not use them to choose work.
 4. **Slice done ≠ mission done.** Overall completion requires **every** §9 DoD item. Never redefine goal as “almost done” or “PR merge-ready.”
 
 ---
@@ -56,13 +56,13 @@ All implementation, verification, docs updates, and local commits go through Her
 ### 2.3 Concurrency, commit, roles
 
 - **One primary editor per slice**; no concurrent writes to overlapping files. Others may **read-only** review.
-- Worker edits+verifies; **no commit** until Codex accepts. After accept, authorize CLI (normally **Grok**) to update plan/progress/findings (+ durable docs if needed) and **local commit only**.
+- Worker edits+verifies; **no commit** until Codex accepts. After accept, authorize CLI (normally **Grok**) to update durable docs if needed and record verified artifacts / GitHub issue comments. **Do not update `task_plan.md` / `progress.md` / `findings.md` as execution workflow.** Local commit only.
 - **Never** push/merge/reset/rebase/stash/clean without owner.
 
 ```
   Owner → Codex (command/review/authorize; no default impl)
             → Herdr: Grok > Kimi > OpenCode
-              → worktree feat/migrate_to_compose + plan/progress/findings
+              → worktree feat/migrate_to_compose + GitHub issue + verified artifacts
 ```
 
 ---
@@ -77,16 +77,16 @@ Skills guide decomposition/review; **CLI agents execute**. Not commit subjects.
 | **to-spec** | Scope agreed, not ticketized | In/out, constraints, acceptance |
 | **to-tickets** | Spec → tracer slices + deps | Ordered `S4d-NNN`; one concern each |
 | **implement** | One bounded ticket | §5 brief → primary Herdr editor |
-| **code-review** | After worker report | Standards/spec vs brief + §6 |
+| **code-review** | Required before accepting any worker report | Standards/spec vs brief + §6 |
 
-Flow: `wayfinder?` → `to-spec` → `to-tickets` → loop(`implement` → worker → `code-review` → accept/revise).
+Flow: `wayfinder` (only when roadmap uncertainty exists) → `to-spec` (agreed scope) → `to-tickets` (approved multi-slice work) → loop(`implement` per frontier ticket → worker → `code-review` before acceptance → accept/revise).
 
 ---
 
 ## 4. Herdr lifecycle + Codex slice loop
 
 ```
-  1 INSPECT   git status -uall; HEAD; plan/progress/findings tops; AGENTS; CLI availability
+  1 INSPECT   git status -uall; HEAD; current GitHub issue + accepted brief; AGENTS; CLI availability
   2 BRIEF     one primary editor; §5 template; exact allowed/forbidden paths
   3 SEND      Herdr dispatch; record agent id / start
   4 WAIT      no busy-loop; backoff/event wait; stall → one status check → escalate/requeue
@@ -150,7 +150,7 @@ READY FOR CODEX REVIEW | BLOCKED | NEEDS REVISION
 
 ## 6. Hard guardrails (do not reopen silently)
 
-Any reopen needs an **explicit owner decision**. Record **durable architecture/policy** changes in an ADR; record **active toolchain/runtime blockers** in `findings.md` (e.g. S4d-338). “Share more” does not override.
+Any reopen needs an **explicit owner decision**. Record **durable architecture/policy** changes in an ADR; record **active toolchain/runtime blockers** as GitHub issue comments / in the accepted brief, not in `findings.md`. “Share more” does not override.
 
 1. **Android production raster/composition stays native:** text (`buildTextShader`/StaticLayout — S4d-17); icon (`buildIconShader` — S4d-8/ADR-0004); composition (`WatermarkRenderer.compose` — S4d-190 No-Go). `WatermarkCellComposer` / `composeTextCell` / `composeIconCell` / `composeOverBackground` = **Desktop/iOS only**. Shared geometry/constants (`WatermarkGeometry`, `ICON_SCALE_REFERENCE_TEXT_SIZE`) are the single sizing source for all platforms.
 2. **No `ViewInfo` / `AndroidView`-bridged renderer.** Preview = Compose `Canvas` over `WatermarkRenderer` (S3c-3).
@@ -298,7 +298,7 @@ Slice finish is **never** overall completion. All must be true:
 - [ ] Shared CMP UI is route of record on all three platforms; platform-native UI only at allowed edges, each listed with a reason.
 - [ ] Data layer (models, repos, DataStore, Room, use-cases) is commonMain **except documented platform-edge implementations** (Android / Desktop / iOS factories, migrations, native IO, and other listed edges); persisted bytes unchanged end-to-end.
 - [ ] Android 1:1 parity archive complete (screens × states × locale × theme + recordings), **owner signed off** screen by screen; iOS/Desktop alignment documented with explicit exceptions.
-- [ ] `AGENTS.md`, `docs/CONTEXT.md`, ADRs, and plan files reflect final architecture (process contract = this file; ACSP retired).
+- [ ] `AGENTS.md`, `docs/CONTEXT.md`, ADRs, GitHub tickets, and verified evidence reflect final architecture (process contract = this file; ACSP retired).
 - [ ] Graduation proposal for PR #358 presented to owner (merge plan, not auto-merge).
 
 ---
@@ -333,7 +333,7 @@ Baseline only — always re-check `git status`.
 ### 11.1 Next on chain
 
 1. Finish or explicitly park **S4d-344** (full gates → review → authorized docs+commit, or documented park).
-2. **A0** matrix if not already durable in plan files.
+2. **A0** matrix if not already durable in GitHub issues / `docs/superpowers/research/`.
 3. Parallel **A1/A2/A3** (skip iOS text/full-root until S4d-338 unblocked).
 4. **A4** only under §6.12; then **A5**; only then Phase B.
 
@@ -341,7 +341,7 @@ Baseline only — always re-check `git status`.
 
 ## 12. Overclaim guard
 
-Do not claim: migration complete; three-platform 1:1; PR merge-ready; Android pixel parity from smoke alone; Desktop packaging = public ship (ADR-0013 Proposed); focused XCUITest = full suite (S4d-344). Prefer fresh `progress.md` + git HEAD over stale `task_plan.md` lines.
+Do not claim: migration complete; three-platform 1:1; PR merge-ready; Android pixel parity from smoke alone; Desktop packaging = public ship (ADR-0013 Proposed); focused XCUITest = full suite (S4d-344). Prefer the current GitHub issue state + verified artifacts + git HEAD over stale planning-file text.
 
 ---
 
@@ -352,7 +352,9 @@ Do not claim: migration complete; three-platform 1:1; PR merge-ready; Android pi
 | **This file** | Sole mission/process contract |
 | `codex-goal.md` | Historical process (superseded) |
 | `AGENTS.md` | Technical truth, closed decisions, commands |
-| `task_plan.md` / `progress.md` / `findings.md` | Live plan / evidence / lessons |
+| `task_plan.md` / `progress.md` / `findings.md` | **Historical evidence only** — do not use for routing or session start |
+| GitHub issues (`docs/agents/issue-tracker.md`) | Operational ticket / task source of truth |
+| Verified artifacts (diffs, test outputs, screenshots) | Acceptance evidence |
 | `docs/CONTEXT.md` / `docs/adr/*` | Domain + architecture |
 | CMP plan under `docs/superpowers/plans/` | C1–C6 blueprint context, not process |
 
