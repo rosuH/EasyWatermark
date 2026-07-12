@@ -1,5 +1,12 @@
 # Compose Migration Findings
 
+## Data-layer pure A4 extraction is exhausted (S4d-357, 2026-07-12)
+
+- commonMain already owns `WaterMarkRepository`, `UserConfigRepository`, `TemplateRepository`, the three editors, and central watermark/user/template models + `WatermarkConfigRules`, with named Android/Desktop/iOS production consumers (exact paths in the audit note).
+- Residual edges (per-platform DataStore/Room factories, icon FS, iOS bridges, Android Bitmap/Uri, DI/resource UI) are platform I/O by design — not §6.12 pure extractions.
+- Do **not** move `TextMeasureEnv` (Android native renderer measurement) into commonMain; that reopens closed Android text raster policy. Empty `MemorySettingRepo` is DI-injected into `MainViewModel` and `AboutViewModel` but has **no members/behavior** — still no extraction candidate. `Action` is a **live** Android event seam with platform types, not A4 material.
+- **Accepted docs audit only** — not Phase A complete, not §9 DoD. Reopen A4 only for a **new** dual production consumer of a not-yet-shared neutral rule. Audit: `docs/superpowers/research/2026-07-12-s4d357-data-layer-commonmain-closure.md`.
+
 ## Phone Screen control can vanish mid-recovery; stale launcher frames are non-evidence (S4d-356, 2026-07-12)
 
 - Session `CE8439F0-97F7-4474-889F-1FF0FE289499` on `emulator-5554` initially had MCP control, but frame 38 was launcher (SHA `15efa7d59ea1708d032e1c94ca6a3b2f9c49a2a050bae674ef67bcbcc3ffc273`) and stayed stale after debug app launch despite foreground metadata.

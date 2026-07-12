@@ -27,6 +27,7 @@ Install of current HEAD debug APK was already done in S4d-354 (`./gradlew :app:i
 ## 2. Allowed recovery attempt (Codex)
 
 - Codex attempted the allowed **`session.start`** recovery path **without** stopping the emulator.
+- **Provenance:** `session.start` was a **direct live Codex MCP invocation** recorded in the task trace; **no** successful session-start payload and **no** build artifact from that call were produced. The **observable follow-up** was `sessions.list` failing with control-socket refusal.
 - Immediately subsequent **`sessions.list`** failed:
 
   ```text
@@ -34,7 +35,7 @@ Install of current HEAD debug APK was already done in S4d-354 (`./gradlew :app:i
   .../group.com.catchingnow.andfiles.shared/am-mcp.sock: connection refused
   ```
 
-- **Do not claim** that `session.start` **caused** the socket refusal — only that control became unreachable for later calls in that sequence.
+- **Do not claim** that `session.start` **caused** the socket refusal, and **do not claim** session-start **success** — only that control was unreachable for the follow-up `sessions.list`.
 
 ---
 

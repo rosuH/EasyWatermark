@@ -1264,3 +1264,9 @@ Goal set by developer: "完成 XML 清理和 CMP + KMP". XML cleanup completed; 
 - **Non-claims:** S4d-348 About **NOT VERIFIED**; S4d-350 SaveExport **NOT VERIFIED**; no parity; no S4d-356 `READ_MEDIA_IMAGES` recheck.
 - **No** product code / dependency / build. Protected project-branch-goals-progress not staged.
 - **Next:** only when AndroMeld control socket returns — `devices.list` → sessions → fresh frame that changes after action → debug launch UI/screenshot agreement → permission → limited About/SaveExport backfill; no raw adb; no emulator shutdown. Parallel **owner A/B/C/defer** (S4d-353). Not Phase A/B/parity complete.
+
+## 2026-07-12 — S4d-357 data-layer commonMain closure audit (docs accepted)
+
+- **S4d-357:** accepted docs audit at `docs/superpowers/research/2026-07-12-s4d357-data-layer-commonmain-closure.md` (Codex evidence revisions: exact repo-relative paths; `MemorySettingRepo` DI-injected into `MainViewModel`/`AboutViewModel` but empty; live `Action` finding preserved).
+- **Verdict:** **A4 pure extraction NO-GO** (§6.12). **Not** Phase A complete; **not** §9 DoD; no persisted-byte E2E claim. No product code/deps/Compose/Skiko.
+- **Tests:** none run / none claimed.
