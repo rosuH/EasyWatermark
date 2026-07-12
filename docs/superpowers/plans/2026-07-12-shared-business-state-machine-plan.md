@@ -226,11 +226,13 @@ Each phase: commonTest for pure reduce/orchestrate + Android smoke + one off-And
 ### Phase 0 — Contracts + toolchain (docs + Gradle only)
 
 - [x] Owner: **B + CMP-first + constructor ports** (2026-07-12)  
-- [ ] ADR: “Shared `WatermarkSessionViewModel` + IO ports + CMP-first UI” (Proposed → Accepted)  
-- [ ] Wire `:shared` commonMain `lifecycle-viewmodel` (version pin + compile all targets)  
+- [x] Owner: keep **Android SKILL** + **performance** guarantees during migration (2026-07-12)  
+- [x] ADR-0017 Accepted — shared ViewModel + ports + CMP-first + skill/perf gates  
+- [x] Wire `:shared` commonMain `lifecycle-viewmodel` + desktop `coroutines-swing`  
+- [x] Phase 0 scaffold `WatermarkSessionViewModel` + commonTest construct smoke  
 - [ ] Freeze: no new product features inside Android `MainViewModel` except bugfixes / thin adapters  
 
-**Exit:** ADR Accepted; deps compile on android + desktop + both iOS.
+**Exit:** ADR Accepted; deps compile on android + desktop + both iOS; skill/perf gates in ADR §4–§5.
 
 ### Phase 1 — Shared ViewModel owns nav/selection (Android still green)
 
@@ -292,6 +294,8 @@ Each phase: commonTest for pure reduce/orchestrate + Android smoke + one off-And
 | Desktop | `--headless` + window smoke; session-driven export |
 | iOS | `iosSimulatorArm64Test` + XCUITest fixture path |
 | Regression | Do **not** claim three-platform pixel parity from session move |
+| **Android SKILL** | Compose/UI slices: baseline → change → visual verify (repo migrate skill); production v2.10.0 truth |
+| **Performance** | Heavy work off Main; Android export path = wrap-not-rewrite; no extra full-res decode on slider ticks; note wall-time/jank when moving export/preview |
 
 ---
 

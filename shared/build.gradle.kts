@@ -75,6 +75,11 @@ kotlin {
             implementation(libs.room.runtime)
             // S4d-247: kotlinx-serialization-json for @Serializable routes.
             implementation(libs.kotlinx.serialization.json)
+            // ADR-0017 Phase 0: multiplatform ViewModel for shared product session.
+            // `api` so CMP hosts / (optional) Swift can see ViewModel types if needed; product UI is CMP-first.
+            api(libs.lifecycle.viewmodel)
+            // viewModelScope needs Main; coroutines-core already transitively available via DataStore/Room.
+            implementation(libs.kotlin.coroutine.core)
         }
         // Pure / platform-neutral tests. Gate: :shared:commonPureTest → testAndroidHostTest.
         commonTest.dependencies {
@@ -86,6 +91,8 @@ kotlin {
                 implementation(compose.desktop.currentOs)
                 // S4d-142: bundled SQLite driver for Desktop Room (must NOT reach :app).
                 implementation(libs.sqlite.bundled)
+                // ADR-0017: ViewModel.viewModelScope uses Dispatchers.Main.immediate — needs swing Main on JVM.
+                implementation(libs.kotlin.coroutine.swing)
             }
         }
         // S4d-231: bundled SQLite driver for iOS targets only.
