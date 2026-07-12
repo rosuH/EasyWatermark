@@ -1,7 +1,6 @@
 package me.rosuh.easywatermark.ui.save
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -51,6 +50,8 @@ fun <T> SaveExportSheetShell(
     onOpenGalleryClick: () -> Unit,
     thumbnail: @Composable (item: T, modifier: Modifier) -> Unit,
 ) {
+    // Phase B: wrap-height content (no fillMaxSize) so the dimmed editor peeks above.
+    // Expand fully to content height so the primary CTA is not clipped by a half-expanded settle.
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(
@@ -62,10 +63,10 @@ fun <T> SaveExportSheetShell(
     ) {
         Column(
             modifier = modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(horizontal = 20.dp)
                 .navigationBarsPadding()
-                .padding(bottom = 20.dp),
+                .padding(bottom = 16.dp),
         ) {
             SaveExportOptionsSection(
                 title = strings.outputTitle,
@@ -82,7 +83,7 @@ fun <T> SaveExportSheetShell(
                 text = strings.exportListTitle,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 30.dp),
+                    .padding(top = 16.dp),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -98,7 +99,7 @@ fun <T> SaveExportSheetShell(
                 enabled = primaryActionEnabled,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 43.dp),
+                    .padding(top = 20.dp),
                 shape = RectangleShape,
             ) {
                 Text(primaryActionLabel)

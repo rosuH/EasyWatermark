@@ -386,16 +386,16 @@
     </section>
 
     <section id="export">
-      <h2><span class="tag tag-warn">P1</span> Export / Save sheet</h2>
+      <h2><span class="tag tag-ok">P1 已修</span> Export / Save sheet</h2>
       <p class="note">
-        控件同类（JPEG / Quality 80 / Export list / CTA）。
-        Debug：全屏 sheet + 离散滑条视觉与 prod 连续滑条不同。
+        修后：wrap-height sheet 露出上方 dimmed 预览；连续 Quality 滑条（松手 snap 20 档 ADR-0014）；
+        CTA 可见。拇指形态仍可能与 prod 圆形略有 M3 差异。
       </p>
       <table class="compare">
         <thead>
           <tr>
             <th>Production<span class="sub">export-sheet-open.png</span></th>
-            <th>Debug (clean)<span class="sub">export-sheet-open-clean.png</span></th>
+            <th>Debug after P1 fix<span class="sub">export-after-p1-fix.png</span></th>
           </tr>
         </thead>
         <tbody>
@@ -403,13 +403,38 @@
             <td>
               <figure>
                 <img src="production/en/dark/export-sheet-open.png" alt="prod export" loading="lazy" />
-                <figcaption>半透明压在预览上 · 连续 Quality 滑条</figcaption>
+                <figcaption>半透明压在预览上 · 连续 Quality · CTA</figcaption>
               </figure>
             </td>
             <td>
               <figure>
-                <img src="debug/en/dark/export-sheet-open-clean.png" alt="debug export clean" loading="lazy" />
-                <figcaption>全屏 sheet · 离散刻度滑条 · 顶部 drag handle</figcaption>
+                <img src="debug/en/dark/export-after-p1-fix.png" alt="debug export after fix" loading="lazy" />
+                <figcaption>预览 peek · 连续滑条 · Export to the album</figcaption>
+              </figure>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="note" style="margin-top:0.75rem">修复前：</p>
+      <table class="compare">
+        <thead>
+          <tr>
+            <th>Debug before<span class="sub">export-sheet-open-clean.png</span></th>
+            <th>Debug after<span class="sub">export-after-p1-fix.png</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <figure>
+                <img src="debug/en/dark/export-sheet-open-clean.png" alt="debug export before" loading="lazy" />
+                <figcaption>近全屏 · 离散刻度</figcaption>
+              </figure>
+            </td>
+            <td>
+              <figure>
+                <img src="debug/en/dark/export-after-p1-fix.png" alt="debug export after" loading="lazy" />
+                <figcaption>peek 预览 · 连续轨 · CTA 可见</figcaption>
               </figure>
             </td>
           </tr>

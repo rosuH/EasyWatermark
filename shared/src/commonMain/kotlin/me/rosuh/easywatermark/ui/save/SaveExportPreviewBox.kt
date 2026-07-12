@@ -34,8 +34,10 @@ fun <T> SaveExportPreviewBox(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 23.dp)
-            .height(145.dp)
+            .padding(top = 16.dp)
+            // Slightly shorter than the old 145.dp so format/quality + CTA fit under a
+            // wrap-height sheet with dimmed editor peek (production export chrome).
+            .height(110.dp)
             .border(
                 width = 1.dp,
                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
@@ -60,7 +62,7 @@ fun <T> SaveExportPreviewBox(
                 items(items) { item ->
                     thumbnail(
                         item,
-                        Modifier.size(120.dp),
+                        Modifier.size(96.dp),
                     )
                 }
             }

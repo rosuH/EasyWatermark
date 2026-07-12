@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -56,7 +55,7 @@ fun SaveExportOptionsSection(
             text = title,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 24.dp),
+                .padding(top = 12.dp),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )
@@ -136,7 +135,7 @@ fun SaveExportOptionsSection(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 32.dp),
+                    .padding(top = 20.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -153,18 +152,22 @@ fun SaveExportOptionsSection(
                 )
             }
 
+            // Continuous track (production look). Snap to 20-step grid on release (ADR-0014).
             Slider(
-                value = quality.toFloat(),
-                onValueChange = {
-                    onQualityChange(it.toInt())
+                value = quality.toFloat().coerceIn(20f, 100f),
+                onValueChange = { raw ->
+                    onQualityChange(raw.toInt().coerceIn(20, 100))
+                },
+                onValueChangeFinished = {
+                    val snapped = ((quality + 10) / 20) * 20
+                    onQualityChange(snapped.coerceIn(20, 100))
                 },
                 enabled = enabled,
                 valueRange = 20f..100f,
-                // 20, 40, 60, 80, 100
-                steps = 3,
+                steps = 0,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(20.dp),
+                    .padding(top = 4.dp),
             )
         }
     }
