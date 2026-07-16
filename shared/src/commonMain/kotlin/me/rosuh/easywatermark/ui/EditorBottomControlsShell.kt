@@ -113,11 +113,14 @@ fun <T> EditorBottomControlsShell(
                 options = selectedTab.options,
                 selectedOption = selectedOption,
                 useCompactPadding = selectedTab.useCompactPadding,
+                // Lazy keys on Android MUST be Bundle-storable (String/Int/…).
+                // Passing FuncType object instances crashes:
+                // IllegalArgumentException: Type of the key … is not supported.
                 itemKey = { option ->
                     when (option) {
-                        is EditorOptionSpec -> option.type
-                        is FuncType -> option
-                        else -> option as Any
+                        is EditorOptionSpec -> "opt_${option.type.stableKey()}"
+                        is FuncType -> "ft_${option.stableKey()}"
+                        else -> option.toString()
                     }
                 },
                 onOptionSelected = {

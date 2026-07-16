@@ -21,9 +21,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropEvent
@@ -43,6 +45,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import me.rosuh.easywatermark.ProductVersion
 import me.rosuh.easywatermark.data.db.buildTemplateDatabase
 import me.rosuh.easywatermark.data.db.unpackDefaultTemplateSeed
 import me.rosuh.easywatermark.data.model.FuncType
@@ -71,11 +74,12 @@ import me.rosuh.easywatermark.shared.generated.resources.dialog_save_exporting
 import me.rosuh.easywatermark.shared.generated.resources.share
 import me.rosuh.easywatermark.ui.EditorBottomControls
 import me.rosuh.easywatermark.ui.EditorScreen
+import me.rosuh.easywatermark.shared.generated.resources.dev_comment
 import me.rosuh.easywatermark.ui.about.AboutDevCard
 import me.rosuh.easywatermark.ui.about.AboutScreenIcons
 import me.rosuh.easywatermark.ui.about.AboutScreen
+import me.rosuh.easywatermark.ui.about.OpenSourceScreen
 import me.rosuh.easywatermark.ui.EditorOptionItem
-import me.rosuh.easywatermark.ui.EditorPreviewFrame
 import me.rosuh.easywatermark.ui.EditorTemplateSheetHost
 import me.rosuh.easywatermark.ui.Image as GalleryImage
 import me.rosuh.easywatermark.ui.label
@@ -98,19 +102,59 @@ import me.rosuh.easywatermark.ui.save.SaveCommandActions
 import me.rosuh.easywatermark.ui.save.SaveCommandActionsLabels
 import me.rosuh.easywatermark.ui.save.SaveExportOptionsSection
 import me.rosuh.easywatermark.ui.save.SaveExportSheetShell
-import me.rosuh.easywatermark.ui.save.SavePreviewStatus
+
 import me.rosuh.easywatermark.ui.theme.AppTheme
 import org.jetbrains.compose.resources.stringResource
 import java.awt.Desktop
 import java.awt.FileDialog
 import java.awt.datatransfer.DataFlavor
 import java.io.File
+import java.net.URI
+import java.util.prefs.Preferences
 
 /** Best-effort Open-dialog filename filter (honored on macOS; ignored on some platforms — harmless). */
 private val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "webp", "bmp", "gif")
 
+// About link edges (match Android ComposeMainActivity / iOS IosProductRootHost).
+private const val ABOUT_URL_RELEASES = "https://github.com/rosuH/EasyWatermark/releases/"
+private const val ABOUT_URL_ISSUES = "https://github.com/rosuH/EasyWatermark/issues/new"
+private const val ABOUT_URL_PRIVACY_ZH =
+    "https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy_zh-CN.md"
+private const val ABOUT_URL_PRIVACY_EN =
+    "https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy.md"
+private const val ABOUT_URL_DEV = "https://github.com/rosuH"
+private const val ABOUT_URL_DESIGNER = "https://tovi.fun/"
+private const val ABOUT_URL_RATE =
+    "https://github.com/rosuH/EasyWatermark#readme"
+
 /** Short label for the current output preference, e.g. "JPEG / 80". */
 private fun describePref(p: UserPreferences): String = "${p.outputFormat} / ${p.compressLevel}"
+
+/** Open a URL in the system browser (About rows). Soft-fail → status string. */
+private fun openUrlInBrowser(url: String): String? {
+    return try {
+        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+            Desktop.getDesktop().browse(URI(url))
+            null
+        } else {
+            "Open URL not supported on this Desktop"
+        }
+    } catch (t: Throwable) {
+        "Open URL failed: ${t.message}"
+    }
+}
+
+/** Sticky "Force Dynamic Color" flag (Android CMonet parity; no Material You on Desktop). */
+private object DesktopDynamicColorPrefs {
+    private const val KEY = "force_dynamic_color"
+    private val prefs: Preferences =
+        Preferences.userRoot().node("me/rosuh/easywatermark/desktop")
+
+    fun isForced(): Boolean = prefs.getBoolean(KEY, false)
+    fun setForced(enabled: Boolean) {
+        prefs.putBoolean(KEY, enabled)
+    }
+}
 
 /**
  * S4d-158 / S4d-228: drop-target file extraction. [hasFileList] is the cheap drag-over predicate (flavor
@@ -325,6 +369,15 @@ fun launchDesktopWindow() = application {
     var outputQuality by remember { mutableStateOf(80) }
     // C2: product export chrome = shared SaveExportSheetShell; FS write/share stay platform edges.
     var showSaveSheet by remember { mutableStateOf(false) }
+    // About open-source overlay (shared OpenSourceScreen; same as Android/iOS).
+    var showOpenSource by remember { mutableStateOf(false) }
+    var dynamicColorForced by remember { mutableStateOf(DesktopDynamicColorPrefs.isForced()) }
+    /**
+     * Filmstrip + export-sheet thumbs. Full [DesktopImageDecoder.decode] of multi-megapixel
+     * files on the UI thread freezes ModalBottomSheet open — always use [decodeThumbnail] off-EDT.
+     */
+    val desktopThumbCache = remember { mutableMapOf<String, ImageBitmap>() }
+    var desktopThumbEpoch by remember { mutableStateOf(0) }
     // U2: watermark config is session/repo-owned — collect once; no parallel mutableStateOf mirrors.
     val waterMark by repo.waterMark.collectAsState(WaterMark.default)
     // S4d-147: the rendered preview image (null until the first successful refresh).
@@ -629,10 +682,13 @@ fun launchDesktopWindow() = application {
                     )
                 }
                 ProductShellNav.Route.About -> {
+                    // UI is shared AboutScreen; Desktop only wires system edges (browser / prefs).
+                    val aboutShowBounds = waterMark.enableBounds
+                    val devComment = stringResource(Res.string.dev_comment)
                     AboutScreen(
-                        versionName = "Desktop",
-                        showBounds = false,
-                        dynamicColorOn = false,
+                        versionName = ProductVersion.NAME,
+                        showBounds = aboutShowBounds,
+                        dynamicColorOn = dynamicColorForced,
                         icons = AboutScreenIcons(
                             back = backPainter,
                             version = versionPainter,
@@ -644,29 +700,58 @@ fun launchDesktopWindow() = application {
                             privacyEn = privacyEnPainter,
                         ),
                         developerCard = AboutDevCard(
-                            title = "Developer",
-                            description = "rosuh",
+                            title = "Developed with ♥ by rosu",
+                            description = devComment,
                             avatar = avatarDevPainter,
                         ),
                         designerCard = AboutDevCard(
-                            title = "Designer",
-                            description = "—",
+                            title = "Designed with ♥ by tovi",
+                            description = "A Designer.",
                             avatar = avatarToviPainter,
                         ),
                         onBack = {
+                            showOpenSource = false
                             productRoute = ProductShellNav.aboutBack(aboutReturnRoute)
                         },
-                        onVersion = {},
-                        onRate = {},
-                        onFeedback = {},
-                        onUpdateLog = {},
-                        onOpenSource = {},
-                        onPrivacyZh = {},
-                        onPrivacyEn = {},
-                        onDeveloper = {},
-                        onDesigner = {},
-                        onToggleBounds = {},
-                        onToggleDynamicColor = {},
+                        onVersion = {
+                            openUrlInBrowser(ABOUT_URL_RELEASES)?.let { status = it }
+                        },
+                        onRate = {
+                            openUrlInBrowser(ABOUT_URL_RATE)?.let { status = it }
+                        },
+                        onFeedback = {
+                            openUrlInBrowser(ABOUT_URL_ISSUES)?.let { status = it }
+                        },
+                        onUpdateLog = {
+                            openUrlInBrowser(ABOUT_URL_RELEASES)?.let { status = it }
+                        },
+                        onOpenSource = { showOpenSource = true },
+                        onPrivacyZh = {
+                            openUrlInBrowser(ABOUT_URL_PRIVACY_ZH)?.let { status = it }
+                        },
+                        onPrivacyEn = {
+                            openUrlInBrowser(ABOUT_URL_PRIVACY_EN)?.let { status = it }
+                        },
+                        onDeveloper = {
+                            openUrlInBrowser(ABOUT_URL_DEV)?.let { status = it }
+                        },
+                        onDesigner = {
+                            openUrlInBrowser(ABOUT_URL_DESIGNER)?.let { status = it }
+                        },
+                        onToggleBounds = { enabled ->
+                            scope.launch {
+                                repo.toggleBounds(enabled)
+                            }
+                        },
+                        onToggleDynamicColor = { enabled ->
+                            DesktopDynamicColorPrefs.setForced(enabled)
+                            dynamicColorForced = enabled
+                            status = if (enabled) {
+                                "Dynamic color flag on (Android Material You)"
+                            } else {
+                                "Dynamic color flag off"
+                            }
+                        },
                         logo = { modifier ->
                             me.rosuh.easywatermark.ui.AboutPageLogo(
                                 modifier = modifier,
@@ -693,27 +778,51 @@ fun launchDesktopWindow() = application {
                             templateList = templateListPainter,
                         ),
                         preview = { previewModifier ->
-                            EditorPreviewFrame(
-                                hasImage = preview != null,
-                                emptyText = status,
-                                modifier = previewModifier,
-                            ) { previewStatusModifier ->
-                                SavePreviewStatus(
-                                    status = status,
-                                    preview = preview,
-                                    previewContentDescription = "Watermark preview",
-                                    modifier = previewStatusModifier.fillMaxWidth().padding(horizontal = 4.dp),
-                                )
+                            // Product editor: no debug "Preview: JPEG, WxH" chrome; fill the
+                            // available frame with ContentScale.Fit (responsive, aspect preserved).
+                            Box(
+                                modifier = previewModifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                val bmp = preview
+                                if (bmp != null) {
+                                    Image(
+                                        bitmap = bmp,
+                                        contentDescription = "Watermark preview",
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.fillMaxSize().padding(12.dp),
+                                    )
+                                } else {
+                                    Text(
+                                        text = status.ifBlank { "No image" },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
                         },
                         thumbnail = { imageInfo, contentDescription, thumbModifier ->
                             val path = imageInfo.uri.value
-                            val bmp = remember(path) {
-                                runCatching { DesktopImageDecoder.decode(File(path)) }.getOrNull()
+                            val epoch = desktopThumbEpoch
+                            val cached = desktopThumbCache[path]
+                            val bmp by produceState(initialValue = cached, path, epoch) {
+                                if (path.isBlank()) {
+                                    value = null
+                                    return@produceState
+                                }
+                                desktopThumbCache[path]?.let {
+                                    value = it
+                                    return@produceState
+                                }
+                                value = withContext(Dispatchers.IO) {
+                                    runCatching {
+                                        DesktopImageDecoder.decodeThumbnail(File(path), maxEdgePx = 96)
+                                    }.getOrNull()
+                                }?.also { desktopThumbCache[path] = it }
                             }
                             if (bmp != null) {
                                 Image(
-                                    bitmap = bmp,
+                                    bitmap = bmp!!,
                                     contentDescription = contentDescription,
                                     contentScale = ContentScale.Crop,
                                     modifier = thumbModifier,
@@ -902,6 +1011,17 @@ fun launchDesktopWindow() = application {
             }
             } // ProductShellHost
 
+            if (showOpenSource) {
+                OpenSourceScreen(
+                    onBack = { showOpenSource = false },
+                    onOpenLink = { url ->
+                        openUrlInBrowser(url)?.let { status = it }
+                    },
+                    backIcon = backPainter,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+
             // C2: shared Android Compose export panel; Desktop only implements FS write + reveal/share edges.
             if (showSaveSheet) {
                 val exportItems = sessionImages.ifEmpty {
@@ -911,6 +1031,21 @@ fun launchDesktopWindow() = application {
                     } else {
                         emptyList()
                     }
+                }
+                // Prefetch export thumbs off-EDT so sheet open is not blocked on full-res ImageIO.
+                LaunchedEffect(exportItems.map { it.uri.value }) {
+                    val missing = exportItems.map { it.uri.value }.filter {
+                        it.isNotBlank() && !desktopThumbCache.containsKey(it)
+                    }
+                    if (missing.isEmpty()) return@LaunchedEffect
+                    withContext(Dispatchers.IO) {
+                        for (path in missing) {
+                            runCatching {
+                                DesktopImageDecoder.decodeThumbnail(File(path), maxEdgePx = 96)
+                            }.getOrNull()?.let { desktopThumbCache[path] = it }
+                        }
+                    }
+                    desktopThumbEpoch += 1
                 }
                 val exportTotal = exportJobState.totalCount.takeIf { it > 0 } ?: exportItems.size.coerceAtLeast(1)
                 val primaryLabel = when {
@@ -1009,8 +1144,22 @@ fun launchDesktopWindow() = application {
                     },
                 ) { info, thumbModifier ->
                     val path = info.uri.value
-                    val bmp = remember(path) {
-                        runCatching { DesktopImageDecoder.decode(File(path)) }.getOrNull()
+                    val epoch = desktopThumbEpoch
+                    val cached = desktopThumbCache[path]
+                    val bmp by produceState(initialValue = cached, path, epoch) {
+                        if (path.isBlank()) {
+                            value = null
+                            return@produceState
+                        }
+                        desktopThumbCache[path]?.let {
+                            value = it
+                            return@produceState
+                        }
+                        value = withContext(Dispatchers.IO) {
+                            runCatching {
+                                DesktopImageDecoder.decodeThumbnail(File(path), maxEdgePx = 96)
+                            }.getOrNull()
+                        }?.also { desktopThumbCache[path] = it }
                     }
                     val job = remember(
                         info.uri,
@@ -1024,7 +1173,7 @@ fun launchDesktopWindow() = application {
                     ) {
                         if (bmp != null) {
                             Image(
-                                bitmap = bmp,
+                                bitmap = bmp!!,
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize(),

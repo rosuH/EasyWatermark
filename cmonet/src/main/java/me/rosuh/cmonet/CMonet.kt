@@ -34,6 +34,9 @@ object CMonet {
         return isDynamicColorAvailable
     }
 
+    /** True only when the user force-toggle is on (About switch state). */
+    fun isForceSupportDynamicColor(): Boolean = monetManufacturer.isForceSupport()
+
     fun forceSupportDynamicColor() {
         Log.d(TAG, "forceSupportDynamicColor")
         monetManufacturer.setForceSupport(true)

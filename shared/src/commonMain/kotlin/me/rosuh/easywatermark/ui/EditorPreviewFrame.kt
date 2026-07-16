@@ -13,8 +13,8 @@ import androidx.compose.ui.unit.dp
 /**
  * Shared CMP frame for the editor preview area.
  *
- * Android still supplies the actual preview renderer because production preview/export reuse the
- * native Android watermark renderer.
+ * Hosts supply the actual renderer. [preview] receives a modifier that fills this frame so the
+ * image can scale with ContentScale.Fit responsively (not a fixed max height).
  */
 @Composable
 fun EditorPreviewFrame(
@@ -27,8 +27,10 @@ fun EditorPreviewFrame(
         modifier = modifier
             .fillMaxWidth()
             .padding(12.dp),
+        contentAlignment = Alignment.Center,
     ) {
         if (hasImage) {
+            // Fill *this* Box only — do not re-apply the outer frame [modifier].
             preview(Modifier.fillMaxSize())
         } else {
             Text(text = emptyText, Modifier.align(Alignment.Center))

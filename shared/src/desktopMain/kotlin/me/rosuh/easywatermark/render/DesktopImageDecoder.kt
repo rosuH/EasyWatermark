@@ -2,6 +2,7 @@ package me.rosuh.easywatermark.render
 
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import java.awt.RenderingHints
 import java.awt.geom.AffineTransform
 import java.awt.image.AffineTransformOp
 import java.awt.image.BufferedImage
@@ -55,6 +56,40 @@ object DesktopImageDecoder {
         val bytes = file.readBytes()
         if (bytes.isEmpty()) error("DesktopImageDecoder: file ${file.path} is empty/missing")
         return decode(bytes)
+    }
+
+    /**
+     * Decode + downscale so the longer edge is at most [maxEdgePx].
+     * Use for filmstrip / export-sheet cells — **never** call full [decode] on the UI thread
+     * for multi-megapixel camera stills (freezes ModalBottomSheet open on Desktop).
+     */
+    fun decodeThumbnail(file: File, maxEdgePx: Int = 96): ImageBitmap {
+        val bytes = file.readBytes()
+        if (bytes.isEmpty()) error("DesktopImageDecoder: file ${file.path} is empty/missing")
+        val buffered = ByteArrayInputStream(bytes).use { ImageIO.read(it) }
+            ?: error("DesktopImageDecoder: ImageIO could not decode ${file.path}")
+        val oriented = applyExifOrientation(buffered, parseExifOrientation(bytes))
+        return scaleToMaxEdge(oriented, maxEdgePx).toComposeImageBitmap()
+    }
+
+    private fun scaleToMaxEdge(src: BufferedImage, maxEdgePx: Int): BufferedImage {
+        val longest = maxOf(src.width, src.height)
+        if (longest <= maxEdgePx || maxEdgePx <= 0) return src
+        val scale = maxEdgePx.toFloat() / longest.toFloat()
+        val nw = (src.width * scale).toInt().coerceAtLeast(1)
+        val nh = (src.height * scale).toInt().coerceAtLeast(1)
+        val dst = BufferedImage(nw, nh, BufferedImage.TYPE_INT_ARGB)
+        val g = dst.createGraphics()
+        try {
+            g.setRenderingHint(
+                RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_BILINEAR,
+            )
+            g.drawImage(src, 0, 0, nw, nh, null)
+        } finally {
+            g.dispose()
+        }
+        return dst
     }
 
     // ---- EXIF orientation (tiny local JPEG APP1/TIFF reader — no dependency) ---------------------

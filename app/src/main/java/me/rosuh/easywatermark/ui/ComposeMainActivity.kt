@@ -127,11 +127,15 @@ class ComposeMainActivity : ComponentActivity() {
 
     // A stable launch resets the crash counter. Ported from legacy MainActivity.onResume,
     // which became dead once ComposeMainActivity took over as launcher (ADR-0016).
+    //
+    // Delay is intentionally long: the previous 1s window wiped the crash streak as soon as
+    // the launch screen appeared, so mid-session crashes (e.g. pick → editor) never reached
+    // recoveryMode (needs CRASH_COUNT=2 without a successful stable window in between).
     override fun onResume() {
         super.onResume()
         if (MyApp.recoveryMode) return
         lifecycleScope.launch {
-            delay(1000)
+            delay(30_000)
             if (!isFinishing) (application as? MyApp)?.launchSuccess()
         }
     }
@@ -407,10 +411,16 @@ class ComposeMainActivity : ComponentActivity() {
                                         }
                                         ProductShellNav.Route.About -> {
                                             val wm by aboutViewModel.waterMark.collectAsStateWithLifecycle()
+                                            // Bind to the force-toggle SP flag, NOT isAvailable():
+                                            // on Samsung/Google, isAvailable() stays true even when
+                                            // force is off, so a controlled Switch never visually flips.
+                                            var forceDynamicColor by remember {
+                                                mutableStateOf(dynamicColorCapability.isForcedSupport())
+                                            }
                                             AboutScreenAndroid(
                                                 versionName = BuildConfig.VERSION_NAME,
                                                 showBounds = wm?.enableBounds ?: false,
-                                                dynamicColorOn = dynamicColorCapability.isAvailable(),
+                                                dynamicColorOn = forceDynamicColor,
                                                 onBack = {
                                                     productRoute =
                                                         ProductShellNav.aboutBack(aboutReturnRoute)
@@ -420,8 +430,9 @@ class ComposeMainActivity : ComponentActivity() {
                                                 },
                                                 onOpenSource = { showOpenSource = true },
                                                 onToggleBounds = { aboutViewModel.toggleBounds(it) },
-                                                onToggleDynamicColor = {
-                                                    aboutViewModel.toggleSupportDynamicColor(it)
+                                                onToggleDynamicColor = { enabled ->
+                                                    aboutViewModel.toggleSupportDynamicColor(enabled)
+                                                    forceDynamicColor = enabled
                                                     Toast.makeText(
                                                         this@ComposeMainActivity,
                                                         "Reboot and you'll get what you want.",
@@ -453,28 +464,23 @@ class ComposeMainActivity : ComponentActivity() {
                                     },
                                     properties = DialogProperties(usePlatformDefaultWidth = false),
                                 ) {
+                                    // Selection is local in the dialog (no per-tap list rebuild).
+                                    // Commit once on FAB dismiss via selectGallery.
                                     GalleryDialog(
-                                        state.imageList,
+                                        images = state.imageList,
                                         onLoadImages = {
                                             viewModel.process(
                                                 Action.LoadImages(context.contentResolver)
                                             )
                                         },
-                                        onDismiss = { selected ->
+                                        onDismiss = { selectedImages ->
                                             showGalleryDialog = false
-                                            if (selected) {
+                                            if (selectedImages.isNotEmpty()) {
                                                 productRoute = ProductShellNav.Route.Editor
+                                                viewModel.selectGallery(selectedImages)
+                                            } else {
+                                                viewModel.process(Action.DialogDismiss(false))
                                             }
-                                            viewModel.process(Action.DialogDismiss(selected))
-                                        },
-                                        onImageSelected = { image, index, isSelected ->
-                                            viewModel.process(
-                                                Action.GalleryImageSelected(
-                                                    image,
-                                                    index,
-                                                    isSelected,
-                                                )
-                                            )
                                         },
                                         onPickImageViaSystem = {
                                             pickMultipleMedia.launch(

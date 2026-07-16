@@ -27,19 +27,21 @@ class MonetManufacturer(
 
     /**
      * cache in memory
-      */
-    private var isForceSupport = sp.getValue(KEY_DYNAMIC_COLOR_FORCE, false)
+     */
+    private var forceSupportCached = sp.getValue(KEY_DYNAMIC_COLOR_FORCE, false)
 
     override fun isDynamicColorAvailable(): Boolean {
         val setContains =
             supportedSet.contains(Build.MANUFACTURER.lowercase()) || supportedSet.contains(Build.BRAND.lowercase())
         return DynamicColors.isDynamicColorAvailable() && setContains
-                || isForceSupport
+                || forceSupportCached
     }
+
+    override fun isForceSupport(): Boolean = forceSupportCached
 
     override fun setForceSupport(supported: Boolean) {
         sp.save(KEY_DYNAMIC_COLOR_FORCE, supported)
-        isForceSupport = supported
+        forceSupportCached = supported
     }
 
     companion object {

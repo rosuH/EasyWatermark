@@ -58,12 +58,17 @@ fun <T> EditorOptionCarousel(
     val density = LocalDensity.current
     val listState = rememberLazyListState()
     val overscroll = rememberOverscrollEffect()
-    // Figma button instance width
+    // Figma button instance width; chips sit flush (no spacedBy).
     val itemWidth = 72.dp
-    val contentPadding = if (useCompactPadding) {
-        8.dp
-    } else {
-        (optionWidth - itemWidth).coerceAtLeast(0.dp) / 2
+    val groupWidth = itemWidth * options.size.coerceAtLeast(0)
+    // When the chip group fits (phone landscape / Desktop), center it.
+    // When it overflows, use compact edge pad (scrollable) or single-item center pad.
+    val contentPadding = when {
+        optionWidth > 0.dp && groupWidth > 0.dp && optionWidth >= groupWidth -> {
+            (optionWidth - groupWidth) / 2
+        }
+        useCompactPadding -> 8.dp
+        else -> (optionWidth - itemWidth).coerceAtLeast(0.dp) / 2
     }
 
     val selectedIndex = remember(options, selectedOption) {

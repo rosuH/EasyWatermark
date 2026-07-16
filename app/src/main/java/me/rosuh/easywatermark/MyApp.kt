@@ -120,6 +120,11 @@ class MyApp : Application() {
         var recoveryMode = false
             private set
 
+        /**
+         * Enter recovery after this many uncaught crashes without a long stable window.
+         * [me.rosuh.easywatermark.ui.ComposeMainActivity.onResume] clears the counter only after
+         * 30s of stable foreground — so a crash-loop on pick→editor still accumulates.
+         */
         private const val CRASH_COUNT = 2
 
         const val SP_NAME = "sp_water_mark_crash_info"

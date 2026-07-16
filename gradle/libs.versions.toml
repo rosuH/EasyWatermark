@@ -1,5 +1,7 @@
 [versions]
-agp = "9.4.0-alpha04"
+# Pin to stable AGP for Android Studio compatibility (Studio max supported: 9.2.1).
+# Do not use AGP 9.3+/9.4 alphas unless Studio is upgraded past that floor.
+agp = "9.2.1"
 # S4d-360: Kotlin 2.4.0 + KSP 2.3.10 — highest Maven-published KSP for this Kotlin line.
 # Official metadata (repo1.maven.org, symbol-processing-gradle-plugin): latest/release = 2.3.10
 # (lastUpdated 20260709). Hard rule: do NOT pair Kotlin 2.4.20-Beta1 with a KSP that only

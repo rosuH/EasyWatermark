@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -23,8 +24,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,6 +51,9 @@ import kotlin.math.abs
  *
  * Tap selects once immediately; the scroll-to-center that follows is marked programmatic so the
  * settle handler does **not** fire a second [onImageSelected].
+ *
+ * User fling/drag: selection updates only after scroll settles, using the item closest to the
+ * **viewport center** (not firstVisibleItemIndex — that is wrong with center contentPadding).
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -73,6 +79,10 @@ fun EditorPhotoStrip(
     // True while we animateScrollToItem from tap / external selection — skip settle select.
     var programmaticScroll by remember { mutableStateOf(false) }
 
+    val imagesState = rememberUpdatedState(images)
+    val onImageSelectedState = rememberUpdatedState(onImageSelected)
+    val lastAppliedState = rememberUpdatedState(lastAppliedUri)
+
     fun applyCenteredSelection(target: ImageInfo, fromUser: Boolean) {
         val uri = target.uri.value
         if (uri == lastAppliedUri) return
@@ -81,7 +91,7 @@ fun EditorPhotoStrip(
             composeHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
             PlatformHaptics.selectionTick()
         }
-        onImageSelected(target)
+        onImageSelectedState.value(target)
     }
 
     suspend fun scrollToIndexProgrammatic(index: Int) {
@@ -97,57 +107,57 @@ fun EditorPhotoStrip(
     // Re-center only when selection URI changes (external select / settle).
     // Do NOT key on images.size — list growth must not yank scroll (pick batch / add-more).
     LaunchedEffect(selectedUri) {
-        if (images.isEmpty() || selectedUri == null) return@LaunchedEffect
+        val imgs = imagesState.value
+        if (imgs.isEmpty() || selectedUri == null) return@LaunchedEffect
         // Never fight an in-progress user fling.
         if (listState.isScrollInProgress && !programmaticScroll) return@LaunchedEffect
-        val index = images.indexOfFirst { it.uri.value == selectedUri }
+        val index = imgs.indexOfFirst { it.uri.value == selectedUri }
         if (index < 0) return@LaunchedEffect
-        // Already tracking this URI and near center — skip (avoids re-scroll after batch stage).
-        val atCenter = listState.firstVisibleItemIndex == index &&
-            listState.firstVisibleItemScrollOffset == 0
+        val centerIdx = centeredItemIndex(listState)
+        val atCenter = centerIdx != null &&
+            imgs.getOrNull(centerIdx)?.uri?.value == selectedUri
         if (selectedUri == lastAppliedUri && atCenter) return@LaunchedEffect
+        // Keep lastApplied in sync with parent selection even if we only re-center.
         lastAppliedUri = selectedUri
         if (!atCenter) {
             scrollToIndexProgrammatic(index)
         }
     }
 
-    // After *user* fling settles: select the cell under the fixed center frame + haptic.
-    // Key only listState — do NOT restart collector when [images] grows mid-fling.
+    // After *user* scroll/fling settles: select the cell under the fixed center frame.
     LaunchedEffect(listState) {
-        var sawUserScroll = false
-        snapshotFlow { listState.isScrollInProgress to programmaticScroll }
+        var wasUserScrolling = false
+        snapshotFlow {
+            listState.isScrollInProgress to programmaticScroll
+        }
             .distinctUntilChanged()
             .collect { (scrolling, programmatic) ->
                 if (programmatic) {
+                    // Programmatic re-center must not look like a user fling settle.
+                    wasUserScrolling = false
                     return@collect
                 }
                 if (scrolling) {
-                    sawUserScroll = true
+                    wasUserScrolling = true
                     return@collect
                 }
-                if (!sawUserScroll || images.isEmpty()) return@collect
-                sawUserScroll = false
+                if (!wasUserScrolling) return@collect
+                wasUserScrolling = false
 
-                val layout = listState.layoutInfo
-                val idx = if (
-                    listState.firstVisibleItemScrollOffset == 0 &&
-                    listState.firstVisibleItemIndex in images.indices
-                ) {
-                    listState.firstVisibleItemIndex
-                } else if (layout.visibleItemsInfo.isNotEmpty()) {
-                    val viewportCenter =
-                        (layout.viewportStartOffset + layout.viewportEndOffset) / 2
-                    val closest = layout.visibleItemsInfo.minByOrNull { item ->
-                        abs(item.offset + item.size / 2 - viewportCenter)
-                    }
-                    closest?.index?.coerceIn(images.indices) ?: return@collect
-                } else {
-                    return@collect
-                }
+                // Wait 2 frames so snap fling layout + item offsets are committed.
+                withFrameNanos { }
+                withFrameNanos { }
 
-                val target = images.getOrNull(idx) ?: return@collect
-                applyCenteredSelection(target, fromUser = true)
+                val imgs = imagesState.value
+                if (imgs.isEmpty()) return@collect
+                val idx = centeredItemIndex(listState) ?: return@collect
+                val target = imgs.getOrNull(idx) ?: return@collect
+                val uri = target.uri.value
+                if (uri == lastAppliedState.value) return@collect
+                lastAppliedUri = uri
+                composeHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                PlatformHaptics.selectionTick()
+                onImageSelectedState.value(target)
             }
     }
 
@@ -190,13 +200,8 @@ fun EditorPhotoStrip(
                             .clickable {
                                 // Select once; mark programmatic *before* scroll so settle is ignored.
                                 applyCenteredSelection(imageInfo, fromUser = true)
-                                programmaticScroll = true
                                 coroutineScope.launch {
-                                    try {
-                                        listState.animateScrollToItem(index)
-                                    } finally {
-                                        programmaticScroll = false
-                                    }
+                                    scrollToIndexProgrammatic(index)
                                 }
                             },
                     )
@@ -216,4 +221,19 @@ fun EditorPhotoStrip(
                 ),
         )
     }
+}
+
+/**
+ * Index of the visible item whose center is closest to the viewport center.
+ * Correct with large start/end [contentPadding] (center-aligned filmstrip); [LazyListState.firstVisibleItemIndex]
+ * alone points at the *leading* cell, not the one under the fixed center frame.
+ */
+private fun centeredItemIndex(listState: LazyListState): Int? {
+    val layout = listState.layoutInfo
+    val visible = layout.visibleItemsInfo
+    if (visible.isEmpty()) return null
+    val viewportCenter = (layout.viewportStartOffset + layout.viewportEndOffset) / 2
+    return visible.minByOrNull { item ->
+        abs(item.offset + item.size / 2 - viewportCenter)
+    }?.index
 }

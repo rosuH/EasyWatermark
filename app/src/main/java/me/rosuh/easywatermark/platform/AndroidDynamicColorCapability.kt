@@ -11,6 +11,8 @@ import me.rosuh.cmonet.CMonet
 class AndroidDynamicColorCapability : DynamicColorCapability {
     override fun isAvailable(): Boolean = CMonet.isDynamicColorAvailable()
 
+    override fun isForcedSupport(): Boolean = CMonet.isForceSupportDynamicColor()
+
     override fun setForcedSupport(enabled: Boolean) {
         if (enabled) {
             CMonet.forceSupportDynamicColor()

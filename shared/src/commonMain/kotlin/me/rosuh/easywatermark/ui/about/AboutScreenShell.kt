@@ -36,9 +36,12 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlin.math.absoluteValue
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.ui.theme.DesignBrand
 import me.rosuh.easywatermark.ui.theme.DesignEditorBg
@@ -282,20 +285,41 @@ private fun DevFooter(
 ) {
     val cards = listOf(developerCard to onDeveloper, designerCard to onDesigner)
     val pagerState = rememberPagerState(pageCount = { cards.size })
+    // Fixed height so developer / designer cards match regardless of description length.
+    val cardHeight = AboutDevCardHeight
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         HorizontalPager(
             state = pagerState,
-            contentPadding = PaddingValues(horizontal = 40.dp),
-            pageSpacing = 16.dp,
+            // Peek side card; center page is full “first” size after scale.
+            contentPadding = PaddingValues(horizontal = 36.dp),
+            pageSpacing = 12.dp,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(cardHeight + 8.dp),
         ) { page ->
             val (card, onClick) = cards[page]
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(cardHeight)
+                    // Read pager offset in Draw so both cards share the same layout size and only
+                    // scale/alpha animate: center → full, side → smaller (carousel focus).
+                    .graphicsLayer {
+                        val pageOffset = (
+                            (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
+                            ).absoluteValue
+                        val focus = (1f - pageOffset.coerceIn(0f, 1f))
+                        val scale = AboutDevCardSideScale +
+                            (1f - AboutDevCardSideScale) * focus
+                        scaleX = scale
+                        scaleY = scale
+                        alpha = AboutDevCardSideAlpha +
+                            (1f - AboutDevCardSideAlpha) * focus
+                    }
                     .clickable(onClick = onClick),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
@@ -304,8 +328,8 @@ private fun DevFooter(
             ) {
                 Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Image(
@@ -313,20 +337,29 @@ private fun DevFooter(
                         contentDescription = card.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .size(56.dp)
-                            .clip(RoundedCornerShape(28.dp)),
+                            .size(AboutDevAvatarSize)
+                            .clip(RoundedCornerShape(AboutDevAvatarSize / 2)),
                     )
-                    Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
+                    Column(
+                        modifier = Modifier
+                            .padding(start = 16.dp)
+                            .weight(1f),
+                        verticalArrangement = Arrangement.Center,
+                    ) {
                         Text(
                             text = card.title,
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(4.dp))
                         Text(
                             text = card.description,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
@@ -343,6 +376,14 @@ private val AboutLogoTopPadding = 8.dp
 
 /** Compact hero: back row + logo (~64) + small bottom gap. */
 private val AboutHeroHeight = 100.dp
+
+/** Equal-size developer / designer cards (avatar 56 + vertical padding). */
+private val AboutDevCardHeight = 88.dp
+private val AboutDevAvatarSize = 56.dp
+
+/** Side (unfocused) page scale / alpha; focused page is 1f. */
+private const val AboutDevCardSideScale = 0.88f
+private const val AboutDevCardSideAlpha = 0.72f
 
 /** @deprecated Use [AboutScreen]. Temporary alias while hosts migrate. */
 @Deprecated("Use AboutScreen", ReplaceWith("AboutScreen(versionName, showBounds, dynamicColorOn, icons, developerCard, designerCard, onBack, onVersion, onRate, onFeedback, onUpdateLog, onOpenSource, onPrivacyZh, onPrivacyEn, onDeveloper, onDesigner, onToggleBounds, onToggleDynamicColor, modifier, logo)"))

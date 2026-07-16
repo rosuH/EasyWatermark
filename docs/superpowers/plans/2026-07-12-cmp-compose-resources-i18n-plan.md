@@ -49,7 +49,7 @@ Make **product UI strings (and later shared drawables)** available from **`share
 
 | Piece | State |
 |-------|--------|
-| AGP | `9.4.0-alpha04` (catalog) |
+| AGP | `9.2.1` (catalog; Studio-compatible pin, not 9.4 alpha) |
 | `:shared` Android plugin | `com.android.kotlin.multiplatform.library` (S4d-360) |
 | Compose Multiplatform | `1.12.0-beta01` + compose plugin on `:shared` |
 | compose-resources | **Explicitly not** on `:shared` (comments cite CMP-9547) |

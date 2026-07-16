@@ -18,4 +18,23 @@ sealed class FuncType {
     object Horizon : FuncType()
     object TextSize : FuncType()
     object TileMode : FuncType()
+
+    /**
+     * Bundle-safe identity for Compose Lazy keys / saveable state.
+     * Do **not** use [FuncType] object instances as Lazy item keys on Android —
+     * they are not Bundle-storable and crash with
+     * `IllegalArgumentException: Type of the key … is not supported`.
+     */
+    fun stableKey(): String = when (this) {
+        Text -> "Text"
+        Icon -> "Icon"
+        Color -> "Color"
+        Alpha -> "Alpha"
+        Degree -> "Degree"
+        TextTypeFace -> "TextTypeFace"
+        Vertical -> "Vertical"
+        Horizon -> "Horizon"
+        TextSize -> "TextSize"
+        TileMode -> "TileMode"
+    }
 }
