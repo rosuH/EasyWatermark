@@ -35,6 +35,19 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.data.model.entity.Template
+import me.rosuh.easywatermark.shared.generated.resources.Res
+import me.rosuh.easywatermark.shared.generated.resources.dialog_button_add_template
+import me.rosuh.easywatermark.shared.generated.resources.dialog_title_edit_watermark
+import me.rosuh.easywatermark.shared.generated.resources.dialog_title_exist_confirm
+import me.rosuh.easywatermark.shared.generated.resources.dialog_title_template_title
+import me.rosuh.easywatermark.shared.generated.resources.template_delete
+import me.rosuh.easywatermark.shared.generated.resources.template_edit
+import me.rosuh.easywatermark.shared.generated.resources.tips_cancel_dialog
+import me.rosuh.easywatermark.shared.generated.resources.tips_confirm_dialog
+import me.rosuh.easywatermark.shared.generated.resources.tips_delete_template
+import me.rosuh.easywatermark.shared.generated.resources.tips_list_empty
+import me.rosuh.easywatermark.shared.generated.resources.tips_use_this_template
+import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Clock
 
 /**
@@ -47,7 +60,7 @@ import kotlin.time.Clock
  * "Use" applies the template content via the same `updateText` path the text editor uses,
  * so it doesn't depend on the legacy `UiState.UseTemplate` plumbing.
  *
- * S4d-238 resource strategy: all text is passed as [TemplateListSheetStrings] (the Android
+ * S-i18n-2: labels from composeResources Res (the Android
  * caller resolves `stringResource` at the edge); both icons are passed as [Painter] parameters
  * (the Android caller resolves `painterResource` at the edge). This composable has no
  * `R.string`/`R.drawable`/`stringResource`/`painterResource` dependencies.
@@ -56,7 +69,6 @@ import kotlin.time.Clock
 @Composable
 fun TemplateListSheet(
     templates: List<Template>,
-    strings: TemplateListSheetStrings,
     editIcon: Painter? = null,
     deleteIcon: Painter? = null,
     enabled: Boolean = true,
@@ -92,7 +104,7 @@ fun TemplateListSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = strings.title,
+                    text = stringResource(Res.string.dialog_title_template_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -100,13 +112,13 @@ fun TemplateListSheet(
                     enabled = enabled,
                     onClick = { editTarget = TemplateEditTarget(null) },
                 ) {
-                    Text(text = strings.addButton)
+                    Text(text = stringResource(Res.string.dialog_button_add_template))
                 }
             }
 
             if (templates.isEmpty()) {
                 Text(
-                    text = strings.empty,
+                    text = stringResource(Res.string.tips_list_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -139,7 +151,7 @@ fun TemplateListSheet(
                                 ) {
                                     Icon(
                                         painter = editIcon,
-                                        contentDescription = strings.editTitle,
+                                        contentDescription = stringResource(Res.string.dialog_title_edit_watermark),
                                     )
                                 }
                             } else {
@@ -147,7 +159,7 @@ fun TemplateListSheet(
                                     enabled = enabled,
                                     onClick = { editTarget = TemplateEditTarget(template) },
                                 ) {
-                                    Text(strings.editButton)
+                                    Text(stringResource(Res.string.template_edit))
                                 }
                             }
                             if (deleteIcon != null) {
@@ -157,7 +169,7 @@ fun TemplateListSheet(
                                 ) {
                                     Icon(
                                         painter = deleteIcon,
-                                        contentDescription = strings.deleteConfirm,
+                                        contentDescription = stringResource(Res.string.tips_delete_template),
                                     )
                                 }
                             } else {
@@ -165,7 +177,7 @@ fun TemplateListSheet(
                                     enabled = enabled,
                                     onClick = { confirmDelete = template },
                                 ) {
-                                    Text(strings.deleteButton)
+                                    Text(stringResource(Res.string.template_delete))
                                 }
                             }
                         }
@@ -180,8 +192,8 @@ fun TemplateListSheet(
     editTarget?.let { target ->
         TemplateEditSheet(
             initialText = target.template?.content ?: newTemplateInitialText,
-            editTitle = strings.editTitle,
-            confirmButton = strings.confirm,
+            editTitle = stringResource(Res.string.dialog_title_edit_watermark),
+            confirmButton = stringResource(Res.string.tips_confirm_dialog),
             enabled = enabled,
             onConfirm = { text ->
                 val t = target.template
@@ -199,8 +211,8 @@ fun TemplateListSheet(
     confirmUse?.let { template ->
         AlertDialog(
             onDismissRequest = { confirmUse = null },
-            title = { Text(strings.existConfirmTitle) },
-            text = { Text(strings.useThisTemplate) },
+            title = { Text(stringResource(Res.string.dialog_title_exist_confirm)) },
+            text = { Text(stringResource(Res.string.tips_use_this_template)) },
             confirmButton = {
                 TextButton(
                     enabled = enabled,
@@ -209,11 +221,11 @@ fun TemplateListSheet(
                         confirmUse = null
                         onDismiss()
                     },
-                ) { Text(strings.confirm) }
+                ) { Text(stringResource(Res.string.tips_confirm_dialog)) }
             },
             dismissButton = {
                 TextButton(onClick = { confirmUse = null }) {
-                    Text(strings.cancel)
+                    Text(stringResource(Res.string.tips_cancel_dialog))
                 }
             }
         )
@@ -222,8 +234,8 @@ fun TemplateListSheet(
     confirmDelete?.let { template ->
         AlertDialog(
             onDismissRequest = { confirmDelete = null },
-            title = { Text(strings.existConfirmTitle) },
-            text = { Text(strings.deleteConfirm) },
+            title = { Text(stringResource(Res.string.dialog_title_exist_confirm)) },
+            text = { Text(stringResource(Res.string.tips_delete_template)) },
             confirmButton = {
                 TextButton(
                     enabled = enabled,
@@ -231,35 +243,16 @@ fun TemplateListSheet(
                         onDelete(template)
                         confirmDelete = null
                     },
-                ) { Text(strings.confirm) }
+                ) { Text(stringResource(Res.string.tips_confirm_dialog)) }
             },
             dismissButton = {
                 TextButton(onClick = { confirmDelete = null }) {
-                    Text(strings.cancel)
+                    Text(stringResource(Res.string.tips_cancel_dialog))
                 }
             }
         )
     }
 }
-
-/**
- * Resolved string values for [TemplateListSheet]. The Android caller constructs this at the
- * edge using `stringResource(R.string.*)`; Desktop/iOS pass hard-coded English strings.
- * See S4d-238 resource strategy.
- */
-data class TemplateListSheetStrings(
-    val title: String,
-    val addButton: String,
-    val empty: String,
-    val editTitle: String,
-    val deleteConfirm: String,
-    val existConfirmTitle: String,
-    val useThisTemplate: String,
-    val confirm: String,
-    val cancel: String,
-    val editButton: String = "Edit",
-    val deleteButton: String = "Delete",
-)
 
 /** Distinguishes "add" (template == null) from "edit" (template != null). */
 private data class TemplateEditTarget(val template: Template?)

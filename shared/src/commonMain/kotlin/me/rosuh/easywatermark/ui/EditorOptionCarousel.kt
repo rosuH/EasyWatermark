@@ -1,22 +1,23 @@
 package me.rosuh.easywatermark.ui
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,12 +25,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
+import me.rosuh.easywatermark.ui.theme.DesignChipSelected
 
-@OptIn(ExperimentalFoundationApi::class)
+/**
+ * Design: function chips **72×56**, selected fill `#2C2C14`, corner **r=2**.
+ *
+ * No [Modifier.animateItem]: Content/Style/Layout catalogs are unrelated lists. Index-keyed
+ * insert/placement animation made chips overlap while flinging right after a tab switch
+ * (labels stacking as "StyColor" / "ColAlpha"). Host should also [key] this composable by tab.
+ */
 @Composable
 fun <T> EditorOptionCarousel(
     options: List<T>,
@@ -37,14 +47,18 @@ fun <T> EditorOptionCarousel(
     onOptionSelected: (T) -> Unit,
     modifier: Modifier = Modifier,
     selectedOption: T? = null,
-    itemContent: @Composable (T) -> Unit,
+    /**
+     * Stable identity for LazyRow items (e.g. [me.rosuh.easywatermark.data.model.FuncType]).
+     * Falls back to index only when omitted.
+     */
+    itemKey: ((T) -> Any)? = null,
+    itemContent: @Composable (option: T, selected: Boolean) -> Unit,
 ) {
-    var optionWidth by remember {
-        mutableStateOf(0.dp)
-    }
-
+    var optionWidth by remember { mutableStateOf(0.dp) }
     val density = LocalDensity.current
     val listState = rememberLazyListState()
+    val overscroll = rememberOverscrollEffect()
+    // Figma button instance width
     val itemWidth = 72.dp
     val contentPadding = if (useCompactPadding) {
         8.dp
@@ -52,44 +66,63 @@ fun <T> EditorOptionCarousel(
         (optionWidth - itemWidth).coerceAtLeast(0.dp) / 2
     }
 
+    val selectedIndex = remember(options, selectedOption) {
+        selectedOption?.let { options.indexOf(it) }?.takeIf { it >= 0 } ?: -1
+    }
+    // Instant scroll — do not animateScroll (fights user fling after tab change).
+    LaunchedEffect(selectedIndex) {
+        if (selectedIndex in options.indices && options.isNotEmpty()) {
+            runCatching { listState.scrollToItem(selectedIndex) }
+        }
+    }
+
     LazyRow(
         modifier
             .fillMaxWidth()
-            .height(64.dp)
+            // Design option row height = 56
+            .height(56.dp)
+            .clipToBounds()
             .onGloballyPositioned {
-                optionWidth = with(density) {
-                    it.size.width.toDp()
-                }
+                optionWidth = with(density) { it.size.width.toDp() }
             },
         state = listState,
-        contentPadding = PaddingValues(
-            start = contentPadding,
-            end = contentPadding,
-        ),
+        overscrollEffect = overscroll,
+        contentPadding = PaddingValues(start = contentPadding, end = contentPadding),
+        horizontalArrangement = Arrangement.spacedBy(0.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        items(options) { item ->
+        itemsIndexed(
+            items = options,
+            key = { index, item -> itemKey?.invoke(item) ?: index },
+            contentType = { _, _ -> "editor_option_chip" },
+        ) { _, item ->
             val isSelected = selectedOption != null && selectedOption == item
-            Column(
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
+            Box(
+                contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .width(itemWidth)
                     .fillMaxHeight()
-                    .padding(horizontal = 2.dp, vertical = 4.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(2.dp))
                     .background(
                         if (isSelected) {
-                            MaterialTheme.colorScheme.surfaceVariant
+                            MaterialTheme.colorScheme.surfaceVariant.takeIf {
+                                it != Color.Unspecified
+                            } ?: DesignChipSelected
                         } else {
-                            MaterialTheme.colorScheme.surface.copy(alpha = 0f)
+                            Color.Transparent
                         },
                     )
-                    .clickable {
-                        onOptionSelected(item)
-                    }
-                    .animateItem(),
+                    .clickable { onOptionSelected(item) },
             ) {
-                itemContent(item)
+                Column(
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clipToBounds(),
+                ) {
+                    itemContent(item, isSelected)
+                }
             }
         }
     }

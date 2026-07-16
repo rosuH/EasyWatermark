@@ -10,17 +10,17 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.SystemBarStyle
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Scaffold
@@ -36,7 +36,6 @@ import me.rosuh.easywatermark.utils.FileUtils
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -46,35 +45,33 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import me.rosuh.easywatermark.shared.generated.resources.Res
+import me.rosuh.easywatermark.shared.generated.resources.copy_failed
+import me.rosuh.easywatermark.shared.generated.resources.copy_success
+import me.rosuh.easywatermark.shared.generated.resources.dev_comment
+import me.rosuh.easywatermark.shared.generated.resources.dialog_export_to_gallery
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_exporting
+import me.rosuh.easywatermark.shared.generated.resources.recovery_mode_closed
+import me.rosuh.easywatermark.shared.generated.resources.share
+import me.rosuh.easywatermark.shared.generated.resources.store_not_found
+import org.jetbrains.compose.resources.stringResource as cmpStringResource
 import androidx.core.os.BuildCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.MyApp
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.dialog
-import androidx.navigation.compose.rememberNavController
-import me.rosuh.easywatermark.R
-
 import me.rosuh.easywatermark.data.model.FuncTitleModel
 import android.widget.Toast
-import android.widget.ImageView
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.viewinterop.AndroidView
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.ui.about.AboutDevCard
 import me.rosuh.easywatermark.ui.about.AboutScreenIcons
-import me.rosuh.easywatermark.ui.about.AboutScreenShell
-import me.rosuh.easywatermark.ui.about.AboutScreenStrings
+import me.rosuh.easywatermark.ui.about.AboutScreen
 import me.rosuh.easywatermark.ui.about.AboutViewModel
 import me.rosuh.easywatermark.ui.about.OpenSourceScreen
-import me.rosuh.easywatermark.ui.about.OpenSourceScreenStrings
-import me.rosuh.easywatermark.ui.widget.ColoredImageVIew
 import me.rosuh.easywatermark.utils.ktx.openLink
 import me.rosuh.easywatermark.utils.ktx.toUri
 import androidx.compose.ui.layout.ContentScale
@@ -82,7 +79,6 @@ import coil3.compose.AsyncImage
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.ui.compose.GalleryDialog
 import me.rosuh.easywatermark.ui.save.SaveExportSheetShell
-import me.rosuh.easywatermark.ui.save.SaveExportSheetStrings
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 @BuildCompat.PrereleaseSdkCheck
@@ -147,9 +143,9 @@ class ComposeMainActivity : ComponentActivity() {
         try {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             clipboard.setPrimaryClip(ClipData.newPlainText(text, text))
-            Toast.makeText(this, R.string.copy_success, Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, sharedString(Res.string.copy_success), Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Toast.makeText(this, R.string.copy_failed, Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, sharedString(Res.string.copy_failed), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -166,15 +162,6 @@ class ComposeMainActivity : ComponentActivity() {
                     Surface(modifier = Modifier.fillMaxSize()) {
                         RecoveryScreen(
                             crashInfo = crashStackTrace(),
-                            strings = RecoveryScreenStrings(
-                                title = stringResource(R.string.recovery_title),
-                                tips = stringResource(R.string.recovery_mode_tips),
-                                copy = stringResource(R.string.copy),
-                                sendEmail = "Send email",
-                                sendTelegram = "Send Telegram",
-                                jumpToStore = "Jump to Store",
-                                turnOffRecovery = stringResource(R.string.turn_off_recovery_mode),
-                            ),
                             onCopy = { copyCrashInfo(crashStackTrace()) },
                             onSendEmail = {
                                 viewModel.extraCrashInfo(this@ComposeMainActivity, crashStackTrace())
@@ -186,7 +173,7 @@ class ComposeMainActivity : ComponentActivity() {
                                 ) {
                                     Toast.makeText(
                                         this@ComposeMainActivity,
-                                        R.string.store_not_found,
+                                        sharedString(Res.string.store_not_found),
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 }
@@ -195,7 +182,7 @@ class ComposeMainActivity : ComponentActivity() {
                                 (application as MyApp).launchSuccess()
                                 Toast.makeText(
                                     this@ComposeMainActivity,
-                                    R.string.recovery_mode_closed,
+                                    sharedString(Res.string.recovery_mode_closed),
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
@@ -237,27 +224,40 @@ class ComposeMainActivity : ComponentActivity() {
                         )
                     }
 
+                    // Shared Launch/Editor/About apply [Modifier.safeDrawingPadding] themselves
+                    // (CMP-safe immersive). Scaffold must not double-apply safeDrawing insets.
                     Scaffold(
-                        contentWindowInsets = WindowInsets.safeDrawing
-                    ) { innerPadding ->
+                        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                    ) { _ ->
                         Surface(
                             modifier = Modifier
                                 .fillMaxSize()
                         ) {
-                            val navController = rememberNavController()
+                            // Product routes + transitions: shared [ProductShellHost].
+                            // Activity only owns system edges (picker, gallery dialog, export, links).
+                            var productRoute by remember {
+                                mutableStateOf(ProductShellNav.Route.Launch)
+                            }
+                            var aboutReturnRoute by remember {
+                                mutableStateOf(ProductShellNav.Route.Launch)
+                            }
+                            var showGalleryDialog by remember { mutableStateOf(false) }
+                            var showOpenSource by remember { mutableStateOf(false) }
+                            var showSaveSheet by remember { mutableStateOf(false) }
+
+                            fun openAboutFrom(from: ProductShellNav.Route) {
+                                val (about, ret) = ProductShellNav.openAbout(from)
+                                aboutReturnRoute = ret
+                                productRoute = about
+                            }
+
                             LaunchedEffect(pendingShareUris) {
                                 pendingShareUris?.let { uris ->
                                     viewModel.updateImageList(uris)
-                                    // launchSingleTop + popUpTo: a share received while already in the
-                                    // editor (onNewIntent) must not stack a second EditorScreen.
-                                    navController.navigate(EditorRoute) {
-                                        launchSingleTop = true
-                                        popUpTo(LaunchRoute)
-                                    }
+                                    productRoute = ProductShellNav.Route.Editor
                                     pendingShareUris = null
                                 }
                             }
-                            var showSaveSheet by remember { mutableStateOf(false) }
                             val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
                             val state by viewModel.launchScreenUiStateFlow.collectAsStateWithLifecycle()
                             val saveExportState by viewModel.saveExportUiState.collectAsStateWithLifecycle()
@@ -326,38 +326,144 @@ class ComposeMainActivity : ComponentActivity() {
                                             "PhotoPicker Number of items selected: ${uris.size}"
                                         )
                                         viewModel.process(Action.SystemPickerImageSelected(uris))
-                                        navController.navigate(EditorRoute)
+                                        productRoute = ProductShellNav.Route.Editor
+                                        showGalleryDialog = false
                                     } else {
                                         Log.i(TAG, "PhotoPicker No media selected")
                                     }
                                 }
 
-                            NavHost(
-                                navController = navController,
-                                startDestination = LaunchRoute,
+                            // System back: OpenSource → About → prior route; Editor → Launch.
+                            BackHandler(enabled = showOpenSource) { showOpenSource = false }
+                            BackHandler(enabled = !showOpenSource && productRoute == ProductShellNav.Route.About) {
+                                productRoute = ProductShellNav.aboutBack(aboutReturnRoute)
+                            }
+                            BackHandler(enabled = !showOpenSource && productRoute == ProductShellNav.Route.Editor) {
+                                productRoute = ProductShellNav.Route.Launch
+                            }
+                            BackHandler(enabled = showGalleryDialog) {
+                                showGalleryDialog = false
+                                viewModel.process(Action.DialogDismiss(false))
+                            }
+
+                            Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(innerPadding)
-                                    .imePadding()
+                                    .imePadding(),
                             ) {
-                                composable<LaunchRoute> {
-                                    LaunchScreen(
-                                        onGoDialog = { navController.navigate(GalleryDialogRoute) },
-                                        onGoAbout = { navController.navigate(AboutRoute) }
+                                ProductShellHost(
+                                    route = productRoute,
+                                ) { route ->
+                                    when (route) {
+                                        ProductShellNav.Route.Launch -> {
+                                            AndroidLaunchScreen(
+                                                onGoDialog = { showGalleryDialog = true },
+                                                onGoAbout = {
+                                                    openAboutFrom(ProductShellNav.Route.Launch)
+                                                },
+                                            )
+                                        }
+                                        ProductShellNav.Route.Editor -> {
+                                            AndroidEditorScreen(
+                                                imageList = state.selectedImageList,
+                                                waterMark = state.waterMark,
+                                                selectedImage = state.curImageInfo,
+                                                onBack = {
+                                                    productRoute = ProductShellNav.Route.Launch
+                                                },
+                                                onWaterMrkChange = { item: FuncTitleModel, any: Any ->
+                                                    viewModel.process(Action.WaterMarkChange(item, any))
+                                                },
+                                                onImageSelected = {
+                                                    viewModel.process(Action.EditorImageSelected(it))
+                                                },
+                                                onGoAboutScreen = {
+                                                    openAboutFrom(ProductShellNav.Route.Editor)
+                                                },
+                                                onAddMoreImages = {
+                                                    pickMultipleMedia.launch(
+                                                        PickVisualMediaRequest(
+                                                            ActivityResultContracts.PickVisualMedia.ImageOnly
+                                                        )
+                                                    )
+                                                },
+                                                onShowSaveDialog = {
+                                                    showSaveSheet = true
+                                                },
+                                                templates = templates,
+                                                onUseTemplate = { template ->
+                                                    template.content?.let { viewModel.updateText(it) }
+                                                },
+                                                onAddTemplate = { content ->
+                                                    viewModel.addTemplate(content)
+                                                },
+                                                onUpdateTemplate = { template ->
+                                                    viewModel.updateTemplate(template)
+                                                },
+                                                onDeleteTemplate = { template ->
+                                                    viewModel.deleteTemplate(template)
+                                                },
+                                            )
+                                        }
+                                        ProductShellNav.Route.About -> {
+                                            val wm by aboutViewModel.waterMark.collectAsStateWithLifecycle()
+                                            AboutScreenAndroid(
+                                                versionName = BuildConfig.VERSION_NAME,
+                                                showBounds = wm?.enableBounds ?: false,
+                                                dynamicColorOn = dynamicColorCapability.isAvailable(),
+                                                onBack = {
+                                                    productRoute =
+                                                        ProductShellNav.aboutBack(aboutReturnRoute)
+                                                },
+                                                onOpenLink = { url ->
+                                                    this@ComposeMainActivity.openLink(url)
+                                                },
+                                                onOpenSource = { showOpenSource = true },
+                                                onToggleBounds = { aboutViewModel.toggleBounds(it) },
+                                                onToggleDynamicColor = {
+                                                    aboutViewModel.toggleSupportDynamicColor(it)
+                                                    Toast.makeText(
+                                                        this@ComposeMainActivity,
+                                                        "Reboot and you'll get what you want.",
+                                                        Toast.LENGTH_SHORT,
+                                                    ).show()
+                                                },
+                                            )
+                                        }
+                                    }
+                                }
+
+                                if (showOpenSource) {
+                                    OpenSourceScreen(
+                                        onBack = { showOpenSource = false },
+                                        onOpenLink = { url ->
+                                            this@ComposeMainActivity.openLink(url)
+                                        },
+                                        backIcon = SharedProductDrawables.backPainter(),
+                                        modifier = Modifier.fillMaxSize(),
                                     )
                                 }
-                                dialog<GalleryDialogRoute>(
-                                    dialogProperties = DialogProperties(usePlatformDefaultWidth = false)
+                            }
+
+                            if (showGalleryDialog) {
+                                Dialog(
+                                    onDismissRequest = {
+                                        showGalleryDialog = false
+                                        viewModel.process(Action.DialogDismiss(false))
+                                    },
+                                    properties = DialogProperties(usePlatformDefaultWidth = false),
                                 ) {
                                     GalleryDialog(
                                         state.imageList,
                                         onLoadImages = {
-                                            viewModel.process(Action.LoadImages(context.contentResolver))
+                                            viewModel.process(
+                                                Action.LoadImages(context.contentResolver)
+                                            )
                                         },
                                         onDismiss = { selected ->
-                                            navController.popBackStack()
+                                            showGalleryDialog = false
                                             if (selected) {
-                                                navController.navigate(EditorRoute)
+                                                productRoute = ProductShellNav.Route.Editor
                                             }
                                             viewModel.process(Action.DialogDismiss(selected))
                                         },
@@ -366,7 +472,7 @@ class ComposeMainActivity : ComponentActivity() {
                                                 Action.GalleryImageSelected(
                                                     image,
                                                     index,
-                                                    isSelected
+                                                    isSelected,
                                                 )
                                             )
                                         },
@@ -376,104 +482,39 @@ class ComposeMainActivity : ComponentActivity() {
                                                     ActivityResultContracts.PickVisualMedia.ImageOnly
                                                 )
                                             )
-                                        }
-                                    )
-                                }
-                                composable<EditorRoute> {
-                                    EditorScreen(
-                                        imageList = state.selectedImageList,
-                                        waterMark = state.waterMark,
-                                        selectedImage = state.curImageInfo,
-                                        onBack = { navController.popBackStack() },
-                                        onWaterMrkChange = { item: FuncTitleModel, any: Any ->
-                                            viewModel.process(Action.WaterMarkChange(item, any))
                                         },
-                                        onImageSelected = {
-                                            viewModel.process(Action.EditorImageSelected(it))
-                                        },
-                                        onGoAboutScreen = {
-                                            navController.navigate(AboutRoute)
-                                        },
-                                        onAddMoreImages = {
-                                            pickMultipleMedia.launch(
-                                                PickVisualMediaRequest(
-                                                    ActivityResultContracts.PickVisualMedia.ImageOnly
-                                                )
-                                            )
-                                        },
-                                        onShowSaveDialog = {
-                                            showSaveSheet = true
-                                        },
-                                        templates = templates,
-                                        onUseTemplate = { template ->
-                                            template.content?.let { viewModel.updateText(it) }
-                                        },
-                                        onAddTemplate = { content ->
-                                            viewModel.addTemplate(content)
-                                        },
-                                        onUpdateTemplate = { template ->
-                                            viewModel.updateTemplate(template)
-                                        },
-                                        onDeleteTemplate = { template ->
-                                            viewModel.deleteTemplate(template)
-                                        }
-                                    )
-                                }
-                                composable<AboutRoute> {
-                                    val wm by aboutViewModel.waterMark.collectAsStateWithLifecycle()
-                                    AboutScreenAndroid(
-                                        versionName = BuildConfig.VERSION_NAME,
-                                        showBounds = wm?.enableBounds ?: false,
-                                        dynamicColorOn = dynamicColorCapability.isAvailable(),
-                                        onBack = { navController.popBackStack() },
-                                        onOpenLink = { url -> this@ComposeMainActivity.openLink(url) },
-                                        onOpenSource = {
-                                            navController.navigate(OpenSourceRoute)
-                                        },
-                                        onToggleBounds = { aboutViewModel.toggleBounds(it) },
-                                        onToggleDynamicColor = {
-                                            aboutViewModel.toggleSupportDynamicColor(it)
-                                            Toast.makeText(
-                                                this@ComposeMainActivity,
-                                                "Reboot and you'll get what you want.",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                    )
-                                }
-                                composable<OpenSourceRoute> {
-                                    OpenSourceScreen(
-                                        onBack = { navController.popBackStack() },
-                                        onOpenLink = { url -> this@ComposeMainActivity.openLink(url) },
-                                        backIcon = painterResource(R.drawable.ic_back),
-                                        strings = OpenSourceScreenStrings(
-                                            title = stringResource(R.string.about_title_open_source),
-                                            aboutLibDesc = stringResource(R.string.open_source_desc_about_lib),
-                                            materialComponentsDesc = stringResource(R.string.open_source_desc_material_components),
-                                            compressorDesc = stringResource(R.string.open_source_desc_compressor),
-                                        ),
                                     )
                                 }
                             }
 
                             if (showSaveSheet) {
-                                val exportTotalCount = saveExportState.totalCount
-                                    .takeIf { it > 0 }
-                                    ?: state.selectedImageList.size
+                                val exportImages = state.selectedImageList
+                                val exportTotalCount = exportImages.size
+                                val completed = exportImages.count {
+                                    it.jobState is me.rosuh.easywatermark.data.model.JobState.Success
+                                }.coerceAtLeast(saveExportState.completedCount)
+                                // Pack ticks into one int so thumbnails recompose on each export step.
+                                val exportTick =
+                                    saveExportState.completedCount * 10 +
+                                        (if (saveExportState.isSaving) 1 else 0) +
+                                        (if (saveExportState.isFinished) 2 else 0)
                                 SaveExportSheetAndroid(
-                                    imageCount = state.selectedImageList.size,
-                                    imageUris = state.selectedImageList.map { it.uri.toUri() },
+                                    imageCount = exportTotalCount,
+                                    images = exportImages,
                                     selectedFormatLabel = userPreferences.outputFormat,
                                     quality = userPreferences.compressLevel,
-                                    resultSummaryText = "${saveExportState.completedCount}/${exportTotalCount}",
+                                    resultSummaryText = "${if (saveExportState.isFinished) completed else completed}/$exportTotalCount",
                                     primaryActionLabel = when {
-                                        saveExportState.isSaving -> stringResource(R.string.dialog_save_exporting)
-                                        saveExportState.isFinished -> stringResource(R.string.share)
-                                        else -> stringResource(R.string.dialog_export_to_gallery)
+                                        saveExportState.isSaving -> cmpStringResource(Res.string.dialog_save_exporting)
+                                        saveExportState.isFinished -> cmpStringResource(Res.string.share)
+                                        else -> cmpStringResource(Res.string.dialog_export_to_gallery)
                                     },
                                     primaryActionEnabled = !saveExportState.isSaving,
                                     showOpenGallery = saveExportState.isFinished && outputUris.isNotEmpty(),
-                                    onDismiss = { showSaveSheet = false },
+                                    exportTick = exportTick,
+                                    onDismiss = {
+                                        if (!saveExportState.isSaving) showSaveSheet = false
+                                    },
                                     onFormatClick = { newFormat ->
                                         viewModel.saveOutput(newFormat)
                                     },
@@ -484,7 +525,7 @@ class ComposeMainActivity : ComponentActivity() {
                                         if (saveExportState.isFinished) {
                                             shareExports()
                                         } else {
-                                            if (state.selectedImageList.isEmpty()) {
+                                            if (exportImages.isEmpty()) {
                                                 return@SaveExportSheetAndroid
                                             }
                                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -521,42 +562,29 @@ private fun AboutScreenAndroid(
     onToggleDynamicColor: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AboutScreenShell(
+    AboutScreen(
         versionName = versionName,
         showBounds = showBounds,
         dynamicColorOn = dynamicColorOn,
-        strings = AboutScreenStrings(
-            infoTitle = stringResource(R.string.about_title_info),
-            versionTitle = stringResource(R.string.about_title_version),
-            ratingTitle = stringResource(R.string.about_title_rating),
-            feedbackTitle = stringResource(R.string.about_title_feed_back),
-            aboutTitle = stringResource(R.string.about_title_about),
-            updateLogTitle = stringResource(R.string.about_title_update_log),
-            openSourceTitle = stringResource(R.string.about_title_open_source),
-            privacyZhTitle = stringResource(R.string.about_title_privacy_statement_zh),
-            privacyEnTitle = stringResource(R.string.about_title_privacy_statement),
-            dynamicColorLabel = "Force Open Dynamic Color Support",
-            showBoundsLabel = "Show Bounds",
-        ),
         icons = AboutScreenIcons(
-            back = painterResource(R.drawable.ic_back),
-            version = painterResource(R.drawable.ic_version),
-            rating = painterResource(R.drawable.ic_rate),
-            feedback = painterResource(R.drawable.ic_bug_report),
-            updateLog = painterResource(R.drawable.ic_update_log),
-            openSource = painterResource(R.drawable.ic_open_source),
-            privacyZh = painterResource(R.drawable.ic_privacy_cn),
-            privacyEn = painterResource(R.drawable.ic_privacy_en),
+            back = SharedProductDrawables.backPainter(),
+            version = SharedProductDrawables.versionPainter(),
+            rating = SharedProductDrawables.ratePainter(),
+            feedback = SharedProductDrawables.feedbackPainter(),
+            updateLog = SharedProductDrawables.updateLogPainter(),
+            openSource = SharedProductDrawables.openSourcePainter(),
+            privacyZh = SharedProductDrawables.privacyZhPainter(),
+            privacyEn = SharedProductDrawables.privacyEnPainter(),
         ),
         developerCard = AboutDevCard(
             title = "Developed with ♥ by rosu",
-            description = stringResource(R.string.dev_comment),
-            avatar = painterResource(R.drawable.bg_avatar_dev),
+            description = cmpStringResource(Res.string.dev_comment),
+            avatar = SharedProductDrawables.avatarDevPainter(),
         ),
         designerCard = AboutDevCard(
             title = "Designed with ♥ by tovi",
             description = "A Designer.",
-            avatar = painterResource(R.drawable.ic_avatar_tovi),
+            avatar = SharedProductDrawables.avatarToviPainter(),
         ),
         onBack = onBack,
         onVersion = { onOpenLink(ABOUT_URL_RELEASES) },
@@ -572,16 +600,9 @@ private fun AboutScreenAndroid(
         onToggleDynamicColor = onToggleDynamicColor,
         modifier = modifier,
         logo = { logoModifier ->
-            AndroidView(
+            me.rosuh.easywatermark.ui.AboutPageLogo(
                 modifier = logoModifier,
-                factory = { ctx ->
-                    ColoredImageVIew(ctx).apply {
-                        adjustViewBounds = true
-                        scaleType = ImageView.ScaleType.FIT_CENTER
-                        setImageResource(R.drawable.ic_logo_about_page)
-                        start()
-                    }
-                }
+                animate = true,
             )
         },
     )
@@ -597,19 +618,21 @@ private const val ABOUT_URL_DEV = "https://github.com/rosuH"
 private const val ABOUT_URL_DESIGNER = "https://tovi.fun/"
 
 /**
- * Android edge for the shared save/export sheet (S4d-350): string resources + Coil URI thumbnails.
- * Export/share/MediaStore/permission stay on the Activity call site.
+ * Android edge for the shared save/export sheet (S4d-350): Coil URI thumbs + per-item jobState
+ * progress overlay. Export/share/MediaStore/permission stay on the Activity call site.
  */
 @Composable
 private fun SaveExportSheetAndroid(
     imageCount: Int,
-    imageUris: List<Uri> = emptyList(),
+    images: List<me.rosuh.easywatermark.data.model.ImageInfo> = emptyList(),
     selectedFormatLabel: ImageFormat,
     quality: Int,
     resultSummaryText: String,
     primaryActionLabel: String,
     primaryActionEnabled: Boolean = true,
     showOpenGallery: Boolean = true,
+    /** Recomposition tick while exporting (completedCount / isSaving / isFinished). */
+    exportTick: Int = 0,
     onDismiss: () -> Unit,
     onFormatClick: (newFormat: ImageFormat) -> Unit,
     onQualityChange: (Int) -> Unit,
@@ -617,34 +640,33 @@ private fun SaveExportSheetAndroid(
     onOpenGalleryClick: () -> Unit,
 ) {
     SaveExportSheetShell(
-        items = imageUris,
+        items = images,
         selectedFormat = selectedFormatLabel,
         quality = quality,
-        strings = SaveExportSheetStrings(
-            outputTitle = stringResource(R.string.about_title_output),
-            formatLabel = stringResource(R.string.dialog_save_config_format),
-            qualityLabel = stringResource(R.string.dialog_save_config_quality),
-            exportListTitle = stringResource(
-                R.string.dialog_save_export_list_title,
-                resultSummaryText,
-            ),
-            emptyPreviewText = "$imageCount image(s) selected",
-            openGalleryLabel = stringResource(R.string.dialog_open_in_gallery),
-        ),
+        exportListSubtitle = resultSummaryText,
+        imageCount = imageCount,
         primaryActionLabel = primaryActionLabel,
         primaryActionEnabled = primaryActionEnabled,
         showOpenGallery = showOpenGallery,
+        itemKey = { it.uri.value },
         onDismiss = onDismiss,
         onFormatClick = onFormatClick,
         onQualityChange = onQualityChange,
         onExportClick = onExportClick,
         onOpenGalleryClick = onOpenGalleryClick,
-    ) { uri, thumbnailModifier ->
-        AsyncImage(
-            model = uri,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
+    ) { info, thumbnailModifier ->
+        // exportTick forces overlay to re-read mutated [ImageInfo.jobState] during batch export.
+        val job = androidx.compose.runtime.remember(info.uri, exportTick) { info.jobState }
+        me.rosuh.easywatermark.ui.save.ExportProgressOverlay(
+            jobState = job,
             modifier = thumbnailModifier,
-        )
+        ) {
+            AsyncImage(
+                model = info.uri.toUri(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
     }
 }

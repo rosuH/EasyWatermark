@@ -9,34 +9,51 @@
 /* Begin PBXBuildFile section */
 		EW0000000000000000000041 /* iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000031 /* iOSApp.swift */; };
 		EW0000000000000000000042 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000032 /* ContentView.swift */; };
-		EW0000000000000000000048 /* KotlinInterop.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000038 /* KotlinInterop.swift */; };
-		EW0000000000000000000049 /* WatermarkWorkflow.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000039 /* WatermarkWorkflow.swift */; };
-		EW000000000000000000004A /* ImageExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW000000000000000000003A /* ImageExport.swift */; };
 		EW0000000000000000000044 /* NotoSans-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000034 /* NotoSans-Regular.ttf */; };
 		EW0000000000000000000045 /* NotoSansSC-Regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000035 /* NotoSansSC-Regular.otf */; };
 		EW0000000000000000000046 /* OFL-NotoSans.txt in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000036 /* OFL-NotoSans.txt */; };
 		EW0000000000000000000047 /* OFL-NotoSansCJK.txt in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000037 /* OFL-NotoSansCJK.txt */; };
+		EW0000000000000000000048 /* KotlinInterop.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000038 /* KotlinInterop.swift */; };
+		EW0000000000000000000049 /* WatermarkWorkflow.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000039 /* WatermarkWorkflow.swift */; };
+		EW000000000000000000004A /* ImageExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW000000000000000000003A /* ImageExport.swift */; };
+		EW0000000000000000000072 /* PickerFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000071 /* PickerFlowUITests.swift */; };
 		EW0000000000000000000092 /* ewm-db-ch.db in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000090 /* ewm-db-ch.db */; };
 		EW0000000000000000000093 /* ewm-db-eng.db in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000091 /* ewm-db-eng.db */; };
-		EW0000000000000000000072 /* PickerFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000071 /* PickerFlowUITests.swift */; };
+		EW00000000000000000000A1 /* ic_log_transparent.dat in Resources */ = {isa = PBXBuildFile; fileRef = EW00000000000000000000A0 /* ic_log_transparent.dat */; };
+		EW00000000000000000000B1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EW00000000000000000000B0 /* Assets.xcassets */; };
+		EW00000000000000000000B3 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = EW00000000000000000000B2 /* InfoPlist.strings */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		EW0000000000000000000081 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EW0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EW0000000000000000000020;
+			remoteInfo = iosApp;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		EW0000000000000000000030 /* iosApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iosApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EW0000000000000000000031 /* iOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSApp.swift; sourceTree = "<group>"; };
 		EW0000000000000000000032 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		EW000000000000000000003B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		EW0000000000000000000038 /* KotlinInterop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KotlinInterop.swift; sourceTree = "<group>"; };
-		EW0000000000000000000039 /* WatermarkWorkflow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatermarkWorkflow.swift; sourceTree = "<group>"; };
-		EW000000000000000000003A /* ImageExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageExport.swift; sourceTree = "<group>"; };
 		EW0000000000000000000034 /* NotoSans-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "NotoSans-Regular.ttf"; sourceTree = "<group>"; };
 		EW0000000000000000000035 /* NotoSansSC-Regular.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "NotoSansSC-Regular.otf"; sourceTree = "<group>"; };
 		EW0000000000000000000036 /* OFL-NotoSans.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OFL-NotoSans.txt"; sourceTree = "<group>"; };
 		EW0000000000000000000037 /* OFL-NotoSansCJK.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OFL-NotoSansCJK.txt"; sourceTree = "<group>"; };
-		EW0000000000000000000090 /* ewm-db-ch.db */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ewm-db-ch.db"; sourceTree = "<group>"; };
-		EW0000000000000000000091 /* ewm-db-eng.db */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ewm-db-eng.db"; sourceTree = "<group>"; };
+		EW0000000000000000000038 /* KotlinInterop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KotlinInterop.swift; sourceTree = "<group>"; };
+		EW0000000000000000000039 /* WatermarkWorkflow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatermarkWorkflow.swift; sourceTree = "<group>"; };
+		EW000000000000000000003A /* ImageExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageExport.swift; sourceTree = "<group>"; };
+		EW000000000000000000003B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		EW0000000000000000000070 /* iosAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iosAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		EW0000000000000000000071 /* PickerFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickerFlowUITests.swift; sourceTree = "<group>"; };
+		EW0000000000000000000090 /* ewm-db-ch.db */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ewm-db-ch.db"; sourceTree = "<group>"; };
+		EW0000000000000000000091 /* ewm-db-eng.db */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ewm-db-eng.db"; sourceTree = "<group>"; };
+		EW00000000000000000000A0 /* ic_log_transparent.dat */ = {isa = PBXFileReference; lastKnownFileType = file; path = ic_log_transparent.dat; sourceTree = "<group>"; };
+		EW00000000000000000000B0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		EW00000000000000000000B4 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		EW00000000000000000000B5 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -66,20 +83,14 @@
 			);
 			sourceTree = "<group>";
 		};
-		EW0000000000000000000015 /* iosAppUITests */ = {
-			isa = PBXGroup;
-			children = (
-				EW0000000000000000000071 /* PickerFlowUITests.swift */,
-			);
-			path = iosAppUITests;
-			sourceTree = "<group>";
-		};
 		EW0000000000000000000011 /* iosApp */ = {
 			isa = PBXGroup;
 			children = (
 				EW0000000000000000000031 /* iOSApp.swift */,
 				EW0000000000000000000032 /* ContentView.swift */,
 				EW000000000000000000003B /* Info.plist */,
+				EW00000000000000000000B2 /* InfoPlist.strings */,
+				EW00000000000000000000B0 /* Assets.xcassets */,
 				EW0000000000000000000038 /* KotlinInterop.swift */,
 				EW0000000000000000000039 /* WatermarkWorkflow.swift */,
 				EW000000000000000000003A /* ImageExport.swift */,
@@ -88,9 +99,19 @@
 			path = iosApp;
 			sourceTree = "<group>";
 		};
+		EW0000000000000000000012 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				EW0000000000000000000030 /* iosApp.app */,
+				EW0000000000000000000070 /* iosAppUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
 		EW0000000000000000000013 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				EW00000000000000000000A0 /* ic_log_transparent.dat */,
 				EW0000000000000000000014 /* Fonts */,
 				EW0000000000000000000094 /* Seed */,
 			);
@@ -108,6 +129,14 @@
 			path = Fonts;
 			sourceTree = "<group>";
 		};
+		EW0000000000000000000015 /* iosAppUITests */ = {
+			isa = PBXGroup;
+			children = (
+				EW0000000000000000000071 /* PickerFlowUITests.swift */,
+			);
+			path = iosAppUITests;
+			sourceTree = "<group>";
+		};
 		EW0000000000000000000094 /* Seed */ = {
 			isa = PBXGroup;
 			children = (
@@ -117,16 +146,19 @@
 			path = Seed;
 			sourceTree = "<group>";
 		};
-		EW0000000000000000000012 /* Products */ = {
-			isa = PBXGroup;
+/* End PBXGroup section */
+
+/* Begin PBXVariantGroup section */
+		EW00000000000000000000B2 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
 			children = (
-				EW0000000000000000000030 /* iosApp.app */,
-				EW0000000000000000000070 /* iosAppUITests.xctest */,
+				EW00000000000000000000B4 /* zh-Hans */,
+				EW00000000000000000000B5 /* zh-Hant */,
 			);
-			name = Products;
+			name = InfoPlist.strings;
 			sourceTree = "<group>";
 		};
-/* End PBXGroup section */
+/* End PBXVariantGroup section */
 
 /* Begin PBXNativeTarget section */
 		EW0000000000000000000020 /* iosApp */ = {
@@ -190,6 +222,8 @@
 			knownRegions = (
 				en,
 				Base,
+				"zh-Hans",
+				"zh-Hant",
 			);
 			mainGroup = EW0000000000000000000010;
 			productRefGroup = EW0000000000000000000012 /* Products */;
@@ -207,6 +241,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EW00000000000000000000B1 /* Assets.xcassets in Resources */,
+				EW00000000000000000000B3 /* InfoPlist.strings in Resources */,
+				EW00000000000000000000A1 /* ic_log_transparent.dat in Resources */,
 				EW0000000000000000000044 /* NotoSans-Regular.ttf in Resources */,
 				EW0000000000000000000045 /* NotoSansSC-Regular.otf in Resources */,
 				EW0000000000000000000046 /* OFL-NotoSans.txt in Resources */,
@@ -271,16 +308,6 @@
 		};
 /* End PBXTargetDependency section */
 
-/* Begin PBXContainerItemProxy section */
-		EW0000000000000000000081 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = EW0000000000000000000001 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = EW0000000000000000000020;
-			remoteInfo = iosApp;
-		};
-/* End PBXContainerItemProxy section */
-
 /* Begin XCBuildConfiguration section */
 		EW0000000000000000000061 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -337,9 +364,12 @@
 		EW0000000000000000000064 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				COMPRESS_PNG_FILES = NO;
+				CURRENT_PROJECT_VERSION = 21000;
+				DEVELOPMENT_TEAM = 85MZB3GP6S;
 				ENABLE_PREVIEWS = YES;
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -348,11 +378,12 @@
 				);
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = iosApp/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Easy Watermark";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2.10.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-framework",
@@ -369,9 +400,12 @@
 		EW0000000000000000000065 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				COMPRESS_PNG_FILES = NO;
+				CURRENT_PROJECT_VERSION = 21000;
+				DEVELOPMENT_TEAM = 85MZB3GP6S;
 				ENABLE_PREVIEWS = YES;
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -380,11 +414,12 @@
 				);
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = iosApp/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Easy Watermark";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2.10.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-framework",
@@ -403,11 +438,11 @@
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 21000;
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2.10.0;
 				PRODUCT_BUNDLE_IDENTIFIER = me.rosuh.easywatermark.iosUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -423,11 +458,11 @@
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 21000;
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2.10.0;
 				PRODUCT_BUNDLE_IDENTIFIER = me.rosuh.easywatermark.iosUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;

@@ -17,6 +17,7 @@ import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopWatermarkComposer
 import me.rosuh.easywatermark.render.DesktopWatermarkTextRenderer
 import me.rosuh.easywatermark.render.WatermarkGeometry
+import me.rosuh.easywatermark.ui.CmpSpikeDesktopWitness
 import java.io.File
 
 /**
@@ -51,6 +52,9 @@ fun main(args: Array<String>) {
  */
 private fun runHeadless(args: Array<String>) {
     println("EasyWatermark — Desktop (JVM) target, running :shared/commonMain engine core")
+
+    // S-i18n-0: prove composeResources resolve on the real Desktop consumer (not unit-test only).
+    CmpSpikeDesktopWitness.printAndCheck()
 
     // domain types from commonMain
     val format = ImageFormat.fromStorageId(1)

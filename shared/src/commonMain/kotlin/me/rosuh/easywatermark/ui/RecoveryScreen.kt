@@ -21,22 +21,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import me.rosuh.easywatermark.shared.generated.resources.Res
+import me.rosuh.easywatermark.shared.generated.resources.copy
+import me.rosuh.easywatermark.shared.generated.resources.recovery_jump_to_store
+import me.rosuh.easywatermark.shared.generated.resources.recovery_mode_tips
+import me.rosuh.easywatermark.shared.generated.resources.recovery_send_email
+import me.rosuh.easywatermark.shared.generated.resources.recovery_send_telegram
+import me.rosuh.easywatermark.shared.generated.resources.recovery_title
+import me.rosuh.easywatermark.shared.generated.resources.turn_off_recovery_mode
+import org.jetbrains.compose.resources.stringResource
 
 /**
- * Compose replacement for the legacy `activity_recovery.xml` crash-recovery screen
- * (View→Compose migration, ADR-0016). Shown by [me.rosuh.easywatermark.ui.ComposeMainActivity]
- * when `MyApp.recoveryMode` is true — the crash-loop self-heal surface. Pure UI + callbacks;
- * the host wires clipboard, email, links, and recovery-mode reset.
- *
- * Moved to `:shared/commonMain` in S4d-241. S4d-238 resource strategy: all visible labels are
- * passed as [RecoveryScreenStrings] (the Android caller resolves `stringResource` at the edge,
- * and passes the previously-hardcoded button literals through unchanged). This composable has
- * no `R.string`/`stringResource`/`painterResource` or Android-package dependencies.
+ * Compose crash-recovery screen (ADR-0016). S-i18n-2: labels from [Res], not bags.
  */
 @Composable
 fun RecoveryScreen(
     crashInfo: String,
-    strings: RecoveryScreenStrings,
     onCopy: () -> Unit,
     onSendEmail: () -> Unit,
     onTelegram: () -> Unit,
@@ -44,6 +44,14 @@ fun RecoveryScreen(
     onCloseRecovery: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val title = stringResource(Res.string.recovery_title)
+    val tips = stringResource(Res.string.recovery_mode_tips)
+    val copy = stringResource(Res.string.copy)
+    val sendEmail = stringResource(Res.string.recovery_send_email)
+    val sendTelegram = stringResource(Res.string.recovery_send_telegram)
+    val jumpToStore = stringResource(Res.string.recovery_jump_to_store)
+    val turnOffRecovery = stringResource(Res.string.turn_off_recovery_mode)
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -52,13 +60,13 @@ fun RecoveryScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = strings.title,
+            text = title,
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(top = 16.dp)
         )
         Text(
-            text = strings.tips,
+            text = tips,
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
@@ -82,34 +90,18 @@ fun RecoveryScreen(
         }
         Spacer(Modifier.height(12.dp))
         Button(onClick = onCopy) {
-            Text(strings.copy)
+            Text(copy)
         }
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            TextButton(onClick = onSendEmail) { Text(strings.sendEmail) }
-            TextButton(onClick = onTelegram) { Text(strings.sendTelegram) }
-            TextButton(onClick = onStore) { Text(strings.jumpToStore) }
+            TextButton(onClick = onSendEmail) { Text(sendEmail) }
+            TextButton(onClick = onTelegram) { Text(sendTelegram) }
+            TextButton(onClick = onStore) { Text(jumpToStore) }
         }
         TextButton(onClick = onCloseRecovery) {
-            Text(strings.turnOffRecovery)
+            Text(turnOffRecovery)
         }
     }
 }
-
-/**
- * Resolved string values for [RecoveryScreen]. The Android caller constructs this at the edge
- * using `stringResource(R.string.*)` for the localized labels and passes the previously
- * hardcoded button literals (`sendEmail`/`sendTelegram`/`jumpToStore`) through unchanged.
- * Desktop/iOS pass hard-coded English strings. See S4d-238 resource strategy.
- */
-data class RecoveryScreenStrings(
-    val title: String,
-    val tips: String,
-    val copy: String,
-    val sendEmail: String,
-    val sendTelegram: String,
-    val jumpToStore: String,
-    val turnOffRecovery: String,
-)

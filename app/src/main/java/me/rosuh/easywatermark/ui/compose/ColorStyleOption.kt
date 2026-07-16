@@ -19,8 +19,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
@@ -28,7 +26,6 @@ import androidx.compose.ui.unit.dp
 import com.skydoves.colorpickerview.ColorEnvelope
 import com.skydoves.colorpickerview.ColorPickerDialog
 import com.skydoves.colorpickerview.listeners.ColorEnvelopeListener
-import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
 import me.rosuh.easywatermark.data.model.FuncType
 import me.rosuh.easywatermark.data.model.MediaRef
@@ -37,6 +34,12 @@ import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
+import me.rosuh.easywatermark.shared.generated.resources.Res
+import me.rosuh.easywatermark.shared.generated.resources.tips_cancel_dialog
+import me.rosuh.easywatermark.shared.generated.resources.tips_choose_color_dialog
+import me.rosuh.easywatermark.shared.generated.resources.tips_confirm_dialog
+import me.rosuh.easywatermark.ui.SharedProductDrawables
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Android Style → Color control. Layout matches production v2.10.0 [ColorFragment]:
@@ -89,11 +92,7 @@ private fun ColorOptionPreview() {
         tileMode = WatermarkTileMode.CLAMP,
     )
     ColorOption(
-        item = FuncTitleModel(
-            FuncType.Color,
-            R.string.title_text_color,
-            R.drawable.ic_func_color
-        ),
+        item = FuncTitleModel(FuncType.Color),
         waterMark = waterMark,
     )
 }
@@ -106,9 +105,9 @@ fun ColorOption(
     onChange: (item: FuncTitleModel, any: Any) -> Unit = { _, _ -> },
 ) {
     val context = LocalContext.current
-    val chooseColorTitle = stringResource(R.string.tips_choose_color_dialog)
-    val confirmLabel = stringResource(R.string.tips_confirm_dialog)
-    val cancelLabel = stringResource(R.string.tips_cancel_dialog)
+    val chooseColorTitle = stringResource(Res.string.tips_choose_color_dialog)
+    val confirmLabel = stringResource(Res.string.tips_confirm_dialog)
+    val cancelLabel = stringResource(Res.string.tips_cancel_dialog)
 
     val selectedIsPreset = presetColorList.any {
         !it.isCustomPicker && it.color == waterMark.textColor
@@ -195,7 +194,7 @@ private fun ColorSwatch(
     ) {
         if (colorItem.isCustomPicker) {
             Image(
-                painter = painterResource(id = R.drawable.ic_btn_color_picker),
+                painter = SharedProductDrawables.colorPickerPainter(),
                 contentDescription = null,
                 modifier = Modifier
                     .size(24.dp)

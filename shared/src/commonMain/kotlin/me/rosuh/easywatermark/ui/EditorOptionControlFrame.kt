@@ -1,11 +1,11 @@
 package me.rosuh.easywatermark.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
@@ -15,15 +15,13 @@ fun EditorOptionControlFrame(
     content: @Composable (innerModifier: Modifier) -> Unit,
 ) {
     Box(
-        modifier = modifier
-            .background(MaterialTheme.colorScheme.surface)
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
     ) {
         content(
             Modifier
                 .fillMaxWidth()
-                // Tighter vertical padding so Content text field / sliders remain fully visible
-                // under the previous hard 56.dp clip (Phase B ticket 08).
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 4.dp),
         )
     }
 }

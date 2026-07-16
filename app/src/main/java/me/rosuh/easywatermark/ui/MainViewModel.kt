@@ -22,8 +22,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.MyApp
-import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.model.FuncTitleModel
+import me.rosuh.easywatermark.shared.generated.resources.Res
+import me.rosuh.easywatermark.shared.generated.resources.crash_mail
+import me.rosuh.easywatermark.shared.generated.resources.email_subject
+import me.rosuh.easywatermark.shared.generated.resources.tip_not_mail_found
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
@@ -314,22 +317,22 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "message/rfc822"
             putExtra(Intent.EXTRA_EMAIL, arrayOf("hi@rosuh.me"))
-            putExtra(Intent.EXTRA_SUBJECT, activity.getString(R.string.email_subject))
+            putExtra(Intent.EXTRA_SUBJECT, sharedString(Res.string.email_subject))
             putExtra(Intent.EXTRA_TEXT, mainContent)
         }
         try {
             activity.startActivity(
                 Intent.createChooser(
                     intent,
-                    activity.getString(R.string.crash_mail)
+                    sharedString(Res.string.crash_mail),
                 )
             )
         } catch (e: ActivityNotFoundException) {
             e.printStackTrace()
             Toast.makeText(
                 activity,
-                activity.getString(R.string.tip_not_mail_found),
-                Toast.LENGTH_LONG
+                sharedString(Res.string.tip_not_mail_found),
+                Toast.LENGTH_LONG,
             ).show()
         }
     }

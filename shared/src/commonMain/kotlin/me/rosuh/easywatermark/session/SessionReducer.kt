@@ -108,10 +108,19 @@ fun reduceSessionUi(snapshot: SessionUiSnapshot, intent: AppIntent): SessionRedu
             if (snapshot.launch.curImageInfo?.uri == intent.ref) {
                 SessionReduceResult(snapshot)
             } else {
-                SessionReduceResult(
-                    snapshot = snapshot,
-                    effects = listOf(SessionEffect.SelectImage(intent.ref)),
-                )
+                // Must update curImageInfo in the same reduce — hosts (iOS) export immediately
+                // after SelectCurrent; relying on async SyncCurrentImage races and exports the wrong image.
+                val match = snapshot.launch.selectedImageList.firstOrNull { it.uri == intent.ref }
+                if (match == null) {
+                    SessionReduceResult(snapshot)
+                } else {
+                    SessionReduceResult(
+                        snapshot = snapshot.copy(
+                            launch = snapshot.launch.copy(curImageInfo = match),
+                        ),
+                        effects = listOf(SessionEffect.SelectImage(intent.ref)),
+                    )
+                }
             }
         }
 

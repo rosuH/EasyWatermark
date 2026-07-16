@@ -28,12 +28,17 @@ plugins {
 // AndroidX coordinates. S4d-236: use the original dependency's version (not a hard-coded one) so
 // artifacts on different version lines (material3 at 1.4.0, annotation-internal, etc.) resolve
 // correctly; the Compose BOM (2026.05.01 -> 1.11.2) aligns the core compose.* artifacts.
+// S-i18n-0: do NOT substitute org.jetbrains.compose.components.* (compose multiplatform resources) —
+// there is no androidx.compose.components:components-resources artifact; keep JetBrains coordinates.
 // Build-config only; no source/renderer/UI behavior change.
 configurations.all {
     resolutionStrategy.dependencySubstitution {
         all {
             val selector = requested
-            if (selector is ModuleComponentSelector && selector.group.startsWith("org.jetbrains.compose.")) {
+            if (selector is ModuleComponentSelector &&
+                selector.group.startsWith("org.jetbrains.compose.") &&
+                !selector.group.startsWith("org.jetbrains.compose.components")
+            ) {
                 val androidxGroup = selector.group.replaceFirst("org.jetbrains.compose", "androidx.compose")
                 useTarget(
                     "$androidxGroup:${selector.module}:${selector.version}",

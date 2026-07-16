@@ -1,0 +1,53 @@
+[
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CF9CE125-D6B2-4D40-B634-56C5E5B65CF4",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "957D1F2E-B2C8-4624-9443-793887D24DBF.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "04-share-sheet_0_5E69FEE0-99FD-46B9-A9F4-AF159ABA8AD0.png",
+        "timestamp" : 1783903775.313
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CF9CE125-D6B2-4D40-B634-56C5E5B65CF4",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "1D3DAE8E-CAC8-4B68-B29B-6845DF9D6188.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "03-after-save_0_22170B77-D0F8-4043-8FF3-C15938E9BB8E.png",
+        "timestamp" : 1783903772.662
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CF9CE125-D6B2-4D40-B634-56C5E5B65CF4",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "B6D62226-9642-4F7A-AC3F-859B21A9DC36.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "02b-export-sheet_0_D5CF7483-0D53-4F8B-BA6F-F9465C91F2D0.png",
+        "timestamp" : 1783903746.402
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CF9CE125-D6B2-4D40-B634-56C5E5B65CF4",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "6067C27A-B9A9-477D-B641-A82AE6202DBE.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "02-watermarked-preview_0_4A98EE92-E1F9-4410-B16D-B75FE5150ECE.png",
+        "timestamp" : 1783903743.816
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CF9CE125-D6B2-4D40-B634-56C5E5B65CF4",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "4E29F1F2-9C37-4101-86EA-D7C0929143A8.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "01-launched-with-fixture_0_90BCCB06-9B00-4744-B7AB-C68E16BE797D.png",
+        "timestamp" : 1783903742.69
+      }
+    ],
+    "testIdentifier" : "PickerFlowUITests/testFixtureRenderPreviewAndExport()",
+    "testIdentifierURL" : "test://com.apple.xcode/iosApp/iosAppUITests/PickerFlowUITests/testFixtureRenderPreviewAndExport"
+  }
+]

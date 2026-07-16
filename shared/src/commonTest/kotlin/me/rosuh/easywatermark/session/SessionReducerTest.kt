@@ -121,4 +121,38 @@ class SessionReducerTest {
         assertEquals(LaunchScreenUiState.Launch, r.snapshot.launch.uiState)
         assertTrue(r.effects.isEmpty())
     }
+
+    /** U0/E06 filmstrip: selection updates curImageInfo immediately + SelectImage effect. */
+    @Test
+    fun selectCurrent_emitsSelectImageEffect() {
+        val a = me.rosuh.easywatermark.data.model.ImageInfo(MediaRef("file:///a.jpg"))
+        val b = me.rosuh.easywatermark.data.model.ImageInfo(MediaRef("file:///b.jpg"))
+        val base = SessionUiSnapshot(
+            launch = me.rosuh.easywatermark.ui.LaunchScreenState(
+                uiState = LaunchScreenUiState.Editor,
+                selectedImageList = listOf(a, b),
+                curImageInfo = a,
+            ),
+        )
+        val r = reduceSessionUi(base, AppIntent.SelectCurrent(b.uri))
+        val effect = r.effects.single()
+        assertIs<SessionEffect.SelectImage>(effect)
+        assertEquals(b.uri, effect.ref)
+        // Critical for iOS: curImageInfo must flip in the same reduce (not async SyncCurrentImage).
+        assertEquals(b.uri, r.snapshot.launch.curImageInfo?.uri)
+    }
+
+    @Test
+    fun selectCurrent_sameRef_isNoOp() {
+        val a = me.rosuh.easywatermark.data.model.ImageInfo(MediaRef("file:///a.jpg"))
+        val base = SessionUiSnapshot(
+            launch = me.rosuh.easywatermark.ui.LaunchScreenState(
+                uiState = LaunchScreenUiState.Editor,
+                selectedImageList = listOf(a),
+                curImageInfo = a,
+            ),
+        )
+        val r = reduceSessionUi(base, AppIntent.SelectCurrent(a.uri))
+        assertTrue(r.effects.isEmpty())
+    }
 }

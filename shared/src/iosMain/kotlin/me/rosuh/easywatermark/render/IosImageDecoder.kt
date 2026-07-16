@@ -2,7 +2,11 @@ package me.rosuh.easywatermark.render
 
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image as SkiaImage
+import org.jetbrains.skia.Rect as SkiaRect
+import org.jetbrains.skia.SamplingMode
+import org.jetbrains.skia.Surface
 
 /**
  * S4d-20B: the **iOS platform image-decode boundary** — the iOS analogue of the Desktop
@@ -39,11 +43,60 @@ object IosImageDecoder {
      * loudly instead of propagating a bad image.
      */
     fun decode(bytes: ByteArray): ImageBitmap {
-        val skiaImage = try {
+        val skiaImage = decodeSkia(bytes)
+        return skiaImage.toComposeImageBitmap()
+    }
+
+    /**
+     * Decode and downscale so the longer edge is at most [maxEdgePx]. Used for filmstrip cells
+     * (≈40dp) so multi-pick does not decode multi-megapixel bitmaps for every thumbnail.
+     */
+    fun decodeThumbnail(bytes: ByteArray, maxEdgePx: Int = 160): ImageBitmap {
+        return scaleSkia(decodeSkia(bytes), maxEdgePx).toComposeImageBitmap()
+    }
+
+    /**
+     * Re-encode [bytes] as PNG with longest edge ≤ [maxEdgePx] for **on-screen preview export**.
+     * Full-res camera photos (12MP+) make Skiko watermark raster multi-second; preview does not
+     * need full resolution.
+     */
+    fun downscaleEncodedToPng(bytes: ByteArray, maxEdgePx: Int = 1600): ByteArray {
+        val scaled = scaleSkia(decodeSkia(bytes), maxEdgePx)
+        val data = scaled.encodeToData(EncodedImageFormat.PNG)
+            ?: error("IosImageDecoder: failed to encode downscaled PNG")
+        return data.bytes
+    }
+
+    private fun scaleSkia(skiaImage: SkiaImage, maxEdgePx: Int): SkiaImage {
+        val w = skiaImage.width
+        val h = skiaImage.height
+        val longest = maxOf(w, h).coerceAtLeast(1)
+        if (longest <= maxEdgePx) {
+            return skiaImage
+        }
+        val scale = maxEdgePx.toFloat() / longest.toFloat()
+        val nw = (w * scale).toInt().coerceAtLeast(1)
+        val nh = (h * scale).toInt().coerceAtLeast(1)
+        val surface = Surface.makeRasterN32Premul(nw, nh)
+        surface.canvas.drawImageRect(
+            skiaImage,
+            src = SkiaRect.makeWH(w.toFloat(), h.toFloat()),
+            dst = SkiaRect.makeWH(nw.toFloat(), nh.toFloat()),
+            samplingMode = SamplingMode.LINEAR,
+            paint = null,
+            strict = true,
+        )
+        return surface.makeImageSnapshot()
+    }
+
+    private fun decodeSkia(bytes: ByteArray): SkiaImage {
+        return try {
             SkiaImage.makeFromEncoded(bytes)
         } catch (t: Throwable) {
-            error("IosImageDecoder: Skia could not decode the supplied ${bytes.size}-byte image (unsupported/corrupt): ${t.message}")
+            error(
+                "IosImageDecoder: Skia could not decode the supplied ${bytes.size}-byte image " +
+                    "(unsupported/corrupt): ${t.message}",
+            )
         }
-        return skiaImage.toComposeImageBitmap()
     }
 }

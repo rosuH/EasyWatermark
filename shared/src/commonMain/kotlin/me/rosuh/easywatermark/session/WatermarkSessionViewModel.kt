@@ -183,6 +183,20 @@ open class WatermarkSessionViewModel(
         _exportJobState.value = ExportJobState()
     }
 
+    /**
+     * Host-only: mark a platform-edge export as finished when the shared pipeline was not used
+     * (e.g. Desktop fixture sample save). Does not write files.
+     */
+    fun markExportFinished(completedCount: Int, totalCount: Int) {
+        setExportJobState(
+            ExportJobState(
+                isFinished = true,
+                completedCount = completedCount,
+                totalCount = totalCount,
+            ),
+        )
+    }
+
     protected fun setExportJobState(state: ExportJobState) {
         _exportJobState.value = state
     }
@@ -227,6 +241,14 @@ open class WatermarkSessionViewModel(
             for (info in images) {
                 try {
                     info.jobState = JobState.Ing
+                    // Emit so UI can show per-thumb progress animation before this item finishes.
+                    setExportJobState(
+                        ExportJobState(
+                            isSaving = true,
+                            completedCount = images.count { it.jobState is JobState.Success },
+                            totalCount = images.size,
+                        ),
+                    )
                     val result = pipeline.exportOne(info, config, prefs)
                     info.result = result
                     info.jobState = if (result.isSuccess()) {

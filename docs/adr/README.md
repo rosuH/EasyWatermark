@@ -9,7 +9,9 @@ Decisions trace to the CMP migration plan (`docs/superpowers/plans/2026-06-12-cm
 | [0001](0001-platform-targets-and-order.md) | Platform targets and order: Android → Desktop (validation) → iOS | Accepted |
 | [0002](0002-single-shared-module-agp-hold.md) | Single `:shared` module; hold AGP 8.x with C4-gate re-check | Accepted |
 | [0003](0003-navigation-stay-nav2.md) | Navigation: stay on Nav2 via JetBrains coordinate; defer Nav3 | Accepted |
-| [0004](0004-rendering-engine-commonmain-rewrite.md) | Rendering engine: single commonMain rewrite, C2a/C2b split | Accepted (image-space sizing portion: Proposed) |
+| [0004](0004-rendering-engine-commonmain-rewrite.md) | Rendering engine: single commonMain rewrite, C2a/C2b split | Accepted; **production Android native hold partially superseded by [0018](0018-option-c2-common-raster-android-export.md)** |
+| [0018](0018-option-c2-common-raster-android-export.md) | Option C2: common raster for Android export + unified preview | **Accepted** (owner 2026-07-12) |
+| [0019](0019-cmp-compose-resources-i18n.md) | CMP composeResources for product UI strings + drawables | **Accepted** (Phases 0–3 landed 2026-07-12) |
 | [0005](0005-di-koin-interfaces.md) | DI: interfaces + Koin modules; expect/actual only at the edges | Accepted |
 | [0006](0006-data-layer-kmp.md) | Data layer: Room/DataStore on KMP coordinates; prepopulated DB path | Accepted |
 | [0007](0007-platform-neutral-models.md) | Platform-neutral model layer (TileMode, ImageFormat, MediaRef) | Accepted |

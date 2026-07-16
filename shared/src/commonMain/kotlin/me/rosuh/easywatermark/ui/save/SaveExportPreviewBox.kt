@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,13 +30,17 @@ import androidx.compose.ui.unit.dp
 /**
  * Shared CMP shell for the save/export preview list.
  *
- * Android still supplies the thumbnail renderer because exported image URIs are a platform edge.
+ * Hosts supply per-item thumbnails (decode by source path/URI — never a single shared preview).
+ * Prefer a stable [itemKey] so LazyRow does not reuse wrong cells across identities.
+ * Hosts **must** decode thumbs off the main thread (see filmstrip produceState pattern);
+ * sync decode inside [thumbnail] freezes fling.
  */
 @Composable
 fun <T> SaveExportPreviewBox(
     items: List<T>,
     emptyText: String,
     modifier: Modifier = Modifier,
+    itemKey: ((T) -> Any)? = null,
     thumbnail: @Composable (item: T, modifier: Modifier) -> Unit,
 ) {
     Box(
@@ -62,7 +67,8 @@ fun <T> SaveExportPreviewBox(
         } else {
             val density = LocalDensity.current
             var rowWidth by remember { mutableStateOf(0.dp) }
-            val itemSize = 96.dp
+            // 72dp is enough for export status chrome; lighter than 96dp for multi-image fling.
+            val itemSize = 72.dp
             val spacing = 8.dp
             val minPad = 8.dp
             val contentWidth =
@@ -80,12 +86,23 @@ fun <T> SaveExportPreviewBox(
                 contentPadding = PaddingValues(horizontal = sidePad, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(spacing),
                 verticalAlignment = Alignment.CenterVertically,
+                overscrollEffect = rememberOverscrollEffect(),
             ) {
-                items(items) { item ->
-                    thumbnail(
-                        item,
-                        Modifier.size(itemSize),
-                    )
+                if (itemKey != null) {
+                    items(
+                        items = items,
+                        key = itemKey,
+                        contentType = { _ -> "export_thumb" },
+                    ) { item ->
+                        thumbnail(item, Modifier.size(itemSize))
+                    }
+                } else {
+                    items(
+                        items = items,
+                        contentType = { _ -> "export_thumb" },
+                    ) { item ->
+                        thumbnail(item, Modifier.size(itemSize))
+                    }
                 }
             }
         }

@@ -8,12 +8,20 @@ import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.repo.IosIconPersistence
 import me.rosuh.easywatermark.render.IosByteArrayInterop
+import me.rosuh.easywatermark.render.IosImageDecoder
 import me.rosuh.easywatermark.render.IosWatermarkRenderBridge
 import platform.Foundation.NSData
 import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSUUID
 import platform.Foundation.dataWithContentsOfFile
 import platform.Foundation.writeToFile
+
+/**
+ * On-screen editor preview max long edge.
+ * Aligns with Android Compose [decodeSampledBitmapFromResource] targeting **canvas size**
+ * (~display pixels, not full camera megapixels). Full save export can use a higher budget later.
+ */
+private const val PREVIEW_MAX_EDGE_PX = 1080
 
 /**
  * iOS [ExportPipelinePort] (ADR-0017 Phase 4): Skiko render via [IosWatermarkRenderBridge]
@@ -40,7 +48,11 @@ class IosExportPipelinePort : ExportPipelinePort {
                     code = ExportErrorCodes.FILE_NOT_FOUND,
                     message = "Source not readable: $path",
                 )
-            val imageBytes = IosByteArrayInterop.fromNSData(data)
+            // Downscale huge camera assets before Skiko raster — biggest iOS preview lag source.
+            val imageBytes = IosImageDecoder.downscaleEncodedToPng(
+                IosByteArrayInterop.fromNSData(data),
+                maxEdgePx = PREVIEW_MAX_EDGE_PX,
+            )
             val rendered = when (config.markMode) {
                 WatermarkMode.Text -> IosWatermarkRenderBridge.renderWatermarkedPng(
                     imageBytes = imageBytes,

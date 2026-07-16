@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- S-i18n-1 dual-write: Weblate still owns app/res locales until post-master retarget.
+     composeResources is the CMP seed (sync when needed). R.string until Phase 2. -->
 <resources>
     <string name="app_name">Easy Watermark</string>
     <string name="action_pick">Choose picture</string>

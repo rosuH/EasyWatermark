@@ -9,6 +9,8 @@ struct EasyWatermarkApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                // Product is forced-dark (parity with Android production); light status bar chrome.
+                .preferredColorScheme(.dark)
         }
     }
 }

@@ -9,9 +9,11 @@ import me.rosuh.easywatermark.data.db.AppDatabase
 import me.rosuh.easywatermark.data.db.dao.TemplateDao
 import me.rosuh.easywatermark.data.repo.MemorySettingRepo
 import me.rosuh.easywatermark.data.repo.TemplateRepository
-import me.rosuh.easywatermark.R
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
+import me.rosuh.easywatermark.shared.generated.resources.Res
+import me.rosuh.easywatermark.shared.generated.resources.config_default_water_mark_text
+import me.rosuh.easywatermark.ui.sharedString
 import me.rosuh.easywatermark.utils.ktx.toWatermarkTileMode
 import org.koin.dsl.module
 
@@ -24,7 +26,8 @@ val repositoryModule = module {
         val context = get<Context>()
         WaterMarkRepository(
             dataStore = context.waterMarkDataStore,
-            defaultTextProvider = { context.getString(R.string.config_default_water_mark_text) },
+            // Product default watermark text from composeResources (locale-aware via sharedString).
+            defaultTextProvider = { sharedString(Res.string.config_default_water_mark_text) },
             // S4d-87: Android edge passes the SDK-gated legacy tile-id mapper (pre-S DECAL -> REPEAT).
             tileModeFromStorageId = { it.toWatermarkTileMode() },
             logError = { message -> Log.e("WaterMarkRepository", message) },

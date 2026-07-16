@@ -1,0 +1,74 @@
+package me.rosuh.easywatermark.ui
+
+import me.rosuh.easywatermark.ProductVersion
+import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.MediaRef
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+
+class ProductShellNavTest {
+
+    @Test
+    fun aboutBack_fromLaunch_returnsLaunch() {
+        assertEquals(
+            ProductShellNav.Route.Launch,
+            ProductShellNav.aboutBack(ProductShellNav.Route.Launch),
+        )
+    }
+
+    @Test
+    fun aboutBack_fromEditor_returnsEditor_notLaunch() {
+        assertEquals(
+            ProductShellNav.Route.Editor,
+            ProductShellNav.aboutBack(ProductShellNav.Route.Editor),
+        )
+        assertNotEquals(
+            ProductShellNav.Route.Launch,
+            ProductShellNav.aboutBack(ProductShellNav.Route.Editor),
+        )
+    }
+
+    @Test
+    fun productVersion_isNotPlatformLabel() {
+        assertEquals("2.10.0", ProductVersion.NAME)
+        assertNotEquals("iOS", ProductVersion.NAME)
+    }
+
+    @Test
+    fun mergePickedSelection_replaceVsAppend() {
+        val a = ImageInfo(MediaRef("a"))
+        val b = ImageInfo(MediaRef("b"))
+        val c = ImageInfo(MediaRef("c"))
+        assertEquals(listOf(b, c), ProductShellNav.mergePickedSelection(listOf(a), listOf(b, c), append = false))
+        assertEquals(listOf(a, b, c), ProductShellNav.mergePickedSelection(listOf(a), listOf(b, c), append = true))
+        assertEquals(listOf(a), ProductShellNav.mergePickedSelection(listOf(a), emptyList(), append = true))
+    }
+
+    @Test
+    fun openAbout_remembersReturnRoute() {
+        val (route, ret) = ProductShellNav.openAbout(ProductShellNav.Route.Editor)
+        assertEquals(ProductShellNav.Route.About, route)
+        assertEquals(ProductShellNav.Route.Editor, ret)
+    }
+
+    @Test
+    fun productShellTransitions_aboutKinds() {
+        assertEquals(
+            ProductShellTransitions.TransitionKind.ToAbout,
+            ProductShellTransitions.kind(ProductShellNav.Route.Launch, ProductShellNav.Route.About),
+        )
+        assertEquals(
+            ProductShellTransitions.TransitionKind.FromAbout,
+            ProductShellTransitions.kind(ProductShellNav.Route.About, ProductShellNav.Route.Editor),
+        )
+        assertEquals(
+            ProductShellTransitions.TransitionKind.ToEditor,
+            ProductShellTransitions.kind(ProductShellNav.Route.Launch, ProductShellNav.Route.Editor),
+        )
+        assertEquals(
+            ProductShellTransitions.TransitionKind.ToLaunch,
+            ProductShellTransitions.kind(ProductShellNav.Route.Editor, ProductShellNav.Route.Launch),
+        )
+    }
+}

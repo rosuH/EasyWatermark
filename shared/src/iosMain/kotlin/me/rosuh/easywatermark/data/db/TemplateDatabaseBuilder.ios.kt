@@ -92,11 +92,21 @@ fun buildTemplateDatabase(
  * executable's bundle does not carry the app's Copy Bundle Resources, so this no-arg path is exercised only
  * in a real `iosApp.app`, where the seed resource is packaged).
  */
+/**
+ * Production no-arg builder — **process-wide singleton** so Swift workflow + CMP product root
+ * never open two Room instances on the same `ewm-db` file (dual open → crash).
+ */
 @OptIn(ExperimentalForeignApi::class)
-fun buildTemplateDatabase(): AppDatabase = buildTemplateDatabase(
-    dir = iosDocumentsDirectory(),
-    seedBytes = IosTemplateSeed.loadSeedBytes(IosTemplateSeed.defaultSeedLanguage()),
-)
+fun buildTemplateDatabase(): AppDatabase = IosTemplateDatabaseHolder.instance
+
+private object IosTemplateDatabaseHolder {
+    val instance: AppDatabase by lazy {
+        buildTemplateDatabase(
+            dir = iosDocumentsDirectory(),
+            seedBytes = IosTemplateSeed.loadSeedBytes(IosTemplateSeed.defaultSeedLanguage()),
+        )
+    }
+}
 
 @OptIn(ExperimentalForeignApi::class)
 private fun iosDocumentsDirectory(): String {

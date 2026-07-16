@@ -45,7 +45,8 @@ final class PickerFlowUITests: XCTestCase {
             .firstMatch
     }
 
-    /// The real proof: fixture image → shared render → watermarked preview → export UI.
+    /// The real proof: fixture image → shared render → SaveExportSheetShell → Photos/Share edges.
+    /// C2: export **panel** is shared Android Compose shell; write/share remain platform (E09/E10).
     func testFixtureRenderPreviewAndExport() {
         let app = XCUIApplication()
         app.launchArguments += ["-uiTestFixtureImage", "1"]
@@ -56,42 +57,117 @@ final class PickerFlowUITests: XCTestCase {
         let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
         XCTAssertTrue(preview.waitForExistence(timeout: 30),
                       "Shared CMP watermark preview never appeared — fixture render did not reach the host.")
-        let outputActions = app.descendants(matching: .any)["sharedComposeSavedOutputActions"].firstMatch
-        XCTAssertTrue(outputActions.waitForExistence(timeout: 5),
-                      "Shared CMP saved-output action row never appeared after fixture render.")
-        // Product order keeps actions below the editor stack; scroll host first, then host-relative taps
-        // (nested Compose buttons often keep a stale non-hittable Y even when labels exist).
-        XCTAssertTrue(scrollUntilHittable(outputActions, in: app, timeout: 20),
-                      "Shared CMP saved-output action row was not hittable after scroll.")
         attach(app, "02-watermarked-preview")
 
-        // Single-host CMP: action Text nodes may be siblings of the testTag host (not nested
-        // descendants). Prefer descendants, then app-wide label, then host-relative coordinates.
-        tapSavedOutputAction(named: "Save to Photos", host: outputActions, in: app, normalizedX: 0.72)
+        // Open shared SaveExportSheetShell (same panel as Android Compose export sheet).
+        let saveButton = app.descendants(matching: .any)["sharedComposeSaveButton"].firstMatch
+        XCTAssertTrue(saveButton.waitForExistence(timeout: 15),
+                      "Editor Save top-bar button (sharedComposeSaveButton) never appeared.")
+        saveButton.tap()
+
+        let exportPrimary = app.descendants(matching: .any)["sharedComposeExportPrimary"].firstMatch
+        XCTAssertTrue(exportPrimary.waitForExistence(timeout: 10),
+                      "SaveExportSheetShell primary CTA (sharedComposeExportPrimary) never appeared.")
+        attach(app, "02b-export-sheet")
+
+        // First primary = Export → platform Save-to-Photos edge (async).
+        exportPrimary.tap()
 
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         for label in ["Allow Access to All Photos", "Allow Full Access", "Allow", "OK", "允许", "好"] {
             let b = springboard.buttons[label].firstMatch
             if b.waitForExistence(timeout: 4) { b.tap(); break }
         }
-        // Success slice: Save MUST report "Saved to Photos" and MUST NOT report "Save failed".
-        let saved = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'Saved'")).firstMatch
-        let saveFailed = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'Save failed'")).firstMatch
-        let savedAppeared = saved.waitForExistence(timeout: 15)
+        // Primary flips to Share (en) / 分享 (zh) after export orchestration marks finished.
+        let shareReady = expectation(
+            for: NSPredicate(format: "label CONTAINS[c] %@ OR label CONTAINS[c] %@", "Share", "分享"),
+            evaluatedWith: exportPrimary,
+            handler: nil,
+        )
+        wait(for: [shareReady], timeout: 20)
         attach(app, "03-after-save")
+        let saveFailed = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'Save failed'")).firstMatch
         XCTAssertFalse(saveFailed.exists, "Save-to-Photos reported 'Save failed': \(saveFailed.label)")
-        XCTAssertTrue(savedAppeared, "Save-to-Photos did not reach a 'Saved to Photos' confirmation.")
 
-        // Share — label existence for X, host dy=0.5 for current visible Y → UIKit share sheet.
-        XCTAssertTrue(scrollUntilHittable(outputActions, in: app, timeout: 10),
-                      "Shared CMP saved-output action row not hittable before Share.")
-        tapSavedOutputAction(named: "Share", host: outputActions, in: app, normalizedX: 0.28)
+        // Second primary = Share → system share sheet (E09 mechanism).
+        XCTAssertTrue(exportPrimary.waitForExistence(timeout: 5), "Export primary CTA gone before Share.")
+        exportPrimary.tap()
         let shareSheet = app.otherElements["ActivityListView"].firstMatch
         let copyAction = app.buttons["Copy"].firstMatch
         let shareSheetAppeared = shareSheet.waitForExistence(timeout: 10) || copyAction.waitForExistence(timeout: 5)
         attach(app, "04-share-sheet")
         XCTAssertTrue(shareSheetAppeared,
                       "System share sheet did not appear after tapping Share (no ActivityListView / Copy action).")
+    }
+
+    /// About from Launch: back must return to Launch (not Editor). Version must not be literal "iOS".
+    func testAboutFromLaunchBacksToLaunch() {
+        let app = XCUIApplication()
+        if app.state == .runningForeground || app.state == .runningBackground {
+            app.terminate()
+        }
+        app.launchArguments = []
+        app.launch()
+
+        let launch = app.descendants(matching: .any)["sharedComposeLaunchScreen"].firstMatch
+        XCTAssertTrue(launch.waitForExistence(timeout: 20), "Launch screen never appeared.")
+        let aboutBtn = app.descendants(matching: .any)["launchAboutButton"].firstMatch
+        XCTAssertTrue(aboutBtn.waitForExistence(timeout: 10), "Launch About control missing.")
+        aboutBtn.tap()
+
+        // Version row trailing should show product version 2.10.0 (not "iOS").
+        let versionLabel = app.staticTexts.matching(NSPredicate(format: "label == %@", "2.10.0")).firstMatch
+        XCTAssertTrue(versionLabel.waitForExistence(timeout: 15),
+                      "About version 2.10.0 not visible (got wrong/missing version).")
+        attach(app, "about-from-launch")
+
+        let back = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@ OR identifier CONTAINS[c] %@", "Back", "back")).firstMatch
+        if back.waitForExistence(timeout: 5) {
+            back.tap()
+        } else {
+            // Fallback: top-leading hit.
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.08, dy: 0.08)).tap()
+        }
+        XCTAssertTrue(launch.waitForExistence(timeout: 10),
+                      "Back from About did not restore Launch (likely wrong Editor route).")
+        XCTAssertFalse(app.descendants(matching: .any)["sharedComposeEditorScreen"].firstMatch.exists,
+                       "About back incorrectly showed Editor.")
+        attach(app, "about-back-to-launch")
+    }
+
+    /// Regression: bottom Content/Style/Layout tabs must switch without SIGABRT (custom tab indicator
+    /// measure path previously crashed on iOS when switching back to the first tab).
+    func testEditorBottomTabsDoNotCrash() {
+        let app = launchFixtureApp()
+        let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
+        XCTAssertTrue(preview.waitForExistence(timeout: 30), "Editor never appeared with fixture.")
+
+        func tapTab(_ labels: [String]) {
+            for label in labels {
+                let el = app.descendants(matching: .any)
+                    .matching(NSPredicate(format: "label == %@", label))
+                    .firstMatch
+                if el.waitForExistence(timeout: 3), el.frame.height > 8 {
+                    el.tap()
+                    return
+                }
+            }
+            XCTFail("Could not find tab among labels: \(labels)")
+        }
+
+        // Cycle Style → Layout → Content (first tab) → Style again.
+        tapTab(["Style", "样式"])
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 2))
+        tapTab(["Layout", "布局"])
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 2))
+        tapTab(["Content", "内容"])
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 2))
+        tapTab(["Style", "样式"])
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 2))
+        tapTab(["Content", "内容"])
+        XCTAssertEqual(app.state, .runningForeground, "App crashed after tab switches.")
+        XCTAssertTrue(preview.exists, "Preview host gone after tab switches — process likely crashed.")
+        attach(app, "tab-switch-ok")
     }
 
     /// S4d-329: the normal iOS tile-mode picker is now a shared CMP control that still writes through

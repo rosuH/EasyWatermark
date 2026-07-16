@@ -1,8 +1,12 @@
 package me.rosuh.easywatermark.desktop
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -12,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -25,17 +30,22 @@ import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.awtTransferable
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.data.db.buildTemplateDatabase
 import me.rosuh.easywatermark.data.db.unpackDefaultTemplateSeed
+import me.rosuh.easywatermark.data.model.FuncType
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.JobState
@@ -43,8 +53,8 @@ import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.UserPreferences
-import me.rosuh.easywatermark.data.model.WatermarkConfigRules
-import me.rosuh.easywatermark.data.model.WatermarkTileMode
+import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkConfigChange
 import me.rosuh.easywatermark.data.repo.DesktopIconPersistence
 import me.rosuh.easywatermark.data.repo.TemplateRepository
 import me.rosuh.easywatermark.domain.OutputPrefsEditor
@@ -55,33 +65,42 @@ import me.rosuh.easywatermark.render.DesktopSaveDecision
 import me.rosuh.easywatermark.session.AppIntent
 import me.rosuh.easywatermark.session.DesktopExportPipelinePort
 import me.rosuh.easywatermark.session.WatermarkSessionViewModel
-import me.rosuh.easywatermark.ui.Image as GalleryImage
+import me.rosuh.easywatermark.shared.generated.resources.Res
+import me.rosuh.easywatermark.shared.generated.resources.dialog_export_to_gallery
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_exporting
+import me.rosuh.easywatermark.shared.generated.resources.share
+import me.rosuh.easywatermark.ui.EditorBottomControls
+import me.rosuh.easywatermark.ui.EditorScreen
+import me.rosuh.easywatermark.ui.about.AboutDevCard
+import me.rosuh.easywatermark.ui.about.AboutScreenIcons
+import me.rosuh.easywatermark.ui.about.AboutScreen
+import me.rosuh.easywatermark.ui.EditorOptionItem
 import me.rosuh.easywatermark.ui.EditorPreviewFrame
-import me.rosuh.easywatermark.ui.EditorScreenShell
 import me.rosuh.easywatermark.ui.EditorTemplateSheetHost
-import me.rosuh.easywatermark.ui.compose.SliderOption
+import me.rosuh.easywatermark.ui.Image as GalleryImage
+import me.rosuh.easywatermark.ui.label
+import me.rosuh.easywatermark.ui.iconPainter
+import me.rosuh.easywatermark.ui.ProductShellHost
+import me.rosuh.easywatermark.ui.ProductShellNav
+import me.rosuh.easywatermark.ui.SharedProductDrawables
+
+import me.rosuh.easywatermark.ui.compose.IconWatermarkOption
 import me.rosuh.easywatermark.ui.compose.TextColorOption
-import me.rosuh.easywatermark.ui.compose.TextColorOptionStrings
-import me.rosuh.easywatermark.ui.compose.TextContentOption
-import me.rosuh.easywatermark.ui.compose.TextContentOptionStrings
 import me.rosuh.easywatermark.ui.compose.TextPaintStyleLabels
 import me.rosuh.easywatermark.ui.compose.TextPaintStyleOption
-import me.rosuh.easywatermark.ui.compose.TextTypefaceLabels
-import me.rosuh.easywatermark.ui.compose.TileModeLabels
-import me.rosuh.easywatermark.ui.compose.TemplateListSheetStrings
 import me.rosuh.easywatermark.ui.compose.WatermarkModeActions
 import me.rosuh.easywatermark.ui.compose.WatermarkModeActionsLabels
 import me.rosuh.easywatermark.ui.compose.formatArgbHexColor
 import me.rosuh.easywatermark.ui.compose.parseArgbHexColor
-import me.rosuh.easywatermark.ui.compose.TextTypeface as TextTypefaceOption
-import me.rosuh.easywatermark.ui.compose.TileMode as TileModeOption
 import me.rosuh.easywatermark.ui.save.SavedOutputActions
 import me.rosuh.easywatermark.ui.save.SavedOutputActionsLabels
 import me.rosuh.easywatermark.ui.save.SaveCommandActions
 import me.rosuh.easywatermark.ui.save.SaveCommandActionsLabels
 import me.rosuh.easywatermark.ui.save.SaveExportOptionsSection
+import me.rosuh.easywatermark.ui.save.SaveExportSheetShell
 import me.rosuh.easywatermark.ui.save.SavePreviewStatus
 import me.rosuh.easywatermark.ui.theme.AppTheme
+import org.jetbrains.compose.resources.stringResource
 import java.awt.Desktop
 import java.awt.FileDialog
 import java.awt.datatransfer.DataFlavor
@@ -234,6 +253,15 @@ private fun resolveDesktopOutputDir(): File {
  * S4d-293 replaced the status text + optional rendered preview image with shared `SavePreviewStatus`.
  * S4d-294 replaced the Open-icon / Use-text / Preview action cluster with shared `WatermarkModeActions`.
  */
+// Product routes + transitions: shared [ProductShellNav] / [ProductShellHost].
+
+@Composable
+private fun desktopOptionLabel(type: FuncType): String = type.label()
+
+@Composable
+private fun desktopOptionIcon(type: FuncType): Painter = type.iconPainter()
+
+
 fun launchDesktopWindow() = application {
     // S4d-215: persist the window's user state (watermark config, output prefs, templates DB) under the
     // stable per-user app-data dir ~/.easywatermark (the CreateDataStore.desktop.kt convention), NOT the
@@ -292,55 +320,28 @@ fun launchDesktopWindow() = application {
     // S4d-342: packaged Desktop launches do not have the repository as their working directory. Keep the
     // interactive preview temp beside the existing per-user config/DB state instead of under `build/`.
     val previewFile = remember { File(appDataDir, "preview/preview.img").apply { parentFile?.mkdirs() } }
-    // S4d-278: current/effective output preference consumed through the shared save/export options section.
+    // S4d-278 / C2: output prefs drive the shared SaveExportSheetShell (Android Compose export panel).
     var outputFormat by remember { mutableStateOf(ImageFormat.JPEG) }
     var outputQuality by remember { mutableStateOf(80) }
-    // S4d-287: watermark text shown through the shared TextContentOption shell; loaded from persisted config.
-    var watermarkText by remember { mutableStateOf("") }
-    // S4d-147: the rendered preview image (null until the first "Preview" click).
+    // C2: product export chrome = shared SaveExportSheetShell; FS write/share stay platform edges.
+    var showSaveSheet by remember { mutableStateOf(false) }
+    // U2: watermark config is session/repo-owned — collect once; no parallel mutableStateOf mirrors.
+    val waterMark by repo.waterMark.collectAsState(WaterMark.default)
+    // S4d-147: the rendered preview image (null until the first successful refresh).
     var preview by remember { mutableStateOf<ImageBitmap?>(null) }
-    // S4d-286: watermark rotation degree edited through the shared SliderOption (0..360).
-    var degreeValue by remember { mutableStateOf(315f) }
-    // S4d-289: text color edited through the shared TextColorOption shell.
-    var textColorValue by remember { mutableStateOf(0xFFFFB800.toInt()) }
-    var colorText by remember { mutableStateOf("") }
-    // S4d-284: watermark opacity edited through the shared SliderOption (0..100 percent).
-    var alphaPercent by remember { mutableStateOf(100f) }
-    // S4d-288: horizontal/vertical watermark gaps edited through shared SliderOption shells.
-    var hGapValue by remember { mutableStateOf(0f) }
-    var vGapValue by remember { mutableStateOf(0f) }
-    // S4d-285: watermark text size edited through the shared SliderOption (1..100).
-    var textSizeValue by remember { mutableStateOf(14f) }
-    // S4d-279: current persisted tile mode consumed through the shared segmented tile-mode option.
-    var tileMode by remember { mutableStateOf(WatermarkTileMode.REPEAT) }
-    // S4d-280: current persisted typeface consumed through the shared segmented typeface option.
-    var typeface by remember { mutableStateOf<TextTypeface>(TextTypeface.Normal) }
-    // S4d-283: current persisted text paint style consumed through the shared segmented option.
-    var textStyle by remember { mutableStateOf<TextPaintStyle>(TextPaintStyle.Fill) }
+    // Debounced preview refresh generation (slider ticks apply config immediately; raster is debounced).
+    var previewGeneration by remember { mutableStateOf(0) }
+    // Shared product shell routes (same transitions as Android/iOS). FileDialog stays Desktop edge.
+    var productRoute by remember { mutableStateOf(ProductShellNav.Route.Launch) }
+    var aboutReturnRoute by remember { mutableStateOf(ProductShellNav.Route.Launch) }
+    val launchUi by session.launchScreenUiStateFlow.collectAsState()
+    val sessionImages = launchUi.selectedImageList
+    var selectedSessionImage by remember { mutableStateOf<ImageInfo?>(null) }
     LaunchedEffect(Unit) {
         userConfigRepo.userPreferences.first().let {
             outputFormat = it.outputFormat
             outputQuality = it.compressLevel
         }
-        watermarkText = repo.waterMark.first().text
-        degreeValue = repo.waterMark.first().degree
-        val loadedColor = repo.waterMark.first().textColor
-        textColorValue = loadedColor
-        colorText = formatArgbHexColor(loadedColor)
-        // Persisted alpha is a 0..255 byte; display as a percent (Android editor semantics).
-        // S4d-179: shared WatermarkConfigRules.alphaByteToPercent (Android baseline order); the displayed
-        // value may differ from the old `alpha * 100f / 255f` by a final float ULP (display only).
-        alphaPercent = WatermarkConfigRules.alphaByteToPercent(repo.waterMark.first().alpha)
-        // S4d-288: load the persisted horizontal/vertical gaps into the shared slider state.
-        hGapValue = repo.waterMark.first().hGap.toFloat()
-        vGapValue = repo.waterMark.first().vGap.toFloat()
-        // S4d-152: load the persisted text size into the editable field.
-        textSizeValue = repo.waterMark.first().textSize
-        // S4d-153/S4d-279: load the persisted tile mode (only REPEAT/CLAMP are exposed in the UI).
-        tileMode = repo.waterMark.first().tileMode
-        // S4d-154/S4d-280: load the persisted typeface + text style.
-        typeface = repo.waterMark.first().textTypeface
-        textStyle = repo.waterMark.first().textStyle
     }
 
     // S4d-198: reactive preview. Render the CURRENT persisted config over the remembered image (or the
@@ -376,25 +377,90 @@ fun launchDesktopWindow() = application {
         return msg
     }
 
-    fun applyTextColor(color: Int) {
+    LaunchedEffect(previewGeneration) {
+        if (previewGeneration == 0) return@LaunchedEffect
+        delay(250)
+        status = refreshPreview()
+    }
+
+    /** Shared system-pick batch spine (Launch CTA + Open image… + multi-select). */
+    fun openImageFilesBatch(files: List<File>) {
+        if (files.isEmpty()) return
         scope.launch {
             busy = true
-            val normalized = formatArgbHexColor(color)
-            val (next, ok, persistedColor) = withContext(Dispatchers.IO) {
-                try {
-                    editor.updateTextColor(color)
-                    Triple("Color applied: $normalized", true, repo.waterMark.first().textColor)
-                } catch (t: Throwable) {
-                    Triple("Failed: ${t.message}", false, null)
+            status = "Rendering ${files.size} image(s)…"
+            var lastPicked: LastImage? = null
+            var lastSaved: File? = null
+            try {
+                val next = withContext(Dispatchers.IO) {
+                    try {
+                        val infos = files.map { ImageInfo(MediaRef(it.absolutePath)) }
+                        val gallery = files.mapIndexed { i, f ->
+                            GalleryImage(
+                                id = i,
+                                uri = MediaRef(f.absolutePath),
+                                name = f.name,
+                                size = f.length(),
+                                date = f.lastModified(),
+                                check = true,
+                            )
+                        }
+                        session.dispatchAndAwait(
+                            AppIntent.EnterEditor(
+                                selected = infos,
+                                gallerySnapshot = gallery,
+                                waterMark = repo.waterMark.first(),
+                            ),
+                        )
+                        session.exportAndAwait(infos)
+                        var successCount = 0
+                        var failCount = 0
+                        var firstFailure: String? = null
+                        for ((file, info) in files.zip(infos)) {
+                            when (val st = info.jobState) {
+                                is JobState.Success -> {
+                                    successCount++
+                                    val outPath = (info.result?.data as? MediaRef)?.value
+                                    if (outPath != null) {
+                                        lastSaved = File(outPath)
+                                        lastPicked = LastImage(file.readBytes(), file.path)
+                                    }
+                                }
+                                is JobState.Failure -> {
+                                    failCount++
+                                    if (firstFailure == null) {
+                                        firstFailure = "${file.name}: ${st.result.message ?: st.result.code}"
+                                    }
+                                }
+                                else -> {
+                                    failCount++
+                                    if (firstFailure == null) firstFailure = "${file.name}: incomplete"
+                                }
+                            }
+                        }
+                        val exp = session.exportJobState.value
+                        buildString {
+                            append(
+                                "Saved $successCount/${files.size} images to ${outputDir.path} " +
+                                    "(session export ${exp.completedCount}/${exp.totalCount})",
+                            )
+                            if (failCount > 0) append(" · $failCount failed: $firstFailure")
+                        }
+                    } catch (t: Throwable) {
+                        "Failed: ${t.message}"
+                    }
                 }
+                lastPicked?.let { lastImage = it }
+                lastSaved?.let { lastSavedFile = it }
+                if (lastPicked != null) {
+                    productRoute = ProductShellNav.Route.Editor
+                    selectedSessionImage = session.launchScreenUiStateFlow.value.curImageInfo
+                        ?: sessionImages.firstOrNull()
+                }
+                status = if (lastSaved != null) "$next · ${refreshPreview()}" else next
+            } finally {
+                busy = false
             }
-            if (ok && persistedColor != null) {
-                textColorValue = persistedColor
-                colorText = formatArgbHexColor(persistedColor)
-            }
-            // S4d-198: auto-refresh the preview on success (no manual Preview click).
-            status = if (ok) "$next · ${refreshPreview()}" else next
-            busy = false
         }
     }
 
@@ -488,6 +554,7 @@ fun launchDesktopWindow() = application {
                         }
                         lastPicked?.let { lastImage = it }
                         lastSaved?.let { lastSavedFile = it }
+                        if (lastPicked != null) productRoute = ProductShellNav.Route.Editor
                         // S4d-228: refresh the preview AT MOST ONCE after the batch, only when ≥1 save succeeded
                         // (over the last successful image). refreshPreview writes ONLY the temp preview file
                         // (never lastSavedFile, so the share-substitute buttons stay bound to real saves).
@@ -503,790 +570,475 @@ fun launchDesktopWindow() = application {
 
     Window(onCloseRequest = ::exitApplication, title = "EasyWatermark — Desktop") {
         AppTheme(darkTheme = true) {
-            EditorScreenShell(
-                showPhotoStrip = false,
-                // S4d-326: the shared editor shell owns the Desktop screen structure; Desktop keeps the
-                // file-drop edge and all edit/save callbacks in the injected slots below.
-                modifier = Modifier.fillMaxSize()
-                    .dragAndDropTarget(shouldStartDragAndDrop = { hasFileList(it) }, target = dropTarget),
-                topBar = { topBarModifier ->
-                    Column(
-                        modifier = topBarModifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Text("EasyWatermark — Desktop", style = MaterialTheme.typography.headlineSmall)
-                        Text(
-                            "Renders the deterministic sample through the shared engine and saves an image. " +
-                                "Honors text / color / typeface / textStyle / tileMode / textSize / degree / gaps / alpha. " +
-                                "Pick an icon to switch to Image mode.",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
+            val selectedForStrip = launchUi.curImageInfo
+                ?: selectedSessionImage
+                ?: sessionImages.firstOrNull()
+            val aboutPainter = SharedProductDrawables.aboutPainter()
+            val backPainter = SharedProductDrawables.backPainter()
+            val addPainter = SharedProductDrawables.pickerImagePainter()
+            val savePainter = SharedProductDrawables.savePainter()
+            val versionPainter = SharedProductDrawables.versionPainter()
+            val ratePainter = SharedProductDrawables.ratePainter()
+            val feedbackPainter = SharedProductDrawables.feedbackPainter()
+            val updateLogPainter = SharedProductDrawables.updateLogPainter()
+            val openSourcePainter = SharedProductDrawables.openSourcePainter()
+            val privacyZhPainter = SharedProductDrawables.privacyZhPainter()
+            val privacyEnPainter = SharedProductDrawables.privacyEnPainter()
+            val logoToolbarPainter = SharedProductDrawables.logoToolbarPainter()
+            val templateListPainter = SharedProductDrawables.templateListPainter()
+            val avatarDevPainter = SharedProductDrawables.avatarDevPainter()
+            val avatarToviPainter = SharedProductDrawables.avatarToviPainter()
+
+            val editorModifier = if (productRoute == ProductShellNav.Route.Editor) {
+                Modifier.fillMaxSize()
+                    .dragAndDropTarget(shouldStartDragAndDrop = { hasFileList(it) }, target = dropTarget)
+            } else {
+                Modifier.fillMaxSize()
+            }
+            ProductShellHost(route = productRoute) { route ->
+            when (route) {
+                ProductShellNav.Route.Launch -> {
+                    me.rosuh.easywatermark.ui.LaunchScreen(
+                        aboutIcon = aboutPainter,
+                        onPickImage = {
+                            val dialog = FileDialog(window, "Open image", FileDialog.LOAD).apply {
+                                isMultipleMode = true
+                                setFilenameFilter { _, fileName ->
+                                    fileName.substringAfterLast('.', "").lowercase() in IMAGE_EXTENSIONS
+                                }
+                                isVisible = true
+                            }
+                            val files = DesktopSaveDecision.supportedImageFiles(dialog.files.toList(), IMAGE_EXTENSIONS)
+                            if (files.isNotEmpty()) {
+                                productRoute = ProductShellNav.Route.Editor
+                                openImageFilesBatch(files)
+                            }
+                        },
+                        onGoAbout = {
+                            val (about, ret) = ProductShellNav.openAbout(ProductShellNav.Route.Launch)
+                            aboutReturnRoute = ret
+                            productRoute = about
+                        },
+                        logo = { modifier, shouldAnimate ->
+                            me.rosuh.easywatermark.ui.BrandLogo(
+                                modifier = modifier,
+                                animate = shouldAnimate,
+                            )
+                        },
+                        modifier = editorModifier,
+                    )
+                }
+                ProductShellNav.Route.About -> {
+                    AboutScreen(
+                        versionName = "Desktop",
+                        showBounds = false,
+                        dynamicColorOn = false,
+                        icons = AboutScreenIcons(
+                            back = backPainter,
+                            version = versionPainter,
+                            rating = ratePainter,
+                            feedback = feedbackPainter,
+                            updateLog = updateLogPainter,
+                            openSource = openSourcePainter,
+                            privacyZh = privacyZhPainter,
+                            privacyEn = privacyEnPainter,
+                        ),
+                        developerCard = AboutDevCard(
+                            title = "Developer",
+                            description = "rosuh",
+                            avatar = avatarDevPainter,
+                        ),
+                        designerCard = AboutDevCard(
+                            title = "Designer",
+                            description = "—",
+                            avatar = avatarToviPainter,
+                        ),
+                        onBack = {
+                            productRoute = ProductShellNav.aboutBack(aboutReturnRoute)
+                        },
+                        onVersion = {},
+                        onRate = {},
+                        onFeedback = {},
+                        onUpdateLog = {},
+                        onOpenSource = {},
+                        onPrivacyZh = {},
+                        onPrivacyEn = {},
+                        onDeveloper = {},
+                        onDesigner = {},
+                        onToggleBounds = {},
+                        onToggleDynamicColor = {},
+                        logo = { modifier ->
+                            me.rosuh.easywatermark.ui.AboutPageLogo(
+                                modifier = modifier,
+                                animate = true,
+                            )
+                        },
+                        modifier = editorModifier,
+                    )
+                }
+                ProductShellNav.Route.Editor -> {
+                    var colorDraft by remember(waterMark.textColor) {
+                        mutableStateOf(formatArgbHexColor(waterMark.textColor))
                     }
-                },
-                preview = { previewModifier ->
-                    EditorPreviewFrame(
-                        hasImage = preview != null,
-                        emptyText = status,
-                        modifier = previewModifier,
-                    ) { previewStatusModifier ->
-                        SavePreviewStatus(
-                            status = status,
-                            preview = preview,
-                            previewContentDescription = "Watermark preview",
-                            modifier = previewStatusModifier.fillMaxWidth().padding(horizontal = 4.dp),
-                        )
-                    }
-                },
-                photoStrip = {},
-                bottomControls = {
-                    // Keep the Desktop-only control surface bounded and scrollable while the shared shell
-                    // reserves a live preview area above it.
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 360.dp)
-                            .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                // S4d-287: Desktop consumes the same text-content shell as Android. The shared composable
-                // owns the row + edit sheet; Desktop still owns persistence, mode flip, and preview refresh.
-                Text("Watermark text", style = MaterialTheme.typography.bodyMedium)
-                TextContentOption(
-                    text = watermarkText,
-                    strings = TextContentOptionStrings(
-                        templateIconContentDescription = "Templates",
-                        editSheetTitle = "Edit watermark text",
-                        confirmButton = "Apply text",
-                    ),
-                    enabled = !busy,
-                    onTextChange = { nextText ->
-                        scope.launch {
-                            busy = true
-                            val applied = nextText
-                            val (msg, ok) = withContext(Dispatchers.IO) {
-                                try {
-                                    editor.updateText(applied)
-                                    "Watermark text applied (Text mode): \"$applied\"" to true
-                                } catch (t: Throwable) {
-                                    "Failed: ${t.message}" to false
-                                }
+                    me.rosuh.easywatermark.ui.EditorScreen(
+                        imageList = sessionImages,
+                        waterMark = waterMark,
+                        selectedImage = selectedForStrip,
+                        templates = templates,
+                        icons = me.rosuh.easywatermark.ui.EditorUiIcons(
+                            back = backPainter,
+                            addMoreImages = addPainter,
+                            save = savePainter,
+                            about = aboutPainter,
+                            templateList = templateListPainter,
+                        ),
+                        preview = { previewModifier ->
+                            EditorPreviewFrame(
+                                hasImage = preview != null,
+                                emptyText = status,
+                                modifier = previewModifier,
+                            ) { previewStatusModifier ->
+                                SavePreviewStatus(
+                                    status = status,
+                                    preview = preview,
+                                    previewContentDescription = "Watermark preview",
+                                    modifier = previewStatusModifier.fillMaxWidth().padding(horizontal = 4.dp),
+                                )
                             }
-                            if (ok) watermarkText = repo.waterMark.first().text
-                            // S4d-198: auto-refresh the preview on a successful apply (no manual click).
-                            status = if (ok) "$msg · ${refreshPreview()}" else msg
-                            busy = false
-                        }
-                    },
-                )
-                // S4d-286: Desktop consumes the shared slider shell for rotation degree. Persistence still
-                // happens only on slider-release through WatermarkConfigEditor.updateDegree.
-                Text("Degree", style = MaterialTheme.typography.bodyMedium)
-                SliderOption(
-                    currentValue = degreeValue,
-                    valueRange = 0f..360f,
-                    enabled = !busy,
-                    onValueChange = { degreeValue = it.coerceIn(0f, 360f) },
-                    onValueChangeFinished = {
-                        scope.launch {
-                            busy = true
-                            val applied = degreeValue.coerceIn(0f, 360f)
-                            val (next, ok) = withContext(Dispatchers.IO) {
-                                try {
-                                    editor.updateDegree(applied)
-                                    "Degree applied: $applied" to true
-                                } catch (t: Throwable) {
-                                    "Failed: ${t.message}" to false
-                                }
+                        },
+                        thumbnail = { imageInfo, contentDescription, thumbModifier ->
+                            val path = imageInfo.uri.value
+                            val bmp = remember(path) {
+                                runCatching { DesktopImageDecoder.decode(File(path)) }.getOrNull()
                             }
-                            if (ok) degreeValue = repo.waterMark.first().degree
-                            // S4d-198: auto-refresh the preview on success (no manual Preview click).
-                            status = if (ok) "$next · ${refreshPreview()}" else next
-                            busy = false
-                        }
-                    },
-                )
-                // S4d-289: Desktop consumes a shared color shell with preset swatches plus the previous
-                // custom #RRGGBB/#AARRGGBB path. Persistence and preview refresh stay at the Desktop edge.
-                Text("Text color", style = MaterialTheme.typography.bodyMedium)
-                TextColorOption(
-                    currentColor = textColorValue,
-                    customText = colorText,
-                    strings = TextColorOptionStrings(
-                        customLabel = "Text color (#AARRGGBB)",
-                        applyCustomButton = "Apply color",
-                    ),
-                    enabled = !busy,
-                    onColorSelected = { applyTextColor(it) },
-                    onCustomTextChange = { colorText = it },
-                    onApplyCustomText = {
-                        val parsedColor = parseArgbHexColor(colorText)
-                        if (parsedColor == null) {
-                            status = "Invalid color: \"$colorText\" - use #RRGGBB or #AARRGGBB hex."
-                        } else {
-                            applyTextColor(parsedColor)
-                        }
-                    },
-                )
-                // S4d-284: Desktop consumes the shared slider shell for opacity. Persistence still happens
-                // only on slider-release through WatermarkConfigEditor.updateAlpha, not on every drag frame.
-                Text("Opacity", style = MaterialTheme.typography.bodyMedium)
-                SliderOption(
-                    currentValue = alphaPercent,
-                    valueRange = 0f..100f,
-                    enabled = !busy,
-                    onValueChange = { alphaPercent = it.coerceIn(0f, 100f) },
-                    onValueChangeFinished = {
-                        scope.launch {
-                            busy = true
-                            val applied = alphaPercent.coerceIn(0f, 100f)
-                            val (next, ok) = withContext(Dispatchers.IO) {
-                                try {
-                                    editor.updateAlpha(applied)
-                                    "Opacity applied: $applied%" to true
-                                } catch (t: Throwable) {
-                                    "Failed: ${t.message}" to false
-                                }
+                            if (bmp != null) {
+                                Image(
+                                    bitmap = bmp,
+                                    contentDescription = contentDescription,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = thumbModifier,
+                                )
+                            } else {
+                                Box(
+                                    modifier = thumbModifier.background(MaterialTheme.colorScheme.surfaceVariant),
+                                )
                             }
-                            if (ok) {
-                                alphaPercent = WatermarkConfigRules.alphaByteToPercent(repo.waterMark.first().alpha)
-                            }
-                            // S4d-198: auto-refresh the preview on success (no manual Preview click).
-                            status = if (ok) "$next · ${refreshPreview()}" else next
-                            busy = false
-                        }
-                    },
-                )
-                // S4d-288: Desktop consumes the shared slider shell for each gap independently, matching
-                // Android's separate horizontal/vertical option controls. Persistence happens on release.
-                Text("Horizontal gap", style = MaterialTheme.typography.bodyMedium)
-                SliderOption(
-                    currentValue = hGapValue,
-                    valueRange = 0f..500f,
-                    enabled = !busy,
-                    onValueChange = { hGapValue = it.coerceIn(0f, 500f) },
-                    onValueChangeFinished = {
-                        scope.launch {
-                            busy = true
-                            val applied = hGapValue.coerceIn(0f, 500f).toInt()
-                            val (next, ok) = withContext(Dispatchers.IO) {
-                                try {
-                                    editor.updateHorizon(applied)
-                                    "Horizontal gap applied: $applied" to true
-                                } catch (t: Throwable) {
-                                    "Failed: ${t.message}" to false
-                                }
-                            }
-                            if (ok) hGapValue = repo.waterMark.first().hGap.toFloat()
-                            // S4d-198: auto-refresh the preview on success (no manual Preview click).
-                            status = if (ok) "$next · ${refreshPreview()}" else next
-                            busy = false
-                        }
-                    },
-                )
-                Text("Vertical gap", style = MaterialTheme.typography.bodyMedium)
-                SliderOption(
-                    currentValue = vGapValue,
-                    valueRange = 0f..500f,
-                    enabled = !busy,
-                    onValueChange = { vGapValue = it.coerceIn(0f, 500f) },
-                    onValueChangeFinished = {
-                        scope.launch {
-                            busy = true
-                            val applied = vGapValue.coerceIn(0f, 500f).toInt()
-                            val (next, ok) = withContext(Dispatchers.IO) {
-                                try {
-                                    editor.updateVertical(applied)
-                                    "Vertical gap applied: $applied" to true
-                                } catch (t: Throwable) {
-                                    "Failed: ${t.message}" to false
-                                }
-                            }
-                            if (ok) vGapValue = repo.waterMark.first().vGap.toFloat()
-                            // S4d-198: auto-refresh the preview on success (no manual Preview click).
-                            status = if (ok) "$next · ${refreshPreview()}" else next
-                            busy = false
-                        }
-                    },
-                )
-                // S4d-285: Desktop consumes the shared slider shell for text size. Persistence still happens
-                // only on slider-release through WatermarkConfigEditor.updateTextSize.
-                Text("Text size", style = MaterialTheme.typography.bodyMedium)
-                SliderOption(
-                    currentValue = textSizeValue,
-                    valueRange = 1f..100f,
-                    enabled = !busy,
-                    onValueChange = { textSizeValue = it.coerceIn(1f, 100f) },
-                    onValueChangeFinished = {
-                        scope.launch {
-                            busy = true
-                            val applied = textSizeValue.coerceIn(1f, 100f)
-                            val (next, ok) = withContext(Dispatchers.IO) {
-                                try {
-                                    editor.updateTextSize(applied)
-                                    "Text size applied: $applied" to true
-                                } catch (t: Throwable) {
-                                    "Failed: ${t.message}" to false
-                                }
-                            }
-                            if (ok) textSizeValue = repo.waterMark.first().textSize
-                            // S4d-198: auto-refresh the preview on success (no manual Preview click).
-                            status = if (ok) "$next · ${refreshPreview()}" else next
-                            busy = false
-                        }
-                    },
-                )
-                // S4d-279: Desktop consumes the shared segmented tile-mode option. Persistence remains the
-                // existing WatermarkConfigEditor path; no renderer behavior changes.
-                Text("Tile mode: ${tileMode.name}", style = MaterialTheme.typography.bodyMedium)
-                TileModeOption(
-                    labels = TileModeLabels(
-                        repeat = "Tile / REPEAT",
-                        decal = "Decal / CLAMP",
-                    ),
-                    mode = tileMode,
-                    enabled = !busy,
-                    onValueChange = { selectedMode ->
-                        if (selectedMode != tileMode) {
-                            scope.launch {
-                                busy = true
-                                val (msg, ok) = withContext(Dispatchers.IO) {
-                                    try {
-                                        editor.updateTileMode(selectedMode)
-                                        when (selectedMode) {
-                                            WatermarkTileMode.REPEAT -> "Tile mode → REPEAT (grid tile)"
-                                            WatermarkTileMode.CLAMP -> "Tile mode → CLAMP (single decal)"
-                                            else -> "Tile mode → ${selectedMode.name}"
-                                        } to true
-                                    } catch (t: Throwable) {
-                                        "Failed: ${t.message}" to false
-                                    }
-                                }
-                                tileMode = repo.waterMark.first().tileMode
-                                // S4d-198: auto-refresh the preview on success (no manual Preview click).
-                                status = if (ok) "$msg · ${refreshPreview()}" else msg
-                                busy = false
-                            }
-                        }
-                    },
-                )
-                // S4d-280: Desktop consumes the shared segmented typeface option. Persistence remains the
-                // existing WatermarkConfigEditor path; no renderer behavior changes.
-                Text("Typeface: ${typefaceLabelOf(typeface)}", style = MaterialTheme.typography.bodyMedium)
-                TextTypefaceOption(
-                    labels = TextTypefaceLabels(
-                        normal = "Normal",
-                        bold = "Bold",
-                        italic = "Italic",
-                        boldItalic = "BoldItalic",
-                    ),
-                    typeface = typeface,
-                    enabled = !busy,
-                    onValueChange = { selectedTypeface ->
-                        if (selectedTypeface != typeface) {
-                            scope.launch {
-                                busy = true
-                                val (msg, ok) = withContext(Dispatchers.IO) {
-                                    try {
-                                        editor.updateTextTypeface(selectedTypeface)
-                                        "Typeface → ${typefaceLabelOf(selectedTypeface)}" to true
-                                    } catch (t: Throwable) {
-                                        "Failed: ${t.message}" to false
-                                    }
-                                }
-                                typeface = repo.waterMark.first().textTypeface
-                                // S4d-198: auto-refresh the preview on success (no manual Preview click).
-                                status = if (ok) "$msg · ${refreshPreview()}" else msg
-                                busy = false
-                            }
-                        }
-                    },
-                )
-                // S4d-283: Desktop consumes the shared segmented text-style option. Persistence remains the
-                // existing WatermarkConfigEditor path; no renderer behavior changes.
-                Text("Text style: ${styleLabelOf(textStyle)}", style = MaterialTheme.typography.bodyMedium)
-                TextPaintStyleOption(
-                    labels = TextPaintStyleLabels(
-                        fill = "Fill",
-                        stroke = "Stroke",
-                    ),
-                    style = textStyle,
-                    enabled = !busy,
-                    onValueChange = { selectedStyle ->
-                        if (selectedStyle != textStyle) {
-                            scope.launch {
-                                busy = true
-                                val name = styleLabelOf(selectedStyle)
-                                val (msg, ok) = withContext(Dispatchers.IO) {
-                                    try {
-                                        editor.updateTextStyle(selectedStyle)
-                                        "Text style → $name" to true
-                                    } catch (t: Throwable) {
-                                        "Failed: ${t.message}" to false
-                                    }
-                                }
-                                textStyle = repo.waterMark.first().textStyle
-                                // S4d-198: auto-refresh the preview on success (no manual Preview click).
-                                status = if (ok) "$msg · ${refreshPreview()}" else msg
-                                busy = false
-                            }
-                        }
-                    },
-                )
-                // S4d-278: first Desktop consumer of the shared save/export options UI. Persisted through
-                // the SAME OutputPrefsEditor/store that runSaveFlow reads; no Desktop renderer change.
-                SaveExportOptionsSection(
-                    title = "Output preference",
-                    formatLabel = "Format",
-                    qualityLabel = "JPEG quality",
-                    selectedFormat = outputFormat,
-                    quality = outputQuality,
-                    enabled = !busy,
-                    onFormatClick = { newFormat ->
-                        scope.launch {
-                            val nextQuality = if (newFormat == ImageFormat.PNG) 100 else outputQuality
-                            outputEditor.save(newFormat, nextQuality)
-                            userConfigRepo.userPreferences.first().let {
-                                outputFormat = it.outputFormat
-                                outputQuality = it.compressLevel
-                                status = "Output preference: ${describePref(it)}"
-                            }
-                        }
-                    },
-                    onQualityChange = { newQuality ->
-                        scope.launch {
-                            val nextQuality = newQuality.coerceIn(20, 100)
-                            outputEditor.save(ImageFormat.JPEG, nextQuality)
-                            userConfigRepo.userPreferences.first().let {
-                                outputFormat = it.outputFormat
-                                outputQuality = it.compressLevel
-                                status = "Output preference: ${describePref(it)}"
-                            }
-                        }
-                    },
-                )
-                SaveCommandActions(
-                    labels = SaveCommandActionsLabels(
-                        renderAndSave = "Render & Save sample",
-                        working = "Working…",
-                        saveAs = "Save as…",
-                        openImage = "Open image…",
-                    ),
-                    busy = busy,
-                    onRenderAndSave = {
-                        // Launch on the UI-bound scope; do the heavy render off the UI thread, then write
-                        // Compose state back on the UI dispatcher.
-                        scope.launch {
-                            busy = true
-                            status = "Rendering…"
-                            val current = lastImage
-                            var savedFile: File? = null
-                            val next = withContext(Dispatchers.IO) {
-                                try {
-                                    // S4d-217: write the real save to the user output dir (not the build/ default).
-                                    val fmt = userConfigRepo.userPreferences.first().outputFormat
-                                    val out = DesktopSaveDecision.resolveUniqueOutputFile(outputDir, fmt)
-                                    val o = if (current != null) {
-                                        DesktopWatermarkFlow.runSaveFlow(
-                                            repo, editor, userConfigRepo,
-                                            inputBytes = current.bytes, inputLabel = current.label,
-                                            outputFile = out,
-                                        )
-                                    } else {
-                                        DesktopWatermarkFlow.runSaveFlow(
-                                            repo, editor, userConfigRepo, outputFile = out,
-                                        )
-                                    }
-                                    // S4d-157: remember the real saved output for the share-substitute buttons.
-                                    savedFile = File(o.outputPath)
-                                    "Saved: ${o.outputPath}\n  ${o.format}, ${o.width}x${o.height}, ${o.outputByteCount} B\n" +
-                                        "  input: ${o.inputLabel} (${o.inputByteCount} B)\n  config: ${o.configAfterEdit}"
-                                } catch (t: Throwable) {
-                                    "Failed: ${t.message}"
-                                }
-                            }
-                            savedFile?.let { lastSavedFile = it }
-                            status = next
-                            busy = false
-                        }
-                    },
-                    onSaveAs = {
-                        // S4d-140: native AWT SAVE dialog to choose the OUTPUT path (modal on the EDT). The
-                        // flow already accepts outputFile; the window simply supplies it here. Same render
-                        // path/decision as "Render & Save sample" — destination-only.
-                        val dialog = FileDialog(window, "Save image", FileDialog.SAVE).apply {
-                            isVisible = true
-                        }
-                        val dir = dialog.directory
-                        val name = dialog.file
-                        if (dir != null && name != null) {
-                            val target = File(dir, name)
-                            // Snapshot the remembered image on the UI thread; render off it (or the fixture).
-                            val current = lastImage
-                            scope.launch {
-                                busy = true
-                                status = "Saving to ${target.name}…"
-                                var savedFile: File? = null
-                                val next = withContext(Dispatchers.IO) {
-                                    try {
-                                        val o = if (current != null) {
-                                            DesktopWatermarkFlow.runSaveFlow(
-                                                repo, editor, userConfigRepo,
-                                                inputBytes = current.bytes, inputLabel = current.label,
-                                                outputFile = target,
-                                            )
-                                        } else {
-                                            DesktopWatermarkFlow.runSaveFlow(
-                                                repo, editor, userConfigRepo, outputFile = target,
-                                            )
+                        },
+                        optionItem = { spec, selected ->
+                            val label = desktopOptionLabel(spec.type)
+                            EditorOptionItem(
+                                icon = desktopOptionIcon(spec.type),
+                                contentDescription = label,
+                                label = label,
+                                selected = selected,
+                            )
+                        },
+                        colorOption = { optionModifier, mark, onColor ->
+                            TextColorOption(
+                                currentColor = mark.textColor,
+                                customText = colorDraft,
+                                enabled = !busy,
+                                modifier = optionModifier,
+                                showCustomPicker = true,
+                                showCustomInput = false,
+                                onColorSelected = onColor,
+                                onCustomTextChange = { colorDraft = it },
+                            )
+                        },
+                        iconOption = { optionModifier, mark, onIcon ->
+                            IconWatermarkOption(
+                                hasIcon = mark.iconUri.isEmpty().not(),
+                                pickLabel = "Open icon…",
+                                modifier = optionModifier,
+                                enabled = !busy,
+                                onPick = {
+                                    val dialog = FileDialog(window, "Open icon", FileDialog.LOAD).apply {
+                                        setFilenameFilter { _, fileName ->
+                                            fileName.substringAfterLast('.', "").lowercase() in IMAGE_EXTENSIONS
                                         }
-                                        // S4d-157: remember the real saved output for the share-substitute buttons.
-                                        savedFile = File(o.outputPath)
-                                        "Saved: ${o.outputPath}\n  ${o.format}, ${o.width}x${o.height}, ${o.outputByteCount} B\n" +
-                                            "  input: ${o.inputLabel} (${o.inputByteCount} B)\n  config: ${o.configAfterEdit}"
+                                        isVisible = true
+                                    }
+                                    val dir = dialog.directory
+                                    val name = dialog.file
+                                    if (dir != null && name != null) {
+                                        val selected = File(dir, name)
+                                        scope.launch {
+                                            try {
+                                                val copied = withContext(Dispatchers.IO) {
+                                                    DesktopIconPersistence.persistIcon(
+                                                        selected, File(appDataDir, "watermark_icons"),
+                                                    )
+                                                }
+                                                onIcon(MediaRef(copied.absolutePath))
+                                            } catch (t: Throwable) {
+                                                status = "Failed: ${t.message}"
+                                            }
+                                        }
+                                    }
+                                },
+                                preview = {},
+                            )
+                        },
+                        onBack = { productRoute = ProductShellNav.Route.Launch },
+                        onAddMoreImages = {
+                            val dialog = FileDialog(window, "Open image", FileDialog.LOAD).apply {
+                                isMultipleMode = true
+                                setFilenameFilter { _, fileName ->
+                                    fileName.substringAfterLast('.', "").lowercase() in IMAGE_EXTENSIONS
+                                }
+                                isVisible = true
+                            }
+                            val files = DesktopSaveDecision.supportedImageFiles(dialog.files.toList(), IMAGE_EXTENSIONS)
+                            if (files.isNotEmpty()) openImageFilesBatch(files)
+                        },
+                        onShowSaveDialog = {
+                            // Open Android-parity export panel; do not write files until primary CTA.
+                            session.resetJobStatus()
+                            showSaveSheet = true
+                        },
+                        onGoAboutScreen = {
+                            val (about, ret) = ProductShellNav.openAbout(ProductShellNav.Route.Editor)
+                            aboutReturnRoute = ret
+                            productRoute = about
+                        },
+                        onImageSelected = { info ->
+                            selectedSessionImage = info
+                            session.selectImage(info.uri)
+                            val path = info.uri.value
+                            val file = java.io.File(path)
+                            if (file.isFile) {
+                                scope.launch {
+                                    lastImage = LastImage(file.readBytes(), file.path)
+                                    previewGeneration++
+                                }
+                            }
+                        },
+                        onConfigChange = { type, value ->
+                            if (!busy) {
+                                scope.launch {
+                                    busy = true
+                                    val (msg, ok) = withContext(Dispatchers.IO) {
+                                        try {
+                                            session.dispatchAndAwait(
+                                                AppIntent.ApplyConfig(WatermarkConfigChange.from(type, value)),
+                                            )
+                                            "Applied $type" to true
+                                        } catch (t: Throwable) {
+                                            "Failed: ${t.message}" to false
+                                        }
+                                    }
+                                    if (ok) previewGeneration++
+                                    status = msg
+                                    busy = false
+                                }
+                            }
+                        },
+                        onUseTemplate = { template ->
+                            val content = template.content
+                            if (content != null) {
+                                scope.launch {
+                                    busy = true
+                                    val (msg, ok) = withContext(Dispatchers.IO) {
+                                        try {
+                                            session.dispatchAndAwait(
+                                                AppIntent.ApplyConfig(WatermarkConfigChange.Text(content)),
+                                            )
+                                            "Template applied" to true
+                                        } catch (t: Throwable) {
+                                            "Failed: ${t.message}" to false
+                                        }
+                                    }
+                                    if (ok) previewGeneration++
+                                    status = msg
+                                    busy = false
+                                }
+                            }
+                        },
+                        onAddTemplate = { text ->
+                            scope.launch {
+                                busy = true
+                                status = withContext(Dispatchers.IO) {
+                                    try {
+                                        templateEditor.add(text)
+                                        "Saved template"
                                     } catch (t: Throwable) {
                                         "Failed: ${t.message}"
                                     }
                                 }
-                                savedFile?.let { lastSavedFile = it }
-                                status = next
                                 busy = false
                             }
-                        }
-                        // Cancelled (null dir/file) → no save, no status change, no remembered-image change (no-op).
-                    },
-                    onOpenImage = {
-                        // S4d-229: native AWT Open dialog with MULTI-SELECT on the EDT (modal → returns the
-                        // selection synchronously). `window` is the FrameWindowScope's AWT frame.
-                        val dialog = FileDialog(window, "Open image", FileDialog.LOAD).apply {
-                            isMultipleMode = true
-                            setFilenameFilter { _, fileName ->
-                                fileName.substringAfterLast('.', "").lowercase() in IMAGE_EXTENSIONS
-                            }
-                            isVisible = true
-                        }
-                        // S4d-229: take ALL selected supported images via the existing pure filter (cancel →
-                        // empty `files`). A single selection is just a one-element list, so single-select still works.
-                        val files = DesktopSaveDecision.supportedImageFiles(dialog.files.toList(), IMAGE_EXTENSIONS)
-                        if (files.isNotEmpty()) {
-                            // Read + render off the UI thread, then write Compose state back on the UI dispatcher.
+                        },
+                        onUpdateTemplate = { template ->
                             scope.launch {
                                 busy = true
-                                status = "Rendering ${files.size} image(s)…"
-                                // Remember the LAST successful image/output (for reuse + the share-substitute buttons).
-                                var lastPicked: LastImage? = null
-                                var lastSaved: File? = null
-                                // S4d-229: mirror the S4d-228 drop batch exactly — the whole batch span is in
-                                // try/finally so `busy` ALWAYS resets, and the withContext body is in try/catch so a
-                                // setup-level failure (e.g. userConfigRepo.userPreferences.first()) surfaces as a
-                                // "Failed: …" status instead of leaving the UI stuck busy.
-                                try {
-                                    val next = withContext(Dispatchers.IO) {
-                                        try {
-                                            // Phase 3: shared session export (DesktopExportPipelinePort) for on-disk picks.
-                                            val infos = files.map { ImageInfo(MediaRef(it.absolutePath)) }
-                                            val gallery = files.mapIndexed { i, f ->
-                                                GalleryImage(
-                                                    id = i,
-                                                    uri = MediaRef(f.absolutePath),
-                                                    name = f.name,
-                                                    size = f.length(),
-                                                    date = f.lastModified(),
-                                                    check = true,
-                                                )
-                                            }
-                                            session.dispatchAndAwait(
-                                                AppIntent.EnterEditor(
-                                                    selected = infos,
-                                                    gallerySnapshot = gallery,
-                                                    waterMark = repo.waterMark.first(),
-                                                ),
-                                            )
-                                            session.exportAndAwait(infos)
-                                            var successCount = 0
-                                            var failCount = 0
-                                            var firstFailure: String? = null
-                                            for ((file, info) in files.zip(infos)) {
-                                                when (val st = info.jobState) {
-                                                    is JobState.Success -> {
-                                                        successCount++
-                                                        val outPath = (info.result?.data as? MediaRef)?.value
-                                                        if (outPath != null) {
-                                                            lastSaved = File(outPath)
-                                                            lastPicked = LastImage(file.readBytes(), file.path)
-                                                        }
-                                                    }
-                                                    is JobState.Failure -> {
-                                                        failCount++
-                                                        if (firstFailure == null) {
-                                                            firstFailure = "${file.name}: ${st.result.message ?: st.result.code}"
-                                                        }
-                                                    }
-                                                    else -> {
-                                                        failCount++
-                                                        if (firstFailure == null) firstFailure = "${file.name}: incomplete"
-                                                    }
-                                                }
-                                            }
-                                            val exp = session.exportJobState.value
-                                            buildString {
-                                                append(
-                                                    "Saved $successCount/${files.size} images to ${outputDir.path} " +
-                                                        "(session export ${exp.completedCount}/${exp.totalCount})",
-                                                )
-                                                if (failCount > 0) append(" · $failCount failed: $firstFailure")
-                                            }
-                                        } catch (t: Throwable) {
-                                            "Failed: ${t.message}"
-                                        }
+                                status = withContext(Dispatchers.IO) {
+                                    try {
+                                        templateEditor.update(template)
+                                        "Updated template"
+                                    } catch (t: Throwable) {
+                                        "Failed: ${t.message}"
                                     }
-                                    lastPicked?.let { lastImage = it }
-                                    lastSaved?.let { lastSavedFile = it }
-                                    // Auto-refresh the preview AT MOST ONCE after the batch, only when ≥1 save
-                                    // succeeded (over the last successful image). refreshPreview writes ONLY the temp
-                                    // preview file (never lastSavedFile, so share-substitute stays real-save-bound).
-                                    status = if (lastSaved != null) "$next · ${refreshPreview()}" else next
+                                }
+                                busy = false
+                            }
+                        },
+                        onDeleteTemplate = { template ->
+                            scope.launch {
+                                busy = true
+                                status = withContext(Dispatchers.IO) {
+                                    try {
+                                        templateEditor.delete(template)
+                                        "Template deleted"
+                                    } catch (t: Throwable) {
+                                        "Failed: ${t.message}"
+                                    }
+                                }
+                                busy = false
+                            }
+                        },
+                        modifier = editorModifier,
+                    )
+                }
+            }
+            } // ProductShellHost
+
+            // C2: shared Android Compose export panel; Desktop only implements FS write + reveal/share edges.
+            if (showSaveSheet) {
+                val exportItems = sessionImages.ifEmpty {
+                    val path = lastImage?.label
+                    if (path != null && File(path).isFile) {
+                        listOf(ImageInfo(MediaRef(path)))
+                    } else {
+                        emptyList()
+                    }
+                }
+                val exportTotal = exportJobState.totalCount.takeIf { it > 0 } ?: exportItems.size.coerceAtLeast(1)
+                val primaryLabel = when {
+                    exportJobState.isSaving -> stringResource(Res.string.dialog_save_exporting)
+                    exportJobState.isFinished -> stringResource(Res.string.share)
+                    else -> stringResource(Res.string.dialog_export_to_gallery)
+                }
+                val exportTotalFixed = exportItems.size.coerceAtLeast(if (lastImage != null) 1 else 0)
+                val completedFixed = exportItems.count {
+                    it.jobState is me.rosuh.easywatermark.data.model.JobState.Success
+                }.coerceAtLeast(exportJobState.completedCount)
+                SaveExportSheetShell(
+                    items = exportItems,
+                    selectedFormat = outputFormat,
+                    quality = outputQuality,
+                    primaryActionLabel = primaryLabel,
+                    primaryActionEnabled = !exportJobState.isSaving && !busy,
+                    showOpenGallery = exportJobState.isFinished && lastSavedFile != null,
+                    exportListSubtitle = "$completedFixed/$exportTotalFixed",
+                    imageCount = exportTotalFixed,
+                    itemKey = { it.uri.value },
+                    onDismiss = {
+                        if (!exportJobState.isSaving) showSaveSheet = false
+                    },
+                    onFormatClick = { fmt ->
+                        scope.launch {
+                            outputEditor.save(fmt, outputQuality)
+                            outputFormat = fmt
+                        }
+                    },
+                    onQualityChange = { q ->
+                        scope.launch {
+                            outputEditor.save(outputFormat, q)
+                            outputQuality = q
+                        }
+                    },
+                    onExportClick = {
+                        if (exportJobState.isFinished) {
+                            // E09 share substitute: reveal folder of last real save.
+                            val file = lastSavedFile
+                            if (file != null && Desktop.isDesktopSupported()) {
+                                try {
+                                    Desktop.getDesktop().open(file.parentFile ?: file)
+                                } catch (t: Throwable) {
+                                    status = "Reveal failed: ${t.message}"
+                                }
+                            }
+                        } else {
+                            scope.launch {
+                                busy = true
+                                try {
+                                    if (exportItems.isNotEmpty()) {
+                                        withContext(Dispatchers.IO) {
+                                            session.exportAndAwait(exportItems)
+                                        }
+                                        var last: File? = null
+                                        for (info in exportItems) {
+                                            val outPath = (info.result?.data as? MediaRef)?.value
+                                            if (outPath != null) last = File(outPath)
+                                        }
+                                        last?.let { lastSavedFile = it }
+                                        val exp = session.exportJobState.value
+                                        status = "Exported ${exp.completedCount}/${exp.totalCount} → ${outputDir.path}"
+                                    } else {
+                                        // No session image: fixture sample via existing save spine (platform edge).
+                                        val out = withContext(Dispatchers.IO) {
+                                            val fmt = userConfigRepo.userPreferences.first().outputFormat
+                                            val target = DesktopSaveDecision.resolveUniqueOutputFile(outputDir, fmt)
+                                            val o = DesktopWatermarkFlow.runSaveFlow(
+                                                repo, editor, userConfigRepo, outputFile = target,
+                                            )
+                                            File(o.outputPath)
+                                        }
+                                        lastSavedFile = out
+                                        session.markExportFinished(completedCount = 1, totalCount = 1)
+                                        status = "Saved: ${out.path}"
+                                    }
+                                } catch (t: Throwable) {
+                                    status = "Export failed: ${t.message}"
                                 } finally {
                                     busy = false
                                 }
                             }
                         }
-                        // Cancelled / no supported selection (empty `files`) → no work, status unchanged (no-op).
                     },
-                )
-                // S4d-294: Desktop consumes a shared mode-action shell. The platform edges stay here: AWT icon
-                // picker, private icon copy, persisted MediaRef, Text-mode switch, and preview refresh.
-                WatermarkModeActions(
-                    labels = WatermarkModeActionsLabels(
-                        pickIcon = "Open icon…",
-                        useTextWatermark = "Use text watermark",
-                        preview = "Preview",
-                    ),
-                    hasIcon = false,
-                    busy = busy,
-                    onPickIcon = {
-                        // S4d-135: native AWT Open dialog for the watermark ICON (same modal pattern + filter
-                        // as "Open image…"). `window` is the FrameWindowScope's AWT frame.
-                        val dialog = FileDialog(window, "Open icon", FileDialog.LOAD).apply {
-                            setFilenameFilter { _, fileName ->
-                                fileName.substringAfterLast('.', "").lowercase() in IMAGE_EXTENSIONS
-                            }
-                            isVisible = true
-                        }
-                        val dir = dialog.directory
-                        val name = dialog.file
-                        if (dir != null && name != null) {
-                            val selected = File(dir, name)
-                            // Persist ONLY the icon PATH (off the UI thread). editor.updateIcon flips persisted
-                            // markMode to Image (S4d-134), so the next "Render & Save sample" / "Open image…"
-                            // save renders through the Image branch (composeIconOverRealImage) over that path.
-                            // S4d-198: this is a mode+input change (→ Image), so it auto-refreshes the preview
-                            // (the icon-over-fixture/last-image render) — symmetric with "Use text watermark".
-                            scope.launch {
-                                busy = true
-                                status = "Setting icon ${selected.name}…"
-                                // Mirror the render buttons: try/catch INSIDE withContext returns the status
-                                // string, so a DataStore/updateIcon failure becomes "Failed: …" and the
-                                // `status = …; busy = false` below ALWAYS run (window never stuck busy).
-                                val (msg, ok) = withContext(Dispatchers.IO) {
-                                    try {
-                                        // S4d-219/S4d-221: copy the picked icon into app-private storage and persist
-                                        // THAT path (not the user's original), so Image-mode survives the source icon
-                                        // moving/renaming/deleting and is machine-portable — parity with iOS
-                                        // `IosIconPersistence` (S4d-116). The copy-then-prune logic lives in the tested
-                                        // shared helper `DesktopIconPersistence` (`:shared:desktopTest`).
-                                        val copied = DesktopIconPersistence.persistIcon(
-                                            selected, File(appDataDir, "watermark_icons"),
-                                        )
-                                        editor.updateIcon(MediaRef(copied.absolutePath))
-                                        ("Icon set: ${selected.name}\n  Copied to ${copied.path}\n  Watermark mode → Image.") to true
-                                    } catch (t: Throwable) {
-                                        "Failed: ${t.message}" to false
-                                    }
-                                }
-                                // S4d-198: auto-refresh the preview on success (no manual Preview click).
-                                status = if (ok) "$msg · ${refreshPreview()}" else msg
-                                busy = false
-                            }
-                        }
-                        // Cancelled (null file/directory) → leave the status + stored icon unchanged (no-op).
-                    },
-                    onUseTextWatermark = {
-                        scope.launch {
-                            busy = true
-                            status = "Switching to Text mode…"
-                            val (msg, ok) = withContext(Dispatchers.IO) {
-                                try {
-                                    // updateText flips persisted mode to Text, so preserve the existing text value.
-                                    val currentText = repo.waterMark.first().text
-                                    editor.updateText(currentText)
-                                    ("Watermark mode → Text. " +
-                                        "Next “Render & Save sample” / “Open image…” renders text.") to true
-                                } catch (t: Throwable) {
-                                    "Failed: ${t.message}" to false
-                                }
-                            }
-                            // S4d-198: auto-refresh the preview on success (no manual Preview click).
-                            status = if (ok) "$msg · ${refreshPreview()}" else msg
-                            busy = false
-                        }
-                    },
-                    onPreview = {
-                        // S4d-147/S4d-198: manual preview — render the CURRENT persisted config through the
-                        // shared refreshPreview() spine (the SAME path the post-edit auto-refresh uses) and show
-                        // it on-screen. Still available as an explicit user command even though edits now
-                        // auto-refresh.
-                        scope.launch {
-                            busy = true
-                            status = "Rendering preview…"
-                            status = refreshPreview()
-                            busy = false
-                        }
-                    },
-                    iconPreview = {},
-                )
-                // S4d-157: Desktop "share substitute" over the last REAL saved output file (set only by the
-                // Render & Save / Save as… / Open image… success paths — Preview writes a temp file and does NOT
-                // set it). "Show in folder" reveals the saved file's folder via guarded java.awt.Desktop (AWT IO
-                // off the UI thread); "Copy output path" puts the path on the Compose clipboard. Both are enabled
-                // only when a real save exists and the window isn't busy.
-                val clipboard = LocalClipboardManager.current
-                SavedOutputActions(
-                    labels = SavedOutputActionsLabels(
-                        primary = "Show in folder",
-                        secondary = "Copy output path",
-                    ),
-                    hasOutput = lastSavedFile != null,
-                    enabled = !busy,
-                    onPrimaryAction = {
+                    onOpenGalleryClick = {
+                        // E10 "open gallery" substitute: reveal output directory.
                         val file = lastSavedFile
-                        if (file != null) {
-                            scope.launch {
-                                busy = true
-                                // AWT Desktop IO off the Compose UI thread; result reported via status.
-                                val next = withContext(Dispatchers.IO) {
-                                    try {
-                                        val desktop = if (Desktop.isDesktopSupported()) Desktop.getDesktop() else null
-                                        val folder = file.parentFile
-                                        if (desktop != null && folder != null && desktop.isSupported(Desktop.Action.OPEN)) {
-                                            desktop.open(folder)
-                                            "Opened folder: ${folder.path}"
-                                        } else {
-                                            "Show in folder isn’t supported on this platform."
-                                        }
-                                    } catch (t: Throwable) {
-                                        "Couldn’t open folder: ${t.message}"
-                                    }
-                                }
-                                status = next
-                                busy = false
+                        if (file != null && Desktop.isDesktopSupported()) {
+                            try {
+                                Desktop.getDesktop().open(file.parentFile ?: file)
+                            } catch (t: Throwable) {
+                                status = "Open folder failed: ${t.message}"
                             }
                         }
                     },
-                    onSecondaryAction = {
-                        val file = lastSavedFile
-                        if (file != null) {
-                            clipboard.setText(AnnotatedString(file.path))
-                            status = "Copied path: ${file.path}"
-                        }
-                    },
-                )
-                // S4d-290: Desktop consumes the shared template sheet host. Desktop still owns the Room-backed
-                // repository/editor callbacks; the shared host owns sheet visibility, add/edit/use/delete UI,
-                // confirmations, and no-icon text fallbacks.
-                EditorTemplateSheetHost(
-                    templates = templates,
-                    strings = TemplateListSheetStrings(
-                        title = "Templates",
-                        addButton = "Add",
-                        empty = "No templates yet.",
-                        editTitle = "Edit template",
-                        deleteConfirm = "Delete this template?",
-                        existConfirmTitle = "Confirm",
-                        useThisTemplate = "Use this template?",
-                        confirm = "OK",
-                        cancel = "Cancel",
-                        editButton = "Edit",
-                        deleteButton = "Delete",
-                    ),
-                    enabled = !busy,
-                    newTemplateInitialText = watermarkText,
-                    onUse = { template ->
-                        val content = template.content
-                        if (content != null) {
-                            scope.launch {
-                                busy = true
-                                val (msg, ok) = withContext(Dispatchers.IO) {
-                                    try {
-                                        editor.updateText(content)
-                                        "Template applied: \"$content\"" to true
-                                    } catch (t: Throwable) {
-                                        "Failed: ${t.message}" to false
-                                    }
-                                }
-                                if (ok) watermarkText = content
-                                // S4d-198: auto-refresh the preview on success (no manual Preview click).
-                                status = if (ok) "$msg · ${refreshPreview()}" else msg
-                                busy = false
-                            }
-                        }
-                    },
-                    onAdd = { text ->
-                        scope.launch {
-                            busy = true
-                            val next = withContext(Dispatchers.IO) {
-                                try {
-                                    templateEditor.add(text)
-                                    "Saved template: \"$text\""
-                                } catch (t: Throwable) {
-                                    "Failed: ${t.message}"
-                                }
-                            }
-                            status = next
-                            busy = false
-                        }
-                    },
-                    onUpdate = { template ->
-                        scope.launch {
-                            busy = true
-                            val next = withContext(Dispatchers.IO) {
-                                try {
-                                    templateEditor.update(template)
-                                    "Updated template to: \"${template.content.orEmpty()}\""
-                                } catch (t: Throwable) {
-                                    "Failed: ${t.message}"
-                                }
-                            }
-                            status = next
-                            busy = false
-                        }
-                    },
-                    onDelete = { template ->
-                        scope.launch {
-                            busy = true
-                            val next = withContext(Dispatchers.IO) {
-                                try {
-                                    templateEditor.delete(template)
-                                    "Template deleted."
-                                } catch (t: Throwable) {
-                                    "Failed: ${t.message}"
-                                }
-                            }
-                            status = next
-                            busy = false
-                        }
-                    },
-                ) { showTemplateSheet ->
-                    Button(
-                        enabled = !busy,
-                        onClick = showTemplateSheet,
+                ) { info, thumbModifier ->
+                    val path = info.uri.value
+                    val bmp = remember(path) {
+                        runCatching { DesktopImageDecoder.decode(File(path)) }.getOrNull()
+                    }
+                    val job = remember(
+                        info.uri,
+                        exportJobState.completedCount,
+                        exportJobState.isSaving,
+                        exportJobState.isFinished,
+                    ) { info.jobState }
+                    me.rosuh.easywatermark.ui.save.ExportProgressOverlay(
+                        jobState = job,
+                        modifier = thumbModifier,
                     ) {
-                        Text("Templates")
+                        if (bmp != null) {
+                            Image(
+                                bitmap = bmp,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                            )
+                        }
                     }
                 }
-                    }
-                },
-            )
+            }
         }
     }
 }

@@ -31,6 +31,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
+import me.rosuh.easywatermark.ui.compose.parseArgbHexColor
+import me.rosuh.easywatermark.data.model.WatermarkConfigRules
+import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.FuncType
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
@@ -38,19 +42,14 @@ import me.rosuh.easywatermark.render.IosImageDecoder
 import me.rosuh.easywatermark.ui.about.AboutDevCard
 import me.rosuh.easywatermark.ui.about.AboutScreenIcons
 import me.rosuh.easywatermark.ui.about.AboutScreenShell
-import me.rosuh.easywatermark.ui.about.AboutScreenStrings
 import me.rosuh.easywatermark.ui.compose.TileMode
-import me.rosuh.easywatermark.ui.compose.TileModeLabels
 import me.rosuh.easywatermark.ui.compose.IconWatermarkOption
 import me.rosuh.easywatermark.ui.compose.TextColorOption
-import me.rosuh.easywatermark.ui.compose.TextColorOptionStrings
 import me.rosuh.easywatermark.ui.compose.formatArgbHexColor
 import me.rosuh.easywatermark.ui.compose.TextContentOption
-import me.rosuh.easywatermark.ui.compose.TextContentOptionStrings
 import me.rosuh.easywatermark.ui.compose.TextPaintStyleLabels
 import me.rosuh.easywatermark.ui.compose.TextPaintStyleOption
 import me.rosuh.easywatermark.ui.compose.TextTypeface as TextTypefaceOption
-import me.rosuh.easywatermark.ui.compose.TextTypefaceLabels
 import me.rosuh.easywatermark.ui.compose.SliderOption
 import me.rosuh.easywatermark.ui.save.SavePreviewStatus
 import me.rosuh.easywatermark.ui.save.SavedOutputActions
@@ -209,8 +208,7 @@ class IosWatermarkTileModeHost(
     fun viewController(): UIViewController = ComposeUIViewController {
         AppTheme {
             TileMode(
-                labels = TileModeLabels(repeat = "Repeat", decal = "Single"),
-                mode = mode,
+                                mode = mode,
                 modifier = Modifier.fillMaxWidth(),
                 onValueChange = { selectedMode ->
                     mode = selectedMode
@@ -259,13 +257,7 @@ class IosTextTypefaceHost(
     fun viewController(): UIViewController = ComposeUIViewController {
         AppTheme {
             TextTypefaceOption(
-                labels = TextTypefaceLabels(
-                    normal = "Normal",
-                    bold = "Bold",
-                    italic = "Italic",
-                    boldItalic = "BoldItalic",
-                ),
-                typeface = typeface,
+                                typeface = typeface,
                 modifier = Modifier.fillMaxWidth(),
                 onValueChange = { selectedTypeface ->
                     typeface = selectedTypeface
@@ -465,12 +457,7 @@ class IosTextContentOptionHost(
         AppTheme {
             TextContentOption(
                 text = text,
-                strings = TextContentOptionStrings(
-                    templateIconContentDescription = "Templates",
-                    editSheetTitle = "Edit watermark text",
-                    confirmButton = "Apply text",
-                ),
-                // Templates remain the proven SwiftUI section; do not open TemplateListSheet here.
+                                // Templates remain the proven SwiftUI section; do not open TemplateListSheet here.
                 templateIcon = null,
                 // XCUITest taps the host row → sheet (openSignal left 0; row click opens sheet).
                 openSignal = 0,
@@ -504,11 +491,7 @@ class IosWatermarkTextColorHost(
             TextColorOption(
                 currentColor = color,
                 customText = "",
-                strings = TextColorOptionStrings(
-                    customLabel = "Custom color",
-                    applyCustomButton = "Apply color",
-                ),
-                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth(),
                 palette = IOS_TEXT_COLOR_PALETTE,
                 showCustomInput = false,
                 onColorSelected = { selectedColor ->
@@ -666,204 +649,180 @@ class IosEditorScreenHost(
                                     .testTag("sharedComposeSavedOutputActions"),
                             )
                         }
+                        // U3: Android-parity shared bottom controls (session callbacks stay Swift workflow edge).
+                        val waterMark = WaterMark(
+                            text = current.text,
+                            textSize = textSize,
+                            textColor = current.textColor,
+                            textStyle = current.textStyle,
+                            textTypeface = current.typeface,
+                            alpha = WatermarkConfigRules.alphaPercentToByte(alphaPercent),
+                            degree = degree,
+                            hGap = horizontalGap.toInt(),
+                            vGap = verticalGap.toInt(),
+                            iconUri = if (iconBitmap != null) MediaRef("ios-icon") else MediaRef.Empty,
+                            markMode = if (current.isImageMode) {
+                                me.rosuh.easywatermark.data.model.WatermarkMode.Image
+                            } else {
+                                me.rosuh.easywatermark.data.model.WatermarkMode.Text
+                            },
+                            enableBounds = false,
+                            tileMode = current.tileMode,
+                        )
+                        var colorDraft by remember(current.textColor) {
+                            mutableStateOf(formatArgbHexColor(current.textColor))
+                        }
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(max = 300.dp)
+                                .heightIn(max = 320.dp)
                                 .verticalScroll(rememberScrollState())
                                 .testTag("sharedComposeEditorOptions")
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("sharedComposeIconWatermarkOption")
-                                    .semantics {
-                                        contentDescription = if (iconBitmap == null) {
-                                            "Watermark icon not selected"
-                                        } else {
-                                            "Watermark icon selected"
+                            EditorBottomControls(
+                                waterMark = waterMark,
+                                                                templateIcon = null,
+                                onValueChange = { type, value ->
+                                    when (type) {
+                                        FuncType.Text -> {
+                                            val next = value as String
+                                            pendingText = next
+                                            state = state.copy(text = next)
+                                            onTextChange(next)
                                         }
-                                    },
-                            ) {
-                                IconWatermarkOption(
-                                    hasIcon = iconBitmap != null,
-                                    pickLabel = "Pick icon",
-                                    modifier = Modifier.fillMaxWidth(),
-                                    onPick = onPickIcon,
-                                    preview = {
-                                        iconBitmap?.let { bitmap ->
-                                            Image(
-                                                bitmap = bitmap,
-                                                contentDescription = "Watermark icon",
-                                                contentScale = ContentScale.Crop,
-                                                modifier = Modifier.size(32.dp),
-                                            )
+                                        FuncType.Degree -> {
+                                            val next = value as Float
+                                            degree = next
+                                            pendingDegree = next
+                                            onDegreeFinished(next)
                                         }
-                                    },
-                                )
-                            }
-
-                            Box(
+                                        FuncType.Alpha -> {
+                                            val next = value as Float
+                                            alphaPercent = next
+                                            pendingAlphaPercent = next
+                                            onAlphaFinished(next)
+                                        }
+                                        FuncType.TextSize -> {
+                                            val next = value as Float
+                                            textSize = next
+                                            pendingTextSize = next
+                                            onTextSizeFinished(next)
+                                        }
+                                        FuncType.Horizon -> {
+                                            val next = value as Float
+                                            horizontalGap = next
+                                            pendingHorizontalGap = next
+                                            onHorizontalGapFinished(next)
+                                        }
+                                        FuncType.Vertical -> {
+                                            val next = value as Float
+                                            verticalGap = next
+                                            pendingVerticalGap = next
+                                            onVerticalGapFinished(next)
+                                        }
+                                        FuncType.Color -> {
+                                            val next = value as Int
+                                            pendingColor = next
+                                            state = state.copy(textColor = next)
+                                            onColorSelected(next)
+                                        }
+                                        FuncType.TileMode -> {
+                                            val next = value as WatermarkTileMode
+                                            pendingTileMode = next
+                                            state = state.copy(tileMode = next)
+                                            onTileModeChange(next)
+                                        }
+                                        FuncType.TextTypeFace -> {
+                                            val next = value as TextTypeface
+                                            pendingTypeface = next
+                                            state = state.copy(typeface = next)
+                                            onTypefaceChange(next)
+                                        }
+                                        FuncType.Icon -> {
+                                            // Icon bytes arrive via PhotosPicker + update(); picker is the edge.
+                                            onPickIcon()
+                                        }
+                                    }
+                                },
+                                onGoTemplateList = { /* Swift Templates strip remains until full ProductApp */ },
+                                colorOption = { optionModifier, mark, onColor ->
+                                    Box(
+                                        modifier = optionModifier
+                                            .testTag("sharedComposeTextColor")
+                                            .semantics {
+                                                contentDescription =
+                                                    "Text color ${formatArgbHexColor(mark.textColor)}"
+                                            },
+                                    ) {
+                                        TextColorOption(
+                                            currentColor = mark.textColor,
+                                            customText = colorDraft,
+                                            modifier = Modifier.fillMaxWidth(),
+                                            showCustomInput = false,
+                                            onColorSelected = onColor,
+                                            onCustomTextChange = { colorDraft = it },
+                                            onApplyCustomText = {
+                                                parseArgbHexColor(colorDraft)?.let(onColor)
+                                            },
+                                        )
+                                    }
+                                },
+                                iconOption = { optionModifier, mark, _ ->
+                                    Box(
+                                        modifier = optionModifier
+                                            .testTag("sharedComposeIconWatermarkOption")
+                                            .semantics {
+                                                contentDescription = if (iconBitmap == null) {
+                                                    "Watermark icon not selected"
+                                                } else {
+                                                    "Watermark icon selected"
+                                                }
+                                            },
+                                    ) {
+                                        IconWatermarkOption(
+                                            hasIcon = iconBitmap != null,
+                                            pickLabel = "Pick icon",
+                                            modifier = Modifier.fillMaxWidth(),
+                                            onPick = onPickIcon,
+                                            preview = {
+                                                iconBitmap?.let { bitmap ->
+                                                    Image(
+                                                        bitmap = bitmap,
+                                                        contentDescription = "Watermark icon",
+                                                        contentScale = ContentScale.Crop,
+                                                        modifier = Modifier.size(32.dp),
+                                                    )
+                                                }
+                                            },
+                                        )
+                                    }
+                                },
+                                optionItem = { spec, selected ->
+                                    val label = when (spec.type) {
+                                        FuncType.Text -> "Text"
+                                        FuncType.Icon -> "Image"
+                                        FuncType.TileMode -> "Tile"
+                                        FuncType.TextSize -> "Size"
+                                        FuncType.TextTypeFace -> "Typeface"
+                                        FuncType.Color -> "Color"
+                                        FuncType.Alpha -> "Opacity"
+                                        FuncType.Degree -> "Rotate"
+                                        FuncType.Horizon -> "H gap"
+                                        FuncType.Vertical -> "V gap"
+                                    }
+                                    EditorOptionItem(
+                                        icon = ColorPainter(MaterialTheme.colorScheme.primary),
+                                        contentDescription = label,
+                                        label = label,
+                                        selected = selected,
+                                    )
+                                },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .testTag("sharedComposeTextContent")
-                                    .semantics { contentDescription = textHostLabel },
-                            ) {
-                                TextContentOption(
-                                    text = current.text,
-                                    strings = TextContentOptionStrings(
-                                        templateIconContentDescription = "Templates",
-                                        editSheetTitle = "Edit watermark text",
-                                        confirmButton = "Apply text",
-                                    ),
-                                    templateIcon = null,
-                                    openSignal = 0,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    onTextChange = { next ->
-                                        pendingText = next
-                                        state = state.copy(text = next)
-                                        onTextChange(next)
-                                    },
-                                )
-                            }
-
-                            labeledEditorSlider(
-                                tag = "sharedComposeWatermarkDegree",
-                                label = "Rotation ${degree.toInt()}",
-                                value = degree,
-                                range = 0f..360f,
-                                onValueChange = {
-                                    degree = it
-                                    pendingDegree = it
-                                },
-                                onFinished = { onDegreeFinished(degree) },
+                                    .testTag("sharedComposeEditorBottomControls"),
                             )
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("sharedComposeTileMode")
-                                    .semantics { contentDescription = tileLabel },
-                            ) {
-                                TileMode(
-                                    labels = TileModeLabels(repeat = "Repeat", decal = "Single"),
-                                    mode = current.tileMode,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    onValueChange = { selected ->
-                                        pendingTileMode = selected
-                                        state = state.copy(tileMode = selected)
-                                        onTileModeChange(selected)
-                                    },
-                                )
-                            }
-                            labeledEditorSlider(
-                                tag = "sharedComposeWatermarkAlpha",
-                                label = "Opacity ${alphaPercent.toInt()}%",
-                                value = alphaPercent,
-                                range = 0f..100f,
-                                onValueChange = {
-                                    alphaPercent = it
-                                    pendingAlphaPercent = it
-                                },
-                                onFinished = { onAlphaFinished(alphaPercent) },
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("sharedComposeTextColor")
-                                    .semantics {
-                                        // Match ColorSwatch a11y: "Text color #AARRGGBB" (not signed Int).
-                                        contentDescription =
-                                            "Text color ${formatArgbHexColor(current.textColor)}"
-                                    },
-                            ) {
-                                TextColorOption(
-                                    currentColor = current.textColor,
-                                    customText = "",
-                                    strings = TextColorOptionStrings(
-                                        customLabel = "Custom color",
-                                        applyCustomButton = "Apply color",
-                                    ),
-                                    modifier = Modifier.fillMaxWidth(),
-                                    palette = EDITOR_TEXT_COLOR_PALETTE,
-                                    showCustomInput = false,
-                                    onColorSelected = { selectedColor ->
-                                        pendingColor = selectedColor
-                                        state = state.copy(textColor = selectedColor)
-                                        onColorSelected(selectedColor)
-                                    },
-                                    onCustomTextChange = {},
-                                    onApplyCustomText = {},
-                                )
-                            }
-                            labeledEditorSlider(
-                                tag = "sharedComposeTextSize",
-                                label = "Text size ${textSize.toInt()}",
-                                value = textSize,
-                                range = 1f..100f,
-                                onValueChange = {
-                                    textSize = it
-                                    pendingTextSize = it
-                                },
-                                onFinished = { onTextSizeFinished(textSize) },
-                            )
-                            Text(
-                                text = "Gaps: H ${horizontalGap.toInt()}  V ${verticalGap.toInt()}",
-                                style = MaterialTheme.typography.labelSmall,
-                                modifier = Modifier
-                                    .testTag("watermarkGapLabel")
-                                    .semantics {
-                                        contentDescription =
-                                            "Gaps: H ${horizontalGap.toInt()}  V ${verticalGap.toInt()}"
-                                    },
-                            )
-                            labeledEditorSlider(
-                                tag = "sharedComposeWatermarkHGap",
-                                label = "Horizontal gap ${horizontalGap.toInt()}",
-                                value = horizontalGap,
-                                range = 0f..500f,
-                                onValueChange = {
-                                    horizontalGap = it
-                                    pendingHorizontalGap = it
-                                },
-                                onFinished = { onHorizontalGapFinished(horizontalGap) },
-                            )
-                            labeledEditorSlider(
-                                tag = "sharedComposeWatermarkVGap",
-                                label = "Vertical gap ${verticalGap.toInt()}",
-                                value = verticalGap,
-                                range = 0f..500f,
-                                onValueChange = {
-                                    verticalGap = it
-                                    pendingVerticalGap = it
-                                },
-                                onFinished = { onVerticalGapFinished(verticalGap) },
-                            )
-                            // No mergeDescendants: segment buttons keep individual a11y (Fill/Stroke,
-                            // Normal/Bold/…). Outer testTag + state description match tile-mode host.
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("sharedComposeTextTypeface")
-                                    .semantics { contentDescription = typefaceLabel },
-                            ) {
-                                TextTypefaceOption(
-                                    labels = TextTypefaceLabels(
-                                        normal = "Normal",
-                                        bold = "Bold",
-                                        italic = "Italic",
-                                        boldItalic = "BoldItalic",
-                                    ),
-                                    typeface = current.typeface,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    onValueChange = { selected ->
-                                        pendingTypeface = selected
-                                        state = state.copy(typeface = selected)
-                                        onTypefaceChange(selected)
-                                    },
-                                )
-                            }
+                            // Paint style is Android-extra on Desktop; keep for iOS parity with prior host.
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -881,6 +840,38 @@ class IosEditorScreenHost(
                                     },
                                 )
                             }
+                            // XCUITest-friendly state summaries (retain prior a11y tags).
+                            Text(
+                                text = textHostLabel,
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier
+                                    .testTag("sharedComposeTextContent")
+                                    .semantics { contentDescription = textHostLabel },
+                            )
+                            Text(
+                                text = tileLabel,
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier
+                                    .testTag("sharedComposeTileMode")
+                                    .semantics { contentDescription = tileLabel },
+                            )
+                            Text(
+                                text = typefaceLabel,
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier
+                                    .testTag("sharedComposeTextTypeface")
+                                    .semantics { contentDescription = typefaceLabel },
+                            )
+                            Text(
+                                text = "Gaps: H ${horizontalGap.toInt()}  V ${verticalGap.toInt()}",
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier
+                                    .testTag("watermarkGapLabel")
+                                    .semantics {
+                                        contentDescription =
+                                            "Gaps: H ${horizontalGap.toInt()}  V ${verticalGap.toInt()}"
+                                    },
+                            )
                         }
                     }
                 },
@@ -972,14 +963,6 @@ class IosEditorScreenHost(
         )
     }
 
-    private companion object {
-        val EDITOR_TEXT_COLOR_PALETTE = listOf(
-            0xFFFFB800.toInt(),
-            0xFFFFFFFF.toInt(),
-            0xFF000000.toInt(),
-            0xFFFF0000.toInt(),
-        )
-    }
 }
 
 private data class IosEditorScreenState(
@@ -1026,8 +1009,6 @@ object IosSharedComposeHost {
     fun launchScreenShellWitness(): UIViewController = ComposeUIViewController {
         AppTheme {
             LaunchScreenShell(
-                pickImageLabel = "Choose Images",
-                aboutContentDescription = "About EasyWatermark",
                 aboutIcon = ColorPainter(MaterialTheme.colorScheme.primary),
                 startLogoAnimation = false,
                 logo = { modifier, _ ->
@@ -1098,20 +1079,7 @@ object IosSharedComposeHost {
                 versionName = "iOS shared witness",
                 showBounds = false,
                 dynamicColorOn = false,
-                strings = AboutScreenStrings(
-                    infoTitle = "Info",
-                    versionTitle = "Version",
-                    ratingTitle = "Rate",
-                    feedbackTitle = "Feedback",
-                    aboutTitle = "About",
-                    updateLogTitle = "Update log",
-                    openSourceTitle = "Open source",
-                    privacyZhTitle = "Privacy zh",
-                    privacyEnTitle = "Privacy en",
-                    dynamicColorLabel = "Dynamic color",
-                    showBoundsLabel = "Show bounds",
-                ),
-                icons = AboutScreenIcons(
+                                icons = AboutScreenIcons(
                     back = accent,
                     version = accent,
                     rating = accent,
@@ -1216,7 +1184,7 @@ object IosSharedComposeHost {
                                 }
                             }
                         },
-                        optionItem = { option ->
+                        optionItem = { option, _ ->
                             Text(option, style = MaterialTheme.typography.labelSmall)
                         },
                     )

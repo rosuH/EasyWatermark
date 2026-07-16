@@ -7,10 +7,10 @@ plugins {
     alias(libs.plugins.android.kotlin.multiplatform.library)
     // C4.3: Kotlin-bundled Compose compiler + Compose Multiplatform. The latter delivers the
     // multiplatform (incl. iOS) androidx.compose graphics/text/material3 artifacts the shared
-    // commonMain renderer and the shared CMP UI route need. compose.runtime/compose.ui are allowed;
-    // Material3 is pinned explicitly (S4d-360); compose-resources / compose.components are NOT
-    // (CMP-9547 stays out of scope). On Android these map to androidx.compose (BOM-aligned via
-    // :app's dependency substitution + enforcedPlatform).
+    // commonMain renderer and the shared CMP UI route need. Material3 is pinned explicitly (S4d-360).
+    // S-i18n-0: official compose.components.resources enabled for packaging spike (CMP-9547 gate);
+    // product UI still uses bags/R.string until Phase 1+. On Android these map to androidx.compose
+    // (BOM-aligned via :app's dependency substitution + enforcedPlatform).
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.compose.multiplatform)
     // S4d-91: Room KMP toolchain proof — KSP (multiplatform) + Room Gradle plugin, applied to
@@ -38,6 +38,13 @@ kotlin {
         namespace = "me.rosuh.easywatermark.shared"
         compileSdk = Apps.compileSdk
         minSdk = Apps.minSdk
+        // S-i18n-0 / CMP-9547: Android-KMP library plugin disables resource packaging by default.
+        // Enable so Compose Multiplatform composeResources are copied into Android assets and
+        // merged into the consuming APK (copyAndroidMainComposeResourcesToAndroidAssets needs
+        // an assets output directory from this flag).
+        androidResources {
+            enable = true
+        }
         // S4d-366: Android host tests run platform-neutral commonTest only (pure models/geometry).
         // Compose ImageBitmap cell-raster lives in skikoTest (Desktop/iOS) — not on the host JVM.
         withHostTest {}
@@ -64,6 +71,10 @@ kotlin {
             // ui-text + ui-unit; on Android → androidx.compose.ui:* (BOM), on iOS/desktop → klibs.
             implementation(compose.runtime)
             implementation(compose.ui)
+            // S-i18n-0: official multiplatform resources (strings/drawables). Packaging spike only
+            // until Phase 0 accepted; product screens still bags/R.string.
+            // `api` so hosts (:app / :desktopApp) can call getString / clearBlocking alongside Res.
+            api(compose.components.resources)
             // S4d-360: explicit JetBrains Material3 (latest published) — do NOT use deprecated
             // compose.material3 accessor (resolved material3:1.9.0 → foundation:1.9.1 skew).
             // See build/s4d359-foundation-skew.md.
@@ -145,4 +156,12 @@ dependencies {
 // S4d-91: Room schema export location (toolchain requirement). Schemas land under shared/schemas.
 room {
     schemaDirectory("$projectDir/schemas")
+}
+
+// S-i18n-0: public Res so :app / desktopApp / ios hosts can read generated accessors if needed.
+// Package is stable and not the default group.module path (easier imports in tests/witnesses).
+compose.resources {
+    publicResClass = true
+    packageOfResClass = "me.rosuh.easywatermark.shared.generated.resources"
+    generateResClass = always
 }

@@ -3,217 +3,75 @@ import PhotosUI
 import UIKit
 import Shared
 
-// C5.4 (S4d-27/29/58) + S4d-383 (A5a): launch/system edges unchanged; the editor laundry-list of
-// per-control ComposeUIViewController hosts is one production `IosEditorScreenHost` shell.
-// PhotosPicker / Templates / Share / Save / `WatermarkWorkflow` stay Swift-owned.
-// S4d-58 DEBUG fixture seam still bypasses PHPicker grid-cell selection for XCUITest only.
-private struct SharedComposeLaunchScreen: UIViewControllerRepresentable {
-    let onPickImage: () -> Void
+// U3: production UI is a **single** Compose product root (`IosProductRootHost`).
+// Swift retains only system edges: PHPicker, Share sheet, Save-to-Photos, DEBUG fixtures/witnesses.
 
-    final class Coordinator {
-        var onPickImage: () -> Void
-        lazy var host = IosLaunchScreenHost(onPickImage: { [weak self] in
-            self?.onPickImage()
-        })
+/// Holds the production Compose host so photo/icon delivery and share/save can reach it.
+/// Services are process-singleton via Kotlin `defaultIosAppServices()` (DataStore one-instance rule).
+@MainActor
+final class IosProductRootBox: ObservableObject {
+    /// Shared with [WatermarkWorkflow] via the same Kotlin singleton factory.
+    let services: IosAppServices = IosAppServicesKt.defaultIosAppServices()
+    var host: IosProductRootHost?
+    weak var viewController: UIViewController?
 
-        init(onPickImage: @escaping () -> Void) {
-            self.onPickImage = onPickImage
+    func presentShare(path: String) {
+        guard let viewController else { return }
+        let url = URL(fileURLWithPath: path)
+        let shareSheet = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        if let popover = shareSheet.popoverPresentationController {
+            popover.sourceView = viewController.view
+            popover.sourceRect = viewController.view.bounds
         }
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator(onPickImage: onPickImage) }
-
-    func makeUIViewController(context: Context) -> UIViewController {
-        context.coordinator.host.viewController()
-    }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        context.coordinator.onPickImage = onPickImage
+        viewController.present(shareSheet, animated: true)
     }
 }
 
-/// S4d-383 / A5a: one production ComposeUIViewController for EditorScreenShell + option column.
-/// Snapshot plain MainActor values into `update` so the representable stays nonisolated-safe.
-private struct SharedComposeEditorScreen: UIViewControllerRepresentable {
-    let text: String
-    let degree: Float
-    let tileMode: WatermarkTileMode
-    let alpha: Float
-    let colorArgb: Int32
-    let textSize: Float
-    let hGap: Int32
-    let vGap: Int32
-    let typefaceKey: Int32
-    let textStyleKey: Int32
-    let isImageMode: Bool
-    let iconBytes: Data?
-    let previewPng: Data?
-    let statusLine: String
-    let canShare: Bool
-    let isSaving: Bool
-    let onPickIcon: () -> Void
-    let workflow: WatermarkWorkflow
-
-    final class Coordinator {
-        weak var workflow: WatermarkWorkflow?
-        weak var viewController: UIViewController?
-        var onPickIcon: () -> Void
-        var resultFileURL: URL?
-        lazy var host = IosEditorScreenHost(
-            onPickIcon: { [weak self] in self?.onPickIcon() },
-            onTextChange: { [weak self] text in self?.setText(text) },
-            onDegreeFinished: { [weak self] value in self?.setDegree(value.floatValue) },
-            onTileModeChange: { [weak self] mode in self?.setTileMode(mode) },
-            onAlphaFinished: { [weak self] percent in self?.setAlphaPercent(percent.floatValue) },
-            onColorSelected: { [weak self] color in self?.setColor(color.int32Value) },
-            onTextSizeFinished: { [weak self] size in self?.setTextSize(size.floatValue) },
-            onHorizontalGapFinished: { [weak self] gap in self?.setHGap(gap.floatValue) },
-            onVerticalGapFinished: { [weak self] gap in self?.setVGap(gap.floatValue) },
-            onTypefaceChange: { [weak self] typeface in self?.setTypeface(typeface) },
-            onTextStyleChange: { [weak self] style in self?.setTextStyle(style) },
-            onShare: { [weak self] in self?.shareResult() },
-            onSaveToPhotos: { [weak self] in self?.saveToPhotos() },
-        )
-
-        init(workflow: WatermarkWorkflow, onPickIcon: @escaping () -> Void, resultFileURL: URL?) {
-            self.workflow = workflow
-            self.onPickIcon = onPickIcon
-            self.resultFileURL = resultFileURL
-        }
-
-        func setText(_ text: String) {
-            Task { @MainActor [weak workflow] in
-                guard let workflow else { return }
-                await workflow.setWatermarkText(text)
-            }
-        }
-
-        func setDegree(_ degree: Float) {
-            Task { @MainActor [weak workflow] in
-                guard let workflow else { return }
-                await workflow.setWatermarkDegree(degree)
-            }
-        }
-
-        func setTileMode(_ mode: WatermarkTileMode) {
-            Task { @MainActor [weak workflow] in
-                guard let workflow else { return }
-                await workflow.setWatermarkTileMode(mode)
-            }
-        }
-
-        func setAlphaPercent(_ percent: Float) {
-            Task { @MainActor [weak workflow] in
-                guard let workflow else { return }
-                await workflow.setWatermarkAlpha(percent / 100.0)
-            }
-        }
-
-        func setColor(_ color: Int32) {
-            Task { @MainActor [weak workflow] in
-                guard let workflow else { return }
-                await workflow.setWatermarkTextColor(color)
-            }
-        }
-
-        func setTextSize(_ size: Float) {
-            Task { @MainActor [weak workflow] in
-                guard let workflow else { return }
-                await workflow.setWatermarkTextSize(size)
-            }
-        }
-
-        func setHGap(_ gap: Float) {
-            Task { @MainActor [weak workflow] in
-                guard let workflow else { return }
-                await workflow.setWatermarkHGap(Int32(gap.rounded()))
-            }
-        }
-
-        func setVGap(_ gap: Float) {
-            Task { @MainActor [weak workflow] in
-                guard let workflow else { return }
-                await workflow.setWatermarkVGap(Int32(gap.rounded()))
-            }
-        }
-
-        func setTypeface(_ typeface: TextTypeface) {
-            Task { @MainActor [weak workflow] in
-                guard let workflow else { return }
-                await workflow.setWatermarkTypeface(typeface.serializeKey())
-            }
-        }
-
-        func setTextStyle(_ style: TextPaintStyle) {
-            Task { @MainActor [weak workflow] in
-                guard let workflow else { return }
-                await workflow.setWatermarkTextStyle(style.serializeKey())
-            }
-        }
-
-        /// Same system-edge share path as the retired `SharedComposeSavedOutputActions` host.
-        func shareResult() {
-            guard let resultFileURL, let viewController else { return }
-            let shareSheet = UIActivityViewController(
-                activityItems: [resultFileURL],
-                applicationActivities: nil,
-            )
-            if let popover = shareSheet.popoverPresentationController {
-                popover.sourceView = viewController.view
-                popover.sourceRect = viewController.view.bounds
-            }
-            viewController.present(shareSheet, animated: true)
-        }
-
-        func saveToPhotos() {
-            Task { @MainActor [weak workflow] in
-                guard let workflow else { return }
-                await workflow.saveResultToPhotos()
-            }
-        }
-    }
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(workflow: workflow, onPickIcon: onPickIcon, resultFileURL: workflow.resultFileURL)
-    }
+/// Single production ComposeUIViewController for Launch + Editor + CMP templates.
+private struct SharedComposeProductRoot: UIViewControllerRepresentable {
+    @ObservedObject var box: IosProductRootBox
+    var onPickPhoto: () -> Void
+    var onPickIcon: () -> Void
 
     func makeUIViewController(context: Context) -> UIViewController {
-        push(context.coordinator)
-        let vc = context.coordinator.host.viewController()
-        context.coordinator.viewController = vc
+        // Kotlin default params are not visible to Swift — pass the process-singleton services.
+        let host = IosProductRootHost(
+            onPickPhoto: onPickPhoto,
+            onPickIcon: onPickIcon,
+            onShare: { [weak box] path in
+                Task { @MainActor in
+                    box?.presentShare(path: path as String)
+                }
+            },
+            onSaveToPhotos: { [weak box] bytes in
+                Task { @MainActor in
+                    do {
+                        try await ImageExport.saveToPhotos(bytes.toData())
+                        box?.host?.markSavedToPhotos(success: true, message: nil)
+                    } catch {
+                        box?.host?.markSavedToPhotos(
+                            success: false,
+                            message: error.localizedDescription,
+                        )
+                    }
+                }
+            },
+            onOpenUrl: { url in
+                Task { @MainActor in
+                    guard let u = URL(string: url as String) else { return }
+                    UIApplication.shared.open(u)
+                }
+            },
+            services: box.services,
+        )
+        box.host = host
+        let vc = host.viewController()
+        box.viewController = vc
         return vc
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        context.coordinator.workflow = workflow
-        context.coordinator.onPickIcon = onPickIcon
-        context.coordinator.resultFileURL = workflow.resultFileURL
-        context.coordinator.viewController = uiViewController
-        push(context.coordinator)
-    }
-
-    private func push(_ coordinator: Coordinator) {
-        let typeface = TextTypeface.companion.obtainSealedClass(key: typefaceKey)
-        let style = TextPaintStyle.companion.obtainSealedClass(key: textStyleKey)
-        coordinator.host.update(
-            text: text,
-            degree: degree,
-            tileMode: tileMode,
-            normalizedAlpha: alpha,
-            textColor: colorArgb,
-            textSize: textSize,
-            horizontalGap: hGap,
-            verticalGap: vGap,
-            typeface: typeface,
-            textStyle: style,
-            isImageMode: isImageMode,
-            iconBytes: iconBytes?.toKotlinByteArray(),
-            previewPng: previewPng?.toKotlinByteArray(),
-            statusLine: statusLine,
-            hasOutput: previewPng != nil,
-            canShare: canShare,
-            isSaving: isSaving,
-        )
+        box.viewController = uiViewController
     }
 }
 
@@ -222,46 +80,41 @@ private struct SharedComposeLaunchShellWitness: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
         IosSharedComposeHost.shared.launchScreenShellWitness()
     }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-    }
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
 }
 
 private struct SharedComposeGalleryShellWitness: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
         IosSharedComposeHost.shared.galleryDialogShellWitness()
     }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-    }
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
 }
 
 private struct SharedComposeAboutShellWitness: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
         IosSharedComposeHost.shared.aboutScreenShellWitness()
     }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-    }
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
 }
 
 private struct SharedComposeEditorShellWitness: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
         IosSharedComposeHost.shared.editorScreenShellWitness()
     }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-    }
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
 }
 #endif
 
 struct ContentView: View {
-    @StateObject private var workflow = WatermarkWorkflow()
-    @State private var pickedItem: PhotosPickerItem?
+    /// System-edge failure surface only — watermark config is session-owned in Kotlin.
+    @StateObject private var edge = WatermarkWorkflow()
+    @StateObject private var productRoot = IosProductRootBox()
+    /// Multi-select source photos (Launch + Editor add-more). Icon watermark stays single.
+    @State private var pickedItems: [PhotosPickerItem] = []
     @State private var isPhotoPickerPresented = false
-    /// S4d-118: the selected ICON for image-watermark mode (separate from the source photo above).
     @State private var pickedIconItem: PhotosPickerItem?
     @State private var isIconPickerPresented = false
+
 #if DEBUG
     private var showSharedComposeWitnesses: Bool {
         ProcessInfo.processInfo.arguments.contains("-sharedComposeWitnesses")
@@ -270,19 +123,15 @@ struct ContentView: View {
     private func shouldShowSharedComposeWitness(_ name: String) -> Bool {
         let arguments = ProcessInfo.processInfo.arguments
         guard showSharedComposeWitnesses else { return false }
-        guard let index = arguments.firstIndex(of: "-sharedComposeWitness"), arguments.indices.contains(index + 1) else {
+        guard let index = arguments.firstIndex(of: "-sharedComposeWitness"),
+              arguments.indices.contains(index + 1) else {
             return true
         }
         return arguments[index + 1] == name
     }
 
-    /// Full-screen DEBUG test surface for shell witnesses. Independent of the production
-    /// editor/Templates layout so XCUITest can reach named IDs without scrolling past a
-    /// fill-height CMP host. Named accessibility identifiers are preserved.
     @ViewBuilder
     private var sharedComposeWitnessSurface: some View {
-        // Independently scrollable so a single requested witness is immediately on-screen,
-        // and an unfiltered multi-witness dump remains reachable by scrolling this surface alone.
         ScrollView {
             VStack(spacing: 16) {
                 if shouldShowSharedComposeWitness("launch") {
@@ -317,142 +166,41 @@ struct ContentView: View {
     }
 #endif
 
-    private var isShowingLaunchScreen: Bool {
-#if DEBUG
-        if showSharedComposeWitnesses { return false }
-#endif
-        guard pickedItem == nil else { return false }
-        if case .idle = workflow.state { return true }
-        return false
+    /// Production path: one CMP product root + system PhotosPicker edges only (no SwiftUI templates).
+    /// Olive full-bleed matches DesignEditorBg so status-bar area is not system white.
+    private var productBackground: Color {
+        Color(red: 0x26 / 255.0, green: 0x26 / 255.0, blue: 0x11 / 255.0)
     }
 
-    /// Production launch + editor path (unchanged by the DEBUG witness route).
     @ViewBuilder
     private var productionContent: some View {
-        if isShowingLaunchScreen {
-            SharedComposeLaunchScreen(onPickImage: { isPhotoPickerPresented = true })
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .accessibilityIdentifier("sharedComposeLaunchScreen")
-                .accessibilityLabel("Pick a photo")
-                .photosPicker(
-                    isPresented: $isPhotoPickerPresented,
-                    selection: $pickedItem,
-                    matching: .images,
-                    photoLibrary: .shared(),
-                )
-        } else {
-            ZStack(alignment: .topTrailing) {
-                // A5a layout: fill-height single CMP host (options scroll inside host) + fixed
-                // Templates strip. Launch / Templates content / pickPhoto / tasks stay as before.
-                VStack(spacing: 0) {
-                    // S4d-383 / A5a: single production CMP editor host (EditorScreenShell + options +
-                    // preview + Share/Save). Replaces the per-control host laundry list only.
-                    SharedComposeEditorScreen(
-                        text: workflow.watermarkText,
-                        degree: workflow.watermarkDegree,
-                        tileMode: workflow.watermarkTileMode,
-                        alpha: workflow.watermarkAlpha,
-                        colorArgb: workflow.watermarkColorArgb,
-                        textSize: workflow.watermarkTextSize,
-                        hGap: workflow.watermarkHGap,
-                        vGap: workflow.watermarkVGap,
-                        typefaceKey: workflow.watermarkTypefaceKey,
-                        textStyleKey: workflow.watermarkTextStyleKey,
-                        isImageMode: workflow.watermarkMarkMode == .image,
-                        iconBytes: workflow.iconThumbnail,
-                        previewPng: workflow.resultPNG,
-                        statusLine: editorStatusLine,
-                        canShare: workflow.resultFileURL != nil,
-                        isSaving: workflow.saveState == .saving,
-                        onPickIcon: { isIconPickerPresented = true },
-                        workflow: workflow,
-                    )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .accessibilityIdentifier("sharedComposeEditorScreen")
-                    .photosPicker(
-                        isPresented: $isIconPickerPresented,
-                        selection: $pickedIconItem,
-                        matching: .images,
-                        photoLibrary: .shared(),
-                    )
-
-                    // S4d-233: minimal Templates UI over the seeded iOS Template Room DB (the no-arg
-                    // `buildTemplateDatabase()` consumed via `IosTemplateBridge`; on a fresh install the rows are the
-                    // bundled default templates from S4d-232). Save the current text, apply a template (reuses
-                    // `setWatermarkText`, which persists + re-renders), or delete one. Minimal — not the final 1:1 editor.
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text("Templates")
-                                    .font(.caption.bold())
-                                    .accessibilityAddTraits(.isHeader)
-                                Spacer()
-                                // S4d-378: stable production a11y id for XCUITest (semantic locator, not label).
-                                // Label stays the visible title "Save current"; action unchanged.
-                                Button {
-                                    Task { await workflow.saveCurrentTextAsTemplate() }
-                                } label: {
-                                    Text("Save current")
-                                }
-                                .buttonStyle(.bordered)
-                                .disabled(workflow.watermarkText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                                .accessibilityIdentifier("saveTemplateButton")
-                            }
-                            ForEach(workflow.templates, id: \.id) { template in
-                                HStack {
-                                    Button(template.content) {
-                                        Task {
-                                            await workflow.applyTemplate(template)
-                                        }
-                                    }
-                                    .buttonStyle(.borderless)
-                                    // S4d-378: per-row id so XCUITest can pair Apply/Delete without Y-frame heuristics.
-                                    .accessibilityIdentifier("templateRow-\(template.id)")
-                                    .accessibilityLabel(template.content)
-                                    Spacer()
-                                    Button(role: .destructive) {
-                                        Task { await workflow.deleteTemplate(template) }
-                                    } label: {
-                                        Image(systemName: "trash")
-                                    }
-                                    .buttonStyle(.borderless)
-                                    .accessibilityLabel("Delete template")
-                                    .accessibilityIdentifier("deleteTemplateButton-\(template.id)")
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                        .padding(.vertical, 8)
-                    }
-                    // Compact strip so EditorScreenShell preview retains usable height on small phones.
-                    .frame(maxHeight: 120)
-                    // children: .contain keeps Save/row/delete as separate AX elements (not one combined button).
-                    // Section id is on the container only — do not rely on it for the Save action.
-                    .accessibilityElement(children: .contain)
-                    .accessibilityIdentifier("templatesSection")
-
-                    // SwiftUI save confirmation remains outside the CMP host (system-edge status).
-                    saveStatusView
-                        .padding(.bottom, 4)
-                }
-                // The shared launch shell owns initial entry. Keep source replacement as a compact
-                // SwiftUI system-picker edge without changing the editor's scroll layout.
-                PhotosPicker(selection: $pickedItem, matching: .images, photoLibrary: .shared()) {
-                    Image(systemName: "photo.on.rectangle")
-                }
-                .buttonStyle(.bordered)
-                .accessibilityIdentifier("pickPhotoButton")
-                .accessibilityLabel("Pick another photo")
-                .padding()
-            }
-        }
+        SharedComposeProductRoot(
+            box: productRoot,
+            onPickPhoto: { isPhotoPickerPresented = true },
+            onPickIcon: { isIconPickerPresented = true },
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(productBackground)
+        .ignoresSafeArea()
+        .accessibilityIdentifier("sharedComposeProductRoot")
+        .photosPicker(
+            isPresented: $isPhotoPickerPresented,
+            selection: $pickedItems,
+            maxSelectionCount: 50,
+            matching: .images,
+            photoLibrary: .shared(),
+        )
+        .photosPicker(
+            isPresented: $isIconPickerPresented,
+            selection: $pickedIconItem,
+            matching: .images,
+            photoLibrary: .shared(),
+        )
     }
 
     var body: some View {
         Group {
 #if DEBUG
-            // DEBUG-only witness route: full-screen test surface so shell witnesses are not
-            // trapped below the production fill-height editor + Templates strip.
             if showSharedComposeWitnesses {
                 sharedComposeWitnessSurface
             } else {
@@ -462,58 +210,51 @@ struct ContentView: View {
             productionContent
 #endif
         }
-        // Re-runs whenever a new photo is picked; `.task(id:)` (iOS 15+) avoids the deprecated
-        // `onChange(of:perform:)` single-arg form. Cancels/restarts cleanly on reselection.
-        .task(id: pickedItem) {
-            guard let item = pickedItem else { return }
-            await load(item)
+        // iOS 16-compatible onChange (single-parameter); multi PhotosPicker selection batch.
+        .onChange(of: pickedItems) { newItems in
+            guard !newItems.isEmpty else { return }
+            let batch = newItems
+            Task { await loadPhotos(batch) }
+            // Clear so re-selecting the same set can fire again.
+            pickedItems = []
         }
-        // S4d-118: when an icon is picked, load its bytes and hand them to the workflow (persists +
-        // flips mode → Image + re-renders). Cancels/restarts cleanly on reselection.
         .task(id: pickedIconItem) {
             guard let item = pickedIconItem else { return }
             await loadIcon(item)
         }
-        // S4d-58 UI-test seam (DEBUG only): see `runUITestFixtureIfRequested`.
         .task { await runUITestFixtureIfRequested() }
-        // S4d-82: one-shot read-only exercise of the retained iOS UserConfig prefs bridge on launch
-        // (link/async-interop witness; no prefs UI, writes nothing).
-        .task { await workflow.loadUserConfigWitness() }
-        // S4d-102/S4d-103: load persisted watermark config from the shared repo on launch.
-        // S4d-378: text is owned by the CMP host + workflow.watermarkText (no SwiftUI draft field).
-        .task {
-            await workflow.loadWatermarkText()
-            await workflow.loadWatermarkDegree()
-            await workflow.loadWatermarkTileMode()
-            await workflow.loadWatermarkAlpha()
-            await workflow.loadWatermarkTextColor()
-            await workflow.loadWatermarkTextSize()
-            await workflow.loadWatermarkGaps()
-            await workflow.loadWatermarkTypeface()
-            await workflow.loadWatermarkTextStyle()
-            await workflow.loadWatermarkMarkMode()
-            await workflow.loadTemplates()
-        }
+        .task { await edge.loadUserConfigWitness() }
     }
 
 #if DEBUG
-    /// UI-test-only seam (S4d-58 / C5.3-d). When the app is launched with `-uiTestFixtureImage 1`
-    /// (only XCUITest passes this; a normal launch never does), feed a deterministic in-memory PNG
-    /// straight into the REAL `WatermarkWorkflow.render` path — bypassing ONLY the PHPicker selection
-    /// step that XCUITest cannot drive on the Xcode-27-beta / iOS-27 picker (S4d-57). This does NOT fake
-    /// the preview: the bytes go through `IosWatermarkRenderBridge` (decode → render → encode) exactly
-    /// like a picked photo. Compiled out of release builds (`#if DEBUG`).
+    /// UI-test fixture seam (S4d-58 / E14): bypass PHPicker cell selection only; real session export.
     private func runUITestFixtureIfRequested() async {
         guard ProcessInfo.processInfo.arguments.contains("-uiTestFixtureImage") else { return }
-        guard workflow.state == .idle, pickedItem == nil else { return }
-        guard let data = Self.makeFixturePNG() else {
-            workflow.reportFailure("UI-test fixture image generation failed")
+        guard pickedItems.isEmpty else { return }
+        // Host is created in makeUIViewController; wait briefly if first frame not ready.
+        for _ in 0..<50 {
+            if productRoot.host != nil { break }
+            try? await Task.sleep(nanoseconds: 20_000_000)
+        }
+        guard let host = productRoot.host else {
+            edge.reportFailure("UI-test fixture: product root host not ready")
             return
         }
-        await workflow.render(imageData: data)
+        guard let data = Self.makeFixturePNG() else {
+            edge.reportFailure("UI-test fixture image generation failed")
+            return
+        }
+        do {
+            try await host.deliverPickedPhotoAndAwait(
+                bytes: data.toKotlinByteArray(),
+                append: false,
+                renderPreview: true,
+            )
+        } catch {
+            edge.reportFailure(error.localizedDescription)
+        }
     }
 
-    /// A small deterministic encoded PNG (no bundled asset) used only by the UI-test fixture seam.
     private static func makeFixturePNG() -> Data? {
         let size = CGSize(width: 240, height: 160)
         let image = UIGraphicsImageRenderer(size: size).image { ctx in
@@ -523,93 +264,88 @@ struct ContentView: View {
         }
         return image.pngData()
     }
+#else
+    private func runUITestFixtureIfRequested() async {}
 #endif
 
-    @ViewBuilder
-    private var saveStatusView: some View {
-        switch workflow.saveState {
-        case .idle:
-            EmptyView()
-        case .saving:
-            ProgressView("Saving…")
-        case .saved:
-            Label("Saved to Photos", systemImage: "checkmark.circle")
-                .font(.footnote)
-                .foregroundStyle(.green)
-        case let .failed(message):
-            Text("Save failed: \(message)")
-                .font(.footnote)
-                .foregroundStyle(.red)
-                .multilineTextAlignment(.center)
+    /// Load selected photos.
+    ///
+    /// UX sequence (deliberate):
+    /// 1. Jump to editor shell immediately (no wait on picker IO).
+    /// 2. Load **all** `PhotosPickerItem` bytes first (preserve order).
+    /// 3. Stage **once** as a single batch so the filmstrip appears complete —
+    ///    never grow 1→2→N while the user flings (that caused snap-back / refresh).
+    /// 4. Kotlin host prefetches filmstrip thumbs + first preview asynchronously.
+    private func loadPhotos(_ items: [PhotosPickerItem]) async {
+        guard let host = productRoot.host else {
+            edge.reportFailure("Product root host not ready")
+            return
         }
-    }
-
-    @ViewBuilder
-    private var statusView: some View {
-        switch workflow.state {
-        case .idle:
-            Text("Pick a photo to watermark.")
-                .foregroundStyle(.secondary)
-        case .rendering:
-            ProgressView("Rendering…")
-        case let .success(bytes, width, height):
-            Text("Watermarked \(width)×\(height), PNG \(bytes) B")
-                .font(.footnote.monospaced())
-                .accessibilityIdentifier("renderStatus")
-        case let .failure(message):
-            Text("Error: \(message)")
-                .font(.footnote)
-                .foregroundStyle(.red)
-                .multilineTextAlignment(.center)
+        let alreadyInEditor = host.isInEditor()
+        // 1) Show editor shell before any loadTransferable / decode work.
+        if !alreadyInEditor {
+            host.showEditorShellImmediately()
         }
-    }
 
-    /// Status line for the A5a editor host top bar (same copy as the retired SwiftUI status views).
-    private var editorStatusLine: String {
-        switch workflow.state {
-        case .idle:
-            return "Pick a photo to watermark."
-        case .rendering:
-            return "Rendering…"
-        case let .success(bytes, width, height):
-            return "Watermarked \(width)×\(height), PNG \(bytes) B"
-        case let .failure(message):
-            return "Error: \(message)"
-        }
-    }
-
-    private var renderedPreviewStatus: String {
-        guard case let .success(bytes, width, height) = workflow.state else {
-            return "Watermarked preview"
-        }
-        return "Watermarked \(width)×\(height), PNG \(bytes) B"
-    }
-
-    /// Load the picked item's encoded bytes and hand them to the renderer workflow.
-    private func load(_ item: PhotosPickerItem) async {
-        do {
-            guard let data = try await item.loadTransferable(type: Data.self) else {
-                workflow.reportFailure("no image data")
-                return
+        // 2) Load every payload before staging (parallel, order restored by index).
+        let payloads: [KotlinByteArray] = await withTaskGroup(
+            of: (Int, KotlinByteArray?).self,
+            returning: [KotlinByteArray].self
+        ) { group in
+            for (index, item) in items.enumerated() {
+                group.addTask {
+                    do {
+                        guard let data = try await item.loadTransferable(type: Data.self) else {
+                            return (index, nil)
+                        }
+                        return (index, data.toKotlinByteArray())
+                    } catch {
+                        return (index, nil)
+                    }
+                }
             }
-            await workflow.render(imageData: data)
+            var byIndex: [(Int, KotlinByteArray)] = []
+            byIndex.reserveCapacity(items.count)
+            for await (index, bytes) in group {
+                if let bytes {
+                    byIndex.append((index, bytes))
+                } else {
+                    await MainActor.run {
+                        edge.reportFailure("Photo picker returned no image data for item \(index)")
+                    }
+                }
+            }
+            return byIndex.sorted { $0.0 < $1.0 }.map { $0.1 }
+        }
+
+        guard !payloads.isEmpty else { return }
+
+        // 3) One EnterEditor / filmstrip commit — complete list, stable scroll.
+        do {
+            try await host.deliverPickedPhotosBatch(
+                images: payloads,
+                append: alreadyInEditor,
+                // Fresh pick: raster first image. Add-more: keep current preview (focus preserved).
+                renderPreview: !alreadyInEditor,
+            )
         } catch {
-            workflow.reportFailure(error.localizedDescription)
+            edge.reportFailure(error.localizedDescription)
         }
     }
 
-    /// S4d-118: load the picked ICON's encoded bytes and hand them to the workflow, which persists them via
-    /// `setIconFromBytes` (→ app-private file + mode = Image) and re-renders. Swift passes bytes only; it
-    /// never parses or persists the icon file path.
     private func loadIcon(_ item: PhotosPickerItem) async {
         do {
             guard let data = try await item.loadTransferable(type: Data.self) else {
-                workflow.reportFailure("no icon data")
+                edge.reportFailure("Icon picker returned no image data")
                 return
             }
-            await workflow.setWatermarkIcon(data)
+            guard let host = productRoot.host else {
+                edge.reportFailure("Product root host not ready")
+                return
+            }
+            try await host.deliverIconBytesAndAwait(bytes: data.toKotlinByteArray())
         } catch {
-            workflow.reportFailure(error.localizedDescription)
+            edge.reportFailure(error.localizedDescription)
         }
     }
 }

@@ -19,24 +19,21 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.math.max
 
 /**
- * Android-only watermark renderer seam (CMP plan S2a). The single home for the CURRENT preview/export
- * watermark logic that was formerly duplicated across the legacy `WaterMarkImageView` preview View
- * (preview `onDraw` + companion cell builders, retired in S3c-3) and
- * [me.rosuh.easywatermark.ui.MainViewModel] `generateImage` (export). The Compose Canvas preview
- * (`EditorScreen.WaterMarkCanvas`) and `generateImage` now both call into here:
+ * Android-only **legacy / flag-off** watermark renderer (CMP plan S2a extraction).
  *
- *  - [buildTextShader] / [buildIconShader] — build one watermark cell + its tiling [BitmapShader]
- *    (legacy Android `StaticLayout` / scaled-bitmap path; cell sizing via commonMain
- *    [WatermarkGeometry]).
- *  - [compose] — draw the cell shader over a target canvas: REPEAT tiles a region, CLAMP paints one
- *    decal at a fractional offset. Preview and export now call the SAME helper.
+ * **ADR-0018 / Option C2 production path (P3.5):** when [CommonRasterFlags.useCommonRasterPreview] /
+ * [CommonRasterFlags.useCommonRasterExport] are on (**default true** for debug and release), preview and
+ * export use [AndroidCommonRaster] → commonMain [CommonWatermarkPipeline] / [WatermarkCellComposer].
+ * This object remains the **flag-off fallback** and the oracle for dual-path measurement /
+ * historical strict goldens — **not** the long-term primary product path.
  *
- * This is an EXTRACTION-ONLY slice: the bodies below are moved verbatim from the old call sites, so
- * rendered pixels are unchanged (guarded by the S0 strict export golden + the S2a composition
- * equivalence test). It is deliberately **Android-only** (it touches `android.graphics.*`,
- * `android.text.StaticLayout`, `TextPaint`) and therefore lives in `:app`, NOT `shared/commonMain` —
- * the platform-neutral renderer is a later, explicitly-approved migration slice. Likewise it keeps
- * the legacy text path and does NOT adopt `TextMeasurer`/`TextMeasureEnv` in this slice.
+ * Capabilities kept here for the fallback path:
+ *  - [buildTextShader] / [buildIconShader] — cell + [BitmapShader] (legacy StaticLayout / bitmap;
+ *    cell sizing still via commonMain [WatermarkGeometry]).
+ *  - [compose] — REPEAT tile / CLAMP decal over a target canvas.
+ *
+ * Deliberately **Android-only** (`android.graphics.*`, `StaticLayout`) — lives in `:app`, not
+ * commonMain. Do not re-route production through this object without an owner decision to reverse C2.
  */
 object WatermarkRenderer {
 

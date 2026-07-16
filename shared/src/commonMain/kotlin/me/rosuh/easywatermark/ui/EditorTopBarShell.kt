@@ -1,25 +1,11 @@
 package me.rosuh.easywatermark.ui
 
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.unit.dp
 
-/**
- * Shared CMP editor top-bar shell.
- *
- * Platform callers provide icons and actions; picker/save/about behavior remains at the platform edge.
- */
-@OptIn(ExperimentalMaterial3Api::class)
+/** @deprecated Use [EditorTopBar]. Kept only until Desktop/witness call sites migrate. */
+@Deprecated("Use EditorTopBar", ReplaceWith("EditorTopBar(backIcon, addMoreImagesIcon, saveIcon, aboutIcon, backContentDescription, addMoreImagesContentDescription, saveContentDescription, aboutContentDescription, modifier, onBack, onAddMoreImages, onShowSaveDialog, onGoAboutScreen)"))
 @Composable
 fun EditorTopBarShell(
     backIcon: Painter,
@@ -36,44 +22,19 @@ fun EditorTopBarShell(
     onShowSaveDialog: () -> Unit = {},
     onGoAboutScreen: () -> Unit = {},
 ) {
-    TopAppBar(
+    EditorTopBar(
+        backIcon = backIcon,
+        addMoreImagesIcon = addMoreImagesIcon,
+        saveIcon = saveIcon,
+        aboutIcon = aboutIcon,
+        backContentDescription = backContentDescription,
+        addMoreImagesContentDescription = addMoreImagesContentDescription,
+        saveContentDescription = saveContentDescription,
+        aboutContentDescription = aboutContentDescription,
         modifier = modifier,
-        windowInsets = WindowInsets(0),
-        title = {},
-        navigationIcon = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // Callers may pass a back arrow or the production toolbar logo; both invoke onBack.
-                IconButton(onClick = onBack) {
-                    Icon(
-                        painter = backIcon,
-                        contentDescription = backContentDescription,
-                        modifier = Modifier.size(40.dp),
-                    )
-                }
-            }
-        },
-        actions = {
-            IconButton(onClick = onAddMoreImages) {
-                Icon(
-                    painter = addMoreImagesIcon,
-                    contentDescription = addMoreImagesContentDescription,
-                )
-            }
-            IconButton(onClick = onShowSaveDialog) {
-                Icon(
-                    painter = saveIcon,
-                    contentDescription = saveContentDescription,
-                )
-            }
-            IconButton(onClick = onGoAboutScreen) {
-                Icon(
-                    painter = aboutIcon,
-                    contentDescription = aboutContentDescription,
-                )
-            }
-        },
+        onBack = onBack,
+        onAddMoreImages = onAddMoreImages,
+        onShowSaveDialog = onShowSaveDialog,
+        onGoAboutScreen = onGoAboutScreen,
     )
 }

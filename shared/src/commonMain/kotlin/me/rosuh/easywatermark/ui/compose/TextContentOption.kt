@@ -1,12 +1,22 @@
 package me.rosuh.easywatermark.ui.compose
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -24,11 +34,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import me.rosuh.easywatermark.shared.generated.resources.Res
+import me.rosuh.easywatermark.shared.generated.resources.dialog_title_edit_watermark
+import me.rosuh.easywatermark.shared.generated.resources.dialog_title_template_title
+import me.rosuh.easywatermark.shared.generated.resources.tips_confirm_dialog
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Shared watermark **text** option.
@@ -38,20 +54,13 @@ import androidx.compose.ui.unit.dp
  * 2. A modal sheet opens with a text field to edit the watermark.
  * 3. **Template entry is top-end of the sheet** (not beside a permanent inline field).
  *
- * [openSignal]: incremented by the parent whenever the Text option is (re)activated via the
+ * S-i18n-2: labels from Res. [openSignal]: bumped when Text option is (re)activated via the
  * carousel. Sheet opens on each positive signal so re-tapping Text reopens the dialog.
  * `0` means "not opened by signal yet" (initial default selection shows summary only).
  */
-data class TextContentOptionStrings(
-    val templateIconContentDescription: String,
-    val editSheetTitle: String,
-    val confirmButton: String,
-)
-
 @Composable
 fun TextContentOption(
     text: String,
-    strings: TextContentOptionStrings,
     templateIcon: Painter? = null,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
@@ -71,31 +80,49 @@ fun TextContentOption(
         }
     }
 
-    // Summary row under the filmstrip: current text; tap re-opens the edit sheet.
-    // Template entry lives only in the sheet (top-end), not on this row.
+    // Summary: muted text + soft caret (lower contrast, slower blink than production View).
+    val cursorAlpha by rememberInfiniteTransition(label = "textContentCursor").animateFloat(
+        initialValue = 0.55f,
+        targetValue = 0.12f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "cursorAlpha",
+    )
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
     Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.Start,
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag(TEXT_CONTENT_ROW_TAG)
+            .clickable(enabled = enabled) { showEditSheet = true }
+            .padding(horizontal = 0.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = muted,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            // weight(fill=false): content-sized up to remaining width so the packed row stays centered.
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        // Soft caret: same muted color, slow alpha pulse (not brand yellow).
+        Box(
             modifier = Modifier
-                .weight(1f)
-                .testTag(TEXT_CONTENT_ROW_TAG)
-                .clickable(enabled = enabled) { showEditSheet = true }
-                .padding(vertical = 12.dp),
+                .padding(start = 1.dp)
+                .width(2.dp)
+                .height(18.dp)
+                .alpha(cursorAlpha)
+                .background(muted),
         )
     }
 
     if (showEditSheet) {
         WatermarkTextEditSheet(
             initialText = text,
-            strings = strings,
             templateIcon = templateIcon,
             enabled = enabled,
             onConfirm = {
@@ -116,7 +143,6 @@ fun TextContentOption(
 @Composable
 private fun WatermarkTextEditSheet(
     initialText: String,
-    strings: TextContentOptionStrings,
     templateIcon: Painter?,
     enabled: Boolean,
     onConfirm: (String) -> Unit,
@@ -145,7 +171,7 @@ private fun WatermarkTextEditSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = strings.editSheetTitle,
+                    text = stringResource(Res.string.dialog_title_edit_watermark),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f),
@@ -158,7 +184,7 @@ private fun WatermarkTextEditSheet(
                     ) {
                         Icon(
                             painter = templateIcon,
-                            contentDescription = strings.templateIconContentDescription,
+                            contentDescription = stringResource(Res.string.dialog_title_template_title),
                         )
                     }
                 }
@@ -182,7 +208,7 @@ private fun WatermarkTextEditSheet(
                     .testTag(TEXT_CONTENT_CONFIRM_TAG),
                 shape = RectangleShape,
             ) {
-                Text(text = strings.confirmButton)
+                Text(text = stringResource(Res.string.tips_confirm_dialog))
             }
         }
     }
