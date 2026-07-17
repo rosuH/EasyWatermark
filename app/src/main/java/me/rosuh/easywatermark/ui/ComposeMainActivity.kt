@@ -21,9 +21,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -51,11 +54,15 @@ import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.copy_failed
 import me.rosuh.easywatermark.shared.generated.resources.copy_success
 import me.rosuh.easywatermark.shared.generated.resources.dev_comment
+import me.rosuh.easywatermark.shared.generated.resources.dialog_cancel_exist_confirm
+import me.rosuh.easywatermark.shared.generated.resources.dialog_content_exist_confirm
 import me.rosuh.easywatermark.shared.generated.resources.dialog_export_to_gallery
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_exporting
+import me.rosuh.easywatermark.shared.generated.resources.dialog_title_exist_confirm
 import me.rosuh.easywatermark.shared.generated.resources.recovery_mode_closed
 import me.rosuh.easywatermark.shared.generated.resources.share
 import me.rosuh.easywatermark.shared.generated.resources.store_not_found
+import me.rosuh.easywatermark.shared.generated.resources.tips_confirm_dialog
 import org.jetbrains.compose.resources.stringResource as cmpStringResource
 import androidx.core.os.BuildCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -337,17 +344,54 @@ class ComposeMainActivity : ComponentActivity() {
                                     }
                                 }
 
-                            // System back: OpenSource → About → prior route; Editor → Launch.
+                            // v2.10.0 parity: leaving the editor asks to discard changes first
+                            // (non-cancelable; Confirm = reset session + back to Launch).
+                            var showEditorExitConfirm by remember { mutableStateOf(false) }
+
+                            // System back: OpenSource → About → prior route; Editor → discard confirm.
                             BackHandler(enabled = showOpenSource) { showOpenSource = false }
                             BackHandler(enabled = !showOpenSource && productRoute == ProductShellNav.Route.About) {
                                 productRoute = ProductShellNav.aboutBack(aboutReturnRoute)
                             }
                             BackHandler(enabled = !showOpenSource && productRoute == ProductShellNav.Route.Editor) {
-                                productRoute = ProductShellNav.Route.Launch
+                                showEditorExitConfirm = true
                             }
                             BackHandler(enabled = showGalleryDialog) {
                                 showGalleryDialog = false
                                 viewModel.process(Action.DialogDismiss(false))
+                            }
+
+                            if (showEditorExitConfirm) {
+                                AlertDialog(
+                                    onDismissRequest = { },
+                                    properties = DialogProperties(
+                                        dismissOnBackPress = false,
+                                        dismissOnClickOutside = false,
+                                    ),
+                                    title = {
+                                        Text(cmpStringResource(Res.string.dialog_title_exist_confirm))
+                                    },
+                                    text = {
+                                        Text(cmpStringResource(Res.string.dialog_content_exist_confirm))
+                                    },
+                                    confirmButton = {
+                                        TextButton(
+                                            onClick = {
+                                                showEditorExitConfirm = false
+                                                viewModel.resetJobStatus()
+                                                viewModel.clearData()
+                                                productRoute = ProductShellNav.Route.Launch
+                                            }
+                                        ) {
+                                            Text(cmpStringResource(Res.string.tips_confirm_dialog))
+                                        }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { showEditorExitConfirm = false }) {
+                                            Text(cmpStringResource(Res.string.dialog_cancel_exist_confirm))
+                                        }
+                                    },
+                                )
                             }
 
                             Box(
@@ -373,7 +417,7 @@ class ComposeMainActivity : ComponentActivity() {
                                                 waterMark = state.waterMark,
                                                 selectedImage = state.curImageInfo,
                                                 onBack = {
-                                                    productRoute = ProductShellNav.Route.Launch
+                                                    showEditorExitConfirm = true
                                                 },
                                                 onWaterMrkChange = { item: FuncTitleModel, any: Any ->
                                                     viewModel.process(Action.WaterMarkChange(item, any))
