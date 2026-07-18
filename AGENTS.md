@@ -38,7 +38,7 @@ Platform source sets supply the edges:
 
 - **Android:** `ComposeMainActivity` (sole `ComponentActivity`) → shared nav/UI (`ui/Routes`, `EditorScreen` …) via Android shells (`ui/AndroidEditorScreen.kt`, `ui/AndroidLaunchScreen.kt`). `MainViewModel` extends the shared session and injects `AndroidExportPipelinePort` + `AndroidMediaLibraryPort`; Koin (`di/AppModule`, `di/RepositoryModule`, `di/DataStoreModule`) wires repos and injected Android edges (default-text provider, SDK-gated tile-id mapper, logger).
 - **Desktop:** `desktopApp/Main.kt` + `DesktopWindow.kt` embed the shared Compose shell with `DesktopExportPipelinePort`; `--args='--headless'` runs the bounded open→render→save spine (`DesktopWatermarkFlow`) without a window.
-- **iOS:** `iosApp/WatermarkWorkflow.swift` retains one instance of each Kotlin bridge; `ContentView.swift` hosts the shared Compose UI via `IosSharedComposeHost` and keeps PHPicker/save/share in Swift. A `#if DEBUG` UI-test fixture seam (`-uiTestFixtureImage`) drives XCUITest because real PHPicker grid cells are not addressable on the current toolchain.
+- **iOS:** `iosApp/WatermarkWorkflow.swift` retains one instance of each Kotlin bridge; `ContentView.swift` hosts the shared Compose UI via `IosSharedComposeHost` and keeps PHPicker/save/share in Swift. A `#if DEBUG` UI-test fixture seam (`-uiTestFixtureImage`) drives XCUITest because real PHPicker grid cells are not addressable on the current toolchain. **Current release is single-scene** (`UIApplicationSupportsMultipleScenes=false`): `IosAppServices` / `defaultIosAppServices()` owns one process-wide Session (route/selection/export/temp); multi-window needs a separately approved scene-scoped Session design.
 
 ### Rendering pipeline
 
