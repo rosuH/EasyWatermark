@@ -14,11 +14,9 @@ import java.io.File
  */
 object DesktopSaveAsDestination {
 
-    fun exactTarget(userChosen: File): File = userChosen
-
     /**
      * Production Save As write: exact path compose+encode+write.
-     * [DesktopWindow] must call this (not a separate runSaveFlow path) so tests cover the live caller.
+     * [me.rosuh.easywatermark.desktop] Window must call this so tests cover the live caller.
      */
     fun renderAndSaveExact(
         imageBytes: ByteArray,
@@ -30,6 +28,6 @@ object DesktopSaveAsDestination {
             imageBytes = imageBytes,
             config = config,
             prefs = prefs,
-            target = exactTarget(userChosen),
+            target = userChosen,
         )
 }

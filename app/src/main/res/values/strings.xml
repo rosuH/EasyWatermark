@@ -41,6 +41,9 @@
     <string name="desktop_import_failed">Import failed: %1$s</string>
     <string name="desktop_saved_as">Saved as: %1$s</string>
     <string name="desktop_save_as_failed">Save As failed: %1$s</string>
+    <string name="desktop_ready_status">Ready. Open/drop import images; Save/Export writes output; Preview is temp-only.</string>
+    <string name="desktop_drop_busy">Busy — wait for the current operation before dropping another image.</string>
+    <string name="desktop_drop_unsupported">Unsupported drop — no supported image files in drop (%1$s).</string>
     <string name="water_mark_mode_text">Text</string>
     <string name="water_mark_mode_image">Icon</string>
     <string name="tips_ok">Confirm</string>

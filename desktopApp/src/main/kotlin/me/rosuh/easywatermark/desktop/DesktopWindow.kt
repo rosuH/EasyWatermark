@@ -72,9 +72,12 @@ import me.rosuh.easywatermark.session.DesktopSaveAsDestination
 import me.rosuh.easywatermark.session.DesktopSessionImport
 import me.rosuh.easywatermark.session.WatermarkSessionViewModel
 import me.rosuh.easywatermark.shared.generated.resources.Res
+import me.rosuh.easywatermark.shared.generated.resources.desktop_drop_busy
+import me.rosuh.easywatermark.shared.generated.resources.desktop_drop_unsupported
 import me.rosuh.easywatermark.shared.generated.resources.desktop_import_failed
 import me.rosuh.easywatermark.shared.generated.resources.desktop_imported
 import me.rosuh.easywatermark.shared.generated.resources.desktop_importing
+import me.rosuh.easywatermark.shared.generated.resources.desktop_ready_status
 import me.rosuh.easywatermark.shared.generated.resources.desktop_save_as
 import me.rosuh.easywatermark.shared.generated.resources.desktop_save_as_dialog_title
 import me.rosuh.easywatermark.shared.generated.resources.desktop_save_as_failed
@@ -299,7 +302,7 @@ fun launchDesktopWindow() = application {
     val templates by remember { templateRepo.getAllTemplate() }.collectAsState(emptyList())
     val scope = rememberCoroutineScope()
     var status by remember {
-        mutableStateOf("Ready. Open/drop import images; Save/Export writes output; Preview is temp-only.")
+        mutableStateOf(sharedString(Res.string.desktop_ready_status))
     }
     // Surface shared export progress when an explicit Save/Export batch is running.
     LaunchedEffect(exportJobState.isSaving, exportJobState.completedCount, exportJobState.totalCount) {
@@ -439,14 +442,18 @@ fun launchDesktopWindow() = application {
         object : DragAndDropTarget {
             override fun onDrop(event: DragAndDropEvent): Boolean {
                 if (busyLatest.value) {
-                    status = "Busy — wait for the current operation before dropping another image."
+                    status = sharedString(Res.string.desktop_drop_busy)
                     return false
                 }
                 val files = supportedImageFiles(event)
                 if (files.isEmpty()) {
-                    status = "Unsupported drop — no supported image files in drop (${IMAGE_EXTENSIONS.joinToString(", ")})."
+                    status = sharedString(
+                        Res.string.desktop_drop_unsupported,
+                        IMAGE_EXTENSIONS.joinToString(", "),
+                    )
                     return false
                 }
+                // Drop is import-only: same openImageFilesBatch as Open / Add more.
                 val append = session.launchScreenUiStateFlow.value.selectedImageList.isNotEmpty()
                 importBatchLatest.value(files, append)
                 return true

@@ -20,7 +20,6 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
@@ -153,25 +152,42 @@ class DesktopImportExportSemanticsTest {
         assertContentEquals(byteArrayOf(0x11, 0x22, 0x33), File(dir, "watermarked.jpg").readBytes())
     }
 
+    /**
+     * Drop uses the same import-only seam as Open/Add more ([DesktopSessionImport.commitImport]
+     * with append when selection is non-empty). Proves zero export + no stable watermarked.* files.
+     */
     @Test
-    fun saveAs_productionSeam_overwritesSamePath_doesNotCreateSuffix() {
-        val dir = tempDir("save-as-overwrite")
-        val chosen = File(dir, "watermarked.jpg")
-        val sentinel = byteArrayOf(0xDE.toByte(), 0xAD.toByte(), 0xBE.toByte(), 0xEF.toByte())
-        chosen.writeBytes(sentinel)
-        val saved = DesktopSaveAsDestination.renderAndSaveExact(
-            imageBytes = DesktopWatermarkComposer.sampleBackgroundPng(48, 32),
-            config = WaterMark.default,
-            prefs = UserPreferences.DEFAULT,
-            userChosen = DesktopSaveAsDestination.exactTarget(chosen),
+    fun dropSemantics_importOnly_appendWithoutExportOrOutputFiles() = runBlocking {
+        val dir = tempDir("drop-import")
+        val outProbe = File(dir, "output-should-stay-empty").apply { mkdirs() }
+        val (session, port) = newSession(dir)
+        val a = pngFile(dir, "drop-a.png")
+        val b = pngFile(dir, "drop-b.png")
+        // First drop-equivalent (replace, like drop onto empty launch/editor).
+        DesktopSessionImport.commitImport(
+            session, listOf(a), emptyList(), append = false, WaterMark.default,
         )
-        assertEquals(chosen.absolutePath, saved.output.value)
-        assertNotEquals(sentinel.toList(), chosen.readBytes().toList())
-        assertFalse(File(dir, "watermarked_1.jpg").exists())
+        // Second drop-equivalent (append, like drop onto editor with selection).
+        val prior = session.launchScreenUiStateFlow.value.selectedImageList
+        DesktopSessionImport.commitImport(
+            session, listOf(b), prior, append = true, WaterMark.default,
+        )
+        assertEquals(
+            listOf(a.absolutePath, b.absolutePath),
+            session.launchScreenUiStateFlow.value.selectedImageList.map { it.uri.value },
+        )
+        assertEquals(0, (port as CountingExportPort).calls.get())
+        assertFalse(session.exportJobState.value.isSaving)
+        assertEquals(0, session.exportJobState.value.totalCount)
+        assertTrue(
+            outProbe.listFiles().isNullOrEmpty() ||
+                outProbe.listFiles()!!.none { it.name.startsWith("watermarked") },
+        )
+        assertTrue(dir.walkTopDown().none { it.isFile && it.name.startsWith("watermarked") })
     }
 
     @Test
-    fun desktopWindow_saveAs_callsProductionExactWriteSeam() {
+    fun desktopWindow_dropAndSaveAs_wireProductionSeams() {
         val relative = "desktopApp/src/main/kotlin/me/rosuh/easywatermark/desktop/DesktopWindow.kt"
         val cwd = File(System.getProperty("user.dir")!!)
         val candidates = listOf(
@@ -197,8 +213,16 @@ class DesktopImportExportSemanticsTest {
         )
         assertTrue("DesktopSessionImport.commitImport" in text)
         assertTrue("showOpenGallery = lastSavedFile != null" in text)
-        // Import status uses resources (not raw English literals for those keys' values alone).
-        assertTrue("Res.string.desktop_importing" in text || "desktop_importing" in text)
+        // Drop target must route through import-only batch (not exportAndAwait).
+        val dropStart = text.indexOf("override fun onDrop")
+        assertTrue(dropStart >= 0)
+        val dropEnd = text.indexOf("fun saveAsExactPath", dropStart)
+        val dropBody = text.substring(dropStart, if (dropEnd > dropStart) dropEnd else text.length)
+        assertTrue("importBatchLatest" in dropBody || "openImageFilesBatch" in dropBody)
+        assertFalse("exportAndAwait" in dropBody)
+        assertTrue("desktop_drop_busy" in text)
+        assertTrue("desktop_ready_status" in text)
+        assertTrue("desktop_importing" in text)
     }
 
     @Test
