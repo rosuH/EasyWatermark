@@ -65,18 +65,24 @@ import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopImageDecoder
 import me.rosuh.easywatermark.render.DesktopSaveDecision
+import me.rosuh.easywatermark.render.DesktopWatermarkComposer
 import me.rosuh.easywatermark.session.AppIntent
 import me.rosuh.easywatermark.session.DesktopExportPipelinePort
-import me.rosuh.easywatermark.session.DesktopLastSavedPolicy
 import me.rosuh.easywatermark.session.DesktopSaveAsDestination
 import me.rosuh.easywatermark.session.DesktopSessionImport
 import me.rosuh.easywatermark.session.WatermarkSessionViewModel
 import me.rosuh.easywatermark.shared.generated.resources.Res
+import me.rosuh.easywatermark.shared.generated.resources.desktop_import_failed
+import me.rosuh.easywatermark.shared.generated.resources.desktop_imported
+import me.rosuh.easywatermark.shared.generated.resources.desktop_importing
 import me.rosuh.easywatermark.shared.generated.resources.desktop_save_as
 import me.rosuh.easywatermark.shared.generated.resources.desktop_save_as_dialog_title
+import me.rosuh.easywatermark.shared.generated.resources.desktop_save_as_failed
+import me.rosuh.easywatermark.shared.generated.resources.desktop_saved_as
 import me.rosuh.easywatermark.shared.generated.resources.dialog_export_to_gallery
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_exporting
 import me.rosuh.easywatermark.shared.generated.resources.share
+import me.rosuh.easywatermark.ui.sharedString
 import me.rosuh.easywatermark.ui.EditorBottomControls
 import me.rosuh.easywatermark.ui.EditorScreen
 import me.rosuh.easywatermark.shared.generated.resources.dev_comment
@@ -267,7 +273,8 @@ fun launchDesktopWindow() = application {
     val editor = remember { WatermarkConfigEditor(repo) }
     // the output-prefs repo the save flow reads (empty store → the shared (JPEG, 80) default).
     val userConfigRepo = remember { DesktopWatermarkFlow.buildUserConfigRepository(dir = appDataDir) }
-    // Shared session + Desktop export port (unique destination). Preview / Save As use runSaveFlow → spine.
+    // Shared session + Desktop export port (unique destination). Preview uses runSaveFlow temp;
+    // Save As uses DesktopSaveAsDestination.renderAndSaveExact.
     val session = remember {
         WatermarkSessionViewModel(
             waterMarkRepo = repo,
@@ -389,7 +396,7 @@ fun launchDesktopWindow() = application {
         if (files.isEmpty()) return
         scope.launch {
             busy = true
-            status = "Importing ${files.size} image(s)…"
+            status = sharedString(Res.string.desktop_importing, files.size)
             try {
                 val prior = session.launchScreenUiStateFlow.value.selectedImageList
                 val (msg, picked) = withContext(Dispatchers.IO) {
@@ -404,9 +411,9 @@ fun launchDesktopWindow() = application {
                         // Remember last file bytes for preview / Save As — not an export.
                         val lastFile = files.lastOrNull { it.isFile }
                         val lastPicked = lastFile?.let { LastImage(it.readBytes(), it.path) }
-                        "Imported ${selected.size} image(s) (no export)" to lastPicked
+                        sharedString(Res.string.desktop_imported, selected.size) to lastPicked
                     } catch (t: Throwable) {
-                        "Import failed: ${t.message}" to null
+                        sharedString(Res.string.desktop_import_failed, t.message ?: "") to null
                     }
                 }
                 picked?.let { lastImage = it }
@@ -415,7 +422,7 @@ fun launchDesktopWindow() = application {
                     selectedSessionImage = session.launchScreenUiStateFlow.value.curImageInfo
                         ?: session.launchScreenUiStateFlow.value.selectedImageList.firstOrNull()
                 }
-                // Preview only — never touch lastSavedFile.
+                // Preview only — never touch lastSavedFile (import is not an explicit save).
                 status = if (picked != null) "$msg · ${refreshPreview()}" else msg
             } finally {
                 busy = false
@@ -448,8 +455,8 @@ fun launchDesktopWindow() = application {
     }
 
     /**
-     * Save As: exact user-chosen path via [DesktopSaveAsDestination] → spine
-     * (not [DesktopSaveDecision.resolveUniqueOutputFile]).
+     * Save As: production exact-write via [DesktopSaveAsDestination.renderAndSaveExact]
+     * (not [DesktopSaveDecision.resolveUniqueOutputFile], not preview temp).
      */
     fun saveAsExactPath(window: java.awt.Frame, dialogTitle: String) {
         if (busy) return
@@ -460,44 +467,32 @@ fun launchDesktopWindow() = application {
         }
         val dir = dialog.directory ?: return
         val name = dialog.file ?: return
-        val target = DesktopSaveAsDestination.exactTarget(File(dir, name))
+        val userChosen = File(dir, name)
         scope.launch {
             busy = true
             try {
                 val out = withContext(Dispatchers.IO) {
-                    val current = lastImage
-                    val o = if (current != null) {
-                        DesktopWatermarkFlow.runSaveFlow(
-                            repo, userConfigRepo,
-                            inputBytes = current.bytes,
-                            inputLabel = current.label,
-                            outputFile = target,
-                        )
-                    } else {
-                        val path = session.launchScreenUiStateFlow.value.curImageInfo?.uri?.value
-                            ?: session.launchScreenUiStateFlow.value.selectedImageList.firstOrNull()?.uri?.value
-                        if (path != null) {
-                            val bytes = File(path).readBytes()
-                            DesktopWatermarkFlow.runSaveFlow(
-                                repo, userConfigRepo,
-                                inputBytes = bytes,
-                                inputLabel = path,
-                                outputFile = target,
-                            )
-                        } else {
-                            DesktopWatermarkFlow.runSaveFlow(
-                                repo, userConfigRepo, outputFile = target,
-                            )
-                        }
-                    }
-                    File(o.outputPath)
+                    val imageBytes = lastImage?.bytes
+                        ?: session.launchScreenUiStateFlow.value.curImageInfo?.uri?.value
+                            ?.let { path -> File(path).takeIf { it.isFile }?.readBytes() }
+                        ?: session.launchScreenUiStateFlow.value.selectedImageList.firstOrNull()?.uri?.value
+                            ?.let { path -> File(path).takeIf { it.isFile }?.readBytes() }
+                        ?: DesktopWatermarkComposer.sampleBackgroundPng(width = 640, height = 480)
+                    val config = repo.waterMark.first()
+                    val prefs = userConfigRepo.userPreferences.first()
+                    val saved = DesktopSaveAsDestination.renderAndSaveExact(
+                        imageBytes = imageBytes,
+                        config = config,
+                        prefs = prefs,
+                        userChosen = userChosen,
+                    )
+                    File(saved.output.value)
                 }
-                if (DesktopLastSavedPolicy.mayTrackAsLastSaved(out, previewFile)) {
-                    lastSavedFile = out
-                }
-                status = "Saved as: ${out.path}"
+                // Explicit Save As branch — track as last real save for Reveal/Open folder.
+                lastSavedFile = out
+                status = sharedString(Res.string.desktop_saved_as, out.path)
             } catch (t: Throwable) {
-                status = "Save As failed: ${t.message}"
+                status = sharedString(Res.string.desktop_save_as_failed, t.message ?: "")
             } finally {
                 busy = false
             }
@@ -1003,11 +998,8 @@ fun launchDesktopWindow() = application {
                                             val outPath = (info.result?.data as? MediaRef)?.value
                                             if (outPath != null) last = File(outPath)
                                         }
-                                        last?.let { out ->
-                                            if (DesktopLastSavedPolicy.mayTrackAsLastSaved(out, previewFile)) {
-                                                lastSavedFile = out
-                                            }
-                                        }
+                                        // Explicit batch Export branch — track last real save for Reveal.
+                                        last?.let { lastSavedFile = it }
                                         val exp = session.exportJobState.value
                                         status = "Exported ${exp.completedCount}/${exp.totalCount} → ${outputDir.path}"
                                     } else {
@@ -1020,9 +1012,7 @@ fun launchDesktopWindow() = application {
                                             )
                                             File(o.outputPath)
                                         }
-                                        if (DesktopLastSavedPolicy.mayTrackAsLastSaved(out, previewFile)) {
-                                            lastSavedFile = out
-                                        }
+                                        lastSavedFile = out
                                         session.markExportFinished(completedCount = 1, totalCount = 1)
                                         status = "Saved: ${out.path}"
                                     }

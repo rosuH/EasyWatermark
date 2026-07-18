@@ -10,3 +10,7 @@ import org.jetbrains.compose.resources.getString
  */
 fun sharedString(resource: StringResource): String =
     runBlocking { getString(resource) }
+
+/** Format-args overload for parameterized product strings outside composition. */
+fun sharedString(resource: StringResource, vararg formatArgs: Any): String =
+    runBlocking { getString(resource, *formatArgs) }

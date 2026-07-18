@@ -47,6 +47,9 @@ compose.desktop {
             packageName = "EasyWatermark"
             // S4d-175: single-sourced from the Android app version (buildSrc Apps.versionName), shared with :app.
             packageVersion = Apps.versionName
+            // Skiko/AWT and other deps touch sun.misc.Unsafe; without jdk.unsupported the
+            // packaged runtime image crashes at launch with NoClassDefFoundError: sun/misc/Unsafe.
+            modules("jdk.unsupported")
         }
     }
 }

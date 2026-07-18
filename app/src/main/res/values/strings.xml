@@ -36,6 +36,11 @@
     <string name="share">Share</string>
     <string name="desktop_save_as">Save As…</string>
     <string name="desktop_save_as_dialog_title">Save As</string>
+    <string name="desktop_importing">Importing %1$d image(s)…</string>
+    <string name="desktop_imported">Imported %1$d image(s) (no export)</string>
+    <string name="desktop_import_failed">Import failed: %1$s</string>
+    <string name="desktop_saved_as">Saved as: %1$s</string>
+    <string name="desktop_save_as_failed">Save As failed: %1$s</string>
     <string name="water_mark_mode_text">Text</string>
     <string name="water_mark_mode_image">Icon</string>
     <string name="tips_ok">Confirm</string>

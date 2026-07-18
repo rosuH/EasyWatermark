@@ -4,24 +4,21 @@ import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.render.DesktopRenderSaveSpine
 import me.rosuh.easywatermark.render.DesktopSavedImage
-import me.rosuh.easywatermark.render.DesktopSaveDecision
 import java.io.File
 
 /**
- * Desktop **Save As** destination policy: the user-chosen [File] is the exact write target.
+ * Desktop **Save As** exact-write seam used by the product window.
  *
- * Distinct from batch export [DesktopSaveDecision.resolveUniqueOutputFile] and from the
- * app-private preview temp path. Production [me.rosuh.easywatermark.desktop] Save As must
- * route through [exactTarget] / [renderAndSaveExact] so unique-naming cannot silently apply.
+ * Writes to the user-chosen [File] via [DesktopRenderSaveSpine] — never
+ * [me.rosuh.easywatermark.render.DesktopSaveDecision.resolveUniqueOutputFile].
  */
 object DesktopSaveAsDestination {
 
-    /** Exact user path — never unique-renamed. */
     fun exactTarget(userChosen: File): File = userChosen
 
     /**
-     * Render/write via [DesktopRenderSaveSpine] to the exact [userChosen] path.
-     * @see exactTarget
+     * Production Save As write: exact path compose+encode+write.
+     * [DesktopWindow] must call this (not a separate runSaveFlow path) so tests cover the live caller.
      */
     fun renderAndSaveExact(
         imageBytes: ByteArray,

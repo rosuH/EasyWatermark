@@ -3,8 +3,8 @@ package me.rosuh.easywatermark.session
 import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.datastore.createUserConfigDataStore
 import me.rosuh.easywatermark.data.datastore.createWaterMarkDataStore
-import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.JobState
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.Result
 import me.rosuh.easywatermark.data.model.UserPreferences
@@ -12,9 +12,9 @@ import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
-import me.rosuh.easywatermark.render.DesktopSaveDecision
 import me.rosuh.easywatermark.render.DesktopWatermarkComposer
 import java.io.File
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -24,9 +24,12 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
- * A3 behavior: import-only selection (no export), Save As exact target, lastSaved vs preview,
- * and batch unique-name order. Drives production seams in [DesktopSessionImport],
- * [DesktopSaveAsDestination], [DesktopLastSavedPolicy], [DesktopExportPipelinePort].
+ * A3 behavior tests for production seams:
+ * - [DesktopSessionImport.commitImport] (Open/Add/Drop) — selection without export
+ * - [DesktopSaveAsDestination.renderAndSaveExact] (Save As production write)
+ * - [WatermarkSessionViewModel.exportAndAwait] order + result writeback (batch Export)
+ *
+ * Collision unique-naming remains owned by Port/SaveDecision tests (A2); not re-run as Port E2E here.
  */
 class DesktopImportExportSemanticsTest {
 
@@ -39,6 +42,22 @@ class DesktopImportExportSemanticsTest {
         ): Result<MediaRef> {
             calls.incrementAndGet()
             return Result.failure(null, code = "UNEXPECTED", message = "import must not export")
+        }
+    }
+
+    /** Records call order and writes synthetic success without real render. */
+    private class RecordingExportPort : ExportPipelinePort {
+        val received = CopyOnWriteArrayList<MediaRef>()
+        override suspend fun exportOne(
+            imageInfo: ImageInfo,
+            config: WaterMark,
+            prefs: UserPreferences,
+        ): Result<MediaRef> {
+            received.add(imageInfo.uri)
+            val out = MediaRef("file://export/${received.size}/${imageInfo.uri.value}")
+            imageInfo.width = 10
+            imageInfo.height = 10
+            return Result.success(out)
         }
     }
 
@@ -95,7 +114,6 @@ class DesktopImportExportSemanticsTest {
         assertEquals(0, (port as CountingExportPort).calls.get())
         assertFalse(session.exportJobState.value.isSaving)
         assertEquals(0, session.exportJobState.value.totalCount)
-        // No stable watermarked.* output created by import.
         assertTrue(dir.listFiles()?.none { it.name.startsWith("watermarked") } != false)
     }
 
@@ -114,34 +132,17 @@ class DesktopImportExportSemanticsTest {
             session, listOf(b, c), prior, append = true, WaterMark.default,
         )
         val paths = session.launchScreenUiStateFlow.value.selectedImageList.map { it.uri.value }
-        assertEquals(
-            listOf(a.absolutePath, b.absolutePath, c.absolutePath),
-            paths,
-        )
+        assertEquals(listOf(a.absolutePath, b.absolutePath, c.absolutePath), paths)
         assertEquals(0, (port as CountingExportPort).calls.get())
     }
 
     @Test
-    fun lastSavedPolicy_previewNeverTracks_realOutputDoes() {
-        val preview = File("/tmp/ewm-preview/preview.img")
-        assertFalse(DesktopLastSavedPolicy.mayTrackAsLastSaved(preview, preview))
-        assertTrue(
-            DesktopLastSavedPolicy.mayTrackAsLastSaved(
-                File("/Pictures/watermarked.jpg"),
-                preview,
-            ),
-        )
-    }
-
-    @Test
-    fun saveAs_exactTarget_writesUserChosenPath_notUniqueSibling() {
+    fun saveAs_productionSeam_writesExactUserPath_notUniqueSibling() {
         val dir = tempDir("save-as-exact")
-        // Occupy the default unique base name so a mistaken unique policy would create _1.
         File(dir, "watermarked.jpg").writeBytes(byteArrayOf(0x11, 0x22, 0x33))
         val chosen = File(dir, "user-chosen-name.jpg")
-        val bytes = DesktopWatermarkComposer.sampleBackgroundPng(40, 30)
         val saved = DesktopSaveAsDestination.renderAndSaveExact(
-            imageBytes = bytes,
+            imageBytes = DesktopWatermarkComposer.sampleBackgroundPng(40, 30),
             config = WaterMark.default.copy(text = "SAVEAS"),
             prefs = UserPreferences.DEFAULT,
             userChosen = chosen,
@@ -149,12 +150,11 @@ class DesktopImportExportSemanticsTest {
         assertEquals(chosen.absolutePath, saved.output.value)
         assertTrue(chosen.isFile && chosen.length() > 3)
         assertFalse(File(dir, "watermarked_1.jpg").exists(), "Save As must not unique-rename")
-        // Occupied base remains untouched by Save As to a different name.
         assertContentEquals(byteArrayOf(0x11, 0x22, 0x33), File(dir, "watermarked.jpg").readBytes())
     }
 
     @Test
-    fun saveAs_exactTarget_overwritesSamePath_doesNotCreateSuffix() {
+    fun saveAs_productionSeam_overwritesSamePath_doesNotCreateSuffix() {
         val dir = tempDir("save-as-overwrite")
         val chosen = File(dir, "watermarked.jpg")
         val sentinel = byteArrayOf(0xDE.toByte(), 0xAD.toByte(), 0xBE.toByte(), 0xEF.toByte())
@@ -171,7 +171,7 @@ class DesktopImportExportSemanticsTest {
     }
 
     @Test
-    fun desktopWindow_saveAs_routesThroughExactTarget_notUniqueHelper() {
+    fun desktopWindow_saveAs_callsProductionExactWriteSeam() {
         val relative = "desktopApp/src/main/kotlin/me/rosuh/easywatermark/desktop/DesktopWindow.kt"
         val cwd = File(System.getProperty("user.dir")!!)
         val candidates = listOf(
@@ -180,46 +180,59 @@ class DesktopImportExportSemanticsTest {
             File(cwd, "../$relative"),
         )
         val window = candidates.firstOrNull { it.isFile }
-            ?: error("DesktopWindow.kt not found from user.dir=$cwd candidates=$candidates")
+            ?: error("DesktopWindow.kt not found from user.dir=$cwd")
         val text = window.readText()
-        assertTrue(
-            "DesktopSaveAsDestination.exactTarget" in text,
-            "Save As caller must use DesktopSaveAsDestination.exactTarget",
-        )
-        assertTrue("DesktopSessionImport.commitImport" in text)
-        // Isolate saveAsExactPath body: must not call unique naming.
         val start = text.indexOf("fun saveAsExactPath")
         assertTrue(start >= 0)
         val end = text.indexOf("Window(onCloseRequest", start)
         val body = text.substring(start, if (end > start) end else text.length)
-        assertFalse(
-            "resolveUniqueOutputFile" in body,
-            "Save As must not use resolveUniqueOutputFile",
+        assertTrue(
+            "DesktopSaveAsDestination.renderAndSaveExact" in body,
+            "production Save As must call renderAndSaveExact (tested write seam)",
         )
-        assertTrue("DesktopSaveAsDestination.exactTarget" in body)
+        assertFalse("resolveUniqueOutputFile" in body)
+        assertFalse(
+            "runSaveFlow" in body,
+            "Save As must not bypass the exact-write seam via runSaveFlow",
+        )
+        assertTrue("DesktopSessionImport.commitImport" in text)
         assertTrue("showOpenGallery = lastSavedFile != null" in text)
+        // Import status uses resources (not raw English literals for those keys' values alone).
+        assertTrue("Res.string.desktop_importing" in text || "desktop_importing" in text)
     }
 
     @Test
-    fun batchExport_preservesOrder_andCollisionSafeNames() = runBlocking {
-        val dir = tempDir("batch-export")
-        val s1 = pngFile(dir, "src1.png", 64, 48)
-        val s2 = pngFile(dir, "src2.png", 64, 48)
-        // Pre-occupy first unique name so second export gets _1.
-        File(dir, "watermarked.jpg").writeBytes(byteArrayOf(1))
-        val port = DesktopExportPipelinePort(outputDirProvider = { dir })
-        val i1 = ImageInfo(MediaRef(s1.absolutePath))
-        val i2 = ImageInfo(MediaRef(s2.absolutePath))
-        val r1 = port.exportOne(i1, WaterMark.default, UserPreferences.DEFAULT)
-        val r2 = port.exportOne(i2, WaterMark.default, UserPreferences.DEFAULT)
-        assertTrue(r1.isSuccess() && r2.isSuccess())
-        val n1 = File(r1.data!!.value).name
-        val n2 = File(r2.data!!.value).name
-        assertEquals("watermarked_1.jpg", n1)
-        assertEquals("watermarked_2.jpg", n2)
-        assertNotEquals(r1.data!!.value, r2.data!!.value)
-        // Contrast: exact Save As to watermarked.jpg would overwrite the sentinel, not create _3.
-        val uniqueProbe = DesktopSaveDecision.resolveUniqueOutputFile(dir, ImageFormat.JPEG)
-        assertEquals("watermarked_3.jpg", uniqueProbe.name)
+    fun exportAndAwait_preservesOrder_andWritesResultsOnSessionItems() = runBlocking {
+        val dir = tempDir("session-batch")
+        val port = RecordingExportPort()
+        val (session, _) = newSession(dir, port)
+        val i1 = ImageInfo(MediaRef("/virtual/a.png"))
+        val i2 = ImageInfo(MediaRef("/virtual/b.png"))
+        val batch = listOf(i1, i2)
+        session.dispatchAndAwait(AppIntent.EnterEditor(selected = batch))
+        // Use the same list instance the host would pass after selection.
+        val selected = session.launchScreenUiStateFlow.value.selectedImageList
+        assertEquals(2, selected.size)
+        session.exportAndAwait(selected)
+        assertEquals(
+            listOf(selected[0].uri, selected[1].uri),
+            port.received.toList(),
+            "export port must see Session batch order",
+        )
+        assertTrue(selected[0].jobState is JobState.Success)
+        assertTrue(selected[1].jobState is JobState.Success)
+        assertEquals(
+            "file://export/1/${selected[0].uri.value}",
+            (selected[0].result?.data as MediaRef).value,
+        )
+        assertEquals(
+            "file://export/2/${selected[1].uri.value}",
+            (selected[1].result?.data as MediaRef).value,
+        )
+        val job = session.exportJobState.value
+        assertTrue(job.isFinished)
+        assertFalse(job.isSaving)
+        assertEquals(2, job.totalCount)
+        assertEquals(2, job.completedCount)
     }
 }
