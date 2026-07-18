@@ -47,6 +47,7 @@ import me.rosuh.easywatermark.ui.theme.DesignBrand
 import me.rosuh.easywatermark.ui.theme.DesignEditorBg
 import me.rosuh.easywatermark.ui.theme.DesignSliderTrack
 import me.rosuh.easywatermark.shared.generated.resources.about_force_dynamic_color
+import me.rosuh.easywatermark.shared.generated.resources.about_prefer_in_app_gallery
 import me.rosuh.easywatermark.shared.generated.resources.about_show_bounds
 import me.rosuh.easywatermark.shared.generated.resources.about_title_about
 import me.rosuh.easywatermark.shared.generated.resources.about_title_feed_back
@@ -101,6 +102,10 @@ fun AboutScreen(
     onToggleBounds: (Boolean) -> Unit,
     onToggleDynamicColor: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    /** Android-only: show preference for in-app MediaStore gallery vs system Photo Picker. */
+    showPreferInAppGallerySwitch: Boolean = false,
+    preferInAppGallery: Boolean = false,
+    onTogglePreferInAppGallery: (Boolean) -> Unit = {},
     logo: @Composable (modifier: Modifier) -> Unit,
 ) {
     val infoTitle = stringResource(Res.string.about_title_info)
@@ -114,6 +119,7 @@ fun AboutScreen(
     val privacyEnTitle = stringResource(Res.string.about_title_privacy_statement)
     val dynamicColorLabel = stringResource(Res.string.about_force_dynamic_color)
     val showBoundsLabel = stringResource(Res.string.about_show_bounds)
+    val preferInAppGalleryLabel = stringResource(Res.string.about_prefer_in_app_gallery)
     val backCd = stringResource(Res.string.cd_back)
 
     // Full-bleed olive + full-screen radial halo (production bg_gradient_about_page).
@@ -192,9 +198,16 @@ fun AboutScreen(
             )
             Spacer(Modifier.height(24.dp))
 
-            // Debug toggles — full-row hit target + brand Switch colors (not stock M3).
+            // Debug / prefs toggles — full-row hit target + brand Switch colors (not stock M3).
             SwitchRow(dynamicColorLabel, dynamicColorOn, onToggleDynamicColor)
             SwitchRow(showBoundsLabel, showBounds, onToggleBounds)
+            if (showPreferInAppGallerySwitch) {
+                SwitchRow(
+                    preferInAppGalleryLabel,
+                    preferInAppGallery,
+                    onTogglePreferInAppGallery,
+                )
+            }
             Spacer(Modifier.height(24.dp))
         }
     }

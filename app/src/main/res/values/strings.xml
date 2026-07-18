@@ -58,6 +58,7 @@
     <string name="dialog_content_exist_confirm">Discard changes?</string>
     <string name="about_title_privacy_statement" translatable="false">Privacy Statement</string>
     <string name="about_title_privacy_statement_zh" translatable="false">隐私政策</string>
+    <string name="about_prefer_in_app_gallery">Use in-app gallery</string>
     <string name="open_source_desc_about_lib" translatable="false">Coil is a fast, lightweight, and modern image loading library for Android and Compose Multiplatform, built with Kotlin Coroutines and Okio.</string>
     <string name="open_source_desc_material_components" translatable="false">Material Components for Android (MDC-Android) help developers execute Material Design. Developed by a core team of engineers and UX designers at Google, these components enable a reliable development workflow to build beautiful and functional Android apps.Material Components for Android is a drop-in replacement for Android\'s Design Support Library.</string>
     <string name="email_subject" translatable="false">[EasyWaterMark] Crash info</string>

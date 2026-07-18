@@ -2,10 +2,12 @@ package me.rosuh.easywatermark.ui
 
 import me.rosuh.easywatermark.platform.DynamicColorCapability
 import org.koin.android.ext.android.inject
+import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -17,6 +19,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.SystemBarStyle
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -283,8 +286,8 @@ class ComposeMainActivity : ComponentActivity() {
                                 )
                             }
 
+                            // Export port returns MediaRef; convert at the Android Intent edge.
                             val outputUris = state.selectedImageList.mapNotNull { image ->
-                                // Export port returns MediaRef; convert at the Android Intent edge.
                                 uriFromExportResultData(image.result?.data)
                             }
                             val shareExports: () -> Unit = {
@@ -345,6 +348,40 @@ class ComposeMainActivity : ComponentActivity() {
                                         Log.i(TAG, "PhotoPicker No media selected")
                                     }
                                 }
+
+                            // Gallery-mode path only: open dialog when full or partial media access.
+                            val galleryPermissionLauncher =
+                                rememberLauncherForActivityResult(
+                                    ActivityResultContracts.RequestMultiplePermissions(),
+                                ) { results ->
+                                    if (hasReadableMediaAccess(this@ComposeMainActivity, results)) {
+                                        showGalleryDialog = true
+                                    } else {
+                                        Log.i(TAG, "Media permission denied (full and partial)")
+                                    }
+                                }
+
+                            val openSystemPhotoPicker: () -> Unit = {
+                                pickMultipleMedia.launch(
+                                    PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly,
+                                    ),
+                                )
+                            }
+                            val openInAppGallery: () -> Unit = {
+                                if (hasReadableMediaAccess(this@ComposeMainActivity)) {
+                                    showGalleryDialog = true
+                                } else {
+                                    galleryPermissionLauncher.launch(mediaPermissionRequestKeys())
+                                }
+                            }
+                            val onPickImages: () -> Unit = {
+                                if (userPreferences.preferInAppGallery) {
+                                    openInAppGallery()
+                                } else {
+                                    openSystemPhotoPicker()
+                                }
+                            }
 
                             // v2.10.0 parity: leaving the editor asks to discard changes first
                             // (non-cancelable; Confirm = reset session + back to Launch).
@@ -407,7 +444,7 @@ class ComposeMainActivity : ComponentActivity() {
                                     when (route) {
                                         ProductShellNav.Route.Launch -> {
                                             AndroidLaunchScreen(
-                                                onGoDialog = { showGalleryDialog = true },
+                                                onPickImage = onPickImages,
                                                 onGoAbout = {
                                                     openAboutFrom(ProductShellNav.Route.Launch)
                                                 },
@@ -433,13 +470,7 @@ class ComposeMainActivity : ComponentActivity() {
                                                 onGoAboutScreen = {
                                                     openAboutFrom(ProductShellNav.Route.Editor)
                                                 },
-                                                onAddMoreImages = {
-                                                    pickMultipleMedia.launch(
-                                                        PickVisualMediaRequest(
-                                                            ActivityResultContracts.PickVisualMedia.ImageOnly
-                                                        )
-                                                    )
-                                                },
+                                                onAddMoreImages = onPickImages,
                                                 onShowSaveDialog = {
                                                     showSaveSheet = true
                                                 },
@@ -470,6 +501,7 @@ class ComposeMainActivity : ComponentActivity() {
                                                 versionName = BuildConfig.VERSION_NAME,
                                                 showBounds = wm?.enableBounds ?: false,
                                                 dynamicColorOn = forceDynamicColor,
+                                                preferInAppGallery = userPreferences.preferInAppGallery,
                                                 onBack = {
                                                     productRoute =
                                                         ProductShellNav.aboutBack(aboutReturnRoute)
@@ -487,6 +519,9 @@ class ComposeMainActivity : ComponentActivity() {
                                                         "Reboot and you'll get what you want.",
                                                         Toast.LENGTH_SHORT,
                                                     ).show()
+                                                },
+                                                onTogglePreferInAppGallery = { enabled ->
+                                                    viewModel.setPreferInAppGallery(enabled)
                                                 },
                                             )
                                         }
@@ -531,13 +566,7 @@ class ComposeMainActivity : ComponentActivity() {
                                                 viewModel.process(Action.DialogDismiss(false))
                                             }
                                         },
-                                        onPickImageViaSystem = {
-                                            pickMultipleMedia.launch(
-                                                PickVisualMediaRequest(
-                                                    ActivityResultContracts.PickVisualMedia.ImageOnly
-                                                )
-                                            )
-                                        },
+                                        onPickImageViaSystem = openSystemPhotoPicker,
                                     )
                                 }
                             }
@@ -610,11 +639,13 @@ private fun AboutScreenAndroid(
     versionName: String,
     showBounds: Boolean,
     dynamicColorOn: Boolean,
+    preferInAppGallery: Boolean,
     onBack: () -> Unit,
     onOpenLink: (String) -> Unit,
     onOpenSource: () -> Unit,
     onToggleBounds: (Boolean) -> Unit,
     onToggleDynamicColor: (Boolean) -> Unit,
+    onTogglePreferInAppGallery: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     AboutScreen(
@@ -653,6 +684,9 @@ private fun AboutScreenAndroid(
         onDesigner = { onOpenLink(ABOUT_URL_DESIGNER) },
         onToggleBounds = onToggleBounds,
         onToggleDynamicColor = onToggleDynamicColor,
+        showPreferInAppGallerySwitch = true,
+        preferInAppGallery = preferInAppGallery,
+        onTogglePreferInAppGallery = onTogglePreferInAppGallery,
         modifier = modifier,
         logo = { logoModifier ->
             me.rosuh.easywatermark.ui.AboutPageLogo(
@@ -661,6 +695,42 @@ private fun AboutScreenAndroid(
             )
         },
     )
+}
+
+/** Permissions to request when opening the in-app gallery (not Photo Picker). */
+private fun mediaPermissionRequestKeys(): Array<String> = when {
+    Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> arrayOf(
+        Manifest.permission.READ_MEDIA_IMAGES,
+        Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED,
+    )
+    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> arrayOf(
+        Manifest.permission.READ_MEDIA_IMAGES,
+    )
+    else -> arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+}
+
+/**
+ * True when the app can list MediaStore images: full library grant, Android 14+ partial
+ * (user-selected), or legacy external storage.
+ */
+private fun hasReadableMediaAccess(
+    context: Context,
+    grantResults: Map<String, Boolean>? = null,
+): Boolean {
+    fun granted(permission: String): Boolean {
+        grantResults?.get(permission)?.let { return it }
+        return ContextCompat.checkSelfPermission(context, permission) ==
+            PackageManager.PERMISSION_GRANTED
+    }
+    return when {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            granted(Manifest.permission.READ_MEDIA_IMAGES) -> true
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+            granted(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) -> true
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU &&
+            granted(Manifest.permission.READ_EXTERNAL_STORAGE) -> true
+        else -> false
+    }
 }
 
 // About URL edges (byte-identical to former AboutScreen.kt constants).

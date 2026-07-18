@@ -1,9 +1,7 @@
 package me.rosuh.easywatermark.ui
 
-import android.Manifest
 import android.content.ContentResolver
 import android.net.Uri
-import android.os.Build
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -13,15 +11,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.os.BuildCompat
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 import me.rosuh.easywatermark.data.model.FuncTitleModel
 import me.rosuh.easywatermark.data.model.ImageInfo
 
 /**
  * Android host for shared [me.rosuh.easywatermark.ui.LaunchScreen].
- * Permission edge only — product layout + logo from commonMain composeResources.
+ * Product layout + logo only — pick routing (Photo Picker vs in-app gallery) lives in
+ * [ComposeMainActivity] so default stays zero-permission Photo Picker.
  *
  * File is named AndroidLaunchScreen.kt (not LaunchScreen.kt) so generated
  * `AndroidLaunchScreenKt` does not collide with shared `LaunchScreenKt`.
@@ -29,40 +25,10 @@ import me.rosuh.easywatermark.data.model.ImageInfo
 @BuildCompat.PrereleaseSdkCheck
 @Composable
 fun AndroidLaunchScreen(
-    onGoDialog: () -> Unit,
+    onPickImage: () -> Unit,
     onGoAbout: () -> Unit = {},
 ) {
-    LaunchScreenContent(onGoDialog, onGoAbout)
-}
-
-@Composable
-@OptIn(ExperimentalPermissionsApi::class)
-private fun LaunchScreenContent(
-    onShowGalleryDialog: () -> Unit = { },
-    onGoAbout: () -> Unit = { },
-) {
     var startLogoAnimation by remember { mutableStateOf(true) }
-
-    val requestPermissionResult = remember {
-        { isGranted: Boolean ->
-            if (isGranted) {
-                onShowGalleryDialog()
-            } else {
-                startLogoAnimation = true
-            }
-        }
-    }
-    val mediaPermissionState = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        rememberPermissionState(
-            Manifest.permission.READ_MEDIA_IMAGES,
-            onPermissionResult = requestPermissionResult,
-        )
-    } else {
-        rememberPermissionState(
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            onPermissionResult = requestPermissionResult,
-        )
-    }
 
     Box(Modifier.fillMaxSize()) {
         LaunchScreen(
@@ -73,11 +39,7 @@ private fun LaunchScreenContent(
             },
             onPickImage = {
                 startLogoAnimation = false
-                if (mediaPermissionState.status.isGranted) {
-                    onShowGalleryDialog()
-                } else {
-                    mediaPermissionState.launchPermissionRequest()
-                }
+                onPickImage()
             },
             onGoAbout = onGoAbout,
         )

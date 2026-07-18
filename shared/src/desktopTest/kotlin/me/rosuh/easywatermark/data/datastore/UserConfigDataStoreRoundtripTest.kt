@@ -22,17 +22,20 @@ class UserConfigDataStoreRoundtripTest {
             // Uses the default name (UserConfigRepository.SP_NAME) so the default is covered.
             val repo = UserConfigRepository(createUserConfigDataStore(dir))
 
-            // Defaults before any write (empty store).
+            // Defaults before any write (empty store) — preferInAppGallery missing key → false (P0).
             val initial = repo.userPreferences.first()
             assertEquals(ImageFormat.JPEG, initial.outputFormat)
             assertEquals(UserConfigRepository.DEFAULT_COMPRESS_LEVEL, initial.compressLevel)
+            assertEquals(false, initial.preferInAppGallery)
 
             repo.updateFormat(ImageFormat.PNG)
             repo.updateCompressLevel(60) // 60 % 20 == 0, so it is kept (not snapped to default)
+            repo.updatePreferInAppGallery(true)
 
             val updated = repo.userPreferences.first()
             assertEquals(ImageFormat.PNG, updated.outputFormat)
             assertEquals(60, updated.compressLevel)
+            assertEquals(true, updated.preferInAppGallery)
 
             // saveVersionCode write path must not throw on the desktop store.
             repo.saveVersionCode(123)

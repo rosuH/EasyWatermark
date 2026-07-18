@@ -227,6 +227,13 @@ class MainViewModel (
         resetJobStatus()
     }
 
+    /** About switch: prefer in-app MediaStore gallery over system Photo Picker (Android). */
+    fun setPreferInAppGallery(enabled: Boolean) {
+        viewModelScope.launch {
+            userRepo.updatePreferInAppGallery(enabled)
+        }
+    }
+
     fun removeImage(
         imageInfo: ImageInfo?,
         curSelectedPos: Int,
@@ -400,12 +407,17 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
         }
     }
 
-    /** System Photo Picker URIs → session editor (MediaStore enrichment via [MediaLibraryPort]). */
+    /**
+     * System Photo Picker URIs → session editor.
+     * Always enter from the raw picker URIs; enrichment is best-effort metadata only and must
+     * not block selection when MediaStore join fails (partial access / non-MediaStore URIs).
+     */
     private suspend fun enterEditorFromSystemUris(uriList: List<Uri>) {
+        if (uriList.isEmpty()) return
         val refs = uriList.map { it.toMediaRef() }
-        val library = mediaLibrary ?: AndroidMediaLibraryPort(applicationContext.contentResolver)
-        val gallerySnapshot = library.enrichPickerRefs(refs)
         val imageInfoList = refs.map { ImageInfo(it) }
+        val library = mediaLibrary ?: AndroidMediaLibraryPort(applicationContext.contentResolver)
+        val gallerySnapshot = runCatching { library.enrichPickerRefs(refs) }.getOrDefault(emptyList())
         enterEditor(
             selected = imageInfoList,
             gallerySnapshot = gallerySnapshot,

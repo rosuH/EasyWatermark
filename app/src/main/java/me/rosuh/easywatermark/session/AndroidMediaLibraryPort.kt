@@ -14,7 +14,10 @@ import me.rosuh.easywatermark.utils.ktx.toUri
 
 /**
  * Android [MediaLibraryPort]: MediaStore listing + system-picker URI enrichment.
- * Behavior matches the former [me.rosuh.easywatermark.ui.MainViewModel] query paths.
+ *
+ * Content identity is [MediaStore.Images.Media._ID] → content URI. Do **not** require the
+ * deprecated [MediaStore.Images.Media.DATA] filesystem path: on API 29+ it is often null even
+ * when the row is readable, which would empty the in-app gallery after the user grants access.
  */
 class AndroidMediaLibraryPort(
     private val contentResolver: ContentResolver,
@@ -24,7 +27,6 @@ class AndroidMediaLibraryPort(
         MediaStore.Images.Media._ID,
         MediaStore.Images.Media.BUCKET_ID,
         MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
-        MediaStore.Images.Media.DATA,
         if (Build.VERSION.SDK_INT > 28) {
             MediaStore.Images.Media.DATE_MODIFIED
         } else {
@@ -52,10 +54,9 @@ class AndroidMediaLibraryPort(
             null,
             sortOrder,
         )?.use { cursor ->
-            val imageIdColumn = cursor.getColumnIndex(MediaStore.Images.Media._ID)
+            val imageIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
             val bucketNameColumn =
                 cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
-            val dataColumn = cursor.getColumnIndex(MediaStore.Images.Media.DATA)
             val dateColumn = cursor.getColumnIndex(
                 if (Build.VERSION.SDK_INT > 28) {
                     MediaStore.Images.Media.DATE_MODIFIED
@@ -66,17 +67,23 @@ class AndroidMediaLibraryPort(
             val sizeColumn = cursor.getColumnIndex(MediaStore.Images.Media.SIZE)
 
             while (cursor.moveToNext()) {
-                val path = cursor.getString(dataColumn)
-                if (path.isNullOrBlank()) continue
-                val imageId = cursor.getInt(imageIdColumn)
-                val bucketName = cursor.getString(bucketNameColumn) ?: ""
-                val dateTaken = cursor.getLong(dateColumn)
-                val size = cursor.getLong(sizeColumn)
+                val imageId = cursor.getLong(imageIdColumn)
+                if (imageId <= 0L) continue
+                val bucketName =
+                    if (bucketNameColumn >= 0) cursor.getString(bucketNameColumn) ?: "" else ""
+                val dateTaken = if (dateColumn >= 0) cursor.getLong(dateColumn) else 0L
+                val size = if (sizeColumn >= 0) cursor.getLong(sizeColumn) else 0L
                 val contentUri: Uri = ContentUris.withAppendedId(
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                    imageId.toLong(),
+                    imageId,
                 )
-                list += Image(imageId, contentUri.toMediaRef(), bucketName, size, dateTaken)
+                list += Image(
+                    id = imageId.toInt(),
+                    uri = contentUri.toMediaRef(),
+                    name = bucketName,
+                    size = size,
+                    date = dateTaken,
+                )
             }
         }
         list
@@ -86,21 +93,36 @@ class AndroidMediaLibraryPort(
         withContext(Dispatchers.IO) {
             if (refs.isEmpty()) return@withContext emptyList()
             val uriList = refs.map { it.toUri() }
+            // Photo Picker / share URIs are not always MediaStore content://…/_ID — parse fails
+            // must not abort the whole pick path (caller still builds ImageInfo from raw refs).
+            val idArgs = uriList.mapNotNull { uri ->
+                runCatching { ContentUris.parseId(uri).takeIf { it > 0L }?.toString() }.getOrNull()
+            }
+            if (idArgs.isEmpty()) {
+                return@withContext refs.mapIndexed { index, ref ->
+                    Image(
+                        id = index,
+                        uri = ref,
+                        name = "",
+                        size = 0L,
+                        date = 0L,
+                        check = true,
+                    )
+                }
+            }
             val imageList = ArrayList<Image>()
             val selection =
-                "${MediaStore.Images.Media._ID} IN (${uriList.joinToString(",") { "?" }})"
-            val selectionArgs = uriList.map { ContentUris.parseId(it).toString() }.toTypedArray()
+                "${MediaStore.Images.Media._ID} IN (${idArgs.joinToString(",") { "?" }})"
             contentResolver.query(
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                 projection,
                 selection,
-                selectionArgs,
+                idArgs.toTypedArray(),
                 sortOrder,
             )?.use { cursor ->
-                val imageIdColumn = cursor.getColumnIndex(MediaStore.Images.Media._ID)
+                val imageIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
                 val bucketNameColumn =
                     cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
-                val dataColumn = cursor.getColumnIndex(MediaStore.Images.Media.DATA)
                 val dateColumn = cursor.getColumnIndex(
                     if (Build.VERSION.SDK_INT > 28) {
                         MediaStore.Images.Media.DATE_MODIFIED
@@ -111,26 +133,38 @@ class AndroidMediaLibraryPort(
                 val sizeColumn = cursor.getColumnIndex(MediaStore.Images.Media.SIZE)
 
                 while (cursor.moveToNext()) {
-                    val path = cursor.getString(dataColumn)
-                    if (path.isNullOrBlank()) continue
-                    val imageId = cursor.getInt(imageIdColumn)
-                    val bucketName = cursor.getString(bucketNameColumn) ?: ""
-                    val dateTaken = cursor.getLong(dateColumn)
-                    val size = cursor.getLong(sizeColumn)
+                    val imageId = cursor.getLong(imageIdColumn)
+                    if (imageId <= 0L) continue
+                    val bucketName =
+                        if (bucketNameColumn >= 0) cursor.getString(bucketNameColumn) ?: "" else ""
+                    val dateTaken = if (dateColumn >= 0) cursor.getLong(dateColumn) else 0L
+                    val size = if (sizeColumn >= 0) cursor.getLong(sizeColumn) else 0L
                     val contentUri: Uri = ContentUris.withAppendedId(
                         MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                        imageId.toLong(),
+                        imageId,
                     )
                     imageList += Image(
-                        imageId,
-                        contentUri.toMediaRef(),
-                        bucketName,
-                        size,
-                        dateTaken,
+                        id = imageId.toInt(),
+                        uri = contentUri.toMediaRef(),
+                        name = bucketName,
+                        size = size,
+                        date = dateTaken,
                         check = true,
                     )
                 }
             }
-            imageList
+            // Prefer MediaStore rows when found; otherwise keep original picker refs.
+            if (imageList.isNotEmpty()) imageList else {
+                refs.mapIndexed { index, ref ->
+                    Image(
+                        id = index,
+                        uri = ref,
+                        name = "",
+                        size = 0L,
+                        date = 0L,
+                        check = true,
+                    )
+                }
+            }
         }
 }
