@@ -18,17 +18,18 @@ import me.rosuh.easywatermark.data.model.WatermarkTileMode
 /**
  * S4d-19: the **Desktop full-image watermark composition** — extends the S4d-18
  * [DesktopWatermarkTextRenderer] from "one text cell" to a watermarked-photo PNG over a sample
- * background. It is the Desktop half of the composition step (the commonMain analogue of Android
- * `WatermarkRenderer.compose`, which Android keeps native per S4d-17 Option C / S4d-8 Option A).
+ * background. Platform half of commonMain [WatermarkCellComposer.composeOverBackground] (Android
+ * production uses the same common composition via `AndroidCommonRaster`; native
+ * `WatermarkRenderer.compose` is oracle/golden only — ADR-0018).
  *
  * Split of responsibilities (ADR-0004 boundary):
  *  - **commonMain** [WatermarkCellComposer.composeOverBackground] does the platform-neutral drawing
- *    (background + REPEAT grid tile / CLAMP single decal) — identical on Desktop and the future iOS.
+ *    (background + REPEAT grid tile / CLAMP single decal) — shared production path.
  *  - **desktopMain** (this object) owns the platform pieces: a **deterministic generated** sample
  *    background (no binary asset; pure Compose graphics) and AWT/`ImageIO` PNG encode (via
  *    [DesktopWatermarkTextRenderer.encodePng]), plus a **Compose-free** result holder for `:desktopApp`.
  *
- * SCOPE: Desktop only. No Android production renderer change, no compose-resources.
+ * SCOPE: Desktop platform edge only; no compose-resources.
  */
 object DesktopWatermarkComposer {
 
@@ -233,10 +234,11 @@ object DesktopWatermarkComposer {
      * Pipeline: decode (platform) → render icon cell (commonMain) → compose (commonMain) → encode
      * (platform). commonMain stays **decode-free** (already-decoded `ImageBitmap` in, composed out).
      *
-     * **Perceptual Desktop/Skiko, NOT Android byte parity.** commonMain has no float-placement +
-     * nearest-filter draw overload, so a rotated non-uniform icon is not byte-identical to Android's
-     * `WatermarkRenderer.buildIconShader` (`Canvas.drawBitmap`) — Android icon production stays native
-     * (S4d-8 / the ADR-0004 addendum). This is the Desktop/iOS icon renderer.
+     * **Perceptual Skiko common path, NOT native-oracle byte parity.** commonMain has no
+     * float-placement + nearest-filter draw overload, so a rotated non-uniform icon is not
+     * byte-identical to native `WatermarkRenderer.buildIconShader` (`Canvas.drawBitmap`). Android
+     * production still uses this common icon path via `AndroidCommonRaster` (ADR-0018); native
+     * remains dual-path/golden only.
      *
      * **Alpha is applied ONCE, at composition.** The icon cell is rendered **opaque** (`alpha = 1f`) and
      * the watermark [alpha] is applied by [WatermarkCellComposer.composeOverBackground] — mirroring the

@@ -23,8 +23,8 @@ import kotlin.test.assertTrue
  * vs Latin ~27% on the Skiko host; latin-first per-glyph fallback to the CJK face works on this backend).
  * This exercises the desktopMain font loading from `desktopMain/resources`.
  *
- * NOT an Android path: Android production text stays native (S4d-17 Option C). This gates the Desktop
- * renderer only.
+ * Desktop platform golden only. Android production also uses commonMain text via
+ * `AndroidCommonRaster` (ADR-0018); native `WatermarkRenderer` is oracle/golden only.
  */
 class DesktopTextRendererGoldenTest {
 

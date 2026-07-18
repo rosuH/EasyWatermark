@@ -4,14 +4,10 @@ import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Paint
 import android.media.MediaScannerConnection
-import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
-import android.text.TextPaint
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -24,14 +20,9 @@ import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.render.AndroidCommonRaster
-import me.rosuh.easywatermark.render.CommonRasterFlags
-import me.rosuh.easywatermark.render.WatermarkRenderer
-import me.rosuh.easywatermark.render.androidTextMeasureEnv
 import me.rosuh.easywatermark.utils.FileUtils.Companion.outPutFolderName
 import me.rosuh.easywatermark.utils.bitmap.decodeBitmapFromUri
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
-import me.rosuh.easywatermark.utils.ktx.applyConfig
-import me.rosuh.easywatermark.utils.ktx.obtainTileMode
 import me.rosuh.easywatermark.utils.ktx.toCompressFormat
 import me.rosuh.easywatermark.utils.ktx.toMediaRef
 import me.rosuh.easywatermark.utils.ktx.toUri
@@ -40,9 +31,8 @@ import java.io.FileNotFoundException
 import java.io.FileOutputStream
 
 /**
- * Android [ExportPipelinePort]: **verbatim** wrap of legacy [me.rosuh.easywatermark.ui.MainViewModel]
- * `generateImage` (native WatermarkRenderer + MediaStore / pre-Q file path).
- * ADR-0017 performance rule: wrap-not-rewrite.
+ * Android [ExportPipelinePort]: decode → commonMain raster ([AndroidCommonRaster]) → MediaStore /
+ * pre-Q file path. ADR-0018 production path (always common; no rollout flag).
  */
 class AndroidExportPipelinePort(
     private val appContext: Context,
@@ -82,95 +72,32 @@ class AndroidExportPipelinePort(
         imageInfo.width = sourceBitmap.width
         imageInfo.height = sourceBitmap.height
 
-        // ADR-0018 / C2: optional common 光栅 path (same algorithm as Desktop/iOS compose).
-        val mutableBitmap: Bitmap = if (CommonRasterFlags.useCommonRasterExport) {
-            val iconBitmap: Bitmap? = when (config.markMode) {
-                WatermarkMode.Image -> {
-                    val iconBitmapRect = decodeSampledBitmapFromResource(
-                        contentResolver,
-                        config.iconUri.toUri(),
-                        imageInfo.width,
-                        imageInfo.height,
-                    )
-                    if (iconBitmapRect.isFailure() || iconBitmapRect.data == null) {
-                        return Result.failure(
-                            null,
-                            code = "-1",
-                            message = "decodeSampledBitmapFromResource == null",
-                        )
-                    }
-                    iconBitmapRect.data!!.bitmap
-                }
-                WatermarkMode.Text -> null
-            }
-            AndroidCommonRaster.composeToBitmap(
-                context = appContext,
-                background = sourceBitmap,
-                config = config,
-                imageInfo = imageInfo,
-                icon = iconBitmap,
-            )
-        } else {
-            val mutable = sourceBitmap.copy(Bitmap.Config.ARGB_8888, true)
-                ?: return Result.failure(
-                    null,
-                    code = "-1",
-                    message = "Copy bitmap from uri failed.",
+        val iconBitmap: Bitmap? = when (config.markMode) {
+            WatermarkMode.Image -> {
+                val iconBitmapRect = decodeSampledBitmapFromResource(
+                    contentResolver,
+                    config.iconUri.toUri(),
+                    imageInfo.width,
+                    imageInfo.height,
                 )
-            val canvas = Canvas(mutable)
-            val bitmapPaint = TextPaint().applyConfig(imageInfo, config, isScale = false)
-            val layoutPaint = Paint()
-            val shader = when (config.markMode) {
-                WatermarkMode.Text -> {
-                    WatermarkRenderer.buildTextShader(
-                        imageInfo,
-                        config,
-                        bitmapPaint,
-                        androidTextMeasureEnv(appContext),
-                        Dispatchers.IO,
+                if (iconBitmapRect.isFailure() || iconBitmapRect.data == null) {
+                    return Result.failure(
+                        null,
+                        code = "-1",
+                        message = "decodeSampledBitmapFromResource == null",
                     )
                 }
-
-                WatermarkMode.Image -> {
-                    val iconBitmapRect = decodeSampledBitmapFromResource(
-                        contentResolver,
-                        config.iconUri.toUri(),
-                        imageInfo.width,
-                        imageInfo.height,
-                    )
-                    if (iconBitmapRect.isFailure() || iconBitmapRect.data == null) {
-                        return Result.failure(
-                            null,
-                            code = "-1",
-                            message = "decodeSampledBitmapFromResource == null",
-                        )
-                    }
-                    val iconBitmap = iconBitmapRect.data!!.bitmap
-                    WatermarkRenderer.buildIconShader(
-                        imageInfo,
-                        iconBitmap,
-                        config,
-                        bitmapPaint,
-                        scale = true,
-                        Dispatchers.IO,
-                    )
-                }
+                iconBitmapRect.data!!.bitmap
             }
-
-            WatermarkRenderer.compose(
-                canvas = canvas,
-                shader = shader,
-                tileMode = config.obtainTileMode(),
-                paint = layoutPaint,
-                left = 0f,
-                top = 0f,
-                regionWidth = mutable.width.toFloat(),
-                regionHeight = mutable.height.toFloat(),
-                offsetX = imageInfo.offsetX,
-                offsetY = imageInfo.offsetY,
-            )
-            mutable
+            WatermarkMode.Text -> null
         }
+        val mutableBitmap = AndroidCommonRaster.composeToBitmap(
+            context = appContext,
+            background = sourceBitmap,
+            config = config,
+            imageInfo = imageInfo,
+            icon = iconBitmap,
+        )
 
         val outputFormat = prefs.outputFormat
         val compressLevel = prefs.compressLevel

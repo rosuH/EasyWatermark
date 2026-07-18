@@ -25,8 +25,9 @@ import me.rosuh.easywatermark.data.model.WatermarkTileMode
  * **offscreen cell composition primitive** built on multiplatform Compose graphics, sized by the
  * shared [WatermarkGeometry] core. Compiles and runs on Android + desktop(JVM) + iOS.
  *
- * This composes ONE watermark "cell" into an offscreen [ImageBitmap], mirroring the Android
- * production renderer's cell pipeline 1:1 (`WatermarkRenderer.buildTextShader`/`buildIconShader`):
+ * This composes ONE watermark "cell" into an offscreen [ImageBitmap], mirroring the historical
+ * Android native cell pipeline (`WatermarkRenderer.buildTextShader`/`buildIconShader` — now a
+ * measurement/golden oracle under ADR-0018; production uses this common path via platform adapters):
  *
  *  - cell size = rotated-AABB of the content box (`WatermarkGeometry.rotatedCellWidth/Height`)
  *    expanded by the gap percents (`horizontalGap`/`verticalGap`) - the SAME math the Android
@@ -46,11 +47,11 @@ import me.rosuh.easywatermark.data.model.WatermarkTileMode
  *    Android `WatermarkRenderer.buildIconShader`. Image DECODE (from `Uri`/`ContentResolver`/bytes/
  *    EXIF/downsample) stays a platform boundary and is NOT in commonMain (see the S4d-4
  *    `decode-boundary.md`).
- *  - **Not wired into production.** Android preview (`EditorScreen.WaterMarkCanvas`) and export
- *    (`MainViewModel.generateImage`) still use the Android-only `WatermarkRenderer` seam, so the
- *    strict renderer goldens and on-device behaviour are unchanged by this slice. These primitives
- *    are verified independently by `WatermarkCellComposerTest` (commonTest / `:shared:desktopTest`).
- *  - No tiling/REPEAT/CLAMP here - composition over the photo stays in `WatermarkRenderer.compose`.
+ *  - **Production (ADR-0018):** Android preview/export route through [AndroidCommonRaster] →
+ *    these primitives + [composeOverBackground]; Desktop/iOS use the same common path. Native
+ *    `WatermarkRenderer` remains dual-path / golden oracle only — **no legacy byte-parity claim**.
+ *  - Tiling/REPEAT/CLAMP over a photo is [composeOverBackground] (common) or native
+ *    `WatermarkRenderer.compose` (oracle).
  */
 object WatermarkCellComposer {
 
@@ -135,11 +136,9 @@ object WatermarkCellComposer {
      * stay byte-identical (S4d-10). The vertical offset stays full-box centred and is NOT changed to
      * Android's line-0-based offset/clip (root cause #2, deferred to an owner decision — S4d-11/S4d-12).
      *
-     * SCOPE (S4d-3): **not wired into production**. The Android preview/export renderer is
-     * unchanged; this is verified test-scope-only (`WatermarkCellComposerTest` on
-     * `:shared:desktopTest`). Cross-platform pixel parity vs the Android `StaticLayout` raster is
-     * NOT asserted here — see `artifacts/parity-gate-plan.md` in the S4d-3 session for what must be
-     * proven before production wiring.
+     * Production (ADR-0018): used on Android (via [AndroidCommonRaster]) and Desktop/iOS. Cross-
+     * platform / native-oracle pixel parity vs `StaticLayout` is **not** asserted (CJK/engine delta
+     * expected). Unit coverage: `WatermarkCellComposerTest` on `:shared:desktopTest`.
      *
      * @param env            the platform-injected text bootstrap (resolver + density + layout dir)
      * @param content        the text content to measure + paint (text + TextStyle + fill colour)
@@ -277,36 +276,28 @@ object WatermarkCellComposer {
      * DrawScope default (not guaranteed nearest), whereas Android draws with a bare nearest paint. No
      * commonMain `drawImage` overload offers float placement AND nearest filtering together (the
      * `dstSize` overload is nearest but rect-maps with a half-texel offset; only the platform
-     * `nativeCanvas.drawBitmap` has both). So `composeIconCell` is the **Desktop/iOS/commonMain** icon
-     * renderer; Android production icons stay native (`WatermarkRenderer.buildIconShader`). See the
-     * ADR-0004 S4d-6→S4d-8 addendum.
+     * `nativeCanvas.drawBitmap` has both). Production icons still go through this common path on
+     * Android (ADR-0018); residual vs native oracle is accepted — **not** byte-identical for
+     * rotated non-uniform icons (historical S4d-6→S4d-8 measurement).
      *
-     * Scaling: Android pre-scales the source with `Bitmap.createScaledBitmap(..., filter=false)`
+     * Scaling: Android native oracle pre-scales with `Bitmap.createScaledBitmap(..., filter=false)`
      * (nearest-neighbor). The commonMain path mirrors the *intent* — pre-scale via
      * `drawImage(dstSize = …, filterQuality = FilterQuality.None)` (ADR-0014 "icon filter=false") —
-     * but, per the note above, is NOT asserted byte-identical to the Android raster for rotated
-     * non-uniform icons and is not an Android production draw-swap target.
+     * but is NOT asserted byte-identical to the native oracle for rotated non-uniform icons.
      *
-     * Opacity: the Android icon path draws the scaled bitmap with a `Paint` whose
-     * `alpha = WaterMark.alpha` (0..255, see `PainKtx.applyConfig`), so image/icon watermarks honour
-     * the watermark opacity. The commonMain analogue takes a normalized [alpha] in `0f..1f` (clamped
-     * at the raster boundary) and passes it to `drawImage(alpha = …)`. The future Android adapter
-     * must pass `WaterMark.alpha / 255f` to reach parity (`alpha = 128` ⇒ `0.5f`). The default `1f`
-     * is a bootstrap convenience that matches the current default `WaterMark.alpha = 255`; future
-     * production wiring must still pass the actual configured alpha, not rely on this default.
+     * Opacity: native oracle draws with `Paint.alpha = WaterMark.alpha` (0..255). commonMain takes
+     * normalized [alpha] in `0f..1f` (clamped) for `drawImage(alpha = …)`. Platform adapters pass
+     * `WaterMark.alpha / 255f` (`128` ⇒ `0.5f`). Default `1f` matches default `WaterMark.alpha = 255`;
+     * production callers should pass the configured alpha.
      *
      * Bootstrap safety guard: Android allocates `(finalWidth*scaleRatio).toInt()` with no explicit
      * min and would crash on a 0-size bitmap; this commonMain bootstrap coerces target/scaled dims to
      * ≥ 1 (documented delta — it only affects degenerate `scaleRatio→0` / 0-size inputs).
      *
-     * SCOPE (S4d-4 / S4d-8 Option A): **not wired into Android production**, and — per S4d-6→S4d-8 —
-     * deliberately **not an Android production draw-swap target** (Android byte-exact parity is not
-     * achievable here, see the placement note above). Android preview/export stay on
-     * `WatermarkRenderer.buildIconShader`; this primitive targets **Desktop/iOS/commonMain** and is
-     * verified on `:shared:desktopTest` (`WatermarkIconCellRasterTest`). Reopening the Android icon
-     * swap needs an explicit owner decision (a tolerance/perceptual golden policy, or a commonMain
-     * nearest rotated blitter), not another swap attempt. Recycled-bitmap rejection (Android's
-     * `srcBitmap.isRecycled`) is not observable in commonMain — input validity is the
+     * Production (ADR-0018): Android preview/export use this via [AndroidCommonRaster] as well as
+     * Desktop/iOS. Byte-exact parity with native `buildIconShader` is **not** claimed (placement
+     * note above). Unit coverage: `:shared:desktopTest` (`WatermarkIconCellRasterTest`).
+     * Recycled-bitmap rejection is not observable in commonMain — input validity is the
      * caller/decode-boundary responsibility.
      *
      * @param icon         the already-decoded source image
@@ -357,7 +348,7 @@ object WatermarkCellComposer {
         // REDUCES that (to ~5/1936) by fixing placement, but does NOT eliminate it — the point-draw
         // overload has no `filterQuality`, so the rotation is not guaranteed nearest like Android's
         // bare-paint `drawBitmap`. commonMain has no float-placement + nearest-filter overload, so this
-        // is not byte-identical to Android and is not an Android production draw-swap (S4d-8 Option A).
+        // is not byte-identical to the native Android oracle (accepted under ADR-0018).
         val scaledImage: ImageBitmap =
             if (scaledWidth == icon.width && scaledHeight == icon.height) {
                 icon
@@ -434,10 +425,11 @@ object WatermarkCellComposer {
      * does not claim MIRROR/DECAL parity and **throws** for them — adding either needs its own design +
      * golden gate if it ever becomes product-relevant.
      *
-     * Cell pixels are drawn with [alpha] (Android draws the shader paint with `WaterMark.alpha`; the
-     * normalized `0f..1f` equivalent is passed here, default opaque). Tiles are clipped to the background
-     * bounds by the surface. NOT wired into Android production (Android composes natively); this is the
-     * Desktop/iOS composition primitive.
+     * Cell pixels are drawn with [alpha] (native oracle draws the shader paint with `WaterMark.alpha`;
+     * the normalized `0f..1f` equivalent is passed here, default opaque). Tiles are clipped to the
+     * background bounds by the surface. Production (ADR-0018): Android uses this via
+     * [AndroidCommonRaster]; Desktop/iOS likewise. Native `WatermarkRenderer.compose` remains the
+     * dual-path / golden oracle only — no legacy byte-parity claim.
      *
      * @param background the already-decoded destination image
      * @param cell       the already-rendered watermark cell (e.g. from [composeTextCell])

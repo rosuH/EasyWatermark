@@ -29,10 +29,10 @@ import java.io.File
 
 /**
  * ADR-0018 / plan **P0.3**: test-only dual-path measurement — **native** [WatermarkRenderer]
- * vs **shipped** [AndroidCommonRaster] / [CommonWatermarkPipeline] on the same fixture.
+ * oracle vs **shipped** [AndroidCommonRaster] / [CommonWatermarkPipeline] on the same fixture.
  *
- * Does **not** flip production permanently; asserts both paths produce non-blank same-sized
- * bitmaps and logs opaque IoU for owner review (CJK/engine delta expected under C2).
+ * Production no longer switches paths; this harness still compares both for IoU / non-blank
+ * evidence (CJK/engine delta expected under C2).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
@@ -44,8 +44,6 @@ class C2DualPathMeasurementTest {
     @Before
     fun setUp() {
         context = RuntimeEnvironment.getApplication()
-        CommonRasterFlags.useCommonRasterExport = true
-        CommonRasterFlags.useCommonRasterPreview = true
     }
 
     @Test
@@ -112,9 +110,8 @@ class C2DualPathMeasurementTest {
     }
 
     @Test
-    fun commonPipeline_isInvokedWhenExportFlagOn() {
-        // Same helper [AndroidExportPipelinePort] calls when useCommonRasterExport is on.
-        assertTrue(CommonRasterFlags.useCommonRasterExport)
+    fun commonPipeline_composesNonBlank_productionHelper() {
+        // Same helper [AndroidExportPipelinePort] always uses for production export.
         val bg = solidBg(64, 64)
         val config = WaterMark.default.copy(text = "OK", markMode = WatermarkMode.Text)
         val info = ImageInfo(uri = MediaRef("x"), width = 64, height = 64)

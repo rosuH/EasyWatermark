@@ -13,7 +13,6 @@ import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkMode
-import me.rosuh.easywatermark.render.CommonRasterFlags
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -27,9 +26,8 @@ import org.robolectric.util.ReflectionHelpers
 import java.io.File
 
 /**
- * ADR-0018 / plan verification: shipped [AndroidExportPipelinePort.exportOne] with
- * [CommonRasterFlags.useCommonRasterExport] **on** must complete through the common compose path
- * (not a reimplemented painter in the test).
+ * ADR-0018: shipped [AndroidExportPipelinePort.exportOne] always uses common compose
+ * ([AndroidCommonRaster]) and returns a non-empty [MediaRef].
  *
  * Uses plain [Application] (not [MyApp]) to avoid Koin double-start; seeds [MyApp.instance] via
  * reflection so decode/EXIF helpers that read the process singleton still work under Robolectric.
@@ -46,12 +44,10 @@ class C2ExportPortCommonRasterTest {
         app = RuntimeEnvironment.getApplication()
         // BitmapUtils.decodeBitmapWithExifSync reads MyApp.instance for orientation helpers.
         ReflectionHelpers.setStaticField(MyApp::class.java, "instance", app as Context)
-        CommonRasterFlags.useCommonRasterExport = true
-        CommonRasterFlags.useCommonRasterPreview = true
     }
 
     @Test
-    fun exportOne_commonFlagOn_succeedsWithNonEmptyMediaRef() = runBlocking {
+    fun exportOne_commonRaster_succeedsWithNonEmptyMediaRef() = runBlocking {
         val src = File(app.cacheDir, "c2-export-src.png").apply {
             parentFile?.mkdirs()
             outputStream().use { out ->
@@ -77,7 +73,7 @@ class C2ExportPortCommonRasterTest {
             prefs = UserPreferences(ImageFormat.PNG, 100),
         )
         assertTrue(
-            "exportOne must succeed under common raster flag (code=${result.code} msg=${result.message})",
+            "exportOne must succeed under common raster (code=${result.code} msg=${result.message})",
             result.isSuccess(),
         )
         val outRef = result.data

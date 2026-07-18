@@ -37,8 +37,8 @@ import kotlin.test.assertTrue
  * not app-bundle font packaging. CJK input is gated only for non-blank + determinism (the system font is
  * expected to provide glyphs/fallback; a degenerate blank/crash would fail).
  *
- * NOT an Android path: Android production text/icon stays native (S4d-8/S4d-17). This gates the iOS
- * renderer only.
+ * iOS platform golden only. Android production also uses commonMain text/icon via
+ * `AndroidCommonRaster` (ADR-0018); native `WatermarkRenderer` is oracle/golden only.
  */
 class IosWatermarkRendererGoldenTest {
 

@@ -13,7 +13,7 @@ import me.rosuh.easywatermark.data.model.WatermarkMode
 
 /**
  * Android edge for ADR-0018 common 光栅: [TextRasterEnv] bootstrap + [Bitmap] ↔ [ImageBitmap].
- * Production preview/export call [composeToBitmap] when [CommonRasterFlags] enable the path.
+ * Production preview and export always call [composeToBitmap] (rollout flag removed).
  */
 object AndroidCommonRaster {
 

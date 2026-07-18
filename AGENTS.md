@@ -44,8 +44,8 @@ Platform source sets supply the edges:
 
 Two cell-raster paths share one geometry core (`WatermarkGeometry`) and one tiling semantic (REPEAT grid / CLAMP decal at fractional offset):
 
-- **Native Android** (`:app/render/WatermarkRenderer`): `StaticLayout` text, scaled-bitmap icon, `BitmapShader`. Serves both preview (`EditorScreen`'s Compose `Canvas`) and export (`MainViewModel.generateImage`), so they composite identically. Flag-off fallback.
-- **CommonMain raster** (`WatermarkCellComposer` + `CommonWatermarkPipeline`): the Desktop/iOS path, and on Android an opt-in rollout gated by `:app/render/CommonRasterFlags` (ADR-0018 / Option C2; Android binding `AndroidCommonRaster.kt`). Never claim byte-parity with legacy native goldens; rebaseline per `docs/adr/0010-c2-golden-policy-delta.md`.
+- **Native Android** (`:app/render/WatermarkRenderer`): legacy `StaticLayout` text / `BitmapShader` oracle for dual-path measurement and historical goldens — **not** the production path.
+- **CommonMain raster** (`WatermarkCellComposer` + `CommonWatermarkPipeline` via Android `AndroidCommonRaster.kt`): production path for Desktop/iOS **and Android** preview + export (ADR-0018 / Option C2; rollout flag removed). Never claim byte-parity with legacy native goldens; rebaseline per `docs/adr/0010-c2-golden-policy-delta.md`.
 
 EXIF policy: Android decode bakes orientation (`utils/bitmap/BitmapUtils.kt`, `BitmapFactory` + inSampleSize); Desktop decodes via AWT and bakes orientation manually; iOS Skia decode bakes it implicitly. Export strips all EXIF metadata — deliberate privacy feature (ADR-0009).
 
@@ -60,7 +60,7 @@ EXIF policy: Android decode bakes orientation (`utils/bitmap/BitmapUtils.kt`, `B
 - `app/src/main/java/me/rosuh/easywatermark/`
   - `ComposeMainActivity.kt` — sole Activity: launcher, share-in, crash-recovery gate. `MyApp.kt` — app init (Koin, CMonet).
   - `ui/` — `MainViewModel.kt` (Android session edge), `AndroidEditorScreen.kt` / `AndroidLaunchScreen.kt` (Android shells over shared UI), `compose/` (Android-only controls: gallery dialog, MediaStore thumbnails), `about/AboutViewModel.kt`, `Theme.kt`.
-  - `render/` — `WatermarkRenderer.kt` (native pipeline), `CommonRasterFlags.kt` + `AndroidCommonRaster.kt` (common-raster rollout), `TextMeasureEnv.kt`.
+  - `render/` — `WatermarkRenderer.kt` (native measurement oracle), `AndroidCommonRaster.kt` (production common-raster edge), `TextMeasureEnv.kt`.
   - `session/` — `AndroidExportPipelinePort.kt`, `AndroidMediaLibraryPort.kt`. `platform/AndroidDynamicColorCapability.kt`.
   - `di/` — Koin modules. `utils/bitmap/` — decode (`BitmapUtils`), `BitmapCache`. `utils/ktx/` — Android edge mappers.
 - `shared/src/commonMain/kotlin/me/rosuh/easywatermark/` — `data/model|repo|datastore|db`, `domain/`, `session/`, `render/`, `ui/` (see §Layering).

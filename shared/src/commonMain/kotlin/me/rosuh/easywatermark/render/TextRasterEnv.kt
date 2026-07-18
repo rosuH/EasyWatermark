@@ -25,10 +25,10 @@ import androidx.compose.ui.unit.LayoutDirection
  * There is NO commonMain zero-arg factory for the resolver, so it is never constructed inside
  * `:shared` — callers build a [TextRasterEnv] at their platform boundary and pass it in.
  *
- * SCOPE (S4d-3): this type and the raster it drives ([WatermarkCellComposer.composeTextCell]) are
- * NOT wired into production. Android preview/export still use the Android-only `WatermarkRenderer`
- * seam, so strict renderer goldens and on-device behaviour are unchanged by this slice. Verified
- * independently by `:shared:desktopTest`.
+ * Production (ADR-0018 / Option C2): Android preview/export use this env via
+ * [me.rosuh.easywatermark.render.AndroidCommonRaster] → [WatermarkCellComposer.composeTextCell]
+ * (Desktop/iOS likewise). Native `WatermarkRenderer` remains a measurement/golden oracle only —
+ * common and native text rasters are **not** claimed byte-identical (CJK/engine delta expected).
  */
 data class TextRasterEnv(
     val fontFamilyResolver: FontFamily.Resolver,

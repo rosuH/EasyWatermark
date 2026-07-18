@@ -45,10 +45,10 @@ C2 was previously blocked by byte-parity failures (rotated non-uniform icons; CJ
 
 ### Status update (2026-07-13 P3.5)
 
-- `CommonRasterFlags.useCommonRasterPreview` / `useCommonRasterExport` default **`true`** for **debug and release**.  
-- Smoke pack: `docs/parity/v2.10.0/captures/c2-p35-smoke-2026-07-13/`.  
-- Export **panel** is shared `SaveExportSheetShell` on Android/Desktop/iOS; Photos/MediaStore/FS/share remain platform edges.  
-- Gate 4 native-builder delete still owner-gated.
+- Preview + export production path uses common raster for **debug and release**.
+- Smoke pack: `docs/parity/v2.10.0/captures/c2-p35-smoke-2026-07-13/`.
+- Export **panel** is shared `SaveExportSheetShell` on Android/Desktop/iOS; Photos/MediaStore/FS/share remain platform edges.
+- Gate 4 full native-builder delete still owner-gated; **rollout flag removed** (2026-07-17): `CommonRasterFlags` deleted — production always uses `AndroidCommonRaster` / commonMain pipeline. Native `WatermarkRenderer` kept for dual-path measurement and historical goldens.
 
 ## Owner acceptance (recorded)
 

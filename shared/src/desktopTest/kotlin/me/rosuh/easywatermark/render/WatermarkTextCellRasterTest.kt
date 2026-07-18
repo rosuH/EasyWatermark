@@ -17,8 +17,8 @@ import kotlin.test.assertTrue
  *
  * This proves the commonMain text path works — `TextMeasurer` measure + `MultiParagraph.paint`
  * render through a platform-injected resolver. It does NOT assert cross-platform pixel parity with
- * the Android `StaticLayout` raster; that is gated by the S4d-3 parity plan and must be re-proven
- * separately. (The Android production renderer is untouched by this slice.)
+ * the native Android `StaticLayout` oracle; that is gated separately. Production Android/Desktop/iOS
+ * use this common text path (ADR-0018); native `WatermarkRenderer` remains comparison/golden oracle only.
  */
 class WatermarkTextCellRasterTest {
 

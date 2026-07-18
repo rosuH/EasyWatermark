@@ -10,8 +10,9 @@ import me.rosuh.easywatermark.data.model.WaterMark
  * Platform export seam (ADR-0017 Phase 2).
  *
  * Decodes the source [ImageInfo], applies [config], encodes, and persists the result.
- * Android wraps the existing native `generateImage` path (no algorithm rewrite).
- * Desktop/iOS later bind Skiko pipelines.
+ * Android production uses commonMain raster via `AndroidCommonRaster` (ADR-0018); native
+ * `WatermarkRenderer` is measurement/golden oracle only. Desktop/iOS bind Skiko pipelines over the
+ * same common compose core.
  *
  * May mutate [imageInfo] width/height as the legacy path did after decode.
  */

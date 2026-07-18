@@ -24,9 +24,10 @@ import kotlin.test.assertTrue
  * cell dims follow `WatermarkGeometry.diagonal` + gap + `scaleRatio`; gap=100 doubles each axis;
  * rotation changes the rendered output; and the icon is centred (not drawn at the origin) at 0°.
  *
- * It does NOT assert cross-platform / cross-impl pixel parity with the Android
- * `Bitmap.createScaledBitmap(..., filter=false)` raster — that is gated separately (see
- * `parity-gate-plan.md`). The Android production renderer is untouched by this slice.
+ * It does NOT assert cross-platform / cross-impl pixel parity with the native Android
+ * `Bitmap.createScaledBitmap(..., filter=false)` oracle — that is gated separately (see
+ * `parity-gate-plan.md`). Production Android/Desktop/iOS use this common icon path (ADR-0018);
+ * native `WatermarkRenderer` remains comparison/golden oracle only.
  */
 class WatermarkIconCellRasterTest {
 

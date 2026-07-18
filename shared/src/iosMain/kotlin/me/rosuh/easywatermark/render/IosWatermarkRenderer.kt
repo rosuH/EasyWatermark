@@ -21,7 +21,8 @@ import org.jetbrains.skia.Image as SkiaImage
  *
  * iOS, like desktop, is a Skiko backend, so the only platform pieces are the env/font boundary
  * ([IosTextRasterEnv]), the decode boundary ([IosImageDecoder]), and Skia PNG encode here. commonMain stays
- * decode-free and platform-neutral. Android production is untouched (S4d-17 Option C / S4d-8 Option A).
+ * decode-free and platform-neutral. Android production also uses commonMain via `AndroidCommonRaster`
+ * (ADR-0018); native `WatermarkRenderer` is oracle/golden only.
  *
  * The [fontFamily] is injected (defaults to [FontFamily.Default] = the iOS system font via Skiko) so the
  * pipeline can be proven without packaging the bundled CJK font into an iOS app bundle yet; pass
@@ -72,10 +73,10 @@ object IosWatermarkRenderer {
      * Desktop/iOS icon path per S4d-8 / the ADR-0004 addendum). Takes an **already-decoded** [icon]; image
      * **decode stays the [IosImageDecoder] boundary** and commonMain stays decode-free.
      *
-     * **Perceptual, NOT byte-parity** with Android `WatermarkRenderer.buildIconShader`: commonMain has no
-     * float-placement + nearest-filter draw overload, so the rotated non-uniform icon raster is not
-     * byte-identical to Android's `Canvas.drawBitmap` (S4d-8). This is the deliberate Desktop/iOS icon
-     * path — do not reopen the Android byte-exact icon swap.
+     * **Perceptual, NOT byte-parity** with native `WatermarkRenderer.buildIconShader`: commonMain has no
+     * float-placement + nearest-filter draw overload, so rotated non-uniform icons are not
+     * byte-identical to native `Canvas.drawBitmap`. Production Android/Desktop/iOS share this common
+     * icon path (ADR-0018); native remains dual-path/golden only.
      *
      * @param scaleRatio icon scale; production passes
      *                   `WaterMark.textSize / WatermarkCellComposer.ICON_SCALE_REFERENCE_TEXT_SIZE` (14f ⇒ 1×)

@@ -19,21 +19,19 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.math.max
 
 /**
- * Android-only **legacy / flag-off** watermark renderer (CMP plan S2a extraction).
+ * Android-only **legacy / measurement oracle** watermark renderer (CMP plan S2a extraction).
  *
- * **ADR-0018 / Option C2 production path (P3.5):** when [CommonRasterFlags.useCommonRasterPreview] /
- * [CommonRasterFlags.useCommonRasterExport] are on (**default true** for debug and release), preview and
- * export use [AndroidCommonRaster] → commonMain [CommonWatermarkPipeline] / [WatermarkCellComposer].
- * This object remains the **flag-off fallback** and the oracle for dual-path measurement /
- * historical strict goldens — **not** the long-term primary product path.
+ * **ADR-0018 / Option C2:** production preview and export use [AndroidCommonRaster] → commonMain
+ * [CommonWatermarkPipeline] / [WatermarkCellComposer]. This object remains for dual-path measurement
+ * and historical strict goldens — **not** the product path.
  *
- * Capabilities kept here for the fallback path:
+ * Capabilities:
  *  - [buildTextShader] / [buildIconShader] — cell + [BitmapShader] (legacy StaticLayout / bitmap;
  *    cell sizing still via commonMain [WatermarkGeometry]).
  *  - [compose] — REPEAT tile / CLAMP decal over a target canvas.
  *
  * Deliberately **Android-only** (`android.graphics.*`, `StaticLayout`) — lives in `:app`, not
- * commonMain. Do not re-route production through this object without an owner decision to reverse C2.
+ * commonMain.
  */
 object WatermarkRenderer {
 

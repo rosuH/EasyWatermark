@@ -10,7 +10,6 @@ import android.graphics.Shader
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
-import android.text.TextPaint
 import android.util.Size as AndroidSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -51,21 +50,14 @@ import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.render.AndroidCommonRaster
-import me.rosuh.easywatermark.render.CommonRasterFlags
-import me.rosuh.easywatermark.render.WatermarkRenderer
-import me.rosuh.easywatermark.render.androidTextMeasureEnv
 import me.rosuh.easywatermark.ui.compose.ColorOption
 import me.rosuh.easywatermark.ui.compose.IconOption
-import me.rosuh.easywatermark.ui.widget.utils.WaterMarkShader
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResourceSync
-import me.rosuh.easywatermark.utils.ktx.applyConfig
 import me.rosuh.easywatermark.utils.ktx.obtainTileMode
-import me.rosuh.easywatermark.utils.ktx.toMediaRef
 import me.rosuh.easywatermark.utils.ktx.toUri
 import kotlin.math.abs
 import kotlin.math.min
-import kotlin.math.roundToInt
 
 /**
  * Android host for shared [me.rosuh.easywatermark.ui.EditorScreen].
@@ -76,9 +68,10 @@ import kotlin.math.roundToInt
 fun AndroidEditorScreen(
     imageList: List<ImageInfo>,
     waterMark: WaterMark,
+    onBack: () -> Unit,
+    onOffsetChanged: (ImageInfo) -> Unit,
     modifier: Modifier = Modifier,
     selectedImage: ImageInfo? = null,
-    onBack: () -> Unit,
     onImageSelected: (ImageInfo) -> Unit = {},
     onWaterMrkChange: (item: FuncTitleModel, any: Any) -> Unit = { _, _ -> },
     onAddMoreImages: () -> Unit = { },
@@ -114,6 +107,7 @@ fun AndroidEditorScreen(
                     modifier = previewModifier,
                     waterMark = waterMark,
                     selectedImage = sel,
+                    onOffsetChanged = onOffsetChanged,
                 )
             }
         },
@@ -255,8 +249,6 @@ private fun loadFilmstripThumbBitmap(context: Context, uri: Uri, sizePx: Int): B
 private data class PreviewFrame(
     val uriValue: String,
     val bitmap: Bitmap,
-    /** True when watermark is already baked into [bitmap] (common raster path). */
-    val watermarkBaked: Boolean,
 )
 
 private fun WaterMark.previewFingerprint(): String = buildString {
@@ -277,17 +269,17 @@ private fun WaterMark.previewFingerprint(): String = buildString {
 /**
  * Android watermark preview canvas.
  *
- * Slice 1–3 fix for filmstrip switch jump/flicker:
  * - Keep previous frame while loading the next (no black flash, no wrong-uri layout mix)
- * - Publish only complete frames; common path bakes watermark before commit
- * - Crossfade between frames (~160ms) when the source uri changes
+ * - Bakes watermark via commonMain [AndroidCommonRaster] before commit (ADR-0018 production path)
+ * - Crossfade between frames when the source uri changes
+ * - CLAMP drag updates local offset, re-bakes, and commits via [onOffsetChanged] (required)
  */
 @Composable
 private fun WaterMarkCanvas(
     modifier: Modifier = Modifier,
     waterMark: WaterMark,
     selectedImage: ImageInfo,
-    onOffsetChanged: (info: ImageInfo) -> Unit = { },
+    onOffsetChanged: (info: ImageInfo) -> Unit,
     onUpdateUriFailed: (SecurityException) -> Unit = { },
 ) {
     val context = LocalContext.current
@@ -295,7 +287,6 @@ private fun WaterMarkCanvas(
         val cw = constraints.maxWidth
         val ch = constraints.maxHeight
         val selectedUri = selectedImage.uri.value
-        val useCommon = CommonRasterFlags.useCommonRasterPreview
         val tileMode = waterMark.obtainTileMode()
         val isClamp = tileMode == Shader.TileMode.CLAMP
         val wmFp = remember(waterMark) { waterMark.previewFingerprint() }
@@ -311,18 +302,14 @@ private fun WaterMarkCanvas(
         // Main load already baked current offsets — skip one redundant offset re-bake.
         var suppressOffsetRebake by remember { mutableStateOf(false) }
 
-        // Native overlay shader — applied when frame uri matches the shader's uri.
-        var nativeShader by remember { mutableStateOf<WaterMarkShader?>(null) }
-        var nativeShaderUri by remember { mutableStateOf<String?>(null) }
         var clampCellSize by remember { mutableStateOf<Pair<Float, Float>?>(null) }
 
         val imagePaint = remember { Paint(Paint.FILTER_BITMAP_FLAG) }
-        val layoutPaint = remember { Paint() }
         val imageMatrix = remember { Matrix() }
         val scope = rememberCoroutineScope()
 
         // --- Load pipeline: cancel previous on key change via LaunchedEffect cancellation ---
-        LaunchedEffect(selectedUri, cw, ch, wmFp, useCommon) {
+        LaunchedEffect(selectedUri, cw, ch, wmFp) {
             if (cw <= 0 || ch <= 0) return@LaunchedEffect
             val requestUri = selectedUri
             val requestImage = selectedImage
@@ -347,11 +334,38 @@ private fun WaterMarkCanvas(
             if (base == null || base.isRecycled) return@LaunchedEffect
             baseCache = requestUri to base
 
-            val frame: PreviewFrame
-            if (useCommon) {
-                val composed = withContext(Dispatchers.Default) {
+            val composed = withContext(Dispatchers.Default) {
+                try {
+                    val info = requestImage.copy(offsetX = offsetX, offsetY = offsetY).also {
+                        it.width = base.width
+                        it.height = base.height
+                    }
+                    val icon = if (requestWm.markMode == WatermarkMode.Image) {
+                        decodeSampledBitmapFromResource(
+                            context.contentResolver,
+                            requestWm.iconUri.toUri(),
+                            base.width,
+                            base.height,
+                        ).data?.bitmap
+                    } else {
+                        null
+                    }
+                    AndroidCommonRaster.composeToBitmap(context, base, requestWm, info, icon)
+                } catch (_: Throwable) {
+                    null
+                }
+            }
+            ensureActive()
+            if (selectedImage.uri.value != requestUri) return@LaunchedEffect
+            val frame = if (composed != null && !composed.isRecycled) {
+                PreviewFrame(requestUri, composed)
+            } else {
+                PreviewFrame(requestUri, base)
+            }
+            if (isClamp) {
+                clampCellSize = withContext(Dispatchers.Default) {
                     try {
-                        val info = requestImage.copy(offsetX = offsetX, offsetY = offsetY).also {
+                        val info = requestImage.copy(offsetX = 0.5f, offsetY = 0.5f).also {
                             it.width = base.width
                             it.height = base.height
                         }
@@ -365,66 +379,19 @@ private fun WaterMarkCanvas(
                         } else {
                             null
                         }
-                        AndroidCommonRaster.composeToBitmap(context, base, requestWm, info, icon)
+                        val cellProbe =
+                            AndroidCommonRaster.cellSizePx(context, requestWm, info, icon)
+                        val scale = min(cw.toFloat() / base.width, ch.toFloat() / base.height)
+                        val drawW = base.width * scale
+                        val drawH = base.height * scale
+                        (cellProbe.first * drawW / base.width) to
+                            (cellProbe.second * drawH / base.height)
                     } catch (_: Throwable) {
                         null
                     }
                 }
-                ensureActive()
-                if (selectedImage.uri.value != requestUri) return@LaunchedEffect
-                frame = if (composed != null && !composed.isRecycled) {
-                    PreviewFrame(requestUri, composed, watermarkBaked = true)
-                } else {
-                    PreviewFrame(requestUri, base, watermarkBaked = false)
-                }
-                nativeShader = null
-                nativeShaderUri = null
-                if (isClamp) {
-                    clampCellSize = withContext(Dispatchers.Default) {
-                        try {
-                            val info = requestImage.copy(offsetX = 0.5f, offsetY = 0.5f).also {
-                                it.width = base.width
-                                it.height = base.height
-                            }
-                            val icon = if (requestWm.markMode == WatermarkMode.Image) {
-                                decodeSampledBitmapFromResource(
-                                    context.contentResolver,
-                                    requestWm.iconUri.toUri(),
-                                    base.width,
-                                    base.height,
-                                ).data?.bitmap
-                            } else {
-                                null
-                            }
-                            val cellProbe =
-                                AndroidCommonRaster.cellSizePx(context, requestWm, info, icon)
-                            val scale = min(cw.toFloat() / base.width, ch.toFloat() / base.height)
-                            val drawW = base.width * scale
-                            val drawH = base.height * scale
-                            (cellProbe.first * drawW / base.width) to
-                                (cellProbe.second * drawH / base.height)
-                        } catch (_: Throwable) {
-                            null
-                        }
-                    }
-                } else {
-                    clampCellSize = null
-                }
             } else {
-                frame = PreviewFrame(requestUri, base, watermarkBaked = false)
-                val scale = min(cw.toFloat() / base.width, ch.toFloat() / base.height)
-                val drawW = (base.width * scale).roundToInt().coerceAtLeast(1)
-                val drawH = (base.height * scale).roundToInt().coerceAtLeast(1)
-                val shader = buildPreviewShader(context, requestWm, requestImage.uri.toUri(), drawW, drawH)
-                ensureActive()
-                if (selectedImage.uri.value != requestUri) return@LaunchedEffect
-                nativeShader = shader
-                nativeShaderUri = requestUri
-                clampCellSize = if (isClamp && shader != null) {
-                    shader.width.toFloat() to shader.height.toFloat()
-                } else {
-                    null
-                }
+                clampCellSize = null
             }
 
             ensureActive()
@@ -468,9 +435,9 @@ private fun WaterMarkCanvas(
             }
         }
 
-        // CLAMP common path: offset drag re-bakes watermark without crossfade / re-decode base.
-        LaunchedEffect(offsetX, offsetY, selectedUri, useCommon, isClamp, wmFp, baseCache?.first) {
-            if (!useCommon || !isClamp) return@LaunchedEffect
+        // CLAMP: offset drag re-bakes watermark without crossfade / re-decode base.
+        LaunchedEffect(offsetX, offsetY, selectedUri, isClamp, wmFp, baseCache?.first) {
+            if (!isClamp) return@LaunchedEffect
             if (suppressOffsetRebake) {
                 suppressOffsetRebake = false
                 return@LaunchedEffect
@@ -509,7 +476,7 @@ private fun WaterMarkCanvas(
             } ?: return@LaunchedEffect
             ensureActive()
             if (selectedImage.uri.value != requestUri) return@LaunchedEffect
-            displayed = PreviewFrame(requestUri, composed, watermarkBaked = true)
+            displayed = PreviewFrame(requestUri, composed)
         }
 
         val disp = displayed
@@ -573,6 +540,11 @@ private fun WaterMarkCanvas(
                                     val startY = offsetY
                                     val centerX = ((hitDrawW - cellW) / 2f) / hitDrawW
                                     val centerY = ((hitDrawH - cellH) / 2f) / hitDrawH
+                                    // Commit session state immediately (export must not see a
+                                    // 300ms stale-offset window). Animation is local visual only.
+                                    onOffsetChanged(
+                                        selectedImage.copy(offsetX = centerX, offsetY = centerY),
+                                    )
                                     scope.launch {
                                         Animatable(0f).animateTo(
                                             1f,
@@ -581,9 +553,6 @@ private fun WaterMarkCanvas(
                                             offsetX = startX + (centerX - startX) * value
                                             offsetY = startY + (centerY - startY) * value
                                         }
-                                        onOffsetChanged(
-                                            selectedImage.copy(offsetX = centerX, offsetY = centerY),
-                                        )
                                     }
                                 } else {
                                     onOffsetChanged(
@@ -610,10 +579,7 @@ private fun WaterMarkCanvas(
             drawIntoCanvas { canvas ->
                 val nc = canvas.nativeCanvas
 
-                /**
-                 * FIT_CENTER [bitmap] into the given content box, then optional native watermark
-                 * in that same box (box-local geometry).
-                 */
+                /** FIT_CENTER [bitmap] into the given content box (watermark already baked when possible). */
                 fun drawBitmapInBox(
                     frame: PreviewFrame,
                     boxL: Float,
@@ -621,7 +587,6 @@ private fun WaterMarkCanvas(
                     boxWidth: Float,
                     boxHeight: Float,
                     alpha: Float,
-                    applyNativeWm: Boolean,
                 ) {
                     if (frame.bitmap.isRecycled || boxWidth <= 0f || boxHeight <= 0f) return
                     val scale = min(
@@ -637,31 +602,8 @@ private fun WaterMarkCanvas(
                         postScale(scale, scale)
                         postTranslate(left, top)
                     }
-                    val a = (alpha.coerceIn(0f, 1f) * 255f).toInt()
-                    imagePaint.alpha = a
-                    layoutPaint.alpha = a
+                    imagePaint.alpha = (alpha.coerceIn(0f, 1f) * 255f).toInt()
                     nc.drawBitmap(frame.bitmap, imageMatrix, imagePaint)
-
-                    if (applyNativeWm &&
-                        !frame.watermarkBaked &&
-                        nativeShaderUri == frame.uriValue
-                    ) {
-                        val shader = nativeShader
-                        if (shader != null && waterMark.text.isNotEmpty()) {
-                            WatermarkRenderer.compose(
-                                canvas = nc,
-                                shader = shader,
-                                tileMode = tileMode,
-                                paint = layoutPaint,
-                                left = left,
-                                top = top,
-                                regionWidth = drawW,
-                                regionHeight = drawH,
-                                offsetX = offsetX,
-                                offsetY = offsetY,
-                            )
-                        }
-                    }
                 }
 
                 if (inc == null) {
@@ -672,20 +614,16 @@ private fun WaterMarkCanvas(
                         boxWidth = boxW,
                         boxHeight = boxH,
                         alpha = 1f,
-                        applyNativeWm = true,
                     )
                 } else {
                     // Morph shared box + crossfade both images inside it (smooth aspect change).
-                    val outA = 1f - t
-                    val inA = t
                     drawBitmapInBox(
                         frame = disp,
                         boxL = boxLeft,
                         boxT = boxTop,
                         boxWidth = boxW,
                         boxHeight = boxH,
-                        alpha = outA,
-                        applyNativeWm = false,
+                        alpha = 1f - t,
                     )
                     drawBitmapInBox(
                         frame = inc,
@@ -693,12 +631,10 @@ private fun WaterMarkCanvas(
                         boxT = boxTop,
                         boxWidth = boxW,
                         boxHeight = boxH,
-                        alpha = inA,
-                        applyNativeWm = inA > 0.85f,
+                        alpha = t,
                     )
                 }
                 imagePaint.alpha = 255
-                layoutPaint.alpha = 255
             }
         }
     }
@@ -763,32 +699,4 @@ private fun isClampWatermarkOutOfDrawable(
         waterMarkX > regionWidth ||
         waterMarkY > regionHeight ||
         waterMarkY + cellHeight < 0f
-}
-
-private suspend fun buildPreviewShader(
-    context: android.content.Context,
-    waterMark: WaterMark,
-    imageUri: android.net.Uri,
-    drawWidth: Int,
-    drawHeight: Int,
-): WaterMarkShader? {
-    val imageInfo = ImageInfo(imageUri.toMediaRef()).apply {
-        width = drawWidth
-        height = drawHeight
-    }
-    val bitmapPaint = TextPaint().applyConfig(imageInfo, waterMark, isScale = false)
-    return when (waterMark.markMode) {
-        WatermarkMode.Text ->
-            WatermarkRenderer.buildTextShader(
-                imageInfo, waterMark, bitmapPaint, androidTextMeasureEnv(context), Dispatchers.IO,
-            )
-        WatermarkMode.Image -> {
-            val icon = decodeSampledBitmapFromResource(
-                context.contentResolver, waterMark.iconUri.toUri(), drawWidth, drawHeight,
-            ).data?.bitmap ?: return null
-            WatermarkRenderer.buildIconShader(
-                imageInfo, icon, waterMark, bitmapPaint, scale = false, Dispatchers.IO,
-            )
-        }
-    }
 }

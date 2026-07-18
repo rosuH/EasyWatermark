@@ -22,10 +22,10 @@ import javax.imageio.ImageIO
 import javax.imageio.ImageWriteParam
 
 /**
- * S4d-18: the **Desktop (JVM/Skiko) production watermark text renderer** — the first non-test use of
- * the bundled commonMain text path. It is the Desktop half of S4d-17 **Option C**: Android watermark
- * text stays native (`WatermarkRenderer.buildTextShader` / `StaticLayout`), while the bundled
- * commonMain [WatermarkCellComposer.composeTextCell] is the Desktop/iOS-first renderer.
+ * S4d-18: the **Desktop (JVM/Skiko) production watermark text renderer** — platform half of the
+ * commonMain text path ([WatermarkCellComposer.composeTextCell]). Android production also uses
+ * commonMain text via `AndroidCommonRaster` (ADR-0018); native `WatermarkRenderer` / `StaticLayout`
+ * is measurement/golden oracle only (not byte-identical, especially CJK).
  *
  * This object owns the two irreducibly-platform pieces ADR-0004 calls out for the text raster:
  *  1. the **font resolver** — desktop Skiko's `createFontFamilyResolver()` (no `Context`), and
@@ -35,15 +35,14 @@ import javax.imageio.ImageWriteParam
  *     compose-resources / CMP-9547** (per the standing CMP constraint).
  *
  * Everything else (measure, size, rotate, paint) is the shared, platform-neutral
- * [WatermarkCellComposer.composeTextCell] — so Desktop and the eventual iOS renderer composite text
- * identically, and the shared `WatermarkGeometry` drives cell sizing on every platform.
+ * [WatermarkCellComposer.composeTextCell] — Desktop/iOS/Android common production share that core,
+ * and the shared `WatermarkGeometry` drives cell sizing on every platform.
  *
- * Density is `Density(1f)` to match the production image-space convention (`1.sp == 1px`, S3a) used by
- * the Android measurement seam — the watermark is a fraction of the image, independent of host DPI.
+ * Density is `Density(1f)` to match the production image-space convention (`1.sp == 1px`, S3a) —
+ * the watermark is a fraction of the image, independent of host DPI.
  *
- * SCOPE: Desktop only. This does NOT touch Android production text (still native) and is NOT an
- * Android draw-swap. Verified by `:shared:desktopTest` (`DesktopTextRendererGoldenTest`) and exercised
- * by `:desktopApp`.
+ * SCOPE: Desktop platform edge only. Verified by `:shared:desktopTest` (`DesktopTextRendererGoldenTest`)
+ * and exercised by `:desktopApp`.
  */
 object DesktopWatermarkTextRenderer {
 
