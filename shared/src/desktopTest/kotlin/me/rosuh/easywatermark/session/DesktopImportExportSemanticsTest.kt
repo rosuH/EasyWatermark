@@ -23,12 +23,14 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * A3 behavior tests for production seams:
- * - [DesktopSessionImport.commitImport] (Open/Add/Drop) — selection without export
- * - [DesktopSaveAsDestination.renderAndSaveExact] (Save As production write)
- * - [WatermarkSessionViewModel.exportAndAwait] order + result writeback (batch Export)
+ * A3 **code-contract** tests for production seams (not OS Finder DnD):
+ * - [DesktopSessionImport.commitImport] — selection without export (Open / Add more / Drop *handler* target)
+ * - [DesktopSaveAsDestination.renderAndSaveExact] — Save As exact write
+ * - [WatermarkSessionViewModel.exportAndAwait] — batch order + result writeback
+ * - [desktopWindow_productionWiringGuard] — static fail-closed wiring of DesktopWindow callers
  *
- * Collision unique-naming remains owned by Port/SaveDecision tests (A2); not re-run as Port E2E here.
+ * OS multi-file Drop into the Compose window is a **manual/runtime gate**, not covered here.
+ * Collision unique-naming remains owned by Port/SaveDecision tests (A2).
  */
 class DesktopImportExportSemanticsTest {
 
@@ -113,7 +115,8 @@ class DesktopImportExportSemanticsTest {
         assertEquals(0, (port as CountingExportPort).calls.get())
         assertFalse(session.exportJobState.value.isSaving)
         assertEquals(0, session.exportJobState.value.totalCount)
-        assertTrue(dir.listFiles()?.none { it.name.startsWith("watermarked") } != false)
+        // Import must not create stable export filenames under the workspace dir.
+        assertTrue(dir.walkTopDown().none { it.isFile && it.name.startsWith("watermarked") })
     }
 
     @Test
@@ -133,6 +136,9 @@ class DesktopImportExportSemanticsTest {
         val paths = session.launchScreenUiStateFlow.value.selectedImageList.map { it.uri.value }
         assertEquals(listOf(a.absolutePath, b.absolutePath, c.absolutePath), paths)
         assertEquals(0, (port as CountingExportPort).calls.get())
+        assertFalse(session.exportJobState.value.isSaving)
+        assertEquals(0, session.exportJobState.value.totalCount)
+        assertTrue(dir.walkTopDown().none { it.isFile && it.name.startsWith("watermarked") })
     }
 
     @Test
@@ -153,41 +159,12 @@ class DesktopImportExportSemanticsTest {
     }
 
     /**
-     * Drop uses the same import-only seam as Open/Add more ([DesktopSessionImport.commitImport]
-     * with append when selection is non-empty). Proves zero export + no stable watermarked.* files.
+     * Fail-closed **source wiring guard** for DesktopWindow production callers.
+     * Does **not** execute Compose DnD or Finder Drop — only asserts the source routes
+     * Open/Add more/Drop body → import batch, and Save As → [DesktopSaveAsDestination.renderAndSaveExact].
      */
     @Test
-    fun dropSemantics_importOnly_appendWithoutExportOrOutputFiles() = runBlocking {
-        val dir = tempDir("drop-import")
-        val outProbe = File(dir, "output-should-stay-empty").apply { mkdirs() }
-        val (session, port) = newSession(dir)
-        val a = pngFile(dir, "drop-a.png")
-        val b = pngFile(dir, "drop-b.png")
-        // First drop-equivalent (replace, like drop onto empty launch/editor).
-        DesktopSessionImport.commitImport(
-            session, listOf(a), emptyList(), append = false, WaterMark.default,
-        )
-        // Second drop-equivalent (append, like drop onto editor with selection).
-        val prior = session.launchScreenUiStateFlow.value.selectedImageList
-        DesktopSessionImport.commitImport(
-            session, listOf(b), prior, append = true, WaterMark.default,
-        )
-        assertEquals(
-            listOf(a.absolutePath, b.absolutePath),
-            session.launchScreenUiStateFlow.value.selectedImageList.map { it.uri.value },
-        )
-        assertEquals(0, (port as CountingExportPort).calls.get())
-        assertFalse(session.exportJobState.value.isSaving)
-        assertEquals(0, session.exportJobState.value.totalCount)
-        assertTrue(
-            outProbe.listFiles().isNullOrEmpty() ||
-                outProbe.listFiles()!!.none { it.name.startsWith("watermarked") },
-        )
-        assertTrue(dir.walkTopDown().none { it.isFile && it.name.startsWith("watermarked") })
-    }
-
-    @Test
-    fun desktopWindow_dropAndSaveAs_wireProductionSeams() {
+    fun desktopWindow_productionWiringGuard() {
         val relative = "desktopApp/src/main/kotlin/me/rosuh/easywatermark/desktop/DesktopWindow.kt"
         val cwd = File(System.getProperty("user.dir")!!)
         val candidates = listOf(
@@ -198,30 +175,32 @@ class DesktopImportExportSemanticsTest {
         val window = candidates.firstOrNull { it.isFile }
             ?: error("DesktopWindow.kt not found from user.dir=$cwd")
         val text = window.readText()
-        val start = text.indexOf("fun saveAsExactPath")
-        assertTrue(start >= 0)
-        val end = text.indexOf("Window(onCloseRequest", start)
-        val body = text.substring(start, if (end > start) end else text.length)
+
+        // Save As body
+        val saveStart = text.indexOf("fun saveAsExactPath")
+        assertTrue(saveStart >= 0)
+        val saveEnd = text.indexOf("Window(onCloseRequest", saveStart)
+        val saveBody = text.substring(saveStart, if (saveEnd > saveStart) saveEnd else text.length)
         assertTrue(
-            "DesktopSaveAsDestination.renderAndSaveExact" in body,
-            "production Save As must call renderAndSaveExact (tested write seam)",
+            "DesktopSaveAsDestination.renderAndSaveExact" in saveBody,
+            "production Save As must call renderAndSaveExact",
         )
-        assertFalse("resolveUniqueOutputFile" in body)
-        assertFalse(
-            "runSaveFlow" in body,
-            "Save As must not bypass the exact-write seam via runSaveFlow",
-        )
-        assertTrue("DesktopSessionImport.commitImport" in text)
-        assertTrue("showOpenGallery = lastSavedFile != null" in text)
-        // Drop target must route through import-only batch (not exportAndAwait).
+        assertFalse("resolveUniqueOutputFile" in saveBody)
+        assertFalse("runSaveFlow" in saveBody)
+
+        // onDrop body — import-only wiring (not a runtime Drop witness)
         val dropStart = text.indexOf("override fun onDrop")
         assertTrue(dropStart >= 0)
         val dropEnd = text.indexOf("fun saveAsExactPath", dropStart)
         val dropBody = text.substring(dropStart, if (dropEnd > dropStart) dropEnd else text.length)
         assertTrue("importBatchLatest" in dropBody || "openImageFilesBatch" in dropBody)
         assertFalse("exportAndAwait" in dropBody)
-        assertTrue("desktop_drop_busy" in text)
+
+        // Import/Open path uses production import seam
+        assertTrue("DesktopSessionImport.commitImport" in text)
+        assertTrue("showOpenGallery = lastSavedFile != null" in text)
         assertTrue("desktop_ready_status" in text)
+        assertTrue("desktop_drop_busy" in text)
         assertTrue("desktop_importing" in text)
     }
 
@@ -234,7 +213,6 @@ class DesktopImportExportSemanticsTest {
         val i2 = ImageInfo(MediaRef("/virtual/b.png"))
         val batch = listOf(i1, i2)
         session.dispatchAndAwait(AppIntent.EnterEditor(selected = batch))
-        // Use the same list instance the host would pass after selection.
         val selected = session.launchScreenUiStateFlow.value.selectedImageList
         assertEquals(2, selected.size)
         session.exportAndAwait(selected)
