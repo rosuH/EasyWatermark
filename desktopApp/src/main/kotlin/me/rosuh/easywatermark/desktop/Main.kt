@@ -29,10 +29,10 @@ import java.io.File
  * `--headless` drive the SAME shared save spine ([DesktopWatermarkFlow]); the window does not fake a
  * preview.
  *
- * History: S4d-18 added the Desktop text-renderer witness; S4d-19/20A the composition + real-image decode
- * witnesses; S4d-80 the UserConfig smoke; S4d-120 the headless save spine (now extracted to
- * [DesktopWatermarkFlow] so the window reuses it); S4d-122/123 made `composeOverRealImage` honor persisted
- * text color, typeface, and paint style. Icon watermark and output-format/compress remain later slices.
+ * History: S4d-18 text-renderer witness; S4d-19/20A composition + real-image decode; S4d-80 UserConfig;
+ * S4d-120 headless save via [DesktopWatermarkFlow]; issue-11 consolidates Text/Icon render+write into
+ * [me.rosuh.easywatermark.render.DesktopRenderSaveSpine] shared with the export port. Main demo samples
+ * may still call the composer directly; save/export paths go through the spine.
  */
 fun main(args: Array<String>) {
     if (args.none { it == "--headless" }) {

@@ -9,32 +9,20 @@ import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
-import me.rosuh.easywatermark.render.DesktopRenderPlan
+import me.rosuh.easywatermark.render.DesktopRenderSaveSpine
 import me.rosuh.easywatermark.render.DesktopSaveDecision
 import me.rosuh.easywatermark.render.DesktopWatermarkComposer
 import java.io.File
 
 /**
- * S4d-121: the S4d-120 headless save spine extracted into reusable Desktop-app functions so BOTH the
- * `--headless` automation path ([runHeadless] in `Main.kt`) and the Compose Desktop window
- * ([launchDesktopWindow]) drive the **same** open → edit → render → save flow over the committed shared
- * APIs — the window does NOT fake a preview.
+ * Desktop open → edit → render → save orchestration for `--headless` and Compose Desktop window.
  *
- * S4d-122/123: this flow passes `WaterMark.textColor`, `textTypeface`, and `textStyle` into
- * [DesktopWatermarkComposer.composeOverRealImage]; all three are raster-honored on Desktop Skiko.
+ * **Render/write** is delegated to [DesktopRenderSaveSpine] (shared with
+ * [me.rosuh.easywatermark.session.DesktopExportPipelinePort]). This object owns repository reads,
+ * fixture generation, default output path ([defaultOutputFile]), and [SaveOutcome] presentation.
  *
- * S4d-128: the output **format + quality** are read from a provided [UserConfigRepository] (an empty
- * store yields the shared default `UserPreferences.DEFAULT == (JPEG, 80)` — matching Android, no
- * Desktop-only PNG default) and passed to the composer; the output filename extension follows the format.
- *
- * S4d-134: [runSaveFlow] honors the persisted [WatermarkMode]. **Image** mode renders the persisted
- * `WaterMark.iconUri` (a Desktop file path) through [DesktopWatermarkComposer.composeIconOverRealImage];
- * a missing/empty/unreadable icon fails loudly (no silent Text fallback).
- *
- * S4d-145: [runSaveFlow] renders the **persisted** `WaterMark` as-is for BOTH modes — it no longer forces a
- * demo text/degree for Text mode. The Desktop window's "Apply text" field sets the text via
- * `WatermarkConfigEditor.updateText`, and the `--headless` witness sets its demo text/degree itself
- * (`Main.kt`) so its output stays deterministic. The `editor` param is retained for call-site stability.
+ * Destination policies remain caller-side: preview temp, Save As exact path, and headless default
+ * all pass an exact [File] into the spine (or use [defaultOutputFile] when null).
  */
 object DesktopWatermarkFlow {
 
@@ -84,12 +72,9 @@ object DesktopWatermarkFlow {
     )
 
     /**
-     * Persist a config edit through [editor], re-read the persisted [WaterMark], read the output
-     * [format]/[quality] from [userConfigRepo] (empty store → the shared `(JPEG, 80)` default), render the
-     * [inputBytes] (or the deterministic 640×480 fixture) via [DesktopWatermarkComposer.composeOverRealImage]
-     * in that format, and write to [outputFile] (default: [defaultOutputFile] for the chosen format, so the
-     * extension matches). `suspend` (DataStore reads) — the caller picks the dispatcher (`runBlocking` for
-     * headless; a UI coroutine for the window). The flow only READS the output prefs (never writes them).
+     * Persist-path orchestration: resolve input bytes (caller or fixture), read prefs + watermark,
+     * render/write via [DesktopRenderSaveSpine] to [outputFile] or [defaultOutputFile].
+     * The `editor` param is retained for call-site stability (callers still hold one for their edits).
      */
     suspend fun runSaveFlow(
         repo: WaterMarkRepository,
@@ -99,8 +84,6 @@ object DesktopWatermarkFlow {
         inputLabel: String = "<generated 640x480 fixture>",
         outputFile: File? = null,
     ): SaveOutcome {
-        // S4d-139: the caller-input vs fixture choice is the pure DesktopSaveDecision.usesCallerInput rule
-        // (true ⟺ inputBytes != null, so the !! is safe). Fixture generation stays here (IO/rendering).
         val bytes = if (DesktopSaveDecision.usesCallerInput(inputBytes)) {
             inputBytes!!
         } else {
@@ -108,71 +91,25 @@ object DesktopWatermarkFlow {
         }
         val prefs = userConfigRepo.userPreferences.first() // empty store -> (JPEG, 80) (shared default)
         val initial = repo.waterMark.first()
-        // S4d-145: render the PERSISTED WaterMark as-is for BOTH modes — no forced demo edit. Callers set
-        // the config first: the Desktop window's text field via WatermarkConfigEditor.updateText, and the
-        // headless witness sets demo text/degree before calling runSaveFlow (Main.kt). (S4d-134's Image
-        // branch already rendered the persisted config as-is; Text mode now matches it, so the window can
-        // finally render user-chosen text.) The `editor` param is retained for call-site stability — callers
-        // still hold one for their own edits — so the existing call sites are unchanged.
+        // Render the PERSISTED WaterMark as-is for BOTH modes — no forced demo edit.
         val wm: WaterMark = initial
-        // S4d-139: the PURE render decision is the testable DesktopSaveDecision.renderPlan (Text vs Icon,
-        // with the blank-icon loud-fail). The icon FILE-existence check + bytes read + composer calls stay
-        // here (IO). Behavior is unchanged vs the prior inline branch.
-        val result: DesktopWatermarkComposer.ComposedImage =
-            when (val plan = DesktopSaveDecision.renderPlan(wm.markMode, wm.iconUri.value)) {
-                is DesktopRenderPlan.Icon -> {
-                    // renderPlan already loud-failed on a BLANK icon path; the FILE-existence check is IO and
-                    // stays here. The read is `suspend`-context IO: the window calls runSaveFlow inside
-                    // withContext(Dispatchers.IO); headless uses runBlocking — so no extra dispatch is needed.
-                    val iconFile = File(plan.iconPath)
-                    require(iconFile.isFile) {
-                        "Image-mode icon file is missing or not a regular file: '${plan.iconPath}'"
-                    }
-                    DesktopWatermarkComposer.composeIconOverRealImage(
-                        imageBytes = bytes,
-                        iconBytes = iconFile.readBytes(),
-                        tileMode = wm.tileMode,
-                        textSize = wm.textSize,
-                        degree = wm.degree,
-                        hGapPercent = wm.hGap,
-                        vGapPercent = wm.vGap,
-                        alpha = wm.alpha / 255f,
-                        // S4d-128: output format + quality from the persisted user prefs (default JPEG/80).
-                        format = prefs.outputFormat,
-                        quality = prefs.compressLevel,
-                    )
-                }
-                DesktopRenderPlan.Text -> DesktopWatermarkComposer.composeOverRealImage(
-                    imageBytes = bytes,
-                    text = wm.text,
-                    tileMode = wm.tileMode,
-                    textSize = wm.textSize,
-                    degree = wm.degree,
-                    hGapPercent = wm.hGap,
-                    vGapPercent = wm.vGap,
-                    alpha = wm.alpha / 255f,
-                    // Drive the persisted text color / typeface / paint style.
-                    colorArgb = wm.textColor,
-                    typeface = wm.textTypeface,
-                    textStyle = wm.textStyle,
-                    // S4d-128: output format + quality from the persisted user prefs (default JPEG/80).
-                    format = prefs.outputFormat,
-                    quality = prefs.compressLevel,
-                )
-            }
         val target = outputFile ?: defaultOutputFile(prefs.outputFormat)
-        target.parentFile?.mkdirs()
-        target.writeBytes(result.png)
+        val saved = DesktopRenderSaveSpine.renderAndSave(
+            imageBytes = bytes,
+            config = wm,
+            prefs = prefs,
+            target = target,
+        )
         return SaveOutcome(
             configInitial = describe(initial),
             configAfterEdit = describe(wm),
             inputLabel = inputLabel,
             inputByteCount = bytes.size,
-            outputPath = target.path,
-            format = prefs.outputFormat,
-            width = result.width,
-            height = result.height,
-            outputByteCount = result.png.size,
+            outputPath = saved.output.value,
+            format = saved.format,
+            width = saved.width,
+            height = saved.height,
+            outputByteCount = saved.outputByteCount,
         )
     }
 

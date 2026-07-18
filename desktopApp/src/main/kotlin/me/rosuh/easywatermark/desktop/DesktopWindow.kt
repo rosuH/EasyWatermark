@@ -239,23 +239,16 @@ private fun resolveDesktopOutputDir(): File {
  * `:desktopApp` launch opens this window (`Main.kt` dispatches); the `--headless` flag keeps a bounded
  * console automation path that exits.
  *
- * Honest, not faked: the "Render & Save sample" button runs the SAME shared spine the headless path uses
- * ([DesktopWatermarkFlow.runSaveFlow] → common `WaterMarkRepository` + `WatermarkConfigEditor` persist a
- * config edit, then `DesktopWatermarkComposer.composeOverRealImage` renders the deterministic fixture and
- * writes an image) and shows the persisted config + output path/dims/size. It honors text color, typeface,
- * and paint style. S4d-125: an "Open image…" button picks a real file via a native AWT [FileDialog] and runs
- * the SAME spine over those bytes. S4d-130: two output-preference presets (JPEG/80, PNG/100) persist through
- * the shared `OutputPrefsEditor`, so the save flow encodes in the chosen format. S4d-135: an "Open icon…"
- * button persists a picked icon path via `WatermarkConfigEditor.updateIcon` (flipping persisted mode to
- * Image), so the existing Render/Open-image saves then render through the S4d-134 Image branch. S4d-136: a
- * "Use text watermark" button flips persisted mode back to Text (via `WatermarkConfigEditor.updateText`,
- * preserving the current text), so Image mode is not one-way. S4d-137: the window remembers the last
- * "Open image…" selection (bytes + label), so "Render & Save sample" composites over that real photo
- * instead of the fixture (null → fixture, as before). S4d-140: a "Save as…" button opens a native AWT
- * SAVE dialog and passes the chosen path as `runSaveFlow(outputFile = …)`, so saves can land outside the
- * fixed `build/` default (same render decision; destination-only). S4d-145: a "Watermark text" field +
- * "Apply text" button persist user text via `WatermarkConfigEditor.updateText`, and `runSaveFlow` no longer
- * forces a demo string — so the window finally renders user-chosen text (the first real edit control).
+ * Honest, not faked: "Render & Save sample" / Preview / Save As use [DesktopWatermarkFlow.runSaveFlow],
+ * which reads repos then delegates Text/Icon render+write to [me.rosuh.easywatermark.render.DesktopRenderSaveSpine]
+ * (same deep module as [me.rosuh.easywatermark.session.DesktopExportPipelinePort] for Open/Drop export).
+ * Destination policy stays here: Preview → app temp; Save As → exact dialog path; Open/Drop → unique files
+ * under the configured output dir via session export. S4d-125: an "Open image…" button picks a real file via
+ * a native AWT [FileDialog]. S4d-130: two output-preference presets (JPEG/80, PNG/100) persist through
+ * the shared `OutputPrefsEditor`. S4d-135: an "Open icon…" button persists a picked icon path via
+ * `WatermarkConfigEditor.updateIcon`. S4d-136: "Use text watermark" flips mode back to Text.
+ * S4d-137: last "Open image…" selection is remembered for sample saves. S4d-140: "Save as…" opens a native
+ * AWT SAVE dialog and passes `runSaveFlow(outputFile = …)`. S4d-145: watermark text field + Apply.
  * S4d-147: a "Preview" button renders the current config through `runSaveFlow` to a repo-local temp file,
  * decodes the bytes (`DesktopImageDecoder`, generic JPEG/PNG), and shows the result on-screen — ending the
  * blind-edit loop. S4d-148: an "Apply degree" field edits rotation (`updateDegree`, 0..360). S4d-149: an
