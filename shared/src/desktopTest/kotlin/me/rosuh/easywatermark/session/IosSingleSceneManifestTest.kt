@@ -3,7 +3,6 @@ package me.rosuh.easywatermark.session
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -13,9 +12,9 @@ import kotlin.test.fail
  * [IosAppServices] / `defaultIosAppServices()` owns one process-wide Session. Advertising
  * multi-scene support without a scene-scoped Session design is false capability declaration.
  *
- * An authorized future multi-window slice must deliberately replace this guard with real
- * two-scene isolation tests (route/selection/export/temp isolation) — do not delete it
- * just to re-enable `UIApplicationSupportsMultipleScenes=true`.
+ * See ADR-0020. An authorized future multi-window slice must deliberately replace this guard
+ * with real two-scene isolation tests — do not delete it just to re-enable
+ * `UIApplicationSupportsMultipleScenes=true`.
  */
 class IosSingleSceneManifestTest {
 
@@ -23,55 +22,86 @@ class IosSingleSceneManifestTest {
     fun sourceManifest_disablesMultipleScenes_untilSceneScopedSessionIsAuthorized() {
         val plist = locateIosInfoPlist()
         val text = plist.readText()
-        assertTrue(
-            text.contains("<key>UIApplicationSceneManifest</key>"),
-            "UIApplicationSceneManifest must be present in ${plist.path}",
-        )
-        val value = extractSupportsMultipleScenes(text)
+        val sceneManifestBody = extractDictBodyAfterKey(text, "UIApplicationSceneManifest")
+            ?: fail("UIApplicationSceneManifest dict missing in ${plist.path}")
+        val value = extractBooleanAfterKey(sceneManifestBody, "UIApplicationSupportsMultipleScenes")
             ?: fail(
-                "UIApplicationSupportsMultipleScenes key missing under UIApplicationSceneManifest " +
+                "UIApplicationSupportsMultipleScenes missing inside UIApplicationSceneManifest " +
                     "in ${plist.path}",
             )
         assertEquals(
             false,
             value,
             "Current release is single-scene (process-wide IosAppServices Session). " +
-                "Found UIApplicationSupportsMultipleScenes=$value in ${plist.path}. " +
-                "Re-enabling multi-scene requires a separately authorized scene-scoped Session design " +
-                "and two-scene isolation tests — not a silent true flip.",
+                "Found UIApplicationSupportsMultipleScenes=$value inside UIApplicationSceneManifest " +
+                "in ${plist.path}. Re-enabling multi-scene requires a separately authorized " +
+                "scene-scoped Session design and two-scene isolation tests — not a silent true flip.",
         )
     }
 
     private fun locateIosInfoPlist(): File {
         val relative = "iosApp/iosApp/Info.plist"
         val cwd = File(System.getProperty("user.dir")!!)
-        val candidates = listOf(
+        // When :shared:desktopTest runs, user.dir is the :shared module root; parent is the repo root.
+        val candidates = linkedSetOf(
             File(cwd, relative),
-            File(cwd.parentFile, relative),
-            File(cwd, "../$relative"),
+            File(cwd.parentFile ?: cwd, relative),
         )
         return candidates.firstOrNull { it.isFile }
             ?: fail("iosApp/iosApp/Info.plist not found from user.dir=$cwd candidates=$candidates")
     }
 
     /**
-     * Returns the boolean after `UIApplicationSupportsMultipleScenes` within the scene manifest
-     * dict, or null if the key is absent. Does not guess safety from unrelated symbols.
+     * Returns the inner XML of the plist dict that immediately follows `<key>$key</key>`,
+     * or null if the key or dict is absent. Nested dicts are balanced.
      */
-    private fun extractSupportsMultipleScenes(plistXml: String): Boolean? {
-        val key = "<key>UIApplicationSupportsMultipleScenes</key>"
-        val keyIdx = plistXml.indexOf(key)
+    private fun extractDictBodyAfterKey(plistXml: String, key: String): String? {
+        val keyTag = "<key>$key</key>"
+        val keyIdx = plistXml.indexOf(keyTag)
         if (keyIdx < 0) return null
-        val after = plistXml.substring(keyIdx + key.length)
-        val trueIdx = after.indexOf("<true/>")
-        val falseIdx = after.indexOf("<false/>")
-        // Next boolean tag wins (plist is well-formed; value immediately follows the key).
+        val afterKey = plistXml.substring(keyIdx + keyTag.length)
+        val dictOpen = afterKey.indexOf("<dict>")
+        if (dictOpen < 0) return null
+        // Skip any non-dict tags between key and dict (whitespace only expected).
+        val between = afterKey.substring(0, dictOpen).trim()
+        if (between.isNotEmpty()) return null
+        var depth = 0
+        var i = dictOpen
+        while (i < afterKey.length) {
+            when {
+                afterKey.startsWith("<dict>", i) -> {
+                    depth++
+                    i += "<dict>".length
+                }
+                afterKey.startsWith("</dict>", i) -> {
+                    depth--
+                    i += "</dict>".length
+                    if (depth == 0) {
+                        // Body between first <dict> and its matching </dict>
+                        val openEnd = dictOpen + "<dict>".length
+                        val closeStart = i - "</dict>".length
+                        return afterKey.substring(openEnd, closeStart)
+                    }
+                }
+                else -> i++
+            }
+        }
+        return null
+    }
+
+    /**
+     * Returns the boolean that immediately follows `<key>$key</key>` within [scopeXml],
+     * or null if the key or a following boolean is absent.
+     */
+    private fun extractBooleanAfterKey(scopeXml: String, key: String): Boolean? {
+        val keyTag = "<key>$key</key>"
+        val keyIdx = scopeXml.indexOf(keyTag)
+        if (keyIdx < 0) return null
+        val after = scopeXml.substring(keyIdx + keyTag.length).trimStart()
         return when {
-            trueIdx < 0 && falseIdx < 0 -> null
-            trueIdx < 0 -> false
-            falseIdx < 0 -> true
-            trueIdx < falseIdx -> true
-            else -> false
+            after.startsWith("<true/>") || after.startsWith("<true></true>") -> true
+            after.startsWith("<false/>") || after.startsWith("<false></false>") -> false
+            else -> null
         }
     }
 }
