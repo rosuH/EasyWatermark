@@ -1,23 +1,26 @@
 package me.rosuh.easywatermark.session
 
 import kotlinx.coroutines.runBlocking
-import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkMode
-import me.rosuh.easywatermark.data.model.WatermarkTileMode
+import me.rosuh.easywatermark.render.DesktopSaveDecision
 import me.rosuh.easywatermark.render.DesktopWatermarkComposer
 import java.io.File
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
- * Adapter contract tests for [DesktopExportPipelinePort]
- * (source validation, unique naming, Result mapping). Render/write is on [DesktopRenderSaveSpine].
+ * Adapter-only contract for [DesktopExportPipelinePort]:
+ * source validation, unique destination policy, [ImageInfo] dimension mapping, and [Result] mapping.
+ *
+ * Render/write matrix (Text/Image, JPEG/PNG, REPEAT/CLAMP, alpha, exact-target, missing icon)
+ * lives in [me.rosuh.easywatermark.render.DesktopRenderSaveSpineTest] — do not re-assert it here.
+ * At most one end-to-end happy path exercises the full port → spine handoff.
  */
 class DesktopExportPipelinePortTest {
 
@@ -33,130 +36,36 @@ class DesktopExportPipelinePortTest {
         return source
     }
 
-    private fun writeIcon(dir: File): File {
-        val icon = File(dir, "icon.png")
-        icon.writeBytes(DesktopWatermarkComposer.sampleBackgroundPng(width = 32, height = 32))
-        return icon
-    }
-
+    /**
+     * Sole E2E happy path (one Port → Spine render/write): pre-seed `watermarked.jpg` so unique
+     * destination picks `watermarked_1.jpg`, assert sentinel is not overwritten, Result.success,
+     * and width/height mutation on [ImageInfo].
+     */
     @Test
-    fun exportOne_writesUniqueFile_fromFixtureBytes() = runBlocking {
-        val dir = tempDir("unique")
+    fun exportOne_happyPath_uniqueDestination_mapsDimensionsAndResult() = runBlocking {
+        val dir = tempDir("happy")
         val source = writeSource(dir)
+        val sentinel = byteArrayOf(0xDE.toByte(), 0xAD.toByte(), 0xBE.toByte(), 0xEF.toByte())
+        val occupied = File(dir, "watermarked.jpg").apply { writeBytes(sentinel) }
         val port = DesktopExportPipelinePort(outputDirProvider = { dir })
         val info = ImageInfo(MediaRef(source.absolutePath))
+
         val result = port.exportOne(info, WaterMark.default, UserPreferences.DEFAULT)
+
         assertTrue(result.isSuccess(), result.message ?: result.code)
         val out = File(result.data!!.value)
+        assertEquals("watermarked_1.jpg", out.name, "unique policy must skip occupied base name")
         assertTrue(out.isFile)
         assertTrue(out.length() > 0)
         assertEquals(64, info.width)
         assertEquals(48, info.height)
-        // JPEG default prefs → .jpg extension
-        assertTrue(out.name.endsWith(".jpg"), out.name)
-        assertTrue(out.readBytes().let { it.size >= 2 && it[0] == 0xFF.toByte() && it[1] == 0xD8.toByte() })
+        // Pre-existing base name must remain untouched (not overwritten by export).
+        assertContentEquals(sentinel, occupied.readBytes())
+        assertTrue(occupied.isFile)
     }
 
     @Test
-    fun exportOne_png_format_writes_png_magic() = runBlocking {
-        val dir = tempDir("png")
-        val source = writeSource(dir)
-        val port = DesktopExportPipelinePort(outputDirProvider = { dir })
-        val info = ImageInfo(MediaRef(source.absolutePath))
-        val prefs = UserPreferences(ImageFormat.PNG, 100)
-        val result = port.exportOne(info, WaterMark.default, prefs)
-        assertTrue(result.isSuccess(), result.message ?: result.code)
-        val out = File(result.data!!.value)
-        assertTrue(out.name.endsWith(".png"), out.name)
-        val bytes = out.readBytes()
-        assertTrue(bytes.size >= 4)
-        assertEquals(0x89.toByte(), bytes[0])
-        assertEquals(0x50.toByte(), bytes[1]) // P
-        assertEquals(0x4E.toByte(), bytes[2]) // N
-        assertEquals(0x47.toByte(), bytes[3]) // G
-    }
-
-    @Test
-    fun exportOne_unique_destination_does_not_overwrite() = runBlocking {
-        val dir = tempDir("collision")
-        val source = writeSource(dir)
-        val port = DesktopExportPipelinePort(outputDirProvider = { dir })
-        val info1 = ImageInfo(MediaRef(source.absolutePath))
-        val info2 = ImageInfo(MediaRef(source.absolutePath))
-        val r1 = port.exportOne(info1, WaterMark.default, UserPreferences.DEFAULT)
-        val r2 = port.exportOne(info2, WaterMark.default, UserPreferences.DEFAULT)
-        assertTrue(r1.isSuccess() && r2.isSuccess())
-        assertNotEquals(r1.data!!.value, r2.data!!.value)
-        assertTrue(File(r1.data!!.value).isFile)
-        assertTrue(File(r2.data!!.value).isFile)
-    }
-
-    @Test
-    fun exportOne_clamp_and_repeat_both_succeed() = runBlocking {
-        val dir = tempDir("tile")
-        val source = writeSource(dir)
-        val port = DesktopExportPipelinePort(outputDirProvider = { dir })
-        for (tile in listOf(WatermarkTileMode.REPEAT, WatermarkTileMode.CLAMP)) {
-            val info = ImageInfo(MediaRef(source.absolutePath))
-            val config = WaterMark.default.copy(tileMode = tile)
-            val result = port.exportOne(info, config, UserPreferences.DEFAULT)
-            assertTrue(result.isSuccess(), "tile=$tile ${result.message}")
-            assertEquals(64, info.width)
-            assertEquals(48, info.height)
-        }
-    }
-
-    @Test
-    fun exportOne_icon_mode_renders_when_icon_file_present() = runBlocking {
-        val dir = tempDir("icon-ok")
-        val source = writeSource(dir)
-        val icon = writeIcon(dir)
-        val port = DesktopExportPipelinePort(outputDirProvider = { dir })
-        val info = ImageInfo(MediaRef(source.absolutePath))
-        val config = WaterMark.default.copy(
-            markMode = WatermarkMode.Image,
-            iconUri = MediaRef(icon.absolutePath),
-        )
-        val result = port.exportOne(info, config, UserPreferences.DEFAULT)
-        assertTrue(result.isSuccess(), result.message ?: result.code)
-        assertTrue(File(result.data!!.value).length() > 0)
-    }
-
-    @Test
-    fun exportOne_icon_mode_missing_file_fails() = runBlocking {
-        val dir = tempDir("icon-miss")
-        val source = writeSource(dir)
-        val port = DesktopExportPipelinePort(outputDirProvider = { dir })
-        val info = ImageInfo(MediaRef(source.absolutePath))
-        val config = WaterMark.default.copy(
-            markMode = WatermarkMode.Image,
-            iconUri = MediaRef(File(dir, "no-icon.png").absolutePath),
-        )
-        val result = port.exportOne(info, config, UserPreferences.DEFAULT)
-        assertTrue(result.isFailure())
-        assertTrue(
-            result.message?.contains("missing") == true ||
-                result.message?.contains("not a regular file") == true,
-            result.message,
-        )
-    }
-
-    @Test
-    fun exportOne_icon_mode_blank_uri_fails() = runBlocking {
-        val dir = tempDir("icon-blank")
-        val source = writeSource(dir)
-        val port = DesktopExportPipelinePort(outputDirProvider = { dir })
-        val info = ImageInfo(MediaRef(source.absolutePath))
-        val config = WaterMark.default.copy(
-            markMode = WatermarkMode.Image,
-            iconUri = MediaRef.Empty,
-        )
-        val result = port.exportOne(info, config, UserPreferences.DEFAULT)
-        assertTrue(result.isFailure())
-    }
-
-    @Test
-    fun exportOne_missingSource_fails() = runBlocking {
+    fun exportOne_missingSource_mapsToFileNotFound() = runBlocking {
         val dir = tempDir("missing")
         val port = DesktopExportPipelinePort(outputDirProvider = { dir })
         val result = port.exportOne(
@@ -169,19 +78,40 @@ class DesktopExportPipelinePortTest {
     }
 
     @Test
-    fun exportOne_lower_alpha_changes_encoded_bytes() = runBlocking {
-        val dir = tempDir("alpha")
+    fun exportOne_emptySourcePath_failsWithoutCallingSpine() = runBlocking {
+        val dir = tempDir("empty-path")
+        val port = DesktopExportPipelinePort(outputDirProvider = { dir })
+        val result = port.exportOne(
+            ImageInfo(MediaRef("")),
+            WaterMark.default,
+            UserPreferences.DEFAULT,
+        )
+        assertTrue(result.isFailure())
+        assertTrue(result.message?.contains("Empty") == true, result.message)
+        // No unique watermarked.* file should appear when source validation fails first.
+        assertTrue(dir.listFiles()?.none { it.name.startsWith("watermarked") } != false)
+    }
+
+    /**
+     * Spine throws on blank Image-mode icon; adapter must map the exception to [Result.failure]
+     * (not rethrow). Render-level blank-icon message ownership stays on the spine test.
+     */
+    @Test
+    fun exportOne_spineThrow_mapsToResultFailure() = runBlocking {
+        val dir = tempDir("spine-throw")
         val source = writeSource(dir)
         val port = DesktopExportPipelinePort(outputDirProvider = { dir })
-        val opaque = WaterMark.default.copy(alpha = 255, text = "ALPHA")
-        val translucent = WaterMark.default.copy(alpha = 80, text = "ALPHA")
-        val info1 = ImageInfo(MediaRef(source.absolutePath))
-        val info2 = ImageInfo(MediaRef(source.absolutePath))
-        val r1 = port.exportOne(info1, opaque, UserPreferences(ImageFormat.PNG, 100))
-        val r2 = port.exportOne(info2, translucent, UserPreferences(ImageFormat.PNG, 100))
-        assertTrue(r1.isSuccess() && r2.isSuccess())
-        val b1 = File(r1.data!!.value).readBytes()
-        val b2 = File(r2.data!!.value).readBytes()
-        assertNotEquals(b1.toList(), b2.toList(), "alpha must affect composition bytes")
+        val info = ImageInfo(MediaRef(source.absolutePath))
+        val config = WaterMark.default.copy(
+            markMode = WatermarkMode.Image,
+            iconUri = MediaRef.Empty,
+        )
+        val result = port.exportOne(info, config, UserPreferences.DEFAULT)
+        assertTrue(result.isFailure())
+        assertEquals(ExportErrorCodes.FILE_NOT_FOUND, result.code)
+        assertEquals(DesktopSaveDecision.EMPTY_ICON_MESSAGE, result.message)
+        // Failed export must not mutate dimensions (ImageInfo defaults remain 1×1).
+        assertEquals(1, info.width)
+        assertEquals(1, info.height)
     }
 }

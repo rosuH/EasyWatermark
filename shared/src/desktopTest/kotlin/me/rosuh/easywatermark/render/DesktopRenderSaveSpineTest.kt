@@ -14,9 +14,12 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
- * Direct contract tests for [DesktopRenderSaveSpine] — exact-target write, Text/Image,
- * JPEG/PNG, REPEAT/CLAMP, alpha, missing icon. Destination **policy** (unique / temp / default)
- * Is owned by callers and tested separately. */
+ * Sole owner of [DesktopRenderSaveSpine] render/write contract:
+ * Text/Image, JPEG/PNG, REPEAT/CLAMP, alpha, exact-target path, missing/blank icon.
+ *
+ * Destination **policy** (unique naming, preview temp, headless default) is caller-owned —
+ * see [me.rosuh.easywatermark.session.DesktopExportPipelinePortTest] for unique export only.
+ */
 class DesktopRenderSaveSpineTest {
 
     private fun fixtureBytes(w: Int = 80, h: Int = 60): ByteArray =
