@@ -24,9 +24,9 @@ object DesktopSaveDecision {
         "Image-mode watermark has no persisted iconUri; refusing to render (no silent fallback to Text)."
 
     /**
- * Choose the render plan from the persisted [markMode] + [iconPath] (= `WaterMark.iconUri.value`).
- * Image mode with a **blank** icon path fails loudly with [EMPTY_ICON_MESSAGE] — no silent fallback to
- * Text. The icon FILE-existence check is IO and stays in `runSaveFlow`. Pure (no IO).
+     * Choose the render plan from the persisted [markMode] + [iconPath] (= `WaterMark.iconUri.value`).
+     * Image mode with a **blank** icon path fails loudly with [EMPTY_ICON_MESSAGE] — no silent
+     * fallback to Text. Icon **file** existence is IO and lives in [DesktopRenderSaveSpine]. Pure (no IO).
      */
     fun renderPlan(markMode: WatermarkMode, iconPath: String): DesktopRenderPlan = when (markMode) {
         WatermarkMode.Image -> {

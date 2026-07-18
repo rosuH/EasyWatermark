@@ -148,7 +148,7 @@ private fun runHeadless(args: Array<String>) {
         // window can render user-set text), so set them here to keep --headless output deterministic.
         configEditor.updateText("请勿转载 DO NOT REDISTRIBUTE")
         configEditor.updateDegree(330f)
-        DesktopWatermarkFlow.runSaveFlow(waterMarkRepo, configEditor, saveFlowUserConfig, inputBytes, inputLabel, outputFile)
+        DesktopWatermarkFlow.runSaveFlow(waterMarkRepo, saveFlowUserConfig, inputBytes, inputLabel, outputFile)
     }
     println("  config (initial): ${outcome.configInitial}")
     println("  config (after edit, persisted): ${outcome.configAfterEdit}")
@@ -173,7 +173,7 @@ private fun runHeadless(args: Array<String>) {
         // updateIcon persists the icon path AND flips persisted markMode to Image.
         iconEditor.updateIcon(MediaRef(iconFile.absolutePath))
         DesktopWatermarkFlow.runSaveFlow(
-            iconRepo, iconEditor, saveFlowUserConfig, inputBytes, inputLabel, iconOutputFile,
+            iconRepo, saveFlowUserConfig, inputBytes, inputLabel, iconOutputFile,
         )
     }
     println("  config (rendered): ${iconOutcome.configAfterEdit}")
@@ -190,7 +190,7 @@ private fun runHeadless(args: Array<String>) {
         missingEditor.updateIcon(MediaRef(missingIconPath)) // mode=Image, icon points at a non-existent file
         try {
             DesktopWatermarkFlow.runSaveFlow(
-                missingRepo, missingEditor, saveFlowUserConfig, inputBytes, inputLabel,
+                missingRepo, saveFlowUserConfig, inputBytes, inputLabel,
                 File(iconFlowDir, "missing_icon_should_not_be_written.jpg"),
             )
             // Reaching here means Image mode did NOT throw on a missing icon → the guard regressed

@@ -8,7 +8,6 @@ import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
-import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopRenderSaveSpine
 import me.rosuh.easywatermark.render.DesktopSaveDecision
 import me.rosuh.easywatermark.render.DesktopWatermarkComposer
@@ -19,7 +18,7 @@ import java.io.File
  *
  * **Render/write** is delegated to [DesktopRenderSaveSpine] (shared with
  * [me.rosuh.easywatermark.session.DesktopExportPipelinePort]). This object owns repository reads,
- * Fixture generation, default output path ([defaultOutputFile]), and [SaveOutcome] presentation. *
+ * fixture generation, default output path ([defaultOutputFile]), and [SaveOutcome] presentation.
  * Destination policies remain caller-side: preview temp, Save As exact path, and headless default
  * all pass an exact [File] into the spine (or use [defaultOutputFile] when null).
  */
@@ -28,8 +27,10 @@ object DesktopWatermarkFlow {
     /** Repo-local watermark-config store dir (NOT `$HOME`) — shared with the S4d-120 flow. */
     val storeDir: File = File("build/s4d120-desktop-watermark-config")
 
-    /** Repo-local **output-prefs** store dir — separate from the witness store, never written here
- * (the flow only READS it), so an empty store keeps yielding the shared `(JPEG, 80)` default. */
+    /**
+     * Repo-local **output-prefs** store dir — separate from the witness store, never written here
+     * (the flow only READS it), so an empty store keeps yielding the shared `(JPEG, 80)` default.
+     */
     val userConfigStoreDir: File = File("build/s4d128-desktop-userconfig")
 
     /** Output dir (repo-local `build/`); the filename extension follows the chosen [ImageFormat]. */
@@ -40,8 +41,9 @@ object DesktopWatermarkFlow {
         File(outputDir, DesktopSaveDecision.defaultOutputFileName(format))
 
     /**
- * Build ONE common [WaterMarkRepository] over the desktop watermark-config store. DataStore forbids a
- * Second active store for the same file, so the caller retains a single instance per process (the * window remembers one; `runHeadless` builds one).
+     * Build ONE common [WaterMarkRepository] over the desktop watermark-config store. DataStore
+     * forbids a second active store for the same file, so the caller retains a single instance per
+     * process (the window remembers one; `runHeadless` builds one).
      */
     fun buildRepository(dir: File = storeDir): WaterMarkRepository = WaterMarkRepository(
         dataStore = createWaterMarkDataStore(dir = dir),
@@ -70,12 +72,13 @@ object DesktopWatermarkFlow {
     )
 
     /**
- * Persist-path orchestration: resolve input bytes (caller or fixture), read prefs + watermark,
- * Render/write via [DesktopRenderSaveSpine] to [outputFile] or [defaultOutputFile]. * The `editor` param is retained for call-site stability (callers still hold one for their edits).
+     * Persist-path orchestration: resolve input bytes (caller or fixture), read prefs + watermark,
+     * then render/write via [DesktopRenderSaveSpine] to [outputFile] or [defaultOutputFile].
+     * Callers that need config edits hold their own [me.rosuh.easywatermark.domain.WatermarkConfigEditor]
+     * and mutate the repo before invoking this flow; the flow only reads the persisted [WaterMark].
      */
     suspend fun runSaveFlow(
         repo: WaterMarkRepository,
-        editor: WatermarkConfigEditor,
         userConfigRepo: UserConfigRepository,
         inputBytes: ByteArray? = null,
         inputLabel: String = "<generated 640x480 fixture>",

@@ -353,11 +353,11 @@ fun launchDesktopWindow() = application {
             try {
                 val o = if (current != null) {
                     DesktopWatermarkFlow.runSaveFlow(
-                        repo, editor, userConfigRepo,
+                        repo, userConfigRepo,
                         inputBytes = current.bytes, inputLabel = current.label, outputFile = previewFile,
                     )
                 } else {
-                    DesktopWatermarkFlow.runSaveFlow(repo, editor, userConfigRepo, outputFile = previewFile)
+                    DesktopWatermarkFlow.runSaveFlow(repo, userConfigRepo, outputFile = previewFile)
                 }
                 DesktopImageDecoder.decode(previewFile.readBytes()) to
                     "Preview: ${o.format}, ${o.width}x${o.height} (${o.outputByteCount} B)"
@@ -1055,7 +1055,7 @@ fun launchDesktopWindow() = application {
                                             val fmt = userConfigRepo.userPreferences.first().outputFormat
                                             val target = DesktopSaveDecision.resolveUniqueOutputFile(outputDir, fmt)
                                             val o = DesktopWatermarkFlow.runSaveFlow(
-                                                repo, editor, userConfigRepo, outputFile = target,
+                                                repo, userConfigRepo, outputFile = target,
                                             )
                                             File(o.outputPath)
                                         }
