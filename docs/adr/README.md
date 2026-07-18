@@ -12,6 +12,7 @@ Decisions trace to the CMP migration plan (`docs/superpowers/plans/2026-06-12-cm
 | [0004](0004-rendering-engine-commonmain-rewrite.md) | Rendering engine: single commonMain rewrite, C2a/C2b split | Accepted; **production Android native hold partially superseded by [0018](0018-option-c2-common-raster-android-export.md)** |
 | [0018](0018-option-c2-common-raster-android-export.md) | Option C2: common raster for Android export + unified preview | **Accepted** (owner 2026-07-12) |
 | [0019](0019-cmp-compose-resources-i18n.md) | CMP composeResources for product UI strings + drawables | **Accepted** (Phases 0–3 landed 2026-07-12) |
+| [0020](0020-ios-single-scene-release.md) | iOS current release is single-scene (process-wide Session) | **Accepted** (issue 14 B1, 2026-07-18) |
 | [0005](0005-di-koin-interfaces.md) | DI: interfaces + Koin modules; expect/actual only at the edges | Accepted |
 | [0006](0006-data-layer-kmp.md) | Data layer: Room/DataStore on KMP coordinates; prepopulated DB path | Accepted |
 | [0007](0007-platform-neutral-models.md) | Platform-neutral model layer (TileMode, ImageFormat, MediaRef) | Accepted |
