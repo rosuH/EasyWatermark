@@ -9,8 +9,7 @@ import org.jetbrains.skia.SamplingMode
 import org.jetbrains.skia.Surface
 
 /**
- * S4d-20B: the **iOS platform image-decode boundary** — the iOS analogue of the Desktop
- * [DesktopImageDecoder] (S4d-20A). Decodes a real encoded image (PNG/JPEG/… bytes) into a Compose
+ * The **iOS platform image-decode boundary** — the iOS analogue of the Desktop * [DesktopImageDecoder]. Decodes a real encoded image (PNG/JPEG/… bytes) into a Compose
  * [ImageBitmap] so the accepted commonMain composition pipeline
  * ([WatermarkCellComposer.composeOverBackground]) can watermark an actually-decoded photo.
  *
@@ -23,24 +22,23 @@ import org.jetbrains.skia.Surface
  * **decode-free** (already-decoded `ImageBitmap` in, composed out). A production iOS app would obtain the
  * bytes from PHPicker/`UIImage`/file (C5); this boundary only needs the encoded bytes.
  *
- * ## S4d-23: EXIF orientation is already honoured by the Skia decode — no extra transform needed
+ * ## : EXIF orientation is already honoured by the Skia decode — no extra transform needed
  * Unlike Android (`BitmapFactory`) and Desktop (`ImageIO`), which return the JPEG's STORED pixels and
  * therefore need EXIF orientation baked in manually (Android `BitmapUtils`; Desktop `DesktopImageDecoder`
- * S4d-21/22), **Skia's `Image.makeFromEncoded` → `toComposeImageBitmap()` already applies the EXIF
+ * /22), **Skia's `Image.makeFromEncoded` → `toComposeImageBitmap()` already applies the EXIF
  * Orientation tag**: an orientation-6 (90° CW) JPEG decodes to an UPRIGHT bitmap with swapped dimensions.
  * This was proven on the SAME skiko/Skia behind the SAME `org.jetbrains.skia` API by the desktop proxy
  * gate `SkiaExifDecodeProbeTest` (desktop run, no iOS runtime needed). So this boundary deliberately does
  * **NOT** apply any further rotation — doing so would DOUBLE-rotate camera photos. The iOS gate
  * `IosExifOrientationTest` asserts decode(orientation-6) is upright; its RUN confirms the iOS-runtime
- * behaviour at S4d-20C/C5 (compile/link-proven here). commonMain stays decode-free.
+ * behaviour at /C5 (compile/link-proven here). commonMain stays decode-free.
  */
 object IosImageDecoder {
 
     /**
-     * Decode encoded image [bytes] into an [ImageBitmap] via Skia. Skia applies EXIF orientation during
-     * decode (see the object KDoc), so the result is already upright — no manual orientation transform is
-     * applied. Throws [IllegalStateException] if Skia cannot decode (unsupported/corrupt) so callers fail
-     * loudly instead of propagating a bad image.
+ * Decode encoded image [bytes] into an [ImageBitmap] via Skia. Skia applies EXIF orientation during
+ * Decode (see the object KDoc), so the result is already upright — no manual orientation transform is * applied. Throws [IllegalStateException] if Skia cannot decode (unsupported/corrupt) so callers fail
+ * loudly instead of propagating a bad image.
      */
     fun decode(bytes: ByteArray): ImageBitmap {
         val skiaImage = decodeSkia(bytes)
@@ -48,18 +46,17 @@ object IosImageDecoder {
     }
 
     /**
-     * Decode and downscale so the longer edge is at most [maxEdgePx]. Used for filmstrip cells
-     * (≈40dp) so multi-pick does not decode multi-megapixel bitmaps for every thumbnail.
+ * Decode and downscale so the longer edge is at most [maxEdgePx]. Used for filmstrip cells
+ * (≈40dp) so multi-pick does not decode multi-megapixel bitmaps for every thumbnail.
      */
     fun decodeThumbnail(bytes: ByteArray, maxEdgePx: Int = 160): ImageBitmap {
         return scaleSkia(decodeSkia(bytes), maxEdgePx).toComposeImageBitmap()
     }
 
     /**
-     * Re-encode [bytes] as PNG with longest edge ≤ [maxEdgePx] for **on-screen preview export**.
-     * Full-res camera photos (12MP+) make Skiko watermark raster multi-second; preview does not
-     * need full resolution.
-     */
+ * Re-encode [bytes] as PNG with longest edge ≤ [maxEdgePx] for **on-screen preview export**.
+ * Full-res camera photos (12MP+) make Skiko watermark raster multi-second; preview does not
+ * Need full resolution.     */
     fun downscaleEncodedToPng(bytes: ByteArray, maxEdgePx: Int = 1600): ByteArray {
         val scaled = scaleSkia(decodeSkia(bytes), maxEdgePx)
         val data = scaled.encodeToData(EncodedImageFormat.PNG)

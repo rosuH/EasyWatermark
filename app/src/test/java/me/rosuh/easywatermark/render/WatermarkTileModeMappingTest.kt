@@ -18,10 +18,10 @@ import org.robolectric.annotation.Config
  * S1 behavior-preservation gate. The repository reads `KEY_TILE_MODE` through the Android-edge
  * legacy mapper `Int?.toWatermarkTileMode()`, which must reproduce BOTH halves of the old behavior:
  *
- *  1. the **neutral model value** the UI observes (`WaterMark.tileMode`, what `TileModeOption`
- *     selects against) — this is the half the first S1 cut missed for pre-S id=3, and
- *  2. the **rendered** `Shader.TileMode`, i.e. `id.toWatermarkTileMode().toShaderTileMode()` must
- *     equal the legacy oracle `id.toTileMode()` for every id.
+ * 1. the **neutral model value** the UI observes (`WaterMark.tileMode`, what `TileModeOption`
+ * selects against) — this is the half the first S1 cut missed for pre-S id=3, and
+ * 2. the **rendered** `Shader.TileMode`, i.e. `id.toWatermarkTileMode().toShaderTileMode()` must
+ * equal the legacy oracle `id.toTileMode()` for every id.
  *
  * `toTileMode()` (the historical `Int? -> Shader.TileMode` mapper) is retained untouched as the
  * oracle. Robolectric supplies real `Shader.TileMode` ordinals + `Build.VERSION`, so the API-31

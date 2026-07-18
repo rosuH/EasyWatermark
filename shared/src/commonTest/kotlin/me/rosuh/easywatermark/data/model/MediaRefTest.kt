@@ -8,8 +8,7 @@ import kotlin.test.assertTrue
 
 /**
  * Platform-neutral contracts for [MediaRef]. Mirrors the test style of `WatermarkTileModeTest` —
- * pure-Kotlin assertions that run on every `:shared` target (commonTest).
- */
+ * Pure-Kotlin assertions that run on every `:shared` target (commonTest). */
 class MediaRefTest {
 
     @Test

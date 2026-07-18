@@ -21,8 +21,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * Gallery cell model that forces MediaStore thumbnail decode instead of opening the full
- * original still (Coil's default [coil3.fetch.ContentUriFetcher] uses openAssetFileDescriptor
- * on the full file — the main gallery scroll jank source on large libraries).
+ * Original still (Coil's default [coil3.fetch.ContentUriFetcher] uses openAssetFileDescriptor * on the full file — the main gallery scroll jank source on large libraries).
  */
 data class MediaStoreThumbnail(
     val uri: Uri,

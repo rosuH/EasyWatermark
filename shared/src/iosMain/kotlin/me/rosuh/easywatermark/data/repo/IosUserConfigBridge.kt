@@ -6,8 +6,7 @@ import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.UserPreferences
 
 /**
- * S4d-81: the iOS Swift-facing bridge for the common [UserConfigRepository].
- *
+ * The iOS Swift-facing bridge for the common [UserConfigRepository]. *
  * Swift never touches the Kotlin `Flow`: [currentPreferences] is a **one-shot snapshot** (it collects
  * `repo.userPreferences.first()`), and the writes are plain `suspend` functions. The Kotlin/Native
  * Swift importer bridges `suspend` to Swift `async` (with a thrown error surfaced to the Swift `catch`),
@@ -47,7 +46,6 @@ class IosUserConfigBridge(private val repo: UserConfigRepository) {
 /**
  * Build an [IosUserConfigBridge] over the app's default iOS preferences store
  * ([createUserConfigDataStore], `NSDocumentDirectory`). A real iOS app calls this ONCE and retains the
- * result (single-instance-per-file).
- */
+ * Result (single-instance-per-file). */
 fun defaultIosUserConfigBridge(): IosUserConfigBridge =
     IosUserConfigBridge(UserConfigRepository(createUserConfigDataStore()))

@@ -33,8 +33,7 @@ data class EditorBottomControlTab<T>(
  * Shared CMP bottom-controls host for the editor.
  *
  * Platform callers still provide resource-backed option models and option bodies; this shell owns
- * only tab/option selection state and the shared carousel/tab layout wiring.
- *
+ * Only tab/option selection state and the shared carousel/tab layout wiring. *
  * [optionControl] receives [optionActivationSignal]: bumps only when
  * [shouldSignalActivation] is true for the tapped option (Text opens its sheet; Icon must
  * **not** bump or the exiting Text panel would flash the edit sheet during AnimatedContent).
@@ -50,8 +49,8 @@ fun <T> EditorBottomControlsShell(
     optionControl: @Composable (option: T, modifier: Modifier, optionActivationSignal: Int) -> Unit,
     optionItem: @Composable (option: T, selected: Boolean) -> Unit,
     /**
-     * When true, [optionActivationSignal] increments (Text sheet open). Default false so
-     * Icon/Style tools never open the text dialog as a side effect of selection.
+ * When true, [optionActivationSignal] increments (Text sheet open). Default false so
+ * Icon/Style tools never open the text dialog as a side effect of selection.
      */
     shouldSignalActivation: (T) -> Boolean = { false },
     onIndicatorPosition: (startPx: Int, endPx: Int) -> Unit = { _, _ -> },

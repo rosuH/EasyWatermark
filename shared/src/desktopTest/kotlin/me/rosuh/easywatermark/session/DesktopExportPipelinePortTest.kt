@@ -16,9 +16,8 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
- * Characterization + contract tests for [DesktopExportPipelinePort].
- * Unique destination policy and source validation stay in the port; render/write will share
- * [me.rosuh.easywatermark.render.DesktopRenderSaveSpine] after P1.1–P1.2 cutover.
+ * Adapter contract tests for [DesktopExportPipelinePort]
+ * (source validation, unique naming, Result mapping). Render/write is on [DesktopRenderSaveSpine].
  */
 class DesktopExportPipelinePortTest {
 

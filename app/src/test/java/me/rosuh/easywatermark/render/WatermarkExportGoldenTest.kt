@@ -119,13 +119,13 @@ class WatermarkExportGoldenTest {
     }
 
     /**
-     * S4b: composite through the REAL production seam [WatermarkRenderer.compose] — this was
-     * formerly a test-local copy of the `MainViewModel.generateImage` composition tail. Export
-     * composites at the bitmap origin (`left=top=0`, region = full bitmap): REPEAT fills the whole
-     * image; CLAMP translates by the fractional offset and paints one cell-sized decal.
-     * [WatermarkRendererCompositionTest] pins `compose` as pixel-identical to the former inline copy,
-     * so the recorded [baselines] stay unchanged. (Still not exercised by this unit harness: the
-     * MediaStore encode-to-disk tail of `generateImage`.)
+ * S4b: composite through the REAL production seam [WatermarkRenderer.compose] — this was
+ * formerly a test-local copy of the `MainViewModel.generateImage` composition tail. Export
+ * composites at the bitmap origin (`left=top=0`, region = full bitmap): REPEAT fills the whole
+ * image; CLAMP translates by the fractional offset and paints one cell-sized decal.
+ * [WatermarkRendererCompositionTest] pins `compose` as pixel-identical to the former inline copy,
+ * so the recorded [baselines] stay unchanged. (Still not exercised by this unit harness: the
+ * MediaStore encode-to-disk tail of `generateImage`.)
      */
     private fun composite(
         imageW: Int,
@@ -162,15 +162,15 @@ class WatermarkExportGoldenTest {
     }
 
     /**
-     * Recorded Robolectric-NATIVE @sdk34 baseline signatures (captured 2026-06-14, see
-     * artifacts/baseline-manifest.md). These are a REGRESSION NET, not a device-pixel reference:
-     * absolute pixels/dims are Robolectric-environment values (CJK especially is NOT the device
-     * oracle — RFCT414QBMZ is, via the instrumented tier). The default gate asserts only
-     * device-independent structure (nonblank/geometry/periodicity/decal/encode). Run with
-     * `WATERMARK_GOLDEN_STRICT=true ./gradlew :app:testDebugUnitTest` to additionally pin every
-     * signature below, intended for a stable pinned environment and re-captured on an intentional
-     * Robolectric/Skia/font bump. (Gradle forwards its environment to the forked test JVM; a plain
-     * `-D` system property does NOT propagate, so an env var is used; `-D` is an IDE-run fallback.)
+ * Recorded Robolectric-NATIVE @sdk34 baseline signatures (captured 2026-06-14, see
+ * artifacts/baseline-manifest.md). These are a REGRESSION NET, not a device-pixel reference:
+ * absolute pixels/dims are Robolectric-environment values (CJK especially is NOT the device
+ * oracle — RFCT414QBMZ is, via the instrumented tier). The default gate asserts only
+ * device-independent structure (nonblank/geometry/periodicity/decal/encode). Run with
+ * `WATERMARK_GOLDEN_STRICT=true ./gradlew :app:testDebugUnitTest` to additionally pin every
+ * signature below, intended for a stable pinned environment and re-captured on an intentional
+ * Robolectric/Skia/font bump. (Gradle forwards its environment to the forked test JVM; a plain
+ * `-D` system property does NOT propagate, so an env var is used; `-D` is an IDE-run fallback.)
      */
     private data class Sig(
         val cellW: Int, val cellH: Int, val cellNonBlank: Int,
@@ -179,7 +179,7 @@ class WatermarkExportGoldenTest {
 
     private val baselines: Map<String, Sig> = mapOf(
         "ascii_0" to Sig(93, 33, 845, -1154811034, -1856277548, 1859426124),
-        // S4d-14C (owner-approved S4d-13 Option C): full-block vertical centring in buildTextShader —
+        // (owner-approved Option C): full-block vertical centring in buildTextShader —
         // the multiline block is no longer clipped at the bottom, so cellNonBlank rose 1482->1817 and the
         // FNVs shifted (dims unchanged). Multiline-only rebaseline; all single-line/icon rows unchanged.
         "multiline" to Sig(110, 61, 1817, 1069584506, -539190039, -242547347),
@@ -187,7 +187,7 @@ class WatermarkExportGoldenTest {
         // S3b: CJK rebaselined for the TextMeasurer cell-box measurement (D1 accepted). Width exact,
         // height grows per Compose line-height (96x33->96x36; 77x77->84x84). Non-CJK entries unchanged.
         "cjk" to Sig(96, 36, 983, -1849753914, 1889317264, -32165372),
-        // S4d-14C: multiline vertical-centring fix relocates the block (same opaque count 895, FNVs
+        // multiline vertical-centring fix relocates the block (same opaque count 895, FNVs
         // shifted). Multiline-only rebaseline.
         "cjk_multiline_315" to Sig(84, 84, 895, 1816084300, -1222896395, 1847139805),
         "gap_h_extreme" to Sig(372, 33, 845, 367245244, -1898366714, 1853155435),
@@ -201,11 +201,11 @@ class WatermarkExportGoldenTest {
             System.getProperty("watermark.golden.strict") == "true"
 
     /**
-     * Whole-corpus export signature gate. DEFAULT: asserts every cell + its REPEAT tiling + its
-     * CLAMP decal render NON-BLANK (the blank-render regression net — the exact failure class the
-     * C2a engine-wiring attempt produced). STRICT (`WATERMARK_GOLDEN_STRICT=true`): additionally
-     * pins cell dims + nonblank + composite FNV signatures to [baselines]. Prints the full manifest
-     * either way so a reviewer can diff captured signatures.
+ * Whole-corpus export signature gate. DEFAULT: asserts every cell + its REPEAT tiling + its
+ * CLAMP decal render NON-BLANK (the blank-render regression net — the exact failure class the
+ * C2a engine-wiring attempt produced). STRICT (`WATERMARK_GOLDEN_STRICT=true`): additionally
+ * pins cell dims + nonblank + composite FNV signatures to [baselines]. Prints the full manifest
+ * either way so a reviewer can diff captured signatures.
      */
     @Test
     fun export_corpus_signature_manifest() {

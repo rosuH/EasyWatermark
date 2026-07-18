@@ -5,7 +5,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
-// S4d-236: the platform-neutral static Material3 theme. Relocated verbatim from the former
+// the platform-neutral static Material3 theme. Relocated verbatim from the former
 // `:app`-only `Theme.kt` (the static `LightColorScheme`/`DarkColorScheme` + the non-dynamic
 // `AppTheme` branch). The Android dynamic-color path (`dynamicDark/LightColorScheme`) stays
 // in the `:app`-only `AppTheme(darkTheme, dynamicColor, content)` wrapper, which delegates
@@ -77,10 +77,9 @@ internal val DarkColorScheme = darkColorScheme(
 )
 
 /**
- * Platform-neutral static Material3 theme (S4d-236). Uses the relocated [LightColorScheme]/
+ * Platform-neutral static Material3 theme. Uses the relocated [LightColorScheme]/
  * [DarkColorScheme] only — no dynamic-color logic (that stays in the `:app`-only overload
- * below, which delegates its non-dynamic branch here).
- *
+ * Below, which delegates its non-dynamic branch here). *
  * Parity (ADR-0011): production v2.10.0 is forced-dark, so [darkTheme] defaults to `true`.
  */
 @Composable

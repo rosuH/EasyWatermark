@@ -50,8 +50,7 @@ import kotlin.math.min
  *
  * Selection is driven by [isSelected] / [onSetSelected] (local Snapshot state).
  * **Long-press + drag** (iOS Photos / legacy [MultiSelectRv]): after a long-press, sliding
- * without lifting the finger paints a contiguous selection range from the anchor cell; reverse
- * drag shrinks the range. Near top/bottom edges the grid auto-scrolls while selecting.
+ * Without lifting the finger paints a contiguous selection range from the anchor cell; reverse * drag shrinks the range. Near top/bottom edges the grid auto-scrolls while selecting.
  */
 @Composable
 fun GalleryImageGrid(

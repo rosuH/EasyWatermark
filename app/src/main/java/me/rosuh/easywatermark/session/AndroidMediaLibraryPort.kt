@@ -16,8 +16,7 @@ import me.rosuh.easywatermark.utils.ktx.toUri
  * Android [MediaLibraryPort]: MediaStore listing + system-picker URI enrichment.
  *
  * Content identity is [MediaStore.Images.Media._ID] → content URI. Do **not** require the
- * deprecated [MediaStore.Images.Media.DATA] filesystem path: on API 29+ it is often null even
- * when the row is readable, which would empty the in-app gallery after the user grants access.
+ * Deprecated [MediaStore.Images.Media.DATA] filesystem path: on API 29+ it is often null even * when the row is readable, which would empty the in-app gallery after the user grants access.
  */
 class AndroidMediaLibraryPort(
     private val contentResolver: ContentResolver,

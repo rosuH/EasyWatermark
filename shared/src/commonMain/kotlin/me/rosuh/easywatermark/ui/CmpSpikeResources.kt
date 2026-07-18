@@ -17,8 +17,7 @@ import org.jetbrains.compose.resources.stringResource
  * S-i18n-0 packaging spike for official Compose Multiplatform resources.
  *
  * Product screens still use Android [androidx.compose.ui.res.stringResource] / bags — this is a
- * temporary witness + unit-test entry for CMP-9547 packaging proof only.
- *
+ * Temporary witness + unit-test entry for CMP-9547 packaging proof only. *
  * Locale qualifier selection is proven by host/tests that set the platform locale (or Compose
  * resource environment) before calling [resolveSpikeHello] / [CmpSpikeHelloLabel]. The public
  * [ResourceEnvironment] constructor is library-internal, so forced-locale tests use system locale
@@ -33,9 +32,8 @@ object CmpSpikeResources {
         get() = Res.string.cmp_spike_hello
 
     /**
-     * Real multiplatform resource read (suspend [getString]) using the system resource
-     * environment. Used by unit tests and host witnesses so packaging into APK/framework is
-     * exercised — not a bag and not Android R.string.
+ * Real multiplatform resource read (suspend [getString]) using the system resource
+ * Environment. Used by unit tests and host witnesses so packaging into APK/framework is * exercised — not a bag and not Android R.string.
      */
     suspend fun resolveSpikeHello(): String = getString(Res.string.cmp_spike_hello)
 }

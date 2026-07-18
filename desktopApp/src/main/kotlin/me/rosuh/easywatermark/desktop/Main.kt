@@ -21,31 +21,21 @@ import me.rosuh.easywatermark.ui.CmpSpikeDesktopWitness
 import java.io.File
 
 /**
- * Desktop (JVM) entry point.
- *
- * S4d-121: a no-arg launch opens the minimal **Compose Desktop window** ([launchDesktopWindow]); the
- * `--headless` flag runs the bounded console witnesses + the S4d-120 save spine ([runHeadless]) and
- * **exits** — the automation path (`:desktopApp:run --args='--headless'`). Both the window and
- * `--headless` drive the SAME shared save spine ([DesktopWatermarkFlow]); the window does not fake a
- * preview.
- *
- * History: S4d-18 text-renderer witness; S4d-19/20A composition + real-image decode; S4d-80 UserConfig;
- * S4d-120 headless save via [DesktopWatermarkFlow]; issue-11 consolidates Text/Icon render+write into
- * [me.rosuh.easywatermark.render.DesktopRenderSaveSpine] shared with the export port. Main demo samples
- * may still call the composer directly; save/export paths go through the spine.
+ * Desktop entry: default launch opens [launchDesktopWindow]; `--headless` runs witnesses and
+ * [DesktopWatermarkFlow.runSaveFlow], then exits.
  */
 fun main(args: Array<String>) {
     if (args.none { it == "--headless" }) {
-        // Default (no-arg) launch -> the Compose Desktop window (S4d-121).
+        // Default (no-arg) launch -> the Compose Desktop window.
         launchDesktopWindow()
         return
     }
-    // --headless -> the console witnesses + the S4d-120 save spine; runs and EXITS (automation path).
+    // --headless -> the console witnesses + the save spine; runs and EXITS (automation path).
     runHeadless(args.filter { it != "--headless" }.toTypedArray())
 }
 
 /**
- * The bounded console path (S4d-18..S4d-120 witnesses + the S4d-120 save spine). Reachable via
+ * The bounded console path ( witnesses + the save spine). Reachable via
  * `--headless`; it runs to completion and returns so the JVM exits (no window).
  *
  * Any non-flag positional args are forwarded as `args[0]` = input image path, `args[1]` = output PNG path.
@@ -75,7 +65,7 @@ private fun runHeadless(args: Array<String>) {
     check(r.isSuccess())
     println("  shared Result: success=${r.isSuccess()} data=${r.data}")
 
-    // S4d-18: render real watermark text cells via the shared commonMain renderer + bundled font,
+    // render real watermark text cells via the shared commonMain renderer + bundled font,
     // and write them as PNGs so the Desktop text renderer is demonstrably no longer a test-only helper.
     val outDir = File("build/s4d18-desktop-text").apply { mkdirs() }
     val samples = listOf(
@@ -92,7 +82,7 @@ private fun runHeadless(args: Array<String>) {
         println("  $name: ${cell.width}x${cell.height} -> ${file.path} (${cell.png.size} B)")
     }
 
-    // S4d-19: compose FULL watermarked sample images over a generated background through the shared
+    // compose FULL watermarked sample images over a generated background through the shared
     // commonMain WatermarkCellComposer.composeOverBackground — REPEAT (tiled) and CLAMP (single decal).
     val composeDir = File("build/s4d19-desktop-watermark").apply { mkdirs() }
     val watermarkText = "请勿转载\nDO NOT REDISTRIBUTE"
@@ -111,7 +101,7 @@ private fun runHeadless(args: Array<String>) {
         println("  $name: ${img.width}x${img.height} -> ${file.path} (${img.png.size} B)")
     }
 
-    // S4d-20A: REAL-image decode path. Produce a deterministic PNG fixture, write it, then DECODE it back
+    // REAL-image decode path. Produce a deterministic PNG fixture, write it, then DECODE it back
     // through AWT/ImageIO (DesktopImageDecoder) and watermark the decoded image — the realistic Desktop
     // pipeline: decode (platform) -> render cell + compose (commonMain) -> encode (platform). No binary asset.
     val realDir = File("build/s4d20-desktop-real-image").apply { mkdirs() }
@@ -125,7 +115,7 @@ private fun runHeadless(args: Array<String>) {
     val realFile = File(realDir, "real_image_watermark.png").apply { writeBytes(realWatermarked.png) }
     println("  real_image_watermark.png: ${realWatermarked.width}x${realWatermarked.height} -> ${realFile.path} (${realWatermarked.png.size} B)")
 
-    // S4d-80: first APP-ENTRY construction of the common `UserConfigRepository` over the S4d-78 Desktop
+    // first APP-ENTRY construction of the common `UserConfigRepository` over the Desktop
     // DataStore factory — read -> update -> read against a real on-disk preferences store. This is an
     // app-level smoke/witness (the read/write roundtrip itself is already gated by `:shared:desktopTest`).
     // Uses a repo-local build dir (NOT ~/.easywatermark) so the smoke leaves no state in the user's home.
@@ -139,22 +129,22 @@ private fun runHeadless(args: Array<String>) {
         println("  userPreferences (after update): ${userRepo.userPreferences.first()}")
     }
 
-    // S4d-120 save spine, extracted to DesktopWatermarkFlow (S4d-121) so the Compose window reuses it.
+    // save spine, extracted to DesktopWatermarkFlow so the Compose window reuses it.
     // A real common WaterMarkRepository persists the watermark config in a desktop DataStore; the shared
     // WatermarkConfigEditor edits it; the persisted WaterMark drives composeOverRealImage over a real
     // (ImageIO-decoded) input; the watermarked PNG is written to disk.
     val inputPath = args.getOrNull(0)
     val inputBytes = inputPath?.let { File(it).readBytes() }
     val inputLabel = inputPath ?: "<generated 640x480 fixture>"
-    // S4d-128: an explicit CLI output path wins; otherwise null lets the flow pick the format-aware default.
+    // an explicit CLI output path wins; otherwise null lets the flow pick the format-aware default.
     val outputFile = args.getOrNull(1)?.let { File(it) }
     val waterMarkRepo = DesktopWatermarkFlow.buildRepository()
     val configEditor = WatermarkConfigEditor(waterMarkRepo)
-    // S4d-128: the output prefs the flow reads (empty store -> the shared (JPEG, 80) default).
+    // the output prefs the flow reads (empty store -> the shared (JPEG, 80) default).
     val saveFlowUserConfig = DesktopWatermarkFlow.buildUserConfigRepository()
     println("Desktop headless config-driven save flow (S4d-120):")
     val outcome = runBlocking {
-        // S4d-145: the demo text/degree now live in the witness — runSaveFlow no longer forces them (so the
+        // the demo text/degree now live in the witness — runSaveFlow no longer forces them (so the
         // window can render user-set text), so set them here to keep --headless output deterministic.
         configEditor.updateText("请勿转载 DO NOT REDISTRIBUTE")
         configEditor.updateDegree(330f)
@@ -165,8 +155,8 @@ private fun runHeadless(args: Array<String>) {
     println("  input:  ${outcome.inputLabel} (${outcome.inputByteCount} B)")
     println("  output: ${outcome.outputPath} (${outcome.format}, ${outcome.width}x${outcome.height}, ${outcome.outputByteCount} B)")
 
-    // S4d-134: Image-mode headless witness (no picker). Persist a generated icon as a Desktop FILE PATH
-    // (MediaRef) and render through the new icon branch -> S4d-133 composeIconOverRealImage. Uses a
+    // Image-mode headless witness (no picker). Persist a generated icon as a Desktop FILE PATH
+    // (MediaRef) and render through the new icon branch -> composeIconOverRealImage. Uses a
     // SEPARATE watermark-config store dir so it can never flip the text witness's store to Image mode on a
     // later run (DataStore is single-instance-per-file; different files are independent).
     val iconFlowDir = File("build/s4d134-desktop-icon-flow").apply { mkdirs() }
@@ -190,7 +180,7 @@ private fun runHeadless(args: Array<String>) {
     println("  icon:   ${iconFile.path} (${iconFile.length()} B)")
     println("  output: ${iconOutcome.outputPath} (${iconOutcome.format}, ${iconOutcome.width}x${iconOutcome.height}, ${iconOutcome.outputByteCount} B)")
 
-    // S4d-134: prove the loud-fail contract — Image mode with a MISSING icon file must THROW, not silently
+    // prove the loud-fail contract — Image mode with a MISSING icon file must THROW, not silently
     // render text. Own store dir; the bad path is never created, so no output is written.
     val missingRepo = DesktopWatermarkFlow.buildRepository(dir = File(iconFlowDir, "config-missing"))
     val missingEditor = WatermarkConfigEditor(missingRepo)
@@ -212,8 +202,8 @@ private fun runHeadless(args: Array<String>) {
         }
     }
 
-    // S4d-143a / S4d-224 / S4d-225: Desktop templates headless witness — the first :desktopApp consumer of
-    // the S4d-142 Desktop template DB builder (bundled SQLite driver) + commonMain TemplateRepository/
+    // / / : Desktop templates headless witness — the first :desktopApp consumer of
+    // the Desktop template DB builder (bundled SQLite driver) + commonMain TemplateRepository/
     // TemplateEditor. Builds a fresh SEEDED repo-local DB via the shared desktopMain seed resource,
     // verifies the seeded templates, then add → list → delete roundtrips one more template and ends empty.
     // No UI. The witness directory is deleted before each run so the seeded-first-creation path is exercised

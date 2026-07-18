@@ -10,8 +10,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * S4d-195: pins the shared commonMain Compose text-style mappings ([toComposeFontStyle] /
- * [toComposeDrawStyle]) that replaced the formerly-duplicated private functions in the Desktop and iOS
+ * Pins the shared commonMain Compose text-style mappings ([toComposeFontStyle] / * [toComposeDrawStyle]) that replaced the formerly-duplicated private functions in the Desktop and iOS
  * renderers. Asserts the exact branch values so the consolidation stays value-preserving (no render
  * change, no golden rebaseline). Runs on every `:shared` target's test source set (executed on
  * `:shared:desktopTest` and `:shared:iosSimulatorArm64Test`).

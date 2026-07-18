@@ -6,8 +6,7 @@ import me.rosuh.easywatermark.data.model.ImageInfo
  * Pure product-shell navigation helpers shared by Android / iOS / Desktop hosts and tests.
  *
  * Route **UI + transitions** live in [ProductShellHost]. Platforms only keep Activity/window
- * containers and edge callbacks (pickers, permissions, share). About back must restore the route
- * that opened About — never infer from unrelated flags.
+ * Containers and edge callbacks (pickers, permissions, share). About back must restore the route * that opened About — never infer from unrelated flags.
  */
 object ProductShellNav {
     enum class Route {
@@ -31,8 +30,8 @@ object ProductShellNav {
         }
 
     /**
-     * Merge newly picked images into the session selection.
-     * [append] true when the user is already in the editor (add-more); false replaces (launch pick).
+ * Merge newly picked images into the session selection.
+ * [append] true when the user is already in the editor (add-more); false replaces (launch pick).
      */
     fun mergePickedSelection(
         existing: List<ImageInfo>,

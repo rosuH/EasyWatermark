@@ -11,8 +11,7 @@ import kotlin.test.assertTrue
 
 /**
  * Real [CommonWatermarkPipeline.compose] exercise (ADR-0018) on Desktop/Skiko —
- * not a tile-id theater suite. Android dual-path + export-port gates live in `:app`.
- */
+ * Not a tile-id theater suite. Android dual-path + export-port gates live in `:app`. */
 class CommonWatermarkPipelineComposeTest {
 
     private val env = desktopTextRasterEnv()

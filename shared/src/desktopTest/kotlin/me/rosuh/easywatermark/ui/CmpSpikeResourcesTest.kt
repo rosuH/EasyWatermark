@@ -14,8 +14,7 @@ import org.jetbrains.compose.resources.getString
 
 /**
  * S-i18n-0: real Compose Multiplatform resource path (generated [Res] + [getString]), not a bag
- * and not Android R.string. Proves default EN + zh-rCN qualifier selection by flipping JVM locale
- * (public API path — [ResourceEnvironment] ctor is library-internal).
+ * And not Android R.string. Proves default EN + zh-rCN qualifier selection by flipping JVM locale * (public API path — [ResourceEnvironment] ctor is library-internal).
  */
 @OptIn(ExperimentalResourceApi::class)
 class CmpSpikeResourcesTest {

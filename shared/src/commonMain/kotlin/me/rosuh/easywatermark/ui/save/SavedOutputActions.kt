@@ -17,8 +17,7 @@ data class SavedOutputActionsLabels(
  * Shared two-action row for a completed output.
  *
  * Callers that share one availability gate keep [hasOutput] + [enabled] (both buttons default
- * to that combined state). Platforms that stage artifacts independently pass
- * [primaryEnabled] / [secondaryEnabled] so a primary-only staging failure does not disable
+ * To that combined state). Platforms that stage artifacts independently pass * [primaryEnabled] / [secondaryEnabled] so a primary-only staging failure does not disable
  * the secondary action (e.g. iOS Share temp file vs Save from in-memory PNG).
  */
 @Composable

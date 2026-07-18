@@ -4,9 +4,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * Pins the platform-neutral [WatermarkConfigRules] (S4d-61) to the exact behavior that was previously
- * inlined in Android `WaterMarkRepository`/`MainViewModel`, so the move stays byte-identical.
- */
+ * Pins the platform-neutral [WatermarkConfigRules] to the exact behavior that was previously
+ * Inlined in Android `WaterMarkRepository`/`MainViewModel`, so the move stays byte-identical. */
 class WatermarkConfigRulesTest {
 
     @Test

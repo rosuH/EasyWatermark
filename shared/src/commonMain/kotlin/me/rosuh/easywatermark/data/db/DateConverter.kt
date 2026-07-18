@@ -6,8 +6,7 @@ import kotlin.time.Instant
 /**
  * Room type converter for the `Template` timestamp columns.
  *
- * S4d-35: migrated from the legacy JVM date type to stdlib `kotlin.time.Instant` (Kotlin 2.3 stdlib;
- * no `kotlinx-datetime`). The on-disk representation is **unchanged**: the same `Long` epoch-milliseconds
+ * Migrated from the legacy JVM date type to stdlib `kotlin.time.Instant` (Kotlin 2.3 stdlib; * no `kotlinx-datetime`). The on-disk representation is **unchanged**: the same `Long` epoch-milliseconds
  * stored in the existing `INTEGER` columns. The old `.time` getter and `Instant.toEpochMilliseconds()`
  * are both epoch-millis, so existing rows and the prepopulated DBs round-trip identically (DB version
  * stays 1).

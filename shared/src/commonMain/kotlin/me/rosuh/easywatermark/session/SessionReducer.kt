@@ -29,8 +29,7 @@ data class SessionReduceResult(
 
 /**
  * Pure rule: apply [info] as current image and replace any [LaunchScreenState.selectedImageList]
- * entry with the same [ImageInfo.uri]. Shared by [reduceSessionUi] and the session VM's
- * synchronous offset commit (export must see post-drag offsets without a global intent actor).
+ * Entry with the same [ImageInfo.uri]. Shared by [reduceSessionUi] and the session VM's * synchronous offset commit (export must see post-drag offsets without a global intent actor).
  */
 internal fun applyCurrentImageToLaunch(
     launch: LaunchScreenState,

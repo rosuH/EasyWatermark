@@ -26,9 +26,9 @@ import org.robolectric.annotation.GraphicsMode
  * S3a — image-space `textSize` behavior. `textPx = textSize * imageInfo.width / REF_WIDTH`
  * (`WatermarkGeometry.REF_WIDTH = 1000`). These tests pin the NEW behavior and **fail on the old
  * view-scale-dependent behavior**:
- *  - old text: `textSize` raw (preview) / `textSize * imageInfo.scaleX` (export) — depended on the
- *    preview matrix and ignored image width;
- *  - old icon: `(scale ? imageInfo.scaleX : 1) * textSize/14` — depended on view scale at export.
+ * - old text: `textSize` raw (preview) / `textSize * imageInfo.scaleX` (export) — depended on the
+ * preview matrix and ignored image width;
+ * - old icon: `(scale ? imageInfo.scaleX : 1) * textSize/14` — depended on view scale at export.
  *
  * The new behavior is independent of `imageInfo.scaleX` and of the `isScale`/`scale` flags, and scales
  * linearly with `imageInfo.width`. At the reference width (1000, used by every existing golden) the

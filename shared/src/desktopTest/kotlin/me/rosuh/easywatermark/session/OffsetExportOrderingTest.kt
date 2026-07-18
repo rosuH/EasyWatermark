@@ -112,9 +112,8 @@ class OffsetExportOrderingTest {
     }
 
     /**
-     * Pure merge pin: reduced snapshot based on [before] must not win over a concurrent [live]
-     * that already has new offsets (models final CAS update { merge(reduced, current, before) }).
-     */
+ * Pure merge pin: reduced snapshot based on [before] must not win over a concurrent [live]
+ * That already has new offsets (models final CAS update { merge(reduced, current, before) }).     */
     @Test
     fun mergeLaunchPreservingLiveImages_prefersLiveOffsetsOverStaleReduced() {
         val uri = MediaRef("file:///m.jpg")
@@ -140,9 +139,8 @@ class OffsetExportOrderingTest {
     }
 
     /**
-     * Production UI enters editor, then selects current. Await each intent so reduce+effects
-     * complete; do not rely on fire-and-forget dispatch FIFO (Mutex is not a queue).
-     */
+ * Production UI enters editor, then selects current. Await each intent so reduce+effects
+ * Complete; do not rely on fire-and-forget dispatch FIFO (Mutex is not a queue).     */
     @Test
     fun enterEditor_thenSelectCurrent_finalIsB() = runBlocking {
         val dir = File(System.getProperty("java.io.tmpdir"), "offset-fx-${System.nanoTime()}")

@@ -25,8 +25,7 @@ import androidx.compose.ui.graphics.painter.Painter
  * Shared CMP gallery-dialog shell.
  *
  * Selection is **local** ([mutableStateMapOf] by image id), matching production RecyclerView
- * behavior (in-place check without list rebuild). Dismiss delivers the selected [Image] list once
- * after the exit animation (empty list = cancel).
+ * Behavior (in-place check without list rebuild). Dismiss delivers the selected [Image] list once * after the exit animation (empty list = cancel).
  */
 @Composable
 fun GalleryDialogShell(

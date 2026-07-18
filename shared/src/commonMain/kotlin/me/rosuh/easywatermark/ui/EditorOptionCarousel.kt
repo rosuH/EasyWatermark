@@ -37,8 +37,7 @@ import me.rosuh.easywatermark.ui.theme.DesignChipSelected
  * Design: function chips **72×56**, selected fill `#2C2C14`, corner **r=2**.
  *
  * No [Modifier.animateItem]: Content/Style/Layout catalogs are unrelated lists. Index-keyed
- * insert/placement animation made chips overlap while flinging right after a tab switch
- * (labels stacking as "StyColor" / "ColAlpha"). Host should also [key] this composable by tab.
+ * Insert/placement animation made chips overlap while flinging right after a tab switch * (labels stacking as "StyColor" / "ColAlpha"). Host should also [key] this composable by tab.
  */
 @Composable
 fun <T> EditorOptionCarousel(
@@ -48,8 +47,8 @@ fun <T> EditorOptionCarousel(
     modifier: Modifier = Modifier,
     selectedOption: T? = null,
     /**
-     * Stable identity for LazyRow items (e.g. [me.rosuh.easywatermark.data.model.FuncType]).
-     * Falls back to index only when omitted.
+ * Stable identity for LazyRow items (e.g. [me.rosuh.easywatermark.data.model.FuncType]).
+ * Falls back to index only when omitted.
      */
     itemKey: ((T) -> Any)? = null,
     itemContent: @Composable (option: T, selected: Boolean) -> Unit,

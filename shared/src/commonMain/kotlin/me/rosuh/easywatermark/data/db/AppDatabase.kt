@@ -9,15 +9,9 @@ import me.rosuh.easywatermark.data.db.dao.TemplateDao
 import me.rosuh.easywatermark.data.model.entity.Template
 
 /**
- * S4d-92: the production templates Room database, moved from `:app` into `:shared/commonMain` at the
- * same FQN `me.rosuh.easywatermark.data.db.AppDatabase`. Schema is unchanged — entity [Template],
- * version 1, `exportSchema = false`, [DateConverter] type converters — so the prepopulated
- * `ewm-db-ch.db`/`ewm-db-eng.db` assets and existing rows open identically.
+ * Room database for watermark templates (schema v1).
  *
- * The KMP-required `@ConstructedBy`/`RoomDatabaseConstructor` pattern lets the Room compiler generate
- * the per-target constructor (replacing JVM reflection). Android creation (locale `createFromAsset`
- * + in-memory fallback) lives in `androidMain` `TemplateDatabaseBuilder.android.kt`; desktop/iOS have
- * no production builder in this slice (they only compile/link the database type).
+ * Built per-platform (Android SupportSQLite; Desktop/iOS BundledSQLiteDriver + seed assets).
  */
 @Database(entities = [Template::class], version = 1, exportSchema = false)
 @ConstructedBy(AppDatabaseConstructor::class)

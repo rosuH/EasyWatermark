@@ -104,7 +104,7 @@ class ComposeMainActivity : ComponentActivity() {
 
     private val aboutViewModel: AboutViewModel by viewModel()
 
-    // S4d-43 (ADR-0007): live dynamic-color reads route through the platform capability (Android
+    // (ADR-0007): live dynamic-color reads route through the platform capability (Android
     // delegates to the :cmonet module). Replaces the prior direct isDynamicColorAvailable() calls.
     private val dynamicColorCapability: DynamicColorCapability by inject()
 
@@ -217,7 +217,7 @@ class ComposeMainActivity : ComponentActivity() {
                 )
             ) {
                 // Parity (ADR-0011): production applies Material You on dynamic-color-allowed devices.
-                // S4d-43: routed through the ADR-0007 DynamicColorCapability (Android delegates to :cmonet).
+                // routed through the ADR-0007 DynamicColorCapability (Android delegates to :cmonet).
                 AppTheme(dynamicColor = dynamicColorCapability.isAvailable()) {
                     val surfaceColor = MaterialTheme.colorScheme.surface
                     val isDark = surfaceColor.luminance() < 0.5f
@@ -631,7 +631,7 @@ class ComposeMainActivity : ComponentActivity() {
 }
 
 /**
- * Android edge for the shared About shell (S4d-348): resources, URL routing, and legacy animated logo.
+ * Android edge for the shared About shell: resources, URL routing, and legacy animated logo.
  * Kept private in this file so there is no standalone app About wrapper type.
  */
 @Composable
@@ -743,9 +743,8 @@ private const val ABOUT_URL_DEV = "https://github.com/rosuH"
 private const val ABOUT_URL_DESIGNER = "https://tovi.fun/"
 
 /**
- * Android edge for the shared save/export sheet (S4d-350): Coil URI thumbs + per-item jobState
- * progress overlay. Export/share/MediaStore/permission stay on the Activity call site.
- */
+ * Android edge for the shared save/export sheet: Coil URI thumbs + per-item jobState
+ * Progress overlay. Export/share/MediaStore/permission stay on the Activity call site. */
 @Composable
 private fun SaveExportSheetAndroid(
     imageCount: Int,

@@ -9,10 +9,9 @@ import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.ui.Image
 
 /**
- * Platform-neutral product-session intents (ADR-0017 / Phase 1).
+ * Platform-neutral product-session intents (ADR-0017).
  *
- * No [android.net.Uri], ContentResolver, Bitmap, or Android resource-id models.
- * Android maps legacy `Action` → these intents at the edge.
+ * No Android `Uri`/Bitmap/resource ids — hosts map system callbacks at the edge.
  */
 sealed class AppIntent {
     /** MediaStore / library query finished; open in-app gallery with [images]. */
@@ -31,8 +30,8 @@ sealed class AppIntent {
     data object ResetGalleryData : AppIntent()
 
     /**
-     * Enter editor with an already-mapped selection (system picker, share-in, multi-select).
-     * [gallerySnapshot] is optional filmstrip/gallery identity list for launch state.
+ * Enter editor with an already-mapped selection (system picker, share-in, multi-select).
+ * [gallerySnapshot] is optional filmstrip/gallery identity list for launch state.
      */
     data class EnterEditor(
         val selected: List<ImageInfo>,
@@ -58,9 +57,8 @@ sealed class AppIntent {
     data class SyncCurrentImage(val info: ImageInfo?) : AppIntent()
 
     /**
-     * Start batch export for [images] (defaults to current session selection when empty list
-     * is passed from hosts that want repo list — hosts should pass explicit list).
-     */
+ * Start batch export for [images] (defaults to current session selection when empty list
+ * Is passed from hosts that want repo list — hosts should pass explicit list).     */
     data class RequestExport(val images: List<ImageInfo>) : AppIntent()
 
     data object CancelExport : AppIntent()

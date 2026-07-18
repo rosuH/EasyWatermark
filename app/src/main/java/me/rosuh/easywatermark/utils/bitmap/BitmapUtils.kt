@@ -250,13 +250,13 @@ fun calculateInSampleSize(
             inSampleSize *= 2
         }
 
-//        var totalPixels = (width / inSampleSize) * (height / inSampleSize)
-//        val totalReqPixels = reqWidth * reqHeight * 2
-//        while (totalPixels > totalReqPixels) {
-//            inSampleSize *= 2;
-//            Log.i(TAG, "totalPixels = $totalPixels, totalReqPixels = $totalReqPixels, inSample -> $inSampleSize")
-//            totalPixels = (width / inSampleSize) * (height / inSampleSize)
-//        }
+// var totalPixels = (width / inSampleSize) * (height / inSampleSize)
+// val totalReqPixels = reqWidth * reqHeight * 2
+// while (totalPixels > totalReqPixels) {
+// inSampleSize *= 2;
+// Log.i(TAG, "totalPixels = $totalPixels, totalReqPixels = $totalReqPixels, inSample -> $inSampleSize")
+// totalPixels = (width / inSampleSize) * (height / inSampleSize)
+// }
     }
 
     return inSampleSize

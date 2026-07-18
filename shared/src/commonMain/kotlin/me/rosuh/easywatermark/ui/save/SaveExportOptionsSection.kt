@@ -24,8 +24,7 @@ import me.rosuh.easywatermark.ui.compose.SliderOption
  * Shared CMP output settings for the save/export sheet — design-aligned chips + [SliderOption].
  *
  * Quality row is **always composed** (JPEG interactive, PNG muted/disabled) so switching
- * format does not collapse the sheet and jump the export list / CTA.
- */
+ * Format does not collapse the sheet and jump the export list / CTA. */
 @Composable
 fun SaveExportOptionsSection(
     title: String,

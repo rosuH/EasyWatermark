@@ -3,17 +3,16 @@ package me.rosuh.easywatermark.data.model
 import kotlin.math.roundToInt
 
 /**
- * Platform-neutral typed watermark config change command (S4d-72). Replaces `MainViewModel`'s
- * repeated branch-local `any as ...` casts with one typed boundary: [from] maps a ([FuncType], raw
- * value) pair to a typed command; the ViewModel then dispatches the typed command to its existing
+ * Platform-neutral typed watermark config change command. Replaces `MainViewModel`'s
+ * Repeated branch-local `any as ...` casts with one typed boundary: [from] maps a ([FuncType], raw * value) pair to a typed command; the ViewModel then dispatches the typed command to its existing
  * `update*` methods (which remain the behavior source — e.g. `WatermarkConfigRules.alphaPercentToByte`
  * for alpha, repo clamps for gap/degree/size).
  *
  * Behavior is preserved exactly:
  * - the same casts ([from]'s `value as X`) are fail-fast (a wrong type throws `ClassCastException`,
- *   as the old inline `any as X` did);
+ * as the old inline `any as X` did);
  * - horizontal/vertical gaps carry the same `(value as Float).roundToInt()` rounding the old dispatch
- *   passed to `updateHorizon`/`updateVertical`.
+ * passed to `updateHorizon`/`updateVertical`.
  */
 sealed class WatermarkConfigChange {
     data class Text(val text: String) : WatermarkConfigChange()
@@ -32,7 +31,7 @@ sealed class WatermarkConfigChange {
 
     companion object {
         /** Map a control [type] + its raw editor value to a typed command. Fail-fast on wrong type
-         *  (matches the legacy `any as X` casts). */
+ * (matches the legacy `any as X` casts). */
         fun from(type: FuncType, value: Any): WatermarkConfigChange = when (type) {
             FuncType.Text -> Text(value as String)
             FuncType.Icon -> Icon(value as MediaRef)

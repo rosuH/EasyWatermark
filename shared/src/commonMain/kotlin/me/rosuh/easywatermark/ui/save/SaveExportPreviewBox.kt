@@ -33,8 +33,7 @@ import androidx.compose.ui.unit.dp
  * Hosts supply per-item thumbnails (decode by source path/URI — never a single shared preview).
  * Prefer a stable [itemKey] so LazyRow does not reuse wrong cells across identities.
  * Hosts **must** decode thumbs off the main thread (see filmstrip produceState pattern);
- * sync decode inside [thumbnail] freezes fling.
- */
+ * Sync decode inside [thumbnail] freezes fling. */
 @Composable
 fun <T> SaveExportPreviewBox(
     items: List<T>,

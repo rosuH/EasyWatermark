@@ -15,14 +15,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * S4d-233: iOS runtime proof of the Swift-facing [IosTemplateBridge] over the common templates store.
+ * iOS runtime proof of the Swift-facing [IosTemplateBridge] over the common templates store.
  * RUNS on `iosSimulatorArm64Test`.
  *
  * The bridge is exercised over test-controlled DBs built with the parameterized `buildTemplateDatabase`
- * overloads (empty-store and S4d-232 seed-bytes), NOT the no-arg `buildTemplateDatabase()` — that path
+ * overloads (empty-store and seed-bytes), NOT the no-arg `buildTemplateDatabase()` — that path
  * reads the seed from `NSBundle.mainBundle`, which a Kotlin/Native test executable's bundle does not carry
  * (see `IosFontLoaderTest`). The no-arg seeded path used by `defaultIosTemplateBridge()` is proven by the
- * S4d-232 packaging gate (the seed ships in `iosApp.app`) + the live app.
+ * packaging gate (the seed ships in `iosApp.app`) + the live app.
  */
 class IosTemplateBridgeTest {
 
@@ -66,7 +66,7 @@ class IosTemplateBridgeTest {
 
     @Test
     fun bridge_reads_seeded_rows() = runBlocking {
-        // Produce a valid seed DB (mirrors S4d-232), then prove the bridge reads seeded content.
+        // Produce a valid seed DB (mirrors ), then prove the bridge reads seeded content.
         val seedDir = uniqueDir("seedsrc")
         val seedDb = buildTemplateDatabase(seedDir)
         try {

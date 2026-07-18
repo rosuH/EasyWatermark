@@ -9,11 +9,10 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * S4d-19: the **Desktop composition gate** — proves [DesktopWatermarkComposer] composes a full
- * watermarked sample image over a background through the shared
+ * The **Desktop composition gate** — proves [DesktopWatermarkComposer] composes a full * watermarked sample image over a background through the shared
  * [WatermarkCellComposer.composeOverBackground], in both REPEAT (tiled) and CLAMP (single-decal) modes.
  *
- * Like the S4d-18 text gate, it asserts **perceptual / structural** properties (NOT byte-exact host
+ * Like the text gate, it asserts **perceptual / structural** properties (NOT byte-exact host
  * pixels): output sized to the background, output differs from the background, REPEAT inks many
  * separated grid regions while CLAMP is localized to far fewer, both are deterministic (identical coarse
  * change-signature across two renders), and PNG encode is valid. Desktop-only; Android composition stays
@@ -118,7 +117,7 @@ class DesktopWatermarkCompositionGoldenTest {
 
     @Test
     fun unsupported_tile_modes_are_rejected() {
-        // S4d-19 review P1: composeOverBackground supports REPEAT/CLAMP only. MIRROR/DECAL are not
+        // review P1: composeOverBackground supports REPEAT/CLAMP only. MIRROR/DECAL are not
         // product-exposed and their BitmapShader sampling is not reproduced by the draw loop, so they
         // must throw rather than silently alias to REPEAT (no false Android-parity claim).
         val bg = DesktopWatermarkComposer.sampleBackground(64, 64)

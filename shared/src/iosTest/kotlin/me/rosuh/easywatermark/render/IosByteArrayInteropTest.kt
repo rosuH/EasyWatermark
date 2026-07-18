@@ -5,8 +5,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * S4d-32: compile/link proof for the iOS byte-array bulk-copy bridge ([IosByteArrayInterop]).
- *
+ * Compile/link proof for the iOS byte-array bulk-copy bridge ([IosByteArrayInterop]). *
  * Like the other `iosTest` suites, these RUN only on an iOS runtime (`iosSimulatorArm64Test`), which is
  * not installed here — so this slice's proof is **compile + native test-executable LINK**; the asserts
  * RUN at C5.3. They exercise the byte-exactness contract that matters for image bytes: every value

@@ -157,9 +157,8 @@ private object DesktopDynamicColorPrefs {
 }
 
 /**
- * S4d-158 / S4d-228: drop-target file extraction. [hasFileList] is the cheap drag-over predicate (flavor
- * only); [supportedImageFiles] does the real extraction on drop — reads the dropped file list and returns
- * ALL files whose extension is in [IMAGE_EXTENSIONS] (order preserved), via the pure, unit-tested
+ * / : drop-target file extraction. [hasFileList] is the cheap drag-over predicate (flavor
+ * Only); [supportedImageFiles] does the real extraction on drop — reads the dropped file list and returns * ALL files whose extension is in [IMAGE_EXTENSIONS] (order preserved), via the pure, unit-tested
  * [DesktopSaveDecision.supportedImageFiles]. Both swallow AWT failures → false/empty (soft-fail, never
  * crash). The AWT file-list flavor is the desktop drag-drop interop; commonMain is untouched.
  */
@@ -201,8 +200,7 @@ private fun styleLabelOf(s: TextPaintStyle): String = when (s) {
 private class LastImage(val bytes: ByteArray, val label: String)
 
 /**
- * S4d-215: the stable per-user app-data dir the interactive Desktop window persists into —
- * `~/.easywatermark` (matching the `CreateDataStore.desktop.kt` store-creation convention), NOT the
+ * The stable per-user app-data dir the interactive Desktop window persists into — * `~/.easywatermark` (matching the `CreateDataStore.desktop.kt` store-creation convention), NOT the
  * repo-local `build/` dev paths the headless/demo witness (`Main.kt`) deliberately uses. If
  * `user.home` is unavailable, fall back to a repo-local `build/` dir and warn instead of crashing.
  * The dir is created if missing.
@@ -220,8 +218,7 @@ private fun resolveDesktopAppDataDir(): File {
 }
 
 /**
- * S4d-217: the user-facing output dir for the interactive window's REAL saves (drop / Render & Save /
- * Open image) — `~/Pictures` when it exists, else `~/.easywatermark/output` (reusing the S4d-215
+ * The user-facing output dir for the interactive window's REAL saves (drop / Render & Save / * Open image) — `~/Pictures` when it exists, else `~/.easywatermark/output` (reusing the
  * app-data dir). Saved watermarked images must not land in the repo-local `build/` dir. The
  * headless/demo witness (`Main.kt`) and the `DesktopWatermarkFlow` default `outputDir` stay build-local.
  * The interactive preview temp stays app-private so the packaged `.app` does not depend on its launch
@@ -234,62 +231,7 @@ private fun resolveDesktopOutputDir(): File {
         .apply { mkdirs() }
 }
 
-/**
- * S4d-121: the smallest useful **Compose Desktop window** over the S4d-120 save spine. A no-arg
- * `:desktopApp` launch opens this window (`Main.kt` dispatches); the `--headless` flag keeps a bounded
- * console automation path that exits.
- *
- * Honest, not faked: "Render & Save sample" / Preview / Save As use [DesktopWatermarkFlow.runSaveFlow],
- * which reads repos then delegates Text/Icon render+write to [me.rosuh.easywatermark.render.DesktopRenderSaveSpine]
- * (same deep module as [me.rosuh.easywatermark.session.DesktopExportPipelinePort] for Open/Drop export).
- * Destination policy stays here: Preview → app temp; Save As → exact dialog path; Open/Drop → unique files
- * under the configured output dir via session export. S4d-125: an "Open image…" button picks a real file via
- * a native AWT [FileDialog]. S4d-130: two output-preference presets (JPEG/80, PNG/100) persist through
- * the shared `OutputPrefsEditor`. S4d-135: an "Open icon…" button persists a picked icon path via
- * `WatermarkConfigEditor.updateIcon`. S4d-136: "Use text watermark" flips mode back to Text.
- * S4d-137: last "Open image…" selection is remembered for sample saves. S4d-140: "Save as…" opens a native
- * AWT SAVE dialog and passes `runSaveFlow(outputFile = …)`. S4d-145: watermark text field + Apply.
- * S4d-147: a "Preview" button renders the current config through `runSaveFlow` to a repo-local temp file,
- * decodes the bytes (`DesktopImageDecoder`, generic JPEG/PNG), and shows the result on-screen — ending the
- * blind-edit loop. S4d-148: an "Apply degree" field edits rotation (`updateDegree`, 0..360). S4d-149: an
- * "Apply color" field edits the text color (hex, via `WatermarkConfigEditor.updateTextColor`). S4d-150: an
- * "Apply opacity" field edits the alpha as a 0..100 percent (via `WatermarkConfigEditor.updateAlpha`). S4d-151:
- * "Apply gaps" fields edit the horizontal/vertical gaps (0..500) atomically (via `updateHorizon`/`updateVertical`).
- * S4d-152: an "Apply text size" field edits the text size (1..100, via `updateTextSize`). S4d-153: two buttons
- * persist the tile mode REPEAT (grid tile) / CLAMP (single decal) via `updateTileMode` (MIRROR/DECAL not exposed).
- * S4d-154: per-value buttons persist the typeface (Normal/Italic/Bold/BoldItalic) and text style (Fill/Stroke) via
- * `updateTextTypeface`/`updateTextStyle`. S4d-155: the main content `Column` is `verticalScroll`-able so the
- * growing control surface + preview stay reachable on constrained window heights (control order/behavior
- * unchanged). S4d-157: a "share substitute" — "Show in folder" (guarded `java.awt.Desktop.open(parentFile)`)
- * + "Copy output path" (Compose `LocalClipboardManager`) acting on the last REAL saved output file (set by
- * the Render & Save / Save as… / Open image… success paths, NOT Preview). S4d-158: dropping an image file
- * onto the window loads it through the same Open-image save spine (`Modifier.dragAndDropTarget` + the AWT
- * file-list flavor; updates `lastImage` + `lastSavedFile`; unsupported/empty/while-busy drops fail softly).
- * S4d-160: a minimal "Templates" section over the shared Desktop Room path saves the current watermark
- * text, lists saved templates, and applies (Use → `WatermarkConfigEditor.updateText`), updates in place
- * (Update → `TemplateEditor.update`), or deletes them.
- * S4d-198: REACTIVE preview — every successful explicit editor action (text sheet confirm,
- * Apply color, opacity/text-size/degree/gap slider release, the tile/typeface/style buttons,
- * "Use text watermark", and template "Use") now
- * auto-refreshes the on-screen preview through the SAME `refreshPreview()` → `runSaveFlow` temp-file spine
- * the manual "Preview" button uses (bounded to explicit clicks, NOT per keystroke). Preview stays a
- * temp render: it never sets `lastSavedFile`, so the share-substitute buttons remain bound to real saves;
- * a preview-refresh failure keeps the last good preview and reports it in the status. S4d-198-r1: the
- * source-change actions "Open image…" and image **drop** ALSO auto-refresh the preview over the just-loaded
- * image (after their real save sets `lastImage`/`lastSavedFile`; the extra refresh still writes only the temp
- * file). "Render & Save sample" / "Save as…" remain real-save-only (they don't change the source/config).
- * S4d-284..S4d-286 then replaced the opacity/text-size/degree Apply fields with shared `SliderOption`
- * consumers that persist on slider release and re-read the repository value.
- * S4d-287 replaced the watermark-text Apply field with the shared `TextContentOption` sheet shell while
- * keeping persistence/preview refresh at the Desktop edge.
- * S4d-288 replaced the horizontal/vertical gap Apply fields with two shared `SliderOption` consumers.
- * S4d-289 replaced the text-color Apply field with a shared palette + custom-hex `TextColorOption`.
- * S4d-290 replaced the inline Desktop templates section with shared `EditorTemplateSheetHost`.
- * S4d-291 replaced the share-substitute button row with shared `SavedOutputActions`.
- * S4d-292 replaced the Render/Save-as/Open-image command buttons with shared `SaveCommandActions`.
- * S4d-293 replaced the status text + optional rendered preview image with shared `SavePreviewStatus`.
- * S4d-294 replaced the Open-icon / Use-text / Preview action cluster with shared `WatermarkModeActions`.
- */
+
 // Product routes + transitions: shared [ProductShellNav] / [ProductShellHost].
 
 @Composable
@@ -299,21 +241,27 @@ private fun desktopOptionLabel(type: FuncType): String = type.label()
 private fun desktopOptionIcon(type: FuncType): Painter = type.iconPainter()
 
 
+/**
+ * Compose Desktop product window.
+ *
+ * Open/Drop: session export with unique outputs. Preview / Save As / sample:
+ * [DesktopWatermarkFlow.runSaveFlow] → [DesktopRenderSaveSpine]. Preview uses a private temp only.
+ */
 fun launchDesktopWindow() = application {
-    // S4d-215: persist the window's user state (watermark config, output prefs, templates DB) under the
+    // persist the window's user state (watermark config, output prefs, templates DB) under the
     // stable per-user app-data dir ~/.easywatermark (the CreateDataStore.desktop.kt convention), NOT the
     // repo-local build/ dev paths — those stay the intentional headless/demo witness layout (Main.kt +
     // DesktopWatermarkFlow defaults). All three persistence files (the two DataStores named by their
     // SP_NAME + the Room "ewm-db") share this dir; distinct filenames, no collision.
     val appDataDir = remember { resolveDesktopAppDataDir() }
-    // S4d-217: where the window's REAL saves (drop / Render & Save / Open image) write — a user dir, not
+    // where the window's REAL saves (drop / Render & Save / Open image) write — a user dir, not
     // the repo-local build/ default. "Save as…" still uses its chosen path; the preview temp + headless
     // witness stay build-local.
     val outputDir = remember { resolveDesktopOutputDir() }
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
     val repo = remember { DesktopWatermarkFlow.buildRepository(dir = appDataDir) }
     val editor = remember { WatermarkConfigEditor(repo) }
-    // S4d-128: the output-prefs repo the save flow reads (empty store → the shared (JPEG, 80) default).
+    // the output-prefs repo the save flow reads (empty store → the shared (JPEG, 80) default).
     val userConfigRepo = remember { DesktopWatermarkFlow.buildUserConfigRepository(dir = appDataDir) }
     // ADR-0017 Phase 3: shared session VM + Desktop export port (Skiko spine). Open-image / drop batches
     // use session.exportAndAwait; Preview / Save-as / fixture sample keep runSaveFlow (in-memory bytes).
@@ -325,9 +273,9 @@ fun launchDesktopWindow() = application {
         )
     }
     val exportJobState by session.exportJobState.collectAsState()
-    // S4d-130: the shared output-prefs write use-case over the SAME store the save flow reads.
+    // the shared output-prefs write use-case over the SAME store the save flow reads.
     val outputEditor = remember { OutputPrefsEditor(userConfigRepo) }
-    // S4d-160/S4d-215/S4d-224/S4d-225: the Desktop templates Room DB (commonMain Room via the desktopMain
+    // ///: the Desktop templates Room DB (commonMain Room via the desktopMain
     // BundledSQLiteDriver builder), now under the stable app-data dir and seeded from the shared desktopMain
     // seed resource on first creation (Chinese for `zh` locales, English otherwise). Room is
     // single-instance-per-file; the process exits on window close, releasing the DB.
@@ -351,13 +299,13 @@ fun launchDesktopWindow() = application {
     }
     var busy by remember { mutableStateOf(false) }
     var lastImage by remember { mutableStateOf<LastImage?>(null) }
-    // S4d-157: the last REAL saved output file (set only by the Render & Save / Save as… / Open image…
+    // the last REAL saved output file (set only by the Render & Save / Save as… / Open image…
     // success paths — NOT Preview, which writes a temp file). Drives the share-substitute buttons.
     var lastSavedFile by remember { mutableStateOf<File?>(null) }
-    // S4d-342: packaged Desktop launches do not have the repository as their working directory. Keep the
+    // packaged Desktop launches do not have the repository as their working directory. Keep the
     // interactive preview temp beside the existing per-user config/DB state instead of under `build/`.
     val previewFile = remember { File(appDataDir, "preview/preview.img").apply { parentFile?.mkdirs() } }
-    // S4d-278 / C2: output prefs drive the shared SaveExportSheetShell (Android Compose export panel).
+    // / C2: output prefs drive the shared SaveExportSheetShell (Android Compose export panel).
     var outputFormat by remember { mutableStateOf(ImageFormat.JPEG) }
     var outputQuality by remember { mutableStateOf(80) }
     // C2: product export chrome = shared SaveExportSheetShell; FS write/share stay platform edges.
@@ -366,14 +314,13 @@ fun launchDesktopWindow() = application {
     var showOpenSource by remember { mutableStateOf(false) }
     var dynamicColorForced by remember { mutableStateOf(DesktopDynamicColorPrefs.isForced()) }
     /**
-     * Filmstrip + export-sheet thumbs. Full [DesktopImageDecoder.decode] of multi-megapixel
-     * files on the UI thread freezes ModalBottomSheet open — always use [decodeThumbnail] off-EDT.
-     */
+ * Filmstrip + export-sheet thumbs. Full [DesktopImageDecoder.decode] of multi-megapixel
+ * Files on the UI thread freezes ModalBottomSheet open — always use [decodeThumbnail] off-EDT.     */
     val desktopThumbCache = remember { mutableMapOf<String, ImageBitmap>() }
     var desktopThumbEpoch by remember { mutableStateOf(0) }
     // U2: watermark config is session/repo-owned — collect once; no parallel mutableStateOf mirrors.
     val waterMark by repo.waterMark.collectAsState(WaterMark.default)
-    // S4d-147: the rendered preview image (null until the first successful refresh).
+    // the rendered preview image (null until the first successful refresh).
     var preview by remember { mutableStateOf<ImageBitmap?>(null) }
     // Debounced preview refresh generation (slider ticks apply config immediately; raster is debounced).
     var previewGeneration by remember { mutableStateOf(0) }
@@ -390,7 +337,7 @@ fun launchDesktopWindow() = application {
         }
     }
 
-    // S4d-198: reactive preview. Render the CURRENT persisted config over the remembered image (or the
+    // reactive preview. Render the CURRENT persisted config over the remembered image (or the
     // deterministic fixture) through the SAME DesktopWatermarkFlow.runSaveFlow spine the manual "Preview"
     // button uses, decode the bytes (DesktopImageDecoder, generic JPEG/PNG), and update the on-screen
     // `preview`. Writes ONLY the app-private temp preview path and never sets `lastSavedFile` — a preview
@@ -399,7 +346,7 @@ fun launchDesktopWindow() = application {
     // withContext(IO); the Compose `preview` state is set after, on the caller's UI dispatcher. Returns a
     // short status line. Callers invoke this inside their own `busy = true … busy = false` span (after a
     // successful explicit edit/mode/source change, or from the manual Preview button), so renders stay
-    // serialized. Defined before the drop target so the S4d-198-r1 drop refresh can call it.
+    // serialized. Defined before the drop target so the drop refresh can call it.
     suspend fun refreshPreview(): String {
         val current = lastImage
         val (img, msg) = withContext(Dispatchers.IO) {
@@ -510,8 +457,8 @@ fun launchDesktopWindow() = application {
         }
     }
 
-    // S4d-158: drop image file(s) onto the window to load them through the SAME save spine as "Open image…".
-    // S4d-228: a multi-file drop now watermarks and saves EVERY supported dropped image (was first-only),
+    // drop image file(s) onto the window to load them through the SAME save spine as "Open image…".
+    // a multi-file drop now watermarks and saves EVERY supported dropped image (was first-only),
     // sequentially, to the user output dir with collision-free names. onDrop runs on the Compose UI thread,
     // so it reads/sets state directly and launches the heavy render loop on `scope`. A drop while busy or a
     // drop with no supported image fails softly with a status (no crash). Remembered so the target identity
@@ -523,7 +470,7 @@ fun launchDesktopWindow() = application {
                     status = "Busy — wait for the current render before dropping another image."
                     return false
                 }
-                // S4d-228: take ALL supported dropped images (pure DesktopSaveDecision.supportedImageFiles).
+                // take ALL supported dropped images (pure DesktopSaveDecision.supportedImageFiles).
                 val files = supportedImageFiles(event)
                 if (files.isEmpty()) {
                     status = "Unsupported drop — no supported image files in drop (${IMAGE_EXTENSIONS.joinToString(", ")})."
@@ -535,7 +482,7 @@ fun launchDesktopWindow() = application {
                     // Remember the LAST successful image/output (for reuse + the share-substitute buttons).
                     var lastPicked: LastImage? = null
                     var lastSaved: File? = null
-                    // S4d-228-r1: the whole batch span is wrapped in try/finally so `busy` is ALWAYS reset —
+                    // the whole batch span is wrapped in try/finally so `busy` is ALWAYS reset —
                     // even if setup (notably reading the output prefs) throws BEFORE the per-file loop. This
                     // restores the old single-file drop's recovery: a setup failure must not leave the UI stuck.
                     try {
@@ -601,7 +548,7 @@ fun launchDesktopWindow() = application {
                         lastPicked?.let { lastImage = it }
                         lastSaved?.let { lastSavedFile = it }
                         if (lastPicked != null) productRoute = ProductShellNav.Route.Editor
-                        // S4d-228: refresh the preview AT MOST ONCE after the batch, only when ≥1 save succeeded
+                        // refresh the preview AT MOST ONCE after the batch, only when ≥1 save succeeded
                         // (over the last successful image). refreshPreview writes ONLY the temp preview file
                         // (never lastSavedFile, so the share-substitute buttons stay bound to real saves).
                         status = if (lastSaved != null) "$next · ${refreshPreview()}" else next

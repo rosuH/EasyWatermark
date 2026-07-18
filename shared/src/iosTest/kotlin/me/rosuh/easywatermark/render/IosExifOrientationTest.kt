@@ -17,14 +17,13 @@ import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image as SkiaImage
 
 /**
- * S4d-23: the **iOS EXIF-orientation decode proof** (`iosSimulatorArm64Test` / `iosArm64` link). Asserts
- * [IosImageDecoder.decode] returns an UPRIGHT image for an EXIF-tagged JPEG — which it does because
+ * The **iOS EXIF-orientation decode proof** (`iosSimulatorArm64Test` / `iosArm64` link). Asserts * [IosImageDecoder.decode] returns an UPRIGHT image for an EXIF-tagged JPEG — which it does because
  * **Skia bakes EXIF orientation during decode** (no manual transform; see the [IosImageDecoder] KDoc and
  * the finding in `SkiaExifDecodeProbeTest`). Fixture: Skia-encode a bright-TOP-LEFT image to JPEG, splice
  * an EXIF APP1 (orientation 6), decode, and assert the result is upright with swapped dimensions.
  *
- * Proof level: **compile + native test-executable LINK** (the S4d-20B bar). The RUN needs an iOS runtime
- * (none installed; do not install — S4d-23 constraint), so it is deferred to S4d-20C/C5 — at which point
+ * Proof level: **compile + native test-executable LINK** (the bar). The RUN needs an iOS runtime
+ * (none installed; do not install — constraint), so it is deferred to /C5 — at which point
  * its RUN is the definitive confirmation that iOS skiko bakes orientation like the desktop skiko proxy
  * already proves at runtime (`SkiaExifDecodeProbeTest`).
  */

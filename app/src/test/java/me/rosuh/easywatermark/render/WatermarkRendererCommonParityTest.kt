@@ -26,7 +26,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * S4d-5: the first **test-only Android-vs-commonMain renderer parity gate**, before any production
+ * the first **test-only Android-vs-commonMain renderer parity gate**, before any production
  * draw-swap (CMP plan C2). It compares the production Android renderer seam
  * ([WatermarkRenderer.buildIconShader] / [WatermarkRenderer.buildTextShader]) against the new
  * commonMain primitives ([WatermarkCellComposer.composeIconCell] / [WatermarkCellComposer.composeTextCell]).

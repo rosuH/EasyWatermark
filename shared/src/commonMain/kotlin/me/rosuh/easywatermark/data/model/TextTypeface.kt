@@ -1,9 +1,8 @@
 package me.rosuh.easywatermark.data.model
 
 /**
- * Platform-neutral text typeface style (S4d-60). Moved to `:shared/commonMain` and made self-contained:
- * it no longer extends the `java.io.Serializable`-based `SerializableSealClass` and no longer carries
- * Android UI methods (`applyStyle(TextView?)` was dead and was dropped).
+ * Platform-neutral text typeface style. Moved to `:shared/commonMain` and made self-contained:
+ * It no longer extends the `java.io.Serializable`-based `SerializableSealClass` and no longer carries * Android UI methods (`applyStyle(TextView?)` was dead and was dropped).
  *
  * [serializeKey] is the stable int persisted in DataStore (`KEY_TEXT_TYPEFACE`): Normal=0, Italic=1,
  * Bold=2, BoldItalic=3 — unchanged from the legacy storage contract.

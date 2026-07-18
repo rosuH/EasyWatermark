@@ -34,20 +34,17 @@ import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_V
 import okio.IOException
 
 /**
- * In-memory image list / selection / offset state is **Main-confined**.
+ * Persisted watermark config ([waterMark]) and in-memory image list/selection/offset state.
  *
- * [updateImageList] and [select] hop to [Dispatchers.Main.immediate] and run list/selected
- * mutations in one non-suspending critical section. [updateOffset] is synchronous and must be
- * called from UI/Main (sole production entry via session applyOffset). Together these three
- * cannot interleave across threads in production; no merged state object or actor is required.
+ * List/selection/offset updates are Main-confined. DataStore keys and defaults are compatibility-critical.
  */
 class WaterMarkRepository(
     private val dataStore: DataStore<Preferences>,
-    // S4d-86: the localized default watermark text is injected from the Android Koin edge
+    // the localized default watermark text is injected from the Android Koin edge
     // (RepositoryModule), removing the app-resource coupling. A provider lambda (not a precomputed
     // String) preserves the original per-emission resolution inside the flow `.map`.
     private val defaultTextProvider: () -> String,
-    // S4d-87: the persisted-tile-id -> WatermarkTileMode read mapper is injected from the Android edge
+    // the persisted-tile-id -> WatermarkTileMode read mapper is injected from the Android edge
     // (RepositoryModule passes the SDK-gated legacy mapper), so the repository no longer depends on the
     // Android `Build.VERSION`-gated extension. The injected mapper preserves the legacy behavior
     // (pre-Android-12 stored DECAL id 3 -> REPEAT), pinned by WatermarkTileModeMappingTest. NOT the pure
@@ -92,7 +89,7 @@ class WaterMarkRepository(
                 textSize = WatermarkConfigRules.clampTextSize(
                     it[KEY_TEXT_SIZE] ?: WatermarkConfigRules.DEFAULT_TEXT_SIZE
                 ),
-                // S4d-84: platform-neutral opaque ARGB constant equal to Color.parseColor("#FFB800")
+                // platform-neutral opaque ARGB constant equal to Color.parseColor("#FFB800")
                 // (pinned by WaterMarkDefaultColorTest), removing the android.graphics.Color edge.
                 textColor = it[KEY_TEXT_COLOR] ?: WaterMark.default.textColor,
                 textStyle = TextPaintStyle.obtainSealedClass(it[KEY_TEXT_STYLE] ?: 0),
@@ -116,9 +113,8 @@ class WaterMarkRepository(
         get() = imageInfoMapFlow.value
 
     /**
-     * Replace the image list on Main. Install + selected rebind run with **no suspension** between
-     * them so they cannot interleave with [select] / [updateOffset].
-     */
+ * Replace the image list on Main. Install + selected rebind run with **no suspension** between
+ * Them so they cannot interleave with [select] / [updateOffset].     */
     suspend fun updateImageList(imageList: List<ImageInfo>) {
         withContext(Dispatchers.Main.immediate) {
             // Atomic list replace (StateFlow). Offset path uses update{} only — no side MutableMap race.
@@ -185,16 +181,15 @@ class WaterMarkRepository(
     }
 
     /**
-     * Synchronous in-memory **offset-only** update. **Main-confined** (call from UI/Main only).
-     *
-     * - Does **not** mutate [imageInfo] (stale UI copies are safe to pass).
-     * - List CAS via [_imageMapFlow.update] is a **pure** lambda (no outer side effects).
-     * - After update, the committed object is **re-read** from the final list by URI so CAS
-     *   retries cannot return a never-installed instance.
-     * - Same offsets → returns the **existing** list entry (identity shared with list + selected).
-     * - [selectedImage] is updated only when its URI still matches (atomic [MutableStateFlow.update]).
-     *
-     * @return the installed list entry, or null if the URI was not found (no-op).
+ * Synchronous in-memory **offset-only** update. **Main-confined** (call from UI/Main only).
+ *
+ * - Does **not** mutate [imageInfo] (stale UI copies are safe to pass).
+ * - List CAS via [_imageMapFlow.update] is a **pure** lambda (no outer side effects).
+ * - After update, the committed object is **re-read** from the final list by URI so CAS
+ * Retries cannot return a never-installed instance. * - Same offsets → returns the **existing** list entry (identity shared with list + selected).
+ * - [selectedImage] is updated only when its URI still matches (atomic [MutableStateFlow.update]).
+ *
+ * @return the installed list entry, or null if the URI was not found (no-op).
      */
     fun updateOffset(imageInfo: ImageInfo): ImageInfo? {
         _imageMapFlow.update { current ->
@@ -235,9 +230,9 @@ class WaterMarkRepository(
     }
 
     /**
-     * Set selection from the **current** list entry for [ref] (or a temp [ImageInfo] if missing).
-     * Read list + write selected happen on Main with no suspension between, so a concurrent
-     * [updateOffset] on Main cannot install B_new while this still holds B_old.
+ * Set selection from the **current** list entry for [ref] (or a temp [ImageInfo] if missing).
+ * Read list + write selected happen on Main with no suspension between, so a concurrent
+ * [updateOffset] on Main cannot install B_new while this still holds B_old.
      */
     suspend fun select(ref: MediaRef) = withContext(Dispatchers.Main.immediate) {
         val info = imageInfoList.find { it.uri == ref } ?: ImageInfo(ref)
@@ -264,7 +259,7 @@ class WaterMarkRepository(
         const val SP_KEY_TILE_MODEL = "${SP_NAME}_key_tile_model"
         const val SP_KEY_OFFSET_X = "${SP_NAME}_key_offset_x"
         const val SP_KEY_OFFSET_Y = "${SP_NAME}_key_offset_y"
-        // Single source of truth = commonMain WatermarkConfigRules (S4d-61); these aliases stay so the
+        // Single source of truth = commonMain WatermarkConfigRules; these aliases stay so the
         // editor sliders (EditorScreen reads WaterMarkRepository.MAX_*) keep their public references.
         const val MAX_TEXT_SIZE = WatermarkConfigRules.MAX_TEXT_SIZE
         const val MIN_TEXT_SIZE = WatermarkConfigRules.MIN_TEXT_SIZE

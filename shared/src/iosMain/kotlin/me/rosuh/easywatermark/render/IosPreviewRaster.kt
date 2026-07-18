@@ -19,14 +19,12 @@ import platform.Foundation.dataWithContentsOfFile
  * - returns an in-memory [ImageBitmap] ready for Compose [Image]
  *
  * That removes the old switch-image cost stack: full-res read → PNG re-encode of downsample →
- * full export write → PNG read → PNG decode for display.
- */
+ * Full export write → PNG read → PNG decode for display. */
 object IosPreviewRaster {
 
     /**
-     * Display-sized long edge. Android samples to canvas pixels (~screen); 720 keeps Skiko
-     * composition snappy on multi-megapixel camera stills while remaining sharp on phone DPI.
-     */
+ * Display-sized long edge. Android samples to canvas pixels (~screen); 720 keeps Skiko
+ * Composition snappy on multi-megapixel camera stills while remaining sharp on phone DPI.     */
     const val PREVIEW_MAX_EDGE_PX: Int = 720
 
     private val fontFamily: FontFamily by lazy {
@@ -34,7 +32,7 @@ object IosPreviewRaster {
     }
 
     /**
-     * Fast source placeholder (no watermark) for instant filmstrip feedback while raster runs.
+ * Fast source placeholder (no watermark) for instant filmstrip feedback while raster runs.
      */
     fun decodeSourcePlaceholder(sourcePath: String, maxEdgePx: Int = PREVIEW_MAX_EDGE_PX): ImageBitmap? {
         val bench = IosPreviewBench.scope("placeholder")
@@ -52,7 +50,7 @@ object IosPreviewRaster {
     }
 
     /**
-     * Watermarked preview [ImageBitmap] for [sourcePath] with current [waterMark] config.
+ * Watermarked preview [ImageBitmap] for [sourcePath] with current [waterMark] config.
      */
     fun renderWatermarked(
         sourcePath: String,

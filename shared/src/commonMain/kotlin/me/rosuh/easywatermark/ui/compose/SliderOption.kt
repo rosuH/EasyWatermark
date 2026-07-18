@@ -43,8 +43,7 @@ import kotlin.math.roundToInt
  * - value as plain label (no white bubble background)
  *
  * Track is drawn with [Canvas] + [DrawScope.drawLine] (same pattern as Material3's own Track
- * implementation: fixed-height canvas, stroke width = 2dp). Avoids nested
- * `Modifier.fillMaxWidth(fraction)` measure, which is fragile when the slider enters composition
+ * Implementation: fixed-height canvas, stroke width = 2dp). Avoids nested * `Modifier.fillMaxWidth(fraction)` measure, which is fragile when the slider enters composition
  * during tab switches on CMP/iOS.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,8 +54,8 @@ fun SliderOption(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     /**
-     * Snap interval within [valueRange] (e.g. `20f` → 20/40/60/80/100).
-     * `null` = integer steps across the full span (editor default).
+ * Snap interval within [valueRange] (e.g. `20f` → 20/40/60/80/100).
+ * `null` = integer steps across the full span (editor default).
      */
     step: Float? = null,
     onValueChangeFinished: (() -> Unit)? = null,
@@ -168,16 +167,14 @@ private val ThumbSize: Dp = 20.dp
 
 /**
  * Vertical space for the slider control (thumb + padding). Track is stroked at 2dp and centered
- * inside this height so Material's slider layout still has a stable measure size.
- */
+ * Inside this height so Material's slider layout still has a stable measure size. */
 private val SliderHitHeight: Dp = 28.dp
 
 /**
  * Draws a 2dp design track.
  *
  * Mirrors Material3's track drawing approach (Canvas + drawLine with StrokeCap.Round) so layout
- * is a single full-width placeable — no fractional-width child measure.
- */
+ * Is a single full-width placeable — no fractional-width child measure. */
 private fun DrawScope.drawDesignTrack(
     fraction: Float,
     activeColor: Color,

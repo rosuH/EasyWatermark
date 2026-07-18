@@ -15,7 +15,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
 /**
- * S4d-50 behavior-preservation gate for the `WaterMark.iconUri: Uri → MediaRef` flip.
+ * behavior-preservation gate for the `WaterMark.iconUri: Uri → MediaRef` flip.
  *
  * Pins the **storage-identical** guarantee: `KEY_ICON_URI` is a `stringPreferencesKey`, so the
  * persisted bytes must be the exact same string the legacy `iconUri.toString()` write produced, and

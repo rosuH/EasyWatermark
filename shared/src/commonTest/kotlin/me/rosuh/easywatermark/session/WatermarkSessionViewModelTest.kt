@@ -6,8 +6,7 @@ import kotlin.test.assertTrue
 
 /**
  * Phase 1: pure session transitions (no DataStore). ViewModel construct needs a real repo —
- * covered on Android/Desktop integration; reducer is the unit gate here.
- */
+ * Covered on Android/Desktop integration; reducer is the unit gate here. */
 class WatermarkSessionViewModelTest {
     @Test
     fun enterEditor_requiresNonEmptySelection() {

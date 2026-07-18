@@ -7,11 +7,10 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * S4d-20C: the **iOS font-loader contract proof** (`iosSimulatorArm64Test` / `iosArm64` link). Proves
- * [IosFontLoader] compiles + links on both iOS targets and documents its loud-failure contract.
+ * The **iOS font-loader contract proof** (`iosSimulatorArm64Test` / `iosArm64` link). Proves * [IosFontLoader] compiles + links on both iOS targets and documents its loud-failure contract.
  *
- * Proof level: **compile + native test-executable LINK** (the S4d-20B bar). The resource-IO RUN needs an
- * iOS runtime + a real `.app` bundle carrying the font files (none here; do not install — S4d-20C
+ * Proof level: **compile + native test-executable LINK** (the bar). The resource-IO RUN needs an
+ * iOS runtime + a real `.app` bundle carrying the font files (none here; do not install —
  * constraint), so the error-path assertions below are RUNTIME-deferred to C5. They are written so they
  * pass on a runtime: a test executable's bundle does not contain the Noto fonts, so a load attempt throws.
  */

@@ -12,8 +12,7 @@ import me.rosuh.easywatermark.data.model.WaterMark
  * Decodes the source [ImageInfo], applies [config], encodes, and persists the result.
  * Android production uses commonMain raster via `AndroidCommonRaster` (ADR-0018); native
  * `WatermarkRenderer` is measurement/golden oracle only. Desktop/iOS bind Skiko pipelines over the
- * same common compose core.
- *
+ * Same common compose core. *
  * May mutate [imageInfo] width/height as the legacy path did after decode.
  */
 fun interface ExportPipelinePort {

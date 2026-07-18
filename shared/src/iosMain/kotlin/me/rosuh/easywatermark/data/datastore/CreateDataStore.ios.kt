@@ -12,7 +12,7 @@ import platform.Foundation.NSURL
 import platform.Foundation.NSUserDomainMask
 
 /**
- * iOS preferences DataStore creation (S4d-78). Resolves the app's `NSDocumentDirectory` and delegates
+ * iOS preferences DataStore creation. Resolves the app's `NSDocumentDirectory` and delegates
  * to the common, serializer-free [createPreferencesDataStore]. Foundation interop only (Kotlin/Native
  * bundled) — no new dependency, no Android types.
  *
@@ -26,7 +26,7 @@ fun createUserConfigDataStore(
 }
 
 /**
- * S4d-102: iOS watermark-config DataStore creation, mirroring [createUserConfigDataStore] but keyed on
+ * iOS watermark-config DataStore creation, mirroring [createUserConfigDataStore] but keyed on
  * [WaterMarkRepository.SP_NAME]. The Swift-facing iOS watermark editor (`IosWatermarkConfigBridge`) is
  * the first off-Android consumer of the common [WaterMarkRepository]; it persists the watermark config
  * in the app's `NSDocumentDirectory`. Foundation interop only — no new dependency, no Android types.

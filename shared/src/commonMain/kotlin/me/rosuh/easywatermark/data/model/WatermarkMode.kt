@@ -2,8 +2,7 @@ package me.rosuh.easywatermark.data.model
 
 /**
  * Platform-neutral watermark mode (text watermark vs image/icon watermark) — the commonMain
- * replacement for the `WaterMarkRepository.MarkMode` sealed type that previously leaked an `:app`
- * repository type into [WaterMark] (S4d-60, after the S4d-59 readiness map).
+ * Replacement for the `WaterMarkRepository.MarkMode` sealed type that previously leaked an `:app` * repository type into [WaterMark] (after the readiness map).
  *
  * [value] is the stable int persisted in DataStore under `KEY_MODE`. It is kept EXACTLY equal to the
  * historical `WaterMarkRepository.MarkMode` values (Text=0, Image=1) so existing user preferences
@@ -15,7 +14,7 @@ enum class WatermarkMode(val value: Int) {
 
     companion object {
         /** Map a persisted [KEY_MODE] int back to a mode; anything other than [Image]'s id is [Text]
-         *  (preserves the legacy `if (it[KEY_MODE] == MarkMode.Image.value) Image else Text` rule). */
+ * (preserves the legacy `if (it[KEY_MODE] == MarkMode.Image.value) Image else Text` rule). */
         fun fromValue(value: Int): WatermarkMode = if (value == Image.value) Image else Text
     }
 }

@@ -13,19 +13,18 @@ import platform.Foundation.dataWithContentsOfFile
 import platform.posix.memcpy
 
 /**
- * S4d-20C: the **iOS font-resource loader boundary** — the platform-edge piece that reads bundled font
- * files from an `NSBundle` (via `NSData`) and hands the raw **bytes** to the already-accepted
- * [IosTextRasterEnv.bundledFontFamily] rendering boundary (S4d-20B).
+ * The **iOS font-resource loader boundary** — the platform-edge piece that reads bundled font * files from an `NSBundle` (via `NSData`) and hands the raw **bytes** to the already-accepted
+ * [IosTextRasterEnv.bundledFontFamily] rendering boundary.
  *
- * ## Why this exists (the S4d-20B packaging gap, now closed for the local/link half)
+ * ## Why this exists (the packaging gap, now closed for the local/link half)
  * Kotlin/Native has **no JVM classpath** (`getResourceAsStream`), and `compose-resources` is **forbidden**
- * (CMP-9547 stays out of scope). S4d-20B therefore left iOS font-byte acquisition as the *caller's*
+ * (CMP-9547 stays out of scope). therefore left iOS font-byte acquisition as the *caller's*
  * responsibility — [IosTextRasterEnv.bundledFontFamily] takes `ByteArray`s. This object adds the missing
  * convenience: read the bytes from the app bundle so a future iOS app target (C5) can build the watermark
  * [FontFamily] with one call, while the **byte-array API stays the core boundary** (so tests / non-bundle
  * callers keep working unchanged).
  *
- * Decode/orientation are unaffected (S4d-23: Skia bakes EXIF at decode; no manual transform). This is a
+ * Decode/orientation are unaffected (: Skia bakes EXIF at decode; no manual transform). This is a
  * pure resource-IO boundary in `iosMain`; commonMain stays decode-free and font-bytes-agnostic.
  *
  * ## Failure mode: loud, never silent
@@ -52,9 +51,8 @@ object IosFontLoader {
     const val DEFAULT_CJK_TYPE: String = "otf"
 
     /**
-     * Read one font resource [name].[type] from [bundle] (default: the main app bundle) and return its raw
-     * bytes. Throws [IllegalStateException] if the resource is missing, unreadable, or empty.
-     */
+ * Read one font resource [name].[type] from [bundle] (default: the main app bundle) and return its raw
+ * Bytes. Throws [IllegalStateException] if the resource is missing, unreadable, or empty.     */
     fun loadFontBytes(
         name: String,
         type: String,
@@ -70,9 +68,8 @@ object IosFontLoader {
     }
 
     /**
-     * Convenience: load the Latin + CJK faces from [bundle] and build the watermark [FontFamily] via the
-     * core [IosTextRasterEnv.bundledFontFamily] boundary. [latinFirst] keeps the owner's Latin+CJK order
-     * (S4d-16). Any missing/unreadable face throws (see [loadFontBytes]).
+ * Convenience: load the Latin + CJK faces from [bundle] and build the watermark [FontFamily] via the
+ * Core [IosTextRasterEnv.bundledFontFamily] boundary. [latinFirst] keeps the owner's Latin+CJK order *. Any missing/unreadable face throws (see [loadFontBytes]).
      */
     fun bundledFontFamily(
         latinName: String = DEFAULT_LATIN_NAME,

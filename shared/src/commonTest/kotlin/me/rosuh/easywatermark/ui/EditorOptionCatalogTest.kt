@@ -9,8 +9,7 @@ import kotlin.test.assertTrue
 /**
  * Pins the U1 Android-parity Content/Style/Layout catalogs that shared
  * [EditorBottomControls] ships — production editor order must stay aligned with
- * v2.10.0 Android bottom options (not reinvented per platform).
- */
+ * V2.10.0 Android bottom options (not reinvented per platform). */
 class EditorOptionCatalogTest {
 
     @Test

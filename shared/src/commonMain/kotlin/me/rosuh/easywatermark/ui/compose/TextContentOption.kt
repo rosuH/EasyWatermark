@@ -55,8 +55,7 @@ import org.jetbrains.compose.resources.stringResource
  * 3. **Template entry is top-end of the sheet** (not beside a permanent inline field).
  *
  * S-i18n-2: labels from Res. [openSignal]: bumped when Text option is (re)activated via the
- * carousel. Sheet opens on each positive signal so re-tapping Text reopens the dialog.
- * `0` means "not opened by signal yet" (initial default selection shows summary only).
+ * Carousel. Sheet opens on each positive signal so re-tapping Text reopens the dialog. * `0` means "not opened by signal yet" (initial default selection shows summary only).
  */
 @Composable
 fun TextContentOption(
@@ -65,8 +64,8 @@ fun TextContentOption(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     /**
-     * Bump when the Text carousel button is activated so the edit sheet opens.
-     * Keep `0` for passive display of the current text summary.
+ * Bump when the Text carousel button is activated so the edit sheet opens.
+ * Keep `0` for passive display of the current text summary.
      */
     openSignal: Int = 0,
     onTextChange: (String) -> Unit,

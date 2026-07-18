@@ -32,8 +32,7 @@ import java.io.FileOutputStream
 
 /**
  * Android [ExportPipelinePort]: decode → commonMain raster ([AndroidCommonRaster]) → MediaStore /
- * pre-Q file path. ADR-0018 production path (always common; no rollout flag).
- */
+ * Pre-Q file path. ADR-0018 production path (always common; no rollout flag). */
 class AndroidExportPipelinePort(
     private val appContext: Context,
     private val contentResolver: ContentResolver = appContext.contentResolver,

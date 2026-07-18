@@ -19,10 +19,10 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * S4d-102: iOS runtime proof that the common [WaterMarkRepository], behind the Swift-facing
- * [IosWatermarkConfigBridge], reads/writes the watermark text (S4d-102), rotation degree (S4d-103),
- * tile mode (S4d-104), alpha (S4d-105), text color (S4d-107), text size (S4d-109), and h/v gaps
- * (S4d-110) through the iOS [createWaterMarkDataStore] (`NSDocumentDirectory`) store. RUNS on
+ * iOS runtime proof that the common [WaterMarkRepository], behind the Swift-facing
+ * [IosWatermarkConfigBridge], reads/writes the watermark text, rotation degree,
+ * tile mode, alpha, text color, text size, and h/v gaps
+ * through the iOS [createWaterMarkDataStore] (`NSDocumentDirectory`) store. RUNS on
  * `iosSimulatorArm64Test`.
  *
  * A unique store name (NSUUID) is used so the initial read is the true default and the test does not
@@ -181,9 +181,8 @@ class IosWatermarkConfigBridgeTest {
     }
 
     /**
-     * S4d-112: the iOS renderer honors all four typefaces — each renders a visible (non-blank) text cell.
-     * Uses the system font (FontFamily.Default) so bold/italic are Compose **synthetic** (faux-bold/italic),
-     * mirroring Android's synthesis intent; this is perceptual, not byte-parity. Cheap: one small cell each.
+ * The iOS renderer honors all four typefaces — each renders a visible (non-blank) text cell. * Uses the system font (FontFamily.Default) so bold/italic are Compose **synthetic** (faux-bold/italic),
+ * mirroring Android's synthesis intent; this is perceptual, not byte-parity. Cheap: one small cell each.
      */
     @Test
     fun renderer_honors_each_typeface_nonblank() {
@@ -213,10 +212,9 @@ class IosWatermarkConfigBridgeTest {
     }
 
     /**
-     * S4d-113: the iOS renderer honors both paint styles — each renders a visible (non-blank) text cell.
-     * Stroke maps to a Compose `Stroke()` (default width 0 = Skia hairline), mirroring Android's stroked
-     * text (`Paint.Style.STROKE` at the default strokeWidth 0); this is perceptual Skiko honoring, not
-     * byte-parity. Cheap: one small cell each.
+ * The iOS renderer honors both paint styles — each renders a visible (non-blank) text cell. * Stroke maps to a Compose `Stroke()` (default width 0 = Skia hairline), mirroring Android's stroked
+ * text (`Paint.Style.STROKE` at the default strokeWidth 0); this is perceptual Skiko honoring, not
+ * byte-parity. Cheap: one small cell each.
      */
     @Test
     fun renderer_honors_each_textstyle_nonblank() {
@@ -230,9 +228,8 @@ class IosWatermarkConfigBridgeTest {
     }
 
     /**
-     * S4d-116: persist picked icon bytes (Option A) and prove the full durable-icon contract on the iOS
-     * runtime: empty-store defaults → write copies bytes to an app-private path + flips mode to Image →
-     * the bytes read back identically → replacement stores new bytes AND cleans up the prior owned file.
+ * Persist picked icon bytes (Option A) and prove the full durable-icon contract on the iOS * runtime: empty-store defaults → write copies bytes to an app-private path + flips mode to Image →
+ * the bytes read back identically → replacement stores new bytes AND cleans up the prior owned file.
      */
     @Test
     fun bridge_icon_persistence_roundtrip_and_replacement_cleanup() = runBlocking {
@@ -285,10 +282,9 @@ class IosWatermarkConfigBridgeTest {
     }
 
     /**
-     * S4d-116 (revision): ownership is more than a prefix match. A real generated path is owned, but a
-     * traversal (`icon_/../../foreign`) or a nested/sibling path (`icon_x/foreign`) — which share the
-     * `icon_` prefix but add a path separator — and an empty-filename path are NOT owned, so
-     * `deleteIfOwned` ignores them and can never delete an arbitrary path. Proven on the iOS runtime.
+ * (revision): ownership is more than a prefix match. A real generated path is owned, but a
+ * Traversal (`icon_/../../foreign`) or a nested/sibling path (`icon_x/foreign`) — which share the * `icon_` prefix but add a path separator — and an empty-filename path are NOT owned, so
+ * `deleteIfOwned` ignores them and can never delete an arbitrary path. Proven on the iOS runtime.
      */
     @Test
     fun iconPersistence_ownership_rejects_traversal_and_nested_suffixes() {
@@ -301,7 +297,7 @@ class IosWatermarkConfigBridgeTest {
         val prefix = ownedPath.substring(0, ownedPath.lastIndexOf(marker) + marker.length)
         val traversal = prefix + "/../../foreign"   // …/watermark_icons/icon_/../../foreign
         val nested = prefix + "x/foreign"            // …/watermark_icons/icon_x/foreign
-        val emptySuffix = prefix                     // …/watermark_icons/icon_   (no filename)
+        val emptySuffix = prefix                     // …/watermark_icons/icon_ (no filename)
 
         assertFalse(IosIconPersistence.isOwned(traversal), "a '..' traversal suffix must NOT be owned")
         assertFalse(IosIconPersistence.isOwned(nested), "a nested-path suffix (extra '/') must NOT be owned")
@@ -327,8 +323,7 @@ class IosWatermarkConfigBridgeTest {
     }
 
     /**
-     * S4d-117: the render workflow reads the persisted icon as **bytes** through the bridge (the file path
-     * never crosses to Swift). Null when no icon is set; the exact persisted bytes after `setIconFromBytes`.
+ * The render workflow reads the persisted icon as **bytes** through the bridge (the file path * never crosses to Swift). Null when no icon is set; the exact persisted bytes after `setIconFromBytes`.
      */
     @Test
     fun bridge_currentIconBytes_reads_persisted_bytes() = runBlocking {

@@ -14,8 +14,7 @@ import androidx.compose.ui.unit.dp
  * Shared CMP frame for the editor preview area.
  *
  * Hosts supply the actual renderer. [preview] receives a modifier that fills this frame so the
- * image can scale with ContentScale.Fit responsively (not a fixed max height).
- */
+ * Image can scale with ContentScale.Fit responsively (not a fixed max height). */
 @Composable
 fun EditorPreviewFrame(
     hasImage: Boolean,

@@ -11,7 +11,7 @@ import org.koin.dsl.module
 
 val appModule = module {
     single<AppDatabase> {
-        // S4d-92: Android creation moved to :shared androidMain (locale createFromAsset + in-memory
+        // Android creation moved to :shared androidMain (locale createFromAsset + in-memory
         // fallback preserved, byte-identical). See data/db/TemplateDatabaseBuilder.android.kt.
         buildTemplateDatabase(get())
     }

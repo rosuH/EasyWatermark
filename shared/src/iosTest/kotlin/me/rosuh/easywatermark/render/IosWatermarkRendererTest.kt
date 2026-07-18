@@ -19,8 +19,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * S4d-20B: the **iOS renderer proof** (runs on `iosSimulatorArm64Test`). Proves the accepted commonMain
- * pipeline executes on the iOS (Skiko) target end-to-end: generate an image → Skia-encode → Skia-decode
+ * The **iOS renderer proof** (runs on `iosSimulatorArm64Test`). Proves the accepted commonMain * pipeline executes on the iOS (Skiko) target end-to-end: generate an image → Skia-encode → Skia-decode
  * ([IosImageDecoder]) → render a text cell + compose ([IosWatermarkRenderer]) → Skia-encode. Uses
  * [FontFamily.Default] (iOS system font) so the runtime proof does not depend on packaging the bundled CJK
  * font into an iOS bundle (that is C5; the bundled-font boundary [IosTextRasterEnv.bundledFontFamily] is
@@ -48,9 +47,8 @@ class IosWatermarkRendererTest {
     }
 
     /**
-     * S4d-115: a small deterministic, **opaque, non-uniform** icon (magenta field + a white inner square)
-     * so the icon raster is clearly visible and asymmetric under rotation. Drawn via commonMain Compose
-     * graphics; encoded to PNG by the test when bytes are needed (exercising the [IosImageDecoder] path).
+ * A small deterministic, **opaque, non-uniform** icon (magenta field + a white inner square) * so the icon raster is clearly visible and asymmetric under rotation. Drawn via commonMain Compose
+ * graphics; encoded to PNG by the test when bytes are needed (exercising the [IosImageDecoder] path).
      */
     private fun makeIcon(): ImageBitmap {
         val s = 24
@@ -113,9 +111,8 @@ class IosWatermarkRendererTest {
     }
 
     /**
-     * S4d-115: [IosWatermarkRenderer.renderIconCell] (wrapping commonMain `composeIconCell`) rasters a
-     * visible icon cell on the iOS Skiko backend. Rotated 315° (the production default) at 2× scale to
-     * exercise rotation + scaling. Perceptual proof (non-blank), not byte-parity with Android.
+ * [IosWatermarkRenderer.renderIconCell] (wrapping commonMain `composeIconCell`) rasters a
+ * Visible icon cell on the iOS Skiko backend. Rotated 315° (the production default) at 2× scale to * exercise rotation + scaling. Perceptual proof (non-blank), not byte-parity with Android.
      */
     @Test
     fun renderIconCell_produces_nonblank_cell() {
@@ -127,10 +124,9 @@ class IosWatermarkRendererTest {
     }
 
     /**
-     * S4d-115: [IosWatermarkRenderer.composeIconOverImage] decodes the background + icon bytes
-     * ([IosImageDecoder]), renders the icon cell, and tiles it over the background — sized to the
-     * background and changing pixels. The icon bytes are PNG-encoded then re-decoded, exercising the full
-     * decode path. REPEAT tiling so at least one icon tile lands on the image.
+ * [IosWatermarkRenderer.composeIconOverImage] decodes the background + icon bytes
+ * ([IosImageDecoder]), renders the icon cell, and tiles it over the background — sized to the
+ * Background and changing pixels. The icon bytes are PNG-encoded then re-decoded, exercising the full * decode path. REPEAT tiling so at least one icon tile lands on the image.
      */
     @Test
     fun composeIconOverImage_is_sized_and_changes_pixels() {

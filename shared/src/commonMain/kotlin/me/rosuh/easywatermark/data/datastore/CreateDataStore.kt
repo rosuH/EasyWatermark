@@ -8,11 +8,10 @@ import androidx.datastore.preferences.core.Preferences
 import okio.Path
 
 /**
- * Platform-neutral, driver-free DataStore creation seam (S4d-74).
+ * Platform-neutral, driver-free DataStore creation seam.
  *
  * This is intentionally NOT a `commonMain expect`: this module targets androidTarget + desktop +
- * iosArm64 + iosSimulatorArm64, and an `expect` would require an `actual` on every target. The
- * platform store-creation functions have genuinely different signatures (Android needs a `Context`
+ * IosArm64 + iosSimulatorArm64, and an `expect` would require an `actual` on every target. The * platform store-creation functions have genuinely different signatures (Android needs a `Context`
  * + `SharedPreferencesMigration`; desktop/iOS only need a file path), so plain per-platform
  * functions are cleaner and more honest than a forced `expect`/`actual`.
  *
@@ -27,10 +26,9 @@ fun createDataStore(storage: Storage<Preferences>): DataStore<Preferences> =
     DataStoreFactory.create(storage = storage)
 
 /**
- * Path-based preferences DataStore creation (S4d-78). Public, serializer-free common API
+ * Path-based preferences DataStore creation. Public, serializer-free common API
  * ([PreferenceDataStoreFactory.createWithPath]); the okio [Path] is supplied by platform code
  * (desktop/iOS). This is the common building block both okio-backed targets share — Android keeps
- * its own `Context`/migration factory in androidMain.
- */
+ * Its own `Context`/migration factory in androidMain. */
 fun createPreferencesDataStore(producePath: () -> Path): DataStore<Preferences> =
     PreferenceDataStoreFactory.createWithPath(produceFile = producePath)

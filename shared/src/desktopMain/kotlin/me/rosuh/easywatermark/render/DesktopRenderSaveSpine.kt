@@ -7,18 +7,10 @@ import me.rosuh.easywatermark.data.model.WaterMark
 import java.io.File
 
 /**
- * Desktop-only **render-and-write** deep module (issue 11 / P1).
+ * Desktop render-and-write spine: the single Text/Icon compose+encode+write path.
  *
- * One Text/Icon/composer/encode/write implementation shared by
- * `DesktopWatermarkFlow.runSaveFlow` and [me.rosuh.easywatermark.session.DesktopExportPipelinePort].
- *
- * **Does not choose destination policy.** Callers pass an exact [target] file (preview temp,
- * Save As path, unique export name, or headless default). The spine only creates parents, writes
- * bytes, and returns observable metadata.
- *
- * Synchronous by design: blocking decode/render/encode/IO. Callers own dispatchers
- * (`Dispatchers.IO` / `runBlocking`).
- */
+ * Callers choose destination (preview temp, exact path, unique export, headless default) and pass
+ * An exact [File]. Synchronous; callers own dispatchers. */
 data class DesktopSavedImage(
     val output: MediaRef,
     val format: ImageFormat,
@@ -30,11 +22,11 @@ data class DesktopSavedImage(
 object DesktopRenderSaveSpine {
 
     /**
-     * Render [config] over [imageBytes] using [prefs] format/quality and write to [target].
-     *
-     * @throws IllegalArgumentException blank Image-mode icon path ([DesktopSaveDecision.EMPTY_ICON_MESSAGE])
-     * @throws IllegalArgumentException missing/unreadable icon file
-     * @throws Exception decode/render/encode/IO failures from the composer stack
+ * Render [config] over [imageBytes] using [prefs] format/quality and write to [target].
+ *
+ * @throws IllegalArgumentException blank Image-mode icon path ([DesktopSaveDecision.EMPTY_ICON_MESSAGE])
+ * @throws IllegalArgumentException missing/unreadable icon file
+ * @throws Exception decode/render/encode/IO failures from the composer stack
      */
     fun renderAndSave(
         imageBytes: ByteArray,

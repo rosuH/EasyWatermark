@@ -8,8 +8,7 @@ import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 
 /**
- * S4d-74: store creation now lives in `:shared/androidMain` ([createPreferencesDataStore]), preserving
- * the exact legacy file path (`filesDir/datastore/<name>.preferences_pb`) + `SharedPreferencesMigration`.
+ * Store creation now lives in `:shared/androidMain` ([createPreferencesDataStore]), preserving * the exact legacy file path (`filesDir/datastore/<name>.preferences_pb`) + `SharedPreferencesMigration`.
  * These extension properties keep the same names/types so consumers (`RepositoryModule`) are unchanged,
  * and back them with a process-wide single instance per file — the old `by preferencesDataStore(...)`
  * delegate's guarantee (DataStore forbids a second active store for the same file). Keyed on the

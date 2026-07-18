@@ -17,8 +17,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
- * S4d-192: the **iOS renderer perceptual/stability gate** (runs on `iosSimulatorArm64Test`) — the iOS
- * sibling of [DesktopTextRendererGoldenTest]. It proves the iOS Skiko render path
+ * The **iOS renderer perceptual/stability gate** (runs on `iosSimulatorArm64Test`) — the iOS * sibling of [DesktopTextRendererGoldenTest]. It proves the iOS Skiko render path
  * ([IosWatermarkRenderer.renderTextCell] / [IosWatermarkRenderer.renderIconCell] over the shared
  * [WatermarkCellComposer]) renders **non-blank and stably** for Latin, CJK, multiline, and rotated-315°
  * text plus the rotated icon cell, catching gross regressions (blank/collapsed/nondeterministic output)
@@ -141,7 +140,7 @@ class IosWatermarkRendererGoldenTest {
         }
     }
 
-    // --- S4d-193: composition gate (cells tiled/placed over a decoded background) ---
+    // --- : composition gate (cells tiled/placed over a decoded background) ---
 
     /** A small deterministic OPAQUE background (dark base + one lighter band) — the composition target. */
     private fun makeBackground(): ImageBitmap {
@@ -155,10 +154,9 @@ class IosWatermarkRendererGoldenTest {
     }
 
     /**
-     * Coarse 8×8 grid of quantized **changed-pixel** levels vs [before] (per bucket: 0 = <1%, 1 = <10%,
-     * 2 = <30%, 3 = ≥30% of its pixels differ). On an opaque background "non-blank" is meaningless, so the
-     * gate measures *where the watermark changed the image* — robust to sub-pixel AA, catches a no-op
-     * composition, and distinguishes a broadly-tiled REPEAT from a single localized CLAMP decal.
+ * Coarse 8×8 grid of quantized **changed-pixel** levels vs [before] (per bucket: 0 = <1%, 1 = <10%,
+ * 2 = <30%, 3 = ≥30% of its pixels differ). On an opaque background "non-blank" is meaningless, so the
+ * Gate measures *where the watermark changed the image* — robust to sub-pixel AA, catches a no-op * composition, and distinguishes a broadly-tiled REPEAT from a single localized CLAMP decal.
      */
     private fun changedSignature(before: ImageBitmap, after: ImageBitmap): List<Int> {
         val pb = before.toPixelMap(); val pa = after.toPixelMap()

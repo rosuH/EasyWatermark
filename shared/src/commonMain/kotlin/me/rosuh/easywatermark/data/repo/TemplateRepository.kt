@@ -8,12 +8,9 @@ import me.rosuh.easywatermark.data.model.entity.Template
 import kotlin.coroutines.CoroutineContext
 
 /**
- * S4d-92: moved from `:app` to `:shared/commonMain` (same FQN). Behavior preserved: a null DAO (DB
- * unavailable) makes [getAllTemplate] emit an empty list and the write ops no-op.
+ * Template CRUD over Room. Null DAO ⇒ empty list and no-op writes.
  *
- * The one Android edge — writes ran on `Dispatchers.IO` — is now injected as [ioContext] because
- * `Dispatchers.IO` is not accessible in commonMain on the Native target. The Koin edge passes
- * `Dispatchers.IO`, so Android threading is byte-identical to before.
+ * [ioContext] is injected (`Dispatchers.IO` is not available on Native commonMain).
  */
 class TemplateRepository(
     private val templateDao: TemplateDao?,

@@ -11,8 +11,7 @@ import java.io.File
 import javax.imageio.ImageIO
 
 /**
- * S4d-20A: the **Desktop platform image-decode boundary** — turns a real encoded image (bytes or a file)
- * into a Compose [ImageBitmap] via AWT `ImageIO`, so the accepted commonMain composition pipeline
+ * The **Desktop platform image-decode boundary** — turns a real encoded image (bytes or a file) * into a Compose [ImageBitmap] via AWT `ImageIO`, so the accepted commonMain composition pipeline
  * ([WatermarkCellComposer.composeOverBackground]) can watermark an actually-decoded photo (not only a
  * generated in-memory background).
  *
@@ -23,9 +22,9 @@ import javax.imageio.ImageIO
  * (`UIImage`/`ImageIO`), reusing the same commonMain composition.
  *
  * Uses only the JDK's bundled `javax.imageio` + the Compose-Desktop `toComposeImageBitmap()` bridge
- * (already on the desktop classpath via S4d-18's `compose.desktop.currentOs`) — **no new dependency**.
+ * (already on the desktop classpath via 's `compose.desktop.currentOs`) — **no new dependency**.
  *
- * ## S4d-21: EXIF orientation baked in at the decode edge
+ * ## : EXIF orientation baked in at the decode edge
  * `ImageIO.read` returns the JPEG's stored pixels WITHOUT applying EXIF orientation, so a camera photo
  * tagged "rotate 90°" would decode sideways. Android's product decode path bakes EXIF rotation into the
  * bitmap (`BitmapUtils`); this boundary now matches that policy on Desktop: it parses the JPEG EXIF
@@ -39,10 +38,10 @@ import javax.imageio.ImageIO
 object DesktopImageDecoder {
 
     /**
-     * Decode encoded image [bytes] (PNG/JPEG/… anything the JVM's `ImageIO` supports) into an
-     * [ImageBitmap], applying EXIF orientation (JPEG) so the result is upright. Throws
-     * [IllegalStateException] if `ImageIO` cannot decode (unsupported/corrupt) — `ImageIO.read` returns
-     * `null` rather than throwing for an unrecognised format.
+ * Decode encoded image [bytes] (PNG/JPEG/… anything the JVM's `ImageIO` supports) into an
+ * [ImageBitmap], applying EXIF orientation (JPEG) so the result is upright. Throws
+ * [IllegalStateException] if `ImageIO` cannot decode (unsupported/corrupt) — `ImageIO.read` returns
+ * `null` rather than throwing for an unrecognised format.
      */
     fun decode(bytes: ByteArray): ImageBitmap {
         val buffered = ByteArrayInputStream(bytes).use { ImageIO.read(it) }
@@ -59,10 +58,9 @@ object DesktopImageDecoder {
     }
 
     /**
-     * Decode + downscale so the longer edge is at most [maxEdgePx].
-     * Use for filmstrip / export-sheet cells — **never** call full [decode] on the UI thread
-     * for multi-megapixel camera stills (freezes ModalBottomSheet open on Desktop).
-     */
+ * Decode + downscale so the longer edge is at most [maxEdgePx].
+ * Use for filmstrip / export-sheet cells — **never** call full [decode] on the UI thread
+ * For multi-megapixel camera stills (freezes ModalBottomSheet open on Desktop).     */
     fun decodeThumbnail(file: File, maxEdgePx: Int = 96): ImageBitmap {
         val bytes = file.readBytes()
         if (bytes.isEmpty()) error("DesktopImageDecoder: file ${file.path} is empty/missing")
@@ -95,10 +93,9 @@ object DesktopImageDecoder {
     // ---- EXIF orientation (tiny local JPEG APP1/TIFF reader — no dependency) ---------------------
 
     /**
-     * Parse the JPEG EXIF Orientation tag (0x0112) from raw [bytes]. Returns 1..8 (1 = normal) or **1** for
-     * any non-JPEG / missing-EXIF / malformed input (best-effort, never throws). Scans the JPEG marker
-     * segments for APP1 (`0xFFE1`) carrying the `Exif\0\0` header, then reads the IFD0 entry for tag
-     * 0x0112 from the embedded TIFF block (honouring `II`/`MM` byte order).
+ * Parse the JPEG EXIF Orientation tag (0x0112) from raw [bytes]. Returns 1..8 (1 = normal) or **1** for
+ * Any non-JPEG / missing-EXIF / malformed input (best-effort, never throws). Scans the JPEG marker * segments for APP1 (`0xFFE1`) carrying the `Exif\0\0` header, then reads the IFD0 entry for tag
+ * 0x0112 from the embedded TIFF block (honouring `II`/`MM` byte order).
      */
     internal fun parseExifOrientation(bytes: ByteArray): Int {
         // JPEG SOI = FF D8.
@@ -173,14 +170,13 @@ object DesktopImageDecoder {
     }
 
     /**
-     * Apply EXIF [orientation] (1..8) to [src], returning an upright [BufferedImage]. Orientations 5–8 swap
-     * width/height. Orientation 1 (or anything out of 1..8) returns [src] unchanged. Uses a 90°-multiple
-     * (+ optional mirror) [AffineTransform] with NEAREST sampling — lossless for the orientation operations.
-     *
-     * Coordinate mappings (src `(x,y)` → dst), the standard EXIF orientation semantics:
-     *  2 mirror-H `(W-1-x, y)`; 3 rotate-180 `(W-1-x, H-1-y)`; 4 mirror-V `(x, H-1-y)`;
-     *  5 transpose `(y, x)`; 6 rotate-90-CW `(H-1-y, x)`; 7 transverse `(H-1-y, W-1-x)`;
-     *  8 rotate-270-CW `(y, W-1-x)`.
+ * Apply EXIF [orientation] (1..8) to [src], returning an upright [BufferedImage]. Orientations 5–8 swap
+ * Width/height. Orientation 1 (or anything out of 1..8) returns [src] unchanged. Uses a 90°-multiple * (+ optional mirror) [AffineTransform] with NEAREST sampling — lossless for the orientation operations.
+ *
+ * Coordinate mappings (src `(x,y)` → dst), the standard EXIF orientation semantics:
+ * 2 mirror-H `(W-1-x, y)`; 3 rotate-180 `(W-1-x, H-1-y)`; 4 mirror-V `(x, H-1-y)`;
+ * 5 transpose `(y, x)`; 6 rotate-90-CW `(H-1-y, x)`; 7 transverse `(H-1-y, W-1-x)`;
+ * 8 rotate-270-CW `(y, W-1-x)`.
      */
     internal fun applyExifOrientation(src: BufferedImage, orientation: Int): BufferedImage {
         if (orientation !in 2..8) return src

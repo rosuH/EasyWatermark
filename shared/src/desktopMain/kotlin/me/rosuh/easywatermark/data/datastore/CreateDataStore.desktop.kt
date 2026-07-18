@@ -8,9 +8,8 @@ import okio.Path.Companion.toOkioPath
 import java.io.File
 
 /**
- * Desktop (JVM) preferences DataStore creation (S4d-78). Builds an okio path under [dir] and
- * delegates to the common, serializer-free [createPreferencesDataStore]. Real public APIs only
- * (`java.io.File` + the common okio-path factory) — no Android types, no `Context`, no migration.
+ * Desktop (JVM) preferences DataStore creation. Builds an okio path under [dir] and
+ * Delegates to the common, serializer-free [createPreferencesDataStore]. Real public APIs only * (`java.io.File` + the common okio-path factory) — no Android types, no `Context`, no migration.
  *
  * Caller owns single-instance-per-file semantics (DataStore forbids a second active store for the
  * same file); a desktop app would bind this as a singleton, mirroring `:app`'s Koin `single`.
@@ -23,9 +22,8 @@ fun createUserConfigDataStore(
 }
 
 /**
- * S4d-120: Desktop (JVM) **watermark-config** DataStore creation, mirroring [createUserConfigDataStore]
- * but keyed on [WaterMarkRepository.SP_NAME] — the Desktop analogue of the iOS `createWaterMarkDataStore`.
- * It lets `:desktopApp` construct the common [WaterMarkRepository] over a real on-disk preferences store.
+ * Desktop (JVM) **watermark-config** DataStore creation, mirroring [createUserConfigDataStore]
+ * But keyed on [WaterMarkRepository.SP_NAME] — the Desktop analogue of the iOS `createWaterMarkDataStore`. * It lets `:desktopApp` construct the common [WaterMarkRepository] over a real on-disk preferences store.
  * Real public APIs only (`java.io.File` + the common okio-path factory) — no Android types, no `Context`,
  * no migration. Caller owns single-instance-per-file semantics (DataStore forbids a second active store
  * for the same file).

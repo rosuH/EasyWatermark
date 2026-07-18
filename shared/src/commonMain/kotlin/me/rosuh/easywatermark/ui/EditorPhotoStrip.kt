@@ -44,8 +44,7 @@ import kotlin.math.abs
 
 /**
  * Design filmstrip: content **40×40**, fixed center frame **48×48** (brand stroke **1.5**, **r=2**),
- * item pitch **56**.
- *
+ * Item pitch **56**. *
  * The highlight border is **fixed in the viewport center** and does not scroll with items.
  * Snap-fling settles a cell under that frame; a light haptic fires when the centered item changes.
  *
@@ -226,8 +225,7 @@ fun EditorPhotoStrip(
 /**
  * Index of the visible item whose center is closest to the viewport center.
  * Correct with large start/end [contentPadding] (center-aligned filmstrip); [LazyListState.firstVisibleItemIndex]
- * alone points at the *leading* cell, not the one under the fixed center frame.
- */
+ * Alone points at the *leading* cell, not the one under the fixed center frame. */
 private fun centeredItemIndex(listState: LazyListState): Int? {
     val layout = listState.layoutInfo
     val visible = layout.visibleItemsInfo

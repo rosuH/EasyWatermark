@@ -38,7 +38,7 @@ class WatermarkGeometryTest {
 
     @Test
     fun font_px_is_image_space_textsize_fraction() {
-        // S4d-181: fontPx = textSize * imageWidth / REF_WIDTH (S3a). At the reference width 1000 → identity.
+        // fontPx = textSize * imageWidth / REF_WIDTH (S3a). At the reference width 1000 → identity.
         assertEquals(14f, WatermarkGeometry.fontPx(14f, 1000), 0.0001f)
         assertEquals(48f, WatermarkGeometry.fontPx(24f, 2000), 0.0001f)
         assertEquals(12f, WatermarkGeometry.fontPx(24f, 500), 0.0001f)

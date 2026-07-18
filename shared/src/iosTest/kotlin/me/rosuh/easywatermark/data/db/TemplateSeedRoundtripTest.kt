@@ -18,7 +18,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * S4d-232: iOS runtime proof of the **seeded** template DB path (the iOS analogue of the desktopTest
+ * iOS runtime proof of the **seeded** template DB path (the iOS analogue of the desktopTest
  * `TemplateDatabaseSeedingTest`). RUNS on `iosSimulatorArm64Test`.
  *
  * A Kotlin/Native test executable's bundle does NOT carry the app's Copy Bundle Resources (see
@@ -29,7 +29,7 @@ import kotlin.test.assertTrue
  * bytes via `buildTemplateDatabase(dir, seedBytes)` and assert the rows are present. This is exactly the
  * mechanism the production no-arg `buildTemplateDatabase()` uses with the bundled Android seed; that the
  * specific Android `ewm-db-{ch,eng}.db` files open under `BundledSQLiteDriver` is already proven on Desktop
- * (S4d-224, identical driver + commonMain schema). The bundled-resource RUN itself is exercised by a real
+ * (identical driver + commonMain schema). The bundled-resource RUN itself is exercised by a real
  * `iosApp.app` (xcodebuild-packaged), not by this test executable.
  */
 class TemplateSeedRoundtripTest {

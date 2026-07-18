@@ -8,9 +8,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 
 /**
- * Android preferences DataStore creation (S4d-74). A plain `androidMain` function (NOT an `actual`):
- * commonMain needs no `expect`, and the desktop/iOS targets need no store creation in this slice.
- *
+ * Android preferences DataStore creation. A plain `androidMain` function (NOT an `actual`):
+ * CommonMain needs no `expect`, and the desktop/iOS targets need no store creation in this slice. *
  * Byte-for-byte equivalent to the legacy `Context.preferencesDataStore(name, produceMigrations = …)`
  * delegate this replaces: same on-disk file `filesDir/datastore/<name>.preferences_pb` (via
  * [preferencesDataStoreFile]) and the same [SharedPreferencesMigration]`(context, name)`. Pass the

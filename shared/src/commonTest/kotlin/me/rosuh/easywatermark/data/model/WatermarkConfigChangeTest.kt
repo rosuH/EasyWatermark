@@ -5,9 +5,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 /**
- * Pins `WatermarkConfigChange.from` (S4d-72): typed-command construction + the gap rounding and fail-fast
- * cast behavior that were previously inline in `MainViewModel.onWaterMarkChanged`.
- */
+ * Pins `WatermarkConfigChange.from`: typed-command construction + the gap rounding and fail-fast
+ * Cast behavior that were previously inline in `MainViewModel.onWaterMarkChanged`. */
 class WatermarkConfigChangeTest {
 
     @Test

@@ -9,13 +9,12 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 
 /**
- * S4d-20B: the **iOS text-raster environment + bundled-font boundary** — the iOS analogue of the Desktop
- * [DesktopWatermarkTextRenderer]'s env/font pieces (S4d-18). iOS, like desktop, uses a **Skiko** backend,
+ * The **iOS text-raster environment + bundled-font boundary** — the iOS analogue of the Desktop * [DesktopWatermarkTextRenderer]'s env/font pieces. iOS, like desktop, uses a **Skiko** backend,
  * so the platform bootstrap is the same shape:
- *  - the font resolver is the no-`Context` `createFontFamilyResolver()` (skiko), wired into the neutral
- *    [TextRasterEnv];
- *  - a bundled [FontFamily] is built from font **bytes** via the skiko byte-`Font` factory
- *    (`androidx.compose.ui.text.platform.Font`) — **no compose-resources / CMP-9547**.
+ * - the font resolver is the no-`Context` `createFontFamilyResolver()` (skiko), wired into the neutral
+ * [TextRasterEnv];
+ * - a bundled [FontFamily] is built from font **bytes** via the skiko byte-`Font` factory
+ * (`androidx.compose.ui.text.platform.Font`) — **no compose-resources / CMP-9547**.
  *
  * Density is `Density(1f)` to match the image-space convention (`1.sp == 1px`, S3a) used on every platform.
  *
@@ -38,10 +37,9 @@ object IosTextRasterEnv {
     )
 
     /**
-     * Build the bundled Latin + CJK watermark [FontFamily] from the supplied font bytes (e.g. Noto Sans +
-     * Noto Sans SC), via the skiko byte-`Font` factory. [latinFirst] lists the Latin face first (the
-     * owner's Latin+CJK order, S4d-16); `false` keeps CJK-first. Bold/Italic are synthesized (no bundled
-     * bold/italic faces, per ADR-0010). Byte acquisition is the caller's responsibility (see class KDoc).
+ * Build the bundled Latin + CJK watermark [FontFamily] from the supplied font bytes (e.g. Noto Sans +
+ * Noto Sans SC), via the skiko byte-`Font` factory. [latinFirst] lists the Latin face first (the
+ * Owner's Latin+CJK order, ); `false` keeps CJK-first. Bold/Italic are synthesized (no bundled * bold/italic faces, per ADR-0010). Byte acquisition is the caller's responsibility (see class KDoc).
      */
     fun bundledFontFamily(
         latinBytes: ByteArray,

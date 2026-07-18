@@ -11,8 +11,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * S4d-98: pins the non-suspend availability gate that drives `MainViewModel.addTemplate`'s
- * `UiState.DatabaseError` branch: a null DAO -> `isDaoNull() == true`, a present DAO -> `false`.
+ * Pins the non-suspend availability gate that drives `MainViewModel.addTemplate`'s * `UiState.DatabaseError` branch: a null DAO -> `isDaoNull() == true`, a present DAO -> `false`.
  *
  * Only `isDaoNull()` is covered: commonTest has no coroutine runner (`kotlinx-coroutines-test` is not
  * a dependency, and adding it is a forbidden Gradle change), so the suspend `add`/`update`/`delete`

@@ -2,8 +2,7 @@ package me.rosuh.easywatermark.data.model
 
 /**
  * Platform-neutral result wrapper. Lives in `:shared/commonMain` (CMP plan — model layer FIRST):
- * pure Kotlin, used across the whole app's repo/VM layer, compiles for Android + JVM/desktop.
- */
+ * Pure Kotlin, used across the whole app's repo/VM layer, compiles for Android + JVM/desktop. */
 class Result<T>(
     var type: Type,
     var data: T? = null,

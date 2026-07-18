@@ -8,8 +8,7 @@ import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import platform.Foundation.NSBundle
 
 /**
- * S4d-31: the **iOS Swift-catchable render boundary**.
- *
+ * The **iOS Swift-catchable render boundary**. *
  * The iOS render path is a sequence of Kotlin/Native calls that fail **loudly** on bad input —
  * [IosFontLoader.bundledFontFamily] (`error`/`check` → [IllegalStateException] on a missing/unreadable/
  * empty bundled font), [IosWatermarkRenderer.composeOverImage] (which decodes via [IosImageDecoder] —
@@ -35,13 +34,12 @@ import platform.Foundation.NSBundle
 object IosWatermarkRenderBridge {
 
     /**
-     * Build the bundled font family, watermark [imageBytes] over a Skia-decoded background, and Skia-
-     * encode the result to PNG — returning bytes + dimensions in [IosRenderedPng]. Any failure at the
-     * font / render(+decode) / encode stage is rethrown as [IosRenderException] (Swift-catchable).
-     *
-     * Defaults mirror the prior Swift call site (`WatermarkWorkflow.renderBlocking`): REPEAT tiling,
-     * 24f text, 315° rotation, 40/40 gaps, centre offset, opaque. Font faces use the
-     * [IosFontLoader] defaults loaded from [bundle].
+ * Build the bundled font family, watermark [imageBytes] over a Skia-decoded background, and Skia-
+ * Encode the result to PNG — returning bytes + dimensions in [IosRenderedPng]. Any failure at the * font / render(+decode) / encode stage is rethrown as [IosRenderException] (Swift-catchable).
+ *
+ * Defaults mirror the prior Swift call site (`WatermarkWorkflow.renderBlocking`): REPEAT tiling,
+ * 24f text, 315° rotation, 40/40 gaps, centre offset, opaque. Font faces use the
+ * [IosFontLoader] defaults loaded from [bundle].
      */
     @Throws(IosRenderException::class)
     fun renderWatermarkedPng(
@@ -55,13 +53,13 @@ object IosWatermarkRenderBridge {
         offsetX: Float = 0.5f,
         offsetY: Float = 0.5f,
         alpha: Float = 1f,
-        // S4d-107: ARGB text color (default amber #FFB800 = WaterMark.default.textColor); aligns the iOS
+        // ARGB text color (default amber #FFB800 = WaterMark.default.textColor); aligns the iOS
         // render to the shared default, replacing the prior hardcoded white.
         colorArgb: Int = WaterMark.default.textColor,
-        // S4d-112: persisted text typeface (default Normal = WaterMark.default.textTypeface preserves the
+        // persisted text typeface (default Normal = WaterMark.default.textTypeface preserves the
         // prior regular output); mapped to Compose fontWeight/fontStyle in IosWatermarkRenderer.
         typeface: TextTypeface = WaterMark.default.textTypeface,
-        // S4d-113: persisted text paint style (default Fill = WaterMark.default.textStyle preserves the
+        // persisted text paint style (default Fill = WaterMark.default.textStyle preserves the
         // prior filled output); mapped to a Compose text drawStyle in IosWatermarkRenderer.
         textStyle: TextPaintStyle = WaterMark.default.textStyle,
         latinFirst: Boolean = true,
@@ -106,17 +104,16 @@ object IosWatermarkRenderBridge {
     }
 
     /**
-     * S4d-117: the **icon (image-watermark) variant** of [renderWatermarkedPng]. Watermarks [imageBytes]
-     * with the persisted icon [iconBytes] via the S4d-115 [IosWatermarkRenderer.composeIconOverImage]
-     * (decode background + icon → render the icon cell → compose), then Skia-encodes to PNG. There is **no
-     * FONT stage** (image watermarks have no text). A decode/render failure is rethrown as
-     * [IosRenderException]`(RENDER, …)` and an encode failure as `(ENCODE, …)` — Swift-catchable, never a
-     * raw Kotlin/Native crash.
-     *
-     * Icon scale follows the renderer contract: `scaleRatio = textSize / ICON_SCALE_REFERENCE_TEXT_SIZE`
-     * (14f ⇒ 1×) is computed **here** from [textSize], so the 14f reference constant stays in Kotlin and
-     * Swift passes only the persisted `WaterMark.textSize`. [tileMode] must be REPEAT or CLAMP. iOS icon
-     * rendering is **perceptual, not byte-parity** with Android `buildIconShader` (S4d-8).
+ * The **icon (image-watermark) variant** of [renderWatermarkedPng]. Watermarks [imageBytes] * with the persisted icon [iconBytes] via the [IosWatermarkRenderer.composeIconOverImage]
+ * (decode background + icon → render the icon cell → compose), then Skia-encodes to PNG. There is **no
+ * FONT stage** (image watermarks have no text). A decode/render failure is rethrown as
+ * [IosRenderException]`(RENDER, …)` and an encode failure as `(ENCODE, …)` — Swift-catchable, never a
+ * raw Kotlin/Native crash.
+ *
+ * Icon scale follows the renderer contract: `scaleRatio = textSize / ICON_SCALE_REFERENCE_TEXT_SIZE`
+ * (14f ⇒ 1×) is computed **here** from [textSize], so the 14f reference constant stays in Kotlin and
+ * Swift passes only the persisted `WaterMark.textSize`. [tileMode] must be REPEAT or CLAMP. iOS icon
+ * rendering is **perceptual, not byte-parity** with Android `buildIconShader`.
      */
     @Throws(IosRenderException::class)
     fun renderIconWatermarkedPng(
@@ -174,8 +171,7 @@ enum class IosRenderStage {
 
 /**
  * The single Swift-catchable error type for the iOS render boundary. Carries the failing [stage] plus
- * the original [message]/cause so Swift can show a precise `State.failure`. Bridged to Swift as a
- * `throws` error via [IosWatermarkRenderBridge]'s [Throws] annotation.
+ * The original [message]/cause so Swift can show a precise `State.failure`. Bridged to Swift as a * `throws` error via [IosWatermarkRenderBridge]'s [Throws] annotation.
  */
 class IosRenderException(
     val stage: IosRenderStage,

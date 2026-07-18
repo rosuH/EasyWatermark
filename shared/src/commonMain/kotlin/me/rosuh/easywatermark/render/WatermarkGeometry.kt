@@ -13,8 +13,7 @@ import kotlin.math.sqrt
  *
  * Extracted faithfully from the legacy Android watermark cell math
  * (`adjustHorizonalGap`/`adjustVerticalGap`/`calculateMaxSize` + the rotated-cell AABB, formerly in
- * the now-retired `WaterMarkImageView`) so the future commonMain renderer (C2) reuses identical
- * formulas on Android, JVM/desktop and iOS.
+ * The now-retired `WaterMarkImageView`) so the future commonMain renderer (C2) reuses identical * formulas on Android, JVM/desktop and iOS.
  *
  * Wired in C2a: Android text and icon watermark-cell sizing delegates here for both preview
  * (`EditorScreen.WaterMarkCanvas`) and export (`MainViewModel.generateImage`). Image-space sizing
@@ -25,18 +24,16 @@ import kotlin.math.sqrt
 object WatermarkGeometry {
 
     /**
-     * S3a image-space text-sizing reference width. `textSize` is a fraction (`textSize / REF_WIDTH`)
-     * of the target image width, so the watermark is a constant fraction of the image on every
-     * platform; at the reference width 1000 the size equals the legacy unscaled value
-     * (`fontPx(t, 1000) == t`). The single shared source for image-space text sizing on all platforms —
-     * Desktop, iOS, and Android `PainKtx.applyConfig` (S4d-181/182).
+ * S3a image-space text-sizing reference width. `textSize` is a fraction (`textSize / REF_WIDTH`)
+ * Of the target image width, so the watermark is a constant fraction of the image on every * platform; at the reference width 1000 the size equals the legacy unscaled value
+ * (`fontPx(t, 1000) == t`). The single shared source for image-space text sizing on all platforms —
+ * Desktop, iOS, and Android `PainKtx.applyConfig` (/182).
      */
     const val REF_WIDTH: Float = 1000f
 
     /**
-     * Image-space font size in px: `textSize * imageWidth / REF_WIDTH` (S3a). Byte-identical to the
-     * per-renderer inline formula it replaces — the dividend is `Float`, so dividing by `REF_WIDTH`
-     * (1000f) equals the old `/ 1000` (Int) divisor exactly.
+ * Image-space font size in px: `textSize * imageWidth / REF_WIDTH` (S3a). Byte-identical to the
+ * Per-renderer inline formula it replaces — the dividend is `Float`, so dividing by `REF_WIDTH` * (1000f) equals the old `/ 1000` (Int) divisor exactly.
      */
     fun fontPx(textSize: Float, imageWidth: Int): Float = textSize * imageWidth / REF_WIDTH
 
@@ -49,17 +46,15 @@ object WatermarkGeometry {
         (maxSize * ((vGapPercent / 100f) + 1)).toInt()
 
     /**
-     * Diagonal length of a w×h cell — the icon cell is laid out as a square of this side.
-     * Uses `pow(2)` (not `w*w`) to stay byte-identical to the Android `calculateMaxSize` it
-     * replaces, so the C2a icon-path delegation is behavior-preserving.
-     */
+ * Diagonal length of a w×h cell — the icon cell is laid out as a square of this side.
+ * Uses `pow(2)` (not `w*w`) to stay byte-identical to the Android `calculateMaxSize` it
+ * Replaces, so the C2a icon-path delegation is behavior-preserving.     */
     fun diagonal(w: Float, h: Float): Int =
         sqrt(w.pow(2) + h.pow(2)).toInt()
 
     /**
-     * Maps an arbitrary 0..360 watermark rotation `degree` to the acute reference angle (radians)
-     * used to size the rotated cell's axis-aligned bounding box. Mirrors the original `when`:
-     * `0..90 → d`, `90..270 → |180 − d|`, else `360 − d`.
+ * Maps an arbitrary 0..360 watermark rotation `degree` to the acute reference angle (radians)
+ * Used to size the rotated cell's axis-aligned bounding box. Mirrors the original `when`: * `0..90 → d`, `90..270 → |180 − d|`, else `360 − d`.
      */
     fun normalizedRadians(degree: Float): Double {
         val d = degree.toDouble()
@@ -87,16 +82,15 @@ object WatermarkGeometry {
     data class ExportScale(val x: Float, val y: Float)
 
     /**
-     * The export **scale rule** (CMP plan D4): export scale = inverse of the preview fit-transform's
-     * per-axis scale, computed **independently per axis**.
-     *
-     * Status (S4b): this rule is **latent / unwired today**. Since S3a, export sizing is image-space
-     * (`textPx = textSize * imageWidth / REF_WIDTH`) and `MainViewModel.generateImage` reads NO
-     * preview matrix — the old `ViewInfo` / `1/MSCALE_X` export-scale coupling was removed
-     * (S3c-1/S3c-3). For the current uniform fit-center preview both axes scale identically, so this
-     * helper would be a no-op; it becomes relevant only for non-uniform / resizable surfaces (e.g. a
-     * Desktop window), where it is the verified target for the future commonMain renderer (C2/C4).
-     * Kept as that target; it does not drive export today.
+ * The export **scale rule** (CMP plan D4): export scale = inverse of the preview fit-transform's
+ * Per-axis scale, computed **independently per axis**. *
+ * Status (S4b): this rule is **latent / unwired today**. Since S3a, export sizing is image-space
+ * (`textPx = textSize * imageWidth / REF_WIDTH`) and `MainViewModel.generateImage` reads NO
+ * preview matrix — the old `ViewInfo` / `1/MSCALE_X` export-scale coupling was removed
+ * (S3c-1/S3c-3). For the current uniform fit-center preview both axes scale identically, so this
+ * helper would be a no-op; it becomes relevant only for non-uniform / resizable surfaces (e.g. a
+ * Desktop window), where it is the verified target for the future commonMain renderer (C2/C4).
+ * Kept as that target; it does not drive export today.
      */
     fun exportScale(previewScaleX: Float, previewScaleY: Float): ExportScale =
         ExportScale(x = 1f / previewScaleX, y = 1f / previewScaleY)

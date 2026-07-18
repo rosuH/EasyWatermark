@@ -157,8 +157,8 @@ class WaterMarkOffsetUpdateTest {
     }
 
     /**
-     * List replace rebinds selected to the new list entry when URI still matches
-     * (avoids same-URI old-instance residue after install).
+ * List replace rebinds selected to the new list entry when URI still matches
+ * (avoids same-URI old-instance residue after install).
      */
     @Test
     fun updateImageList_rebindsSelectedToNewListEntryWhenUriMatches() = runBlocking {
@@ -191,9 +191,8 @@ class WaterMarkOffsetUpdateTest {
     }
 
     /**
-     * Install-then-select: when list was empty, select(first) must resolve to the installed
-     * list entry (not a temporary ImageInfo(ref) that is a different object).
-     */
+ * Install-then-select: when list was empty, select(first) must resolve to the installed
+ * List entry (not a temporary ImageInfo(ref) that is a different object).     */
     @Test
     fun updateImageList_thenSelect_sharesListEntryIdentity() = runBlocking {
         val dir = File(System.getProperty("java.io.tmpdir"), "wm-install-${System.nanoTime()}")
@@ -217,9 +216,8 @@ class WaterMarkOffsetUpdateTest {
     }
 
     /**
-     * Sequential list → select → offset under Main confinement: list entry, selected, and
-     * committed must be the **same** object with the new offsets. No cross-Main concurrency
-     * is simulated — the contract is single-thread confinement of the three mutators.
+ * Sequential list → select → offset under Main confinement: list entry, selected, and
+ * Committed must be the **same** object with the new offsets. No cross-Main concurrency * is simulated — the contract is single-thread confinement of the three mutators.
      */
     @Test
     fun updateList_select_applyOffset_listSelectedCommittedShareIdentity() = runBlocking {

@@ -4,11 +4,10 @@ import java.io.File
 import java.util.Locale
 
 /**
- * S4d-224 / S4d-225: Desktop template seed helpers.
+ * /  Desktop template seed helpers.
  *
  * The Android template seed DBs (`ewm-db-ch.db` and `ewm-db-eng.db`) are packaged as `:shared` desktopMain
- * resources so the shared builder/tests can access them without `:shared` depending on `:desktopApp` resources
- * or assets.
+ * Resources so the shared builder/tests can access them without `:shared` depending on `:desktopApp` resources * or assets.
  *
  * Because Room KMP does not expose `createFromFile`/`createFromAsset` off-Android, seeding is performed by
  * copying the seed file to the final DB path before Room opens it (see [buildTemplateDatabase]). This helper
@@ -44,8 +43,7 @@ fun unpackDefaultTemplateSeed(output: File): File = unpackTemplateSeed(output, d
  * Copies the bundled template seed DB for the requested [language] to [output].
  *
  * Supported [language] values are `"ch"` and `"eng"`, matching the two Android seed assets. The value is
- * used verbatim to build the resource path `seed/ewm-db-{language}.db`, so callers can pass a fixed key in
- * tests without mutating the process-global default locale.
+ * Used verbatim to build the resource path `seed/ewm-db-{language}.db`, so callers can pass a fixed key in * tests without mutating the process-global default locale.
  *
  * @param output the file to write the seed bytes to; its parent directory is created if missing.
  * @param language the seed language key (`"ch"` or `"eng"`).

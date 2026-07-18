@@ -24,8 +24,8 @@ object AndroidCommonRaster {
     )
 
     /**
-     * Compose [config] over a copy of [background] (ARGB_8888). Optional [icon] for Image mode.
-     * Off-main only — call from IO/Default, never Compose Main.
+ * Compose [config] over a copy of [background] (ARGB_8888). Optional [icon] for Image mode.
+ * Off-main only — call from IO/Default, never Compose Main.
      */
     fun composeToBitmap(
         context: Context,
@@ -57,8 +57,8 @@ object AndroidCommonRaster {
     }
 
     /**
-     * Image-space cell width/height for CLAMP hit-testing under common preview.
-     * Off-main only.
+ * Image-space cell width/height for CLAMP hit-testing under common preview.
+ * Off-main only.
      */
     fun cellSizePx(
         context: Context,

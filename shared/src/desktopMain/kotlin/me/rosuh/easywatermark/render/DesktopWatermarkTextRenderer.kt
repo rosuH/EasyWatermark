@@ -22,17 +22,16 @@ import javax.imageio.ImageIO
 import javax.imageio.ImageWriteParam
 
 /**
- * S4d-18: the **Desktop (JVM/Skiko) production watermark text renderer** — platform half of the
- * commonMain text path ([WatermarkCellComposer.composeTextCell]). Android production also uses
+ * The **Desktop (JVM/Skiko) production watermark text renderer** — platform half of the * commonMain text path ([WatermarkCellComposer.composeTextCell]). Android production also uses
  * commonMain text via `AndroidCommonRaster` (ADR-0018); native `WatermarkRenderer` / `StaticLayout`
  * is measurement/golden oracle only (not byte-identical, especially CJK).
  *
  * This object owns the two irreducibly-platform pieces ADR-0004 calls out for the text raster:
- *  1. the **font resolver** — desktop Skiko's `createFontFamilyResolver()` (no `Context`), and
- *  2. the **bundled font bytes** — Noto Sans (Latin) + Noto Sans SC (CJK), loaded from this module's
- *     desktop **main** resources (`shared/src/desktopMain/resources/fonts/`) via the classpath, with
- *     the Skiko byte-`Font` factory (`androidx.compose.ui.text.platform.Font`). **No
- *     compose-resources / CMP-9547** (per the standing CMP constraint).
+ * 1. the **font resolver** — desktop Skiko's `createFontFamilyResolver()` (no `Context`), and
+ * 2. the **bundled font bytes** — Noto Sans (Latin) + Noto Sans SC (CJK), loaded from this module's
+ * desktop **main** resources (`shared/src/desktopMain/resources/fonts/`) via the classpath, with
+ * the Skiko byte-`Font` factory (`androidx.compose.ui.text.platform.Font`). **No
+ * compose-resources / CMP-9547** (per the standing CMP constraint).
  *
  * Everything else (measure, size, rotate, paint) is the shared, platform-neutral
  * [WatermarkCellComposer.composeTextCell] — Desktop/iOS/Android common production share that core,
@@ -47,11 +46,10 @@ import javax.imageio.ImageWriteParam
 object DesktopWatermarkTextRenderer {
 
     /**
-     * The bundled Latin + CJK watermark [FontFamily] for Desktop, loaded from
-     * `desktopMain/resources/fonts/` on the classpath. [latinFirst] lists the Latin face first (the
-     * owner's Latin+CJK order, S4d-16) so Latin keeps near-system line metrics while CJK resolves via
-     * fallback; `false` keeps the CJK-first order. Bold/Italic are synthesized (no bundled
-     * bold/italic faces, per ADR-0010).
+ * The bundled Latin + CJK watermark [FontFamily] for Desktop, loaded from
+ * `desktopMain/resources/fonts/` on the classpath. [latinFirst] lists the Latin face first (the
+ * Owner's Latin+CJK order, ) so Latin keeps near-system line metrics while CJK resolves via * fallback; `false` keeps the CJK-first order. Bold/Italic are synthesized (no bundled
+ * bold/italic faces, per ADR-0010).
      */
     fun bundledLatinCjkFontFamily(latinFirst: Boolean = true): FontFamily {
         fun bytes(path: String): ByteArray =
@@ -71,18 +69,17 @@ object DesktopWatermarkTextRenderer {
     )
 
     /**
-     * Render ONE watermark text cell through the shared [WatermarkCellComposer.composeTextCell] with
-     * the bundled Desktop font, returning the offscreen [ImageBitmap].
-     *
-     * @param text        watermark text (may contain `\n` for multiline and CJK)
-     * @param textSize    the `WaterMark.textSize` value (image-space fraction of [imageWidth])
-     * @param imageWidth  target image width; `fontPx = WatermarkGeometry.fontPx(textSize, imageWidth)` (S3a)
-     * @param degree      rotation in degrees (matches `WaterMark.degree`)
-     * @param color       fill colour (default white, like the production text cell)
-     * @param hGapPercent horizontal gap percent; @param vGapPercent vertical gap percent
-     * @param latinFirst  font fallback order (see [bundledLatinCjkFontFamily])
-     * @param typeface    S4d-122: text typeface → Compose `fontWeight`/`fontStyle` (default Normal)
-     * @param textStyle   S4d-122: paint style → Compose text `drawStyle` (default Fill)
+ * Render ONE watermark text cell through the shared [WatermarkCellComposer.composeTextCell] with
+ * The bundled Desktop font, returning the offscreen [ImageBitmap]. *
+ * @param text watermark text (may contain `\n` for multiline and CJK)
+ * @param textSize the `WaterMark.textSize` value (image-space fraction of [imageWidth])
+ * @param imageWidth target image width; `fontPx = WatermarkGeometry.fontPx(textSize, imageWidth)` (S3a)
+ * @param degree rotation in degrees (matches `WaterMark.degree`)
+ * @param color fill colour (default white, like the production text cell)
+ * @param hGapPercent horizontal gap percent; @param vGapPercent vertical gap percent
+ * @param latinFirst font fallback order (see [bundledLatinCjkFontFamily])
+ * @param typeface : text typeface → Compose `fontWeight`/`fontStyle` (default Normal)
+ * @param textStyle : paint style → Compose text `drawStyle` (default Fill)
      */
     fun renderTextCell(
         text: String,
@@ -126,17 +123,16 @@ object DesktopWatermarkTextRenderer {
     }
 
     /**
-     * S4d-127: encode an [ImageBitmap] to [format] bytes. **PNG delegates to [encodePng]** (lossless,
-     * byte-identical to the existing path). **JPEG** flattens the ARGB `toAwtImage()` onto an opaque
-     * `TYPE_INT_RGB` canvas first — the JDK ImageIO JPEG writer cannot encode alpha, so a naive
-     * `ImageIO.write(argb, "jpg", …)` produces wrong/black output — then encodes at [quality]
-     * (0..100 → `ImageWriteParam.compressionQuality` 0f..1f). JDK ImageIO only; **no new dependency**.
-     *
-     * S4d-127 added this as a capability; **S4d-128 wired it into the Desktop save flow** —
-     * `DesktopWatermarkFlow.runSaveFlow` reads the persisted `UserConfigRepository` prefs and passes the
-     * `outputFormat`/`compressLevel` through to the composer (empty store → the shared `(JPEG, 80)` default).
-     * The `composeOverRealImage`/`composeIconOverRealImage` composer goldens still default to PNG for
-     * byte-identical output.
+ * Encode an [ImageBitmap] to [format] bytes. **PNG delegates to [encodePng]** (lossless, * byte-identical to the existing path). **JPEG** flattens the ARGB `toAwtImage()` onto an opaque
+ * `TYPE_INT_RGB` canvas first — the JDK ImageIO JPEG writer cannot encode alpha, so a naive
+ * `ImageIO.write(argb, "jpg", …)` produces wrong/black output — then encodes at [quality]
+ * (0..100 → `ImageWriteParam.compressionQuality` 0f..1f). JDK ImageIO only; **no new dependency**.
+ *
+ * added this as a capability; ** wired it into the Desktop save flow** —
+ * `DesktopWatermarkFlow.runSaveFlow` reads the persisted `UserConfigRepository` prefs and passes the
+ * `outputFormat`/`compressLevel` through to the composer (empty store → the shared `(JPEG, 80)` default).
+ * The `composeOverRealImage`/`composeIconOverRealImage` composer goldens still default to PNG for
+ * byte-identical output.
      */
     fun encode(bitmap: ImageBitmap, format: ImageFormat, quality: Int = 100): ByteArray = when (format) {
         ImageFormat.PNG -> encodePng(bitmap)
@@ -187,9 +183,9 @@ object DesktopWatermarkTextRenderer {
     )
 
     /**
-     * A **Compose-free** rendered result (cell dims + PNG bytes) so a plain-JVM consumer like
-     * `:desktopApp` can render + report a watermark text cell without putting `androidx.compose.ui`
-     * (`ImageBitmap`) on its own compile classpath. The renderer scaffold stays minimal.
+ * A **Compose-free** rendered result (cell dims + PNG bytes) so a plain-JVM consumer like
+ * `:desktopApp` can render + report a watermark text cell without putting `androidx.compose.ui`
+ * (`ImageBitmap`) on its own compile classpath. The renderer scaffold stays minimal.
      */
     data class RenderedTextCell(val width: Int, val height: Int, val png: ByteArray) {
         override fun equals(other: Any?): Boolean =
@@ -201,12 +197,11 @@ object DesktopWatermarkTextRenderer {
     }
 
     /**
-     * Render a text cell and return its dims + PNG bytes as a **Compose-free** holder (used by
-     * `:desktopApp`). The signature deliberately avoids the `androidx.compose.ui.graphics.Color`
-     * value class: exposing a value-class parameter across the module boundary mangles the synthetic
-     * `$default` method name and breaks a plain-JVM caller at runtime. Fill colour is white (the
-     * production text-cell default); colour-parameterized rendering uses [renderTextCell] within
-     * Compose-aware code. [colorArgb] takes a plain packed ARGB int if a non-white fill is needed.
+ * Render a text cell and return its dims + PNG bytes as a **Compose-free** holder (used by
+ * `:desktopApp`). The signature deliberately avoids the `androidx.compose.ui.graphics.Color`
+ * Value class: exposing a value-class parameter across the module boundary mangles the synthetic * `$default` method name and breaks a plain-JVM caller at runtime. Fill colour is white (the
+ * production text-cell default); colour-parameterized rendering uses [renderTextCell] within
+ * Compose-aware code. [colorArgb] takes a plain packed ARGB int if a non-white fill is needed.
      */
     fun renderTextCellResult(
         text: String,

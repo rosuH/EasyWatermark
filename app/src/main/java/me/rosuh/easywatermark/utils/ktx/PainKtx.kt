@@ -11,8 +11,7 @@ import me.rosuh.easywatermark.render.WatermarkGeometry
 /**
  * S3a image-space sizing: the text paint size is `textSize * imageInfo.width / REF_WIDTH`, i.e.
  * `textSize` is a fraction (`textSize / REF_WIDTH`) of the target image's width, resolved against the
- * bitmap the cell tiles over (`ImageInfo.width` = the displayed drawable in preview, the full source
- * image at export). Preview and export now use the SAME formula, so the watermark is the same fraction
+ * Bitmap the cell tiles over (`ImageInfo.width` = the displayed drawable in preview, the full source * image at export). Preview and export now use the SAME formula, so the watermark is the same fraction
  * of the image regardless of device/preview-view size.
  *
  * Replaces the old, device-dependent behavior (`textSize` raw in preview; `textSize * scaleX`, where

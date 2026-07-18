@@ -10,8 +10,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * S4d-120: end-to-end proof on a real (non-Android) runtime that the commonMain [WaterMarkRepository] +
- * [WatermarkConfigEditor] work over a desktop-created **watermark-config** DataStore
+ * End-to-end proof on a real (non-Android) runtime that the commonMain [WaterMarkRepository] + * [WatermarkConfigEditor] work over a desktop-created **watermark-config** DataStore
  * ([createWaterMarkDataStore]). Mirrors [UserConfigDataStoreRoundtripTest] for the watermark store: the
  * injected default text shows on an empty store, then edits round-trip through the shared editor.
  */

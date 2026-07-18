@@ -13,7 +13,7 @@ import org.robolectric.annotation.Config
 import java.util.Locale
 
 /**
- * S4d-92 prepopulated-DB smoke (driver decision gate).
+ * prepopulated-DB smoke (driver decision gate).
  *
  * Proves the commonMain [AppDatabase], created through the production Android builder
  * [buildTemplateDatabase], still opens the locale-selected prepackaged seed assets

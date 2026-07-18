@@ -9,17 +9,10 @@ import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 
 /**
- * S4d-96: the platform-neutral watermark config-edit use-case, extracted from Android `MainViewModel`.
+ * Platform-neutral use-case for editing persisted watermark config via [WaterMarkRepository].
  *
- * Each method wraps the matching commonMain [WaterMarkRepository] `update*` call and carries the few
- * edit rules that previously lived inline in the ViewModel (text-size clamp, alpha percent→byte
- * conversion, empty-icon guard) — moved verbatim so behavior is byte-identical. Methods are `suspend`
- * and own no `CoroutineScope`; the caller (the Android `MainViewModel`) keeps `viewModelScope`/`launch`.
- *
- * Having a single immediate Android consumer makes this a behavior-preserving refactor, and it
- * positions the edit flow for reuse by a future Desktop/iOS editor. Method names mirror the
- * `MainViewModel` public methods so the delegation diff stays minimal.
- */
+ * Applies edit rules (text-size clamp, alpha percent→byte, empty-icon guard). Methods are `suspend`
+ * And own no coroutine scope — callers launch on their own scope. */
 class WatermarkConfigEditor(private val repo: WaterMarkRepository) {
 
     suspend fun updateText(text: String) {
@@ -71,8 +64,8 @@ class WatermarkConfigEditor(private val repo: WaterMarkRepository) {
     }
 
     /**
-     * Synchronous offset-only update. Returns the repository-installed [ImageInfo], or null if the
-     * URI is not in the list (no-op). Caller object is never mutated.
+ * Synchronous offset-only update. Returns the repository-installed [ImageInfo], or null if the
+ * URI is not in the list (no-op). Caller object is never mutated.
      */
     fun updateOffset(info: ImageInfo): ImageInfo? = repo.updateOffset(info)
 }

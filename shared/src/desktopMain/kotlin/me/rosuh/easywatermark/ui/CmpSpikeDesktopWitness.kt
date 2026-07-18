@@ -8,8 +8,7 @@ import org.jetbrains.compose.resources.clearBlocking
 
 /**
  * S-i18n-0 Desktop host witness: resolve the spike string under US + zh-CN JVM locales via the
- * real [CmpSpikeResources.resolveSpikeHello] path. Called from `:desktopApp --headless`.
- */
+ * Real [CmpSpikeResources.resolveSpikeHello] path. Called from `:desktopApp --headless`. */
 @OptIn(ExperimentalResourceApi::class)
 object CmpSpikeDesktopWitness {
     data class Result(val sys: String, val en: String, val zhCn: String)

@@ -12,12 +12,11 @@ import kotlin.test.assertEquals
 import org.jetbrains.skia.Image as SkiaImage
 
 /**
- * S4d-23: the **iOS-decode proxy gate**. [IosImageDecoder] cannot be RUN here (no iOS runtime), but it
- * decodes via `org.jetbrains.skia.Image.makeFromEncoded(bytes).toComposeImageBitmap()`. Desktop skiko
+ * The **iOS-decode proxy gate**. [IosImageDecoder] cannot be RUN here (no iOS runtime), but it * decodes via `org.jetbrains.skia.Image.makeFromEncoded(bytes).toComposeImageBitmap()`. Desktop skiko
  * bundles the **same Skia** behind the **same** `org.jetbrains.skia` API, so exercising that exact
  * sequence on the JVM is a faithful proxy for the iOS decode path.
  *
- * **Finding (S4d-23):** unlike AWT `ImageIO` (Desktop production decode) and Android `BitmapFactory` —
+ * **Finding:** unlike AWT `ImageIO` (Desktop production decode) and Android `BitmapFactory` —
  * which return the JPEG's STORED pixels and need EXIF orientation baked in manually — **skiko's
  * `makeFromEncoded` ALREADY applies the EXIF Orientation tag**: an orientation-6 (90° CW) JPEG decodes to
  * an UPRIGHT 16×24 bitmap with the bright block top-right. This is why [IosImageDecoder] deliberately does

@@ -8,8 +8,7 @@ import kotlin.test.assertFalse
 /**
  * First multiplatform tests (CMP plan C1.8 — commonTest harness foundation). Runs on every
  * `:shared` target (JVM/desktop, Android, iOS). Pins the contracts of the platform-neutral
- * domain types now living in commonMain.
- */
+ * Domain types now living in commonMain. */
 class SharedModelTest {
 
     @Test

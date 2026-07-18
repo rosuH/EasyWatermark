@@ -9,11 +9,10 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 
 /**
- * S4d-3 TEST-SCOPE bootstrap for [TextRasterEnv] on the desktop(JVM/Skiko) target.
+ * TEST-SCOPE bootstrap for [TextRasterEnv] on the desktop(JVM/Skiko) target.
  *
  * The platform font resolver is the one irreducibly platform-specific piece of the commonMain text
- * raster (ADR-0004). On desktop the Skiko backend ships a **Context-free** factory,
- * `createFontFamilyResolver()` from `androidx.compose.ui.text.font` (`ui-text-desktop`'s
+ * Raster (ADR-0004). On desktop the Skiko backend ships a **Context-free** factory, * `createFontFamilyResolver()` from `androidx.compose.ui.text.font` (`ui-text-desktop`'s
  * `FontFamilyResolver.skiko.kt`). This helper wires that desktop resolver into the neutral
  * [TextRasterEnv] so `:shared:desktopTest` can actually execute the commonMain text raster
  * (`WatermarkCellComposer.composeTextCell`) on the JVM host.
@@ -33,19 +32,18 @@ fun desktopTextRasterEnv(
 )
 
 /**
- * S4d-16 (owner-approved C2, test-only): the **bundled Latin + CJK SC** watermark FontFamily for
+ * (owner-approved C2, test-only): the **bundled Latin + CJK SC** watermark FontFamily for
  * `:shared:desktopTest`, loaded from the test-only resources under `desktopTest/resources/fonts/`:
- *  - `NotoSans-Regular.ttf` (Noto Sans Latin static Regular, OFL-1.1)
- *  - `NotoSansSC-Regular.otf` (Noto Sans CJK SC static Regular, full SC coverage, OFL-1.1)
+ * - `NotoSans-Regular.ttf` (Noto Sans Latin static Regular, OFL-1.1)
+ * - `NotoSansSC-Regular.otf` (Noto Sans CJK SC static Regular, full SC coverage, OFL-1.1)
  *
  * It is built via the Skiko **byte-`Font`** factory (`androidx.compose.ui.text.platform.Font`) — NO
- * compose-resources / CMP-9547. Callers put this on `WatermarkTextContent.style.fontFamily`; the
- * `createFontFamilyResolver()` resolver (in [desktopTextRasterEnv]) resolves it. This is the desktop
- * half of the per-platform `TextRasterEnv` font injection (S4d-9 F1): it proves the commonMain text
+ * Compose-resources / CMP-9547. Callers put this on `WatermarkTextContent.style.fontFamily`; the * `createFontFamilyResolver()` resolver (in [desktopTextRasterEnv]) resolves it. This is the desktop
+ * half of the per-platform `TextRasterEnv` font injection ( F1): it proves the commonMain text
  * raster (`composeTextCell`) renders CJK with the bundled font on the JVM host. Bold/Italic are
  * synthesized (no bundled bold/italic faces). NOT a production path.
  *
- * S4d-16 round 2 (P1): the owner approved a **Latin + CJK** bundle, so [latinFirst]=true (default) lists
+ * round 2 (P1): the owner approved a **Latin + CJK** bundle, so [latinFirst]=true (default) lists
  * the Latin face first and the CJK SC face second — the Latin+CJK fallback order. [latinFirst]=false keeps
  * the CJK-first ordering for the round-1 comparison. NOTE: a Compose `FontFamily(fontA, fontB)` of the
  * same weight/style does not guarantee per-glyph fallback between the two user fonts; the parity test

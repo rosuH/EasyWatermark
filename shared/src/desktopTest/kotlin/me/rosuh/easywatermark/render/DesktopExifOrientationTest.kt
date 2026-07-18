@@ -12,8 +12,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * S4d-21: the **Desktop EXIF-orientation gate** — proves [DesktopImageDecoder] applies JPEG EXIF
- * orientation (1/3/6/8 + the mirror cases) at the decode edge, so the composition pipeline receives an
+ * The **Desktop EXIF-orientation gate** — proves [DesktopImageDecoder] applies JPEG EXIF * orientation (1/3/6/8 + the mirror cases) at the decode edge, so the composition pipeline receives an
  * upright `ImageBitmap` with orientation-correct dimensions.
  *
  * Fixtures are **generated deterministically, no binary asset**: a base image with a bright TOP-LEFT

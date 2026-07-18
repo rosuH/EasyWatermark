@@ -9,16 +9,9 @@ import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 
 /**
- * S4d-195: commonMain Compose-side mapping for the platform-neutral text-style model, shared by
- * Desktop/iOS Skiko renderers and Android common-raster text ([CommonWatermarkPipeline] via
- * `AndroidCommonRaster`, ADR-0018). Native `WatermarkRenderer` / `StaticLayout` remains measurement
- * and golden oracle only (not byte-identical).
+ * Maps [TextTypeface] / [TextPaintStyle] to Compose font and draw styles for common-raster text.
  *
- * Android native-edge UI chrome may still map [TextPaintStyle] via `obtainSysStyle()` for non-raster
- * paint; production watermark text/icon cells use these Compose mappings on the common path.
- *
- * Bold/italic are **synthetic** (bundled Noto faces are regular-only; ADR-0010) and the `Stroke`
- * default width `0f` is a Skia hairline — perceptual Skiko honoring, not native-oracle byte parity.
+ * Bold/italic are synthetic (regular Noto faces). Not byte-parity with native StaticLayout.
  */
 fun TextTypeface.toComposeFontStyle(): Pair<FontWeight, FontStyle> = when (this) {
     TextTypeface.Normal -> FontWeight.Normal to FontStyle.Normal

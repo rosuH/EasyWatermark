@@ -15,7 +15,7 @@ import platform.Foundation.dataWithContentsOfFile
 import platform.Foundation.writeToFile
 
 /**
- * S4d-116: iOS **app-private icon-bytes persistence** (Option A from the S4d-114 readiness pack).
+ * iOS **app-private icon-bytes persistence** (Option A from the readiness pack).
  *
  * ## Why this exists
  * On Android the watermark `iconUri` is a `content://` URI that `ContentResolver` re-opens at every render.
@@ -35,7 +35,7 @@ import platform.Foundation.writeToFile
  * Pure Foundation + Kotlin/Native interop (`platform.Foundation`, the existing [IosByteArrayInterop]
  * `memcpy` bridge) — **no new dependency**, no compose-resources. commonMain stays **decode-free**: this
  * helper only stores/loads raw bytes; decoding bytes → `ImageBitmap` remains the `IosImageDecoder` boundary
- * used by the S4d-115 icon render path. iosMain-only (not compiled for Android/`:app` or desktop).
+ * used by the icon render path. iosMain-only (not compiled for Android/`:app` or desktop).
  *
  * ## Failure mode: loud, never silent
  * Empty bytes ([writeIconBytes]) and an unreadable path ([readIconBytes]) throw rather than creating or
@@ -77,9 +77,8 @@ object IosIconPersistence {
     private fun ownedPrefix(): String = iconDirPath() + "/" + ICON_FILE_PREFIX
 
     /**
-     * Write non-empty icon [bytes] to a unique helper-owned file and return its absolute path (the value
-     * to persist as a [MediaRef]). Throws [IllegalArgumentException] for empty bytes and
-     * [IllegalStateException] if the write fails.
+ * Write non-empty icon [bytes] to a unique helper-owned file and return its absolute path (the value
+ * To persist as a [MediaRef]). Throws [IllegalArgumentException] for empty bytes and * [IllegalStateException] if the write fails.
      */
     fun writeIconBytes(bytes: ByteArray): String {
         require(bytes.isNotEmpty()) { "IosIconPersistence: refusing to persist empty icon bytes" }
@@ -90,9 +89,8 @@ object IosIconPersistence {
     }
 
     /**
-     * Read the icon bytes back from a persisted [ref]'s path. Throws [IllegalStateException] if the file is
-     * missing/unreadable (e.g. after cleanup), so callers fail loudly instead of rendering a blank icon.
-     */
+ * Read the icon bytes back from a persisted [ref]'s path. Throws [IllegalStateException] if the file is
+ * Missing/unreadable (e.g. after cleanup), so callers fail loudly instead of rendering a blank icon.     */
     fun readIconBytes(ref: MediaRef): ByteArray {
         val data: NSData = NSData.dataWithContentsOfFile(ref.value)
             ?: error("IosIconPersistence: could not read icon bytes at '${ref.value}'")
@@ -100,12 +98,11 @@ object IosIconPersistence {
     }
 
     /**
-     * True iff [path] is a helper-owned icon file: it starts with the owned prefix
-     * (`<docs>/watermark_icons/icon_`) **and** the remainder is a single generated filename — non-empty
-     * and containing **no path separator**. The no-`/` rule is what makes ownership safe: a generated path
-     * is `prefix + NSUUID` (no `/`), whereas a traversal (`icon_/../../foreign`) or a nested/sibling path
-     * (`icon_x/foreign`) has a `/` after the prefix and is therefore NOT owned. So [deleteIfOwned] can
-     * never escape the owned directory or delete an arbitrary path that merely shares the prefix.
+ * True iff [path] is a helper-owned icon file: it starts with the owned prefix
+ * (`<docs>/watermark_icons/icon_`) **and** the remainder is a single generated filename — non-empty
+ * And containing **no path separator**. The no-`/` rule is what makes ownership safe: a generated path * is `prefix + NSUUID` (no `/`), whereas a traversal (`icon_/../../foreign`) or a nested/sibling path
+ * (`icon_x/foreign`) has a `/` after the prefix and is therefore NOT owned. So [deleteIfOwned] can
+ * never escape the owned directory or delete an arbitrary path that merely shares the prefix.
      */
     fun isOwned(path: String): Boolean {
         val prefix = ownedPrefix()
@@ -115,9 +112,8 @@ object IosIconPersistence {
     }
 
     /**
-     * Best-effort delete of a PRIOR helper-owned icon file on replacement. **Only** deletes paths this
-     * helper owns ([isOwned]); a foreign/empty path is ignored, so arbitrary paths are never removed.
-     */
+ * Best-effort delete of a PRIOR helper-owned icon file on replacement. **Only** deletes paths this
+ * Helper owns ([isOwned]); a foreign/empty path is ignored, so arbitrary paths are never removed.     */
     fun deleteIfOwned(path: String) {
         if (!isOwned(path)) return
         NSFileManager.defaultManager.removeItemAtPath(path, error = null)

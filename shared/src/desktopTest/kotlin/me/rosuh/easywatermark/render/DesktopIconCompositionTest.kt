@@ -17,10 +17,9 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * S4d-133: structural proof of the Desktop ICON composition primitive
- * ([DesktopWatermarkComposer.composeIconOverRealImage]) — the desktopMain mirror of iOS
+ * Structural proof of the Desktop ICON composition primitive * ([DesktopWatermarkComposer.composeIconOverRealImage]) — the desktopMain mirror of iOS
  * `IosWatermarkRenderer.composeIconOverImage`. **NOT a byte-exact golden** (rotated non-uniform icon
- * rasters are Skia-version-sensitive and perceptual, not Android byte parity — S4d-8). Asserts: PNG/JPEG
+ * rasters are Skia-version-sensitive and perceptual, not Android byte parity — ). Asserts: PNG/JPEG
  * output magic, output dims == decoded background dims, REPEAT and CLAMP both compose, and that the icon
  * **visibly alters** the result (a distinctly-coloured icon — absent from the generated background —
  * appears in the composed pixels, so the assertion fails if the icon path were skipped).
@@ -34,10 +33,9 @@ class DesktopIconCompositionTest {
         b.size >= 3 && b[0] == 0xFF.toByte() && b[1] == 0xD8.toByte() && b[2] == 0xFF.toByte()
 
     /**
-     * A solid, fully-opaque **red** icon, PNG-encoded. The generated sample background
-     * ([DesktopWatermarkComposer.sampleBackground]) contains NO red, so any red pixel in the composed
-     * output can only come from the icon — i.e. the icon path actually ran.
-     */
+ * A solid, fully-opaque **red** icon, PNG-encoded. The generated sample background
+ * ([DesktopWatermarkComposer.sampleBackground]) contains NO red, so any red pixel in the composed
+ * Output can only come from the icon — i.e. the icon path actually ran.     */
     private fun redIconPng(size: Int = 24): ByteArray {
         val bmp = ImageBitmap(size, size, ImageBitmapConfig.Argb8888)
         CanvasDrawScope().draw(

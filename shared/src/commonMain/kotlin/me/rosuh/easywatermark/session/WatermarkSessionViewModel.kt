@@ -33,12 +33,11 @@ import me.rosuh.easywatermark.ui.UiState
  *
  * Offset→export (narrow, KMP-safe):
  * - [applyOffset] is the **sole** offset entry: sync repo CAS then session CAS before return.
- *   Call from UI/Main (or single-threaded hosts). No async [AppIntent] dual path.
+ * Call from UI/Main (or single-threaded hosts). No async [AppIntent] dual path.
  * - Non-export intents: [sessionMutex] serializes one intent's **reduceAndPublish + executeEffect**
- *   so they do not interleave with another intent's critical section. Mutex is mutual exclusion
- *   only — it does **not** guarantee fire-and-forget [dispatch] FIFO across concurrent launchers.
+ * So they do not interleave with another intent's critical section. Mutex is mutual exclusion * only — it does **not** guarantee fire-and-forget [dispatch] FIFO across concurrent launchers.
  * - Reducer publish writes launch via [MutableStateFlow.update] + pure [mergeLaunchPreservingLiveImages]
- *   so a concurrent [applyOffset] is not lost on final write.
+ * so a concurrent [applyOffset] is not lost on final write.
  * - [requestExport] resolves once (repo list first); [exportAndAwait] joins its own job.
  */
 open class WatermarkSessionViewModel(
@@ -69,8 +68,8 @@ open class WatermarkSessionViewModel(
     protected var mediaLibrary: MediaLibraryPort? = null
 
     /**
-     * Serializes non-export reduce + effects (coroutine Mutex — not JVM synchronized).
-     * Mutual exclusion only; not a FIFO queue for independent [dispatch] launchers.
+ * Serializes non-export reduce + effects (coroutine Mutex — not JVM synchronized).
+ * Mutual exclusion only; not a FIFO queue for independent [dispatch] launchers.
      */
     private val sessionMutex = Mutex()
     private var exportJob: Job? = null
@@ -124,8 +123,8 @@ open class WatermarkSessionViewModel(
     }
 
     /**
-     * Snapshot read → reduce → write on [Dispatchers.Main.immediate] with no suspend between.
-     * Launch is published with CAS [MutableStateFlow.update] so concurrent [applyOffset] is merged.
+ * Snapshot read → reduce → write on [Dispatchers.Main.immediate] with no suspend between.
+ * Launch is published with CAS [MutableStateFlow.update] so concurrent [applyOffset] is merged.
      */
     private suspend fun reduceAndPublish(intent: AppIntent): List<SessionEffect> {
         var effects: List<SessionEffect> = emptyList()
@@ -158,9 +157,8 @@ open class WatermarkSessionViewModel(
     )
 
     /**
-     * Freeze export inputs from committed sources. Repo list is offset truth (post-[applyOffset]);
-     * session list is fallback for any observation window; caller object last.
-     */
+ * Freeze export inputs from committed sources. Repo list is offset truth (post-[applyOffset]);
+ * Session list is fallback for any observation window; caller object last.     */
     private fun resolveExportImages(requested: List<ImageInfo>): List<ImageInfo> {
         if (requested.isEmpty()) return emptyList()
         val repoList = waterMarkRepo.imageInfoList
@@ -337,11 +335,11 @@ open class WatermarkSessionViewModel(
     fun applyTextStyle(style: TextPaintStyle) = dispatch(AppIntent.ApplyTextStyle(style))
 
     /**
-     * Synchronous offset commit — sole production entry (UI/Main callers only).
-     *
-     * Repo CAS first (fact source), then session launch CAS with the **same** committed object.
-     * Missing URI is a no-op (does not install caller as curImageInfo).
-     * Do not invent a second async [AppIntent] path or cross-thread fire-and-forget dual write.
+ * Synchronous offset commit — sole production entry (UI/Main callers only).
+ *
+ * Repo CAS first (fact source), then session launch CAS with the **same** committed object.
+ * Missing URI is a no-op (does not install caller as curImageInfo).
+ * Do not invent a second async [AppIntent] path or cross-thread fire-and-forget dual write.
      */
     fun applyOffset(info: ImageInfo) {
         val committed = configEditor.updateOffset(info) ?: return

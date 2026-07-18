@@ -23,12 +23,11 @@ import kotlin.math.max
  *
  * **ADR-0018 / Option C2:** production preview and export use [AndroidCommonRaster] → commonMain
  * [CommonWatermarkPipeline] / [WatermarkCellComposer]. This object remains for dual-path measurement
- * and historical strict goldens — **not** the product path.
- *
+ * And historical strict goldens — **not** the product path. *
  * Capabilities:
- *  - [buildTextShader] / [buildIconShader] — cell + [BitmapShader] (legacy StaticLayout / bitmap;
- *    cell sizing still via commonMain [WatermarkGeometry]).
- *  - [compose] — REPEAT tile / CLAMP decal over a target canvas.
+ * - [buildTextShader] / [buildIconShader] — cell + [BitmapShader] (legacy StaticLayout / bitmap;
+ * cell sizing still via commonMain [WatermarkGeometry]).
+ * - [compose] — REPEAT tile / CLAMP decal over a target canvas.
  *
  * Deliberately **Android-only** (`android.graphics.*`, `StaticLayout`) — lives in `:app`, not
  * commonMain.
@@ -36,15 +35,14 @@ import kotlin.math.max
 object WatermarkRenderer {
 
     /**
-     * Build the text watermark cell + REPEAT/CLAMP [BitmapShader].
-     *
-     * S3b (D1 accepted): the cell BOX is measured via the platform-neutral
-     * [WatermarkTextMeasurer]/[TextMeasureEnv] seam — width is byte-exact vs legacy `StaticLayout`
-     * (device-independent), CJK height follows the Compose line-height (signed device baseline,
-     * `WatermarkCellParityGateTest`), non-CJK height is unchanged. DRAWING still uses legacy
-     * `StaticLayout` + the supplied [textPaint] (configured via `TextPaint.applyConfig`) — only
-     * measurement moved to the seam, not the rasterization. The [env] is the injected measurement
-     * environment (Android bootstrap via `androidTextMeasureEnv(context)` at the call sites).
+ * Build the text watermark cell + REPEAT/CLAMP [BitmapShader].
+ *
+ * S3b (D1 accepted): the cell BOX is measured via the platform-neutral
+ * [WatermarkTextMeasurer]/[TextMeasureEnv] seam — width is byte-exact vs legacy `StaticLayout`
+ * (device-independent), CJK height follows the Compose line-height (signed device baseline,
+ * `WatermarkCellParityGateTest`), non-CJK height is unchanged. DRAWING still uses legacy
+ * `StaticLayout` + the supplied [textPaint] (configured via `TextPaint.applyConfig`) — only
+ * Measurement moved to the seam, not the rasterization. The [env] is the injected measurement * environment (Android bootstrap via `androidTextMeasureEnv(context)` at the call sites).
      */
     suspend fun buildTextShader(
         imageInfo: ImageInfo,
@@ -114,11 +112,11 @@ object WatermarkRenderer {
         )
         // draw text
         canvas.withSave {
-            // S4d-14C (owner-approved S4d-13 Option C): centre the FULL StaticLayout block, not just
+            // (owner-approved Option C): centre the FULL StaticLayout block, not just
             // line 0. The legacy `(finalHeight - getLineBottom(0) - getLineTop(0))/2` used only the
             // first line's height — for a single line that equals `staticLayout.height` (so single-line
             // output is byte-identical), but for multiline it shifted the whole block down and clipped
-            // the bottom (S4d-11). `(finalHeight - staticLayout.height)/2` centres the whole block,
+            // the bottom. `(finalHeight - staticLayout.height)/2` centres the whole block,
             // converging with the commonMain text primitive's full-block centring.
             this.translate(
                 ((finalWidth) / 2).toFloat(),
@@ -143,9 +141,8 @@ object WatermarkRenderer {
     }
 
     /**
-     * Build the icon watermark cell + REPEAT/CLAMP [BitmapShader]. Verbatim extraction of the former
-     * legacy `WaterMarkImageView.buildIconBitmapShader` (that View was retired in S3c-3). Preserves the
-     * legacy nearest-neighbor `Bitmap.createScaledBitmap(..., false)` behavior.
+ * Build the icon watermark cell + REPEAT/CLAMP [BitmapShader]. Verbatim extraction of the former
+ * Legacy `WaterMarkImageView.buildIconBitmapShader` (that View was retired in S3c-3). Preserves the * legacy nearest-neighbor `Bitmap.createScaledBitmap(..., false)` behavior.
      */
     suspend fun buildIconShader(
         @Suppress("UNUSED_PARAMETER") imageInfo: ImageInfo, // S3a: icon no longer reads scaleX; kept for API compatibility
@@ -224,18 +221,17 @@ object WatermarkRenderer {
     }
 
     /**
-     * Draw the watermark cell [shader] over [canvas] — the composition step shared by preview
-     * (`onDraw`) and export (`generateImage`). Verbatim unification of the two former branches:
-     *
-     *  - REPEAT: `translate(left, top)` then fill `[regionWidth] x [regionHeight]` (the whole
-     *    image/drawable region is tiled).
-     *  - CLAMP : `translate(left + offsetX*regionWidth, top + offsetY*regionHeight)` then draw ONE
-     *    cell-sized decal (`shader.width x shader.height`).
-     *
-     * Preview passes the drawable bounds (`left=drawableBounds.left, top=drawableBounds.top,
-     * region=drawableBounds.width()/height()`); export passes `left=0, top=0, region=bitmap size`
-     * (its REPEAT branch had no translate — `translate(0,0)` is a no-op, so behavior is identical).
-     * The null-shader edge cases (CLAMP → 0x0 rect; REPEAT → paint fills the region) are preserved.
+ * Draw the watermark cell [shader] over [canvas] — the composition step shared by preview
+ * (`onDraw`) and export (`generateImage`). Verbatim unification of the two former branches:
+ *
+ * - REPEAT: `translate(left, top)` then fill `[regionWidth] x [regionHeight]` (the whole
+ * Image/drawable region is tiled). * - CLAMP : `translate(left + offsetX*regionWidth, top + offsetY*regionHeight)` then draw ONE
+ * cell-sized decal (`shader.width x shader.height`).
+ *
+ * Preview passes the drawable bounds (`left=drawableBounds.left, top=drawableBounds.top,
+ * region=drawableBounds.width()/height()`); export passes `left=0, top=0, region=bitmap size`
+ * (its REPEAT branch had no translate — `translate(0,0)` is a no-op, so behavior is identical).
+ * The null-shader edge cases (CLAMP → 0x0 rect; REPEAT → paint fills the region) are preserved.
      */
     fun compose(
         canvas: Canvas,

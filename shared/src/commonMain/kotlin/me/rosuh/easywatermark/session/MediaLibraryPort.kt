@@ -14,8 +14,8 @@ interface MediaLibraryPort {
     suspend fun listImages(): List<Image>
 
     /**
-     * Best-effort gallery rows for system-picker [MediaRef]s (e.g. MediaStore content URIs).
-     * May return fewer rows than [refs] if metadata is unavailable; hosts still enter editor from refs.
+ * Best-effort gallery rows for system-picker [MediaRef]s (e.g. MediaStore content URIs).
+ * May return fewer rows than [refs] if metadata is unavailable; hosts still enter editor from refs.
      */
     suspend fun enrichPickerRefs(refs: List<MediaRef>): List<Image>
 }

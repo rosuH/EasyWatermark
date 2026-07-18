@@ -112,16 +112,15 @@ class IosProductRootHost(
     private var statusLine by mutableStateOf("")
     private var isBusy by mutableStateOf(false)
     /**
-     * Android BitmapCache analogue: watermarked [ImageBitmap] by source path.
-     * Cleared on config change. Instant filmstrip re-selection.
+ * Android BitmapCache analogue: watermarked [ImageBitmap] by source path.
+ * Cleared on config change. Instant filmstrip re-selection.
      */
     private val wmPreviewCache = mutableMapOf<String, ImageBitmap>()
     /** Source-only placeholders (no watermark) for instant switch feedback. */
     private val sourcePlaceholderCache = mutableMapOf<String, ImageBitmap>()
     /**
-     * Filmstrip cell cache (path → small bitmap). Prefetched when a batch is staged so
-     * fling does not cold-decode / flash empty cells (snap-back perception).
-     */
+ * Filmstrip cell cache (path → small bitmap). Prefetched when a batch is staged so
+ * Fling does not cold-decode / flash empty cells (snap-back perception).     */
     private val filmstripThumbCache = mutableMapOf<String, ImageBitmap>()
     /** Bumped after prefetch so produceState re-reads the map. */
     private var filmstripThumbEpoch by mutableStateOf(0)
@@ -142,8 +141,8 @@ class IosProductRootHost(
     /** Open-source licenses overlay (Android showOpenSource parity). */
     private var showOpenSource by mutableStateOf(false)
     /**
-     * iOS has no Material You; still persist a force flag (Android CMonet parity) so the About
-     * switch is interactive and sticky across launches.
+ * iOS has no Material You; still persist a force flag (Android CMonet parity) so the About
+ * switch is interactive and sticky across launches.
      */
     private var dynamicColorForced by mutableStateOf(IosDynamicColorPrefs.isForced())
 
@@ -695,14 +694,13 @@ class IosProductRootHost(
     }
 
     /**
-     * Deliver one picked source photo into the session.
-     *
-     * **Latency:** always stages + EnterEditor first (filmstrip updates immediately). Watermark
-     * export for the big preview runs only when [renderPreview] is true (use false for multi-pick
-     * non-final items so N photos do not mean N full exports).
-     *
-     * @param append true to append to the current multi-image selection (add-more / multi-select tail).
-     * @param renderPreview when true, run export pipeline for the focused (first) image after staging.
+ * Deliver one picked source photo into the session.
+ *
+ * **Latency:** always stages + EnterEditor first (filmstrip updates immediately). Watermark
+ * Export for the big preview runs only when [renderPreview] is true (use false for multi-pick * non-final items so N photos do not mean N full exports).
+ *
+ * @param append true to append to the current multi-image selection (add-more / multi-select tail).
+ * @param renderPreview when true, run export pipeline for the focused (first) image after staging.
      */
     @Throws(Exception::class)
     suspend fun deliverPickedPhotoAndAwait(
@@ -714,9 +712,9 @@ class IosProductRootHost(
     }
 
     /**
-     * Navigate to the editor shell **immediately** (before any photo bytes are ready).
-     * Call from Swift as soon as the picker dismisses so the user is not blocked on
-     * `loadTransferable` / decode / stage. No "Loading…" chrome.
+ * Navigate to the editor shell **immediately** (before any photo bytes are ready).
+ * Call from Swift as soon as the picker dismisses so the user is not blocked on
+ * `loadTransferable` / decode / stage. No "Loading…" chrome.
      */
     fun showEditorShellImmediately() {
         showEditor = true
@@ -726,11 +724,10 @@ class IosProductRootHost(
     }
 
     /**
-     * Stage all [images] in **one** EnterEditor (filmstrip fills at once), prefetch filmstrip
-     * thumbs so fling is cold-miss free, then optionally raster the focused preview.
-     *
-     * Prefer [showEditorShellImmediately] first so UI is not gated on photo IO.
-     * Swift should load **all** picker payloads then call this once (not per-item append).
+ * Stage all [images] in **one** EnterEditor (filmstrip fills at once), prefetch filmstrip
+ * Thumbs so fling is cold-miss free, then optionally raster the focused preview. *
+ * Prefer [showEditorShellImmediately] first so UI is not gated on photo IO.
+ * Swift should load **all** picker payloads then call this once (not per-item append).
      */
     @Throws(Exception::class)
     suspend fun deliverPickedPhotosBatch(
@@ -855,10 +852,10 @@ class IosProductRootHost(
     }
 
     /**
-     * Fast in-memory preview (Android WaterMarkCanvas analogue):
-     * - [IosPreviewRaster]: decode+scale+compose ImageBitmap, **no PNG encode/disk**
-     * - [wmPreviewCache] hit → 0 raster work
-     * - [gen] drops stale async results on rapid filmstrip taps
+ * Fast in-memory preview (Android WaterMarkCanvas analogue):
+ * - [IosPreviewRaster]: decode+scale+compose ImageBitmap, **no PNG encode/disk**
+ * - [wmPreviewCache] hit → 0 raster work
+ * - [gen] drops stale async results on rapid filmstrip taps
      */
     private suspend fun renderPreviewForCurrentSelection(gen: Int) {
         val launch = services.session.launchScreenUiStateFlow.first()

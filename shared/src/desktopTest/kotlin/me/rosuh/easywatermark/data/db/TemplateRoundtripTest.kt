@@ -15,10 +15,9 @@ import kotlin.test.assertTrue
 import kotlin.time.Clock
 
 /**
- * S4d-142: Desktop (JVM) templates roundtrip over the commonMain Room path, built by the new desktopMain
+ * Desktop (JVM) templates roundtrip over the commonMain Room path, built by the new desktopMain
  * [buildTemplateDatabase] with the bundled SQLite driver. Empty store (no seeding). Exercises the existing
- * commonMain [TemplateRepository] (`getAllTemplate`/`checkIfIsDaoNull`) + [TemplateEditor] (`add`/`delete`),
- * using plain `kotlinx.coroutines.runBlocking` — the existing `shared/src/desktopTest` roundtrip pattern
+ * CommonMain [TemplateRepository] (`getAllTemplate`/`checkIfIsDaoNull`) + [TemplateEditor] (`add`/`delete`), * using plain `kotlinx.coroutines.runBlocking` — the existing `shared/src/desktopTest` roundtrip pattern
  * (`DesktopWaterMarkStoreRoundtripTest`, `UserConfigDataStoreRoundtripTest`); NO `kotlinx-coroutines-test`.
  */
 class TemplateRoundtripTest {

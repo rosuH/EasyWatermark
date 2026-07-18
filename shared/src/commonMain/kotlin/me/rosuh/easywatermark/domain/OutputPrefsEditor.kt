@@ -4,15 +4,9 @@ import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 
 /**
- * S4d-97: the platform-neutral output-preference write, extracted from Android `MainViewModel.saveOutput`.
+ * Platform-neutral use-case for writing output format and compress level via [UserConfigRepository].
  *
- * A single `suspend` [save] writes the output format then the compress level (same order as before)
- * through the commonMain [UserConfigRepository]. No validation/clamping is added; behavior is
- * unchanged. The caller (`MainViewModel`) keeps `viewModelScope`/`launch` and the post-launch
- * `resetJobStatus()`; this use-case owns no `CoroutineScope`.
- *
- * Sibling of [WatermarkConfigEditor] (S4d-96): a small shared editor use-case with an immediate
- * Android consumer, positioning the flow for future Desktop/iOS reuse.
+ * Callers own coroutine scopes and any post-save UI side effects.
  */
 class OutputPrefsEditor(private val repo: UserConfigRepository) {
 

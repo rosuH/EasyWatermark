@@ -14,8 +14,7 @@ import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image as SkiaImage
 
 /**
- * S4d-20B: the **iOS watermark renderer** — the iOS analogue of [DesktopWatermarkTextRenderer] +
- * [DesktopWatermarkComposer], proving the accepted commonMain pipeline runs on the iOS (Skiko) target:
+ * The **iOS watermark renderer** — the iOS analogue of [DesktopWatermarkTextRenderer] + * [DesktopWatermarkComposer], proving the accepted commonMain pipeline runs on the iOS (Skiko) target:
  * render a text cell ([WatermarkCellComposer.composeTextCell]) → compose it over a decoded image
  * ([WatermarkCellComposer.composeOverBackground]) → (optionally) Skia-encode to PNG.
  *
@@ -40,9 +39,9 @@ object IosWatermarkRenderer {
         color: Color = Color.White,
         hGapPercent: Int = 0,
         vGapPercent: Int = 0,
-        // S4d-112: persisted text typeface; default Normal preserves the prior (regular) output.
+        // persisted text typeface; default Normal preserves the prior (regular) output.
         typeface: TextTypeface = TextTypeface.Normal,
-        // S4d-113: persisted text paint style; default Fill preserves the prior (filled) output.
+        // persisted text paint style; default Fill preserves the prior (filled) output.
         textStyle: TextPaintStyle = TextPaintStyle.Fill,
     ): ImageBitmap {
         val fontPx = WatermarkGeometry.fontPx(textSize, imageWidth)
@@ -68,21 +67,20 @@ object IosWatermarkRenderer {
     }
 
     /**
-     * S4d-115: render ONE watermark **icon** cell via the shared [WatermarkCellComposer.composeIconCell]
-     * on iOS — the icon analogue of [renderTextCell], and the iOS/Skiko icon renderer (the accepted
-     * Desktop/iOS icon path per S4d-8 / the ADR-0004 addendum). Takes an **already-decoded** [icon]; image
-     * **decode stays the [IosImageDecoder] boundary** and commonMain stays decode-free.
-     *
-     * **Perceptual, NOT byte-parity** with native `WatermarkRenderer.buildIconShader`: commonMain has no
-     * float-placement + nearest-filter draw overload, so rotated non-uniform icons are not
-     * byte-identical to native `Canvas.drawBitmap`. Production Android/Desktop/iOS share this common
-     * icon path (ADR-0018); native remains dual-path/golden only.
-     *
-     * @param scaleRatio icon scale; production passes
-     *                   `WaterMark.textSize / WatermarkCellComposer.ICON_SCALE_REFERENCE_TEXT_SIZE` (14f ⇒ 1×)
-     * @param alpha      icon opacity baked into the cell (0f..1f, default opaque). NOTE:
-     *                   [composeIconOverImage] leaves this at the default and instead applies the watermark
-     *                   alpha ONCE at the composition step (see its KDoc), mirroring [composeOverImage].
+ * Render ONE watermark **icon** cell via the shared [WatermarkCellComposer.composeIconCell] * on iOS — the icon analogue of [renderTextCell], and the iOS/Skiko icon renderer (the accepted
+ * Desktop/iOS icon path per / the ADR-0004 addendum). Takes an **already-decoded** [icon]; image
+ * **decode stays the [IosImageDecoder] boundary** and commonMain stays decode-free.
+ *
+ * **Perceptual, NOT byte-parity** with native `WatermarkRenderer.buildIconShader`: commonMain has no
+ * float-placement + nearest-filter draw overload, so rotated non-uniform icons are not
+ * byte-identical to native `Canvas.drawBitmap`. Production Android/Desktop/iOS share this common
+ * icon path (ADR-0018); native remains dual-path/golden only.
+ *
+ * @param scaleRatio icon scale; production passes
+ * `WaterMark.textSize / WatermarkCellComposer.ICON_SCALE_REFERENCE_TEXT_SIZE` (14f ⇒ 1×)
+ * @param alpha icon opacity baked into the cell (0f..1f, default opaque). NOTE:
+ * [composeIconOverImage] leaves this at the default and instead applies the watermark
+ * alpha ONCE at the composition step (see its KDoc), mirroring [composeOverImage].
      */
     fun renderIconCell(
         icon: ImageBitmap,
@@ -108,10 +106,9 @@ object IosWatermarkRenderer {
     }
 
     /**
-     * Full iOS pipeline: **decode** [imageBytes] ([IosImageDecoder]) → **render** a text cell → **compose**
-     * over the decoded image ([WatermarkCellComposer.composeOverBackground]) → return the composed
-     * [ImageBitmap] (sized to the decoded image). [tileMode] must be REPEAT or CLAMP (commonMain rejects
-     * MIRROR/DECAL).
+ * Full iOS pipeline: **decode** [imageBytes] ([IosImageDecoder]) → **render** a text cell → **compose**
+ * Over the decoded image ([WatermarkCellComposer.composeOverBackground]) → return the composed * [ImageBitmap] (sized to the decoded image). [tileMode] must be REPEAT or CLAMP (commonMain rejects
+ * MIRROR/DECAL).
      */
     fun composeOverImage(
         imageBytes: ByteArray,
@@ -125,12 +122,12 @@ object IosWatermarkRenderer {
         offsetX: Float = 0.5f,
         offsetY: Float = 0.5f,
         alpha: Float = 1f,
-        // S4d-107: ARGB text color (default amber #FFB800), converted to a Compose Color below. Replaces
+        // ARGB text color (default amber #FFB800), converted to a Compose Color below. Replaces
         // the prior hardcoded white so the iOS render honors the shared WaterMark.textColor default.
         colorArgb: Int = WaterMark.default.textColor,
-        // S4d-112: persisted text typeface; default Normal preserves the prior (regular) output.
+        // persisted text typeface; default Normal preserves the prior (regular) output.
         typeface: TextTypeface = TextTypeface.Normal,
-        // S4d-113: persisted text paint style; default Fill preserves the prior (filled) output.
+        // persisted text paint style; default Fill preserves the prior (filled) output.
         textStyle: TextPaintStyle = TextPaintStyle.Fill,
     ): ImageBitmap {
         val background = IosImageDecoder.decode(imageBytes)
@@ -157,22 +154,21 @@ object IosWatermarkRenderer {
     }
 
     /**
-     * S4d-115: full iOS **icon** pipeline — the icon analogue of [composeOverImage]: **decode**
-     * [imageBytes] + [iconBytes] ([IosImageDecoder]) → **render** the icon cell ([renderIconCell] →
-     * [WatermarkCellComposer.composeIconCell]) → **compose** over the decoded background
-     * ([WatermarkCellComposer.composeOverBackground]) → composed [ImageBitmap] sized to the background.
-     * [tileMode] must be REPEAT or CLAMP (commonMain rejects MIRROR/DECAL). commonMain stays decode-free;
-     * decode is the [IosImageDecoder] boundary for both the background and the icon.
-     *
-     * **Alpha is applied ONCE, at the composition step** (the icon cell is rendered opaque), exactly as
-     * [composeOverImage] applies text alpha. (Android bakes alpha into the icon cell in `buildIconShader`
-     * **and** re-applies it via the shared paint in `compose`, i.e. double-applies; iOS applies it once —
-     * single application is the visually-correct behavior, and iOS icon rendering is perceptual, not
-     * byte-parity with Android.)
-     *
-     * @param scaleRatio production passes
-     *                   `WaterMark.textSize / WatermarkCellComposer.ICON_SCALE_REFERENCE_TEXT_SIZE` (14f ⇒ 1×)
-     * @param alpha      normalized watermark opacity 0f..1f, applied at composition
+ * Full iOS **icon** pipeline — the icon analogue of [composeOverImage]: **decode** * [imageBytes] + [iconBytes] ([IosImageDecoder]) → **render** the icon cell ([renderIconCell] →
+ * [WatermarkCellComposer.composeIconCell]) → **compose** over the decoded background
+ * ([WatermarkCellComposer.composeOverBackground]) → composed [ImageBitmap] sized to the background.
+ * [tileMode] must be REPEAT or CLAMP (commonMain rejects MIRROR/DECAL). commonMain stays decode-free;
+ * decode is the [IosImageDecoder] boundary for both the background and the icon.
+ *
+ * **Alpha is applied ONCE, at the composition step** (the icon cell is rendered opaque), exactly as
+ * [composeOverImage] applies text alpha. (Android bakes alpha into the icon cell in `buildIconShader`
+ * **and** re-applies it via the shared paint in `compose`, i.e. double-applies; iOS applies it once —
+ * single application is the visually-correct behavior, and iOS icon rendering is perceptual, not
+ * byte-parity with Android.)
+ *
+ * @param scaleRatio production passes
+ * `WaterMark.textSize / WatermarkCellComposer.ICON_SCALE_REFERENCE_TEXT_SIZE` (14f ⇒ 1×)
+ * @param alpha normalized watermark opacity 0f..1f, applied at composition
      */
     fun composeIconOverImage(
         imageBytes: ByteArray,

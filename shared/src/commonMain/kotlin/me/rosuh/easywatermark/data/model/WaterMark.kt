@@ -1,18 +1,10 @@
 package me.rosuh.easywatermark.data.model
 
 /**
- * Platform-neutral watermark configuration (S4d-60). Moved from Android `:app` to `:shared/commonMain`.
+ * Platform-neutral watermark configuration persisted by [WaterMarkRepository].
  *
- * All Android coupling that used to live here is now at the Android edge:
- * - `android.graphics.Color.parseColor("#FFB800")` → the literal ARGB int `0xFFFFB800` (byte-identical).
- * - `markMode: WaterMarkRepository.MarkMode` (an `:app` repo type) → the neutral [WatermarkMode].
- * - `obtainTileMode(): android.graphics.Shader.TileMode` → the Android extension
- *   `WaterMark.obtainTileMode()` in `utils/ktx` (still backed by [tileMode] + `toShaderTileMode()`).
- * - The `@Keep` annotation (androidx, Android-only) was dropped — `WaterMark` is referenced directly
- *   in code (no reflection/serialization-by-class-name), so R8 keeps it without an annotation.
- *
- * The field order, names, types of persisted-backed fields, and the default values are unchanged, so
- * DataStore storage is byte-identical (no migration) and the renderer reads the same values.
+ * Field names, types, and defaults are compatibility-critical for DataStore. Platform types
+ * (`android.graphics.*`) stay at Android edge mappers.
  */
 data class WaterMark(
     val text: String,

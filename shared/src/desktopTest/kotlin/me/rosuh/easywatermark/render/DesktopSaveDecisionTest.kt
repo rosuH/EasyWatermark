@@ -11,14 +11,13 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * S4d-139 / S4d-222: unit tests for the [DesktopSaveDecision] seam extracted from
+ * /  unit tests for the [DesktopSaveDecision] seam extracted from
  * `DesktopWatermarkFlow.runSaveFlow`. This is the runtime harness for the Desktop flow glue that
  * `:shared:desktopTest` can reach (the flow itself lives in `:desktopApp`, which has no test source set).
  *
- * Most tests exercise pure decisions (no IO, no rendering). S4d-222 adds tests for
+ * Most tests exercise pure decisions (no IO, no rendering). adds tests for
  * [resolveUniqueOutputFile], which performs filesystem existence checks only and does not create,
- * write, or delete files.
- */
+ * Write, or delete files. */
 class DesktopSaveDecisionTest {
 
     @Test
@@ -110,7 +109,7 @@ class DesktopSaveDecisionTest {
         assertEquals(File(dir, "watermarked.png"), pngResult)
     }
 
-    // --- S4d-228: multi-file drag/drop batch selection + sequential-naming contract ---
+    // --- : multi-file drag/drop batch selection + sequential-naming contract ---
 
     @Test
     fun supported_image_files_keeps_supported_subset_in_order() {

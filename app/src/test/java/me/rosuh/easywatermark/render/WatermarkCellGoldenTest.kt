@@ -80,9 +80,9 @@ class WatermarkCellGoldenTest {
     }
 
     /**
-     * Renders ONE full watermark cell (sized to the cell's own dimensions, so the whole rotated
-     * text box is captured — a fixed small window would sample a transparent corner of a large
-     * cell) and returns its pixels.
+ * Renders ONE full watermark cell (sized to the cell's own dimensions, so the whole rotated
+ * text box is captured — a fixed small window would sample a transparent corner of a large
+ * cell) and returns its pixels.
      */
     private fun renderTiledPixels(text: String, degree: Float): IntArray {
         val config = WaterMark.default.copy(
@@ -105,10 +105,10 @@ class WatermarkCellGoldenTest {
     }
 
     /**
-     * PIXEL golden (upgrades the dimension-only golden): composites the tiled cell shader and pins
-     * the rendered output. Catches blank/empty-render regressions that cell dimensions miss — the
-     * class of bug the C2a engine-wiring attempt produced. Strict signature pins exact pixels
-     * (Robolectric NATIVE @ sdk34; update only on an intentional Robolectric/font bump).
+ * PIXEL golden (upgrades the dimension-only golden): composites the tiled cell shader and pins
+ * the rendered output. Catches blank/empty-render regressions that cell dimensions miss — the
+ * class of bug the C2a engine-wiring attempt produced. Strict signature pins exact pixels
+ * (Robolectric NATIVE @ sdk34; update only on an intentional Robolectric/font bump).
      */
     @Test
     fun textCell_rendered_pixels_are_nonblank_and_stable() {
@@ -122,14 +122,14 @@ class WatermarkCellGoldenTest {
     }
 
     /**
-     * KNOWN LIMITATION (pinned as a passing test, CMP plan C1.7 refinement): the REAL production
-     * default config — emoji "👋 DO NOT REDISTRIBUTE" @ 315° — renders BLANK (0 visible px) under
-     * Robolectric NATIVE, even though it renders correctly on a real device. So Robolectric NATIVE
-     * does NOT faithfully reproduce emoji + rotated text: the device-free JVM golden can cover
-     * simple ASCII/0° cells (above) but CANNOT serve as a faithful oracle for this app's actual
-     * watermark (emoji default + rotation). A faithful golden of the real configs — and trustworthy
-     * verification of the C2a engine-wiring swap — therefore needs INSTRUMENTED (on-device) tests.
-     * This test documents the gap so it isn't mistaken for a code regression.
+ * KNOWN LIMITATION (pinned as a passing test, CMP plan C1.7 refinement): the REAL production
+ * default config — emoji "👋 DO NOT REDISTRIBUTE" @ 315° — renders BLANK (0 visible px) under
+ * Robolectric NATIVE, even though it renders correctly on a real device. So Robolectric NATIVE
+ * does NOT faithfully reproduce emoji + rotated text: the device-free JVM golden can cover
+ * simple ASCII/0° cells (above) but CANNOT serve as a faithful oracle for this app's actual
+ * watermark (emoji default + rotation). A faithful golden of the real configs — and trustworthy
+ * verification of the C2a engine-wiring swap — therefore needs INSTRUMENTED (on-device) tests.
+ * This test documents the gap so it isn't mistaken for a code regression.
      */
     private fun iconCellDims(iconW: Int, iconH: Int, degree: Float, hGap: Int, vGap: Int): Pair<Int, Int> {
         val config = WaterMark.default.copy(
@@ -144,9 +144,9 @@ class WatermarkCellGoldenTest {
     }
 
     /**
-     * Icon-cell golden: cross-checks `buildIconShader`'s sizing against commonMain
-     * `WatermarkGeometry.diagonal`/`horizontalGap` — the equivalence proof that gates wiring the
-     * icon path to commonMain (C2a). At textSize=14 (scaleRatio=1), gap=0: cell = maxSize square.
+ * Icon-cell golden: cross-checks `buildIconShader`'s sizing against commonMain
+ * `WatermarkGeometry.diagonal`/`horizontalGap` — the equivalence proof that gates wiring the
+ * icon path to commonMain (C2a). At textSize=14 (scaleRatio=1), gap=0: cell = maxSize square.
      */
     @Test
     fun iconCell_dimensions_match_geometry() {

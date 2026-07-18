@@ -12,8 +12,7 @@ import platform.Foundation.create
 import platform.posix.memcpy
 
 /**
- * S4d-32: the **iOS Swift↔Kotlin byte-array bulk-copy boundary**.
- *
+ * The **iOS Swift↔Kotlin byte-array bulk-copy boundary**. *
  * The Kotlin/Native ObjC bridge exposes `KotlinByteArray` to Swift with element accessors only
  * (`get(index:)`/`set(index:value:)`), so the previous Swift helpers (`KotlinInterop.swift`) copied
  * image-sized buffers **one byte at a time** — O(n) Swift calls per picked photo and per encoded PNG.
@@ -42,10 +41,9 @@ object IosByteArrayInterop {
     }
 
     /**
-     * Copy a Kotlin [ByteArray] into a new [NSData] via one `memcpy`. Uses `+[NSData dataWithBytes:length:]`
-     * (the `create(bytes:length:)` binding), which **copies** the buffer, so the pinned address is only
-     * needed for the duration of the call.
-     */
+ * Copy a Kotlin [ByteArray] into a new [NSData] via one `memcpy`. Uses `+[NSData dataWithBytes:length:]`
+ * (the `create(bytes:length:)` binding), which **copies** the buffer, so the pinned address is only
+ * Needed for the duration of the call.     */
     fun toNSData(bytes: ByteArray): NSData {
         if (bytes.isEmpty()) return NSData()
         return bytes.usePinned { pinned ->

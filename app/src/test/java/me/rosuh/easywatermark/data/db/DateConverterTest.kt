@@ -5,7 +5,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
- * S4d-35: proves the `kotlin.time.Instant` Room converter preserves the **exact epoch-millis** stored by
+ * proves the `kotlin.time.Instant` Room converter preserves the **exact epoch-millis** stored by
  * the previous `java.util.Date` converter — null/epoch-0/fixed-millis round-trips, so DB version 1 and the
  * prepopulated databases stay compatible (no schema/migration change).
  */

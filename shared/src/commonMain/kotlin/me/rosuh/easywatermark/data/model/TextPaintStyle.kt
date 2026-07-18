@@ -1,9 +1,8 @@
 package me.rosuh.easywatermark.data.model
 
 /**
- * Platform-neutral text paint style (S4d-60). Moved to `:shared/commonMain` and made self-contained:
- * no longer extends the `java.io.Serializable`-based `SerializableSealClass`, and the Android-typed
- * `obtainSysStyle(): android.graphics.Paint.Style` was moved to an Android edge mapper
+ * Platform-neutral text paint style. Moved to `:shared/commonMain` and made self-contained:
+ * No longer extends the `java.io.Serializable`-based `SerializableSealClass`, and the Android-typed * `obtainSysStyle(): android.graphics.Paint.Style` was moved to an Android edge mapper
  * (`utils/ktx/TextStyleExt.kt`); `applyStyle(TextView?)` was dead and was dropped.
  *
  * [serializeKey] is the stable int persisted in DataStore (`KEY_TEXT_STYLE`): Fill=0, Stroke=1 —

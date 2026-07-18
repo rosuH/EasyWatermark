@@ -16,8 +16,7 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 /**
- * S4d-31: compile/link proof for the iOS Swift-catchable render boundary
- * ([IosWatermarkRenderBridge]/[IosRenderException]/[IosRenderedPng]).
+ * Compile/link proof for the iOS Swift-catchable render boundary * ([IosWatermarkRenderBridge]/[IosRenderException]/[IosRenderedPng]).
  *
  * Like the other `iosTest` suites, these RUN only on an iOS runtime (`iosSimulatorArm64Test`), which is
  * not installed here — so this slice's proof is **compile + native test-executable LINK** (the API
@@ -78,8 +77,7 @@ class IosWatermarkRenderBridgeTest {
     }
 
     /**
-     * S4d-117: the icon render entry composes the background + icon end-to-end (no FONT stage) and returns a
-     * PNG sized to the background. RUNS on `iosSimulatorArm64Test`.
+ * The icon render entry composes the background + icon end-to-end (no FONT stage) and returns a * PNG sized to the background. RUNS on `iosSimulatorArm64Test`.
      */
     @Test
     fun icon_bridge_renders_png_sized_to_background() {
@@ -92,8 +90,7 @@ class IosWatermarkRenderBridgeTest {
     }
 
     /**
-     * S4d-117: a decode failure on the icon bytes (or background) is wrapped as a single Swift-catchable
-     * [IosRenderException] (stage RENDER), never a raw Kotlin exception across the Swift boundary.
+ * A decode failure on the icon bytes (or background) is wrapped as a single Swift-catchable * [IosRenderException] (stage RENDER), never a raw Kotlin exception across the Swift boundary.
      */
     @Test
     fun icon_bridge_wraps_bad_icon_bytes_as_render_exception() {

@@ -18,8 +18,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * S4d-127: structural proof of the Desktop format-aware encode primitive
- * ([DesktopWatermarkTextRenderer.encode]) — NOT a byte-exact JPEG golden (JPEG is lossy and the bytes
+ * Structural proof of the Desktop format-aware encode primitive * ([DesktopWatermarkTextRenderer.encode]) — NOT a byte-exact JPEG golden (JPEG is lossy and the bytes
  * depend on the JDK ImageIO JPEG encoder version, so a byte-golden would be brittle). Asserts: JPEG magic,
  * re-decode dimensions, not-PNG, quality monotonicity (with slack), and the **alpha flatten** (a
  * transparent input must NOT encode to black). PNG remains byte-identical to `encodePng`.

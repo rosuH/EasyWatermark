@@ -7,12 +7,11 @@ import androidx.compose.ui.text.TextStyle
 
 /**
  * C4.3 COMPILE WITNESS ONLY — proves `:shared/commonMain` can resolve and compile the Compose
- * graphics/text/runtime types the future commonMain watermark renderer will need (ADR-0004 / CMP
- * plan C2), on Android + desktop(JVM) + iOS, now that the Compose lineage is unified.
+ * Graphics/text/runtime types the future commonMain watermark renderer will need (ADR-0004 / CMP * plan C2), on Android + desktop(JVM) + iOS, now that the Compose lineage is unified.
  *
  * Intentionally NOT a renderer: no watermark logic, no drawing/tiling, no [WatermarkGeometry] use,
  * no production call site — it only references the types so every target must resolve the
- * multiplatform Compose artifacts. Replace/remove it when the real renderer slice (S4d-2+) begins;
+ * multiplatform Compose artifacts. Replace/remove it when the real renderer slice (+) begins;
  * removing it is a no-op for the rest of the codebase.
  */
 internal object ComposeTypeProbe {

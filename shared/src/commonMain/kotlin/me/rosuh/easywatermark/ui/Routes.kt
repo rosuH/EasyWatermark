@@ -7,8 +7,7 @@ import kotlinx.serialization.Serializable
  *
  * Product Launch / Editor / About now use [ProductShellNav] + [ProductShellHost] (shared
  * AnimatedContent transitions). These `@Serializable` route objects are retained only as
- * historical symbols; do not wire new product navigation through Navigation Compose.
- */
+ * Historical symbols; do not wire new product navigation through Navigation Compose. */
 @Serializable
 object LaunchRoute
 

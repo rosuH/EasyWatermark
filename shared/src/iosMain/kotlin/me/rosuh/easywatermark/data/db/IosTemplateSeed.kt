@@ -15,7 +15,7 @@ import platform.Foundation.languageCode
 import platform.posix.memcpy
 
 /**
- * S4d-232: iOS template **seed** loader — reads a bundled Android template seed DB (`ewm-db-ch.db` /
+ * iOS template **seed** loader — reads a bundled Android template seed DB (`ewm-db-ch.db` /
  * `ewm-db-eng.db`) from an [NSBundle] and returns its raw bytes, mirroring the [IosFontLoader] NSBundle
  * pattern (`pathForResource` → `NSData.dataWithContentsOfFile` → `ByteArray` via pinned `memcpy`).
  *
@@ -50,9 +50,8 @@ object IosTemplateSeed {
     }
 
     /**
-     * Read the bundled seed DB bytes for [language] (`"ch"`/`"eng"`) from [bundle] (default: the main app
-     * bundle). Throws [IllegalStateException] if the resource is missing, unreadable, or empty.
-     */
+ * Read the bundled seed DB bytes for [language] (`"ch"`/`"eng"`) from [bundle] (default: the main app
+ * Bundle). Throws [IllegalStateException] if the resource is missing, unreadable, or empty.     */
     fun loadSeedBytes(language: String, bundle: NSBundle = NSBundle.mainBundle): ByteArray {
         val name = "$SEED_RESOURCE_PREFIX$language"
         val path = bundle.pathForResource(name, SEED_RESOURCE_TYPE)

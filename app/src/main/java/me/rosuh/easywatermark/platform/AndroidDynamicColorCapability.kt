@@ -4,8 +4,7 @@ import me.rosuh.cmonet.CMonet
 
 /**
  * Android [DynamicColorCapability] — delegates exactly to the existing `:cmonet` [CMonet] object, so
- * the OEM allowlist and the persisted force-support flag (SharedPreferences `sp_water_mark_c_monet`,
- * key `dynamic_color_force`) are preserved byte-for-byte (S4d-43, Option A). This is a pure indirection:
+ * The OEM allowlist and the persisted force-support flag (SharedPreferences `sp_water_mark_c_monet`, * key `dynamic_color_force`) are preserved byte-for-byte (Option A). This is a pure indirection:
  * behavior is identical to the prior direct `CMonet.*` call sites.
  */
 class AndroidDynamicColorCapability : DynamicColorCapability {

@@ -47,8 +47,7 @@ fun ProductShellHost(
  *
  * **Z-order (critical):** production keeps About *on top* while it slides out.
  * [ContentTransform.targetContentZIndex] must put About above Launch/Editor both
- * on enter (target z=1) and on exit (target Launch/Editor z=0 so prior About z=1 wins).
- * Without this, exit draws home on top of About and looks like a hard cover-up.
+ * On enter (target z=1) and on exit (target Launch/Editor z=0 so prior About z=1 wins). * Without this, exit draws home on top of About and looks like a hard cover-up.
  */
 object ProductShellTransitions {
     /** ~ [android.R.integer.config_mediumAnimTime] */

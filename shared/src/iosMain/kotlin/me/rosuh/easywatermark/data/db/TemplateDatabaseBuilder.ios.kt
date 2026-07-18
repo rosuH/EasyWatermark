@@ -13,8 +13,8 @@ import platform.Foundation.NSUserDomainMask
 import kotlin.coroutines.CoroutineContext
 
 /**
- * S4d-231: iOS creation of the commonMain [AppDatabase] — the iOS analogue of the desktopMain
- * `buildTemplateDatabase` (S4d-142) and androidMain `buildTemplateDatabase(context)`.
+ * iOS creation of the commonMain [AppDatabase] — the iOS analogue of the desktopMain
+ * `buildTemplateDatabase` and androidMain `buildTemplateDatabase(context)`.
  *
  * Like Desktop (and unlike Android's framework SupportSQLite **compatibility mode**), Room on iOS/Native
  * **requires an explicit `SQLiteDriver`** — there is no compatibility mode off Android. This uses
@@ -28,11 +28,11 @@ import kotlin.coroutines.CoroutineContext
  * [me.rosuh.easywatermark.data.repo.TemplateRepository] takes an injected `ioContext`). A real iOS consumer
  * may pass a dedicated dispatcher; the default keeps Room's query work off the calling coroutine.
  *
- * SCOPE (S4d-231): **empty-store** builder only — Room creates the schema on first open. The DB file is
+ * SCOPE: **empty-store** builder only — Room creates the schema on first open. The DB file is
  * `ewm-db` under the caller-supplied [dir]. Schema (`Template`, version 1, `exportSchema=false`) is the
  * unchanged commonMain one; the per-target impl is the KSP-generated [AppDatabaseConstructor].
  *
- * S4d-232: a [buildTemplateDatabase] overload now optionally **seeds** from raw `seedBytes` (the Android
+ * a [buildTemplateDatabase] overload now optionally **seeds** from raw `seedBytes` (the Android
  * seed DB bytes), and the production no-arg [buildTemplateDatabase] seeds from the bundled seed via
  * [IosTemplateSeed]. This empty-store overload is preserved for tests/callers that explicitly want an empty DB.
  */
@@ -49,8 +49,7 @@ fun buildTemplateDatabase(
         .build()
 
 /**
- * S4d-232: build an iOS template DB, optionally **seeded** from [seedBytes] — the iOS analogue of the
- * desktopMain `buildTemplateDatabase(dir, seedFile)` (S4d-224). When [seedBytes] is non-null and the target
+ * Build an iOS template DB, optionally **seeded** from [seedBytes] — the iOS analogue of the * desktopMain `buildTemplateDatabase(dir, seedFile)`. When [seedBytes] is non-null and the target
  * DB file (`$dir/ewm-db`) does not yet exist, the bytes are written to that path **before** Room opens it;
  * Room then validates the `room_master_table` identity hash and opens it as a pre-existing DB (the same
  * copy-then-open approach Desktop uses, because Room KMP off-Android has no `createFromAsset`). When the DB
@@ -84,18 +83,16 @@ fun buildTemplateDatabase(
 }
 
 /**
- * S4d-231/S4d-232: production no-arg overload — builds the iOS template DB under the app's
+ * / production no-arg overload — builds the iOS template DB under the app's
  * `NSDocumentDirectory` (the same store-location convention as `CreateDataStore.ios.kt`), **seeded** on first
- * creation from the bundled Android seed DB selected by locale ([IosTemplateSeed]). Single-instance-per-file:
- * a real iOS consumer retains one database. The parameterized [buildTemplateDatabase] overloads above are the
+ * Creation from the bundled Android seed DB selected by locale ([IosTemplateSeed]). Single-instance-per-file: * a real iOS consumer retains one database. The parameterized [buildTemplateDatabase] overloads above are the
  * test seams (the roundtrip tests pass a unique temp dir and/or explicit seed bytes — a Kotlin/Native test
  * executable's bundle does not carry the app's Copy Bundle Resources, so this no-arg path is exercised only
  * in a real `iosApp.app`, where the seed resource is packaged).
  */
 /**
  * Production no-arg builder — **process-wide singleton** so Swift workflow + CMP product root
- * never open two Room instances on the same `ewm-db` file (dual open → crash).
- */
+ * Never open two Room instances on the same `ewm-db` file (dual open → crash). */
 @OptIn(ExperimentalForeignApi::class)
 fun buildTemplateDatabase(): AppDatabase = IosTemplateDatabaseHolder.instance
 

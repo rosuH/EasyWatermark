@@ -244,8 +244,7 @@ private fun loadFilmstripThumbBitmap(context: Context, uri: Uri, sizePx: Int): B
 
 /**
  * Identity-safe preview frame. Canvas may keep drawing a previous [uriValue] until the next
- * frame is ready (no black flash), then crossfades. Never mixes uri A pixels with uri B layout.
- */
+ * Frame is ready (no black flash), then crossfades. Never mixes uri A pixels with uri B layout. */
 private data class PreviewFrame(
     val uriValue: String,
     val bitmap: Bitmap,

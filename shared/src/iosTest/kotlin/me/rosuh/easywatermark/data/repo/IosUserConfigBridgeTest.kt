@@ -8,7 +8,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * S4d-81: iOS runtime proof that the common `UserConfigRepository`, behind the Swift-facing
+ * iOS runtime proof that the common `UserConfigRepository`, behind the Swift-facing
  * [IosUserConfigBridge], reads/writes user prefs through the iOS `createUserConfigDataStore`
  * (`NSDocumentDirectory`) store. RUNS on `iosSimulatorArm64Test`.
  *

@@ -11,8 +11,7 @@ import java.io.File
 
 /**
  * Desktop [ExportPipelinePort]: validates a source file [MediaRef], chooses a **unique** output
- * under [outputDirProvider], and delegates render/write to [DesktopRenderSaveSpine].
- *
+ * Under [outputDirProvider], and delegates render/write to [DesktopRenderSaveSpine]. *
  * Unique naming is an export destination policy (not the spine). Shared [Result] mapping and
  * width/height mutation on [ImageInfo] stay here until P3 outcome redesign.
  */

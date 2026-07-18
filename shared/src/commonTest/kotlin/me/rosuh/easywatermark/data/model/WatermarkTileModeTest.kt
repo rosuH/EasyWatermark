@@ -6,8 +6,7 @@ import kotlin.test.assertEquals
 /**
  * Neutral (no-Android) contract for [WatermarkTileMode] — runs on every `:shared` target via
  * `:shared:desktopTest` (CMP plan C1.8). The Android-edge composition (`toShaderTileMode()` and
- * equivalence with the legacy `Int?.toTileMode()`) is pinned separately in the app-side
- * `WatermarkTileModeMappingTest`, which needs the real `Shader.TileMode`.
+ * Equivalence with the legacy `Int?.toTileMode()`) is pinned separately in the app-side * `WatermarkTileModeMappingTest`, which needs the real `Shader.TileMode`.
  */
 class WatermarkTileModeTest {
 

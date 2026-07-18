@@ -9,19 +9,17 @@ import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 
 /**
- * ADR-0018 / Option **C2**: single pure commonMain paint path for **preview and export**.
+ * Pure commonMain paint path for preview and export (ADR-0018).
  *
- * Platform supplies already-decoded [background] (and [icon] when [WaterMark.markMode] is Image),
- * plus [TextRasterEnv]. Encode / MediaStore / Photos stay platform-side.
- *
- * Not byte-identical to legacy Android `WatermarkRenderer` (StaticLayout / native drawBitmap).
+ * Platforms supply decoded background (and optional icon), [TextRasterEnv], and [WaterMark].
+ * Encode / MediaStore / Photos stay platform-side.
  */
 object CommonWatermarkPipeline {
 
     /**
-     * Compose [config] over [background] using shared cell + [WatermarkCellComposer.composeOverBackground].
-     *
-     * @param icon required when [WaterMark.markMode] is [WatermarkMode.Image]; ignored for Text mode.
+ * Compose [config] over [background] using shared cell + [WatermarkCellComposer.composeOverBackground].
+ *
+ * @param icon required when [WaterMark.markMode] is [WatermarkMode.Image]; ignored for Text mode.
      */
     fun compose(
         background: ImageBitmap,
@@ -40,8 +38,8 @@ object CommonWatermarkPipeline {
     }
 
     /**
-     * Same as [compose] but applies fractional [offsetX]/[offsetY] for CLAMP/decal placement
-     * (image-space 0..1, matching Android [ImageInfo.offsetX]/[offsetY]).
+ * Same as [compose] but applies fractional [offsetX]/[offsetY] for CLAMP/decal placement
+ * (image-space 0..1, matching Android [ImageInfo.offsetX]/[offsetY]).
      */
     fun compose(
         background: ImageBitmap,
@@ -108,6 +106,6 @@ object CommonWatermarkPipeline {
             hGapPercent = config.hGap,
             vGapPercent = config.vGap,
             scaleRatio = config.textSize / WatermarkCellComposer.ICON_SCALE_REFERENCE_TEXT_SIZE,
-            alpha = 1f, // alpha applied once at composition (iOS S4d-115 rule)
+            alpha = 1f, // alpha applied once at composition (iOS rule)
         )
 }

@@ -8,8 +8,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
- * S4d-18: the **Desktop text-renderer gate** — proves the production Desktop renderer
- * [DesktopWatermarkTextRenderer] (bundled Latin+CJK font + shared [WatermarkCellComposer.composeTextCell])
+ * The **Desktop text-renderer gate** — proves the production Desktop renderer * [DesktopWatermarkTextRenderer] (bundled Latin+CJK font + shared [WatermarkCellComposer.composeTextCell])
  * renders Latin, CJK, multiline, and rotated watermark text **non-blank and stably** on the JVM/Skiko host.
  *
  * It deliberately uses a **perceptual / bitmap-signature** gate instead of fragile exact host-font pixel

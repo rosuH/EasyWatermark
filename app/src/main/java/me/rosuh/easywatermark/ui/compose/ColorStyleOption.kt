@@ -43,8 +43,7 @@ import org.jetbrains.compose.resources.stringResource
 
 /**
  * Android Style → Color control. Layout matches production v2.10.0 [ColorFragment]:
- * horizontal preset swatches + trailing custom picker that opens skydoves [ColorPickerDialog].
- *
+ * Horizontal preset swatches + trailing custom picker that opens skydoves [ColorPickerDialog]. *
  * The previous Compose WIP used MotionLayout with [DebugFlags.All], which painted a huge green
  * oval over the control surface — not product UI.
  */

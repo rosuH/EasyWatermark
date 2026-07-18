@@ -38,7 +38,7 @@ fun IconOption(
     item: FuncTitleModel,
     waterMark: WaterMark,
     modifier: Modifier = Modifier,
-    // S4d-50: IconOption is the Android edge. The picker launcher still returns android.net.Uri;
+    // IconOption is the Android edge. The picker launcher still returns android.net.Uri;
     // it is converted to a platform-neutral MediaRef HERE at the picker-result boundary, so Uri
     // never escapes into the model/ViewModel layer.
     onIconSelected: (item: FuncTitleModel, MediaRef) -> Unit,

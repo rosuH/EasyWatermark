@@ -30,9 +30,9 @@ import org.robolectric.annotation.GraphicsMode
  * [WatermarkRenderer.compose] reproduces — pixel-for-pixel — the two former, separate composition
  * branches it replaced:
  *
- *  - the EXPORT branch in `MainViewModel.generateImage` (no `withSave`, no translate for REPEAT,
- *    composited at canvas origin), and
- *  - the PREVIEW branch in `WaterMarkImageView.onDraw` (`withSave`, translate by drawable bounds).
+ * - the EXPORT branch in `MainViewModel.generateImage` (no `withSave`, no translate for REPEAT,
+ * composited at canvas origin), and
+ * - the PREVIEW branch in `WaterMarkImageView.onDraw` (`withSave`, translate by drawable bounds).
  *
  * The cell-builder extraction (`buildTextShader`/`buildIconShader`) is guarded separately by the S0
  * strict export golden, which calls [WatermarkRenderer.buildTextShader]/[WatermarkRenderer.buildIconShader]
@@ -65,9 +65,9 @@ class WatermarkRendererCompositionTest {
         IntArray(b.width * b.height).also { b.getPixels(it, 0, b.width, 0, 0, b.width, b.height) }
 
     /**
-     * Verbatim copy of the PRE-S2a (legacy) export composition that lived inline in
-     * `MainViewModel.generateImage` before the `WatermarkRenderer.compose` extraction. Kept as the
-     * historical reference that pins the extracted seam; the inline original no longer exists.
+ * Verbatim copy of the PRE-S2a (legacy) export composition that lived inline in
+ * `MainViewModel.generateImage` before the `WatermarkRenderer.compose` extraction. Kept as the
+ * historical reference that pins the extracted seam; the inline original no longer exists.
      */
     private fun oldExportCompose(
         canvas: Canvas, shader: WaterMarkShader?, tile: Shader.TileMode, paint: Paint,
@@ -83,8 +83,8 @@ class WatermarkRendererCompositionTest {
     }
 
     /**
-     * Verbatim copy of the PRE-S2a (legacy) preview composition from `WaterMarkImageView.onDraw` —
-     * that View was retired in S3c-3. Kept as the historical reference that pins the extracted seam.
+ * Verbatim copy of the PRE-S2a (legacy) preview composition from `WaterMarkImageView.onDraw` —
+ * that View was retired in S3c-3. Kept as the historical reference that pins the extracted seam.
      */
     private fun oldPreviewCompose(
         canvas: Canvas, shader: WaterMarkShader?, tile: Shader.TileMode, paint: Paint,

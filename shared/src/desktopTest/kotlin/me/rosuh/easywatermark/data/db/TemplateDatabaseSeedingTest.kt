@@ -16,13 +16,12 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
- * S4d-224 / S4d-225: Desktop template DB seeding via the shared desktopMain resources.
+ * /  Desktop template DB seeding via the shared desktopMain resources.
  *
  * Verifies that `unpackDefaultTemplateSeed` / `unpackTemplateSeed` extract the bundled seed DBs and that
  * `buildTemplateDatabase(dir, seedFile)` produces a database already populated with the seeded templates.
  * Both locale keys (`ch`, `eng`) and the existing empty-store path (`buildTemplateDatabase(dir)`) are
- * exercised. Existing DB files are protected from reseeding.
- */
+ * Exercised. Existing DB files are protected from reseeding. */
 class TemplateDatabaseSeedingTest {
 
     private val dir: File = Files.createTempDirectory("s4d224-template-seed").toFile()

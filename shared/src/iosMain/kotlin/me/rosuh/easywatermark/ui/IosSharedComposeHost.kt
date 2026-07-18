@@ -444,8 +444,7 @@ class IosWatermarkVerticalGapSliderHost(
 /**
  * Production host for shared watermark text editing ([TextContentOption]).
  *
- * S4d-378: replaces the SwiftUI TextField + Apply path. Swift still owns
- * [WatermarkWorkflow] persistence and re-render; no template icon (Templates stay SwiftUI).
+ * Replaces the SwiftUI TextField + Apply path. Swift still owns * [WatermarkWorkflow] persistence and re-render; no template icon (Templates stay SwiftUI).
  */
 class IosTextContentOptionHost(
     private val onTextChange: (String) -> Unit,
@@ -523,7 +522,7 @@ class IosWatermarkTextColorHost(
 }
 
 /**
- * Production iOS editor route (S4d-383 / A5a): one [ComposeUIViewController] owning shared
+ * Production iOS editor route ( / A5a): one [ComposeUIViewController] owning shared
  * [EditorScreenShell] with a flat scrollable options column.
  *
  * Swift retains PhotosPicker, Templates, Share/Save system UI, and [WatermarkWorkflow] writes.

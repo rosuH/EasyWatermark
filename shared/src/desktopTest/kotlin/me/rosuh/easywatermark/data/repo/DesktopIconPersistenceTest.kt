@@ -8,8 +8,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * S4d-221: the Desktop sibling of the iOS icon-persistence tests — pins the observable invariants of
- * [DesktopIconPersistence.persistIcon] (the extracted S4d-219 copy-then-prune): bounded one helper-owned
+ * The Desktop sibling of the iOS icon-persistence tests — pins the observable invariants of * [DesktopIconPersistence.persistIcon] (the extracted copy-then-prune): bounded one helper-owned
  * file, different-extension prune, same-copy no-op, failed-source-read leaves the prior copy intact
  * (no data loss), and the blank-extension → `png` fallback.
  *

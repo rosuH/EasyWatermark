@@ -62,9 +62,9 @@ import java.io.File
 typealias SaveExportUiState = ExportJobState
 
 /**
- * Android product host (ADR-0017 Phase 1–5): thin edge over shared [WatermarkSessionViewModel].
- * Owns MediaStore gallery query, compress, crash export, and maps legacy [Action] → [AppIntent].
- * Config edits go through session [applyConfig]; export through [AndroidExportPipelinePort].
+ * Android product host over [WatermarkSessionViewModel] (ADR-0017).
+ *
+ * Maps legacy [Action] to [AppIntent]; owns MediaStore gallery query, compress, and crash export.
  */
 class MainViewModel (
     private val userRepo: UserConfigRepository,
@@ -76,15 +76,15 @@ class MainViewModel (
     userConfigRepo = userRepo,
 ) {
 
-    // S4d-97: output-preference write use-case (still Android-hosted launch wrapper).
+    // output-preference write use-case (still Android-hosted launch wrapper).
     private val outputPrefsEditor = OutputPrefsEditor(userRepo)
 
-    // S4d-98: template add/update/delete business logic lives in a commonMain use-case; the VM keeps
+    // template add/update/delete business logic lives in a commonMain use-case; the VM keeps
     // UiState mapping (the null-DAO -> UiState.DatabaseError branch stays here). Built from the
     // already-injected template repo (no DI change).
     private val templateEditor = TemplateEditor(templateRepo)
 
-    // S4d-65: StateFlow-only (was MutableLiveData). null initial = "no
+    // StateFlow-only (was MutableLiveData). null initial = "no
     // compress event yet" (old LiveData had no value before first emit). Distinct Result instances each
     // emit, so StateFlow conflation never skips a real event.
     private val _compressedResult = MutableStateFlow<Result<*>?>(null)
@@ -155,8 +155,8 @@ class MainViewModel (
     }
 
     /**
-     * Batch export entry — orchestration lives in [WatermarkSessionViewModel.requestExport];
-     * [contentResolver] retained for API compatibility (port uses application ContentResolver).
+ * Batch export entry — orchestration lives in [WatermarkSessionViewModel.requestExport];
+ * [contentResolver] retained for API compatibility (port uses application ContentResolver).
      */
     @Suppress("UNUSED_PARAMETER")
     fun saveImage(
@@ -313,7 +313,7 @@ $crashInfo
 
 APP:
 
-${BuildConfig.VERSION_CODE}, ${BuildConfig.VERSION_NAME}, ${BuildConfig.BUILD_TYPE} 
+${BuildConfig.VERSION_CODE}, ${BuildConfig.VERSION_NAME}, ${BuildConfig.BUILD_TYPE}
 
 Devices:
 
@@ -408,10 +408,9 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
     }
 
     /**
-     * System Photo Picker URIs → session editor.
-     * Always enter from the raw picker URIs; enrichment is best-effort metadata only and must
-     * not block selection when MediaStore join fails (partial access / non-MediaStore URIs).
-     */
+ * System Photo Picker URIs → session editor.
+ * Always enter from the raw picker URIs; enrichment is best-effort metadata only and must
+ * Not block selection when MediaStore join fails (partial access / non-MediaStore URIs).     */
     private suspend fun enterEditorFromSystemUris(uriList: List<Uri>) {
         if (uriList.isEmpty()) return
         val refs = uriList.map { it.toMediaRef() }

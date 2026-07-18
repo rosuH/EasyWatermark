@@ -1,6 +1,6 @@
 package me.rosuh.easywatermark.data.model
 
-// Platform-neutral watermark config normalization (S4d-61). Pure value functions + limit constants,
+// Platform-neutral watermark config normalization. Pure value functions + limit constants,
 // extracted verbatim from the Android inline clamps in WaterMarkRepository/MainViewModel so persisted
 // values and render output stay unchanged. No Android types, no deps.
 object WatermarkConfigRules {
@@ -27,7 +27,7 @@ object WatermarkConfigRules {
     // Alpha percent (0..100 slider) to 0..255 byte (was (alpha / 100 * 255).toInt(); float div + truncation).
     fun alphaPercentToByte(percent: Float): Int = (percent / 100 * 255).toInt()
 
-    // Inverse of alphaPercentToByte: 0..255 byte to 0..100 percent for slider/field display (S4d-179).
+    // Inverse of alphaPercentToByte: 0..255 byte to 0..100 percent for slider/field display.
     // Android baseline order (was inline `alpha.toFloat() / 255 * 100` in EditorScreen; Desktop used
     // `alpha * 100f / 255f`, value-equal up to the last float ULP). Display only — not persisted.
     fun alphaByteToPercent(alpha: Int): Float = alpha.toFloat() / 255 * 100

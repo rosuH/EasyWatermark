@@ -11,15 +11,14 @@ import me.rosuh.easywatermark.ui.theme.AppTheme as SharedAppTheme
 
 
 /**
- * Android Material3 theme (S4d-236).
+ * Android Material3 theme.
  *
  * Signature is unchanged: `AppTheme(darkTheme, dynamicColor, content)`.
  *
  * - **Dynamic-color branch** (`dynamicColor && Build.VERSION.SDK_INT >= S`): unchanged —
- *   uses `dynamicDark/LightColorScheme(LocalContext.current)`.
- * - **Non-dynamic branch**: delegates to the commonMain [SharedAppTheme]
- *   (`me.rosuh.easywatermark.ui.theme.AppTheme`), which builds the static
- *   `Light/DarkColorScheme` from the relocated color tokens.
+ * Uses `dynamicDark/LightColorScheme(LocalContext.current)`. * - **Non-dynamic branch**: delegates to the commonMain [SharedAppTheme]
+ * (`me.rosuh.easywatermark.ui.theme.AppTheme`), which builds the static
+ * `Light/DarkColorScheme` from the relocated color tokens.
  *
  * Parity (ADR-0011): production v2.10.0 is forced-dark (Theme.Material3.Dark, no DayNight).
  * The static color tokens + schemes now live in `:shared/commonMain` (`ui/theme/Color.kt` +

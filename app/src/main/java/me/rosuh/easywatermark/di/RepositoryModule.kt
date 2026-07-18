@@ -28,7 +28,7 @@ val repositoryModule = module {
             dataStore = context.waterMarkDataStore,
             // Product default watermark text from composeResources (locale-aware via sharedString).
             defaultTextProvider = { sharedString(Res.string.config_default_water_mark_text) },
-            // S4d-87: Android edge passes the SDK-gated legacy tile-id mapper (pre-S DECAL -> REPEAT).
+            // Android edge passes the SDK-gated legacy tile-id mapper (pre-S DECAL -> REPEAT).
             tileModeFromStorageId = { it.toWatermarkTileMode() },
             logError = { message -> Log.e("WaterMarkRepository", message) },
         )
@@ -39,7 +39,7 @@ val repositoryModule = module {
     }
 
     single<TemplateRepository> {
-        // S4d-92: nullable-DAO fallback unchanged; Dispatchers.IO injected here (commonMain repo can't
+        // nullable-DAO fallback unchanged; Dispatchers.IO injected here (commonMain repo can't
         // reference it on Native) so Android write threading stays byte-identical.
         TemplateRepository((getOrNull<AppDatabase>())?.templateDao(), Dispatchers.IO)
     }

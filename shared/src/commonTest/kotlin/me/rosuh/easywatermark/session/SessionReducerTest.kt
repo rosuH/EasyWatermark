@@ -157,9 +157,8 @@ class SessionReducerTest {
     }
 
     /**
-     * CLAMP drag → [AppIntent.SyncCurrentImage] must update **both** curImageInfo and the
-     * matching selectedImageList entry. Export uses selectedImageList (not only cur).
-     */
+ * CLAMP drag → [AppIntent.SyncCurrentImage] must update **both** curImageInfo and the
+ * Matching selectedImageList entry. Export uses selectedImageList (not only cur).     */
     @Test
     fun syncCurrentImage_replacesMatchingSelectedListOffsets() {
         val a = me.rosuh.easywatermark.data.model.ImageInfo(

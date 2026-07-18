@@ -16,8 +16,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
- * S4d-4: the **executable icon-raster proof** for [WatermarkCellComposer.composeIconCell]. Runs on
- * `:shared:desktopTest` (JVM/Skiko host), the same home as S4d-3's `WatermarkTextCellRasterTest`.
+ * The **executable icon-raster proof** for [WatermarkCellComposer.composeIconCell]. Runs on * `:shared:desktopTest` (JVM/Skiko host), the same home as 's `WatermarkTextCellRasterTest`.
  *
  * It builds a synthetic, **asymmetric** source [ImageBitmap] (blue with a red top-left quadrant) so
  * a no-rotation or wrong-centre implementation is observable, then asserts: visible pixels render;
@@ -144,9 +143,8 @@ class WatermarkIconCellRasterTest {
     }
 
     /**
-     * P1 (review round 1): `composeIconCell` must honour the watermark opacity contract — Android draws
-     * the icon with `Paint.alpha = WaterMark.alpha`, so the commonMain analogue must apply the
-     * normalized [alpha]. These assertions FAIL for a full-opacity implementation that ignores alpha.
+ * P1 (review round 1): `composeIconCell` must honour the watermark opacity contract — Android draws
+ * The icon with `Paint.alpha = WaterMark.alpha`, so the commonMain analogue must apply the * normalized [alpha]. These assertions FAIL for a full-opacity implementation that ignores alpha.
      */
     @Test
     fun alpha_scales_icon_opacity() {

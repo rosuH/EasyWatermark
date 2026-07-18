@@ -53,13 +53,12 @@ import kotlin.time.Clock
 /**
  * Shared (commonMain) replacement for the legacy text-template surface —
  * `TextContentTemplateListFragment` (the list) + `EditTemplateContentFragment` (add/edit).
- * View→Compose migration, ADR-0016. Moved to commonMain in S4d-239.
+ * View→Compose migration, ADR-0016. Moved to commonMain in .
  *
  * The template CRUD already lives in [me.rosuh.easywatermark.ui.MainViewModel]
  * (`templateListFlow` + add/update/delete); this is a pure UI port over those callbacks.
  * "Use" applies the template content via the same `updateText` path the text editor uses,
- * so it doesn't depend on the legacy `UiState.UseTemplate` plumbing.
- *
+ * So it doesn't depend on the legacy `UiState.UseTemplate` plumbing. *
  * S-i18n-2: labels from composeResources Res (the Android
  * caller resolves `stringResource` at the edge); both icons are passed as [Painter] parameters
  * (the Android caller resolves `painterResource` at the edge). This composable has no

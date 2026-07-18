@@ -4,9 +4,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * Pins `ImageFormat.fileExtension` (S4d-177): the single source for the default output-file extension
- * that Android (`MainViewModel.trapOutputExtension`) and Desktop (`DesktopSaveDecision.defaultOutputFileName`)
- * now share. The strings must stay `"jpg"`/`"png"` (byte-identical to the old inline mappings; the Android
+ * Pins `ImageFormat.fileExtension`: the single source for the default output-file extension
+ * That Android (`MainViewModel.trapOutputExtension`) and Desktop (`DesktopSaveDecision.defaultOutputFileName`) * now share. The strings must stay `"jpg"`/`"png"` (byte-identical to the old inline mappings; the Android
  * `image/<ext>` MIME shape depends on these). `fromStorageId` round-trip is re-pinned here too.
  */
 class ImageFormatTest {

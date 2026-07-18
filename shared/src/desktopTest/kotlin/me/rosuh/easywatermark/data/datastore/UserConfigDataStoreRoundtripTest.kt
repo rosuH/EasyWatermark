@@ -9,8 +9,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * S4d-78: end-to-end proof on a real (non-Android) runtime that the commonMain `UserConfigRepository`
- * works over a desktop-created preferences DataStore. Exercises the okio-path store creation +
+ * End-to-end proof on a real (non-Android) runtime that the commonMain `UserConfigRepository` * works over a desktop-created preferences DataStore. Exercises the okio-path store creation +
  * write/read roundtrip through the same common repository the Android app uses.
  */
 class UserConfigDataStoreRoundtripTest {

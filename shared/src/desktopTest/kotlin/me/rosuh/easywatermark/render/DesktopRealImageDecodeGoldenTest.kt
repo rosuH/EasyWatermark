@@ -9,8 +9,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * S4d-20A: the **Desktop real-image decode gate** — proves [DesktopImageDecoder] actually decodes an
- * encoded image through AWT `ImageIO` and that the decoded `ImageBitmap` flows through the accepted
+ * The **Desktop real-image decode gate** — proves [DesktopImageDecoder] actually decodes an * encoded image through AWT `ImageIO` and that the decoded `ImageBitmap` flows through the accepted
  * commonMain composition pipeline ([WatermarkCellComposer.composeOverBackground]) to a valid watermarked
  * PNG.
  *

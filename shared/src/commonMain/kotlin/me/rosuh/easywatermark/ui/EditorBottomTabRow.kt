@@ -29,8 +29,7 @@ import me.rosuh.easywatermark.ui.theme.DesignNeutralMuted
  * - no hairline divider (seamless olive editor bg)
  *
  * Uses the stock [TabRowDefaults.PrimaryIndicator] + [tabIndicatorOffset] path instead of a
- * hand-rolled measure/animate layout — the custom measure path could throw on iOS when
- * tabPositions was empty or width resolved to 0 during tab switches.
+ * Hand-rolled measure/animate layout — the custom measure path could throw on iOS when * tabPositions was empty or width resolved to 0 during tab switches.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

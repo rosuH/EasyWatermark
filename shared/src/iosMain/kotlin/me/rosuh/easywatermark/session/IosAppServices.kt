@@ -22,8 +22,7 @@ private const val DEFAULT_WATERMARK_TEXT = "EasyWatermark 水印"
 
 /**
  * Single-process iOS graph (ADR-0017 Phase 4): **one** watermark DataStore + user prefs store,
- * shared by config bridges and [WatermarkSessionViewModel] (DataStore forbids dual stores per file).
- */
+ * Shared by config bridges and [WatermarkSessionViewModel] (DataStore forbids dual stores per file). */
 @OptIn(ExperimentalObjCName::class)
 @ObjCName(name = "IosAppServices", exact = true)
 class IosAppServices(
@@ -34,8 +33,8 @@ class IosAppServices(
     val session: WatermarkSessionViewModel,
 ) {
     /**
-     * Stage [imageBytes] to a temp file, enter editor, **and** export a watermarked preview.
-     * Prefer [stagePickedImagesBytes] + async preview when filmstrip must appear immediately.
+ * Stage [imageBytes] to a temp file, enter editor, **and** export a watermarked preview.
+ * Prefer [stagePickedImagesBytes] + async preview when filmstrip must appear immediately.
      */
     @Throws(Exception::class)
     suspend fun exportPickedImageBytes(imageBytes: ByteArray): String {
@@ -44,11 +43,11 @@ class IosAppServices(
     }
 
     /**
-     * Fast path: write picked bytes to temp files and update session selection / EnterEditor.
-     * Does **not** run the watermark export pipeline (that is the multi-second cost).
-     * Filmstrip can bind to [WatermarkSessionViewModel.launchScreenUiStateFlow] immediately after.
-     *
-     * @return source path of the focused (last newly staged) image.
+ * Fast path: write picked bytes to temp files and update session selection / EnterEditor.
+ * Does **not** run the watermark export pipeline (that is the multi-second cost).
+ * Filmstrip can bind to [WatermarkSessionViewModel.launchScreenUiStateFlow] immediately after.
+ *
+ * @return source path of the focused (last newly staged) image.
      */
     @Throws(Exception::class)
     suspend fun stagePickedImagesBytes(
@@ -95,7 +94,7 @@ class IosAppServices(
     }
 
     /**
-     * Run watermark export for the current session focus image only. Returns output path.
+ * Run watermark export for the current session focus image only. Returns output path.
      */
     @Throws(Exception::class)
     suspend fun exportFocusedPreview(): String {
@@ -120,7 +119,7 @@ class IosAppServices(
     }
 
     /**
-     * Stage + export (legacy combined path). Prefer stage then [exportFocusedPreview] for UI latency.
+ * Stage + export (legacy combined path). Prefer stage then [exportFocusedPreview] for UI latency.
      */
     @Throws(Exception::class)
     suspend fun exportPickedImagesBytes(
@@ -134,8 +133,7 @@ class IosAppServices(
 
 /**
  * Build the single iOS service graph. **Process-wide singleton** — DataStore forbids a second
- * active instance per file; Swift must not create a parallel graph for the product host.
- */
+ * Active instance per file; Swift must not create a parallel graph for the product host. */
 fun defaultIosAppServices(): IosAppServices = IosAppServicesHolder.instance
 
 private object IosAppServicesHolder {

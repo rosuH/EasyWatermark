@@ -1,23 +1,17 @@
 package me.rosuh.easywatermark.platform
 
 /**
- * Platform-neutral capability for Material You dynamic color (ADR-0007, ADR-0005).
+ * Platform gate for Material You / forced dynamic color.
  *
- * Android's actual implementation keeps the OEM allowlist + persisted user toggle (delegating to the
- * `:cmonet` module); Desktop/iOS bind an implementation that returns `false` / no-ops, falling back to
- * the static color schemes in `Theme.kt`.
- *
- * S4d-43 introduces this seam and routes only the live Compose call sites (theme gate + About toggle)
- * through it; the Android `ContextExtension` color getters and `MyApp.init` still call `:cmonet`
- * directly (deferred — see the slice plan).
+ * Android implements via `:cmonet`; other platforms no-op. Prefer this over direct CMonet access.
  */
 interface DynamicColorCapability {
     /** True if Material You dynamic color should be applied on this platform/device for the current user setting. */
     fun isAvailable(): Boolean
 
     /**
-     * Persisted "Force Open Dynamic Color" toggle (About switch).
-     * Distinct from [isAvailable]: on allowlisted devices [isAvailable] stays true even when force is off.
+ * Persisted "Force Open Dynamic Color" toggle (About switch).
+ * Distinct from [isAvailable]: on allowlisted devices [isAvailable] stays true even when force is off.
      */
     fun isForcedSupport(): Boolean
 

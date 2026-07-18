@@ -31,8 +31,7 @@ import org.jetbrains.compose.resources.painterResource
  * (`ic_log_transparent`).
  *
  * When [animate] is true, applies production [ColoredImageVIew]-style sweeping multi-stop
- * linear gradient with [BlendMode.SrcAtop] (2.5s reverse infinite). Static Image when false.
- */
+ * Linear gradient with [BlendMode.SrcAtop] (2.5s reverse infinite). Static Image when false. */
 @Composable
 fun BrandLogo(
     modifier: Modifier = Modifier,

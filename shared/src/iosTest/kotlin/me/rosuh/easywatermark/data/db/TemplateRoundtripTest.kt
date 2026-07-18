@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
 import kotlin.time.Clock
 
 /**
- * S4d-231: iOS runtime proof that the commonMain Room templates path RUNS on iOS via the new iosMain
+ * iOS runtime proof that the commonMain Room templates path RUNS on iOS via the new iosMain
  * [buildTemplateDatabase] (bundled SQLite driver). Empty store (no seeding). Exercises the existing
  * commonMain [TemplateRepository] (`checkIfIsDaoNull`/`getAllTemplate`) + [TemplateEditor]
  * (`isDaoNull`/`add`/`update`/`delete`), mirroring the desktopTest `TemplateRoundtripTest` with plain
