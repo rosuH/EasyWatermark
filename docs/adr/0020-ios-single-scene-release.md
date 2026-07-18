@@ -1,7 +1,7 @@
 # ADR-0020: iOS current release is single-scene
 
-**Status:** Accepted (2026-07-18)  
-**Context slice:** issue 13 stage B1 / issue 14  
+**Status:** Accepted (2026-07-18)
+**Context slice:** issue 13 stage B1 / issue 14
 **Related:** ADR-0017 (shared session ViewModel), issue 13 §7 B1
 
 ## Context
