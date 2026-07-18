@@ -64,12 +64,16 @@ import me.rosuh.easywatermark.domain.OutputPrefsEditor
 import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopImageDecoder
-import me.rosuh.easywatermark.render.DesktopImageImport
 import me.rosuh.easywatermark.render.DesktopSaveDecision
 import me.rosuh.easywatermark.session.AppIntent
 import me.rosuh.easywatermark.session.DesktopExportPipelinePort
+import me.rosuh.easywatermark.session.DesktopLastSavedPolicy
+import me.rosuh.easywatermark.session.DesktopSaveAsDestination
+import me.rosuh.easywatermark.session.DesktopSessionImport
 import me.rosuh.easywatermark.session.WatermarkSessionViewModel
 import me.rosuh.easywatermark.shared.generated.resources.Res
+import me.rosuh.easywatermark.shared.generated.resources.desktop_save_as
+import me.rosuh.easywatermark.shared.generated.resources.desktop_save_as_dialog_title
 import me.rosuh.easywatermark.shared.generated.resources.dialog_export_to_gallery
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_exporting
 import me.rosuh.easywatermark.shared.generated.resources.share
@@ -376,7 +380,8 @@ fun launchDesktopWindow() = application {
 
     /**
      * Import-only batch (Launch Open, editor Add more, Drop).
-     * Updates Session selection and preview; **never** writes output files or starts export.
+     * Updates Session selection and preview via [DesktopSessionImport.commitImport];
+     * **never** writes output files or starts export.
      *
      * @param append false = replace selection (Launch Open); true = append unique paths (Add more / Drop).
      */
@@ -389,17 +394,12 @@ fun launchDesktopWindow() = application {
                 val prior = session.launchScreenUiStateFlow.value.selectedImageList
                 val (msg, picked) = withContext(Dispatchers.IO) {
                     try {
-                        val incoming = DesktopImageImport.toImageInfos(files)
-                        val selected = DesktopImageImport.mergeSelection(prior, incoming, append = append)
-                        val gallery = DesktopImageImport.toGalleryImages(
-                            selected.map { File(it.uri.value) },
-                        )
-                        session.dispatchAndAwait(
-                            AppIntent.EnterEditor(
-                                selected = selected,
-                                gallerySnapshot = gallery,
-                                waterMark = repo.waterMark.first(),
-                            ),
+                        val selected = DesktopSessionImport.commitImport(
+                            session = session,
+                            files = files,
+                            existingSelection = prior,
+                            append = append,
+                            waterMark = repo.waterMark.first(),
                         )
                         // Remember last file bytes for preview / Save As — not an export.
                         val lastFile = files.lastOrNull { it.isFile }
@@ -447,17 +447,20 @@ fun launchDesktopWindow() = application {
         }
     }
 
-    /** Save As: exact user-chosen path via spine (not unique export naming). */
-    fun saveAsExactPath(window: java.awt.Frame) {
+    /**
+     * Save As: exact user-chosen path via [DesktopSaveAsDestination] → spine
+     * (not [DesktopSaveDecision.resolveUniqueOutputFile]).
+     */
+    fun saveAsExactPath(window: java.awt.Frame, dialogTitle: String) {
         if (busy) return
-        val dialog = FileDialog(window, "Save As", FileDialog.SAVE).apply {
+        val dialog = FileDialog(window, dialogTitle, FileDialog.SAVE).apply {
             val fmt = outputFormat
             file = "watermarked.${fmt.fileExtension}"
             isVisible = true
         }
         val dir = dialog.directory ?: return
         val name = dialog.file ?: return
-        val target = File(dir, name)
+        val target = DesktopSaveAsDestination.exactTarget(File(dir, name))
         scope.launch {
             busy = true
             try {
@@ -489,7 +492,7 @@ fun launchDesktopWindow() = application {
                     }
                     File(o.outputPath)
                 }
-                if (DesktopImageImport.mayUpdateLastSavedFile(out, previewFile)) {
+                if (DesktopLastSavedPolicy.mayTrackAsLastSaved(out, previewFile)) {
                     lastSavedFile = out
                 }
                 status = "Saved as: ${out.path}"
@@ -935,6 +938,8 @@ fun launchDesktopWindow() = application {
                     it.jobState is me.rosuh.easywatermark.data.model.JobState.Success
                 }.coerceAtLeast(exportJobState.completedCount)
                 // Desktop-only Save As (exact path) — not unique batch export naming.
+                val saveAsLabel = stringResource(Res.string.desktop_save_as)
+                val saveAsDialogTitle = stringResource(Res.string.desktop_save_as_dialog_title)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -942,10 +947,10 @@ fun launchDesktopWindow() = application {
                     horizontalArrangement = Arrangement.End,
                 ) {
                     Button(
-                        onClick = { saveAsExactPath(window) },
+                        onClick = { saveAsExactPath(window, dialogTitle = saveAsDialogTitle) },
                         enabled = !exportJobState.isSaving && !busy,
                     ) {
-                        Text("Save As…")
+                        Text(saveAsLabel)
                     }
                 }
                 SaveExportSheetShell(
@@ -954,7 +959,8 @@ fun launchDesktopWindow() = application {
                     quality = outputQuality,
                     primaryActionLabel = primaryLabel,
                     primaryActionEnabled = !exportJobState.isSaving && !busy,
-                    showOpenGallery = exportJobState.isFinished && lastSavedFile != null,
+                    // Open folder depends on last explicit save (Export or Save As), not batch finished.
+                    showOpenGallery = lastSavedFile != null && !exportJobState.isSaving,
                     exportListSubtitle = "$completedFixed/$exportTotalFixed",
                     imageCount = exportTotalFixed,
                     itemKey = { it.uri.value },
@@ -998,7 +1004,7 @@ fun launchDesktopWindow() = application {
                                             if (outPath != null) last = File(outPath)
                                         }
                                         last?.let { out ->
-                                            if (DesktopImageImport.mayUpdateLastSavedFile(out, previewFile)) {
+                                            if (DesktopLastSavedPolicy.mayTrackAsLastSaved(out, previewFile)) {
                                                 lastSavedFile = out
                                             }
                                         }
@@ -1014,7 +1020,7 @@ fun launchDesktopWindow() = application {
                                             )
                                             File(o.outputPath)
                                         }
-                                        if (DesktopImageImport.mayUpdateLastSavedFile(out, previewFile)) {
+                                        if (DesktopLastSavedPolicy.mayTrackAsLastSaved(out, previewFile)) {
                                             lastSavedFile = out
                                         }
                                         session.markExportFinished(completedCount = 1, totalCount = 1)

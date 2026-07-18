@@ -34,6 +34,8 @@
     <string name="error_file_not_found">The image couldn\'t be opened or was not selected</string>
     <string name="dialog_export_to_gallery">Export to the album</string>
     <string name="share">Share</string>
+    <string name="desktop_save_as">Save As…</string>
+    <string name="desktop_save_as_dialog_title">Save As</string>
     <string name="water_mark_mode_text">Text</string>
     <string name="water_mark_mode_image">Icon</string>
     <string name="tips_ok">Confirm</string>
