@@ -18,9 +18,9 @@ data class ImageInfo(
     val offsetX: Float = 0.5f,
     val offsetY: Float = 0.5f,
 ) {
-    // S4d-53: the dead `shareUri: Uri?` computed accessor (`result?.data as? Uri?`) was removed —
-    // it had zero call sites/reflection/tests, and the share-out button is an unwired empty lambda.
-    // The actual export result still lives in `result`/`jobState` (untouched).
+    // Export success payload lives in [result] (typically `Result<MediaRef>` on Android). Share /
+    // open-gallery map `result.data` at the Android edge (`uriFromExportResultData`); do not cast
+    // to platform Uri inside this model.
     fun isSameItem(other: ImageInfo): Boolean {
         return uri == other.uri
                 && result == other.result

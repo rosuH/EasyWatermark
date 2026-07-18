@@ -81,6 +81,7 @@ import me.rosuh.easywatermark.ui.about.AboutViewModel
 import me.rosuh.easywatermark.ui.about.OpenSourceScreen
 import me.rosuh.easywatermark.utils.ktx.openLink
 import me.rosuh.easywatermark.utils.ktx.toUri
+import me.rosuh.easywatermark.utils.ktx.uriFromExportResultData
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import me.rosuh.easywatermark.data.model.ImageFormat
@@ -283,7 +284,8 @@ class ComposeMainActivity : ComponentActivity() {
                             }
 
                             val outputUris = state.selectedImageList.mapNotNull { image ->
-                                image.result?.data as? Uri
+                                // Export port returns MediaRef; convert at the Android Intent edge.
+                                uriFromExportResultData(image.result?.data)
                             }
                             val shareExports: () -> Unit = {
                                 if (outputUris.isNotEmpty()) {

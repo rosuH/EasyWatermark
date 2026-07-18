@@ -20,3 +20,15 @@ import me.rosuh.easywatermark.data.model.MediaRef
 fun MediaRef.toUri(): Uri = if (value.isEmpty()) Uri.EMPTY else Uri.parse(value)
 
 fun Uri.toMediaRef(): MediaRef = MediaRef(toString())
+
+/**
+ * Android edge: map export [Result.data] to a shareable [Uri] for Intents.
+ *
+ * [AndroidExportPipelinePort] stores success payloads as [MediaRef]; share/open-gallery must
+ * convert here (not `as? Uri`, which always misses). Empty [MediaRef] → null (omit from share list).
+ */
+fun uriFromExportResultData(data: Any?): Uri? {
+    val ref = data as? MediaRef ?: return null
+    val uri = ref.toUri()
+    return uri.takeUnless { it == Uri.EMPTY }
+}
