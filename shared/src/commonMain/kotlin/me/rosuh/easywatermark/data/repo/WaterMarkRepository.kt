@@ -3,7 +3,12 @@ package me.rosuh.easywatermark.data.repo
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
@@ -28,6 +33,14 @@ import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_T
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_VERTICAL_GAP
 import okio.IOException
 
+/**
+ * In-memory image list / selection / offset state is **Main-confined**.
+ *
+ * [updateImageList] and [select] hop to [Dispatchers.Main.immediate] and run list/selected
+ * mutations in one non-suspending critical section. [updateOffset] is synchronous and must be
+ * called from UI/Main (sole production entry via session applyOffset). Together these three
+ * cannot interleave across threads in production; no merged state object or actor is required.
+ */
 class WaterMarkRepository(
     private val dataStore: DataStore<Preferences>,
     // S4d-86: the localized default watermark text is injected from the Android Koin edge
@@ -96,18 +109,25 @@ class WaterMarkRepository(
         }
 
     private val _imageMapFlow: MutableStateFlow<List<ImageInfo>> = MutableStateFlow(emptyList())
-    private val imageInfoMap: MutableMap<MediaRef, Int> = mutableMapOf()
 
     val imageInfoMapFlow = _imageMapFlow
 
     val imageInfoList: List<ImageInfo>
         get() = imageInfoMapFlow.value
 
+    /**
+     * Replace the image list on Main. Install + selected rebind run with **no suspension** between
+     * them so they cannot interleave with [select] / [updateOffset].
+     */
     suspend fun updateImageList(imageList: List<ImageInfo>) {
-        val map = imageList.mapIndexed { index, imageInfo -> imageInfo.uri to index }.toMap()
-        imageInfoMap.clear()
-        imageInfoMap.putAll(map)
-        _imageMapFlow.emit(imageList)
+        withContext(Dispatchers.Main.immediate) {
+            // Atomic list replace (StateFlow). Offset path uses update{} only — no side MutableMap race.
+            _imageMapFlow.value = imageList
+            // Keep list/selected identity: if selected URI is still present, rebind to the new entry.
+            _selectedImage.update { current ->
+                imageList.firstOrNull { it.uri == current.uri } ?: current
+            }
+        }
     }
 
     suspend fun updateText(text: String) {
@@ -164,19 +184,42 @@ class WaterMarkRepository(
         }
     }
 
-    suspend fun updateOffset(imageInfo: ImageInfo) {
-        if (imageInfo == selectedImage.value) {
-            return
+    /**
+     * Synchronous in-memory **offset-only** update. **Main-confined** (call from UI/Main only).
+     *
+     * - Does **not** mutate [imageInfo] (stale UI copies are safe to pass).
+     * - List CAS via [_imageMapFlow.update] is a **pure** lambda (no outer side effects).
+     * - After update, the committed object is **re-read** from the final list by URI so CAS
+     *   retries cannot return a never-installed instance.
+     * - Same offsets → returns the **existing** list entry (identity shared with list + selected).
+     * - [selectedImage] is updated only when its URI still matches (atomic [MutableStateFlow.update]).
+     *
+     * @return the installed list entry, or null if the URI was not found (no-op).
+     */
+    fun updateOffset(imageInfo: ImageInfo): ImageInfo? {
+        _imageMapFlow.update { current ->
+            val index = current.indexOfFirst { it.uri == imageInfo.uri }
+            if (index < 0) return@update current
+            val existing = current[index]
+            if (existing.offsetX == imageInfo.offsetX && existing.offsetY == imageInfo.offsetY) {
+                return@update current
+            }
+            val next = existing.copy(
+                offsetX = imageInfo.offsetX,
+                offsetY = imageInfo.offsetY,
+            )
+            current.toMutableList().also { it[index] = next }
         }
-        val index = imageInfoMap[selectedImage.value.uri] ?: kotlin.run {
-            logError("updateOffset: imageInfo not found, uri = ${selectedImage.value.uri}")
-            return
+        // Always re-read from the final list — never trust lambda-local objects across CAS retries.
+        val committed = _imageMapFlow.value.firstOrNull { it.uri == imageInfo.uri }
+        if (committed == null) {
+            logError("updateOffset: imageInfo not found, uri = ${imageInfo.uri}")
+            return null
         }
-        val list = ArrayList(imageInfoList)
-        list[index] = imageInfo
-        imageInfoMap[imageInfo.uri] = index
-        _imageMapFlow.emit(list)
-        _selectedImage.emit(imageInfo)
+        _selectedImage.update { current ->
+            if (current.uri == committed.uri) committed else current
+        }
+        return committed
     }
 
     suspend fun resetModeToText() {
@@ -191,9 +234,14 @@ class WaterMarkRepository(
         updateImageList(emptyList())
     }
 
-    suspend fun select(ref: MediaRef) = withContext(Dispatchers.Default) {
+    /**
+     * Set selection from the **current** list entry for [ref] (or a temp [ImageInfo] if missing).
+     * Read list + write selected happen on Main with no suspension between, so a concurrent
+     * [updateOffset] on Main cannot install B_new while this still holds B_old.
+     */
+    suspend fun select(ref: MediaRef) = withContext(Dispatchers.Main.immediate) {
         val info = imageInfoList.find { it.uri == ref } ?: ImageInfo(ref)
-        _selectedImage.emit(info)
+        _selectedImage.value = info
     }
 
     companion object {

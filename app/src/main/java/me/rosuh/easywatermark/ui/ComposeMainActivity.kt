@@ -421,6 +421,9 @@ class ComposeMainActivity : ComponentActivity() {
                                                 onBack = {
                                                     showEditorExitConfirm = true
                                                 },
+                                                onOffsetChanged = { info ->
+                                                    viewModel.updateOffset(info)
+                                                },
                                                 onWaterMrkChange = { item: FuncTitleModel, any: Any ->
                                                     viewModel.process(Action.WaterMarkChange(item, any))
                                                 },

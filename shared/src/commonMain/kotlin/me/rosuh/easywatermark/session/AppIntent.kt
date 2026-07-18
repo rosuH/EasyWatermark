@@ -70,5 +70,6 @@ sealed class AppIntent {
 
     data class ApplyTextStyle(val style: TextPaintStyle) : AppIntent()
 
-    data class ApplyOffset(val info: ImageInfo) : AppIntent()
+    // Offset is not an AppIntent: production uses synchronous
+    // WatermarkSessionViewModel.applyOffset (UI/Main) only — no async dual path.
 }

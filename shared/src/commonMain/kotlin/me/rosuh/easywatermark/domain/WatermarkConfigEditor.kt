@@ -70,7 +70,9 @@ class WatermarkConfigEditor(private val repo: WaterMarkRepository) {
         repo.updateTileMode(tileMode)
     }
 
-    suspend fun updateOffset(info: ImageInfo) {
-        repo.updateOffset(info)
-    }
+    /**
+     * Synchronous offset-only update. Returns the repository-installed [ImageInfo], or null if the
+     * URI is not in the list (no-op). Caller object is never mutated.
+     */
+    fun updateOffset(info: ImageInfo): ImageInfo? = repo.updateOffset(info)
 }

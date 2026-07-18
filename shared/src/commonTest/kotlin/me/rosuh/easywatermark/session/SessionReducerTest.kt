@@ -155,4 +155,63 @@ class SessionReducerTest {
         val r = reduceSessionUi(base, AppIntent.SelectCurrent(a.uri))
         assertTrue(r.effects.isEmpty())
     }
+
+    /**
+     * CLAMP drag → [AppIntent.SyncCurrentImage] must update **both** curImageInfo and the
+     * matching selectedImageList entry. Export uses selectedImageList (not only cur).
+     */
+    @Test
+    fun syncCurrentImage_replacesMatchingSelectedListOffsets() {
+        val a = me.rosuh.easywatermark.data.model.ImageInfo(
+            MediaRef("file:///a.jpg"),
+            offsetX = 0.5f,
+            offsetY = 0.5f,
+        )
+        val b = me.rosuh.easywatermark.data.model.ImageInfo(
+            MediaRef("file:///b.jpg"),
+            offsetX = 0.5f,
+            offsetY = 0.5f,
+        )
+        val base = SessionUiSnapshot(
+            launch = me.rosuh.easywatermark.ui.LaunchScreenState(
+                uiState = LaunchScreenUiState.Editor,
+                selectedImageList = listOf(a, b),
+                curImageInfo = a,
+            ),
+        )
+        val draggedA = a.copy(offsetX = 0.12f, offsetY = 0.88f)
+        val r = reduceSessionUi(base, AppIntent.SyncCurrentImage(draggedA))
+
+        val cur = r.snapshot.launch.curImageInfo
+        assertEquals(a.uri, cur?.uri)
+        assertEquals(0.12f, cur?.offsetX)
+        assertEquals(0.88f, cur?.offsetY)
+
+        // List entry for A must carry new offsets (export input for hosts that read selectedImageList).
+        val exportList = r.snapshot.launch.selectedImageList
+        assertEquals(2, exportList.size)
+        val exportA = exportList.first { it.uri == a.uri }
+        val exportB = exportList.first { it.uri == b.uri }
+        assertEquals(0.12f, exportA.offsetX)
+        assertEquals(0.88f, exportA.offsetY)
+        assertEquals(0.5f, exportB.offsetX)
+        assertEquals(0.5f, exportB.offsetY)
+        assertEquals(draggedA.offsetX, exportList[0].offsetX)
+    }
+
+    @Test
+    fun syncCurrentImage_null_clearsCurOnly() {
+        val a = me.rosuh.easywatermark.data.model.ImageInfo(MediaRef("file:///a.jpg"))
+        val base = SessionUiSnapshot(
+            launch = me.rosuh.easywatermark.ui.LaunchScreenState(
+                uiState = LaunchScreenUiState.Editor,
+                selectedImageList = listOf(a),
+                curImageInfo = a,
+            ),
+        )
+        val r = reduceSessionUi(base, AppIntent.SyncCurrentImage(null))
+        assertEquals(null, r.snapshot.launch.curImageInfo)
+        assertEquals(1, r.snapshot.launch.selectedImageList.size)
+        assertEquals(a.uri, r.snapshot.launch.selectedImageList.single().uri)
+    }
 }

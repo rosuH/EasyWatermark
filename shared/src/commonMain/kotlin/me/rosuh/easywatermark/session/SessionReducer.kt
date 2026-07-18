@@ -27,6 +27,55 @@ data class SessionReduceResult(
     val effects: List<SessionEffect> = emptyList(),
 )
 
+/**
+ * Pure rule: apply [info] as current image and replace any [LaunchScreenState.selectedImageList]
+ * entry with the same [ImageInfo.uri]. Shared by [reduceSessionUi] and the session VM's
+ * synchronous offset commit (export must see post-drag offsets without a global intent actor).
+ */
+internal fun applyCurrentImageToLaunch(
+    launch: LaunchScreenState,
+    info: ImageInfo?,
+): LaunchScreenState {
+    if (info == null) {
+        return launch.copy(curImageInfo = null)
+    }
+    val list = launch.selectedImageList
+    val updatedList = if (list.any { it.uri == info.uri }) {
+        list.map { item -> if (item.uri == info.uri) info else item }
+    } else {
+        list
+    }
+    return launch.copy(
+        curImageInfo = info,
+        selectedImageList = updatedList,
+    )
+}
+
+/**
+ * Pure merge for concurrent launch updates during reducer publish.
+ * If [live] diverged from [before] (e.g. [applyOffset] via StateFlow.update), prefer live
+ * [ImageInfo] instances by URI so offsets/results are not overwritten by a stale reduced snapshot.
+ */
+internal fun mergeLaunchPreservingLiveImages(
+    reduced: LaunchScreenState,
+    live: LaunchScreenState,
+    before: LaunchScreenState,
+): LaunchScreenState {
+    if (live == before) return reduced
+    val liveByUri = live.selectedImageList.associateBy { it.uri }
+    if (liveByUri.isEmpty()) return reduced
+    val mergedList = reduced.selectedImageList.map { item ->
+        liveByUri[item.uri] ?: item
+    }
+    val curUri = reduced.curImageInfo?.uri ?: live.curImageInfo?.uri
+    val mergedCur = curUri?.let { uri -> liveByUri[uri] ?: reduced.curImageInfo }
+        ?: reduced.curImageInfo
+    return reduced.copy(
+        selectedImageList = mergedList,
+        curImageInfo = mergedCur,
+    )
+}
+
 fun reduceSessionUi(snapshot: SessionUiSnapshot, intent: AppIntent): SessionReduceResult {
     return when (intent) {
         is AppIntent.GalleryLoaded -> {
@@ -180,8 +229,10 @@ fun reduceSessionUi(snapshot: SessionUiSnapshot, intent: AppIntent): SessionRedu
         }
 
         is AppIntent.SyncCurrentImage -> {
+            // Keep session snapshot self-consistent: hosts export from selectedImageList
+            // (ComposeMainActivity.doExport), not only curImageInfo.
             SessionReduceResult(
-                snapshot.copy(launch = snapshot.launch.copy(curImageInfo = intent.info)),
+                snapshot.copy(launch = applyCurrentImageToLaunch(snapshot.launch, intent.info)),
             )
         }
 
@@ -190,7 +241,6 @@ fun reduceSessionUi(snapshot: SessionUiSnapshot, intent: AppIntent): SessionRedu
         AppIntent.CancelExport,
         is AppIntent.ApplyConfig,
         is AppIntent.ApplyTextStyle,
-        is AppIntent.ApplyOffset,
         -> SessionReduceResult(snapshot)
     }
 }
