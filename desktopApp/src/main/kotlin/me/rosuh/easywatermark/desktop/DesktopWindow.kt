@@ -24,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -51,7 +52,6 @@ import me.rosuh.easywatermark.data.db.unpackDefaultTemplateSeed
 import me.rosuh.easywatermark.data.model.FuncType
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.ImageInfo
-import me.rosuh.easywatermark.data.model.JobState
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
@@ -64,6 +64,7 @@ import me.rosuh.easywatermark.domain.OutputPrefsEditor
 import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopImageDecoder
+import me.rosuh.easywatermark.render.DesktopImageImport
 import me.rosuh.easywatermark.render.DesktopSaveDecision
 import me.rosuh.easywatermark.session.AppIntent
 import me.rosuh.easywatermark.session.DesktopExportPipelinePort
@@ -81,7 +82,6 @@ import me.rosuh.easywatermark.ui.about.AboutScreen
 import me.rosuh.easywatermark.ui.about.OpenSourceScreen
 import me.rosuh.easywatermark.ui.EditorOptionItem
 import me.rosuh.easywatermark.ui.EditorTemplateSheetHost
-import me.rosuh.easywatermark.ui.Image as GalleryImage
 import me.rosuh.easywatermark.ui.label
 import me.rosuh.easywatermark.ui.iconPainter
 import me.rosuh.easywatermark.ui.ProductShellHost
@@ -218,7 +218,8 @@ private fun resolveDesktopAppDataDir(): File {
 }
 
 /**
- * The user-facing output dir for the interactive window's REAL saves (drop / Render & Save / * Open image) — `~/Pictures` when it exists, else `~/.easywatermark/output` (reusing the
+ * User-facing output dir for explicit Save/Export batches — `~/Pictures` when it exists, else
+ * `~/.easywatermark/output` (reusing the
  * app-data dir). Saved watermarked images must not land in the repo-local `build/` dir. The
  * headless/demo witness (`Main.kt`) and the `DesktopWatermarkFlow` default `outputDir` stay build-local.
  * The interactive preview temp stays app-private so the packaged `.app` does not depend on its launch
@@ -244,8 +245,9 @@ private fun desktopOptionIcon(type: FuncType): Painter = type.iconPainter()
 /**
  * Compose Desktop product window.
  *
- * Open/Drop: session export with unique outputs. Preview / Save As / sample:
- * [DesktopWatermarkFlow.runSaveFlow] → [DesktopRenderSaveSpine]. Preview uses a private temp only.
+ * **Import-only:** Open / Add more / Drop enter or append Session selection — no output files, no export job.
+ * **Write:** Save / Export (unique names under [resolveDesktopOutputDir]) and Save As (exact path).
+ * **Preview:** app-private temp only; never becomes [lastSavedFile].
  */
 fun launchDesktopWindow() = application {
     // persist the window's user state (watermark config, output prefs, templates DB) under the
@@ -254,17 +256,14 @@ fun launchDesktopWindow() = application {
     // DesktopWatermarkFlow defaults). All three persistence files (the two DataStores named by their
     // SP_NAME + the Room "ewm-db") share this dir; distinct filenames, no collision.
     val appDataDir = remember { resolveDesktopAppDataDir() }
-    // where the window's REAL saves (drop / Render & Save / Open image) write — a user dir, not
-    // the repo-local build/ default. "Save as…" still uses its chosen path; the preview temp + headless
-    // witness stay build-local.
+    // Real Save/Export batch destination (unique names). Save As uses the user-chosen path exactly.
     val outputDir = remember { resolveDesktopOutputDir() }
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
     val repo = remember { DesktopWatermarkFlow.buildRepository(dir = appDataDir) }
     val editor = remember { WatermarkConfigEditor(repo) }
     // the output-prefs repo the save flow reads (empty store → the shared (JPEG, 80) default).
     val userConfigRepo = remember { DesktopWatermarkFlow.buildUserConfigRepository(dir = appDataDir) }
-    // ADR-0017 Phase 3: shared session VM + Desktop export port (Skiko spine). Open-image / drop batches
-    // use session.exportAndAwait; Preview / Save-as / fixture sample keep runSaveFlow (in-memory bytes).
+    // Shared session + Desktop export port (unique destination). Preview / Save As use runSaveFlow → spine.
     val session = remember {
         WatermarkSessionViewModel(
             waterMarkRepo = repo,
@@ -289,9 +288,9 @@ fun launchDesktopWindow() = application {
     val templates by remember { templateRepo.getAllTemplate() }.collectAsState(emptyList())
     val scope = rememberCoroutineScope()
     var status by remember {
-        mutableStateOf("Ready. Open/drop images use shared session export; sample/preview use runSaveFlow.")
+        mutableStateOf("Ready. Open/drop import images; Save/Export writes output; Preview is temp-only.")
     }
-    // Surface shared export progress when a batch is running (Open image / drop).
+    // Surface shared export progress when an explicit Save/Export batch is running.
     LaunchedEffect(exportJobState.isSaving, exportJobState.completedCount, exportJobState.totalCount) {
         if (exportJobState.isSaving && exportJobState.totalCount > 0) {
             status = "Session export ${exportJobState.completedCount}/${exportJobState.totalCount}…"
@@ -299,8 +298,7 @@ fun launchDesktopWindow() = application {
     }
     var busy by remember { mutableStateOf(false) }
     var lastImage by remember { mutableStateOf<LastImage?>(null) }
-    // the last REAL saved output file (set only by the Render & Save / Save as… / Open image…
-    // success paths — NOT Preview, which writes a temp file). Drives the share-substitute buttons.
+    // Last REAL save only (explicit Export / Save As). Never Preview temp, never Open/Drop import.
     var lastSavedFile by remember { mutableStateOf<File?>(null) }
     // packaged Desktop launches do not have the repository as their working directory. Keep the
     // interactive preview temp beside the existing per-user config/DB state instead of under `build/`.
@@ -376,187 +374,129 @@ fun launchDesktopWindow() = application {
         status = refreshPreview()
     }
 
-    /** Shared system-pick batch spine (Launch CTA + Open image… + multi-select). */
-    fun openImageFilesBatch(files: List<File>) {
+    /**
+     * Import-only batch (Launch Open, editor Add more, Drop).
+     * Updates Session selection and preview; **never** writes output files or starts export.
+     *
+     * @param append false = replace selection (Launch Open); true = append unique paths (Add more / Drop).
+     */
+    fun openImageFilesBatch(files: List<File>, append: Boolean = false) {
         if (files.isEmpty()) return
         scope.launch {
             busy = true
-            status = "Rendering ${files.size} image(s)…"
-            var lastPicked: LastImage? = null
-            var lastSaved: File? = null
+            status = "Importing ${files.size} image(s)…"
             try {
-                val next = withContext(Dispatchers.IO) {
+                val prior = session.launchScreenUiStateFlow.value.selectedImageList
+                val (msg, picked) = withContext(Dispatchers.IO) {
                     try {
-                        val infos = files.map { ImageInfo(MediaRef(it.absolutePath)) }
-                        val gallery = files.mapIndexed { i, f ->
-                            GalleryImage(
-                                id = i,
-                                uri = MediaRef(f.absolutePath),
-                                name = f.name,
-                                size = f.length(),
-                                date = f.lastModified(),
-                                check = true,
-                            )
-                        }
+                        val incoming = DesktopImageImport.toImageInfos(files)
+                        val selected = DesktopImageImport.mergeSelection(prior, incoming, append = append)
+                        val gallery = DesktopImageImport.toGalleryImages(
+                            selected.map { File(it.uri.value) },
+                        )
                         session.dispatchAndAwait(
                             AppIntent.EnterEditor(
-                                selected = infos,
+                                selected = selected,
                                 gallerySnapshot = gallery,
                                 waterMark = repo.waterMark.first(),
                             ),
                         )
-                        session.exportAndAwait(infos)
-                        var successCount = 0
-                        var failCount = 0
-                        var firstFailure: String? = null
-                        for ((file, info) in files.zip(infos)) {
-                            when (val st = info.jobState) {
-                                is JobState.Success -> {
-                                    successCount++
-                                    val outPath = (info.result?.data as? MediaRef)?.value
-                                    if (outPath != null) {
-                                        lastSaved = File(outPath)
-                                        lastPicked = LastImage(file.readBytes(), file.path)
-                                    }
-                                }
-                                is JobState.Failure -> {
-                                    failCount++
-                                    if (firstFailure == null) {
-                                        firstFailure = "${file.name}: ${st.result.message ?: st.result.code}"
-                                    }
-                                }
-                                else -> {
-                                    failCount++
-                                    if (firstFailure == null) firstFailure = "${file.name}: incomplete"
-                                }
-                            }
-                        }
-                        val exp = session.exportJobState.value
-                        buildString {
-                            append(
-                                "Saved $successCount/${files.size} images to ${outputDir.path} " +
-                                    "(session export ${exp.completedCount}/${exp.totalCount})",
-                            )
-                            if (failCount > 0) append(" · $failCount failed: $firstFailure")
-                        }
+                        // Remember last file bytes for preview / Save As — not an export.
+                        val lastFile = files.lastOrNull { it.isFile }
+                        val lastPicked = lastFile?.let { LastImage(it.readBytes(), it.path) }
+                        "Imported ${selected.size} image(s) (no export)" to lastPicked
                     } catch (t: Throwable) {
-                        "Failed: ${t.message}"
+                        "Import failed: ${t.message}" to null
                     }
                 }
-                lastPicked?.let { lastImage = it }
-                lastSaved?.let { lastSavedFile = it }
-                if (lastPicked != null) {
+                picked?.let { lastImage = it }
+                if (picked != null || session.launchScreenUiStateFlow.value.selectedImageList.isNotEmpty()) {
                     productRoute = ProductShellNav.Route.Editor
                     selectedSessionImage = session.launchScreenUiStateFlow.value.curImageInfo
-                        ?: sessionImages.firstOrNull()
+                        ?: session.launchScreenUiStateFlow.value.selectedImageList.firstOrNull()
                 }
-                status = if (lastSaved != null) "$next · ${refreshPreview()}" else next
+                // Preview only — never touch lastSavedFile.
+                status = if (picked != null) "$msg · ${refreshPreview()}" else msg
             } finally {
                 busy = false
             }
         }
     }
 
-    // drop image file(s) onto the window to load them through the SAME save spine as "Open image…".
-    // a multi-file drop now watermarks and saves EVERY supported dropped image (was first-only),
-    // sequentially, to the user output dir with collision-free names. onDrop runs on the Compose UI thread,
-    // so it reads/sets state directly and launches the heavy render loop on `scope`. A drop while busy or a
-    // drop with no supported image fails softly with a status (no crash). Remembered so the target identity
-    // is stable.
+    // Drop → same import-only batch as Open / Add more (append when editor already has images).
+    val importBatchLatest = rememberUpdatedState(
+        newValue = { files: List<File>, append: Boolean -> openImageFilesBatch(files, append) },
+    )
+    val busyLatest = rememberUpdatedState(busy)
     val dropTarget = remember {
         object : DragAndDropTarget {
             override fun onDrop(event: DragAndDropEvent): Boolean {
-                if (busy) {
-                    status = "Busy — wait for the current render before dropping another image."
+                if (busyLatest.value) {
+                    status = "Busy — wait for the current operation before dropping another image."
                     return false
                 }
-                // take ALL supported dropped images (pure DesktopSaveDecision.supportedImageFiles).
                 val files = supportedImageFiles(event)
                 if (files.isEmpty()) {
                     status = "Unsupported drop — no supported image files in drop (${IMAGE_EXTENSIONS.joinToString(", ")})."
                     return false
                 }
-                scope.launch {
-                    busy = true
-                    status = "Rendering ${files.size} image(s)…"
-                    // Remember the LAST successful image/output (for reuse + the share-substitute buttons).
-                    var lastPicked: LastImage? = null
-                    var lastSaved: File? = null
-                    // the whole batch span is wrapped in try/finally so `busy` is ALWAYS reset —
-                    // even if setup (notably reading the output prefs) throws BEFORE the per-file loop. This
-                    // restores the old single-file drop's recovery: a setup failure must not leave the UI stuck.
-                    try {
-                        // Phase 3: same shared session export path as Open image… (DesktopExportPipelinePort).
-                        val next = withContext(Dispatchers.IO) {
-                            try {
-                                val infos = files.map { ImageInfo(MediaRef(it.absolutePath)) }
-                                val gallery = files.mapIndexed { i, f ->
-                                    GalleryImage(
-                                        id = i,
-                                        uri = MediaRef(f.absolutePath),
-                                        name = f.name,
-                                        size = f.length(),
-                                        date = f.lastModified(),
-                                        check = true,
-                                    )
-                                }
-                                session.dispatchAndAwait(
-                                    AppIntent.EnterEditor(
-                                        selected = infos,
-                                        gallerySnapshot = gallery,
-                                        waterMark = repo.waterMark.first(),
-                                    ),
-                                )
-                                session.exportAndAwait(infos)
-                                var successCount = 0
-                                var failCount = 0
-                                var firstFailure: String? = null
-                                for ((file, info) in files.zip(infos)) {
-                                    when (val st = info.jobState) {
-                                        is JobState.Success -> {
-                                            successCount++
-                                            val outPath = (info.result?.data as? MediaRef)?.value
-                                            if (outPath != null) {
-                                                lastSaved = File(outPath)
-                                                lastPicked = LastImage(file.readBytes(), file.path)
-                                            }
-                                        }
-                                        is JobState.Failure -> {
-                                            failCount++
-                                            if (firstFailure == null) {
-                                                firstFailure = "${file.name}: ${st.result.message ?: st.result.code}"
-                                            }
-                                        }
-                                        else -> {
-                                            failCount++
-                                            if (firstFailure == null) firstFailure = "${file.name}: incomplete"
-                                        }
-                                    }
-                                }
-                                val exp = session.exportJobState.value
-                                buildString {
-                                    append(
-                                        "Saved $successCount/${files.size} images to ${outputDir.path} " +
-                                            "(session export ${exp.completedCount}/${exp.totalCount})",
-                                    )
-                                    if (failCount > 0) append(" · $failCount failed: $firstFailure")
-                                }
-                            } catch (t: Throwable) {
-                                "Failed: ${t.message}"
-                            }
-                        }
-                        lastPicked?.let { lastImage = it }
-                        lastSaved?.let { lastSavedFile = it }
-                        if (lastPicked != null) productRoute = ProductShellNav.Route.Editor
-                        // refresh the preview AT MOST ONCE after the batch, only when ≥1 save succeeded
-                        // (over the last successful image). refreshPreview writes ONLY the temp preview file
-                        // (never lastSavedFile, so the share-substitute buttons stay bound to real saves).
-                        status = if (lastSaved != null) "$next · ${refreshPreview()}" else next
-                    } finally {
-                        busy = false
-                    }
-                }
+                val append = session.launchScreenUiStateFlow.value.selectedImageList.isNotEmpty()
+                importBatchLatest.value(files, append)
                 return true
+            }
+        }
+    }
+
+    /** Save As: exact user-chosen path via spine (not unique export naming). */
+    fun saveAsExactPath(window: java.awt.Frame) {
+        if (busy) return
+        val dialog = FileDialog(window, "Save As", FileDialog.SAVE).apply {
+            val fmt = outputFormat
+            file = "watermarked.${fmt.fileExtension}"
+            isVisible = true
+        }
+        val dir = dialog.directory ?: return
+        val name = dialog.file ?: return
+        val target = File(dir, name)
+        scope.launch {
+            busy = true
+            try {
+                val out = withContext(Dispatchers.IO) {
+                    val current = lastImage
+                    val o = if (current != null) {
+                        DesktopWatermarkFlow.runSaveFlow(
+                            repo, userConfigRepo,
+                            inputBytes = current.bytes,
+                            inputLabel = current.label,
+                            outputFile = target,
+                        )
+                    } else {
+                        val path = session.launchScreenUiStateFlow.value.curImageInfo?.uri?.value
+                            ?: session.launchScreenUiStateFlow.value.selectedImageList.firstOrNull()?.uri?.value
+                        if (path != null) {
+                            val bytes = File(path).readBytes()
+                            DesktopWatermarkFlow.runSaveFlow(
+                                repo, userConfigRepo,
+                                inputBytes = bytes,
+                                inputLabel = path,
+                                outputFile = target,
+                            )
+                        } else {
+                            DesktopWatermarkFlow.runSaveFlow(
+                                repo, userConfigRepo, outputFile = target,
+                            )
+                        }
+                    }
+                    File(o.outputPath)
+                }
+                if (DesktopImageImport.mayUpdateLastSavedFile(out, previewFile)) {
+                    lastSavedFile = out
+                }
+                status = "Saved as: ${out.path}"
+            } catch (t: Throwable) {
+                status = "Save As failed: ${t.message}"
+            } finally {
+                busy = false
             }
         }
     }
@@ -582,12 +522,9 @@ fun launchDesktopWindow() = application {
             val avatarDevPainter = SharedProductDrawables.avatarDevPainter()
             val avatarToviPainter = SharedProductDrawables.avatarToviPainter()
 
-            val editorModifier = if (productRoute == ProductShellNav.Route.Editor) {
-                Modifier.fillMaxSize()
-                    .dragAndDropTarget(shouldStartDragAndDrop = { hasFileList(it) }, target = dropTarget)
-            } else {
-                Modifier.fillMaxSize()
-            }
+            // Drop is import-only on Launch and Editor (never writes output).
+            val shellModifier = Modifier.fillMaxSize()
+                .dragAndDropTarget(shouldStartDragAndDrop = { hasFileList(it) }, target = dropTarget)
             ProductShellHost(route = productRoute) { route ->
             when (route) {
                 ProductShellNav.Route.Launch -> {
@@ -618,7 +555,7 @@ fun launchDesktopWindow() = application {
                                 animate = shouldAnimate,
                             )
                         },
-                        modifier = editorModifier,
+                        modifier = shellModifier,
                     )
                 }
                 ProductShellNav.Route.About -> {
@@ -698,7 +635,7 @@ fun launchDesktopWindow() = application {
                                 animate = true,
                             )
                         },
-                        modifier = editorModifier,
+                        modifier = shellModifier,
                     )
                 }
                 ProductShellNav.Route.Editor -> {
@@ -838,7 +775,7 @@ fun launchDesktopWindow() = application {
                                 isVisible = true
                             }
                             val files = DesktopSaveDecision.supportedImageFiles(dialog.files.toList(), IMAGE_EXTENSIONS)
-                            if (files.isNotEmpty()) openImageFilesBatch(files)
+                            if (files.isNotEmpty()) openImageFilesBatch(files, append = true)
                         },
                         onShowSaveDialog = {
                             // Open Android-parity export panel; do not write files until primary CTA.
@@ -945,7 +882,7 @@ fun launchDesktopWindow() = application {
                                 busy = false
                             }
                         },
-                        modifier = editorModifier,
+                        modifier = shellModifier,
                     )
                 }
             }
@@ -997,6 +934,20 @@ fun launchDesktopWindow() = application {
                 val completedFixed = exportItems.count {
                     it.jobState is me.rosuh.easywatermark.data.model.JobState.Success
                 }.coerceAtLeast(exportJobState.completedCount)
+                // Desktop-only Save As (exact path) — not unique batch export naming.
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    Button(
+                        onClick = { saveAsExactPath(window) },
+                        enabled = !exportJobState.isSaving && !busy,
+                    ) {
+                        Text("Save As…")
+                    }
+                }
                 SaveExportSheetShell(
                     items = exportItems,
                     selectedFormat = outputFormat,
@@ -1024,7 +975,7 @@ fun launchDesktopWindow() = application {
                     },
                     onExportClick = {
                         if (exportJobState.isFinished) {
-                            // E09 share substitute: reveal folder of last real save.
+                            // E09 share substitute: reveal folder of last real save (never preview).
                             val file = lastSavedFile
                             if (file != null && Desktop.isDesktopSupported()) {
                                 try {
@@ -1046,11 +997,15 @@ fun launchDesktopWindow() = application {
                                             val outPath = (info.result?.data as? MediaRef)?.value
                                             if (outPath != null) last = File(outPath)
                                         }
-                                        last?.let { lastSavedFile = it }
+                                        last?.let { out ->
+                                            if (DesktopImageImport.mayUpdateLastSavedFile(out, previewFile)) {
+                                                lastSavedFile = out
+                                            }
+                                        }
                                         val exp = session.exportJobState.value
                                         status = "Exported ${exp.completedCount}/${exp.totalCount} → ${outputDir.path}"
                                     } else {
-                                        // No session image: fixture sample via existing save spine (platform edge).
+                                        // No session image: fixture sample via unique export destination.
                                         val out = withContext(Dispatchers.IO) {
                                             val fmt = userConfigRepo.userPreferences.first().outputFormat
                                             val target = DesktopSaveDecision.resolveUniqueOutputFile(outputDir, fmt)
@@ -1059,7 +1014,9 @@ fun launchDesktopWindow() = application {
                                             )
                                             File(o.outputPath)
                                         }
-                                        lastSavedFile = out
+                                        if (DesktopImageImport.mayUpdateLastSavedFile(out, previewFile)) {
+                                            lastSavedFile = out
+                                        }
                                         session.markExportFinished(completedCount = 1, totalCount = 1)
                                         status = "Saved: ${out.path}"
                                     }
