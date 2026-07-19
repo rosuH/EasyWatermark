@@ -13,6 +13,7 @@ import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkMode
+import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.utils.bitmap.AndroidExifTestFixture.BaseHeight
 import me.rosuh.easywatermark.utils.bitmap.AndroidExifTestFixture.BaseWidth
 import me.rosuh.easywatermark.utils.bitmap.AndroidExifTestFixture.Quadrant
@@ -44,38 +45,54 @@ class C2ExportPortCommonRasterTest {
     private val app: Application = RuntimeEnvironment.getApplication()
 
     @Test
-    fun exportOne_commonRaster_succeedsWithNonEmptyMediaRef() = runBlocking {
+    fun exportOne_textClamp_nonCenter_pngReadback_currentContract() = runBlocking {
         val src = File(app.cacheDir, "c2-export-src.png").apply {
             parentFile?.mkdirs()
             outputStream().use { out ->
-                solidBg(96, 72).compress(Bitmap.CompressFormat.PNG, 100, out)
+                solidBg(320, 240).compress(Bitmap.CompressFormat.PNG, 100, out)
             }
         }
         val uri = Uri.fromFile(src)
-        val info = ImageInfo(
-            uri = MediaRef(uri.toString()),
-            width = 96,
-            height = 72,
-            offsetX = 0.5f,
-            offsetY = 0.5f,
-        )
         val port = AndroidExportPipelinePort(appContext = app)
+        val config = WaterMark.default.copy(
+            text = "C0.2",
+            textSize = 32f,
+            markMode = WatermarkMode.Text,
+            tileMode = WatermarkTileMode.CLAMP,
+            degree = 0f,
+        )
+
+        val pngInfo = ImageInfo(
+            uri = MediaRef(uri.toString()),
+            width = 320,
+            height = 240,
+            offsetX = 0.17f,
+            offsetY = 0.83f,
+        )
         val result = port.exportOne(
-            imageInfo = info,
-            config = WaterMark.default.copy(
-                text = "C2Export",
-                markMode = WatermarkMode.Text,
-                degree = 315f,
-            ),
-            prefs = UserPreferences(ImageFormat.PNG, 100),
+            imageInfo = pngInfo,
+            config = config,
+            prefs = UserPreferences(ImageFormat.PNG, 90),
         )
         assertTrue(
-            "exportOne must succeed under common raster (code=${result.code} msg=${result.message})",
+            "PNG exportOne must succeed (code=${result.code} msg=${result.message})",
             result.isSuccess(),
         )
-        val outRef = result.data
-        assertNotNull(outRef)
-        assertTrue(outRef!!.value.isNotEmpty())
+        val outputUri = Uri.parse(result.data!!.value)
+        val pngBytes = app.contentResolver.openInputStream(outputUri).use { it!!.readBytes() }
+        assertTrue(
+            "PNG output must have canonical magic",
+            pngBytes.take(8).toByteArray().contentEquals(
+                byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A),
+            ),
+        )
+        val pngBitmap = BitmapFactory.decodeByteArray(pngBytes, 0, pngBytes.size)
+        assertNotNull(pngBitmap)
+        assertEquals(320, pngBitmap!!.width)
+        assertEquals(240, pngBitmap.height)
+        assertEquals(320, pngInfo.width)
+        assertEquals(240, pngInfo.height)
+        assertLocalizedLowerLeft(pngBitmap)
     }
 
     @Test
@@ -124,4 +141,36 @@ class C2ExportPortCommonRasterTest {
 
     private fun solidBg(w: Int, h: Int): Bitmap =
         Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.BLUE) }
+
+    private fun assertLocalizedLowerLeft(bitmap: Bitmap) {
+        var changed = 0
+        var minX = bitmap.width
+        var maxX = -1
+        var minY = bitmap.height
+        var maxY = -1
+        var sumX = 0L
+        var sumY = 0L
+        for (y in 0 until bitmap.height) {
+            for (x in 0 until bitmap.width) {
+                if (bitmap.getPixel(x, y) != Color.BLUE) {
+                    changed++
+                    minX = minOf(minX, x)
+                    maxX = maxOf(maxX, x)
+                    minY = minOf(minY, y)
+                    maxY = maxOf(maxY, y)
+                    sumX += x
+                    sumY += y
+                }
+            }
+        }
+        assertTrue("CLAMP output must change pixels", changed > 0)
+        val bboxW = maxX - minX + 1
+        val bboxH = maxY - minY + 1
+        assertTrue("CLAMP bbox must be localized horizontally (bboxW=$bboxW)", bboxW < bitmap.width * 0.60)
+        assertTrue("CLAMP bbox must be localized vertically (bboxH=$bboxH)", bboxH < bitmap.height * 0.60)
+        val centroidX = sumX.toDouble() / changed
+        val centroidY = sumY.toDouble() / changed
+        assertTrue("offsetX=0.17 must stay left of center (centroidX=$centroidX)", centroidX < bitmap.width * 0.45)
+        assertTrue("offsetY=0.83 must stay below center (centroidY=$centroidY)", centroidY > bitmap.height * 0.65)
+    }
 }

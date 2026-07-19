@@ -191,4 +191,22 @@ class DesktopRenderSaveSpineTest {
         assertTrue(target.isFile)
         assertTrue(target.length() > 3)
     }
+
+    @Test
+    fun renderAndSave_large2048x1536_completesWithOriginalDimensions() {
+        val dir = workDir("large-current-contract")
+        val target = File(dir, "large.jpg")
+        val saved = DesktopRenderSaveSpine.renderAndSave(
+            imageBytes = fixtureBytes(2048, 1536),
+            config = WaterMark.default.copy(text = "C0.2 LARGE"),
+            prefs = UserPreferences(ImageFormat.JPEG, 80),
+            target = target,
+        )
+
+        assertTrue(target.isFile)
+        assertTrue(saved.outputByteCount > 0)
+        assertEquals(2048, saved.width)
+        assertEquals(1536, saved.height)
+        assertEquals(target.absolutePath, saved.output.value)
+    }
 }
