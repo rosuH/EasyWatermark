@@ -16,7 +16,6 @@ import android.widget.ImageView.ScaleType
 import androidx.exifinterface.media.ExifInterface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.data.model.Result
 import java.io.FileNotFoundException
 import java.io.InputStream
@@ -25,110 +24,104 @@ import kotlin.math.roundToInt
 
 private const val TAG = "BitmapUtils"
 
-suspend fun decodeBitmapWithExif(
-    uri: Uri,
-    inputStream: InputStream,
-    options: BitmapFactory.Options? = null,
-): Result<BitmapCache.BitmapValue> =
-    withContext(Dispatchers.IO) {
-        return@withContext decodeBitmapWithExifSync(uri, inputStream, options)
-    }
+private data class ExifTransform(val orientation: Int) {
+    val swapsDimensions: Boolean get() = orientation in 5..8
 
-fun decodeBitmapWithExifSync(
-    uri: Uri,
+    fun matrixOrNull(): Matrix? {
+        return Matrix().apply {
+            when (orientation) {
+                ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> setScale(-1f, 1f)
+                ExifInterface.ORIENTATION_ROTATE_180 -> setRotate(180f)
+                ExifInterface.ORIENTATION_FLIP_VERTICAL -> {
+                    setRotate(180f)
+                    postScale(-1f, 1f)
+                }
+                ExifInterface.ORIENTATION_TRANSPOSE -> {
+                    setRotate(90f)
+                    postScale(-1f, 1f)
+                }
+                ExifInterface.ORIENTATION_ROTATE_90 -> setRotate(90f)
+                ExifInterface.ORIENTATION_TRANSVERSE -> {
+                    setRotate(-90f)
+                    postScale(-1f, 1f)
+                }
+                ExifInterface.ORIENTATION_ROTATE_270 -> setRotate(-90f)
+                else -> return null
+            }
+        }
+    }
+}
+
+private fun decodeBitmapWithExifSync(
     inputStream: InputStream,
+    transform: ExifTransform,
     options: BitmapFactory.Options? = null
 ): Result<BitmapCache.BitmapValue> {
     val bitmap = BitmapFactory.decodeStream(inputStream, null, options)
         ?: return Result.failure(null, "-1", "Generate Bitmap failed.")
     val inSampleSize = options?.inSampleSize ?: 1
-    val bitmapValue = BitmapCache.BitmapValue(bitmap, inSampleSize)
+    val matrix = transform.matrixOrNull()
+        ?: return Result.success(BitmapCache.BitmapValue(bitmap, inSampleSize))
 
-    val rotation = getOrientation(MyApp.instance, uri)
-    if (rotation == 0f) {
-        return Result.success(bitmapValue)
+    val uprightBitmap = try {
+        Bitmap.createBitmap(
+            bitmap,
+            0,
+            0,
+            bitmap.width,
+            bitmap.height,
+            matrix,
+            false
+        )
+    } catch (failure: Throwable) {
+        if (!bitmap.isRecycled) {
+            bitmap.recycle()
+        }
+        throw failure
     }
-
-    val matrix = Matrix()
-    matrix.postRotate(rotation)
-
-    val rotatedBitmap = Bitmap.createBitmap(
-        bitmap,
-        0,
-        0,
-        bitmap.width,
-        bitmap.height,
-        matrix,
-        false
-    )
-    if (rotatedBitmap != bitmap && !bitmap.isRecycled) {
+    if (uprightBitmap != bitmap && !bitmap.isRecycled) {
         bitmap.recycle()
     }
-    val rotateBitmapValue = BitmapCache.BitmapValue(rotatedBitmap, inSampleSize)
-    return Result.success(rotateBitmapValue)
+    return Result.success(BitmapCache.BitmapValue(uprightBitmap, inSampleSize))
 }
 
-/**
- * Get orientation from ExifInterface and System sql.
- */
-private fun getOrientation(
-    context: Context,
+/** Read EXIF once per decode operation; MediaStore degrees are only a missing-EXIF fallback. */
+private fun readExifTransform(
+    resolver: ContentResolver,
     uri: Uri
-): Float {
-    context.contentResolver.openInputStream(uri).use {
-        if (it == null) {
-            return 0f
+): ExifTransform {
+    val tagOrientation = runCatching {
+        resolver.openInputStream(uri)?.use { input ->
+            ExifInterface(input).getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_UNDEFINED,
+            )
         }
-        val exif = if (android.os.Build.VERSION.SDK_INT > android.os.Build.VERSION_CODES.N) {
-            try {
-                ExifInterface(it)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                null
-            }
-        } else {
-            // do not support api lower 24
-            null
-        }
-        val tagOrientation: Int = exif?.getAttributeInt(
-            ExifInterface.TAG_ORIENTATION,
-            ExifInterface.ORIENTATION_UNDEFINED
-        ) ?: ExifInterface.ORIENTATION_UNDEFINED
-
-        when (tagOrientation) {
-            ExifInterface.ORIENTATION_ROTATE_90 -> {
-                return 90f
-            }
-            ExifInterface.ORIENTATION_ROTATE_180 -> {
-                return 180f
-            }
-            ExifInterface.ORIENTATION_ROTATE_270 -> {
-                return 270f
-            }
-            else -> {
-                // do not need to rotate bitmap
-                try {
-                    val cursor: Cursor? = context.contentResolver.query(
-                        uri,
-                        arrayOf(MediaStore.Images.ImageColumns.ORIENTATION),
-                        null,
-                        null,
-                        null
-                    )
-                    if (cursor?.count != 1) {
-                        cursor?.close()
-                        return 0f
-                    }
-                    cursor.moveToFirst()
-                    val orientation: Int = cursor.getInt(0)
-                    cursor.close()
-                    return orientation.toFloat()
-                } catch (e: Exception) {
-                    return 0f
-                }
-            }
-        }
+    }.getOrNull()
+    if (tagOrientation != null && tagOrientation in 1..8) {
+        return ExifTransform(tagOrientation)
     }
+
+    val mediaStoreDegrees = try {
+        resolver.query(
+            uri,
+            arrayOf(MediaStore.Images.ImageColumns.ORIENTATION),
+            null,
+            null,
+            null,
+        )?.use { cursor: Cursor ->
+            if (cursor.count == 1 && cursor.moveToFirst()) cursor.getInt(0) else null
+        }
+    } catch (_: Exception) {
+        null
+    }
+    val fallbackOrientation = when (mediaStoreDegrees) {
+        90 -> ExifInterface.ORIENTATION_ROTATE_90
+        180 -> ExifInterface.ORIENTATION_ROTATE_180
+        270 -> ExifInterface.ORIENTATION_ROTATE_270
+        else -> ExifInterface.ORIENTATION_NORMAL
+    }
+    return ExifTransform(fallbackOrientation)
 }
 
 
@@ -137,11 +130,12 @@ suspend fun decodeBitmapFromUri(
     uri: Uri
 ): Result<BitmapCache.BitmapValue> =
     withContext(Dispatchers.IO) {
+        val transform = readExifTransform(resolver, uri)
         resolver.openInputStream(uri).use { inputStream ->
             if (inputStream == null) {
                 return@withContext Result.failure(null, "-1", "Open input stream failed.")
             }
-            return@withContext decodeBitmapWithExif(uri, inputStream)
+            return@withContext decodeBitmapWithExifSync(inputStream, transform)
         }
     }
 
@@ -180,6 +174,7 @@ fun decodeSampledBitmapFromResourceSync(
     reqHeight: Int
 ): Result<BitmapCache.BitmapValue> {
     try {
+        val transform = readExifTransform(resolver, uri)
         val options = BitmapFactory.Options()
         options.inJustDecodeBounds = true
         // 1. decode bounds only
@@ -187,7 +182,7 @@ fun decodeSampledBitmapFromResourceSync(
             BitmapFactory.decodeStream(`is`, null, options)
         }
         // 2. Calculate inSampleSize
-        val (oHeight: Int, oWidth: Int) = if (interChangeSize(MyApp.instance, uri)) {
+        val (oHeight: Int, oWidth: Int) = if (transform.swapsDimensions) {
             options.run { outWidth to outHeight }
         } else {
             options.run { outHeight to outWidth }
@@ -200,7 +195,7 @@ fun decodeSampledBitmapFromResourceSync(
             if (inputStream == null) {
                 return Result.failure(null, "-1", "Open input stream failed.")
             }
-            return decodeBitmapWithExifSync(uri, inputStream, options)
+            return decodeBitmapWithExifSync(inputStream, transform, options)
         }
     } catch (fne: FileNotFoundException) {
         return Result.failure(null, "-1", fne.message)
@@ -217,14 +212,6 @@ fun decodeSampledBitmapFromResourceSync(
             "Decoding sampled bitmap from resource throw oom"
         )
     }
-}
-
-fun interChangeSize(context: Context, uri: Uri): Boolean {
-    val rotation = getOrientation(context, uri)
-    if (rotation == 90f || rotation == 180f) {
-        return true
-    }
-    return false
 }
 
 fun calculateInSampleSize(

@@ -47,7 +47,7 @@ Two cell-raster paths share one geometry core (`WatermarkGeometry`) and one tili
 - **Native Android** (`:app/render/WatermarkRenderer`): legacy `StaticLayout` text / `BitmapShader` oracle for dual-path measurement and historical goldens — **not** the production path.
 - **CommonMain raster** (`WatermarkCellComposer` + `CommonWatermarkPipeline` via Android `AndroidCommonRaster.kt`): production path for Desktop/iOS **and Android** preview + export (ADR-0018 / Option C2; rollout flag removed). Never claim byte-parity with legacy native goldens; rebaseline per `docs/adr/0010-c2-golden-policy-delta.md`.
 
-EXIF policy: Android decode bakes orientation (`utils/bitmap/BitmapUtils.kt`, `BitmapFactory` + inSampleSize); Desktop decodes via AWT and bakes orientation manually; iOS Skia decode bakes it implicitly. Export strips all EXIF metadata — deliberate privacy feature (ADR-0009).
+EXIF policy: Android decode uses `ExifInterface(InputStream)` on API 23+ and bakes all eight EXIF orientations (including mirrored 2/4/5/7) into pixels in `utils/bitmap/BitmapUtils.kt`; sampled bounds swap only for orientations 5–8. MediaStore rotation is a best-effort fallback only when EXIF is absent or invalid. Desktop decodes via AWT and bakes orientation manually; iOS Skia decode bakes it implicitly. Export strips all EXIF metadata — deliberate privacy feature (ADR-0009).
 
 ### Storage & model invariants
 
