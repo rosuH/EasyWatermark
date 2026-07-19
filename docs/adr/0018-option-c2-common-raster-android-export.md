@@ -50,6 +50,16 @@ C2 was previously blocked by byte-parity failures (rotated non-uniform icons; CJ
 - Export **panel** is shared `SaveExportSheetShell` on Android/Desktop/iOS; Photos/MediaStore/FS/share remain platform edges.
 - Gate 4 full native-builder delete still owner-gated; **rollout flag removed** (2026-07-17): `CommonRasterFlags` deleted — production always uses `AndroidCommonRaster` / commonMain pipeline. Native `WatermarkRenderer` kept for dual-path measurement and historical goldens.
 
+### Status update (2026-07-19 — Stage C1 pipeline API depth)
+
+- `CommonWatermarkPipeline.compose` / `composeTextCell` accept an optional prepared
+  `FontFamily? = null` as the last parameter (issue 20).
+- Omitted/`null` preserves the pre-C1 default resolver path (Android production unchanged).
+- Image mode ignores the family. No production caller passes a non-null family in C1.
+- Desktop/iOS supply bundled Latin+CJK families into this API only in later slices
+  (**Stage C2** / **Stage C3** production cutovers). Direct `WatermarkCellComposer`
+  orchestration on those platforms remains until then.
+
 ## Owner acceptance (recorded)
 
 - **C2** selected explicitly after product discussion of common 光栅 and C1/C2 tradeoff.  

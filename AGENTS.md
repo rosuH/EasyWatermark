@@ -25,7 +25,7 @@ EasyWatermark (`me.rosuh.easywatermark`) — a privacy-focused watermark app tha
 - `data/db/` — Room KMP: `Template` entity, `AppDatabase`, `TemplateDao`, `TemplateRepository`. Locale-seeded template DBs (`ewm-db-ch.db` / `ewm-db-eng.db`).
 - `domain/` — editor use-cases over the repos: `WatermarkConfigEditor`, `OutputPrefsEditor`, `TemplateEditor`.
 - `session/` — product state machine: `WatermarkSessionViewModel` + `SessionReducer` + `AppIntent`, with platform capabilities injected as ports (`ExportPipelinePort`, `MediaLibraryPort`). ADR-0017.
-- `render/` — engine: `WatermarkGeometry` (image-space sizing: `REF_WIDTH` 1000, gap/diagonal/rotated-AABB math) and `WatermarkCellComposer` (`composeTextCell` / `composeIconCell` / `composeOverBackground`) + `CommonWatermarkPipeline`. Text rastering via `TextRasterEnv` (FontFamily.Resolver + Density) and `TextMeasurer`/`MultiParagraph`.
+- `render/` — engine: `WatermarkGeometry` (image-space sizing: `REF_WIDTH` 1000, gap/diagonal/rotated-AABB math), `WatermarkCellComposer` (`composeTextCell` / `composeIconCell` / `composeOverBackground`), and product composition entry `CommonWatermarkPipeline` (optional last `FontFamily? = null` for Text mode; omitted/`null` = default resolver path; Image mode ignores family). Decode, font file load, encode, and system I/O stay platform edges. Text rastering via `TextRasterEnv` (FontFamily.Resolver + Density) and `TextMeasurer`/`MultiParagraph`.
 - `ui/` — shared Compose Multiplatform UI: `Routes` (typed `@Serializable` nav), `ProductShellNav`/`ProductShellHost`, `LaunchScreen`, `EditorScreen` (+ option controls, template sheet, gallery dialog, save/export sheet), `about/`, `theme/`. Strings/drawables via `composeResources`.
 
 Platform source sets supply the edges:
@@ -45,7 +45,7 @@ Platform source sets supply the edges:
 Two cell-raster paths share one geometry core (`WatermarkGeometry`) and one tiling semantic (REPEAT grid / CLAMP decal at fractional offset):
 
 - **Native Android** (`:app/render/WatermarkRenderer`): legacy `StaticLayout` text / `BitmapShader` oracle for dual-path measurement and historical goldens — **not** the production path.
-- **CommonMain raster** (`WatermarkCellComposer` + `CommonWatermarkPipeline` via Android `AndroidCommonRaster.kt`): production path for Desktop/iOS **and Android** preview + export (ADR-0018 / Option C2; rollout flag removed). Never claim byte-parity with legacy native goldens; rebaseline per `docs/adr/0010-c2-golden-policy-delta.md`.
+- **CommonMain raster** (`CommonWatermarkPipeline` + `WatermarkCellComposer` primitives via Android `AndroidCommonRaster.kt`): Android production preview + export (ADR-0018 / Option C2; rollout flag removed). Desktop/iOS still compose via direct primitive orchestration until Stage C2/C3 cutover; optional prepared `FontFamily` is accepted on the pipeline now but not yet passed from those production callers. Never claim byte-parity with legacy native goldens; rebaseline per `docs/adr/0010-c2-golden-policy-delta.md`.
 
 EXIF policy: Android decode uses `ExifInterface(InputStream)` on API 23+ and bakes all eight EXIF orientations (including mirrored 2/4/5/7) into pixels in `utils/bitmap/BitmapUtils.kt`; sampled bounds swap only for orientations 5–8. MediaStore rotation is a best-effort fallback only when EXIF is absent or invalid. Desktop decodes via AWT and bakes orientation manually; iOS Skia decode bakes it implicitly. Export strips all EXIF metadata — deliberate privacy feature (ADR-0009).
 

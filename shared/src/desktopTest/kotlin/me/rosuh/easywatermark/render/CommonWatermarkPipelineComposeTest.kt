@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.ImageBitmapConfig
 import androidx.compose.ui.graphics.PixelMap
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import me.rosuh.easywatermark.data.model.TextPaintStyle
@@ -26,8 +27,8 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 /**
- * C0.1 shared paint contract matrix (issue 18): real [CommonWatermarkPipeline.compose]
- * on Desktop/Skiko with deterministic opaque background and changed-pixel geometry.
+ * C0.1 shared paint contract matrix (issue 18) plus C1 optional [FontFamily] contract
+ * (issue 20): real [CommonWatermarkPipeline.compose] on Desktop/Skiko.
  */
 class CommonWatermarkPipelineComposeTest {
 
@@ -223,6 +224,106 @@ class CommonWatermarkPipelineComposeTest {
         assertLocalizedClamp(fullStats, imgW, imgH)
         assertLocalizedClamp(reducedStats, imgW, imgH)
         assertAlphaReduced(bg, full, reduced)
+    }
+
+    // ─── C1 optional FontFamily contract (issue 20) ────────────────────────
+
+    @Test
+    fun c1_defaultFontFamily_omittedAndExplicitNull_arePixelIdentical() {
+        val bg = opaqueBg()
+        val config = WaterMark.default.copy(
+            text = "C1-DEFAULT",
+            textSize = 32f,
+            textStyle = TextPaintStyle.Fill,
+            textTypeface = TextTypeface.Normal,
+            tileMode = WatermarkTileMode.CLAMP,
+            degree = 0f,
+            hGap = 0,
+            vGap = 0,
+            alpha = 255,
+            markMode = WatermarkMode.Text,
+        )
+        // Non-center offsets exercise the offset overload (not only the centered default).
+        val omitted = CommonWatermarkPipeline.compose(
+            bg, config, env, null, 0.17f, 0.83f,
+        )
+        val explicitNull = CommonWatermarkPipeline.compose(
+            bg, config, env, null, 0.17f, 0.83f, fontFamily = null,
+        )
+        assertPixelEqual(
+            omitted,
+            explicitNull,
+            "C1: omitted fontFamily must be pixel-identical to explicit null",
+        )
+    }
+
+    @Test
+    fun c1_explicitBundledCjkFontFamily_rendersDistinctCjkGlyphsThroughPipeline() {
+        val bg = opaqueBg()
+        val family = bundledLatinCjkFontFamily(latinFirst = false)
+        val config = WaterMark.default.copy(
+            text = "请勿转载",
+            textSize = 32f,
+            textStyle = TextPaintStyle.Stroke,
+            textTypeface = TextTypeface.Bold,
+            tileMode = WatermarkTileMode.REPEAT,
+            degree = 315f,
+            hGap = 0,
+            vGap = 0,
+            alpha = 255,
+            markMode = WatermarkMode.Text,
+        )
+        // Offset overload with explicit family (mutation-sensitive vs default path).
+        val withFamilyOffset = CommonWatermarkPipeline.compose(
+            bg, config, env, null, 0.5f, 0.5f, fontFamily = family,
+        )
+        val defaultPath = CommonWatermarkPipeline.compose(
+            bg, config, env, null, 0.5f, 0.5f, fontFamily = null,
+        )
+        val fullStats = deltaStats(bg, withFamilyOffset)
+        assertTrue(fullStats.changedCount > 0, "C1 explicit CJK family must paint full string")
+        assertNotTofuCjk(bg, config, withFamilyOffset, fullStats, fontFamily = family)
+        // If composeTextCell ignores fontFamily, withFamily ≡ defaultPath → this fails.
+        assertTrue(
+            !pixelMapsEqual(withFamilyOffset, defaultPath),
+            "C1: bundled FontFamily output must differ from default-null path " +
+                "(proves fontFamily is applied through the full pipeline)",
+        )
+        // Centered overload must forward the same non-null family as offset (0.5, 0.5).
+        val withFamilyCentered = CommonWatermarkPipeline.compose(
+            background = bg,
+            config = config,
+            env = env,
+            icon = null,
+            fontFamily = family,
+        )
+        assertPixelEqual(
+            withFamilyCentered,
+            withFamilyOffset,
+            "C1: centered compose(fontFamily=F) must equal offset (0.5,0.5) compose(fontFamily=F)",
+        )
+    }
+
+    @Test
+    fun c1_imageMode_ignoresFontFamily_andPreservesPixels() {
+        val bg = opaqueBg()
+        val config = sharedIconBaseConfig.copy(
+            tileMode = WatermarkTileMode.CLAMP,
+            degree = 0f,
+            alpha = 128,
+        )
+        val family = bundledLatinCjkFontFamily(latinFirst = false)
+        val omitted = CommonWatermarkPipeline.compose(
+            bg, config, env, sharedAsymmetricIcon, 0.17f, 0.83f,
+        )
+        val withFamily = CommonWatermarkPipeline.compose(
+            bg, config, env, sharedAsymmetricIcon, 0.17f, 0.83f, fontFamily = family,
+        )
+        assertPixelEqual(
+            omitted,
+            withFamily,
+            "C1 Image mode must ignore fontFamily (exact pixel identity)",
+        )
     }
 
     // ─── fixtures ─────────────────────────────────────────────────────────
@@ -423,12 +524,13 @@ class CommonWatermarkPipelineComposeTest {
         cjkCfg: WaterMark,
         cjkOut: ImageBitmap,
         cjkStats: PixelDeltaStats,
+        fontFamily: FontFamily? = null,
     ) {
         assertTrue(cjkStats.changedCount > 0, "full CJK string must paint")
         val chars = listOf("请", "勿", "转", "载")
         val singleOuts = chars.map { ch ->
             CommonWatermarkPipeline.compose(
-                bg, cjkCfg.copy(text = ch), env, null, 0.5f, 0.5f,
+                bg, cjkCfg.copy(text = ch), env, null, 0.5f, 0.5f, fontFamily = fontFamily,
             )
         }
         for (i in chars.indices) {
@@ -450,7 +552,7 @@ class CommonWatermarkPipelineComposeTest {
         }
         // Full string must not match a pure fullwidth-box control of the same length.
         val boxOut = CommonWatermarkPipeline.compose(
-            bg, cjkCfg.copy(text = "□□□□"), env, null, 0.5f, 0.5f,
+            bg, cjkCfg.copy(text = "□□□□"), env, null, 0.5f, 0.5f, fontFamily = fontFamily,
         )
         assertTrue(
             !pixelMapsEqual(cjkOut, boxOut),
