@@ -36,7 +36,7 @@ Platform source sets supply the edges:
 
 ### Runtime wiring
 
-- **Android:** `ComposeMainActivity` (sole `ComponentActivity`) → shared nav/UI (`ui/Routes`, `EditorScreen` …) via Android shells (`ui/AndroidEditorScreen.kt`, `ui/AndroidLaunchScreen.kt`). `MainViewModel` extends the shared session and injects `AndroidExportPipelinePort` + `AndroidMediaLibraryPort`; Koin (`di/AppModule`, `di/RepositoryModule`, `di/DataStoreModule`) wires repos and injected Android edges (default-text provider, SDK-gated tile-id mapper, logger).
+- **Android:** `ComposeMainActivity` (sole `ComponentActivity`) → shared nav/UI (`ui/Routes`, `EditorScreen` …) via Android shells (`ui/AndroidEditorScreen.kt`, `ui/AndroidLaunchScreen.kt`). `MainViewModel` extends the shared session and injects `AndroidExportPipelinePort` + `AndroidMediaLibraryPort`; Koin (`di/AppModule`, `di/RepositoryModule`, `di/DataStoreModule`) wires repos and injected Android edges (default-text provider, SDK-gated tile-id mapper, logger). One-off watermark-icon selection launches `PickVisualMedia` without broad media permission, copies bytes through `AndroidIconPersistence` to internal `filesDir/watermark_icons`, then awaits the shared config commit before deleting the prior app-owned icon. Cold editor entry reads `waterMarkRepo.waterMark.first()`; `MyApp` must not reset the persisted watermark mode during process startup.
 - **Desktop:** `desktopApp/Main.kt` + `DesktopWindow.kt` embed the shared Compose shell with `DesktopExportPipelinePort`; `--args='--headless'` runs the bounded open→render→save spine (`DesktopWatermarkFlow`) without a window.
 - **iOS:** `iosApp/WatermarkWorkflow.swift` retains one instance of each Kotlin bridge; `ContentView.swift` hosts the shared Compose UI via `IosSharedComposeHost` and keeps PHPicker/save/share in Swift. A `#if DEBUG` UI-test fixture seam (`-uiTestFixtureImage`) drives XCUITest because real PHPicker grid cells are not addressable on the current toolchain. **Current release is single-scene** (`UIApplicationSupportsMultipleScenes=false`, ADR-0020): `IosAppServices` / `defaultIosAppServices()` owns one process-wide Session (route/selection/export/temp); multi-window needs a separately approved scene-scoped Session design.
 
@@ -54,6 +54,7 @@ EXIF policy: Android decode bakes orientation (`utils/bitmap/BitmapUtils.kt`, `B
 - Persisted bytes are compatibility-critical: DataStore store names/keys, `WatermarkTileMode.storageId` (mirrors `Shader.TileMode` ordinals; pre-Android-12 stored DECAL id 3 reads back as REPEAT — Android-only mapper in `TileModeExt.kt`), `TextTypeface`/`TextPaintStyle` `serializeKey()` values, Room schema v1 (`exportSchema=false`).
 - Keep `android.graphics.*`, `android.net.Uri`, repo-nested types out of commonMain models. Android render types live at the edge: `utils/ktx/TileModeExt.kt`, `TextStyleExt.kt`, `MediaRefExt.kt`, `ImageFormatExt.kt`.
 - `MediaRef` (`@JvmInline value class`) is the cross-platform reference type (`WaterMark.iconUri`, `ImageInfo.uri`, `imageInfoMap` keys). Deliberate Android `Uri` edges that stay (do NOT "fix"): gallery `Image.uri`, `Action.SystemPickerImageSelected.uriList`, `SaveExportSheet.imageUris`, picker contracts, `BitmapUtils`/`BitmapCache`/`FileUtils` decode signatures.
+- Newly picked Android watermark icons persist an app-owned `${applicationId}.fileprovider/watermark_icons/...` `MediaRef`; legacy/external icon refs remain readable but are never deleted by the app-owned cleanup path. The picker `Uri` stays inside the Android host until the private copy succeeds.
 
 ## Code navigation
 
@@ -61,7 +62,7 @@ EXIF policy: Android decode bakes orientation (`utils/bitmap/BitmapUtils.kt`, `B
   - `ComposeMainActivity.kt` — sole Activity: launcher, share-in, crash-recovery gate. `MyApp.kt` — app init (Koin, CMonet).
   - `ui/` — `MainViewModel.kt` (Android session edge), `AndroidEditorScreen.kt` / `AndroidLaunchScreen.kt` (Android shells over shared UI), `compose/` (Android-only controls: gallery dialog, MediaStore thumbnails), `about/AboutViewModel.kt`, `Theme.kt`.
   - `render/` — `WatermarkRenderer.kt` (native measurement oracle), `AndroidCommonRaster.kt` (production common-raster edge), `TextMeasureEnv.kt`.
-  - `session/` — `AndroidExportPipelinePort.kt`, `AndroidMediaLibraryPort.kt`. `platform/AndroidDynamicColorCapability.kt`.
+  - `session/` — `AndroidExportPipelinePort.kt`, `AndroidMediaLibraryPort.kt`. `platform/` — `AndroidDynamicColorCapability`, `AndroidIconPersistence`, `AndroidIconSelectionCoordinator`.
   - `di/` — Koin modules. `utils/bitmap/` — decode (`BitmapUtils`), `BitmapCache`. `utils/ktx/` — Android edge mappers.
 - `shared/src/commonMain/kotlin/me/rosuh/easywatermark/` — `data/model|repo|datastore|db`, `domain/`, `session/`, `render/`, `ui/` (see §Layering).
 - `shared/src/{androidMain,desktopMain,iosMain}/kotlin/...` — platform store/Room builders, decoders, raster envs, export ports, iOS Swift bridges.

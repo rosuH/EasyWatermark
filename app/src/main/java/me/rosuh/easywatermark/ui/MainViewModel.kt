@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -44,6 +45,8 @@ import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.domain.OutputPrefsEditor
 import me.rosuh.easywatermark.domain.TemplateEditor
+import me.rosuh.easywatermark.platform.AndroidIconPersistence
+import me.rosuh.easywatermark.platform.AndroidIconSelectionCoordinator
 import me.rosuh.easywatermark.session.AndroidExportPipelinePort
 import me.rosuh.easywatermark.session.AndroidMediaLibraryPort
 import me.rosuh.easywatermark.session.AppIntent
@@ -90,12 +93,6 @@ class MainViewModel (
     private val _compressedResult = MutableStateFlow<Result<*>?>(null)
     val compressedResult: StateFlow<Result<*>?> = _compressedResult.asStateFlow()
 
-    val waterMarkFlow = waterMarkRepo.waterMark.stateIn(
-        viewModelScope,
-        SharingStarted.WhileSubscribed(5000L),
-        WaterMark.default
-    )
-
     /** Android UI name for shared export progress [exportJobState]. */
     val saveExportUiState: StateFlow<SaveExportUiState> get() = exportJobState
 
@@ -124,6 +121,18 @@ class MainViewModel (
     )
 
     private val applicationContext: Context by inject(Context::class.java)
+
+    private val iconPersistence by lazy { AndroidIconPersistence(applicationContext) }
+    private val iconSelectionCoordinator by lazy {
+        AndroidIconSelectionCoordinator(
+            store = iconPersistence,
+            currentIcon = { waterMarkRepo.waterMark.first().iconUri },
+            commitIcon = { ref ->
+                dispatchAndAwait(AppIntent.ApplyConfig(WatermarkConfigChange.Icon(ref)))
+            },
+        )
+    }
+    private var iconImportJob: Job? = null
 
     init {
         // Phase 2: shared export loop uses Android port (wrap of legacy generateImage).
@@ -169,10 +178,12 @@ class MainViewModel (
     fun updateImageList(list: List<Uri>) {
         launch {
             generateImageInfoList(list)?.run {
-                enterEditor(selected = this, waterMark = waterMarkFlow.value)
+                enterEditor(selected = this, waterMark = persistedWaterMark())
             }
         }
     }
+
+    private suspend fun persistedWaterMark(): WaterMark = waterMarkRepo.waterMark.first()
 
     private suspend fun generateImageInfoList(list: List<Uri>) =
         withContext(Dispatchers.Default) {
@@ -211,6 +222,14 @@ class MainViewModel (
 
     fun updateIcon(iconUri: MediaRef) =
         applyConfig(WatermarkConfigChange.Icon(iconUri))
+
+    /** Copy a transient Photo Picker Uri, then atomically advance the persisted icon reference. */
+    fun importWatermarkIcon(source: Uri) {
+        iconImportJob?.cancel()
+        iconImportJob = viewModelScope.launch {
+            iconSelectionCoordinator.import(source)
+        }
+    }
 
     fun updateTileMode(tileMode: WatermarkTileMode) =
         applyConfig(WatermarkConfigChange.TileMode(tileMode))
@@ -346,6 +365,7 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
 
     override fun onCleared() {
         cancelCompressJob()
+        iconImportJob?.cancel()
         super.onCleared()
     }
 
@@ -362,11 +382,13 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
     fun selectGallery(selectedList: List<Image>) {
         val imageInfoList = selectedList.map { ImageInfo(it.uri) }
         if (imageInfoList.isNotEmpty()) {
-            enterEditor(
-                selected = imageInfoList,
-                gallerySnapshot = selectedList,
-                waterMark = waterMarkFlow.value,
-            )
+            launch {
+                enterEditor(
+                    selected = imageInfoList,
+                    gallerySnapshot = selectedList,
+                    waterMark = persistedWaterMark(),
+                )
+            }
         }
     }
 
@@ -420,7 +442,7 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
         enterEditor(
             selected = imageInfoList,
             gallerySnapshot = gallerySnapshot,
-            waterMark = waterMarkFlow.value,
+            waterMark = persistedWaterMark(),
         )
     }
 

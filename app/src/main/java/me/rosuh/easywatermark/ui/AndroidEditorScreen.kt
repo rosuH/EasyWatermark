@@ -74,6 +74,7 @@ fun AndroidEditorScreen(
     selectedImage: ImageInfo? = null,
     onImageSelected: (ImageInfo) -> Unit = {},
     onWaterMrkChange: (item: FuncTitleModel, any: Any) -> Unit = { _, _ -> },
+    onIconPicked: (Uri) -> Unit = {},
     onAddMoreImages: () -> Unit = { },
     onShowSaveDialog: () -> Unit = { },
     onGoAboutScreen: () -> Unit = { },
@@ -84,7 +85,6 @@ fun AndroidEditorScreen(
     onDeleteTemplate: (Template) -> Unit = {},
 ) {
     val colorModel = remember { FuncTitleModel(FuncType.Color) }
-    val iconModel = remember { FuncTitleModel(FuncType.Icon) }
 
     EditorScreen(
         imageList = imageList,
@@ -136,12 +136,11 @@ fun AndroidEditorScreen(
                 onChange = { _, any -> onColor(any as Int) },
             )
         },
-        iconOption = { optionModifier, mark, onIcon ->
+        iconOption = { optionModifier, mark, _ ->
             IconOption(
-                item = iconModel,
                 waterMark = mark,
                 modifier = optionModifier,
-                onIconSelected = { _, ref -> onIcon(ref) },
+                onIconPicked = onIconPicked,
             )
         },
         onBack = onBack,

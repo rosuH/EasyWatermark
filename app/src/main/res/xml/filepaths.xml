@@ -6,4 +6,7 @@
     <external-path
         name="my_external_dir"
         path="Pictures/EasyWaterMark/"/>
+    <files-path
+        name="watermark_icons"
+        path="watermark_icons/"/>
 </paths>

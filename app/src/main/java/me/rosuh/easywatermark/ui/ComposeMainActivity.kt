@@ -464,6 +464,7 @@ class ComposeMainActivity : ComponentActivity() {
                                                 onWaterMrkChange = { item: FuncTitleModel, any: Any ->
                                                     viewModel.process(Action.WaterMarkChange(item, any))
                                                 },
+                                                onIconPicked = viewModel::importWatermarkIcon,
                                                 onImageSelected = {
                                                     viewModel.process(Action.EditorImageSelected(it))
                                                 },

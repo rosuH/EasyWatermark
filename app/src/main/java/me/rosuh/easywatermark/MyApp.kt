@@ -6,20 +6,14 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.core.content.edit
-import kotlinx.coroutines.*
 import me.rosuh.cmonet.CMonet
-import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.di.appModule
-import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
 import kotlin.system.exitProcess
 
 class MyApp : Application() {
-
-    private val waterMarkRepo: WaterMarkRepository by inject()
-
     private val sp by lazy { getSharedPreferences(SP_NAME, Context.MODE_PRIVATE) }
 
     override fun attachBaseContext(base: Context?) {
@@ -38,13 +32,7 @@ class MyApp : Application() {
             modules(appModule)
         }
         CMonet.init(this, true)
-        if (checkRecoveryMode()) {
-            return
-        } else {
-            applicationScope.launch {
-                waterMarkRepo.resetModeToText()
-            }
-        }
+        if (checkRecoveryMode()) return
     }
 
     private fun checkRecoveryMode(): Boolean {
@@ -110,8 +98,6 @@ class MyApp : Application() {
     }
 
     companion object {
-
-        val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
         @SuppressLint("StaticFieldLeak")
         lateinit var instance: Context
