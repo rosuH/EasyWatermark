@@ -90,12 +90,20 @@ class DesktopJpegEncodeTest {
     @Test
     fun composer_emits_png_default_and_jpeg_on_request() {
         val fixture = DesktopWatermarkComposer.sampleBackgroundPng(width = 128, height = 96)
-        val asPng = DesktopWatermarkComposer.composeOverRealImage(fixture, "X", WatermarkTileMode.REPEAT)
-        val asJpeg = DesktopWatermarkComposer.composeOverRealImage(
-            fixture, "X", WatermarkTileMode.REPEAT, format = ImageFormat.JPEG, quality = 80,
+        val cfg = me.rosuh.easywatermark.data.model.WaterMark.default.copy(
+            text = "X",
+            tileMode = WatermarkTileMode.REPEAT,
         )
-        assertTrue(isPng(asPng.png), "default composeOverRealImage output must remain PNG")
-        assertTrue(startsWithJpeg(asJpeg.png), "composeOverRealImage(format=JPEG) must emit JPEG bytes")
+        val asPng = DesktopWatermarkComposer.composeRealImage(
+            fixture,
+            DesktopRenderRequest(cfg, me.rosuh.easywatermark.data.model.UserPreferences(ImageFormat.PNG, 100), 0.5f, 0.5f),
+        )
+        val asJpeg = DesktopWatermarkComposer.composeRealImage(
+            fixture,
+            DesktopRenderRequest(cfg, me.rosuh.easywatermark.data.model.UserPreferences(ImageFormat.JPEG, 80), 0.5f, 0.5f),
+        )
+        assertTrue(isPng(asPng.png), "PNG request must emit PNG")
+        assertTrue(startsWithJpeg(asJpeg.png), "JPEG request must emit JPEG bytes")
         assertEquals(asPng.width, asJpeg.width, "format must not change composed width")
         assertEquals(asPng.height, asJpeg.height, "format must not change composed height")
     }

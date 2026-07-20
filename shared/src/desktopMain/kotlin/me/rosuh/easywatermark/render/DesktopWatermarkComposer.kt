@@ -9,23 +9,22 @@ import androidx.compose.ui.graphics.ImageBitmapConfig
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
-import me.rosuh.easywatermark.data.model.ImageFormat
-import me.rosuh.easywatermark.data.model.TextPaintStyle
-import me.rosuh.easywatermark.data.model.TextTypeface
-import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 
 /**
  * Desktop composition over sample or real decoded image bytes (ImageIO + Skiko encode).
  *
- * Cell tiling uses [WatermarkCellComposer]. Prefer [DesktopRenderSaveSpine] for production save/export.
+ * Production real-image paint uses [composeRealImage] → [CommonWatermarkPipeline] (C2).
+ * Deterministic [composeSample] / [composeSampleResult] remain sample/witness helpers and may call
+ * primitives directly.
  */
 object DesktopWatermarkComposer {
 
     /**
- * A deterministic, asset-free sample background: a dark base with regular lighter diagonal-ish
- * Bands so (a) white watermark ink is clearly visible against it, and (b) it is visually distinct * from a flat fill in inspection. Pure Compose graphics → identical bytes on every run (no
- * `Math.random`/time), which the determinism test relies on.
+     * A deterministic, asset-free sample background: a dark base with regular lighter diagonal-ish
+     * bands so (a) white watermark ink is clearly visible against it, and (b) it is visually distinct
+     * from a flat fill in inspection. Pure Compose graphics → identical bytes on every run.
      */
     fun sampleBackground(width: Int, height: Int): ImageBitmap {
         val w = width.coerceAtLeast(1)
@@ -37,9 +36,7 @@ object DesktopWatermarkComposer {
             canvas = Canvas(bmp),
             size = Size(w.toFloat(), h.toFloat()),
         ) {
-            // Dark base (opaque) so white watermark text contrasts strongly.
             drawRect(color = Color(0xFF1E2630))
-            // Regular vertical bands in a slightly lighter tone — deterministic, no white.
             val band = (w / 16).coerceAtLeast(4)
             var x = 0
             var i = 0
@@ -59,8 +56,8 @@ object DesktopWatermarkComposer {
     }
 
     /**
- * Compose a full watermarked sample [ImageBitmap]: generate the sample background, render ONE text
- * Cell via [DesktopWatermarkTextRenderer.renderTextCell] (bundled Latin+CJK font), and composite via * the shared [WatermarkCellComposer.composeOverBackground]. Text is sized image-space to [bgWidth].
+     * Compose a full watermarked sample [ImageBitmap] via direct cell + [WatermarkCellComposer]
+     * (sample/witness helper — not the product real-image adapter).
      */
     fun composeSample(
         text: String,
@@ -98,8 +95,8 @@ object DesktopWatermarkComposer {
     }
 
     /**
- * A **Compose-free** composed result (dims + PNG bytes) for the plain-JVM `:desktopApp`, mirroring
- * 's `RenderedTextCell` (keeps `androidx.compose.ui` off `:desktopApp`'s compile classpath).
+     * A Compose-free composed result (dims + encoded bytes) for plain-JVM `:desktopApp`.
+     * [png] holds encoded output bytes (PNG or JPEG depending on the encode path used).
      */
     data class ComposedImage(val width: Int, val height: Int, val png: ByteArray) {
         override fun equals(other: Any?): Boolean =
@@ -131,148 +128,52 @@ object DesktopWatermarkComposer {
         return ComposedImage(composed.width, composed.height, DesktopWatermarkTextRenderer.encodePng(composed))
     }
 
-    // ---- : real-image (ImageIO-decoded) composition ---------------------------------------
-
     /**
- * Compose-free helper that produces a **deterministic encoded-PNG fixture** (the generated sample
- * Background, AWT-encoded). It is the input a real-image path consumes: a caller can feed these bytes * straight back through [DesktopImageDecoder.decode] (a genuine `ImageIO` decode) and watermark the
- * result — exercising the platform decode path with no checked-in binary asset. Returns plain
- * `ByteArray` so `:desktopApp` needs no `androidx.compose.ui` on its compile classpath.
+     * Deterministic encoded-PNG fixture (generated sample background, AWT-encoded) for real-image
+     * decode tests without checked-in binary assets.
      */
     fun sampleBackgroundPng(width: Int = 640, height: Int = 480): ByteArray =
         DesktopWatermarkTextRenderer.encodePng(sampleBackground(width, height))
 
     /**
- * Watermark a **real, `ImageIO`-decoded** image. [imageBytes] are decoded via * [DesktopImageDecoder] (the platform decode boundary) into an [ImageBitmap] background, a text [cell]
- * is rendered at the decoded image's width (image-space sizing), and the two are composited through the
- * shared [WatermarkCellComposer.composeOverBackground]. Output is sized to the decoded image. Returns a
- * Compose-free [ComposedImage] (dims + PNG bytes) for `:desktopApp`.
- *
- * This is the realistic Desktop pipeline: decode (platform) → render cell (commonMain) → compose
- * (commonMain) → encode (platform). Decode/encode stay platform-side; commonMain stays decode-free.
- *
- * /123: drives the persisted text fields [colorArgb] (ARGB), [typeface] ([TextTypeface]), and
- * [textStyle] ([TextPaintStyle]) through the shared text renderer. Defaults are the shared
- * `WaterMark.default` values. Icon watermark and output-format remain out of scope (PNG only).
+     * Production Desktop real-image composition (C2): decode → [CommonWatermarkPipeline.compose] →
+     * encode. Paint policy (tile, alpha-once, geometry, Text/Image) is owned by the common pipeline.
+     * Desktop supplies EXIF-baked decode, bundled Latin+CJK [FontFamily], icon file bytes (caller),
+     * and encode format/quality from [DesktopRenderRequest.prefs].
+     *
+     * [iconBytes] is required when [DesktopRenderRequest.config] is Image mode; ignored for Text.
      */
-    fun composeOverRealImage(
+    fun composeRealImage(
         imageBytes: ByteArray,
-        text: String,
-        tileMode: WatermarkTileMode = WatermarkTileMode.REPEAT,
-        textSize: Float = 24f,
-        degree: Float = 315f,
-        hGapPercent: Int = 40,
-        vGapPercent: Int = 40,
-        offsetX: Float = 0.5f,
-        offsetY: Float = 0.5f,
-        alpha: Float = 1f,
-        latinFirst: Boolean = true,
-        colorArgb: Int = WaterMark.default.textColor,
-        typeface: TextTypeface = TextTypeface.Normal,
-        textStyle: TextPaintStyle = TextPaintStyle.Fill,
-        // output encoding. Defaults to PNG (quality ignored for PNG) so existing callers + the
-        // PNG-magic goldens get byte-identical output; pass ImageFormat.JPEG + a quality (0..100) for JPEG.
-        // wired the Desktop save flow to this: DesktopWatermarkFlow.runSaveFlow reads the persisted
-        // UserConfigRepository prefs and passes outputFormat/compressLevel here (empty store → (JPEG, 80)).
-        format: ImageFormat = ImageFormat.PNG,
-        quality: Int = 100,
+        request: DesktopRenderRequest,
+        iconBytes: ByteArray? = null,
     ): ComposedImage {
-        val background = DesktopImageDecoder.decode(imageBytes) // genuine ImageIO decode
-        val cell = DesktopWatermarkTextRenderer.renderTextCell(
-            text = text,
-            textSize = textSize,
-            imageWidth = background.width,
-            degree = degree,
-            color = Color(colorArgb),
-            hGapPercent = hGapPercent,
-            vGapPercent = vGapPercent,
-            latinFirst = latinFirst,
-            typeface = typeface,
-            textStyle = textStyle,
-        )
-        val composed = WatermarkCellComposer.composeOverBackground(
+        val background = DesktopImageDecoder.decode(imageBytes)
+        val icon = if (request.config.markMode == WatermarkMode.Image) {
+            require(iconBytes != null && iconBytes.isNotEmpty()) {
+                "Image-mode composeRealImage requires non-empty iconBytes"
+            }
+            DesktopImageDecoder.decode(iconBytes)
+        } else {
+            null
+        }
+        val composed = CommonWatermarkPipeline.compose(
             background = background,
-            cell = cell,
-            tileMode = tileMode,
-            offsetX = offsetX,
-            offsetY = offsetY,
-            alpha = alpha,
-        )
-        return ComposedImage(
-            composed.width,
-            composed.height,
-            DesktopWatermarkTextRenderer.encode(composed, format, quality),
-        )
-    }
-
-    // ---- : real-image ICON composition (Desktop/iOS icon path) ----------------------------
-
-    /**
- * Watermark a **real, `ImageIO`-decoded** image with an **icon/image** watermark — the icon * analogue of [composeOverRealImage] and the desktopMain mirror of iOS
- * `IosWatermarkRenderer.composeIconOverImage`. Both [imageBytes] (background) and [iconBytes] are
- * decoded via [DesktopImageDecoder] (the platform decode boundary, EXIF baked); the icon cell is
- * rastered by the shared [WatermarkCellComposer.composeIconCell] and composited over the decoded
- * background by [WatermarkCellComposer.composeOverBackground]. Output is sized to the decoded
- * background and encoded via [DesktopWatermarkTextRenderer.encode] (PNG default; JPEG on request).
- *
- * Pipeline: decode (platform) → render icon cell (commonMain) → compose (commonMain) → encode
- * (platform). commonMain stays **decode-free** (already-decoded `ImageBitmap` in, composed out).
- *
- * **Perceptual Skiko common path, NOT native-oracle byte parity.** commonMain has no
- * float-placement + nearest-filter draw overload, so a rotated non-uniform icon is not
- * byte-identical to native `WatermarkRenderer.buildIconShader` (`Canvas.drawBitmap`). Android
- * production still uses this common icon path via `AndroidCommonRaster` (ADR-0018); native
- * remains dual-path/golden only.
- *
- * **Alpha is applied ONCE, at composition.** The icon cell is rendered **opaque** (`alpha = 1f`) and
- * the watermark [alpha] is applied by [WatermarkCellComposer.composeOverBackground] — mirroring the
- * accepted iOS `composeIconOverImage` rule (single application is the visually-correct behavior;
- * Android's native path double-applies). [scaleRatio][WatermarkCellComposer.composeIconCell] follows
- * production: `textSize / ICON_SCALE_REFERENCE_TEXT_SIZE` (14 ⇒ 1×).
- *
- * added this render **primitive**; ** wired it into the Desktop save flow** —
- * `DesktopWatermarkFlow.runSaveFlow` renders the persisted `markMode == Image` branch through this
- * (a missing/empty/unreadable icon fails loudly, no silent Text fallback).
- * [tileMode] must be REPEAT or CLAMP (commonMain rejects MIRROR/DECAL).
-     */
-    fun composeIconOverRealImage(
-        imageBytes: ByteArray,
-        iconBytes: ByteArray,
-        tileMode: WatermarkTileMode = WatermarkTileMode.REPEAT,
-        textSize: Float = 24f,
-        degree: Float = 315f,
-        hGapPercent: Int = 40,
-        vGapPercent: Int = 40,
-        offsetX: Float = 0.5f,
-        offsetY: Float = 0.5f,
-        alpha: Float = 1f,
-        format: ImageFormat = ImageFormat.PNG,
-        quality: Int = 100,
-    ): ComposedImage {
-        val background = DesktopImageDecoder.decode(imageBytes) // genuine ImageIO decode (EXIF baked)
-        val icon = DesktopImageDecoder.decode(iconBytes)
-        val cell = WatermarkCellComposer.composeIconCell(
+            config = request.config,
+            env = DesktopWatermarkTextRenderer.textRasterEnv(),
             icon = icon,
-            degree = degree,
-            hGapPercent = hGapPercent,
-            vGapPercent = vGapPercent,
-            scaleRatio = textSize / WatermarkCellComposer.ICON_SCALE_REFERENCE_TEXT_SIZE,
-            // Opaque cell; the watermark alpha is applied once at the composition step below
-            // (mirrors iOS composeIconOverImage — see this function's KDoc).
-            alpha = 1f,
-        )
-        val composed = WatermarkCellComposer.composeOverBackground(
-            background = background,
-            cell = cell,
-            tileMode = tileMode,
-            offsetX = offsetX,
-            offsetY = offsetY,
-            alpha = alpha,
+            offsetX = request.offsetX,
+            offsetY = request.offsetY,
+            fontFamily = DesktopWatermarkTextRenderer.bundledLatinCjkFontFamily(),
         )
         return ComposedImage(
             composed.width,
             composed.height,
-            DesktopWatermarkTextRenderer.encode(composed, format, quality),
+            DesktopWatermarkTextRenderer.encode(
+                composed,
+                request.prefs.outputFormat,
+                request.prefs.compressLevel,
+            ),
         )
     }
 }

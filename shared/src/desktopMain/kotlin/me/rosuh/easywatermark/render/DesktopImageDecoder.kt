@@ -30,7 +30,7 @@ import javax.imageio.ImageIO
  * bitmap (`BitmapUtils`); this boundary now matches that policy on Desktop: it parses the JPEG EXIF
  * Orientation tag (a tiny local APP1/TIFF reader — **no metadata dependency**) and applies the matching
  * rotation/flip to the decoded `BufferedImage` BEFORE bridging to Compose, so callers
- * ([DesktopWatermarkComposer.composeOverRealImage]) always receive an **upright** `ImageBitmap` whose
+ * ([DesktopWatermarkComposer.composeRealImage]) always receive an **upright** `ImageBitmap` whose
  * dimensions reflect orientation (6/8 swap width/height). Orientation parsing is best-effort: any
  * non-JPEG / missing / malformed EXIF yields orientation 1 (no transform). commonMain stays decode-free —
  * orientation is purely a platform decode-edge concern.

@@ -80,16 +80,38 @@ class DesktopTextParityTest {
     @Test
     fun composer_threads_color_through_real_image() {
         val fixture = DesktopWatermarkComposer.sampleBackgroundPng(width = 320, height = 240)
-        val red = DesktopWatermarkComposer.composeOverRealImage(
-            imageBytes = fixture, text = "请勿转载 X", tileMode = WatermarkTileMode.REPEAT,
-            colorArgb = 0xFFFF0000.toInt(),
+        val prefs = me.rosuh.easywatermark.data.model.UserPreferences(
+            me.rosuh.easywatermark.data.model.ImageFormat.PNG,
+            100,
         )
-        val white = DesktopWatermarkComposer.composeOverRealImage(
-            imageBytes = fixture, text = "请勿转载 X", tileMode = WatermarkTileMode.REPEAT,
-            colorArgb = 0xFFFFFFFF.toInt(),
+        val red = DesktopWatermarkComposer.composeRealImage(
+            fixture,
+            DesktopRenderRequest(
+                me.rosuh.easywatermark.data.model.WaterMark.default.copy(
+                    text = "请勿转载 X",
+                    tileMode = WatermarkTileMode.REPEAT,
+                    textColor = 0xFFFF0000.toInt(),
+                ),
+                prefs,
+                0.5f,
+                0.5f,
+            ),
+        )
+        val white = DesktopWatermarkComposer.composeRealImage(
+            fixture,
+            DesktopRenderRequest(
+                me.rosuh.easywatermark.data.model.WaterMark.default.copy(
+                    text = "请勿转载 X",
+                    tileMode = WatermarkTileMode.REPEAT,
+                    textColor = 0xFFFFFFFF.toInt(),
+                ),
+                prefs,
+                0.5f,
+                0.5f,
+            ),
         )
         assertEquals(red.width, white.width, "color must not change output width")
         assertEquals(red.height, white.height, "color must not change output height")
-        assertTrue(!red.png.contentEquals(white.png), "different colorArgb must change the composed PNG")
+        assertTrue(!red.png.contentEquals(white.png), "different textColor must change the composed PNG")
     }
 }

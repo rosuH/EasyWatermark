@@ -46,15 +46,16 @@ class DesktopImportExportSemanticsTest {
         }
     }
 
-    /** Records call order and writes synthetic success without real render. */
+    /** Records call order (uri + offset) and writes synthetic success without real render. */
     private class RecordingExportPort : ExportPipelinePort {
-        val received = CopyOnWriteArrayList<MediaRef>()
+        data class Call(val uri: MediaRef, val offsetX: Float, val offsetY: Float)
+        val received = CopyOnWriteArrayList<Call>()
         override suspend fun exportOne(
             imageInfo: ImageInfo,
             config: WaterMark,
             prefs: UserPreferences,
         ): Result<MediaRef> {
-            received.add(imageInfo.uri)
+            received.add(Call(imageInfo.uri, imageInfo.offsetX, imageInfo.offsetY))
             val out = MediaRef("file://export/${received.size}/${imageInfo.uri.value}")
             imageInfo.width = 10
             imageInfo.height = 10
@@ -148,8 +149,12 @@ class DesktopImportExportSemanticsTest {
         val chosen = File(dir, "user-chosen-name.jpg")
         val saved = DesktopSaveAsDestination.renderAndSaveExact(
             imageBytes = DesktopWatermarkComposer.sampleBackgroundPng(40, 30),
-            config = WaterMark.default.copy(text = "SAVEAS"),
-            prefs = UserPreferences.DEFAULT,
+            request = me.rosuh.easywatermark.render.DesktopRenderRequest(
+                config = WaterMark.default.copy(text = "SAVEAS"),
+                prefs = UserPreferences.DEFAULT,
+                offsetX = 0.5f,
+                offsetY = 0.5f,
+            ),
             userChosen = chosen,
         )
         assertEquals(chosen.absolutePath, saved.output.value)
@@ -159,12 +164,12 @@ class DesktopImportExportSemanticsTest {
     }
 
     /**
-     * Fail-closed **source wiring guard** for DesktopWindow production callers.
-     * Does **not** execute Compose DnD or Finder Drop — only asserts the source routes
-     * Open/Add more/Drop body → import batch, and Save As → [DesktopSaveAsDestination.renderAndSaveExact].
+     * Fail-closed **source wiring guard** (not an OS-window E2E): Preview/Save As must freeze
+     * **same-item** path+offset via [freezeCurrentItemInput], and must not pair `lastImage.bytes`
+     * with a separately resolved Session offset when a Session item exists.
      */
     @Test
-    fun desktopWindow_productionWiringGuard() {
+    fun desktopWindow_productionWiringGuard_freezesSameItemSourceAndOffset() {
         val relative = "desktopApp/src/main/kotlin/me/rosuh/easywatermark/desktop/DesktopWindow.kt"
         val cwd = File(System.getProperty("user.dir")!!)
         val candidates = listOf(
@@ -176,19 +181,64 @@ class DesktopImportExportSemanticsTest {
             ?: error("DesktopWindow.kt not found from user.dir=$cwd")
         val text = window.readText()
 
+        assertTrue(
+            "fun freezeCurrentItemInput" in text || "freezeCurrentItemInput():" in text,
+            "must define freezeCurrentItemInput for same-item path+offset",
+        )
+        assertTrue(
+            "FrozenItemInput" in text && "sourcePath" in text,
+            "must freeze sourcePath with offsets together",
+        )
+        assertTrue("sourcePath" in text, "FrozenItemInput must carry sourcePath")
+
         // Save As body
         val saveStart = text.indexOf("fun saveAsExactPath")
         assertTrue(saveStart >= 0)
         val saveEnd = text.indexOf("Window(onCloseRequest", saveStart)
         val saveBody = text.substring(saveStart, if (saveEnd > saveStart) saveEnd else text.length)
+        assertTrue("DesktopSaveAsDestination.renderAndSaveExact" in saveBody)
+        assertTrue("DesktopRenderRequest" in saveBody)
+        assertTrue("freezeCurrentItemInput" in saveBody, "Save As must freeze same-item input before IO")
+        assertTrue("frozen.sourcePath" in saveBody, "Save As must read frozen path, not re-resolve curImageInfo")
+        assertTrue("frozen.offsetX" in saveBody && "frozen.offsetY" in saveBody)
+        // Fail-closed ordering: full DesktopRenderRequest (config+prefs+offset) before withContext(IO).
+        val reqIdx = saveBody.indexOf("DesktopRenderRequest(")
+        val ioIdx = saveBody.indexOf("withContext(Dispatchers.IO)")
+        assertTrue(reqIdx >= 0, "Save As must construct DesktopRenderRequest")
+        assertTrue(ioIdx >= 0, "Save As must use withContext(Dispatchers.IO) for file work")
         assertTrue(
-            "DesktopSaveAsDestination.renderAndSaveExact" in saveBody,
-            "production Save As must call renderAndSaveExact",
+            reqIdx < ioIdx,
+            "Save As must build DesktopRenderRequest before withContext(Dispatchers.IO) " +
+                "(reqIdx=$reqIdx ioIdx=$ioIdx) — config/prefs/offset are a pre-IO snapshot",
+        )
+        val wmFirstIdx = saveBody.indexOf("waterMark.first()")
+        val prefsFirstIdx = saveBody.indexOf("userPreferences.first()")
+        assertTrue(wmFirstIdx >= 0 && wmFirstIdx < ioIdx, "config first() must be before IO")
+        assertTrue(prefsFirstIdx >= 0 && prefsFirstIdx < ioIdx, "prefs first() must be before IO")
+        // Must not pair lastImage.bytes with independently re-read Session offset.
+        assertFalse(
+            Regex("""lastImage\?\.bytes[\s\S]{0,400}curImageInfo""").containsMatchIn(saveBody),
+            "Save As must not pair lastImage.bytes with a re-resolved curImageInfo",
         )
         assertFalse("resolveUniqueOutputFile" in saveBody)
         assertFalse("runSaveFlow" in saveBody)
 
-        // onDrop body — import-only wiring (not a runtime Drop witness)
+        // Preview freezes same-item path+offset
+        val previewStart = text.indexOf("suspend fun refreshPreview")
+        assertTrue(previewStart >= 0)
+        val previewEnd = text.indexOf("LaunchedEffect(previewGeneration)", previewStart)
+        val previewBody = text.substring(previewStart, if (previewEnd > previewStart) previewEnd else text.length)
+        assertTrue("freezeCurrentItemInput" in previewBody)
+        assertTrue("frozen.sourcePath" in previewBody)
+        assertTrue("frozen.offsetX" in previewBody)
+        assertTrue("runSaveFlow" in previewBody)
+        assertFalse(
+            Regex("""current\.bytes[\s\S]{0,300}currentItemOffsetSnapshot""").containsMatchIn(previewBody),
+            "Preview must not use lastImage bytes with a separate offset snapshot helper",
+        )
+        assertFalse("currentItemOffsetSnapshot" in text, "offset-only helper must be removed")
+
+        // onDrop body — import-only
         val dropStart = text.indexOf("override fun onDrop")
         assertTrue(dropStart >= 0)
         val dropEnd = text.indexOf("fun saveAsExactPath", dropStart)
@@ -196,12 +246,15 @@ class DesktopImportExportSemanticsTest {
         assertTrue("importBatchLatest" in dropBody || "openImageFilesBatch" in dropBody)
         assertFalse("exportAndAwait" in dropBody)
 
-        // Import/Open path uses production import seam
         assertTrue("DesktopSessionImport.commitImport" in text)
         assertTrue("showOpenGallery = lastSavedFile != null" in text)
         assertTrue("desktop_ready_status" in text)
         assertTrue("desktop_drop_busy" in text)
         assertTrue("desktop_importing" in text)
+        assertTrue(
+            text.contains("offsetX = 0.5f") && text.contains("offsetY = 0.5f"),
+            "no-session fixture path must pass explicit center offsets",
+        )
     }
 
     @Test
@@ -218,7 +271,7 @@ class DesktopImportExportSemanticsTest {
         session.exportAndAwait(selected)
         assertEquals(
             listOf(selected[0].uri, selected[1].uri),
-            port.received.toList(),
+            port.received.map { it.uri },
             "export port must see Session batch order",
         )
         assertTrue(selected[0].jobState is JobState.Success)
@@ -236,5 +289,29 @@ class DesktopImportExportSemanticsTest {
         assertFalse(job.isSaving)
         assertEquals(2, job.totalCount)
         assertEquals(2, job.completedCount)
+    }
+
+    /**
+     * Batch export must deliver each item's own offset in order — one item cannot leak its offset
+     * to the next. Does not re-own the Spine paint matrix (still Port adapter-level).
+     */
+    @Test
+    fun exportAndAwait_isolatesPerItemOffset_inCallOrder() = runBlocking {
+        val dir = tempDir("session-batch-offset")
+        val port = RecordingExportPort()
+        val (session, _) = newSession(dir, port)
+        val i1 = ImageInfo(MediaRef("/virtual/a.png"), offsetX = 0.17f, offsetY = 0.83f)
+        val i2 = ImageInfo(MediaRef("/virtual/b.png"), offsetX = 0.83f, offsetY = 0.17f)
+        session.dispatchAndAwait(AppIntent.EnterEditor(selected = listOf(i1, i2)))
+        val selected = session.launchScreenUiStateFlow.value.selectedImageList
+        assertEquals(2, selected.size)
+        session.exportAndAwait(selected)
+        assertEquals(2, port.received.size)
+        assertEquals(selected[0].uri, port.received[0].uri)
+        assertEquals(0.17f, port.received[0].offsetX)
+        assertEquals(0.83f, port.received[0].offsetY)
+        assertEquals(selected[1].uri, port.received[1].uri)
+        assertEquals(0.83f, port.received[1].offsetX)
+        assertEquals(0.17f, port.received[1].offsetY)
     }
 }

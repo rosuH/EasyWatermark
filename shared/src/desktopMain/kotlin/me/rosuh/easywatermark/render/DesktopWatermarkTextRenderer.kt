@@ -131,7 +131,7 @@ object DesktopWatermarkTextRenderer {
  * added this as a capability; ** wired it into the Desktop save flow** —
  * `DesktopWatermarkFlow.runSaveFlow` reads the persisted `UserConfigRepository` prefs and passes the
  * `outputFormat`/`compressLevel` through to the composer (empty store → the shared `(JPEG, 80)` default).
- * The `composeOverRealImage`/`composeIconOverRealImage` composer goldens still default to PNG for
+ * The `composeRealImage` path encodes from [UserPreferences]; test goldens still request PNG for
  * byte-identical output.
      */
     fun encode(bitmap: ImageBitmap, format: ImageFormat, quality: Int = 100): ByteArray = when (format) {

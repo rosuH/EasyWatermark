@@ -5,15 +5,19 @@ import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.Result
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.render.DesktopRenderRequest
 import me.rosuh.easywatermark.render.DesktopRenderSaveSpine
 import me.rosuh.easywatermark.render.DesktopSaveDecision
 import java.io.File
 
 /**
  * Desktop [ExportPipelinePort]: validates a source file [MediaRef], chooses a **unique** output
- * Under [outputDirProvider], and delegates render/write to [DesktopRenderSaveSpine]. *
- * Unique naming is an export destination policy (not the spine). Shared [Result] mapping and
- * width/height mutation on [ImageInfo] stay here until P3 outcome redesign.
+ * under [outputDirProvider], and delegates render/write to [DesktopRenderSaveSpine].
+ *
+ * Freezes path, config, prefs, and [ImageInfo.offsetX]/[ImageInfo.offsetY] into
+ * [DesktopRenderRequest] **before** source/destination IO (C2 review-fix). Unique naming is an
+ * export destination policy (not the spine). Shared [Result] mapping and width/height mutation on
+ * [ImageInfo] stay here until P3 outcome redesign.
  */
 class DesktopExportPipelinePort(
     private val outputDirProvider: () -> File,
@@ -25,7 +29,14 @@ class DesktopExportPipelinePort(
         prefs: UserPreferences,
     ): Result<MediaRef> {
         return try {
+            // Snapshot all request identity before any filesystem IO (C2 review-fix).
             val path = imageInfo.uri.value
+            val request = DesktopRenderRequest(
+                config = config,
+                prefs = prefs,
+                offsetX = imageInfo.offsetX,
+                offsetY = imageInfo.offsetY,
+            )
             if (path.isBlank()) {
                 return Result.failure(null, code = "-1", message = "Empty image path")
             }
@@ -43,8 +54,7 @@ class DesktopExportPipelinePort(
             val target = DesktopSaveDecision.resolveUniqueOutputFile(outDir, prefs.outputFormat)
             val saved = DesktopRenderSaveSpine.renderAndSave(
                 imageBytes = bytes,
-                config = config,
-                prefs = prefs,
+                request = request,
                 target = target,
             )
             imageInfo.width = saved.width

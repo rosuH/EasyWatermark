@@ -1,7 +1,6 @@
 package me.rosuh.easywatermark.session
 
-import me.rosuh.easywatermark.data.model.UserPreferences
-import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.render.DesktopRenderRequest
 import me.rosuh.easywatermark.render.DesktopRenderSaveSpine
 import me.rosuh.easywatermark.render.DesktopSavedImage
 import java.io.File
@@ -15,19 +14,17 @@ import java.io.File
 object DesktopSaveAsDestination {
 
     /**
-     * Production Save As write: exact path compose+encode+write.
-     * [me.rosuh.easywatermark.desktop] Window must call this so tests cover the live caller.
+     * Production Save As write: exact path compose+encode+write with immutable [request]
+     * (includes frozen per-item offset).
      */
     fun renderAndSaveExact(
         imageBytes: ByteArray,
-        config: WaterMark,
-        prefs: UserPreferences,
+        request: DesktopRenderRequest,
         userChosen: File,
     ): DesktopSavedImage =
         DesktopRenderSaveSpine.renderAndSave(
             imageBytes = imageBytes,
-            config = config,
-            prefs = prefs,
+            request = request,
             target = userChosen,
         )
 }

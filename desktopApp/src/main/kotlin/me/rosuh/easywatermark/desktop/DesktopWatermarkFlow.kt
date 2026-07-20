@@ -8,6 +8,7 @@ import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
+import me.rosuh.easywatermark.render.DesktopRenderRequest
 import me.rosuh.easywatermark.render.DesktopRenderSaveSpine
 import me.rosuh.easywatermark.render.DesktopSaveDecision
 import me.rosuh.easywatermark.render.DesktopWatermarkComposer
@@ -19,8 +20,7 @@ import java.io.File
  * **Render/write** is delegated to [DesktopRenderSaveSpine] (shared with
  * [me.rosuh.easywatermark.session.DesktopExportPipelinePort]). This object owns repository reads,
  * fixture generation, default output path ([defaultOutputFile]), and [SaveOutcome] presentation.
- * Destination policies remain caller-side: preview temp, Save As exact path, and headless default
- * all pass an exact [File] into the spine (or use [defaultOutputFile] when null).
+ * Callers must pass explicit [offsetX]/[offsetY] (no hidden center default — C2).
  */
 object DesktopWatermarkFlow {
 
@@ -72,10 +72,12 @@ object DesktopWatermarkFlow {
     )
 
     /**
-     * Persist-path orchestration: resolve input bytes (caller or fixture), read prefs + watermark,
-     * then render/write via [DesktopRenderSaveSpine] to [outputFile] or [defaultOutputFile].
-     * Callers that need config edits hold their own [me.rosuh.easywatermark.domain.WatermarkConfigEditor]
-     * and mutate the repo before invoking this flow; the flow only reads the persisted [WaterMark].
+     * Persist-path orchestration: resolve input bytes (caller or fixture), read prefs + watermark
+     * once, build [DesktopRenderRequest] with the caller-provided offset snapshot, then render/write
+     * via [DesktopRenderSaveSpine] to [outputFile] or [defaultOutputFile].
+     *
+     * [offsetX]/[offsetY] are **required** (no defaults). Headless/no-session callers pass
+     * explicit `(0.5f, 0.5f)`. Window freezes the current selected item's offset before IO.
      */
     suspend fun runSaveFlow(
         repo: WaterMarkRepository,
@@ -83,6 +85,8 @@ object DesktopWatermarkFlow {
         inputBytes: ByteArray? = null,
         inputLabel: String = "<generated 640x480 fixture>",
         outputFile: File? = null,
+        offsetX: Float,
+        offsetY: Float,
     ): SaveOutcome {
         val bytes = if (DesktopSaveDecision.usesCallerInput(inputBytes)) {
             inputBytes!!
@@ -91,13 +95,17 @@ object DesktopWatermarkFlow {
         }
         val prefs = userConfigRepo.userPreferences.first() // empty store -> (JPEG, 80) (shared default)
         val initial = repo.waterMark.first()
-        // Render the PERSISTED WaterMark as-is for BOTH modes — no forced demo edit.
         val wm: WaterMark = initial
         val target = outputFile ?: defaultOutputFile(prefs.outputFormat)
-        val saved = DesktopRenderSaveSpine.renderAndSave(
-            imageBytes = bytes,
+        val request = DesktopRenderRequest(
             config = wm,
             prefs = prefs,
+            offsetX = offsetX,
+            offsetY = offsetY,
+        )
+        val saved = DesktopRenderSaveSpine.renderAndSave(
+            imageBytes = bytes,
+            request = request,
             target = target,
         )
         return SaveOutcome(

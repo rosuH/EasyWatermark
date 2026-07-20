@@ -56,9 +56,15 @@ C2 was previously blocked by byte-parity failures (rotated non-uniform icons; CJ
   `FontFamily? = null` as the last parameter (issue 20).
 - Omitted/`null` preserves the pre-C1 default resolver path (Android production unchanged).
 - Image mode ignores the family. No production caller passes a non-null family in C1.
-- Desktop/iOS supply bundled Latin+CJK families into this API only in later slices
-  (**Stage C2** / **Stage C3** production cutovers). Direct `WatermarkCellComposer`
-  orchestration on those platforms remains until then.
+
+### Status update (2026-07-19 — Stage C2 Desktop cutover)
+
+- Desktop production real-image paint uses `DesktopWatermarkComposer.composeRealImage` →
+  `CommonWatermarkPipeline.compose` with bundled Latin+CJK `FontFamily` and immutable
+  `DesktopRenderRequest` (config + prefs + required offsetX/Y; no offset defaults).
+- Desktop retains decode/EXIF bake, icon file bytes, encode, destination policy, and direct
+  `target.writeBytes` (atomic rename remains G1).
+- iOS production still orchestrates `WatermarkCellComposer` directly until **Stage C3**.
 
 ## Owner acceptance (recorded)
 

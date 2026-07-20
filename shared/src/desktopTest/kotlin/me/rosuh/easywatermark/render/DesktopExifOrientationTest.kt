@@ -188,9 +188,21 @@ class DesktopExifOrientationTest {
 
     @Test
     fun oriented_image_flows_through_composition_with_swapped_dims() {
-        // composeOverRealImage must receive the ORIENTED image: a 90° fixture → output dims are swapped.
-        val result = DesktopWatermarkComposer.composeOverRealImage(
-            imageBytes = jpegWithOrientation(6), text = "请勿转载", tileMode = WatermarkTileMode.REPEAT,
+        // composeRealImage must receive the ORIENTED image: a 90° fixture → output dims are swapped.
+        val result = DesktopWatermarkComposer.composeRealImage(
+            imageBytes = jpegWithOrientation(6),
+            request = DesktopRenderRequest(
+                me.rosuh.easywatermark.data.model.WaterMark.default.copy(
+                    text = "请勿转载",
+                    tileMode = WatermarkTileMode.REPEAT,
+                ),
+                me.rosuh.easywatermark.data.model.UserPreferences(
+                    me.rosuh.easywatermark.data.model.ImageFormat.PNG,
+                    100,
+                ),
+                0.5f,
+                0.5f,
+            ),
         )
         assertEquals(baseH, result.width, "composed width must reflect EXIF-oriented decode (swapped)")
         assertEquals(baseW, result.height, "composed height must reflect EXIF-oriented decode (swapped)")

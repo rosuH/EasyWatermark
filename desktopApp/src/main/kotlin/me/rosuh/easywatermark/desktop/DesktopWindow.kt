@@ -64,6 +64,7 @@ import me.rosuh.easywatermark.domain.OutputPrefsEditor
 import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopImageDecoder
+import me.rosuh.easywatermark.render.DesktopRenderRequest
 import me.rosuh.easywatermark.render.DesktopSaveDecision
 import me.rosuh.easywatermark.render.DesktopWatermarkComposer
 import me.rosuh.easywatermark.session.AppIntent
@@ -254,6 +255,16 @@ private fun desktopOptionLabel(type: FuncType): String = type.label()
 @Composable
 private fun desktopOptionIcon(type: FuncType): Painter = type.iconPainter()
 
+/**
+ * Immutable same-item Preview/Save As input (C2 review-fix): one Session item owns path + offset.
+ * File-level type so it is not a local class inside [launchDesktopWindow].
+ */
+private data class FrozenItemInput(
+    val sourcePath: String?,
+    val offsetX: Float,
+    val offsetY: Float,
+    val label: String,
+)
 
 /**
  * Compose Desktop product window.
@@ -349,35 +360,77 @@ fun launchDesktopWindow() = application {
         }
     }
 
-    // reactive preview. Render the CURRENT persisted config over the remembered image (or the
-    // deterministic fixture) through the SAME DesktopWatermarkFlow.runSaveFlow spine the manual "Preview"
-    // button uses, decode the bytes (DesktopImageDecoder, generic JPEG/PNG), and update the on-screen
-    // `preview`. Writes ONLY the app-private temp preview path and never sets `lastSavedFile` — a preview
-    // is NOT a real save (the share-substitute buttons stay bound to real saves). Keeps the last good preview
-    // on failure (only replaces it on a successful decode). Heavy render+decode runs off the EDT inside
-    // withContext(IO); the Compose `preview` state is set after, on the caller's UI dispatcher. Returns a
-    // short status line. Callers invoke this inside their own `busy = true … busy = false` span (after a
-    // successful explicit edit/mode/source change, or from the manual Preview button), so renders stay
-    // serialized. Defined before the drop target so the drop refresh can call it.
+    /**
+     * Resolve one Session [ImageInfo] that owns **both** source path and offset — never pair
+     * [LastImage] bytes with another item's offset after multi-file import.
+     * Order: curImageInfo → selectedSessionImage if still in selection → first selected → fixture center.
+     */
+    fun freezeCurrentItemInput(): FrozenItemInput {
+        val launch = session.launchScreenUiStateFlow.value
+        val selected = launch.selectedImageList
+        val item = launch.curImageInfo
+            ?: selectedSessionImage?.takeIf { mirror ->
+                selected.any { it.uri == mirror.uri }
+            }
+            ?: selected.firstOrNull()
+        if (item != null) {
+            val path = item.uri.value
+            return FrozenItemInput(
+                sourcePath = path,
+                offsetX = item.offsetX,
+                offsetY = item.offsetY,
+                label = path,
+            )
+        }
+        return FrozenItemInput(
+            sourcePath = null,
+            offsetX = 0.5f,
+            offsetY = 0.5f,
+            label = "<generated 640x480 fixture>",
+        )
+    }
+
+    // reactive preview. Freezes one Session item (path+offset) before IO; only when no Session
+    // item exists may lastImage/fixture supply bytes with explicit center. Never lastSavedFile.
     suspend fun refreshPreview(): String {
-        val current = lastImage
+        val frozen = freezeCurrentItemInput()
+        val last = lastImage
         val (img, msg) = withContext(Dispatchers.IO) {
             try {
-                val o = if (current != null) {
-                    DesktopWatermarkFlow.runSaveFlow(
-                        repo, userConfigRepo,
-                        inputBytes = current.bytes, inputLabel = current.label, outputFile = previewFile,
-                    )
-                } else {
-                    DesktopWatermarkFlow.runSaveFlow(repo, userConfigRepo, outputFile = previewFile)
+                val imageBytes: ByteArray
+                val label: String
+                when {
+                    frozen.sourcePath != null -> {
+                        val file = File(frozen.sourcePath)
+                        require(file.isFile) {
+                            "Current Session image is missing or not a regular file: ${frozen.sourcePath}"
+                        }
+                        imageBytes = file.readBytes()
+                        label = frozen.label
+                    }
+                    last != null -> {
+                        imageBytes = last.bytes
+                        label = last.label
+                    }
+                    else -> {
+                        imageBytes = DesktopWatermarkComposer.sampleBackgroundPng(width = 640, height = 480)
+                        label = frozen.label
+                    }
                 }
+                val o = DesktopWatermarkFlow.runSaveFlow(
+                    repo, userConfigRepo,
+                    inputBytes = imageBytes,
+                    inputLabel = label,
+                    outputFile = previewFile,
+                    offsetX = frozen.offsetX,
+                    offsetY = frozen.offsetY,
+                )
                 DesktopImageDecoder.decode(previewFile.readBytes()) to
                     "Preview: ${o.format}, ${o.width}x${o.height} (${o.outputByteCount} B)"
             } catch (t: Throwable) {
                 null to "Preview refresh failed (kept last preview): ${t.message}"
             }
         }
-        // Only replace the visible preview on a successful decode (keep the last good one on failure).
         img?.let { preview = it }
         return msg
     }
@@ -478,19 +531,34 @@ fun launchDesktopWindow() = application {
         scope.launch {
             busy = true
             try {
+                // Immutable job snapshot before filesystem IO (C2 attempt 2):
+                // same-item path+offset + config + prefs → DesktopRenderRequest, then IO only reads
+                // bytes / render / exact write with that frozen request.
+                val frozen = freezeCurrentItemInput()
+                val last = lastImage
+                val config = repo.waterMark.first()
+                val prefs = userConfigRepo.userPreferences.first()
+                val request = DesktopRenderRequest(
+                    config = config,
+                    prefs = prefs,
+                    offsetX = frozen.offsetX,
+                    offsetY = frozen.offsetY,
+                )
                 val out = withContext(Dispatchers.IO) {
-                    val imageBytes = lastImage?.bytes
-                        ?: session.launchScreenUiStateFlow.value.curImageInfo?.uri?.value
-                            ?.let { path -> File(path).takeIf { it.isFile }?.readBytes() }
-                        ?: session.launchScreenUiStateFlow.value.selectedImageList.firstOrNull()?.uri?.value
-                            ?.let { path -> File(path).takeIf { it.isFile }?.readBytes() }
-                        ?: DesktopWatermarkComposer.sampleBackgroundPng(width = 640, height = 480)
-                    val config = repo.waterMark.first()
-                    val prefs = userConfigRepo.userPreferences.first()
+                    val imageBytes: ByteArray = when {
+                        frozen.sourcePath != null -> {
+                            val file = File(frozen.sourcePath)
+                            require(file.isFile) {
+                                "Current Session image is missing or not a regular file: ${frozen.sourcePath}"
+                            }
+                            file.readBytes()
+                        }
+                        last != null -> last.bytes
+                        else -> DesktopWatermarkComposer.sampleBackgroundPng(width = 640, height = 480)
+                    }
                     val saved = DesktopSaveAsDestination.renderAndSaveExact(
                         imageBytes = imageBytes,
-                        config = config,
-                        prefs = prefs,
+                        request = request,
                         userChosen = userChosen,
                     )
                     File(saved.output.value)
@@ -1010,12 +1078,14 @@ fun launchDesktopWindow() = application {
                                         val exp = session.exportJobState.value
                                         status = "Exported ${exp.completedCount}/${exp.totalCount} → ${outputDir.path}"
                                     } else {
-                                        // No session image: fixture sample via unique export destination.
+                                        // No session image: fixture sample via unique export destination;
+                                        // explicit center offset (C2).
                                         val out = withContext(Dispatchers.IO) {
                                             val fmt = userConfigRepo.userPreferences.first().outputFormat
                                             val target = DesktopSaveDecision.resolveUniqueOutputFile(outputDir, fmt)
                                             val o = DesktopWatermarkFlow.runSaveFlow(
                                                 repo, userConfigRepo, outputFile = target,
+                                                offsetX = 0.5f, offsetY = 0.5f,
                                             )
                                             File(o.outputPath)
                                         }

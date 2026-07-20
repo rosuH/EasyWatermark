@@ -9,11 +9,14 @@ import me.rosuh.easywatermark.data.db.unpackDefaultTemplateSeed
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.Result
+import me.rosuh.easywatermark.data.model.UserPreferences
+import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.repo.TemplateRepository
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
+import me.rosuh.easywatermark.render.DesktopRenderRequest
 import me.rosuh.easywatermark.render.DesktopWatermarkComposer
 import me.rosuh.easywatermark.render.DesktopWatermarkTextRenderer
 import me.rosuh.easywatermark.render.WatermarkGeometry
@@ -109,8 +112,22 @@ private fun runHeadless(args: Array<String>) {
     File(realDir, "source_fixture.png").writeBytes(fixturePng)
     println("Desktop real-image decode (ImageIO) + watermark:")
     println("  source_fixture.png: ${fixturePng.size} B -> ${File(realDir, "source_fixture.png").path}")
-    val realWatermarked = DesktopWatermarkComposer.composeOverRealImage(
-        imageBytes = fixturePng, text = watermarkText, tileMode = WatermarkTileMode.REPEAT,
+    // Preserve pre-C2 real-image witness defaults: textSize=24, hGap=40, vGap=40
+    // (WaterMark.default is 14/0/0 — do not silently change headless paint semantics).
+    val realWatermarked = DesktopWatermarkComposer.composeRealImage(
+        imageBytes = fixturePng,
+        request = DesktopRenderRequest(
+            config = WaterMark.default.copy(
+                text = watermarkText,
+                tileMode = WatermarkTileMode.REPEAT,
+                textSize = 24f,
+                hGap = 40,
+                vGap = 40,
+            ),
+            prefs = UserPreferences(ImageFormat.PNG, 100),
+            offsetX = 0.5f,
+            offsetY = 0.5f,
+        ),
     )
     val realFile = File(realDir, "real_image_watermark.png").apply { writeBytes(realWatermarked.png) }
     println("  real_image_watermark.png: ${realWatermarked.width}x${realWatermarked.height} -> ${realFile.path} (${realWatermarked.png.size} B)")
@@ -131,8 +148,8 @@ private fun runHeadless(args: Array<String>) {
 
     // save spine, extracted to DesktopWatermarkFlow so the Compose window reuses it.
     // A real common WaterMarkRepository persists the watermark config in a desktop DataStore; the shared
-    // WatermarkConfigEditor edits it; the persisted WaterMark drives composeOverRealImage over a real
-    // (ImageIO-decoded) input; the watermarked PNG is written to disk.
+    // WatermarkConfigEditor edits it; the persisted WaterMark drives composeRealImage over a real
+    // (ImageIO-decoded) input; the watermarked output is written to disk.
     val inputPath = args.getOrNull(0)
     val inputBytes = inputPath?.let { File(it).readBytes() }
     val inputLabel = inputPath ?: "<generated 640x480 fixture>"
@@ -148,7 +165,10 @@ private fun runHeadless(args: Array<String>) {
         // window can render user-set text), so set them here to keep --headless output deterministic.
         configEditor.updateText("请勿转载 DO NOT REDISTRIBUTE")
         configEditor.updateDegree(330f)
-        DesktopWatermarkFlow.runSaveFlow(waterMarkRepo, saveFlowUserConfig, inputBytes, inputLabel, outputFile)
+        DesktopWatermarkFlow.runSaveFlow(
+            waterMarkRepo, saveFlowUserConfig, inputBytes, inputLabel, outputFile,
+            offsetX = 0.5f, offsetY = 0.5f,
+        )
     }
     println("  config (initial): ${outcome.configInitial}")
     println("  config (after edit, persisted): ${outcome.configAfterEdit}")
@@ -156,7 +176,7 @@ private fun runHeadless(args: Array<String>) {
     println("  output: ${outcome.outputPath} (${outcome.format}, ${outcome.width}x${outcome.height}, ${outcome.outputByteCount} B)")
 
     // Image-mode headless witness (no picker). Persist a generated icon as a Desktop FILE PATH
-    // (MediaRef) and render through the new icon branch -> composeIconOverRealImage. Uses a
+    // (MediaRef) and render through Image-mode composeRealImage. Uses a
     // SEPARATE watermark-config store dir so it can never flip the text witness's store to Image mode on a
     // later run (DataStore is single-instance-per-file; different files are independent).
     val iconFlowDir = File("build/s4d134-desktop-icon-flow").apply { mkdirs() }
@@ -174,6 +194,7 @@ private fun runHeadless(args: Array<String>) {
         iconEditor.updateIcon(MediaRef(iconFile.absolutePath))
         DesktopWatermarkFlow.runSaveFlow(
             iconRepo, saveFlowUserConfig, inputBytes, inputLabel, iconOutputFile,
+            offsetX = 0.5f, offsetY = 0.5f,
         )
     }
     println("  config (rendered): ${iconOutcome.configAfterEdit}")
@@ -192,6 +213,7 @@ private fun runHeadless(args: Array<String>) {
             DesktopWatermarkFlow.runSaveFlow(
                 missingRepo, saveFlowUserConfig, inputBytes, inputLabel,
                 File(iconFlowDir, "missing_icon_should_not_be_written.jpg"),
+                offsetX = 0.5f, offsetY = 0.5f,
             )
             // Reaching here means Image mode did NOT throw on a missing icon → the guard regressed
             // (a silent fallback). HARD-fail the headless run so the gate catches it (error() throws an
