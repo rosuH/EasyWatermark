@@ -11,8 +11,8 @@ package me.rosuh.easywatermark.data.model
  *
  * [fileExtension] is the default output-file extension (`jpg`/`png`), single-sourced here
  * so Android (`MainViewModel.trapOutputExtension`) and Desktop (`DesktopSaveDecision`) stop duplicating
- * the same mapping. It is the bare extension (not a MIME); the historical `image/jpg` MIME is composed
- * at the Android edge.
+ * the same mapping. It is the bare extension (not a MIME). Android Q+ MediaStore MIME is mapped
+ * separately at the app edge via `ImageFormat.toMediaStoreMimeType()` (`image/jpeg` / `image/png`).
  */
 enum class ImageFormat(val storageId: Int, val fileExtension: String) {
     JPEG(0, "jpg"),

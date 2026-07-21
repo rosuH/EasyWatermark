@@ -25,6 +25,7 @@ import me.rosuh.easywatermark.utils.bitmap.decodeBitmapFromUri
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.utils.ktx.toCompressFormat
 import me.rosuh.easywatermark.utils.ktx.toMediaRef
+import me.rosuh.easywatermark.utils.ktx.toMediaStoreMimeType
 import me.rosuh.easywatermark.utils.ktx.toUri
 import java.io.File
 import java.io.FileNotFoundException
@@ -108,7 +109,7 @@ class AndroidExportPipelinePort(
                 MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
             val imageDetail = ContentValues().apply {
                 put(MediaStore.Images.Media.DISPLAY_NAME, displayName)
-                put(MediaStore.Images.Media.MIME_TYPE, "image/$fileExt")
+                put(MediaStore.Images.Media.MIME_TYPE, outputFormat.toMediaStoreMimeType())
                 put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/$outPutFolderName/")
                 put(MediaStore.Images.Media.IS_PENDING, 1)
             }
