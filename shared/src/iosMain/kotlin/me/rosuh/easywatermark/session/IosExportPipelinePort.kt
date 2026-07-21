@@ -1,5 +1,6 @@
 package me.rosuh.easywatermark.session
 
+import androidx.compose.ui.text.font.FontFamily
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.Result
@@ -25,8 +26,17 @@ import platform.Foundation.writeToFile
  * cap. [MediaRef.value] is a readable filesystem path; returns temp path under [NSTemporaryDirectory].
  *
  * Issue 22 §2.5: atomic write of encoded bytes precedes [ImageInfo] width/height mutation.
+ *
+ * C4.3 attempt 2: optional internal [textFontFamilyProvider] construction seam for Text-mode only.
+ * The public no-arg constructor still defaults to [IosFontLoader.bundledFontFamily]. Image mode never
+ * invokes the provider.
  */
-class IosExportPipelinePort : ExportPipelinePort {
+class IosExportPipelinePort internal constructor(
+    private val textFontFamilyProvider: () -> FontFamily?,
+) : ExportPipelinePort {
+
+    /** Production entry: Text mode uses the app-bundled Latin+CJK faces. */
+    constructor() : this({ IosFontLoader.bundledFontFamily(latinFirst = true) })
 
     /**
      * Test-only atomic-write override so a failed write can be forced without message parsing
@@ -63,8 +73,9 @@ class IosExportPipelinePort : ExportPipelinePort {
             } else {
                 null
             }
+            // Text only: never call the provider in Image mode (C4.3 seam).
             val fontFamily = if (config.markMode == WatermarkMode.Text) {
-                IosFontLoader.bundledFontFamily(latinFirst = true)
+                textFontFamilyProvider()
             } else {
                 null
             }
