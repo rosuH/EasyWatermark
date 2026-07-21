@@ -108,7 +108,8 @@ class IosExportPipelinePortTest {
 
     /**
      * Issue 22 §2.5 steps 7–8: on atomic-write failure, [ImageInfo] width/height must remain
-     * unchanged. Mutation-resistant via [IosExportPipelinePort.atomicWriteOverrideForTests].
+     * unchanged. Fail-closed: override must be invoked exactly once with non-empty JPEG payload
+     * and a `.jpg` target path — so an earlier decode/render failure cannot pass this test.
      */
     @Test
     fun exportOne_failedWrite_doesNotMutateImageInfoDimensions() = runBlocking {
@@ -136,10 +137,29 @@ class IosExportPipelinePortTest {
             offsetY = 0.8f,
         )
         val port = IosExportPipelinePort()
-        port.atomicWriteOverrideForTests = { _, _ -> false }
+        var writeCalls = 0
+        var lastBytes: ByteArray? = null
+        var lastPath: String? = null
+        port.atomicWriteOverrideForTests = { bytes, path ->
+            writeCalls += 1
+            lastBytes = bytes
+            lastPath = path
+            false
+        }
         try {
             val result = port.exportOne(imageInfo, config, prefs)
             assertTrue(result.isFailure(), "forced write failure must fail the export")
+            assertEquals(
+                1,
+                writeCalls,
+                "writer must be reached exactly once (fail-closed against early render failure)",
+            )
+            val payload = lastBytes
+            assertNotNull(payload, "writer must receive encoded bytes")
+            assertTrue(payload.isNotEmpty(), "writer payload must be non-empty")
+            val target = lastPath
+            assertNotNull(target, "writer must receive a target path")
+            assertTrue(target.endsWith(".jpg"), "JPEG prefs must target .jpg path (got $target)")
             assertEquals(1, imageInfo.width, "width must not mutate when write fails")
             assertEquals(1, imageInfo.height, "height must not mutate when write fails")
         } finally {
