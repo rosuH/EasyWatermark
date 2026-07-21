@@ -106,6 +106,47 @@ class IosExportPipelinePortTest {
         assertContentEquals(spine.bytes, outputBytes)
     }
 
+    /**
+     * Issue 22 §2.5 steps 7–8: on atomic-write failure, [ImageInfo] width/height must remain
+     * unchanged. Mutation-resistant via [IosExportPipelinePort.atomicWriteOverrideForTests].
+     */
+    @Test
+    fun exportOne_failedWrite_doesNotMutateImageInfoDimensions() = runBlocking {
+        val sourcePath = NSTemporaryDirectory() + "c3_fail_src_" + NSUUID().UUIDString() + ".png"
+        val sourceBytes = IosWatermarkRenderer.encodePng(solidBitmap(64, 48, Color(0xFF203040)))
+        assertTrue(IosByteArrayInterop.toNSData(sourceBytes).writeToFile(sourcePath, atomically = true))
+        val iconPath = NSTemporaryDirectory() + "c3_fail_icon_" + NSUUID().UUIDString() + ".png"
+        val iconBytes = IosWatermarkRenderer.encodePng(solidBitmap(16, 12, Color.Red))
+        assertTrue(IosByteArrayInterop.toNSData(iconBytes).writeToFile(iconPath, atomically = true))
+
+        val config = WaterMark.default.copy(
+            markMode = WatermarkMode.Image,
+            iconUri = MediaRef(iconPath),
+            tileMode = WatermarkTileMode.CLAMP,
+            textSize = 12f,
+            degree = 0f,
+            alpha = 255,
+        )
+        val prefs = UserPreferences(ImageFormat.JPEG, 80)
+        val imageInfo = ImageInfo(
+            uri = MediaRef(sourcePath),
+            width = 1,
+            height = 1,
+            offsetX = 0.2f,
+            offsetY = 0.8f,
+        )
+        val port = IosExportPipelinePort()
+        port.atomicWriteOverrideForTests = { _, _ -> false }
+        try {
+            val result = port.exportOne(imageInfo, config, prefs)
+            assertTrue(result.isFailure(), "forced write failure must fail the export")
+            assertEquals(1, imageInfo.width, "width must not mutate when write fails")
+            assertEquals(1, imageInfo.height, "height must not mutate when write fails")
+        } finally {
+            port.atomicWriteOverrideForTests = null
+        }
+    }
+
     private fun solidBitmap(width: Int, height: Int, color: Color): ImageBitmap {
         val bitmap = ImageBitmap(width, height, ImageBitmapConfig.Argb8888)
         CanvasDrawScope().draw(

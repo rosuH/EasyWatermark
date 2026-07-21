@@ -23,8 +23,16 @@ import platform.Foundation.writeToFile
  *
  * Snapshots path/config/prefs/offset **before** source/temp IO. Does not apply a preview max-edge
  * cap. [MediaRef.value] is a readable filesystem path; returns temp path under [NSTemporaryDirectory].
+ *
+ * Issue 22 §2.5: atomic write of encoded bytes precedes [ImageInfo] width/height mutation.
  */
 class IosExportPipelinePort : ExportPipelinePort {
+
+    /**
+     * Test-only atomic-write override so a failed write can be forced without message parsing
+     * or real filesystem failure. Production leaves this null and uses Foundation `writeToFile`.
+     */
+    internal var atomicWriteOverrideForTests: ((bytes: ByteArray, path: String) -> Boolean)? = null
 
     override suspend fun exportOne(
         imageInfo: ImageInfo,
@@ -66,14 +74,15 @@ class IosExportPipelinePort : ExportPipelinePort {
                 iconBytes = iconBytes,
                 fontFamily = fontFamily,
             )
-            imageInfo.width = encoded.width
-            imageInfo.height = encoded.height
             val ext = encoded.format.fileExtension
             val outPath = NSTemporaryDirectory() + "ewm_out_" + NSUUID().UUIDString + "." + ext
-            val ok = IosByteArrayInterop.toNSData(encoded.bytes).writeToFile(outPath, atomically = true)
+            // Issue 22 §2.5 steps 7–8: write first; mutate dimensions only after success.
+            val ok = writeEncodedBytes(encoded.bytes, outPath)
             if (!ok) {
                 return Result.failure(null, code = "-1", message = "Failed to write $outPath")
             }
+            imageInfo.width = encoded.width
+            imageInfo.height = encoded.height
             Result.success(MediaRef(outPath))
         } catch (e: Exception) {
             Result.failure(
@@ -81,6 +90,15 @@ class IosExportPipelinePort : ExportPipelinePort {
                 code = ExportErrorCodes.FILE_NOT_FOUND,
                 message = e.message ?: "iOS export failed",
             )
+        }
+    }
+
+    private fun writeEncodedBytes(bytes: ByteArray, path: String): Boolean {
+        val override = atomicWriteOverrideForTests
+        return if (override != null) {
+            override(bytes, path)
+        } else {
+            IosByteArrayInterop.toNSData(bytes).writeToFile(path, atomically = true)
         }
     }
 }
