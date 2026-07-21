@@ -66,6 +66,33 @@ C2 was previously blocked by byte-parity failures (rotated non-uniform icons; CJ
   `target.writeBytes` (atomic rename remains G1).
 - iOS production still orchestrates `WatermarkCellComposer` directly until **Stage C3**.
 
+### Status update (2026-07-20 — Stage C3 iOS Preview + Final Export)
+
+- iOS product paint uses `CommonWatermarkPipeline` on both surfaces:
+  - **Preview:** `IosPreviewRaster` — max-edge 720 thumbnail decode, in-memory `ImageBitmap`,
+    no final encode/write; offset forwarded.
+  - **Final Export:** `IosExportPipelinePort` freezes `IosRenderRequest` (config/prefs/offsetX/Y,
+    no offset defaults) before IO → `IosFinalRenderSpine.renderAndEncode` → full-resolution
+    `IosImageDecoder.decode` → one `CommonWatermarkPipeline.compose` → explicit-sRGB encode
+    (JPEG white-flatten + selected quality; PNG alpha preserve). Temp extension from actual format.
+- Compatibility `IosWatermarkRenderBridge` PNG APIs route through the spine with PNG prefs;
+  Swift ABI unchanged. Cell/golden helpers remain in `IosWatermarkRenderer` as test/witness only.
+- Skia decode already bakes EXIF; final encoder does not re-rotate; newly encoded output has no
+  source EXIF. Physical camera-size runtime witness remains **RUNTIME_PENDING** (issue 22).
+- C4 / Stage D / Stage H unauthorized by this status block.
+
+### Status update (2026-07-21 — Stage C3 attempt-2 review repairs)
+
+- Orientation-7 spine test uses a real EXIF tag **7** fixture and asserts BR upright quadrant +
+  swapped dims + APP1 strip (no orientation-6 stand-in).
+- Explicit-sRGB contract narrowed to the encode **working surface**
+  (`IosFinalRenderSpine.explicitSrgbImageInfo` / `ImageInfo.makeS32`); tests reject `null` as sRGB
+  and do not claim decoded JPEG/PNG containers re-report a profile.
+- Preview no-export-file check enumerates the real temp directory via `NSFileManager` (sentinel-
+  mutation-resistant).
+- Bridge RENDER/ENCODE stages are structural (separate compose vs encode catches); forced ENCODE
+  regression uses a test-only encode override — no message-string stage guessing.
+
 ## Owner acceptance (recorded)
 
 - **C2** selected explicitly after product discussion of common 光栅 and C1/C2 tradeoff.  

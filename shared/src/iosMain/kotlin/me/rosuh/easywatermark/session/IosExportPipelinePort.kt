@@ -8,8 +8,9 @@ import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.repo.IosIconPersistence
 import me.rosuh.easywatermark.render.IosByteArrayInterop
-import me.rosuh.easywatermark.render.IosImageDecoder
-import me.rosuh.easywatermark.render.IosWatermarkRenderBridge
+import me.rosuh.easywatermark.render.IosFinalRenderSpine
+import me.rosuh.easywatermark.render.IosFontLoader
+import me.rosuh.easywatermark.render.IosRenderRequest
 import platform.Foundation.NSData
 import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSUUID
@@ -17,18 +18,11 @@ import platform.Foundation.dataWithContentsOfFile
 import platform.Foundation.writeToFile
 
 /**
- * On-screen editor preview max long edge.
- * Aligns with Android Compose [decodeSampledBitmapFromResource] targeting **canvas size**
- * (~display pixels, not full camera megapixels). Full save export can use a higher budget later.
- */
-private const val PREVIEW_MAX_EDGE_PX = 1080
-
-/**
- * iOS [ExportPipelinePort] (ADR-0017 Phase 4): Skiko render via [IosWatermarkRenderBridge]
- * (wrap of accepted iOS path — no algorithm rewrite).
+ * iOS [ExportPipelinePort] (C3): full-resolution Final Export through [IosFinalRenderSpine] →
+ * [CommonWatermarkPipeline], honoring [UserPreferences] format/quality and per-item offset.
  *
- * [MediaRef.value] must be a readable filesystem path to encoded image bytes.
- * Writes a PNG under [NSTemporaryDirectory] and returns that path as [MediaRef].
+ * Snapshots path/config/prefs/offset **before** source/temp IO. Does not apply a preview max-edge
+ * cap. [MediaRef.value] is a readable filesystem path; returns temp path under [NSTemporaryDirectory].
  */
 class IosExportPipelinePort : ExportPipelinePort {
 
@@ -38,7 +32,14 @@ class IosExportPipelinePort : ExportPipelinePort {
         prefs: UserPreferences,
     ): Result<MediaRef> {
         return try {
+            // Freeze identity before any filesystem IO (C3).
             val path = imageInfo.uri.value
+            val request = IosRenderRequest(
+                config = config,
+                prefs = prefs,
+                offsetX = imageInfo.offsetX,
+                offsetY = imageInfo.offsetY,
+            )
             if (path.isBlank()) {
                 return Result.failure(null, code = "-1", message = "Empty image path")
             }
@@ -48,44 +49,28 @@ class IosExportPipelinePort : ExportPipelinePort {
                     code = ExportErrorCodes.FILE_NOT_FOUND,
                     message = "Source not readable: $path",
                 )
-            // Downscale huge camera assets before Skiko raster — biggest iOS preview lag source.
-            val imageBytes = IosImageDecoder.downscaleEncodedToPng(
-                IosByteArrayInterop.fromNSData(data),
-                maxEdgePx = PREVIEW_MAX_EDGE_PX,
-            )
-            val rendered = when (config.markMode) {
-                WatermarkMode.Text -> IosWatermarkRenderBridge.renderWatermarkedPng(
-                    imageBytes = imageBytes,
-                    text = config.text,
-                    tileMode = config.tileMode,
-                    textSize = config.textSize,
-                    degree = config.degree,
-                    hGapPercent = config.hGap,
-                    vGapPercent = config.vGap,
-                    alpha = config.alpha / 255f,
-                    colorArgb = config.textColor,
-                    typeface = config.textTypeface,
-                    textStyle = config.textStyle,
-                )
-                WatermarkMode.Image -> {
-                    val iconBytes = IosIconPersistence.readIconBytes(config.iconUri)
-                    IosWatermarkRenderBridge.renderIconWatermarkedPng(
-                        imageBytes = imageBytes,
-                        iconBytes = iconBytes,
-                        tileMode = config.tileMode,
-                        textSize = config.textSize,
-                        degree = config.degree,
-                        hGapPercent = config.hGap,
-                        vGapPercent = config.vGap,
-                        alpha = config.alpha / 255f,
-                    )
-                }
+            val imageBytes = IosByteArrayInterop.fromNSData(data)
+            val iconBytes: ByteArray? = if (config.markMode == WatermarkMode.Image) {
+                IosIconPersistence.readIconBytes(config.iconUri)
+            } else {
+                null
             }
-            imageInfo.width = rendered.width
-            imageInfo.height = rendered.height
-            // prefs.format currently ignored for iOS (always PNG via Skia encode) — matches product path.
-            val outPath = NSTemporaryDirectory() + "ewm_out_" + NSUUID().UUIDString + ".png"
-            val ok = IosByteArrayInterop.toNSData(rendered.png).writeToFile(outPath, atomically = true)
+            val fontFamily = if (config.markMode == WatermarkMode.Text) {
+                IosFontLoader.bundledFontFamily(latinFirst = true)
+            } else {
+                null
+            }
+            val encoded = IosFinalRenderSpine.renderAndEncode(
+                imageBytes = imageBytes,
+                request = request,
+                iconBytes = iconBytes,
+                fontFamily = fontFamily,
+            )
+            imageInfo.width = encoded.width
+            imageInfo.height = encoded.height
+            val ext = encoded.format.fileExtension
+            val outPath = NSTemporaryDirectory() + "ewm_out_" + NSUUID().UUIDString + "." + ext
+            val ok = IosByteArrayInterop.toNSData(encoded.bytes).writeToFile(outPath, atomically = true)
             if (!ok) {
                 return Result.failure(null, code = "-1", message = "Failed to write $outPath")
             }

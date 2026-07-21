@@ -14,18 +14,11 @@ import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image as SkiaImage
 
 /**
- * The **iOS watermark renderer** — the iOS analogue of [DesktopWatermarkTextRenderer] + * [DesktopWatermarkComposer], proving the accepted commonMain pipeline runs on the iOS (Skiko) target:
- * render a text cell ([WatermarkCellComposer.composeTextCell]) → compose it over a decoded image
- * ([WatermarkCellComposer.composeOverBackground]) → (optionally) Skia-encode to PNG.
+ * Cell-level / golden **test-witness helpers** for iOS (C3).
  *
- * iOS, like desktop, is a Skiko backend, so the only platform pieces are the env/font boundary
- * ([IosTextRasterEnv]), the decode boundary ([IosImageDecoder]), and Skia PNG encode here. commonMain stays
- * decode-free and platform-neutral. Android production also uses commonMain via `AndroidCommonRaster`
- * (ADR-0018); native `WatermarkRenderer` is oracle/golden only.
- *
- * The [fontFamily] is injected (defaults to [FontFamily.Default] = the iOS system font via Skiko) so the
- * pipeline can be proven without packaging the bundled CJK font into an iOS app bundle yet; pass
- * [IosTextRasterEnv.bundledFontFamily] with real Noto bytes for the bundled-font path (see C5).
+ * Production Preview uses [IosPreviewRaster] → [CommonWatermarkPipeline]; Final Export uses
+ * [IosFinalRenderSpine]. Product Port/Preview/bridge must not call [composeOverImage] /
+ * [composeIconOverImage] after C3. These helpers remain for existing cell/golden tests.
  */
 object IosWatermarkRenderer {
 

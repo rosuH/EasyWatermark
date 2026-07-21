@@ -1,45 +1,35 @@
 package me.rosuh.easywatermark.render
 
 import androidx.compose.ui.graphics.ImageBitmap
+import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
+import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import platform.Foundation.NSBundle
 
 /**
- * The **iOS Swift-catchable render boundary**. *
- * The iOS render path is a sequence of Kotlin/Native calls that fail **loudly** on bad input —
- * [IosFontLoader.bundledFontFamily] (`error`/`check` → [IllegalStateException] on a missing/unreadable/
- * empty bundled font), [IosWatermarkRenderer.composeOverImage] (which decodes via [IosImageDecoder] —
- * `error` → [IllegalStateException] on undecodable bytes — and validates the tile mode in commonMain
- * `composeOverBackground` — `require` → [IllegalArgumentException] for MIRROR/DECAL), and
- * [IosWatermarkRenderer.encodePng] (`error` → [IllegalStateException] if Skia returns null).
+ * iOS Swift-catchable render boundary (C3: routes through [IosFinalRenderSpine] + common pipeline).
  *
- * Without an annotation, a Kotlin exception crossing the Kotlin/Native ↔ Swift boundary **terminates
- * the process** rather than becoming a Swift `catch`. Once the iOS app actually runs (C5.3), a user
- * picking a corrupt/HEIC-unsupported image, or fonts somehow missing from the bundle, would therefore
- * crash the app instead of showing an error.
+ * Preserves PNG-return ABI and FONT/RENDER/ENCODE stages for legacy Swift callers. Production
+ * format policy lives on [IosExportPipelinePort], not here.
  *
- * This object wraps the whole sequence and rethrows **every** render-path failure as a single
- * [IosRenderException] (tagged with the failing [IosRenderStage] and preserving the original
- * message + cause), annotated [Throws] so the generated Swift API is `throws`. Swift then does
- * `do { try … } catch { … }` and surfaces `WatermarkWorkflow.State.failure(...)`.
- *
- * It does **NOT** swallow failures into blank images or default fonts — a failure is always surfaced
- * as a thrown error; only the success path returns an [IosRenderedPng]. commonMain/Android renderer
- * behaviour is unchanged; this is a pure iOS-edge wrapper over the existing accepted APIs (no new
- * dependency, no compose-resources).
+ * RENDER vs ENCODE mapping is **structural** (separate try/catch around compose vs encode), not
+ * message-string heuristics.
  */
 object IosWatermarkRenderBridge {
 
     /**
- * Build the bundled font family, watermark [imageBytes] over a Skia-decoded background, and Skia-
- * Encode the result to PNG — returning bytes + dimensions in [IosRenderedPng]. Any failure at the * font / render(+decode) / encode stage is rethrown as [IosRenderException] (Swift-catchable).
- *
- * Defaults mirror the prior Swift call site (`WatermarkWorkflow.renderBlocking`): REPEAT tiling,
- * 24f text, 315° rotation, 40/40 gaps, centre offset, opaque. Font faces use the
- * [IosFontLoader] defaults loaded from [bundle].
+     * Test-only encode override so ENCODE-stage failures can be forced without message parsing.
+     * Production path leaves this null and uses [IosFinalRenderSpine.encodeExplicitSrgb].
+     */
+    internal var encodeOverrideForTests: ((ImageBitmap, ImageFormat, Int) -> ByteArray)? = null
+
+    /**
+     * Build the bundled font family, watermark [imageBytes], and encode PNG via the final spine.
+     * Defaults mirror the prior Swift call site. Failures rethrow as [IosRenderException].
      */
     @Throws(IosRenderException::class)
     fun renderWatermarkedPng(
@@ -53,14 +43,8 @@ object IosWatermarkRenderBridge {
         offsetX: Float = 0.5f,
         offsetY: Float = 0.5f,
         alpha: Float = 1f,
-        // ARGB text color (default amber #FFB800 = WaterMark.default.textColor); aligns the iOS
-        // render to the shared default, replacing the prior hardcoded white.
         colorArgb: Int = WaterMark.default.textColor,
-        // persisted text typeface (default Normal = WaterMark.default.textTypeface preserves the
-        // prior regular output); mapped to Compose fontWeight/fontStyle in IosWatermarkRenderer.
         typeface: TextTypeface = WaterMark.default.textTypeface,
-        // persisted text paint style (default Fill = WaterMark.default.textStyle preserves the
-        // prior filled output); mapped to a Compose text drawStyle in IosWatermarkRenderer.
         textStyle: TextPaintStyle = WaterMark.default.textStyle,
         latinFirst: Boolean = true,
         bundle: NSBundle = NSBundle.mainBundle,
@@ -71,49 +55,37 @@ object IosWatermarkRenderBridge {
             throw IosRenderException(IosRenderStage.FONT, t.message ?: "bundled font load failed", t)
         }
 
-        val composed: ImageBitmap = try {
-            IosWatermarkRenderer.composeOverImage(
-                imageBytes = imageBytes,
-                text = text,
-                fontFamily = fontFamily,
-                tileMode = tileMode,
-                textSize = textSize,
-                degree = degree,
-                hGapPercent = hGapPercent,
-                vGapPercent = vGapPercent,
-                offsetX = offsetX,
-                offsetY = offsetY,
-                alpha = alpha,
-                colorArgb = colorArgb,
-                typeface = typeface,
-                textStyle = textStyle,
-            )
-        } catch (t: Throwable) {
-            // RENDER covers decode (IosImageDecoder, inside composeOverImage), cell rasterization,
-            // tile-mode validation, and composition.
-            throw IosRenderException(IosRenderStage.RENDER, t.message ?: "watermark render failed", t)
-        }
+        val config = WaterMark.default.copy(
+            text = text,
+            markMode = WatermarkMode.Text,
+            tileMode = tileMode,
+            textSize = textSize,
+            degree = degree,
+            hGap = hGapPercent,
+            vGap = vGapPercent,
+            alpha = (alpha.coerceIn(0f, 1f) * 255f).toInt().coerceIn(0, 255),
+            textColor = colorArgb,
+            textTypeface = typeface,
+            textStyle = textStyle,
+        )
+        val request = IosRenderRequest(
+            config = config,
+            prefs = UserPreferences(ImageFormat.PNG, 100),
+            offsetX = offsetX,
+            offsetY = offsetY,
+        )
 
-        val png: ByteArray = try {
-            IosWatermarkRenderer.encodePng(composed)
-        } catch (t: Throwable) {
-            throw IosRenderException(IosRenderStage.ENCODE, t.message ?: "PNG encode failed", t)
-        }
-
-        return IosRenderedPng(png = png, width = composed.width, height = composed.height)
+        return composeThenEncodePng(
+            imageBytes = imageBytes,
+            request = request,
+            iconBytes = null,
+            fontFamily = fontFamily,
+            failMessage = "watermark render failed",
+        )
     }
 
     /**
- * The **icon (image-watermark) variant** of [renderWatermarkedPng]. Watermarks [imageBytes] * with the persisted icon [iconBytes] via the [IosWatermarkRenderer.composeIconOverImage]
- * (decode background + icon → render the icon cell → compose), then Skia-encodes to PNG. There is **no
- * FONT stage** (image watermarks have no text). A decode/render failure is rethrown as
- * [IosRenderException]`(RENDER, …)` and an encode failure as `(ENCODE, …)` — Swift-catchable, never a
- * raw Kotlin/Native crash.
- *
- * Icon scale follows the renderer contract: `scaleRatio = textSize / ICON_SCALE_REFERENCE_TEXT_SIZE`
- * (14f ⇒ 1×) is computed **here** from [textSize], so the 14f reference constant stays in Kotlin and
- * Swift passes only the persisted `WaterMark.textSize`. [tileMode] must be REPEAT or CLAMP. iOS icon
- * rendering is **perceptual, not byte-parity** with Android `buildIconShader`.
+     * Icon (image-watermark) variant — no FONT stage. PNG compatibility only.
      */
     @Throws(IosRenderException::class)
     fun renderIconWatermarkedPng(
@@ -128,50 +100,87 @@ object IosWatermarkRenderBridge {
         offsetY: Float = 0.5f,
         alpha: Float = 1f,
     ): IosRenderedPng {
-        val composed: ImageBitmap = try {
-            IosWatermarkRenderer.composeIconOverImage(
+        val config = WaterMark.default.copy(
+            markMode = WatermarkMode.Image,
+            tileMode = tileMode,
+            textSize = textSize,
+            degree = degree,
+            hGap = hGapPercent,
+            vGap = vGapPercent,
+            alpha = (alpha.coerceIn(0f, 1f) * 255f).toInt().coerceIn(0, 255),
+        )
+        val request = IosRenderRequest(
+            config = config,
+            prefs = UserPreferences(ImageFormat.PNG, 100),
+            offsetX = offsetX,
+            offsetY = offsetY,
+        )
+        return composeThenEncodePng(
+            imageBytes = imageBytes,
+            request = request,
+            iconBytes = iconBytes,
+            fontFamily = null,
+            failMessage = "icon watermark render failed",
+        )
+    }
+
+    /**
+     * Structurally separate RENDER (decode/compose) from ENCODE. No message-string stage guessing.
+     */
+    private fun composeThenEncodePng(
+        imageBytes: ByteArray,
+        request: IosRenderRequest,
+        iconBytes: ByteArray?,
+        fontFamily: androidx.compose.ui.text.font.FontFamily?,
+        failMessage: String,
+    ): IosRenderedPng {
+        val composed = try {
+            IosFinalRenderSpine.composeForExport(
                 imageBytes = imageBytes,
+                request = request,
                 iconBytes = iconBytes,
-                tileMode = tileMode,
-                degree = degree,
-                hGapPercent = hGapPercent,
-                vGapPercent = vGapPercent,
-                offsetX = offsetX,
-                offsetY = offsetY,
-                scaleRatio = textSize / WatermarkCellComposer.ICON_SCALE_REFERENCE_TEXT_SIZE,
-                alpha = alpha,
+                fontFamily = fontFamily,
             )
         } catch (t: Throwable) {
-            // RENDER covers decode (background + icon via IosImageDecoder, inside composeIconOverImage),
-            // icon-cell rasterization, tile-mode validation, and composition.
-            throw IosRenderException(IosRenderStage.RENDER, t.message ?: "icon watermark render failed", t)
+            throw IosRenderException(
+                IosRenderStage.RENDER,
+                t.message ?: failMessage,
+                t,
+            )
         }
 
-        val png: ByteArray = try {
-            IosWatermarkRenderer.encodePng(composed)
+        val encodedBytes = try {
+            val override = encodeOverrideForTests
+            if (override != null) {
+                override(composed, ImageFormat.PNG, 100)
+            } else {
+                IosFinalRenderSpine.encodeExplicitSrgb(composed, ImageFormat.PNG, 100)
+            }
         } catch (t: Throwable) {
-            throw IosRenderException(IosRenderStage.ENCODE, t.message ?: "PNG encode failed", t)
+            throw IosRenderException(
+                IosRenderStage.ENCODE,
+                t.message ?: failMessage,
+                t,
+            )
         }
 
-        return IosRenderedPng(png = png, width = composed.width, height = composed.height)
+        return IosRenderedPng(
+            png = encodedBytes,
+            width = composed.width,
+            height = composed.height,
+        )
     }
 }
 
 /** The render-pipeline stage that failed — tags an [IosRenderException] for diagnostics/UI. */
 enum class IosRenderStage {
-    /** Building the bundled Latin+CJK font family from the app bundle. */
     FONT,
-
-    /** Decoding the source bytes + rasterizing/compositing the watermark cell over the image. */
     RENDER,
-
-    /** Skia-encoding the composed bitmap to PNG. */
     ENCODE,
 }
 
 /**
- * The single Swift-catchable error type for the iOS render boundary. Carries the failing [stage] plus
- * The original [message]/cause so Swift can show a precise `State.failure`. Bridged to Swift as a * `throws` error via [IosWatermarkRenderBridge]'s [Throws] annotation.
+ * Single Swift-catchable error type for the iOS render boundary.
  */
 class IosRenderException(
     val stage: IosRenderStage,
@@ -179,7 +188,7 @@ class IosRenderException(
     cause: Throwable?,
 ) : Exception(message, cause)
 
-/** Immutable success holder: the encoded PNG [png] and the composed image [width] × [height]. */
+/** Immutable success holder: encoded PNG [png] and composed [width] × [height]. */
 class IosRenderedPng(
     val png: ByteArray,
     val width: Int,

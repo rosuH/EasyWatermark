@@ -87,7 +87,7 @@ class IosProductRootHost(
     private val onPickPhoto: () -> Unit,
     private val onPickIcon: () -> Unit,
     private val onShare: (filePath: String) -> Unit,
-    private val onSaveToPhotos: (pngBytes: ByteArray) -> Unit,
+    private val onSaveToPhotos: (encodedBytes: ByteArray) -> Unit,
     private val onOpenUrl: (url: String) -> Unit = {},
     private val services: IosAppServices = defaultIosAppServices(),
 ) {
@@ -608,9 +608,9 @@ class IosProductRootHost(
                                         if (info.jobState is JobState.Success && ref != null) {
                                             lastPath = ref
                                             val data = NSData.dataWithContentsOfFile(ref)
-                                            val png = data?.let { IosByteArrayInterop.fromNSData(it) }
-                                            if (png != null) {
-                                                onSaveToPhotos(png)
+                                            val encodedBytes = data?.let { IosByteArrayInterop.fromNSData(it) }
+                                            if (encodedBytes != null) {
+                                                onSaveToPhotos(encodedBytes)
                                                 saved++
                                             }
                                         }

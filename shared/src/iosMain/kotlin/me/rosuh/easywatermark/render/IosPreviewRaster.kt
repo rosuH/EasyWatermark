@@ -1,8 +1,6 @@
 package me.rosuh.easywatermark.render
 
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.text.font.FontFamily
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.repo.IosIconPersistence
@@ -10,29 +8,29 @@ import platform.Foundation.NSData
 import platform.Foundation.dataWithContentsOfFile
 
 /**
- * **On-screen editor preview** raster — Android [WaterMarkCanvas] analogue for iOS.
+ * **On-screen editor preview** raster — Android [WaterMarkCanvas] analogue for iOS (C3).
  *
- * Unlike [IosExportPipelinePort] / [IosWatermarkRenderBridge.renderWatermarkedPng], this path:
- * - never encodes PNG
+ * Unlike [IosExportPipelinePort] / [IosFinalRenderSpine], this path:
+ * - never encodes final JPEG/PNG product output
  * - never writes temp export files
- * - decodes + downscales source in one pass to [maxEdgePx]
+ * - decodes + downscales source in one pass to [PREVIEW_MAX_EDGE_PX]
+ * - paints through [CommonWatermarkPipeline.compose] with the current offset
  * - returns an in-memory [ImageBitmap] ready for Compose [Image]
- *
- * That removes the old switch-image cost stack: full-res read → PNG re-encode of downsample →
- * Full export write → PNG read → PNG decode for display. */
+ */
 object IosPreviewRaster {
 
     /**
- * Display-sized long edge. Android samples to canvas pixels (~screen); 720 keeps Skiko
- * Composition snappy on multi-megapixel camera stills while remaining sharp on phone DPI.     */
+     * Display-sized long edge. Android samples to canvas pixels (~screen); 720 keeps Skiko
+     * composition snappy on multi-megapixel camera stills while remaining sharp on phone DPI.
+     */
     const val PREVIEW_MAX_EDGE_PX: Int = 720
 
-    private val fontFamily: FontFamily by lazy {
+    private val fontFamily by lazy {
         IosFontLoader.bundledFontFamily(latinFirst = true)
     }
 
     /**
- * Fast source placeholder (no watermark) for instant filmstrip feedback while raster runs.
+     * Fast source placeholder (no watermark) for instant filmstrip feedback while raster runs.
      */
     fun decodeSourcePlaceholder(sourcePath: String, maxEdgePx: Int = PREVIEW_MAX_EDGE_PX): ImageBitmap? {
         val bench = IosPreviewBench.scope("placeholder")
@@ -50,7 +48,8 @@ object IosPreviewRaster {
     }
 
     /**
- * Watermarked preview [ImageBitmap] for [sourcePath] with current [waterMark] config.
+     * Watermarked preview [ImageBitmap] for [sourcePath] with current [waterMark] config.
+     * In-memory only — no encode/write.
      */
     fun renderWatermarked(
         sourcePath: String,
@@ -64,56 +63,25 @@ object IosPreviewRaster {
             ?: error("IosPreviewRaster: unreadable $sourcePath")
         bench.mark("read")
 
-        // One-pass decode+scale — no intermediate PNG re-encode (export path used to do that).
         val background = IosImageDecoder.decodeThumbnail(bytes, maxEdgePx = maxEdgePx)
         bench.mark("decodeScale")
 
-        val composed = when (waterMark.markMode) {
-            WatermarkMode.Text -> {
-                val cell = IosWatermarkRenderer.renderTextCell(
-                    text = waterMark.text,
-                    fontFamily = fontFamily,
-                    textSize = waterMark.textSize,
-                    imageWidth = background.width,
-                    degree = waterMark.degree,
-                    color = Color(waterMark.textColor),
-                    hGapPercent = waterMark.hGap,
-                    vGapPercent = waterMark.vGap,
-                    typeface = waterMark.textTypeface,
-                    textStyle = waterMark.textStyle,
-                )
-                bench.mark("cell")
-                WatermarkCellComposer.composeOverBackground(
-                    background = background,
-                    cell = cell,
-                    tileMode = waterMark.tileMode,
-                    offsetX = offsetX,
-                    offsetY = offsetY,
-                    alpha = waterMark.alpha / 255f,
-                )
-            }
-            WatermarkMode.Image -> {
-                val iconBytes = IosIconPersistence.readIconBytes(waterMark.iconUri)
-                val icon = IosImageDecoder.decodeThumbnail(iconBytes, maxEdgePx = 256)
-                val cell = IosWatermarkRenderer.renderIconCell(
-                    icon = icon,
-                    degree = waterMark.degree,
-                    hGapPercent = waterMark.hGap,
-                    vGapPercent = waterMark.vGap,
-                    scaleRatio = waterMark.textSize / WatermarkCellComposer.ICON_SCALE_REFERENCE_TEXT_SIZE,
-                    alpha = 1f,
-                )
-                bench.mark("cell")
-                WatermarkCellComposer.composeOverBackground(
-                    background = background,
-                    cell = cell,
-                    tileMode = waterMark.tileMode,
-                    offsetX = offsetX,
-                    offsetY = offsetY,
-                    alpha = waterMark.alpha / 255f,
-                )
-            }
+        val icon = if (waterMark.markMode == WatermarkMode.Image) {
+            val iconBytes = IosIconPersistence.readIconBytes(waterMark.iconUri)
+            IosImageDecoder.decodeThumbnail(iconBytes, maxEdgePx = 256)
+        } else {
+            null
         }
+        val family = if (waterMark.markMode == WatermarkMode.Text) fontFamily else null
+        val composed = CommonWatermarkPipeline.compose(
+            background = background,
+            config = waterMark,
+            env = IosTextRasterEnv.textRasterEnv(),
+            icon = icon,
+            offsetX = offsetX,
+            offsetY = offsetY,
+            fontFamily = family,
+        )
         bench.mark("compose")
         bench.finish(
             mapOf(

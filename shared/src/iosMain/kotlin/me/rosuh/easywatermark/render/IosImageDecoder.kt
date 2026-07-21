@@ -9,9 +9,11 @@ import org.jetbrains.skia.SamplingMode
 import org.jetbrains.skia.Surface
 
 /**
- * The **iOS platform image-decode boundary** — the iOS analogue of the Desktop * [DesktopImageDecoder]. Decodes a real encoded image (PNG/JPEG/… bytes) into a Compose
- * [ImageBitmap] so the accepted commonMain composition pipeline
- * ([WatermarkCellComposer.composeOverBackground]) can watermark an actually-decoded photo.
+ * The **iOS platform image-decode boundary** — the iOS analogue of Desktop [DesktopImageDecoder].
+ * Decodes a real encoded image (PNG/JPEG/… bytes) into a Compose [ImageBitmap] for product paint.
+ * C3 Final Export ([IosFinalRenderSpine]) and Preview ([IosPreviewRaster]) call full-res
+ * [decode] / [decodeThumbnail] here, then compose via [CommonWatermarkPipeline]; never re-rotate
+ * after decode (Skia already bakes EXIF).
  *
  * iOS has no `javax.imageio`, so decode goes through **Skia** (`org.jetbrains.skia.Image.makeFromEncoded`),
  * which ships with the Compose-Multiplatform iOS artifacts (skiko) — **no new dependency**. The Skia

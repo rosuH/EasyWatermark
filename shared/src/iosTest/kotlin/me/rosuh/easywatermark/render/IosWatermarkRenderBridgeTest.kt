@@ -90,7 +90,9 @@ class IosWatermarkRenderBridgeTest {
     }
 
     /**
- * A decode failure on the icon bytes (or background) is wrapped as a single Swift-catchable * [IosRenderException] (stage RENDER), never a raw Kotlin exception across the Swift boundary.
+     * A decode failure on the icon bytes (or background) is wrapped as a single Swift-catchable
+     * [IosRenderException] (stage RENDER), never a raw Kotlin exception across the Swift boundary.
+     * Structural RENDER mapping — not message-string heuristics.
      */
     @Test
     fun icon_bridge_wraps_bad_icon_bytes_as_render_exception() {
@@ -102,5 +104,45 @@ class IosWatermarkRenderBridgeTest {
             )
         }
         assertSame(IosRenderStage.RENDER, ex.stage, "undecodable icon bytes must fail at the RENDER stage")
+    }
+
+    /**
+     * Forced encode-path failure must map to [IosRenderStage.ENCODE] via structural separation
+     * (compose succeeded; encode override throws). Message text is irrelevant.
+     */
+    @Test
+    fun forced_encode_failure_maps_to_encode_stage() {
+        val bg = pngBytes(32, 24, 0xFF203040)
+        val icon = pngBytes(12, 12, 0xFFEE22AA)
+        IosWatermarkRenderBridge.encodeOverrideForTests = { _, _, _ ->
+            error("forced encode failure without encode keyword in path")
+        }
+        try {
+            val ex = assertFailsWith<IosRenderException> {
+                IosWatermarkRenderBridge.renderIconWatermarkedPng(
+                    imageBytes = bg,
+                    iconBytes = icon,
+                )
+            }
+            assertSame(
+                IosRenderStage.ENCODE,
+                ex.stage,
+                "encode-path failure must map to ENCODE without message parsing",
+            )
+        } finally {
+            IosWatermarkRenderBridge.encodeOverrideForTests = null
+        }
+    }
+
+    /** Bad background bytes fail in the compose/decode catch → RENDER (structural). */
+    @Test
+    fun bad_background_bytes_map_to_render_stage() {
+        val ex = assertFailsWith<IosRenderException> {
+            IosWatermarkRenderBridge.renderIconWatermarkedPng(
+                imageBytes = byteArrayOf(9, 8, 7),
+                iconBytes = pngBytes(8, 8, 0xFF112233),
+            )
+        }
+        assertSame(IosRenderStage.RENDER, ex.stage)
     }
 }

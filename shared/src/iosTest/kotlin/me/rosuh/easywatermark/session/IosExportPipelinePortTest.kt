@@ -8,14 +8,18 @@ import androidx.compose.ui.graphics.ImageBitmapConfig
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
+import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkMode
+import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.render.IosByteArrayInterop
+import me.rosuh.easywatermark.render.IosFinalRenderSpine
 import me.rosuh.easywatermark.render.IosImageDecoder
+import me.rosuh.easywatermark.render.IosRenderRequest
 import me.rosuh.easywatermark.render.IosWatermarkRenderer
 import platform.Foundation.NSData
 import platform.Foundation.NSTemporaryDirectory
@@ -23,11 +27,15 @@ import platform.Foundation.NSUUID
 import platform.Foundation.dataWithContentsOfFile
 import platform.Foundation.writeToFile
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import kotlinx.coroutines.runBlocking
 
+/**
+ * Adapter contract for [IosExportPipelinePort] (C3): validation + sole success E2E for
+ * full-resolution JPEG prefs/offset/result mapping.
+ */
 class IosExportPipelinePortTest {
 
     @Test
@@ -43,56 +51,59 @@ class IosExportPipelinePortTest {
     }
 
     /**
-     * CURRENT contract only: iOS Port ignores JPEG prefs, writes PNG, and applies the preview
-     * max-edge budget to export. C3 replaces this with the target full-resolution format contract.
+     * Sole success E2E: 2048×1536 stays full-res; JPEG prefs → `.jpg` + magic; Port once.
      */
     @Test
-    fun exportOne_currentContract_pngMagic_and_downscales2048x1536To1080x810() = runBlocking {
-        val sourcePath = NSTemporaryDirectory() + "c0_2_source_" + NSUUID().UUIDString() + ".png"
-        val sourceBytes = IosWatermarkRenderer.encodePng(largeBackground())
+    fun exportOne_jpeg_fullResolution_honorsPrefsOffset_andMapsResult() = runBlocking {
+        val sourcePath = NSTemporaryDirectory() + "c3_source_" + NSUUID().UUIDString() + ".png"
+        val sourceBytes = IosWatermarkRenderer.encodePng(solidBitmap(2048, 1536, Color(0xFF203040)))
         assertTrue(IosByteArrayInterop.toNSData(sourceBytes).writeToFile(sourcePath, atomically = true))
-        val iconPath = NSTemporaryDirectory() + "c0_2_icon_" + NSUUID().UUIDString() + ".png"
-        val iconBytes = IosWatermarkRenderer.encodePng(solidBitmap(32, 24, Color(0xFFFFB800)))
+        val iconPath = NSTemporaryDirectory() + "c3_icon_" + NSUUID().UUIDString() + ".png"
+        val iconBytes = IosWatermarkRenderer.encodePng(solidBitmap(48, 32, Color(0xFFFF0000)))
         assertTrue(IosByteArrayInterop.toNSData(iconBytes).writeToFile(iconPath, atomically = true))
+
+        val offsetX = 0.17f
+        val offsetY = 0.83f
+        val config = WaterMark.default.copy(
+            markMode = WatermarkMode.Image,
+            iconUri = MediaRef(iconPath),
+            tileMode = WatermarkTileMode.CLAMP,
+            textSize = 14f,
+            degree = 0f,
+            alpha = 255,
+        )
+        val prefs = UserPreferences(ImageFormat.JPEG, 80)
         val imageInfo = ImageInfo(
             uri = MediaRef(sourcePath),
-            width = 2048,
-            height = 1536,
+            width = 1,
+            height = 1,
+            offsetX = offsetX,
+            offsetY = offsetY,
         )
 
-        val result = IosExportPipelinePort().exportOne(
-            imageInfo = imageInfo,
-            config = WaterMark.default.copy(
-                markMode = WatermarkMode.Image,
-                iconUri = MediaRef(iconPath),
-            ),
-            prefs = UserPreferences(ImageFormat.JPEG, 20),
+        val spine = IosFinalRenderSpine.renderAndEncode(
+            sourceBytes,
+            IosRenderRequest(config, prefs, offsetX, offsetY),
+            iconBytes = iconBytes,
         )
 
-        assertTrue(
-            result.isSuccess(),
-            "current iOS Port export must succeed (code=${result.code} msg=${result.message})",
-        )
+        val result = IosExportPipelinePort().exportOne(imageInfo, config, prefs)
+        assertTrue(result.isSuccess(), "code=${result.code} msg=${result.message}")
         val outputPath = result.data!!.value
-        assertTrue(outputPath.endsWith(".png"), "current iOS Port output path must remain .png")
+        assertTrue(outputPath.endsWith(".jpg"), "JPEG prefs must yield .jpg path")
         val outputData = NSData.dataWithContentsOfFile(outputPath)
         assertNotNull(outputData)
         val outputBytes = IosByteArrayInterop.fromNSData(outputData)
         assertTrue(
-            outputBytes.take(8).toByteArray().contentEquals(
-                byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A),
-            ),
-            "current iOS Port output must have PNG magic even when JPEG is requested",
+            outputBytes[0] == 0xFF.toByte() && outputBytes[1] == 0xD8.toByte() && outputBytes[2] == 0xFF.toByte(),
+            "JPEG magic required",
         )
-        val decoded = IosImageDecoder.decode(outputBytes)
-        assertEquals(1080, decoded.width)
-        assertEquals(810, decoded.height)
-        assertEquals(1080, imageInfo.width)
-        assertEquals(810, imageInfo.height)
-    }
-
-    private fun largeBackground(): ImageBitmap {
-        return solidBitmap(2048, 1536, Color(0xFF203040))
+        assertEquals(2048, imageInfo.width)
+        assertEquals(1536, imageInfo.height)
+        assertEquals(2048, spine.width)
+        assertEquals(1536, spine.height)
+        // Same request through spine and Port → byte-identical product encode.
+        assertContentEquals(spine.bytes, outputBytes)
     }
 
     private fun solidBitmap(width: Int, height: Int, color: Color): ImageBitmap {
@@ -102,9 +113,7 @@ class IosExportPipelinePortTest {
             layoutDirection = LayoutDirection.Ltr,
             canvas = Canvas(bitmap),
             size = Size(width.toFloat(), height.toFloat()),
-        ) {
-            drawRect(color)
-        }
+        ) { drawRect(color) }
         return bitmap
     }
 }
