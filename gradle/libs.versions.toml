@@ -36,6 +36,8 @@ junit = "4.13.2"
 espressoCore = "3.7.0"
 uiautomator = "2.4.0"
 extJunit = "1.3.0"
+# Align with androidx.test:core resolved by ext:junit (1.7.0 line).
+androidxTestRunner = "1.7.0"
 robolectric = "4.16.1"
 # Absolute latest Compose BOM (Google Maven). BOM governs compose UI/foundation/etc.
 # Material3 explicit pin may skew BOM — owner absolute-latest policy.
@@ -138,4 +140,5 @@ test-junit = { group = "junit", name = "junit", version.ref = "junit" }
 test-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 test-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
 test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "extJunit" }
+test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }

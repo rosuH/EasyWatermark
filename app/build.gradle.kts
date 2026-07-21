@@ -114,8 +114,10 @@ android {
  * Replaces removed `applicationVariants` + internal `ApkVariantOutputImpl` (no reflection).
  * Listens to [SingleArtifact.APK] (directory) and copies the packaged APK under the release name.
  *
- * Deterministic output:
- *   app/build/outputs/apk/<variant>/renamed/EasyWatermark-<versionName>-<versionCode>.apk
+ * Deterministic output (C4.0):
+ * - release: `app/build/outputs/apk/release/renamed/` (release.yml contract, unchanged)
+ * - other variants: `app/build/outputs/renamed-apk/<variant>/` (outside AGP standard APK tree
+ *   so `connectedDebugAndroidTest` no longer collides with `copyRenamedDebugApk`)
  * assemble<Variant> is finalizedBy the matching copy task so the rename always runs with assemble.
  */
 abstract class CopyRenamedApkTask : DefaultTask() {
@@ -145,8 +147,13 @@ extensions.configure<ApplicationAndroidComponentsExtension>("androidComponents")
     onVariants { variant ->
         val capitalized = variant.name.replaceFirstChar { it.uppercase() }
         val copyTask = tasks.register<CopyRenamedApkTask>("copyRenamed${capitalized}Apk") {
-            // Deterministic renamed directory consumed by .github/workflows/release.yml
-            outputFolder.set(layout.buildDirectory.dir("outputs/apk/${variant.name}/renamed"))
+            // Release keeps release.yml path; non-release moves outside outputs/apk/<variant>.
+            val renamedDir = if (variant.name == "release") {
+                "outputs/apk/release/renamed"
+            } else {
+                "outputs/renamed-apk/${variant.name}"
+            }
+            outputFolder.set(layout.buildDirectory.dir(renamedDir))
             apkFileName.set(apkBaseName)
         }
         // Public API: wire task input to packaged APK directory (SingleArtifact.APK is a Directory).
@@ -197,6 +204,8 @@ dependencies {
     testImplementation(libs.test.junit)
     testImplementation(libs.robolectric)
     androidTestImplementation(libs.test.ext.junit)
+    // Explicit runner for AndroidJUnitRunner (C4.0); not production implementation.
+    androidTestImplementation(libs.test.runner)
 
     // or only import the main APIs for the underlying toolkit systems,
     // such as input and measurement/layout
