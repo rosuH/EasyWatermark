@@ -7,7 +7,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * C4.4R.2 Desktop half — fail-closed **source wiring guard**.
+ * C4.4R.2 Desktop + C4.4R.3 iOS — fail-closed **source wiring guards**.
  *
  * Structural evidence only: not a gesture/runtime proof. Geometry remains
  * [ClampPreviewOffsetDragTest]; Session commit-before-export remains
@@ -191,6 +191,191 @@ class ClampPreviewOffsetHostWiringTest {
         assertTrue(
             offsetParamLines.all { !it.contains("=") },
             "DesktopRenderRequest offsetX/offsetY must have no default values: $offsetParamLines",
+        )
+    }
+
+    /**
+     * C4.4R.3 iOS half — structural guard for [IosProductRootHost] CLAMP drag wiring.
+     * Same module as commonMain: calls internal [clampPreviewOffsetDrag] directly (no iOS bridge).
+     */
+    @Test
+    fun ios_clamp_preview_offset_wiring_guard() {
+        val host = resolveRepoFile(
+            "shared/src/iosMain/kotlin/me/rosuh/easywatermark/ui/IosProductRootHost.kt",
+        ).readText()
+        val hostCode = stripKotlinComments(host)
+
+        // Exactly one production call to the shared internal modifier.
+        val dragCallCount = Regex("""\.clampPreviewOffsetDrag\s*\(""")
+            .findAll(hostCode)
+            .count()
+        assertEquals(
+            1,
+            dragCallCount,
+            "IosProductRootHost must call .clampPreviewOffsetDrag( exactly once",
+        )
+        assertFalse("detectDragGestures" in hostCode, "no host-local drag gestures")
+        assertFalse("computeFittedImageRect" in hostCode, "no host-local fitted math")
+        assertFalse("applyClampDragDelta" in hostCode, "no host-local delta math")
+        assertFalse(
+            "desktopClampPreviewOffsetDrag" in hostCode,
+            "iOS must not use the Desktop JVM bridge",
+        )
+
+        // Fail-closed: slice the single Image( invocation that owns the drag modifier.
+        // No whole-file fallback for Fit / contentDescription strings.
+        val callIdx = hostCode.indexOf(".clampPreviewOffsetDrag(")
+        assertTrue(callIdx >= 0, "drag call site required")
+        val imageStart = hostCode.lastIndexOf("Image(", callIdx)
+        assertTrue(imageStart >= 0 && imageStart < callIdx, "drag must sit inside an Image(")
+        // End at the matching Image close after the drag call (next top-level sibling is far;
+        // use a bounded window from Image( through the drag callback).
+        val imageSlice = hostCode.substring(
+            imageStart,
+            (callIdx + 4500).coerceAtMost(hostCode.length),
+        )
+        // Enable-gate lives just above the same Image (dragPath / watermarkedDisplayMatchesSelection).
+        val enableSlice = hostCode.substring(
+            (imageStart - 900).coerceAtLeast(0),
+            callIdx,
+        )
+        // Require Image-local Fit + watermarked description (not elsewhere in the file).
+        assertTrue(
+            Regex("""contentDescription\s*=\s*"Watermarked preview"""").containsMatchIn(imageSlice),
+            "same Image must set contentDescription = \"Watermarked preview\"",
+        )
+        assertTrue(
+            Regex("""contentScale\s*=\s*ContentScale\.Fit""").containsMatchIn(imageSlice),
+            "same Image must use contentScale = ContentScale.Fit",
+        )
+        assertTrue(
+            Regex(
+                """\.fillMaxSize\s*\(\s*\)\s*\n\s*\.clampPreviewOffsetDrag\s*\(""",
+            ).containsMatchIn(imageSlice),
+            "same Image modifier chain must be fillMaxSize() then clampPreviewOffsetDrag(",
+        )
+        // Drag must not appear on a Crop thumbnail in this Image slice.
+        assertFalse(
+            Regex("""contentScale\s*=\s*ContentScale\.Crop""").containsMatchIn(imageSlice),
+            "drag Image slice must not be a Crop thumbnail",
+        )
+
+        val callbackSlice = hostCode.substring(
+            callIdx,
+            (callIdx + 4500).coerceAtMost(hostCode.length),
+        )
+
+        // Path + watermarked-display identity (not path alone — placeholders share previewSourcePath).
+        assertTrue(
+            Regex(
+                """wmPreviewCache\s*\[\s*dragPath\s*\]\s*===\s*displayPreview""",
+            ).containsMatchIn(enableSlice),
+            "enable must require wmPreviewCache[dragPath] === displayPreview " +
+                "(watermarked cache, not placeholder)",
+        )
+        assertTrue(
+            Regex("""previewSourcePath\s*==\s*dragPath""")
+                .containsMatchIn(enableSlice),
+            "enable must still require previewSourcePath == dragPath",
+        )
+        assertTrue(
+            "watermarkedDisplayMatchesSelection" in enableSlice ||
+                Regex("""wmPreviewCache\s*\[\s*dragPath\s*\]\s*===\s*displayPreview""")
+                    .containsMatchIn(enableSlice),
+            "enable path must name watermarked-display identity gate",
+        )
+        assertTrue(
+            "watermarkedDisplayMatchesSelection" in imageSlice ||
+                Regex("""enabled\s*=[\s\S]{0,200}watermarkedDisplayMatchesSelection""")
+                    .containsMatchIn(imageSlice),
+            "enabled= must use watermarkedDisplayMatchesSelection on this Image",
+        )
+        // Callback triple identity + watermarked bitmap re-check.
+        assertTrue(
+            Regex("""previewSourcePath\s*!=\s*dragPath|previewSourcePath\s*==\s*dragPath""")
+                .containsMatchIn(callbackSlice),
+            "callback must re-check previewSourcePath vs dragPath",
+        )
+        assertTrue(
+            Regex(
+                """wmPreviewCache\s*\[\s*dragPath\s*\]\s*!==\s*displayPreview|""" +
+                    """wmPreviewCache\s*\[\s*dragPath\s*\]\s*===\s*displayPreview""",
+            ).containsMatchIn(callbackSlice),
+            "callback must re-check wmPreviewCache[dragPath] vs displayPreview",
+        )
+        assertTrue(
+            "curImageInfo" in callbackSlice,
+            "callback must read live curImageInfo",
+        )
+        assertTrue(
+            Regex(
+                """\.uri\.value\s*==\s*dragPath|it\.uri\.value\s*==\s*dragPath""",
+            ).containsMatchIn(callbackSlice),
+            "callback must require live uri.value == dragPath",
+        )
+        assertFalse(
+            Regex("""selectedImageList\.firstOrNull\s*\(""").containsMatchIn(callbackSlice),
+            "callback must not fall through to selectedImageList.firstOrNull",
+        )
+
+        // Order: applyOffset → selected-key cache remove → previewGen++ (exactly once each).
+        val applyMatches = Regex("""services\.session\.applyOffset\s*\(""")
+            .findAll(callbackSlice)
+            .toList()
+        assertEquals(
+            1,
+            applyMatches.size,
+            "callback must contain exactly one services.session.applyOffset(",
+        )
+        val removeMatches = Regex("""wmPreviewCache\.remove\s*\(\s*dragPath\s*\)""")
+            .findAll(callbackSlice)
+            .toList()
+        assertEquals(
+            1,
+            removeMatches.size,
+            "callback must remove exactly the selected path via wmPreviewCache.remove(dragPath)",
+        )
+        val genMatches = Regex("""previewGen\s*(\+\+|=\s*previewGen\s*\+\s*1)""")
+            .findAll(callbackSlice)
+            .toList()
+        assertEquals(
+            1,
+            genMatches.size,
+            "callback must bump previewGen exactly once",
+        )
+        assertTrue(
+            applyMatches.first().range.first < removeMatches.first().range.first &&
+                removeMatches.first().range.first < genMatches.first().range.first,
+            "order must be applyOffset → wmPreviewCache.remove(dragPath) → previewGen bump",
+        )
+        assertFalse(
+            "wmPreviewCache.clear()" in callbackSlice,
+            "callback must not clear the whole watermarked preview cache",
+        )
+        assertFalse(
+            "repo.updateOffset" in host || "waterMarkRepo.updateOffset" in host,
+            "must not bypass Session with repo offset writers",
+        )
+        assertFalse(
+            Regex("""launch\s*\{[\s\S]{0,200}applyOffset""").containsMatchIn(callbackSlice),
+            "applyOffset must not be fire-and-forget inside launch{}",
+        )
+        // Existing preview rerender path after generation capture (within Image callback slice).
+        assertTrue(
+            "renderPreviewForCurrentSelection" in callbackSlice,
+            "callback neighborhood must invoke existing renderPreviewForCurrentSelection",
+        )
+        assertTrue(
+            Regex(
+                """renderPreviewForCurrentSelection\s*\([\s\S]{0,120}gen\s*=""",
+            ).containsMatchIn(callbackSlice),
+            "rerender must pass captured gen=",
+        )
+        // Renderer ownership/budget policy not changed in this host (names must remain).
+        assertTrue("IosPreviewRaster" in hostCode, "preview raster owner must remain")
+        assertFalse(
+            Regex("""IosFinalRenderSpine""").containsMatchIn(callbackSlice),
+            "drag callback must not call final export spine",
         )
     }
 }

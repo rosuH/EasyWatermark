@@ -40,6 +40,7 @@ import me.rosuh.easywatermark.data.model.JobState
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkConfigChange
+import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.data.repo.IosIconPersistence
 import me.rosuh.easywatermark.data.repo.TemplateRepository
@@ -308,6 +309,18 @@ class IosProductRootHost(
                             templateList = templateListPainter,
                         ),
                         preview = { previewModifier ->
+                            // C4.4R.3: CLAMP drag on the Fit preview Image → session.applyOffset,
+                            // selected-path cache eviction, one previewGen bump, existing rerender.
+                            // Enable only when (1) path identity matches and (2) the displayed bitmap
+                            // is the watermarked cache entry for that path — not a source placeholder
+                            // (previewSourcePath is also set for unwatermarked placeholders).
+                            val dragItem = launchUi.curImageInfo ?: sessionImages.firstOrNull()
+                            val dragPath = dragItem?.uri?.value.orEmpty()
+                            val watermarkedDisplayMatchesSelection =
+                                dragPath.isNotEmpty() &&
+                                    previewSourcePath == dragPath &&
+                                    displayPreview != null &&
+                                    wmPreviewCache[dragPath] === displayPreview
                             Box(
                                 modifier = previewModifier
                                     .fillMaxSize()
@@ -319,7 +332,59 @@ class IosProductRootHost(
                                         bitmap = displayPreview,
                                         contentDescription = "Watermarked preview",
                                         contentScale = ContentScale.Fit,
-                                        modifier = Modifier.fillMaxSize(),
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clampPreviewOffsetDrag(
+                                                enabled = !isBusy &&
+                                                    dragItem != null &&
+                                                    watermarkedDisplayMatchesSelection,
+                                                selectionId = dragPath,
+                                                isClamp = waterMark.tileMode ==
+                                                    WatermarkTileMode.CLAMP,
+                                                imageWidth = displayPreview.width.toFloat(),
+                                                imageHeight = displayPreview.height.toFloat(),
+                                                offsetX = dragItem?.offsetX ?: 0.5f,
+                                                offsetY = dragItem?.offsetY ?: 0.5f,
+                                                onOffsetCommit = { x, y ->
+                                                    if (dragPath.isEmpty()) {
+                                                        return@clampPreviewOffsetDrag
+                                                    }
+                                                    // Triple identity: frozen drag path, displayed
+                                                    // preview path, and live Session selection.
+                                                    // Also refuse if display is no longer the
+                                                    // watermarked cache bitmap for dragPath.
+                                                    if (previewSourcePath != dragPath) {
+                                                        return@clampPreviewOffsetDrag
+                                                    }
+                                                    if (wmPreviewCache[dragPath] !== displayPreview) {
+                                                        return@clampPreviewOffsetDrag
+                                                    }
+                                                    val live = services.session
+                                                        .launchScreenUiStateFlow
+                                                        .value
+                                                        .curImageInfo
+                                                        ?.takeIf { it.uri.value == dragPath }
+                                                        ?: return@clampPreviewOffsetDrag
+                                                    // Sync Session sole commit → selected cache
+                                                    // eviction → one gen bump → existing rerender.
+                                                    services.session.applyOffset(
+                                                        live.copy(offsetX = x, offsetY = y),
+                                                    )
+                                                    wmPreviewCache.remove(dragPath)
+                                                    previewGen++
+                                                    val gen = previewGen
+                                                    hostScope.launch {
+                                                        try {
+                                                            renderPreviewForCurrentSelection(
+                                                                gen = gen,
+                                                            )
+                                                        } catch (t: Throwable) {
+                                                            statusLine =
+                                                                "Preview failed: ${t.message}"
+                                                        }
+                                                    }
+                                                },
+                                            ),
                                     )
                                 }
                                 // Silent empty — never show "Loading…" in the top-left.
