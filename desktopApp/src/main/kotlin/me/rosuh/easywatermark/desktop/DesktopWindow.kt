@@ -58,6 +58,7 @@ import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkConfigChange
+import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.repo.DesktopIconPersistence
 import me.rosuh.easywatermark.data.repo.TemplateRepository
 import me.rosuh.easywatermark.domain.OutputPrefsEditor
@@ -101,6 +102,7 @@ import me.rosuh.easywatermark.ui.iconPainter
 import me.rosuh.easywatermark.ui.ProductShellHost
 import me.rosuh.easywatermark.ui.ProductShellNav
 import me.rosuh.easywatermark.ui.SharedProductDrawables
+import me.rosuh.easywatermark.ui.desktopClampPreviewOffsetDrag
 
 import me.rosuh.easywatermark.ui.compose.IconWatermarkOption
 import me.rosuh.easywatermark.ui.compose.TextColorOption
@@ -730,17 +732,46 @@ fun launchDesktopWindow() = application {
                         preview = { previewModifier ->
                             // Product editor: no debug "Preview: JPEG, WxH" chrome; fill the
                             // available frame with ContentScale.Fit (responsive, aspect preserved).
+                            // C4.4R.2: CLAMP offset drag via shared bridge → session.applyOffset then
+                            // previewGeneration++ (no local offset mirror).
                             Box(
                                 modifier = previewModifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 val bmp = preview
                                 if (bmp != null) {
+                                    val dragItem = selectedForStrip
                                     Image(
                                         bitmap = bmp,
                                         contentDescription = "Watermark preview",
                                         contentScale = ContentScale.Fit,
-                                        modifier = Modifier.fillMaxSize().padding(12.dp),
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(12.dp)
+                                            .desktopClampPreviewOffsetDrag(
+                                                enabled = !busy && dragItem != null,
+                                                selectionId = dragItem?.uri?.value.orEmpty(),
+                                                isClamp = waterMark.tileMode == WatermarkTileMode.CLAMP,
+                                                imageWidth = bmp.width.toFloat(),
+                                                imageHeight = bmp.height.toFloat(),
+                                                offsetX = dragItem?.offsetX ?: 0.5f,
+                                                offsetY = dragItem?.offsetY ?: 0.5f,
+                                                onOffsetCommit = { x, y ->
+                                                    // Fail-closed: only the live Session curImageInfo
+                                                    // whose uri still matches the drag identity may commit.
+                                                    val dragUri = dragItem?.uri
+                                                        ?: return@desktopClampPreviewOffsetDrag
+                                                    val item = session.launchScreenUiStateFlow.value
+                                                        .curImageInfo
+                                                        ?.takeIf { it.uri == dragUri }
+                                                        ?: return@desktopClampPreviewOffsetDrag
+                                                    // Synchronous sole commit owner; then one preview invalidate.
+                                                    session.applyOffset(
+                                                        item.copy(offsetX = x, offsetY = y),
+                                                    )
+                                                    previewGeneration++
+                                                },
+                                            ),
                                     )
                                 } else {
                                     Text(
