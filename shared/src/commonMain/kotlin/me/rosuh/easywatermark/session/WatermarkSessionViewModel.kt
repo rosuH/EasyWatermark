@@ -2,8 +2,10 @@ package me.rosuh.easywatermark.session
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -217,6 +219,9 @@ open class WatermarkSessionViewModel(
                 isFinished = true,
                 completedCount = completedCount,
                 totalCount = totalCount,
+                successCount = completedCount,
+                failureCount = 0,
+                processedCount = completedCount,
             ),
         )
     }
@@ -230,8 +235,14 @@ open class WatermarkSessionViewModel(
         dispatch(AppIntent.RequestExport(resolved))
     }
 
+    /**
+     * Cancel the in-flight export job **synchronously** (D2).
+     * Does not wait for a Default-dispatcher dispatch hop; the job is cancelled immediately so
+     * cooperative cancel is observed at the next suspend point in the export loop.
+     */
     fun cancelExport() {
-        dispatch(AppIntent.CancelExport)
+        exportJob?.cancel()
+        exportJob = null
     }
 
     suspend fun dispatchAndAwait(intent: AppIntent) = applyIntent(intent)
@@ -350,68 +361,120 @@ open class WatermarkSessionViewModel(
                 setExportJobState(ExportJobState())
                 return@launch
             }
-            resetJobStatus()
-            setExportJobState(
-                ExportJobState(
-                    isSaving = true,
-                    totalCount = images.size,
-                ),
-            )
-            val config = waterMarkRepo.waterMark.first()
-            val prefs = userConfigRepo.userPreferences.first()
+            // D2 retry policy: preserve prior Success (no double-export); clear stuck Ing;
+            // re-queue Failure as Ready so retry can re-run failed items only.
             for (info in images) {
-                try {
-                    info.jobState = JobState.Ing
-                    setExportJobState(
-                        ExportJobState(
-                            isSaving = true,
-                            completedCount = images.count { it.jobState is JobState.Success },
-                            totalCount = images.size,
-                        ),
-                    )
-                    // D1: consume typed ExportOutcome; bridge to Result<MediaRef> for hosts until D5.
-                    val outcome = pipeline.exportOne(info, config, prefs)
-                    when (outcome) {
-                        is ExportOutcome.Success -> {
-                            val media = outcome.media
-                            // Typed facts are source of truth; apply dims even if adapter skipped mutation.
-                            info.width = media.width
-                            info.height = media.height
-                            val result = outcome.toLegacyResult()
-                            info.result = result
-                            info.jobState = JobState.Success(result)
-                        }
-                        is ExportOutcome.Failure -> {
-                            val result = outcome.toLegacyResult()
-                            info.result = result
-                            info.jobState = JobState.Failure(result)
-                        }
+                when (info.jobState) {
+                    is JobState.Ing -> info.jobState = JobState.Ready
+                    is JobState.Failure -> {
+                        info.jobState = JobState.Ready
+                        info.result = null
                     }
-                } catch (e: Exception) {
-                    // D2 residual: CancellationException still caught here until cancel redesign.
-                    val failure = Result.failure<MediaRef>(
-                        null,
-                        code = ExportErrorCodes.FILE_NOT_FOUND,
-                        message = e.message ?: "export failed",
-                    )
-                    info.result = failure
-                    info.jobState = JobState.Failure(failure)
+                    else -> Unit
                 }
+            }
+            var successCount = images.count { it.jobState is JobState.Success }
+            var failureCount = 0
+            var cancelledInFlight = 0
+            fun publishExportState(saving: Boolean, finished: Boolean) {
+                val processed = successCount + failureCount + cancelledInFlight
                 setExportJobState(
                     ExportJobState(
-                        isSaving = true,
-                        completedCount = images.count { it.jobState is JobState.Success },
+                        isSaving = saving,
+                        isFinished = finished,
+                        completedCount = successCount,
                         totalCount = images.size,
+                        successCount = successCount,
+                        failureCount = failureCount,
+                        processedCount = processed,
                     ),
                 )
             }
-            setExportJobState(
-                ExportJobState(
-                    isFinished = true,
-                    completedCount = images.count { it.jobState is JobState.Success },
-                    totalCount = images.size,
-                ),
-            )
+            try {
+                publishExportState(saving = true, finished = false)
+                val config = waterMarkRepo.waterMark.first()
+                val prefs = userConfigRepo.userPreferences.first()
+                for (info in images) {
+                    // Do not re-export items that already succeeded (retry-after-cancel).
+                    if (info.jobState is JobState.Success) continue
+                    // Cooperative cancel: stop starting later items.
+                    ensureActive()
+                    try {
+                        info.jobState = JobState.Ing
+                        publishExportState(saving = true, finished = false)
+                        // D1: consume typed ExportOutcome; bridge to Result<MediaRef> for hosts until D5.
+                        val outcome = pipeline.exportOne(info, config, prefs)
+                        when (outcome) {
+                            is ExportOutcome.Success -> {
+                                val media = outcome.media
+                                info.width = media.width
+                                info.height = media.height
+                                val result = outcome.toLegacyResult()
+                                info.result = result
+                                info.jobState = JobState.Success(result)
+                                successCount += 1
+                            }
+                            is ExportOutcome.Failure -> {
+                                val result = outcome.toLegacyResult()
+                                info.result = result
+                                info.jobState = JobState.Failure(result)
+                                failureCount += 1
+                            }
+                        }
+                    } catch (e: CancellationException) {
+                        // Never map cancel to FILE_NOT_FOUND. Leave item terminal if it was in-flight.
+                        if (info.jobState is JobState.Ing) {
+                            val cancelled = Result.failure<MediaRef>(
+                                null,
+                                code = ExportErrorCodes.CANCELLED,
+                                message = e.message ?: "export cancelled",
+                            )
+                            info.result = cancelled
+                            info.jobState = JobState.Failure(cancelled)
+                            cancelledInFlight += 1
+                        }
+                        throw e
+                    } catch (e: Exception) {
+                        val failure = Result.failure<MediaRef>(
+                            null,
+                            code = ExportErrorCodes.FILE_NOT_FOUND,
+                            message = e.message ?: "export failed",
+                        )
+                        info.result = failure
+                        info.jobState = JobState.Failure(failure)
+                        failureCount += 1
+                    }
+                    publishExportState(saving = true, finished = false)
+                }
+            } finally {
+                // Always leave isSaving and clear any stuck Ing (cancel / failure / success).
+                for (info in images) {
+                    if (info.jobState is JobState.Ing) {
+                        val cancelled = Result.failure<MediaRef>(
+                            null,
+                            code = ExportErrorCodes.CANCELLED,
+                            message = "export cancelled",
+                        )
+                        info.result = cancelled
+                        info.jobState = JobState.Failure(cancelled)
+                        cancelledInFlight += 1
+                    }
+                }
+                successCount = images.count { it.jobState is JobState.Success }
+                failureCount = images.count {
+                    it.jobState is JobState.Failure &&
+                        it.result?.code != ExportErrorCodes.CANCELLED
+                }
+                cancelledInFlight = images.count {
+                    it.jobState is JobState.Failure &&
+                        it.result?.code == ExportErrorCodes.CANCELLED
+                }
+                // Cancelled in-flight counts toward failureCount for taxonomy honesty in processed
+                // split: processed = success + non-cancel failure + cancel; expose cancel inside
+                // failureCount? Plan: success / failure / processed. Count cancel as processed
+                // via cancelledInFlight folded into processedCount; failureCount = hard failures only.
+                publishExportState(saving = false, finished = true)
+            }
         }
         exportJob = job
         return job

@@ -35,10 +35,28 @@ class ExportOrchestrationTest {
 
     @Test
     fun exportJobState_progressShape() {
-        val mid = ExportJobState(isSaving = true, completedCount = 1, totalCount = 3)
+        val mid = ExportJobState(
+            isSaving = true,
+            completedCount = 1,
+            totalCount = 3,
+            successCount = 1,
+            failureCount = 0,
+            processedCount = 1,
+        )
         assertEquals(1, mid.completedCount)
+        assertEquals(1, mid.successCount)
         assertEquals(3, mid.totalCount)
-        val done = ExportJobState(isFinished = true, completedCount = 3, totalCount = 3)
+        val done = ExportJobState(
+            isFinished = true,
+            completedCount = 2,
+            totalCount = 3,
+            successCount = 2,
+            failureCount = 1,
+            processedCount = 3,
+        )
         assertTrue(done.isFinished)
+        assertEquals(2, done.successCount)
+        assertEquals(1, done.failureCount)
+        assertEquals(3, done.processedCount)
     }
 }

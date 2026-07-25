@@ -87,7 +87,11 @@ sealed class ExportFailure {
         override val legacyCode: String = ExportErrorCodes.PERSISTENCE,
     ) : ExportFailure()
 
-    /** Cooperative cancellation (D2 will rethrow [kotlinx.coroutines.CancellationException]). */
+    /**
+     * Cooperative cancellation taxonomy for ports that report cancel as a typed failure.
+     * Session export loop rethrows [kotlinx.coroutines.CancellationException] (D2) and never maps
+     * cancel to [ExportErrorCodes.FILE_NOT_FOUND].
+     */
     data class Cancelled(
         override val message: String? = null,
         override val legacyCode: String = ExportErrorCodes.CANCELLED,
