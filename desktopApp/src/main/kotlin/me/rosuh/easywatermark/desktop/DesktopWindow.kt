@@ -93,6 +93,11 @@ import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_success
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_progress
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_exporting
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_destination_folder
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_filename_policy_desktop
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_counts
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_success_where
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_error_generic
 import me.rosuh.easywatermark.shared.generated.resources.share
 import me.rosuh.easywatermark.ui.sharedString
 import me.rosuh.easywatermark.ui.EditorBottomControls
@@ -1164,14 +1169,44 @@ fun launchDesktopWindow() = application {
                 } else {
                     stringResource(
                         Res.string.dialog_save_export_cd_done,
+                        recovery.processedCount
+                            .coerceAtLeast(recovery.successCount + recovery.failureCount),
                         recovery.successCount,
                         recovery.failureCount,
                         recovery.totalCount.coerceAtLeast(1),
                     )
                 }
+                val destinationLine = stringResource(
+                    Res.string.dialog_save_destination_folder,
+                    outputDir.path,
+                )
+                val filenamePolicyLine = stringResource(Res.string.dialog_save_filename_policy_desktop)
+                val countsLine = if (recovery.isExporting || recovery.isFinished) {
+                    stringResource(
+                        Res.string.dialog_save_export_counts,
+                        recovery.processedCount
+                            .coerceAtLeast(recovery.successCount + recovery.failureCount),
+                        recovery.successCount,
+                        recovery.failureCount,
+                    )
+                } else {
+                    ""
+                }
+                val outcomeDetailLine = when {
+                    recovery.isAllSuccess || recovery.isPartial ->
+                        stringResource(
+                            Res.string.dialog_save_success_where,
+                            recovery.successCount,
+                            outputDir.path,
+                        )
+                    recovery.isAllFailed ->
+                        stringResource(Res.string.dialog_save_error_generic)
+                    else -> ""
+                }
                 // Desktop-only Save As (exact path) — not unique batch export naming.
                 val saveAsLabel = stringResource(Res.string.desktop_save_as)
                 val saveAsDialogTitle = stringResource(Res.string.desktop_save_as_dialog_title)
+                val exportErrorGeneric = stringResource(Res.string.dialog_save_error_generic)
                 val runBatchExport: () -> Unit = {
                     scope.launch {
                         busy = true
@@ -1188,6 +1223,7 @@ fun launchDesktopWindow() = application {
                                 // Explicit batch Export branch — track last real save for Reveal.
                                 last?.let { lastSavedFile = it }
                                 val exp = session.exportJobState.value
+                                // I0: counts + destination path; no raw exception text.
                                 status = "Exported ${exp.successCount}/${exp.totalCount} " +
                                     "(${exp.failureCount} failed) → ${outputDir.path}"
                             } else {
@@ -1206,8 +1242,9 @@ fun launchDesktopWindow() = application {
                                 session.markExportFinished(completedCount = 1, totalCount = 1)
                                 status = "Saved: ${out.path}"
                             }
-                        } catch (t: Throwable) {
-                            status = "Export failed: ${t.message}"
+                        } catch (_: Throwable) {
+                            // I0: never surface raw Throwable.message in product chrome.
+                            status = exportErrorGeneric
                         } finally {
                             busy = false
                         }
@@ -1242,6 +1279,10 @@ fun launchDesktopWindow() = application {
                     showRetryFailedButton = recovery.showRetryFailed,
                     onRetryFailedClick = { runBatchExport() },
                     statusContentDescription = statusCd,
+                    destinationLine = destinationLine,
+                    filenamePolicyLine = filenamePolicyLine,
+                    countsLine = countsLine,
+                    outcomeDetailLine = outcomeDetailLine,
                     itemKey = { it.uri.value },
                     onDismiss = {
                         if (!exportJobState.isSaving) showSaveSheet = false
@@ -1265,8 +1306,8 @@ fun launchDesktopWindow() = application {
                             if (file != null && Desktop.isDesktopSupported()) {
                                 try {
                                     Desktop.getDesktop().open(file.parentFile ?: file)
-                                } catch (t: Throwable) {
-                                    status = "Reveal failed: ${t.message}"
+                                } catch (_: Throwable) {
+                                    status = exportErrorGeneric
                                 }
                             }
                         } else {

@@ -67,6 +67,11 @@ import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_success
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_progress
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_exporting
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_destination_album
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_filename_policy_android
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_counts
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_success_where
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_error_generic
 import me.rosuh.easywatermark.shared.generated.resources.dialog_title_exist_confirm
 import me.rosuh.easywatermark.shared.generated.resources.recovery_mode_closed
 import me.rosuh.easywatermark.shared.generated.resources.share
@@ -643,10 +648,41 @@ class ComposeMainActivity : ComponentActivity() {
                                 } else {
                                     cmpStringResource(
                                         Res.string.dialog_save_export_cd_done,
+                                        recovery.processedCount
+                                            .coerceAtLeast(recovery.successCount + recovery.failureCount),
                                         recovery.successCount,
                                         recovery.failureCount,
                                         recovery.totalCount.coerceAtLeast(1),
                                     )
+                                }
+                                val destinationLine = cmpStringResource(
+                                    Res.string.dialog_save_destination_album,
+                                )
+                                val filenamePolicyLine = cmpStringResource(
+                                    Res.string.dialog_save_filename_policy_android,
+                                )
+                                val countsLine = if (recovery.isExporting || recovery.isFinished) {
+                                    cmpStringResource(
+                                        Res.string.dialog_save_export_counts,
+                                        recovery.processedCount
+                                            .coerceAtLeast(recovery.successCount + recovery.failureCount),
+                                        recovery.successCount,
+                                        recovery.failureCount,
+                                    )
+                                } else {
+                                    ""
+                                }
+                                // I0: success says where + how many; failures use generic taxonomy (no raw Throwable).
+                                val outcomeDetailLine = when {
+                                    recovery.isAllSuccess || recovery.isPartial ->
+                                        cmpStringResource(
+                                            Res.string.dialog_save_success_where,
+                                            recovery.successCount,
+                                            cmpStringResource(Res.string.dialog_save_destination_album),
+                                        )
+                                    recovery.isAllFailed ->
+                                        cmpStringResource(Res.string.dialog_save_error_generic)
+                                    else -> ""
                                 }
                                 // Pack ticks into one int so thumbnails recompose on each export step.
                                 val exportTick =
@@ -662,6 +698,10 @@ class ComposeMainActivity : ComponentActivity() {
                                     quality = userPreferences.compressLevel,
                                     resultSummaryText = resultSummaryText,
                                     statusContentDescription = statusCd,
+                                    destinationLine = destinationLine,
+                                    filenamePolicyLine = filenamePolicyLine,
+                                    countsLine = countsLine,
+                                    outcomeDetailLine = outcomeDetailLine,
                                     primaryActionLabel = when {
                                         saveExportState.isSaving -> cmpStringResource(Res.string.dialog_save_exporting)
                                         saveExportState.isFinished -> cmpStringResource(Res.string.share)
@@ -845,6 +885,10 @@ private fun SaveExportSheetAndroid(
     showCancelButton: Boolean = false,
     showRetryFailedButton: Boolean = false,
     statusContentDescription: String = resultSummaryText,
+    destinationLine: String = "",
+    filenamePolicyLine: String = "",
+    countsLine: String = "",
+    outcomeDetailLine: String = "",
     /** Recomposition tick while exporting (processedCount / isSaving / isFinished). */
     exportTick: Int = 0,
     onDismiss: () -> Unit,
@@ -870,6 +914,10 @@ private fun SaveExportSheetAndroid(
         showRetryFailedButton = showRetryFailedButton,
         onRetryFailedClick = onRetryFailedClick,
         statusContentDescription = statusContentDescription,
+        destinationLine = destinationLine,
+        filenamePolicyLine = filenamePolicyLine,
+        countsLine = countsLine,
+        outcomeDetailLine = outcomeDetailLine,
         itemKey = { it.uri.value },
         onDismiss = onDismiss,
         onFormatClick = onFormatClick,

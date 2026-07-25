@@ -93,7 +93,25 @@
     <string name="dialog_save_retry_failed">Retry failed</string>
     <string name="dialog_save_cancel_export">Cancel export</string>
     <string name="dialog_save_export_cd_progress">Export progress: %1$d of %2$d processed, %3$d succeeded, %4$d failed</string>
-    <string name="dialog_save_export_cd_done">Export finished: %1$d succeeded, %2$d failed, of %3$d</string>
+    <string name="dialog_save_export_cd_done">Export finished: %1$d processed, %2$d succeeded, %3$d failed, of %4$d</string>
+    <!-- I0 export / recovery user contract -->
+    <string name="dialog_save_destination_album">Destination: device album (Pictures)</string>
+    <string name="dialog_save_destination_photos">Destination: Photos library</string>
+    <string name="dialog_save_destination_folder">Destination: %1$s</string>
+    <string name="dialog_save_filename_policy_android">Filenames: unique ewm_* via MediaStore</string>
+    <string name="dialog_save_filename_policy_desktop">Filenames: unique names in the output folder</string>
+    <string name="dialog_save_filename_policy_ios">Filenames: temporary export, then Photos/Share</string>
+    <string name="dialog_save_export_counts">Processed %1$d · Succeeded %2$d · Failed %3$d</string>
+    <string name="dialog_save_success_where">Saved %1$d item(s) to %2$s</string>
+    <string name="dialog_save_error_source">Could not read the image. Try another photo.</string>
+    <string name="dialog_save_error_render">Could not apply the watermark.</string>
+    <string name="dialog_save_error_encode">Could not encode the image.</string>
+    <string name="dialog_save_error_permission">Permission needed to save. Check system settings.</string>
+    <string name="dialog_save_error_oom">Not enough memory to export. Try fewer or smaller images.</string>
+    <string name="dialog_save_error_io">Storage problem while saving. Free space and try again.</string>
+    <string name="dialog_save_error_persistence">Could not write to storage. Try again.</string>
+    <string name="dialog_save_error_cancelled">Export cancelled.</string>
+    <string name="dialog_save_error_generic">Save failed. Try again.</string>
     <string name="tips_pick_image">Choose Images</string>
     <string name="pick_via_system">more…</string>
     <string name="recovery_title">Recovery Mode</string>

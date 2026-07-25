@@ -41,10 +41,15 @@ import org.jetbrains.compose.resources.stringResource
  * Shared CMP shell for the save/export modal sheet.
  * S-i18n-2: labels from [Res].
  * D5: optional Cancel / Retry failed + progress semantics (not color-only).
+ * I0: optional destination / filename-policy / outcome-detail lines (host-localized).
  *
  * @param exportListSubtitle argument for [Res.string.dialog_save_export_list_title] (e.g. result summary).
  * @param imageCount used for empty-preview plural string when [items] is empty.
  * @param statusContentDescription screen-reader announcement for progress/final outcome.
+ * @param destinationLine host-supplied destination summary (blank = hide).
+ * @param filenamePolicyLine host-supplied filename policy (blank = hide).
+ * @param countsLine optional distinct processed/succeeded/failed line (blank = hide).
+ * @param outcomeDetailLine success-where or localized error detail (blank = hide).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,6 +69,10 @@ fun <T> SaveExportSheetShell(
     showRetryFailedButton: Boolean = false,
     onRetryFailedClick: (() -> Unit)? = null,
     statusContentDescription: String = exportListSubtitle,
+    destinationLine: String = "",
+    filenamePolicyLine: String = "",
+    countsLine: String = "",
+    outcomeDetailLine: String = "",
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
     onFormatClick: (newFormat: ImageFormat) -> Unit,
@@ -113,6 +122,29 @@ fun <T> SaveExportSheetShell(
                 onQualityChange = onQualityChange,
             )
 
+            if (destinationLine.isNotBlank()) {
+                Text(
+                    text = destinationLine,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp)
+                        .testTag("sharedComposeExportDestination"),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (filenamePolicyLine.isNotBlank()) {
+                Text(
+                    text = filenamePolicyLine,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
+                        .testTag("sharedComposeExportFilenamePolicy"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
             Text(
                 text = exportListTitle,
                 modifier = Modifier
@@ -123,6 +155,29 @@ fun <T> SaveExportSheetShell(
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
+
+            if (countsLine.isNotBlank()) {
+                Text(
+                    text = countsLine,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
+                        .testTag("sharedComposeExportCounts"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (outcomeDetailLine.isNotBlank()) {
+                Text(
+                    text = outcomeDetailLine,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
+                        .testTag("sharedComposeExportOutcomeDetail"),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
 
             SaveExportPreviewBox(
                 items = items,

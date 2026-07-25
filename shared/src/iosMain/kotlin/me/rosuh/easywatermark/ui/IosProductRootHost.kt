@@ -69,6 +69,11 @@ import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_success
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_progress
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_exporting
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_destination_photos
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_filename_policy_ios
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_counts
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_success_where
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_error_generic
 import me.rosuh.easywatermark.shared.generated.resources.share
 import me.rosuh.easywatermark.ui.about.AboutDevCard
 import me.rosuh.easywatermark.ui.about.AboutScreen
@@ -944,19 +949,47 @@ class IosProductRootHost(
                 } else {
                     stringResource(
                         Res.string.dialog_save_export_cd_done,
+                        recovery.processedCount
+                            .coerceAtLeast(recovery.successCount + recovery.failureCount),
                         recovery.successCount,
                         recovery.failureCount,
                         recovery.totalCount.coerceAtLeast(1),
                     )
                 }
+                val destinationLine = stringResource(Res.string.dialog_save_destination_photos)
+                val filenamePolicyLine = stringResource(Res.string.dialog_save_filename_policy_ios)
+                val countsLine = if (recovery.isExporting || recovery.isFinished) {
+                    stringResource(
+                        Res.string.dialog_save_export_counts,
+                        recovery.processedCount
+                            .coerceAtLeast(recovery.successCount + recovery.failureCount),
+                        recovery.successCount,
+                        recovery.failureCount,
+                    )
+                } else {
+                    ""
+                }
+                val outcomeDetailLine = when {
+                    recovery.isAllSuccess || recovery.isPartial ->
+                        stringResource(
+                            Res.string.dialog_save_success_where,
+                            recovery.successCount,
+                            stringResource(Res.string.dialog_save_destination_photos),
+                        )
+                    recovery.isAllFailed ->
+                        stringResource(Res.string.dialog_save_error_generic)
+                    else -> ""
+                }
                 val listItems = exportItems.ifEmpty {
                     if (previewBitmap != null) listOf(ImageInfo(MediaRef("preview"))) else emptyList()
                 }
+                val exportErrorGeneric = stringResource(Res.string.dialog_save_error_generic)
+                val exportingLabel = stringResource(Res.string.dialog_save_exporting)
                 val runIosExportBatch: () -> Unit = {
                     scope.launch {
                         isSaving = true
                         sheetExportFinished = false
-                        statusLine = "Saving…"
+                        statusLine = exportingLabel
                         try {
                             val images = exportItems.ifEmpty {
                                 error("Nothing to export")
@@ -988,8 +1021,9 @@ class IosProductRootHost(
                                 batchSize = images.size,
                                 result = photosResult,
                             )
-                        } catch (t: Throwable) {
-                            statusLine = "Export failed: ${t.message}"
+                        } catch (_: Throwable) {
+                            // I0: never surface raw Throwable.message in product chrome.
+                            statusLine = exportErrorGeneric
                             isSaving = false
                             sheetExportFinished = true
                         }
@@ -1014,6 +1048,10 @@ class IosProductRootHost(
                     showRetryFailedButton = recovery.showRetryFailed,
                     onRetryFailedClick = { runIosExportBatch() },
                     statusContentDescription = statusCd,
+                    destinationLine = destinationLine,
+                    filenamePolicyLine = filenamePolicyLine,
+                    countsLine = countsLine,
+                    outcomeDetailLine = outcomeDetailLine,
                     itemKey = { it.uri.value },
                     onDismiss = {
                         if (!exporting) showSaveSheet = false
