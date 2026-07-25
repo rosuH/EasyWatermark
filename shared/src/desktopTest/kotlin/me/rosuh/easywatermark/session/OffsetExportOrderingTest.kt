@@ -89,15 +89,17 @@ class OffsetExportOrderingTest {
 
             session.applyOffset(dragged)
             assertEquals(0.12f, session.launchScreenUiStateFlow.value.selectedImageList.single().offsetX)
-            // Repo is offset truth; session and repo share the committed instance after applyOffset.
-            val committed = waterRepo.imageInfoList.single()
-            assertEquals(0.12f, committed.offsetX)
-            assertSame(committed, session.launchScreenUiStateFlow.value.selectedImageList.single())
+            // E1: Session is offset truth (list + cur share identity). Repo residual may lag.
+            val sessionCommitted = session.launchScreenUiStateFlow.value.selectedImageList.single()
+            assertEquals(0.12f, sessionCommitted.offsetX)
+            assertSame(sessionCommitted, session.launchScreenUiStateFlow.value.curImageInfo)
 
+            // Late stale SyncCurrentImage must not clobber Session offsets (repo rebind prefers list entry).
             session.dispatchAndAwait(AppIntent.SyncCurrentImage(oldSnapshot))
             assertEquals(0.12f, session.launchScreenUiStateFlow.value.curImageInfo?.offsetX)
             assertEquals(0.12f, session.launchScreenUiStateFlow.value.selectedImageList.single().offsetX)
 
+            // Export freezes Session snapshot — not repo list.
             session.requestExport(staleHostList)
             withTimeout(5_000) {
                 while (!session.exportJobState.value.isFinished) {

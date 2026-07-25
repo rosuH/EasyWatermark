@@ -33,14 +33,14 @@ import me.rosuh.easywatermark.ui.UiState
 /**
  * Shared product session host (ADR-0017).
  *
- * Offset→export (narrow, KMP-safe):
- * - [applyOffset] is the **sole** offset entry: sync repo CAS then session CAS before return.
- * Call from UI/Main (or single-threaded hosts). No async [AppIntent] dual path.
+ * Offset→export (narrow, KMP-safe) — E1:
+ * - [applyOffset] is the **sole** offset entry: pure Session CAS on list+cur (same identity).
+ * Call from UI/Main (or single-threaded hosts). No repo [updateOffset] product path.
  * - Non-export intents: [sessionMutex] serializes one intent's **reduceAndPublish + executeEffect**
  * So they do not interleave with another intent's critical section. Mutex is mutual exclusion * only — it does **not** guarantee fire-and-forget [dispatch] FIFO across concurrent launchers.
  * - Reducer publish writes launch via [MutableStateFlow.update] + pure [mergeLaunchPreservingLiveImages]
  * so a concurrent [applyOffset] is not lost on final write.
- * - [requestExport] resolves once (repo list first); [exportAndAwait] joins its own job.
+ * - [requestExport] freezes images from the Session snapshot only; [exportAndAwait] joins its own job.
  */
 open class WatermarkSessionViewModel(
     protected val waterMarkRepo: WaterMarkRepository,
@@ -133,8 +133,14 @@ open class WatermarkSessionViewModel(
         withContext(Dispatchers.Main.immediate) {
             val before = currentSnapshot()
             val effective = when (intent) {
-                is AppIntent.SyncCurrentImage ->
-                    AppIntent.SyncCurrentImage(waterMarkRepo.selectedImage.value)
+                is AppIntent.SyncCurrentImage -> {
+                    // E1: Session owns list/offset. Repo selection only rebinds cur to the
+                    // Session list entry when the URI is present — never clobber Session offsets
+                    // with a stale repo ImageInfo.
+                    val repoInfo = waterMarkRepo.selectedImage.value
+                    val match = before.launch.selectedImageList.firstOrNull { it.uri == repoInfo.uri }
+                    AppIntent.SyncCurrentImage(match ?: repoInfo)
+                }
                 else -> intent
             }
             val result = reduceSessionUi(before, effective)
@@ -159,16 +165,14 @@ open class WatermarkSessionViewModel(
     )
 
     /**
- * Freeze export inputs from committed sources. Repo list is offset truth (post-[applyOffset]);
- * Session list is fallback for any observation window; caller object last.     */
+     * Freeze export inputs from the Session snapshot only (E1).
+     * Session list is offset/selection truth; caller object last if URI unknown to Session.
+     */
     private fun resolveExportImages(requested: List<ImageInfo>): List<ImageInfo> {
         if (requested.isEmpty()) return emptyList()
-        val repoList = waterMarkRepo.imageInfoList
         val sessionList = _launchScreenUiStateFlow.value.selectedImageList
         return requested.map { req ->
-            repoList.firstOrNull { it.uri == req.uri }
-                ?: sessionList.firstOrNull { it.uri == req.uri }
-                ?: req
+            sessionList.firstOrNull { it.uri == req.uri } ?: req
         }
     }
 
@@ -207,6 +211,11 @@ open class WatermarkSessionViewModel(
     }
 
     fun resetJobStatus() {
+        // E1: product export path owns job flags on Session list entries.
+        _launchScreenUiStateFlow.value.selectedImageList.forEach {
+            it.jobState = JobState.Ready
+        }
+        // Residual: keep repo mirror in sync for any non-product residual consumers.
         waterMarkRepo.imageInfoList.forEach {
             it.jobState = JobState.Ready
         }
@@ -515,16 +524,41 @@ open class WatermarkSessionViewModel(
     fun applyTextStyle(style: TextPaintStyle) = dispatch(AppIntent.ApplyTextStyle(style))
 
     /**
- * Synchronous offset commit — sole production entry (UI/Main callers only).
- *
- * Repo CAS first (fact source), then session launch CAS with the **same** committed object.
- * Missing URI is a no-op (does not install caller as curImageInfo).
- * Do not invent a second async [AppIntent] path or cross-thread fire-and-forget dual write.
+     * Synchronous offset commit — sole production entry (UI/Main callers only).
+     *
+     * E1: pure Session CAS on [launchScreenUiStateFlow]. List entry and cur share the same
+     * committed object when URI matches. Offset-only: preserves dims/job flags from the
+     * existing list entry; does not mutate the caller object. Missing URI is a no-op.
+     * Does **not** write [WaterMarkRepository.updateOffset] (repo residual only).
+     * Do not invent a second async [AppIntent] path or cross-thread fire-and-forget dual write.
      */
     fun applyOffset(info: ImageInfo) {
-        val committed = configEditor.updateOffset(info) ?: return
         _launchScreenUiStateFlow.update { current ->
-            applyCurrentImageToLaunch(current, committed)
+            val index = current.selectedImageList.indexOfFirst { it.uri == info.uri }
+            if (index < 0) return@update current
+            val existing = current.selectedImageList[index]
+            if (existing.offsetX == info.offsetX && existing.offsetY == info.offsetY) {
+                // Same offsets → keep existing list identity; rebind cur if needed.
+                return@update if (
+                    current.curImageInfo?.uri == existing.uri &&
+                    current.curImageInfo !== existing
+                ) {
+                    current.copy(curImageInfo = existing)
+                } else {
+                    current
+                }
+            }
+            val committed = existing.copy(
+                offsetX = info.offsetX,
+                offsetY = info.offsetY,
+            )
+            val newList = current.selectedImageList.toMutableList().also { it[index] = committed }
+            val newCur =
+                if (current.curImageInfo?.uri == committed.uri) committed else current.curImageInfo
+            current.copy(
+                selectedImageList = newList,
+                curImageInfo = newCur,
+            )
         }
     }
 }

@@ -359,7 +359,6 @@ fun launchDesktopWindow() = application {
     val launchUi by session.launchScreenUiStateFlow.collectAsState()
     val productRoute = ProductShellNav.routeFromLaunchUi(launchUi.uiState)
     val sessionImages = launchUi.selectedImageList
-    var selectedSessionImage by remember { mutableStateOf<ImageInfo?>(null) }
     LaunchedEffect(Unit) {
         userConfigRepo.userPreferences.first().let {
             outputFormat = it.outputFormat
@@ -370,16 +369,12 @@ fun launchDesktopWindow() = application {
     /**
      * Resolve one Session [ImageInfo] that owns **both** source path and offset — never pair
      * [LastImage] bytes with another item's offset after multi-file import.
-     * Order: curImageInfo → selectedSessionImage if still in selection → first selected → fixture center.
+     * E1: Session only — curImageInfo → first selected → fixture center.
      */
     fun freezeCurrentItemInput(): FrozenItemInput {
         val launch = session.launchScreenUiStateFlow.value
         val selected = launch.selectedImageList
-        val item = launch.curImageInfo
-            ?: selectedSessionImage?.takeIf { mirror ->
-                selected.any { it.uri == mirror.uri }
-            }
-            ?: selected.firstOrNull()
+        val item = launch.curImageInfo ?: selected.firstOrNull()
         if (item != null) {
             val path = item.uri.value
             return FrozenItemInput(
@@ -480,11 +475,7 @@ fun launchDesktopWindow() = application {
                     }
                 }
                 picked?.let { lastImage = it }
-                if (picked != null || session.launchScreenUiStateFlow.value.selectedImageList.isNotEmpty()) {
-                    // openImageFilesBatch → Session EnterEditor (productRoute from Session).
-                    selectedSessionImage = session.launchScreenUiStateFlow.value.curImageInfo
-                        ?: session.launchScreenUiStateFlow.value.selectedImageList.firstOrNull()
-                }
+                // openImageFilesBatch → Session EnterEditor (productRoute / selection from Session).
                 // Preview only — never touch lastSavedFile (import is not an explicit save).
                 status = if (picked != null) "$msg · ${refreshPreview()}" else msg
             } finally {
@@ -583,8 +574,8 @@ fun launchDesktopWindow() = application {
 
     Window(onCloseRequest = ::exitApplication, title = "EasyWatermark — Desktop") {
         AppTheme(darkTheme = true) {
+            // E1: Session-only current for filmstrip (no host selectedSessionImage mirror).
             val selectedForStrip = launchUi.curImageInfo
-                ?: selectedSessionImage
                 ?: sessionImages.firstOrNull()
             val aboutPainter = SharedProductDrawables.aboutPainter()
             val backPainter = SharedProductDrawables.backPainter()
@@ -892,7 +883,7 @@ fun launchDesktopWindow() = application {
                             session.openAbout(me.rosuh.easywatermark.ui.LaunchScreenUiState.Editor)
                         },
                         onImageSelected = { info ->
-                            selectedSessionImage = info
+                            // E1: Session SelectCurrent owns focus; no host image mirror.
                             session.selectImage(info.uri)
                             val path = info.uri.value
                             val file = java.io.File(path)
