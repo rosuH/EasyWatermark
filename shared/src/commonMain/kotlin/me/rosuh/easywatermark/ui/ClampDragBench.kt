@@ -3,19 +3,15 @@ package me.rosuh.easywatermark.ui
 import kotlin.time.TimeSource
 
 /**
- * H0.1 measurement-only timings for CLAMP preview drag → Session commit → host preview refresh.
+ * H0.1 / H0.1-fix measurement timings for CLAMP preview drag → Session commit → host preview.
  *
  * One structured println per completed gesture (and optional host preview scopes), e.g.:
  * ```
- * ClampDragBench name=gesture totalMs=412 stages=drag:180,resolveCommit:0,onOffsetCommit:1,applyOffset:0 sampleCount=12 committed=true liveDraft=false
- * ClampDragBench name=desktop_preview_refresh totalMs=95 stages=debounceSkip:0,read:4,saveFlow:80,decodeDisplay:11
+ * ClampDragBench name=gesture … sampleCount=12 committed=true liveDraft=true
+ * ClampDragBench name=desktop_offset_preview totalMs=12 stages=read:1,compose:11 path=light
  * ```
  *
- * **Not** an SLO and **not** a product state owner. Gated by [enabled] (default true so
- * Desktop/iOS consoles capture without flipping flags; tests may disable).
- *
- * Live-draft is intentionally **not** required by this slice — [liveDraftDuringDrag] records
- * the product contract (false) so baselines can prove absence of mid-gesture visual feedback.
+ * **Not** an SLO and **not** a product state owner. Gated by [enabled].
  */
 object ClampDragBench {
     /**
@@ -36,12 +32,17 @@ object ClampDragBench {
     var lastSampleCount: Int = 0
         private set
 
+    /** Last finished gesture reported live UI draft emissions. Test seam. */
+    var lastLiveDraft: Boolean = false
+        private set
+
     private val timeSource = TimeSource.Monotonic
 
     fun resetForTests() {
         lastLine = null
         lastCommitCount = 0
         lastSampleCount = 0
+        lastLiveDraft = false
     }
 
     fun gestureScope(): GestureScope = GestureScope(timeSource.markNow())
@@ -55,6 +56,7 @@ object ClampDragBench {
         private var last = start
         private var sampleCount = 0
         private var committed = false
+        private var liveDraft = false
         private var active = true
 
         fun mark(stage: String) {
@@ -69,6 +71,12 @@ object ClampDragBench {
         fun sample() {
             if (!enabled || !active) return
             sampleCount++
+        }
+
+        /** H0.1-fix: UI-only draft offset was emitted for live preview paint. */
+        fun noteLiveDraft() {
+            if (!enabled || !active) return
+            liveDraft = true
         }
 
         /**
@@ -89,8 +97,7 @@ object ClampDragBench {
             val baseExtras = linkedMapOf<String, Any?>(
                 "sampleCount" to sampleCount,
                 "committed" to committed,
-                // Product contract for H0.1: adapter has no mid-gesture draft raster.
-                "liveDraft" to false,
+                "liveDraft" to liveDraft,
             )
             baseExtras.putAll(extra)
             val extras = baseExtras.entries.joinToString(" ") { (k, v) -> "$k=$v" }
@@ -99,6 +106,7 @@ object ClampDragBench {
             lastLine = line
             lastCommitCount = if (committed) 1 else 0
             lastSampleCount = sampleCount
+            lastLiveDraft = liveDraft
             println(line)
         }
     }

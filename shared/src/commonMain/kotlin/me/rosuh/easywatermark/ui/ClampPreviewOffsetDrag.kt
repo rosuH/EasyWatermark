@@ -126,9 +126,10 @@ internal fun resolveClampDragCommit(snapshot: ClampDragGestureSnapshot): ClampDr
 }
 
 /**
- * Thin Compose adapter: emits at most one [onOffsetCommit] per successful end.
- * Does not call Session/repository and does not keep preview draft state.
+ * Thin Compose adapter: emits UI-only [onOffsetDraft] during drag and at most one
+ * [onOffsetCommit] per successful end. Does **not** call Session/repository.
  *
+ * H0.1-fix: draft is for host preview paint only — never export/DataStore.
  * Selection identity is frozen at drag start; the latest [selectionId] is sampled at end
  * (via [rememberUpdatedState]) so a mid-gesture selection change yields a pure-resolver no-commit.
  *
@@ -138,7 +139,9 @@ internal fun resolveClampDragCommit(snapshot: ClampDragGestureSnapshot): ClampDr
  * @param imageHeight displayed bitmap pixel height
  * @param offsetX current committed/start offset (0..1)
  * @param offsetY current committed/start offset (0..1)
- * @param onOffsetCommit host-owned persistence hook (typically session.applyOffset)
+ * @param onOffsetDraft UI-only live offset for preview (host must not persist)
+ * @param onOffsetDraftClear clear host draft (cancel / end after commit)
+ * @param onOffsetCommit host-owned persistence hook (typically session.applyOffset) — ≤1 / gesture
  */
 internal fun Modifier.clampPreviewOffsetDrag(
     enabled: Boolean,
@@ -149,6 +152,8 @@ internal fun Modifier.clampPreviewOffsetDrag(
     offsetX: Float,
     offsetY: Float,
     onOffsetCommit: (offsetX: Float, offsetY: Float) -> Unit,
+    onOffsetDraft: ((offsetX: Float, offsetY: Float) -> Unit)? = null,
+    onOffsetDraftClear: (() -> Unit)? = null,
 ): Modifier = composed {
     if (!enabled || !isClamp || selectionId.isEmpty()) {
         return@composed this
@@ -160,6 +165,8 @@ internal fun Modifier.clampPreviewOffsetDrag(
     val currentOffsetX by rememberUpdatedState(offsetX)
     val currentOffsetY by rememberUpdatedState(offsetY)
     val currentOnCommit by rememberUpdatedState(onOffsetCommit)
+    val currentOnDraft by rememberUpdatedState(onOffsetDraft)
+    val currentOnDraftClear by rememberUpdatedState(onOffsetDraftClear)
 
     // Do not key pointerInput on selectionId alone in a way that prevents end sampling:
     // freeze start id on drag start; read latest selectionId at end via currentSelectionId.
@@ -174,6 +181,28 @@ internal fun Modifier.clampPreviewOffsetDrag(
         var fitted: FittedImageRect? = null
         // H0.1: measurement scope for this gesture only (no product state).
         var bench: ClampDragBench.GestureScope? = null
+        var emittedDraft = false
+
+        fun clearDraftUi() {
+            if (emittedDraft) {
+                currentOnDraftClear?.invoke()
+                emittedDraft = false
+            }
+        }
+
+        fun emitDraftIfPossible() {
+            val f = fitted ?: return
+            val draft = applyClampDragDelta(
+                startOffsetX = startOx,
+                startOffsetY = startOy,
+                dragDeltaX = totalDx,
+                dragDeltaY = totalDy,
+                fitted = f,
+            )
+            currentOnDraft?.invoke(draft.first, draft.second)
+            emittedDraft = true
+            bench?.noteLiveDraft()
+        }
 
         fun endGesture(cancelled: Boolean) {
             val scope = bench
@@ -201,6 +230,8 @@ internal fun Modifier.clampPreviewOffsetDrag(
                 // Host callback time includes applyOffset + invalidate kickoff (not full preview).
                 scope?.markCommitDone()
             }
+            // Always clear UI draft after gesture; committed preview uses Session offset.
+            clearDraftUi()
             scope?.finish(
                 mapOf(
                     "cancelled" to cancelled,
@@ -231,6 +262,7 @@ internal fun Modifier.clampPreviewOffsetDrag(
                 startOy = currentOffsetY
                 totalDx = 0f
                 totalDy = 0f
+                emittedDraft = false
                 // Only instrument gestures that start inside the fitted image in CLAMP.
                 bench = if (active) ClampDragBench.gestureScope() else null
             },
@@ -241,6 +273,7 @@ internal fun Modifier.clampPreviewOffsetDrag(
                     active = false
                     totalDx = 0f
                     totalDy = 0f
+                    clearDraftUi()
                     bench = null
                 }
             },
@@ -252,8 +285,9 @@ internal fun Modifier.clampPreviewOffsetDrag(
             change.consume()
             totalDx += dragAmount.x
             totalDy += dragAmount.y
-            // Count samples only — no mid-gesture raster / live draft (H0.1 product contract).
             bench?.sample()
+            // H0.1-fix: UI-only draft for live preview paint (never Session/export).
+            emitDraftIfPossible()
         }
     }
 }

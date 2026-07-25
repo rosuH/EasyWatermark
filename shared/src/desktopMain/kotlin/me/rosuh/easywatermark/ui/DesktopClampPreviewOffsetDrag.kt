@@ -17,6 +17,8 @@ fun Modifier.desktopClampPreviewOffsetDrag(
     offsetX: Float,
     offsetY: Float,
     onOffsetCommit: (offsetX: Float, offsetY: Float) -> Unit,
+    onOffsetDraft: ((offsetX: Float, offsetY: Float) -> Unit)? = null,
+    onOffsetDraftClear: (() -> Unit)? = null,
 ): Modifier = clampPreviewOffsetDrag(
     enabled = enabled,
     selectionId = selectionId,
@@ -26,4 +28,6 @@ fun Modifier.desktopClampPreviewOffsetDrag(
     offsetX = offsetX,
     offsetY = offsetY,
     onOffsetCommit = onOffsetCommit,
+    onOffsetDraft = onOffsetDraft,
+    onOffsetDraftClear = onOffsetDraftClear,
 )

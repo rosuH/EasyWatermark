@@ -135,7 +135,7 @@ class ClampPreviewOffsetHostWiringTest {
             "callback must not fall through to selectedSessionImage alternate URI",
         )
 
-        // Exactly one applyOffset and one previewGeneration++ in order in the callback neighborhood.
+        // Exactly one applyOffset; offset-preview invalidate on commit (draft may also bump gen).
         val applyMatches = Regex("""session\.applyOffset\s*\(""")
             .findAll(callbackCode)
             .toList()
@@ -144,17 +144,37 @@ class ClampPreviewOffsetHostWiringTest {
             applyMatches.size,
             "callback neighborhood must contain exactly one session.applyOffset(",
         )
-        val genMatches = Regex("""previewGeneration\s*\+\+""")
-            .findAll(callbackCode)
+        val commitIdx = callbackCode.indexOf("onOffsetCommit")
+        assertTrue(commitIdx >= 0, "onOffsetCommit required")
+        val commitOnly = callbackCode.substring(commitIdx)
+        val genMatches = Regex("""offsetPreviewGeneration\s*\+\+""")
+            .findAll(commitOnly)
             .toList()
         assertEquals(
             1,
             genMatches.size,
-            "callback neighborhood must contain exactly one previewGeneration++",
+            "onOffsetCommit must contain exactly one offsetPreviewGeneration++",
+        )
+        val applyInCommit = Regex("""session\.applyOffset\s*\(""")
+            .findAll(commitOnly)
+            .toList()
+        assertEquals(1, applyInCommit.size)
+        assertTrue(
+            applyInCommit.first().range.first < genMatches.first().range.first,
+            "applyOffset must precede offsetPreviewGeneration++ inside onOffsetCommit",
+        )
+        // Offset commit must not bump the debounced config-only generation.
+        assertFalse(
+            Regex("""(?<!offset)previewGeneration\s*\+\+""").containsMatchIn(commitOnly),
+            "offset commit must not use debounced previewGeneration++",
         )
         assertTrue(
-            applyMatches.first().range.first < genMatches.first().range.first,
-            "applyOffset must precede previewGeneration++",
+            "onOffsetDraft" in window,
+            "DesktopWindow must wire onOffsetDraft for live UI draft",
+        )
+        assertFalse(
+            "runSaveFlow" in commitOnly,
+            "offset commit must not call runSaveFlow",
         )
 
         assertFalse(
@@ -261,9 +281,10 @@ class ClampPreviewOffsetHostWiringTest {
             "drag Image slice must not be a Crop thumbnail",
         )
 
+        // H0.1-fix draft callbacks expand the neighborhood past the prior 4500 bound.
         val callbackSlice = hostCode.substring(
             callIdx,
-            (callIdx + 4500).coerceAtMost(hostCode.length),
+            (callIdx + 7000).coerceAtMost(hostCode.length),
         )
 
         // Path + watermarked-display identity (not path alone — placeholders share previewSourcePath).
@@ -319,35 +340,43 @@ class ClampPreviewOffsetHostWiringTest {
             "callback must not fall through to selectedImageList.firstOrNull",
         )
 
-        // Order: applyOffset → selected-key cache remove → previewGen++ (exactly once each).
+        // Order inside onOffsetCommit: applyOffset → selected-key cache remove → previewGen bump.
+        // H0.1-fix: onOffsetDraft may also bump previewGen for live paint.
+        val commitIdx = callbackSlice.indexOf("onOffsetCommit")
+        assertTrue(commitIdx >= 0, "onOffsetCommit required")
+        val commitOnly = callbackSlice.substring(commitIdx)
         val applyMatches = Regex("""services\.session\.applyOffset\s*\(""")
-            .findAll(callbackSlice)
+            .findAll(commitOnly)
             .toList()
         assertEquals(
             1,
             applyMatches.size,
-            "callback must contain exactly one services.session.applyOffset(",
+            "onOffsetCommit must contain exactly one services.session.applyOffset(",
         )
         val removeMatches = Regex("""wmPreviewCache\.remove\s*\(\s*dragPath\s*\)""")
-            .findAll(callbackSlice)
+            .findAll(commitOnly)
             .toList()
         assertEquals(
             1,
             removeMatches.size,
-            "callback must remove exactly the selected path via wmPreviewCache.remove(dragPath)",
+            "onOffsetCommit must remove exactly the selected path via wmPreviewCache.remove(dragPath)",
         )
         val genMatches = Regex("""previewGen\s*(\+\+|=\s*previewGen\s*\+\s*1)""")
-            .findAll(callbackSlice)
+            .findAll(commitOnly)
             .toList()
         assertEquals(
             1,
             genMatches.size,
-            "callback must bump previewGen exactly once",
+            "onOffsetCommit must bump previewGen exactly once",
         )
         assertTrue(
             applyMatches.first().range.first < removeMatches.first().range.first &&
                 removeMatches.first().range.first < genMatches.first().range.first,
             "order must be applyOffset → wmPreviewCache.remove(dragPath) → previewGen bump",
+        )
+        assertTrue(
+            "onOffsetDraft" in callbackSlice,
+            "iOS must wire onOffsetDraft for live UI draft",
         )
         assertFalse(
             "wmPreviewCache.clear()" in callbackSlice,

@@ -65,6 +65,7 @@ import me.rosuh.easywatermark.domain.OutputPrefsEditor
 import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.DesktopImageDecoder
+import me.rosuh.easywatermark.render.DesktopPreviewRaster
 import me.rosuh.easywatermark.render.DesktopRenderRequest
 import me.rosuh.easywatermark.render.DesktopSaveDecision
 import me.rosuh.easywatermark.render.DesktopWatermarkComposer
@@ -353,8 +354,12 @@ fun launchDesktopWindow() = application {
     val waterMark by repo.waterMark.collectAsState(WaterMark.default)
     // the rendered preview image (null until the first successful refresh).
     var preview by remember { mutableStateOf<ImageBitmap?>(null) }
-    // Debounced preview refresh generation (slider ticks apply config immediately; raster is debounced).
+    // Config / import preview refresh — debounced (slider ticks).
     var previewGeneration by remember { mutableStateOf(0) }
+    // H0.1-fix: offset-only / draft preview gen — **no** 250ms debounce, light in-memory raster.
+    var offsetPreviewGeneration by remember { mutableStateOf(0) }
+    // UI-only CLAMP drag draft (never Session/export). selectionId + offsets.
+    var clampDraft by remember { mutableStateOf<Triple<String, Float, Float>?>(null) }
     // E0: Session owns product route; FileDialog stays Desktop edge.
     val launchUi by session.launchScreenUiStateFlow.collectAsState()
     val productRoute = ProductShellNav.routeFromLaunchUi(launchUi.uiState)
@@ -392,17 +397,27 @@ fun launchDesktopWindow() = application {
         )
     }
 
-    // reactive preview. Freezes one Session item (path+offset) before IO; only when no Session
-    // item exists may lastImage/fixture supply bytes with explicit center. Never lastSavedFile.
-    suspend fun refreshPreview(): String {
-        // H0.1: stage the full Desktop post-commit preview path (encode/temp write included).
-        val bench = me.rosuh.easywatermark.ui.ClampDragBench.previewScope("desktop_preview_refresh")
+    /**
+     * H0.1-fix: in-memory editor preview (decode+downscale+compose, **no** encode/temp).
+     * Optional [overrideOffset] for UI draft or just-committed offset; default Session freeze.
+     * [gen] drops stale async results (draft samples / rapid offset commits).
+     */
+    suspend fun refreshPreviewLight(
+        gen: Int,
+        overrideOffset: Pair<Float, Float>? = null,
+        isDraft: Boolean = false,
+    ): String {
+        val bench = me.rosuh.easywatermark.ui.ClampDragBench.previewScope(
+            if (isDraft) "desktop_draft_preview" else "desktop_offset_preview",
+        )
         val frozen = freezeCurrentItemInput()
         val last = lastImage
+        val ox = overrideOffset?.first ?: frozen.offsetX
+        val oy = overrideOffset?.second ?: frozen.offsetY
+        val wm = repo.waterMark.first()
         val (img, msg) = withContext(Dispatchers.IO) {
             try {
                 val imageBytes: ByteArray
-                val label: String
                 when {
                     frozen.sourcePath != null -> {
                         val file = File(frozen.sourcePath)
@@ -410,55 +425,77 @@ fun launchDesktopWindow() = application {
                             "Current Session image is missing or not a regular file: ${frozen.sourcePath}"
                         }
                         imageBytes = file.readBytes()
-                        label = frozen.label
                     }
-                    last != null -> {
-                        imageBytes = last.bytes
-                        label = last.label
-                    }
+                    last != null -> imageBytes = last.bytes
                     else -> {
                         imageBytes = DesktopWatermarkComposer.sampleBackgroundPng(width = 640, height = 480)
-                        label = frozen.label
                     }
                 }
                 bench.mark("read")
-                val o = DesktopWatermarkFlow.runSaveFlow(
-                    repo, userConfigRepo,
-                    inputBytes = imageBytes,
-                    inputLabel = label,
-                    outputFile = previewFile,
-                    offsetX = frozen.offsetX,
-                    offsetY = frozen.offsetY,
+                val iconBytes = if (wm.markMode == me.rosuh.easywatermark.data.model.WatermarkMode.Image &&
+                    wm.iconUri.value.isNotBlank()
+                ) {
+                    val iconFile = File(wm.iconUri.value)
+                    if (iconFile.isFile) iconFile.readBytes() else null
+                } else {
+                    null
+                }
+                val composed = DesktopPreviewRaster.renderWatermarked(
+                    imageBytes = imageBytes,
+                    waterMark = wm,
+                    offsetX = ox,
+                    offsetY = oy,
+                    iconBytes = iconBytes,
                 )
-                bench.mark("saveFlow")
-                val decoded = DesktopImageDecoder.decode(previewFile.readBytes())
-                bench.mark("decodeDisplay")
-                decoded to
-                    "Preview: ${o.format}, ${o.width}x${o.height} (${o.outputByteCount} B)"
+                bench.mark("compose")
+                composed to "Preview light ${composed.width}x${composed.height}"
             } catch (t: Throwable) {
                 bench.mark("error")
-                null to "Preview refresh failed (kept last preview): ${t.message}"
+                null to "Preview light failed: ${t.message}"
             }
+        }
+        // Drop stale generations (draft flurry or superseded offset commit).
+        if (gen != offsetPreviewGeneration) {
+            bench.finish(mapOf("staleGen" to true, "isDraft" to isDraft))
+            return msg
         }
         img?.let { preview = it }
         bench.finish(
             mapOf(
-                "offsetX" to frozen.offsetX,
-                "offsetY" to frozen.offsetY,
+                "offsetX" to ox,
+                "offsetY" to oy,
                 "hasPreview" to (img != null),
+                "isDraft" to isDraft,
+                "debounceMs" to 0,
+                "saveFlow" to false,
+                "maxEdge" to DesktopPreviewRaster.PREVIEW_MAX_EDGE_PX,
             ),
         )
         return msg
     }
 
+    // Config / import: keep 250ms debounce for high-frequency slider ticks, then kick light path.
+    // Export / Save As still uses full DesktopRenderSaveSpine (committed Session offsets only).
     LaunchedEffect(previewGeneration) {
         if (previewGeneration == 0) return@LaunchedEffect
-        // H0.1 baseline: fixed 250ms debounce is part of end→visible latency (not removed here).
-        val debounceBench = me.rosuh.easywatermark.ui.ClampDragBench.previewScope("desktop_preview_debounce")
+        val debounceBench = me.rosuh.easywatermark.ui.ClampDragBench.previewScope("desktop_config_preview_debounce")
         delay(250)
         debounceBench.mark("delay250")
         debounceBench.finish(mapOf("previewGeneration" to previewGeneration))
-        status = refreshPreview()
+        // After debounce, request one light paint (no saveFlow).
+        offsetPreviewGeneration += 1
+    }
+
+    // Single light-preview consumer: draft (override) or Session freeze. No debounce here.
+    LaunchedEffect(offsetPreviewGeneration) {
+        if (offsetPreviewGeneration == 0) return@LaunchedEffect
+        val draft = clampDraft
+        val override = draft?.let { it.second to it.third }
+        status = refreshPreviewLight(
+            gen = offsetPreviewGeneration,
+            overrideOffset = override,
+            isDraft = draft != null,
+        )
     }
 
     /**
@@ -495,7 +532,15 @@ fun launchDesktopWindow() = application {
                 picked?.let { lastImage = it }
                 // openImageFilesBatch → Session EnterEditor (productRoute / selection from Session).
                 // Preview only — never touch lastSavedFile (import is not an explicit save).
-                status = if (picked != null) "$msg · ${refreshPreview()}" else msg
+                // H0.1-fix: light in-memory preview (no saveFlow); clear any CLAMP draft.
+                if (picked != null) {
+                    clampDraft = null
+                    offsetPreviewGeneration += 1
+                    val gen = offsetPreviewGeneration
+                    status = "$msg · ${refreshPreviewLight(gen = gen, isDraft = false)}"
+                } else {
+                    status = msg
+                }
             } finally {
                 busy = false
             }
@@ -751,8 +796,8 @@ fun launchDesktopWindow() = application {
                         preview = { previewModifier ->
                             // Product editor: no debug "Preview: JPEG, WxH" chrome; fill the
                             // available frame with ContentScale.Fit (responsive, aspect preserved).
-                            // C4.4R.2: CLAMP offset drag via shared bridge → session.applyOffset then
-                            // previewGeneration++ (no local offset mirror).
+                            // C4.4R.2 + H0.1-fix: CLAMP drag → UI draft paint + one applyOffset
+                            // at end; offset preview uses light raster (no 250ms/saveFlow).
                             Box(
                                 modifier = previewModifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center,
@@ -775,6 +820,15 @@ fun launchDesktopWindow() = application {
                                                 imageHeight = bmp.height.toFloat(),
                                                 offsetX = dragItem?.offsetX ?: 0.5f,
                                                 offsetY = dragItem?.offsetY ?: 0.5f,
+                                                onOffsetDraft = { x, y ->
+                                                    val id = dragItem?.uri?.value.orEmpty()
+                                                    if (id.isEmpty()) return@desktopClampPreviewOffsetDrag
+                                                    clampDraft = Triple(id, x, y)
+                                                    offsetPreviewGeneration++
+                                                },
+                                                onOffsetDraftClear = {
+                                                    clampDraft = null
+                                                },
                                                 onOffsetCommit = { x, y ->
                                                     // Fail-closed: live Session curImageInfo.uri must match drag.
                                                     val dragUri = dragItem?.uri
@@ -783,16 +837,24 @@ fun launchDesktopWindow() = application {
                                                         .curImageInfo
                                                         ?.takeIf { it.uri == dragUri }
                                                         ?: return@desktopClampPreviewOffsetDrag
-                                                    // H0.1: sync commit; async preview (debounce+saveFlow).
+                                                    // H0.1-fix: sync commit; immediate light preview.
                                                     val b = me.rosuh.easywatermark.ui.ClampDragBench
                                                         .previewScope("desktop_offset_commit")
                                                     session.applyOffset(
                                                         item.copy(offsetX = x, offsetY = y),
                                                     )
                                                     b.mark("applyOffset")
-                                                    previewGeneration++
-                                                    b.mark("previewGenerationBump")
-                                                    b.finish(mapOf("offsetX" to x, "offsetY" to y))
+                                                    clampDraft = null
+                                                    offsetPreviewGeneration++
+                                                    b.mark("offsetPreviewGenerationBump")
+                                                    b.finish(
+                                                        mapOf(
+                                                            "offsetX" to x,
+                                                            "offsetY" to y,
+                                                            "debounceMs" to 0,
+                                                            "saveFlow" to false,
+                                                        ),
+                                                    )
                                                 },
                                             ),
                                     )

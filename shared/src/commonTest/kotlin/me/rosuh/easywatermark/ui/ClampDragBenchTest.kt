@@ -28,7 +28,7 @@ class ClampDragBenchTest {
     }
 
     @Test
-    fun successfulResolve_recordsExactlyOneCommitAndNoLiveDraft() {
+    fun successfulResolve_recordsExactlyOneCommit_liveDraftWhenNoted() {
         val fitted = computeFittedImageRect(400f, 400f, 200f, 200f)!!
         val commit = resolveClampDragCommit(
             ClampDragGestureSnapshot(
@@ -49,6 +49,7 @@ class ClampDragBenchTest {
         // Simulate adapter end path (without Compose pointer): samples → resolve → host commit.
         val scope = ClampDragBench.gestureScope()
         scope.sample()
+        scope.noteLiveDraft() // H0.1-fix: draft emissions during drag
         scope.sample()
         scope.sample()
         scope.mark("drag")
@@ -59,10 +60,11 @@ class ClampDragBenchTest {
 
         assertEquals(1, ClampDragBench.lastCommitCount)
         assertEquals(3, ClampDragBench.lastSampleCount)
+        assertTrue(ClampDragBench.lastLiveDraft)
         val line = assertNotNull(ClampDragBench.lastLine)
         assertTrue(line.contains("name=gesture"), line)
         assertTrue(line.contains("committed=true"), line)
-        assertTrue(line.contains("liveDraft=false"), line)
+        assertTrue(line.contains("liveDraft=true"), line)
         assertTrue(line.contains("sampleCount=3"), line)
         assertTrue(line.contains("onOffsetCommit:"), line)
     }

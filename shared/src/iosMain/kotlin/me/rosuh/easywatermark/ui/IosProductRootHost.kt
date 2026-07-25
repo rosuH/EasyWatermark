@@ -157,6 +157,12 @@ class IosProductRootHost(
     /** Export-sheet thumbs. Budget: [EXPORT_THUMB_CACHE_MAX]. */
     private val exportThumbCache = mutableMapOf<String, ImageBitmap>()
     private var previewGen: Int = 0
+    /**
+     * H0.1-fix: UI-only CLAMP draft offset for live preview paint.
+     * Never written to Session / export / DataStore. Cleared on gesture end/cancel.
+     */
+    private var clampDraftOffset by mutableStateOf<Pair<Float, Float>?>(null)
+    private var clampDraftSelectionId by mutableStateOf<String?>(null)
     private var isSaving by mutableStateOf(false)
     /**
      * Presentation-only optimistic editor shell while picker IO runs (Session still Launch).
@@ -337,6 +343,8 @@ class IosProductRootHost(
         showSaveSheet = false
         sheetExportFinished = false
         showOpenSource = false
+        clampDraftOffset = null
+        clampDraftSelectionId = null
         filmstripThumbEpoch += 1
         wmPreviewCache.clear()
         sourcePlaceholderCache.clear()
@@ -523,11 +531,16 @@ class IosProductRootHost(
                             // (previewSourcePath is also set for unwatermarked placeholders).
                             val dragItem = launchUi.curImageInfo ?: sessionImages.firstOrNull()
                             val dragPath = dragItem?.uri?.value.orEmpty()
+                            val draftActiveForSelection =
+                                clampDraftSelectionId == dragPath && clampDraftOffset != null
                             val watermarkedDisplayMatchesSelection =
                                 dragPath.isNotEmpty() &&
                                     previewSourcePath == dragPath &&
                                     displayPreview != null &&
-                                    wmPreviewCache[dragPath] === displayPreview
+                                    (
+                                        wmPreviewCache[dragPath] === displayPreview ||
+                                            draftActiveForSelection
+                                        )
                             Box(
                                 modifier = previewModifier
                                     .fillMaxSize()
@@ -552,18 +565,41 @@ class IosProductRootHost(
                                                 imageHeight = displayPreview.height.toFloat(),
                                                 offsetX = dragItem?.offsetX ?: 0.5f,
                                                 offsetY = dragItem?.offsetY ?: 0.5f,
+                                                onOffsetDraft = { x, y ->
+                                                    if (dragPath.isEmpty()) {
+                                                        return@clampPreviewOffsetDrag
+                                                    }
+                                                    clampDraftOffset = x to y
+                                                    clampDraftSelectionId = dragPath
+                                                    previewGen += 1
+                                                    val gen = previewGen
+                                                    hostScope.launch {
+                                                        try {
+                                                            renderPreviewForCurrentSelection(
+                                                                gen = gen,
+                                                                draftOffset = x to y,
+                                                            )
+                                                        } catch (_: Throwable) {
+                                                        }
+                                                    }
+                                                },
+                                                onOffsetDraftClear = {
+                                                    clampDraftOffset = null
+                                                    clampDraftSelectionId = null
+                                                },
                                                 onOffsetCommit = { x, y ->
                                                     if (dragPath.isEmpty()) {
                                                         return@clampPreviewOffsetDrag
                                                     }
                                                     // Triple identity: frozen drag path, displayed
                                                     // preview path, and live Session selection.
-                                                    // Also refuse if display is no longer the
-                                                    // watermarked cache bitmap for dragPath.
                                                     if (previewSourcePath != dragPath) {
                                                         return@clampPreviewOffsetDrag
                                                     }
-                                                    if (wmPreviewCache[dragPath] !== displayPreview) {
+                                                    if (
+                                                        wmPreviewCache[dragPath] !== displayPreview &&
+                                                        !draftActiveForSelection
+                                                    ) {
                                                         return@clampPreviewOffsetDrag
                                                     }
                                                     val live = services.session
@@ -572,15 +608,16 @@ class IosProductRootHost(
                                                         .curImageInfo
                                                         ?.takeIf { it.uri.value == dragPath }
                                                         ?: return@clampPreviewOffsetDrag
-                                                    // H0.1: sync Session commit + cache eviction;
-                                                    // raster is async (IosPreviewRaster stages).
-                                                    // No live draft during drag (product contract).
+                                                    // H0.1-fix: sync Session commit; draft cleared
+                                                    // by adapter after this callback.
                                                     val commitBench = ClampDragBench
                                                         .previewScope("ios_offset_commit")
                                                     services.session.applyOffset(
                                                         live.copy(offsetX = x, offsetY = y),
                                                     )
                                                     commitBench.mark("applyOffset")
+                                                    clampDraftOffset = null
+                                                    clampDraftSelectionId = null
                                                     wmPreviewCache.remove(dragPath)
                                                     commitBench.mark("cacheEvict")
                                                     previewGen++
@@ -1303,59 +1340,74 @@ class IosProductRootHost(
  * - [wmPreviewCache] hit → 0 raster work
  * - [gen] drops stale async results on rapid filmstrip taps
      */
-    private suspend fun renderPreviewForCurrentSelection(gen: Int) {
+    private suspend fun renderPreviewForCurrentSelection(
+        gen: Int,
+        draftOffset: Pair<Float, Float>? = null,
+    ) {
         // H0.1: host-level stages around IosPreviewRaster (read/decode/compose logged there too).
-        val hostBench = ClampDragBench.previewScope("ios_preview_refresh")
+        val isDraft = draftOffset != null
+        val hostBench = ClampDragBench.previewScope(
+            if (isDraft) "ios_draft_preview" else "ios_preview_refresh",
+        )
         val launch = services.session.launchScreenUiStateFlow.first()
         val cur = launch.curImageInfo ?: launch.selectedImageList.firstOrNull() ?: return
         val sourcePath = cur.uri.value
         if (sourcePath.isBlank()) return
         val wm = services.waterMarkRepo.waterMark.first()
+        val ox = draftOffset?.first ?: cur.offsetX
+        val oy = draftOffset?.second ?: cur.offsetY
         hostBench.mark("sessionRead")
 
-        wmPreviewCache[sourcePath]?.let { cached ->
-            if (gen != previewGen) return
-            previewBitmap = cached
-            previewSourcePath = sourcePath
-            hostBench.mark("cacheHit")
-            hostBench.finish(
-                mapOf(
-                    "hit" to true,
-                    "path" to sourcePath.substringAfterLast('/'),
-                    "offsetX" to cur.offsetX,
-                    "offsetY" to cur.offsetY,
-                ),
-            )
-            return
+        // Cache hit only for committed (non-draft) paints at exact Session offset.
+        if (!isDraft) {
+            wmPreviewCache[sourcePath]?.let { cached ->
+                if (gen != previewGen) return
+                previewBitmap = cached
+                previewSourcePath = sourcePath
+                hostBench.mark("cacheHit")
+                hostBench.finish(
+                    mapOf(
+                        "hit" to true,
+                        "path" to sourcePath.substringAfterLast('/'),
+                        "offsetX" to ox,
+                        "offsetY" to oy,
+                    ),
+                )
+                return
+            }
         }
 
         val composed = withContext(Dispatchers.Default) {
             IosPreviewRaster.renderWatermarked(
                 sourcePath = sourcePath,
                 waterMark = wm,
-                offsetX = cur.offsetX,
-                offsetY = cur.offsetY,
+                offsetX = ox,
+                offsetY = oy,
             )
         }
         hostBench.mark("raster")
         if (gen != previewGen) {
-            hostBench.finish(mapOf("staleGen" to true, "hit" to false))
+            hostBench.finish(mapOf("staleGen" to true, "hit" to false, "isDraft" to isDraft))
             return
         }
 
-        wmPreviewCache[sourcePath] = composed
-        enforceCacheBudgets()
-        hostBench.mark("cachePut")
+        // Never cache draft bitmaps as committed path entries (export must not see draft paint).
+        if (!isDraft) {
+            wmPreviewCache[sourcePath] = composed
+            enforceCacheBudgets()
+            hostBench.mark("cachePut")
+        }
         previewBitmap = composed
         previewSourcePath = sourcePath
         hostBench.finish(
             mapOf(
                 "hit" to false,
+                "isDraft" to isDraft,
                 "path" to sourcePath.substringAfterLast('/'),
                 "w" to composed.width,
                 "h" to composed.height,
-                "offsetX" to cur.offsetX,
-                "offsetY" to cur.offsetY,
+                "offsetX" to ox,
+                "offsetY" to oy,
             ),
         )
     }

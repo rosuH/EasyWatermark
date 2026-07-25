@@ -64,8 +64,17 @@ object DesktopImageDecoder {
     fun decodeThumbnail(file: File, maxEdgePx: Int = 96): ImageBitmap {
         val bytes = file.readBytes()
         if (bytes.isEmpty()) error("DesktopImageDecoder: file ${file.path} is empty/missing")
+        return decodeThumbnail(bytes, maxEdgePx)
+    }
+
+    /**
+     * Decode + downscale from encoded [bytes] so the longer edge is at most [maxEdgePx].
+     * Used by editor in-memory preview (H0.1-fix) — not final export.
+     */
+    fun decodeThumbnail(bytes: ByteArray, maxEdgePx: Int = 96): ImageBitmap {
+        if (bytes.isEmpty()) error("DesktopImageDecoder: empty image bytes")
         val buffered = ByteArrayInputStream(bytes).use { ImageIO.read(it) }
-            ?: error("DesktopImageDecoder: ImageIO could not decode ${file.path}")
+            ?: error("DesktopImageDecoder: ImageIO could not decode ${bytes.size}-byte image")
         val oriented = applyExifOrientation(buffered, parseExifOrientation(bytes))
         return scaleToMaxEdge(oriented, maxEdgePx).toComposeImageBitmap()
     }
