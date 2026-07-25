@@ -198,6 +198,18 @@ fun reduceSessionUi(snapshot: SessionUiSnapshot, intent: AppIntent): SessionRedu
                     )
                 }
 
+                LaunchScreenUiState.About -> {
+                    val returnTo = when (val r = snapshot.launch.aboutReturnUiState) {
+                        LaunchScreenUiState.Launch, LaunchScreenUiState.Editor -> r
+                        else -> LaunchScreenUiState.Launch
+                    }
+                    SessionReduceResult(
+                        snapshot.copy(
+                            launch = snapshot.launch.copy(uiState = returnTo),
+                        ),
+                    )
+                }
+
                 LaunchScreenUiState.Launch -> {
                     SessionReduceResult(
                         snapshot.copy(
@@ -209,6 +221,21 @@ fun reduceSessionUi(snapshot: SessionUiSnapshot, intent: AppIntent): SessionRedu
                     )
                 }
             }
+        }
+
+        is AppIntent.OpenAbout -> {
+            val returnTo = when (intent.returnTo) {
+                LaunchScreenUiState.Launch, LaunchScreenUiState.Editor -> intent.returnTo
+                else -> LaunchScreenUiState.Launch
+            }
+            SessionReduceResult(
+                snapshot.copy(
+                    launch = snapshot.launch.copy(
+                        uiState = LaunchScreenUiState.About,
+                        aboutReturnUiState = returnTo,
+                    ),
+                ),
+            )
         }
 
         AppIntent.GoTemplate -> SessionReduceResult(snapshot.copy(dialogUi = UiState.GoTemplate))

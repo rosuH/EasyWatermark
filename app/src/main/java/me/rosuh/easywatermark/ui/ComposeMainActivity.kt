@@ -254,34 +254,23 @@ class ComposeMainActivity : ComponentActivity() {
                             modifier = Modifier
                                 .fillMaxSize()
                         ) {
-                            // Product routes + transitions: shared [ProductShellHost].
-                            // Activity only owns system edges (picker, gallery dialog, export, links).
-                            var productRoute by remember {
-                                mutableStateOf(ProductShellNav.Route.Launch)
-                            }
-                            var aboutReturnRoute by remember {
-                                mutableStateOf(ProductShellNav.Route.Launch)
-                            }
+                            // E0: Session owns product route (Launch/Editor/About). Activity only
+                            // owns presentation/system edges (picker, gallery dialog, export, links).
                             var showGalleryDialog by remember { mutableStateOf(false) }
                             var showOpenSource by remember { mutableStateOf(false) }
                             var showSaveSheet by remember { mutableStateOf(false) }
 
-                            fun openAboutFrom(from: ProductShellNav.Route) {
-                                val (about, ret) = ProductShellNav.openAbout(from)
-                                aboutReturnRoute = ret
-                                productRoute = about
-                            }
-
                             LaunchedEffect(pendingShareUris) {
                                 pendingShareUris?.let { uris ->
                                     viewModel.updateImageList(uris)
-                                    productRoute = ProductShellNav.Route.Editor
+                                    // EnterEditor is applied by updateImageList → Session uiState.
                                     pendingShareUris = null
                                 }
                             }
                             val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
                             val state by viewModel.launchScreenUiStateFlow.collectAsStateWithLifecycle()
                             val saveExportState by viewModel.saveExportUiState.collectAsStateWithLifecycle()
+                            val productRoute = ProductShellNav.routeFromLaunchUi(state.uiState)
                             val context = LocalContext.current
                             val templates by viewModel.templateListFlow.collectAsStateWithLifecycle()
 
@@ -347,8 +336,8 @@ class ComposeMainActivity : ComponentActivity() {
                                             TAG,
                                             "PhotoPicker Number of items selected: ${uris.size}"
                                         )
+                                        // System picker → Session EnterEditor (productRoute from Session).
                                         viewModel.process(Action.SystemPickerImageSelected(uris))
-                                        productRoute = ProductShellNav.Route.Editor
                                         showGalleryDialog = false
                                     } else {
                                         Log.i(TAG, "PhotoPicker No media selected")
@@ -396,7 +385,7 @@ class ComposeMainActivity : ComponentActivity() {
                             // System back: OpenSource → About → prior route; Editor → discard confirm.
                             BackHandler(enabled = showOpenSource) { showOpenSource = false }
                             BackHandler(enabled = !showOpenSource && productRoute == ProductShellNav.Route.About) {
-                                productRoute = ProductShellNav.aboutBack(aboutReturnRoute)
+                                viewModel.onBackPressed()
                             }
                             BackHandler(enabled = !showOpenSource && productRoute == ProductShellNav.Route.Editor) {
                                 showEditorExitConfirm = true
@@ -425,7 +414,7 @@ class ComposeMainActivity : ComponentActivity() {
                                                 showEditorExitConfirm = false
                                                 viewModel.resetJobStatus()
                                                 viewModel.clearData()
-                                                productRoute = ProductShellNav.Route.Launch
+                                                viewModel.onBackPressed()
                                             }
                                         ) {
                                             Text(cmpStringResource(Res.string.tips_confirm_dialog))
@@ -452,7 +441,9 @@ class ComposeMainActivity : ComponentActivity() {
                                             AndroidLaunchScreen(
                                                 onPickImage = onPickImages,
                                                 onGoAbout = {
-                                                    openAboutFrom(ProductShellNav.Route.Launch)
+                                                    viewModel.openAbout(
+                                                        me.rosuh.easywatermark.ui.LaunchScreenUiState.Launch,
+                                                    )
                                                 },
                                             )
                                         }
@@ -475,7 +466,9 @@ class ComposeMainActivity : ComponentActivity() {
                                                     viewModel.process(Action.EditorImageSelected(it))
                                                 },
                                                 onGoAboutScreen = {
-                                                    openAboutFrom(ProductShellNav.Route.Editor)
+                                                    viewModel.openAbout(
+                                                        me.rosuh.easywatermark.ui.LaunchScreenUiState.Editor,
+                                                    )
                                                 },
                                                 onAddMoreImages = onPickImages,
                                                 onShowSaveDialog = {
@@ -509,10 +502,7 @@ class ComposeMainActivity : ComponentActivity() {
                                                 showBounds = wm?.enableBounds ?: false,
                                                 dynamicColorOn = forceDynamicColor,
                                                 preferInAppGallery = userPreferences.preferInAppGallery,
-                                                onBack = {
-                                                    productRoute =
-                                                        ProductShellNav.aboutBack(aboutReturnRoute)
-                                                },
+                                                onBack = { viewModel.onBackPressed() },
                                                 onOpenLink = { url ->
                                                     this@ComposeMainActivity.openLink(url)
                                                 },
@@ -567,7 +557,7 @@ class ComposeMainActivity : ComponentActivity() {
                                         onDismiss = { selectedImages ->
                                             showGalleryDialog = false
                                             if (selectedImages.isNotEmpty()) {
-                                                productRoute = ProductShellNav.Route.Editor
+                                                // selectGallery → EnterEditor (Session uiState=Editor).
                                                 viewModel.selectGallery(selectedImages)
                                             } else {
                                                 viewModel.process(Action.DialogDismiss(false))

@@ -97,6 +97,60 @@ class SessionReducerTest {
         assertTrue(r.snapshot.galleryPicked!!.isEmpty())
     }
 
+    /** E0 R1 — About from Launch returns to Launch. */
+    @Test
+    fun r1_openAboutFromLaunch_thenBack_toLaunch() {
+        val opened = reduceSessionUi(
+            SessionUiSnapshot(),
+            AppIntent.OpenAbout(returnTo = LaunchScreenUiState.Launch),
+        )
+        assertEquals(LaunchScreenUiState.About, opened.snapshot.launch.uiState)
+        assertEquals(LaunchScreenUiState.Launch, opened.snapshot.launch.aboutReturnUiState)
+        val back = reduceSessionUi(opened.snapshot, AppIntent.NavigateBack)
+        assertEquals(LaunchScreenUiState.Launch, back.snapshot.launch.uiState)
+    }
+
+    /** E0 R2 — About from Editor returns to Editor; selection preserved. */
+    @Test
+    fun r2_openAboutFromEditor_thenBack_toEditor_selectionPreserved() {
+        val selected = listOf(
+            me.rosuh.easywatermark.data.model.ImageInfo(MediaRef("content://sel/1")),
+        )
+        val editor = SessionUiSnapshot(
+            launch = me.rosuh.easywatermark.ui.LaunchScreenState(
+                uiState = LaunchScreenUiState.Editor,
+                selectedImageList = selected,
+                curImageInfo = selected.first(),
+            ),
+        )
+        val opened = reduceSessionUi(
+            editor,
+            AppIntent.OpenAbout(returnTo = LaunchScreenUiState.Editor),
+        )
+        assertEquals(LaunchScreenUiState.About, opened.snapshot.launch.uiState)
+        assertEquals(LaunchScreenUiState.Editor, opened.snapshot.launch.aboutReturnUiState)
+        assertEquals(1, opened.snapshot.launch.selectedImageList.size)
+        val back = reduceSessionUi(opened.snapshot, AppIntent.NavigateBack)
+        assertEquals(LaunchScreenUiState.Editor, back.snapshot.launch.uiState)
+        assertEquals(1, back.snapshot.launch.selectedImageList.size)
+        assertEquals(MediaRef("content://sel/1"), back.snapshot.launch.selectedImageList.first().uri)
+    }
+
+    /** E0 R3 — EnterEditor then NavigateBack → Launch. */
+    @Test
+    fun r3_enterEditor_thenNavigateBack_toLaunch() {
+        val selected = listOf(
+            me.rosuh.easywatermark.data.model.ImageInfo(MediaRef("content://e/1")),
+        )
+        val entered = reduceSessionUi(
+            SessionUiSnapshot(),
+            AppIntent.EnterEditor(selected = selected),
+        )
+        assertEquals(LaunchScreenUiState.Editor, entered.snapshot.launch.uiState)
+        val back = reduceSessionUi(entered.snapshot, AppIntent.NavigateBack)
+        assertEquals(LaunchScreenUiState.Launch, back.snapshot.launch.uiState)
+    }
+
     @Test
     fun templateDialogs_updateUiState() {
         assertEquals(

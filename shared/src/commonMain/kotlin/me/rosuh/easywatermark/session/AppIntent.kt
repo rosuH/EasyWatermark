@@ -7,6 +7,7 @@ import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkConfigChange
 import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.ui.Image
+import me.rosuh.easywatermark.ui.LaunchScreenUiState
 
 /**
  * Platform-neutral product-session intents (ADR-0017).
@@ -42,6 +43,14 @@ sealed class AppIntent {
     data class SelectCurrent(val ref: MediaRef) : AppIntent()
 
     data object NavigateBack : AppIntent()
+
+    /**
+     * E0: open full-screen About and record [returnTo] (Launch or Editor) for back.
+     * Other [LaunchScreenUiState] values are treated as Launch.
+     */
+    data class OpenAbout(
+        val returnTo: LaunchScreenUiState = LaunchScreenUiState.Launch,
+    ) : AppIntent()
 
     data object GoTemplate : AppIntent()
     data object GoEdit : AppIntent()

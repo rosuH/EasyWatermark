@@ -5,14 +5,24 @@ import me.rosuh.easywatermark.data.model.ImageInfo
 /**
  * Pure product-shell navigation helpers shared by Android / iOS / Desktop hosts and tests.
  *
- * Route **UI + transitions** live in [ProductShellHost]. Platforms only keep Activity/window
- * Containers and edge callbacks (pickers, permissions, share). About back must restore the route * that opened About — never infer from unrelated flags.
+ * Route **UI + transitions** live in [ProductShellHost]. Session owns product route via
+ * [LaunchScreenUiState] (E0); hosts map with [routeFromLaunchUi]. These helpers are pure
+ * transition aids only — not a second route owner.
  */
 object ProductShellNav {
     enum class Route {
         Launch,
         Editor,
         About,
+    }
+
+    /** Map Session-owned [LaunchScreenUiState] to shell animation route. */
+    fun routeFromLaunchUi(ui: LaunchScreenUiState): Route = when (ui) {
+        LaunchScreenUiState.Launch,
+        LaunchScreenUiState.GalleryDialog,
+        -> Route.Launch
+        LaunchScreenUiState.Editor -> Route.Editor
+        LaunchScreenUiState.About -> Route.About
     }
 
     /** [returnTo] is the screen that navigated to About (Launch or Editor). */
@@ -28,6 +38,12 @@ object ProductShellNav {
             Route.Launch, Route.Editor -> from
             Route.About -> Route.Launch
         }
+
+    /** Session-side return target for About (Launch or Editor only). */
+    fun aboutReturnUi(from: LaunchScreenUiState): LaunchScreenUiState = when (from) {
+        LaunchScreenUiState.Launch, LaunchScreenUiState.Editor -> from
+        LaunchScreenUiState.GalleryDialog, LaunchScreenUiState.About -> LaunchScreenUiState.Launch
+    }
 
     /**
  * Merge newly picked images into the session selection.

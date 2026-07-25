@@ -486,6 +486,10 @@ open class WatermarkSessionViewModel(
     fun useTemplate(template: Template) = dispatch(AppIntent.UseTemplate(template))
     fun goEditDialog() = dispatch(AppIntent.GoEditDialog)
     fun onBackPressed() = dispatch(AppIntent.NavigateBack)
+
+    /** E0: open About from Launch (default) or Editor. */
+    fun openAbout(returnTo: me.rosuh.easywatermark.ui.LaunchScreenUiState) =
+        dispatch(AppIntent.OpenAbout(returnTo = returnTo))
     fun resetGalleryData() = dispatch(AppIntent.ResetGalleryData)
 
     fun selectImage(ref: MediaRef) = dispatch(AppIntent.SelectCurrent(ref))

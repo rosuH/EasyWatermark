@@ -355,10 +355,9 @@ fun launchDesktopWindow() = application {
     var preview by remember { mutableStateOf<ImageBitmap?>(null) }
     // Debounced preview refresh generation (slider ticks apply config immediately; raster is debounced).
     var previewGeneration by remember { mutableStateOf(0) }
-    // Shared product shell routes (same transitions as Android/iOS). FileDialog stays Desktop edge.
-    var productRoute by remember { mutableStateOf(ProductShellNav.Route.Launch) }
-    var aboutReturnRoute by remember { mutableStateOf(ProductShellNav.Route.Launch) }
+    // E0: Session owns product route; FileDialog stays Desktop edge.
     val launchUi by session.launchScreenUiStateFlow.collectAsState()
+    val productRoute = ProductShellNav.routeFromLaunchUi(launchUi.uiState)
     val sessionImages = launchUi.selectedImageList
     var selectedSessionImage by remember { mutableStateOf<ImageInfo?>(null) }
     LaunchedEffect(Unit) {
@@ -482,7 +481,7 @@ fun launchDesktopWindow() = application {
                 }
                 picked?.let { lastImage = it }
                 if (picked != null || session.launchScreenUiStateFlow.value.selectedImageList.isNotEmpty()) {
-                    productRoute = ProductShellNav.Route.Editor
+                    // openImageFilesBatch → Session EnterEditor (productRoute from Session).
                     selectedSessionImage = session.launchScreenUiStateFlow.value.curImageInfo
                         ?: session.launchScreenUiStateFlow.value.selectedImageList.firstOrNull()
                 }
@@ -621,14 +620,11 @@ fun launchDesktopWindow() = application {
                             }
                             val files = DesktopSaveDecision.supportedImageFiles(dialog.files.toList(), IMAGE_EXTENSIONS)
                             if (files.isNotEmpty()) {
-                                productRoute = ProductShellNav.Route.Editor
                                 openImageFilesBatch(files)
                             }
                         },
                         onGoAbout = {
-                            val (about, ret) = ProductShellNav.openAbout(ProductShellNav.Route.Launch)
-                            aboutReturnRoute = ret
-                            productRoute = about
+                            session.openAbout(me.rosuh.easywatermark.ui.LaunchScreenUiState.Launch)
                         },
                         logo = { modifier, shouldAnimate ->
                             me.rosuh.easywatermark.ui.BrandLogo(
@@ -669,7 +665,7 @@ fun launchDesktopWindow() = application {
                         ),
                         onBack = {
                             showOpenSource = false
-                            productRoute = ProductShellNav.aboutBack(aboutReturnRoute)
+                            session.onBackPressed()
                         },
                         onVersion = {
                             openUrlInBrowser(ABOUT_URL_RELEASES)?.let { status = it }
@@ -875,7 +871,7 @@ fun launchDesktopWindow() = application {
                                 preview = {},
                             )
                         },
-                        onBack = { productRoute = ProductShellNav.Route.Launch },
+                        onBack = { session.onBackPressed() },
                         onAddMoreImages = {
                             val dialog = FileDialog(window, "Open image", FileDialog.LOAD).apply {
                                 isMultipleMode = true
@@ -893,9 +889,7 @@ fun launchDesktopWindow() = application {
                             showSaveSheet = true
                         },
                         onGoAboutScreen = {
-                            val (about, ret) = ProductShellNav.openAbout(ProductShellNav.Route.Editor)
-                            aboutReturnRoute = ret
-                            productRoute = about
+                            session.openAbout(me.rosuh.easywatermark.ui.LaunchScreenUiState.Editor)
                         },
                         onImageSelected = { info ->
                             selectedSessionImage = info

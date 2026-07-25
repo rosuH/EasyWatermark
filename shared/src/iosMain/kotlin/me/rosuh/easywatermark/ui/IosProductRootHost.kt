@@ -143,10 +143,11 @@ class IosProductRootHost(
     private val exportThumbCache = mutableMapOf<String, ImageBitmap>()
     private var previewGen: Int = 0
     private var isSaving by mutableStateOf(false)
+    /**
+     * Presentation-only optimistic editor shell while picker IO runs (Session still Launch).
+     * E0: Session is product-route owner; this flag only bridges shell until EnterEditor lands.
+     */
     private var showEditor by mutableStateOf(false)
-    private var productRoute by mutableStateOf(ProductShellNav.Route.Launch)
-    /** Screen that opened About — used for correct back (not [showEditor]). */
-    private var aboutReturnRoute by mutableStateOf(ProductShellNav.Route.Launch)
     /** C2: shared Android Compose export panel; Photos/Share stay Swift callbacks. */
     private var showSaveSheet by mutableStateOf(false)
     private var outputFormat by mutableStateOf(ImageFormat.JPEG)
@@ -161,20 +162,24 @@ class IosProductRootHost(
      */
     private var dynamicColorForced by mutableStateOf(IosDynamicColorPrefs.isForced())
 
-    private fun openAboutFrom(from: ProductShellNav.Route) {
-        val (about, ret) = ProductShellNav.openAbout(from)
-        aboutReturnRoute = ret
-        productRoute = about
+    private fun openAboutFromLaunch() {
+        services.session.openAbout(LaunchScreenUiState.Launch)
+    }
+
+    private fun openAboutFromEditor() {
+        services.session.openAbout(LaunchScreenUiState.Editor)
     }
 
     private fun closeAbout() {
         showOpenSource = false
-        productRoute = ProductShellNav.aboutBack(aboutReturnRoute)
+        services.session.onBackPressed()
     }
 
     /** Swift edge: whether the product root is currently showing the editor. */
-    fun isInEditor(): Boolean =
-        productRoute == ProductShellNav.Route.Editor || showEditor
+    fun isInEditor(): Boolean {
+        val ui = services.session.launchScreenUiStateFlow.value.uiState
+        return ui == LaunchScreenUiState.Editor || showEditor
+    }
 
     /**
      * Issue 26 / C4.4R.S1 **test seam only** — observe preview-path identity after
@@ -200,6 +205,13 @@ class IosProductRootHost(
             val launchUi by services.session.launchScreenUiStateFlow.collectAsState()
             val exportJob by services.session.exportJobState.collectAsState()
             val sessionImages = launchUi.selectedImageList
+            // E0: Session owns route; optimistic showEditor only while Session not yet Editor.
+            val productRoute = when {
+                launchUi.uiState == LaunchScreenUiState.About -> ProductShellNav.Route.About
+                launchUi.uiState == LaunchScreenUiState.Editor || showEditor ->
+                    ProductShellNav.Route.Editor
+                else -> ProductShellNav.Route.Launch
+            }
             val scope = rememberCoroutineScope()
 
             var templates by remember { mutableStateOf(emptyList<Template>()) }
@@ -243,7 +255,7 @@ class IosProductRootHost(
                     LaunchScreen(
                         aboutIcon = aboutPainter,
                         onPickImage = onPickPhoto,
-                        onGoAbout = { openAboutFrom(ProductShellNav.Route.Launch) },
+                        onGoAbout = { openAboutFromLaunch() },
                         logo = { modifier, animate ->
                             BrandLogo(modifier = modifier, animate = animate)
                         },
@@ -486,10 +498,9 @@ class IosProductRootHost(
                             )
                         },
                         onBack = {
-                            // Route alone drives [ProductShellHost] Editor→Launch transition.
-                            // Keep showEditor in sync for isInEditor() / Swift edge queries.
-                            productRoute = ProductShellNav.Route.Launch
+                            // Session NavigateBack owns Launch; clear optimistic shell flag.
                             showEditor = false
+                            services.session.onBackPressed()
                         },
                         onAddMoreImages = onPickPhoto,
                         onShowSaveDialog = {
@@ -498,7 +509,7 @@ class IosProductRootHost(
                             sheetExportFinished = false
                             showSaveSheet = true
                         },
-                        onGoAboutScreen = { openAboutFrom(ProductShellNav.Route.Editor) },
+                        onGoAboutScreen = { openAboutFromEditor() },
                         onImageSelected = { info ->
                             // Android parity: select instantly; show placeholder; watermark async + cache.
                             scope.launch {
@@ -880,8 +891,8 @@ class IosProductRootHost(
  * `loadTransferable` / decode / stage. No "Loading…" chrome.
      */
     fun showEditorShellImmediately() {
+        // Presentation-only optimistic shell; Session EnterEditor lands when stage succeeds.
         showEditor = true
-        productRoute = ProductShellNav.Route.Editor
         // Leave preview blank (silent) until stage + placeholder / raster fill it.
         statusLine = ""
     }
@@ -920,8 +931,8 @@ class IosProductRootHost(
             return
         }
         sourceBytes = images.first()
+        // Session already EnterEditor via stagePickedImagesBytes; keep optimistic flag for isInEditor.
         showEditor = true
-        productRoute = ProductShellNav.Route.Editor
         if (!append) {
             wmPreviewCache.clear()
             sourcePlaceholderCache.clear()
