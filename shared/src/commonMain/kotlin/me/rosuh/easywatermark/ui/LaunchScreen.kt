@@ -2,10 +2,14 @@ package me.rosuh.easywatermark.ui
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -21,8 +25,11 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.about_title_about
+import me.rosuh.easywatermark.shared.generated.resources.privacy_confidence_pick
 import me.rosuh.easywatermark.shared.generated.resources.tips_pick_image
 import org.jetbrains.compose.resources.stringResource
 
@@ -31,6 +38,7 @@ import org.jetbrains.compose.resources.stringResource
  *
  * Hosts supply [logo] (Android may inject animated logo) and [aboutIcon].
  * S-i18n-2: labels from composeResources [Res], not edge bags.
+ * I4: privacy confidence line near pick CTA (on-device + selected-only).
  */
 @Composable
 fun LaunchScreen(
@@ -44,6 +52,7 @@ fun LaunchScreen(
     },
 ) {
     val pickImageLabel = stringResource(Res.string.tips_pick_image)
+    val privacyPick = stringResource(Res.string.privacy_confidence_pick)
     val aboutContentDescription = stringResource(Res.string.about_title_about)
     val aboutInteraction = remember { MutableInteractionSource() }
     val aboutPressed by aboutInteraction.collectIsPressedAsState()
@@ -63,15 +72,32 @@ fun LaunchScreen(
                 startLogoAnimation,
             )
 
-            Button(
+            Column(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .padding(top = maxHeight * 0.3f)
-                    .testTag("launchPickImageButton"),
-                shape = RectangleShape,
-                onClick = onPickImage,
+                    .padding(horizontal = 24.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(pickImageLabel)
+                Button(
+                    modifier = Modifier.testTag("launchPickImageButton"),
+                    shape = RectangleShape,
+                    onClick = onPickImage,
+                ) {
+                    Text(pickImageLabel)
+                }
+                // I4: succinct on-device + selected-only confidence at pick decision point.
+                Text(
+                    text = privacyPick,
+                    modifier = Modifier
+                        .widthIn(max = 320.dp)
+                        .testTag("launchPrivacyConfidence"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
             }
 
             IconButton(

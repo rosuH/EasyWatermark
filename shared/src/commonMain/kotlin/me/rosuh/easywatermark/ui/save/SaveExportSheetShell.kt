@@ -34,6 +34,7 @@ import me.rosuh.easywatermark.shared.generated.resources.dialog_save_config_form
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_config_quality
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_list_title
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_retry_failed
+import me.rosuh.easywatermark.shared.generated.resources.privacy_confidence_export
 import me.rosuh.easywatermark.shared.generated.resources.tips_images_selected
 import me.rosuh.easywatermark.ui.theme.DesignBrand
 import me.rosuh.easywatermark.ui.theme.DesignEditorBg
@@ -44,6 +45,7 @@ import org.jetbrains.compose.resources.stringResource
  * S-i18n-2: labels from [Res].
  * D5: optional Cancel / Retry failed + progress semantics (not color-only).
  * I0: optional destination / filename-policy / outcome-detail lines (host-localized).
+ * I4: privacy confidence line (on-device + EXIF strip / ADR-0009).
  *
  * @param exportListSubtitle argument for [Res.string.dialog_save_export_list_title] (e.g. result summary).
  * @param imageCount used for empty-preview plural string when [items] is empty.
@@ -92,6 +94,7 @@ fun <T> SaveExportSheetShell(
     val openGalleryLabel = stringResource(Res.string.dialog_open_in_gallery)
     val cancelLabel = stringResource(Res.string.dialog_save_cancel_export)
     val retryLabel = stringResource(Res.string.dialog_save_retry_failed)
+    val privacyExport = stringResource(Res.string.privacy_confidence_export)
     val statusCd = statusContentDescription.ifBlank { exportListSubtitle }
 
     ModalBottomSheet(
@@ -146,6 +149,17 @@ fun <T> SaveExportSheetShell(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+
+            // I4: on-device + EXIF strip (ADR-0009) at export decision point.
+            Text(
+                text = privacyExport,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+                    .testTag("sharedComposeExportPrivacyConfidence"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
             Text(
                 text = exportListTitle,
