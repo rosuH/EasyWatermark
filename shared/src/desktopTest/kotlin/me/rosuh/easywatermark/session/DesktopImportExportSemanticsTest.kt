@@ -40,9 +40,11 @@ class DesktopImportExportSemanticsTest {
             imageInfo: ImageInfo,
             config: WaterMark,
             prefs: UserPreferences,
-        ): Result<MediaRef> {
+        ): ExportOutcome {
             calls.incrementAndGet()
-            return Result.failure(null, code = "UNEXPECTED", message = "import must not export")
+            return ExportOutcome.failure(
+                ExportFailure.Render(message = "import must not export"),
+            )
         }
     }
 
@@ -54,12 +56,20 @@ class DesktopImportExportSemanticsTest {
             imageInfo: ImageInfo,
             config: WaterMark,
             prefs: UserPreferences,
-        ): Result<MediaRef> {
+        ): ExportOutcome {
             received.add(Call(imageInfo.uri, imageInfo.offsetX, imageInfo.offsetY))
             val out = MediaRef("file://export/${received.size}/${imageInfo.uri.value}")
             imageInfo.width = 10
             imageInfo.height = 10
-            return Result.success(out)
+            return ExportOutcome.success(
+                me.rosuh.easywatermark.data.model.ExportedMedia(
+                    ref = out,
+                    width = 10,
+                    height = 10,
+                    format = me.rosuh.easywatermark.data.model.ImageFormat.PNG,
+                    byteCount = 1L,
+                ),
+            )
         }
     }
 

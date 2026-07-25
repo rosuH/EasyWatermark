@@ -15,10 +15,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.MyApp
+import me.rosuh.easywatermark.data.model.ExportedMedia
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.ImageInfo
-import me.rosuh.easywatermark.data.model.MediaRef
-import me.rosuh.easywatermark.data.model.Result
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkMode
@@ -33,10 +32,13 @@ import me.rosuh.easywatermark.utils.ktx.toUri
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
+import java.io.OutputStream
 
 /**
  * Android [ExportPipelinePort]: decode → commonMain raster ([AndroidCommonRaster]) → MediaStore /
- * Pre-Q file path. ADR-0018 production path (always common; no rollout flag). */
+ * Pre-Q file path. ADR-0018 production path (always common; no rollout flag). D1: typed
+ * [ExportOutcome] with [ExportedMedia] facts.
+ */
 class AndroidExportPipelinePort(
     private val appContext: Context,
     private val contentResolver: ContentResolver = appContext.contentResolver,
@@ -46,13 +48,13 @@ class AndroidExportPipelinePort(
         imageInfo: ImageInfo,
         config: WaterMark,
         prefs: UserPreferences,
-    ): Result<MediaRef> = withContext(Dispatchers.IO) {
+    ): ExportOutcome = withContext(Dispatchers.IO) {
         try {
             exportOneInternal(imageInfo, config, prefs)
         } catch (_: FileNotFoundException) {
-            Result.failure(null, code = ExportErrorCodes.FILE_NOT_FOUND)
-        } catch (_: OutOfMemoryError) {
-            Result.failure(null, code = ExportErrorCodes.SAVE_OOM)
+            ExportOutcome.failure(ExportFailure.SourceDecode())
+        } catch (e: OutOfMemoryError) {
+            ExportOutcome.failure(ExportFailure.Io.outOfMemory(e.message))
         }
     }
 
@@ -60,16 +62,16 @@ class AndroidExportPipelinePort(
         imageInfo: ImageInfo,
         config: WaterMark,
         prefs: UserPreferences,
-    ): Result<MediaRef> {
+    ): ExportOutcome {
         val rect = decodeBitmapFromUri(contentResolver, imageInfo.uri.toUri())
         if (rect.isFailure()) {
-            return Result.extendMsg(rect)
+            return ExportOutcome.failure(
+                ExportFailure.SourceDecode(message = rect.message),
+            )
         }
         val sourceBitmap = rect.data?.bitmap
-            ?: return Result.failure(
-                null,
-                code = "-1",
-                message = "Copy bitmap from uri failed.",
+            ?: return ExportOutcome.failure(
+                ExportFailure.SourceDecode(message = "Copy bitmap from uri failed."),
             )
 
         imageInfo.width = sourceBitmap.width
@@ -84,23 +86,29 @@ class AndroidExportPipelinePort(
                     imageInfo.height,
                 )
                 if (iconBitmapRect.isFailure() || iconBitmapRect.data == null) {
-                    return Result.failure(
-                        null,
-                        code = "-1",
-                        message = "decodeSampledBitmapFromResource == null",
+                    return ExportOutcome.failure(
+                        ExportFailure.Render(
+                            message = "decodeSampledBitmapFromResource == null",
+                        ),
                     )
                 }
                 iconBitmapRect.data!!.bitmap
             }
             WatermarkMode.Text -> null
         }
-        val mutableBitmap = AndroidCommonRaster.composeToBitmap(
-            context = appContext,
-            background = sourceBitmap,
-            config = config,
-            imageInfo = imageInfo,
-            icon = iconBitmap,
-        )
+        val mutableBitmap = try {
+            AndroidCommonRaster.composeToBitmap(
+                context = appContext,
+                background = sourceBitmap,
+                config = config,
+                imageInfo = imageInfo,
+                icon = iconBitmap,
+            )
+        } catch (e: Exception) {
+            return ExportOutcome.failure(
+                ExportFailure.Render(message = e.message ?: "compose failed"),
+            )
+        }
 
         val outputFormat = prefs.outputFormat
         val compressLevel = prefs.compressLevel
@@ -122,24 +130,45 @@ class AndroidExportPipelinePort(
                 }
 
                 val imageContentUri = contentResolver.insert(imageCollection, imageDetail)
-                contentResolver.openFileDescriptor(imageContentUri!!, "w", null).use { pfd ->
-                    encodeBitmap.compress(
+                    ?: return ExportOutcome.failure(
+                        ExportFailure.Persistence(message = "MediaStore insert returned null"),
+                    )
+                val byteCount = contentResolver.openFileDescriptor(imageContentUri, "w", null).use { pfd ->
+                    if (pfd == null) {
+                        return ExportOutcome.failure(
+                            ExportFailure.Persistence(message = "openFileDescriptor returned null"),
+                        )
+                    }
+                    val counting = CountingOutputStream(FileOutputStream(pfd.fileDescriptor))
+                    val ok = encodeBitmap.compress(
                         outputFormat.toCompressFormat(),
                         compressLevel,
-                        FileOutputStream(pfd!!.fileDescriptor),
+                        counting,
                     )
+                    if (!ok) {
+                        return ExportOutcome.failure(
+                            ExportFailure.Encode(message = "Bitmap.compress returned false"),
+                        )
+                    }
+                    counting.count
                 }
                 imageDetail.clear()
                 imageDetail.put(MediaStore.Images.Media.IS_PENDING, 0)
                 contentResolver.update(imageContentUri, imageDetail, null, null)
-                Result.success(imageContentUri.toMediaRef())
+                ExportOutcome.success(
+                    ExportedMedia(
+                        ref = imageContentUri.toMediaRef(),
+                        width = encodeBitmap.width,
+                        height = encodeBitmap.height,
+                        format = outputFormat,
+                        byteCount = byteCount,
+                    ),
+                )
             } else {
                 val picturesFile: File =
                     Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-                        ?: return Result.failure(
-                            null,
-                            code = "-1",
-                            message = "Can't get pictures directory.",
+                        ?: return ExportOutcome.failure(
+                            ExportFailure.Io(message = "Can't get pictures directory."),
                         )
                 if (!picturesFile.exists()) {
                     picturesFile.mkdir()
@@ -150,12 +179,19 @@ class AndroidExportPipelinePort(
                     mediaDir.mkdirs()
                 }
                 val outputFile = File(mediaDir, displayName)
-                outputFile.outputStream().use { fileOutputStream ->
-                    encodeBitmap.compress(
+                val byteCount = outputFile.outputStream().use { fileOutputStream ->
+                    val counting = CountingOutputStream(fileOutputStream)
+                    val ok = encodeBitmap.compress(
                         outputFormat.toCompressFormat(),
                         compressLevel,
-                        fileOutputStream,
+                        counting,
                     )
+                    if (!ok) {
+                        return ExportOutcome.failure(
+                            ExportFailure.Encode(message = "Bitmap.compress returned false"),
+                        )
+                    }
+                    counting.count
                 }
                 val outputUri = FileProvider.getUriForFile(
                     MyApp.instance,
@@ -168,7 +204,15 @@ class AndroidExportPipelinePort(
                     null,
                     null,
                 )
-                Result.success(outputUri.toMediaRef())
+                ExportOutcome.success(
+                    ExportedMedia(
+                        ref = outputUri.toMediaRef(),
+                        width = encodeBitmap.width,
+                        height = encodeBitmap.height,
+                        format = outputFormat,
+                        byteCount = byteCount,
+                    ),
+                )
             }
         } finally {
             if (ownsEncodeBitmap && !encodeBitmap.isRecycled) {
@@ -189,5 +233,27 @@ class AndroidExportPipelinePort(
         canvas.drawColor(Color.WHITE)
         canvas.drawBitmap(source, 0f, 0f, null)
         return flat
+    }
+
+    /** Counts bytes written while delegating to [delegate] (D1 ExportedMedia.byteCount). */
+    private class CountingOutputStream(
+        private val delegate: OutputStream,
+    ) : OutputStream() {
+        var count: Long = 0
+            private set
+
+        override fun write(b: Int) {
+            delegate.write(b)
+            count++
+        }
+
+        override fun write(b: ByteArray, off: Int, len: Int) {
+            delegate.write(b, off, len)
+            count += len.toLong()
+        }
+
+        override fun flush() = delegate.flush()
+
+        override fun close() = delegate.close()
     }
 }

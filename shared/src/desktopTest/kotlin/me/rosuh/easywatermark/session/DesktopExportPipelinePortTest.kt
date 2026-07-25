@@ -16,11 +16,13 @@ import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /**
  * Adapter-only contract for [DesktopExportPipelinePort]:
- * source validation, unique destination policy, [ImageInfo] dimension mapping, and [Result] mapping.
+ * source validation, unique destination policy, [ImageInfo] dimension mapping, and typed
+ * [ExportOutcome] mapping (D1).
  *
  * Exactly one success E2E proves Port → Spine handoff, unique naming, and C2 offset parity with
  * a Spine preview at the same frozen offset (lossless PNG pixel equality).
@@ -76,13 +78,18 @@ class DesktopExportPipelinePortTest {
         )
         val result = port.exportOne(info, config, prefs)
 
-        assertTrue(result.isSuccess(), result.message ?: result.code)
-        val out = File(result.data!!.value)
+        assertTrue(result.isSuccess(), (result as? ExportOutcome.Failure)?.failure?.message)
+        val media = (result as ExportOutcome.Success).media
+        val out = File(media.ref.value)
         assertEquals("watermarked_1.png", out.name, "unique policy must skip occupied base name")
         assertTrue(out.isFile)
         assertTrue(out.length() > 0)
         assertEquals(96, info.width)
         assertEquals(72, info.height)
+        assertEquals(96, media.width)
+        assertEquals(72, media.height)
+        assertEquals(ImageFormat.PNG, media.format)
+        assertEquals(out.length(), media.byteCount)
         assertContentEquals(sentinel, occupied.readBytes())
         // Lossless PNG: Port export must match Spine preview for same request/offset.
         assertContentEquals(previewTarget.readBytes(), out.readBytes())
@@ -100,7 +107,9 @@ class DesktopExportPipelinePortTest {
             UserPreferences.DEFAULT,
         )
         assertTrue(result.isFailure())
-        assertEquals(ExportErrorCodes.FILE_NOT_FOUND, result.code)
+        val failure = (result as ExportOutcome.Failure).failure
+        assertIs<ExportFailure.SourceDecode>(failure)
+        assertEquals(ExportErrorCodes.FILE_NOT_FOUND, failure.legacyCode)
     }
 
     @Test
@@ -113,7 +122,9 @@ class DesktopExportPipelinePortTest {
             UserPreferences.DEFAULT,
         )
         assertTrue(result.isFailure())
-        assertTrue(result.message?.contains("Empty") == true, result.message)
+        val failure = (result as ExportOutcome.Failure).failure
+        assertIs<ExportFailure.SourceDecode>(failure)
+        assertTrue(failure.message?.contains("Empty") == true, failure.message)
         assertTrue(dir.listFiles()?.none { it.name.startsWith("watermarked") } != false)
     }
 
@@ -129,8 +140,10 @@ class DesktopExportPipelinePortTest {
         )
         val result = port.exportOne(info, config, UserPreferences.DEFAULT)
         assertTrue(result.isFailure())
-        assertEquals(ExportErrorCodes.FILE_NOT_FOUND, result.code)
-        assertEquals(DesktopSaveDecision.EMPTY_ICON_MESSAGE, result.message)
+        val failure = (result as ExportOutcome.Failure).failure
+        assertIs<ExportFailure.Render>(failure)
+        assertEquals(ExportErrorCodes.RENDER, failure.legacyCode)
+        assertEquals(DesktopSaveDecision.EMPTY_ICON_MESSAGE, failure.message)
         assertEquals(1, info.width)
         assertEquals(1, info.height)
     }

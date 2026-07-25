@@ -369,14 +369,26 @@ open class WatermarkSessionViewModel(
                             totalCount = images.size,
                         ),
                     )
-                    val result = pipeline.exportOne(info, config, prefs)
-                    info.result = result
-                    info.jobState = if (result.isSuccess()) {
-                        JobState.Success(result)
-                    } else {
-                        JobState.Failure(result)
+                    // D1: consume typed ExportOutcome; bridge to Result<MediaRef> for hosts until D5.
+                    val outcome = pipeline.exportOne(info, config, prefs)
+                    when (outcome) {
+                        is ExportOutcome.Success -> {
+                            val media = outcome.media
+                            // Typed facts are source of truth; apply dims even if adapter skipped mutation.
+                            info.width = media.width
+                            info.height = media.height
+                            val result = outcome.toLegacyResult()
+                            info.result = result
+                            info.jobState = JobState.Success(result)
+                        }
+                        is ExportOutcome.Failure -> {
+                            val result = outcome.toLegacyResult()
+                            info.result = result
+                            info.jobState = JobState.Failure(result)
+                        }
                     }
                 } catch (e: Exception) {
+                    // D2 residual: CancellationException still caught here until cancel redesign.
                     val failure = Result.failure<MediaRef>(
                         null,
                         code = ExportErrorCodes.FILE_NOT_FOUND,

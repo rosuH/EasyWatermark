@@ -39,9 +39,17 @@ class OffsetExportOrderingTest {
             imageInfo: ImageInfo,
             config: WaterMark,
             prefs: UserPreferences,
-        ): Result<MediaRef> {
+        ): ExportOutcome {
             received.add(imageInfo)
-            return Result.success(MediaRef("file://export/${imageInfo.uri.value}"))
+            return ExportOutcome.success(
+                me.rosuh.easywatermark.data.model.ExportedMedia(
+                    ref = MediaRef("file://export/${imageInfo.uri.value}"),
+                    width = 1,
+                    height = 1,
+                    format = me.rosuh.easywatermark.data.model.ImageFormat.JPEG,
+                    byteCount = 1L,
+                ),
+            )
         }
     }
 

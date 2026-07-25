@@ -63,10 +63,12 @@ class AndroidExportPipelineMimeInstrumentedTest {
                 prefs = UserPreferences(ImageFormat.JPEG, 85),
             )
             assertTrue(
-                "exportOne must succeed (code=${result.code} msg=${result.message})",
+                "exportOne must succeed " +
+                    "(code=${(result as? ExportOutcome.Failure)?.failure?.legacyCode} " +
+                    "msg=${(result as? ExportOutcome.Failure)?.failure?.message})",
                 result.isSuccess(),
             )
-            outputUri = Uri.parse(result.data!!.value)
+            outputUri = Uri.parse((result as ExportOutcome.Success).media.ref.value)
             val projection = arrayOf(
                 MediaStore.Images.Media.MIME_TYPE,
                 MediaStore.Images.Media.DISPLAY_NAME,

@@ -33,6 +33,7 @@ import me.rosuh.easywatermark.data.repo.IosWatermarkConfigBridge
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.render.IosWatermarkRenderer
+import me.rosuh.easywatermark.session.ExportOutcome
 import me.rosuh.easywatermark.session.ExportPipelinePort
 import me.rosuh.easywatermark.session.IosAppServices
 import me.rosuh.easywatermark.session.IosSourceStager
@@ -75,11 +76,19 @@ class IosProductRootHostPreviewIdentityTest {
             imageInfo: ImageInfo,
             config: WaterMark,
             prefs: UserPreferences,
-        ): Result<MediaRef> {
+        ): ExportOutcome {
             receivedUris += imageInfo.uri.value
             imageInfo.width = 10
             imageInfo.height = 10
-            return Result.success(MediaRef("file://export-identity/${receivedUris.size}"))
+            return ExportOutcome.success(
+                me.rosuh.easywatermark.data.model.ExportedMedia(
+                    ref = MediaRef("file://export-identity/${receivedUris.size}"),
+                    width = 10,
+                    height = 10,
+                    format = me.rosuh.easywatermark.data.model.ImageFormat.JPEG,
+                    byteCount = 1L,
+                ),
+            )
         }
     }
 

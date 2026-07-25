@@ -39,6 +39,7 @@ import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
@@ -73,7 +74,9 @@ class IosExportPipelinePortTest {
             UserPreferences.DEFAULT,
         )
         assertTrue(result.isFailure())
-        assertEquals(ExportErrorCodes.FILE_NOT_FOUND, result.code)
+        val failure = (result as ExportOutcome.Failure).failure
+        assertIs<ExportFailure.SourceDecode>(failure)
+        assertEquals(ExportErrorCodes.FILE_NOT_FOUND, failure.legacyCode)
     }
 
     /**
@@ -117,12 +120,22 @@ class IosExportPipelinePortTest {
         try {
             val port = IosExportPipelinePort(imageModeFontProvider())
             val result = port.exportOne(imageInfo, config, prefs)
-            assertTrue(result.isSuccess(), "code=${result.code} msg=${result.message}")
-            val outputPath = result.data!!.value
+            assertTrue(
+                result.isSuccess(),
+                "code=${(result as? ExportOutcome.Failure)?.failure?.legacyCode} " +
+                    "msg=${(result as? ExportOutcome.Failure)?.failure?.message}",
+            )
+            val media = (result as ExportOutcome.Success).media
+            val outputPath = media.ref.value
             assertTrue(outputPath.endsWith(".jpg"), "JPEG prefs must yield .jpg path")
+            assertEquals(ImageFormat.JPEG, media.format)
+            assertEquals(2048, media.width)
+            assertEquals(1536, media.height)
+            assertTrue(media.byteCount > 0)
             val outputData = NSData.dataWithContentsOfFile(outputPath)
             assertNotNull(outputData)
             val outputBytes = IosByteArrayInterop.fromNSData(outputData)
+            assertEquals(outputBytes.size.toLong(), media.byteCount)
             assertTrue(
                 outputBytes[0] == 0xFF.toByte() &&
                     outputBytes[1] == 0xD8.toByte() &&
@@ -182,6 +195,8 @@ class IosExportPipelinePortTest {
         try {
             val result = port.exportOne(imageInfo, config, prefs)
             assertTrue(result.isFailure(), "forced write failure must fail the export")
+            val failure = (result as ExportOutcome.Failure).failure
+            assertIs<ExportFailure.Persistence>(failure)
             assertEquals(
                 1,
                 writeCalls,
@@ -235,8 +250,12 @@ class IosExportPipelinePortTest {
             assertEquals(1, info128.height)
 
             val r128 = port.exportOne(info128, base.copy(alpha = 128), prefs)
-            assertTrue(r128.isSuccess(), "α128 PNG: ${r128.code} ${r128.message}")
-            val p128 = r128.data!!.value
+            assertTrue(
+                r128.isSuccess(),
+                "α128 PNG: ${(r128 as? ExportOutcome.Failure)?.failure?.legacyCode} " +
+                    "${(r128 as? ExportOutcome.Failure)?.failure?.message}",
+            )
+            val p128 = (r128 as ExportOutcome.Success).media.ref.value
             outPaths += p128
             assertTrue(p128.endsWith(".png"), "PNG prefs → .png")
             val b128 = readFile(p128)
@@ -280,8 +299,12 @@ class IosExportPipelinePortTest {
                 base.copy(alpha = 255),
                 prefs,
             )
-            assertTrue(r255.isSuccess(), "α255 PNG: ${r255.code} ${r255.message}")
-            val p255 = r255.data!!.value
+            assertTrue(
+                r255.isSuccess(),
+                "α255 PNG: ${(r255 as? ExportOutcome.Failure)?.failure?.legacyCode} " +
+                    "${(r255 as? ExportOutcome.Failure)?.failure?.message}",
+            )
+            val p255 = (r255 as ExportOutcome.Success).media.ref.value
             outPaths += p255
             val b255 = readFile(p255)
 
@@ -490,8 +513,12 @@ class IosExportPipelinePortTest {
             offsetY = oy,
         )
         val result = port.exportOne(info, config, prefs)
-        assertTrue(result.isSuccess(), "export failed: ${result.code} ${result.message}")
-        val path = result.data!!.value
+        assertTrue(
+            result.isSuccess(),
+            "export failed: ${(result as? ExportOutcome.Failure)?.failure?.legacyCode} " +
+                "${(result as? ExportOutcome.Failure)?.failure?.message}",
+        )
+        val path = (result as ExportOutcome.Success).media.ref.value
         assertTrue(path.endsWith(".png"), "expected .png, got $path")
         val bytes = readFile(path)
         assertPngMagic(bytes)

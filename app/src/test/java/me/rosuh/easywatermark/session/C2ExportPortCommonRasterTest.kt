@@ -33,7 +33,7 @@ import java.io.File
 
 /**
  * ADR-0018: shipped [AndroidExportPipelinePort.exportOne] always uses common compose
- * ([AndroidCommonRaster]) and returns a non-empty [MediaRef].
+ * ([AndroidCommonRaster]) and returns typed [ExportOutcome] with [ExportedMedia] (D1).
  *
  * Uses plain [Application] because the Android decode edge consumes its caller-provided resolver and
  * has no process-singleton dependency.
@@ -75,11 +75,12 @@ class C2ExportPortCommonRasterTest {
             config = config,
             prefs = UserPreferences(ImageFormat.PNG, 90),
         )
-        assertTrue(
-            "PNG exportOne must succeed (code=${result.code} msg=${result.message})",
-            result.isSuccess(),
-        )
-        val outputUri = Uri.parse(result.data!!.value)
+        val media = requireSuccessMedia(result)
+        assertEquals(ImageFormat.PNG, media.format)
+        assertEquals(320, media.width)
+        assertEquals(240, media.height)
+        assertTrue("PNG byteCount must be positive", media.byteCount > 0)
+        val outputUri = Uri.parse(media.ref.value)
         val (mime, displayName) = queryMimeAndDisplayName(outputUri)
         assertEquals("image/png", mime)
         assertTrue("PNG display name must end with .png (got $displayName)", displayName!!.endsWith(".png"))
@@ -123,11 +124,10 @@ class C2ExportPortCommonRasterTest {
             ),
             prefs = UserPreferences(ImageFormat.JPEG, 90),
         )
-        assertTrue(
-            "JPEG exportOne must succeed (code=${result.code} msg=${result.message})",
-            result.isSuccess(),
-        )
-        val outputUri = Uri.parse(result.data!!.value)
+        val media = requireSuccessMedia(result)
+        assertEquals(ImageFormat.JPEG, media.format)
+        assertTrue("JPEG byteCount must be positive", media.byteCount > 0)
+        val outputUri = Uri.parse(media.ref.value)
         val (mime, displayName) = queryMimeAndDisplayName(outputUri)
         assertEquals("image/jpeg", mime)
         assertTrue(
@@ -179,13 +179,12 @@ class C2ExportPortCommonRasterTest {
             prefs = UserPreferences(ImageFormat.PNG, 100),
         )
 
-        assertTrue(
-            "orientation-7 export must succeed (code=${result.code} msg=${result.message})",
-            result.isSuccess(),
-        )
+        val media = requireSuccessMedia(result)
         assertEquals(BaseHeight, imageInfo.width)
         assertEquals(BaseWidth, imageInfo.height)
-        val outputUri = Uri.parse(result.data!!.value)
+        assertEquals(BaseHeight, media.width)
+        assertEquals(BaseWidth, media.height)
+        val outputUri = Uri.parse(media.ref.value)
         val outputBitmap = app.contentResolver.openInputStream(outputUri).use { input ->
             BitmapFactory.decodeStream(input)
         }
@@ -423,10 +422,12 @@ class C2ExportPortCommonRasterTest {
             config = config,
             prefs = UserPreferences(ImageFormat.PNG, 100),
         )
-        assertTrue("large export must succeed: ${result.message}", result.isSuccess())
+        val media = requireSuccessMedia(result)
         assertEquals(2048, info.width)
         assertEquals(1536, info.height)
-        val out = decodeUri(Uri.parse(result.data!!.value))
+        assertEquals(2048, media.width)
+        assertEquals(1536, media.height)
+        val out = decodeUri(Uri.parse(media.ref.value))
         assertEquals(2048, out.width)
         assertEquals(1536, out.height)
     }
@@ -494,8 +495,7 @@ class C2ExportPortCommonRasterTest {
                 prefs = UserPreferences(ImageFormat.PNG, 100),
             )
         }
-        assertTrue("export PNG failed: ${result.code} ${result.message}", result.isSuccess())
-        return decodeUri(Uri.parse(result.data!!.value))
+        return decodeUri(Uri.parse(requireSuccessMedia(result).ref.value))
     }
 
     private fun exportJpeg(src: File, config: WaterMark, quality: Int): Uri {
@@ -513,8 +513,17 @@ class C2ExportPortCommonRasterTest {
                 prefs = UserPreferences(ImageFormat.JPEG, quality),
             )
         }
-        assertTrue("export JPEG failed: ${result.code} ${result.message}", result.isSuccess())
-        return Uri.parse(result.data!!.value)
+        return Uri.parse(requireSuccessMedia(result).ref.value)
+    }
+
+    private fun requireSuccessMedia(result: ExportOutcome): me.rosuh.easywatermark.data.model.ExportedMedia {
+        assertTrue(
+            "exportOne must succeed: " +
+                "${(result as? ExportOutcome.Failure)?.failure?.legacyCode} " +
+                "${(result as? ExportOutcome.Failure)?.failure?.message}",
+            result.isSuccess(),
+        )
+        return (result as ExportOutcome.Success).media
     }
 
     private fun decodeUri(uri: Uri): Bitmap {
