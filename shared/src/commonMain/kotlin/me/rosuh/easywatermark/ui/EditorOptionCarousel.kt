@@ -29,6 +29,11 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.ui.theme.DesignChipSelected
@@ -51,6 +56,8 @@ fun <T> EditorOptionCarousel(
  * Falls back to index only when omitted.
      */
     itemKey: ((T) -> Any)? = null,
+    /** Stable accessibility/test identity for the real clickable option chip. */
+    itemTestTag: ((T) -> String)? = null,
     itemContent: @Composable (option: T, selected: Boolean) -> Unit,
 ) {
     var optionWidth by remember { mutableStateOf(0.dp) }
@@ -116,6 +123,14 @@ fun <T> EditorOptionCarousel(
                             Color.Transparent
                         },
                     )
+                    .then(
+                        itemTestTag?.invoke(item)?.let { Modifier.testTag(it) } ?: Modifier,
+                    )
+                    // I2: selected + Tab role; name comes from merged EditorOptionItem CD/label.
+                    .semantics(mergeDescendants = true) {
+                        this.selected = isSelected
+                        role = Role.Tab
+                    }
                     .clickable { onOptionSelected(item) },
             ) {
                 Column(

@@ -104,6 +104,8 @@ private fun EditorOptionControl(
                     modifier = innerModifier,
                     currentValue = WatermarkConfigRules.alphaByteToPercent(waterMark.alpha),
                     valueRange = spec.valueRange,
+                    // I2: product name for slider semantics.
+                    label = spec.type.label(),
                     // F2: emit typed command at control source (0..100 percent).
                     onValueChange = { onValueChange(WatermarkConfigChange.AlphaPercent(it)) },
                 )
@@ -114,6 +116,7 @@ private fun EditorOptionControl(
                     modifier = innerModifier,
                     currentValue = waterMark.textSize,
                     valueRange = spec.valueRange,
+                    label = spec.type.label(),
                     onValueChange = { onValueChange(WatermarkConfigChange.TextSize(it)) },
                 )
             }
@@ -123,6 +126,7 @@ private fun EditorOptionControl(
                     modifier = innerModifier,
                     currentValue = waterMark.vGap.toFloat(),
                     valueRange = spec.valueRange,
+                    label = spec.type.label(),
                     // Preserve legacy (Float).roundToInt() at emission.
                     onValueChange = {
                         onValueChange(WatermarkConfigChange.VerticalGap(it.roundToInt()))
@@ -135,6 +139,7 @@ private fun EditorOptionControl(
                     modifier = innerModifier,
                     currentValue = waterMark.hGap.toFloat(),
                     valueRange = spec.valueRange,
+                    label = spec.type.label(),
                     onValueChange = {
                         onValueChange(WatermarkConfigChange.HorizontalGap(it.roundToInt()))
                     },
@@ -146,6 +151,7 @@ private fun EditorOptionControl(
                     modifier = innerModifier,
                     currentValue = waterMark.degree,
                     valueRange = spec.valueRange,
+                    label = spec.type.label(),
                     onValueChange = { onValueChange(WatermarkConfigChange.Degree(it)) },
                 )
             }

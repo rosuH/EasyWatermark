@@ -16,7 +16,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -45,7 +50,7 @@ fun <T> DesignChoiceChips(
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        options.forEach { option ->
+        options.forEachIndexed { index, option ->
             val isSelected = option.value == selected
             val bg = if (isSelected) DesignChipSelected else Color.Transparent
             val fg = when {
@@ -59,8 +64,15 @@ fun <T> DesignChoiceChips(
                     .height(40.dp)
                     .clip(RoundedCornerShape(2.dp))
                     .background(bg)
+                    .testTag("choice-$index")
                     .clickable(enabled = enabled) { onSelected(option.value) }
-                    .semantics { contentDescription = option.label }
+                    // I2: name + Radio role + selected/disabled (exclusive choice set).
+                    .semantics {
+                        contentDescription = option.label
+                        this.selected = isSelected
+                        role = Role.RadioButton
+                        if (!enabled) disabled()
+                    }
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {

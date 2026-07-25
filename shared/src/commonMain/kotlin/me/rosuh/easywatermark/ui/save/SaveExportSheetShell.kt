@@ -20,7 +20,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.data.model.ImageFormat
@@ -150,7 +152,11 @@ fun <T> SaveExportSheetShell(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 16.dp)
-                    .semantics { contentDescription = statusCd }
+                    // I2: polite live region so count/progress CD is announced (not color-only).
+                    .semantics {
+                        contentDescription = statusCd
+                        liveRegion = LiveRegionMode.Polite
+                    }
                     .testTag("sharedComposeExportStatus"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -162,6 +168,10 @@ fun <T> SaveExportSheetShell(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 4.dp)
+                        .semantics {
+                            contentDescription = countsLine
+                            if (isExporting) liveRegion = LiveRegionMode.Polite
+                        }
                         .testTag("sharedComposeExportCounts"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

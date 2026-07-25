@@ -26,12 +26,18 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import me.rosuh.easywatermark.ui.AccessibilitySemantics
 import me.rosuh.easywatermark.ui.theme.DesignEditorBg
 import me.rosuh.easywatermark.ui.theme.DesignSliderTrack
 import kotlin.math.roundToInt
@@ -54,6 +60,11 @@ fun SliderOption(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     /**
+     * Optional product name for a11y (I2). Combined with the current value for
+     * [contentDescription]; omit when a visible text label already merges in the parent.
+     */
+    label: String? = null,
+    /**
  * Snap interval within [valueRange] (e.g. `20f` → 20/40/60/80/100).
  * `null` = integer steps across the full span (editor default).
      */
@@ -69,6 +80,8 @@ fun SliderOption(
         valueRange.endInclusive..valueRange.start
     }
     val coerced = currentValue.coerceIn(safeRange.start, safeRange.endInclusive)
+    val valueDisplay = coerced.roundToInt().toString()
+    val a11yName = AccessibilitySemantics.sliderContentDescription(label, valueDisplay)
     // Material `steps` = intermediate stops only (not including endpoints).
     val span = (safeRange.endInclusive - safeRange.start)
     val steps = when {
@@ -106,7 +119,15 @@ fun SliderOption(
     )
 
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            // I2: name + value/state; disabled when not interactive.
+            .semantics(mergeDescendants = true) {
+                contentDescription = a11yName
+                stateDescription = valueDisplay
+                if (!enabled) disabled()
+            }
+            .testTag("sliderOption"),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -119,7 +140,8 @@ fun SliderOption(
             valueRange = safeRange,
             modifier = Modifier
                 .weight(1f)
-                .height(SliderHitHeight),
+                .height(SliderHitHeight)
+                .testTag("sliderTrack"),
             colors = colors,
             interactionSource = interactionSource,
             thumb = {
@@ -149,12 +171,14 @@ fun SliderOption(
         )
         // Value label only — no white bubble (owner request / design polish).
         Text(
-            text = coerced.roundToInt().toString(),
+            text = valueDisplay,
             color = if (enabled) Color.White else Color.White.copy(alpha = 0.4f),
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.End,
-            modifier = Modifier.widthIn(min = 28.dp),
+            modifier = Modifier
+                .widthIn(min = 28.dp)
+                .testTag("sliderValue"),
         )
     }
 }

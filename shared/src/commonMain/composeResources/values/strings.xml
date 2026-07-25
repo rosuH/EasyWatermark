@@ -147,6 +147,10 @@
     <string name="cd_add_more_images">Add more images</string>
     <string name="cd_save">Save</string>
     <string name="cd_back">Back</string>
+    <!-- I2 accessibility: selection / checkbox state phrases -->
+    <string name="cd_selected">Selected</string>
+    <string name="cd_unselected">Not selected</string>
+    <string name="cd_checkbox">Checkbox</string>
     <string name="template_edit">Edit</string>
     <string name="template_delete">Delete</string>
     <string name="tips_images_selected">%1$d image(s) selected</string>

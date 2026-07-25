@@ -103,6 +103,8 @@ fun SaveExportOptionsSection(
                 valueRange = 20f..100f,
                 step = 20f,
                 enabled = qualityEnabled,
+                // I2: quality label for slider name + value semantics.
+                label = qualityLabel,
                 onValueChange = { raw ->
                     if (qualityEnabled) {
                         onQualityChange(raw.toInt().coerceIn(20, 100))

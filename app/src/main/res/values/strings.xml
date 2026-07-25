@@ -135,4 +135,8 @@
     <string name="tips_database_init_error">Database init failed.</string>
     <string name="tile_mode_title_repeat">Repeat</string>
     <string name="tile_mode_title_decal">Single</string>
+    <!-- I2 accessibility: selection / checkbox state phrases (dual-write with composeResources) -->
+    <string name="cd_selected">Selected</string>
+    <string name="cd_unselected">Not selected</string>
+    <string name="cd_checkbox">Checkbox</string>
 </resources>

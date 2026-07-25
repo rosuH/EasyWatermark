@@ -39,9 +39,21 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import me.rosuh.easywatermark.shared.generated.resources.Res
+import me.rosuh.easywatermark.shared.generated.resources.cd_checkbox
+import me.rosuh.easywatermark.shared.generated.resources.cd_selected
+import me.rosuh.easywatermark.shared.generated.resources.cd_unselected
 import me.rosuh.easywatermark.ui.theme.DesignChipSelected
+import org.jetbrains.compose.resources.stringResource
 import kotlin.math.max
 import kotlin.math.min
 
@@ -204,11 +216,27 @@ private fun GalleryImageCard(
     modifier: Modifier = Modifier,
     thumbnail: @Composable (image: Image, contentDescription: String, modifier: Modifier) -> Unit,
 ) {
+    val selectedPhrase = stringResource(Res.string.cd_selected)
+    val unselectedPhrase = stringResource(Res.string.cd_unselected)
+    val cardCd = AccessibilitySemantics.galleryImageContentDescription(
+        imageName = image.name,
+        selected = selected,
+        selectedPhrase = selectedPhrase,
+        unselectedPhrase = unselectedPhrase,
+    )
     Box(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(1f)
             .background(DesignChipSelected)
+            // I2: name + selected + checkbox role (not color-only selection).
+            .semantics {
+                contentDescription = cardCd
+                this.selected = selected
+                stateDescription = if (selected) selectedPhrase else unselectedPhrase
+                role = Role.Checkbox
+            }
+            .testTag("galleryImageCard")
             .clickable(onClick = onToggle),
     ) {
         // Fixed layout bounds for the thumb; selection is Draw-phase scale only.
@@ -259,6 +287,13 @@ private fun CircleCheckBox(
         BorderStroke(2.dp, color.onSurface.copy(alpha = 0.6f))
     }
     val interactionSource = remember { MutableInteractionSource() }
+    val checkboxLabel = stringResource(Res.string.cd_checkbox)
+    // Parent GalleryImageCard owns full selection CD; icon is decorative when selected.
+    val iconCd = if (selected) {
+        AccessibilitySemantics.checkboxContentDescription(checkboxLabel, selected = true)
+    } else {
+        null
+    }
     val boxModifier = if (selected) {
         modifier.background(color.secondary, shape = CircleShape)
     } else {
@@ -276,7 +311,7 @@ private fun CircleCheckBox(
         if (selected) {
             FoundationImage(
                 painter = checkIcon,
-                contentDescription = "check box",
+                contentDescription = iconCd,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxSize(),
             )

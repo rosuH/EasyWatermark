@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
@@ -39,6 +40,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlin.math.absoluteValue
@@ -261,11 +264,18 @@ private fun AboutRow(
 
 @Composable
 private fun SwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    // I2: single toggleable row (name = label text, Role.Switch, checked state).
+    // Switch is visual only so TalkBack does not see two separate focus targets.
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) }
-            .padding(horizontal = 24.dp, vertical = 12.dp),
+            .toggleable(
+                value = checked,
+                role = Role.Switch,
+                onValueChange = onCheckedChange,
+            )
+            .padding(horizontal = 24.dp, vertical = 12.dp)
+            .testTag("aboutSwitchRow"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -276,7 +286,7 @@ private fun SwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean
         )
         Switch(
             checked = checked,
-            onCheckedChange = onCheckedChange,
+            onCheckedChange = null,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = DesignEditorBg,
                 checkedTrackColor = DesignBrand,
