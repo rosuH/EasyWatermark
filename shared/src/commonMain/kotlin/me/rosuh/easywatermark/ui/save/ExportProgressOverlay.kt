@@ -26,7 +26,10 @@ import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.data.model.JobState
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.ic_save_done
+import me.rosuh.easywatermark.ui.theme.EwmTheme
+import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
 import me.rosuh.easywatermark.ui.theme.md_theme_dark_tertiary
+import me.rosuh.easywatermark.ui.theme.motionDurationMs
 import org.jetbrains.compose.resources.painterResource
 
 /**
@@ -58,8 +61,10 @@ fun ExportProgressOverlay(
     // Survives only while this item stays composed; on recycle we snap without re-playing.
     var lastPhase by remember { mutableStateOf(Phase.Ready) }
     var showCheck by remember { mutableStateOf(false) }
+    // I3: honor MotionPolicy (0ms → snap via animateTo with empty duration).
+    val wipeMs = motionDurationMs(currentMotionPolicy(), EwmTheme.motion.exportWipeMs)
 
-    LaunchedEffect(phase) {
+    LaunchedEffect(phase, wipeMs) {
         when (phase) {
             Phase.Ready -> {
                 progress.snapTo(0f)
@@ -74,10 +79,14 @@ fun ExportProgressOverlay(
                 } else {
                     progress.snapTo(0f)
                     // Production start(): 0 → 0.25
-                    progress.animateTo(
-                        0.25f,
-                        animationSpec = tween(durationMillis = 400, easing = LinearEasing),
-                    )
+                    if (wipeMs <= 0) {
+                        progress.snapTo(0.25f)
+                    } else {
+                        progress.animateTo(
+                            0.25f,
+                            animationSpec = tween(durationMillis = wipeMs, easing = LinearEasing),
+                        )
+                    }
                 }
                 lastPhase = Phase.Ing
             }
@@ -91,10 +100,14 @@ fun ExportProgressOverlay(
                     Phase.Ing -> {
                         val from = progress.value.coerceAtLeast(0.25f)
                         progress.snapTo(from)
-                        progress.animateTo(
-                            1f,
-                            animationSpec = tween(durationMillis = 400, easing = LinearEasing),
-                        )
+                        if (wipeMs <= 0) {
+                            progress.snapTo(1f)
+                        } else {
+                            progress.animateTo(
+                                1f,
+                                animationSpec = tween(durationMillis = wipeMs, easing = LinearEasing),
+                            )
+                        }
                         showCheck = true
                     }
                     else -> {

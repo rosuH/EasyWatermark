@@ -16,10 +16,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
+import me.rosuh.easywatermark.ui.theme.EwmTheme
+import me.rosuh.easywatermark.ui.theme.MotionPolicy
+import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
+import me.rosuh.easywatermark.ui.theme.motionDurationMs
 
 /**
  * Shared product-shell navigator for Launch / Editor / About.
  * Platforms keep Activity/window containers only; route transitions live here.
+ * I3: durations honor [currentMotionPolicy] (0 = instant under Off).
  */
 @Composable
 fun ProductShellHost(
@@ -27,10 +32,11 @@ fun ProductShellHost(
     modifier: Modifier = Modifier,
     content: @Composable (route: ProductShellNav.Route) -> Unit,
 ) {
+    val motionPolicy = currentMotionPolicy()
     AnimatedContent(
         targetState = route,
         transitionSpec = {
-            ProductShellTransitions.transform(initialState, targetState)
+            ProductShellTransitions.transform(initialState, targetState, motionPolicy)
         },
         contentAlignment = Alignment.Center,
         label = "productShellRoute",
@@ -50,22 +56,41 @@ fun ProductShellHost(
  * On enter (target z=1) and on exit (target Launch/Editor z=0 so prior About z=1 wins). * Without this, exit draws home on top of About and looks like a hard cover-up.
  */
 object ProductShellTransitions {
-    /** ~ [android.R.integer.config_mediumAnimTime] */
-    private val MediumFloat = tween<Float>(durationMillis = 340, easing = FastOutSlowInEasing)
-    private val MediumOffset = tween<IntOffset>(durationMillis = 340, easing = FastOutSlowInEasing)
-    private val ShortFloat = tween<Float>(durationMillis = 240, easing = FastOutSlowInEasing)
-    private val ShortOffset = tween<IntOffset>(durationMillis = 240, easing = FastOutSlowInEasing)
-
     /** About sits above Launch/Editor during open *and* close. */
     private const val AboutZ = 1f
 
     /** Screens under About. */
     private const val UnderAboutZ = 0f
 
+    private fun mediumFloat(policy: MotionPolicy) = tween<Float>(
+        durationMillis = motionDurationMs(policy, EwmTheme.motion.shellMediumMs),
+        easing = FastOutSlowInEasing,
+    )
+
+    private fun mediumOffset(policy: MotionPolicy) = tween<IntOffset>(
+        durationMillis = motionDurationMs(policy, EwmTheme.motion.shellMediumMs),
+        easing = FastOutSlowInEasing,
+    )
+
+    private fun shortFloat(policy: MotionPolicy) = tween<Float>(
+        durationMillis = motionDurationMs(policy, EwmTheme.motion.shellShortMs),
+        easing = FastOutSlowInEasing,
+    )
+
+    private fun shortOffset(policy: MotionPolicy) = tween<IntOffset>(
+        durationMillis = motionDurationMs(policy, EwmTheme.motion.shellShortMs),
+        easing = FastOutSlowInEasing,
+    )
+
     fun transform(
         initialState: ProductShellNav.Route,
         targetState: ProductShellNav.Route,
+        motionPolicy: MotionPolicy = MotionPolicy.Full,
     ): ContentTransform {
+        val mediumFloat = mediumFloat(motionPolicy)
+        val mediumOffset = mediumOffset(motionPolicy)
+        val shortFloat = shortFloat(motionPolicy)
+        val shortOffset = shortOffset(motionPolicy)
         val toAbout = targetState == ProductShellNav.Route.About
         val fromAbout = initialState == ProductShellNav.Route.About
         val toEditor = targetState == ProductShellNav.Route.Editor
@@ -76,32 +101,32 @@ object ProductShellTransitions {
             // Production open_in / open_out — About enters on top.
             toAbout -> {
                 contentTransform(
-                    enter = slideInHorizontally(animationSpec = MediumOffset) { full -> full } +
-                        scaleIn(initialScale = 0.75f, animationSpec = MediumFloat),
-                    exit = slideOutHorizontally(animationSpec = MediumOffset) { full ->
+                    enter = slideInHorizontally(animationSpec = mediumOffset) { full -> full } +
+                        scaleIn(initialScale = 0.75f, animationSpec = mediumFloat),
+                    exit = slideOutHorizontally(animationSpec = mediumOffset) { full ->
                         (-full * 0.15f).toInt()
-                    } + scaleOut(targetScale = 0.5f, animationSpec = MediumFloat),
+                    } + scaleOut(targetScale = 0.5f, animationSpec = mediumFloat),
                     targetZ = AboutZ,
                 )
             }
             // Production close_in / close_out — About (initial, z=1) stays on top while exiting.
             fromAbout -> {
                 contentTransform(
-                    enter = slideInHorizontally(animationSpec = MediumOffset) { full ->
+                    enter = slideInHorizontally(animationSpec = mediumOffset) { full ->
                         (-full * 0.15f).toInt()
-                    } + scaleIn(initialScale = 0.45f, animationSpec = MediumFloat),
-                    exit = slideOutHorizontally(animationSpec = MediumOffset) { full -> full } +
-                        scaleOut(targetScale = 0.75f, animationSpec = MediumFloat),
+                    } + scaleIn(initialScale = 0.45f, animationSpec = mediumFloat),
+                    exit = slideOutHorizontally(animationSpec = mediumOffset) { full -> full } +
+                        scaleOut(targetScale = 0.75f, animationSpec = mediumFloat),
                     // Launch/Editor is the target: keep it *under* the exiting About.
                     targetZ = UnderAboutZ,
                 )
             }
             fromLaunch && toEditor -> {
                 contentTransform(
-                    enter = fadeIn(animationSpec = ShortFloat) +
-                        slideInHorizontally(animationSpec = ShortOffset) { full -> full },
-                    exit = fadeOut(animationSpec = ShortFloat) +
-                        slideOutHorizontally(animationSpec = ShortOffset) { full ->
+                    enter = fadeIn(animationSpec = shortFloat) +
+                        slideInHorizontally(animationSpec = shortOffset) { full -> full },
+                    exit = fadeOut(animationSpec = shortFloat) +
+                        slideOutHorizontally(animationSpec = shortOffset) { full ->
                             (-full * 0.12f).toInt()
                         },
                     targetZ = 0f,
@@ -109,19 +134,19 @@ object ProductShellTransitions {
             }
             fromEditor && toLaunch -> {
                 contentTransform(
-                    enter = fadeIn(animationSpec = ShortFloat) +
-                        slideInHorizontally(animationSpec = ShortOffset) { full ->
+                    enter = fadeIn(animationSpec = shortFloat) +
+                        slideInHorizontally(animationSpec = shortOffset) { full ->
                             (-full * 0.12f).toInt()
                         },
-                    exit = fadeOut(animationSpec = ShortFloat) +
-                        slideOutHorizontally(animationSpec = ShortOffset) { full -> full },
+                    exit = fadeOut(animationSpec = shortFloat) +
+                        slideOutHorizontally(animationSpec = shortOffset) { full -> full },
                     targetZ = 0f,
                 )
             }
             else -> {
                 contentTransform(
-                    enter = fadeIn(animationSpec = ShortFloat),
-                    exit = fadeOut(animationSpec = ShortFloat),
+                    enter = fadeIn(animationSpec = shortFloat),
+                    exit = fadeOut(animationSpec = shortFloat),
                     targetZ = 0f,
                 )
             }

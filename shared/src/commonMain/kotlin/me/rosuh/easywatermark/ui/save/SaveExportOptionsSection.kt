@@ -19,6 +19,9 @@ import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.ui.compose.DesignChoiceChips
 import me.rosuh.easywatermark.ui.compose.DesignChoiceOption
 import me.rosuh.easywatermark.ui.compose.SliderOption
+import me.rosuh.easywatermark.ui.theme.EwmTheme
+import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
+import me.rosuh.easywatermark.ui.theme.motionDurationMs
 
 /**
  * Shared CMP output settings for the save/export sheet — design-aligned chips + [SliderOption].
@@ -41,12 +44,14 @@ fun SaveExportOptionsSection(
     val qualityEnabled = enabled && qualityApplies
     // Soft mute when PNG — layout height stays stable.
     val qualityAlpha = if (qualityApplies) 1f else 0.38f
+    // I3: animateContentSize duration follows MotionPolicy (0 when Off).
+    val contentSizeMs = motionDurationMs(currentMotionPolicy(), EwmTheme.motion.contentSizeMs)
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .animateContentSize(
-                animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing),
+                animationSpec = tween(durationMillis = contentSizeMs, easing = FastOutSlowInEasing),
             ),
     ) {
         Text(

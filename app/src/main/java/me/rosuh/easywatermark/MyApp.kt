@@ -32,6 +32,8 @@ class MyApp : Application() {
             modules(appModule)
         }
         CMonet.init(this, true)
+        // I3: ContentResolver for platformMotionPolicy (animator scale / reduce motion).
+        me.rosuh.easywatermark.platform.AndroidMotionContentResolver.install(contentResolver)
         if (checkRecoveryMode()) return
     }
 

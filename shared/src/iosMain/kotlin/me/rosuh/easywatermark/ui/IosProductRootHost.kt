@@ -84,7 +84,9 @@ import me.rosuh.easywatermark.ui.compose.IconWatermarkOption
 import me.rosuh.easywatermark.ui.compose.TextColorOption
 import me.rosuh.easywatermark.ui.compose.formatArgbHexColor
 import me.rosuh.easywatermark.ui.save.SaveExportSheetShell
+import me.rosuh.easywatermark.platform.platformMotionPolicy
 import me.rosuh.easywatermark.ui.theme.AppTheme
+import me.rosuh.easywatermark.ui.theme.ProvideMotionPolicy
 import org.jetbrains.compose.resources.stringResource
 import platform.Foundation.NSData
 import platform.Foundation.NSUserDefaults
@@ -404,6 +406,8 @@ class IosProductRootHost(
 
     fun viewController(): UIViewController = ComposeUIViewController {
         AppTheme(darkTheme = true) {
+            // I3: UIAccessibility reduce motion → MotionPolicy.Reduced when enabled.
+            ProvideMotionPolicy(platformMotionPolicy()) {
             val waterMark by services.waterMarkRepo.waterMark.collectAsState(WaterMark.default)
             val launchUi by services.session.launchScreenUiStateFlow.collectAsState()
             val exportJob by services.session.exportJobState.collectAsState()
@@ -1145,8 +1149,9 @@ class IosProductRootHost(
                     }
                 }
             }
-        }
-    }
+            } // ProvideMotionPolicy
+        } // AppTheme
+    } // ComposeUIViewController
 
     /**
      * Legacy optimistic shell only — does **not** stage or retain multi full-res owners.

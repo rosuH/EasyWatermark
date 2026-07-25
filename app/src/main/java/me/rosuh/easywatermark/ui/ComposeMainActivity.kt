@@ -220,6 +220,10 @@ class ComposeMainActivity : ComponentActivity() {
 
         setContent {
             val windowSizeClass = calculateWindowSizeClass(this)
+            // I3: feed MotionPolicy from OS animator scale / reduce-motion flags.
+            val motionPolicy = remember {
+                me.rosuh.easywatermark.platform.platformMotionPolicy()
+            }
 
             CompositionLocalProvider(
                 compositionLocalOf<WindowSizeClass> { error("SizeClass not present") } provides calculateWindowSizeClass(
@@ -229,6 +233,7 @@ class ComposeMainActivity : ComponentActivity() {
                 // Parity (ADR-0011): production applies Material You on dynamic-color-allowed devices.
                 // routed through the ADR-0007 DynamicColorCapability (Android delegates to :cmonet).
                 AppTheme(dynamicColor = dynamicColorCapability.isAvailable()) {
+                    me.rosuh.easywatermark.ui.theme.ProvideMotionPolicy(motionPolicy) {
                     val surfaceColor = MaterialTheme.colorScheme.surface
                     val isDark = surfaceColor.luminance() < 0.5f
 
@@ -750,9 +755,10 @@ class ComposeMainActivity : ComponentActivity() {
                             }
                         }
                     }
-                }
-            }
-        }
+                    } // ProvideMotionPolicy
+                } // AppTheme
+            } // CompositionLocalProvider WindowSizeClass
+        } // setContent
     }
 }
 

@@ -133,7 +133,9 @@ import me.rosuh.easywatermark.ui.save.SaveCommandActionsLabels
 import me.rosuh.easywatermark.ui.save.SaveExportOptionsSection
 import me.rosuh.easywatermark.ui.save.SaveExportSheetShell
 
+import me.rosuh.easywatermark.platform.platformMotionPolicy
 import me.rosuh.easywatermark.ui.theme.AppTheme
+import me.rosuh.easywatermark.ui.theme.ProvideMotionPolicy
 import org.jetbrains.compose.resources.stringResource
 import java.awt.Desktop
 import java.awt.FileDialog
@@ -652,6 +654,8 @@ fun launchDesktopWindow() = application {
 
     Window(onCloseRequest = ::closeDesktopWindow, title = "EasyWatermark — Desktop") {
         AppTheme(darkTheme = true) {
+            // I3: Desktop platformMotionPolicy is Full (no OS reduce-motion API).
+            ProvideMotionPolicy(platformMotionPolicy()) {
             // E1: Session-only current for filmstrip (no host selectedSessionImage mirror).
             val selectedForStrip = launchUi.curImageInfo
                 ?: sessionImages.firstOrNull()
@@ -1382,6 +1386,7 @@ fun launchDesktopWindow() = application {
                     }
                 }
             }
-        }
-    }
+            } // ProvideMotionPolicy
+        } // AppTheme
+    } // Window
 }

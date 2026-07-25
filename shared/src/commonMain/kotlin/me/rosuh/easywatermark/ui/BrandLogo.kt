@@ -24,14 +24,19 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import me.rosuh.easywatermark.ui.theme.EwmTheme
+import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
+import me.rosuh.easywatermark.ui.theme.motionAllowsDecorativeLoop
 import org.jetbrains.compose.resources.painterResource
 
 /**
  * Product launch logo from composeResources [SharedProductDrawables.brandLogo]
  * (`ic_log_transparent`).
  *
- * When [animate] is true, applies production [ColoredImageVIew]-style sweeping multi-stop
- * Linear gradient with [BlendMode.SrcAtop] (2.5s reverse infinite). Static Image when false. */
+ * When [animate] is true **and** [currentMotionPolicy] allows decorative loops (Full),
+ * applies production sweeping multi-stop gradient (2.5s reverse infinite).
+ * Reduced/Off → static Image (I3 MotionPolicy).
+ */
 @Composable
 fun BrandLogo(
     modifier: Modifier = Modifier,
@@ -70,7 +75,7 @@ fun AboutPageLogo(
  * Shared gradient-mask logo (parity with Android [me.rosuh.easywatermark.ui.widget.ColoredImageVIew]).
  *
  * Gradient stops match production static palette (#FFA51F → #FFD703 → #C0FF39 → #00FFE0).
- * Sweep position animates 1→0.1 over 2500ms, reverse infinite.
+ * Sweep position animates 1→0.1 over [EwmTheme.motion.logoSweepMs], reverse infinite (Full only).
  */
 @Composable
 fun GradientMaskedLogo(
@@ -80,7 +85,9 @@ fun GradientMaskedLogo(
     size: Dp = 180.dp,
     animate: Boolean = true,
 ) {
-    if (!animate) {
+    // I3: Reduced/Off suppress infinite decorative sweep even if caller passed animate=true.
+    val effectiveAnimate = animate && motionAllowsDecorativeLoop(currentMotionPolicy())
+    if (!effectiveAnimate) {
         Image(
             painter = painter,
             contentDescription = contentDescription,
@@ -90,12 +97,13 @@ fun GradientMaskedLogo(
         return
     }
 
+    val sweepMs = EwmTheme.motion.logoSweepMs
     val transition = rememberInfiniteTransition(label = "logoGradient")
     val pos by transition.animateFloat(
         initialValue = 1f,
         targetValue = 0.1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2500, easing = LinearEasing),
+            animation = tween(durationMillis = sweepMs, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "logoGradientPos",
