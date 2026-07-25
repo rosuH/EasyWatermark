@@ -11,10 +11,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.testTag
-import me.rosuh.easywatermark.data.model.FuncType
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkConfigChange
 import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.about_title_about
@@ -62,7 +62,7 @@ fun EditorScreen(
     onShowSaveDialog: () -> Unit,
     onGoAboutScreen: () -> Unit,
     onImageSelected: (ImageInfo) -> Unit,
-    onConfigChange: (type: FuncType, value: Any) -> Unit,
+    onConfigChange: (WatermarkConfigChange) -> Unit,
     onUseTemplate: (Template) -> Unit,
     onAddTemplate: (String) -> Unit,
     onUpdateTemplate: (Template) -> Unit,

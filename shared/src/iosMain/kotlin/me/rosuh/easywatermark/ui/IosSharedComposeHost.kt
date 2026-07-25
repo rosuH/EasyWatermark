@@ -37,6 +37,7 @@ import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.FuncType
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
+import me.rosuh.easywatermark.data.model.WatermarkConfigChange
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.render.IosImageDecoder
 import me.rosuh.easywatermark.ui.about.AboutDevCard
@@ -682,63 +683,57 @@ class IosEditorScreenHost(
                             EditorBottomControls(
                                 waterMark = waterMark,
                                                                 templateIcon = null,
-                                onValueChange = { type, value ->
-                                    when (type) {
-                                        FuncType.Text -> {
-                                            val next = value as String
-                                            pendingText = next
-                                            state = state.copy(text = next)
-                                            onTextChange(next)
+                                // F2: typed WatermarkConfigChange from EditorBottomControls.
+                                onValueChange = { change ->
+                                    when (change) {
+                                        is WatermarkConfigChange.Text -> {
+                                            pendingText = change.text
+                                            state = state.copy(text = change.text)
+                                            onTextChange(change.text)
                                         }
-                                        FuncType.Degree -> {
-                                            val next = value as Float
-                                            degree = next
-                                            pendingDegree = next
-                                            onDegreeFinished(next)
+                                        is WatermarkConfigChange.Degree -> {
+                                            degree = change.degree
+                                            pendingDegree = change.degree
+                                            onDegreeFinished(change.degree)
                                         }
-                                        FuncType.Alpha -> {
-                                            val next = value as Float
-                                            alphaPercent = next
-                                            pendingAlphaPercent = next
-                                            onAlphaFinished(next)
+                                        is WatermarkConfigChange.AlphaPercent -> {
+                                            alphaPercent = change.percent
+                                            pendingAlphaPercent = change.percent
+                                            onAlphaFinished(change.percent)
                                         }
-                                        FuncType.TextSize -> {
-                                            val next = value as Float
-                                            textSize = next
-                                            pendingTextSize = next
-                                            onTextSizeFinished(next)
+                                        is WatermarkConfigChange.TextSize -> {
+                                            textSize = change.size
+                                            pendingTextSize = change.size
+                                            onTextSizeFinished(change.size)
                                         }
-                                        FuncType.Horizon -> {
-                                            val next = value as Float
+                                        is WatermarkConfigChange.HorizontalGap -> {
+                                            val next = change.gap.toFloat()
                                             horizontalGap = next
                                             pendingHorizontalGap = next
                                             onHorizontalGapFinished(next)
                                         }
-                                        FuncType.Vertical -> {
-                                            val next = value as Float
+                                        is WatermarkConfigChange.VerticalGap -> {
+                                            val next = change.gap.toFloat()
                                             verticalGap = next
                                             pendingVerticalGap = next
                                             onVerticalGapFinished(next)
                                         }
-                                        FuncType.Color -> {
-                                            val next = value as Int
-                                            pendingColor = next
-                                            state = state.copy(textColor = next)
-                                            onColorSelected(next)
+                                        is WatermarkConfigChange.Color -> {
+                                            pendingColor = change.color
+                                            state = state.copy(textColor = change.color)
+                                            onColorSelected(change.color)
                                         }
-                                        FuncType.TileMode -> {
-                                            val next = value as WatermarkTileMode
-                                            pendingTileMode = next
-                                            state = state.copy(tileMode = next)
-                                            onTileModeChange(next)
+                                        is WatermarkConfigChange.TileMode -> {
+                                            pendingTileMode = change.tileMode
+                                            state = state.copy(tileMode = change.tileMode)
+                                            onTileModeChange(change.tileMode)
                                         }
-                                        FuncType.TextTypeFace -> {
-                                            val next = value as TextTypeface
-                                            pendingTypeface = next
-                                            state = state.copy(typeface = next)
-                                            onTypefaceChange(next)
+                                        is WatermarkConfigChange.Typeface -> {
+                                            pendingTypeface = change.typeface
+                                            state = state.copy(typeface = change.typeface)
+                                            onTypefaceChange(change.typeface)
                                         }
-                                        FuncType.Icon -> {
+                                        is WatermarkConfigChange.Icon -> {
                                             // Icon bytes arrive via PhotosPicker + update(); picker is the edge.
                                             onPickIcon()
                                         }

@@ -47,6 +47,7 @@ import me.rosuh.easywatermark.data.model.FuncTitleModel
 import me.rosuh.easywatermark.data.model.FuncType
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkConfigChange
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.render.AndroidCommonRaster
@@ -73,7 +74,7 @@ fun AndroidEditorScreen(
     modifier: Modifier = Modifier,
     selectedImage: ImageInfo? = null,
     onImageSelected: (ImageInfo) -> Unit = {},
-    onWaterMrkChange: (item: FuncTitleModel, any: Any) -> Unit = { _, _ -> },
+    onWaterMrkChange: (WatermarkConfigChange) -> Unit = {},
     onIconPicked: (Uri) -> Unit = {},
     onAddMoreImages: () -> Unit = { },
     onShowSaveDialog: () -> Unit = { },
@@ -148,9 +149,8 @@ fun AndroidEditorScreen(
         onShowSaveDialog = onShowSaveDialog,
         onGoAboutScreen = onGoAboutScreen,
         onImageSelected = onImageSelected,
-        onConfigChange = { type, value ->
-            onWaterMrkChange(androidOptionModel(type), value)
-        },
+        // F2: typed WatermarkConfigChange from shared controls; no FuncType+Any / from().
+        onConfigChange = onWaterMrkChange,
         onUseTemplate = onUseTemplate,
         onAddTemplate = onAddTemplate,
         onUpdateTemplate = onUpdateTemplate,
@@ -158,8 +158,6 @@ fun AndroidEditorScreen(
         modifier = modifier,
     )
 }
-
-private fun androidOptionModel(type: FuncType): FuncTitleModel = FuncTitleModel(type)
 
 private const val FilmstripThumbPx = 160
 

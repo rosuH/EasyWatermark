@@ -11,7 +11,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.os.BuildCompat
-import me.rosuh.easywatermark.data.model.FuncTitleModel
 import me.rosuh.easywatermark.data.model.ImageInfo
 
 /**
@@ -49,8 +48,10 @@ fun AndroidLaunchScreen(
 /**
  * Android UI edge actions (ADR-0017 Phase 5).
  *
- * Carries [Uri]/[ContentResolver]/[FuncTitleModel] and is mapped once in
+ * Carries [Uri]/[ContentResolver] and is mapped once in
  * [MainViewModel.process] → shared [me.rosuh.easywatermark.session.AppIntent].
+ * F2: watermark config uses typed [me.rosuh.easywatermark.data.model.WatermarkConfigChange]
+ * via [MainViewModel.applyConfig] — no raw WaterMarkChange Action.
  */
 sealed class Action {
     data class DialogDismiss(val isSelected: Boolean) : Action()
@@ -62,8 +63,6 @@ sealed class Action {
     ) : Action()
 
     data class LoadImages(val resolver: ContentResolver) : Action()
-
-    data class WaterMarkChange(val item: FuncTitleModel, val any: Any) : Action()
 
     data class EditorImageSelected(val image: ImageInfo) : Action()
 }

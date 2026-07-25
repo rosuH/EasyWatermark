@@ -23,7 +23,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.MyApp
-import me.rosuh.easywatermark.data.model.FuncTitleModel
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.crash_mail
 import me.rosuh.easywatermark.shared.generated.resources.email_subject
@@ -491,11 +490,6 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
                         checked = action.isCheck,
                     ),
                 )
-            }
-
-            is Action.WaterMarkChange -> {
-                // Edge: FuncTitleModel + raw value → shared typed config command.
-                applyConfig(WatermarkConfigChange.from(action.item.type, action.any))
             }
 
             is Action.EditorImageSelected -> {

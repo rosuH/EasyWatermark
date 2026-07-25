@@ -35,7 +35,6 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import me.rosuh.easywatermark.ProductVersion
 import me.rosuh.easywatermark.data.db.buildTemplateDatabase
-import me.rosuh.easywatermark.data.model.FuncType
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.JobState
@@ -621,9 +620,10 @@ class IosProductRootHost(
                                 }
                             }
                         },
-                        onConfigChange = { type, value ->
+                        onConfigChange = { change ->
+                            // F2: typed WatermarkConfigChange from shared controls (no from()).
                             if (isBusy) return@EditorScreen
-                            if (type == FuncType.Icon) {
+                            if (change is WatermarkConfigChange.Icon) {
                                 onPickIcon()
                                 return@EditorScreen
                             }
@@ -635,7 +635,7 @@ class IosProductRootHost(
                                 isBusy = true
                                 try {
                                     services.session.dispatchAndAwait(
-                                        AppIntent.ApplyConfig(WatermarkConfigChange.from(type, value)),
+                                        AppIntent.ApplyConfig(change),
                                     )
                                     renderPreviewForCurrentSelection(gen = gen)
                                 } catch (t: Throwable) {

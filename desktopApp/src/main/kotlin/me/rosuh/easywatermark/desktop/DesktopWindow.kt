@@ -902,16 +902,17 @@ fun launchDesktopWindow() = application {
                                 }
                             }
                         },
-                        onConfigChange = { type, value ->
+                        onConfigChange = { change ->
+                            // F2: typed WatermarkConfigChange from shared controls (no from()).
                             if (!busy) {
                                 scope.launch {
                                     busy = true
                                     val (msg, ok) = withContext(Dispatchers.IO) {
                                         try {
                                             session.dispatchAndAwait(
-                                                AppIntent.ApplyConfig(WatermarkConfigChange.from(type, value)),
+                                                AppIntent.ApplyConfig(change),
                                             )
-                                            "Applied $type" to true
+                                            "Applied ${change::class.simpleName}" to true
                                         } catch (t: Throwable) {
                                             "Failed: ${t.message}" to false
                                         }

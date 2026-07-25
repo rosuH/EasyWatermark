@@ -79,7 +79,6 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.MyApp
-import me.rosuh.easywatermark.data.model.FuncTitleModel
 import android.widget.Toast
 import androidx.compose.runtime.Composable
 import me.rosuh.easywatermark.BuildConfig
@@ -478,8 +477,8 @@ class ComposeMainActivity : ComponentActivity() {
                                                 onOffsetChanged = { info ->
                                                     viewModel.updateOffset(info)
                                                 },
-                                                onWaterMrkChange = { item: FuncTitleModel, any: Any ->
-                                                    viewModel.process(Action.WaterMarkChange(item, any))
+                                                onWaterMrkChange = { change ->
+                                                    viewModel.applyConfig(change)
                                                 },
                                                 onIconPicked = viewModel::importWatermarkIcon,
                                                 onImageSelected = {

@@ -3,10 +3,13 @@ package me.rosuh.easywatermark.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.platform.testTag
+import kotlin.math.roundToInt
 import me.rosuh.easywatermark.data.model.FuncType
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkConfigChange
 import me.rosuh.easywatermark.data.model.WatermarkConfigRules
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.shared.generated.resources.Res
@@ -26,7 +29,7 @@ import org.jetbrains.compose.resources.stringResource
 fun EditorBottomControls(
     waterMark: WaterMark,
     templateIcon: Painter?,
-    onValueChange: (type: FuncType, value: Any) -> Unit,
+    onValueChange: (WatermarkConfigChange) -> Unit,
     onGoTemplateList: () -> Unit,
     colorOption: @Composable (
         modifier: Modifier,
@@ -86,20 +89,23 @@ private fun EditorOptionControl(
     waterMark: WaterMark,
     templateIcon: Painter?,
     optionActivationSignal: Int,
-    onValueChange: (type: FuncType, value: Any) -> Unit,
+    onValueChange: (WatermarkConfigChange) -> Unit,
     onGoTemplateList: () -> Unit,
     colorOption: @Composable (Modifier, WaterMark, (Int) -> Unit) -> Unit,
     iconOption: @Composable (Modifier, WaterMark, (MediaRef) -> Unit) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    EditorOptionControlFrame(modifier = modifier) { innerModifier ->
+    EditorOptionControlFrame(
+        modifier = modifier.testTag("editorControl-${spec.type.stableKey()}"),
+    ) { innerModifier ->
         when (spec.type) {
             FuncType.Alpha -> {
                 SliderOption(
                     modifier = innerModifier,
                     currentValue = WatermarkConfigRules.alphaByteToPercent(waterMark.alpha),
                     valueRange = spec.valueRange,
-                    onValueChange = { onValueChange(spec.type, it) },
+                    // F2: emit typed command at control source (0..100 percent).
+                    onValueChange = { onValueChange(WatermarkConfigChange.AlphaPercent(it)) },
                 )
             }
 
@@ -108,7 +114,7 @@ private fun EditorOptionControl(
                     modifier = innerModifier,
                     currentValue = waterMark.textSize,
                     valueRange = spec.valueRange,
-                    onValueChange = { onValueChange(spec.type, it) },
+                    onValueChange = { onValueChange(WatermarkConfigChange.TextSize(it)) },
                 )
             }
 
@@ -117,7 +123,10 @@ private fun EditorOptionControl(
                     modifier = innerModifier,
                     currentValue = waterMark.vGap.toFloat(),
                     valueRange = spec.valueRange,
-                    onValueChange = { onValueChange(spec.type, it) },
+                    // Preserve legacy (Float).roundToInt() at emission.
+                    onValueChange = {
+                        onValueChange(WatermarkConfigChange.VerticalGap(it.roundToInt()))
+                    },
                 )
             }
 
@@ -126,7 +135,9 @@ private fun EditorOptionControl(
                     modifier = innerModifier,
                     currentValue = waterMark.hGap.toFloat(),
                     valueRange = spec.valueRange,
-                    onValueChange = { onValueChange(spec.type, it) },
+                    onValueChange = {
+                        onValueChange(WatermarkConfigChange.HorizontalGap(it.roundToInt()))
+                    },
                 )
             }
 
@@ -135,19 +146,19 @@ private fun EditorOptionControl(
                     modifier = innerModifier,
                     currentValue = waterMark.degree,
                     valueRange = spec.valueRange,
-                    onValueChange = { onValueChange(spec.type, it) },
+                    onValueChange = { onValueChange(WatermarkConfigChange.Degree(it)) },
                 )
             }
 
             FuncType.Color -> {
                 colorOption(innerModifier, waterMark) { color ->
-                    onValueChange(FuncType.Color, color)
+                    onValueChange(WatermarkConfigChange.Color(color))
                 }
             }
 
             FuncType.Icon -> {
                 iconOption(innerModifier, waterMark) { ref ->
-                    onValueChange(FuncType.Icon, ref)
+                    onValueChange(WatermarkConfigChange.Icon(ref))
                 }
             }
 
@@ -157,7 +168,7 @@ private fun EditorOptionControl(
                     templateIcon = templateIcon,
                     modifier = innerModifier,
                     openSignal = optionActivationSignal,
-                    onTextChange = { onValueChange(FuncType.Text, it) },
+                    onTextChange = { onValueChange(WatermarkConfigChange.Text(it)) },
                     onGoTemplateList = onGoTemplateList,
                 )
             }
@@ -167,7 +178,7 @@ private fun EditorOptionControl(
                     typeface = waterMark.textTypeface,
                     modifier = innerModifier,
                     onValueChange = { next: TextTypeface ->
-                        onValueChange(FuncType.TextTypeFace, next)
+                        onValueChange(WatermarkConfigChange.Typeface(next))
                     },
                 )
             }
@@ -177,7 +188,7 @@ private fun EditorOptionControl(
                     mode = waterMark.tileMode,
                     modifier = innerModifier,
                     onValueChange = { next: WatermarkTileMode ->
-                        onValueChange(FuncType.TileMode, next)
+                        onValueChange(WatermarkConfigChange.TileMode(next))
                     },
                 )
             }
