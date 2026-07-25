@@ -145,7 +145,9 @@ import java.net.URI
 import java.util.prefs.Preferences
 
 /** Best-effort Open-dialog filename filter (honored on macOS; ignored on some platforms — harmless). */
-private val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "webp", "bmp", "gif")
+// J3: capability-true extensions (WebP only if ImageIO can decode — stock JDK usually cannot).
+private val IMAGE_EXTENSIONS: Set<String> =
+    me.rosuh.easywatermark.render.DesktopImageFormats.chooserExtensions()
 
 // About link edges (match Android ComposeMainActivity / iOS IosProductRootHost).
 private const val ABOUT_URL_RELEASES = "https://github.com/rosuH/EasyWatermark/releases/"
@@ -232,31 +234,26 @@ private fun styleLabelOf(s: TextPaintStyle): String = when (s) {
 private class LastImage(val bytes: ByteArray, val label: String)
 
 /**
- * The stable per-user app-data dir the interactive Desktop window persists into — * `~/.easywatermark` (matching the `CreateDataStore.desktop.kt` store-creation convention), NOT the
- * repo-local `build/` dev paths the headless/demo witness (`Main.kt`) deliberately uses. If
- * `user.home` is unavailable, fall back to a repo-local `build/` dir and warn instead of crashing.
- * The dir is created if missing.
+ * Stable per-user app-data dir for the interactive Desktop window.
+ * J3: [me.rosuh.easywatermark.platform.DesktopAppPaths.resolveAppDataDir] (OS-native + legacy
+ * `~/.easywatermark` copy-forward). Headless/demo witnesses (`Main.kt`) stay under repo-local `build/`.
  */
 private fun resolveDesktopAppDataDir(): File {
     val home = System.getProperty("user.home")?.takeIf { it.isNotBlank() }
-    return if (home != null) {
-        File(home, ".easywatermark")
-    } else {
+    if (home == null) {
         System.err.println(
-            "S4d-215: user.home unavailable; persisting window state under repo-local build/desktop-app-data"
+            "S4d-215/J3: user.home unavailable; persisting window state under repo-local build/desktop-app-data",
         )
-        File("build/desktop-app-data")
-    }.apply { mkdirs() }
+    }
+    return me.rosuh.easywatermark.platform.DesktopAppPaths.resolveAppDataDir(
+        home = home,
+        fallbackWhenNoHome = File("build/desktop-app-data"),
+    )
 }
 
 /**
- * User-facing output dir for explicit Save/Export batches — `~/Pictures` when it exists, else
- * `~/.easywatermark/output` (reusing the
- * app-data dir). Saved watermarked images must not land in the repo-local `build/` dir. The
- * headless/demo witness (`Main.kt`) and the `DesktopWatermarkFlow` default `outputDir` stay build-local.
- * The interactive preview temp stays app-private so the packaged `.app` does not depend on its launch
- * working directory. (Full per-OS XDG/AppData handling is a separate deferred refinement.) The dir is
- * created if missing.
+ * User-facing output dir for Save/Export batches — `~/Pictures` when it exists, else
+ * `<app-data>/output`. Must not use repo-local `build/`. Headless defaults stay build-local.
  */
 private fun resolveDesktopOutputDir(): File {
     val pictures = System.getProperty("user.home")?.takeIf { it.isNotBlank() }?.let { File(it, "Pictures") }
@@ -292,11 +289,8 @@ private data class FrozenItemInput(
  * **Preview:** app-private temp only; never becomes [lastSavedFile].
  */
 fun launchDesktopWindow() = application {
-    // persist the window's user state (watermark config, output prefs, templates DB) under the
-    // stable per-user app-data dir ~/.easywatermark (the CreateDataStore.desktop.kt convention), NOT the
-    // repo-local build/ dev paths — those stay the intentional headless/demo witness layout (Main.kt +
-    // DesktopWatermarkFlow defaults). All three persistence files (the two DataStores named by their
-    // SP_NAME + the Room "ewm-db") share this dir; distinct filenames, no collision.
+    // Persist window state under OS-native app-data (J3 DesktopAppPaths; legacy ~/.easywatermark
+    // copy-forward when empty). Headless/demo witnesses stay under build/ (Main.kt).
     val appDataDir = remember { resolveDesktopAppDataDir() }
     // Real Save/Export batch destination (unique names). Save As uses the user-chosen path exactly.
     val outputDir = remember { resolveDesktopOutputDir() }

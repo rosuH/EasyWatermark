@@ -1,12 +1,14 @@
 name: Desktop packaging
 
-# S4d-166: the smallest Desktop CI packaging gate (S4d-165 decision). Proves `:desktopApp` packages in CI —
-# a headless run witness + an UNSIGNED app image (`createDistributable`) — reusing the same Zulu 17 /
-# ubuntu-latest setup the Android workflows already use. Narrowly triggered (manual + Desktop-affecting PRs)
-# so it does not burden or block unrelated PRs. No signing / installer formats / app icon / version source /
-# macOS runner; no `compose.desktop.packaging.checkJdkVendor=false`. Zulu is the existing non-Homebrew CI
-# provisioning; the workflow run is the proof that it satisfies Compose Desktop's vendor guard (the local
-# Homebrew JDK is the known failing case).
+# S4d-166 / J3 (issue 13 §J3): smallest Desktop CI packaging gate.
+# Proves: headless run + UNSIGNED `createDistributable` on Ubuntu Zulu 17.
+#
+# Honesty (do not overclaim):
+# - This is **not** a signed three-OS release matrix.
+# - No macOS/Windows runners, no notarization, no Authenticode, no DMG/MSI package* proof here.
+# - WebP is not advertised unless ImageIO can decode (DesktopImageFormats / J3).
+# - App-data uses OS-native roots with legacy ~/.easywatermark copy-forward (DesktopAppPaths).
+# Zulu 17 satisfies Compose Desktop vendor guard (Homebrew OpenJDK does not — CMP#3107).
 
 env:
   GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx3072m -Dfile.encoding=UTF-8 -XX:+HeapDumpOnOutOfMemoryError -XX:MaxMetaspaceSize=1g" -Dkotlin.daemon.jvm.options="-Xmx2560m" -Dkotlin.incremental=false

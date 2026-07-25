@@ -1,3 +1,5 @@
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+
 plugins {
     id(libs.plugins.kotlin.jvm.get().pluginId)
     // S4d-121: Compose Desktop for the minimal window. Existing catalog plugin aliases + versions only
@@ -39,7 +41,17 @@ dependencies {
     implementation("org.jetbrains.compose.material3:material3:1.12.0-alpha03")
 }
 
-// S4d-163: minimal unsigned app-image packaging; installer formats/signing later.
+// S4d-163 / J3 (issue 13 §J3): packaging honesty.
+// Proven on host/CI: `createDistributable` → **unsigned** app image (macOS .app / Linux image /
+// Windows dir) with bundled JRE. That alone is **not** release-ready.
+//
+// Intended signed release formats (residual without owner secrets + matching runners):
+// - macOS: DMG or PKG + Developer ID signing + notarization
+// - Windows: MSI or EXE + Authenticode
+// - Linux: DEB and/or AppImage (or RPM) as chosen
+//
+// `targetFormats` documents the package* tasks Compose Desktop can generate when run on the
+// matching OS. Non-host formats are residual on a single-OS CI runner.
 compose.desktop {
     application {
         mainClass = "me.rosuh.easywatermark.desktop.MainKt"
@@ -47,9 +59,12 @@ compose.desktop {
             packageName = "EasyWatermark"
             // S4d-175: single-sourced from the Android app version (buildSrc Apps.versionName), shared with :app.
             packageVersion = Apps.versionName
+            description = "EasyWatermark — offline photo watermarking (unsigned createDistributable ≠ release)"
             // Skiko/AWT and other deps touch sun.misc.Unsafe; without jdk.unsupported the
             // packaged runtime image crashes at launch with NoClassDefFoundError: sun/misc/Unsafe.
             modules("jdk.unsupported")
+            // J3: declared installer intent; signing/notarization residual (see evidence/j3/matrix.md).
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
         }
     }
 }

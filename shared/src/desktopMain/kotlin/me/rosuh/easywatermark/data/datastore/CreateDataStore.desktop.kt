@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
+import me.rosuh.easywatermark.platform.DesktopAppPaths
 import okio.Path.Companion.toOkioPath
 import java.io.File
 
@@ -13,6 +14,9 @@ import java.io.File
  *
  * Caller owns single-instance-per-file semantics (DataStore forbids a second active store for the
  * same file); a desktop app would bind this as a singleton, mirroring `:app`'s Koin `single`.
+ *
+ * Default [dir] is OS-native via [DesktopAppPaths.resolveAppDataDir] (J3), with safe legacy
+ * `~/.easywatermark` copy-forward when the native root is empty.
  */
 fun createUserConfigDataStore(
     dir: File = defaultDesktopDataDir(),
@@ -35,5 +39,5 @@ fun createWaterMarkDataStore(
     dir.apply { mkdirs() }.resolve("$name.preferences_pb").toOkioPath()
 }
 
-private fun defaultDesktopDataDir(): File =
-    File(System.getProperty("user.home"), ".easywatermark")
+/** J3: OS-native app-data root (legacy migration included). */
+fun defaultDesktopDataDir(): File = DesktopAppPaths.resolveAppDataDir()
