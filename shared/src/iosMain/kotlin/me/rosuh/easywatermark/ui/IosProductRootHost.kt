@@ -88,10 +88,18 @@ class IosProductRootHost(
     private val onPickPhoto: () -> Unit,
     private val onPickIcon: () -> Unit,
     private val onShare: (filePath: String) -> Unit,
-    private val onSaveToPhotos: (encodedBytes: ByteArray) -> Unit,
+    /**
+     * D4: Photos persistence edge for Swift.
+     * Signature: `(bytes) { success, message -> … }` — must call the completion after
+     * `PHPhotoLibrary.performChanges` finishes (not fire-and-forget).
+     * Kotlin awaits each item before counting a persisted success.
+     */
+    private val onSaveToPhotos: (encodedBytes: ByteArray, onComplete: (Boolean, String?) -> Unit) -> Unit,
     private val onOpenUrl: (url: String) -> Unit = {},
     private val services: IosAppServices = defaultIosAppServices(),
 ) {
+    private val photosSaveEdge: IosPhotosSaveEdge =
+        IosPhotosSaveEdge { bytes, onComplete -> onSaveToPhotos(bytes, onComplete) }
     private val templateRepo by lazy {
         TemplateRepository(
             buildTemplateDatabase().templateDao(),
@@ -684,28 +692,29 @@ class IosProductRootHost(
                                     withContext(Dispatchers.Default) {
                                         services.session.exportAndAwait(images)
                                     }
-                                    var saved = 0
-                                    var lastPath: String? = null
-                                    for (info in images) {
-                                        val ref = (info.result?.data as? MediaRef)?.value
-                                        if (info.jobState is JobState.Success && ref != null) {
-                                            lastPath = ref
-                                            val data = NSData.dataWithContentsOfFile(ref)
-                                            val encodedBytes = data?.let { IosByteArrayInterop.fromNSData(it) }
-                                            if (encodedBytes != null) {
-                                                onSaveToPhotos(encodedBytes)
-                                                saved++
-                                            }
+                                    // D4: await Photos per render success before counting persisted.
+                                    val lastPath = images
+                                        .asReversed()
+                                        .firstOrNull {
+                                            it.jobState is JobState.Success &&
+                                                (it.result?.data as? MediaRef)?.value != null
                                         }
-                                    }
+                                        ?.let { (it.result?.data as? MediaRef)?.value }
+                                    val photosResult = persistRenderSuccessesToPhotos(
+                                        images = images,
+                                        loadBytes = { path ->
+                                            NSData.dataWithContentsOfFile(path)
+                                                ?.let { IosByteArrayInterop.fromNSData(it) }
+                                        },
+                                        photosSave = photosSaveEdge,
+                                    )
                                     outputPath = lastPath
                                     sheetExportFinished = true
                                     isSaving = false
-                                    statusLine = if (saved > 0) {
-                                        "Exported $saved/${images.size}"
-                                    } else {
-                                        "Nothing to export"
-                                    }
+                                    statusLine = photosPersistStatusLine(
+                                        batchSize = images.size,
+                                        result = photosResult,
+                                    )
                                 } catch (t: Throwable) {
                                     statusLine = "Export failed: ${t.message}"
                                     isSaving = false
@@ -996,6 +1005,11 @@ class IosProductRootHost(
         }
     }
 
+    /**
+     * Legacy secondary status hook (single-item fire-and-forget paths).
+     * Production batch export awaits Photos via [onSaveToPhotos] and does not rely on this
+     * for batch counts (D4).
+     */
     fun markSavedToPhotos(success: Boolean, message: String? = null) {
         isSaving = false
         if (success) {

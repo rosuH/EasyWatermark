@@ -204,7 +204,7 @@ class IosPickGenerationPublishBoundaryTest {
                 onPickPhoto = {},
                 onPickIcon = {},
                 onShare = {},
-                onSaveToPhotos = {},
+                onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
                 services = graph.services,
             )
             val aBytes = solidPng(Color(0xFF112233))
@@ -267,7 +267,7 @@ class IosPickGenerationPublishBoundaryTest {
                 onPickPhoto = {},
                 onPickIcon = {},
                 onShare = {},
-                onSaveToPhotos = {},
+                onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
                 services = graph.services,
             )
             // Need a photo selection so icon preview path can run; plant one first.

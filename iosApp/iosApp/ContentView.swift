@@ -60,16 +60,15 @@ private struct SharedComposeProductRoot: UIViewControllerRepresentable {
                     box?.presentShare(path: path as String)
                 }
             },
-            onSaveToPhotos: { [weak box] bytes in
-                Task { @MainActor in
+            // D4: completion must run only after PHPhotoLibrary.performChanges finishes.
+            // Kotlin awaits this edge before counting a persisted success (no fire-and-forget ++).
+            onSaveToPhotos: { bytes, onComplete in
+                Task {
                     do {
                         try await ImageExport.saveToPhotos(bytes.toData())
-                        box?.host?.markSavedToPhotos(success: true, message: nil)
+                        onComplete(true, nil)
                     } catch {
-                        box?.host?.markSavedToPhotos(
-                            success: false,
-                            message: error.localizedDescription,
-                        )
+                        onComplete(false, error.localizedDescription)
                     }
                 }
             },

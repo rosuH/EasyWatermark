@@ -161,7 +161,7 @@ class IosProductRootHostPreviewIdentityTest {
                     onPickPhoto = {},
                     onPickIcon = {},
                     onShare = {},
-                    onSaveToPhotos = {},
+                    onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
                     services = graph.services,
                 )
                 val aBytes = solidPng(Color(0xFF203040))
@@ -239,7 +239,7 @@ class IosProductRootHostPreviewIdentityTest {
                 onPickPhoto = {},
                 onPickIcon = {},
                 onShare = {},
-                onSaveToPhotos = {},
+                onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
                 services = graph.services,
             )
             val aBytes = solidPng(Color(0xFF203040))
