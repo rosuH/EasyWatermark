@@ -15,6 +15,11 @@ final class IosProductRootBox: ObservableObject {
     var host: IosProductRootHost?
     weak var viewController: UIViewController?
 
+    /// E2: cancel export, clear host caches, remove owned temps (idempotent).
+    func disposeHost() {
+        host?.dispose()
+    }
+
     func presentShare(path: String) {
         guard let presenter = foregroundPresenter() else { return }
         let url = URL(fileURLWithPath: path)
@@ -88,6 +93,20 @@ private struct SharedComposeProductRoot: UIViewControllerRepresentable {
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
         box.viewController = uiViewController
+    }
+
+    static func dismantleUIViewController(_ uiViewController: UIViewController, coordinator: Coordinator) {
+        // E2: product root teardown → host dispose (export cancel, caches, owned temps).
+        coordinator.box?.disposeHost()
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(box: box)
+    }
+
+    final class Coordinator {
+        weak var box: IosProductRootBox?
+        init(box: IosProductRootBox) { self.box = box }
     }
 }
 

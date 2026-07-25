@@ -9,4 +9,8 @@
     <files-path
         name="watermark_icons"
         path="watermark_icons/"/>
+    <!-- E2: durable share-in / source staging (app-owned copies for process-death restore). -->
+    <files-path
+        name="share_sources"
+        path="share_sources/"/>
 </paths>

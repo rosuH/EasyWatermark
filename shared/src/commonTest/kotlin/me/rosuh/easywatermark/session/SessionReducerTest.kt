@@ -73,15 +73,23 @@ class SessionReducerTest {
 
     @Test
     fun navigateBack_fromEditor_toLaunch() {
+        val selected = listOf(
+            me.rosuh.easywatermark.data.model.ImageInfo(MediaRef("content://batch/1")),
+        )
         val base = SessionUiSnapshot(
             launch = me.rosuh.easywatermark.ui.LaunchScreenState(
                 uiState = LaunchScreenUiState.Editor,
                 imageList = listOf(img(1)),
+                selectedImageList = selected,
+                curImageInfo = selected.first(),
             ),
         )
         val r = reduceSessionUi(base, AppIntent.NavigateBack)
         assertEquals(LaunchScreenUiState.Launch, r.snapshot.launch.uiState)
         assertTrue(r.snapshot.launch.imageList.isEmpty())
+        // E2: discard transient batch selection on leave-editor.
+        assertTrue(r.snapshot.launch.selectedImageList.isEmpty())
+        assertEquals(null, r.snapshot.launch.curImageInfo)
     }
 
     @Test
@@ -149,6 +157,8 @@ class SessionReducerTest {
         assertEquals(LaunchScreenUiState.Editor, entered.snapshot.launch.uiState)
         val back = reduceSessionUi(entered.snapshot, AppIntent.NavigateBack)
         assertEquals(LaunchScreenUiState.Launch, back.snapshot.launch.uiState)
+        assertTrue(back.snapshot.launch.selectedImageList.isEmpty())
+        assertEquals(null, back.snapshot.launch.curImageInfo)
     }
 
     @Test

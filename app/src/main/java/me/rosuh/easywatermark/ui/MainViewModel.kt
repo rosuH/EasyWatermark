@@ -47,6 +47,8 @@ import me.rosuh.easywatermark.domain.OutputPrefsEditor
 import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.platform.AndroidIconPersistence
 import me.rosuh.easywatermark.platform.AndroidIconSelectionCoordinator
+import me.rosuh.easywatermark.platform.AndroidSessionRestoreStore
+import me.rosuh.easywatermark.platform.AndroidShareStaging
 import me.rosuh.easywatermark.session.AndroidExportPipelinePort
 import me.rosuh.easywatermark.session.AndroidMediaLibraryPort
 import me.rosuh.easywatermark.session.AppIntent
@@ -134,6 +136,11 @@ class MainViewModel (
     }
     private var iconImportJob: Job? = null
 
+    /** E2: durable share/source staging (app-owned bytes before long-lived Session selection). */
+    private val shareStaging by lazy { AndroidShareStaging(applicationContext) }
+    /** E2: minimal route + source-id restore (no bitmap payloads). */
+    private val sessionRestore by lazy { AndroidSessionRestoreStore(applicationContext) }
+
     init {
         // Phase 2: shared export loop uses Android port (wrap of legacy generateImage).
         exportPipeline = AndroidExportPipelinePort(appContext = applicationContext)
@@ -175,12 +182,63 @@ class MainViewModel (
         requestExport(imageList)
     }
 
+    /**
+     * Legacy raw-URI enter (gallery / in-app sources already durable). Prefer
+     * [stageShareAndEnterEditor] for inbound share grants that can die after process death.
+     */
     fun updateImageList(list: List<Uri>) {
         launch {
             generateImageInfoList(list)?.run {
                 enterEditor(selected = this, waterMark = persistedWaterMark())
+                sessionRestore.saveEditorSources(map { it.uri })
             }
         }
+    }
+
+    /**
+     * E2 share-in / cold-start path: copy grant URIs into app-owned storage, then EnterEditor
+     * with durable MediaRefs. Fails closed if staging cannot complete.
+     */
+    fun stageShareAndEnterEditor(list: List<Uri>) {
+        if (list.isEmpty()) return
+        launch {
+            val owned = shareStaging.copyAllToOwnedRefs(list.toSet().toList()).getOrElse {
+                return@launch
+            }
+            if (owned.isEmpty()) return@launch
+            shareStaging.pruneExcept(owned)
+            val images = owned.map { ImageInfo(it) }
+            enterEditor(selected = images, waterMark = persistedWaterMark())
+            sessionRestore.saveEditorSources(owned)
+        }
+    }
+
+    /**
+     * E2: after process death, re-enter Editor only when restore ids still point at readable
+     * app-owned staged files. Returns true if restore was scheduled.
+     */
+    fun restoreEditorIfDurable(): Boolean {
+        val snapshot = sessionRestore.read() ?: return false
+        if (snapshot.route != LaunchScreenUiState.Editor) return false
+        val readable = snapshot.sourceRefs.filter { shareStaging.isOwnedReadable(it) }
+        if (readable.isEmpty()) {
+            sessionRestore.clear()
+            return false
+        }
+        launch {
+            enterEditor(
+                selected = readable.map { ImageInfo(it) },
+                waterMark = persistedWaterMark(),
+            )
+            sessionRestore.saveEditorSources(readable)
+            shareStaging.pruneExcept(readable)
+        }
+        return true
+    }
+
+    /** E2: discard restore ids when user leaves the editor batch (Launch). */
+    fun clearSessionRestore() {
+        sessionRestore.clear()
     }
 
     private suspend fun persistedWaterMark(): WaterMark = waterMarkRepo.waterMark.first()

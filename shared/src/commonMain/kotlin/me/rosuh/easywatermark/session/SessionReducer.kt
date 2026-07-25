@@ -176,11 +176,14 @@ fun reduceSessionUi(snapshot: SessionUiSnapshot, intent: AppIntent): SessionRedu
         AppIntent.NavigateBack -> {
             when (snapshot.launch.uiState) {
                 LaunchScreenUiState.Editor -> {
+                    // E2: discard transient batch selection on leave-editor; durable WaterMark stays in repo.
                     SessionReduceResult(
                         snapshot.copy(
                             launch = snapshot.launch.copy(
                                 uiState = LaunchScreenUiState.Launch,
                                 imageList = emptyList(),
+                                selectedImageList = emptyList(),
+                                curImageInfo = null,
                             ),
                         ),
                     )

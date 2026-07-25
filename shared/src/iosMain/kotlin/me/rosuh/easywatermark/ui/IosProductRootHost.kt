@@ -25,10 +25,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import me.rosuh.easywatermark.session.IosSourceStager
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import me.rosuh.easywatermark.ProductVersion
@@ -116,6 +118,12 @@ class IosProductRootHost(
     private val outputEditor by lazy { OutputPrefsEditor(services.userConfigRepo) }
     /** Host-owned scope for background stage/preview work (not GlobalScope). */
     private val hostScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    /**
+     * App-owned staged source paths (`ewm_src_*`) for this host generation (E2 dispose).
+     * Mutated on Main / host-scoped jobs only — no concurrent writer races with dispose.
+     */
+    private val ownedStagedPaths = linkedSetOf<String>()
+    private var disposed = false
 
     private var sourceBytes by mutableStateOf<ByteArray?>(null)
     private var iconBytes by mutableStateOf<ByteArray?>(null)
@@ -198,6 +206,60 @@ class IosProductRootHost(
             wmCachePaths = wmPreviewCache.keys.toSet(),
             placeholderCachePaths = sourcePlaceholderCache.keys.toSet(),
         )
+
+    /** Test-only: whether [dispose] has completed at least once. */
+    internal fun isDisposedForTests(): Boolean = disposed
+
+    /** Test-only: paths still tracked as host-owned staged sources. */
+    internal fun ownedStagedPathsForTests(): Set<String> = ownedStagedPaths.toSet()
+
+    /** Test-only: register an app-owned staged path without a full picker deliver. */
+    internal fun trackOwnedStagedPathForTests(path: String) {
+        if (path.isNotBlank()) ownedStagedPaths.add(path)
+    }
+
+    /**
+     * E2 host close/dispose (single-scene B1):
+     * - cancel Session export
+     * - invalidate preview generation
+     * - clear bounded wm/placeholder/filmstrip/export caches
+     * - remove app-owned staged temp paths from this host generation
+     * - cancel host-scoped background work
+     *
+     * Idempotent: a second call is a no-op after the first full teardown.
+     */
+    fun dispose() {
+        if (disposed) return
+        disposed = true
+        services.session.cancelExport()
+        previewGen += 1
+        hostScope.coroutineContext.cancelChildren()
+        // Clear presentation + caches (Main-thread host; mutex for concurrent background writers).
+        sourceBytes = null
+        iconBytes = null
+        previewBitmap = null
+        previewSourcePath = null
+        outputPath = null
+        statusLine = ""
+        isBusy = false
+        isSaving = false
+        showEditor = false
+        showSaveSheet = false
+        sheetExportFinished = false
+        showOpenSource = false
+        filmstripThumbEpoch += 1
+        wmPreviewCache.clear()
+        sourcePlaceholderCache.clear()
+        filmstripThumbCache.clear()
+        exportThumbCache.clear()
+        val toDelete = ownedStagedPaths.toList()
+        ownedStagedPaths.clear()
+        toDelete.forEach { path ->
+            if (path.contains("ewm_src_")) {
+                IosSourceStager.deleteQuietly(path)
+            }
+        }
+    }
 
     fun viewController(): UIViewController = ComposeUIViewController {
         AppTheme(darkTheme = true) {
@@ -930,6 +992,7 @@ class IosProductRootHost(
         if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
             return
         }
+        if (disposed) return
         sourceBytes = images.first()
         // Session already EnterEditor via stagePickedImagesBytes; keep optimistic flag for isInEditor.
         showEditor = true
@@ -940,11 +1003,14 @@ class IosProductRootHost(
             filmstripThumbEpoch += 1
             previewBitmap = null
             previewSourcePath = null
+            ownedStagedPaths.clear()
         }
         statusLine = ""
 
         val launch = services.session.launchScreenUiStateFlow.first()
         val paths = launch.selectedImageList.map { it.uri.value }.filter { it.isNotBlank() }
+        // Track app-owned staged sources for dispose cleanup (E2).
+        paths.filter { it.contains("ewm_src_") }.forEach { ownedStagedPaths.add(it) }
         val focusPath = (launch.curImageInfo ?: launch.selectedImageList.firstOrNull())?.uri?.value
 
         if (renderPreview && focusPath != null) {

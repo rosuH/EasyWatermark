@@ -260,16 +260,36 @@ class ComposeMainActivity : ComponentActivity() {
                             var showOpenSource by remember { mutableStateOf(false) }
                             var showSaveSheet by remember { mutableStateOf(false) }
 
+                            // E2: stage share grants to app-owned files before Session selection.
                             LaunchedEffect(pendingShareUris) {
                                 pendingShareUris?.let { uris ->
-                                    viewModel.updateImageList(uris)
-                                    // EnterEditor is applied by updateImageList → Session uiState.
+                                    viewModel.stageShareAndEnterEditor(uris)
                                     pendingShareUris = null
+                                }
+                            }
+                            // E2: cold start / process-death restore of minimal durable source ids.
+                            LaunchedEffect(Unit) {
+                                if (pendingShareUris == null) {
+                                    viewModel.restoreEditorIfDurable()
                                 }
                             }
                             val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
                             val state by viewModel.launchScreenUiStateFlow.collectAsStateWithLifecycle()
                             val saveExportState by viewModel.saveExportUiState.collectAsStateWithLifecycle()
+                            // Clear restore ids only after an Editor session returns to Launch (not cold Launch).
+                            var sawEditorSession by remember { mutableStateOf(false) }
+                            LaunchedEffect(state.uiState) {
+                                when (state.uiState) {
+                                    LaunchScreenUiState.Editor -> sawEditorSession = true
+                                    LaunchScreenUiState.Launch -> {
+                                        if (sawEditorSession) {
+                                            viewModel.clearSessionRestore()
+                                            sawEditorSession = false
+                                        }
+                                    }
+                                    else -> Unit
+                                }
+                            }
                             val productRoute = ProductShellNav.routeFromLaunchUi(state.uiState)
                             val context = LocalContext.current
                             val templates by viewModel.templateListFlow.collectAsStateWithLifecycle()

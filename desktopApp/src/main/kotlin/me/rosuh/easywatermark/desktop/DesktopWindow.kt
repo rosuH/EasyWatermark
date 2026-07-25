@@ -572,7 +572,15 @@ fun launchDesktopWindow() = application {
         }
     }
 
-    Window(onCloseRequest = ::exitApplication, title = "EasyWatermark — Desktop") {
+    // E2 close policy: cancel in-flight export, then exit. Durable WaterMark DataStore is not wiped.
+    // Presentation-only state (preview bitmap, sheets) dies with the process; Session product route
+    // is not mirrored as a host owner. Editor back uses session.onBackPressed() → Launch + discard batch.
+    fun closeDesktopWindow() {
+        session.cancelExport()
+        exitApplication()
+    }
+
+    Window(onCloseRequest = ::closeDesktopWindow, title = "EasyWatermark — Desktop") {
         AppTheme(darkTheme = true) {
             // E1: Session-only current for filmstrip (no host selectedSessionImage mirror).
             val selectedForStrip = launchUi.curImageInfo
