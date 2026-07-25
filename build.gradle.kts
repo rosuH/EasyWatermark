@@ -38,3 +38,14 @@ plugins {
 //        }
 //    }
 //}
+
+/**
+ * E3 ownership fitness (issue 35 / issue 12 P4).
+ * Fail-closed static + focused Session tests via scripts/verify-ownership-fitness.sh.
+ */
+tasks.register<Exec>("verifyOwnershipFitness") {
+    group = "verification"
+    description = "E3 ownership fitness gates (route/selection static + Session unit tests)"
+    workingDir = rootDir
+    commandLine("bash", "scripts/verify-ownership-fitness.sh")
+}

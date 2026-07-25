@@ -1,6 +1,5 @@
 package me.rosuh.easywatermark.domain
 
-import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
@@ -63,9 +62,6 @@ class WatermarkConfigEditor(private val repo: WaterMarkRepository) {
         repo.updateTileMode(tileMode)
     }
 
-    /**
- * Synchronous offset-only update. Returns the repository-installed [ImageInfo], or null if the
- * URI is not in the list (no-op). Caller object is never mutated.
-     */
-    fun updateOffset(info: ImageInfo): ImageInfo? = repo.updateOffset(info)
+    // E3: product offset path is WatermarkSessionViewModel.applyOffset (Session CAS).
+    // Do not re-expose repo.updateOffset through the config editor.
 }

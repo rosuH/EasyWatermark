@@ -98,8 +98,6 @@ class MainViewModel (
     /** Android UI name for shared export progress [exportJobState]. */
     val saveExportUiState: StateFlow<SaveExportUiState> get() = exportJobState
 
-    val selectedImageFlow = waterMarkRepo.selectedImage
-
     private var compressedJob: Job? = null
 
     private var _userPreferences: StateFlow<UserPreferences> = userRepo.userPreferences.stateIn(
@@ -311,40 +309,65 @@ class MainViewModel (
         }
     }
 
+    /**
+     * E3: Session owns selection list. Remove one item and re-publish via EnterEditor
+     * (or NavigateBack when empty). Does not call [WaterMarkRepository] list/select APIs.
+     */
     fun removeImage(
         imageInfo: ImageInfo?,
         curSelectedPos: Int,
     ) {
-        val list = waterMarkRepo.imageInfoList.toMutableList()
-        val removePos = list.indexOf(imageInfo)
+        if (imageInfo == null) return
+        val list = launchScreenUiStateFlow.value.selectedImageList.toMutableList()
+        val removePos = list.indexOfFirst { it.uri == imageInfo.uri }
+        if (removePos < 0) return
         list.removeAt(removePos)
         val selectedPos =
-            if (removePos < curSelectedPos || removePos >= waterMarkRepo.imageInfoList.size - 1
-            ) {
+            if (removePos < curSelectedPos || removePos >= list.size) {
                 (curSelectedPos - 1).coerceAtLeast(0)
             } else {
                 curSelectedPos
             }
         launch {
             nextSelectedPos = selectedPos
-            waterMarkRepo.updateImageList(list)
+            if (list.isEmpty()) {
+                clearSessionRestore()
+                onBackPressed()
+                return@launch
+            }
+            enterEditor(selected = list, waterMark = persistedWaterMark())
             if (removePos == curSelectedPos) {
                 list.getOrNull(selectedPos)?.uri?.let { selectImage(it) }
             }
         }
     }
 
+    /**
+     * E3: exit-confirm residual cleanup. Batch discard is Session NavigateBack;
+     * only clear Android restore ids here (no repo select).
+     */
     fun clearData() {
-        launch {
-            waterMarkRepo.select(MediaRef.Empty)
-        }
+        clearSessionRestore()
     }
 
+    /**
+     * Compress the Session-focused (or first selected) image. Session list is source of truth.
+     */
     fun compressImg(activity: Activity) {
         compressedJob = viewModelScope.launch(Dispatchers.IO) {
             _compressedResult.value = Result.success(null, code = TYPE_COMPRESSING)
+            val focus = launchScreenUiStateFlow.value.curImageInfo
+                ?: launchScreenUiStateFlow.value.selectedImageList.firstOrNull()
+            if (focus == null) {
+                _compressedResult.value = Result.failure(
+                    null,
+                    code = TYPE_COMPRESS_ERROR,
+                    message = "No image selected",
+                )
+                return@launch
+            }
             val tmpFile = File.createTempFile("easy_water_mark_", "_compressed")
-            activity.contentResolver.openInputStream(waterMarkRepo.imageInfoList.first().uri.toUri())
+            activity.contentResolver.openInputStream(focus.uri.toUri())
                 .use { input ->
                     tmpFile.outputStream().use { output ->
                         input?.copyTo(output)

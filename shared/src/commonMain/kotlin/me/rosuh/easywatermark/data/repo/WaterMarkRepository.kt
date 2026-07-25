@@ -34,7 +34,13 @@ import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_V
 import okio.IOException
 
 /**
- * Persisted watermark config ([waterMark]) and in-memory image list/selection/offset state.
+ * Persisted watermark config ([waterMark]) is the durable product surface.
+ *
+ * **E3 residual:** in-memory image list/selection/offset ([_imageMapFlow], [_selectedImage],
+ * [updateOffset], [updateImageList], [select]) remain for Session EnterEditor dual-write
+ * effects and a few tests. Product editor path owns selection/offset on Session (E1);
+ * do not add new production callers. Full deletion is a follow-up once Session effects
+ * stop mirroring list/select into the repo.
  *
  * List/selection/offset updates are Main-confined. DataStore keys and defaults are compatibility-critical.
  */
