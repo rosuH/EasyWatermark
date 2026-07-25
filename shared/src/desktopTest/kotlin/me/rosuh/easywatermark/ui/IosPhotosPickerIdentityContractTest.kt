@@ -1,0 +1,249 @@
+package me.rosuh.easywatermark.ui
+
+import java.io.File
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+/**
+ * Issue 26 / C4.4R.S1 — fail-closed **source contracts** for the iOS PhotosPicker identity edge.
+ *
+ * Structural evidence only (no Simulator gestures). Runtime PHPicker acceptance remains a separate
+ * Coordinator-owned R1/R2 rerun after this code contract is reviewed.
+ */
+class IosPhotosPickerIdentityContractTest {
+
+    private fun resolveRepoFile(relative: String): File {
+        val cwd = File(System.getProperty("user.dir")!!)
+        val candidates = listOf(
+            File(cwd, relative),
+            File(cwd.parentFile, relative),
+            File(cwd, "../$relative"),
+        )
+        return candidates.firstOrNull { it.isFile }
+            ?: error("$relative not found from user.dir=$cwd")
+    }
+
+    private fun stripSwiftComments(source: String): String {
+        val noBlock = source.replace(Regex("""/\*[\s\S]*?\*/"""), " ")
+        return noBlock.lineSequence().joinToString("\n") { line ->
+            val idx = line.indexOf("//")
+            if (idx >= 0) line.substring(0, idx) else line
+        }
+    }
+
+    @Test
+    fun s1_both_picker_edges_request_current_encoding() {
+        val contentView = resolveRepoFile("iosApp/iosApp/ContentView.swift").readText()
+        val code = stripSwiftComments(contentView)
+
+        val currentEncodingHits = Regex("""preferredItemEncoding\s*:\s*\.current""")
+            .findAll(code)
+            .count()
+        assertEquals(
+            2,
+            currentEncodingHits,
+            "Both source and icon .photosPicker edges must set preferredItemEncoding: .current " +
+                "(found $currentEncodingHits). Silent return to automatic encoding is a fail-closed " +
+                "regression for issue 26 H1.",
+        )
+
+        // Fail if a photosPicker block still uses only the automatic default on the iOS 17 path:
+        // require the iOS 17 branch to exist and carry .current.
+        assertTrue(
+            Regex("""#available\s*\(\s*iOS\s+17\.0""").containsMatchIn(code),
+            "ContentView must gate preferredItemEncoding behind iOS 17 availability " +
+                "(deployment target remains 16).",
+        )
+    }
+
+    @Test
+    fun s2_contentView_uses_serial_commit_gate_for_photos_and_icon() {
+        val contentView = resolveRepoFile("iosApp/iosApp/ContentView.swift").readText()
+        val gate = resolveRepoFile("iosApp/iosApp/PhotosPickerBatchGate.swift").readText()
+        val contentCode = stripSwiftComments(contentView)
+        val gateCode = stripSwiftComments(gate)
+
+        assertTrue(
+            "enum PhotosPickerBatchGate" in gateCode ||
+                Regex("""enum\s+PhotosPickerBatchGate""").containsMatchIn(gateCode),
+            "PhotosPickerBatchGate must exist as a pure Swift helper",
+        )
+        assertTrue(
+            Regex("""func\s+beginGeneration\s*\(""").containsMatchIn(gateCode),
+            "gate must expose beginGeneration",
+        )
+        assertTrue(
+            Regex("""func\s+shouldDeliver\s*\(""").containsMatchIn(gateCode),
+            "gate must expose shouldDeliver",
+        )
+        assertTrue(
+            Regex("""func\s+shouldBeginCommit\s*\(""").containsMatchIn(gateCode),
+            "gate must expose shouldBeginCommit (review F1)",
+        )
+        assertTrue(
+            Regex("""@MainActor[\s\S]*class\s+PhotosPickerCommitSerial""").containsMatchIn(gateCode) ||
+                Regex("""final\s+class\s+PhotosPickerCommitSerial""").containsMatchIn(gateCode),
+            "PhotosPickerCommitSerial must be MainActor class (not reentrant actor-only body)",
+        )
+        assertTrue(
+            "commitTail" in gateCode,
+            "commit serial must keep a FIFO commitTail so bodies do not reenter",
+        )
+        assertTrue(
+            Regex("""func\s+commitIfNewest\s*\(""").containsMatchIn(gateCode),
+            "commit serial must expose commitIfNewest",
+        )
+        assertTrue(
+            "candidate == latest && candidate > highestPublished" in gateCode ||
+                Regex(
+                    """candidate\s*==\s*latest\s*&&\s*candidate\s*>\s*highestPublished""",
+                ).containsMatchIn(gateCode),
+            "shouldBeginCommit must require newest + not yet published",
+        )
+        assertTrue(
+            "inFlight?.cancel()" in gateCode || "inFlight?.cancel" in gateCode,
+            "F9: beginGeneration must cancel in-flight older commit",
+        )
+        assertTrue(
+            "isCurrent" in gateCode,
+            "F9: serial must expose isCurrent for pre-publish checks",
+        )
+        assertTrue(
+            "previous?.result" in gateCode || "await previous" in gateCode,
+            "commitIfNewest must await previous commit fully before revalidate/body",
+        )
+
+        assertTrue(
+            "photoCommitSerial" in contentCode && "iconCommitSerial" in contentCode,
+            "ContentView must own photo and icon commit serial lanes",
+        )
+        assertTrue(
+            "commitIfNewest" in contentCode,
+            "ContentView must stage via commitIfNewest (not check-then-await alone)",
+        )
+        // F6: generation frozen at selection onChange, not only inside loadPhotos Task.
+        assertTrue(
+            Regex("""onChange\s*\(\s*of:\s*pickedItems\s*\)""").containsMatchIn(contentCode),
+            "photo selection onChange must exist",
+        )
+        val onChangeBlock = contentCode.substringAfter("onChange(of: pickedItems)")
+            .substringBefore("onChange(of: pickedIconItem)")
+        assertTrue(
+            "photoCommitSerial.beginGeneration" in onChangeBlock,
+            "F6: beginGeneration must run synchronously in pickedItems onChange",
+        )
+        assertTrue(
+            "nextPhotoGeneration" in gateCode || "IosPickGenerationGate" in gateCode,
+            "F14: beginGeneration must issue tokens from Kotlin IosPickGenerationGate",
+        )
+        assertTrue(
+            "generation:" in onChangeBlock || "generation =" in onChangeBlock ||
+                "generation: generation" in contentCode,
+            "F6: frozen generation must be passed into loadPhotos",
+        )
+        assertTrue(
+            "onChange(of: pickedIconItem)" in contentCode &&
+                "iconCommitSerial.beginGeneration" in contentCode,
+            "F6: icon generation frozen at icon selection onChange",
+        )
+
+        val commitGuards = Regex("""commitIfNewest""")
+            .findAll(contentCode)
+            .count()
+        assertTrue(
+            commitGuards >= 2,
+            "expected commitIfNewest on both photo and icon load paths; found $commitGuards",
+        )
+
+        // Deliver calls must sit inside / after serial commit (ordering smoke).
+        val photoDeliverIdx = contentCode.indexOf("deliverPickedPhotosBatch")
+        val photoCommitIdx = contentCode.indexOf("photoCommitSerial.commitIfNewest")
+        assertTrue(
+            photoCommitIdx >= 0 && photoDeliverIdx > photoCommitIdx,
+            "deliverPickedPhotosBatch must run only inside photoCommitSerial.commitIfNewest",
+        )
+        assertFalse(
+            Regex("""print\s*\(\s*".*(hash|SHA|filename|localIdentifier)""", RegexOption.IGNORE_CASE)
+                .containsMatchIn(contentCode),
+            "no release telemetry of user media identity in ContentView",
+        )
+    }
+
+    @Test
+    fun pbxproj_includes_photos_picker_batch_gate() {
+        val pbx = resolveRepoFile("iosApp/iosApp.xcodeproj/project.pbxproj").readText()
+        assertTrue(
+            "PhotosPickerBatchGate.swift in Sources" in pbx,
+            "Xcode target must compile PhotosPickerBatchGate.swift",
+        )
+        assertTrue(
+            "path = PhotosPickerBatchGate.swift" in pbx,
+            "pbxproj must reference PhotosPickerBatchGate.swift",
+        )
+    }
+
+    @Test
+    fun k1_host_fresh_batch_clears_preview_caches_before_stage() {
+        val host = resolveRepoFile(
+            "shared/src/iosMain/kotlin/me/rosuh/easywatermark/ui/IosProductRootHost.kt",
+        ).readText()
+        val code = stripSwiftComments(host) // also strips // and /* */ which Kotlin uses
+
+        val deliverStart = code.indexOf("suspend fun deliverPickedPhotosBatch")
+        assertTrue(deliverStart >= 0, "deliverPickedPhotosBatch must exist")
+        val deliverBody = code.substring(deliverStart, deliverStart + 1800)
+
+        assertTrue(
+            Regex("""if\s*\(\s*!append\s*\)""").containsMatchIn(deliverBody),
+            "fresh pick (!append) must have an explicit cache-invalidation branch",
+        )
+        assertTrue("wmPreviewCache.clear()" in deliverBody, "fresh pick clears wmPreviewCache")
+        assertTrue(
+            "sourcePlaceholderCache.clear()" in deliverBody,
+            "fresh pick clears sourcePlaceholderCache",
+        )
+        assertTrue(
+            "filmstripThumbCache.clear()" in deliverBody,
+            "fresh pick clears filmstripThumbCache",
+        )
+        assertTrue(
+            "previewSourcePath = null" in deliverBody,
+            "fresh pick nulls previewSourcePath so A cannot remain displayed",
+        )
+
+        val clearIdx = deliverBody.indexOf("wmPreviewCache.clear()")
+        val stageIdx = deliverBody.indexOf("stagePickedImagesBytes")
+        // F11: Session-guarded stage runs first; host caches clear only after successful publish
+        // so a superseded generation cannot leave preview/cache bound to A.
+        assertTrue(
+            stageIdx >= 0 && clearIdx > stageIdx,
+            "stagePickedImagesBytes (generation-guarded) must run before host cache clear (F11)",
+        )
+        assertTrue(
+            "pickGeneration" in deliverBody,
+            "deliverPickedPhotosBatch must take pickGeneration for Kotlin publish boundary",
+        )
+    }
+
+    @Test
+    fun k3_staging_writes_uuid_paths_via_ios_source_stager() {
+        val stager = resolveRepoFile(
+            "shared/src/iosMain/kotlin/me/rosuh/easywatermark/session/IosSourceStager.kt",
+        ).readText()
+        val services = resolveRepoFile(
+            "shared/src/iosMain/kotlin/me/rosuh/easywatermark/session/IosAppServices.kt",
+        ).readText()
+        val stagerCode = stripSwiftComments(stager)
+        val servicesCode = stripSwiftComments(services)
+        assertTrue("ewm_src_" in stagerCode && "NSUUID()" in stagerCode,
+            "IosSourceStager must mint ewm_src_ + UUID paths")
+        assertTrue("writeToFile" in stagerCode && "atomically" in stagerCode,
+            "staging must write atomically to the minted path")
+        assertTrue("IosSourceStager.stageBytes" in servicesCode,
+            "IosAppServices.stagePickedImagesBytes must delegate path identity to IosSourceStager")
+        assertTrue("focusAfterPick" in servicesCode,
+            "IosAppServices must use ProductShellNav.focusAfterPick for append focus")
+    }
+}

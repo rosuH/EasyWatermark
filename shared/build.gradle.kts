@@ -125,6 +125,14 @@ kotlin {
                 implementation(compose.desktop.currentOs)
             }
         }
+        // Issue 26 / C4.4R.S1: iosTest needs coroutines-test Main (setMain/resetMain).
+        // Product uses Dispatchers.Main.immediate; runBlocking without setMain deadlocks kexe.
+        // F17: not authorized under constraints.json without owner confirmation.
+        listOf("iosSimulatorArm64Test", "iosArm64Test").forEach { name ->
+            (kotlin.sourceSets.findByName(name) ?: return@forEach).dependencies {
+                implementation(libs.kotlin.coroutine.test)
+            }
+        }
     }
 }
 

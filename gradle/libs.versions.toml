@@ -105,6 +105,8 @@ kotlin-coroutine-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-co
 kotlin-coroutine-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 # ADR-0017: Desktop ViewModel.viewModelScope Main dispatcher
 kotlin-coroutine-swing = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-swing", version.ref = "coroutines" }
+# Issue 26 / C4.4R.S1: iosTest Main harness (setMain/runTest). Requires owner confirmation (F17).
+kotlin-coroutine-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
 lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycleViewModel" }
 # ADR-0017 / Phase 0: multiplatform ViewModel for :shared commonMain session host.

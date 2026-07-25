@@ -16,14 +16,31 @@ final class IosProductRootBox: ObservableObject {
     weak var viewController: UIViewController?
 
     func presentShare(path: String) {
-        guard let viewController else { return }
+        guard let presenter = foregroundPresenter() else { return }
         let url = URL(fileURLWithPath: path)
         let shareSheet = UIActivityViewController(activityItems: [url], applicationActivities: nil)
         if let popover = shareSheet.popoverPresentationController {
-            popover.sourceView = viewController.view
-            popover.sourceRect = viewController.view.bounds
+            popover.sourceView = presenter.view
+            popover.sourceRect = presenter.view.bounds
         }
-        viewController.present(shareSheet, animated: true)
+        presenter.present(shareSheet, animated: true)
+    }
+
+    /// `UIViewControllerRepresentable` may replace or temporarily detach its child controller during
+    /// Compose recomposition. Resolve the visible window root at action time instead of silently losing
+    /// Share when the weak child reference is stale.
+    private func foregroundPresenter() -> UIViewController? {
+        let window = viewController?.viewIfLoaded?.window
+            ?? UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .filter { $0.activationState == .foregroundActive }
+                .flatMap(\.windows)
+                .first(where: \.isKeyWindow)
+        guard var presenter = window?.rootViewController else { return nil }
+        while let presented = presenter.presentedViewController {
+            presenter = presented
+        }
+        return presenter
     }
 }
 
@@ -114,6 +131,10 @@ struct ContentView: View {
     @State private var isPhotoPickerPresented = false
     @State private var pickedIconItem: PhotosPickerItem?
     @State private var isIconPickerPresented = false
+    /// Serial photo-batch commit lane (generation + TOCTOU-safe stage). Issue 26 H2 / review F1.
+    @State private var photoCommitSerial = PhotosPickerCommitSerial()
+    /// Serial icon-picker commit lane (same rule as source batches).
+    @State private var iconCommitSerial = PhotosPickerCommitSerial()
 
 #if DEBUG
     private var showSharedComposeWitnesses: Bool {
@@ -174,7 +195,7 @@ struct ContentView: View {
 
     @ViewBuilder
     private var productionContent: some View {
-        SharedComposeProductRoot(
+        let root = SharedComposeProductRoot(
             box: productRoot,
             onPickPhoto: { isPhotoPickerPresented = true },
             onPickIcon: { isIconPickerPresented = true },
@@ -183,19 +204,43 @@ struct ContentView: View {
         .background(productBackground)
         .ignoresSafeArea()
         .accessibilityIdentifier("sharedComposeProductRoot")
-        .photosPicker(
-            isPresented: $isPhotoPickerPresented,
-            selection: $pickedItems,
-            maxSelectionCount: 50,
-            matching: .images,
-            photoLibrary: .shared(),
-        )
-        .photosPicker(
-            isPresented: $isIconPickerPresented,
-            selection: $pickedIconItem,
-            matching: .images,
-            photoLibrary: .shared(),
-        )
+
+        // iOS 17+: request the selected asset's current encoding on both picker edges so
+        // loadTransferable does not silently receive a derived/compatible representation (issue 26 H1).
+        // iOS 16 deployment keeps the pre-encoding API shape; runtime targets for C4 are 17+.
+        if #available(iOS 17.0, *) {
+            root
+                .photosPicker(
+                    isPresented: $isPhotoPickerPresented,
+                    selection: $pickedItems,
+                    maxSelectionCount: 50,
+                    matching: .images,
+                    preferredItemEncoding: .current,
+                    photoLibrary: .shared(),
+                )
+                .photosPicker(
+                    isPresented: $isIconPickerPresented,
+                    selection: $pickedIconItem,
+                    matching: .images,
+                    preferredItemEncoding: .current,
+                    photoLibrary: .shared(),
+                )
+        } else {
+            root
+                .photosPicker(
+                    isPresented: $isPhotoPickerPresented,
+                    selection: $pickedItems,
+                    maxSelectionCount: 50,
+                    matching: .images,
+                    photoLibrary: .shared(),
+                )
+                .photosPicker(
+                    isPresented: $isIconPickerPresented,
+                    selection: $pickedIconItem,
+                    matching: .images,
+                    photoLibrary: .shared(),
+                )
+        }
     }
 
     var body: some View {
@@ -211,16 +256,28 @@ struct ContentView: View {
 #endif
         }
         // iOS 16-compatible onChange (single-parameter); multi PhotosPicker selection batch.
+        // F6: freeze generation + append intent synchronously at the selection event, then load async.
         .onChange(of: pickedItems) { newItems in
             guard !newItems.isEmpty else { return }
             let batch = newItems
-            Task { await loadPhotos(batch) }
+            let generation = photoCommitSerial.beginGeneration(edge: .photo)
+            let frozenAppend = productRoot.host?.isInEditor() ?? false
             // Clear so re-selecting the same set can fire again.
             pickedItems = []
+            Task {
+                await loadPhotos(
+                    batch,
+                    generation: generation,
+                    frozenAppend: frozenAppend,
+                )
+            }
         }
-        .task(id: pickedIconItem) {
-            guard let item = pickedIconItem else { return }
-            await loadIcon(item)
+        // F6: icon generation frozen at selection event (not inside a later-scheduled task body start).
+        .onChange(of: pickedIconItem) { newItem in
+            guard let item = newItem else { return }
+            let generation = iconCommitSerial.beginGeneration(edge: .icon)
+            pickedIconItem = nil
+            Task { await loadIcon(item, generation: generation) }
         }
         .task { await runUITestFixtureIfRequested() }
         .task { await edge.loadUserConfigWitness() }
@@ -245,10 +302,12 @@ struct ContentView: View {
             return
         }
         do {
+            let fixtureGen = IosPickGenerationGate.shared.nextPhotoGeneration()
             try await host.deliverPickedPhotoAndAwait(
                 bytes: data.toKotlinByteArray(),
                 append: false,
                 renderPreview: true,
+                pickGeneration: fixtureGen,
             )
         } catch {
             edge.reportFailure(error.localizedDescription)
@@ -276,18 +335,29 @@ struct ContentView: View {
     /// 3. Stage **once** as a single batch so the filmstrip appears complete —
     ///    never grow 1→2→N while the user flings (that caused snap-back / refresh).
     /// 4. Kotlin host prefetches filmstrip thumbs + first preview asynchronously.
-    private func loadPhotos(_ items: [PhotosPickerItem]) async {
+    ///
+    /// Late async batches: early drop via shouldDeliver; mutating stage only via
+    /// [PhotosPickerCommitSerial.commitIfNewest] (F5 one-in-flight FIFO + MainActor mutation).
+    ///
+    /// - Parameter generation: frozen at selection-change edge (F6), not at Task start.
+    /// - Parameter frozenAppend: in-editor intent frozen with that same selection event.
+    private func loadPhotos(
+        _ items: [PhotosPickerItem],
+        generation: UInt64,
+        frozenAppend: Bool,
+    ) async {
         guard let host = productRoot.host else {
             edge.reportFailure("Product root host not ready")
             return
         }
-        let alreadyInEditor = host.isInEditor()
         // 1) Show editor shell before any loadTransferable / decode work.
-        if !alreadyInEditor {
-            host.showEditorShellImmediately()
+        if !frozenAppend {
+            await MainActor.run {
+                host.showEditorShellImmediately()
+            }
         }
 
-        // 2) Load every payload before staging (parallel, order restored by index).
+        // 2) Load every payload before staging (parallel, order restored by index). Off-main OK.
         let payloads: [KotlinByteArray] = await withTaskGroup(
             of: (Int, KotlinByteArray?).self,
             returning: [KotlinByteArray].self
@@ -318,34 +388,78 @@ struct ContentView: View {
             return byIndex.sorted { $0.0 < $1.0 }.map { $0.1 }
         }
 
+        // Empty/failed batches must not resurrect an older generation (S2).
         guard !payloads.isEmpty else { return }
+        // Cheap early drop (non-mutating). Authoritative gate is commitIfNewest below.
+        let latestAfterLoad = await MainActor.run { photoCommitSerial.currentLatest() }
+        guard PhotosPickerBatchGate.shouldDeliver(
+            candidate: generation,
+            latest: latestAfterLoad,
+        ) else { return }
 
-        // 3) One EnterEditor / filmstrip commit — complete list, stable scroll.
+        // 3) FIFO one-in-flight EnterEditor commit on MainActor (F5).
+        // F9: if a newer selection cancelled this generation, commitIfNewest no-ops.
         do {
-            try await host.deliverPickedPhotosBatch(
-                images: payloads,
-                append: alreadyInEditor,
-                // Fresh pick: raster first image. Add-more: keep current preview (focus preserved).
-                renderPreview: !alreadyInEditor,
-            )
+            try await photoCommitSerial.commitIfNewest(generation: generation) {
+                try Task.checkCancellation()
+                guard photoCommitSerial.isCurrent(generation) else { return }
+                try await host.deliverPickedPhotosBatch(
+                    images: payloads,
+                    append: frozenAppend,
+                    // Fresh pick: raster first image. Add-more: keep current preview (focus preserved).
+                    renderPreview: !frozenAppend,
+                    pickGeneration: Int64(generation),
+                )
+                try Task.checkCancellation()
+            }
+        } catch is CancellationError {
+            // Superseded by a newer photo selection (including empty/failed G2) — not a user error.
         } catch {
-            edge.reportFailure(error.localizedDescription)
+            // F11: Kotlin StalePickGenerationException surfaces as NSError — treat as supersession.
+            let ns = error as NSError
+            if ns.localizedDescription.contains("stale pick generation") {
+                return
+            }
+            await MainActor.run {
+                edge.reportFailure(error.localizedDescription)
+            }
         }
     }
 
-    private func loadIcon(_ item: PhotosPickerItem) async {
+    private func loadIcon(_ item: PhotosPickerItem, generation: UInt64) async {
         do {
             guard let data = try await item.loadTransferable(type: Data.self) else {
-                edge.reportFailure("Icon picker returned no image data")
+                await MainActor.run {
+                    edge.reportFailure("Icon picker returned no image data")
+                }
                 return
             }
-            guard let host = productRoot.host else {
-                edge.reportFailure("Product root host not ready")
+            let latestAfterLoad = await MainActor.run { iconCommitSerial.currentLatest() }
+            guard PhotosPickerBatchGate.shouldDeliver(
+                candidate: generation,
+                latest: latestAfterLoad,
+            ) else { return }
+            guard let host = await MainActor.run(body: { productRoot.host }) else {
+                await MainActor.run {
+                    edge.reportFailure("Product root host not ready")
+                }
                 return
             }
-            try await host.deliverIconBytesAndAwait(bytes: data.toKotlinByteArray())
+            try await iconCommitSerial.commitIfNewest(generation: generation) {
+                try Task.checkCancellation()
+                guard iconCommitSerial.isCurrent(generation) else { return }
+                try await host.deliverIconBytesAndAwait(
+                    bytes: data.toKotlinByteArray(),
+                    pickGeneration: Int64(generation),
+                )
+                try Task.checkCancellation()
+            }
+        } catch is CancellationError {
+            // Superseded by a newer icon selection — not a user error.
         } catch {
-            edge.reportFailure(error.localizedDescription)
+            await MainActor.run {
+                edge.reportFailure(error.localizedDescription)
+            }
         }
     }
 }

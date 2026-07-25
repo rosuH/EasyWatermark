@@ -41,4 +41,26 @@ object ProductShellNav {
         if (newly.isEmpty()) return existing
         return if (append) existing + newly else newly
     }
+
+    /**
+     * Focus after a picker batch is committed into [selected].
+     *
+     * - Fresh replace (`append=false`): first item (EnterEditor default).
+     * - Append (`append=true`): keep [previousCur] when it remains in the list so add-more does
+     *   not snap the filmstrip back to index 0.
+     *
+     * Issue 26 K1/K2: pure selection identity; does not own path/cache bytes.
+     */
+    fun focusAfterPick(
+        selected: List<ImageInfo>,
+        append: Boolean,
+        previousCur: ImageInfo?,
+    ): ImageInfo? {
+        if (selected.isEmpty()) return null
+        if (append && previousCur != null) {
+            val kept = selected.firstOrNull { it.uri == previousCur.uri }
+            if (kept != null) return kept
+        }
+        return selected.first()
+    }
 }

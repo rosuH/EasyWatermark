@@ -11,10 +11,6 @@ import me.rosuh.easywatermark.data.repo.IosUserConfigBridge
 import me.rosuh.easywatermark.data.repo.IosWatermarkConfigBridge
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
-import me.rosuh.easywatermark.render.IosByteArrayInterop
-import platform.Foundation.NSTemporaryDirectory
-import platform.Foundation.NSUUID
-import platform.Foundation.writeToFile
 import kotlin.experimental.ExperimentalObjCName
 import kotlin.native.ObjCName
 
@@ -22,7 +18,8 @@ private const val DEFAULT_WATERMARK_TEXT = "EasyWatermark 水印"
 
 /**
  * Single-process iOS graph (ADR-0017 Phase 4): **one** watermark DataStore + user prefs store,
- * Shared by config bridges and [WatermarkSessionViewModel] (DataStore forbids dual stores per file). */
+ * Shared by config bridges and [WatermarkSessionViewModel] (DataStore forbids dual stores per file).
+ */
 @OptIn(ExperimentalObjCName::class)
 @ObjCName(name = "IosAppServices", exact = true)
 class IosAppServices(
@@ -33,76 +30,83 @@ class IosAppServices(
     val session: WatermarkSessionViewModel,
 ) {
     /**
- * Stage [imageBytes] to a temp file, enter editor, **and** export a watermarked preview.
- * Prefer [stagePickedImagesBytes] + async preview when filmstrip must appear immediately.
+     * Stage + export (legacy WatermarkWorkflow.render path). Issues a **new** process-wide photo
+     * generation so this path never hard-codes gen 0 after live picks (F14).
      */
     @Throws(Exception::class)
     suspend fun exportPickedImageBytes(imageBytes: ByteArray): String {
-        stagePickedImagesBytes(listOf(imageBytes), append = false)
+        val gen = IosPickGenerationGate.nextPhotoGeneration()
+        stagePickedImagesBytes(listOf(imageBytes), append = false, pickGeneration = gen)
         return exportFocusedPreview()
     }
 
     /**
- * Fast path: write picked bytes to temp files and update session selection / EnterEditor.
- * Does **not** run the watermark export pipeline (that is the multi-second cost).
- * Filmstrip can bind to [WatermarkSessionViewModel.launchScreenUiStateFlow] immediately after.
- *
- * @return source path of the focused (last newly staged) image.
+     * Fast path: prepare temp files, then **atomically** publish selection into Session only if
+     * [pickGeneration] is still current (F12 — no publish-then-rollback).
+     *
+     * @param pickGeneration token from [IosPickGenerationGate.nextPhotoGeneration] (Swift edge).
+     * @return source path of the focused (last newly staged) image.
      */
     @Throws(Exception::class)
     suspend fun stagePickedImagesBytes(
         imageBytesList: List<ByteArray>,
         append: Boolean,
+        pickGeneration: Long,
     ): String {
         require(imageBytesList.isNotEmpty()) { "stagePickedImagesBytes: empty list" }
+        // Phase 1 — prepare files (safe if later superseded; cleaned on stale).
         val staged = imageBytesList.map { bytes ->
-            require(bytes.isNotEmpty()) { "stagePickedImagesBytes: empty image" }
-            val srcPath = NSTemporaryDirectory() + "ewm_src_" + NSUUID().UUIDString
-            val wrote = IosByteArrayInterop.toNSData(bytes).writeToFile(srcPath, atomically = true)
-            check(wrote) { "stagePickedImagesBytes: failed to stage source bytes" }
-            ImageInfo(MediaRef(srcPath))
+            ImageInfo(MediaRef(IosSourceStager.stageBytes(bytes)))
         }
-        val prevLaunch = session.launchScreenUiStateFlow.first()
-        val existing = if (append) {
-            prevLaunch.selectedImageList
-        } else {
-            emptyList()
-        }
-        // Preserve focus on append so add-more does not snap filmstrip back to index 0.
-        val previousCur = if (append) prevLaunch.curImageInfo else null
-        val selected = me.rosuh.easywatermark.ui.ProductShellNav.mergePickedSelection(
-            existing = existing,
-            newly = staged,
-            append = append,
-        )
-        val wm = waterMarkRepo.waterMark.first()
-        // EnterEditor defaults focus to selected.first(); restore prior focus when appending.
-        session.dispatchAndAwait(
-            AppIntent.EnterEditor(
+        try {
+            if (!IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
+                throw StalePickGenerationException(pickGeneration)
+            }
+            val prevLaunch = session.launchScreenUiStateFlow.first()
+            val existing = if (append) prevLaunch.selectedImageList else emptyList()
+            val previousCur = if (append) prevLaunch.curImageInfo else null
+            val selected = me.rosuh.easywatermark.ui.ProductShellNav.mergePickedSelection(
+                existing = existing,
+                newly = staged,
+                append = append,
+            )
+            val focus = me.rosuh.easywatermark.ui.ProductShellNav.focusAfterPick(
+                selected = selected,
+                append = append,
+                previousCur = previousCur,
+            )
+            val wm = waterMarkRepo.waterMark.first()
+
+            // Deterministic test seam: pause *outside* the session lock, immediately before
+            // the guarded publication (F12). Production leaves the probe null.
+            IosPickPublishProbe.awaitBeforeGuardedPublish(pickGeneration)
+
+            // Phase 2 — single atomic EnterEditor(+SelectCurrent) publish if still current.
+            // No StateFlow write when stale (no A, no rollback).
+            val focusUri =
+                if (focus != null && selected.firstOrNull()?.uri != focus.uri) focus.uri else null
+            val published = session.publishEditorSelectionIf(
+                stillValid = { IosPickGenerationGate.isPhotoCurrent(pickGeneration) },
                 selected = selected,
                 waterMark = wm,
-            ),
-        )
-        if (
-            previousCur != null &&
-            selected.any { it.uri == previousCur.uri } &&
-            selected.firstOrNull()?.uri != previousCur.uri
-        ) {
-            session.dispatchAndAwait(AppIntent.SelectCurrent(previousCur.uri))
+                focusUriIfNotFirst = focusUri,
+            )
+            if (!published) {
+                throw StalePickGenerationException(pickGeneration)
+            }
+            return staged.last().uri.value
+        } catch (e: StalePickGenerationException) {
+            staged.forEach { IosSourceStager.deleteQuietly(it.uri.value) }
+            throw e
         }
-        return staged.last().uri.value
     }
 
-    /**
- * Run watermark export for the current session focus image only. Returns output path.
-     */
     @Throws(Exception::class)
     suspend fun exportFocusedPreview(): String {
         val launch = session.launchScreenUiStateFlow.first()
         val focus = launch.curImageInfo
             ?: launch.selectedImageList.firstOrNull()
             ?: error("exportFocusedPreview: no current image")
-        // Export the instance from the live selection list (same object refs as session state).
         val live = launch.selectedImageList.firstOrNull { it.uri == focus.uri } ?: focus
         session.exportAndAwait(listOf(live))
         return when (val st = live.jobState) {
@@ -118,22 +122,17 @@ class IosAppServices(
         }
     }
 
-    /**
- * Stage + export (legacy combined path). Prefer stage then [exportFocusedPreview] for UI latency.
-     */
     @Throws(Exception::class)
     suspend fun exportPickedImagesBytes(
         imageBytesList: List<ByteArray>,
         append: Boolean,
+        pickGeneration: Long,
     ): String {
-        stagePickedImagesBytes(imageBytesList, append)
+        stagePickedImagesBytes(imageBytesList, append, pickGeneration)
         return exportFocusedPreview()
     }
 }
 
-/**
- * Build the single iOS service graph. **Process-wide singleton** — DataStore forbids a second
- * Active instance per file; Swift must not create a parallel graph for the product host. */
 fun defaultIosAppServices(): IosAppServices = IosAppServicesHolder.instance
 
 private object IosAppServicesHolder {

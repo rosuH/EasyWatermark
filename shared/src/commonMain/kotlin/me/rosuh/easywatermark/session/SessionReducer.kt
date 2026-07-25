@@ -137,6 +137,7 @@ fun reduceSessionUi(snapshot: SessionUiSnapshot, intent: AppIntent): SessionRedu
         }
 
         is AppIntent.EnterEditor -> {
+            // Historical product rule: empty selection is a no-op (never clears an existing list).
             if (intent.selected.isEmpty()) return SessionReduceResult(snapshot)
             SessionReduceResult(
                 snapshot = snapshot.copy(

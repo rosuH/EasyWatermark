@@ -46,6 +46,31 @@ class ProductShellNavTest {
     }
 
     @Test
+    fun focusAfterPick_fresh_replaces_focus_with_first_new() {
+        val a = ImageInfo(MediaRef("a"))
+        val b = ImageInfo(MediaRef("b"))
+        val c = ImageInfo(MediaRef("c"))
+        val selected = ProductShellNav.mergePickedSelection(listOf(a), listOf(b, c), append = false)
+        assertEquals(
+            b,
+            ProductShellNav.focusAfterPick(selected, append = false, previousCur = a),
+            "fresh A→B,C focuses first of the new batch (B), not previous A",
+        )
+    }
+
+    @Test
+    fun focusAfterPick_append_keeps_previous_when_still_present() {
+        val a = ImageInfo(MediaRef("a"))
+        val b = ImageInfo(MediaRef("b"))
+        val selected = ProductShellNav.mergePickedSelection(listOf(a), listOf(b), append = true)
+        assertEquals(
+            a,
+            ProductShellNav.focusAfterPick(selected, append = true, previousCur = a),
+            "append must preserve A focus",
+        )
+    }
+
+    @Test
     fun openAbout_remembersReturnRoute() {
         val (route, ret) = ProductShellNav.openAbout(ProductShellNav.Route.Editor)
         assertEquals(ProductShellNav.Route.About, route)

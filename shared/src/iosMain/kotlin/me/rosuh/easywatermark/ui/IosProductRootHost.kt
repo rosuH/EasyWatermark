@@ -162,6 +162,24 @@ class IosProductRootHost(
     fun isInEditor(): Boolean =
         productRoute == ProductShellNav.Route.Editor || showEditor
 
+    /**
+     * Issue 26 / C4.4R.S1 **test seam only** — observe preview-path identity after
+     * [deliverPickedPhotosBatch]. Not a second product source of truth.
+     */
+    internal data class PreviewIdentitySnapshot(
+        val previewSourcePath: String?,
+        val wmCachePaths: Set<String>,
+        val placeholderCachePaths: Set<String>,
+    )
+
+    /** Test-only read of host preview identity (wm/placeholder path caches). */
+    internal fun previewIdentityForTests(): PreviewIdentitySnapshot =
+        PreviewIdentitySnapshot(
+            previewSourcePath = previewSourcePath,
+            wmCachePaths = wmPreviewCache.keys.toSet(),
+            placeholderCachePaths = sourcePlaceholderCache.keys.toSet(),
+        )
+
     fun viewController(): UIViewController = ComposeUIViewController {
         AppTheme(darkTheme = true) {
             val waterMark by services.waterMarkRepo.waterMark.collectAsState(WaterMark.default)
@@ -772,8 +790,14 @@ class IosProductRootHost(
         bytes: ByteArray,
         append: Boolean = false,
         renderPreview: Boolean = true,
+        pickGeneration: Long,
     ) {
-        deliverPickedPhotosBatch(listOf(bytes), append = append, renderPreview = renderPreview)
+        deliverPickedPhotosBatch(
+            images = listOf(bytes),
+            append = append,
+            renderPreview = renderPreview,
+            pickGeneration = pickGeneration,
+        )
     }
 
     /**
@@ -794,19 +818,37 @@ class IosProductRootHost(
  * Prefer [showEditorShellImmediately] first so UI is not gated on photo IO.
  * Swift should load **all** picker payloads then call this once (not per-item append).
      */
+    /**
+     * Stage + bind preview for a picker batch.
+     *
+     * @param pickGeneration token from [me.rosuh.easywatermark.session.IosPickGenerationGate.nextPhotoGeneration].
+     * Session publication is generation-guarded (F12) inside [IosAppServices.stagePickedImagesBytes].
+     */
     @Throws(Exception::class)
     suspend fun deliverPickedPhotosBatch(
         images: List<ByteArray>,
         append: Boolean = false,
         renderPreview: Boolean = true,
+        pickGeneration: Long,
     ) {
         require(images.isNotEmpty()) { "deliverPickedPhotosBatch: empty" }
+        // F11/F16: do not clear host caches until Session publish succeeds for this generation.
+        // Superseded picks throw StalePickGenerationException without leaving Session/cache as A.
+        withContext(Dispatchers.Default) {
+            services.stagePickedImagesBytes(
+                imageBytesList = images,
+                append = append,
+                pickGeneration = pickGeneration,
+            )
+        }
+        // Abort host UI bind if generation flipped after Session publish returned.
+        if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
+            return
+        }
         sourceBytes = images.first()
-        // Ensure shell is visible even if caller skipped [showEditorShellImmediately].
         showEditor = true
         productRoute = ProductShellNav.Route.Editor
         if (!append) {
-            // Fresh pick: drop old strip/preview so we never show stale cells while staging.
             wmPreviewCache.clear()
             sourcePlaceholderCache.clear()
             filmstripThumbCache.clear()
@@ -814,45 +856,57 @@ class IosProductRootHost(
             previewBitmap = null
             previewSourcePath = null
         }
-        withContext(Dispatchers.Default) {
-            services.stagePickedImagesBytes(images, append = append)
-        }
         statusLine = ""
 
         val launch = services.session.launchScreenUiStateFlow.first()
         val paths = launch.selectedImageList.map { it.uri.value }.filter { it.isNotBlank() }
         val focusPath = (launch.curImageInfo ?: launch.selectedImageList.firstOrNull())?.uri?.value
 
-        // Instant source placeholder for the focused image (no watermark yet).
         if (renderPreview && focusPath != null) {
-            val placeholder = sourcePlaceholderCache[focusPath]
-                ?: withContext(Dispatchers.Default) {
-                    IosPreviewRaster.decodeSourcePlaceholder(focusPath)
-                }?.also { sourcePlaceholderCache[focusPath] = it }
+            val cached = sourcePlaceholderCache[focusPath]
+            val placeholder = cached ?: withContext(Dispatchers.Default) {
+                IosPreviewRaster.decodeSourcePlaceholder(focusPath)
+            }
+            // F16: re-validate after decode suspension before any host cache/preview write.
+            me.rosuh.easywatermark.session.IosPickPublishProbe
+                .awaitBeforeHostPreviewBind(pickGeneration)
+            if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
+                return
+            }
             if (placeholder != null) {
+                if (cached == null) {
+                    sourcePlaceholderCache[focusPath] = placeholder
+                }
                 previewBitmap = placeholder
                 previewSourcePath = focusPath
             }
         }
 
-        // Prefetch ALL filmstrip thumbs before/alongside full raster so fling never snaps
-        // on empty→filled cell churn.
+        if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
+            return
+        }
+        val filmstripPaths = paths
+        val filmstripPickGen = pickGeneration
         hostScope.launch {
             try {
-                prefetchFilmstripThumbs(paths)
+                prefetchFilmstripThumbs(filmstripPaths, filmstripPickGen)
             } catch (_: Throwable) {
-                // Best-effort; produceState cold path still works.
             }
         }
 
         if (!renderPreview) {
             return
         }
-        // Full watermarked preview is async; deliver returns after stage + placeholder.
+        if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
+            return
+        }
         previewGen += 1
         val gen = previewGen
         hostScope.launch {
             try {
+                if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
+                    return@launch
+                }
                 renderPreviewForCurrentSelection(gen = gen)
             } catch (t: Throwable) {
                 statusLine = "Preview failed: ${t.message}"
@@ -868,34 +922,70 @@ class IosProductRootHost(
         )
     }
 
-    /** Decode missing filmstrip thumbs off-main; bumps [filmstripThumbEpoch] once when done. */
-    private suspend fun prefetchFilmstripThumbs(paths: List<String>) {
+    /**
+     * Decode missing filmstrip thumbs off-main; bumps [filmstripThumbEpoch] once when done.
+     * [pickGeneration] gates every cache write after suspension (F16).
+     */
+    private suspend fun prefetchFilmstripThumbs(paths: List<String>, pickGeneration: Long) {
         if (paths.isEmpty()) return
+        if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
+            return
+        }
         val missing = paths.filter { it.isNotBlank() && !filmstripThumbCache.containsKey(it) }
         if (missing.isEmpty()) return
-        coroutineScope {
+        val decoded = coroutineScope {
             missing.map { path ->
                 async(Dispatchers.Default) {
-                    runCatching {
-                        decodeFilmstripThumb(path)?.let { filmstripThumbCache[path] = it }
-                    }
+                    path to runCatching { decodeFilmstripThumb(path) }.getOrNull()
                 }
             }.awaitAll()
         }
+        if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
+            return
+        }
+        for ((path, thumb) in decoded) {
+            if (thumb != null) filmstripThumbCache[path] = thumb
+        }
         withContext(Dispatchers.Main) {
-            filmstripThumbEpoch += 1
+            if (me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
+                filmstripThumbEpoch += 1
+            }
         }
     }
 
+    /**
+     * @param pickGeneration icon generation from [me.rosuh.easywatermark.session.IosPickGenerationGate.nextIconGeneration]
+     * (F15/F16 — Kotlin publication boundary for icon config via [WatermarkSessionViewModel.applyConfigIf]).
+     */
     @Throws(Exception::class)
-    suspend fun deliverIconBytesAndAwait(bytes: ByteArray) {
+    suspend fun deliverIconBytesAndAwait(bytes: ByteArray, pickGeneration: Long) {
         isBusy = true
         try {
+            if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isIconCurrent(pickGeneration)) {
+                throw me.rosuh.easywatermark.session.StalePickGenerationException(pickGeneration)
+            }
             val previousRef = services.waterMarkRepo.waterMark.first().iconUri
             val path = IosIconPersistence.writeIconBytes(bytes)
-            services.session.dispatchAndAwait(
-                AppIntent.ApplyConfig(WatermarkConfigChange.Icon(MediaRef(path))),
+            // Re-check after IO before config publication (F15/F16).
+            me.rosuh.easywatermark.session.IosPickPublishProbe.awaitBeforeIconConfig(pickGeneration)
+            if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isIconCurrent(pickGeneration)) {
+                me.rosuh.easywatermark.data.repo.IosIconPersistence.deleteIfOwned(path)
+                throw me.rosuh.easywatermark.session.StalePickGenerationException(pickGeneration)
+            }
+            val applied = services.session.applyConfigIf(
+                stillValid = {
+                    me.rosuh.easywatermark.session.IosPickGenerationGate.isIconCurrent(pickGeneration)
+                },
+                change = WatermarkConfigChange.Icon(MediaRef(path)),
             )
+            if (!applied) {
+                me.rosuh.easywatermark.data.repo.IosIconPersistence.deleteIfOwned(path)
+                throw me.rosuh.easywatermark.session.StalePickGenerationException(pickGeneration)
+            }
+            // Host-side bind only when generation is still current after config write.
+            if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isIconCurrent(pickGeneration)) {
+                return
+            }
             IosIconPersistence.deleteIfOwned(previousRef.value)
             iconBytes = bytes
             wmPreviewCache.clear()

@@ -236,6 +236,107 @@ open class WatermarkSessionViewModel(
 
     suspend fun dispatchAndAwait(intent: AppIntent) = applyIntent(intent)
 
+    /**
+     * Generation-scoped EnterEditor (+ optional SelectCurrent) publication (F12/F16).
+     *
+     * Under [sessionMutex], a single [stillValid] check gates **both** repository selection
+     * effects and launch StateFlow writes on [Dispatchers.Main.immediate]. Repo commits
+     * ([SessionEffect.CommitImageSelection] / [SessionEffect.SelectImage]) run in the same
+     * Main.immediate window as StateFlow updates — they use Main.immediate themselves and do
+     * not yield when already on Main — so there is no post-StateFlow suspending effect window
+     * where a newer generation can still install A into the repository.
+     *
+     * When [stillValid] is false, **neither** StateFlow nor repository selection is written.
+     * No publish-then-rollback.
+     *
+     * @return true if published; false if skipped.
+     */
+    suspend fun publishEditorSelectionIf(
+        stillValid: () -> Boolean,
+        selected: List<ImageInfo>,
+        waterMark: WaterMark,
+        focusUriIfNotFirst: MediaRef? = null,
+        gallerySnapshot: List<Image> = emptyList(),
+    ): Boolean {
+        return sessionMutex.withLock {
+            var published = false
+            withContext(Dispatchers.Main.immediate) {
+                // Single validity check immediately before any repo or StateFlow write.
+                if (!stillValid()) return@withContext
+                val before = currentSnapshot()
+                val enter = reduceSessionUi(
+                    before,
+                    AppIntent.EnterEditor(
+                        selected = selected,
+                        gallerySnapshot = gallerySnapshot,
+                        waterMark = waterMark,
+                    ),
+                )
+                var mid = enter.snapshot
+                val effects = enter.effects.toMutableList()
+
+                if (
+                    focusUriIfNotFirst != null &&
+                    selected.firstOrNull()?.uri != focusUriIfNotFirst
+                ) {
+                    val select = reduceSessionUi(
+                        mid,
+                        AppIntent.SelectCurrent(focusUriIfNotFirst),
+                    )
+                    effects += select.effects
+                    mid = select.snapshot
+                }
+
+                // Repo selection first (same Main.immediate frame — no interleaving suspend).
+                for (effect in effects) {
+                    when (effect) {
+                        is SessionEffect.CommitImageSelection -> {
+                            if (effect.list.isEmpty()) continue
+                            waterMarkRepo.updateImageList(effect.list)
+                            nextSelectedPos = 0
+                            waterMarkRepo.select(effect.list.first().uri)
+                        }
+                        is SessionEffect.SelectImage -> {
+                            if (waterMarkRepo.selectedImage.value.uri != effect.ref) {
+                                waterMarkRepo.select(effect.ref)
+                            }
+                        }
+                    }
+                }
+
+                // Launch StateFlow only after repo selection is installed in the same window.
+                _launchScreenUiStateFlow.update { current ->
+                    mergeLaunchPreservingLiveImages(
+                        reduced = mid.launch,
+                        live = current,
+                        before = before.launch,
+                    )
+                }
+                _galleryPickedImageList.value = mid.galleryPicked
+                _uiState.value = mid.dialogUi
+                published = true
+            }
+            published
+        }
+    }
+
+    /**
+     * Apply a config change only if [stillValid] is true immediately before the write (F16 icon).
+     * Does not roll back a completed DataStore write; callers must not treat a false return as
+     * "config was never attempted" when [stillValid] flipped during a suspending store edit —
+     * icon host code re-checks generation after return and skips host-side bind when stale.
+     */
+    suspend fun applyConfigIf(
+        stillValid: () -> Boolean,
+        change: WatermarkConfigChange,
+    ): Boolean {
+        return sessionMutex.withLock {
+            if (!stillValid()) return@withLock false
+            applyConfigChange(change)
+            true
+        }
+    }
+
     suspend fun exportAndAwait(images: List<ImageInfo>) {
         val resolved = resolveExportImages(images)
         startExport(resolved)?.join()
