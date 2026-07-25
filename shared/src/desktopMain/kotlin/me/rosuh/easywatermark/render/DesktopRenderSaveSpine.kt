@@ -26,6 +26,9 @@ data class DesktopRenderRequest(
  * Callers choose destination (preview temp, exact path, unique export, headless default) and pass
  * an exact [File]. Synchronous; callers own dispatchers. Paint goes through
  * [DesktopWatermarkComposer.composeRealImage] → [CommonWatermarkPipeline].
+ *
+ * **G1:** final bytes are published via [DesktopAtomicFileWrite] (temp → sync → atomic replace),
+ * so a failed publish never leaves a half-written public [target] when an older file existed.
  */
 data class DesktopSavedImage(
     val output: MediaRef,
@@ -40,6 +43,7 @@ object DesktopRenderSaveSpine {
     /**
      * Render [request] over [imageBytes] and write to [target].
      *
+     * @param writeHooks optional G1 fault-injection seam for tests (production default no-ops).
      * @throws IllegalArgumentException blank Image-mode icon path ([DesktopSaveDecision.EMPTY_ICON_MESSAGE])
      * @throws IllegalArgumentException missing/unreadable icon file
      * @throws Exception decode/render/encode/IO failures from the composer stack
@@ -48,6 +52,7 @@ object DesktopRenderSaveSpine {
         imageBytes: ByteArray,
         request: DesktopRenderRequest,
         target: File,
+        writeHooks: DesktopAtomicFileWrite.Hooks = DesktopAtomicFileWrite.Hooks(),
     ): DesktopSavedImage {
         val iconBytes: ByteArray? =
             when (val plan = DesktopSaveDecision.renderPlan(request.config.markMode, request.config.iconUri.value)) {
@@ -66,7 +71,7 @@ object DesktopRenderSaveSpine {
             iconBytes = iconBytes,
         )
         target.parentFile?.mkdirs()
-        target.writeBytes(composed.png)
+        DesktopAtomicFileWrite.publish(target, composed.png, writeHooks)
         return DesktopSavedImage(
             output = MediaRef(target.absolutePath),
             format = request.prefs.outputFormat,
