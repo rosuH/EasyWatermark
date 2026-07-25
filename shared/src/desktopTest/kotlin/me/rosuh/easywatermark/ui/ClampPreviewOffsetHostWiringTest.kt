@@ -104,9 +104,10 @@ class ClampPreviewOffsetHostWiringTest {
         // Call-site (not import): require '('.
         val bridgeIdx = window.indexOf(".desktopClampPreviewOffsetDrag(")
         assertTrue(bridgeIdx >= 0, "bridge call site required on preview Modifier")
+        // Neighborhood must cover applyOffset + previewGeneration++ (H0.1 bench marks add lines).
         val callbackSlice = window.substring(
             bridgeIdx,
-            (bridgeIdx + 2200).coerceAtMost(window.length),
+            (bridgeIdx + 3200).coerceAtMost(window.length),
         )
         val callbackCode = stripKotlinComments(callbackSlice)
 

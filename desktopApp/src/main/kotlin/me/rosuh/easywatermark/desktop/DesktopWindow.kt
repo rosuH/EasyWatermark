@@ -395,6 +395,8 @@ fun launchDesktopWindow() = application {
     // reactive preview. Freezes one Session item (path+offset) before IO; only when no Session
     // item exists may lastImage/fixture supply bytes with explicit center. Never lastSavedFile.
     suspend fun refreshPreview(): String {
+        // H0.1: stage the full Desktop post-commit preview path (encode/temp write included).
+        val bench = me.rosuh.easywatermark.ui.ClampDragBench.previewScope("desktop_preview_refresh")
         val frozen = freezeCurrentItemInput()
         val last = lastImage
         val (img, msg) = withContext(Dispatchers.IO) {
@@ -419,6 +421,7 @@ fun launchDesktopWindow() = application {
                         label = frozen.label
                     }
                 }
+                bench.mark("read")
                 val o = DesktopWatermarkFlow.runSaveFlow(
                     repo, userConfigRepo,
                     inputBytes = imageBytes,
@@ -427,19 +430,34 @@ fun launchDesktopWindow() = application {
                     offsetX = frozen.offsetX,
                     offsetY = frozen.offsetY,
                 )
-                DesktopImageDecoder.decode(previewFile.readBytes()) to
+                bench.mark("saveFlow")
+                val decoded = DesktopImageDecoder.decode(previewFile.readBytes())
+                bench.mark("decodeDisplay")
+                decoded to
                     "Preview: ${o.format}, ${o.width}x${o.height} (${o.outputByteCount} B)"
             } catch (t: Throwable) {
+                bench.mark("error")
                 null to "Preview refresh failed (kept last preview): ${t.message}"
             }
         }
         img?.let { preview = it }
+        bench.finish(
+            mapOf(
+                "offsetX" to frozen.offsetX,
+                "offsetY" to frozen.offsetY,
+                "hasPreview" to (img != null),
+            ),
+        )
         return msg
     }
 
     LaunchedEffect(previewGeneration) {
         if (previewGeneration == 0) return@LaunchedEffect
+        // H0.1 baseline: fixed 250ms debounce is part of end→visible latency (not removed here).
+        val debounceBench = me.rosuh.easywatermark.ui.ClampDragBench.previewScope("desktop_preview_debounce")
         delay(250)
+        debounceBench.mark("delay250")
+        debounceBench.finish(mapOf("previewGeneration" to previewGeneration))
         status = refreshPreview()
     }
 
@@ -758,19 +776,23 @@ fun launchDesktopWindow() = application {
                                                 offsetX = dragItem?.offsetX ?: 0.5f,
                                                 offsetY = dragItem?.offsetY ?: 0.5f,
                                                 onOffsetCommit = { x, y ->
-                                                    // Fail-closed: only the live Session curImageInfo
-                                                    // whose uri still matches the drag identity may commit.
+                                                    // Fail-closed: live Session curImageInfo.uri must match drag.
                                                     val dragUri = dragItem?.uri
                                                         ?: return@desktopClampPreviewOffsetDrag
                                                     val item = session.launchScreenUiStateFlow.value
                                                         .curImageInfo
                                                         ?.takeIf { it.uri == dragUri }
                                                         ?: return@desktopClampPreviewOffsetDrag
-                                                    // Synchronous sole commit owner; then one preview invalidate.
+                                                    // H0.1: sync commit; async preview (debounce+saveFlow).
+                                                    val b = me.rosuh.easywatermark.ui.ClampDragBench
+                                                        .previewScope("desktop_offset_commit")
                                                     session.applyOffset(
                                                         item.copy(offsetX = x, offsetY = y),
                                                     )
+                                                    b.mark("applyOffset")
                                                     previewGeneration++
+                                                    b.mark("previewGenerationBump")
+                                                    b.finish(mapOf("offsetX" to x, "offsetY" to y))
                                                 },
                                             ),
                                     )

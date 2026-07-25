@@ -572,14 +572,27 @@ class IosProductRootHost(
                                                         .curImageInfo
                                                         ?.takeIf { it.uri.value == dragPath }
                                                         ?: return@clampPreviewOffsetDrag
-                                                    // Sync Session sole commit → selected cache
-                                                    // eviction → one gen bump → existing rerender.
+                                                    // H0.1: sync Session commit + cache eviction;
+                                                    // raster is async (IosPreviewRaster stages).
+                                                    // No live draft during drag (product contract).
+                                                    val commitBench = ClampDragBench
+                                                        .previewScope("ios_offset_commit")
                                                     services.session.applyOffset(
                                                         live.copy(offsetX = x, offsetY = y),
                                                     )
+                                                    commitBench.mark("applyOffset")
                                                     wmPreviewCache.remove(dragPath)
+                                                    commitBench.mark("cacheEvict")
                                                     previewGen++
                                                     val gen = previewGen
+                                                    commitBench.mark("previewGenBump")
+                                                    commitBench.finish(
+                                                        mapOf(
+                                                            "offsetX" to x,
+                                                            "offsetY" to y,
+                                                            "path" to dragPath.substringAfterLast('/'),
+                                                        ),
+                                                    )
                                                     hostScope.launch {
                                                         try {
                                                             renderPreviewForCurrentSelection(
@@ -1291,16 +1304,28 @@ class IosProductRootHost(
  * - [gen] drops stale async results on rapid filmstrip taps
      */
     private suspend fun renderPreviewForCurrentSelection(gen: Int) {
+        // H0.1: host-level stages around IosPreviewRaster (read/decode/compose logged there too).
+        val hostBench = ClampDragBench.previewScope("ios_preview_refresh")
         val launch = services.session.launchScreenUiStateFlow.first()
         val cur = launch.curImageInfo ?: launch.selectedImageList.firstOrNull() ?: return
         val sourcePath = cur.uri.value
         if (sourcePath.isBlank()) return
         val wm = services.waterMarkRepo.waterMark.first()
+        hostBench.mark("sessionRead")
 
         wmPreviewCache[sourcePath]?.let { cached ->
             if (gen != previewGen) return
             previewBitmap = cached
             previewSourcePath = sourcePath
+            hostBench.mark("cacheHit")
+            hostBench.finish(
+                mapOf(
+                    "hit" to true,
+                    "path" to sourcePath.substringAfterLast('/'),
+                    "offsetX" to cur.offsetX,
+                    "offsetY" to cur.offsetY,
+                ),
+            )
             return
         }
 
@@ -1312,12 +1337,27 @@ class IosProductRootHost(
                 offsetY = cur.offsetY,
             )
         }
-        if (gen != previewGen) return
+        hostBench.mark("raster")
+        if (gen != previewGen) {
+            hostBench.finish(mapOf("staleGen" to true, "hit" to false))
+            return
+        }
 
         wmPreviewCache[sourcePath] = composed
         enforceCacheBudgets()
+        hostBench.mark("cachePut")
         previewBitmap = composed
         previewSourcePath = sourcePath
+        hostBench.finish(
+            mapOf(
+                "hit" to false,
+                "path" to sourcePath.substringAfterLast('/'),
+                "w" to composed.width,
+                "h" to composed.height,
+                "offsetX" to cur.offsetX,
+                "offsetY" to cur.offsetY,
+            ),
+        )
     }
 
     private suspend fun reexportCurrent() {

@@ -172,8 +172,12 @@ internal fun Modifier.clampPreviewOffsetDrag(
         var totalDx = 0f
         var totalDy = 0f
         var fitted: FittedImageRect? = null
+        // H0.1: measurement scope for this gesture only (no product state).
+        var bench: ClampDragBench.GestureScope? = null
 
         fun endGesture(cancelled: Boolean) {
+            val scope = bench
+            scope?.mark("drag")
             val tile =
                 if (currentIsClamp) WatermarkTileMode.CLAMP else WatermarkTileMode.REPEAT
             val commit = resolveClampDragCommit(
@@ -191,9 +195,19 @@ internal fun Modifier.clampPreviewOffsetDrag(
                     cancelled = cancelled,
                 ),
             )
+            scope?.mark("resolveCommit")
             if (commit != null) {
                 currentOnCommit(commit.offsetX, commit.offsetY)
+                // Host callback time includes applyOffset + invalidate kickoff (not full preview).
+                scope?.markCommitDone()
             }
+            scope?.finish(
+                mapOf(
+                    "cancelled" to cancelled,
+                    "platform" to "shared",
+                ),
+            )
+            bench = null
             active = false
             startInFitted = false
             totalDx = 0f
@@ -217,6 +231,8 @@ internal fun Modifier.clampPreviewOffsetDrag(
                 startOy = currentOffsetY
                 totalDx = 0f
                 totalDy = 0f
+                // Only instrument gestures that start inside the fitted image in CLAMP.
+                bench = if (active) ClampDragBench.gestureScope() else null
             },
             onDragEnd = {
                 if (active || startInFitted) {
@@ -225,6 +241,7 @@ internal fun Modifier.clampPreviewOffsetDrag(
                     active = false
                     totalDx = 0f
                     totalDy = 0f
+                    bench = null
                 }
             },
             onDragCancel = {
@@ -235,6 +252,8 @@ internal fun Modifier.clampPreviewOffsetDrag(
             change.consume()
             totalDx += dragAmount.x
             totalDy += dragAmount.y
+            // Count samples only — no mid-gesture raster / live draft (H0.1 product contract).
+            bench?.sample()
         }
     }
 }
