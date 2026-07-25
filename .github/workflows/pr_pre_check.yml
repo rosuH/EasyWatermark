@@ -66,6 +66,16 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      # J2 — static privacy/backup policy must stay explicit on every PR (issue 13 §J2).
+      - name: Android backup / data-extraction policy structural check
+        run: |
+          set -euo pipefail
+          grep -q 'android:dataExtractionRules="@xml/data_extraction_rules"' app/src/main/AndroidManifest.xml
+          grep -q 'android:fullBackupContent="@xml/backup_rules"' app/src/main/AndroidManifest.xml
+          test -f app/src/main/res/xml/data_extraction_rules.xml
+          test -f app/src/main/res/xml/backup_rules.xml
+          echo "J2 backup policy structural check OK"
+
       - name: Build apk with Gradle
         run: ./gradlew :app:assembleDebug
 
@@ -74,6 +84,11 @@ jobs:
 
       - name: Run :app unit tests incl. watermark golden (Robolectric NATIVE, CMP plan C1.7/C1.8)
         run: ./gradlew :app:testDebugUnitTest
+
+      # J2: lint is informative — do not fail the PR on pre-existing lint debt (fail-open).
+      - name: Lint Debug (J2 residual-tolerant)
+        continue-on-error: true
+        run: ./gradlew :app:lintDebug --max-workers=4
 
   # J1 — permanent iOS PR gate (issue 13 §J1 / plan 52).
   # Ubuntu cannot build Kotlin/Native iOS or the Swift host; this job is the non-local-only compile

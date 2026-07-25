@@ -67,6 +67,13 @@ jobs:
       # Set Repository Name As Env Variable
       - name: Set repository name as env variable
         run: echo "repository_name=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_ENV
+      # J2 — baseline profile presence (minified release path); physical-device witness residual.
+      - name: Baseline profile presence (J2)
+        run: |
+          set -euo pipefail
+          test -f app/src/main/baseline-prof.txt
+          wc -l app/src/main/baseline-prof.txt
+          echo "Physical-device output witness: residual (owner device; not this GHA job)"
       # Create APK Release
       - name: Build apk release project (APK) - ${{ env.main_project_module }} module
         run: ./gradlew -PappVerName=${{ env.VERSION }} ${{ env.main_project_module }}:assembleRelease
