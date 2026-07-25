@@ -20,6 +20,11 @@ final class IosProductRootBox: ObservableObject {
         host?.dispose()
     }
 
+    /// G4: memory-pressure trim — host image caches only; Session selection retained.
+    func trimHostCaches() {
+        host?.onMemoryWarning()
+    }
+
     func presentShare(path: String) {
         guard let presenter = foregroundPresenter() else { return }
         let url = URL(fileURLWithPath: path)
@@ -226,8 +231,15 @@ struct ContentView: View {
         // iOS 17+: request the selected asset's current encoding on both picker edges so
         // loadTransferable does not silently receive a derived/compatible representation (issue 26 H1).
         // iOS 16 deployment keeps the pre-encoding API shape; runtime targets for C4 are 17+.
+        // G4: trim host image caches on memory warning (keeps Session selection).
+        let withMemoryTrim = root.onReceive(
+            NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)
+        ) { _ in
+            productRoot.trimHostCaches()
+        }
+
         if #available(iOS 17.0, *) {
-            root
+            withMemoryTrim
                 .photosPicker(
                     isPresented: $isPhotoPickerPresented,
                     selection: $pickedItems,
@@ -244,7 +256,7 @@ struct ContentView: View {
                     photoLibrary: .shared(),
                 )
         } else {
-            root
+            withMemoryTrim
                 .photosPicker(
                     isPresented: $isPhotoPickerPresented,
                     selection: $pickedItems,

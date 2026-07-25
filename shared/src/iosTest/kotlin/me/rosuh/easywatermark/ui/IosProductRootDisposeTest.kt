@@ -117,4 +117,43 @@ class IosProductRootDisposeTest {
         }
         Unit
     }
+
+    @Test
+    fun trimCaches_clearsBudgets_disposeStillIdempotent() = runBlocking {
+        val (services, store) = isolatedServices()
+        try {
+            val host = IosProductRootHost(
+                onPickPhoto = {},
+                onPickIcon = {},
+                onShare = {},
+                onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
+                services = services,
+            )
+            val tiny = androidx.compose.ui.graphics.ImageBitmap(
+                2,
+                2,
+                androidx.compose.ui.graphics.ImageBitmapConfig.Argb8888,
+            )
+            host.putWmPreviewForTests("a", tiny)
+            host.putPlaceholderForTests("b", tiny)
+            host.putFilmstripThumbForTests("c", tiny)
+            assertTrue(host.cacheBudgetForTests().wmPreview > 0)
+
+            host.trimCaches()
+            val cleared = host.cacheBudgetForTests()
+            assertEquals(0, cleared.wmPreview)
+            assertEquals(0, cleared.placeholder)
+            assertEquals(0, cleared.filmstrip)
+            assertFalse(host.isDisposedForTests())
+
+            host.dispose()
+            assertTrue(host.isDisposedForTests())
+            // trim after dispose is no-op safe.
+            host.trimCaches()
+            host.dispose()
+        } finally {
+            store.clear()
+        }
+        Unit
+    }
 }

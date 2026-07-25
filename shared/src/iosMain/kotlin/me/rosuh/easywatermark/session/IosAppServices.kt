@@ -1,6 +1,12 @@
 package me.rosuh.easywatermark.session
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import me.rosuh.easywatermark.data.datastore.createUserConfigDataStore
 import me.rosuh.easywatermark.data.datastore.createWaterMarkDataStore
 import me.rosuh.easywatermark.data.model.ImageInfo
@@ -15,6 +21,12 @@ import kotlin.experimental.ExperimentalObjCName
 import kotlin.native.ObjCName
 
 private const val DEFAULT_WATERMARK_TEXT = "EasyWatermark 水印"
+
+/**
+ * G4: max concurrent [IosSourceStager.stageBytes] writers during multi-pick stage.
+ * Order of [ImageInfo] in Session is always input order (index-stable gather).
+ */
+const val IOS_STAGING_MAX_CONCURRENCY: Int = 3
 
 /**
  * Single-process iOS graph (ADR-0017 Phase 4): **one** watermark DataStore + user prefs store,
@@ -54,10 +66,10 @@ class IosAppServices(
         pickGeneration: Long,
     ): String {
         require(imageBytesList.isNotEmpty()) { "stagePickedImagesBytes: empty list" }
-        // Phase 1 — prepare files (safe if later superseded; cleaned on stale).
-        val staged = imageBytesList.map { bytes ->
-            ImageInfo(MediaRef(IosSourceStager.stageBytes(bytes)))
-        }
+        // Phase 1 — file-first stage with bounded concurrency (G4).
+        // Gather by input index so Session selection order matches picker order.
+        // Caller's multi ByteArray list is not retained after return; durable identity is path.
+        val staged = stageBytesBounded(imageBytesList)
         try {
             if (!IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
                 throw StalePickGenerationException(pickGeneration)
@@ -98,6 +110,33 @@ class IosAppServices(
         } catch (e: StalePickGenerationException) {
             staged.forEach { IosSourceStager.deleteQuietly(it.uri.value) }
             throw e
+        }
+    }
+
+    /**
+     * Stage [imageBytesList] to `ewm_src_*` files with at most [IOS_STAGING_MAX_CONCURRENCY]
+     * concurrent writers. Returns [ImageInfo] list in **input order**.
+     */
+    private suspend fun stageBytesBounded(imageBytesList: List<ByteArray>): List<ImageInfo> {
+        if (imageBytesList.size == 1) {
+            return listOf(ImageInfo(MediaRef(IosSourceStager.stageBytes(imageBytesList.first()))))
+        }
+        val gate = Semaphore(IOS_STAGING_MAX_CONCURRENCY)
+        return coroutineScope {
+            imageBytesList.mapIndexed { index, bytes ->
+                async(Dispatchers.Default) {
+                    gate.withPermit {
+                        IosStageConcurrencyProbe.onEnter()
+                        try {
+                            index to ImageInfo(MediaRef(IosSourceStager.stageBytes(bytes)))
+                        } finally {
+                            IosStageConcurrencyProbe.onExit()
+                        }
+                    }
+                }
+            }.awaitAll()
+                .sortedBy { it.first }
+                .map { it.second }
         }
     }
 

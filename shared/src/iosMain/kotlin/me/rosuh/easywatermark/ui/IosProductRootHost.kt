@@ -29,8 +29,11 @@ import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.session.IosSourceStager
+import me.rosuh.easywatermark.session.IOS_STAGING_MAX_CONCURRENCY
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import me.rosuh.easywatermark.ProductVersion
@@ -124,6 +127,10 @@ class IosProductRootHost(
     private val ownedStagedPaths = linkedSetOf<String>()
     private var disposed = false
 
+    /**
+     * G4 file-first: host no longer permanently owns multi-item full-res source bytes.
+     * Preview / export re-read staged `ewm_src_*` paths. Field retained only for dispose clear.
+     */
     private var sourceBytes by mutableStateOf<ByteArray?>(null)
     private var iconBytes by mutableStateOf<ByteArray?>(null)
     /** In-memory watermarked preview (no PNG round-trip). */
@@ -134,19 +141,20 @@ class IosProductRootHost(
     private var statusLine by mutableStateOf("")
     private var isBusy by mutableStateOf(false)
     /**
- * Android BitmapCache analogue: watermarked [ImageBitmap] by source path.
- * Cleared on config change. Instant filmstrip re-selection.
+     * Android BitmapCache analogue: watermarked [ImageBitmap] by source path.
+     * Cleared on config change / memory pressure. Budget: [WM_PREVIEW_CACHE_MAX].
      */
     private val wmPreviewCache = mutableMapOf<String, ImageBitmap>()
-    /** Source-only placeholders (no watermark) for instant switch feedback. */
+    /** Source-only placeholders (no watermark). Budget: [PLACEHOLDER_CACHE_MAX]. */
     private val sourcePlaceholderCache = mutableMapOf<String, ImageBitmap>()
     /**
- * Filmstrip cell cache (path → small bitmap). Prefetched when a batch is staged so
- * Fling does not cold-decode / flash empty cells (snap-back perception).     */
+     * Filmstrip cell cache (path → small bitmap). Prefetched when a batch is staged so
+     * fling does not cold-decode / flash empty cells. Budget: [FILMSTRIP_THUMB_CACHE_MAX].
+     */
     private val filmstripThumbCache = mutableMapOf<String, ImageBitmap>()
     /** Bumped after prefetch so produceState re-reads the map. */
     private var filmstripThumbEpoch by mutableStateOf(0)
-    /** Export-sheet thumbs (path → small bitmap); avoids re-decode on fling recompose. */
+    /** Export-sheet thumbs. Budget: [EXPORT_THUMB_CACHE_MAX]. */
     private val exportThumbCache = mutableMapOf<String, ImageBitmap>()
     private var previewGen: Int = 0
     private var isSaving by mutableStateOf(false)
@@ -217,6 +225,89 @@ class IosProductRootHost(
         if (path.isNotBlank()) ownedStagedPaths.add(path)
     }
 
+    /** Test-only: current entry counts for budgeted host image caches. */
+    internal data class CacheBudgetSnapshot(
+        val wmPreview: Int,
+        val placeholder: Int,
+        val filmstrip: Int,
+        val exportThumb: Int,
+        val holdsSourceBytes: Boolean,
+    )
+
+    internal fun cacheBudgetForTests(): CacheBudgetSnapshot =
+        CacheBudgetSnapshot(
+            wmPreview = wmPreviewCache.size,
+            placeholder = sourcePlaceholderCache.size,
+            filmstrip = filmstripThumbCache.size,
+            exportThumb = exportThumbCache.size,
+            holdsSourceBytes = sourceBytes != null,
+        )
+
+    /** Test-only: insert a placeholder cache entry and enforce budgets (no Session change). */
+    internal fun putPlaceholderForTests(path: String, bitmap: ImageBitmap) {
+        sourcePlaceholderCache[path] = bitmap
+        enforceCacheBudgets()
+    }
+
+    /** Test-only: insert a wm preview cache entry and enforce budgets. */
+    internal fun putWmPreviewForTests(path: String, bitmap: ImageBitmap) {
+        wmPreviewCache[path] = bitmap
+        enforceCacheBudgets()
+    }
+
+    /** Test-only: insert a filmstrip thumb and enforce budgets. */
+    internal fun putFilmstripThumbForTests(path: String, bitmap: ImageBitmap) {
+        filmstripThumbCache[path] = bitmap
+        enforceCacheBudgets()
+    }
+
+    /**
+     * G4 memory-pressure seam: clear host image caches and presentation bitmaps without
+     * wiping Session product selection / route / owned staged path tracking.
+     * Swift should call from `UIApplication.didReceiveMemoryWarningNotification`.
+     *
+     * Distinct from [dispose] (full teardown + temp delete + export cancel).
+     */
+    fun trimCaches() {
+        if (disposed) return
+        sourceBytes = null
+        // Keep iconBytes: single small buffer needed for Image-mode editor chrome; Session still owns icon path.
+        previewBitmap = null
+        previewSourcePath = null
+        previewGen += 1
+        filmstripThumbEpoch += 1
+        wmPreviewCache.clear()
+        sourcePlaceholderCache.clear()
+        filmstripThumbCache.clear()
+        exportThumbCache.clear()
+    }
+
+    /** Alias for Swift / ObjC memory-warning bridge. */
+    fun onMemoryWarning() = trimCaches()
+
+    /**
+     * FIFO eviction by insertion order when entry counts exceed G4 budgets.
+     * Called after every cache put path (preview render, filmstrip prefetch, export thumb, tests).
+     */
+    private fun enforceCacheBudgets() {
+        while (wmPreviewCache.size > WM_PREVIEW_CACHE_MAX) {
+            val oldest = wmPreviewCache.keys.firstOrNull() ?: break
+            wmPreviewCache.remove(oldest)
+        }
+        while (sourcePlaceholderCache.size > PLACEHOLDER_CACHE_MAX) {
+            val oldest = sourcePlaceholderCache.keys.firstOrNull() ?: break
+            sourcePlaceholderCache.remove(oldest)
+        }
+        while (filmstripThumbCache.size > FILMSTRIP_THUMB_CACHE_MAX) {
+            val oldest = filmstripThumbCache.keys.firstOrNull() ?: break
+            filmstripThumbCache.remove(oldest)
+        }
+        while (exportThumbCache.size > EXPORT_THUMB_CACHE_MAX) {
+            val oldest = exportThumbCache.keys.firstOrNull() ?: break
+            exportThumbCache.remove(oldest)
+        }
+    }
+
     /**
      * E2 host close/dispose (single-scene B1):
      * - cancel Session export
@@ -258,6 +349,17 @@ class IosProductRootHost(
                 IosSourceStager.deleteQuietly(path)
             }
         }
+    }
+
+    companion object {
+        /** G4: watermarked preview cache entry cap. */
+        const val WM_PREVIEW_CACHE_MAX: Int = 8
+        /** G4: source-only placeholder cache entry cap. */
+        const val PLACEHOLDER_CACHE_MAX: Int = 12
+        /** G4: filmstrip thumb cache entry cap. */
+        const val FILMSTRIP_THUMB_CACHE_MAX: Int = 48
+        /** G4: export-sheet thumb cache entry cap. */
+        const val EXPORT_THUMB_CACHE_MAX: Int = 48
     }
 
     fun viewController(): UIViewController = ComposeUIViewController {
@@ -512,7 +614,10 @@ class IosProductRootHost(
                                 }
                                 value = withContext(Dispatchers.Default) {
                                     decodeFilmstripThumb(path)
-                                }?.also { filmstripThumbCache[path] = it }
+                                }?.also {
+                                    filmstripThumbCache[path] = it
+                                    enforceCacheBudgets()
+                                }
                             }
                             if (thumbBitmap != null) {
                                 Image(
@@ -881,7 +986,10 @@ class IosProductRootHost(
                                 IosByteArrayInterop.fromNSData(data),
                                 maxEdgePx = 96,
                             )
-                        }?.also { exportThumbCache[path] = it }
+                        }?.also {
+                            exportThumbCache[path] = it
+                            enforceCacheBudgets()
+                        }
                     }
                     val displayThumb = thumb
                         ?: previewBitmap.takeIf { path == "preview" || path.isBlank() }
@@ -918,8 +1026,13 @@ class IosProductRootHost(
         }
     }
 
+    /**
+     * Legacy optimistic shell only — does **not** stage or retain multi full-res owners.
+     * Production path is [deliverPickedPhotosBatch] (file-first).
+     */
     fun deliverPickedPhoto(bytes: ByteArray) {
-        sourceBytes = bytes
+        // G4: do not pin full-res bytes on the host; Session path is the durable owner.
+        sourceBytes = null
         showEditor = true
     }
 
@@ -993,13 +1106,16 @@ class IosProductRootHost(
             return
         }
         if (disposed) return
-        sourceBytes = images.first()
+        // G4 file-first: drop any host full-res source pin; staged paths + Session own identity.
+        // Caller's [images] list is stack-scoped and must not be stored on the host.
+        sourceBytes = null
         // Session already EnterEditor via stagePickedImagesBytes; keep optimistic flag for isInEditor.
         showEditor = true
         if (!append) {
             wmPreviewCache.clear()
             sourcePlaceholderCache.clear()
             filmstripThumbCache.clear()
+            exportThumbCache.clear()
             filmstripThumbEpoch += 1
             previewBitmap = null
             previewSourcePath = null
@@ -1027,6 +1143,7 @@ class IosProductRootHost(
             if (placeholder != null) {
                 if (cached == null) {
                     sourcePlaceholderCache[focusPath] = placeholder
+                    enforceCacheBudgets()
                 }
                 previewBitmap = placeholder
                 previewSourcePath = focusPath
@@ -1084,10 +1201,14 @@ class IosProductRootHost(
         }
         val missing = paths.filter { it.isNotBlank() && !filmstripThumbCache.containsKey(it) }
         if (missing.isEmpty()) return
+        // G4: bound concurrent filmstrip decodes to the same ceiling as stage concurrency.
+        val gate = Semaphore(IOS_STAGING_MAX_CONCURRENCY)
         val decoded = coroutineScope {
             missing.map { path ->
                 async(Dispatchers.Default) {
-                    path to runCatching { decodeFilmstripThumb(path) }.getOrNull()
+                    gate.withPermit {
+                        path to runCatching { decodeFilmstripThumb(path) }.getOrNull()
+                    }
                 }
             }.awaitAll()
         }
@@ -1097,6 +1218,7 @@ class IosProductRootHost(
         for ((path, thumb) in decoded) {
             if (thumb != null) filmstripThumbCache[path] = thumb
         }
+        enforceCacheBudgets()
         withContext(Dispatchers.Main) {
             if (me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
                 filmstripThumbEpoch += 1
@@ -1193,18 +1315,7 @@ class IosProductRootHost(
         if (gen != previewGen) return
 
         wmPreviewCache[sourcePath] = composed
-        while (wmPreviewCache.size > 8) {
-            val oldest = wmPreviewCache.keys.firstOrNull() ?: break
-            wmPreviewCache.remove(oldest)
-        }
-        while (sourcePlaceholderCache.size > 12) {
-            val oldest = sourcePlaceholderCache.keys.firstOrNull() ?: break
-            sourcePlaceholderCache.remove(oldest)
-        }
-        while (filmstripThumbCache.size > 48) {
-            val oldest = filmstripThumbCache.keys.firstOrNull() ?: break
-            filmstripThumbCache.remove(oldest)
-        }
+        enforceCacheBudgets()
         previewBitmap = composed
         previewSourcePath = sourcePath
     }
