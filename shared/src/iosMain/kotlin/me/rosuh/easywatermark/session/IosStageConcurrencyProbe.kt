@@ -8,7 +8,8 @@ import kotlin.concurrent.AtomicInt
  *
  * Not a product API — max concurrent writers is gated by [IOS_STAGING_MAX_CONCURRENCY].
  */
-object IosStageConcurrencyProbe {
+/** J5: implementation/test seam — not part of the Swift product API surface. */
+internal object IosStageConcurrencyProbe {
     private val inFlight = AtomicInt(0)
     private val peak = AtomicInt(0)
 

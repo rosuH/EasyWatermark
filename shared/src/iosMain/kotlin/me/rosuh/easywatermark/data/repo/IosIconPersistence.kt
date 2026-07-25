@@ -41,7 +41,8 @@ import platform.Foundation.writeToFile
  * Empty bytes ([writeIconBytes]) and an unreadable path ([readIconBytes]) throw rather than creating or
  * propagating an unusable icon.
  */
-object IosIconPersistence {
+/** J5: icon file persistence — used via config bridge / Session, not Swift directly. */
+internal object IosIconPersistence {
 
     /** Helper-owned subdirectory under `NSDocumentDirectory` (ownership boundary for [deleteIfOwned]). */
     const val ICON_DIR_NAME: String = "watermark_icons"

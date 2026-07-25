@@ -27,7 +27,8 @@ import androidx.compose.ui.unit.LayoutDirection
  * a test supplies its own bytes. This keeps the slice honest: the *rendering* boundary is proven now;
  * *packaging* the 8 MB CJK font into an iOS bundle is a C5 concern (see `ios-decode-font-boundary.md`).
  */
-object IosTextRasterEnv {
+/** J5: text raster env — not called from Swift. */
+internal object IosTextRasterEnv {
 
     /**
      * H2: process-wide shared Skiko [FontFamily.Resolver] — avoid allocating a resolver per

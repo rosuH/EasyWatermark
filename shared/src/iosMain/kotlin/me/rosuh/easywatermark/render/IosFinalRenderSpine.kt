@@ -67,7 +67,8 @@ data class IosEncodedImage(
  * Production Text passes [IosFontLoader.bundledFontFamily]; Image does not load fonts.
  * Preview remains [IosPreviewRaster] (720 budget, in-memory, no encode).
  */
-object IosFinalRenderSpine {
+/** J5: export pipeline implementation — not called from Swift. */
+internal object IosFinalRenderSpine {
 
     /**
      * Explicit sRGB S32 working [ImageInfo] used before encode. Color space must be non-null sRGB.

@@ -20,7 +20,8 @@ import org.jetbrains.skia.Image as SkiaImage
  * [IosFinalRenderSpine]. Product Port/Preview/bridge must not call [composeOverImage] /
  * [composeIconOverImage] after C3. These helpers remain for existing cell/golden tests.
  */
-object IosWatermarkRenderer {
+/** J5: render implementation — Swift uses IosWatermarkRenderBridge. */
+internal object IosWatermarkRenderer {
 
     /** Render ONE watermark text cell via the shared [WatermarkCellComposer.composeTextCell] on iOS. */
     fun renderTextCell(

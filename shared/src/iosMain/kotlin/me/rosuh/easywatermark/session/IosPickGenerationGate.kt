@@ -91,7 +91,8 @@ class StalePickGenerationException(
  * Test probes that pause **immediately before** production publication writes.
  * Production leaves all hooks null. Used by F12/F16 seam tests.
  */
-object IosPickPublishProbe {
+/** J5: test seam — not part of the Swift product API surface. */
+internal object IosPickPublishProbe {
     private val lock = NSLock()
     private var beforeGuardedPublish: (suspend (generation: Long) -> Unit)? = null
     private var beforeHostPreviewBind: (suspend (generation: Long) -> Unit)? = null

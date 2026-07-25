@@ -14,7 +14,8 @@ import kotlin.time.TimeSource
  *
  * Not a formal JMH suite — production-safe NSLog-style println for device/sim.
  */
-object IosPreviewBench {
+/** J5: internal timing helper — not part of the Swift product API surface. */
+internal object IosPreviewBench {
     private val timeSource = TimeSource.Monotonic
 
     fun scope(name: String): Scope = Scope(name, timeSource.markNow())

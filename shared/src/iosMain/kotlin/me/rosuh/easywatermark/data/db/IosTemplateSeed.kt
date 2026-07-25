@@ -33,7 +33,8 @@ import platform.posix.memcpy
  * Failure is loud (missing/unreadable/empty resource → [IllegalStateException]), matching [IosFontLoader].
  * No new dependency: Kotlin/Native bundled `platform.Foundation`/`platform.posix` interop only.
  */
-object IosTemplateSeed {
+/** J5: seed unpack — not called from Swift. */
+internal object IosTemplateSeed {
 
     const val LANGUAGE_CH: String = "ch"
     const val LANGUAGE_ENG: String = "eng"

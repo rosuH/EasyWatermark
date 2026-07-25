@@ -32,7 +32,8 @@ import platform.Foundation.writeToFile
  * The public no-arg constructor still defaults to [IosFontLoader.bundledFontFamily]. Image mode never
  * invokes the provider.
  */
-class IosExportPipelinePort internal constructor(
+/** J5: Session export port — not called from Swift. */
+internal class IosExportPipelinePort internal constructor(
     private val textFontFamilyProvider: () -> FontFamily?,
 ) : ExportPipelinePort {
 

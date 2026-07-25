@@ -17,7 +17,8 @@ import platform.Foundation.dataWithContentsOfFile
  * - paints through [CommonWatermarkPipeline.compose] with the current offset
  * - returns an in-memory [ImageBitmap] ready for Compose [Image]
  */
-object IosPreviewRaster {
+/** J5: preview raster — not called from Swift. */
+internal object IosPreviewRaster {
 
     /**
      * Display-sized long edge. Android samples to canvas pixels (~screen); 720 keeps Skiko

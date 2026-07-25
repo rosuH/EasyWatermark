@@ -53,15 +53,15 @@ kotlin {
         }
     }
     jvm("desktop")
-    // C5.1 (S4d-25): declare a `Shared` framework on both iOS targets so the iOS app target
-    // (`iosApp/`) can link `:shared`. A dynamic framework (the canonical KMP template choice) is used
-    // so the framework self-contains skiko's transitive system-framework links — the consuming app
-    // just does `import Shared` + `-framework Shared`, and `embedAndSignAppleFrameworkForXcode` picks
-    // the right CONFIGURATION/SDK/ARCH from Xcode's environment. This is framework PACKAGING wiring
-    // only: no renderer logic, no new dependency, no commonMain/Android change.
+    // C5.1 (S4d-25) / J5 (issue 13 §J5): declare a dynamic `Shared` framework on both iOS targets
+    // so `iosApp/` can link `:shared` via classic Objective-C export (`import Shared`).
+    // **Do not** migrate production to experimental Alpha Swift export merely to hide symbols —
+    // shrink with Kotlin `internal` / `@HiddenFromObjC` (see evidence/j5/). Packaging only:
+    // `embedAndSignAppleFrameworkForXcode` picks CONFIGURATION/SDK/ARCH from Xcode.
     listOf(iosArm64(), iosSimulatorArm64()).forEach { iosTarget ->
         iosTarget.binaries.framework {
             baseName = "Shared"
+            // Classic ObjC-compatible framework (default). No SwiftExport experimental path.
         }
     }
 

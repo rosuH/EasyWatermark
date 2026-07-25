@@ -42,7 +42,8 @@ import platform.posix.memcpy
  * loader **compiles and links** on both iOS targets and documents the contract via [IosFontLoaderTest].
  * The RUN (and real font packaging into an `.app` bundle) lands with the C5 iOS app target.
  */
-object IosFontLoader {
+/** J5: font load edge — not called from Swift. */
+internal object IosFontLoader {
 
     /** Default bundled face names/types (match the desktop fonts in `desktopMain/resources/fonts/`). */
     const val DEFAULT_LATIN_NAME: String = "NotoSans-Regular"

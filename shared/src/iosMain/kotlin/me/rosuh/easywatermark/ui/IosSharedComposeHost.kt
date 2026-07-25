@@ -81,7 +81,7 @@ private data class IosSavedOutputActionsState(
 )
 
 /** Production host for the rendered watermark preview; system picker/share/save stay in SwiftUI. */
-class IosWatermarkPreviewHost {
+internal class IosWatermarkPreviewHost {
     private var state by mutableStateOf(IosWatermarkPreviewState())
 
     fun viewController(): UIViewController = ComposeUIViewController {
@@ -111,7 +111,7 @@ class IosWatermarkPreviewHost {
 }
 
 /** Production host for the shared launch shell; Swift still presents the system source picker. */
-class IosLaunchScreenHost(
+internal class IosLaunchScreenHost(
     private val onPickImage: () -> Unit,
 ) {
     fun viewController(): UIViewController = ComposeUIViewController {
@@ -131,7 +131,7 @@ class IosLaunchScreenHost(
 }
 
 /** Production host for the shared icon-option shell; Swift still presents the system picker. */
-class IosWatermarkIconOptionHost(
+internal class IosWatermarkIconOptionHost(
     private val onPick: () -> Unit,
 ) {
     private var state by mutableStateOf(IosWatermarkIconOptionState())
@@ -167,7 +167,7 @@ class IosWatermarkIconOptionHost(
 }
 
 /** Production host for post-render output actions; Swift retains Share/Photos system UI. */
-class IosSavedOutputActionsHost(
+internal class IosSavedOutputActionsHost(
     private val onShare: () -> Unit,
     private val onSaveToPhotos: () -> Unit,
 ) {
@@ -201,7 +201,7 @@ class IosSavedOutputActionsHost(
 }
 
 /** Production host for the shared tile-mode control; Swift still owns workflow writes and re-rendering. */
-class IosWatermarkTileModeHost(
+internal class IosWatermarkTileModeHost(
     private val onValueChange: (WatermarkTileMode) -> Unit,
 ) {
     private var mode by mutableStateOf(WatermarkTileMode.REPEAT)
@@ -225,7 +225,7 @@ class IosWatermarkTileModeHost(
 }
 
 /** Production host for the shared text-style control; Swift still owns workflow writes and re-rendering. */
-class IosTextPaintStyleHost(
+internal class IosTextPaintStyleHost(
     private val onValueChange: (TextPaintStyle) -> Unit,
 ) {
     private var style: TextPaintStyle by mutableStateOf(TextPaintStyle.Fill)
@@ -250,7 +250,7 @@ class IosTextPaintStyleHost(
 }
 
 /** Production host for the shared typeface control; Swift still owns workflow writes and re-rendering. */
-class IosTextTypefaceHost(
+internal class IosTextTypefaceHost(
     private val onValueChange: (TextTypeface) -> Unit,
 ) {
     private var typeface: TextTypeface by mutableStateOf(TextTypeface.Normal)
@@ -274,7 +274,7 @@ class IosTextTypefaceHost(
 }
 
 /** Production host for the shared text-size slider; Swift still owns persistence and re-rendering. */
-class IosTextSizeSliderHost(
+internal class IosTextSizeSliderHost(
     private val onValueChangeFinished: (Float) -> Unit,
 ) {
     private var textSize by mutableStateOf(14f)
@@ -307,7 +307,7 @@ class IosTextSizeSliderHost(
 }
 
 /** Production host for the shared rotation slider; Swift still owns persistence and re-rendering. */
-class IosWatermarkDegreeSliderHost(
+internal class IosWatermarkDegreeSliderHost(
     private val onValueChangeFinished: (Float) -> Unit,
 ) {
     private var degree by mutableStateOf(315f)
@@ -340,7 +340,7 @@ class IosWatermarkDegreeSliderHost(
 }
 
 /** Production host for the shared opacity slider; Swift still owns persistence and re-rendering. */
-class IosWatermarkAlphaSliderHost(
+internal class IosWatermarkAlphaSliderHost(
     private val onValueChangeFinished: (Float) -> Unit,
 ) {
     private var alphaPercent by mutableStateOf(100f)
@@ -375,7 +375,7 @@ class IosWatermarkAlphaSliderHost(
 }
 
 /** Production host for the shared horizontal-gap slider; Swift still owns persistence and re-rendering. */
-class IosWatermarkHorizontalGapSliderHost(
+internal class IosWatermarkHorizontalGapSliderHost(
     private val onValueChangeFinished: (Float) -> Unit,
 ) {
     private var horizontalGap by mutableStateOf(0f)
@@ -409,7 +409,7 @@ class IosWatermarkHorizontalGapSliderHost(
 }
 
 /** Production host for the shared vertical-gap slider; Swift still owns persistence and re-rendering. */
-class IosWatermarkVerticalGapSliderHost(
+internal class IosWatermarkVerticalGapSliderHost(
     private val onValueChangeFinished: (Float) -> Unit,
 ) {
     private var verticalGap by mutableStateOf(0f)
@@ -447,7 +447,7 @@ class IosWatermarkVerticalGapSliderHost(
  *
  * Replaces the SwiftUI TextField + Apply path. Swift still owns * [WatermarkWorkflow] persistence and re-render; no template icon (Templates stay SwiftUI).
  */
-class IosTextContentOptionHost(
+internal class IosTextContentOptionHost(
     private val onTextChange: (String) -> Unit,
 ) {
     private var text by mutableStateOf("")
@@ -480,7 +480,7 @@ class IosTextContentOptionHost(
 }
 
 /** Production host for the shared four-preset text-color palette; Swift still owns persistence and re-rendering. */
-class IosWatermarkTextColorHost(
+internal class IosWatermarkTextColorHost(
     private val onColorSelected: (Int) -> Unit,
 ) {
     private var color by mutableStateOf(0xFFFFB800.toInt())
@@ -528,7 +528,7 @@ class IosWatermarkTextColorHost(
  *
  * Swift retains PhotosPicker, Templates, Share/Save system UI, and [WatermarkWorkflow] writes.
  */
-class IosEditorScreenHost(
+internal class IosEditorScreenHost(
     private val onPickIcon: () -> Unit,
     private val onTextChange: (String) -> Unit,
     private val onDegreeFinished: (Float) -> Unit,

@@ -12,12 +12,13 @@ import kotlin.coroutines.resume
  * Invokes [onComplete] **exactly once** after Photos persistence finishes (success or failure).
  * Production Swift wraps `PHPhotoLibrary.performChanges`; tests inject fakes.
  */
-fun interface IosPhotosSaveEdge {
+/** J5: Photos save edge adapter — not a Swift product type. */
+internal fun interface IosPhotosSaveEdge {
     fun save(bytes: ByteArray, onComplete: (success: Boolean, message: String?) -> Unit)
 }
 
 /** Result of applying Photos persistence after Session render successes. */
-data class PhotosPersistBatchResult(
+internal data class PhotosPersistBatchResult(
     /** Items with Session [JobState.Success] and a non-blank result path. */
     val renderSuccessCount: Int,
     /** Items where Photos edge reported success after await. */
@@ -30,7 +31,7 @@ data class PhotosPersistBatchResult(
  * For each Session render success, load encoded bytes and **await** Photos save.
  * Does not mutate [ImageInfo.jobState] on Photos failure (render success is preserved).
  */
-suspend fun persistRenderSuccessesToPhotos(
+internal suspend fun persistRenderSuccessesToPhotos(
     images: List<ImageInfo>,
     loadBytes: (filePath: String) -> ByteArray?,
     photosSave: IosPhotosSaveEdge,
@@ -60,7 +61,7 @@ suspend fun persistRenderSuccessesToPhotos(
     )
 }
 
-suspend fun awaitPhotosSave(
+internal suspend fun awaitPhotosSave(
     photosSave: IosPhotosSaveEdge,
     bytes: ByteArray,
 ): Pair<Boolean, String?> = suspendCancellableCoroutine { cont ->
@@ -72,7 +73,8 @@ suspend fun awaitPhotosSave(
 }
 
 /** Status line for save sheet after render + Photos phase (D4 honesty). */
-fun photosPersistStatusLine(
+/** J5: status helper for host sheet — not called from Swift. */
+internal fun photosPersistStatusLine(
     batchSize: Int,
     result: PhotosPersistBatchResult,
 ): String = when {

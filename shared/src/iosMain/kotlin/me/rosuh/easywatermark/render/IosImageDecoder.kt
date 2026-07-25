@@ -35,7 +35,8 @@ import org.jetbrains.skia.Surface
  * `IosExifOrientationTest` asserts decode(orientation-6) is upright; its RUN confirms the iOS-runtime
  * behaviour at /C5 (compile/link-proven here). commonMain stays decode-free.
  */
-object IosImageDecoder {
+/** J5: decode edge — not called from Swift (goes through bridges). */
+internal object IosImageDecoder {
 
     /**
  * Decode encoded image [bytes] into an [ImageBitmap] via Skia. Skia applies EXIF orientation during
