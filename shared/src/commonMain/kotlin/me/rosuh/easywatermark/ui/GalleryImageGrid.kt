@@ -59,6 +59,11 @@ fun GalleryImageGrid(
     isSelected: (Image) -> Boolean,
     onSetSelected: (Image, Int, Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * I1: min cell size for [GridCells.Adaptive]. Default [GALLERY_ADAPTIVE_MIN_CELL_DP]
+     * yields ~4 columns at 360dp and more on expanded widths (not Fixed(4) only).
+     */
+    minCellDp: Float = GALLERY_ADAPTIVE_MIN_CELL_DP,
     thumbnail: @Composable (image: Image, contentDescription: String, modifier: Modifier) -> Unit,
 ) {
     val selectedShape = remember { RoundedCornerShape(10.dp) }
@@ -123,7 +128,8 @@ fun GalleryImageGrid(
     }
 
     LazyVerticalGrid(
-        columns = GridCells.Fixed(4),
+        // I1: adaptive min-cell — phone keeps ~4 cols; tablet/Desktop gain more.
+        columns = GridCells.Adaptive(minSize = minCellDp.dp),
         modifier = modifier
             .pointerInput(images.size) {
                 detectDragGesturesAfterLongPress(

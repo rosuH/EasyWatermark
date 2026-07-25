@@ -3,6 +3,7 @@ package me.rosuh.easywatermark.ui
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
@@ -541,6 +542,11 @@ class IosProductRootHost(
                         mutableStateOf(formatArgbHexColor(waterMark.textColor))
                     }
 
+                    // I1: container constraints in Dp → pure EditorLayoutClass (no UIKit types in domain).
+                    BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val layoutClass = remember(maxWidth, maxHeight) {
+                        editorLayoutClass(maxWidth.value, maxHeight.value)
+                    }
                     EditorScreen(
                         imageList = sessionImages,
                         waterMark = waterMark,
@@ -873,7 +879,9 @@ class IosProductRootHost(
                             }
                         },
                         modifier = Modifier.fillMaxSize(),
+                        layoutClass = layoutClass,
                     )
+                    } // BoxWithConstraints Editor
                 }
                 } // when (route)
             } // ProductShellHost

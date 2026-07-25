@@ -5,6 +5,7 @@ import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -102,6 +103,7 @@ import me.rosuh.easywatermark.shared.generated.resources.share
 import me.rosuh.easywatermark.ui.sharedString
 import me.rosuh.easywatermark.ui.EditorBottomControls
 import me.rosuh.easywatermark.ui.EditorScreen
+import me.rosuh.easywatermark.ui.editorLayoutClass
 import me.rosuh.easywatermark.shared.generated.resources.dev_comment
 import me.rosuh.easywatermark.ui.about.AboutDevCard
 import me.rosuh.easywatermark.ui.about.AboutScreenIcons
@@ -786,6 +788,11 @@ fun launchDesktopWindow() = application {
                     var colorDraft by remember(waterMark.textColor) {
                         mutableStateOf(formatArgbHexColor(waterMark.textColor))
                     }
+                    // I1: window size in Dp → pure EditorLayoutClass (Expanded on typical Desktop).
+                    BoxWithConstraints(modifier = shellModifier) {
+                    val layoutClass = remember(maxWidth, maxHeight) {
+                        editorLayoutClass(maxWidth.value, maxHeight.value)
+                    }
                     me.rosuh.easywatermark.ui.EditorScreen(
                         imageList = sessionImages,
                         waterMark = waterMark,
@@ -1075,8 +1082,10 @@ fun launchDesktopWindow() = application {
                                 busy = false
                             }
                         },
-                        modifier = shellModifier,
+                        modifier = Modifier.fillMaxSize(),
+                        layoutClass = layoutClass,
                     )
+                    } // BoxWithConstraints Editor
                 }
             }
             } // ProductShellHost

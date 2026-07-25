@@ -1,9 +1,13 @@
 package me.rosuh.easywatermark.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -11,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
@@ -26,6 +31,7 @@ import org.jetbrains.compose.resources.stringResource
 
 /**
  * Shared product editor screen. S-i18n-2: chrome labels from [Res]; hosts inject painters + slots.
+ * I1: optional [layoutClass] — Compact/Medium keep vertical stack; Expanded uses preview + controls pane.
  */
 data class EditorUiIcons(
     val back: Painter,
@@ -68,6 +74,11 @@ fun EditorScreen(
     onUpdateTemplate: (Template) -> Unit,
     onDeleteTemplate: (Template) -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * I1 layout class from host window size. Default [EditorLayoutClass.Compact] keeps
+     * phone binary-compatible call sites.
+     */
+    layoutClass: EditorLayoutClass = EditorLayoutClass.Compact,
 ) {
     val selected = selectedImage ?: imageList.firstOrNull()
     val emptyPreview = stringResource(Res.string.tips_no_image_selected)
@@ -95,7 +106,14 @@ fun EditorScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .safeDrawingPadding(),
+                    .safeDrawingPadding()
+                    .testTag(
+                        when (layoutClass) {
+                            EditorLayoutClass.Compact -> "editorLayoutCompact"
+                            EditorLayoutClass.Medium -> "editorLayoutMedium"
+                            EditorLayoutClass.Expanded -> "editorLayoutExpanded"
+                        },
+                    ),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 EditorTopBar(
@@ -114,37 +132,90 @@ fun EditorScreen(
                     onGoAboutScreen = onGoAboutScreen,
                 )
 
-                EditorPreviewFrame(
-                    hasImage = selected != null,
-                    emptyText = emptyPreview,
-                    modifier = Modifier
-                        .weight(1f, fill = true)
-                        .fillMaxWidth()
-                        .testTag("sharedComposeWatermarkPreview"),
-                ) { previewModifier ->
-                    preview(previewModifier)
-                }
+                if (layoutClass == EditorLayoutClass.Expanded) {
+                    // I1 expanded: preview (weight) + supporting controls column.
+                    Row(
+                        modifier = Modifier
+                            .weight(1f, fill = true)
+                            .fillMaxWidth()
+                            .testTag("editorExpandedPaneRow"),
+                    ) {
+                        EditorPreviewFrame(
+                            hasImage = selected != null,
+                            emptyText = emptyPreview,
+                            modifier = Modifier
+                                .weight(1f, fill = true)
+                                .fillMaxHeight()
+                                .testTag("sharedComposeWatermarkPreview"),
+                        ) { previewModifier ->
+                            preview(previewModifier)
+                        }
 
-                if (imageList.isNotEmpty()) {
-                    EditorPhotoStrip(
-                        images = imageList,
-                        selectedImage = selected,
+                        Column(
+                            modifier = Modifier
+                                .widthIn(max = EDITOR_EXPANDED_CONTROLS_PANE_MAX_DP.dp)
+                                .fillMaxHeight()
+                                .fillMaxWidth(0.38f)
+                                .testTag("editorExpandedControlsPane"),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            if (imageList.isNotEmpty()) {
+                                EditorPhotoStrip(
+                                    images = imageList,
+                                    selectedImage = selected,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    onImageSelected = onImageSelected,
+                                    thumbnail = thumbnail,
+                                )
+                            }
+                            Box(modifier = Modifier.weight(1f, fill = true).fillMaxWidth()) {
+                                EditorBottomControls(
+                                    waterMark = waterMark,
+                                    templateIcon = icons.templateList,
+                                    onValueChange = onConfigChange,
+                                    onGoTemplateList = showTemplateSheet,
+                                    colorOption = colorOption,
+                                    iconOption = iconOption,
+                                    optionItem = optionItem,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // Compact / Medium: existing phone vertical stack.
+                    EditorPreviewFrame(
+                        hasImage = selected != null,
+                        emptyText = emptyPreview,
+                        modifier = Modifier
+                            .weight(1f, fill = true)
+                            .fillMaxWidth()
+                            .testTag("sharedComposeWatermarkPreview"),
+                    ) { previewModifier ->
+                        preview(previewModifier)
+                    }
+
+                    if (imageList.isNotEmpty()) {
+                        EditorPhotoStrip(
+                            images = imageList,
+                            selectedImage = selected,
+                            modifier = Modifier.fillMaxWidth(),
+                            onImageSelected = onImageSelected,
+                            thumbnail = thumbnail,
+                        )
+                    }
+
+                    EditorBottomControls(
+                        waterMark = waterMark,
+                        templateIcon = icons.templateList,
+                        onValueChange = onConfigChange,
+                        onGoTemplateList = showTemplateSheet,
+                        colorOption = colorOption,
+                        iconOption = iconOption,
+                        optionItem = optionItem,
                         modifier = Modifier.fillMaxWidth(),
-                        onImageSelected = onImageSelected,
-                        thumbnail = thumbnail,
                     )
                 }
-
-                EditorBottomControls(
-                    waterMark = waterMark,
-                    templateIcon = icons.templateList,
-                    onValueChange = onConfigChange,
-                    onGoTemplateList = showTemplateSheet,
-                    colorOption = colorOption,
-                    iconOption = iconOption,
-                    optionItem = optionItem,
-                    modifier = Modifier.fillMaxWidth(),
-                )
             }
         }
     }

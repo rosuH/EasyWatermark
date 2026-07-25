@@ -87,76 +87,83 @@ fun AndroidEditorScreen(
 ) {
     val colorModel = remember { FuncTitleModel(FuncType.Color) }
 
-    EditorScreen(
-        imageList = imageList,
-        waterMark = waterMark,
-        selectedImage = selectedImage,
-        templates = templates,
-        icons = EditorUiIcons(
-            back = SharedProductDrawables.backPainter(),
-            addMoreImages = SharedProductDrawables.pickerImagePainter(),
-            save = SharedProductDrawables.savePainter(),
-            about = SharedProductDrawables.aboutPainter(),
-            templateList = SharedProductDrawables.templateListPainter(),
-            templateEdit = SharedProductDrawables.templateEditPainter(),
-            templateDelete = SharedProductDrawables.templateDeletePainter(),
-        ),
-        preview = { previewModifier ->
-            val sel = selectedImage ?: imageList.firstOrNull()
-            if (sel != null) {
-                WaterMarkCanvas(
-                    modifier = previewModifier,
-                    waterMark = waterMark,
-                    selectedImage = sel,
-                    onOffsetChanged = onOffsetChanged,
+    // I1: host feeds window size in Dp → pure EditorLayoutClass (no Android types in commonMain).
+    BoxWithConstraints(modifier = modifier) {
+        val layoutClass = remember(maxWidth, maxHeight) {
+            editorLayoutClass(maxWidth.value, maxHeight.value)
+        }
+        EditorScreen(
+            imageList = imageList,
+            waterMark = waterMark,
+            selectedImage = selectedImage,
+            templates = templates,
+            icons = EditorUiIcons(
+                back = SharedProductDrawables.backPainter(),
+                addMoreImages = SharedProductDrawables.pickerImagePainter(),
+                save = SharedProductDrawables.savePainter(),
+                about = SharedProductDrawables.aboutPainter(),
+                templateList = SharedProductDrawables.templateListPainter(),
+                templateEdit = SharedProductDrawables.templateEditPainter(),
+                templateDelete = SharedProductDrawables.templateDeletePainter(),
+            ),
+            preview = { previewModifier ->
+                val sel = selectedImage ?: imageList.firstOrNull()
+                if (sel != null) {
+                    WaterMarkCanvas(
+                        modifier = previewModifier,
+                        waterMark = waterMark,
+                        selectedImage = sel,
+                        onOffsetChanged = onOffsetChanged,
+                    )
+                }
+            },
+            // Use the same MediaStore/EXIF decode path as the big preview — Coil fails blank on
+            // some content URIs / HEIC / EXIF-odd files that BitmapUtils still decodes fine.
+            thumbnail = { imageInfo, contentDescription, thumbnailModifier ->
+                EditorFilmstripThumb(
+                    imageInfo = imageInfo,
+                    contentDescription = contentDescription,
+                    modifier = thumbnailModifier,
                 )
-            }
-        },
-        // Use the same MediaStore/EXIF decode path as the big preview — Coil fails blank on
-        // some content URIs / HEIC / EXIF-odd files that BitmapUtils still decodes fine.
-        thumbnail = { imageInfo, contentDescription, thumbnailModifier ->
-            EditorFilmstripThumb(
-                imageInfo = imageInfo,
-                contentDescription = contentDescription,
-                modifier = thumbnailModifier,
-            )
-        },
-        optionItem = { spec, selected ->
-            EditorOptionItem(
-                icon = spec.type.iconPainter(),
-                contentDescription = spec.type.label(),
-                label = spec.type.label(),
-                selected = selected,
-            )
-        },
-        colorOption = { optionModifier, mark, onColor ->
-            ColorOption(
-                item = colorModel,
-                waterMark = mark,
-                modifier = optionModifier,
-                onChange = { _, any -> onColor(any as Int) },
-            )
-        },
-        iconOption = { optionModifier, mark, _ ->
-            IconOption(
-                waterMark = mark,
-                modifier = optionModifier,
-                onIconPicked = onIconPicked,
-            )
-        },
-        onBack = onBack,
-        onAddMoreImages = onAddMoreImages,
-        onShowSaveDialog = onShowSaveDialog,
-        onGoAboutScreen = onGoAboutScreen,
-        onImageSelected = onImageSelected,
-        // F2: typed WatermarkConfigChange from shared controls; no FuncType+Any / from().
-        onConfigChange = onWaterMrkChange,
-        onUseTemplate = onUseTemplate,
-        onAddTemplate = onAddTemplate,
-        onUpdateTemplate = onUpdateTemplate,
-        onDeleteTemplate = onDeleteTemplate,
-        modifier = modifier,
-    )
+            },
+            optionItem = { spec, selected ->
+                EditorOptionItem(
+                    icon = spec.type.iconPainter(),
+                    contentDescription = spec.type.label(),
+                    label = spec.type.label(),
+                    selected = selected,
+                )
+            },
+            colorOption = { optionModifier, mark, onColor ->
+                ColorOption(
+                    item = colorModel,
+                    waterMark = mark,
+                    modifier = optionModifier,
+                    onChange = { _, any -> onColor(any as Int) },
+                )
+            },
+            iconOption = { optionModifier, mark, _ ->
+                IconOption(
+                    waterMark = mark,
+                    modifier = optionModifier,
+                    onIconPicked = onIconPicked,
+                )
+            },
+            onBack = onBack,
+            onAddMoreImages = onAddMoreImages,
+            onShowSaveDialog = onShowSaveDialog,
+            onGoAboutScreen = onGoAboutScreen,
+            onImageSelected = onImageSelected,
+            // F2: typed WatermarkConfigChange from shared controls; no FuncType+Any / from().
+            onConfigChange = onWaterMrkChange,
+            onUseTemplate = onUseTemplate,
+            onAddTemplate = onAddTemplate,
+            onUpdateTemplate = onUpdateTemplate,
+            onDeleteTemplate = onDeleteTemplate,
+            modifier = Modifier.fillMaxSize(),
+            layoutClass = layoutClass,
+        )
+    }
 }
 
 private const val FilmstripThumbPx = 160
