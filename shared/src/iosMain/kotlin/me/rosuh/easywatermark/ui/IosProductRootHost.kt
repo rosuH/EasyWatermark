@@ -142,20 +142,22 @@ class IosProductRootHost(
     private var isBusy by mutableStateOf(false)
     /**
      * Android BitmapCache analogue: watermarked [ImageBitmap] by source path.
-     * Cleared on config change / memory pressure. Budget: [WM_PREVIEW_CACHE_MAX].
+     * LinkedHashMap preserves insertion order for FIFO/byte-budget eviction (H2).
+     * Cleared on config change / memory pressure.
+     * Caps: [WM_PREVIEW_CACHE_MAX] entries + [WM_PREVIEW_BYTES_MAX] approx bytes.
      */
-    private val wmPreviewCache = mutableMapOf<String, ImageBitmap>()
-    /** Source-only placeholders (no watermark). Budget: [PLACEHOLDER_CACHE_MAX]. */
-    private val sourcePlaceholderCache = mutableMapOf<String, ImageBitmap>()
+    private val wmPreviewCache = linkedMapOf<String, ImageBitmap>()
+    /** Source-only placeholders (no watermark). */
+    private val sourcePlaceholderCache = linkedMapOf<String, ImageBitmap>()
     /**
      * Filmstrip cell cache (path → small bitmap). Prefetched when a batch is staged so
-     * fling does not cold-decode / flash empty cells. Budget: [FILMSTRIP_THUMB_CACHE_MAX].
+     * fling does not cold-decode / flash empty cells.
      */
-    private val filmstripThumbCache = mutableMapOf<String, ImageBitmap>()
+    private val filmstripThumbCache = linkedMapOf<String, ImageBitmap>()
     /** Bumped after prefetch so produceState re-reads the map. */
     private var filmstripThumbEpoch by mutableStateOf(0)
-    /** Export-sheet thumbs. Budget: [EXPORT_THUMB_CACHE_MAX]. */
-    private val exportThumbCache = mutableMapOf<String, ImageBitmap>()
+    /** Export-sheet thumbs. */
+    private val exportThumbCache = linkedMapOf<String, ImageBitmap>()
     private var previewGen: Int = 0
     /**
      * H0.1-fix: UI-only CLAMP draft offset for live preview paint.
@@ -231,13 +233,17 @@ class IosProductRootHost(
         if (path.isNotBlank()) ownedStagedPaths.add(path)
     }
 
-    /** Test-only: current entry counts for budgeted host image caches. */
+    /** Test-only: entry counts + approximate byte totals for budgeted host image caches. */
     internal data class CacheBudgetSnapshot(
         val wmPreview: Int,
         val placeholder: Int,
         val filmstrip: Int,
         val exportThumb: Int,
         val holdsSourceBytes: Boolean,
+        val wmPreviewBytes: Long = 0,
+        val placeholderBytes: Long = 0,
+        val filmstripBytes: Long = 0,
+        val exportThumbBytes: Long = 0,
     )
 
     internal fun cacheBudgetForTests(): CacheBudgetSnapshot =
@@ -247,6 +253,10 @@ class IosProductRootHost(
             filmstrip = filmstripThumbCache.size,
             exportThumb = exportThumbCache.size,
             holdsSourceBytes = sourceBytes != null,
+            wmPreviewBytes = IosHostImageCacheBudgets.totalApproxBytes(wmPreviewCache),
+            placeholderBytes = IosHostImageCacheBudgets.totalApproxBytes(sourcePlaceholderCache),
+            filmstripBytes = IosHostImageCacheBudgets.totalApproxBytes(filmstripThumbCache),
+            exportThumbBytes = IosHostImageCacheBudgets.totalApproxBytes(exportThumbCache),
         )
 
     /** Test-only: insert a placeholder cache entry and enforce budgets (no Session change). */
@@ -292,26 +302,31 @@ class IosProductRootHost(
     fun onMemoryWarning() = trimCaches()
 
     /**
-     * FIFO eviction by insertion order when entry counts exceed G4 budgets.
+     * H2: FIFO eviction by insertion order until **entry caps** and **approx byte budgets** hold.
      * Called after every cache put path (preview render, filmstrip prefetch, export thumb, tests).
+     * Never invents H3 CI SLOs — engineering caps only (see companion constants).
      */
     private fun enforceCacheBudgets() {
-        while (wmPreviewCache.size > WM_PREVIEW_CACHE_MAX) {
-            val oldest = wmPreviewCache.keys.firstOrNull() ?: break
-            wmPreviewCache.remove(oldest)
-        }
-        while (sourcePlaceholderCache.size > PLACEHOLDER_CACHE_MAX) {
-            val oldest = sourcePlaceholderCache.keys.firstOrNull() ?: break
-            sourcePlaceholderCache.remove(oldest)
-        }
-        while (filmstripThumbCache.size > FILMSTRIP_THUMB_CACHE_MAX) {
-            val oldest = filmstripThumbCache.keys.firstOrNull() ?: break
-            filmstripThumbCache.remove(oldest)
-        }
-        while (exportThumbCache.size > EXPORT_THUMB_CACHE_MAX) {
-            val oldest = exportThumbCache.keys.firstOrNull() ?: break
-            exportThumbCache.remove(oldest)
-        }
+        IosHostImageCacheBudgets.enforce(
+            wmPreviewCache,
+            maxEntries = WM_PREVIEW_CACHE_MAX,
+            maxBytes = WM_PREVIEW_BYTES_MAX,
+        )
+        IosHostImageCacheBudgets.enforce(
+            sourcePlaceholderCache,
+            maxEntries = PLACEHOLDER_CACHE_MAX,
+            maxBytes = PLACEHOLDER_BYTES_MAX,
+        )
+        IosHostImageCacheBudgets.enforce(
+            filmstripThumbCache,
+            maxEntries = FILMSTRIP_THUMB_CACHE_MAX,
+            maxBytes = FILMSTRIP_THUMB_BYTES_MAX,
+        )
+        IosHostImageCacheBudgets.enforce(
+            exportThumbCache,
+            maxEntries = EXPORT_THUMB_CACHE_MAX,
+            maxBytes = EXPORT_THUMB_BYTES_MAX,
+        )
     }
 
     /**
@@ -360,7 +375,7 @@ class IosProductRootHost(
     }
 
     companion object {
-        /** G4: watermarked preview cache entry cap. */
+        /** G4: watermarked preview cache entry cap (secondary safety). */
         const val WM_PREVIEW_CACHE_MAX: Int = 8
         /** G4: source-only placeholder cache entry cap. */
         const val PLACEHOLDER_CACHE_MAX: Int = 12
@@ -368,6 +383,17 @@ class IosProductRootHost(
         const val FILMSTRIP_THUMB_CACHE_MAX: Int = 48
         /** G4: export-sheet thumb cache entry cap. */
         const val EXPORT_THUMB_CACHE_MAX: Int = 48
+
+        /**
+         * H2: approximate byte budgets (ARGB_8888 ≈ w×h×4). Engineering defaults —
+         * **not** H3 release SLOs / CI hard gates.
+         * WM preview max-edge 720 → ~2MB/entry; 8× ≈ 16MB ceiling.
+         */
+        const val WM_PREVIEW_BYTES_MAX: Long = 16L * 1024 * 1024
+        const val PLACEHOLDER_BYTES_MAX: Long = 12L * 1024 * 1024
+        /** Filmstrip thumbs ~96px edge → small; keep modest multi-image set. */
+        const val FILMSTRIP_THUMB_BYTES_MAX: Long = 8L * 1024 * 1024
+        const val EXPORT_THUMB_BYTES_MAX: Long = 8L * 1024 * 1024
     }
 
     fun viewController(): UIViewController = ComposeUIViewController {

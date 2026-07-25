@@ -29,17 +29,29 @@ import androidx.compose.ui.unit.LayoutDirection
  */
 object IosTextRasterEnv {
 
-    /** The iOS (Skiko) text-raster environment: skiko resolver + image-space density. */
+    /**
+     * H2: process-wide shared Skiko [FontFamily.Resolver] — avoid allocating a resolver per
+     * preview/export raster call. No Android Context (safe for process singleton).
+     */
+    private val sharedFontFamilyResolver by lazy {
+        createFontFamilyResolver()
+    }
+
+    /** The iOS (Skiko) text-raster environment: shared resolver + image-space density. */
     fun textRasterEnv(density: Density = Density(1f)): TextRasterEnv = TextRasterEnv(
-        fontFamilyResolver = createFontFamilyResolver(),
+        fontFamilyResolver = sharedFontFamilyResolver,
         density = density,
         layoutDirection = LayoutDirection.Ltr,
     )
 
     /**
- * Build the bundled Latin + CJK watermark [FontFamily] from the supplied font bytes (e.g. Noto Sans +
- * Noto Sans SC), via the skiko byte-`Font` factory. [latinFirst] lists the Latin face first (the
- * Owner's Latin+CJK order, ); `false` keeps CJK-first. Bold/Italic are synthesized (no bundled * bold/italic faces, per ADR-0010). Byte acquisition is the caller's responsibility (see class KDoc).
+     * Build the bundled Latin + CJK watermark [FontFamily] from the supplied font bytes (e.g. Noto Sans +
+     * Noto Sans SC), via the skiko byte-`Font` factory. [latinFirst] lists the Latin face first;
+     * `false` keeps CJK-first. Bold/Italic are synthesized (no bundled bold/italic faces, per ADR-0010).
+     * Byte acquisition is the caller's responsibility (see class KDoc).
+     *
+     * Note: production process-wide family cache lives in [IosFontLoader.bundledFontFamily]
+     * (bundle path). This API remains for tests / custom bytes.
      */
     fun bundledFontFamily(
         latinBytes: ByteArray,

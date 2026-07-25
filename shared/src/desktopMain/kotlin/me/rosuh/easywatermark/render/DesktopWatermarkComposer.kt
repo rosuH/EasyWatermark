@@ -148,32 +148,40 @@ object DesktopWatermarkComposer {
         request: DesktopRenderRequest,
         iconBytes: ByteArray? = null,
     ): ComposedImage {
-        val background = DesktopImageDecoder.decode(imageBytes)
-        val icon = if (request.config.markMode == WatermarkMode.Image) {
-            require(iconBytes != null && iconBytes.isNotEmpty()) {
-                "Image-mode composeRealImage requires non-empty iconBytes"
+        // H2: nested scope so decode/compose ImageBitmap refs become unreachable as soon as
+        // encoded bytes + dims are captured. Skiko ImageBitmap has no recycle(); GC is the
+        // release path — still avoid returning a structure that holds all three bitmaps.
+        val width: Int
+        val height: Int
+        val encoded: ByteArray
+        run {
+            val background = DesktopImageDecoder.decode(imageBytes)
+            val icon = if (request.config.markMode == WatermarkMode.Image) {
+                require(iconBytes != null && iconBytes.isNotEmpty()) {
+                    "Image-mode composeRealImage requires non-empty iconBytes"
+                }
+                DesktopImageDecoder.decode(iconBytes)
+            } else {
+                null
             }
-            DesktopImageDecoder.decode(iconBytes)
-        } else {
-            null
-        }
-        val composed = CommonWatermarkPipeline.compose(
-            background = background,
-            config = request.config,
-            env = DesktopWatermarkTextRenderer.textRasterEnv(),
-            icon = icon,
-            offsetX = request.offsetX,
-            offsetY = request.offsetY,
-            fontFamily = DesktopWatermarkTextRenderer.bundledLatinCjkFontFamily(),
-        )
-        return ComposedImage(
-            composed.width,
-            composed.height,
-            DesktopWatermarkTextRenderer.encode(
+            val composed = CommonWatermarkPipeline.compose(
+                background = background,
+                config = request.config,
+                env = DesktopWatermarkTextRenderer.textRasterEnv(),
+                icon = icon,
+                offsetX = request.offsetX,
+                offsetY = request.offsetY,
+                fontFamily = DesktopWatermarkTextRenderer.bundledLatinCjkFontFamily(),
+            )
+            width = composed.width
+            height = composed.height
+            encoded = DesktopWatermarkTextRenderer.encode(
                 composed,
                 request.prefs.outputFormat,
                 request.prefs.compressLevel,
-            ),
-        )
+            )
+            // background / icon / composed fall out of scope here (only bytes retained).
+        }
+        return ComposedImage(width, height, encoded)
     }
 }

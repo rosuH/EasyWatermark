@@ -68,8 +68,29 @@ object IosFontLoader {
     }
 
     /**
- * Convenience: load the Latin + CJK faces from [bundle] and build the watermark [FontFamily] via the
- * Core [IosTextRasterEnv.bundledFontFamily] boundary. [latinFirst] keeps the owner's Latin+CJK order *. Any missing/unreadable face throws (see [loadFontBytes]).
+     * H2: process-wide cache of successfully loaded default-bundle families (latinFirst true/false).
+     * Avoids re-reading multi-MB font files and rebuilding [FontFamily] on every preview/export.
+     * Only caches the default name/type + main bundle path; custom names bypass the cache.
+     */
+    private val processFamilyLatinFirst = lazy {
+        loadDefaultFamily(latinFirst = true, bundle = NSBundle.mainBundle)
+    }
+    private val processFamilyCjkFirst = lazy {
+        loadDefaultFamily(latinFirst = false, bundle = NSBundle.mainBundle)
+    }
+
+    private fun loadDefaultFamily(latinFirst: Boolean, bundle: NSBundle): FontFamily {
+        val latinBytes = loadFontBytes(DEFAULT_LATIN_NAME, DEFAULT_LATIN_TYPE, bundle)
+        val cjkBytes = loadFontBytes(DEFAULT_CJK_NAME, DEFAULT_CJK_TYPE, bundle)
+        return IosTextRasterEnv.bundledFontFamily(latinBytes, cjkBytes, latinFirst)
+    }
+
+    /**
+     * Convenience: load the Latin + CJK faces from [bundle] and build the watermark [FontFamily] via the
+     * core [IosTextRasterEnv.bundledFontFamily] boundary. [latinFirst] keeps the owner's Latin+CJK order.
+     * Any missing/unreadable face throws (see [loadFontBytes]).
+     *
+     * H2: default names + main bundle are process-wide cached after first success.
      */
     fun bundledFontFamily(
         latinName: String = DEFAULT_LATIN_NAME,
@@ -79,6 +100,15 @@ object IosFontLoader {
         latinFirst: Boolean = true,
         bundle: NSBundle = NSBundle.mainBundle,
     ): FontFamily {
+        val usesDefaultFaces =
+            latinName == DEFAULT_LATIN_NAME &&
+                latinType == DEFAULT_LATIN_TYPE &&
+                cjkName == DEFAULT_CJK_NAME &&
+                cjkType == DEFAULT_CJK_TYPE &&
+                bundle == NSBundle.mainBundle
+        if (usesDefaultFaces) {
+            return if (latinFirst) processFamilyLatinFirst.value else processFamilyCjkFirst.value
+        }
         val latinBytes = loadFontBytes(latinName, latinType, bundle)
         val cjkBytes = loadFontBytes(cjkName, cjkType, bundle)
         return IosTextRasterEnv.bundledFontFamily(latinBytes, cjkBytes, latinFirst)

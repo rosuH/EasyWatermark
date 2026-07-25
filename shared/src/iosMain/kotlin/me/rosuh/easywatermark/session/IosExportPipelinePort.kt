@@ -68,29 +68,34 @@ class IosExportPipelinePort internal constructor(
                 ?: return ExportOutcome.failure(
                     ExportFailure.SourceDecode(message = "Source not readable: $path"),
                 )
-            val imageBytes = IosByteArrayInterop.fromNSData(data)
-            val iconBytes: ByteArray? = if (config.markMode == WatermarkMode.Image) {
-                IosIconPersistence.readIconBytes(config.iconUri)
-            } else {
-                null
-            }
-            // Text only: never call the provider in Image mode (C4.3 seam).
-            val fontFamily = if (config.markMode == WatermarkMode.Text) {
-                textFontFamilyProvider()
-            } else {
-                null
-            }
-            val encoded = try {
-                IosFinalRenderSpine.renderAndEncode(
-                    imageBytes = imageBytes,
-                    request = request,
-                    iconBytes = iconBytes,
-                    fontFamily = fontFamily,
-                )
-            } catch (e: Exception) {
-                return ExportOutcome.failure(
-                    ExportFailure.Render(message = e.message ?: "iOS render failed"),
-                )
+            // H2: sequential scopes — drop source/icon byte arrays after encode before write
+            // so peak is not source+icon+encoded+file simultaneously longer than needed.
+            val encoded = run {
+                val imageBytes = IosByteArrayInterop.fromNSData(data)
+                val iconBytes: ByteArray? = if (config.markMode == WatermarkMode.Image) {
+                    IosIconPersistence.readIconBytes(config.iconUri)
+                } else {
+                    null
+                }
+                // Text only: never call the provider in Image mode (C4.3 seam).
+                val fontFamily = if (config.markMode == WatermarkMode.Text) {
+                    textFontFamilyProvider()
+                } else {
+                    null
+                }
+                try {
+                    IosFinalRenderSpine.renderAndEncode(
+                        imageBytes = imageBytes,
+                        request = request,
+                        iconBytes = iconBytes,
+                        fontFamily = fontFamily,
+                    )
+                } catch (e: Exception) {
+                    return ExportOutcome.failure(
+                        ExportFailure.Render(message = e.message ?: "iOS render failed"),
+                    )
+                }
+                // imageBytes / iconBytes fall out of scope; only encoded retained for write.
             }
             val ext = encoded.format.fileExtension
             val outPath = NSTemporaryDirectory() + "ewm_out_" + NSUUID().UUIDString + "." + ext

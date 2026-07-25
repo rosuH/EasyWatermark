@@ -134,10 +134,19 @@ class AndroidExportPipelinePort(
                 icon = iconBitmap,
             )
         } catch (e: Exception) {
+            // Failure path: still release owned source (not from BitmapCache).
+            recycleOwnedQuietly(sourceBitmap)
             return ExportOutcome.failure(
                 ExportFailure.Render(message = e.message ?: "compose failed"),
             )
         }
+
+        // H2: source is decode-owned (decodeBitmapFromUri is not BitmapCache-backed).
+        // Release as soon as compose has painted into [mutableBitmap] — drops peak of
+        // source+composed(+icon) concurrent retention.
+        // Icon may be BitmapCache-owned via decodeSampledBitmapFromResource — never recycle.
+        recycleOwnedQuietly(sourceBitmap)
+        AndroidExportMemoryProbe.onSourceReleasedAfterCompose()
 
         val outputFormat = prefs.outputFormat
         val compressLevel = prefs.compressLevel
@@ -157,6 +166,16 @@ class AndroidExportPipelinePort(
             if (ownsEncodeBitmap && !encodeBitmap.isRecycled) {
                 encodeBitmap.recycle()
             }
+            // H2: composed export buffer is fully owned by this stack — free after encode/write.
+            recycleOwnedQuietly(mutableBitmap)
+            AndroidExportMemoryProbe.onComposedReleasedAfterEncode()
+        }
+    }
+
+    /** Recycle only when still alive; never throws (export cleanup). */
+    private fun recycleOwnedQuietly(bitmap: Bitmap?) {
+        if (bitmap != null && !bitmap.isRecycled) {
+            bitmap.recycle()
         }
     }
 

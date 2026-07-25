@@ -46,12 +46,25 @@ import javax.imageio.ImageWriteParam
 object DesktopWatermarkTextRenderer {
 
     /**
- * The bundled Latin + CJK watermark [FontFamily] for Desktop, loaded from
- * `desktopMain/resources/fonts/` on the classpath. [latinFirst] lists the Latin face first (the
- * Owner's Latin+CJK order, ) so Latin keeps near-system line metrics while CJK resolves via * fallback; `false` keeps the CJK-first order. Bold/Italic are synthesized (no bundled
- * bold/italic faces, per ADR-0010).
+     * H2: process-wide immutable [FontFamily] caches — classpath font bytes load once per process
+     * (not per compose call). Latin-first vs CJK-first are distinct families.
      */
-    fun bundledLatinCjkFontFamily(latinFirst: Boolean = true): FontFamily {
+    private val fontFamilyLatinFirst: FontFamily by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        loadBundledLatinCjkFontFamily(latinFirst = true)
+    }
+    private val fontFamilyCjkFirst: FontFamily by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        loadBundledLatinCjkFontFamily(latinFirst = false)
+    }
+
+    /**
+     * H2: process-wide shared [FontFamily.Resolver] for [textRasterEnv] — avoids
+     * `createFontFamilyResolver()` allocation on every raster call.
+     */
+    private val sharedFontFamilyResolver by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        createFontFamilyResolver()
+    }
+
+    private fun loadBundledLatinCjkFontFamily(latinFirst: Boolean): FontFamily {
         fun bytes(path: String): ByteArray =
             DesktopWatermarkTextRenderer::class.java.classLoader!!.getResourceAsStream(path)
                 ?.use { it.readBytes() }
@@ -61,9 +74,21 @@ object DesktopWatermarkTextRenderer {
         return if (latinFirst) FontFamily(latin, cjk) else FontFamily(cjk, latin)
     }
 
-    /** The Desktop (Skiko) text-raster environment: desktop resolver + image-space density. */
+    /**
+     * The bundled Latin + CJK watermark [FontFamily] for Desktop, loaded from
+     * `desktopMain/resources/fonts/` on the classpath. [latinFirst] lists the Latin face first (the
+     * owner's Latin+CJK order) so Latin keeps near-system line metrics while CJK resolves via
+     * fallback; `false` keeps the CJK-first order. Bold/Italic are synthesized (no bundled
+     * bold/italic faces, per ADR-0010).
+     *
+     * H2: process-wide singleton per [latinFirst] flag (classpath bytes read once).
+     */
+    fun bundledLatinCjkFontFamily(latinFirst: Boolean = true): FontFamily =
+        if (latinFirst) fontFamilyLatinFirst else fontFamilyCjkFirst
+
+    /** The Desktop (Skiko) text-raster environment: shared resolver + image-space density. */
     fun textRasterEnv(density: Density = Density(1f)): TextRasterEnv = TextRasterEnv(
-        fontFamilyResolver = createFontFamilyResolver(),
+        fontFamilyResolver = sharedFontFamilyResolver,
         density = density,
         layoutDirection = LayoutDirection.Ltr,
     )
