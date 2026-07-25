@@ -60,6 +60,12 @@ import me.rosuh.easywatermark.shared.generated.resources.dev_comment
 import me.rosuh.easywatermark.shared.generated.resources.dialog_cancel_exist_confirm
 import me.rosuh.easywatermark.shared.generated.resources.dialog_content_exist_confirm
 import me.rosuh.easywatermark.shared.generated.resources.dialog_export_to_gallery
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_cd_done
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_cd_progress
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_failed
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_partial
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_success
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_progress
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_exporting
 import me.rosuh.easywatermark.shared.generated.resources.dialog_title_exist_confirm
 import me.rosuh.easywatermark.shared.generated.resources.recovery_mode_closed
@@ -574,21 +580,79 @@ class ComposeMainActivity : ComponentActivity() {
 
                             if (showSaveSheet) {
                                 val exportImages = state.selectedImageList
-                                val exportTotalCount = exportImages.size
-                                val completed = exportImages.count {
-                                    it.jobState is me.rosuh.easywatermark.data.model.JobState.Success
-                                }.coerceAtLeast(saveExportState.completedCount)
+                                val exportTotalCount = exportImages.size.coerceAtLeast(1)
+                                // D5: Session counts are source of truth (not host invent).
+                                val successCount = saveExportState.successCount
+                                    .coerceAtLeast(saveExportState.completedCount)
+                                val failureCount = saveExportState.failureCount
+                                val processedCount = saveExportState.processedCount
+                                    .coerceAtLeast(successCount + failureCount)
+                                val totalCount = saveExportState.totalCount
+                                    .takeIf { it > 0 } ?: exportImages.size
+                                val recovery = me.rosuh.easywatermark.ui.save.ExportRecoveryUi.fromJob(
+                                    isSaving = saveExportState.isSaving,
+                                    isFinished = saveExportState.isFinished,
+                                    successCount = successCount,
+                                    failureCount = failureCount,
+                                    processedCount = processedCount,
+                                    totalCount = totalCount.coerceAtLeast(exportTotalCount),
+                                )
+                                val resultSummaryText = when {
+                                    recovery.isExporting -> cmpStringResource(
+                                        Res.string.dialog_save_export_progress,
+                                        recovery.processedCount,
+                                        recovery.totalCount.coerceAtLeast(1),
+                                    )
+                                    recovery.isFinished && recovery.failureCount == 0 && recovery.successCount > 0 ->
+                                        cmpStringResource(
+                                            Res.string.dialog_save_export_done_success,
+                                            recovery.successCount,
+                                            recovery.totalCount.coerceAtLeast(1),
+                                        )
+                                    recovery.isFinished && recovery.successCount > 0 && recovery.failureCount > 0 ->
+                                        cmpStringResource(
+                                            Res.string.dialog_save_export_done_partial,
+                                            recovery.successCount,
+                                            recovery.totalCount.coerceAtLeast(1),
+                                            recovery.failureCount,
+                                        )
+                                    recovery.isFinished && recovery.successCount == 0 ->
+                                        cmpStringResource(
+                                            Res.string.dialog_save_export_done_failed,
+                                            recovery.totalCount.coerceAtLeast(1),
+                                        )
+                                    else -> "${recovery.successCount}/${recovery.totalCount.coerceAtLeast(1)}"
+                                }
+                                val statusCd = if (recovery.isExporting) {
+                                    cmpStringResource(
+                                        Res.string.dialog_save_export_cd_progress,
+                                        recovery.processedCount,
+                                        recovery.totalCount.coerceAtLeast(1),
+                                        recovery.successCount,
+                                        recovery.failureCount,
+                                    )
+                                } else {
+                                    cmpStringResource(
+                                        Res.string.dialog_save_export_cd_done,
+                                        recovery.successCount,
+                                        recovery.failureCount,
+                                        recovery.totalCount.coerceAtLeast(1),
+                                    )
+                                }
                                 // Pack ticks into one int so thumbnails recompose on each export step.
                                 val exportTick =
-                                    saveExportState.completedCount * 10 +
+                                    saveExportState.processedCount * 10 +
+                                        successCount * 100 +
+                                        failureCount * 1000 +
                                         (if (saveExportState.isSaving) 1 else 0) +
                                         (if (saveExportState.isFinished) 2 else 0)
                                 SaveExportSheetAndroid(
-                                    imageCount = exportTotalCount,
+                                    imageCount = exportImages.size,
                                     images = exportImages,
                                     selectedFormatLabel = userPreferences.outputFormat,
                                     quality = userPreferences.compressLevel,
-                                    resultSummaryText = "${if (saveExportState.isFinished) completed else completed}/$exportTotalCount",
+                                    resultSummaryText = resultSummaryText,
+                                    statusContentDescription = statusCd,
                                     primaryActionLabel = when {
                                         saveExportState.isSaving -> cmpStringResource(Res.string.dialog_save_exporting)
                                         saveExportState.isFinished -> cmpStringResource(Res.string.share)
@@ -596,6 +660,9 @@ class ComposeMainActivity : ComponentActivity() {
                                     },
                                     primaryActionEnabled = !saveExportState.isSaving,
                                     showOpenGallery = saveExportState.isFinished && outputUris.isNotEmpty(),
+                                    isExporting = recovery.isExporting,
+                                    showCancelButton = recovery.showCancel,
+                                    showRetryFailedButton = recovery.showRetryFailed,
                                     exportTick = exportTick,
                                     onDismiss = {
                                         if (!saveExportState.isSaving) showSaveSheet = false
@@ -605,6 +672,15 @@ class ComposeMainActivity : ComponentActivity() {
                                     },
                                     onQualityChange = { q ->
                                         viewModel.saveOutput(level = q)
+                                    },
+                                    onCancelClick = { viewModel.cancelExport() },
+                                    onRetryFailedClick = {
+                                        if (exportImages.isEmpty()) return@SaveExportSheetAndroid
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                            doExport()
+                                        } else {
+                                            permissionLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                                        }
                                     },
                                     onExportClick = {
                                         if (saveExportState.isFinished) {
@@ -756,12 +832,18 @@ private fun SaveExportSheetAndroid(
     primaryActionLabel: String,
     primaryActionEnabled: Boolean = true,
     showOpenGallery: Boolean = true,
-    /** Recomposition tick while exporting (completedCount / isSaving / isFinished). */
+    isExporting: Boolean = false,
+    showCancelButton: Boolean = false,
+    showRetryFailedButton: Boolean = false,
+    statusContentDescription: String = resultSummaryText,
+    /** Recomposition tick while exporting (processedCount / isSaving / isFinished). */
     exportTick: Int = 0,
     onDismiss: () -> Unit,
     onFormatClick: (newFormat: ImageFormat) -> Unit,
     onQualityChange: (Int) -> Unit,
     onExportClick: () -> Unit,
+    onCancelClick: (() -> Unit)? = null,
+    onRetryFailedClick: (() -> Unit)? = null,
     onOpenGalleryClick: () -> Unit,
 ) {
     SaveExportSheetShell(
@@ -773,6 +855,12 @@ private fun SaveExportSheetAndroid(
         primaryActionLabel = primaryActionLabel,
         primaryActionEnabled = primaryActionEnabled,
         showOpenGallery = showOpenGallery,
+        isExporting = isExporting,
+        showCancelButton = showCancelButton,
+        onCancelClick = onCancelClick,
+        showRetryFailedButton = showRetryFailedButton,
+        onRetryFailedClick = onRetryFailedClick,
+        statusContentDescription = statusContentDescription,
         itemKey = { it.uri.value },
         onDismiss = onDismiss,
         onFormatClick = onFormatClick,

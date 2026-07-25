@@ -58,6 +58,12 @@ import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.action_pick
 import me.rosuh.easywatermark.shared.generated.resources.dev_comment
 import me.rosuh.easywatermark.shared.generated.resources.dialog_export_to_gallery
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_cd_done
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_cd_progress
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_failed
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_partial
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_success
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_progress
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_exporting
 import me.rosuh.easywatermark.shared.generated.resources.share
 import me.rosuh.easywatermark.ui.about.AboutDevCard
@@ -631,17 +637,109 @@ class IosProductRootHost(
                 )
                 // Re-read job ticks so thumbnails recompose during batch export (jobState is mutated
                 // on ImageInfo; ExportJobState Flow is the recomposition signal).
-                val completed = exportItems.count { it.jobState is JobState.Success }
-                    .coerceAtLeast(exportJob.completedCount)
                 val finished = sheetExportFinished || exportJob.isFinished
                 val exporting = isSaving || exportJob.isSaving
+                val recovery = me.rosuh.easywatermark.ui.save.ExportRecoveryUi.fromJob(
+                    isSaving = exporting,
+                    isFinished = finished,
+                    successCount = exportJob.successCount.coerceAtLeast(exportJob.completedCount),
+                    failureCount = exportJob.failureCount,
+                    processedCount = exportJob.processedCount
+                        .coerceAtLeast(exportJob.successCount + exportJob.failureCount),
+                    totalCount = exportJob.totalCount.takeIf { it > 0 } ?: exportTotal,
+                )
                 val primaryLabel = when {
                     finished -> stringResource(Res.string.share)
                     exporting -> stringResource(Res.string.dialog_save_exporting)
                     else -> stringResource(Res.string.dialog_export_to_gallery)
                 }
+                val resultSummaryText = when {
+                    recovery.isExporting -> stringResource(
+                        Res.string.dialog_save_export_progress,
+                        recovery.processedCount,
+                        recovery.totalCount.coerceAtLeast(1),
+                    )
+                    recovery.isFinished && recovery.failureCount == 0 && recovery.successCount > 0 ->
+                        stringResource(
+                            Res.string.dialog_save_export_done_success,
+                            recovery.successCount,
+                            recovery.totalCount.coerceAtLeast(1),
+                        )
+                    recovery.isFinished && recovery.successCount > 0 && recovery.failureCount > 0 ->
+                        stringResource(
+                            Res.string.dialog_save_export_done_partial,
+                            recovery.successCount,
+                            recovery.totalCount.coerceAtLeast(1),
+                            recovery.failureCount,
+                        )
+                    recovery.isFinished && recovery.successCount == 0 ->
+                        stringResource(
+                            Res.string.dialog_save_export_done_failed,
+                            recovery.totalCount.coerceAtLeast(1),
+                        )
+                    else -> "${recovery.successCount}/${recovery.totalCount.coerceAtLeast(1)}"
+                }
+                val statusCd = if (recovery.isExporting) {
+                    stringResource(
+                        Res.string.dialog_save_export_cd_progress,
+                        recovery.processedCount,
+                        recovery.totalCount.coerceAtLeast(1),
+                        recovery.successCount,
+                        recovery.failureCount,
+                    )
+                } else {
+                    stringResource(
+                        Res.string.dialog_save_export_cd_done,
+                        recovery.successCount,
+                        recovery.failureCount,
+                        recovery.totalCount.coerceAtLeast(1),
+                    )
+                }
                 val listItems = exportItems.ifEmpty {
                     if (previewBitmap != null) listOf(ImageInfo(MediaRef("preview"))) else emptyList()
+                }
+                val runIosExportBatch: () -> Unit = {
+                    scope.launch {
+                        isSaving = true
+                        sheetExportFinished = false
+                        statusLine = "Saving…"
+                        try {
+                            val images = exportItems.ifEmpty {
+                                error("Nothing to export")
+                            }
+                            // Batch pipeline: per-item JobState.Ing → Success + exportJob ticks.
+                            withContext(Dispatchers.Default) {
+                                services.session.exportAndAwait(images)
+                            }
+                            // D4: await Photos per render success before counting persisted.
+                            val lastPath = images
+                                .asReversed()
+                                .firstOrNull {
+                                    it.jobState is JobState.Success &&
+                                        (it.result?.data as? MediaRef)?.value != null
+                                }
+                                ?.let { (it.result?.data as? MediaRef)?.value }
+                            val photosResult = persistRenderSuccessesToPhotos(
+                                images = images,
+                                loadBytes = { path ->
+                                    NSData.dataWithContentsOfFile(path)
+                                        ?.let { IosByteArrayInterop.fromNSData(it) }
+                                },
+                                photosSave = photosSaveEdge,
+                            )
+                            outputPath = lastPath
+                            sheetExportFinished = true
+                            isSaving = false
+                            statusLine = photosPersistStatusLine(
+                                batchSize = images.size,
+                                result = photosResult,
+                            )
+                        } catch (t: Throwable) {
+                            statusLine = "Export failed: ${t.message}"
+                            isSaving = false
+                            sheetExportFinished = true
+                        }
+                    }
                 }
                 SaveExportSheetShell(
                     items = listItems,
@@ -654,8 +752,14 @@ class IosProductRootHost(
                     },
                     // iOS has no in-app gallery; after save, primary becomes Share (E09/E10).
                     showOpenGallery = false,
-                    exportListSubtitle = "${if (finished) completed.coerceAtLeast(exportTotal) else completed}/$exportTotal",
+                    exportListSubtitle = resultSummaryText,
                     imageCount = exportTotal,
+                    isExporting = recovery.isExporting,
+                    showCancelButton = recovery.showCancel,
+                    onCancelClick = { services.session.cancelExport() },
+                    showRetryFailedButton = recovery.showRetryFailed,
+                    onRetryFailedClick = { runIosExportBatch() },
+                    statusContentDescription = statusCd,
                     itemKey = { it.uri.value },
                     onDismiss = {
                         if (!exporting) showSaveSheet = false
@@ -680,46 +784,7 @@ class IosProductRootHost(
                                 }
                             if (path != null) onShare(path)
                         } else {
-                            scope.launch {
-                                isSaving = true
-                                sheetExportFinished = false
-                                statusLine = "Saving…"
-                                try {
-                                    val images = exportItems.ifEmpty {
-                                        error("Nothing to export")
-                                    }
-                                    // Batch pipeline: per-item JobState.Ing → Success + exportJob ticks.
-                                    withContext(Dispatchers.Default) {
-                                        services.session.exportAndAwait(images)
-                                    }
-                                    // D4: await Photos per render success before counting persisted.
-                                    val lastPath = images
-                                        .asReversed()
-                                        .firstOrNull {
-                                            it.jobState is JobState.Success &&
-                                                (it.result?.data as? MediaRef)?.value != null
-                                        }
-                                        ?.let { (it.result?.data as? MediaRef)?.value }
-                                    val photosResult = persistRenderSuccessesToPhotos(
-                                        images = images,
-                                        loadBytes = { path ->
-                                            NSData.dataWithContentsOfFile(path)
-                                                ?.let { IosByteArrayInterop.fromNSData(it) }
-                                        },
-                                        photosSave = photosSaveEdge,
-                                    )
-                                    outputPath = lastPath
-                                    sheetExportFinished = true
-                                    isSaving = false
-                                    statusLine = photosPersistStatusLine(
-                                        batchSize = images.size,
-                                        result = photosResult,
-                                    )
-                                } catch (t: Throwable) {
-                                    statusLine = "Export failed: ${t.message}"
-                                    isSaving = false
-                                }
-                            }
+                            runIosExportBatch()
                         }
                     },
                     onOpenGalleryClick = {},

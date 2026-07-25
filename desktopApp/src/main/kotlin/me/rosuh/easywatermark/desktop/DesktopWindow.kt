@@ -85,6 +85,12 @@ import me.rosuh.easywatermark.shared.generated.resources.desktop_save_as_dialog_
 import me.rosuh.easywatermark.shared.generated.resources.desktop_save_as_failed
 import me.rosuh.easywatermark.shared.generated.resources.desktop_saved_as
 import me.rosuh.easywatermark.shared.generated.resources.dialog_export_to_gallery
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_cd_done
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_cd_progress
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_failed
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_partial
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_success
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_progress
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_exporting
 import me.rosuh.easywatermark.shared.generated.resources.share
 import me.rosuh.easywatermark.ui.sharedString
@@ -1028,19 +1034,107 @@ fun launchDesktopWindow() = application {
                     }
                     desktopThumbEpoch += 1
                 }
-                val exportTotal = exportJobState.totalCount.takeIf { it > 0 } ?: exportItems.size.coerceAtLeast(1)
+                val exportTotalFixed = exportItems.size.coerceAtLeast(if (lastImage != null) 1 else 0)
+                val recovery = me.rosuh.easywatermark.ui.save.ExportRecoveryUi.fromJob(
+                    isSaving = exportJobState.isSaving,
+                    isFinished = exportJobState.isFinished,
+                    successCount = exportJobState.successCount.coerceAtLeast(exportJobState.completedCount),
+                    failureCount = exportJobState.failureCount,
+                    processedCount = exportJobState.processedCount
+                        .coerceAtLeast(exportJobState.successCount + exportJobState.failureCount),
+                    totalCount = exportJobState.totalCount.takeIf { it > 0 } ?: exportTotalFixed,
+                )
                 val primaryLabel = when {
-                    exportJobState.isSaving -> stringResource(Res.string.dialog_save_exporting)
-                    exportJobState.isFinished -> stringResource(Res.string.share)
+                    recovery.isExporting -> stringResource(Res.string.dialog_save_exporting)
+                    recovery.isFinished -> stringResource(Res.string.share)
                     else -> stringResource(Res.string.dialog_export_to_gallery)
                 }
-                val exportTotalFixed = exportItems.size.coerceAtLeast(if (lastImage != null) 1 else 0)
-                val completedFixed = exportItems.count {
-                    it.jobState is me.rosuh.easywatermark.data.model.JobState.Success
-                }.coerceAtLeast(exportJobState.completedCount)
+                val resultSummaryText = when {
+                    recovery.isExporting -> stringResource(
+                        Res.string.dialog_save_export_progress,
+                        recovery.processedCount,
+                        recovery.totalCount.coerceAtLeast(1),
+                    )
+                    recovery.isFinished && recovery.failureCount == 0 && recovery.successCount > 0 ->
+                        stringResource(
+                            Res.string.dialog_save_export_done_success,
+                            recovery.successCount,
+                            recovery.totalCount.coerceAtLeast(1),
+                        )
+                    recovery.isFinished && recovery.successCount > 0 && recovery.failureCount > 0 ->
+                        stringResource(
+                            Res.string.dialog_save_export_done_partial,
+                            recovery.successCount,
+                            recovery.totalCount.coerceAtLeast(1),
+                            recovery.failureCount,
+                        )
+                    recovery.isFinished && recovery.successCount == 0 ->
+                        stringResource(
+                            Res.string.dialog_save_export_done_failed,
+                            recovery.totalCount.coerceAtLeast(1),
+                        )
+                    else -> "${recovery.successCount}/${recovery.totalCount.coerceAtLeast(1)}"
+                }
+                val statusCd = if (recovery.isExporting) {
+                    stringResource(
+                        Res.string.dialog_save_export_cd_progress,
+                        recovery.processedCount,
+                        recovery.totalCount.coerceAtLeast(1),
+                        recovery.successCount,
+                        recovery.failureCount,
+                    )
+                } else {
+                    stringResource(
+                        Res.string.dialog_save_export_cd_done,
+                        recovery.successCount,
+                        recovery.failureCount,
+                        recovery.totalCount.coerceAtLeast(1),
+                    )
+                }
                 // Desktop-only Save As (exact path) — not unique batch export naming.
                 val saveAsLabel = stringResource(Res.string.desktop_save_as)
                 val saveAsDialogTitle = stringResource(Res.string.desktop_save_as_dialog_title)
+                val runBatchExport: () -> Unit = {
+                    scope.launch {
+                        busy = true
+                        try {
+                            if (exportItems.isNotEmpty()) {
+                                withContext(Dispatchers.IO) {
+                                    session.exportAndAwait(exportItems)
+                                }
+                                var last: File? = null
+                                for (info in exportItems) {
+                                    val outPath = (info.result?.data as? MediaRef)?.value
+                                    if (outPath != null) last = File(outPath)
+                                }
+                                // Explicit batch Export branch — track last real save for Reveal.
+                                last?.let { lastSavedFile = it }
+                                val exp = session.exportJobState.value
+                                status = "Exported ${exp.successCount}/${exp.totalCount} " +
+                                    "(${exp.failureCount} failed) → ${outputDir.path}"
+                            } else {
+                                // Fixture-only path (no session selection). Not a Session batch —
+                                // markExportFinished is allowed here only (D5 U4).
+                                val out = withContext(Dispatchers.IO) {
+                                    val fmt = userConfigRepo.userPreferences.first().outputFormat
+                                    val target = DesktopSaveDecision.resolveUniqueOutputFile(outputDir, fmt)
+                                    val o = DesktopWatermarkFlow.runSaveFlow(
+                                        repo, userConfigRepo, outputFile = target,
+                                        offsetX = 0.5f, offsetY = 0.5f,
+                                    )
+                                    File(o.outputPath)
+                                }
+                                lastSavedFile = out
+                                session.markExportFinished(completedCount = 1, totalCount = 1)
+                                status = "Saved: ${out.path}"
+                            }
+                        } catch (t: Throwable) {
+                            status = "Export failed: ${t.message}"
+                        } finally {
+                            busy = false
+                        }
+                    }
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1062,8 +1156,14 @@ fun launchDesktopWindow() = application {
                     primaryActionEnabled = !exportJobState.isSaving && !busy,
                     // Open folder depends on last explicit save (Export or Save As), not batch finished.
                     showOpenGallery = lastSavedFile != null && !exportJobState.isSaving,
-                    exportListSubtitle = "$completedFixed/$exportTotalFixed",
+                    exportListSubtitle = resultSummaryText,
                     imageCount = exportTotalFixed,
+                    isExporting = recovery.isExporting,
+                    showCancelButton = recovery.showCancel,
+                    onCancelClick = { session.cancelExport() },
+                    showRetryFailedButton = recovery.showRetryFailed,
+                    onRetryFailedClick = { runBatchExport() },
+                    statusContentDescription = statusCd,
                     itemKey = { it.uri.value },
                     onDismiss = {
                         if (!exportJobState.isSaving) showSaveSheet = false
@@ -1092,44 +1192,7 @@ fun launchDesktopWindow() = application {
                                 }
                             }
                         } else {
-                            scope.launch {
-                                busy = true
-                                try {
-                                    if (exportItems.isNotEmpty()) {
-                                        withContext(Dispatchers.IO) {
-                                            session.exportAndAwait(exportItems)
-                                        }
-                                        var last: File? = null
-                                        for (info in exportItems) {
-                                            val outPath = (info.result?.data as? MediaRef)?.value
-                                            if (outPath != null) last = File(outPath)
-                                        }
-                                        // Explicit batch Export branch — track last real save for Reveal.
-                                        last?.let { lastSavedFile = it }
-                                        val exp = session.exportJobState.value
-                                        status = "Exported ${exp.completedCount}/${exp.totalCount} → ${outputDir.path}"
-                                    } else {
-                                        // No session image: fixture sample via unique export destination;
-                                        // explicit center offset (C2).
-                                        val out = withContext(Dispatchers.IO) {
-                                            val fmt = userConfigRepo.userPreferences.first().outputFormat
-                                            val target = DesktopSaveDecision.resolveUniqueOutputFile(outputDir, fmt)
-                                            val o = DesktopWatermarkFlow.runSaveFlow(
-                                                repo, userConfigRepo, outputFile = target,
-                                                offsetX = 0.5f, offsetY = 0.5f,
-                                            )
-                                            File(o.outputPath)
-                                        }
-                                        lastSavedFile = out
-                                        session.markExportFinished(completedCount = 1, totalCount = 1)
-                                        status = "Saved: ${out.path}"
-                                    }
-                                } catch (t: Throwable) {
-                                    status = "Export failed: ${t.message}"
-                                } finally {
-                                    busy = false
-                                }
-                            }
+                            runBatchExport()
                         }
                     },
                     onOpenGalleryClick = {
@@ -1164,7 +1227,9 @@ fun launchDesktopWindow() = application {
                     }
                     val job = remember(
                         info.uri,
-                        exportJobState.completedCount,
+                        exportJobState.processedCount,
+                        exportJobState.successCount,
+                        exportJobState.failureCount,
                         exportJobState.isSaving,
                         exportJobState.isFinished,
                     ) { info.jobState }

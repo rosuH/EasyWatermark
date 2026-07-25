@@ -84,6 +84,16 @@
     <string name="dialog_save_config_format">Format</string>
     <string name="dialog_save_config_quality">Quality</string>
     <string name="dialog_save_exporting">Exporting</string>
+    <!-- D5 save-sheet recovery -->
+    <string name="dialog_save_export_progress">Exporting %1$d of %2$d</string>
+    <string name="dialog_save_export_done_success">Exported %1$d of %2$d</string>
+    <string name="dialog_save_export_done_partial">Exported %1$d of %2$d (%3$d failed)</string>
+    <string name="dialog_save_export_done_failed">Export failed (0 of %1$d)</string>
+    <string name="dialog_save_export_cancelled">Export cancelled (%1$d of %2$d saved)</string>
+    <string name="dialog_save_retry_failed">Retry failed</string>
+    <string name="dialog_save_cancel_export">Cancel export</string>
+    <string name="dialog_save_export_cd_progress">Export progress: %1$d of %2$d processed, %3$d succeeded, %4$d failed</string>
+    <string name="dialog_save_export_cd_done">Export finished: %1$d succeeded, %2$d failed, of %3$d</string>
     <string name="tips_pick_image">Choose Images</string>
     <string name="pick_via_system">more…</string>
     <string name="recovery_title">Recovery Mode</string>
