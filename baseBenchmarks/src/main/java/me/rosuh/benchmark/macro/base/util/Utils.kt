@@ -16,5 +16,14 @@
 
 package com.example.benchmark.macro.base.util
 
+/**
+ * Package of the app under test for Baseline Profile generation and Macrobenchmark.
+ *
+ * Matches `:app` release / benchmark applicationId (`me.rosuh.easywatermark`).
+ * Debug builds use `me.rosuh.easywatermark.debug` and are **not** this lane's target
+ * (H1: measure near-release, not debug suffix).
+ */
 const val TARGET_PACKAGE = "me.rosuh.easywatermark"
+
+/** Default Macrobenchmark iterations (observational — not an H3 SLO). */
 const val DEFAULT_ITERATIONS = 10

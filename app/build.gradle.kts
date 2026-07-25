@@ -75,14 +75,25 @@ android {
             )
         }
 
+        // H1: near-release measurement / Baseline Profile generation target.
+        // - minify + shrink inherited from release (official: non-debuggable optimized app)
+        // - debug signing so local install works without release keystore
+        // - package stays me.rosuh.easywatermark (no .debug suffix) for TARGET_PACKAGE
+        // - proguard: release rules + app/benchmark-rules.pro (must exist)
         create("benchmark") {
             initWith(release)
             signingConfig = signingConfigs.getByName("debug")
+            isDebuggable = false
             // [START_EXCLUDE silent]
             // Selects release buildType if the benchmark buildType not available in other modules.
             matchingFallbacks.add("release")
             // [END_EXCLUDE]
-            proguardFiles("benchmark-rules.pro")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "coroutines.pro",
+                "proguard-rules.pro",
+                "benchmark-rules.pro",
+            )
         }
     }
 

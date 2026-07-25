@@ -6,9 +6,11 @@ import org.junit.Rule
 import org.junit.Test
 
 /**
- * S4d-364: Baseline Profile generator migrated to AndroidX Benchmark 1.5 API.
- * Uses [BaselineProfileRule.collect] (replaces removed ExperimentalBaselineProfilesApi /
- * collectBaselineProfile). Startup-only journey; TARGET_PACKAGE unchanged.
+ * S4d-364 / H1: Baseline Profile generator (AndroidX Benchmark 1.5 [BaselineProfileRule.collect]).
+ *
+ * **Startup-only** journey — kept for a minimal profile collect.
+ * Editor-adjacent multi-step profile: [ProductBaselineProfileGenerator].
+ * Package: [TARGET_PACKAGE] = `me.rosuh.easywatermark`.
  */
 class StartupOnlyBaselineProfileGenerator {
     @get:Rule

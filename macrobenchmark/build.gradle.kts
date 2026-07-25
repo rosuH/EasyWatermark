@@ -16,6 +16,10 @@ android {
         minSdk = Apps.minSdk
         targetSdk = Apps.targetSdk
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // H1: allow local/managed-emulator smoke for the measurement lane.
+        // Physical-device numbers remain the accuracy gold standard (document residual).
+        // Does NOT invent H3 latency SLOs — only unblocks FrameTimingMetric collection.
+        testInstrumentationRunnerArguments["androidx.benchmark.suppressErrors"] = "EMULATOR"
     }
 
     testOptions {
@@ -36,7 +40,9 @@ android {
     experimentalProperties["android.experimental.self-instrumenting"] = true
 
     buildTypes {
-        // declare a build type to match the target app"s build type
+        // H1: test APK (self-instrumenting) may be debuggable; the *app under test*
+        // is :app benchmark/release (non-debuggable, minified). Do not flip this to false
+        // without re-validating Macrobenchmark self-instrumenting install.
         create("benchmark") {
             isDebuggable = true
             signingConfig = signingConfigs.getByName("debug")
