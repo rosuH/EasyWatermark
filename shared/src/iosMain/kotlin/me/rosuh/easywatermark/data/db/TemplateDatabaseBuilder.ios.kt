@@ -29,12 +29,12 @@ import kotlin.coroutines.CoroutineContext
  * may pass a dedicated dispatcher; the default keeps Room's query work off the calling coroutine.
  *
  * SCOPE: **empty-store** builder only — Room creates the schema on first open. The DB file is
- * `ewm-db` under the caller-supplied [dir]. Schema (`Template`, version 1, `exportSchema=false`) is the
- * unchanged commonMain one; the per-target impl is the KSP-generated [AppDatabaseConstructor].
+ * `ewm-db` under the caller-supplied [dir]. Schema (`Template`, version 1, exportSchema=true for G2)
+ * is the unchanged commonMain one; the per-target impl is the KSP-generated [AppDatabaseConstructor].
  *
- * a [buildTemplateDatabase] overload now optionally **seeds** from raw `seedBytes` (the Android
- * seed DB bytes), and the production no-arg [buildTemplateDatabase] seeds from the bundled seed via
- * [IosTemplateSeed]. This empty-store overload is preserved for tests/callers that explicitly want an empty DB.
+ * A [buildTemplateDatabase] overload optionally **seeds** from raw `seedBytes` (Android seed DB bytes),
+ * and the production no-arg [buildTemplateDatabase] seeds from the bundled seed via [IosTemplateSeed].
+ * First-create seed install is crash-atomic (temp → atomicMove). Empty-store overload preserved for tests.
  */
 fun buildTemplateDatabase(
     dir: String,
@@ -49,16 +49,15 @@ fun buildTemplateDatabase(
         .build()
 
 /**
- * Build an iOS template DB, optionally **seeded** from [seedBytes] — the iOS analogue of the * desktopMain `buildTemplateDatabase(dir, seedFile)`. When [seedBytes] is non-null and the target
- * DB file (`$dir/ewm-db`) does not yet exist, the bytes are written to that path **before** Room opens it;
- * Room then validates the `room_master_table` identity hash and opens it as a pre-existing DB (the same
- * copy-then-open approach Desktop uses, because Room KMP off-Android has no `createFromAsset`). When the DB
- * file already exists the seed is ignored, so repeated calls are idempotent and user edits are preserved.
- * When [seedBytes] is null this is equivalent to the empty-store overload.
+ * Build an iOS template DB, optionally **seeded** from [seedBytes] — the iOS analogue of the
+ * desktopMain `buildTemplateDatabase(dir, seedFile)`. When [seedBytes] is non-null and the target
+ * DB file (`$dir/ewm-db`) does not yet exist, bytes are installed via [installSeedBytesAtomically]
+ * (temp → atomicMove) before Room opens. Room then validates the `room_master_table` identity hash.
+ * When the DB file already exists the seed is ignored (user edits preserved). Null [seedBytes]
+ * is equivalent to the empty-store overload.
  *
- * [seedBytes] must be a valid SQLite DB matching the commonMain Room schema (the authoritative Android
- * `ewm-db-{ch,eng}.db`). The file write uses okio's `FileSystem.SYSTEM` (already an iosMain transitive dep
- * via DataStore okio); no new dependency.
+ * [seedBytes] must be a valid SQLite DB matching the commonMain Room schema (Android
+ * `ewm-db-{ch,eng}.db`). Uses okio [FileSystem.SYSTEM] (iosMain transitive via DataStore).
  */
 fun buildTemplateDatabase(
     dir: String,
@@ -69,8 +68,7 @@ fun buildTemplateDatabase(
     if (seedBytes != null) {
         val dbPath = dbName.toPath()
         if (!FileSystem.SYSTEM.exists(dbPath)) {
-            dbPath.parent?.let { FileSystem.SYSTEM.createDirectories(it) }
-            FileSystem.SYSTEM.write(dbPath) { write(seedBytes) }
+            installSeedBytesAtomically(dbPath = dbPath, seedBytes = seedBytes)
         }
     }
     return Room.databaseBuilder<AppDatabase>(
@@ -80,6 +78,35 @@ fun buildTemplateDatabase(
         .setDriver(BundledSQLiteDriver())
         .setQueryCoroutineContext(queryContext)
         .build()
+}
+
+/**
+ * G2: first-create seed install from raw bytes — never leave a half-written public `ewm-db`.
+ * Visible for unit fault tests.
+ */
+internal fun installSeedBytesAtomically(
+    dbPath: okio.Path,
+    seedBytes: ByteArray,
+    beforeMove: () -> Unit = {},
+) {
+    require(seedBytes.isNotEmpty()) { "seedBytes must be non-empty" }
+    val fs = FileSystem.SYSTEM
+    dbPath.parent?.let { fs.createDirectories(it) }
+    val tmp = "$dbPath.seed.tmp".toPath()
+    var moved = false
+    try {
+        fs.write(tmp) { write(seedBytes) }
+        beforeMove()
+        fs.atomicMove(tmp, dbPath)
+        moved = true
+    } catch (t: Throwable) {
+        runCatching { if (fs.exists(tmp)) fs.delete(tmp) }
+        throw t
+    } finally {
+        if (!moved) {
+            runCatching { if (fs.exists(tmp)) fs.delete(tmp) }
+        }
+    }
 }
 
 /**

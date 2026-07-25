@@ -13,7 +13,8 @@ import me.rosuh.easywatermark.data.model.entity.Template
  *
  * Built per-platform (Android SupportSQLite; Desktop/iOS BundledSQLiteDriver + seed assets).
  */
-@Database(entities = [Template::class], version = 1, exportSchema = false)
+// G2: exportSchema=true so v1 JSON is generated under shared/schemas/ (no entity/version change).
+@Database(entities = [Template::class], version = 1, exportSchema = true)
 @ConstructedBy(AppDatabaseConstructor::class)
 @TypeConverters(DateConverter::class)
 abstract class AppDatabase : RoomDatabase() {
