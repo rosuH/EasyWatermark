@@ -78,8 +78,14 @@ open class WatermarkSessionViewModel(
 
     init {
         viewModelScope.launch(Dispatchers.Default) {
+            var hasSyncedInitialWatermark = false
             waterMarkRepo.waterMark.collect { wm ->
-                resetJobStatus()
+                // The first DataStore emission initializes Session config; it is not a user edit.
+                // It may arrive after an immediate export and must not erase that export's result.
+                if (hasSyncedInitialWatermark) {
+                    resetJobStatus()
+                }
+                hasSyncedInitialWatermark = true
                 applyIntent(AppIntent.SyncWaterMark(wm))
             }
         }

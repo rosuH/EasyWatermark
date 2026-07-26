@@ -1,6 +1,13 @@
 package me.rosuh.easywatermark.session
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.emptyPreferences
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import me.rosuh.easywatermark.data.datastore.createUserConfigDataStore
 import me.rosuh.easywatermark.data.datastore.createWaterMarkDataStore
 import me.rosuh.easywatermark.data.model.ExportedMedia
@@ -14,6 +21,7 @@ import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -51,6 +59,37 @@ class TypedExportSessionTest {
         }
     }
 
+    /**
+     * Holds the Session's first config collector until an export has completed. Later collectors
+     * (including export's one-shot config read) receive the current value immediately.
+     */
+    private class DelayedInitialWatermarkStore : DataStore<Preferences> {
+        private val collectorCount = AtomicInteger()
+        private var current: Preferences = emptyPreferences()
+
+        val initialCollectorStarted = CompletableDeferred<Unit>()
+        val releaseInitialCollector = CompletableDeferred<Unit>()
+        val initialCollectorHandled = CompletableDeferred<Unit>()
+
+        override val data: Flow<Preferences> = flow {
+            if (collectorCount.incrementAndGet() == 1) {
+                initialCollectorStarted.complete(Unit)
+                releaseInitialCollector.await()
+                emit(current)
+                initialCollectorHandled.complete(Unit)
+            } else {
+                emit(current)
+            }
+        }
+
+        override suspend fun updateData(
+            transform: suspend (t: Preferences) -> Preferences,
+        ): Preferences {
+            current = transform(current)
+            return current
+        }
+    }
+
     private fun tempDir(name: String): File =
         File("build/d1-typed-session-$name-${System.nanoTime()}").apply {
             deleteRecursively()
@@ -60,9 +99,10 @@ class TypedExportSessionTest {
     private fun newSession(
         dir: File,
         port: ExportPipelinePort,
+        waterMarkStore: DataStore<Preferences> = createWaterMarkDataStore(File(dir, "wm-store")),
     ): WatermarkSessionViewModel {
         val waterRepo = WaterMarkRepository(
-            dataStore = createWaterMarkDataStore(File(dir, "wm-store")),
+            dataStore = waterMarkStore,
             defaultTextProvider = { "EasyWatermark" },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
             logError = {},
@@ -115,6 +155,45 @@ class TypedExportSessionTest {
         // Port return facts are complete (unit-level identity of the payload Session consumed).
         assertEquals(ImageFormat.PNG, media.format)
         assertEquals(42_000L, media.byteCount)
+    }
+
+    @Test
+    fun t1_initialConfigSync_afterExport_doesNotResetTypedSuccess() = runBlocking {
+        val dir = tempDir("t1-delayed-initial-config")
+        val store = DelayedInitialWatermarkStore()
+        val media = ExportedMedia(
+            ref = MediaRef("file:///exports/typed-out.png"),
+            width = 640,
+            height = 480,
+            format = ImageFormat.PNG,
+            byteCount = 42_000L,
+        )
+        val session = newSession(
+            dir = dir,
+            port = TypedSuccessPort(media),
+            waterMarkStore = store,
+        )
+        withTimeout(5_000) {
+            store.initialCollectorStarted.await()
+        }
+        val item = ImageInfo(
+            uri = MediaRef("/virtual/src-delayed-config.png"),
+            width = 1,
+            height = 1,
+        )
+        session.dispatchAndAwait(AppIntent.EnterEditor(selected = listOf(item)))
+        val selected = session.launchScreenUiStateFlow.value.selectedImageList
+
+        session.exportAndAwait(selected)
+        assertIs<JobState.Success>(selected.single().jobState)
+
+        store.releaseInitialCollector.complete(Unit)
+        withTimeout(5_000) {
+            store.initialCollectorHandled.await()
+        }
+
+        assertIs<JobState.Success>(selected.single().jobState)
+        assertTrue(session.exportJobState.value.isFinished)
     }
 
     @Test
