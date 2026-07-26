@@ -51,7 +51,7 @@ EXIF policy: Android decode uses `ExifInterface(InputStream)` on API 23+ and bak
 
 ### Storage & model invariants
 
-- Persisted bytes are compatibility-critical: DataStore store names/keys, `WatermarkTileMode.storageId` (mirrors `Shader.TileMode` ordinals; pre-Android-12 stored DECAL id 3 reads back as REPEAT — Android-only mapper in `TileModeExt.kt`), `TextTypeface`/`TextPaintStyle` `serializeKey()` values, Room schema v1 (`exportSchema=false`).
+- Persisted bytes are compatibility-critical: DataStore store names/keys, `WatermarkTileMode.storageId` (mirrors `Shader.TileMode` ordinals; pre-Android-12 stored DECAL id 3 reads back as REPEAT — Android-only mapper in `TileModeExt.kt`), `TextTypeface`/`TextPaintStyle` `serializeKey()` values, Room schema v1 (`exportSchema=true`, committed under `shared/schemas/me.rosuh.easywatermark.data.db.AppDatabase/1.json`).
 - Keep `android.graphics.*`, `android.net.Uri`, repo-nested types out of commonMain models. Android render types live at the edge: `utils/ktx/TileModeExt.kt`, `TextStyleExt.kt`, `MediaRefExt.kt`, `ImageFormatExt.kt`.
 - `MediaRef` (`@JvmInline value class`) is the cross-platform reference type (`WaterMark.iconUri`, `ImageInfo.uri`, `imageInfoMap` keys). Deliberate Android `Uri` edges that stay (do NOT "fix"): gallery `Image.uri`, `Action.SystemPickerImageSelected.uriList`, `SaveExportSheet.imageUris`, picker contracts, `BitmapUtils`/`BitmapCache`/`FileUtils` decode signatures.
 - Newly picked Android watermark icons persist an app-owned `${applicationId}.fileprovider/watermark_icons/...` `MediaRef`; legacy/external icon refs remain readable but are never deleted by the app-owned cleanup path. The picker `Uri` stays inside the Android host until the private copy succeeds.
@@ -87,11 +87,11 @@ EXIF policy: Android decode uses `ExifInterface(InputStream)` on API 23+ and bak
 
 - Build debug: `./gradlew :app:assembleDebug` → `app/build/outputs/apk/debug/`. Debug applicationId is `me.rosuh.easywatermark.debug`, so it installs alongside the production app — useful for side-by-side parity checks.
 - Unit tests: `./gradlew :app:testDebugUnitTest`; shared: `./gradlew :shared:desktopTest`; iOS: `:shared:iosSimulatorArm64Test`. Instrumented: `./gradlew :app:connectedDebugAndroidTest`.
-- Desktop: `./gradlew :desktopApp:run` (window), `:desktopApp:run --args='--headless'` (automation), `:desktopApp:createDistributable` (unsigned app image; needs Corretto/Zulu, NOT Homebrew OpenJDK, CMP#3107). **J3:** app-data is OS-native (`DesktopAppPaths`) with legacy `~/.easywatermark` copy-forward; chooser formats via `DesktopImageFormats` (WebP only if ImageIO can decode). Unsigned `createDistributable` is **not** a signed three-OS release (DMG/MSI/DEB + signing residual; see `evidence/j3/`).
+- Desktop: `./gradlew :desktopApp:run` (window), `:desktopApp:run --args='--headless'` (automation), `:desktopApp:createDistributable` (unsigned app image; needs Corretto/Zulu, NOT Homebrew OpenJDK, CMP#3107). **J3:** app-data is OS-native (`DesktopAppPaths`) with legacy `~/.easywatermark` copy-forward; chooser formats via `DesktopImageFormats` (WebP only if ImageIO can decode). Unsigned `createDistributable` is **not** a signed three-OS release (DMG/MSI/DEB + signing residual).
 - No linter is wired up (spotless/ktlint blocks in root `build.gradle.kts` are commented out). Match existing style by hand.
 - Release builds are minified (R8, `proguard-rules.pro` + `coroutines.pro`); CI (`.github/workflows/pr_pre_check.yml`) on PRs: Ubuntu `build` (`:app:assembleDebug` + `:shared:desktopTest` + non-strict `:app:testDebugUnitTest` + J2 backup-policy structural check; lintDebug fail-open) and permanent macOS `ios` job (J1: `:shared:iosSimulatorArm64Test` + `iosApp` generic iOS Simulator `xcodebuild`, `CODE_SIGNING_ALLOWED=NO`). Nightly Android matrix skeleton: `android_nightly_matrix.yml` (API 23/29/34/36 labels; unit smoke, not unbounded emulators). Release: `assembleRelease` + baseline-prof presence check; physical witness residual.
-- **Dependency qualification (J4):** stable-by-default; prerelease only with a named reason; **one upgrade slice at a time** (never bulk CMP+Material+Nav+DataStore). Inventory + policy: `.scratch/easywatermark-kmp-cmp-migration/evidence/j4/`. Record rollback HEAD before any catalog promotion.
-- **iOS framework surface (J5):** classic ObjC dynamic `Shared.framework` only — do **not** migrate production to Alpha Swift export. Swift consumption + symbol budget: `.scratch/easywatermark-kmp-cmp-migration/evidence/j5/`. Prefer `internal` for implementation-only iosMain; public growth requires review.
+- **Dependency qualification (J4):** stable-by-default; prerelease only with a named reason; **one upgrade slice at a time** (never bulk CMP+Material+Nav+DataStore). Record rollback HEAD before any catalog promotion.
+- **iOS framework surface (J5):** classic ObjC dynamic `Shared.framework` only — do **not** migrate production to Alpha Swift export. Prefer `internal` for implementation-only iosMain; public growth requires review.
 - Android CLI 1.0 is installed (`android`): `android docs search '<query>'` queries an offline KB mirroring developer.android.com AND the JetBrains KMP docs (then `android docs fetch kb://...`); `android emulator list/start`, `android screenshot`, `android layout` (UI tree as JSON — faster than screenshots), `android run`.
 
 ## Conventions for agents
@@ -125,7 +125,7 @@ EXIF policy: Android decode uses `ExifInterface(InputStream)` on API 23+ and bak
 
 ### Ops pointers
 
-- **Issue tracker:** `.scratch/easywatermark-kmp-cmp-migration/` (`docs/agents/issue-tracker.md`).
+- **Issue tracker:** lightweight operational source is status page + current slice plan under `.scratch/easywatermark-kmp-cmp-migration/issues/` plus ACSP session briefs (`docs/agents/issue-tracker.md`). No repository evidence archive.
 - **Triage labels:** `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix` (`docs/agents/triage-labels.md`).
 - **Domain docs:** vocabulary in `docs/CONTEXT.md`, decisions in `docs/adr/` (`docs/agents/domain.md`).
-- **Migration history:** slice-by-slice evidence (S3c / S4d-xx) in `docs/migration-log.md`; `task_plan.md` / `findings.md` / `progress.md` at repo root are historical evidence only — do not read at session start, do not update.
+- **Migration history:** high-level notes in `docs/migration-log.md`; `task_plan.md` / `findings.md` / `progress.md` at repo root are historical evidence only — do not read at session start, do not update.
