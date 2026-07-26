@@ -34,8 +34,8 @@ class AndroidIconPersistenceTest {
 
     @Before
     fun clearFileProviderPathStrategyCache() {
-        // See AndroidShareStagingTest — clear static FileProvider path-strategy cache so
-        // production-constructor FileProvider roots match this Application's dataDir.
+        // Clear static FileProvider path-strategy cache so production-constructor roots
+        // match this Application's dataDir (Robolectric isolation).
         val cacheField = FileProvider::class.java.getDeclaredField("sCache")
         cacheField.isAccessible = true
         @Suppress("UNCHECKED_CAST")

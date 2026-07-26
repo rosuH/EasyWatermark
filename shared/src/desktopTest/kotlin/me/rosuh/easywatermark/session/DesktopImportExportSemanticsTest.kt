@@ -225,13 +225,20 @@ class DesktopImportExportSemanticsTest {
         val prefsFirstIdx = saveBody.indexOf("userPreferences.first()")
         assertTrue(wmFirstIdx >= 0 && wmFirstIdx < ioIdx, "config first() must be before IO")
         assertTrue(prefsFirstIdx >= 0 && prefsFirstIdx < ioIdx, "prefs first() must be before IO")
-        // Must not pair lastImage.bytes with independently re-read Session offset.
+        // Host must not retain a full-resolution LastImage.bytes mirror.
+        assertFalse("LastImage" in text, "host LastImage byte mirror must be removed")
+        assertFalse("lastImage" in text, "host lastImage state must be removed")
         assertFalse(
             Regex("""lastImage\?\.bytes[\s\S]{0,400}curImageInfo""").containsMatchIn(saveBody),
             "Save As must not pair lastImage.bytes with a re-resolved curImageInfo",
         )
         assertFalse("resolveUniqueOutputFile" in saveBody)
         assertFalse("runSaveFlow" in saveBody)
+        // Save As reads frozen Session path (or fixture), never a host byte mirror.
+        assertTrue(
+            "frozen.sourcePath" in saveBody && "file.readBytes()" in saveBody,
+            "Save As must read bytes from frozen Session source path",
+        )
 
         // Light preview freezes same-item path+offset via refreshPreviewLight + DesktopPreviewRaster
         // (H0.1); must not route preview through full runSaveFlow.
@@ -255,6 +262,19 @@ class DesktopImportExportSemanticsTest {
             "runSaveFlow" in previewBody,
             "preview must not call runSaveFlow (full save spine is export/Save As only)",
         )
+        // Filmstrip selection must await Session SelectCurrent before preview generation bump.
+        val selectStart = text.indexOf("onImageSelected = { info ->")
+        assertTrue(selectStart >= 0, "must define onImageSelected")
+        val selectEnd = text.indexOf("onConfigChange", selectStart)
+        val selectBody = text.substring(selectStart, if (selectEnd > selectStart) selectEnd else text.length)
+        assertTrue(
+            "dispatchAndAwait" in selectBody && "SelectCurrent" in selectBody,
+            "onImageSelected must await AppIntent.SelectCurrent before preview freeze",
+        )
+        val awaitIdx = selectBody.indexOf("dispatchAndAwait")
+        val previewBumpIdx = selectBody.indexOf("previewGeneration++")
+        assertTrue(awaitIdx >= 0 && previewBumpIdx > awaitIdx,
+            "SelectCurrent must complete before previewGeneration++ (awaitIdx=$awaitIdx bump=$previewBumpIdx)")
         assertFalse(
             Regex("""current\.bytes[\s\S]{0,300}currentItemOffsetSnapshot""").containsMatchIn(previewBody),
             "Preview must not use lastImage bytes with a separate offset snapshot helper",

@@ -231,8 +231,6 @@ private fun styleLabelOf(s: TextPaintStyle): String = when (s) {
     TextPaintStyle.Stroke -> "Stroke"
 }
 
-private class LastImage(val bytes: ByteArray, val label: String)
-
 /**
  * Stable per-user app-data dir for the interactive Desktop window.
  * J3: [me.rosuh.easywatermark.platform.DesktopAppPaths.resolveAppDataDir] (OS-native + legacy
@@ -334,7 +332,6 @@ fun launchDesktopWindow() = application {
         }
     }
     var busy by remember { mutableStateOf(false) }
-    var lastImage by remember { mutableStateOf<LastImage?>(null) }
     // Last REAL save only (explicit Export / Save As). Never Preview temp, never Open/Drop import.
     var lastSavedFile by remember { mutableStateOf<File?>(null) }
     // packaged Desktop launches do not have the repository as their working directory. Keep the
@@ -375,9 +372,8 @@ fun launchDesktopWindow() = application {
     }
 
     /**
-     * Resolve one Session [ImageInfo] that owns **both** source path and offset — never pair
-     * [LastImage] bytes with another item's offset after multi-file import.
-     * E1: Session only — curImageInfo → first selected → fixture center.
+     * Resolve one Session [ImageInfo] that owns **both** source path and offset.
+     * E1: Session only — curImageInfo → first selected → fixture center (no host byte mirror).
      */
     fun freezeCurrentItemInput(): FrozenItemInput {
         val launch = session.launchScreenUiStateFlow.value
@@ -414,7 +410,6 @@ fun launchDesktopWindow() = application {
             if (isDraft) "desktop_draft_preview" else "desktop_offset_preview",
         )
         val frozen = freezeCurrentItemInput()
-        val last = lastImage
         val ox = overrideOffset?.first ?: frozen.offsetX
         val oy = overrideOffset?.second ?: frozen.offsetY
         val wm = repo.waterMark.first()
@@ -429,7 +424,6 @@ fun launchDesktopWindow() = application {
                         }
                         imageBytes = file.readBytes()
                     }
-                    last != null -> imageBytes = last.bytes
                     else -> {
                         imageBytes = DesktopWatermarkComposer.sampleBackgroundPng(width = 640, height = 480)
                     }
@@ -515,7 +509,7 @@ fun launchDesktopWindow() = application {
             status = sharedString(Res.string.desktop_importing, files.size)
             try {
                 val prior = session.launchScreenUiStateFlow.value.selectedImageList
-                val (msg, picked) = withContext(Dispatchers.IO) {
+                val (msg, ok) = withContext(Dispatchers.IO) {
                     try {
                         val selected = DesktopSessionImport.commitImport(
                             session = session,
@@ -524,19 +518,16 @@ fun launchDesktopWindow() = application {
                             append = append,
                             waterMark = repo.waterMark.first(),
                         )
-                        // Remember last file bytes for preview / Save As — not an export.
-                        val lastFile = files.lastOrNull { it.isFile }
-                        val lastPicked = lastFile?.let { LastImage(it.readBytes(), it.path) }
-                        sharedString(Res.string.desktop_imported, selected.size) to lastPicked
+                        // Session paths own source identity — no host full-resolution byte mirror.
+                        sharedString(Res.string.desktop_imported, selected.size) to true
                     } catch (t: Throwable) {
-                        sharedString(Res.string.desktop_import_failed, t.message ?: "") to null
+                        sharedString(Res.string.desktop_import_failed, t.message ?: "") to false
                     }
                 }
-                picked?.let { lastImage = it }
                 // openImageFilesBatch → Session EnterEditor (productRoute / selection from Session).
                 // Preview only — never touch lastSavedFile (import is not an explicit save).
                 // H0.1-fix: light in-memory preview (no saveFlow); clear any CLAMP draft.
-                if (picked != null) {
+                if (ok) {
                     clampDraft = null
                     offsetPreviewGeneration += 1
                     val gen = offsetPreviewGeneration
@@ -599,7 +590,6 @@ fun launchDesktopWindow() = application {
                 // same-item path+offset + config + prefs → DesktopRenderRequest, then IO only reads
                 // bytes / render / exact write with that frozen request.
                 val frozen = freezeCurrentItemInput()
-                val last = lastImage
                 val config = repo.waterMark.first()
                 val prefs = userConfigRepo.userPreferences.first()
                 val request = DesktopRenderRequest(
@@ -617,7 +607,6 @@ fun launchDesktopWindow() = application {
                             }
                             file.readBytes()
                         }
-                        last != null -> last.bytes
                         else -> DesktopWatermarkComposer.sampleBackgroundPng(width = 640, height = 480)
                     }
                     val saved = DesktopSaveAsDestination.renderAndSaveExact(
@@ -985,15 +974,13 @@ fun launchDesktopWindow() = application {
                             session.openAbout(me.rosuh.easywatermark.ui.LaunchScreenUiState.Editor)
                         },
                         onImageSelected = { info ->
-                            // E1: Session SelectCurrent owns focus; no host image mirror.
-                            session.selectImage(info.uri)
-                            val path = info.uri.value
-                            val file = java.io.File(path)
-                            if (file.isFile) {
-                                scope.launch {
-                                    lastImage = LastImage(file.readBytes(), file.path)
-                                    previewGeneration++
-                                }
+                            // E1: await Session SelectCurrent before light-preview freeze so path+offset
+                            // match the selected item (no host byte mirror; no race on previous focus).
+                            scope.launch {
+                                session.dispatchAndAwait(
+                                    AppIntent.SelectCurrent(info.uri),
+                                )
+                                previewGeneration++
                             }
                         },
                         onConfigChange = { change ->
@@ -1101,14 +1088,7 @@ fun launchDesktopWindow() = application {
 
             // C2: shared Android Compose export panel; Desktop only implements FS write + reveal/share edges.
             if (showSaveSheet) {
-                val exportItems = sessionImages.ifEmpty {
-                    val path = lastImage?.label
-                    if (path != null && File(path).isFile) {
-                        listOf(ImageInfo(MediaRef(path)))
-                    } else {
-                        emptyList()
-                    }
-                }
+                val exportItems = sessionImages
                 // Prefetch export thumbs off-EDT so sheet open is not blocked on full-res ImageIO.
                 LaunchedEffect(exportItems.map { it.uri.value }) {
                     val missing = exportItems.map { it.uri.value }.filter {
@@ -1124,7 +1104,7 @@ fun launchDesktopWindow() = application {
                     }
                     desktopThumbEpoch += 1
                 }
-                val exportTotalFixed = exportItems.size.coerceAtLeast(if (lastImage != null) 1 else 0)
+                val exportTotalFixed = exportItems.size
                 val recovery = me.rosuh.easywatermark.ui.save.ExportRecoveryUi.fromJob(
                     isSaving = exportJobState.isSaving,
                     isFinished = exportJobState.isFinished,

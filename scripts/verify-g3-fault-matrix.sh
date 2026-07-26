@@ -25,7 +25,7 @@ echo "=== G3 fault matrix suites ($(date -u +%Y-%m-%dT%H:%MZ)) ==="
 
 ./gradlew :app:testDebugUnitTest \
   --tests 'me.rosuh.easywatermark.session.*' \
-  --tests 'me.rosuh.easywatermark.platform.AndroidShareStagingTest' \
+  --tests 'me.rosuh.easywatermark.platform.AndroidShareInDirectUriBehaviorTest' \
   --max-workers=8
 
 ./gradlew :shared:iosSimulatorArm64Test \

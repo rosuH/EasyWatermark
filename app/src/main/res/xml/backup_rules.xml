@@ -5,7 +5,7 @@
   Product privacy (offline, no analytics):
   - INCLUDE-only strategy: only listed paths are backed up for these domains.
   - App-owned settings/templates/icons restore after reinstall.
-  - Omitted (not backed up): caches, compressor temp, share_sources staging,
+  - Omitted (not backed up): caches, compressor temp,
     external Pictures/gallery paths, and any other filesDir trees.
 
   Do not expand include domains without an explicit privacy review.

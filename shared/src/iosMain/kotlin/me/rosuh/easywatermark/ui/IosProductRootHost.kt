@@ -89,9 +89,11 @@ import me.rosuh.easywatermark.ui.theme.AppTheme
 import me.rosuh.easywatermark.ui.theme.ProvideMotionPolicy
 import org.jetbrains.compose.resources.stringResource
 import platform.Foundation.NSData
+import platform.Foundation.NSFileManager
 import platform.Foundation.NSUserDefaults
 import platform.Foundation.dataWithContentsOfFile
 import platform.UIKit.UIViewController
+import platform.Foundation.NSLock
 import kotlin.experimental.ExperimentalObjCName
 import kotlin.native.ObjCName
 
@@ -130,10 +132,13 @@ class IosProductRootHost(
     private val hostScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     /**
      * App-owned staged source paths (`ewm_src_*`) for this host generation (E2 dispose).
-     * Mutated on Main / host-scoped jobs only — no concurrent writer races with dispose.
+     * Mutated under [lifecycleLock] together with [disposed] so publish→ownership transfer
+     * is atomic w.r.t. [dispose].
      */
     private val ownedStagedPaths = linkedSetOf<String>()
     private var disposed = false
+    /** Serializes dispose vs post-publish ownership adoption (Main / delivery continuations). */
+    private val lifecycleLock = NSLock()
 
     /**
      * G4 file-first: host no longer permanently owns multi-item full-res source bytes.
@@ -348,37 +353,42 @@ class IosProductRootHost(
      * Idempotent: a second call is a no-op after the first full teardown.
      */
     fun dispose() {
-        if (disposed) return
-        disposed = true
-        services.session.cancelExport()
-        previewGen += 1
-        hostScope.coroutineContext.cancelChildren()
-        // Clear presentation + caches (Main-thread host; mutex for concurrent background writers).
-        sourceBytes = null
-        iconBytes = null
-        previewBitmap = null
-        previewSourcePath = null
-        outputPath = null
-        statusLine = ""
-        isBusy = false
-        isSaving = false
-        showEditor = false
-        showSaveSheet = false
-        sheetExportFinished = false
-        showOpenSource = false
-        clampDraftOffset = null
-        clampDraftSelectionId = null
-        filmstripThumbEpoch += 1
-        wmPreviewCache.clear()
-        sourcePlaceholderCache.clear()
-        filmstripThumbCache.clear()
-        exportThumbCache.clear()
-        val toDelete = ownedStagedPaths.toList()
-        ownedStagedPaths.clear()
-        toDelete.forEach { path ->
-            if (path.contains("ewm_src_")) {
-                IosSourceStager.deleteQuietly(path)
+        lifecycleLock.lock()
+        try {
+            if (disposed) return
+            disposed = true
+            services.session.cancelExport()
+            previewGen += 1
+            hostScope.coroutineContext.cancelChildren()
+            // Clear presentation + caches (Main-thread host; lock serializes vs ownership adopt).
+            sourceBytes = null
+            iconBytes = null
+            previewBitmap = null
+            previewSourcePath = null
+            outputPath = null
+            statusLine = ""
+            isBusy = false
+            isSaving = false
+            showEditor = false
+            showSaveSheet = false
+            sheetExportFinished = false
+            showOpenSource = false
+            clampDraftOffset = null
+            clampDraftSelectionId = null
+            filmstripThumbEpoch += 1
+            wmPreviewCache.clear()
+            sourcePlaceholderCache.clear()
+            filmstripThumbCache.clear()
+            exportThumbCache.clear()
+            val toDelete = ownedStagedPaths.toList()
+            ownedStagedPaths.clear()
+            toDelete.forEach { path ->
+                if (path.contains("ewm_src_")) {
+                    IosSourceStager.deleteQuietly(path)
+                }
             }
+        } finally {
+            lifecycleLock.unlock()
         }
     }
 
@@ -1219,43 +1229,49 @@ class IosProductRootHost(
         pickGeneration: Long,
     ) {
         require(images.isNotEmpty()) { "deliverPickedPhotosBatch: empty" }
-        // F11/F16: do not clear host caches until Session publish succeeds for this generation.
-        // Superseded picks throw StalePickGenerationException without leaving Session/cache as A.
-        withContext(Dispatchers.Default) {
-            services.stagePickedImagesBytes(
+        // Disposed host must not stage or publish (lifecycle validity joins generation gate).
+        if (disposed) return
+        // Snapshot prior Session selection + host-owned temps for transactional ownership / revert.
+        val previousLaunch = services.session.launchScreenUiStateFlow.value
+        val previousSelection = previousLaunch.selectedImageList.toList()
+        val previousWaterMark = previousLaunch.waterMark
+        val previousOwned = ownedStagedPaths.toList()
+        // F11/F16: stage+publish on Default; hostAlive re-checked at guarded publish boundary.
+        // Public ObjC API is the 3-arg stagePickedImagesBytes; host uses internal lifecycle gate.
+        val published = withContext(Dispatchers.Default) {
+            services.stagePickedImagesBytesInternal(
                 imageBytesList = images,
                 append = append,
                 pickGeneration = pickGeneration,
+                hostAlive = { !disposed },
             )
         }
+        // Test seam: force dispose in the post-publication / pre-ownership-registration window.
+        me.rosuh.easywatermark.session.IosHostOwnershipProbe.awaitBeforeAdopt()
+        // Identity-scoped adopt: cleanup/revert only when Session still holds this delivery.
+        val adopt = adoptPublishedOwnership(
+            previousOwned = previousOwned,
+            previousSelection = previousSelection,
+            previousWaterMark = previousWaterMark,
+            append = append,
+            deliveryStagedPaths = published.stagedPaths.toSet(),
+            pickGeneration = pickGeneration,
+            publishedSelectionUris = published.publishedSelectionUris,
+        )
+        if (!adopt.alive) {
+            return
+        }
+        // G4 file-first: drop any host full-res source pin; staged paths + Session own identity.
+        sourceBytes = null
+        showEditor = true
+        statusLine = ""
         // Abort host UI bind if generation flipped after Session publish returned.
         if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
             return
         }
-        if (disposed) return
-        // G4 file-first: drop any host full-res source pin; staged paths + Session own identity.
-        // Caller's [images] list is stack-scoped and must not be stored on the host.
-        sourceBytes = null
-        // Session already EnterEditor via stagePickedImagesBytes; keep optimistic flag for isInEditor.
-        showEditor = true
-        if (!append) {
-            wmPreviewCache.clear()
-            sourcePlaceholderCache.clear()
-            filmstripThumbCache.clear()
-            exportThumbCache.clear()
-            filmstripThumbEpoch += 1
-            previewBitmap = null
-            previewSourcePath = null
-            ownedStagedPaths.clear()
-        }
-        statusLine = ""
-
-        val launch = services.session.launchScreenUiStateFlow.first()
+        val launch = services.session.launchScreenUiStateFlow.value
         val paths = launch.selectedImageList.map { it.uri.value }.filter { it.isNotBlank() }
-        // Track app-owned staged sources for dispose cleanup (E2).
-        paths.filter { it.contains("ewm_src_") }.forEach { ownedStagedPaths.add(it) }
         val focusPath = (launch.curImageInfo ?: launch.selectedImageList.firstOrNull())?.uri?.value
-
         if (renderPreview && focusPath != null) {
             val cached = sourcePlaceholderCache[focusPath]
             val placeholder = cached ?: withContext(Dispatchers.Default) {
@@ -1306,6 +1322,130 @@ class IosProductRootHost(
             } catch (t: Throwable) {
                 statusLine = "Preview failed: ${t.message}"
             }
+        }
+    }
+
+    private data class OwnershipAdoptResult(val alive: Boolean)
+
+    private enum class LateDisposeSessionAction {
+        /** Host alive — ownership adopted. */
+        Alive,
+
+        /** Host disposed; Session still this delivery; previous paths readable → restore. */
+        RevertPrevious,
+
+        /** Host disposed; Session still this delivery; previous dead/empty → leave editor empty. */
+        NavigateBack,
+
+        /** Host disposed; a newer generation already owns Session — do not touch Session. */
+        LeaveSession,
+    }
+
+    /**
+     * Atomically w.r.t. [dispose]: adopt Session-published `ewm_src_*` into [ownedStagedPaths],
+     * or perform **identity-scoped** late-dispose cleanup for [deliveryStagedPaths] only.
+     *
+     * Late-dispose rules (attempt 5):
+     * - Cleanup deletes only paths staged by **this** delivery (never enumerate process-wide Session
+     *   as ownership, and never delete a newer generation's paths).
+     * - Session is mutated only when generation is still current **and** Session selection still
+     *   equals [publishedSelectionUris] (this delivery still owns Session).
+     * - Never restore [previousSelection] when those paths were already deleted by [dispose].
+     *
+     * Session intents use [dispatchAndAwait] **outside** [lifecycleLock] so dispose cannot
+     * deadlock against a suspended Main intent.
+     */
+    private suspend fun adoptPublishedOwnership(
+        previousOwned: List<String>,
+        previousSelection: List<me.rosuh.easywatermark.data.model.ImageInfo>,
+        previousWaterMark: me.rosuh.easywatermark.data.model.WaterMark,
+        append: Boolean,
+        deliveryStagedPaths: Set<String>,
+        pickGeneration: Long,
+        publishedSelectionUris: List<String>,
+    ): OwnershipAdoptResult {
+        var action = LateDisposeSessionAction.Alive
+        lifecycleLock.lock()
+        try {
+            val launch = services.session.launchScreenUiStateFlow.value
+            val sessionUris = launch.selectedImageList.map { it.uri.value }
+            val sessionSet = sessionUris.toSet()
+            val sessionOwned = sessionUris.filter { it.contains("ewm_src_") }.toSet()
+            val genCurrent =
+                me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)
+            // Exact selection identity: this delivery still owns the process-wide Session.
+            val sessionStillOurs = genCurrent && sessionUris == publishedSelectionUris
+
+            if (disposed) {
+                // Identity-scoped temp cleanup: only this delivery's staged paths.
+                // If a newer generation already owns Session, keep any of our paths that it still
+                // references (unusual but safe); delete the rest.
+                val toDelete = if (sessionStillOurs) {
+                    deliveryStagedPaths
+                } else {
+                    deliveryStagedPaths.filter { it !in sessionSet }
+                }
+                toDelete.forEach { IosSourceStager.deleteQuietly(it) }
+
+                action = if (!sessionStillOurs) {
+                    LateDisposeSessionAction.LeaveSession
+                } else if (previousSelection.isNotEmpty() && previousSelectionReadable(previousSelection)) {
+                    LateDisposeSessionAction.RevertPrevious
+                } else {
+                    // Dispose may have deleted previous host-owned ewm_src paths — never restore
+                    // Session to dead files.
+                    LateDisposeSessionAction.NavigateBack
+                }
+            } else if (!append) {
+                previousOwned.filter { it !in sessionOwned }.forEach { IosSourceStager.deleteQuietly(it) }
+                ownedStagedPaths.clear()
+                wmPreviewCache.clear()
+                sourcePlaceholderCache.clear()
+                filmstripThumbCache.clear()
+                exportThumbCache.clear()
+                filmstripThumbEpoch += 1
+                previewBitmap = null
+                previewSourcePath = null
+                // Track current Session ewm_src paths (replace publishes full selection).
+                sessionOwned.forEach { ownedStagedPaths.add(it) }
+            } else {
+                // Append: own exactly the paths this delivery staged (not process-wide diff).
+                deliveryStagedPaths.forEach { ownedStagedPaths.add(it) }
+            }
+        } finally {
+            lifecycleLock.unlock()
+        }
+        when (action) {
+            LateDisposeSessionAction.Alive,
+            LateDisposeSessionAction.LeaveSession,
+            -> Unit
+            LateDisposeSessionAction.RevertPrevious -> {
+                services.session.dispatchAndAwait(
+                    me.rosuh.easywatermark.session.AppIntent.EnterEditor(
+                        selected = previousSelection,
+                        waterMark = previousWaterMark,
+                    ),
+                )
+            }
+            LateDisposeSessionAction.NavigateBack -> {
+                services.session.dispatchAndAwait(
+                    me.rosuh.easywatermark.session.AppIntent.NavigateBack,
+                )
+            }
+        }
+        return OwnershipAdoptResult(alive = action == LateDisposeSessionAction.Alive)
+    }
+
+    /** True when every previous selection path still exists (non-ewm paths assumed durable). */
+    private fun previousSelectionReadable(
+        previousSelection: List<me.rosuh.easywatermark.data.model.ImageInfo>,
+    ): Boolean {
+        val fm = NSFileManager.defaultManager
+        return previousSelection.all { info ->
+            val path = info.uri.value
+            if (path.isBlank()) return@all false
+            if (!path.contains("ewm_src_")) return@all true
+            fm.fileExistsAtPath(path)
         }
     }
 
