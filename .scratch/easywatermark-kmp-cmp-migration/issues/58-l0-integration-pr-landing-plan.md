@@ -50,6 +50,7 @@ Worker no-push is a **worker boundary**, not the overall L0 product scope.
 1. `shared/src/desktopTest/kotlin/me/rosuh/easywatermark/session/DesktopImportExportSemanticsTest.kt`
 2. `app/src/test/java/me/rosuh/easywatermark/platform/AndroidShareStagingTest.kt`
 3. `app/src/test/java/me/rosuh/easywatermark/platform/AndroidIconPersistenceTest.kt` (only if required for FileProvider isolation)
+4. `shared/src/desktopTest/kotlin/me/rosuh/easywatermark/render/CommonWatermarkPipelineComposeTest.kt` (owner-approved Linux CI host-font correction)
 
 ### Must retain unchanged vs `dc9ecf34`
 
@@ -118,7 +119,8 @@ git diff --name-status "$SRC" HEAD -- . \
   ':(exclude)scripts/verify-ownership-fitness.sh' \
   ':(exclude)shared/src/desktopTest/kotlin/me/rosuh/easywatermark/session/DesktopImportExportSemanticsTest.kt' \
   ':(exclude)app/src/test/java/me/rosuh/easywatermark/platform/AndroidShareStagingTest.kt' \
-  ':(exclude)app/src/test/java/me/rosuh/easywatermark/platform/AndroidIconPersistenceTest.kt'
+  ':(exclude)app/src/test/java/me/rosuh/easywatermark/platform/AndroidIconPersistenceTest.kt' \
+  ':(exclude)shared/src/desktopTest/kotlin/me/rosuh/easywatermark/render/CommonWatermarkPipelineComposeTest.kt'
 # Expect empty against the committed candidate tip.
 ```
 
