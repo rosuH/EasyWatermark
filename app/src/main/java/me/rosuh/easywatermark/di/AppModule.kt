@@ -20,9 +20,9 @@ val appModule = module {
         AndroidDynamicColorCapability()
     }
     viewModel {
-        MainViewModel(get(), get(), get(), get())
+        MainViewModel(get(), get(), get())
     }
     viewModel {
-        AboutViewModel(get(), get(), get())
+        AboutViewModel(get(), get())
     }
 }

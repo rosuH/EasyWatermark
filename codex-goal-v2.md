@@ -16,7 +16,7 @@ Standing mission/process contract. **Read this file every session before work.**
 
 1. **This file is the sole process/mission contract.** Supersedes `codex-goal.md`. **ACSP** (`~/.agent-cowork/sessions/easywatermark/`) is the active multi-agent handoff protocol for authorized slices — claim, execute, prove, review. Do not invent parallel session roots.
 2. **Technical constraints** in `AGENTS.md`, `docs/CONTEXT.md`, `docs/adr/*` remain binding. Process conflict → **this file wins**. Technical conflict → **`AGENTS.md` / ADRs win** until owner says otherwise.
-3. **Operational source of truth (lightweight):** (a) this file; (b) roadmap **status** `issues/13-roadmap-status.md`; (c) **current slice plan** (Issue 58 / named plan under `issues/`); (d) **ACSP** task/review briefs for the active session; (e) verified artifacts kept **outside** the repository. Public GitHub Issues are **not** the migration ops backend. There is **no** in-repo `spec.md` or `evidence/**` archive. `task_plan.md`, `progress.md`, and `findings.md` are **historical evidence only** — do not read them at session start, do not update them after slices, and do not use them to choose work.
+3. **Operational source of truth (lightweight):** (a) this file; (b) current Git/PR state and the owner's active request; (c) **ACSP** task/review briefs for delegated work; (d) verified artifacts kept **outside** the repository. There is no repository-local `.scratch`, `spec.md`, or `evidence/**` archive. `task_plan.md`, `progress.md`, and `findings.md` are **historical evidence only** — do not read them at session start, do not update them after slices, and do not use them to choose work.
 4. **Slice done ≠ mission done.** Overall completion requires **every** §9 DoD item. Never redefine goal as “almost done” or “PR merge-ready.”
 
 ---
@@ -317,7 +317,7 @@ Baseline only — always re-check `git status`. Full checklist: `docs/parity/v2.
 | **§9 overall** | **NOT MET** (parity archive not exhaustive locale/theme/recording matrix; Desktop unsigned; ADR renderer split intentional). Automated residual gates closed on lab host. **Not** “migration complete.” |
 | Graduation | **Owner chose A** (2026-07-12): keep Draft; **no push**; **no merge**. Proposal: `docs/parity/v2.10.0/dod/graduation-proposal-pr358.md` |
 | Shared session | **ADR-0017** Phase **0–6 landed** — + MediaLibraryPort; Android VM edge shell (~420 lines) |
-| Local process backend | status page + current slice plan under compact `issues/` + ACSP (no evidence archive) |
+| Local process backend | Current owner request + Git/PR state + bounded ACSP handoffs (no in-repo task/evidence archive) |
 | Protect | User research doc `docs/superpowers/research/2026-07-11-project-branch-goals-progress.md` stays uncommitted unless owner allows |
 | Remote | Local may lead `origin/feat/migrate_to_compose`; PR #358 **Draft** (stay Draft under graduation A) |
 | Simulators | Do **not** shut down live Android + iOS simulators unless owner orders |
@@ -333,7 +333,7 @@ Baseline only — always re-check `git status`. Full checklist: `docs/parity/v2.
 
 ## 12. Overclaim guard
 
-Do not claim: migration complete; three-platform 1:1; PR merge-ready; Android pixel parity from smoke alone; Desktop packaging = public ship (ADR-0013 Proposed); focused XCUITest = full suite; A5 pass without ticket `05`. Prefer the lightweight operational source (status page + current slice plan + ACSP) + verified artifacts (outside the repo) + git HEAD over stale planning-file text or revoked public GitHub migration issues.
+Do not claim: migration complete; three-platform 1:1; PR merge-ready; Android pixel parity from smoke alone; Desktop packaging = public ship (ADR-0013 Proposed); focused XCUITest = full suite; A5 pass without ticket `05`. Prefer the current owner request + Git/PR state + ACSP (when delegated) + verified artifacts outside the repo over stale planning-file text.
 
 ---
 
@@ -345,7 +345,7 @@ Do not claim: migration complete; three-platform 1:1; PR merge-ready; Android pi
 | `codex-goal.md` | Historical process (superseded) |
 | `AGENTS.md` | Technical truth, closed decisions, commands |
 | `task_plan.md` / `progress.md` / `findings.md` | **Historical evidence only** — do not use for routing or session start |
-| Status page + current slice plan (`issues/13-roadmap-status.md`, `issues/58-…`; `docs/agents/issue-tracker.md`) | Lightweight operational ticket / task source (not public GitHub; no in-repo evidence archive) |
+| Current owner request + Git/PR state (`docs/agents/issue-tracker.md`) | Operational task and landing state |
 | ACSP (`~/.agent-cowork/sessions/easywatermark/`) | Active multi-agent handoff (task, review, result, verification) |
 | Verified artifacts (diffs, test outputs, screenshots) | Acceptance evidence (stored outside the product tree) |
 | `docs/CONTEXT.md` / `docs/adr/*` | Domain + architecture |

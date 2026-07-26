@@ -72,7 +72,7 @@ Rough partition of **46** public/private methods:
 | **C. Gallery query** | `query` / MediaStore projection, `SystemPickerImageSelected` MediaStore path | **No** — port |
 | **D. Export pipeline** | `saveImage` → `generateList` → `generateImage` (Bitmap/Canvas/`WatermarkRenderer`/MediaStore) | **Orchestration yes; pixels no** |
 | **E. Compress / crash / version** | `compressImg`, `extraCrashInfo`, `saveUpgradeInfo` | Compress = port; crash = Android edge |
-| **F. DI host** | `viewModelScope`, Koin `Context`, `MemorySettingRepo` (empty) | Stay platform |
+| **F. DI host** | `viewModelScope`, Koin `Context`; the empty `MemorySettingRepo` wiring was removed post-L0 | Stay platform |
 
 ### Off-Android consumers today (parallel state, not shared machine)
 

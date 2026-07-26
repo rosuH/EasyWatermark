@@ -38,7 +38,6 @@ import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.data.model.WatermarkConfigChange
-import me.rosuh.easywatermark.data.repo.MemorySettingRepo
 import me.rosuh.easywatermark.data.repo.TemplateRepository
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
@@ -73,7 +72,6 @@ typealias SaveExportUiState = ExportJobState
 class MainViewModel (
     private val userRepo: UserConfigRepository,
     waterMarkRepo: WaterMarkRepository,
-    private val memorySettingRepo: MemorySettingRepo,
     private val templateRepo: TemplateRepository,
 ) : WatermarkSessionViewModel(
     waterMarkRepo = waterMarkRepo,

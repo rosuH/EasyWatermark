@@ -7,7 +7,6 @@ import androidx.datastore.preferences.core.Preferences
 import kotlinx.coroutines.Dispatchers
 import me.rosuh.easywatermark.data.db.AppDatabase
 import me.rosuh.easywatermark.data.db.dao.TemplateDao
-import me.rosuh.easywatermark.data.repo.MemorySettingRepo
 import me.rosuh.easywatermark.data.repo.TemplateRepository
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
@@ -32,10 +31,6 @@ val repositoryModule = module {
             tileModeFromStorageId = { it.toWatermarkTileMode() },
             logError = { message -> Log.e("WaterMarkRepository", message) },
         )
-    }
-
-    single<MemorySettingRepo> {
-        MemorySettingRepo()
     }
 
     single<TemplateRepository> {

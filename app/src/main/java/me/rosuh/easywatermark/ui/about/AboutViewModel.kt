@@ -6,7 +6,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import me.rosuh.easywatermark.data.model.WaterMark
-import me.rosuh.easywatermark.data.repo.MemorySettingRepo
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.platform.DynamicColorCapability
 import me.rosuh.easywatermark.utils.ktx.launch
@@ -14,7 +13,6 @@ import me.rosuh.easywatermark.utils.ktx.launch
 
 class AboutViewModel (
     private val waterMarkRepository: WaterMarkRepository,
-    private val memorySettingRepo: MemorySettingRepo,
     private val dynamicColorCapability: DynamicColorCapability
 ) : ViewModel() {
 
