@@ -446,8 +446,16 @@ class ComposeMainActivity : ComponentActivity() {
                                 ) { route ->
                                     when (route) {
                                         ProductShellNav.Route.Launch -> {
-                                            AndroidLaunchScreen(
-                                                onPickImage = onPickImages,
+                                            // Shared Common LaunchScreen owns product layout/logo.
+                                            // Keep animation flag local: stop logo before opening picker.
+                                            var startLogoAnimation by remember { mutableStateOf(true) }
+                                            LaunchScreen(
+                                                aboutIcon = SharedProductDrawables.aboutPainter(),
+                                                startLogoAnimation = startLogoAnimation,
+                                                onPickImage = {
+                                                    startLogoAnimation = false
+                                                    onPickImages()
+                                                },
                                                 onGoAbout = {
                                                     viewModel.openAbout(
                                                         me.rosuh.easywatermark.ui.LaunchScreenUiState.Launch,
