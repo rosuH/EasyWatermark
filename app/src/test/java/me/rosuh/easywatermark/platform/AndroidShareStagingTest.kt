@@ -12,6 +12,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -31,6 +32,17 @@ class AndroidShareStagingTest {
     val temporaryFolder = TemporaryFolder()
 
     private val authority = "me.rosuh.easywatermark.debug.fileprovider"
+
+    @Before
+    fun clearFileProviderPathStrategyCache() {
+        // FileProvider caches PathStrategy by authority with absolute roots from the first
+        // Application dataDir. Robolectric recreates Application between tests/classes; a stale
+        // strategy then rejects cache/files paths (order-dependent leakage with icon tests).
+        val cacheField = FileProvider::class.java.getDeclaredField("sCache")
+        cacheField.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        (cacheField.get(null) as MutableMap<*, *>).clear()
+    }
 
     @Test
     fun copyToOwnedRef_publishesReadableAppOwnedRef_survivesSourceDeletion() = runBlocking {

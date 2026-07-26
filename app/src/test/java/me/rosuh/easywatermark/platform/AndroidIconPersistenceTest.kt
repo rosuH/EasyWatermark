@@ -14,6 +14,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -30,6 +31,16 @@ class AndroidIconPersistenceTest {
     val temporaryFolder = TemporaryFolder()
 
     private val authority = "me.rosuh.easywatermark.debug.fileprovider"
+
+    @Before
+    fun clearFileProviderPathStrategyCache() {
+        // See AndroidShareStagingTest — clear static FileProvider path-strategy cache so
+        // production-constructor FileProvider roots match this Application's dataDir.
+        val cacheField = FileProvider::class.java.getDeclaredField("sCache")
+        cacheField.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        (cacheField.get(null) as MutableMap<*, *>).clear()
+    }
 
     @Test
     fun productionConstructor_fileProviderPath_isReadableThroughContentResolver() = runBlocking {

@@ -233,15 +233,28 @@ class DesktopImportExportSemanticsTest {
         assertFalse("resolveUniqueOutputFile" in saveBody)
         assertFalse("runSaveFlow" in saveBody)
 
-        // Preview freezes same-item path+offset
-        val previewStart = text.indexOf("suspend fun refreshPreview")
-        assertTrue(previewStart >= 0)
-        val previewEnd = text.indexOf("LaunchedEffect(previewGeneration)", previewStart)
+        // Light preview freezes same-item path+offset via refreshPreviewLight + DesktopPreviewRaster
+        // (H0.1); must not route preview through full runSaveFlow.
+        val previewStart = text.indexOf("suspend fun refreshPreviewLight")
+        assertTrue(previewStart >= 0, "preview must use refreshPreviewLight (not full runSaveFlow)")
+        val previewEndMarker = text.indexOf("\n    // Config / import", previewStart)
+        val previewEnd = if (previewEndMarker > previewStart) {
+            previewEndMarker
+        } else {
+            text.indexOf("LaunchedEffect(previewGeneration)", previewStart)
+        }
         val previewBody = text.substring(previewStart, if (previewEnd > previewStart) previewEnd else text.length)
         assertTrue("freezeCurrentItemInput" in previewBody)
         assertTrue("frozen.sourcePath" in previewBody)
         assertTrue("frozen.offsetX" in previewBody)
-        assertTrue("runSaveFlow" in previewBody)
+        assertTrue(
+            "DesktopPreviewRaster" in previewBody,
+            "light preview must paint via DesktopPreviewRaster",
+        )
+        assertFalse(
+            "runSaveFlow" in previewBody,
+            "preview must not call runSaveFlow (full save spine is export/Save As only)",
+        )
         assertFalse(
             Regex("""current\.bytes[\s\S]{0,300}currentItemOffsetSnapshot""").containsMatchIn(previewBody),
             "Preview must not use lastImage bytes with a separate offset snapshot helper",
