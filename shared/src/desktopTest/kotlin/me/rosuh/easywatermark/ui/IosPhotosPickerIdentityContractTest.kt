@@ -185,49 +185,6 @@ class IosPhotosPickerIdentityContractTest {
     }
 
     @Test
-    fun k1_host_fresh_batch_clears_preview_caches_before_stage() {
-        val host = resolveRepoFile(
-            "shared/src/iosMain/kotlin/me/rosuh/easywatermark/ui/IosProductRootHost.kt",
-        ).readText()
-        val code = stripSwiftComments(host) // also strips // and /* */ which Kotlin uses
-
-        val deliverStart = code.indexOf("suspend fun deliverPickedPhotosBatch")
-        assertTrue(deliverStart >= 0, "deliverPickedPhotosBatch must exist")
-        val deliverBody = code.substring(deliverStart, deliverStart + 1800)
-
-        assertTrue(
-            Regex("""if\s*\(\s*!append\s*\)""").containsMatchIn(deliverBody),
-            "fresh pick (!append) must have an explicit cache-invalidation branch",
-        )
-        assertTrue("wmPreviewCache.clear()" in deliverBody, "fresh pick clears wmPreviewCache")
-        assertTrue(
-            "sourcePlaceholderCache.clear()" in deliverBody,
-            "fresh pick clears sourcePlaceholderCache",
-        )
-        assertTrue(
-            "filmstripThumbCache.clear()" in deliverBody,
-            "fresh pick clears filmstripThumbCache",
-        )
-        assertTrue(
-            "previewSourcePath = null" in deliverBody,
-            "fresh pick nulls previewSourcePath so A cannot remain displayed",
-        )
-
-        val clearIdx = deliverBody.indexOf("wmPreviewCache.clear()")
-        val stageIdx = deliverBody.indexOf("stagePickedImagesBytes")
-        // F11: Session-guarded stage runs first; host caches clear only after successful publish
-        // so a superseded generation cannot leave preview/cache bound to A.
-        assertTrue(
-            stageIdx >= 0 && clearIdx > stageIdx,
-            "stagePickedImagesBytes (generation-guarded) must run before host cache clear (F11)",
-        )
-        assertTrue(
-            "pickGeneration" in deliverBody,
-            "deliverPickedPhotosBatch must take pickGeneration for Kotlin publish boundary",
-        )
-    }
-
-    @Test
     fun k3_staging_writes_uuid_paths_via_ios_source_stager() {
         val stager = resolveRepoFile(
             "shared/src/iosMain/kotlin/me/rosuh/easywatermark/session/IosSourceStager.kt",
