@@ -79,6 +79,15 @@ jobs:
       - name: Build apk with Gradle
         run: ./gradlew :app:assembleDebug
 
+      # CI-P1: downloadable debug APK for review (debug-signed, not Play/release-ready).
+      - name: Upload unsigned debug APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: easywatermark-android-debug-${{ github.sha }}-UNSIGNED-DEBUG
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Run :shared multiplatform tests (JVM, CMP plan C1.8)
         run: ./gradlew :shared:desktopTest
 
