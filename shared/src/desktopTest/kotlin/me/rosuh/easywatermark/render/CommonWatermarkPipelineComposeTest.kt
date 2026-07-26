@@ -106,11 +106,16 @@ class CommonWatermarkPipelineComposeTest {
             markMode = WatermarkMode.Text,
         )
         val fullCfg = reducedCfg.copy(alpha = 255)
-        val full = CommonWatermarkPipeline.compose(bg, fullCfg, env, null, 0.5f, 0.5f)
-        val reduced = CommonWatermarkPipeline.compose(bg, reducedCfg, env, null, 0.5f, 0.5f)
+        val cjkFamily = bundledLatinCjkFontFamily(latinFirst = false)
+        val full = CommonWatermarkPipeline.compose(
+            bg, fullCfg, env, null, 0.5f, 0.5f, fontFamily = cjkFamily,
+        )
+        val reduced = CommonWatermarkPipeline.compose(
+            bg, reducedCfg, env, null, 0.5f, 0.5f, fontFamily = cjkFamily,
+        )
         val fullStats = deltaStats(bg, full)
         assertTrue(fullStats.changedCount > 0, "P2 alpha-255 CJK control must paint")
-        assertNotTofuCjk(bg, fullCfg, full, fullStats)
+        assertNotTofuCjk(bg, fullCfg, full, fullStats, fontFamily = cjkFamily)
         assertBroadRepeat(fullStats, imgW, imgH)
         val reducedStats = deltaStats(bg, reduced)
         assertTrue(reducedStats.changedCount > 0, "P2 alpha-128 must remain visible")
@@ -277,17 +282,28 @@ class CommonWatermarkPipelineComposeTest {
         val withFamilyOffset = CommonWatermarkPipeline.compose(
             bg, config, env, null, 0.5f, 0.5f, fontFamily = family,
         )
-        val defaultPath = CommonWatermarkPipeline.compose(
-            bg, config, env, null, 0.5f, 0.5f, fontFamily = null,
+        val latinConfig = config.copy(
+            text = "Watermark 123",
+            textStyle = TextPaintStyle.Fill,
+            textTypeface = TextTypeface.Normal,
+        )
+        val latinFirst = CommonWatermarkPipeline.compose(
+            bg, latinConfig, env, null, 0.5f, 0.5f,
+            fontFamily = bundledLatinCjkFontFamily(latinFirst = true),
+        )
+        val cjkFirst = CommonWatermarkPipeline.compose(
+            bg, latinConfig, env, null, 0.5f, 0.5f,
+            fontFamily = bundledLatinCjkFontFamily(latinFirst = false),
         )
         val fullStats = deltaStats(bg, withFamilyOffset)
         assertTrue(fullStats.changedCount > 0, "C1 explicit CJK family must paint full string")
         assertNotTofuCjk(bg, config, withFamilyOffset, fullStats, fontFamily = family)
-        // If composeTextCell ignores fontFamily, withFamily ≡ defaultPath → this fails.
+        // Both paths use repository-bundled fonts. If composeTextCell ignores fontFamily,
+        // their output becomes identical; no host/system font assumption is involved.
         assertTrue(
-            !pixelMapsEqual(withFamilyOffset, defaultPath),
-            "C1: bundled FontFamily output must differ from default-null path " +
-                "(proves fontFamily is applied through the full pipeline)",
+            !pixelMapsEqual(latinFirst, cjkFirst),
+            "C1: explicit bundled FontFamily order must affect Latin output " +
+                "(proves fontFamily is applied through the full pipeline without system-font dependence)",
         )
         // Centered overload must forward the same non-null family as offset (0.5, 0.5).
         val withFamilyCentered = CommonWatermarkPipeline.compose(
