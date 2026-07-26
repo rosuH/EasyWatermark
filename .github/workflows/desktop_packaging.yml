@@ -253,11 +253,12 @@ jobs:
         if: runner.os != 'Windows'
         run: chmod +x ./gradlew
 
-      - name: Package current-OS installer (packageDistributionForCurrentOS)
+      - name: Package current-OS installer and create smokeable app image
         shell: bash
         run: |
           set -euo pipefail
           ${{ matrix.gradle }} :desktopApp:packageDistributionForCurrentOS --max-workers=4
+          ${{ matrix.gradle }} :desktopApp:createDistributable --max-workers=4
 
       # Do not pass Gradle --args to the packaged-run task (unsupported on this plugin).
       # Launch the generated app-image binary directly with --headless; fail closed if missing.
