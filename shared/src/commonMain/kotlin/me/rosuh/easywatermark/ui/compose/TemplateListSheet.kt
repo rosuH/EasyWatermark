@@ -1,6 +1,5 @@
 package me.rosuh.easywatermark.ui.compose
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,6 +31,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -81,11 +84,13 @@ fun TemplateListSheet(
     var editTarget by remember { mutableStateOf<TemplateEditTarget?>(null) }
     var confirmUse by remember { mutableStateOf<Template?>(null) }
     var confirmDelete by remember { mutableStateOf<Template?>(null) }
+    var selectedTemplateId by remember { mutableStateOf<Int?>(null) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         shape = RectangleShape,
         containerColor = MaterialTheme.colorScheme.surface,
+        modifier = Modifier.testTag(TEMPLATE_LIST_SHEET_TAG),
     ) {
         Column(
             modifier = Modifier
@@ -110,6 +115,7 @@ fun TemplateListSheet(
                 TextButton(
                     enabled = enabled,
                     onClick = { editTarget = TemplateEditTarget(null) },
+                    modifier = Modifier.testTag(TEMPLATE_ADD_BUTTON_TAG),
                 ) {
                     Text(text = stringResource(Res.string.dialog_button_add_template))
                 }
@@ -140,13 +146,24 @@ fun TemplateListSheet(
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier
                                     .weight(1f)
-                                    .clickable(enabled = enabled) { confirmUse = template }
+                                    .testTag(templateRowTag(template.id))
+                                    .selectable(
+                                        selected = selectedTemplateId == template.id,
+                                        enabled = enabled,
+                                    ) {
+                                        selectedTemplateId = template.id
+                                        confirmUse = template
+                                    }
+                                    .semantics {
+                                        contentDescription = template.content ?: ""
+                                    }
                                     .padding(vertical = 16.dp)
                             )
                             if (editIcon != null) {
                                 IconButton(
                                     enabled = enabled,
                                     onClick = { editTarget = TemplateEditTarget(template) },
+                                    modifier = Modifier.testTag(templateEditButtonTag(template.id)),
                                 ) {
                                     Icon(
                                         painter = editIcon,
@@ -157,6 +174,7 @@ fun TemplateListSheet(
                                 TextButton(
                                     enabled = enabled,
                                     onClick = { editTarget = TemplateEditTarget(template) },
+                                    modifier = Modifier.testTag(templateEditButtonTag(template.id)),
                                 ) {
                                     Text(stringResource(Res.string.template_edit))
                                 }
@@ -165,6 +183,7 @@ fun TemplateListSheet(
                                 IconButton(
                                     enabled = enabled,
                                     onClick = { confirmDelete = template },
+                                    modifier = Modifier.testTag(templateDeleteButtonTag(template.id)),
                                 ) {
                                     Icon(
                                         painter = deleteIcon,
@@ -175,6 +194,7 @@ fun TemplateListSheet(
                                 TextButton(
                                     enabled = enabled,
                                     onClick = { confirmDelete = template },
+                                    modifier = Modifier.testTag(templateDeleteButtonTag(template.id)),
                                 ) {
                                     Text(stringResource(Res.string.template_delete))
                                 }
@@ -220,6 +240,7 @@ fun TemplateListSheet(
                         confirmUse = null
                         onDismiss()
                     },
+                    modifier = Modifier.testTag(TEMPLATE_USE_CONFIRM_BUTTON_TAG),
                 ) { Text(stringResource(Res.string.tips_confirm_dialog)) }
             },
             dismissButton = {
@@ -242,6 +263,7 @@ fun TemplateListSheet(
                         onDelete(template)
                         confirmDelete = null
                     },
+                    modifier = Modifier.testTag(TEMPLATE_DELETE_CONFIRM_BUTTON_TAG),
                 ) { Text(stringResource(Res.string.tips_confirm_dialog)) }
             },
             dismissButton = {
@@ -271,6 +293,7 @@ private fun TemplateEditSheet(
         onDismissRequest = onDismiss,
         shape = RectangleShape,
         containerColor = MaterialTheme.colorScheme.surface,
+        modifier = Modifier.testTag(TEMPLATE_EDIT_SHEET_TAG),
     ) {
         Column(
             modifier = Modifier
@@ -291,7 +314,8 @@ private fun TemplateEditSheet(
                 enabled = enabled,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .wrapContentHeight(),
+                    .wrapContentHeight()
+                    .testTag(TEMPLATE_EDIT_FIELD_TAG),
                 shape = RectangleShape,
             )
             Button(
@@ -299,7 +323,8 @@ private fun TemplateEditSheet(
                 enabled = enabled && draft.isNotBlank(),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 24.dp),
+                    .padding(top = 24.dp)
+                    .testTag(TEMPLATE_EDIT_CONFIRM_BUTTON_TAG),
                 shape = RectangleShape,
             ) {
                 Text(text = confirmButton)
@@ -307,3 +332,16 @@ private fun TemplateEditSheet(
         }
     }
 }
+
+/** Stable Compose testTag ids for the production template flow. */
+const val TEMPLATE_LIST_SHEET_TAG = "templateListSheet"
+const val TEMPLATE_ADD_BUTTON_TAG = "templateAddButton"
+const val TEMPLATE_EDIT_SHEET_TAG = "templateEditSheet"
+const val TEMPLATE_EDIT_FIELD_TAG = "templateEditField"
+const val TEMPLATE_EDIT_CONFIRM_BUTTON_TAG = "templateEditConfirm"
+const val TEMPLATE_USE_CONFIRM_BUTTON_TAG = "templateUseConfirm"
+const val TEMPLATE_DELETE_CONFIRM_BUTTON_TAG = "templateDeleteConfirm"
+
+fun templateRowTag(id: Int): String = "templateRow-$id"
+fun templateEditButtonTag(id: Int): String = "templateEditButton-$id"
+fun templateDeleteButtonTag(id: Int): String = "templateDeleteButton-$id"

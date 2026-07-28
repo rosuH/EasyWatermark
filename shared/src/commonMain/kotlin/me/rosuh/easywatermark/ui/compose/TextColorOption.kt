@@ -27,7 +27,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.shared.generated.resources.Res
@@ -171,8 +173,12 @@ private fun ColorSwatch(
                     )
                 },
             )
+            .testTag("colorSwatch-${formatArgbHexColor(color).removePrefix("#")}")
             .clickable(enabled = enabled, onClick = onClick)
-            .semantics { contentDescription = "Text color ${formatArgbHexColor(color)}" },
+            .semantics {
+                contentDescription = "Text color ${formatArgbHexColor(color)}"
+                this.selected = selected
+            },
         contentAlignment = Alignment.Center,
     ) {
         Image(
@@ -206,8 +212,12 @@ private fun CustomPickerSwatch(
                     )
                 },
             )
+            .testTag("colorSwatch-custom")
             .clickable(enabled = enabled, onClick = onClick)
-            .semantics { contentDescription = "color picker" },
+            .semantics {
+                contentDescription = "color picker"
+                this.selected = selected
+            },
         contentAlignment = Alignment.Center,
     ) {
         Image(

@@ -122,6 +122,14 @@ fun <T> EditorBottomControlsShell(
                         else -> option.toString()
                     }
                 },
+                itemTestTag = { option ->
+                    val stableKey = when (option) {
+                        is EditorOptionSpec -> option.type.stableKey()
+                        is FuncType -> option.stableKey()
+                        else -> option.toString()
+                    }
+                    "editorOption-$stableKey"
+                },
                 onOptionSelected = {
                     selectedOption = it
                     if (shouldSignalActivation(it)) {
