@@ -26,6 +26,9 @@ out/
 .gradle/
 build/
 
+# Agent/local investigation artifacts must never enter repository history.
+.scratch/
+
 # Local configuration file (sdk path, etc)
 local.properties
 
@@ -47,6 +50,9 @@ proguard/
 !docs/parity/**/captures/**
 !docs/parity/**/*.png
 !docs/parity/**/*.md
+
+# Xcode result bundles are generated test output, including under parity captures.
+*.xcresult/
 
 # IntelliJ
 *.iml
