@@ -32,7 +32,7 @@ Platform source sets supply the edges:
 
 - `androidMain` — byte-faithful DataStore creation (`createPreferencesDataStore(context, name)` with `SharedPreferencesMigration`), Room builder in compatibility mode (framework SupportSQLite + `createFromAsset` locale seeds, no `sqlite-bundled`).
 - `desktopMain` — DataStore/Room builders under `~/.easywatermark` (`BundledSQLiteDriver`, locale-aware seed unpack), `DesktopImageDecoder` (AWT `ImageIO` + manual EXIF bake), `DesktopWatermarkComposer`/`DesktopWatermarkTextRenderer` (bundled Noto Latin+CJK via Skiko byte-`Font`), `DesktopExportPipelinePort`, `DesktopIconPersistence`, `DesktopSaveDecision`.
-- `iosMain` — DataStore/Room builders under `NSDocumentDirectory` (seeded), `IosImageDecoder` (Skia decode — already bakes EXIF, never re-rotate), `IosTextRasterEnv`/`IosFontLoader` (NSBundle font bytes → Skiko), `IosWatermarkRenderer`, `IosExportPipelinePort`, Swift-facing bridges (`IosWatermarkRenderBridge`, `IosWatermarkConfigBridge`, `IosUserConfigBridge`, `IosTemplateBridge`), `IosSharedComposeHost`/`IosProductRootHost`.
+- `iosMain` — DataStore/Room builders under `NSDocumentDirectory` (seeded), `IosImageDecoder` (JPEG/PNG via Skia with EXIF bake; HEIF/HEIC via Apple ImageIO direct-pixel bridge with orientation baked once — never re-rotate after decode), `IosTextRasterEnv`/`IosFontLoader` (NSBundle font bytes → Skiko), `IosWatermarkRenderer`, `IosExportPipelinePort`, Swift-facing bridges (`IosWatermarkRenderBridge`, `IosWatermarkConfigBridge`, `IosUserConfigBridge`, `IosTemplateBridge`), `IosSharedComposeHost`/`IosProductRootHost`.
 
 ### Runtime wiring
 
@@ -47,7 +47,7 @@ Two cell-raster paths share one geometry core (`WatermarkGeometry`) and one tili
 - **Native Android** (`:app/render/WatermarkRenderer`): legacy `StaticLayout` text / `BitmapShader` oracle for dual-path measurement and historical goldens — **not** the production path.
 - **CommonMain raster** (`CommonWatermarkPipeline` + `WatermarkCellComposer` primitives): Android via `AndroidCommonRaster`. Desktop via `composeRealImage` + `DesktopRenderRequest` (C2). iOS Preview via `IosPreviewRaster` (max-edge 720, no final encode) and Final Export via `IosFinalRenderSpine` + `IosRenderRequest` (full-res JPEG/PNG, explicit sRGB, frozen offset; C3 / issue 22). Platform edges retain decode/encode/I/O. Never claim byte-parity with legacy native goldens; rebaseline per `docs/adr/0010-c2-golden-policy-delta.md`.
 
-EXIF policy: Android decode uses `ExifInterface(InputStream)` on API 23+ and bakes all eight EXIF orientations (including mirrored 2/4/5/7) into pixels in `utils/bitmap/BitmapUtils.kt`; sampled bounds swap only for orientations 5–8. MediaStore rotation is a best-effort fallback only when EXIF is absent or invalid. Desktop decodes via AWT and bakes orientation manually; iOS Skia decode bakes it implicitly. Export strips all EXIF metadata — deliberate privacy feature (ADR-0009).
+EXIF policy: Android decode uses `ExifInterface(InputStream)` on API 23+ and bakes all eight EXIF orientations (including mirrored 2/4/5/7) into pixels in `utils/bitmap/BitmapUtils.kt`; sampled bounds swap only for orientations 5–8. MediaStore rotation is a best-effort fallback only when EXIF is absent or invalid. Desktop decodes via AWT and bakes orientation manually; iOS bakes orientation once at the decode edge (Skia for JPEG/PNG; ImageIO for HEIF/HEIC) and never re-rotates afterward. Export strips all EXIF metadata — deliberate privacy feature (ADR-0009).
 
 ### Storage & model invariants
 

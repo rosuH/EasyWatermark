@@ -18,7 +18,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
 import kotlinx.coroutines.CoroutineScope
@@ -56,6 +58,7 @@ import me.rosuh.easywatermark.render.IosByteArrayInterop
 import me.rosuh.easywatermark.render.IosImageDecoder
 import me.rosuh.easywatermark.render.IosPreviewBench
 import me.rosuh.easywatermark.render.IosPreviewRaster
+import me.rosuh.easywatermark.render.PreviewResolutionPolicy
 import me.rosuh.easywatermark.session.AppIntent
 import me.rosuh.easywatermark.session.IosAppServices
 import me.rosuh.easywatermark.session.defaultIosAppServices
@@ -148,6 +151,12 @@ class IosProductRootHost(
     private var iconBytes by mutableStateOf<ByteArray?>(null)
     /** In-memory watermarked preview (no PNG round-trip). */
     private var previewBitmap by mutableStateOf<ImageBitmap?>(null)
+    /**
+     * Active committed preview long-edge bucket from the measured preview box (px).
+     * Placeholders/drafts always use [PreviewResolutionPolicy.PLACEHOLDER_MAX_EDGE_PX].
+     * Changing this bucket fail-closes [wmPreviewCache] and bumps [previewGen].
+     */
+    private var committedPreviewMaxEdgePx by mutableStateOf(PreviewResolutionPolicy.BUCKET_720)
     /** Source path that [previewBitmap] was rendered for. */
     private var previewSourcePath by mutableStateOf<String?>(null)
     private var outputPath by mutableStateOf<String?>(null)
@@ -169,8 +178,15 @@ class IosProductRootHost(
     private val filmstripThumbCache = linkedMapOf<String, ImageBitmap>()
     /** Bumped after prefetch so produceState re-reads the map. */
     private var filmstripThumbEpoch by mutableStateOf(0)
-    /** Export-sheet thumbs. */
-    private val exportThumbCache = linkedMapOf<String, ImageBitmap>()
+    /** Export-sheet thumbs (path → resolution-aware entry). */
+    private val exportThumbCache =
+        linkedMapOf<String, IosExportThumbnailLoader.Entry>()
+    /**
+     * Snapshot-observable epoch for Export waterfall aspect ratios.
+     * Ordinary LinkedHashMap cache puts do not invalidate Compose; bump this after
+     * filmstrip prefetch and Export-thumb decode so [itemAspectRatio] recomputes once.
+     */
+    private var exportAspectEpoch by mutableStateOf(0)
     private var previewGen: Int = 0
     /**
      * H0.1-fix: UI-only CLAMP draft offset for live preview paint.
@@ -269,7 +285,7 @@ class IosProductRootHost(
             wmPreviewBytes = IosHostImageCacheBudgets.totalApproxBytes(wmPreviewCache),
             placeholderBytes = IosHostImageCacheBudgets.totalApproxBytes(sourcePlaceholderCache),
             filmstripBytes = IosHostImageCacheBudgets.totalApproxBytes(filmstripThumbCache),
-            exportThumbBytes = IosHostImageCacheBudgets.totalApproxBytes(exportThumbCache),
+            exportThumbBytes = IosExportThumbnailLoader.totalApproxBytes(exportThumbCache),
         )
 
     /** Test-only: insert a placeholder cache entry and enforce budgets (no Session change). */
@@ -288,6 +304,44 @@ class IosProductRootHost(
     internal fun putFilmstripThumbForTests(path: String, bitmap: ImageBitmap) {
         filmstripThumbCache[path] = bitmap
         enforceCacheBudgets()
+        noteExportAspectSourcesChanged()
+    }
+
+    /** Test-only: insert an Export-sheet thumb entry and notify aspect observers. */
+    internal fun putExportThumbForTests(path: String, bitmap: ImageBitmap, requestedMaxEdgePx: Int = 216) {
+        exportThumbCache[path] = IosExportThumbnailLoader.Entry(
+            bitmap = bitmap,
+            requestedMaxEdgePx = requestedMaxEdgePx,
+        )
+        enforceCacheBudgets()
+        noteExportAspectSourcesChanged()
+    }
+
+    /** Test-only: current Export aspect invalidation epoch. */
+    internal fun exportAspectEpochForTests(): Int = exportAspectEpoch
+
+    /**
+     * Production aspect-ratio seam used by Export [itemAspectRatio].
+     * Prefer decoded export/filmstrip thumbs; ImageInfo 1×1 remains unknown.
+     */
+    internal fun resolveExportItemAspectRatio(
+        path: String,
+        infoWidth: Int = 1,
+        infoHeight: Int = 1,
+    ): Float? {
+        val thumb = exportThumbCache[path]?.bitmap ?: filmstripThumbCache[path]
+        return when {
+            thumb != null && thumb.width > 1 && thumb.height > 1 ->
+                thumb.width.toFloat() / thumb.height.toFloat()
+            infoWidth > 1 && infoHeight > 1 ->
+                infoWidth.toFloat() / infoHeight.toFloat()
+            else -> null
+        }
+    }
+
+    /** Bump snapshot epoch so Export aspect providers re-read cache-backed ratios. */
+    private fun noteExportAspectSourcesChanged() {
+        exportAspectEpoch += 1
     }
 
     /**
@@ -305,6 +359,7 @@ class IosProductRootHost(
         previewSourcePath = null
         previewGen += 1
         filmstripThumbEpoch += 1
+        exportAspectEpoch += 1
         wmPreviewCache.clear()
         sourcePlaceholderCache.clear()
         filmstripThumbCache.clear()
@@ -335,7 +390,7 @@ class IosProductRootHost(
             maxEntries = FILMSTRIP_THUMB_CACHE_MAX,
             maxBytes = FILMSTRIP_THUMB_BYTES_MAX,
         )
-        IosHostImageCacheBudgets.enforce(
+        IosExportThumbnailLoader.enforce(
             exportThumbCache,
             maxEntries = EXPORT_THUMB_CACHE_MAX,
             maxBytes = EXPORT_THUMB_BYTES_MAX,
@@ -376,6 +431,7 @@ class IosProductRootHost(
             clampDraftOffset = null
             clampDraftSelectionId = null
             filmstripThumbEpoch += 1
+            exportAspectEpoch += 1
             wmPreviewCache.clear()
             sourcePlaceholderCache.clear()
             filmstripThumbCache.clear()
@@ -405,7 +461,7 @@ class IosProductRootHost(
         /**
          * H2: approximate byte budgets (ARGB_8888 ≈ w×h×4). Engineering defaults —
          * **not** H3 release SLOs / CI hard gates.
-         * WM preview max-edge 720 → ~2MB/entry; 8× ≈ 16MB ceiling.
+         * Worst-case 1920² ARGB ≈ 14.1MiB; 16MiB still fits one committed entry.
          */
         const val WM_PREVIEW_BYTES_MAX: Long = 16L * 1024 * 1024
         const val PLACEHOLDER_BYTES_MAX: Long = 12L * 1024 * 1024
@@ -595,7 +651,8 @@ class IosProductRootHost(
                             Box(
                                 modifier = previewModifier
                                     .fillMaxSize()
-                                    .testTag("sharedComposeWatermarkPreview"),
+                                    .testTag("sharedComposeWatermarkPreview")
+                                    .onSizeChanged { size -> onPreviewBoxSizeChanged(size) },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 if (displayPreview != null) {
@@ -1075,6 +1132,16 @@ class IosProductRootHost(
                     countsLine = countsLine,
                     outcomeDetailLine = outcomeDetailLine,
                     itemKey = { it.uri.value },
+                    // Prefer export/filmstrip decoded thumbs; ImageInfo 1×1 is unknown pre-export.
+                    // Reading [exportAspectEpoch] invalidates this scope when cold caches fill.
+                    itemAspectRatio = { info ->
+                        exportAspectEpoch // snapshot dependency
+                        resolveExportItemAspectRatio(
+                            path = info.uri.value,
+                            infoWidth = info.width,
+                            infoHeight = info.height,
+                        )
+                    },
                     onDismiss = {
                         if (!exporting) showSaveSheet = false
                     },
@@ -1104,28 +1171,46 @@ class IosProductRootHost(
                     onOpenGalleryClick = {},
                 ) { info, thumbModifier ->
                     // Per-source-path thumb off-main (never shared previewBitmap; never sync decode).
-                    // Sync remember{decode} froze the export LazyRow fling on first open.
+                    // Decode target comes from measured card pixel size (not a hard-coded 96).
                     val path = info.uri.value
-                    val cached = exportThumbCache[path]
-                    val thumb by produceState(initialValue = cached, path) {
+                    var measuredPx by remember(path) { mutableStateOf(0 to 0) }
+                    val neededMaxEdge = IosExportThumbnailLoader.resolveMaxEdgePx(
+                        measuredPx.first,
+                        measuredPx.second,
+                    )
+                    val cachedEntry = exportThumbCache[path]
+                    val cachedBitmap =
+                        if (IosExportThumbnailLoader.isSufficient(cachedEntry, neededMaxEdge)) {
+                            cachedEntry?.bitmap
+                        } else {
+                            null
+                        }
+                    val thumb by produceState(
+                        initialValue = cachedBitmap,
+                        path,
+                        neededMaxEdge,
+                    ) {
                         if (path.isBlank() || path == "preview") {
                             value = previewBitmap
                             return@produceState
                         }
-                        exportThumbCache[path]?.let {
-                            value = it
+                        if (neededMaxEdge <= 0) {
+                            // First frame / unbounded measure — keep prior sufficient bitmap if any.
+                            value = exportThumbCache[path]?.bitmap
+                            return@produceState
+                        }
+                        val existing = exportThumbCache[path]
+                        if (IosExportThumbnailLoader.isSufficient(existing, neededMaxEdge)) {
+                            value = existing?.bitmap
                             return@produceState
                         }
                         value = withContext(Dispatchers.Default) {
-                            val data = NSData.dataWithContentsOfFile(path) ?: return@withContext null
-                            IosImageDecoder.decodeThumbnail(
-                                IosByteArrayInterop.fromNSData(data),
-                                maxEdgePx = 96,
-                            )
-                        }?.also {
-                            exportThumbCache[path] = it
+                            IosExportThumbnailLoader.decodeFileOrNull(path, neededMaxEdge)
+                        }?.also { entry ->
+                            exportThumbCache[path] = entry
                             enforceCacheBudgets()
-                        }
+                            noteExportAspectSourcesChanged()
+                        }?.bitmap
                     }
                     val displayThumb = thumb
                         ?: previewBitmap.takeIf { path == "preview" || path.isBlank() }
@@ -1140,7 +1225,10 @@ class IosProductRootHost(
                     }
                     me.rosuh.easywatermark.ui.save.ExportProgressOverlay(
                         jobState = job,
-                        modifier = thumbModifier,
+                        modifier = thumbModifier.onSizeChanged { size ->
+                            val next = size.width to size.height
+                            if (next != measuredPx) measuredPx = next
+                        },
                     ) {
                         if (displayThumb != null) {
                             Image(
@@ -1404,6 +1492,7 @@ class IosProductRootHost(
                 filmstripThumbCache.clear()
                 exportThumbCache.clear()
                 filmstripThumbEpoch += 1
+                exportAspectEpoch += 1
                 previewBitmap = null
                 previewSourcePath = null
                 // Track current Session ewm_src paths (replace publishes full selection).
@@ -1450,11 +1539,7 @@ class IosProductRootHost(
     }
 
     private fun decodeFilmstripThumb(path: String): ImageBitmap? {
-        val data = NSData.dataWithContentsOfFile(path) ?: return null
-        return IosImageDecoder.decodeThumbnail(
-            IosByteArrayInterop.fromNSData(data),
-            maxEdgePx = 96,
-        )
+        return decodeIosFilmstripThumbOrNull(path)
     }
 
     /**
@@ -1489,6 +1574,7 @@ class IosProductRootHost(
         withContext(Dispatchers.Main) {
             if (me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
                 filmstripThumbEpoch += 1
+                noteExportAspectSourcesChanged()
             }
         }
     }
@@ -1552,10 +1638,69 @@ class IosProductRootHost(
     }
 
     /**
+     * Single non-launching update for measured preview-box size (px).
+     * When the [PreviewResolutionPolicy] bucket changes: clears [wmPreviewCache], bumps [previewGen].
+     * Same-bucket / invalid size / disposed host → no-op.
+     *
+     * @return true only when the committed bucket actually changed (caller may schedule one rerender).
+     */
+    private fun applyPreviewBoxSize(widthPx: Int, heightPx: Int): Boolean {
+        if (disposed) return false
+        if (widthPx <= 0 || heightPx <= 0) return false
+        val next = PreviewResolutionPolicy.committedMaxEdgePx(widthPx, heightPx)
+        if (next == committedPreviewMaxEdgePx) return false
+        committedPreviewMaxEdgePx = next
+        // Path-keyed entries belong only to the *current* bucket; transition fail-closes the map.
+        wmPreviewCache.clear()
+        previewGen += 1
+        return true
+    }
+
+    /**
+     * Production size callback: [applyPreviewBoxSize] then at most one committed rerender.
+     * Fail-closed after [dispose] (late layout callbacks must not start work).
+     */
+    private fun onPreviewBoxSizeChanged(size: IntSize) {
+        if (!applyPreviewBoxSize(size.width, size.height)) return
+        val gen = previewGen
+        hostScope.launch {
+            try {
+                if (disposed) return@launch
+                renderPreviewForCurrentSelection(gen = gen)
+            } catch (_: Throwable) {
+            }
+        }
+    }
+
+    /**
+     * Test seam: same non-launching path as production ([applyPreviewBoxSize]).
+     * @return current committed bucket after the call.
+     */
+    internal fun applyPreviewBoxSizeForTests(widthPx: Int, heightPx: Int): Int {
+        applyPreviewBoxSize(widthPx, heightPx)
+        return committedPreviewMaxEdgePx
+    }
+
+    /** Test seam: current committed long-edge bucket. */
+    internal fun committedPreviewMaxEdgePxForTests(): Int = committedPreviewMaxEdgePx
+
+    /** Test seam: current preview generation token. */
+    internal fun previewGenForTests(): Int = previewGen
+
+    /**
+     * Test seam: production committed/draft preview paint (for stale-gen / cache-hit proofs).
+     */
+    internal suspend fun renderPreviewForCurrentSelectionForTests(
+        gen: Int,
+        draftOffset: Pair<Float, Float>? = null,
+    ) = renderPreviewForCurrentSelection(gen = gen, draftOffset = draftOffset)
+
+    /**
  * Fast in-memory preview (Android WaterMarkCanvas analogue):
  * - [IosPreviewRaster]: decode+scale+compose ImageBitmap, **no PNG encode/disk**
- * - [wmPreviewCache] hit → 0 raster work
- * - [gen] drops stale async results on rapid filmstrip taps
+ * - [wmPreviewCache] hit → 0 raster work (entries belong to the current committed bucket only;
+ *   bucket transitions clear the map — no dimension heuristic)
+ * - [gen] drops stale async results on rapid filmstrip taps / bucket transitions
      */
     private suspend fun renderPreviewForCurrentSelection(
         gen: Int,
@@ -1573,9 +1718,14 @@ class IosProductRootHost(
         val wm = services.waterMarkRepo.waterMark.first()
         val ox = draftOffset?.first ?: cur.offsetX
         val oy = draftOffset?.second ?: cur.offsetY
+        val maxEdge = PreviewResolutionPolicy.maxEdgeForPaint(
+            isDraft = isDraft,
+            committedBucketPx = committedPreviewMaxEdgePx,
+        )
         hostBench.mark("sessionRead")
 
-        // Cache hit only for committed (non-draft) paints at exact Session offset.
+        // Cache hit only for committed (non-draft) paints. Entries are current-bucket-only
+        // because [applyPreviewBoxSize] clears the map on every bucket transition.
         if (!isDraft) {
             wmPreviewCache[sourcePath]?.let { cached ->
                 if (gen != previewGen) return
@@ -1588,6 +1738,7 @@ class IosProductRootHost(
                         "path" to sourcePath.substringAfterLast('/'),
                         "offsetX" to ox,
                         "offsetY" to oy,
+                        "maxEdge" to maxEdge,
                     ),
                 )
                 return
@@ -1600,11 +1751,19 @@ class IosProductRootHost(
                 waterMark = wm,
                 offsetX = ox,
                 offsetY = oy,
+                maxEdgePx = maxEdge,
             )
         }
         hostBench.mark("raster")
         if (gen != previewGen) {
-            hostBench.finish(mapOf("staleGen" to true, "hit" to false, "isDraft" to isDraft))
+            hostBench.finish(
+                mapOf(
+                    "staleGen" to true,
+                    "hit" to false,
+                    "isDraft" to isDraft,
+                    "maxEdge" to maxEdge,
+                ),
+            )
             return
         }
 
@@ -1625,6 +1784,7 @@ class IosProductRootHost(
                 "h" to composed.height,
                 "offsetX" to ox,
                 "offsetY" to oy,
+                "maxEdge" to maxEdge,
             ),
         )
     }
@@ -1633,6 +1793,21 @@ class IosProductRootHost(
         renderPreviewForCurrentSelection(gen = previewGen)
     }
 
+}
+
+/**
+ * Filmstrip thumbnails are presentation-only. A missing, unsupported, or corrupt selected source
+ * must render the existing placeholder instead of escaping an exception from [produceState] and
+ * terminating the Kotlin/Native process.
+ */
+internal fun decodeIosFilmstripThumbOrNull(path: String): ImageBitmap? {
+    val data = NSData.dataWithContentsOfFile(path) ?: return null
+    return runCatching {
+        IosImageDecoder.decodeThumbnail(
+            IosByteArrayInterop.fromNSData(data),
+            maxEdgePx = 96,
+        )
+    }.getOrNull()
 }
 
 // About link edges (match Android ComposeMainActivity ABOUT_URL_*).

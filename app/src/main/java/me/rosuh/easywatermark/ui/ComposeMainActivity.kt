@@ -42,11 +42,13 @@ import me.rosuh.easywatermark.utils.FileUtils
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
@@ -892,6 +894,8 @@ private fun SaveExportSheetAndroid(
     onRetryFailedClick: (() -> Unit)? = null,
     onOpenGalleryClick: () -> Unit,
 ) {
+    // Coil success sizes — ImageInfo.width/height stay 1×1 until export mutates them.
+    val thumbAspectByUri = remember { mutableStateMapOf<String, Float>() }
     SaveExportSheetShell(
         items = images,
         selectedFormat = selectedFormatLabel,
@@ -912,6 +916,12 @@ private fun SaveExportSheetAndroid(
         countsLine = countsLine,
         outcomeDetailLine = outcomeDetailLine,
         itemKey = { it.uri.value },
+        itemAspectRatio = { info ->
+            thumbAspectByUri[info.uri.value]
+                ?: info.width.takeIf { it > 1 }?.let { w ->
+                    info.height.takeIf { it > 1 }?.let { h -> w.toFloat() / h.toFloat() }
+                }
+        },
         onDismiss = onDismiss,
         onFormatClick = onFormatClick,
         onQualityChange = onQualityChange,
@@ -929,6 +939,12 @@ private fun SaveExportSheetAndroid(
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
+                onSuccess = { state ->
+                    val size = state.painter.intrinsicSize
+                    if (size.isSpecified && size.width > 0f && size.height > 0f) {
+                        thumbAspectByUri[info.uri.value] = size.width / size.height
+                    }
+                },
             )
         }
     }

@@ -157,14 +157,6 @@
     <string name="color_custom">Custom</string>
     <string name="color_apply_custom">Apply</string>
 
-    <!-- I4 privacy confidence (pick + export decision points; ADR-0009 EXIF strip) -->
-    <string name="privacy_on_device">Processing stays on this device.</string>
-    <string name="privacy_selected_only">Only images you choose are opened.</string>
-    <string name="privacy_exif_strip">Exported photos remove location and camera metadata.</string>
-    <!-- Combined one-liners for UI surfaces (succinct; not legal policy). -->
-    <string name="privacy_confidence_pick">On-device only. Opens only the images you select.</string>
-    <string name="privacy_confidence_export">On-device only. Exported files strip location/camera metadata (EXIF).</string>
-
     <!-- S-i18n-0 packaging spike (retained after Phase 1). -->
     <string name="cmp_spike_hello">CMP spike hello</string>
 </resources>

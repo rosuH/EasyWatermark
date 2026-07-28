@@ -13,7 +13,9 @@ import platform.Foundation.dataWithContentsOfFile
  * Unlike [IosExportPipelinePort] / [IosFinalRenderSpine], this path:
  * - never encodes final JPEG/PNG product output
  * - never writes temp export files
- * - decodes + downscales source in one pass to [PREVIEW_MAX_EDGE_PX]
+ * - decodes + downscales source in one pass to [maxEdgePx]
+ *   (default [PREVIEW_MAX_EDGE_PX] = 720 for placeholder/draft; committed uses
+ *   [PreviewResolutionPolicy.committedMaxEdgePx] from the measured preview box)
  * - paints through [CommonWatermarkPipeline.compose] with the current offset
  * - returns an in-memory [ImageBitmap] ready for Compose [Image]
  */
@@ -21,10 +23,10 @@ import platform.Foundation.dataWithContentsOfFile
 internal object IosPreviewRaster {
 
     /**
-     * Display-sized long edge. Android samples to canvas pixels (~screen); 720 keeps Skiko
-     * composition snappy on multi-megapixel camera stills while remaining sharp on phone DPI.
+     * Default / transient long edge (placeholder + active CLAMP draft).
+     * Committed previews pass an explicit [maxEdgePx] from [PreviewResolutionPolicy].
      */
-    const val PREVIEW_MAX_EDGE_PX: Int = 720
+    const val PREVIEW_MAX_EDGE_PX: Int = PreviewResolutionPolicy.PLACEHOLDER_MAX_EDGE_PX
 
     private val fontFamily by lazy {
         IosFontLoader.bundledFontFamily(latinFirst = true)

@@ -37,8 +37,10 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -358,6 +360,10 @@ fun launchDesktopWindow() = application {
     var previewGeneration by remember { mutableStateOf(0) }
     // H0.1-fix: offset-only / draft preview gen — **no** 250ms debounce, light in-memory raster.
     var offsetPreviewGeneration by remember { mutableStateOf(0) }
+    // Committed long-edge bucket from measured preview box (px). Draft paints stay at 720.
+    var committedPreviewMaxEdgePx by remember {
+        mutableStateOf(DesktopPreviewRaster.PREVIEW_MAX_EDGE_PX)
+    }
     // UI-only CLAMP drag draft (never Session/export). selectionId + offsets.
     var clampDraft by remember { mutableStateOf<Triple<String, Float, Float>?>(null) }
     // E0: Session owns product route; FileDialog stays Desktop edge.
@@ -413,6 +419,10 @@ fun launchDesktopWindow() = application {
         val ox = overrideOffset?.first ?: frozen.offsetX
         val oy = overrideOffset?.second ?: frozen.offsetY
         val wm = repo.waterMark.first()
+        val maxEdge = DesktopPreviewRaster.maxEdgeForPaint(
+            isDraft = isDraft,
+            committedBucketPx = committedPreviewMaxEdgePx,
+        )
         val (img, msg) = withContext(Dispatchers.IO) {
             try {
                 val imageBytes: ByteArray
@@ -443,9 +453,10 @@ fun launchDesktopWindow() = application {
                     offsetX = ox,
                     offsetY = oy,
                     iconBytes = iconBytes,
+                    maxEdgePx = maxEdge,
                 )
                 bench.mark("compose")
-                composed to "Preview light ${composed.width}x${composed.height}"
+                composed to "Preview light ${composed.width}x${composed.height} maxEdge=$maxEdge"
             } catch (t: Throwable) {
                 bench.mark("error")
                 null to "Preview light failed: ${t.message}"
@@ -453,7 +464,7 @@ fun launchDesktopWindow() = application {
         }
         // Drop stale generations (draft flurry or superseded offset commit).
         if (gen != offsetPreviewGeneration) {
-            bench.finish(mapOf("staleGen" to true, "isDraft" to isDraft))
+            bench.finish(mapOf("staleGen" to true, "isDraft" to isDraft, "maxEdge" to maxEdge))
             return msg
         }
         img?.let { preview = it }
@@ -465,10 +476,23 @@ fun launchDesktopWindow() = application {
                 "isDraft" to isDraft,
                 "debounceMs" to 0,
                 "saveFlow" to false,
-                "maxEdge" to DesktopPreviewRaster.PREVIEW_MAX_EDGE_PX,
+                "maxEdge" to maxEdge,
             ),
         )
         return msg
+    }
+
+    /**
+     * Measured preview-box size (px) → committed long-edge bucket.
+     * Only acts when the bucket changes: one committed light-preview generation.
+     * Same-bucket resize is a no-op.
+     */
+    fun onPreviewBoxSizeChanged(size: IntSize) {
+        if (size.width <= 0 || size.height <= 0) return
+        val next = DesktopPreviewRaster.committedMaxEdgePx(size.width, size.height)
+        if (next == committedPreviewMaxEdgePx) return
+        committedPreviewMaxEdgePx = next
+        offsetPreviewGeneration += 1
     }
 
     // Config / import: keep 250ms debounce for high-frequency slider ticks, then kick light path.
@@ -798,7 +822,9 @@ fun launchDesktopWindow() = application {
                             // C4.4R.2 + H0.1-fix: CLAMP drag → UI draft paint + one applyOffset
                             // at end; offset preview uses light raster (no 250ms/saveFlow).
                             Box(
-                                modifier = previewModifier.fillMaxSize(),
+                                modifier = previewModifier
+                                    .fillMaxSize()
+                                    .onSizeChanged { size -> onPreviewBoxSizeChanged(size) },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 val bmp = preview
@@ -1271,6 +1297,17 @@ fun launchDesktopWindow() = application {
                     countsLine = countsLine,
                     outcomeDetailLine = outcomeDetailLine,
                     itemKey = { it.uri.value },
+                    // Prefer already-decoded filmstrip/export thumbs; ImageInfo 1×1 is unknown.
+                    itemAspectRatio = { info ->
+                        val thumb = desktopThumbCache[info.uri.value]
+                        when {
+                            thumb != null && thumb.width > 1 && thumb.height > 1 ->
+                                thumb.width.toFloat() / thumb.height.toFloat()
+                            info.width > 1 && info.height > 1 ->
+                                info.width.toFloat() / info.height.toFloat()
+                            else -> null
+                        }
+                    },
                     onDismiss = {
                         if (!exportJobState.isSaving) showSaveSheet = false
                     },

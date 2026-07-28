@@ -11,7 +11,9 @@ import java.io.File
  * Unlike [DesktopRenderSaveSpine] / Save As:
  * - never encodes product JPEG/PNG for disk
  * - never writes temp export files
- * - decodes + downscales source to [PREVIEW_MAX_EDGE_PX]
+ * - decodes + downscales source to [maxEdgePx]
+ *   (default [PREVIEW_MAX_EDGE_PX] = 720 for draft; committed uses
+ *   [PreviewResolutionPolicy.committedMaxEdgePx] from the measured preview box)
  * - paints through [CommonWatermarkPipeline.compose] with the given offset
  * - returns an in-memory [ImageBitmap] for Compose [Image]
  *
@@ -20,8 +22,22 @@ import java.io.File
  */
 object DesktopPreviewRaster {
 
-    /** Display-sized long edge (match iOS preview spirit). */
-    const val PREVIEW_MAX_EDGE_PX: Int = 720
+    /** Default / transient long edge (active CLAMP draft). Committed paints pass explicit maxEdge. */
+    const val PREVIEW_MAX_EDGE_PX: Int = PreviewResolutionPolicy.PLACEHOLDER_MAX_EDGE_PX
+
+    /**
+     * Map measured preview-box width/height (px) to a committed long-edge bucket.
+     * Same policy as iOS ([PreviewResolutionPolicy]).
+     */
+    fun committedMaxEdgePx(previewBoxWidthPx: Int, previewBoxHeightPx: Int): Int =
+        PreviewResolutionPolicy.committedMaxEdgePx(previewBoxWidthPx, previewBoxHeightPx)
+
+    /**
+     * Production helper: max edge for one light-preview paint.
+     * Drafts stay at 720; committed uses the active display bucket.
+     */
+    fun maxEdgeForPaint(isDraft: Boolean, committedBucketPx: Int): Int =
+        PreviewResolutionPolicy.maxEdgeForPaint(isDraft, committedBucketPx)
 
     /**
      * Watermarked preview [ImageBitmap] for encoded [imageBytes] at [offsetX]/[offsetY].
