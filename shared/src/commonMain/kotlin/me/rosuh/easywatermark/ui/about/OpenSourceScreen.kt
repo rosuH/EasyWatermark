@@ -28,6 +28,7 @@ import me.rosuh.easywatermark.shared.generated.resources.cd_back
 import me.rosuh.easywatermark.shared.generated.resources.open_source_desc_about_lib
 import me.rosuh.easywatermark.shared.generated.resources.open_source_desc_compressor
 import me.rosuh.easywatermark.shared.generated.resources.open_source_desc_material_components
+import me.rosuh.easywatermark.shared.generated.resources.open_source_desc_phosphor_icons
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -45,6 +46,7 @@ fun OpenSourceScreen(
     val aboutLibDesc = stringResource(Res.string.open_source_desc_about_lib)
     val materialComponentsDesc = stringResource(Res.string.open_source_desc_material_components)
     val compressorDesc = stringResource(Res.string.open_source_desc_compressor)
+    val phosphorIconsDesc = stringResource(Res.string.open_source_desc_phosphor_icons)
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -83,6 +85,9 @@ fun OpenSourceScreen(
             }
             OssCard("Compressor", compressorDesc) {
                 onOpenLink("https://github.com/zetbaitsu/Compressor/")
+            }
+            OssCard("Phosphor Icons", phosphorIconsDesc) {
+                onOpenLink("https://github.com/phosphor-icons/core")
             }
 
             Spacer(Modifier.height(24.dp))

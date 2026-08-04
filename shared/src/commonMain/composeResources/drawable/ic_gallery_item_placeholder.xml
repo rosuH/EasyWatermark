@@ -1,22 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Gallery picker cell placeholder (A1 · Brand mountain). Brand yellow on olive cells. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <!-- Rounded frame stroke @ 35% brand -->
-    <path
-        android:fillColor="#00000000"
-        android:pathData="M6,3.5h12c1.38,0 2.5,1.12 2.5,2.5v12c0,1.38 -1.12,2.5 -2.5,2.5h-12c-1.38,0 -2.5,-1.12 -2.5,-2.5v-12c0,-1.38 1.12,-2.5 2.5,-2.5z"
-        android:strokeWidth="1.2"
-        android:strokeColor="#59FFDE32" />
-    <!-- Mountain fill @ 55% -->
+    android:viewportWidth="256"
+    android:viewportHeight="256">
     <path
         android:fillColor="#8CFFDE32"
-        android:pathData="M6,16.5l3.2,-4.1 2.4,2.8 3.1,-4.6L18,16.5H6z" />
-    <!-- Sun @ 70% -->
-    <path
-        android:fillColor="#B3FFDE32"
-        android:pathData="M10.55,8.4a1.35,1.35 0 1,1 -2.7,0a1.35,1.35 0 1,1 2.7,0" />
+        android:pathData="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,16V158.75l-26.07-26.06a16,16,0,0,0-22.63,0l-20,20-44-44a16,16,0,0,0-22.62,0L40,149.37V56ZM40,172l52-52,80,80H40Zm176,28H194.63l-36-36,20-20L216,181.38V200ZM144,100a12,12,0,1,1,12,12A12,12,0,0,1,144,100Z" />
 </vector>

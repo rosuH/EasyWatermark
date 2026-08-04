@@ -1,22 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <!-- B1: Aa typeface -->
+    android:viewportWidth="256"
+    android:viewportHeight="256">
     <path
-        android:fillColor="#00000000"
-        android:pathData="M5,18 L9,6 L13,18 M6.6,14.2 H11.4"
-        android:strokeWidth="1.5"
-        android:strokeColor="#ffffff"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
-    <path
-        android:fillColor="#00000000"
-        android:pathData="M15.5,12.2 C15.5,10.4 16.7,9.3 18.3,9.3 C19.9,9.3 21,10.4 21,12.2 V18 M21,14.8 C20.4,13.7 19.4,13.1 18.2,13.1 C16.7,13.1 15.5,14.2 15.5,15.7 C15.5,17.2 16.7,18.2 18.3,18.2 C19.5,18.2 20.5,17.5 21,16.5"
-        android:strokeWidth="1.5"
-        android:strokeColor="#ffffff"
-        android:strokeAlpha="0.55"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
+        android:fillColor="#FF000000"
+        android:pathData="M87.24,52.59a8,8,0,0,0-14.48,0l-64,136a8,8,0,1,0,14.48,6.81L39.9,160h80.2l16.66,35.4a8,8,0,1,0,14.48-6.81ZM47.43,144,80,74.79,112.57,144ZM200,96c-12.76,0-22.73,3.47-29.63,10.32a8,8,0,0,0,11.26,11.36c3.8-3.77,10-5.68,18.37-5.68,13.23,0,24,9,24,20v3.22A42.76,42.76,0,0,0,200,128c-22.06,0-40,16.15-40,36s17.94,36,40,36a42.73,42.73,0,0,0,24-7.25,8,8,0,0,0,16-.75V132C240,112.15,222.06,96,200,96Zm0,88c-13.23,0-24-9-24-20s10.77-20,24-20,24,9,24,20S213.23,184,200,184Z" />
 </vector>

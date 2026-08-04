@@ -72,6 +72,7 @@
     <string name="open_source_desc_material_components" translatable="false">Material Components for Android (MDC-Android) help developers execute Material Design. Developed by a core team of engineers and UX designers at Google, these components enable a reliable development workflow to build beautiful and functional Android apps.Material Components for Android is a drop-in replacement for Android\'s Design Support Library.</string>
     <string name="email_subject" translatable="false">[EasyWaterMark] Crash info</string>
     <string name="open_source_desc_compressor" translatable="false">"Compressor is a lightweight and powerful android image compression library. Compressor will allow you to compress large photos into smaller sized photos with very less or negligible loss in quality of the image. "</string>
+    <string name="open_source_desc_phosphor_icons" translatable="false">Phosphor Icons is a flexible icon family for interfaces, diagrams, and presentations. EasyWatermark vendors selected Regular-weight glyphs (MIT License, Copyright (c) 2023 Phosphor Icons) as Compose Multiplatform vector resources. Full notice: THIRD_PARTY_NOTICES.md.</string>
     <!--    -->
     <string name="text_paint_fill">Fill</string>
     <string name="text_paint_stroke">Stroke</string>
