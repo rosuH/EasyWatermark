@@ -157,12 +157,21 @@ class IosPhotosPickerIdentityContractTest {
             "expected commitIfNewest on both photo and icon load paths; found $commitGuards",
         )
 
-        // Deliver calls must sit inside / after serial commit (ordering smoke).
-        val photoDeliverIdx = contentCode.indexOf("deliverPickedPhotosBatch")
+        // Progressive path-first photo deliver sits inside serial commit (ordering smoke).
+        val photoDeliverIdx = contentCode.indexOf("photoImportCoordinator.importBatch")
         val photoCommitIdx = contentCode.indexOf("photoCommitSerial.commitIfNewest")
         assertTrue(
             photoCommitIdx >= 0 && photoDeliverIdx > photoCommitIdx,
-            "deliverPickedPhotosBatch must run only inside photoCommitSerial.commitIfNewest",
+            "photoImportCoordinator.importBatch must run only inside photoCommitSerial.commitIfNewest",
+        )
+        assertTrue(
+            "PhotoImportCoordinator" in contentCode || "photoImportCoordinator" in contentCode,
+            "ContentView must own a PhotoImportCoordinator for path-first progressive import",
+        )
+        assertTrue(
+            "ImageFileTransfer" in resolveRepoFile("iosApp/iosApp/PhotoImportCoordinator.swift").readText() ||
+                "FileRepresentation" in resolveRepoFile("iosApp/iosApp/PhotoImportCoordinator.swift").readText(),
+            "PhotoImportCoordinator must use FileRepresentation path transfer",
         )
         assertFalse(
             Regex("""print\s*\(\s*".*(hash|SHA|filename|localIdentifier)""", RegexOption.IGNORE_CASE)
@@ -177,6 +186,14 @@ class IosPhotosPickerIdentityContractTest {
         assertTrue(
             "PhotosPickerBatchGate.swift in Sources" in pbx,
             "Xcode target must compile PhotosPickerBatchGate.swift",
+        )
+        assertTrue(
+            "PhotoImportCoordinator.swift in Sources" in pbx,
+            "Xcode target must compile PhotoImportCoordinator.swift",
+        )
+        assertTrue(
+            "ProgressiveImportNotifications.swift in Sources" in pbx,
+            "Xcode target must compile ProgressiveImportNotifications.swift",
         )
         assertTrue(
             "path = PhotosPickerBatchGate.swift" in pbx,

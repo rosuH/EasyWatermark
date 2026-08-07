@@ -145,4 +145,11 @@
     <string name="privacy_exif_strip">Exported photos remove location and camera metadata.</string>
     <string name="privacy_confidence_pick">On-device only. Opens only the images you select.</string>
     <string name="privacy_confidence_export">On-device only. Exported files strip location/camera metadata (EXIF).</string>
+    <string name="ios_import_preparing">Preparing photos…</string>
+    <string name="ios_import_failed_retry">Could not import. Tap to retry.</string>
+    <string name="ios_import_pending">Preparing</string>
+    <string name="ios_import_ready">Photo</string>
+    <string name="ios_import_failed">Import failed</string>
+    <string name="ios_import_retry">Retry</string>
+    <string name="ios_import_remove">Remove</string>
 </resources>

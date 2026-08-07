@@ -179,50 +179,53 @@ class IosG4StagingMemoryTest {
                 onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
                 services = graph.services,
             )
+            try {
+                val tiny = ImageBitmap(2, 2, ImageBitmapConfig.Argb8888)
+                // Fill past WM budget (8).
+                val wmMax = IosProductRootHost.WM_PREVIEW_CACHE_MAX
+                for (i in 0 until wmMax + 4) {
+                    host.putWmPreviewForTests("wm_$i", tiny)
+                }
+                assertEquals(wmMax, host.cacheBudgetForTests().wmPreview)
 
-            val tiny = ImageBitmap(2, 2, ImageBitmapConfig.Argb8888)
-            // Fill past WM budget (8).
-            val wmMax = IosProductRootHost.WM_PREVIEW_CACHE_MAX
-            for (i in 0 until wmMax + 4) {
-                host.putWmPreviewForTests("wm_$i", tiny)
+                val placeMax = IosProductRootHost.PLACEHOLDER_CACHE_MAX
+                for (i in 0 until placeMax + 3) {
+                    host.putPlaceholderForTests("ph_$i", tiny)
+                }
+                assertEquals(placeMax, host.cacheBudgetForTests().placeholder)
+
+                val filmMax = IosProductRootHost.FILMSTRIP_THUMB_CACHE_MAX
+                for (i in 0 until filmMax + 2) {
+                    host.putFilmstripThumbForTests("fs_$i", tiny)
+                }
+                assertEquals(filmMax, host.cacheBudgetForTests().filmstrip)
+
+                // Session still holds selection before/after trim.
+                assertEquals(
+                    2,
+                    graph.services.session.launchScreenUiStateFlow.first().selectedImageList.size,
+                )
+                host.trimCaches()
+                val afterTrim = host.cacheBudgetForTests()
+                assertEquals(0, afterTrim.wmPreview)
+                assertEquals(0, afterTrim.placeholder)
+                assertEquals(0, afterTrim.filmstrip)
+                assertEquals(0, afterTrim.exportThumb)
+                assertFalse(afterTrim.holdsSourceBytes)
+                assertEquals(
+                    2,
+                    graph.services.session.launchScreenUiStateFlow.first().selectedImageList.size,
+                    "trimCaches must not wipe Session selection",
+                )
+                assertFalse(host.isDisposedForTests())
+
+                // onMemoryWarning is alias of trimCaches.
+                host.putWmPreviewForTests("again", tiny)
+                host.onMemoryWarning()
+                assertEquals(0, host.cacheBudgetForTests().wmPreview)
+            } finally {
+                host.dispose()
             }
-            assertEquals(wmMax, host.cacheBudgetForTests().wmPreview)
-
-            val placeMax = IosProductRootHost.PLACEHOLDER_CACHE_MAX
-            for (i in 0 until placeMax + 3) {
-                host.putPlaceholderForTests("ph_$i", tiny)
-            }
-            assertEquals(placeMax, host.cacheBudgetForTests().placeholder)
-
-            val filmMax = IosProductRootHost.FILMSTRIP_THUMB_CACHE_MAX
-            for (i in 0 until filmMax + 2) {
-                host.putFilmstripThumbForTests("fs_$i", tiny)
-            }
-            assertEquals(filmMax, host.cacheBudgetForTests().filmstrip)
-
-            // Session still holds selection before/after trim.
-            assertEquals(
-                2,
-                graph.services.session.launchScreenUiStateFlow.first().selectedImageList.size,
-            )
-            host.trimCaches()
-            val afterTrim = host.cacheBudgetForTests()
-            assertEquals(0, afterTrim.wmPreview)
-            assertEquals(0, afterTrim.placeholder)
-            assertEquals(0, afterTrim.filmstrip)
-            assertEquals(0, afterTrim.exportThumb)
-            assertFalse(afterTrim.holdsSourceBytes)
-            assertEquals(
-                2,
-                graph.services.session.launchScreenUiStateFlow.first().selectedImageList.size,
-                "trimCaches must not wipe Session selection",
-            )
-            assertFalse(host.isDisposedForTests())
-
-            // onMemoryWarning is alias of trimCaches.
-            host.putWmPreviewForTests("again", tiny)
-            host.onMemoryWarning()
-            assertEquals(0, host.cacheBudgetForTests().wmPreview)
         } finally {
             graph.close()
         }
@@ -239,20 +242,24 @@ class IosG4StagingMemoryTest {
                 onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
                 services = graph.services,
             )
-            val gen = IosPickGenerationGate.nextPhotoGeneration()
-            host.deliverPickedPhotosBatch(
-                images = listOf(solidPng(Color.Red), solidPng(Color.Green)),
-                append = false,
-                renderPreview = false,
-                pickGeneration = gen,
-            )
-            val selected = graph.services.session.launchScreenUiStateFlow.first().selectedImageList
-            graph.trackAll(selected.map { it.uri.value })
-            assertEquals(2, selected.size)
-            assertFalse(
-                host.cacheBudgetForTests().holdsSourceBytes,
-                "G4 file-first: host must not pin multi full-res sourceBytes after stage",
-            )
+            try {
+                val gen = IosPickGenerationGate.nextPhotoGeneration()
+                host.deliverPickedPhotosBatch(
+                    images = listOf(solidPng(Color.Red), solidPng(Color.Green)),
+                    append = false,
+                    renderPreview = false,
+                    pickGeneration = gen,
+                )
+                val selected = graph.services.session.launchScreenUiStateFlow.first().selectedImageList
+                graph.trackAll(selected.map { it.uri.value })
+                assertEquals(2, selected.size)
+                assertFalse(
+                    host.cacheBudgetForTests().holdsSourceBytes,
+                    "G4 file-first: host must not pin multi full-res sourceBytes after stage",
+                )
+            } finally {
+                host.dispose()
+            }
         } finally {
             graph.close()
         }

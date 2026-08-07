@@ -35,6 +35,8 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -43,8 +45,77 @@ import me.rosuh.easywatermark.data.model.ImageInfo
 import kotlin.math.abs
 
 /**
+ * Design filmstrip metrics. Single source for legacy and progressive paths.
+ *
+ * Content **40×40**, fixed center frame **48×48** (brand stroke **1.5**, **r=2**),
+ * item pitch **56** (48 cell + 8 gap), rail height **56**.
+ */
+internal object EditorFilmstripMetrics {
+    val RailHeight: Dp = 56.dp
+    val CellSize: Dp = 48.dp
+    val ContentSize: Dp = 40.dp
+    val ItemGap: Dp = 8.dp
+    val FrameBorder: Dp = 1.5.dp
+    val FrameRadius: Dp = 2.dp
+    val Pitch: Dp = CellSize + ItemGap
+}
+
+/**
+ * Production-used interaction decisions for the filmstrip scaffold.
+ * Scaffold branches call these so unit tests exercise the real gate, not dead helpers.
+ */
+internal object EditorFilmstripInteraction {
+    /** Tap publishes once when the cell is selectable and not already applied. */
+    fun shouldPublishOnTap(
+        canSelect: Boolean,
+        itemKey: String,
+        lastAppliedKey: String?,
+    ): Boolean = canSelect && itemKey != lastAppliedKey
+
+    /**
+     * User fling/drag settle publishes only after real user scroll ends on a selectable
+     * center cell whose key differs from the last applied selection.
+     */
+    fun shouldPublishOnSettle(
+        wasUserScrolling: Boolean,
+        programmatic: Boolean,
+        canSelect: Boolean,
+        centeredKey: String?,
+        lastAppliedKey: String?,
+    ): Boolean =
+        wasUserScrolling &&
+            !programmatic &&
+            canSelect &&
+            centeredKey != null &&
+            centeredKey != lastAppliedKey
+
+    /**
+     * Programmatic re-center runs when selection key is off-center and the user is not
+     * mid-fling. Mere list append (same selectedKey) never requests a recenter.
+     */
+    fun shouldProgrammaticRecenter(
+        selectedKey: String?,
+        lastAppliedKey: String?,
+        atCenter: Boolean,
+        userScrollInProgress: Boolean,
+    ): Boolean {
+        if (selectedKey == null) return false
+        if (userScrollInProgress) return false
+        if (selectedKey == lastAppliedKey && atCenter) return false
+        return !atCenter
+    }
+
+    /** Effect key is selection only — list size must not yank scroll on append. */
+    fun recenterEffectKey(selectedKey: String?): String? = selectedKey
+
+    /** Progressive slots: only Ready may become a Session selection. */
+    fun canSelectSlot(slot: EditorMediaSlot): Boolean = slot is EditorMediaSlot.Ready
+}
+
+/**
  * Design filmstrip: content **40×40**, fixed center frame **48×48** (brand stroke **1.5**, **r=2**),
- * Item pitch **56**. *
+ * Item pitch **56**.
+ *
  * The highlight border is **fixed in the viewport center** and does not scroll with items.
  * Snap-fling settles a cell under that frame; a light haptic fires when the centered item changes.
  *
@@ -54,7 +125,6 @@ import kotlin.math.abs
  * User fling/drag: selection updates only after scroll settles, using the item closest to the
  * **viewport center** (not firstVisibleItemIndex — that is wrong with center contentPadding).
  */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EditorPhotoStrip(
     images: List<ImageInfo>,
@@ -63,34 +133,79 @@ fun EditorPhotoStrip(
     onImageSelected: (ImageInfo) -> Unit = {},
     thumbnail: @Composable (imageInfo: ImageInfo, contentDescription: String, modifier: Modifier) -> Unit,
 ) {
+    val frameShape = RoundedCornerShape(EditorFilmstripMetrics.FrameRadius)
+    EditorFilmstripScaffold(
+        items = images,
+        keyOf = { it.uri.value },
+        selectedKey = selectedImage?.uri?.value,
+        canSelect = { true },
+        onItemSelected = onImageSelected,
+        modifier = modifier,
+        testTag = "editorPhotoStrip",
+        itemContent = { imageInfo, contentModifier ->
+            thumbnail(
+                imageInfo,
+                "image",
+                contentModifier
+                    .size(EditorFilmstripMetrics.ContentSize)
+                    .clip(frameShape),
+            )
+        },
+    )
+}
+
+/**
+ * Single filmstrip scaffold owned by the legacy geometry/interaction contract.
+ * Progressive slots render through [itemContent] inside the same LazyRow.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+internal fun <T> EditorFilmstripScaffold(
+    items: List<T>,
+    keyOf: (T) -> String,
+    selectedKey: String?,
+    canSelect: (T) -> Boolean,
+    onItemSelected: (T) -> Unit,
+    modifier: Modifier = Modifier,
+    testTag: String = "editorFilmstripScaffold",
+    itemContent: @Composable (item: T, contentModifier: Modifier) -> Unit,
+) {
     val listState = rememberLazyListState()
     val overscroll = rememberOverscrollEffect()
     val snapFling = rememberSnapFlingBehavior(lazyListState = listState)
     val coroutineScope = rememberCoroutineScope()
     val composeHaptic = LocalHapticFeedback.current
     var stripWidth by remember { mutableStateOf(0.dp) }
-    val cellSize = 48.dp
+    val cellSize = EditorFilmstripMetrics.CellSize
     val density = LocalDensity.current
-    val selectedUri = selectedImage?.uri?.value
-    val frameShape = RoundedCornerShape(2.dp)
-    // Own last-applied URI (not a stale composition capture of selectedUri).
-    var lastAppliedUri by remember { mutableStateOf(selectedUri) }
+    val frameShape = RoundedCornerShape(EditorFilmstripMetrics.FrameRadius)
+    // Own last-applied key (not a stale composition capture of selectedKey).
+    var lastAppliedKey by remember { mutableStateOf(selectedKey) }
     // True while we animateScrollToItem from tap / external selection — skip settle select.
     var programmaticScroll by remember { mutableStateOf(false) }
 
-    val imagesState = rememberUpdatedState(images)
-    val onImageSelectedState = rememberUpdatedState(onImageSelected)
-    val lastAppliedState = rememberUpdatedState(lastAppliedUri)
+    val itemsState = rememberUpdatedState(items)
+    val keyOfState = rememberUpdatedState(keyOf)
+    val canSelectState = rememberUpdatedState(canSelect)
+    val onItemSelectedState = rememberUpdatedState(onItemSelected)
+    val lastAppliedState = rememberUpdatedState(lastAppliedKey)
 
-    fun applyCenteredSelection(target: ImageInfo, fromUser: Boolean) {
-        val uri = target.uri.value
-        if (uri == lastAppliedUri) return
-        lastAppliedUri = uri
+    fun applyCenteredSelection(target: T, fromUser: Boolean) {
+        val key = keyOfState.value(target)
+        if (!EditorFilmstripInteraction.shouldPublishOnTap(
+                canSelect = canSelectState.value(target),
+                itemKey = key,
+                lastAppliedKey = lastAppliedKey,
+            )
+        ) {
+            return
+        }
+        lastAppliedKey = key
         if (fromUser) {
             composeHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
             PlatformHaptics.selectionTick()
         }
-        onImageSelectedState.value(target)
+        onItemSelectedState.value(target)
     }
 
     suspend fun scrollToIndexProgrammatic(index: Int) {
@@ -103,22 +218,27 @@ fun EditorPhotoStrip(
         }
     }
 
-    // Re-center only when selection URI changes (external select / settle).
-    // Do NOT key on images.size — list growth must not yank scroll (pick batch / add-more).
-    LaunchedEffect(selectedUri) {
-        val imgs = imagesState.value
-        if (imgs.isEmpty() || selectedUri == null) return@LaunchedEffect
-        // Never fight an in-progress user fling.
-        if (listState.isScrollInProgress && !programmaticScroll) return@LaunchedEffect
-        val index = imgs.indexOfFirst { it.uri.value == selectedUri }
+    // Re-center only when selection key changes (external select / settle).
+    // Do NOT key on items.size — list growth must not yank scroll (pick batch / add-more).
+    LaunchedEffect(EditorFilmstripInteraction.recenterEffectKey(selectedKey)) {
+        val current = itemsState.value
+        if (current.isEmpty() || selectedKey == null) return@LaunchedEffect
+        val index = current.indexOfFirst { keyOfState.value(it) == selectedKey }
         if (index < 0) return@LaunchedEffect
         val centerIdx = centeredItemIndex(listState)
         val atCenter = centerIdx != null &&
-            imgs.getOrNull(centerIdx)?.uri?.value == selectedUri
-        if (selectedUri == lastAppliedUri && atCenter) return@LaunchedEffect
+            current.getOrNull(centerIdx)?.let { keyOfState.value(it) } == selectedKey
+        val userScrollInProgress = listState.isScrollInProgress && !programmaticScroll
+        val priorApplied = lastAppliedKey
+        val needsRecenter = EditorFilmstripInteraction.shouldProgrammaticRecenter(
+            selectedKey = selectedKey,
+            lastAppliedKey = priorApplied,
+            atCenter = atCenter,
+            userScrollInProgress = userScrollInProgress,
+        )
         // Keep lastApplied in sync with parent selection even if we only re-center.
-        lastAppliedUri = selectedUri
-        if (!atCenter) {
+        lastAppliedKey = selectedKey
+        if (needsRecenter) {
             scrollToIndexProgrammatic(index)
         }
     }
@@ -147,26 +267,36 @@ fun EditorPhotoStrip(
                 withFrameNanos { }
                 withFrameNanos { }
 
-                val imgs = imagesState.value
-                if (imgs.isEmpty()) return@collect
+                val current = itemsState.value
+                if (current.isEmpty()) return@collect
                 val idx = centeredItemIndex(listState) ?: return@collect
-                val target = imgs.getOrNull(idx) ?: return@collect
-                val uri = target.uri.value
-                if (uri == lastAppliedState.value) return@collect
-                lastAppliedUri = uri
+                val target = current.getOrNull(idx) ?: return@collect
+                val key = keyOfState.value(target)
+                if (!EditorFilmstripInteraction.shouldPublishOnSettle(
+                        wasUserScrolling = true,
+                        programmatic = false,
+                        canSelect = canSelectState.value(target),
+                        centeredKey = key,
+                        lastAppliedKey = lastAppliedState.value,
+                    )
+                ) {
+                    return@collect
+                }
+                lastAppliedKey = key
                 composeHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 PlatformHaptics.selectionTick()
-                onImageSelectedState.value(target)
+                onItemSelectedState.value(target)
             }
     }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(56.dp)
+            .height(EditorFilmstripMetrics.RailHeight)
             .onGloballyPositioned {
                 stripWidth = with(density) { it.size.width.toDp() }
-            },
+            }
+            .testTag(testTag),
         contentAlignment = Alignment.Center,
     ) {
         LazyRow(
@@ -175,35 +305,42 @@ fun EditorPhotoStrip(
                 start = (stripWidth - cellSize).coerceAtLeast(0.dp) / 2,
                 end = (stripWidth - cellSize).coerceAtLeast(0.dp) / 2,
             ),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(EditorFilmstripMetrics.ItemGap),
             state = listState,
             flingBehavior = snapFling,
             overscrollEffect = overscroll,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             itemsIndexed(
-                items = images,
-                key = { _, image -> image.uri.value },
-                contentType = { _, _ -> "filmstrip_thumb" },
-            ) { index, imageInfo ->
+                items = items,
+                key = { _, item -> keyOf(item) },
+                // Distinguish Ready vs Pending/Failed for Lazy composition reuse during import churn.
+                contentType = { _, item ->
+                    when (item) {
+                        is EditorMediaSlot.Ready -> "filmstrip_ready"
+                        is EditorMediaSlot.Pending -> "filmstrip_pending"
+                        is EditorMediaSlot.Failed -> "filmstrip_failed"
+                        else -> "filmstrip_cell"
+                    }
+                },
+            ) { index, item ->
                 Box(
                     modifier = Modifier.size(cellSize),
                     contentAlignment = Alignment.Center,
                 ) {
-                    thumbnail(
-                        imageInfo,
-                        "image",
+                    // Legacy path: plain clickable. Progressive secondary actions live in itemContent.
+                    val interactionModifier = if (canSelect(item)) {
+                        Modifier.clickable {
+                            // Select once; mark programmatic *before* scroll so settle is ignored.
+                            applyCenteredSelection(item, fromUser = true)
+                            coroutineScope.launch {
+                                scrollToIndexProgrammatic(index)
+                            }
+                        }
+                    } else {
                         Modifier
-                            .size(40.dp)
-                            .clip(frameShape)
-                            .clickable {
-                                // Select once; mark programmatic *before* scroll so settle is ignored.
-                                applyCenteredSelection(imageInfo, fromUser = true)
-                                coroutineScope.launch {
-                                    scrollToIndexProgrammatic(index)
-                                }
-                            },
-                    )
+                    }
+                    itemContent(item, interactionModifier)
                 }
             }
         }
@@ -214,7 +351,7 @@ fun EditorPhotoStrip(
                 .size(cellSize)
                 .align(Alignment.Center)
                 .border(
-                    width = 1.5.dp,
+                    width = EditorFilmstripMetrics.FrameBorder,
                     color = MaterialTheme.colorScheme.primary,
                     shape = frameShape,
                 ),
@@ -225,8 +362,9 @@ fun EditorPhotoStrip(
 /**
  * Index of the visible item whose center is closest to the viewport center.
  * Correct with large start/end [contentPadding] (center-aligned filmstrip); [LazyListState.firstVisibleItemIndex]
- * Alone points at the *leading* cell, not the one under the fixed center frame. */
-private fun centeredItemIndex(listState: LazyListState): Int? {
+ * alone points at the *leading* cell, not the one under the fixed center frame.
+ */
+internal fun centeredItemIndex(listState: LazyListState): Int? {
     val layout = listState.layoutInfo
     val visible = layout.visibleItemsInfo
     if (visible.isEmpty()) return null

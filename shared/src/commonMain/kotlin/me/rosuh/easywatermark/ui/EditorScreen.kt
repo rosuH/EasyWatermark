@@ -26,6 +26,7 @@ import me.rosuh.easywatermark.shared.generated.resources.about_title_about
 import me.rosuh.easywatermark.shared.generated.resources.cd_add_more_images
 import me.rosuh.easywatermark.shared.generated.resources.cd_navigate_up
 import me.rosuh.easywatermark.shared.generated.resources.cd_save
+import me.rosuh.easywatermark.shared.generated.resources.ios_import_preparing
 import me.rosuh.easywatermark.shared.generated.resources.tips_no_image_selected
 import org.jetbrains.compose.resources.stringResource
 
@@ -80,8 +81,15 @@ fun EditorScreen(
      */
     layoutClass: EditorLayoutClass = EditorLayoutClass.Compact,
 ) {
+    val progressiveSlots = LocalEditorProgressiveSlotPresentation.current
     val selected = selectedImage ?: imageList.firstOrNull()
-    val emptyPreview = stringResource(Res.string.tips_no_image_selected)
+    val hasProgressiveSlots = progressiveSlots?.state?.slots?.isNotEmpty() == true
+    val hasPreviewContent = selected != null || hasProgressiveSlots
+    val emptyPreview = if (hasProgressiveSlots) {
+        stringResource(Res.string.ios_import_preparing)
+    } else {
+        stringResource(Res.string.tips_no_image_selected)
+    }
     val backCd = stringResource(Res.string.cd_navigate_up)
     val addMoreCd = stringResource(Res.string.cd_add_more_images)
     val saveCd = stringResource(Res.string.cd_save)
@@ -141,7 +149,7 @@ fun EditorScreen(
                             .testTag("editorExpandedPaneRow"),
                     ) {
                         EditorPreviewFrame(
-                            hasImage = selected != null,
+                            hasImage = hasPreviewContent,
                             emptyText = emptyPreview,
                             modifier = Modifier
                                 .weight(1f, fill = true)
@@ -159,7 +167,13 @@ fun EditorScreen(
                                 .testTag("editorExpandedControlsPane"),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            if (imageList.isNotEmpty()) {
+                            if (progressiveSlots != null && hasProgressiveSlots) {
+                                EditorProgressivePhotoStrip(
+                                    presentation = progressiveSlots,
+                                    thumbnail = thumbnail,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            } else if (imageList.isNotEmpty()) {
                                 EditorPhotoStrip(
                                     images = imageList,
                                     selectedImage = selected,
@@ -185,7 +199,7 @@ fun EditorScreen(
                 } else {
                     // Compact / Medium: existing phone vertical stack.
                     EditorPreviewFrame(
-                        hasImage = selected != null,
+                        hasImage = hasPreviewContent,
                         emptyText = emptyPreview,
                         modifier = Modifier
                             .weight(1f, fill = true)
@@ -195,7 +209,13 @@ fun EditorScreen(
                         preview(previewModifier)
                     }
 
-                    if (imageList.isNotEmpty()) {
+                    if (progressiveSlots != null && hasProgressiveSlots) {
+                        EditorProgressivePhotoStrip(
+                            presentation = progressiveSlots,
+                            thumbnail = thumbnail,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    } else if (imageList.isNotEmpty()) {
                         EditorPhotoStrip(
                             images = imageList,
                             selectedImage = selected,

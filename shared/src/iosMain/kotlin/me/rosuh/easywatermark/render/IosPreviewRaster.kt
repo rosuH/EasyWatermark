@@ -4,8 +4,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.repo.IosIconPersistence
-import platform.Foundation.NSData
-import platform.Foundation.dataWithContentsOfFile
 
 /**
  * **On-screen editor preview** raster — Android [WaterMarkCanvas] analogue for iOS (C3).
@@ -36,10 +34,8 @@ internal object IosPreviewRaster {
     fun decodeSourcePlaceholder(sourcePath: String, maxEdgePx: Int = PREVIEW_MAX_EDGE_PX): ImageBitmap? {
         val bench = IosPreviewBench.scope("placeholder")
         return try {
-            val bytes = readFileBytes(sourcePath) ?: return null
-            bench.mark("read")
-            val bmp = IosImageDecoder.decodeThumbnail(bytes, maxEdgePx = maxEdgePx)
-            bench.mark("decodeScale")
+            val bmp = decodePathThumbnail(sourcePath, maxEdgePx)
+            bench.mark("imageIOThumbnail")
             bench.finish(mapOf("path" to sourcePath.substringAfterLast('/'), "w" to bmp.width, "h" to bmp.height))
             bmp
         } catch (t: Throwable) {
@@ -60,12 +56,8 @@ internal object IosPreviewRaster {
         maxEdgePx: Int = PREVIEW_MAX_EDGE_PX,
     ): ImageBitmap {
         val bench = IosPreviewBench.scope("wm_preview")
-        val bytes = readFileBytes(sourcePath)
-            ?: error("IosPreviewRaster: unreadable $sourcePath")
-        bench.mark("read")
-
-        val background = IosImageDecoder.decodeThumbnail(bytes, maxEdgePx = maxEdgePx)
-        bench.mark("decodeScale")
+        val background = decodePathThumbnail(sourcePath, maxEdgePx)
+        bench.mark("imageIOThumbnail")
 
         val icon = if (waterMark.markMode == WatermarkMode.Image) {
             val iconBytes = IosIconPersistence.readIconBytes(waterMark.iconUri)
@@ -95,8 +87,12 @@ internal object IosPreviewRaster {
         return composed
     }
 
-    private fun readFileBytes(path: String): ByteArray? {
-        val data = NSData.dataWithContentsOfFile(path) ?: return null
-        return IosByteArrayInterop.fromNSData(data)
-    }
+    /**
+     * Picker/source previews are URL-first. ImageIO covers JPEG/PNG/HEIF and applies orientation
+     * while requesting the bounded native thumbnail. It intentionally fails closed for an
+     * unsupported type: re-reading a full source as NSData/ByteArray would defeat the bounded,
+     * file-first import contract. Final export remains a separate full-resolution spine.
+     */
+    private fun decodePathThumbnail(path: String, maxEdgePx: Int): ImageBitmap =
+        IosImageIODecoder.decodeThumbnail(path, maxEdgePx)
 }

@@ -167,4 +167,11 @@
 
     <!-- S-i18n-0 packaging spike (retained after Phase 1). -->
     <string name="cmp_spike_hello">CMP spike hello</string>
+    <string name="ios_import_preparing">Preparing photos…</string>
+    <string name="ios_import_failed_retry">Could not import. Tap to retry.</string>
+    <string name="ios_import_pending">Preparing</string>
+    <string name="ios_import_ready">Photo</string>
+    <string name="ios_import_failed">Import failed</string>
+    <string name="ios_import_retry">Retry</string>
+    <string name="ios_import_remove">Remove</string>
 </resources>
