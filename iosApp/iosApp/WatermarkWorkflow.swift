@@ -46,7 +46,9 @@ final class WatermarkWorkflow: ObservableObject {
     /// Watermark text composed over the photo. S4d-102: now sourced from the shared
     /// `WaterMarkRepository` via `watermarkConfigBridge` (loaded on launch, edited through the shared
     /// `WatermarkConfigEditor`) instead of a Swift-only constant. Default matches the prior constant.
-    @Published private(set) var watermarkText: String = "EasyWatermark 水印"
+    /// Seed only until first bridge load; empty-store default comes from shared
+    /// `config_default_water_mark_text` (master-aligned EN / locale variants).
+    @Published private(set) var watermarkText: String = "👋 DO NOT REDISTRIBUTE"
 
     /// S4d-103: watermark rotation degree, also sourced from the shared `WaterMarkRepository` via
     /// `watermarkConfigBridge` (loaded on launch, edited through `WatermarkConfigEditor.updateDegree`).
@@ -146,7 +148,8 @@ final class WatermarkWorkflow: ObservableObject {
     }
 
     /// S4d-102: load the persisted watermark text from the shared `WaterMarkRepository` (one-shot
-    /// snapshot). On an empty store this returns the repository's default ("EasyWatermark 水印"), so the
+    /// snapshot). On an empty store this returns the repository's default
+    /// (`config_default_water_mark_text` / master), so the
     /// visible default is preserved. A read error keeps the current value.
     func loadWatermarkText() async {
         do {

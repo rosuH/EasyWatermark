@@ -8,6 +8,9 @@ import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
+import me.rosuh.easywatermark.shared.generated.resources.Res
+import me.rosuh.easywatermark.shared.generated.resources.config_default_water_mark_text
+import me.rosuh.easywatermark.ui.sharedString
 
 /**
  * The iOS Swift-facing bridge for the common [WaterMarkRepository] — the **first off-Android * consumer of the shared watermark editor state**. Mirrors [IosUserConfigBridge]:
@@ -150,21 +153,20 @@ class IosWatermarkConfigBridge(private val repo: WaterMarkRepository) {
     }
 }
 
-/** Default watermark text on a fresh iOS store — matches the prior hardcoded Swift constant. */
-private const val DEFAULT_WATERMARK_TEXT = "EasyWatermark 水印"
-
 /**
  * Build an [IosWatermarkConfigBridge] over the app's default iOS watermark-config store
  * ([createWaterMarkDataStore], `NSDocumentDirectory`). The three [WaterMarkRepository] edges are
  * Supplied with platform-neutral iOS values: a default-text provider, the **pure** * [WatermarkTileMode.fromStorageId] read mapper (the Android SDK-gated legacy DECAL-id-3→REPEAT mapper
  * is Android-only — there is no legacy iOS data), and a `println` logger (no dependency). A real iOS app
  * calls this ONCE and retains the result (single-instance-per-file).
+ *
+ * Default text is locale-aware [config_default_water_mark_text] (master-aligned), same as Android.
  */
 fun defaultIosWatermarkConfigBridge(): IosWatermarkConfigBridge =
     IosWatermarkConfigBridge(
         WaterMarkRepository(
             dataStore = createWaterMarkDataStore(),
-            defaultTextProvider = { DEFAULT_WATERMARK_TEXT },
+            defaultTextProvider = { sharedString(Res.string.config_default_water_mark_text) },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
             logError = { message -> println("IosWatermarkConfigBridge: $message") },
         ),

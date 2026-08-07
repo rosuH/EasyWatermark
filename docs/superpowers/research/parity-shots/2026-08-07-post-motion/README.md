@@ -58,8 +58,8 @@ These are **not** reopened P0 blockers — structure matches (Launch CTA, 3-tab 
 | ID | Area | Prod | Debug (compose) | Severity |
 |---|---|---|---|---|
 | R1 | Launch logo tint | Material You / dynamic (pink-lilac on this AVD) | Static amber brand | P3 feel (dynamic on Android still via capability; may differ by wallpaper) |
-| R2 | Editor top bar leading | **Brand logo** (no back) | **Back chevron** | P3 / product nav semantics (old backlog P1-C — still open) |
-| R3 | Default watermark copy | Full line + emoji (👋 图片仅供测试…) | Truncated `请勿转载…` in field | P3 string/default path |
+| R2 | Editor top bar leading | **Brand logo** (no back) | **Back chevron** | **Owner 2026-08-08: keep back** (Compose route semantics) |
+| R3 | Default watermark copy | zh: `👋图片仅供测试…` | Was stale DataStore `请勿转载…`; EN/zh resources already master; iOS/Desktop hardcodes → `config_default_water_mark_text` | **Fixed** (platform defaultTextProvider) |
 | R4 | Content toggle icons | Classic T / sticker glyphs | Phosphor Regular set | Intentional (icon refresh commit) |
 | R5 | Export sheet chrome | Partial peek, JPEG default on this run | Full sheet, PNG selected in fixture run | P3 sheet expansion / prefs |
 | R6 | Reduced-motion | Launch still usable at scale 0 | Launch/editor/export chrome intact at scale 0 | **Pass** (no broken layout) |
@@ -77,8 +77,8 @@ These are **not** reopened P0 blockers — structure matches (Launch CTA, 3-tab 
 | iOS Reduce Motion fixture editor | **Done** |
 | iOS multi + Export automation | Still manual (HEIC multi owner-OK; no sim tap tool) |
 | Desktop journey shots | Open (separate platform track) |
-| R2 top-bar logo-vs-back product decision | Needs owner sign-off or small PR |
-| R3 default text string unification | Small follow-up |
+| R2 top-bar logo-vs-back | **Closed — keep back** |
+| R3 default text string unification | **Closed** — shared `config_default_water_mark_text` on Android/iOS/Desktop |
 | R5 export sheet expansion vs peek | Optional polish |
 
 ---

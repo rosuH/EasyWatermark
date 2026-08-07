@@ -12,6 +12,9 @@ import me.rosuh.easywatermark.render.DesktopRenderRequest
 import me.rosuh.easywatermark.render.DesktopRenderSaveSpine
 import me.rosuh.easywatermark.render.DesktopSaveDecision
 import me.rosuh.easywatermark.render.DesktopWatermarkComposer
+import me.rosuh.easywatermark.shared.generated.resources.Res
+import me.rosuh.easywatermark.shared.generated.resources.config_default_water_mark_text
+import me.rosuh.easywatermark.ui.sharedString
 import java.io.File
 
 /**
@@ -47,7 +50,8 @@ object DesktopWatermarkFlow {
      */
     fun buildRepository(dir: File = storeDir): WaterMarkRepository = WaterMarkRepository(
         dataStore = createWaterMarkDataStore(dir = dir),
-        defaultTextProvider = { "EasyWatermark 水印" },
+        // Locale-aware; same key as Android/iOS and master `config_default_water_mark_text`.
+        defaultTextProvider = { sharedString(Res.string.config_default_water_mark_text) },
         // Desktop uses the PURE storage-id mapper; the Android SDK-gated legacy DECAL-id-3→REPEAT mapper
         // is Android-only (there is no legacy desktop data).
         tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },

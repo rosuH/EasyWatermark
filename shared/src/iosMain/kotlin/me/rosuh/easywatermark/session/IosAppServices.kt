@@ -21,10 +21,14 @@ import me.rosuh.easywatermark.data.repo.IosUserConfigBridge
 import me.rosuh.easywatermark.data.repo.IosWatermarkConfigBridge
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
+import me.rosuh.easywatermark.shared.generated.resources.Res
+import me.rosuh.easywatermark.shared.generated.resources.config_default_water_mark_text
+import me.rosuh.easywatermark.ui.sharedString
 import kotlin.experimental.ExperimentalObjCName
 import kotlin.native.ObjCName
 
-private const val DEFAULT_WATERMARK_TEXT = "EasyWatermark 水印"
+/** Locale-aware default — same key as Android/Desktop (`config_default_water_mark_text` / master). */
+private fun defaultWatermarkText(): String = sharedString(Res.string.config_default_water_mark_text)
 
 /**
  * G4: max concurrent [IosSourceStager.stageBytes] writers during multi-pick stage.
@@ -276,7 +280,7 @@ private object IosAppServicesHolder {
         installKotlinUnhandledExceptionLogging()
         val waterMarkRepo = WaterMarkRepository(
             dataStore = createWaterMarkDataStore(),
-            defaultTextProvider = { DEFAULT_WATERMARK_TEXT },
+            defaultTextProvider = { defaultWatermarkText() },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
             logError = { message -> println("IosAppServices/WaterMarkRepository: $message") },
         )
