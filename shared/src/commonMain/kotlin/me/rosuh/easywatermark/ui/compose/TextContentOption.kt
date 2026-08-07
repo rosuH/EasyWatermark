@@ -34,8 +34,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,6 +44,9 @@ import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.dialog_title_edit_watermark
 import me.rosuh.easywatermark.shared.generated.resources.dialog_title_template_title
 import me.rosuh.easywatermark.shared.generated.resources.tips_confirm_dialog
+import me.rosuh.easywatermark.ui.theme.EwmTheme
+import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
+import me.rosuh.easywatermark.ui.theme.motionAllowsDecorativeLoop
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -79,16 +82,22 @@ fun TextContentOption(
         }
     }
 
-    // Summary: muted text + soft caret (lower contrast, slower blink than production View).
-    val cursorAlpha by rememberInfiniteTransition(label = "textContentCursor").animateFloat(
+    // M4: soft caret blink (prod BlinkCursorView). Decorative loop — Full only (MotionPolicy).
+    // Always allocate the infinite transition (Compose remember rules); gate the painted alpha.
+    val allowBlink = motionAllowsDecorativeLoop(currentMotionPolicy())
+    val blinkAlpha by rememberInfiniteTransition(label = "textContentCursor").animateFloat(
         initialValue = 0.55f,
         targetValue = 0.12f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 900, easing = LinearEasing),
+            animation = tween(
+                durationMillis = EwmTheme.motion.textCaretBlinkMs,
+                easing = LinearEasing,
+            ),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "cursorAlpha",
     )
+    val cursorAlpha = if (allowBlink) blinkAlpha else 0.4f
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     Row(
         modifier = modifier
@@ -108,13 +117,13 @@ fun TextContentOption(
             // weight(fill=false): content-sized up to remaining width so the packed row stays centered.
             modifier = Modifier.weight(1f, fill = false),
         )
-        // Soft caret: same muted color, slow alpha pulse (not brand yellow).
+        // Soft caret: same muted color; blink under Full, static under Reduced/Off.
         Box(
             modifier = Modifier
                 .padding(start = 1.dp)
                 .width(2.dp)
                 .height(18.dp)
-                .alpha(cursorAlpha)
+                .graphicsLayer { alpha = cursorAlpha }
                 .background(muted),
         )
     }

@@ -53,6 +53,10 @@ import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.render.AndroidCommonRaster
 import me.rosuh.easywatermark.ui.compose.ColorOption
 import me.rosuh.easywatermark.ui.compose.IconOption
+import me.rosuh.easywatermark.ui.theme.EwmTheme
+import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
+import me.rosuh.easywatermark.ui.theme.motionDurationMs
+import me.rosuh.easywatermark.ui.theme.previewCrossfadeDurationMs
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResourceSync
 import me.rosuh.easywatermark.utils.ktx.obtainTileMode
@@ -300,6 +304,9 @@ private fun WaterMarkCanvas(
         var displayed by remember { mutableStateOf<PreviewFrame?>(null) }
         var incoming by remember { mutableStateOf<PreviewFrame?>(null) }
         var crossfade by remember { mutableFloatStateOf(1f) }
+        // M7: first-frame alpha 0→1 (prod WaterMarkImageView drawableAlphaAnimator).
+        var firstReveal by remember { mutableFloatStateOf(0f) }
+        var hasRevealedOnce by remember { mutableStateOf(false) }
         // Last decoded base (no watermark) for CLAMP drag re-compose without re-open ContentResolver.
         var baseCache by remember { mutableStateOf<Pair<String, Bitmap>?>(null) }
         // Main load already baked current offsets — skip one redundant offset re-bake.
@@ -310,9 +317,11 @@ private fun WaterMarkCanvas(
         val imagePaint = remember { Paint(Paint.FILTER_BITMAP_FLAG) }
         val imageMatrix = remember { Matrix() }
         val scope = rememberCoroutineScope()
+        val motionPolicy = currentMotionPolicy()
+        val firstRevealMs = motionDurationMs(motionPolicy, EwmTheme.motion.firstPreviewRevealMs)
 
         // --- Load pipeline: cancel previous on key change via LaunchedEffect cancellation ---
-        LaunchedEffect(selectedUri, cw, ch, wmFp) {
+        LaunchedEffect(selectedUri, cw, ch, wmFp, firstRevealMs) {
             if (cw <= 0 || ch <= 0) return@LaunchedEffect
             val requestUri = selectedUri
             val requestImage = selectedImage
@@ -407,33 +416,63 @@ private fun WaterMarkCanvas(
                 incoming = null
                 crossfade = 1f
                 suppressOffsetRebake = true
+                if (!hasRevealedOnce) {
+                    // M7: first preview alpha reveal under MotionPolicy.
+                    if (firstRevealMs <= 0) {
+                        firstReveal = 1f
+                        hasRevealedOnce = true
+                    } else {
+                        firstReveal = 0f
+                        val anim = Animatable(0f)
+                        anim.animateTo(
+                            1f,
+                            animationSpec = tween(
+                                durationMillis = firstRevealMs,
+                                easing = FastOutSlowInEasing,
+                            ),
+                        ) {
+                            firstReveal = value
+                        }
+                        ensureActive()
+                        firstReveal = 1f
+                        hasRevealedOnce = true
+                    }
+                } else {
+                    firstReveal = 1f
+                }
             } else {
-                // Different source image: morph bounds + crossfade (aspect-aware duration).
+                // Different source image: morph bounds + crossfade (aspect-aware, MotionPolicy).
                 incoming = frame
                 crossfade = 0f
+                firstReveal = 1f
+                hasRevealedOnce = true
                 val fromAspect = current.bitmap.width.toFloat() / current.bitmap.height.coerceAtLeast(1)
                 val toAspect = frame.bitmap.width.toFloat() / frame.bitmap.height.coerceAtLeast(1)
                 val aspectDelta = abs(fromAspect - toAspect) / maxOf(fromAspect, toAspect, 0.01f)
-                val duration = (
-                    PreviewCrossfadeMinMs +
-                        (PreviewCrossfadeMaxMs - PreviewCrossfadeMinMs) * aspectDelta.coerceIn(0f, 1f)
-                    ).toInt()
-                val anim = Animatable(0f)
-                anim.animateTo(
-                    1f,
-                    animationSpec = tween(
-                        durationMillis = duration,
-                        easing = FastOutSlowInEasing,
-                    ),
-                ) {
-                    crossfade = value
-                }
-                ensureActive()
-                if (selectedImage.uri.value == requestUri) {
+                val duration = previewCrossfadeDurationMs(motionPolicy, aspectDelta)
+                if (duration <= 0) {
                     displayed = frame
                     incoming = null
                     crossfade = 1f
                     suppressOffsetRebake = true
+                } else {
+                    val anim = Animatable(0f)
+                    anim.animateTo(
+                        1f,
+                        animationSpec = tween(
+                            durationMillis = duration,
+                            easing = FastOutSlowInEasing,
+                        ),
+                    ) {
+                        crossfade = value
+                    }
+                    ensureActive()
+                    if (selectedImage.uri.value == requestUri) {
+                        displayed = frame
+                        incoming = null
+                        crossfade = 1f
+                        suppressOffsetRebake = true
+                    }
                 }
             }
         }
@@ -609,6 +648,7 @@ private fun WaterMarkCanvas(
                     nc.drawBitmap(frame.bitmap, imageMatrix, imagePaint)
                 }
 
+                val reveal = firstReveal.coerceIn(0f, 1f)
                 if (inc == null) {
                     drawBitmapInBox(
                         frame = disp,
@@ -616,7 +656,7 @@ private fun WaterMarkCanvas(
                         boxT = boxTop,
                         boxWidth = boxW,
                         boxHeight = boxH,
-                        alpha = 1f,
+                        alpha = reveal,
                     )
                 } else {
                     // Morph shared box + crossfade both images inside it (smooth aspect change).
@@ -626,7 +666,7 @@ private fun WaterMarkCanvas(
                         boxT = boxTop,
                         boxWidth = boxW,
                         boxHeight = boxH,
-                        alpha = 1f - t,
+                        alpha = (1f - t) * reveal,
                     )
                     drawBitmapInBox(
                         frame = inc,
@@ -634,7 +674,7 @@ private fun WaterMarkCanvas(
                         boxT = boxTop,
                         boxWidth = boxW,
                         boxHeight = boxH,
-                        alpha = t,
+                        alpha = t * reveal,
                     )
                 }
                 imagePaint.alpha = 255
@@ -664,10 +704,6 @@ private fun naturalContentRect(bitmap: Bitmap, cw: Int, ch: Int): ContentRect {
 }
 
 private fun lerp(a: Float, b: Float, t: Float): Float = a + (b - a) * t
-
-/** Aspect-similar switches stay snappy; large aspect deltas get a longer morph. */
-private const val PreviewCrossfadeMinMs = 180
-private const val PreviewCrossfadeMaxMs = 320
 
 private fun isTouchingClampWatermark(
     pointer: Offset,

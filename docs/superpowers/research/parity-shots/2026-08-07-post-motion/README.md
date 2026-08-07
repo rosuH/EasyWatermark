@@ -80,6 +80,7 @@ These are **not** reopened P0 blockers — structure matches (Launch CTA, 3-tab 
 | R2 top-bar logo-vs-back | **Closed — keep back** |
 | R3 default text string unification | **Closed** — shared `config_default_water_mark_text` on Android/iOS/Desktop |
 | R5 export sheet expansion vs peek | Optional polish |
+| **M1–M10 micro-motion (2026-08-08)** | See ACSP `20260808-024249--motion-m1-m10-parity` / session `result.md`. Implemented: M1 select spring, M2 crossfade policy + iOS/Desktop fade, M4 caret gate, M6 check appear, M7 first reveal, M9 Desktop reduce-motion best-effort, M10 springs on micro. Residual: M3 filmstrip drag-delete (API exists, strip redesign needs owner design), M5 gallery scrollbar 2× (no custom scrollbar in CMP grid), M8 M3 PrimaryTabRow owns indicator |
 
 ---
 

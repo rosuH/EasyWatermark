@@ -612,15 +612,18 @@ class IosProductRootHost(
                                         wmPreviewCache[dragPath] === displayPreview ||
                                             draftActiveForSelection
                                         )
-                            Box(
+                            // M2/M7: policy-aware first reveal + switch fade (iOS was hard-cut).
+                            AnimatedPreviewSurface(
+                                contentKey = previewSourcePath,
+                                hasContent = displayPreview != null,
                                 modifier = previewModifier
                                     .fillMaxSize()
                                     .testTag("sharedComposeWatermarkPreview"),
-                                contentAlignment = Alignment.Center,
                             ) {
-                                if (displayPreview != null) {
+                                val bmp = displayPreview
+                                if (bmp != null) {
                                     Image(
-                                        bitmap = displayPreview,
+                                        bitmap = bmp,
                                         contentDescription = "Watermarked preview",
                                         contentScale = ContentScale.Fit,
                                         modifier = Modifier
@@ -632,8 +635,8 @@ class IosProductRootHost(
                                                 selectionId = dragPath,
                                                 isClamp = waterMark.tileMode ==
                                                     WatermarkTileMode.CLAMP,
-                                                imageWidth = displayPreview.width.toFloat(),
-                                                imageHeight = displayPreview.height.toFloat(),
+                                                imageWidth = bmp.width.toFloat(),
+                                                imageHeight = bmp.height.toFloat(),
                                                 offsetX = dragItem?.offsetX ?: 0.5f,
                                                 offsetY = dragItem?.offsetY ?: 0.5f,
                                                 onOffsetDraft = { x, y ->

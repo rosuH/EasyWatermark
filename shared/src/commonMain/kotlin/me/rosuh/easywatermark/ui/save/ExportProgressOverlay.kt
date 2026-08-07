@@ -1,7 +1,10 @@
 package me.rosuh.easywatermark.ui.save
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
@@ -21,12 +24,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.data.model.JobState
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.ic_save_done
 import me.rosuh.easywatermark.ui.theme.EwmTheme
+import me.rosuh.easywatermark.ui.theme.MotionPolicy
 import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
 import me.rosuh.easywatermark.ui.theme.md_theme_dark_tertiary
 import me.rosuh.easywatermark.ui.theme.motionDurationMs
@@ -58,21 +63,53 @@ fun ExportProgressOverlay(
     }
 
     val progress = remember { Animatable(0f) }
+    // M6: prod ivDone.appear() — scale 0.75→1 + alpha; snap on recycle / Off.
+    val checkAppear = remember { Animatable(0f) }
     // Survives only while this item stays composed; on recycle we snap without re-playing.
     var lastPhase by remember { mutableStateOf(Phase.Ready) }
     var showCheck by remember { mutableStateOf(false) }
+    val motionPolicy = currentMotionPolicy()
     // I3: honor MotionPolicy (0ms → snap via animateTo with empty duration).
-    val wipeMs = motionDurationMs(currentMotionPolicy(), EwmTheme.motion.exportWipeMs)
+    val wipeMs = motionDurationMs(motionPolicy, EwmTheme.motion.exportWipeMs)
+    val checkMs = motionDurationMs(motionPolicy, EwmTheme.motion.exportCheckAppearMs)
 
-    LaunchedEffect(phase, wipeMs) {
+    suspend fun playCheckAppear(replay: Boolean) {
+        if (!replay) {
+            checkAppear.snapTo(1f)
+            return
+        }
+        if (checkMs <= 0) {
+            checkAppear.snapTo(1f)
+            return
+        }
+        checkAppear.snapTo(0f)
+        if (motionPolicy == MotionPolicy.Full) {
+            checkAppear.animateTo(
+                1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium,
+                ),
+            )
+        } else {
+            checkAppear.animateTo(
+                1f,
+                animationSpec = tween(durationMillis = checkMs, easing = FastOutSlowInEasing),
+            )
+        }
+    }
+
+    LaunchedEffect(phase, wipeMs, checkMs) {
         when (phase) {
             Phase.Ready -> {
                 progress.snapTo(0f)
+                checkAppear.snapTo(0f)
                 showCheck = false
                 lastPhase = Phase.Ready
             }
             Phase.Ing -> {
                 showCheck = false
+                checkAppear.snapTo(0f)
                 if (lastPhase == Phase.Ing && progress.value >= 0.2f) {
                     // Already running / recycled mid-export — hold ~25%, do not restart wipe.
                     progress.snapTo(progress.value.coerceAtLeast(0.25f).coerceAtMost(0.28f))
@@ -96,6 +133,7 @@ fun ExportProgressOverlay(
                         // LazyRow recycle after success: show final state, no re-animation.
                         progress.snapTo(1f)
                         showCheck = true
+                        playCheckAppear(replay = false)
                     }
                     Phase.Ing -> {
                         val from = progress.value.coerceAtLeast(0.25f)
@@ -109,17 +147,20 @@ fun ExportProgressOverlay(
                             )
                         }
                         showCheck = true
+                        playCheckAppear(replay = true)
                     }
                     else -> {
                         // Never saw Ing (e.g. restored finished list): full wash + check, no wipe.
                         progress.snapTo(1f)
                         showCheck = true
+                        playCheckAppear(replay = true)
                     }
                 }
                 lastPhase = Phase.Success
             }
             Phase.Failure -> {
                 progress.snapTo(1f)
+                checkAppear.snapTo(0f)
                 showCheck = false
                 lastPhase = Phase.Failure
             }
@@ -147,15 +188,22 @@ fun ExportProgressOverlay(
                 )
             }
         }
-        // Production iv_done: centered check on success (white stroke icon).
+        // Production iv_done.appear(): centered check with scale/alpha (M6).
         if (showCheck && phase == Phase.Success) {
+            val t = checkAppear.value.coerceIn(0f, 1f)
             Icon(
                 painter = successIcon,
                 contentDescription = null,
                 tint = Color.White,
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .size(28.dp),
+                    .size(28.dp)
+                    .graphicsLayer {
+                        val s = 0.75f + 0.25f * t
+                        scaleX = s
+                        scaleY = s
+                        alpha = t
+                    },
             )
         }
     }

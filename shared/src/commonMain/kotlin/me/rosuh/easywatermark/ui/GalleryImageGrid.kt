@@ -1,5 +1,10 @@
 package me.rosuh.easywatermark.ui
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image as FoundationImage
 import androidx.compose.foundation.background
@@ -53,6 +58,10 @@ import me.rosuh.easywatermark.shared.generated.resources.cd_checkbox
 import me.rosuh.easywatermark.shared.generated.resources.cd_selected
 import me.rosuh.easywatermark.shared.generated.resources.cd_unselected
 import me.rosuh.easywatermark.ui.theme.DesignChipSelected
+import me.rosuh.easywatermark.ui.theme.EwmTheme
+import me.rosuh.easywatermark.ui.theme.MotionPolicy
+import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
+import me.rosuh.easywatermark.ui.theme.motionDurationMs
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.max
 import kotlin.math.min
@@ -224,6 +233,22 @@ private fun GalleryImageCard(
         selectedPhrase = selectedPhrase,
         unselectedPhrase = unselectedPhrase,
     )
+    // M1 + M10: animate 1→0.8 select scale (prod ObjectAnimator 200ms); spring under Full.
+    val motionPolicy = currentMotionPolicy()
+    val selectMs = motionDurationMs(motionPolicy, EwmTheme.motion.gallerySelectMs)
+    val targetScale = if (selected) EwmTheme.motion.gallerySelectScale else 1f
+    val selectScale by animateFloatAsState(
+        targetValue = targetScale,
+        animationSpec = when {
+            selectMs <= 0 -> snap()
+            motionPolicy == MotionPolicy.Full -> spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMediumLow,
+            )
+            else -> tween(durationMillis = selectMs)
+        },
+        label = "gallerySelectScale",
+    )
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -239,14 +264,13 @@ private fun GalleryImageCard(
             .testTag("galleryImageCard")
             .clickable(onClick = onToggle),
     ) {
-        // Fixed layout bounds for the thumb; selection is Draw-phase scale only.
+        // Fixed layout bounds for the thumb; selection scale is Draw-phase only (deferring-state-reads).
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    val s = if (selected) 0.8f else 1f
-                    scaleX = s
-                    scaleY = s
+                    scaleX = selectScale
+                    scaleY = selectScale
                 }
                 .then(
                     if (selected) {

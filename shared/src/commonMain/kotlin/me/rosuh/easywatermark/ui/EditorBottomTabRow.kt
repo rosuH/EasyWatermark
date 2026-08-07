@@ -30,7 +30,11 @@ import me.rosuh.easywatermark.ui.theme.DesignNeutralMuted
  * - no hairline divider (seamless olive editor bg)
  *
  * Uses the stock [TabRowDefaults.PrimaryIndicator] + [tabIndicatorOffset] path instead of a
- * Hand-rolled measure/animate layout — the custom measure path could throw on iOS when * tabPositions was empty or width resolved to 0 during tab switches.
+ * hand-rolled measure/animate layout — the custom measure path could throw on iOS when
+ * tabPositions was empty or width resolved to 0 during tab switches.
+ *
+ * **M8 residual (intentional):** indicator feel is owned by Material3 PrimaryTabRow spring/tween.
+ * Do not reintroduce a custom measure path for “prod-like” indicator physics.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -72,7 +72,30 @@ class MotionPolicyTest {
         assertTrue(EwmTheme.motion.shellShortMs > 0)
         assertTrue(EwmTheme.motion.exportWipeMs > 0)
         assertTrue(EwmTheme.motion.contentSizeMs > 0)
+        assertTrue(EwmTheme.motion.gallerySelectMs > 0)
+        assertTrue(EwmTheme.motion.previewCrossfadeMinMs > 0)
+        assertTrue(EwmTheme.motion.previewCrossfadeMaxMs >= EwmTheme.motion.previewCrossfadeMinMs)
+        assertTrue(EwmTheme.motion.firstPreviewRevealMs > 0)
+        assertTrue(EwmTheme.motion.exportCheckAppearMs > 0)
         // Off maps all to 0
         assertEquals(0, motionDurationMs(MotionPolicy.Off, EwmTheme.motion.exportWipeMs))
+    }
+
+    @Test
+    fun previewCrossfade_aspectAware_andOff() {
+        assertEquals(0, previewCrossfadeDurationMs(MotionPolicy.Off, 0f))
+        assertEquals(0, previewCrossfadeDurationMs(MotionPolicy.Off, 1f))
+        assertEquals(
+            EwmTheme.motion.previewCrossfadeMinMs,
+            previewCrossfadeDurationMs(MotionPolicy.Full, 0f),
+        )
+        assertEquals(
+            EwmTheme.motion.previewCrossfadeMaxMs,
+            previewCrossfadeDurationMs(MotionPolicy.Full, 1f),
+        )
+        val mid = previewCrossfadeDurationMs(MotionPolicy.Full, 0.5f)
+        assertTrue(mid in EwmTheme.motion.previewCrossfadeMinMs..EwmTheme.motion.previewCrossfadeMaxMs)
+        // Reduced is scaled (floor may still be >0).
+        assertTrue(previewCrossfadeDurationMs(MotionPolicy.Reduced, 1f) < EwmTheme.motion.previewCrossfadeMaxMs)
     }
 }

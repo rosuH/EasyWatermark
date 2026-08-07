@@ -100,6 +100,7 @@ import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_coun
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_success_where
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_error_generic
 import me.rosuh.easywatermark.shared.generated.resources.share
+import me.rosuh.easywatermark.ui.AnimatedPreviewSurface
 import me.rosuh.easywatermark.ui.sharedString
 import me.rosuh.easywatermark.ui.EditorBottomControls
 import me.rosuh.easywatermark.ui.EditorScreen
@@ -797,6 +798,7 @@ fun launchDesktopWindow() = application {
                             // available frame with ContentScale.Fit (responsive, aspect preserved).
                             // C4.4R.2 + H0.1-fix: CLAMP drag → UI draft paint + one applyOffset
                             // at end; offset preview uses light raster (no 250ms/saveFlow).
+                            // M2/M7: policy-aware first reveal + switch fade on Desktop preview.
                             Box(
                                 modifier = previewModifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center,
@@ -804,59 +806,69 @@ fun launchDesktopWindow() = application {
                                 val bmp = preview
                                 if (bmp != null) {
                                     val dragItem = selectedForStrip
-                                    Image(
-                                        bitmap = bmp,
-                                        contentDescription = "Watermark preview",
-                                        contentScale = ContentScale.Fit,
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(12.dp)
-                                            .desktopClampPreviewOffsetDrag(
-                                                enabled = !busy && dragItem != null,
-                                                selectionId = dragItem?.uri?.value.orEmpty(),
-                                                isClamp = waterMark.tileMode == WatermarkTileMode.CLAMP,
-                                                imageWidth = bmp.width.toFloat(),
-                                                imageHeight = bmp.height.toFloat(),
-                                                offsetX = dragItem?.offsetX ?: 0.5f,
-                                                offsetY = dragItem?.offsetY ?: 0.5f,
-                                                onOffsetDraft = { x, y ->
-                                                    val id = dragItem?.uri?.value.orEmpty()
-                                                    if (id.isEmpty()) return@desktopClampPreviewOffsetDrag
-                                                    clampDraft = Triple(id, x, y)
-                                                    offsetPreviewGeneration++
-                                                },
-                                                onOffsetDraftClear = {
-                                                    clampDraft = null
-                                                },
-                                                onOffsetCommit = { x, y ->
-                                                    // Fail-closed: live Session curImageInfo.uri must match drag.
-                                                    val dragUri = dragItem?.uri
-                                                        ?: return@desktopClampPreviewOffsetDrag
-                                                    val item = session.launchScreenUiStateFlow.value
-                                                        .curImageInfo
-                                                        ?.takeIf { it.uri == dragUri }
-                                                        ?: return@desktopClampPreviewOffsetDrag
-                                                    // H0.1-fix: sync commit; immediate light preview.
-                                                    val b = me.rosuh.easywatermark.ui.ClampDragBench
-                                                        .previewScope("desktop_offset_commit")
-                                                    session.applyOffset(
-                                                        item.copy(offsetX = x, offsetY = y),
-                                                    )
-                                                    b.mark("applyOffset")
-                                                    clampDraft = null
-                                                    offsetPreviewGeneration++
-                                                    b.mark("offsetPreviewGenerationBump")
-                                                    b.finish(
-                                                        mapOf(
-                                                            "offsetX" to x,
-                                                            "offsetY" to y,
-                                                            "debounceMs" to 0,
-                                                            "saveFlow" to false,
-                                                        ),
-                                                    )
-                                                },
-                                            ),
-                                    )
+                                    AnimatedPreviewSurface(
+                                        contentKey = dragItem?.uri?.value,
+                                        hasContent = true,
+                                        modifier = Modifier.fillMaxSize(),
+                                    ) {
+                                        Image(
+                                            bitmap = bmp,
+                                            contentDescription = "Watermark preview",
+                                            contentScale = ContentScale.Fit,
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(12.dp)
+                                                .desktopClampPreviewOffsetDrag(
+                                                    enabled = !busy && dragItem != null,
+                                                    selectionId = dragItem?.uri?.value.orEmpty(),
+                                                    isClamp = waterMark.tileMode ==
+                                                        WatermarkTileMode.CLAMP,
+                                                    imageWidth = bmp.width.toFloat(),
+                                                    imageHeight = bmp.height.toFloat(),
+                                                    offsetX = dragItem?.offsetX ?: 0.5f,
+                                                    offsetY = dragItem?.offsetY ?: 0.5f,
+                                                    onOffsetDraft = { x, y ->
+                                                        val id = dragItem?.uri?.value.orEmpty()
+                                                        if (id.isEmpty()) {
+                                                            return@desktopClampPreviewOffsetDrag
+                                                        }
+                                                        clampDraft = Triple(id, x, y)
+                                                        offsetPreviewGeneration++
+                                                    },
+                                                    onOffsetDraftClear = {
+                                                        clampDraft = null
+                                                    },
+                                                    onOffsetCommit = { x, y ->
+                                                        val dragUri = dragItem?.uri
+                                                            ?: return@desktopClampPreviewOffsetDrag
+                                                        val item = session
+                                                            .launchScreenUiStateFlow
+                                                            .value
+                                                            .curImageInfo
+                                                            ?.takeIf { it.uri == dragUri }
+                                                            ?: return@desktopClampPreviewOffsetDrag
+                                                        val b = me.rosuh.easywatermark.ui
+                                                            .ClampDragBench
+                                                            .previewScope("desktop_offset_commit")
+                                                        session.applyOffset(
+                                                            item.copy(offsetX = x, offsetY = y),
+                                                        )
+                                                        b.mark("applyOffset")
+                                                        clampDraft = null
+                                                        offsetPreviewGeneration++
+                                                        b.mark("offsetPreviewGenerationBump")
+                                                        b.finish(
+                                                            mapOf(
+                                                                "offsetX" to x,
+                                                                "offsetY" to y,
+                                                                "debounceMs" to 0,
+                                                                "saveFlow" to false,
+                                                            ),
+                                                        )
+                                                    },
+                                                ),
+                                        )
+                                    }
                                 } else {
                                     Text(
                                         text = status.ifBlank { "No image" },

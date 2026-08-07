@@ -76,6 +76,9 @@ object EwmMotionTokens {
     /** Export progress wipe (Ing / Success). */
     const val exportWipeMs: Int = 400
 
+    /** Export success check appear (prod [View.appear] ~200ms). */
+    const val exportCheckAppearMs: Int = 200
+
     /** Save sheet format block animateContentSize / gallery FAB enter-exit. */
     const val contentSizeMs: Int = 220
 
@@ -90,6 +93,27 @@ object EwmMotionTokens {
 
     /** Gallery [AnimatedTransitionHost] exit wait before dispose. */
     const val dialogHostExitMs: Int = 300
+
+    /** Gallery cell select scale (prod GalleryAdapter ObjectAnimator 200ms). */
+    const val gallerySelectMs: Int = 200
+
+    /** Gallery selected thumbnail scale factor (prod 0.8). */
+    const val gallerySelectScale: Float = 0.8f
+
+    /**
+     * Multi-image preview switch crossfade floor (aspect-similar switches stay snappy).
+     * Ceiling [previewCrossfadeMaxMs]; aspect-delta interpolates between them.
+     */
+    const val previewCrossfadeMinMs: Int = 180
+
+    /** Multi-image preview switch crossfade ceiling (large aspect deltas). */
+    const val previewCrossfadeMaxMs: Int = 320
+
+    /** First watermark preview alpha reveal (prod WaterMarkImageView drawableAlpha 450ms). */
+    const val firstPreviewRevealMs: Int = 450
+
+    /** Soft caret blink half-cycle in text content summary (decorative loop). */
+    const val textCaretBlinkMs: Int = 900
 }
 
 /** State colors (error / success washes) — not a full semantic palette. */

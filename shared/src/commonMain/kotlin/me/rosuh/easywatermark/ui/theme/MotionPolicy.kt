@@ -65,6 +65,23 @@ fun motionAllowsDecorativeLoop(policy: MotionPolicy): Boolean = policy == Motion
 fun motionAllowsTimedAnimation(policy: MotionPolicy): Boolean = policy != MotionPolicy.Off
 
 /**
+ * Aspect-aware multi-image preview crossfade duration under [policy].
+ * [aspectDelta] in 0..1 (0 = same aspect, 1 = extreme change). Off → 0.
+ */
+fun previewCrossfadeDurationMs(
+    policy: MotionPolicy,
+    aspectDelta: Float,
+    minFullMs: Int = EwmMotionTokens.previewCrossfadeMinMs,
+    maxFullMs: Int = EwmMotionTokens.previewCrossfadeMaxMs,
+): Int {
+    val minMs = motionDurationMs(policy, minFullMs)
+    val maxMs = motionDurationMs(policy, maxFullMs)
+    if (minMs <= 0 && maxMs <= 0) return 0
+    val t = aspectDelta.coerceIn(0f, 1f)
+    return (minMs + (maxMs - minMs) * t).toInt().coerceAtLeast(0)
+}
+
+/**
  * Map Android [Settings.Global.ANIMATOR_DURATION_SCALE] (and similar) to a policy.
  * - `0` → Off
  * - `(0, 0.5)` → Reduced
