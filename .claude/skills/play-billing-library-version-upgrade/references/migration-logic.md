@@ -2,8 +2,7 @@
 
 ### 1. Connection Management (The v8+ Reconnection Shift)
 
-**Intent**: Move from developer-managed state (manual retries) to
-library-managed state.
+**Intent**: Move from developer-managed state (manual retries) to library-managed state.
 
 - **Remove** : Manual `startConnection()` calls or retry timers inside `onServiceDisconnected()`.
 - **Add** : `.enableAutoServiceReconnection()` to `BillingClient.Builder`.
@@ -11,8 +10,7 @@ library-managed state.
 
 ### 2. Product Querying \& Models (The v5-v8 Architectural Shift)
 
-**Intent**: Support the "One Product, Multiple Offers" model introduced in v5
-and refined in v8.
+**Intent**: Support the "One Product, Multiple Offers" model introduced in v5 and refined in v8.
 
 - **Data Model Swap** :
   - **Legacy** : `SkuDetails` (1:1 mapping of ID to price).
@@ -20,13 +18,7 @@ and refined in v8.
 - **Result Handling (v8+ Logic)** :
   - **Change** : `queryProductDetailsAsync` no longer returns a list in the listener.
   - **New Intent** : You must receive a `QueryProductDetailsResult` object.
-  - **Refactor** : `kotlin
-    // PBL 8+ Pattern
-    billingClient.queryProductDetailsAsync(params) { result: QueryProductDetailsResult ->
-    val responseCode = result.billingResult.responseCode
-    val productDetailsList = result.productDetailsList // Retrieve list from result object
-    // Process list...
-    }`
+  - **Refactor** : `kotlin // PBL 8+ Pattern billingClient.queryProductDetailsAsync(params) { result: QueryProductDetailsResult -> val responseCode = result.billingResult.responseCode val productDetailsList = result.productDetailsList // Retrieve list from result object // Process list... }`
 
 ### 3. Subscription Modernization (v6 \& v7)
 
@@ -44,8 +36,7 @@ and refined in v8.
 
 ### 4. Purchase Handling \& History (v6+)
 
-**Intent**: Move away from local-only purchase caches to real-time status
-checks.
+**Intent**: Move away from local-only purchase caches to real-time status checks.
 
 - **Active Purchases** :
   - **Deprecated** : `queryPurchases()` (synchronous).
@@ -69,8 +60,7 @@ checks.
 
 ### 7. User-Facing Features (Post-Upgrade Recommendations)
 
-Once the upgrade is complete, the following features are enabled by these
-versions:
+Once the upgrade is complete, the following features are enabled by these versions:
 
 - **v7** : **Installments** (Monthly payments for annual plans).
 - **v8** : **Prepaid Plans** (Users can top-up time without auto-renewing).

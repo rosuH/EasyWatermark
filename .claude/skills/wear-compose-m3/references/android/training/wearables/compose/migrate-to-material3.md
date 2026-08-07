@@ -1,17 +1,13 @@
-[Material 3 Expressive](https://developer.android.com/design/ui/wear/guides/get-started) is the next evolution of Material Design. It includes
-updated theming, components, and personalization features like dynamic color.
+[Material 3 Expressive](https://developer.android.com/design/ui/wear/guides/get-started) is the next evolution of Material Design. It includes updated theming, components, and personalization features like dynamic color.
 
-This guide focuses on migrating from the [Wear Compose Material 2.5
-(androidx.wear.compose)](https://developer.android.com/jetpack/androidx/releases/wear-compose#wear_compose_version_15_2) Jetpack library to the [Wear Compose Material 3
-(androidx.wear.compose.material3)](https://developer.android.com/jetpack/androidx/releases/wear-compose-m3) Jetpack library for apps.
+This guide focuses on migrating from the [Wear Compose Material 2.5 (androidx.wear.compose)](https://developer.android.com/jetpack/androidx/releases/wear-compose#wear_compose_version_15_2) Jetpack library to the [Wear Compose Material 3 (androidx.wear.compose.material3)](https://developer.android.com/jetpack/androidx/releases/wear-compose-m3) Jetpack library for apps.
 
 > [!NOTE]
 > **Note:** This guide uses abbreviation "M3" to refer to the interchangeable terms of "Material 3 Expressive" and the equivalent Jetpack library for Compose on Wear OS (androidx.wear.compose.material3). The abbreviation "M2.5" is used to refer to the interchangeable terms of "Material 2.5" and the equivalent Jetpack library for Compose on Wear OS (androidx.wear.compose.material).
 
 ## Approaches
 
-For migrating your app code from M2.5 to M3, follow the same approach described
-in the [Compose Material migration phone guidance](https://developer.android.com/develop/ui/compose/designsystems/material2-material3), in particular:
+For migrating your app code from M2.5 to M3, follow the same approach described in the [Compose Material migration phone guidance](https://developer.android.com/develop/ui/compose/designsystems/material2-material3), in particular:
 
 - You shouldn't use both [M2.5 and M3 in a single app long-term](https://developer.android.com/develop/ui/compose/designsystems/material2-material3#approaches).
 - You should no longer use the Horologist Composables, Compose Layout, or Compose Material libraries. Instead, use the components in M3.
@@ -27,26 +23,18 @@ M3 has a separate package and version to M2.5:
 
 ### M3
 
-    implementation("androidx.wear.compose:compose-material3:1.7.0-alpha05")
+    implementation("androidx.wear.compose:compose-material3:1.7.0-alpha07")
 
 See the latest M3 versions on the [Wear Compose Material 3 releases page](https://developer.android.com/jetpack/androidx/releases/wear-compose-m3).
 
-Wear Compose Foundation library version 1.7.0-alpha05 introduced
-some new components that are designed to work with Material 3 components.
-Similarly, `SwipeDismissableNavHost` from Wear Compose Navigation library has an
-updated animation when running on Wear OS 6 (API level 36) or higher. When
-updating to Wear Compose Material 3 version, we suggest to also update the Wear
-Compose Foundation and Navigation libraries:
+Wear Compose Foundation library version 1.7.0-alpha07 introduced some new components that are designed to work with Material 3 components. Similarly, `SwipeDismissableNavHost` from Wear Compose Navigation library has an updated animation when running on Wear OS 6 (API level 36) or higher. When updating to Wear Compose Material 3 version, we suggest to also update the Wear Compose Foundation and Navigation libraries:
 
-    implementation("androidx.wear.compose:compose-foundation:1.7.0-alpha05")
-    implementation("androidx.wear.compose:compose-navigation:1.7.0-alpha05")
+    implementation("androidx.wear.compose:compose-foundation:1.7.0-alpha07")
+    implementation("androidx.wear.compose:compose-navigation:1.7.0-alpha07")
 
 ## Theme
 
-In both M2.5 and M3, the theme composable is named [`MaterialTheme`](https://developer.android.com/reference/kotlin/androidx/wear/compose/material3/package-summary#MaterialTheme(androidx.wear.compose.material3.ColorScheme,androidx.wear.compose.material3.Typography,androidx.wear.compose.material3.Shapes,androidx.wear.compose.material3.MotionScheme,kotlin.Function0)), but the
-import packages and parameters differ. In M3, the `Colors` parameter has been
-renamed to `ColorScheme` and `MotionScheme` has been introduced for implementing
-transitions.
+In both M2.5 and M3, the theme composable is named [`MaterialTheme`](https://developer.android.com/reference/kotlin/androidx/wear/compose/material3/package-summary#MaterialTheme(androidx.wear.compose.material3.ColorScheme,androidx.wear.compose.material3.Typography,androidx.wear.compose.material3.Shapes,androidx.wear.compose.material3.MotionScheme,kotlin.Function0)), but the import packages and parameters differ. In M3, the `Colors` parameter has been renamed to `ColorScheme` and `MotionScheme` has been introduced for implementing transitions.
 
 ### M2.5
 
@@ -61,6 +49,7 @@ transitions.
 
 ### M3
 
+<br />
 
 ```kotlin
 import androidx.wear.compose.material3.MaterialTheme
@@ -72,16 +61,14 @@ import androidx.wear.compose.material3.MaterialTheme
         motionScheme = MotionScheme.standard(),
         content = { /*content here*/ }
     )
+      
 ```
 
 <br />
 
 ### Color
 
-The color system in M3 is significantly different from M2.5. The number of color
-parameters has increased, they have different names, and they map differently to
-M3 components. In Compose, this applies to the M2.5 [`Colors`](https://developer.android.com/reference/kotlin/androidx/wear/compose/material/Colors) class, the M3
-[`ColorScheme`](https://developer.android.com/reference/kotlin/androidx/wear/compose/material3/ColorScheme) class, and related functions:
+The color system in M3 is significantly different from M2.5. The number of color parameters has increased, they have different names, and they map differently to M3 components. In Compose, this applies to the M2.5 [`Colors`](https://developer.android.com/reference/kotlin/androidx/wear/compose/material/Colors) class, the M3 [`ColorScheme`](https://developer.android.com/reference/kotlin/androidx/wear/compose/material3/ColorScheme) class, and related functions:
 
 ### M2.5
 
@@ -93,6 +80,7 @@ M3 components. In Compose, this applies to the M2.5 [`Colors`](https://developer
 
 ### M3
 
+<br />
 
 ```kotlin
 import androidx.wear.compose.material3.ColorScheme
@@ -100,6 +88,7 @@ import androidx.wear.compose.material3.ColorScheme
     val appColorScheme: ColorScheme = ColorScheme(
         // M3 ColorScheme parameters
     )
+      
 ```
 
 <br />
@@ -115,13 +104,11 @@ The following table describes the key differences between M2.5 and M3:
 
 #### Dynamic color theming
 
-A new feature in M3 is [dynamic color theming](https://m3.material.io/styles/color/dynamic-color/overview). If users change
-the watch face colors, the colors in the UI change to match.
+A new feature in M3 is [dynamic color theming](https://m3.material.io/styles/color/dynamic-color/overview). If users change the watch face colors, the colors in the UI change to match.
 
-Use the [`dynamicColorScheme`](https://developer.android.com/reference/kotlin/androidx/wear/compose/material3/package-summary#dynamicColorScheme(android.content.Context)) function to implement dynamic color scheme
-and provide a `defaultColorScheme` as a fallback in case dynamic color scheme is
-not available.
+Use the [`dynamicColorScheme`](https://developer.android.com/reference/kotlin/androidx/wear/compose/material3/package-summary#dynamicColorScheme(android.content.Context)) function to implement dynamic color scheme and provide a `defaultColorScheme` as a fallback in case dynamic color scheme is not available.
 
+<br />
 
 ```kotlin
 @Composable
@@ -131,14 +118,14 @@ fun myApp() {
 }
 
 internal val myBrandColors: ColorScheme = ColorScheme( /* Specify colors here */)
+   
 ```
 
 <br />
 
 ### Typography
 
-The [typography system](https://m3.material.io/styles/typography/overview) in M3 is different from M2.5 and it includes
-the following features:
+The [typography system](https://m3.material.io/styles/typography/overview) in M3 is different from M2.5 and it includes the following features:
 
 - Nine new [text styles](https://developer.android.com/reference/kotlin/androidx/wear/compose/material3/Typography#public-properties_1)
 - Flex fonts, which allow for customization of the type scales for different weights, widths, and roundness
@@ -154,6 +141,7 @@ the following features:
 
 ### M3
 
+<br />
 
 ```kotlin
 import androidx.wear.compose.material3.Typography
@@ -161,19 +149,18 @@ import androidx.wear.compose.material3.Typography
 val Typography = Typography(
     // M3 TextStyle parameters
 )
+      
 ```
 
 <br />
 
 #### Flex fonts
 
-Flex Fonts allow designers to specify the type width and weight for specific
-sizes.
+Flex Fonts allow designers to specify the type width and weight for specific sizes.
 
 #### Text styles
 
-The following [TextStyles](https://cs.android.com/androidx/platform/frameworks/support/+/androidx-main:wear/compose/compose-material3/src/main/java/androidx/wear/compose/material3/Typography.kt;l=115?q=displayLarge&ss=androidx/platform/frameworks/support) are available in M3. These are
-employed by default by various M3 components.
+The following [TextStyles](https://cs.android.com/androidx/platform/frameworks/support/+/androidx-main:wear/compose/compose-material3/src/main/java/androidx/wear/compose/material3/Typography.kt;l=115?q=displayLarge&ss=androidx/platform/frameworks/support) are available in M3. These are employed by default by various M3 components.
 
 | Typography | TextStyle |
 |---|---|
@@ -186,9 +173,7 @@ employed by default by various M3 components.
 
 ### Shape
 
-The [shape system](https://m3.material.io/styles/shape/overview) in M3 is different from M2.5. The number of shape
-parameters has increased, they're named differently, and they map differently to
-M3 components. The following shape sizes are available:
+The [shape system](https://m3.material.io/styles/shape/overview) in M3 is different from M2.5. The number of shape parameters has increased, they're named differently, and they map differently to M3 components. The following shape sizes are available:
 
 - Extra-small
 - Small
@@ -196,8 +181,7 @@ M3 components. The following shape sizes are available:
 - Large
 - Extra-large
 
-In Compose, this applies to the M2 [`Shapes`](https://developer.android.com/reference/kotlin/androidx/wear/compose/material/Shapes) class and the M3
-[`Shapes`](https://developer.android.com/reference/kotlin/androidx/compose/material3/Shapes) class:
+In Compose, this applies to the M2 [`Shapes`](https://developer.android.com/reference/kotlin/androidx/wear/compose/material/Shapes) class and the M3 [`Shapes`](https://developer.android.com/reference/kotlin/androidx/compose/material3/Shapes) class:
 
 ### M2.5
 
@@ -209,6 +193,7 @@ In Compose, this applies to the M2 [`Shapes`](https://developer.android.com/refe
 
 ### M3
 
+<br />
 
 ```kotlin
 import androidx.wear.compose.material3.Shapes
@@ -216,6 +201,7 @@ import androidx.wear.compose.material3.Shapes
 val Shapes = Shapes(
     // M3 Shapes parameters
 )
+      
 ```
 
 <br />
@@ -223,15 +209,13 @@ val Shapes = Shapes(
 > [!NOTE]
 > **Note:** For shapes, we generally recommend using the default Material 3 Wear shapes which are optimized for round devices.
 
-Use the Shapes parameter mapping from [Migrate from Material 2 to Material 3 in
-Compose](https://developer.android.com/training/wearables/compose/migrate-to-material3#shape) as a starting point.
+Use the Shapes parameter mapping from [Migrate from Material 2 to Material 3 in Compose](https://developer.android.com/training/wearables/compose/migrate-to-material3#shape) as a starting point.
 
 ### Shape morphing
 
 M3 introduces Shape Morphing: shapes now morph in response to interactions.
 
-Shape Morphing behavior is available as a variation on a number of round
-buttons, see the following list of buttons that support Shape Morphing:
+Shape Morphing behavior is available as a variation on a number of round buttons, see the following list of buttons that support Shape Morphing:
 
 | Buttons | Shape morphing function |
 |---|---|
@@ -242,12 +226,9 @@ buttons, see the following list of buttons that support Shape Morphing:
 
 ## Components and Layout
 
-Most components and layouts from M2.5 are available in M3. However, some M3
-components and layouts didn't exist in M2.5. Furthermore, some M3 components
-have more variations than their equivalents in M2.5.
+Most components and layouts from M2.5 are available in M3. However, some M3 components and layouts didn't exist in M2.5. Furthermore, some M3 components have more variations than their equivalents in M2.5.
 
-While some components require special considerations, the following function
-mappings are recommended as a starting point:
+While some components require special considerations, the following function mappings are recommended as a starting point:
 
 | Material 2.5 | Material 3 |
 |---|---|
@@ -326,10 +307,9 @@ Here is a full list of all the Material 3 components:
 | [androidx.wear.compose.material3.TimeText](https://developer.android.com/reference/kotlin/androidx/wear/compose/material3/package-summary#TimeText(androidx.compose.ui.Modifier,androidx.wear.compose.foundation.CurvedModifier,kotlin.Float,androidx.wear.compose.material3.TimeSource,androidx.compose.ui.text.TextStyle,androidx.compose.ui.graphics.Color,androidx.compose.foundation.layout.PaddingValues,kotlin.Function1)) | [androidx.wear.compose.material.TimeText](https://developer.android.com/reference/kotlin/androidx/wear/compose/material/package-summary#TimeText(androidx.compose.ui.Modifier,androidx.wear.compose.material.TimeSource,androidx.compose.ui.text.TextStyle,androidx.compose.foundation.layout.PaddingValues,kotlin.Function0,kotlin.Function1,kotlin.Function0,kotlin.Function1,kotlin.Function0,kotlin.Function1)) |
 | [androidx.wear.compose.material3.VerticalPagerScaffold](https://developer.android.com/reference/kotlin/androidx/wear/compose/material3/package-summary#VerticalPagerScaffold(androidx.wear.compose.foundation.pager.PagerState,androidx.compose.ui.Modifier,kotlin.Function1,androidx.compose.animation.core.AnimationSpec,androidx.wear.compose.foundation.rotary.RotaryScrollableBehavior,kotlin.Function2)) | New |
 
-And finally a list of some relevant components from Wear Compose Foundation
-library:
+And finally a list of some relevant components from Wear Compose Foundation library:
 
-| Wear Compose Foundation 1.7.0-alpha05 |   |
+| Wear Compose Foundation 1.7.0-alpha07 |   |
 |---|---|
 | [androidx.wear.compose.foundation.hierarchicalFocusGroup](https://developer.android.com/reference/kotlin/androidx/wear/compose/foundation/package-summary#(androidx.compose.ui.Modifier).hierarchicalFocusGroup(kotlin.Boolean)) | Used to annotate composables in an application, to keep track of the active part of the composition and coordinate focus. |
 | [androidx.wear.compose.foundation.pager.HorizontalPager](https://developer.android.com/reference/kotlin/androidx/wear/compose/foundation/pager/package-summary#HorizontalPager(androidx.wear.compose.foundation.pager.PagerState,androidx.compose.ui.Modifier,androidx.compose.foundation.layout.PaddingValues,kotlin.Int,androidx.compose.foundation.gestures.TargetedFlingBehavior,kotlin.Boolean,androidx.wear.compose.foundation.GestureInclusion,kotlin.Boolean,kotlin.Function1,androidx.wear.compose.foundation.rotary.RotaryScrollableBehavior,kotlin.Function2)) | A horizontally scrolling pager, built on the Compose Foundation components with Wear-specific enhancements to improve performance and adherence to Wear OS guidelines. |
@@ -339,10 +319,7 @@ library:
 
 ### Buttons
 
-Buttons in M3 are different from M2.5. The M2.5 Chip has been replaced by
-Button. [`Button`](https://developer.android.com/reference/kotlin/androidx/wear/compose/material3/package-summary#Button(kotlin.Function0,androidx.compose.ui.Modifier,kotlin.Function0,kotlin.String,kotlin.Boolean,androidx.compose.ui.graphics.Shape,androidx.wear.compose.material3.ButtonColors,androidx.compose.foundation.BorderStroke,androidx.compose.foundation.layout.PaddingValues,androidx.compose.foundation.interaction.MutableInteractionSource,androidx.wear.compose.material3.SurfaceTransformation,kotlin.Function1)) implementation provides default values for `Text`
-`maxLines` and `textAlign`. Those default values can be overridden in the `Text`
-element.
+Buttons in M3 are different from M2.5. The M2.5 Chip has been replaced by Button. [`Button`](https://developer.android.com/reference/kotlin/androidx/wear/compose/material3/package-summary#Button(kotlin.Function0,androidx.compose.ui.Modifier,kotlin.Function0,kotlin.String,kotlin.Boolean,androidx.compose.ui.graphics.Shape,androidx.wear.compose.material3.ButtonColors,androidx.compose.foundation.BorderStroke,androidx.compose.foundation.layout.PaddingValues,androidx.compose.foundation.interaction.MutableInteractionSource,androidx.wear.compose.material3.SurfaceTransformation,kotlin.Function1)) implementation provides default values for `Text` `maxLines` and `textAlign`. Those default values can be overridden in the `Text` element.
 
 ### M2.5
 
@@ -355,6 +332,7 @@ element.
 
 ### M3
 
+<br />
 
 ```kotlin
 //M3 Buttons
@@ -362,24 +340,18 @@ Button(onClick = { }){}
 CompactButton(onClick = { }){}
 IconButton(onClick = { }){}
 TextButton(onClick = { }){}
+      
 ```
 
 <br />
 
-M3 also includes new button variations. Check them out on the [Compose Material
-3 API reference overview](https://developer.android.com/jetpack/androidx/releases/wear-compose#wear_compose_version_15_2).
+M3 also includes new button variations. Check them out on the [Compose Material 3 API reference overview](https://developer.android.com/jetpack/androidx/releases/wear-compose#wear_compose_version_15_2).
 
-M3 introduces a new button: [`EdgeButton`](https://developer.android.com/reference/kotlin/androidx/wear/compose/material3/package-summary#EdgeButton(kotlin.Function0,androidx.compose.ui.Modifier,androidx.wear.compose.material3.EdgeButtonSize,kotlin.Boolean,androidx.wear.compose.material3.ButtonColors,androidx.compose.foundation.BorderStroke,androidx.compose.foundation.interaction.MutableInteractionSource,kotlin.Function1)). `EdgeButton` is available in 4
-different sizes: extra small, small, medium, and large. `EdgeButton`
-implementation provide a default value for `maxLines` depending on the size
-which can be customized.
+M3 introduces a new button: [`EdgeButton`](https://developer.android.com/reference/kotlin/androidx/wear/compose/material3/package-summary#EdgeButton(kotlin.Function0,androidx.compose.ui.Modifier,androidx.wear.compose.material3.EdgeButtonSize,kotlin.Boolean,androidx.wear.compose.material3.ButtonColors,androidx.compose.foundation.BorderStroke,androidx.compose.foundation.interaction.MutableInteractionSource,kotlin.Function1)). `EdgeButton` is available in 4 different sizes: extra small, small, medium, and large. `EdgeButton` implementation provide a default value for `maxLines` depending on the size which can be customized.
 
-If you are using `TransformingLazyColumn` or `ScalingLazyColumn`, pass the
-`EdgeButton` into the `ScreenScaffold` so that it morphs, changing its shape
-with scrolling, instead of adding an `EdgeButton` as the final list item. See
-the following code to check how to use `EdgeButton` with `ScreenScaffold` and
-`TransformingLazyColumn`.
+If you are using `TransformingLazyColumn` or `ScalingLazyColumn`, pass the `EdgeButton` into the `ScreenScaffold` so that it morphs, changing its shape with scrolling, instead of adding an `EdgeButton` as the final list item. See the following code to check how to use `EdgeButton` with `ScreenScaffold` and `TransformingLazyColumn`.
 
+<br />
 
 ```kotlin
 val state = rememberTransformingLazyColumnState()
@@ -401,26 +373,18 @@ ScreenScaffold(
         // additional code here
     }
 }
+   
 ```
 
 <br />
 
 ### Scaffold
 
-Scaffold in M3 is different from M2.5. In M3, `AppScaffold` and the new
-`ScreenScaffold` composable have replaced Scaffold. `AppScaffold` and
-`ScreenScaffold` lay out the structure of a screen and coordinate transitions of
-the `ScrollIndicator` and `TimeText` components.
+Scaffold in M3 is different from M2.5. In M3, `AppScaffold` and the new `ScreenScaffold` composable have replaced Scaffold. `AppScaffold` and `ScreenScaffold` lay out the structure of a screen and coordinate transitions of the `ScrollIndicator` and `TimeText` components.
 
-`AppScaffold` allows static screen elements such as `TimeText` to remain visible
-during in-app transitions such as swipe-to-dismiss. ​​It provides a slot for the
-main application content, which will usually be supplied by a navigation
-component such as `SwipeDismissableNavHost`
+`AppScaffold` allows static screen elements such as `TimeText` to remain visible during in-app transitions such as swipe-to-dismiss. ​​It provides a slot for the main application content, which will usually be supplied by a navigation component such as `SwipeDismissableNavHost`
 
-You declare one `AppScaffold` for Activity and use a `ScreenScaffold` for each
-Screen.
-`AppScaffold` adds a default `TimeText`component to the screens. You can
-override it if you want to customize it by using the `timeText` parameter.
+You declare one `AppScaffold` for Activity and use a `ScreenScaffold` for each Screen. `AppScaffold` adds a default `TimeText`component to the screens. You can override it if you want to customize it by using the `timeText` parameter.
 
 ### M2.5
 
@@ -430,6 +394,7 @@ override it if you want to customize it by using the `timeText` parameter.
 
 ### M3
 
+<br />
 
 ```kotlin
     AppScaffold {
@@ -466,6 +431,7 @@ fun MessageDetail(id: String) {
     ) { scaffoldPaddingValues ->
         // Screen content goes here
         // ...
+       
 ```
 
 <br />
@@ -473,20 +439,13 @@ fun MessageDetail(id: String) {
 > [!NOTE]
 > **Note:** `AppScaffold` and `ScreenScaffold` from [Horologist](https://github.com/google/horologist) haven't been migrated to M3. To maintain correct scrolling behavior and `TimeText` elements, migrate to the `AppScaffold` and `ScreenScaffold` from M3.
 
-If you are using a `HorizontalPager` with [HorizontalPagerIndicator](https://developer.android.com/reference/kotlin/androidx/wear/compose/material/package-summary#HorizontalPageIndicator(androidx.wear.compose.material.PageIndicatorState,androidx.compose.ui.Modifier,androidx.wear.compose.material.PageIndicatorStyle,androidx.compose.ui.graphics.Color,androidx.compose.ui.graphics.Color,androidx.compose.ui.unit.Dp,androidx.compose.ui.unit.Dp,androidx.compose.ui.graphics.Shape)), you
-can migrate to `HorizontalPagerScaffold`. [`HorizontalPagerScaffold`](https://developer.android.com/reference/kotlin/androidx/wear/compose/material3/package-summary#HorizontalPagerScaffold(androidx.wear.compose.foundation.pager.PagerState,androidx.compose.ui.Modifier,kotlin.Function1,androidx.compose.animation.core.AnimationSpec,androidx.wear.compose.foundation.rotary.RotaryScrollableBehavior,kotlin.Function2)) is
-placed within an `AppScaffold`. `AppScaffold` and `HorizontalPagerScaffold` lay
-out the structure of a Pager and coordinate transitions of the
-`HorizontalPageIndicator` and `TimeText` components.
+If you are using a `HorizontalPager` with [HorizontalPagerIndicator](https://developer.android.com/reference/kotlin/androidx/wear/compose/material/package-summary#HorizontalPageIndicator(androidx.wear.compose.material.PageIndicatorState,androidx.compose.ui.Modifier,androidx.wear.compose.material.PageIndicatorStyle,androidx.compose.ui.graphics.Color,androidx.compose.ui.graphics.Color,androidx.compose.ui.unit.Dp,androidx.compose.ui.unit.Dp,androidx.compose.ui.graphics.Shape)), you can migrate to `HorizontalPagerScaffold`. [`HorizontalPagerScaffold`](https://developer.android.com/reference/kotlin/androidx/wear/compose/material3/package-summary#HorizontalPagerScaffold(androidx.wear.compose.foundation.pager.PagerState,androidx.compose.ui.Modifier,kotlin.Function1,androidx.compose.animation.core.AnimationSpec,androidx.wear.compose.foundation.rotary.RotaryScrollableBehavior,kotlin.Function2)) is placed within an `AppScaffold`. `AppScaffold` and `HorizontalPagerScaffold` lay out the structure of a Pager and coordinate transitions of the `HorizontalPageIndicator` and `TimeText` components.
 
-`HorizontalPagerScaffold` displays the `HorizontalPageIndicator` at the
-center-end of the screen by default and coordinates showing and hiding
-`TimeText` and `HorizontalPageIndicator` according to whether the `Pager` is
-being paged, this is determined by the `PagerState`.
+`HorizontalPagerScaffold` displays the `HorizontalPageIndicator` at the center-end of the screen by default and coordinates showing and hiding `TimeText` and `HorizontalPageIndicator` according to whether the `Pager` is being paged, this is determined by the `PagerState`.
 
-There's also a new `AnimatedPage` component, which animates a page within a
-Pager with a scaling and scrim effect based on its position.
+There's also a new `AnimatedPage` component, which animates a page within a Pager with a scaling and scrim effect based on its position.
 
+<br />
 
 ```kotlin
 AppScaffold {
@@ -531,13 +490,14 @@ AppScaffold {
         }
     }
 }
+   
 ```
 
 <br />
 
-Finally, M3 introduces a [`VerticalPagerScaffold`](https://developer.android.com/reference/kotlin/androidx/wear/compose/material3/package-summary#VerticalPagerScaffold(androidx.wear.compose.foundation.pager.PagerState,androidx.compose.ui.Modifier,kotlin.Function1,androidx.compose.animation.core.AnimationSpec,androidx.wear.compose.foundation.rotary.RotaryScrollableBehavior,kotlin.Function2)) which follows the same
-pattern as the `HorizontalPagerScaffold`:
+Finally, M3 introduces a [`VerticalPagerScaffold`](https://developer.android.com/reference/kotlin/androidx/wear/compose/material3/package-summary#VerticalPagerScaffold(androidx.wear.compose.foundation.pager.PagerState,androidx.compose.ui.Modifier,kotlin.Function1,androidx.compose.animation.core.AnimationSpec,androidx.wear.compose.foundation.rotary.RotaryScrollableBehavior,kotlin.Function2)) which follows the same pattern as the `HorizontalPagerScaffold`:
 
+<br />
 
 ```kotlin
 AppScaffold {
@@ -555,14 +515,14 @@ AppScaffold {
         }
     }
 }
+   
 ```
 
 <br />
 
 ### Placeholder
 
-There are some API changes between M2.5 and M3.
-`Placeholder.PlaceholderDefaults` now provides two modifiers:
+There are some API changes between M2.5 and M3. `Placeholder.PlaceholderDefaults` now provides two modifiers:
 
 - [`Modifier.placeholder`](https://developer.android.com/reference/kotlin/androidx/wear/compose/material3/package-summary#(androidx.compose.ui.Modifier).placeholder(androidx.wear.compose.material3.PlaceholderState,androidx.compose.ui.graphics.Shape,androidx.compose.ui.graphics.Color)), which is drawn instead of content that is not yet loaded
 - A placeholder shimmer effect [`Modifier.placeholderShimmer`](https://developer.android.com/reference/kotlin/androidx/wear/compose/material3/package-summary#(androidx.compose.ui.Modifier).placeholderShimmer(androidx.wear.compose.material3.PlaceholderState,androidx.compose.ui.graphics.Shape,androidx.compose.ui.graphics.Color)) which provides a placeholder shimmer effect which runs in an animation loop while waiting for the data to load.
@@ -581,30 +541,22 @@ See the following table for additional changes to the `Placeholder` component.
 
 ### SwipeDismissableNavHost
 
-`SwipeDismissableNavHost` is part of `wear.compose.navigation`. When this
-component is used with M3, the M3 MaterialTheme updates the
-`LocalSwipeToDismissBackgroundScrimColor` and
-`LocalSwipeToDismissContentScrimColor`.
+`SwipeDismissableNavHost` is part of `wear.compose.navigation`. When this component is used with M3, the M3 MaterialTheme updates the `LocalSwipeToDismissBackgroundScrimColor` and `LocalSwipeToDismissContentScrimColor`.
 
 ### TransformingLazyColumn
 
-`TransformingLazyColumn` is part of `wear.compose.lazy.foundation` and adds
-support for scaling and morphing animations on list items during scrolling ,
-enhancing the user experience. It is strongly recommended that apps migrate from
-`ScalingLazyColumn` to `TransformingLazyColumn`
+`TransformingLazyColumn` is part of `wear.compose.lazy.foundation` and adds support for scaling and morphing animations on list items during scrolling , enhancing the user experience. It is strongly recommended that apps migrate from `ScalingLazyColumn` to `TransformingLazyColumn`
 
-Similarly to `ScalingLazyColumn`, it provides
-`rememberTransformingLazyColumnState()` to create a
-`TransformingLazyColumnState` that is remembered across compositions.
+Similarly to `ScalingLazyColumn`, it provides `rememberTransformingLazyColumnState()` to create a `TransformingLazyColumnState` that is remembered across compositions.
 
 For adding scaling and morphing animations, add the following to each list item:
 
 - `Modifier.transformedHeight`, which lets you calculate transformed height of the items using a `TransformationSpec`, you can use `rememberTransformationSpec()` unless you need further customization.
 - A `SurfaceTransformation`
 
-To verify that the padding is correct at the top and bottom of the list, use the
-`minimumVerticalContentPadding` modifier.
+To verify that the padding is correct at the top and bottom of the list, use the `minimumVerticalContentPadding` modifier.
 
+<br />
 
 ```kotlin
 val columnState = rememberTransformingLazyColumnState()
@@ -652,14 +604,14 @@ ScreenScaffold(
         }
     }
 }
+   
 ```
 
 <br />
 
 ## Useful links
 
-To learn more about migrating from M2.5 to M3 in Compose, consult the following
-additional resources.
+To learn more about migrating from M2.5 to M3 in Compose, consult the following additional resources.
 
 ### Samples
 

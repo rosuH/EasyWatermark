@@ -144,4 +144,6 @@ class AnimatedActivity : ComponentActivity() {
         }
     }
 }
+
+   
 ```

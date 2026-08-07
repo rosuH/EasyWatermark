@@ -1,19 +1,16 @@
 <br />
 
+<br />
 
 Applicable XR devices This guidance helps you build experiences for these types of XR devices. [Learn about XR device types →](https://developer.android.com/develop/xr/devices) ![](https://developer.android.com/static/images/develop/xr/ai-glasses-icon.svg) Display Glasses [](https://developer.android.com/develop/xr/devices#audio-display) [Learn about XR device types →](https://developer.android.com/develop/xr/devices)
 
 <br />
 
-In Jetpack Compose Glimmer, the [`Icon`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/Icon.composable) component is a UI element for
-rendering single-color icons. Icons intelligently handle tinting and scaling so
-that they remain legible and visually consistent with the [`GlimmerTheme`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/GlimmerTheme.composable).
+In Jetpack Compose Glimmer, the [`Icon`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/Icon.composable) component is a UI element for rendering single-color icons. Icons intelligently handle tinting and scaling so that they remain legible and visually consistent with the [`GlimmerTheme`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/GlimmerTheme.composable).
 
 ## Sizes
 
-While icons default to the size provided by [`LocalIconSize`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/package-summary#LocalIconSize()), you can also
-use the three icon sizes provided to set an specific size. These sizes are also
-used by default for the following contexts:
+While icons default to the size provided by [`LocalIconSize`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/package-summary#LocalIconSize()), you can also use the three icon sizes provided to set an specific size. These sizes are also used by default for the following contexts:
 
 | Size token | Default usage |
 |---|---|
@@ -23,9 +20,7 @@ used by default for the following contexts:
 
 ## Icon sources
 
-Icons can accept [`ImageVector`](https://developer.android.com/reference/kotlin/androidx/compose/ui/graphics/vector/ImageVector), [`ImageBitmap`](https://developer.android.com/reference/kotlin/androidx/compose/ui/graphics/ImageBitmap), or [`Painter`](https://developer.android.com/reference/kotlin/androidx/compose/ui/graphics/painter/Painter) as
-their source. When defining your own icons, use `ImageVector` where possible to
-promote sharp rendering at any scale on display glasses.
+Icons can accept [`ImageVector`](https://developer.android.com/reference/kotlin/androidx/compose/ui/graphics/vector/ImageVector), [`ImageBitmap`](https://developer.android.com/reference/kotlin/androidx/compose/ui/graphics/ImageBitmap), or [`Painter`](https://developer.android.com/reference/kotlin/androidx/compose/ui/graphics/painter/Painter) as their source. When defining your own icons, use `ImageVector` where possible to promote sharp rendering at any scale on display glasses.
 
 ## Color and Tinting
 
@@ -36,9 +31,9 @@ promote sharp rendering at any scale on display glasses.
 
 ## Example: Basic icon within a surface
 
-The following code creates an icon placed inside a circular surface, utilizing
-the theme's primary color:
+The following code creates an icon placed inside a circular surface, utilizing the theme's primary color:
 
+<br />
 
 ```kotlin
 @Composable
@@ -62,6 +57,7 @@ fun IconSampleUsage() {
         }
     }
 }
+   
 ```
 
 <br />
@@ -70,6 +66,7 @@ fun IconSampleUsage() {
 
 The following code demonstrates the different icon sizes:
 
+<br />
 
 ```kotlin
 @Composable
@@ -85,6 +82,7 @@ fun IconSizesSample() {
         Icon(FavoriteIcon, "Localized description", Modifier.size(iconSizes.large))
     }
 }
+   
 ```
 
 <br />

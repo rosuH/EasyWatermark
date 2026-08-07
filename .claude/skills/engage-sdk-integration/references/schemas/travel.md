@@ -861,7 +861,7 @@ This file defines the schema for the TRAVEL vertical in the Engage SDK.
         }
       },
       "methods": {
-        "isServiceAvailable": null,
+        "isServiceAvailable": "ServiceAvailabilityRequest",
         "publishRecommendationClusters": "PublishRecommendationClustersRequest",
         "publishFeaturedCluster": "PublishFeaturedClusterRequest",
         "publishUserAccountManagementRequest": "PublishUserAccountManagementRequest",

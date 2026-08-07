@@ -86,7 +86,7 @@ This file defines the schema for the SHOPPING vertical in the Engage SDK.
         }
       },
       "methods": {
-        "isServiceAvailable": null,
+        "isServiceAvailable": "ServiceAvailabilityRequest",
         "publishRecommendationClusters": "PublishRecommendationClustersRequest",
         "publishFeaturedCluster": "PublishFeaturedClusterRequest",
         "publishShoppingCart": "PublishShoppingCartClusterRequest",

@@ -1,6 +1,6 @@
-When creating a Glimmer List component, refer to the following source code in
-`ListState.kt` for creating a state for the list:
+When creating a Glimmer List component, refer to the following source code in `GlimmerLazyListState.kt` for creating a state for the list:
 
+<br />
 
 ```kotlin
 /*
@@ -45,46 +45,49 @@ import androidx.compose.ui.layout.Remeasurement
 import androidx.compose.ui.layout.RemeasurementModifier
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
-import androidx.xr.glimmer.list.ListState.Companion.Saver
+import androidx.xr.glimmer.list.GlimmerLazyListState.Companion.Saver
 import kotlin.math.abs
 
 /**
- * Creates a [ListState] that is remembered across compositions.
+ * Creates a [GlimmerLazyListState] that is remembered across compositions.
  *
  * Changes to the provided initial values will **not** result in the state being recreated or
  * changed in any way if it has already been created.
  *
- * @param initialFirstVisibleItemIndex the initial value for [ListState.firstVisibleItemIndex]
+ * @param initialFirstVisibleItemIndex the initial value for
+ *   [GlimmerLazyListState.firstVisibleItemIndex]
  * @param initialFirstVisibleItemScrollOffset the initial value for
- *   [ListState.firstVisibleItemScrollOffset]
+ *   [GlimmerLazyListState.firstVisibleItemScrollOffset]
  */
 @Composable
-public fun rememberListState(
+public fun rememberGlimmerLazyListState(
     initialFirstVisibleItemIndex: Int = 0,
     initialFirstVisibleItemScrollOffset: Int = 0,
-): ListState =
-    rememberSaveable(saver = ListState.Saver) {
-        ListState(initialFirstVisibleItemIndex, initialFirstVisibleItemScrollOffset)
+): GlimmerLazyListState =
+    rememberSaveable(saver = GlimmerLazyListState.Saver) {
+        GlimmerLazyListState(initialFirstVisibleItemIndex, initialFirstVisibleItemScrollOffset)
     }
 
 /**
  * A state object that can be hoisted to control and observe scrolling.
  *
- * In most cases, this will be created via [rememberListState].
+ * In most cases, this will be created via [rememberGlimmerLazyListState].
  *
- * @param firstVisibleItemIndex the initial value for [ListState.firstVisibleItemIndex]
+ * @param firstVisibleItemIndex the initial value for [GlimmerLazyListState.firstVisibleItemIndex]
  * @param firstVisibleItemScrollOffset the initial value for
- *   [ListState.firstVisibleItemScrollOffset]
+ *   [GlimmerLazyListState.firstVisibleItemScrollOffset]
  */
-public class ListState(firstVisibleItemIndex: Int = 0, firstVisibleItemScrollOffset: Int = 0) :
-    ScrollableState {
+public class GlimmerLazyListState(
+    firstVisibleItemIndex: Int = 0,
+    firstVisibleItemScrollOffset: Int = 0,
+) : ScrollableState {
 
     private val backingState = ScrollableState { -onScroll(-it) }
 
     // TODO: b/414961654 - Consider making this abstraction around "anchor item".
     /** The holder class for the current scroll position. */
     private val scrollPosition =
-        GlimmerListScrollPosition(firstVisibleItemIndex, firstVisibleItemScrollOffset)
+        GlimmerLazyListScrollPosition(firstVisibleItemIndex, firstVisibleItemScrollOffset)
 
     /** Backing state for [layoutInfo] */
     internal val layoutInfoState = mutableStateOf(EmptyLazyListMeasureResult, neverEqualPolicy())
@@ -101,7 +104,7 @@ public class ListState(firstVisibleItemIndex: Int = 0, firstVisibleItemScrollOff
     internal val beyondBoundsInfo = LazyLayoutBeyondBoundsInfo()
 
     /** Includes information for requesting focus for children as the list scrolls. */
-    internal val autoFocusState = GlimmerListAutoFocusState()
+    internal val autoFocusState = GlimmerLazyListAutoFocusState()
 
     /** Stores currently pinned items which are always composed. */
     internal val pinnedItems = LazyLayoutPinnedItemList()
@@ -159,7 +162,7 @@ public class ListState(firstVisibleItemIndex: Int = 0, firstVisibleItemScrollOff
     internal val remeasurementModifier =
         object : RemeasurementModifier {
             override fun onRemeasurementAvailable(remeasurement: Remeasurement) {
-                this@ListState.remeasurement = remeasurement
+                this@GlimmerLazyListState.remeasurement = remeasurement
             }
         }
 
@@ -172,7 +175,7 @@ public class ListState(firstVisibleItemIndex: Int = 0, firstVisibleItemScrollOff
     /**
      * The index of the first item that is visible within the scrollable viewport area not including
      * items in the content padding region. For the first visible item that includes items in the
-     * content padding please use [ListLayoutInfo.visibleItemsInfo].
+     * content padding please use [GlimmerLazyListLayoutInfo.visibleItemsInfo].
      *
      * Note that this property is observable and if you use it in the composable function it will be
      * recomposed on every change causing potential performance issues.
@@ -191,8 +194,8 @@ public class ListState(firstVisibleItemIndex: Int = 0, firstVisibleItemScrollOff
         @FrequentlyChangingValue get() = scrollPosition.scrollOffset
 
     /**
-     * The object of [ListLayoutInfo] calculated during the last layout pass. For example, you can
-     * use it to calculate what items are currently visible.
+     * The object of [GlimmerLazyListLayoutInfo] calculated during the last layout pass. For
+     * example, you can use it to calculate what items are currently visible.
      *
      * Note that this property is observable and is updated after every scroll or remeasure. If you
      * use it in the composable function it will be recomposed on every change causing potential
@@ -202,7 +205,7 @@ public class ListState(firstVisibleItemIndex: Int = 0, firstVisibleItemScrollOff
      * If you want to run some side effects like sending an analytics event or updating a state
      * based on this value consider using "snapshotFlow":
      */
-    public val layoutInfo: ListLayoutInfo
+    public val layoutInfo: GlimmerLazyListLayoutInfo
         @FrequentlyChangingValue get() = layoutInfoState.value
 
     /**
@@ -225,7 +228,7 @@ public class ListState(firstVisibleItemIndex: Int = 0, firstVisibleItemScrollOff
      * visible one even given that its index has been changed.
      */
     internal fun updateScrollPositionIfTheFirstItemWasMoved(
-        itemProvider: GlimmerListItemProvider,
+        itemProvider: GlimmerLazyListItemProvider,
         firstItemIndex: Int,
     ): Int = scrollPosition.updateScrollPositionIfTheFirstItemWasMoved(itemProvider, firstItemIndex)
 
@@ -242,7 +245,7 @@ public class ListState(firstVisibleItemIndex: Int = 0, firstVisibleItemScrollOff
      *   [consumedScroll].
      */
     internal fun applyMeasureResult(
-        result: GlimmerListMeasureResult,
+        result: GlimmerLazyListMeasureResult,
         consumedScroll: Float,
         scrollToCarryOver: Float,
     ) {
@@ -314,8 +317,9 @@ public class ListState(firstVisibleItemIndex: Int = 0, firstVisibleItemScrollOff
                         if (this === EmptyLazyListMeasureResult) {
                             Int.MAX_VALUE
                         } else {
-                            this@ListState.firstVisibleItemIndex * visibleItemsAverageSize +
-                                this@ListState.firstVisibleItemScrollOffset
+                            this@GlimmerLazyListState.firstVisibleItemIndex *
+                                visibleItemsAverageSize +
+                                this@GlimmerLazyListState.firstVisibleItemScrollOffset
                         }
                     }
 
@@ -370,25 +374,28 @@ public class ListState(firstVisibleItemIndex: Int = 0, firstVisibleItemScrollOff
      */
     public suspend fun animateScrollToItem(@IntRange(from = 0) index: Int, scrollOffset: Int = 0) {
         scroll {
-            GlimmerListScrollScope(this@ListState, this)
+            GlimmerLazyListScrollScope(this@GlimmerLazyListState, this)
                 .animateScrollToItem(index, scrollOffset, NumberOfItemsToTeleport, density)
         }
     }
 
     public companion object {
-        /** The default [Saver] implementation for [ListState]. */
-        public val Saver: Saver<ListState, Any> =
+        /** The default [Saver] implementation for [GlimmerLazyListState]. */
+        public val Saver: Saver<GlimmerLazyListState, Any> =
             listSaver(
                 save = { listOf(it.firstVisibleItemIndex, it.firstVisibleItemScrollOffset) },
                 restore = {
-                    ListState(firstVisibleItemIndex = it[0], firstVisibleItemScrollOffset = it[1])
+                    GlimmerLazyListState(
+                        firstVisibleItemIndex = it[0],
+                        firstVisibleItemScrollOffset = it[1],
+                    )
                 },
             )
     }
 }
 
 private val EmptyLazyListMeasureResult =
-    GlimmerListMeasureResult(
+    GlimmerLazyListMeasureResult(
         firstVisibleItem = null,
         firstVisibleItemScrollOffset = 0,
         canScrollForward = false,
@@ -415,6 +422,8 @@ private val EmptyLazyListMeasureResult =
         density = Density(1f),
         childConstraints = Constraints(),
     )
+
+   
 ```
 
 <br />

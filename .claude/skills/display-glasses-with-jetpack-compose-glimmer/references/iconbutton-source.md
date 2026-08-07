@@ -1,6 +1,6 @@
-When creating a Glimmer Icon component, refer to the following source code in
-`IconButton.kt` for icon buttons:
+When creating a Glimmer Icon component, refer to the following source code in `IconButton.kt` for icon buttons:
 
+<br />
 
 ```kotlin
 /*
@@ -131,6 +131,8 @@ public object IconButtonDefaults {
     internal val iconSize: Dp
         get() = GlimmerTheme.iconSizes.small
 }
+
+   
 ```
 
 <br />

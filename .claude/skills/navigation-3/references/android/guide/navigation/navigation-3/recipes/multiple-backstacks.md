@@ -2,7 +2,7 @@
 
 This recipe demonstrates how to create multiple back stacks.
 
-The app has three top level routes: `RouteA`, `RouteB` and `RouteC`. These routes have sub routes `RouteA1`, `RouteB1` and `RouteC1` respectively. The content for the sub routes is a counter that can be used to verify state retention through configuration changes and process death.
+The app has three top level routes: `RouteA`, `RouteB` and `RouteC`. These routes have sub routes `RouteA1`, `RouteB1` and `RouteC1` respectively. `RouteA1` contains a 100-item scrollable list, while `RouteB1` and `RouteC1` contain counters used to verify state retention through configuration changes and process death.
 
 The app's navigation state is held in the `NavigationState` class. The state itself is created using `rememberNavigationState`.
 
@@ -14,6 +14,7 @@ Key behaviors:
 
 - This app follows the "exit through home" pattern where the user always exits through the starting back stack. This means that `RouteA`'s entries are *always* in the list of entries.
 - Navigating to a top level route that is not the starting route *replaces* the other entries. For example, navigating A-\>B-\>C would result in entries for A+C, B's entries are removed.
+- When a top-level route is reselected, for example if the user is on `RouteA` and taps `RouteA` on the navigation bar again, the `NavigationBar` signals the reselected key to `Navigator`, which emits it to a `Flow<NavKey>`. `RouteA1` observes this flow and, when it receives `RouteA`, resets its list scroll position to index 0.
 
 Important implementation details:
 
@@ -41,11 +42,16 @@ Important implementation details:
 package com.example.nav3recipes.multiplestacks
 
 import androidx.navigation3.runtime.NavKey
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 /**
  * Handles navigation events (forward and back) by updating the navigation state.
  */
 class Navigator(val state: NavigationState){
+    private val _reselectEvents = MutableSharedFlow<NavKey>(extraBufferCapacity = 1)
+    val reselectEvents = _reselectEvents.asSharedFlow()
+
     fun navigate(route: NavKey){
         if (route in state.backStacks.keys){
             // This is a top level route, just switch to it
@@ -53,6 +59,10 @@ class Navigator(val state: NavigationState){
         } else {
             state.backStacks[state.topLevelRoute]?.add(route)
         }
+    }
+
+    fun onReselect(route: NavKey) {
+        _reselectEvents.tryEmit(route)
     }
 
     fun goBack(){
@@ -68,6 +78,8 @@ class Navigator(val state: NavigationState){
         }
     }
 }
+
+   
 ```
 
 ```
@@ -204,6 +216,8 @@ class NavigationState(
             listOf(startRoute, topLevelRoute)
         }
 }
+
+   
 ```
 
 ```
@@ -225,10 +239,11 @@ class NavigationState(
 
 package com.example.nav3recipes.multiplestacks
 
-import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.Face
@@ -239,7 +254,9 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
@@ -277,7 +294,6 @@ data class NavBarItem(
 )
 
 class MultipleStacksActivity : ComponentActivity() {
-    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     override fun onCreate(savedInstanceState: Bundle?) {
         setEdgeToEdgeConfig()
         super.onCreate(savedInstanceState)
@@ -290,18 +306,26 @@ class MultipleStacksActivity : ComponentActivity() {
             val navigator = remember { Navigator(navigationState) }
 
             val entryProvider = entryProvider {
-                featureASection(onSubRouteClick = { navigator.navigate(RouteA1) })
+                featureASection(
+                    reselectEvents = navigator.reselectEvents,
+                    onSubRouteClick = { navigator.navigate(RouteA1) }
+                )
                 featureBSection(onSubRouteClick = { navigator.navigate(RouteB1) })
                 featureCSection(onSubRouteClick = { navigator.navigate(RouteC1) })
             }
 
-            Scaffold(bottomBar = {
+            Scaffold(contentWindowInsets = WindowInsets(0.dp), bottomBar = {
                 NavigationBar {
                     TOP_LEVEL_ROUTES.forEach { (key, value) ->
                         val isSelected = key == navigationState.topLevelRoute
                         NavigationBarItem(
                             selected = isSelected,
-                            onClick = { navigator.navigate(key) },
+                            onClick = {
+                                navigator.navigate(key)
+                                if (isSelected) {
+                                    navigator.onReselect(key)
+                                }
+                            },
                             icon = {
                                 Icon(
                                     imageVector = value.icon,
@@ -312,15 +336,18 @@ class MultipleStacksActivity : ComponentActivity() {
                         )
                     }
                 }
-            }) {
+            }) { innerPadding ->
                 NavDisplay(
                     entries = navigationState.toDecoratedEntries(entryProvider),
-                    onBack = { navigator.goBack() }
+                    onBack = { navigator.goBack() },
+                    modifier = Modifier.padding(innerPadding)
                 )
             }
         }
     }
 }
+
+   
 ```
 
 ```
@@ -343,13 +370,17 @@ class MultipleStacksActivity : ComponentActivity() {
 package com.example.nav3recipes.multiplestacks
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavKey
@@ -359,27 +390,34 @@ import com.example.nav3recipes.content.ContentOrange
 import com.example.nav3recipes.content.ContentPink
 import com.example.nav3recipes.content.ContentPurple
 import com.example.nav3recipes.content.ContentRed
+import kotlinx.coroutines.flow.Flow
 
 fun EntryProviderScope<NavKey>.featureASection(
+    reselectEvents: Flow<NavKey>,
     onSubRouteClick: () -> Unit,
 ) {
     entry<RouteA> {
         ContentRed("Route A") {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Button(onClick = dropUnlessResumed(block = onSubRouteClick)) {
-                    Text("Go to A1")
-                }
+            Button(onClick = dropUnlessResumed(block = onSubRouteClick)) {
+                Text("Go to A1")
             }
         }
     }
     entry<RouteA1> {
-        ContentPink("Route A1") {
-            var count by rememberSaveable {
-                mutableIntStateOf(0)
+        val scrollState = rememberLazyListState()
+        LaunchedEffect(reselectEvents) {
+            reselectEvents.collect { route ->
+                if (route == RouteA) {
+                    scrollState.scrollToItem(0)
+                }
             }
+        }
 
-            Button(onClick = { count++ }) {
-                Text("Value: $count")
+        ContentPink("Route A1") {
+            LazyColumn(state = scrollState) {
+                items(100) { index ->
+                    Text("Route A item ${index + 1}", fontSize = 24.sp)
+                }
             }
         }
     }
@@ -433,4 +471,6 @@ fun EntryProviderScope<NavKey>.featureCSection(
         }
     }
 }
+
+   
 ```

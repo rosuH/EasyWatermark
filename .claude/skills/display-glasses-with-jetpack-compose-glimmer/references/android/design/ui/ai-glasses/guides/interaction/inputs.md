@@ -1,15 +1,8 @@
-Glasses have multiple sources and types of interaction inputs, including
-hardware and touch, physical gesture, and voice.
+Glasses have multiple sources and types of interaction inputs, including hardware and touch, physical gesture, and voice.
 
 ## Hardware controls
 
-Glasses controls can vary depending on device model, but most will include a
-camera button, touchpad, display button, and power switch or button. Hardware
-controls have default interactions, and some can be remapped for your app.
-Consider that inputs for glasses are more 1-dimensional, where users can make
-one control input at a time, compared to touchscreen inputs. The glasses
-hardware controls have default interaction mapping, some of which are handled by
-the app, and others that are handled by the system.
+Glasses controls can vary depending on device model, but most will include a camera button, touchpad, display button, and power switch or button. Hardware controls have default interactions, and some can be remapped for your app. Consider that inputs for glasses are more 1-dimensional, where users can make one control input at a time, compared to touchscreen inputs. The glasses hardware controls have default interaction mapping, some of which are handled by the app, and others that are handled by the system.
 
 **The system will handle the following inputs:**
 
@@ -30,6 +23,7 @@ frame.](https://developer.android.com/static/images/design/ui/glasses/guides/gla
 
 ### AI Glasses
 
+<br />
 
 | Input | Gesture | Interaction affect |
 |---|---|---|
@@ -47,6 +41,7 @@ frame.](https://developer.android.com/static/images/design/ui/glasses/guides/gla
 
 ### AI Glasses with Display
 
+<br />
 
 | Input | Gesture | Interaction affect |
 |---|---|---|
@@ -63,5 +58,4 @@ frame.](https://developer.android.com/static/images/design/ui/glasses/guides/gla
 <br />
 
 ![Design elements should be anchored to the bottom of the
-frame.](https://developer.android.com/static/images/design/ui/glasses/guides/glasses_ixd_inputs_focus.png) On
-display focus states have a visual affordances.
+frame.](https://developer.android.com/static/images/design/ui/glasses/guides/glasses_ixd_inputs_focus.png) On display focus states have a visual affordances.

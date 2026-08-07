@@ -4,24 +4,15 @@ You can test your Compose app with well-established approaches and patterns.
 
 ### Test in isolation
 
-[`ComposeTestRule`](https://developer.android.com/reference/kotlin/androidx/compose/ui/test/junit4/ComposeTestRule) lets you start an activity displaying any composable:
-your full application, a single screen, or a small element. It's also a good
-practice to check that your composables are correctly encapsulated and they work
-independently, allowing for easier and more focused UI testing.
+[`ComposeTestRule`](https://developer.android.com/reference/kotlin/androidx/compose/ui/test/junit4/ComposeTestRule) lets you start an activity displaying any composable: your full application, a single screen, or a small element. It's also a good practice to check that your composables are correctly encapsulated and they work independently, allowing for easier and more focused UI testing.
 
-This doesn't mean you should *only* create unit UI tests. UI tests scoping
-larger parts of your UI are also very important.
+This doesn't mean you should *only* create unit UI tests. UI tests scoping larger parts of your UI are also very important.
 
 ### Access the activity and resources after setting your own content
 
-Oftentimes you need to set the content under test using
-`composeTestRule.setContent` and you also need to access activity resources, for
-example to assert that a displayed text matches a string resource. However, you
-can't call `setContent` on a rule created with `createAndroidComposeRule()` if
-the activity already calls it.
+Oftentimes you need to set the content under test using `composeTestRule.setContent` and you also need to access activity resources, for example to assert that a displayed text matches a string resource. However, you can't call `setContent` on a rule created with `createAndroidComposeRule()` if the activity already calls it.
 
-A common pattern to achieve this is to create an `AndroidComposeTestRule` using
-an empty activity such as [`ComponentActivity`](https://developer.android.com/reference/androidx/activity/ComponentActivity).
+A common pattern to achieve this is to create an `AndroidComposeTestRule` using an empty activity such as [`ComponentActivity`](https://developer.android.com/reference/androidx/activity/ComponentActivity).
 
     class MyComposeTest {
 
@@ -41,17 +32,13 @@ an empty activity such as [`ComponentActivity`](https://developer.android.com/re
         }
     }
 
-Note that `ComponentActivity` needs to be added to your app's
-`AndroidManifest.xml` file. Enable that by adding this dependency to your
-module:
+Note that `ComponentActivity` needs to be added to your app's `AndroidManifest.xml` file. Enable that by adding this dependency to your module:
 
     debugImplementation("androidx.compose.ui:ui-test-manifest:$compose_version")
 
 ### Custom semantics properties
 
-You can create custom [semantics](https://developer.android.com/develop/ui/compose/testing/semantics) properties to expose information to tests.
-To do this, define a new `SemanticsPropertyKey` and make it available using the
-`SemanticsPropertyReceiver`.
+You can create custom [semantics](https://developer.android.com/develop/ui/compose/testing/semantics) properties to expose information to tests. To do this, define a new `SemanticsPropertyKey` and make it available using the `SemanticsPropertyReceiver`.
 
     // Creates a semantics property of type Long.
     val PickedDateKey = SemanticsPropertyKey<Long>("PickedDate")
@@ -64,8 +51,7 @@ Now use that property in the `semantics` modifier:
         modifier = Modifier.semantics { pickedDate = datePickerValue }
     )
 
-From tests, use `SemanticsMatcher.expectValue` to assert the value of the
-property:
+From tests, use `SemanticsMatcher.expectValue` to assert the value of the property:
 
     composeTestRule
         .onNode(SemanticsMatcher.expectValue(PickedDateKey, 1445378400)) // 2015-10-21
@@ -76,12 +62,9 @@ property:
 
 ### Verify state restoration
 
-Verify that the state of your Compose elements is correctly restored when the
-activity or process is recreated. Perform such checks without relying on
-activity recreation with the [`StateRestorationTester`](https://developer.android.com/reference/kotlin/androidx/compose/ui/test/junit4/StateRestorationTester) class.
+Verify that the state of your Compose elements is correctly restored when the activity or process is recreated. Perform such checks without relying on activity recreation with the [`StateRestorationTester`](https://developer.android.com/reference/kotlin/androidx/compose/ui/test/junit4/StateRestorationTester) class.
 
-This class lets you simulate the recreation of a composable. It's especially
-useful to verify the implementation of [`rememberSaveable`](https://developer.android.com/reference/kotlin/androidx/compose/runtime/saveable/rememberSaveable.composable#rememberSaveable(kotlin.Array,androidx.compose.runtime.saveable.Saver,kotlin.String,kotlin.Function0)).
+This class lets you simulate the recreation of a composable. It's especially useful to verify the implementation of [`rememberSaveable`](https://developer.android.com/reference/kotlin/androidx/compose/runtime/saveable/rememberSaveable.composable#rememberSaveable(kotlin.Array,androidx.compose.runtime.saveable.Saver,kotlin.String,kotlin.Function0)).
 
 
     class MyStateRestorationTests {
@@ -106,40 +89,25 @@ useful to verify the implementation of [`rememberSaveable`](https://developer.an
 
 ### Test different device configurations
 
-Android apps need to adapt to many changing conditions: window sizes, locales,
-font sizes, dark and light themes, and more. Most of these conditions are
-derived from device-level values controlled by the user and exposed with the
-current [`Configuration`](https://developer.android.com/reference/android/content/res/Configuration) instance. Testing different configurations
-directly in a test is difficult since the test must configure device-level
-properties.
+Android apps need to adapt to many changing conditions: window sizes, locales, font sizes, dark and light themes, and more. Most of these conditions are derived from device-level values controlled by the user and exposed with the current [`Configuration`](https://developer.android.com/reference/android/content/res/Configuration) instance. Testing different configurations directly in a test is difficult since the test must configure device-level properties.
 
-[`DeviceConfigurationOverride`](https://developer.android.com/reference/kotlin/androidx/compose/ui/test/DeviceConfigurationOverride) is a test-only API that lets you simulate
-different device configurations in a localized way for the `@Composable` content
-under test.
+[`DeviceConfigurationOverride`](https://developer.android.com/reference/kotlin/androidx/compose/ui/test/DeviceConfigurationOverride) is a test-only API that lets you simulate different device configurations in a localized way for the `@Composable` content under test.
 
-The companion object of `DeviceConfigurationOverride` has the following
-extension functions, which override device-level configuration properties:
+The companion object of `DeviceConfigurationOverride` has the following extension functions, which override device-level configuration properties:
 
 - [`DeviceConfigurationOverride.DarkMode()`](https://developer.android.com/reference/kotlin/androidx/compose/ui/test/DeviceConfigurationOverride.Companion#(androidx.compose.ui.test.DeviceConfigurationOverride.Companion).DarkMode(kotlin.Boolean)): Overrides the system to dark theme or light theme.
-- [`DeviceConfigurationOverride.FontScale()`](https://developer.android.com/reference/kotlin/androidx/compose/ui/test/DeviceConfigurationOverride.Companion#(androidx.compose.ui.test.DeviceConfigurationOverride.Companion).FontScale(kotlin.Float)): Overrides the [system font
-  scale](https://developer.android.com/training/multiscreen/screendensities#TaskUseDP).
+- [`DeviceConfigurationOverride.FontScale()`](https://developer.android.com/reference/kotlin/androidx/compose/ui/test/DeviceConfigurationOverride.Companion#(androidx.compose.ui.test.DeviceConfigurationOverride.Companion).FontScale(kotlin.Float)): Overrides the [system font scale](https://developer.android.com/training/multiscreen/screendensities#TaskUseDP).
 - [`DeviceConfigurationOverride.FontWeightAdjustment()`](https://developer.android.com/reference/kotlin/androidx/compose/ui/test/DeviceConfigurationOverride.Companion#(androidx.compose.ui.test.DeviceConfigurationOverride.Companion).FontWeightAdjustment(kotlin.Int)): Overrides the system font weight adjustment.
 - [`DeviceConfigurationOverride.ForcedSize()`](https://developer.android.com/reference/kotlin/androidx/compose/ui/test/DeviceConfigurationOverride.Companion#(androidx.compose.ui.test.DeviceConfigurationOverride.Companion).ForcedSize(androidx.compose.ui.unit.DpSize)): Forces a specific amount of space regardless of device size.
-- [`DeviceConfigurationOverride.LayoutDirection()`](https://developer.android.com/reference/kotlin/androidx/compose/ui/test/DeviceConfigurationOverride.Companion#(androidx.compose.ui.test.DeviceConfigurationOverride.Companion).LayoutDirection(androidx.compose.ui.unit.LayoutDirection)): Overrides the [layout
-  direction](https://developer.android.com/training/basics/supporting-devices/languages#SupportLayoutMirroring) (left-to-right or right-to-left).
+- [`DeviceConfigurationOverride.LayoutDirection()`](https://developer.android.com/reference/kotlin/androidx/compose/ui/test/DeviceConfigurationOverride.Companion#(androidx.compose.ui.test.DeviceConfigurationOverride.Companion).LayoutDirection(androidx.compose.ui.unit.LayoutDirection)): Overrides the [layout direction](https://developer.android.com/training/basics/supporting-devices/languages#SupportLayoutMirroring) (left-to-right or right-to-left).
 - [`DeviceConfigurationOverride.Locales()`](https://developer.android.com/reference/kotlin/androidx/compose/ui/test/DeviceConfigurationOverride.Companion#(androidx.compose.ui.test.DeviceConfigurationOverride.Companion).Locales(androidx.compose.ui.text.intl.LocaleList)): Overrides the [locale](https://developer.android.com/guide/topics/resources/localization).
 - [`DeviceConfigurationOverride.RoundScreen()`](https://developer.android.com/reference/kotlin/androidx/compose/ui/test/DeviceConfigurationOverride.Companion#(androidx.compose.ui.test.DeviceConfigurationOverride.Companion).RoundScreen(kotlin.Boolean)): Overrides if the screen is [round](https://developer.android.com/design/ui/wear/guides/foundations/getting-started#design-for-round).
 
-To apply a specific override, wrap the content under test in a call to the
-[`DeviceConfigurationOverride()`](https://developer.android.com/reference/kotlin/androidx/compose/ui/test/DeviceConfigurationOverride.composable#DeviceConfigurationOverride(androidx.compose.ui.test.DeviceConfigurationOverride,kotlin.Function0)) top-level function, passing the override
-to apply as a parameter.
+To apply a specific override, wrap the content under test in a call to the [`DeviceConfigurationOverride()`](https://developer.android.com/reference/kotlin/androidx/compose/ui/test/DeviceConfigurationOverride.composable#DeviceConfigurationOverride(androidx.compose.ui.test.DeviceConfigurationOverride,kotlin.Function0)) top-level function, passing the override to apply as a parameter.
 
-For example, the following code applies the
-`DeviceConfigurationOverride.ForcedSize()` override to change the density
-locally, forcing the `MyScreen` composable to be rendered in a large landscape
-window, even if the device the test is running on doesn't support that window
-size directly:
+For example, the following code applies the `DeviceConfigurationOverride.ForcedSize()` override to change the density locally, forcing the `MyScreen` composable to be rendered in a large landscape window, even if the device the test is running on doesn't support that window size directly:
 
+<br />
 
 ```kotlin
 composeTestRule.setContent {
@@ -149,13 +117,14 @@ composeTestRule.setContent {
         MyScreen() // Will be rendered in the space for 1280dp by 800dp without clipping.
     }
 }
+   
 ```
 
 <br />
 
-To apply multiple overrides together, use
-[`DeviceConfigurationOverride.then()`](https://developer.android.com/reference/kotlin/androidx/compose/ui/test/DeviceConfigurationOverride#(androidx.compose.ui.test.DeviceConfigurationOverride).then(androidx.compose.ui.test.DeviceConfigurationOverride)):
+To apply multiple overrides together, use [`DeviceConfigurationOverride.then()`](https://developer.android.com/reference/kotlin/androidx/compose/ui/test/DeviceConfigurationOverride#(androidx.compose.ui.test.DeviceConfigurationOverride).then(androidx.compose.ui.test.DeviceConfigurationOverride)):
 
+<br />
 
 ```kotlin
 composeTestRule.setContent {
@@ -166,6 +135,7 @@ composeTestRule.setContent {
         Text(text = "text with increased scale and weight")
     }
 }
+   
 ```
 
 <br />

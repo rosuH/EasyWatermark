@@ -8,7 +8,7 @@ description: Provides a complete workflow for implementing verified email retrie
 license: Complete terms in LICENSE.txt
 metadata:
   author: Google LLC
-  last-updated: '2026-07-02'
+  last-updated: '2026-08-06'
   keywords:
   - implementation
   - Android
@@ -57,15 +57,11 @@ Email verification is applicable for the following use cases:
 
 ### Scope \& Pre-requisites
 
-**Crucial** : This skill focuses exclusively on the **Android client-side
-integration** . It does **not** implement the app's server-side cryptographic
-validation logic. Server-side validation of the returned credential is required
-for security and must be implemented in your backend.
+**Crucial** : This skill focuses exclusively on the **Android client-side integration** . It does **not** implement the app's server-side cryptographic validation logic. Server-side validation of the returned credential is required for security and must be implemented in your backend.
 
 ## Codebase exploration for Use Cases
 
-Get started with the following queries in project source code to find relevant
-screens with different use cases to implement verified email:
+Get started with the following queries in project source code to find relevant screens with different use cases to implement verified email:
 
 - `SignUpScreen`
 - `"Email address"`
@@ -76,14 +72,11 @@ screens with different use cases to implement verified email:
 
 ## Identifying Integration Points
 
-To implement this feature effectively, you must first locate the relevant
-flows in your codebase. To initiate, start with the following strategies to
-cater to different use cases using verified email:
+To implement this feature effectively, you must first locate the relevant flows in your codebase. To initiate, start with the following strategies to cater to different use cases using verified email:
 
 ### 1. Search for Navigation Routes
 
-If your app uses Navigation, search for routes or destinations related
-to authentication:
+If your app uses Navigation, search for routes or destinations related to authentication:
 
 Look for:
 
@@ -92,16 +85,14 @@ Look for:
 
 ### 2. Locate Authentication ViewModels
 
-Find the business logic handling user attributes and account creation, account
-recovery:
+Find the business logic handling user attributes and account creation, account recovery:
 
 - **Keywords** : `SignUpViewModel`, `AuthViewModel`, `RegistrationRepository`.
 - **Code Pattern** : Look for methods like `onCreateAccount`, `onRecoverAccount`, or `validateEmail`.
 
 ### 3. Find instances of reauthentication for sensitive actions
 
-For reauthentication use cases, find areas where users perform sensitive
-actions:
+For reauthentication use cases, find areas where users perform sensitive actions:
 
 - **Keywords** : `ChangePassword`, `UpdatePayment`, `DeleteAccount`, `UpdateDetails`, `EditUserDetails`
 
@@ -117,21 +108,20 @@ actions:
 - Leave a TODO for developers to handle the app's server-side validation and parsing.
 - Direct users to the home screen after API call success and show a snackbar with user details for reference purpose only.
 
-This guide describes how to implement verified email retrieval using the
-[Digital Credentials Verifier API](references/android/identity/digital-credentials/credential-verifier.md) through an [OpenID for Verifiable
-Presentations (OpenID4VP)](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html) request.
+## Overview
+
+This guide describes how to implement verified email retrieval using the [Digital Credentials Verifier API](references/android/identity/digital-credentials/credential-verifier.md) through an [OpenID for Verifiable Presentations (OpenID4VP)](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html) request.
 
 ## Add dependencies
 
-In your app's `build.gradle` file, add the following dependencies for Credential
-Manager:
+In your app's `build.gradle` file, add the following dependencies for Credential Manager:
 
 ### Kotlin
 
 ```kotlin
 dependencies {
-    implementation("androidx.credentials:credentials:1.7.0-alpha02")
-    implementation("androidx.credentials:credentials-play-services-auth:1.7.0-alpha02")
+    implementation("androidx.credentials:credentials:1.7.0-alpha03")
+    implementation("androidx.credentials:credentials-play-services-auth:1.7.0-alpha03")
 }
 ```
 
@@ -139,8 +129,8 @@ dependencies {
 
 ```groovy
 dependencies {
-    implementation "androidx.credentials:credentials:1.7.0-alpha02"
-    implementation "androidx.credentials:credentials-play-services-auth:1.7.0-alpha02"
+    implementation "androidx.credentials:credentials:1.7.0-alpha03"
+    implementation "androidx.credentials:credentials-play-services-auth:1.7.0-alpha03"
 }
 ```
 
@@ -154,14 +144,9 @@ Use your app or activity context to create a `CredentialManager` object.
 
 ## Construct the Digital Credential request
 
-To request a verified email, construct a [`GetCredentialRequest`](https://developer.android.com/reference/android/credentials/GetCredentialRequest)
-containing a [`GetDigitalCredentialOption`](https://developer.android.com/reference/androidx/credentials/GetDigitalCredentialOption). This option requires a
-`requestJson` string formatted as an OpenID for Verifiable Presentations
-(OpenID4VP) request.
+To request a verified email, construct a [`GetCredentialRequest`](https://developer.android.com/reference/android/credentials/GetCredentialRequest) containing a [`GetDigitalCredentialOption`](https://developer.android.com/reference/androidx/credentials/GetDigitalCredentialOption). This option requires a `requestJson` string formatted as an OpenID for Verifiable Presentations (OpenID4VP) request.
 
-The OpenID4VP request JSON must follow a specific structure. The current
-providers support a JSON structure with an outer `"digital": {"requests":
-[...]}` wrapper.
+The OpenID4VP request JSON must follow a specific structure. The current providers support a JSON structure with an outer `"digital": {"requests": [...]}` wrapper.
 
         val nonce = generateSecureRandomNonce()
 
@@ -206,26 +191,19 @@ providers support a JSON structure with an outer `"digital": {"requests":
 
 The request contains the following key information:
 
-- **DCQL query** : The `dcql_query` specifies the credential type and the
-  claims being requested (`email_verified`). You can request other claims to
-  determine the level of verification. A few possible claims are as follows:
+- **DCQL query** : The `dcql_query` specifies the credential type and the claims being requested (`email_verified`). You can request other claims to determine the level of verification. A few possible claims are as follows:
 
   - `email_verified`: In the response, this is a Boolean that indicates whether the email is verified.
   - `hd` (hosted domain): In the response, this is empty.
 
   > [!NOTE]
-  > **Note:** If `email_verified` is `true` and `hd` is empty in the response, it implies that the account is an authorized Google Account. Google does not issue [verifiable credentials](references/android/identity/digital-credentials/index.md) for Google Workspace Accounts. However, the `hd` field is present in verifiable credentials issued for non-workspace accounts. You are encouraged to implement handling this field to future-proof your app. If the email is non-@gmail.com, Google verified this email when the Google Account was created, but there is no freshness claim. Therefore, for non-Google emails, you should consider an additional challenge, such as an OTP, to verify the user. To understand the schema of the credential and the specific rules for validating fields like `email_verified`, refer to the [Google
-  > Identity guides](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token).
+  > **Note:** If `email_verified` is `true` and `hd` is empty in the response, it implies that the account is an authorized Google Account. Google does not issue [verifiable credentials](references/android/identity/digital-credentials/index.md) for Google Workspace Accounts. However, the `hd` field is present in verifiable credentials issued for non-workspace accounts. You are encouraged to implement handling this field to future-proof your app. If the email is non-@gmail.com, Google verified this email when the Google Account was created, but there is no freshness claim. Therefore, for non-Google emails, you should consider an additional challenge, such as an OTP, to verify the user. To understand the schema of the credential and the specific rules for validating fields like `email_verified`, refer to the [Google Identity guides](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token).
 
-- **nonce**: A unique, cryptographically secure random value is generated for
-  each request. This is critical for security, as it prevents replay attacks.
+- **nonce**: A unique, cryptographically secure random value is generated for each request. This is critical for security, as it prevents replay attacks.
 
-- `UserInfoCredential`: This value implies a specific type of digital
-  credential that contains user attributes. Including this in the request is
-  pivotal to distinguish the email verification use case.
+- `UserInfoCredential`: This value implies a specific type of digital credential that contains user attributes. Including this in the request is pivotal to distinguish the email verification use case.
 
-Next, wrap the `openId4vpRequest` JSON in a `GetDigitalCredentialOption`, create
-a `GetCredentialRequest`, and call `getCredential()`.
+Next, wrap the `openId4vpRequest` JSON in a `GetDigitalCredentialOption`, create a `GetCredentialRequest`, and call `getCredential()`.
 
 > [!NOTE]
 > **Note:** The `hd` and `email_verified` fields are hidden from users in Credential Manager's built-in UI. You cannot make a request with only these hidden fields- in case of such requests, the response is the [`GetCredentialCancellationException`](https://developer.android.com/reference/kotlin/androidx/credentials/exceptions/GetCredentialCancellationException).
@@ -261,15 +239,12 @@ Present the user with the request, using the Credential Manager built-in UI.
 
 ## Parse the response on the client
 
-After receiving the response, you can perform a preliminary parse on the client.
-This is useful for immediately updating the UI, for example, by showing the
-user's name.
+After receiving the response, you can perform a preliminary parse on the client. This is useful for immediately updating the UI, for example, by showing the user's name.
 
 > [!IMPORTANT]
 > **Important:** This step is not for validation. Full cryptographic verification must be performed on your server.
 
-The following code extracts the raw [Selective Disclosure JWT
-(SD-JWT)](https://datatracker.ietf.org/doc/rfc9901/) and uses a helper to decode its claims.
+The following code extracts the raw [Selective Disclosure JWT (SD-JWT)](https://datatracker.ietf.org/doc/rfc9901/) and uses a helper to decode its claims.
 
     // 1. Parse the outer JSON wrapper to get the `vp_token`
     val responseData = JSONObject(responseJsonString)
@@ -294,12 +269,9 @@ The following code extracts the raw [Selective Disclosure JWT
 
 ## Handle the response
 
-The Credential Manager API will return a [`DigitalCredential`](https://developer.android.com/reference/androidx/credentials/DigitalCredential)
-response.
+The Credential Manager API will return a [`DigitalCredential`](https://developer.android.com/reference/androidx/credentials/DigitalCredential) response.
 
-The following is an example of what the raw `responseJsonString` looks like, and
-what the claims look like after parsing the inner SD-JWT where you get
-additional metadata as well along with verified email:
+The following is an example of what the raw `responseJsonString` looks like, and what the claims look like after parsing the inner SD-JWT where you get additional metadata as well along with verified email:
 
     /*
     // Example of the raw JSON response from credential.credentialJson:
@@ -337,18 +309,11 @@ additional metadata as well along with verified email:
 
 ## Server-side validation for account creation
 
-Since the retrieved email is cryptographically verified, you can omit the email
-OTP verification step, significantly reducing sign-up friction and potentially
-increasing conversion. This process is best handled on your server. The client
-sends the raw response (containing the `vp_token`) and the original nonce to a
-new server endpoint.
+Since the retrieved email is cryptographically verified, you can omit the email OTP verification step, significantly reducing sign-up friction and potentially increasing conversion. This process is best handled on your server. The client sends the raw response (containing the `vp_token`) and the original nonce to a new server endpoint.
 
-For verification, your application must send the full `responseJsonString` to
-your server for cryptographic validation before creating an account or logging
-the user in.
+For verification, your application must send the full `responseJsonString` to your server for cryptographic validation before creating an account or logging the user in.
 
-The digital credential provides two critical levels of verification for your
-server:
+The digital credential provides two critical levels of verification for your server:
 
 - **Authenticity of the data** : Verifying the issuer (`iss`) URL and the `SD-JWT` signature proves that a trusted authority issued this data.
 - **Identity of the presenter** : Verifying the `cnf` field and the Key Binding (`kb`) signature confirms that the credential is being shared by the same device it was originally issued to, preventing it from being intercepted or used on another device.
@@ -359,15 +324,11 @@ The validation on the server must achieve the following:
 - **Verify signature**: Check the signature of the SD-JWT using the public keys (JWKs) available at https://verifiablecredentials-pa.googleapis.com/.well-known/vc-public-jwks.
 
 > [!NOTE]
-> **Note:** Use a standard library (such as [@sd-jwt/sd-jwt-vc](https://datatracker.ietf.org/doc/rfc9901/) for Node.js) to perform the verification steps as outlined in the [OpenID for Verifiable
-> Presentations specification](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html).
+> **Note:** Use a standard library (such as [@sd-jwt/sd-jwt-vc](https://datatracker.ietf.org/doc/rfc9901/) for Node.js) to perform the verification steps as outlined in the [OpenID for Verifiable Presentations specification](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html).
 
-For full security, make sure that you also validate the `nonce` to prevent
-replay attacks.
+For full security, make sure that you also validate the `nonce` to prevent replay attacks.
 
-By combining these steps, your server can validate both the authenticity of the
-data and the identity of the presenter, ensuring the credential wasn't
-intercepted or spoofed before provisioning the new account.
+By combining these steps, your server can validate both the authenticity of the data and the identity of the presenter, ensuring the credential wasn't intercepted or spoofed before provisioning the new account.
 
     try {
         // Send the raw credential response and the original nonce to your server.
@@ -390,17 +351,11 @@ intercepted or spoofed before provisioning the new account.
 
 ## Passkey creation
 
-An optional but highly recommended next step after provisioning an account is to
-immediately [create a passkey](references/android/identity/passkeys/create-passkeys.md) for that account. This provides a secure,
-passwordless method for the user to sign in. This flow is identical to a
-standard passkey registration.
+An optional but highly recommended next step after provisioning an account is to immediately [create a passkey](references/android/identity/passkeys/create-passkeys.md) for that account. This provides a secure, passwordless method for the user to sign in. This flow is identical to a standard passkey registration.
 
 ## WebView support
 
-For the flow to work on a [`WebView`](https://developer.android.com/reference/android/webkit/WebView), developers should implement a
-[JavaScript bridge](references/android/identity/sign-in/credential-manager-webview.md) (JS Bridge) to facilitate the handoff. This bridge
-allows the `WebView` object to signal the native app, which can then perform the
-actual call to the Credential Manager API.
+For the flow to work on a [`WebView`](https://developer.android.com/reference/android/webkit/WebView), developers should implement a [JavaScript bridge](references/android/identity/sign-in/credential-manager-webview.md) (JS Bridge) to facilitate the handoff. This bridge allows the `WebView` object to signal the native app, which can then perform the actual call to the Credential Manager API.
 
 ## See also
 
@@ -409,8 +364,7 @@ actual call to the Credential Manager API.
 
 ## Critical Security Guidelines
 
-To maintain the integrity of the email verification flow, the following security
-requirements are mandatory:
+To maintain the integrity of the email verification flow, the following security requirements are mandatory:
 
 - **Server-side Validation** : Never trust claims parsed on the client for security-sensitive operations like account creation. Send the complete, raw `responseJsonString` and the original `nonce` to the app's server for full verification.
 - **Nonce Integrity** : Generate a unique, cryptographically secure nonce for every request and **never** reuse a nonce across multiple requests to prevent replay attacks.

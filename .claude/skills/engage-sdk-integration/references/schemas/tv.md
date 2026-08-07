@@ -1209,7 +1209,7 @@ This file defines the schema for the TV vertical in the Engage SDK.
         }
       },
       "methods": {
-        "isServiceAvailable": null,
+        "isServiceAvailable": "ServiceAvailabilityRequest",
         "publishRecommendationClusters": "PublishRecommendationClustersRequest",
         "publishFeaturedCluster": "PublishFeaturedClusterRequest",
         "publishContinuationCluster": "PublishContinuationClusterRequest",

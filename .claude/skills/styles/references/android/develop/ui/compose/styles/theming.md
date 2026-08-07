@@ -1,8 +1,7 @@
 > [!NOTE]
 > **Note:** Styles are `@Experimental` and likely to change in upcoming releases, with Material support for Styles added in future releases. If you have any feedback, [file Styles issues](https://issuetracker.google.com/issues/new?component=612128).
 
-There are several ways you can build out your apps using Styles. What you choose
-depends on where your app sits in relation to its adoption of Material Design:
+There are several ways you can build out your apps using Styles. What you choose depends on where your app sits in relation to its adoption of Material Design:
 
 1. Fully custom design system, not using Material Design
    - **Recommendation**: Define component styles that consume values from the theme, and expose style parameters on design system components.
@@ -11,15 +10,9 @@ depends on where your app sits in relation to its adoption of Material Design:
 
 ## The Style layer
 
-In the traditional Compose model, customization often relies heavily on
-overriding global tokens (colors and typography) provided by `MaterialTheme`, or
-wrapping and overriding properties of a design system composable where possible.
-Sometimes, there are properties within the Material layer that are not exposed
-through the subsystems or parameters, but are hardcoded defaults on the
-component itself.
+In the traditional Compose model, customization often relies heavily on overriding global tokens (colors and typography) provided by `MaterialTheme`, or wrapping and overriding properties of a design system composable where possible. Sometimes, there are properties within the Material layer that are not exposed through the subsystems or parameters, but are hardcoded defaults on the component itself.
 
-With the Styles API, there's a new layer of abstraction that's a bridge between
-subsystems and components: **Styles**.
+With the Styles API, there's a new layer of abstraction that's a bridge between subsystems and components: **Styles**.
 
 | Layer | Responsibility | Example |
 |---|---|---|
@@ -32,11 +25,9 @@ subsystems and components: **Styles**.
 
 ### Atomic versus monolithic Styles
 
-With the Styles API, you can break down a Style into separate atomic styles.
-Instead of defining complex, component-specific styles like `baseButtonStyle`,
-you can also create small, single-purpose utility styles. These act as your
-"atoms".
+With the Styles API, you can break down a Style into separate atomic styles. Instead of defining complex, component-specific styles like `baseButtonStyle`, you can also create small, single-purpose utility styles. These act as your "atoms".
 
+<br />
 
 ```kotlin
 // Define single-purpose "atomic" styles
@@ -69,18 +60,17 @@ val interactiveShadowAtomic = Style {
         }
     }
 }
+
+   
 ```
 
 <br />
 
 #### Composition using "then"
 
-One of the powerful features of the new Styles API is the `then` operator, which
-lets you merge multiple `Style` objects. This lets you build a component using
-atomic utility classes.
+One of the powerful features of the new Styles API is the `then` operator, which lets you merge multiple `Style` objects. This lets you build a component using atomic utility classes.
 
 **Traditional (non-atomic)**:
-
 
 ```kotlin
 // One large monolithic style
@@ -89,49 +79,39 @@ val buttonStyle = Style {
     shape(RoundedCornerShape(8.dp))
     background(Color.Blue)
 }
+   
 ```
 
 <br />
 
 **Atomic refactor**:
 
-
 ```kotlin
 // Combine atoms to create the final appearance
 val buttonStyle = paddingAtomic then roundedCornerShapeAtomic then primaryBackgroundAtomic then interactiveShadowAtomic
+    
 ```
 
 <br />
 
 ## Adopt Styles in your design system
 
-Consider the following options when adopting Styles within your design system,
-depending on where in the spectrum your design system lies.
+Consider the following options when adopting Styles within your design system, depending on where in the spectrum your design system lies.
 
 ### Custom design system with Styles
 
-***Consider when**: You've been handed an extensive brand guide that is not
-based on Material Design, and you are not planning to use Material Design*.
+***Consider when**: You've been handed an extensive brand guide that is not based on Material Design, and you are not planning to use Material Design*.
 
-***Strategy**: Implement a fully custom design system, and expose styles as part
-of the theme*.
+***Strategy**: Implement a fully custom design system, and expose styles as part of the theme*.
 
-This option is the custom path if you don't use Material as your main design
-system language. You bypass `MaterialTheme` entirely for visual definitions and
-have created your [own custom theme already](https://developer.android.com/develop/ui/compose/designsystems/custom#implementing-fully-custom). You build a `CompanyTheme` that
-acts as a container for your Styles.
+This option is the custom path if you don't use Material as your main design system language. You bypass `MaterialTheme` entirely for visual definitions and have created your [own custom theme already](https://developer.android.com/develop/ui/compose/designsystems/custom#implementing-fully-custom). You build a `CompanyTheme` that acts as a container for your Styles.
 
 - **How it works** : Create a `CompanyTheme` object that holds `Style` objects for every component in your system. Your components (either wrappers around Material logic or custom `Box` or `Layout` implementations) consume these styles directly, and expose a `Style` parameter for consumers of your design system.
 - **The Style layer**: Styles are the primary definition of your design system. Tokens are named variables fed into these styles. This allows for deep customization, such as defining unique animations for state changes (for example, animating scale and color on press).
 
-If you are building out your own [custom theme](https://developer.android.com/develop/ui/compose/designsystems/custom) without using Material, and
-want to adopt styles, add your list of styles to your Theme. This lets you
-access your base styles from anywhere in your project.
+If you are building out your own [custom theme](https://developer.android.com/develop/ui/compose/designsystems/custom) without using Material, and want to adopt styles, add your list of styles to your Theme. This lets you access your base styles from anywhere in your project.
 
-1. Create a `Styles` class that stores the various styles in your application
-   and create the defaults. For example, in the Jetsnack app - the class is
-   named `JetsnackStyles`:
-
+1. Create a `Styles` class that stores the various styles in your application and create the defaults. For example, in the Jetsnack app - the class is named `JetsnackStyles`:
 
    ```kotlin
    object JetsnackStyles{
@@ -154,13 +134,12 @@ access your base styles from anywhere in your project.
            contentColor(colors.textPrimary)
        }
    }
+        
    ```
 
    <br />
 
-2. Provide `Styles` as part of your overall theme, and expose helper extension
-   functions on `StyleScope` to access the subsystems:
-
+2. Provide `Styles` as part of your overall theme, and expose helper extension functions on `StyleScope` to access the subsystems:
 
    ```kotlin
    @Immutable
@@ -215,12 +194,12 @@ access your base styles from anywhere in your project.
            )
        }
    }
+        
    ```
 
    <br />
 
 3. Access `JetsnackStyles` within your composable:
-
 
    ```kotlin
    @Composable
@@ -245,13 +224,9 @@ access your base styles from anywhere in your project.
            Text(text)
        }
    }
+        
    ```
 
    <br />
 
-Beyond global theme adoption, there are alternative strategies for incorporating
-`Styles` into your apps. You can leverage `Styles` inline for specific call
-sites or use static definitions when full theming capabilities are unnecessary.
-`Styles` shouldn't be swapped conditionally unless the whole style is
-fundamentally different. You should prefer accessing dynamic tokens inside a
-visual definition rather than switching between distinct style objects.
+Beyond global theme adoption, there are alternative strategies for incorporating `Styles` into your apps. You can leverage `Styles` inline for specific call sites or use static definitions when full theming capabilities are unnecessary. `Styles` shouldn't be swapped conditionally unless the whole style is fundamentally different. You should prefer accessing dynamic tokens inside a visual definition rather than switching between distinct style objects.

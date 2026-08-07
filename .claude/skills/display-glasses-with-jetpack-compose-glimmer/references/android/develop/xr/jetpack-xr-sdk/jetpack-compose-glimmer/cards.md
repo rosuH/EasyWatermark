@@ -1,27 +1,19 @@
 <br />
 
+<br />
 
 Applicable XR devices This guidance helps you build experiences for these types of XR devices. [Learn about XR device types →](https://developer.android.com/develop/xr/devices) ![](https://developer.android.com/static/images/develop/xr/ai-glasses-icon.svg) Display Glasses [](https://developer.android.com/develop/xr/devices#audio-display) [Learn about XR device types →](https://developer.android.com/develop/xr/devices)
 
 <br />
 
-In Jetpack Compose Glimmer, the [`Card`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/Card.composable) component serves as the primary
-container for related content, creating a clear visual boundary for digestible
-units of information. Cards are highly adaptable, supporting combinations of
-main content, optional titles, subtitles, and leading or trailing icons. Cards
-fill the maximum available width by default, are focusable, and you can also
-make them clickable. Cards support a vertical arrangement where the header image
-is top-most, followed by the title, subtitle, and body content.
+In Jetpack Compose Glimmer, the [`Card`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/Card.composable) component serves as the primary container for related content, creating a clear visual boundary for digestible units of information. Cards are highly adaptable, supporting combinations of main content, optional titles, subtitles, and leading or trailing icons. Cards fill the maximum available width by default, are focusable, and you can also make them clickable. Cards support a vertical arrangement where the header image is top-most, followed by the title, subtitle, and body content.
 
-Cards are built on the Jetpack Compose Glimmer [surface system](https://developer.android.com/develop/xr/jetpack-xr-sdk/jetpack-compose-glimmer/surface), so they
-inherit physical properties like depth effects, clipping, and consistent border
-highlights.
+Cards are built on the Jetpack Compose Glimmer [surface system](https://developer.android.com/develop/xr/jetpack-xr-sdk/jetpack-compose-glimmer/surface), so they inherit physical properties like depth effects, clipping, and consistent border highlights.
 ![](https://developer.android.com/static/images/design/ui/glasses/guides/glasses_components_cards.png) **Figure 1.** An example of some different styles of cards in Jetpack Compose Glimmer.
 
 ## Anatomy and slots
 
-A Jetpack Compose Glimmer Card is built from several specialized elements that
-let you customize its content and layout.
+A Jetpack Compose Glimmer Card is built from several specialized elements that let you customize its content and layout.
 
 | Slot | Description |
 |---|---|
@@ -42,8 +34,7 @@ The following defaults apply to cards:
 - **Header shape** : Uses [`RoundedCornerShape`](https://developer.android.com/reference/kotlin/androidx/compose/foundation/shape/package-summary#RoundedCornerShape(androidx.compose.ui.unit.Dp)) with `24.dp` corners
 - **Content padding** : Defaults to [`GlimmerTheme.componentSpacingValues.medium`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/ComponentSpacingValues#medium()). This affects the outermost padding around header images and the content container.
 - **Shape** : Defaults to [`GlimmerTheme.shapes.medium`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/Shapes#medium()).
-- **Text rendering** : Uses the default values from
-  [`GlimmerTheme.typography`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/GlimmerTheme#typography()) for the following slots:
+- **Text rendering** : Uses the default values from [`GlimmerTheme.typography`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/GlimmerTheme#typography()) for the following slots:
 
   - Title: [`bodyMedium`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/Typography#bodyMedium())
   - Subtitle: [`caption`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/Typography#caption())
@@ -53,12 +44,14 @@ The following defaults apply to cards:
 
 The following code creates a basic card:
 
+<br />
 
 ```kotlin
 @Composable
 fun CardSample() {
     Card { Text("This is a card") }
 }
+   
 ```
 
 <br />
@@ -67,6 +60,7 @@ fun CardSample() {
 
 The following code shows how to use multiple slots together to build a card.
 
+<br />
 
 ```kotlin
 @Composable
@@ -86,6 +80,7 @@ fun CardWithTitleAndLeadingIconAndHeaderAndAction() {
         Text("This is a card with a title, leading icon, header image, and action")
     }
 }
+   
 ```
 
 <br />

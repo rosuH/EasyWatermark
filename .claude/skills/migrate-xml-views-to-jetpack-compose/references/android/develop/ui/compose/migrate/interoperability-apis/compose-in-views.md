@@ -3,10 +3,9 @@
 
 You can add Compose-based UI into an existing app that uses a View-based design.
 
-To create a new, entirely Compose-based screen, have your
-activity call the `setContent()` method, and pass whatever composable functions
-you like.
+To create a new, entirely Compose-based screen, have your activity call the `setContent()` method, and pass whatever composable functions you like.
 
+<br />
 
 ```kotlin
 class ExampleActivity : ComponentActivity() {
@@ -25,6 +24,7 @@ class ExampleActivity : ComponentActivity() {
 fun Greeting(name: String) {
     Text(text = "Hello $name!")
 }
+   
 ```
 
 <br />
@@ -32,30 +32,17 @@ fun Greeting(name: String) {
 This code looks just like what you'd find in a Compose-only app.
 
 > [!CAUTION]
-> **Caution:** To use the `ComponentActivity.setContent`
-> method, add the `androidx.activity:activity-compose:$latestVersion`
-> dependency to your `build.gradle` file.
+> **Caution:** To use the `ComponentActivity.setContent` method, add the `androidx.activity:activity-compose:$latestVersion` dependency to your `build.gradle` file.
 >
-> See the [Activity releases page](https://developer.android.com/jetpack/androidx/releases/activity)
-> to find out the latest version.
+> See the [Activity releases page](https://developer.android.com/jetpack/androidx/releases/activity) to find out the latest version.
 
 ## `ViewCompositionStrategy` for `ComposeView`
 
-[`ViewCompositionStrategy`](https://developer.android.com/reference/kotlin/androidx/compose/ui/platform/ViewCompositionStrategy)
-defines when the Composition should be disposed. The default,
-[`ViewCompositionStrategy.Default`](https://developer.android.com/reference/kotlin/androidx/compose/ui/platform/ViewCompositionStrategy#Default()),
-disposes the Composition when the underlying
-[`ComposeView`](https://developer.android.com/reference/kotlin/androidx/compose/ui/platform/ComposeView)
-detaches from the window, unless it is part of a pooling container such as a
-`RecyclerView`. In a single-Activity Compose-only app, this default behavior is
-what you would want, however, if you are incrementally adding Compose in your
-codebase, this behavior may cause state loss in some scenarios.
+[`ViewCompositionStrategy`](https://developer.android.com/reference/kotlin/androidx/compose/ui/platform/ViewCompositionStrategy) defines when the Composition should be disposed. The default, [`ViewCompositionStrategy.Default`](https://developer.android.com/reference/kotlin/androidx/compose/ui/platform/ViewCompositionStrategy#Default()), disposes the Composition when the underlying [`ComposeView`](https://developer.android.com/reference/kotlin/androidx/compose/ui/platform/ComposeView) detaches from the window, unless it is part of a pooling container such as a `RecyclerView`. In a single-Activity Compose-only app, this default behavior is what you would want, however, if you are incrementally adding Compose in your codebase, this behavior may cause state loss in some scenarios.
 
-To change the `ViewCompositionStrategy`, call the [`setViewCompositionStrategy()`](https://developer.android.com/reference/kotlin/androidx/compose/ui/platform/AbstractComposeView#setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy))
-method and provide a different strategy.
+To change the `ViewCompositionStrategy`, call the [`setViewCompositionStrategy()`](https://developer.android.com/reference/kotlin/androidx/compose/ui/platform/AbstractComposeView#setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy)) method and provide a different strategy.
 
-The table below summarizes the different scenarios you can use
-`ViewCompositionStrategy` in:
+The table below summarizes the different scenarios you can use `ViewCompositionStrategy` in:
 
 | `ViewCompositionStrategy` | Description and Interop Scenario |
 |---|---|
@@ -69,11 +56,7 @@ The table below summarizes the different scenarios you can use
 > [!NOTE]
 > **Note:** For hybrid apps with Views and Compose, that use Fragments, use `ComposeView` to wrap composables content and add to a Fragment during migration. For Compose-only apps, do not use Fragments and instead use the recommended Compose-only architecture with a single Activity and latest navigation libraries, like Navigation 3.
 
-If you want to incorporate Compose UI content in a fragment or an existing View
-layout, use [`ComposeView`](https://developer.android.com/reference/kotlin/androidx/compose/ui/platform/ComposeView)
-and call its
-[`setContent()`](https://developer.android.com/reference/kotlin/androidx/compose/ui/platform/ComposeView#setContent(kotlin.Function0))
-method. `ComposeView` is an Android [`View`](https://developer.android.com/reference/android/view/View).
+If you want to incorporate Compose UI content in a fragment or an existing View layout, use [`ComposeView`](https://developer.android.com/reference/kotlin/androidx/compose/ui/platform/ComposeView) and call its [`setContent()`](https://developer.android.com/reference/kotlin/androidx/compose/ui/platform/ComposeView#setContent(kotlin.Function0)) method. `ComposeView` is an Android [`View`](https://developer.android.com/reference/android/view/View).
 
 You can put the `ComposeView` in your XML layout just like any other `View`:
 
@@ -93,13 +76,12 @@ You can put the `ComposeView` in your XML layout just like any other `View`:
       android:layout_width="match_parent"
       android:layout_height="match_parent" />
 </LinearLayout>
+   
 ```
 
-In the Kotlin source code, inflate the layout from the [layout
-resource](https://developer.android.com/guide/topics/resources/layout-resource) defined in XML. Then get the
-`ComposeView` using the XML ID, set a Composition strategy that works best for
-the host `View`, and call `setContent()` to use Compose.
+In the Kotlin source code, inflate the layout from the [layout resource](https://developer.android.com/guide/topics/resources/layout-resource) defined in XML. Then get the `ComposeView` using the XML ID, set a Composition strategy that works best for the host `View`, and call `setContent()` to use Compose.
 
+<br />
 
 ```kotlin
 class ExampleFragmentXml : Fragment() {
@@ -125,13 +107,14 @@ class ExampleFragmentXml : Fragment() {
         return view
     }
 }
+   
 ```
 
 <br />
 
-Alternatively, you can also use view binding to obtain references to the
-`ComposeView` by referencing the generated binding class for your XML layout file:
+Alternatively, you can also use view binding to obtain references to the `ComposeView` by referencing the generated binding class for your XML layout file:
 
+<br />
 
 ```kotlin
 class ExampleFragment : Fragment() {
@@ -167,20 +150,18 @@ class ExampleFragment : Fragment() {
         _binding = null
     }
 }
+   
 ```
 
 <br />
 
 ![Two slightly different text elements, one above the other](https://developer.android.com/static/develop/ui/compose/images/interop-hellos.png)
 
-**Figure 1.** This shows the output of the code that adds Compose elements in a
-View UI hierarchy. The "Hello Android!" text is displayed by a
-`TextView` widget. The "Hello Compose!" text is displayed by a
-Compose text element.
+**Figure 1.** This shows the output of the code that adds Compose elements in a View UI hierarchy. The "Hello Android!" text is displayed by a `TextView` widget. The "Hello Compose!" text is displayed by a Compose text element.
 
-You can also include a `ComposeView` directly in a fragment if your full screen
-is built with Compose, which lets you avoid using an XML layout file entirely.
+You can also include a `ComposeView` directly in a fragment if your full screen is built with Compose, which lets you avoid using an XML layout file entirely.
 
+<br />
 
 ```kotlin
 class ExampleFragmentNoXml : Fragment() {
@@ -203,15 +184,16 @@ class ExampleFragmentNoXml : Fragment() {
         }
     }
 }
+   
 ```
 
 <br />
 
 ## Multiple `ComposeView` instances in the same layout
 
-If there are multiple `ComposeView` elements in the same layout, each one must
-have a unique ID for `savedInstanceState` to work.
+If there are multiple `ComposeView` elements in the same layout, each one must have a unique ID for `savedInstanceState` to work.
 
+<br />
 
 ```kotlin
 class ExampleFragmentMultipleComposeView : Fragment() {
@@ -242,6 +224,7 @@ class ExampleFragmentMultipleComposeView : Fragment() {
         )
     }
 }
+   
 ```
 
 <br />
@@ -253,18 +236,16 @@ The `ComposeView` IDs are defined in the `res/values/ids.xml` file:
   <item name="compose_view_x" type="id" />
   <item name="compose_view_y" type="id" />
 </resources>
+   
 ```
 
 ## Preview composables in Layout Editor
 
-You can also preview composables within the Layout Editor for your XML layout
-containing a `ComposeView`. Doing so lets you see how your composables look
-within a mixed Views and Compose layout.
+You can also preview composables within the Layout Editor for your XML layout containing a `ComposeView`. Doing so lets you see how your composables look within a mixed Views and Compose layout.
 
-Say you want to display the following composable in the Layout Editor. Note
-that composables annotated with `@Preview` are good candidates to preview in the
-Layout Editor.
+Say you want to display the following composable in the Layout Editor. Note that composables annotated with `@Preview` are good candidates to preview in the Layout Editor.
 
+<br />
 
 ```kotlin
 @Preview
@@ -272,13 +253,12 @@ Layout Editor.
 fun GreetingPreview() {
     Greeting(name = "Android")
 }
+   
 ```
 
 <br />
 
-To display this composable, use the `tools:composableName` tools attribute and
-set its value to the fully qualified name of the composable to preview in the
-layout.
+To display this composable, use the `tools:composableName` tools attribute and set its value to the fully qualified name of the composable to preview in the layout.
 
 ```xml
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -294,6 +274,7 @@ layout.
       android:layout_width="match_parent"/>
 
 </LinearLayout>
+   
 ```
 
 ![Composable displayed within layout editor](https://developer.android.com/static/develop/ui/compose/images/layout-editor-composable-preview.png)

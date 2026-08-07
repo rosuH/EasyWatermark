@@ -1,6 +1,6 @@
-When simulating depth on AI glasses using shadows, refer to the following source
-code in `DepthEffectLevels.kt`:
+When simulating depth on AI glasses using shadows, refer to the following source code in `DepthEffectLevels.kt`:
 
+<br />
 
 ```kotlin
 /*
@@ -100,6 +100,8 @@ private val DepthEffectLevel5 =
         layer1 = Shadow(radius = 56.dp, color = Color.Black, spread = 32.dp, alpha = 0.90f),
         layer2 = Shadow(radius = 12.dp, color = Color.Black, spread = 12.dp),
     )
+
+   
 ```
 
 <br />

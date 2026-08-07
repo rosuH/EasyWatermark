@@ -1,6 +1,6 @@
-When simulating depth on AI glasses using shadows, refer to the following source
-code in `DepthEffect.kt`:
+When simulating depth on AI glasses using shadows, refer to the following source code in `DepthEffect.kt`:
 
+<br />
 
 ```kotlin
 /*
@@ -108,8 +108,8 @@ public fun Modifier.depthEffect(depthEffect: DepthEffect?, shape: Shape): Modifi
 internal fun Modifier.depthEffect(
     from: DepthEffect?,
     to: DepthEffect?,
-    shap>e: Shape,
-    progress: () - Float,
+    shape: Shape,
+    progress: () -> Float,
 ): Modifier {
     // dropShadow draws the shadow, and then the content on top. So in order to get layer2 to
     // render on top of layer1, we draw layer1 first - this means that layer1's dropShadow will
@@ -139,8 +139,8 @@ private fun ShadowScope.updateFrom(shadow: Shadow) {
     this.blendMode = shadow.blendMode
 }
 
-private class DepthEffectElement(private val depthEffect: DepthEffect, private< val shape: Sha>pe) :
-    ModifierNodeElementDepthEffectNode() {
+private class DepthEffectElement(private val depthEffect: DepthEffect, private val shape: Shape) :
+    ModifierNodeElement<DepthEffectNode>() {
 
     override fun create(): DepthEffectNode = DepthEffectNode(depthEffect, shape)
 
@@ -216,10 +216,11 @@ internal class DepthEffectNode(private var depthEffect: DepthEffect, private var
         layer2ShadowPainter
             ?: requireGraphicsContext()
                 .shadowContext
-                .createDropShadowPainter(shape,ayer2)
+                .createDropShadowPainter(shape, depthEffect.layer2)
                 .also { layer2ShadowPainter = it }
 }
-DepthEffect.kt
+
+   
 ```
 
 <br />

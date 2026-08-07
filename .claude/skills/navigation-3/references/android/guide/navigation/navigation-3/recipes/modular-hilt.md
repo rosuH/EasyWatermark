@@ -75,6 +75,8 @@ private fun ProfileScreen() {
         )
     }
 }
+
+   
 ```
 
 ```
@@ -118,6 +120,8 @@ class HiltModularActivity : ComponentActivity() {
         }
     }
 }
+
+   
 ```
 
 ```
@@ -236,6 +240,8 @@ private fun ConversationDetailScreen(
         }
     }
 }
+
+   
 ```
 
 ```
@@ -261,6 +267,7 @@ class Navigator(startDestination: Any) {
         backStack.removeLastOrNull()
     }
 }
+   
 ```
 
 ```
@@ -280,4 +287,6 @@ object AppModule {
     @ActivityRetainedScoped
     fun provideNavigator() : Navigator = Navigator(startDestination = ConversationList)
 }
+
+   
 ```

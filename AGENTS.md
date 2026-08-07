@@ -109,6 +109,20 @@ EXIF policy: Android decode uses `ExifInterface(InputStream)` on API 23+ and bak
 
 ## Agent skills
 
+### Use skills proactively (required stance)
+
+Skills are not optional reference shelves — they are the preferred playbooks for matching work. **Load and follow the relevant skill before improvising.**
+
+1. **Match → open → follow.** At task start (or as soon as the task shape is clear), pick the best skill from the catalogs below, **read its `SKILL.md`**, and execute its workflow/checklists. Do not recreate a migration, edge-to-edge, Navigation 3, testing harness, R8, or CameraX plan from training data when a skill already owns that path.
+2. **Read references when the skill points at them.** Many Android skills ship `references/` (recipes, release notes, migration tables). Open those files instead of guessing API surface.
+3. **Prefer skill + offline docs over memory.** For Android/KMP APIs: skill guidance first, then `android docs search` / `android docs fetch` (see `android-cli`). Training data is the fallback, not the primary source.
+4. **Compose perf has a skill path too.** Jank, skip/recompose mysteries, stability, lazy scroll, baseline profiles, HotSwan → load the matching Compose skill before ad-hoc Layout Inspector thrashing.
+5. **Name the skill in your plan.** When a task maps to a skill, say which skill you are following (e.g. “following `migrate-xml-views-to-jetpack-compose` step 4”) so reviews can check skill fidelity.
+6. **Skip only when truly off-catalog.** Pure domain/session/render work with no platform-skill match, or an owner-explicit shortcut, may skip. If unsure, open the closest skill and use what applies.
+7. **Refresh, do not hand-edit upstream skills.** Official Google Android skills are managed by the `android` CLI. Update with `android update` (CLI) and `android skills add --all --project=.` (or a named skill). Do not patch `SKILL.md` / `references/` by hand unless the owner asks for a repo-local fork.
+
+**Install layout:** Google Android skills are mirrored under `skills/`, `.claude/skills/`, and `.agents/skills/` (same content after `android skills add`). Compose performance / HotSwan skills live under `.agents/skills/` (and are symlinked from `.claude/skills/`). Any of these roots is fine to open; prefer the path your agent already resolved.
+
 ### Compose skills (`.agents/skills/`)
 
 - **Performance audit & diagnosis:** `auditing-compose-performance` (four-phase audit orchestration), `debugging-recompositions` (Layout Inspector counts), `diagnosing-compose-stability` (compiler reports), `understanding-stability-inference`, `tracing-recompositions-at-runtime`, `visualizing-recomposition-cascades`.
@@ -117,11 +131,28 @@ EXIF policy: Android decode uses `ExifInterface(InputStream)` on API 23+ and bak
 - **Measurement & CI:** `generating-baseline-profiles`, `testing-compose-in-release-mode`, `enforcing-stability-in-ci`, `using-stability-analyzer-ide-plugin`.
 - **Hot reload (Compose HotSwan):** `setting-up-compose-hotswan`, `iterating-with-ai-and-mcp`, `preserving-state-across-reloads`, `understanding-hot-reload-limits`.
 
-### Android skills (`skills/`)
+### Android skills (`skills/` · also `.claude/skills/` · `.agents/skills/`)
 
-- **Daily drivers:** `android-cli` (`android` CLI + offline docs KB), `migrate-xml-views-to-jetpack-compose` (10-step parity migration), `jetpack-compose-m3`, `edge-to-edge`, `navigation-3`, `testing-setup`.
-- **Build & perf:** `agp-9-upgrade`, `r8-analyzer`, `perfetto-trace-analysis`, `perfetto-sql`.
-- **Platform features:** `camerax`, `camera1-to-camerax`, `adaptive`, `appfunctions`, `android-intent-security`, `engage-sdk-integration`, `play-billing-library-version-upgrade`, `verified-email`, `styles`, `wear-compose-m3`, `display-glasses-with-jetpack-compose-glimmer`.
+- **Daily drivers:** `android-cli` (`android` CLI + offline docs KB), `migrate-xml-views-to-jetpack-compose` (10-step parity migration), `edge-to-edge`, `navigation-3`, `testing-setup`, `styles` (experimental Compose Styles API).
+- **Build & perf:** `agp-9-upgrade` (**not** for KMP modules), `r8-analyzer`, `perfetto-trace-analysis`, `perfetto-sql`.
+- **Wear / TV / media (when relevant):** `wear-compose-m3`, `jetpack-compose-m3` (Wear Material3), `leanback-to-compose-tv-migration`, `media3-cast-integration`.
+- **Platform / Play / security:** `camerax`, `camera1-to-camerax`, `adaptive`, `appfunctions`, `android-intent-security`, `engage-sdk-integration`, `play-billing-library-version-upgrade`, `play-policy-insights`, `verified-email`, `display-glasses-with-jetpack-compose-glimmer`.
+
+**High-value triggers for this repo (open the skill early):**
+
+| Situation | Skill |
+|---|---|
+| XML → Compose layout / parity migration | `migrate-xml-views-to-jetpack-compose` |
+| System bars, IME, cutout, obscured UI | `edge-to-edge` |
+| Nav graph, back stack, deep links, multi-pane scenes | `navigation-3` |
+| Adaptive / large-screen / foldable layout | `adaptive` |
+| Unit / UI / screenshot / e2e harness setup | `testing-setup` |
+| Emulator, screenshots, layout tree, docs KB | `android-cli` |
+| R8 / keep rules / size | `r8-analyzer` |
+| Trace jank or latency | `perfetto-trace-analysis` (+ `perfetto-sql`) |
+| Intent export / redirection / PendingIntent | `android-intent-security` |
+| Play policy / Data Safety audit | `play-policy-insights` |
+| Scroll jank / recompose / stability | Compose skills above (`auditing-compose-performance` entry point) |
 
 ### Ops pointers
 

@@ -1,6 +1,6 @@
-When using surfaces to build a custom component, refer to the following source
-code in `Surface.kt`:
+When using surfaces to build a custom component, refer to the following source code in `Surface.kt`:
 
+<br />
 
 ```kotlin
 /*
@@ -744,6 +744,8 @@ private object HighlightShaderHelper {
         return shader
     }
 }
+
+   
 ```
 
 <br />

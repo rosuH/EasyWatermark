@@ -1,14 +1,8 @@
-When you introduce Compose in an existing app, you need to migrate your Material
-XML themes to use `MaterialTheme` for Compose components. This means your app's
-theming will have two sources of truth: the View-based theme and the Compose
-theme. Any changes to your styling need to be made in multiple places. Once
-your app is fully migrated to Compose, remove your XML theming.
+When you introduce Compose in an existing app, you need to migrate your Material XML themes to use `MaterialTheme` for Compose components. This means your app's theming will have two sources of truth: the View-based theme and the Compose theme. Any changes to your styling need to be made in multiple places. Once your app is fully migrated to Compose, remove your XML theming.
 
-You can use the [Material Theme Builder](https://m3.material.io/theme-builder)
-tool for migrating colors.
+You can use the [Material Theme Builder](https://m3.material.io/theme-builder) tool for migrating colors.
 
-When you start the migration from XML to Compose, migrate the theming to
-Material 3 Compose theming.
+When you start the migration from XML to Compose, migrate the theming to Material 3 Compose theming.
 
 ## Glossary
 
@@ -29,26 +23,19 @@ Before migrating, be aware of the following limitations:
 
 ## Step 1: Evaluate the design system
 
-Identify which design system is used in the XML View project.
-Analyze the migration path and necessary steps to migrate the existing design
-system to Material 3 in Compose.
+Identify which design system is used in the XML View project. Analyze the migration path and necessary steps to migrate the existing design system to Material 3 in Compose.
 
 ## Step 2: Identify theme source files
 
-In XML you write `?attr/colorPrimary`. In Compose, you access theme values
-with `MaterialTheme.*`:
+In XML you write `?attr/colorPrimary`. In Compose, you access theme values with `MaterialTheme.*`:
 
-Identify and locate all XML resources and files necessary for theming:
-light and dark color schemes and qualifiers, themes, shapes, dimensions,
-typography, styles and other relevant files.
+Identify and locate all XML resources and files necessary for theming: light and dark color schemes and qualifiers, themes, shapes, dimensions, typography, styles and other relevant files.
 
 Resources such as strings can be reused as is and don't need to be migrated.
 
 ## Step 3: Migrate colors
 
-**Key principle:** XML uses named hex colors.
-Material 3 uses *semantic roles* (e.g., `primary`, `onPrimary`, `surface`).
-Stop naming colors by their hex; name them by their role.
+**Key principle:** XML uses named hex colors. Material 3 uses *semantic roles* (e.g., `primary`, `onPrimary`, `surface`). Stop naming colors by their hex; name them by their role.
 
 Examples:
 
@@ -69,8 +56,7 @@ Examples:
 
 *** ** * ** ***
 
-Migrate the dark and light color schemes from XML to their equivalents in
-Material 3 Compose.
+Migrate the dark and light color schemes from XML to their equivalents in Material 3 Compose.
 
 > [!NOTE]
 > **Note:** Material 3 naming differs from Material 2 color naming.
@@ -117,20 +103,14 @@ XML styles (styles.xml) system defines styles and appearance of:
 3. Themes and overlays
 4. Shapes
 
-XML Views and components combine multiple attributes to create a style.
-They set their styles from styles.xml in two different ways:
+XML Views and components combine multiple attributes to create a style. They set their styles from styles.xml in two different ways:
 
 1. Setting "style="@style/..." directly and explicitly in the XML View
 2. Setting the style indirectly and implicitly for a component as part of a larger Theme (theme.xml)
 
-Styles have no **direct** equivalent in Compose - instead styles are passed as:
-parameters or modifiers to composables, using the
-[new, experimental Styles API](https://developer.android.com/develop/ui/compose/styles) defined in the AppTheme, or by creating
-layered, reusable composable variations with the defined style.
+Styles have no **direct** equivalent in Compose - instead styles are passed as: parameters or modifiers to composables, using the [new, experimental Styles API](https://developer.android.com/develop/ui/compose/styles) defined in the AppTheme, or by creating layered, reusable composable variations with the defined style.
 
-Provide separate @Composable functions named according to the style and the
-base component, to signify the difference in styling and use cases for those
-components.
+Provide separate @Composable functions named according to the style and the base component, to signify the difference in styling and use cases for those components.
 
 - **Pattern:** If an XML element uses a custom style (e.g., `style="@style/MyPrimaryButton"`), don't try to replicate the style inline. Instead, suggest creating a specific composable.
 - **Example:**
@@ -162,10 +142,6 @@ components.
 
 ## Step 6: Validate the theme migration
 
-Always use the existing theme values from the original XML theme as the source
-of truth for the new Material Theme in Compose.
-Never invent new theme values during migration, to maintain brand consistency
-and avoid visual regressions.
+Always use the existing theme values from the original XML theme as the source of truth for the new Material Theme in Compose. Never invent new theme values during migration, to maintain brand consistency and avoid visual regressions.
 
-Verify all new Compose theme values match the existing XML values.
-Don't hardcode any migrated values.
+Verify all new Compose theme values match the existing XML values. Don't hardcode any migrated values.

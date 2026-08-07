@@ -1,6 +1,6 @@
-When creating a Glimmer Stack component, refer to the following source code in
-`Stack.kt`:
+When creating a Glimmer Stack component, refer to the following source code in `Stack.kt`:
 
+<br />
 
 ```kotlin
 /*
@@ -364,6 +364,8 @@ private val SnapAnimationSpec =
         stiffness = 118f,
         visibilityThreshold = Int.VisibilityThreshold.toFloat(),
     )
+
+   
 ```
 
 <br />

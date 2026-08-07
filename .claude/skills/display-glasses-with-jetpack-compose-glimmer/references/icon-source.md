@@ -1,6 +1,6 @@
-When creating a Glimmer Icon component, refer to the following source code in
-`Icon.kt`:
+When creating a Glimmer Icon component, refer to the following source code in `Icon.kt`:
 
+<br />
 
 ```kotlin
 /*
@@ -384,6 +384,8 @@ private class IconColorFilterNode(
         }
     }
 }
+
+   
 ```
 
 <br />

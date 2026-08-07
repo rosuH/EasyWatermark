@@ -11,8 +11,7 @@
 
 - \[Rule\]: Disables R8 globally. **Action**: Remove.
 
-If there is -dontobfuscate, -dontoptimize or -dontshrink in the codebase,
-mention in this section
+If there is -dontobfuscate, -dontoptimize or -dontshrink in the codebase, mention in this section
 
 ## 3. Optimization summary
 
@@ -20,8 +19,7 @@ mention in this section
 - **Shrinking score**: \[X\]% of code will be optimized by R8 by removing unused classes, fields and methods. \[100-X\]% of codebase contains redundant classes, fields and methods that can't be removed by R8.
 - **Obfuscation score**: \[X\]% of the codebase is available for R8 to obfuscate.
 
-Increasing these scores increases the codebase available to R8 for
-optimizations.
+Increasing these scores increases the codebase available to R8 for optimizations.
 
 ## 4. Keep rules evaluation
 
@@ -42,10 +40,4 @@ optimizations.
 
 ## 6. Historical analysis summary
 
-*(Only include this section if a previous report existed. Summarize the changes
-in optimization scores here to track progress. For example:)* The previous app
-had scores: Optimization (XX%), Obfuscation (XX%), and Shrinking (XX%). The
-current app has scores: Optimization (YY%), Obfuscation (YY%), and Shrinking
-(YY%).
-**Change**: Optimization improved by ZZ%, Obfuscation improved by ZZ%, and
-Shrinking improved by ZZ%.
+*(Only include this section if a previous report existed. Summarize the changes in optimization scores here to track progress. For example:)* The previous app had scores: Optimization (XX%), Obfuscation (XX%), and Shrinking (XX%). The current app has scores: Optimization (YY%), Obfuscation (YY%), and Shrinking (YY%). **Change**: Optimization improved by ZZ%, Obfuscation improved by ZZ%, and Shrinking improved by ZZ%.

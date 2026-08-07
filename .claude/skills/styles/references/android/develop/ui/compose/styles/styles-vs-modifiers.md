@@ -1,7 +1,4 @@
-Styles differ from modifiers by design. Styles don't replace modifiers; instead,
-the two systems coexist with different goals. Internally, a Style is a modifier.
-You can do everything Styles can do with modifiers, but not all functionality in
-modifiers is available in Styles.
+Styles differ from modifiers by design. Styles don't replace modifiers; instead, the two systems coexist with different goals. Internally, a Style is a modifier. You can do everything Styles can do with modifiers, but not all functionality in modifiers is available in Styles.
 **Important:**
 
 - **Choose Styles if:** You need to override a default of an existing component, perform high-performance animations, or define a theme-wide set of properties for a component.
@@ -19,8 +16,7 @@ The following is a comparison between Styles versus modifiers:
 
 ## Limitations of modifiers
 
-Modifiers have many benefits in the current Compose landscape. However, Styles
-address some limitations of modifiers, which the following list describes:
+Modifiers have many benefits in the current Compose landscape. However, Styles address some limitations of modifiers, which the following list describes:
 
 - Modifiers are typically created in the Composition phase. Updates can force a full rerun of Composition, Layout, and Draw, even for small visual changes like color, unless you create lambda-based modifiers.
 - Conditional modifiers require disruptive if-else logic within fluent chains. Animating them requires manual state boilerplate and lacks a high-performance "auto-animate" mechanism.
@@ -29,18 +25,15 @@ address some limitations of modifiers, which the following list describes:
 
 ## Limitations of Styles
 
-While Styles can fill in some of the gaps that modifiers have, they also have
-some limitations, which show how they cannot entirely replace modifiers:
+While Styles can fill in some of the gaps that modifiers have, they also have some limitations, which show how they cannot entirely replace modifiers:
 
 - Styles are specialized Modifiers. While a modifier can do anything a Style does, the reverse is not true. Consequently, Styles can supplement, but cannot replace, modifiers.
 - Styles are limited to visual configuration (backgrounds, padding, borders). They cannot handle behaviors like click logic, gesture detection, or accessibility semantics.
-- Resolving a Style into its final state is *more expensive than applying a
-  single modifier*. The system must generate a data structure containing all possible property values, and the lookup of inherited properties further complicates this.
+- Resolving a Style into its final state is *more expensive than applying a single modifier*. The system must generate a data structure containing all possible property values, and the lookup of inherited properties further complicates this.
 
 ## When to use Styles over modifiers
 
-While the choice to use Styles is largely dependent on your app and use cases,
-the following guidance helps determine when to prefer a style over a modifier:
+While the choice to use Styles is largely dependent on your app and use cases, the following guidance helps determine when to prefer a style over a modifier:
 
 - **To achieve theme-wide consistency:** Styles are designed to be "lifted" into a global theme. Instead of passing repetitive Modifiers to every component, you can define a single Style in your theme to create a unified look across the entire app.
 - **When performing frequent animations:** Styles evaluate during the Layout and Draw phases, allowing properties like color or scale to animate while bypassing the Composition phase entirely. This significantly reduces performance overhead. Use a Style instead of a modifier when doing visual property animations.

@@ -1,11 +1,6 @@
-This guide contains instructions for developers to integrate their recommended
-video content, using the [Engage SDK](https://developer.android.com/guide/playcore/engage), to populate recommendations
-experiences across Google surfaces, such as TV, mobile, and tablet.
+This guide contains instructions for developers to integrate their recommended video content, using the [Engage SDK](https://developer.android.com/guide/playcore/engage), to populate recommendations experiences across Google surfaces, such as TV, mobile, and tablet.
 
-Recommendation leverages the **Recommendation cluster** to show movies and TV
-shows, from multiple apps in one UI grouping. Each developer partner can
-broadcast a maximum **of 25 entities** in each recommendations cluster and there
-can be a maximum **of 7** recommendation clusters per request.
+Recommendation leverages the **Recommendation cluster** to show movies and TV shows, from multiple apps in one UI grouping. Each developer partner can broadcast a maximum **of 25 entities** in each recommendations cluster and there can be a maximum **of 7** recommendation clusters per request.
 
 ## Pre-work
 
@@ -21,22 +16,17 @@ Complete the [Pre-work](https://developer.android.com/guide/playcore/engage/tv/g
 
 ## Integration
 
-`AppEngagePublishClient` publishes the recommendation cluster. Use the
-`publishRecommendationClusters` method to publish a recommendations object.
+`AppEngagePublishClient` publishes the recommendation cluster. Use the `publishRecommendationClusters` method to publish a recommendations object.
 
-Make sure to initialize the client and check for service availability as
-described in the [Getting Started guide](https://developer.android.com/guide/playcore/engage/tv/getting-started#common-integration).
+Make sure to initialize the client and check for service availability as described in the [Getting Started guide](https://developer.android.com/guide/playcore/engage/tv/getting-started#common-integration).
 
     client.publishRecommendationClusters(recommendationRequest)
 
 ### Upserting recommendation clusters
 
-Clusters are logical grouping of the entities. The following code examples
-explains how to build the clusters based on your preference and how to create a
-publishing request and upsert all clusters.
+Clusters are logical grouping of the entities. The following code examples explains how to build the clusters based on your preference and how to create a publishing request and upsert all clusters.
 
-The [`RecommendationClusterType`](https://developer.android.com/reference/com/google/android/engage/common/datamodel/RecommendationClusterType) determines how the
-cluster will be displayed.
+The [`RecommendationClusterType`](https://developer.android.com/reference/com/google/android/engage/common/datamodel/RecommendationClusterType) determines how the cluster will be displayed.
 
     // cluster for popular movies
     val recommendationCluster1 = RecommendationCluster
@@ -73,8 +63,7 @@ cluster will be displayed.
       .addRecommendationCluster(recommendationCluster2)
       .build()
 
-When the service receives the request, the following actions occur within one
-transaction:
+When the service receives the request, the following actions occur within one transaction:
 
 - Existing `RecommendationsCluster` data from the developer partner is removed.
 - Data from the request is parsed and stored in the updated `RecommendationsCluster`. In case of an error, the entire request is rejected and the existing state is maintained.
@@ -84,27 +73,17 @@ transaction:
 
 ### Cross-device sync
 
-`SyncAcrossDevices` flag controls whether a user's recommendations cluster data
-is shared with Google TV and available across their devices such as TV, phone,
-tablets. In order for the recommendation to work, it must be set to true.
+`SyncAcrossDevices` flag controls whether a user's recommendations cluster data is shared with Google TV and available across their devices such as TV, phone, tablets. In order for the recommendation to work, it must be set to true.
 
 ### Obtain consent
 
-The media application must provide a clear setting to enable or disable
-cross-device syncing. Explain the benefits to the user and store the user's
-preference once and apply it in `publishRecommendations` Request accordingly. To
-get the most out of cross-device feature, verify app obtains user
-consent and enables `SyncAcrossDevices` to `true`.
+The media application must provide a clear setting to enable or disable cross-device syncing. Explain the benefits to the user and store the user's preference once and apply it in `publishRecommendations` Request accordingly. To get the most out of cross-device feature, verify app obtains user consent and enables `SyncAcrossDevices` to `true`.
 
 ### Delete the Engage data
 
-To manually delete a user's data from the Google TV server before the standard
-60-day retention period, use the `client.deleteClusters()` method. Upon
-receiving the request, the service deletes all existing Engage
-data for the account profile, or for the entire account.
+To manually delete a user's data from the Google TV server before the standard 60-day retention period, use the `client.deleteClusters()` method. Upon receiving the request, the service deletes all existing Engage data for the account profile, or for the entire account.
 
-The [`DeleteReason`](https://developer.android.com/reference/com/google/android/engage/service/DeleteReason) enum defines the reason for data deletion.
-The following code removes recommendations on logout.
+The [`DeleteReason`](https://developer.android.com/reference/com/google/android/engage/service/DeleteReason) enum defines the reason for data deletion. The following code removes recommendations on logout.
 
     // If the user logs out from your media app, you must make the following call
     // to remove recommendations data from the current Google TV device, otherwise,
@@ -129,8 +108,7 @@ The following code removes recommendations on logout.
 
 ## Create entities
 
-The SDK has defined different entities to represent each item type. Following
-entities are supported for the Recommendation cluster:
+The SDK has defined different entities to represent each item type. Following entities are supported for the Recommendation cluster:
 
 1. [`MediaActionFeedEntity`](https://developer.android.com/reference/com/google/android/engage/video/datamodel/MediaActionFeedEntity)
 2. [`MovieEntity`](https://developer.android.com/reference/com/google/android/engage/video/datamodel/MovieEntity)
@@ -140,27 +118,21 @@ entities are supported for the Recommendation cluster:
 
 ### Provide descriptions
 
-Provide a short description for each entity; this description will be displayed
-when users hover over the entity, providing them with additional details.
+Provide a short description for each entity; this description will be displayed when users hover over the entity, providing them with additional details.
 
 ### Call to action text
 
-Provide an optional call to action text for each entity. This text will be
-displayed to the user to encourage engagement.
+Provide an optional call to action text for each entity. This text will be displayed to the user to encourage engagement.
 
 ### Tags
 
-Optionally provide a list of tags for each entity. Tags can be used for
-categorization and filtering.
+Optionally provide a list of tags for each entity. Tags can be used for categorization and filtering.
 
 ### Platform specific playBack URIs
 
-Create playback URIs for each supported platform: Android TV, Android, or iOS.
-This allows the system to select the appropriate URI for video playback on the
-respective platform.
+Create playback URIs for each supported platform: Android TV, Android, or iOS. This allows the system to select the appropriate URI for video playback on the respective platform.
 
-In the rare case when the playback URIs are identical for all platforms,
-repeat it for every platform.
+In the rare case when the playback URIs are identical for all platforms, repeat it for every platform.
 
     // Required. Set this when you want recommended entities to show up on
     // Google TV
@@ -198,12 +170,7 @@ repeat it for every platform.
 
 ### Poster images
 
-Poster images require a URI and pixel dimensions (height and width). Target
-different form factors by providing multiple poster images, but verify all
-images maintain a 16:9 aspect ratio and a minimum height of 200 pixels for
-correct display of the "Recommendations" entity, especially within Google's
-[Entertainment Space](https://support.google.com/entertainmentspace/answer/10346911). Images with a height less than 200
-pixels may not be shown.
+Poster images require a URI and pixel dimensions (height and width). Target different form factors by providing multiple poster images, but verify all images maintain a 16:9 aspect ratio and a minimum height of 200 pixels for correct display of the "Recommendations" entity, especially within Google's [Entertainment Space](https://support.google.com/entertainmentspace/answer/10346911). Images with a height less than 200 pixels may not be shown.
 
     Image image1 = new Image.Builder()
       .setImageUri(Uri.parse("http://www.example.com/entity_image1.png");)
@@ -222,9 +189,7 @@ pixels may not be shown.
 
 ### Recommendation reason
 
-Optionally provide a recommendation reason which can be used by Google
-TV to construct reasons as to why to suggest a specific Movie or TV Show to
-the user.
+Optionally provide a recommendation reason which can be used by Google TV to construct reasons as to why to suggest a specific Movie or TV Show to the user.
 
     //Allows us to construct reason: "Because it is top 10 on your Channel"
     val topOnPartner = RecommendationReasonTopOnPartner
@@ -271,11 +236,7 @@ the user.
 
 ### Display time window
 
-If an entity should only be available for a limited time, set a custom
-expiration time. Without an explicit expiration time, entities will
-automatically expire and be erased after 60 days. So set an expiration time only
-when the entities need to be expired sooner. Specify multiple such
-availability windows.
+If an entity should only be available for a limited time, set a custom expiration time. Without an explicit expiration time, entities will automatically expire and be erased after 60 days. So set an expiration time only when the entities need to be expired sooner. Specify multiple such availability windows.
 
     val window1 = DisplayTimeWindow
       .Builder()
@@ -290,12 +251,7 @@ availability windows.
 
 ### DataFeedElementId
 
-If you have integrated your Media catalogue or Media action feed with Google TV,
-you need not create separate entities for Movie or TV Show and instead you can
-create a [`MediaActionFeedEntity`](https://developer.android.com/reference/com/google/android/engage/video/datamodel/MediaActionFeedEntity) which includes the
-required field DataFeedElementId. This Id must be unique and must match with the
-ID in Media Action Feed as it helps to identify ingested feed content and
-perform media content lookups.
+If you have integrated your Media catalogue or Media action feed with Google TV, you need not create separate entities for Movie or TV Show and instead you can create a [`MediaActionFeedEntity`](https://developer.android.com/reference/com/google/android/engage/video/datamodel/MediaActionFeedEntity) which includes the required field DataFeedElementId. This Id must be unique and must match with the ID in Media Action Feed as it helps to identify ingested feed content and perform media content lookups.
 
     val id = "dataFeedElementId"
 
@@ -314,9 +270,7 @@ Here's an example of creating a `MovieEntity` with all the required fields:
       .addTag("Action")
       .build()
 
-You can provide additional data such as genres, content ratings, release date,
-recommendation reason and availability time windows, which may be used by Google
-TV for enhanced displays or filtering purposes.
+You can provide additional data such as genres, content ratings, release date, recommendation reason and availability time windows, which may be used by Google TV for enhanced displays or filtering purposes.
 
     val genres = Arrays.asList("Action", "Science fiction");
     val rating1 = RatingSystem.Builder().setAgencyName("MPAA").setRating("pg-13").build();
@@ -345,9 +299,7 @@ Here's an example of creating a `TvShowEntity` with all the required fields:
       .addTag("Drama")
       .build();
 
-Optionally provide additional data such as genres, content ratings,
-recommendation reason, offer price, season count or availability time window,
-which may be used by Google TV for enhanced displays or filtering purposes.
+Optionally provide additional data such as genres, content ratings, recommendation reason, offer price, season count or availability time window, which may be used by Google TV for enhanced displays or filtering purposes.
 
     val genres = Arrays.asList("Action", "Science fiction");
     val rating1 = RatingSystem.Builder()
@@ -372,8 +324,7 @@ which may be used by Google TV for enhanced displays or filtering purposes.
 
 ### `MediaActionFeedEntity`
 
-Here's an example of creating an `MediaActionFeedEntity` with all the required
-fields:
+Here's an example of creating an `MediaActionFeedEntity` with all the required fields:
 
     val mediaActionFeedEntity = MediaActionFeedEntity.Builder()
       .setDataFeedElementId(id)
@@ -381,9 +332,7 @@ fields:
       .addTag("Action")
       .build()
 
-Optionally provide additional data such as description, recommendation reason
-and display time window, which may be used by Google TV for enhanced displays or
-filtering purposes.
+Optionally provide additional data such as description, recommendation reason and display time window, which may be used by Google TV for enhanced displays or filtering purposes.
 
     val mediaActionFeedEntity = MediaActionFeedEntity.Builder()
       .setName("Movie name or TV Show name")
@@ -394,8 +343,7 @@ filtering purposes.
 
 ### `LiveTvChannelEntity`
 
-This represents a live TV channel. Here's an example of creating a
-`LiveTvChannelEntity` with all the required fields:
+This represents a live TV channel. Here's an example of creating a `LiveTvChannelEntity` with all the required fields:
 
     val liveTvChannelEntity = LiveTvChannelEntity.Builder()
       .setName("Channel Name")
@@ -409,8 +357,7 @@ This represents a live TV channel. Here's an example of creating a
       .addTag("News")
       .build()
 
-Optionally provide additional data such as content ratings or
-recommendation reason.
+Optionally provide additional data such as content ratings or recommendation reason.
 
     val rating1 = RatingSystem.Builder()
       .setAgencyName("MPAA")
@@ -426,9 +373,7 @@ recommendation reason.
 
 ### `LiveTvProgramEntity`
 
-This represents a live TV program card airing or scheduled to air on
-a live TV channel. Here's an example of creating a `LiveTvProgramEntity`
-with all the required fields:
+This represents a live TV program card airing or scheduled to air on a live TV channel. Here's an example of creating a `LiveTvProgramEntity` with all the required fields:
 
     val liveTvProgramEntity = LiveTvProgramEntity.Builder()
       // First set the channel information
@@ -450,8 +395,7 @@ with all the required fields:
       .addTag("Sports")
       .build()
 
-Optionally provide additional data such as content ratings, genres, or
-recommendation reason.
+Optionally provide additional data such as content ratings, genres, or recommendation reason.
 
     val rating1 = RatingSystem.Builder()
       .setAgencyName("MPAA")

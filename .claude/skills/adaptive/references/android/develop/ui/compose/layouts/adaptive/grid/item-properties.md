@@ -1,33 +1,18 @@
-While the `Grid` config defines the overall structure,
-you use the [`gridItem`](https://developer.android.com/reference/kotlin/androidx/compose/foundation/layout/GridScope#(androidx.compose.ui.Modifier).gridItem(kotlin.Int,kotlin.Int,kotlin.Int,kotlin.Int,androidx.compose.ui.Alignment)) modifier to control the position, spanning,
-and alignment of items within that structure.
+While the `Grid` config defines the overall structure, you use the [`gridItem`](https://developer.android.com/reference/kotlin/androidx/compose/foundation/layout/GridScope#(androidx.compose.ui.Modifier).gridItem(kotlin.Int,kotlin.Int,kotlin.Int,kotlin.Int,androidx.compose.ui.Alignment)) modifier to control the position, spanning, and alignment of items within that structure.
 
 ## Set the item position
 
-Place an item into a specific track or cell
-with the `row` and `column` parameters.
+Place an item into a specific track or cell with the `row` and `column` parameters.
 
-The `row` and `column` parameters specify the row and column track indexes
-that the item is placed in.
-Track indexes are 1-based---they start at one.
-Specifying only `row` or `column` (not both) places the item
-in the next available space in that track.
-Specifying both places the item into that cell.
+The `row` and `column` parameters specify the row and column track indexes that the item is placed in. Track indexes are 1-based---they start at one. Specifying only `row` or `column` (not both) places the item in the next available space in that track. Specifying both places the item into that cell.
 
-Use a positive integer to specify the track index from the start.
-For example, to place an item in the first row and column,
-use `gridItem(row = 1, column = 1)`.
+Use a positive integer to specify the track index from the start. For example, to place an item in the first row and column, use `gridItem(row = 1, column = 1)`.
 
-Use a negative integer to specify the track relative to the end.
-For example, to place an item in the second-to-last row and column, use
-`gridItem(row = -2, column = -2)`.
+Use a negative integer to specify the track relative to the end. For example, to place an item in the second-to-last row and column, use `gridItem(row = -2, column = -2)`.
 
-In the following example, Card **#2** is placed
-in the second row and the second column.
-Card **#3** is assigned to the last row (indexed by -1),
-where it automatically occupies
-the first available column in that track (Figure 1).
+In the following example, Card **#2** is placed in the second row and the second column. Card **#3** is assigned to the last row (indexed by -1), where it automatically occupies the first available column in that track (Figure 1).
 
+<br />
 
 ```kotlin
 Grid(
@@ -45,6 +30,7 @@ Grid(
     Card2(modifier = Modifier.gridItem(row = 2, column = 2))
     Card3(modifier = Modifier.gridItem(row = -1, column = -2))
 }
+   
 ```
 
 <br />
@@ -55,16 +41,9 @@ and Card #3 is placed in the first column in the third row.](https://developer.a
 
 ## Span rows and columns
 
-Use the `rowSpan` and `columnSpan` parameters
-to span an item over multiple cells.
-You can place a UI element into a [grid area](https://developer.android.com/develop/ui/compose/layouts/adaptive/grid#grid-area),
-which is the area consisting of several [grid cells](https://developer.android.com/develop/ui/compose/layouts/adaptive/grid#grid-cell).
-The `gridItem` modifier lets you specify the grid area
-with the `rowSpan` and `columnSpan` parameters.
-In the following example,
-Card **#1** is placed in the area consisting of two rows and two columns
-(Figure 2).
+Use the `rowSpan` and `columnSpan` parameters to span an item over multiple cells. You can place a UI element into a [grid area](https://developer.android.com/develop/ui/compose/layouts/adaptive/grid#grid-area), which is the area consisting of several [grid cells](https://developer.android.com/develop/ui/compose/layouts/adaptive/grid#grid-cell). The `gridItem` modifier lets you specify the grid area with the `rowSpan` and `columnSpan` parameters. In the following example, Card **#1** is placed in the area consisting of two rows and two columns (Figure 2).
 
+<br />
 
 ```kotlin
 Grid(
@@ -84,6 +63,7 @@ Grid(
     Card3()
     Card4(modifier = Modifier.gridItem(columnSpan = 3))
 }
+   
 ```
 
 <br />
@@ -92,11 +72,9 @@ Grid(
 
 ## Set the alignment in a grid area
 
-You can set the alignment of the UI element in a grid area
-by specifying it in the `alignment` parameter of the [`gridItem`](https://developer.android.com/reference/kotlin/androidx/compose/foundation/layout/GridScope#(androidx.compose.ui.Modifier).gridItem(kotlin.Int,kotlin.Int,kotlin.Int,kotlin.Int,androidx.compose.ui.Alignment)) modifier.
-In the following example, **#1** is placed in the center of the grid area
-consisting of two columns and two rows.
+You can set the alignment of the UI element in a grid area by specifying it in the `alignment` parameter of the [`gridItem`](https://developer.android.com/reference/kotlin/androidx/compose/foundation/layout/GridScope#(androidx.compose.ui.Modifier).gridItem(kotlin.Int,kotlin.Int,kotlin.Int,kotlin.Int,androidx.compose.ui.Alignment)) modifier. In the following example, **#1** is placed in the center of the grid area consisting of two columns and two rows.
 
+<br />
 
 ```kotlin
 Grid(
@@ -124,6 +102,7 @@ Grid(
     Card3()
     Card4(modifier = Modifier.gridItem(columnSpan = 3))
 }
+   
 ```
 
 <br />
@@ -133,13 +112,9 @@ consisting of two rows and two columns.](https://developer.android.com/static/de
 
 ## Auto-placement mixed with placed items
 
-A UI element in `Grid`
-that has no position specification undergoes auto-placement.
-This example shows how you can mix auto-placed elements
-and the UI elements with specified grid cells.
-Card **#2** and Card **#4** are placed in specified grid cells,
-and the other items are auto-placed.
+A UI element in `Grid` that has no position specification undergoes auto-placement. This example shows how you can mix auto-placed elements and the UI elements with specified grid cells. Card **#2** and Card **#4** are placed in specified grid cells, and the other items are auto-placed.
 
+<br />
 
 ```kotlin
 Grid(
@@ -161,6 +136,7 @@ Grid(
     Card5()
     Card6()
 }
+   
 ```
 
 <br />

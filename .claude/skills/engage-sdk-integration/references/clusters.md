@@ -1,4 +1,4 @@
-This file defines the structure of various clusters in the Engage SDK.
+The Engage SDK defines cluster structures as shown in this reference:
 
     {
       "clusters": {
@@ -107,7 +107,7 @@ This file defines the structure of various clusters in the Engage SDK.
             },
             "recommendationClusterType": {
               "type": "@RecommendationClusterType int",
-              "requirement": "Optional",
+              "requirement": "Required",
               "setter": "setRecommendationClusterType(@RecommendationClusterType int)",
               "getter": "getRecommendationClusterType()"
             }

@@ -6,7 +6,7 @@ description: Use this skill when upgrading or migrating an Android project from 
 license: Complete terms in LICENSE.txt
 metadata:
   author: Google LLC
-  last-updated: '2026-07-02'
+  last-updated: '2026-08-06'
   keywords:
   - android
   - play billing
@@ -20,8 +20,7 @@ metadata:
 
 ## Phase 0: Intent Message
 
-**Reporting Action**: Before proceeding, immediately tell the user: "I will
-upgrade Play Billing Library to the latest version."
+**Reporting Action**: Before proceeding, immediately tell the user: "I will upgrade Play Billing Library to the latest version."
 
 ## Phase 1: Discovery \& Situational Awareness
 
@@ -29,22 +28,18 @@ upgrade Play Billing Library to the latest version."
 2. **Initial Compilation Test**: Attempt to sync and build the project immediately.
 3. **Fallback Discovery (Effective Version)** :
    - **Trigger**: Only if the build fails immediately, scan the source code for deprecated artifacts.
-   - **Logic** : The presence of deprecated APIs indicates the **"Effective
-     Version"** ---defined as the version where those specific APIs were **last
-     available**, not when they were introduced.
+   - **Logic** : The presence of deprecated APIs indicates the **"Effective Version"** ---defined as the version where those specific APIs were **last available**, not when they were introduced.
    - **Example** : If `SkuDetails` is present, treat the baseline as **PBL v7** or earlier (regardless of the version string in `build.gradle`).
 4. **Identify Target \& Path** : Access the version tool or release notes to find the latest stable version and calculate a \[Direct/Stepped\] migration path based on the **Effective Version** baseline.
 
 - **Calculate Migration Path** :
   - If the **Effective Version** is within 2 major versions of the target: Plan a **Direct Migration**.
-  - If it is more than 2 major versions behind: Plan a **Stepped
-    Migration**. Migrate by two major versions at a time (e.g., v4 -\> v6 -\> v8) until you are within two versions of the target.
+  - If it is more than 2 major versions behind: Plan a **Stepped Migration**. Migrate by two major versions at a time (e.g., v4 -\> v6 -\> v8) until you are within two versions of the target.
 - **Reporting Action**: Before proceeding, tell the user: "I've detected you are effectively on PBL \[Current\] and the latest is \[Target\]. I am planning a \[direct/stepped\] migration path."
 
 ## Phase 2: Contextual Document Mapping \& Planning
 
-For every major version jump identified in your path, you **MUST** synthesize
-instructions from:
+For every major version jump identified in your path, you **MUST** synthesize instructions from:
 
 - **[Migration Guide](https://developer.android.com/google/play/billing/migrate-gpblv%5BX%5D)** (where `[X]` is the target major version).
 - **Release Highlights** : The "Deprecations" and "Breaking Changes" sections of the relevant [Release Notes](references/android/google/play/billing/release-notes.md).
@@ -53,9 +48,7 @@ instructions from:
 
 ## Phase 3: Instructions for Execution
 
-*Reporting Action: For each of the following steps, give a brief explanation of
-what you will be doing prior to execution, and a brief summary of what you
-accomplished afterwards.*
+*Reporting Action: For each of the following steps, give a brief explanation of what you will be doing prior to execution, and a brief summary of what you accomplished afterwards.*
 
 ### Step 1: SDK \& Environment Alignment
 
@@ -64,8 +57,7 @@ accomplished afterwards.*
 
 ### Step 2: Intent-based Refactoring
 
-Analyze the intent of the existing code rather than performing purely textual
-string replacement.
+Analyze the intent of the existing code rather than performing purely textual string replacement.
 
 - **Action** : You **MUST** follow all deprecation instructions and refactor patterns from **both** the [references/migration-logic.md](references/migration-logic.md) section, the official migration guides, and the general documentation pages identified in Phase 2.
 - **Verification** : Verify you are doing **all steps from all documentation** and then making sure you follow the specific directions from the checklist in the references.

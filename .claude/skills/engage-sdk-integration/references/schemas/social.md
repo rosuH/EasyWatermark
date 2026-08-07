@@ -217,7 +217,7 @@ This file defines the schema for the SOCIAL vertical in the Engage SDK.
         }
       },
       "methods": {
-        "isServiceAvailable": null,
+        "isServiceAvailable": "ServiceAvailabilityRequest",
         "publishRecommendationClusters": "PublishRecommendationClustersRequest",
         "publishUserAccountManagementRequest": "PublishUserAccountManagementRequest",
         "updatePublishStatus": "PublishStatusRequest",

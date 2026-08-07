@@ -1,6 +1,4 @@
-When migrating to AGP's new DSL, any Gradle code (plugins or logic in build
-scripts) that relied on the old DSL will stop working. Such code must be
-migrated.
+When migrating to AGP's new DSL, any Gradle code (plugins or logic in build scripts) that relied on the old DSL will stop working. Such code must be migrated.
 
 ## Guidelines
 
@@ -8,14 +6,9 @@ migrated.
 - **DO NOT** use AGP internals in migrated code.
 - **DO** use only public APIs in migrated code.
 
-In some cases, there is a one-to-one replacement for the old code. Some examples
-are in [the AGP 9.0.0 release notes](https://developer.android.com/build/releases/agp-9-0-0-release-notes).
+In some cases, there is a one-to-one replacement for the old code. Some examples are in [the AGP 9.0.0 release notes](https://developer.android.com/build/releases/agp-9-0-0-release-notes).
 
-In other cases, there is no direct one-to-one replacement. For these situations,
-the [gradle-recipes repo](https://github.com/android/gradle-recipes) is a great resource. You can checkout one of its
-AGP 9.x branches, such as `agp-9.0`, `agp-9.1`, or `agp-9.2`. These branches
-contain recipes for common situations in Android projects. The following table
-lists the compatibility for recipes for each version of AGP.
+In other cases, there is no direct one-to-one replacement. For these situations, the [gradle-recipes repo](https://github.com/android/gradle-recipes) is a great resource. You can checkout one of its AGP 9.x branches, such as `agp-9.0`, `agp-9.1`, or `agp-9.2`. These branches contain recipes for common situations in Android projects. The following table lists the compatibility for recipes for each version of AGP.
 
 ## Compatibility table
 
@@ -38,7 +31,7 @@ Additional details for each use-case follow.
 
 ### Add custom BuildConfig fields
 
-See the detailed guide at [BuildConfig](https://developer.android.com/agents/skills/build/agp/agp-9-upgrade/references/buildconfig).
+See the detailed guide at [BuildConfig](https://developer.android.com/agents/skills/build-system/agp/agp-9-upgrade/references/buildconfig).
 
 ### Renaming an APK
 
@@ -56,7 +49,4 @@ In the old DSL, an APK could be renamed very simply. Here's an example:
       }
     }
 
-However, with AGP 9 and the new DSL, `applicationVariants` is no longer
-available. You must instead react to artifact creation using the
-`androidComponents.onVariants` API. A complete example of this is available in
-the **gradle-recipes** repository in the `listenToArtifacts` recipe.
+However, with AGP 9 and the new DSL, `applicationVariants` is no longer available. You must instead react to artifact creation using the `androidComponents.onVariants` API. A complete example of this is available in the **gradle-recipes** repository in the `listenToArtifacts` recipe.

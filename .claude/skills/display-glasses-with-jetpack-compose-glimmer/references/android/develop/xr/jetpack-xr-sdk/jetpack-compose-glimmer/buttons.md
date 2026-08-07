@@ -1,21 +1,16 @@
 <br />
 
+<br />
 
 Applicable XR devices This guidance helps you build experiences for these types of XR devices. [Learn about XR device types →](https://developer.android.com/develop/xr/devices) ![](https://developer.android.com/static/images/develop/xr/ai-glasses-icon.svg) Display Glasses [](https://developer.android.com/develop/xr/devices#audio-display) [Learn about XR device types →](https://developer.android.com/develop/xr/devices)
 
 <br />
 
-In Jetpack Compose Glimmer, a [`Button`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/Button.composable) is an interactive component that's
-optimized for display glasses input, offering clear visual feedback through its
-states to guide user actions.
+In Jetpack Compose Glimmer, a [`Button`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/Button.composable) is an interactive component that's optimized for display glasses input, offering clear visual feedback through its states to guide user actions.
 
-Buttons are built on the Jetpack Compose Glimmer [surface system](https://developer.android.com/develop/xr/jetpack-xr-sdk/jetpack-compose-glimmer/surface), which
-automatically handles physical properties like borders and depth.
+Buttons are built on the Jetpack Compose Glimmer [surface system](https://developer.android.com/develop/xr/jetpack-xr-sdk/jetpack-compose-glimmer/surface), which automatically handles physical properties like borders and depth.
 
-The standard button contains a text label and optional icons. You can use it for
-primary or secondary actions. There are also specialized buttons, such as [icon
-buttons](https://developer.android.com/develop/xr/jetpack-xr-sdk/jetpack-compose-glimmer/icon-buttons) and [toggle buttons](https://developer.android.com/develop/xr/jetpack-xr-sdk/jetpack-compose-glimmer/toggle-buttons), which are defined as separate components in
-Jetpack Compose Glimmer.
+The standard button contains a text label and optional icons. You can use it for primary or secondary actions. There are also specialized buttons, such as [icon buttons](https://developer.android.com/develop/xr/jetpack-xr-sdk/jetpack-compose-glimmer/icon-buttons) and [toggle buttons](https://developer.android.com/develop/xr/jetpack-xr-sdk/jetpack-compose-glimmer/toggle-buttons), which are defined as separate components in Jetpack Compose Glimmer.
 
 ### Default
 
@@ -27,8 +22,7 @@ Jetpack Compose Glimmer.
 
 ## Anatomy
 
-A button consists of a container and a label, with optional leading and trailing
-icons.
+A button consists of a container and a label, with optional leading and trailing icons.
 
 | Part | Description |
 |---|---|
@@ -38,8 +32,7 @@ icons.
 
 ## Sizes
 
-Jetpack Compose Glimmer buttons support two size variants. These affect the
-minimum height and internal padding.
+Jetpack Compose Glimmer buttons support two size variants. These affect the minimum height and internal padding.
 
 | Size | Minimum height | Default usage |
 |---|---|---|
@@ -48,8 +41,7 @@ minimum height and internal padding.
 
 ## States
 
-Buttons in Jetpack Compose Glimmer change their appearance to communicate their
-state.
+Buttons in Jetpack Compose Glimmer change their appearance to communicate their state.
 
 - **Enabled**: The default state for an interactive button.
 - **Focused** : When focused, the button applies a [`GlimmerTheme.depthEffectLevels.level1`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/DepthEffectLevels#level1()) and a focused border highlight.
@@ -70,23 +62,25 @@ The following defaults apply to standard buttons:
 
 The following code creates a standard button with text:
 
+<br />
 
 ```kotlin
 @Composable
 fun ButtonSample() {
     Button(onClick = {}) { Text("Send") }
 }
+   
 ```
 
 <br />
 
 ## Example: Buttons with leading and trailing icons
 
-You can also add icons to the start (using `leadingIcon`) or end (using
-`trailingIcon`) of the text to provide additional context.
+You can also add icons to the start (using `leadingIcon`) or end (using `trailingIcon`) of the text to provide additional context.
 
 The following code creates a button with a leading icon:
 
+<br />
 
 ```kotlin
 @Composable
@@ -95,6 +89,7 @@ fun ButtonWithLeadingIconSample() {
         Text("Send")
     }
 }
+   
 ```
 
 <br />

@@ -1,6 +1,6 @@
-When implementing Glimmer styles, refer to the following source code in
-`GlimmerTheme.kt`:
+When implementing Glimmer styles, refer to the following source code in `GlimmerTheme.kt`:
 
+<br />
 
 ```kotlin
 /*
@@ -60,7 +60,7 @@ public fun GlimmerTheme(
     colors: Colors = GlimmerTheme.colors,
     typography: Typography = GlimmerTheme.typography,
     componentSpacingValues: ComponentSpacingValues = GlimmerTheme.componentSpacingValues,
-    conte>nt: @Composable () - Unit,
+    content: @Composable () -> Unit,
 ) {
     val theme = GlimmerTheme(colors, typography, componentSpacingValues)
     CompositionLocalProvider(
@@ -136,7 +136,7 @@ public class GlimmerTheme(
          * retrieving values from inside CompositionLocalConsumerModifierNode implementations - in
          * most cases you should use [colors] and other properties directly.
          */
-        pu<blic val Loc>alGlimmerTheme: CompositionLocalGlimmerTheme
+        public val LocalGlimmerTheme: CompositionLocal<GlimmerTheme>
             get() = _localGlimmerTheme
 
         /**
@@ -173,11 +173,12 @@ private object NoIndication : IndicationNodeFactory {
 
 /** Use [GlimmerTheme.LocalGlimmerTheme] to access this publicly. */
 @Suppress("CompositionLocalNaming")
-priv<ate val _loc>alGlimmerTheme: ProvidableCompositionLocalGlimmerTheme =
-    stLocalOf {
+private val _localGlimmerTheme: ProvidableCompositionLocal<GlimmerTheme> =
+    staticCompositionLocalOf {
         GlimmerTheme()
     }
-GlimmerTheme.kt
+
+   
 ```
 
 <br />

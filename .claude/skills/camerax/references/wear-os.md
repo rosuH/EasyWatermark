@@ -1,6 +1,4 @@
-Developing camera features for Wear OS is rarely about the watch's own lens, if
-it even has one. It's almost always about creating a **Remote Viewfinder** to
-control the phone's camera.
+Developing camera features for Wear OS is rarely about the watch's own lens, if it even has one. It's almost always about creating a **Remote Viewfinder** to control the phone's camera.
 
 ## The Wear OS remote mindset
 
@@ -17,8 +15,7 @@ control the phone's camera.
 
 ### The circular UI challenge
 
-Wear OS devices are often round. Standard rectangular layouts clip corner
-buttons.
+Wear OS devices are often round. Standard rectangular layouts clip corner buttons.
 
 Follow these blueprint recommendations:
 
@@ -30,6 +27,7 @@ Follow these blueprint recommendations:
 
 You can't send a raw 60 fps stream over Bluetooth. compress and throttle.
 
+<br />
 
 ```kotlin
 // Example: Sending a viewfinder frame to the watch
@@ -41,30 +39,31 @@ if (bitmap != null) {
     }
     Wearable.getDataClient(context).putDataItem(request.asPutDataRequest())
 }
+
+   
 ```
 
 <br />
 
-**Optimization** : Cap the watch preview at **10-15 fps** to preserve battery and
-bandwidth.
+**Optimization** : Cap the watch preview at **10-15 fps** to preserve battery and bandwidth.
 
 ### Remote triggers and syncing
 
-Use the `MessageClient` for low-latency commands like "Take Photo" or "Switch
-Camera."
+Use the `MessageClient` for low-latency commands like "Take Photo" or "Switch Camera."
 
+<br />
 
 ```kotlin
 // Watch sends a trigger to the phone
 Wearable.getMessageClient(context).sendMessage(nodeId, "/camera/capture", null)
+   
 ```
 
 <br />
 
 ### Rotary input support
 
-On devices that support it, use the physical crown, Rotary Input, to control
-**Zoom** or **Exposure**.
+On devices that support it, use the physical crown, Rotary Input, to control **Zoom** or **Exposure**.
 
 *** ** * ** ***
 
