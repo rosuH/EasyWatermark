@@ -262,8 +262,18 @@ class IosAppServices(
 
 fun defaultIosAppServices(): IosAppServices = IosAppServicesHolder.instance
 
+@OptIn(kotlin.experimental.ExperimentalNativeApi::class)
+private fun installKotlinUnhandledExceptionLogging() {
+    // Print the real throwable before K/N's default terminate/SIGABRT path.
+    setUnhandledExceptionHook { t ->
+        println("K/N UNHANDLED: ${t::class.simpleName}: ${t.message}")
+        t.printStackTrace()
+    }
+}
+
 private object IosAppServicesHolder {
     val instance: IosAppServices by lazy {
+        installKotlinUnhandledExceptionLogging()
         val waterMarkRepo = WaterMarkRepository(
             dataStore = createWaterMarkDataStore(),
             defaultTextProvider = { DEFAULT_WATERMARK_TEXT },

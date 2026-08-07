@@ -70,14 +70,26 @@ object EwmMotionTokens {
     /** Product shell About enter/exit (~config_mediumAnimTime). */
     const val shellMediumMs: Int = 340
 
-    /** Product shell Launch↔Editor short crossfade/slide. */
+    /** Product shell Launch↔Editor short crossfade/slide (ADR-0023 intentional route family). */
     const val shellShortMs: Int = 240
 
     /** Export progress wipe (Ing / Success). */
     const val exportWipeMs: Int = 400
 
-    /** Save sheet format block animateContentSize. */
+    /** Save sheet format block animateContentSize / gallery FAB enter-exit. */
     const val contentSizeMs: Int = 220
+
+    /** Editor option panel slide (legacy fragment_open_in medium ~300ms). */
+    const val optionPanelSlideMs: Int = 300
+
+    /** Editor option panel fade + gallery dialog slide/fade. */
+    const val optionPanelFadeMs: Int = 200
+
+    /** Gallery [AnimatedTransitionHost] enter delay before content appears. */
+    const val dialogHostEnterDelayMs: Int = 50
+
+    /** Gallery [AnimatedTransitionHost] exit wait before dispose. */
+    const val dialogHostExitMs: Int = 300
 }
 
 /** State colors (error / success washes) — not a full semantic palette. */

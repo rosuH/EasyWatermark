@@ -14,6 +14,12 @@
     <string name="tips_confirm_dialog">Confirm</string>
     <string name="tips_cancel_dialog">Cancel</string>
     <string name="tips_error">Error</string>
+    <!-- ADR-0022: pre-compress dialog removed; EN stubs keep resource default rows for Weblate locales. -->
+    <string name="tips_need_compress_img">Insufficient storage or the image is too large</string>
+    <string name="tips_compressing">Compressing…</string>
+    <string name="tips_compress_images">Compress picture</string>
+    <string name="tips_compress_ok">Finished compressing. Click OK to continue the export.</string>
+    <string name="tips_compress_create_uri_failed">Finished compressing, but failed to create the Uri. Please restart the app and try again. %1$s</string>
     <string name="title_text_style">Style</string>
     <string name="title_text_size">Size</string>
     <string name="title_tile_mode">TileMode</string>
@@ -48,11 +54,6 @@
     <string name="water_mark_mode_image">Icon</string>
     <string name="tips_ok">Confirm</string>
     <string name="tips_cancel_output">Cancel</string>
-    <string name="tips_need_compress_img">Insufficient storage or the image is too large</string>
-    <string name="tips_compressing">Compressing…</string>
-    <string name="tips_compress_images">Compress picture</string>
-    <string name="tips_compress_ok">Finished compressing. Click OK to continue the export.</string>
-    <string name="tips_compress_create_uri_failed">Finished compressing, but failed to create the Uri. Please restart the app and try again. %1$s</string>
     <string name="tips_tip_title">Crash detected</string>
     <string name="msg_crash">Would you like to report this crash? This can help us improve the app! This will not collect any personal information.</string>
     <string name="crash_mail">Send email</string>
@@ -71,7 +72,6 @@
     <string name="open_source_desc_about_lib" translatable="false">Coil is a fast, lightweight, and modern image loading library for Android and Compose Multiplatform, built with Kotlin Coroutines and Okio.</string>
     <string name="open_source_desc_material_components" translatable="false">Material Components for Android (MDC-Android) help developers execute Material Design. Developed by a core team of engineers and UX designers at Google, these components enable a reliable development workflow to build beautiful and functional Android apps.Material Components for Android is a drop-in replacement for Android\'s Design Support Library.</string>
     <string name="email_subject" translatable="false">[EasyWaterMark] Crash info</string>
-    <string name="open_source_desc_compressor" translatable="false">"Compressor is a lightweight and powerful android image compression library. Compressor will allow you to compress large photos into smaller sized photos with very less or negligible loss in quality of the image. "</string>
     <string name="open_source_desc_phosphor_icons" translatable="false">Phosphor Icons is a flexible icon family for interfaces, diagrams, and presentations. EasyWatermark vendors selected Regular-weight glyphs (MIT License, Copyright (c) 2023 Phosphor Icons) as Compose Multiplatform vector resources. Full notice: THIRD_PARTY_NOTICES.md.</string>
     <!--    -->
     <string name="text_paint_fill">Fill</string>

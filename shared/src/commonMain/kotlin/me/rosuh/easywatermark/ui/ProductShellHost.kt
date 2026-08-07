@@ -25,6 +25,9 @@ import me.rosuh.easywatermark.ui.theme.motionDurationMs
  * Shared product-shell navigator for Launch / Editor / About.
  * Platforms keep Activity/window containers only; route transitions live here.
  * I3: durations honor [currentMotionPolicy] (0 = instant under Off).
+ *
+ * Launch↔Editor uses short horizontal slide + fade (not production LaunchView spring morph) —
+ * intentional product route transition per ADR-0023.
  */
 @Composable
 fun ProductShellHost(

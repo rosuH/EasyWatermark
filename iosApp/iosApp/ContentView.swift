@@ -387,35 +387,31 @@ struct ContentView: View {
             }
         }
 
-        // 2) Load every payload before staging (parallel, order restored by index). Off-main OK.
-        let payloads: [KotlinByteArray] = await withTaskGroup(
-            of: (Int, KotlinByteArray?).self,
-            returning: [KotlinByteArray].self
-        ) { group in
-            for (index, item) in items.enumerated() {
-                group.addTask {
-                    do {
-                        guard let data = try await item.loadTransferable(type: Data.self) else {
-                            return (index, nil)
-                        }
-                        return (index, data.toKotlinByteArray())
-                    } catch {
-                        return (index, nil)
-                    }
-                }
+        // 2) Load payloads before staging (order-preserving).
+        // Bound concurrency + retries: unrestricted parallel Data loads on multi-select often
+        // drop 1+ items (nil/throw from Photos), so the filmstrip shows e.g. 5 of 6 and the
+        // main preview can stay blank while the focused slot is still cold or was the failed one.
+        let loadResults = await Self.loadPickerPayloads(items)
+        let payloads = loadResults.compactMap(\.bytes)
+        let failed = loadResults.filter { $0.bytes == nil }
+        if !failed.isEmpty {
+            let detail = failed.map { "\($0.index)(\($0.error ?? "nil"))" }.joined(separator: ", ")
+            await MainActor.run {
+                // Partial success is still useful — do not treat as hard workflow failure that
+                // clears the product root; surface a single summary for the missing slots.
+                edge.reportFailure(
+                    "Loaded \(payloads.count) of \(items.count) photos; failed index(es): \(detail)"
+                )
             }
-            var byIndex: [(Int, KotlinByteArray)] = []
-            byIndex.reserveCapacity(items.count)
-            for await (index, bytes) in group {
-                if let bytes {
-                    byIndex.append((index, bytes))
-                } else {
-                    await MainActor.run {
-                        edge.reportFailure("Photo picker returned no image data for item \(index)")
-                    }
-                }
-            }
-            return byIndex.sorted { $0.0 < $1.0 }.map { $0.1 }
+            // NSLog reaches `simctl log stream` (plain print often does not).
+            NSLog(
+                "PhotosPicker partial load: Loaded %d of %d; failed index(es): %@",
+                payloads.count,
+                items.count,
+                detail,
+            )
+        } else {
+            NSLog("PhotosPicker load ok: %d of %d", payloads.count, items.count)
         }
 
         // Empty/failed batches must not resurrect an older generation (S2).
@@ -454,6 +450,76 @@ struct ContentView: View {
                 edge.reportFailure(error.localizedDescription)
             }
         }
+    }
+
+    /// One picker item after load attempts (order key = original selection index).
+    private struct PickerLoadResult: Sendable {
+        let index: Int
+        let bytes: KotlinByteArray?
+        let error: String?
+    }
+
+    /// Load [PhotosPickerItem] bytes with limited concurrency and short retries.
+    /// Returns one result per input index (nil bytes = failed after retries).
+    private static func loadPickerPayloads(_ items: [PhotosPickerItem]) async -> [PickerLoadResult] {
+        // Match progressive-import transfer cap (2): fewer concurrent FileProvider claims.
+        let maxConcurrent = 2
+        return await withTaskGroup(of: PickerLoadResult.self) { group in
+            var iterator = items.enumerated().makeIterator()
+            var collected: [PickerLoadResult] = []
+            collected.reserveCapacity(items.count)
+
+            func startOne() {
+                guard let (index, item) = iterator.next() else { return }
+                group.addTask {
+                    await loadOnePickerItem(item, index: index)
+                }
+            }
+
+            for _ in 0..<min(maxConcurrent, items.count) {
+                startOne()
+            }
+            for await result in group {
+                collected.append(result)
+                startOne()
+            }
+            return collected.sorted { $0.index < $1.index }
+        }
+    }
+
+    private static func loadOnePickerItem(
+        _ item: PhotosPickerItem,
+        index: Int,
+    ) async -> PickerLoadResult {
+        var lastError: String?
+        for attempt in 1...3 {
+            do {
+                if let data = try await item.loadTransferable(type: Data.self), !data.isEmpty {
+                    if attempt > 1 {
+                        NSLog(
+                            "PhotosPicker item %d loaded on attempt %d (%d bytes)",
+                            index,
+                            attempt,
+                            data.count,
+                        )
+                    }
+                    return PickerLoadResult(
+                        index: index,
+                        bytes: data.toKotlinByteArray(),
+                        error: nil,
+                    )
+                }
+                lastError = "empty Data (attempt \(attempt))"
+                NSLog("PhotosPicker item %d: %@", index, lastError!)
+            } catch {
+                lastError = error.localizedDescription
+                NSLog("PhotosPicker item %d attempt %d: %@", index, attempt, lastError!)
+            }
+            if attempt < 3 {
+                try? await Task.sleep(nanoseconds: 120_000_000 * UInt64(attempt))
+            }
+        }
+        return PickerLoadResult(index: index, bytes: nil, error: lastError)
     }
 
     private func loadIcon(_ item: PhotosPickerItem, generation: UInt64) async {

@@ -8,15 +8,11 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.widget.Toast
-import androidx.core.content.FileProvider
 import androidx.lifecycle.viewModelScope
-import id.zelory.compressor.Compressor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -30,7 +26,6 @@ import me.rosuh.easywatermark.shared.generated.resources.tip_not_mail_found
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
-import me.rosuh.easywatermark.data.model.Result
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.UserPreferences
@@ -57,7 +52,6 @@ import me.rosuh.easywatermark.utils.ktx.launch
 import me.rosuh.easywatermark.utils.ktx.toMediaRef
 import me.rosuh.easywatermark.utils.ktx.toUri
 import org.koin.java.KoinJavaComponent.inject
-import java.io.File
 
 /** Android alias for shared [ExportJobState] (export-sheet presentation). */
 typealias SaveExportUiState = ExportJobState
@@ -65,7 +59,8 @@ typealias SaveExportUiState = ExportJobState
 /**
  * Android product host over [WatermarkSessionViewModel] (ADR-0017).
  *
- * Maps legacy [Action] to [AppIntent]; owns MediaStore gallery query, compress, and crash export.
+ * Maps legacy [Action] to [AppIntent]; owns MediaStore gallery query and crash export.
+ * Pre-compress recovery UI dropped (ADR-0022) — OOM/export failures use recovery copy only.
  */
 class MainViewModel (
     private val userRepo: UserConfigRepository,
@@ -84,16 +79,8 @@ class MainViewModel (
     // already-injected template repo (no DI change).
     private val templateEditor = TemplateEditor(templateRepo)
 
-    // StateFlow-only (was MutableLiveData). null initial = "no
-    // compress event yet" (old LiveData had no value before first emit). Distinct Result instances each
-    // emit, so StateFlow conflation never skips a real event.
-    private val _compressedResult = MutableStateFlow<Result<*>?>(null)
-    val compressedResult: StateFlow<Result<*>?> = _compressedResult.asStateFlow()
-
     /** Android UI name for shared export progress [exportJobState]. */
     val saveExportUiState: StateFlow<SaveExportUiState> get() = exportJobState
-
-    private var compressedJob: Job? = null
 
     private var _userPreferences: StateFlow<UserPreferences> = userRepo.userPreferences.stateIn(
         viewModelScope,
@@ -292,57 +279,6 @@ class MainViewModel (
         }
     }
 
-    /**
-     * Compress the Session-focused (or first selected) image. Session list is source of truth.
-     */
-    fun compressImg(activity: Activity) {
-        compressedJob = viewModelScope.launch(Dispatchers.IO) {
-            _compressedResult.value = Result.success(null, code = TYPE_COMPRESSING)
-            val focus = launchScreenUiStateFlow.value.curImageInfo
-                ?: launchScreenUiStateFlow.value.selectedImageList.firstOrNull()
-            if (focus == null) {
-                _compressedResult.value = Result.failure(
-                    null,
-                    code = TYPE_COMPRESS_ERROR,
-                    message = "No image selected",
-                )
-                return@launch
-            }
-            val tmpFile = File.createTempFile("easy_water_mark_", "_compressed")
-            activity.contentResolver.openInputStream(focus.uri.toUri())
-                .use { input ->
-                    tmpFile.outputStream().use { output ->
-                        input?.copyTo(output)
-                    }
-                }
-            val compressedFile = Compressor.compress(activity, tmpFile)
-            // clear tmp files
-            if (tmpFile.exists()) {
-                tmpFile.delete()
-            }
-            try {
-                val compressedFileUri = FileProvider.getUriForFile(
-                    activity,
-                    "${BuildConfig.APPLICATION_ID}.fileprovider",
-                    compressedFile
-                )
-                selectImage(compressedFileUri.toMediaRef())
-                _compressedResult.value = Result.success(null, code = TYPE_COMPRESS_OK)
-            } catch (ie: IllegalArgumentException) {
-                _compressedResult.value =
-                    Result.failure(
-                        null,
-                        code = TYPE_COMPRESS_ERROR,
-                        message = "Images creates uri failed."
-                    )
-            }
-        }
-    }
-
-    fun cancelCompressJob() {
-        compressedJob?.cancel()
-    }
-
     fun extraCrashInfo(activity: Activity, crashInfo: String?) {
         // user do not saving crash info into external storage
         // So that wo just share the internal file
@@ -387,7 +323,6 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
     }
 
     override fun onCleared() {
-        cancelCompressJob()
         iconImportJob?.cancel()
         super.onCleared()
     }
@@ -467,8 +402,5 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
     companion object {
         const val TYPE_ERROR_FILE_NOT_FOUND = ExportErrorCodes.FILE_NOT_FOUND
         const val TYPE_ERROR_SAVE_OOM = ExportErrorCodes.SAVE_OOM
-        const val TYPE_COMPRESS_ERROR = "type_CompressError"
-        const val TYPE_COMPRESS_OK = "type_CompressOK"
-        const val TYPE_COMPRESSING = "type_Compressing"
     }
 }

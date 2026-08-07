@@ -22,6 +22,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.data.model.FuncType
+import me.rosuh.easywatermark.ui.theme.EwmTheme
+import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
+import me.rosuh.easywatermark.ui.theme.motionDurationMs
 
 data class EditorBottomControlTab<T>(
     val label: String,
@@ -40,7 +43,7 @@ data class EditorBottomControlTab<T>(
  *
  * Option panel height is **fixed** so switching tools does not push the preview up/down.
  * Tool switches use production fragment-style transition: enter slide-up 60% + fade, exit fade
- * (`fragment_open_in` / `fragment_pop_exit_slide`).
+ * (`fragment_open_in` / `fragment_pop_exit_slide`), with durations scaled by [currentMotionPolicy].
  */
 @Composable
 fun <T> EditorBottomControlsShell(
@@ -58,6 +61,10 @@ fun <T> EditorBottomControlsShell(
     if (tabs.isEmpty()) {
         return
     }
+
+    val motionPolicy = currentMotionPolicy()
+    val slideMs = motionDurationMs(motionPolicy, EwmTheme.motion.optionPanelSlideMs)
+    val fadeMs = motionDurationMs(motionPolicy, EwmTheme.motion.optionPanelFadeMs)
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val safeTabIndex = selectedTabIndex.coerceIn(tabs.indices)
@@ -82,15 +89,15 @@ fun <T> EditorBottomControlsShell(
                 modifier = Modifier.fillMaxWidth(),
                 transitionSpec = {
                     // Production: open_in = translate 60%→0 (medium) + fade (short);
-                    // pop_exit = fade only (short). config_medium≈300ms, short≈200ms.
+                    // pop_exit = fade only (short). Full-motion defaults 300/200; Off → 0ms.
                     val enter = slideInVertically(
-                        animationSpec = tween(300, easing = FastOutSlowInEasing),
+                        animationSpec = tween(slideMs, easing = FastOutSlowInEasing),
                         initialOffsetY = { fullHeight -> (fullHeight * 0.6f).toInt() },
                     ) + fadeIn(
-                        animationSpec = tween(200, easing = FastOutSlowInEasing),
+                        animationSpec = tween(fadeMs, easing = FastOutSlowInEasing),
                     )
                     val exit = fadeOut(
-                        animationSpec = tween(200, easing = FastOutSlowInEasing),
+                        animationSpec = tween(fadeMs, easing = FastOutSlowInEasing),
                     )
                     enter togetherWith exit
                 },

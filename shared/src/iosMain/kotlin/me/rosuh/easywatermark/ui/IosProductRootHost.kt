@@ -21,6 +21,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -128,8 +129,23 @@ class IosProductRootHost(
     }
     private val templateEditor by lazy { TemplateEditor(templateRepo) }
     private val outputEditor by lazy { OutputPrefsEditor(services.userConfigRepo) }
-    /** Host-owned scope for background stage/preview work (not GlobalScope). */
-    private val hostScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    /**
+     * Host-owned scope for background stage/preview work (not GlobalScope).
+     * SupervisorJob alone does **not** swallow child failures: without a
+     * [CoroutineExceptionHandler], uncaught throws become K/N process abort
+     * (`terminateWithUnhandledException` / SIGABRT on iOS). Log + surface
+     * instead of killing the app.
+     */
+    private val hostScope = CoroutineScope(
+        SupervisorJob() +
+            Dispatchers.Main +
+            CoroutineExceptionHandler { _, t ->
+                statusLine = "Background work failed: ${t.message ?: t::class.simpleName}"
+                println(
+                    "IosProductRootHost uncaught: ${t.message}\n${t.stackTraceToString()}",
+                )
+            },
+    )
     /**
      * App-owned staged source paths (`ewm_src_*`) for this host generation (E2 dispose).
      * Mutated under [lifecycleLock] together with [disposed] so publish→ownership transfer
@@ -440,9 +456,13 @@ class IosProductRootHost(
                 }
             }
             LaunchedEffect(Unit) {
-                services.userConfigRepo.userPreferences.first().let {
-                    outputFormat = it.outputFormat
-                    outputQuality = it.compressLevel
+                try {
+                    services.userConfigRepo.userPreferences.first().let {
+                        outputFormat = it.outputFormat
+                        outputQuality = it.compressLevel
+                    }
+                } catch (t: Throwable) {
+                    statusLine = "Prefs load failed: ${t.message}"
                 }
             }
 
@@ -705,19 +725,26 @@ class IosProductRootHost(
                             val epoch = filmstripThumbEpoch
                             val cached = filmstripThumbCache[path]
                             val thumbBitmap by produceState(initialValue = cached, path, epoch) {
-                                if (path.isBlank() || path == "preview") {
+                                // produceState runs under Compose's StandaloneCoroutine: an
+                                // uncaught throw becomes K/N process abort (SIGABRT).
+                                try {
+                                    if (path.isBlank() || path == "preview") {
+                                        value = null
+                                        return@produceState
+                                    }
+                                    filmstripThumbCache[path]?.let {
+                                        value = it
+                                        return@produceState
+                                    }
+                                    value = withContext(Dispatchers.Default) {
+                                        runCatching { decodeFilmstripThumb(path) }.getOrNull()
+                                    }?.also {
+                                        filmstripThumbCache[path] = it
+                                        enforceCacheBudgets()
+                                    }
+                                } catch (t: Throwable) {
+                                    println("filmstrip produceState failed path=$path: ${t.message}")
                                     value = null
-                                    return@produceState
-                                }
-                                filmstripThumbCache[path]?.let {
-                                    value = it
-                                    return@produceState
-                                }
-                                value = withContext(Dispatchers.Default) {
-                                    decodeFilmstripThumb(path)
-                                }?.also {
-                                    filmstripThumbCache[path] = it
-                                    enforceCacheBudgets()
                                 }
                             }
                             if (thumbBitmap != null) {
@@ -1108,23 +1135,31 @@ class IosProductRootHost(
                     val path = info.uri.value
                     val cached = exportThumbCache[path]
                     val thumb by produceState(initialValue = cached, path) {
-                        if (path.isBlank() || path == "preview") {
-                            value = previewBitmap
-                            return@produceState
-                        }
-                        exportThumbCache[path]?.let {
-                            value = it
-                            return@produceState
-                        }
-                        value = withContext(Dispatchers.Default) {
-                            val data = NSData.dataWithContentsOfFile(path) ?: return@withContext null
-                            IosImageDecoder.decodeThumbnail(
-                                IosByteArrayInterop.fromNSData(data),
-                                maxEdgePx = 96,
-                            )
-                        }?.also {
-                            exportThumbCache[path] = it
-                            enforceCacheBudgets()
+                        try {
+                            if (path.isBlank() || path == "preview") {
+                                value = previewBitmap
+                                return@produceState
+                            }
+                            exportThumbCache[path]?.let {
+                                value = it
+                                return@produceState
+                            }
+                            value = withContext(Dispatchers.Default) {
+                                runCatching {
+                                    val data = NSData.dataWithContentsOfFile(path)
+                                        ?: return@runCatching null
+                                    IosImageDecoder.decodeThumbnail(
+                                        IosByteArrayInterop.fromNSData(data),
+                                        maxEdgePx = 96,
+                                    )
+                                }.getOrNull()
+                            }?.also {
+                                exportThumbCache[path] = it
+                                enforceCacheBudgets()
+                            }
+                        } catch (t: Throwable) {
+                            println("export thumb produceState failed path=$path: ${t.message}")
+                            value = null
                         }
                     }
                     val displayThumb = thumb

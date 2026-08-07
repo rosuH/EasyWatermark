@@ -1,47 +1,47 @@
+@file:OptIn(ExperimentalForeignApi::class)
+
 package me.rosuh.easywatermark.render
 
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.useContents
 import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image as SkiaImage
 import org.jetbrains.skia.Rect as SkiaRect
 import org.jetbrains.skia.SamplingMode
 import org.jetbrains.skia.Surface
+import platform.CoreGraphics.CGRectMake
+import platform.UIKit.UIGraphicsBeginImageContextWithOptions
+import platform.UIKit.UIGraphicsEndImageContext
+import platform.UIKit.UIGraphicsGetImageFromCurrentImageContext
+import platform.UIKit.UIImage
+import platform.UIKit.UIImageJPEGRepresentation
 
 /**
  * The **iOS platform image-decode boundary** — the iOS analogue of Desktop [DesktopImageDecoder].
- * Decodes a real encoded image (PNG/JPEG/… bytes) into a Compose [ImageBitmap] for product paint.
+ * Decodes a real encoded image (PNG/JPEG/HEIC/…) into a Compose [ImageBitmap] for product paint.
  * C3 Final Export ([IosFinalRenderSpine]) and Preview ([IosPreviewRaster]) call full-res
  * [decode] / [decodeThumbnail] here, then compose via [CommonWatermarkPipeline]; never re-rotate
- * after decode (Skia already bakes EXIF).
+ * after a successful decode (Skia bakes EXIF for JPEG/PNG; UIImage path bakes orientation by draw).
  *
- * iOS has no `javax.imageio`, so decode goes through **Skia** (`org.jetbrains.skia.Image.makeFromEncoded`),
- * which ships with the Compose-Multiplatform iOS artifacts (skiko) — **no new dependency**. The Skia
- * `Image` is bridged to Compose with `toComposeImageBitmap()` (the same skiko bridge the desktop side
- * uses for `BufferedImage`).
+ * Primary path is **Skia** (`Image.makeFromEncoded`) — no extra dependency. Skia covers JPEG/PNG/WebP
+ * well but **does not decode HEIC/HEIF** (common from iPhone Photos with
+ * `preferredItemEncoding = .current`). When Skia fails (or the container is clearly HEIF), we fall
+ * back to **UIKit `UIImage`** → orientation-baked intermediate JPEG → Skia. That keeps commonMain
+ * decode-free and avoids a blank focused preview when the first multi-pick asset is HEIC.
  *
- * This keeps the ADR-0004 decode boundary platform-side: decode lives in `iosMain`; commonMain stays
- * **decode-free** (already-decoded `ImageBitmap` in, composed out). A production iOS app would obtain the
- * bytes from PHPicker/`UIImage`/file (C5); this boundary only needs the encoded bytes.
- *
- * ## : EXIF orientation is already honoured by the Skia decode — no extra transform needed
- * Unlike Android (`BitmapFactory`) and Desktop (`ImageIO`), which return the JPEG's STORED pixels and
- * therefore need EXIF orientation baked in manually (Android `BitmapUtils`; Desktop `DesktopImageDecoder`
- * /22), **Skia's `Image.makeFromEncoded` → `toComposeImageBitmap()` already applies the EXIF
- * Orientation tag**: an orientation-6 (90° CW) JPEG decodes to an UPRIGHT bitmap with swapped dimensions.
- * This was proven on the SAME skiko/Skia behind the SAME `org.jetbrains.skia` API by the desktop proxy
- * gate `SkiaExifDecodeProbeTest` (desktop run, no iOS runtime needed). So this boundary deliberately does
- * **NOT** apply any further rotation — doing so would DOUBLE-rotate camera photos. The iOS gate
- * `IosExifOrientationTest` asserts decode(orientation-6) is upright; its RUN confirms the iOS-runtime
- * behaviour at /C5 (compile/link-proven here). commonMain stays decode-free.
+ * ## EXIF / orientation
+ * - Skia path: `makeFromEncoded` already bakes JPEG EXIF orientation (see `IosExifOrientationTest`).
+ * - UIImage path: draw into a graphics context at `UIImage.size` so `imageOrientation` is baked into
+ *   pixels before re-encode; Skia then sees an upright buffer with no further transform.
  */
 /** J5: decode edge — not called from Swift (goes through bridges). */
 internal object IosImageDecoder {
 
     /**
- * Decode encoded image [bytes] into an [ImageBitmap] via Skia. Skia applies EXIF orientation during
- * Decode (see the object KDoc), so the result is already upright — no manual orientation transform is * applied. Throws [IllegalStateException] if Skia cannot decode (unsupported/corrupt) so callers fail
- * loudly instead of propagating a bad image.
+     * Decode encoded image [bytes] into an [ImageBitmap]. Throws [IllegalStateException] if neither
+     * Skia nor UIImage can decode so callers fail loudly instead of propagating a bad image.
      */
     fun decode(bytes: ByteArray): ImageBitmap {
         val skiaImage = decodeSkia(bytes)
@@ -49,17 +49,18 @@ internal object IosImageDecoder {
     }
 
     /**
- * Decode and downscale so the longer edge is at most [maxEdgePx]. Used for filmstrip cells
- * (≈40dp) so multi-pick does not decode multi-megapixel bitmaps for every thumbnail.
+     * Decode and downscale so the longer edge is at most [maxEdgePx]. Used for filmstrip cells
+     * (≈40dp) so multi-pick does not decode multi-megapixel bitmaps for every thumbnail.
      */
     fun decodeThumbnail(bytes: ByteArray, maxEdgePx: Int = 160): ImageBitmap {
         return scaleSkia(decodeSkia(bytes), maxEdgePx).toComposeImageBitmap()
     }
 
     /**
- * Re-encode [bytes] as PNG with longest edge ≤ [maxEdgePx] for **on-screen preview export**.
- * Full-res camera photos (12MP+) make Skiko watermark raster multi-second; preview does not
- * Need full resolution.     */
+     * Re-encode [bytes] as PNG with longest edge ≤ [maxEdgePx] for **on-screen preview export**.
+     * Full-res camera photos (12MP+) make Skiko watermark raster multi-second; preview does not
+     * need full resolution.
+     */
     fun downscaleEncodedToPng(bytes: ByteArray, maxEdgePx: Int = 1600): ByteArray {
         val scaled = scaleSkia(decodeSkia(bytes), maxEdgePx)
         val data = scaled.encodeToData(EncodedImageFormat.PNG)
@@ -90,13 +91,81 @@ internal object IosImageDecoder {
     }
 
     private fun decodeSkia(bytes: ByteArray): SkiaImage {
-        return try {
-            SkiaImage.makeFromEncoded(bytes)
-        } catch (t: Throwable) {
-            error(
-                "IosImageDecoder: Skia could not decode the supplied ${bytes.size}-byte image " +
-                    "(unsupported/corrupt): ${t.message}",
-            )
+        // HEIF containers are never handled by current skiko — skip the doomed primary path.
+        if (!looksLikeHeif(bytes)) {
+            try {
+                return SkiaImage.makeFromEncoded(bytes)
+            } catch (_: Throwable) {
+                // Fall through to UIImage for other platform-only codecs or rare Skia gaps.
+            }
         }
+        val viaUi = decodeViaUIImage(bytes)
+        if (viaUi != null) {
+            return viaUi
+        }
+        error(
+            "IosImageDecoder: could not decode the supplied ${bytes.size}-byte image " +
+                "(Skia + UIImage both failed; container may be unsupported/corrupt)",
+        )
+    }
+
+    /**
+     * UIImage → orientation-baked JPEG → Skia. Used for HEIC/HEIF and as a Skia-failure fallback.
+     * Intermediate is JPEG (not PNG) to bound memory on 12MP camera frames.
+     */
+    private fun decodeViaUIImage(bytes: ByteArray): SkiaImage? {
+        if (bytes.isEmpty()) return null
+        val nsData = IosByteArrayInterop.toNSData(bytes)
+        val uiImage = UIImage.imageWithData(nsData) ?: return null
+        val baked = bakeOrientation(uiImage) ?: return null
+        // 0.92: high enough for full-res export fidelity; far smaller than PNG intermediates.
+        val jpegData = UIImageJPEGRepresentation(baked, 0.92) ?: return null
+        val jpegBytes = IosByteArrayInterop.fromNSData(jpegData)
+        return try {
+            SkiaImage.makeFromEncoded(jpegBytes)
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    /**
+     * Draw [image] into a fresh context sized to [UIImage.size] so `imageOrientation` is applied
+     * into pixels. Without this, HEIC from the camera can re-encode with a non-upright buffer
+     * while UIKit would have rotated on display.
+     */
+    private fun bakeOrientation(image: UIImage): UIImage? {
+        val (w, h) = image.size.useContents { width to height }
+        if (w <= 0.0 || h <= 0.0) return null
+        // scale=1: pixel-true bake (not screen-scale); product wants source resolution.
+        UIGraphicsBeginImageContextWithOptions(image.size, false, 1.0)
+        return try {
+            image.drawInRect(CGRectMake(0.0, 0.0, w, h))
+            UIGraphicsGetImageFromCurrentImageContext()
+        } finally {
+            UIGraphicsEndImageContext()
+        }
+    }
+
+    /** ISO BMFF brands used by HEIC/HEIF stills (and common variants). */
+    private fun looksLikeHeif(bytes: ByteArray): Boolean {
+        if (bytes.size < 12) return false
+        // box size (4) + 'ftyp' (4) + major brand (4)
+        if (bytes[4] != 'f'.code.toByte() ||
+            bytes[5] != 't'.code.toByte() ||
+            bytes[6] != 'y'.code.toByte() ||
+            bytes[7] != 'p'.code.toByte()
+        ) {
+            return false
+        }
+        val brand = byteArrayOf(bytes[8], bytes[9], bytes[10], bytes[11])
+            .decodeToString()
+            .lowercase()
+        return brand == "heic" ||
+            brand == "heif" ||
+            brand == "mif1" ||
+            brand == "msf1" ||
+            brand == "heix" ||
+            brand == "hevc" ||
+            brand == "hevx"
     }
 }

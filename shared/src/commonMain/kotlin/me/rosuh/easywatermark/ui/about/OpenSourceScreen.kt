@@ -26,7 +26,6 @@ import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.about_title_open_source
 import me.rosuh.easywatermark.shared.generated.resources.cd_back
 import me.rosuh.easywatermark.shared.generated.resources.open_source_desc_about_lib
-import me.rosuh.easywatermark.shared.generated.resources.open_source_desc_compressor
 import me.rosuh.easywatermark.shared.generated.resources.open_source_desc_material_components
 import me.rosuh.easywatermark.shared.generated.resources.open_source_desc_phosphor_icons
 import org.jetbrains.compose.resources.stringResource
@@ -45,7 +44,6 @@ fun OpenSourceScreen(
     val backCd = stringResource(Res.string.cd_back)
     val aboutLibDesc = stringResource(Res.string.open_source_desc_about_lib)
     val materialComponentsDesc = stringResource(Res.string.open_source_desc_material_components)
-    val compressorDesc = stringResource(Res.string.open_source_desc_compressor)
     val phosphorIconsDesc = stringResource(Res.string.open_source_desc_phosphor_icons)
 
     Surface(
@@ -82,9 +80,6 @@ fun OpenSourceScreen(
             }
             OssCard("Material Components for Android", materialComponentsDesc) {
                 onOpenLink("https://github.com/material-components/material-components-android")
-            }
-            OssCard("Compressor", compressorDesc) {
-                onOpenLink("https://github.com/zetbaitsu/Compressor/")
             }
             OssCard("Phosphor Icons", phosphorIconsDesc) {
                 onOpenLink("https://github.com/phosphor-icons/core")
