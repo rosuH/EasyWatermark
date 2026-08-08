@@ -23,6 +23,8 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform) apply false
     // S4d-360: official Android-KMP library plugin for :shared (AGP 9).
     alias(libs.plugins.android.kotlin.multiplatform.library) apply false
+    // Compose stability analyzer 0.12.0 (Kotlin 2.4.0) — applied by :app for DEBUG TraceRecomposition.
+    alias(libs.plugins.stability.analyzer) apply false
 //    alias(libs.plugins.spotless) apply false
 }
 

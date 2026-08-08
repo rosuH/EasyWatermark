@@ -256,8 +256,10 @@ class ClampPreviewOffsetHostWiringTest {
             (callIdx + 4500).coerceAtMost(hostCode.length),
         )
         // Enable-gate lives just above the same Image (dragPath / watermarkedDisplayMatchesSelection).
+        // Window ≥1100: EditorSelection ImageInfoUi projection at the EditorScreen call site
+        // sits above the gate and pushed it past the old 900-char bound.
         val enableSlice = hostCode.substring(
-            (imageStart - 900).coerceAtLeast(0),
+            (imageStart - 1200).coerceAtLeast(0),
             callIdx,
         )
         // Require Image-local Fit + watermarked description (not elsewhere in the file).

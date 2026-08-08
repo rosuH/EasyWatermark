@@ -71,6 +71,9 @@ kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 # S4d-91: Room Gradle plugin (KMP schema/codegen) — applied to :shared only for the Room KMP
 # toolchain proof. Reuses the existing room version. :app keeps classic KSP Android Room.
 androidx-room = { id = "androidx.room", version.ref = "room" }
+# skydoves compose-stability-analyzer — Kotlin 2.4.0 matches plugin 0.12.0
+# (TraceRecomposition / DEBUG heatmap; apply on :app only).
+stability-analyzer = { id = "com.github.skydoves.compose.stability.analyzer", version = "0.12.0" }
 
 
 

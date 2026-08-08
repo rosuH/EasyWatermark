@@ -19,6 +19,8 @@ plugins {
     id(libs.plugins.ksp.get().pluginId)
 //    id(libs.plugins.hilt.plugin.get().pluginId)
     alias(libs.plugins.compose.compiler)
+    // skydoves compose-stability-analyzer 0.12.0 (Kotlin 2.4.0): @TraceRecomposition + stabilityDump.
+    alias(libs.plugins.stability.analyzer)
 //    id(libs.plugins.spotless.get().pluginId)
 }
 
@@ -117,6 +119,17 @@ android {
     // AGP 9 built-in Kotlin: jvmToolchain stays on android.kotlin.
     kotlin {
         jvmToolchain(17)
+    }
+}
+
+// Opt-in Compose Compiler stability reports (diagnose Editor/Gallery recompose).
+// Release only when -PcomposeCompilerReports=true (debug Live Literals skew reports).
+// ./gradlew :app:compileReleaseKotlin -PcomposeCompilerReports=true
+// → app/build/compose_compiler/
+composeCompiler {
+    if (providers.gradleProperty("composeCompilerReports").orNull == "true") {
+        reportsDestination = layout.buildDirectory.dir("compose_compiler")
+        metricsDestination = layout.buildDirectory.dir("compose_compiler")
     }
 }
 

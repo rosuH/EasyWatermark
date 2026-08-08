@@ -24,12 +24,20 @@ fun EditorTemplateSheetHost(
     onAdd: (String) -> Unit,
     onUpdate: (Template) -> Unit,
     onDelete: (Template) -> Unit,
+    /**
+     * Fired when the sheet opens/closes so hosts can defer [templates] collection until open
+     * (Editor composition must not recompose solely because Room templates emitted).
+     */
+    onSheetVisibilityChange: (Boolean) -> Unit = {},
     content: @Composable (showTemplateSheet: () -> Unit) -> Unit,
 ) {
     var showTemplateSheet by remember { mutableStateOf(false) }
 
     content {
-        showTemplateSheet = true
+        if (!showTemplateSheet) {
+            showTemplateSheet = true
+            onSheetVisibilityChange(true)
+        }
     }
 
     if (showTemplateSheet) {
@@ -39,7 +47,10 @@ fun EditorTemplateSheetHost(
             deleteIcon = deleteIcon,
             enabled = enabled,
             newTemplateInitialText = newTemplateInitialText,
-            onDismiss = { showTemplateSheet = false },
+            onDismiss = {
+                showTemplateSheet = false
+                onSheetVisibilityChange(false)
+            },
             onUse = onUse,
             onAdd = onAdd,
             onUpdate = onUpdate,

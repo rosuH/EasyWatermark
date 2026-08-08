@@ -54,6 +54,7 @@ import me.rosuh.easywatermark.data.model.FuncType
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
+import me.rosuh.easywatermark.data.model.toUiProjection
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.UserPreferences
@@ -782,9 +783,11 @@ fun launchDesktopWindow() = application {
                         editorLayoutClass(maxWidth.value, maxHeight.value)
                     }
                     me.rosuh.easywatermark.ui.EditorScreen(
-                        imageList = sessionImages,
+                        imageList = sessionImages.map {
+                            it.toUiProjection()
+                        },
                         waterMark = waterMark,
-                        selectedImage = selectedForStrip,
+                        selectedImage = selectedForStrip?.toUiProjection(),
                         templates = templates,
                         icons = me.rosuh.easywatermark.ui.EditorUiIcons(
                             back = backPainter,

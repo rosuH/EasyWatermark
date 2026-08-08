@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.ImageInfoUi
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkConfigChange
@@ -46,13 +46,21 @@ data class EditorUiIcons(
 
 @Composable
 fun EditorScreen(
-    imageList: List<ImageInfo>,
+    /**
+     * Display list for filmstrip (immutable projection — no export jobState/result vars).
+     * Prefer [me.rosuh.easywatermark.data.model.toUiProjection] at the host boundary.
+     */
+    imageList: List<ImageInfoUi>,
     waterMark: WaterMark,
-    selectedImage: ImageInfo?,
+    selectedImage: ImageInfoUi?,
+    /**
+     * Templates for the sheet only. Pass [emptyList] until the sheet opens when the host
+     * can defer collection (Android P2); sheet content still receives a live list when open.
+     */
     templates: List<Template>,
     icons: EditorUiIcons,
     preview: @Composable (Modifier) -> Unit,
-    thumbnail: @Composable (image: ImageInfo, contentDescription: String, modifier: Modifier) -> Unit,
+    thumbnail: @Composable (image: ImageInfoUi, contentDescription: String, modifier: Modifier) -> Unit,
     optionItem: @Composable (spec: EditorOptionSpec, selected: Boolean) -> Unit,
     colorOption: @Composable (
         modifier: Modifier,
@@ -68,7 +76,7 @@ fun EditorScreen(
     onAddMoreImages: () -> Unit,
     onShowSaveDialog: () -> Unit,
     onGoAboutScreen: () -> Unit,
-    onImageSelected: (ImageInfo) -> Unit,
+    onImageSelected: (ImageInfoUi) -> Unit,
     onConfigChange: (WatermarkConfigChange) -> Unit,
     onUseTemplate: (Template) -> Unit,
     onAddTemplate: (String) -> Unit,
@@ -80,6 +88,8 @@ fun EditorScreen(
      * phone binary-compatible call sites.
      */
     layoutClass: EditorLayoutClass = EditorLayoutClass.Compact,
+    /** Optional: host learns when template sheet opens/closes (defer template Flow collect). */
+    onTemplateSheetVisibilityChange: (Boolean) -> Unit = {},
 ) {
     val progressiveSlots = LocalEditorProgressiveSlotPresentation.current
     val selected = selectedImage ?: imageList.firstOrNull()
@@ -104,6 +114,7 @@ fun EditorScreen(
         onAdd = onAddTemplate,
         onUpdate = onUpdateTemplate,
         onDelete = onDeleteTemplate,
+        onSheetVisibilityChange = onTemplateSheetVisibilityChange,
     ) { showTemplateSheet ->
         Surface(
             modifier = modifier

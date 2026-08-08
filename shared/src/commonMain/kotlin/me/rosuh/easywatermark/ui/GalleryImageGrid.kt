@@ -94,13 +94,18 @@ fun GalleryImageGrid(
     val edgePx = with(density) { 56.dp.toPx() }
     val autoScrollPx = with(density) { 28.dp.toPx() }
 
-    val imagesState = rememberUpdatedState(images)
-    val onSetSelectedState = rememberUpdatedState(onSetSelected)
-
     // Gesture session: range paint from [dragAnchor] through [dragExtent].
     var dragActive by remember { mutableStateOf(false) }
     var dragAnchor by remember { mutableIntStateOf(-1) }
     var dragExtent by remember { mutableIntStateOf(-1) }
+    // P3: freeze the list identity for the drag session so a host rebuild of [images]
+    // mid-paint cannot re-key the grid or restart range arithmetic.
+    var dragFrozenImages by remember { mutableStateOf<List<Image>?>(null) }
+    val listForGesture = dragFrozenImages ?: images
+    val displayImages = if (dragActive) listForGesture else images
+
+    val imagesState = rememberUpdatedState(listForGesture)
+    val onSetSelectedState = rememberUpdatedState(onSetSelected)
 
     fun hitIndex(pos: Offset): Int? {
         val info = gridState.layoutInfo
@@ -152,12 +157,13 @@ fun GalleryImageGrid(
         // I1: adaptive min-cell — phone keeps ~4 cols; tablet/Desktop gain more.
         columns = GridCells.Adaptive(minSize = minCellDp.dp),
         modifier = modifier
-            .pointerInput(images.size) {
+            .pointerInput(displayImages.size) {
                 detectDragGesturesAfterLongPress(
                     onDragStart = { offset ->
                         val list = imagesState.value
                         val idx = hitIndex(offset) ?: return@detectDragGesturesAfterLongPress
                         if (idx !in list.indices) return@detectDragGesturesAfterLongPress
+                        dragFrozenImages = list
                         dragActive = true
                         dragAnchor = idx
                         dragExtent = idx
@@ -182,11 +188,13 @@ fun GalleryImageGrid(
                         dragActive = false
                         dragAnchor = -1
                         dragExtent = -1
+                        dragFrozenImages = null
                     },
                     onDragCancel = {
                         dragActive = false
                         dragAnchor = -1
                         dragExtent = -1
+                        dragFrozenImages = null
                     },
                 )
             },
@@ -196,7 +204,7 @@ fun GalleryImageGrid(
         verticalArrangement = Arrangement.spacedBy(1.5.dp),
     ) {
         itemsIndexed(
-            items = images,
+            items = displayImages,
             key = { _: Int, item: Image -> item.id },
             contentType = { _, _ -> "gallery_cell" },
         ) { index, image ->

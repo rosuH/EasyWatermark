@@ -31,7 +31,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
-import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.ImageInfoUi
+import me.rosuh.easywatermark.data.model.toUiProjection
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.ios_import_failed
 import me.rosuh.easywatermark.shared.generated.resources.ios_import_failed_retry
@@ -77,7 +78,7 @@ internal val LocalEditorProgressiveSlotPresentation =
 @Composable
 internal fun EditorProgressivePhotoStrip(
     presentation: EditorProgressiveSlotPresentation,
-    thumbnail: @Composable (ImageInfo, String, Modifier) -> Unit,
+    thumbnail: @Composable (ImageInfoUi, String, Modifier) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val pendingLabel = stringResource(Res.string.ios_import_pending)
@@ -127,7 +128,7 @@ internal fun EditorProgressivePhotoStrip(
                             contentAlignment = Alignment.Center,
                         ) {
                             thumbnail(
-                                slot.image,
+                                slot.image.toUiProjection(),
                                 readyLabel,
                                 Modifier
                                     .fillMaxSize()

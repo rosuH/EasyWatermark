@@ -28,6 +28,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
+import me.rosuh.easywatermark.data.model.ImageInfoUi
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,7 +42,6 @@ import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import me.rosuh.easywatermark.data.model.ImageInfo
 import kotlin.math.abs
 
 /**
@@ -127,11 +127,11 @@ internal object EditorFilmstripInteraction {
  */
 @Composable
 fun EditorPhotoStrip(
-    images: List<ImageInfo>,
-    selectedImage: ImageInfo?,
+    images: List<ImageInfoUi>,
+    selectedImage: ImageInfoUi?,
     modifier: Modifier = Modifier,
-    onImageSelected: (ImageInfo) -> Unit = {},
-    thumbnail: @Composable (imageInfo: ImageInfo, contentDescription: String, modifier: Modifier) -> Unit,
+    onImageSelected: (ImageInfoUi) -> Unit = {},
+    thumbnail: @Composable (imageInfo: ImageInfoUi, contentDescription: String, modifier: Modifier) -> Unit,
 ) {
     val frameShape = RoundedCornerShape(EditorFilmstripMetrics.FrameRadius)
     EditorFilmstripScaffold(

@@ -24,6 +24,9 @@ class MyApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // DEBUG-only recomposition tracing for compose-stability-analyzer / IDE heatmap.
+        // Release keeps the gate off so TraceRecomposition residual is map-lookup + early return.
+        com.skydoves.compose.stability.runtime.ComposeStabilityAnalyzer.setEnabled(BuildConfig.DEBUG)
         startKoin {
             // 将 Koin 日志记录到 Android logger
             androidLogger()

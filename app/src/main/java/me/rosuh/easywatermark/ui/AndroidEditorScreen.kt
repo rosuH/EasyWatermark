@@ -43,9 +43,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.skydoves.compose.stability.runtime.TraceRecomposition
 import me.rosuh.easywatermark.data.model.FuncTitleModel
 import me.rosuh.easywatermark.data.model.FuncType
 import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.ImageInfoUi
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkConfigChange
 import me.rosuh.easywatermark.data.model.WatermarkMode
@@ -68,16 +70,19 @@ import kotlin.math.min
  * Android host for shared [me.rosuh.easywatermark.ui.EditorScreen].
  * Named AndroidEditorScreen (file AndroidEditorScreen.kt) to avoid JVM clash with shared EditorScreenKt.
  * Supplies resources, Coil thumbnails, Color/Icon edges, and [WaterMarkCanvas] preview.
+ *
+ * Accepts immutable [ImageInfoUi] for filmstrip/preview (P0). Session still applies offsets via
+ * [ImageInfo] at the host boundary.
  */
 @Composable
 fun AndroidEditorScreen(
-    imageList: List<ImageInfo>,
+    imageList: List<ImageInfoUi>,
     waterMark: WaterMark,
     onBack: () -> Unit,
     onOffsetChanged: (ImageInfo) -> Unit,
     modifier: Modifier = Modifier,
-    selectedImage: ImageInfo? = null,
-    onImageSelected: (ImageInfo) -> Unit = {},
+    selectedImage: ImageInfoUi? = null,
+    onImageSelected: (ImageInfoUi) -> Unit = {},
     onWaterMrkChange: (WatermarkConfigChange) -> Unit = {},
     onIconPicked: (Uri) -> Unit = {},
     onAddMoreImages: () -> Unit = { },
@@ -88,6 +93,7 @@ fun AndroidEditorScreen(
     onAddTemplate: (String) -> Unit = {},
     onUpdateTemplate: (Template) -> Unit = {},
     onDeleteTemplate: (Template) -> Unit = {},
+    onTemplateSheetVisibilityChange: (Boolean) -> Unit = {},
 ) {
     val colorModel = remember { FuncTitleModel(FuncType.Color) }
 
@@ -166,6 +172,7 @@ fun AndroidEditorScreen(
             onDeleteTemplate = onDeleteTemplate,
             modifier = Modifier.fillMaxSize(),
             layoutClass = layoutClass,
+            onTemplateSheetVisibilityChange = onTemplateSheetVisibilityChange,
         )
     }
 }
@@ -176,9 +183,10 @@ private const val FilmstripThumbPx = 160
  * Filmstrip cell: MediaStore system thumb → BitmapUtils (EXIF) fallback.
  * Avoids Coil content-URI blanks that still decode fine for the main preview.
  */
+@TraceRecomposition(tag = "editor-filmstrip", threshold = 2)
 @Composable
 private fun EditorFilmstripThumb(
-    imageInfo: ImageInfo,
+    imageInfo: ImageInfoUi,
     contentDescription: String,
     modifier: Modifier = Modifier,
 ) {
@@ -281,11 +289,12 @@ private fun WaterMark.previewFingerprint(): String = buildString {
  * - Crossfade between frames when the source uri changes
  * - CLAMP drag updates local offset, re-bakes, and commits via [onOffsetChanged] (required)
  */
+@TraceRecomposition(tag = "editor-preview", threshold = 2)
 @Composable
 private fun WaterMarkCanvas(
     modifier: Modifier = Modifier,
     waterMark: WaterMark,
-    selectedImage: ImageInfo,
+    selectedImage: ImageInfoUi,
     onOffsetChanged: (info: ImageInfo) -> Unit,
     onUpdateUriFailed: (SecurityException) -> Unit = { },
 ) {
@@ -348,7 +357,10 @@ private fun WaterMarkCanvas(
 
             val composed = withContext(Dispatchers.Default) {
                 try {
-                    val info = requestImage.copy(offsetX = offsetX, offsetY = offsetY).also {
+                    val info = requestImage.toImageInfo().copy(
+                        offsetX = offsetX,
+                        offsetY = offsetY,
+                    ).also {
                         it.width = base.width
                         it.height = base.height
                     }
@@ -377,7 +389,10 @@ private fun WaterMarkCanvas(
             if (isClamp) {
                 clampCellSize = withContext(Dispatchers.Default) {
                     try {
-                        val info = requestImage.copy(offsetX = 0.5f, offsetY = 0.5f).also {
+                        val info = requestImage.toImageInfo().copy(
+                            offsetX = 0.5f,
+                            offsetY = 0.5f,
+                        ).also {
                             it.width = base.width
                             it.height = base.height
                         }
@@ -497,7 +512,10 @@ private fun WaterMarkCanvas(
             val base = cached.second
             val composed = withContext(Dispatchers.Default) {
                 try {
-                    val info = requestImage.copy(offsetX = offsetX, offsetY = offsetY).also {
+                    val info = requestImage.toImageInfo().copy(
+                        offsetX = offsetX,
+                        offsetY = offsetY,
+                    ).also {
                         it.width = base.width
                         it.height = base.height
                     }
@@ -585,7 +603,9 @@ private fun WaterMarkCanvas(
                                     // Commit session state immediately (export must not see a
                                     // 300ms stale-offset window). Animation is local visual only.
                                     onOffsetChanged(
-                                        selectedImage.copy(offsetX = centerX, offsetY = centerY),
+                                        selectedImage
+                                            .copy(offsetX = centerX, offsetY = centerY)
+                                            .toImageInfo(),
                                     )
                                     scope.launch {
                                         Animatable(0f).animateTo(
@@ -598,7 +618,9 @@ private fun WaterMarkCanvas(
                                     }
                                 } else {
                                     onOffsetChanged(
-                                        selectedImage.copy(offsetX = offsetX, offsetY = offsetY),
+                                        selectedImage
+                                            .copy(offsetX = offsetX, offsetY = offsetY)
+                                            .toImageInfo(),
                                     )
                                 }
                             }

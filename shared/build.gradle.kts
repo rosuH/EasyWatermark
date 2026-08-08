@@ -173,3 +173,14 @@ compose.resources {
     packageOfResClass = "me.rosuh.easywatermark.shared.generated.resources"
     generateResClass = always
 }
+
+// Opt-in Compose Compiler stability reports for shared CMP UI (EditorScreen / Gallery shells).
+// ./gradlew :shared:compileAndroidMain -PcomposeCompilerReports=true
+// or :shared:compileKotlinDesktop / release path as available.
+// → shared/build/compose_compiler/
+composeCompiler {
+    if (providers.gradleProperty("composeCompilerReports").orNull == "true") {
+        reportsDestination = layout.buildDirectory.dir("compose_compiler")
+        metricsDestination = layout.buildDirectory.dir("compose_compiler")
+    }
+}

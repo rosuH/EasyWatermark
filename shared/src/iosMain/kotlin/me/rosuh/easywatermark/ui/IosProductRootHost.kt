@@ -51,6 +51,7 @@ import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkConfigChange
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.model.entity.Template
+import me.rosuh.easywatermark.data.model.toUiProjection
 import me.rosuh.easywatermark.data.repo.IosIconPersistence
 import me.rosuh.easywatermark.data.repo.TemplateRepository
 import me.rosuh.easywatermark.domain.OutputPrefsEditor
@@ -799,9 +800,10 @@ class IosProductRootHost(
                         LocalEditorProgressiveSlotPresentation provides progressivePresentation,
                     ) {
                     EditorScreen(
-                        imageList = sessionImages,
+                        imageList = sessionImages.map { it.toUiProjection() },
                         waterMark = waterMark,
-                        selectedImage = launchUi.curImageInfo ?: sessionImages.firstOrNull(),
+                        selectedImage = (launchUi.curImageInfo ?: sessionImages.firstOrNull())
+                            ?.toUiProjection(),
                         templates = templates,
                         icons = EditorUiIcons(
                             // Production navigate-up is a back chevron (ic_back), not the brand logo.

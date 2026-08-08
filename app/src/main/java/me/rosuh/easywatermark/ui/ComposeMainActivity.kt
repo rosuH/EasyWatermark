@@ -81,12 +81,15 @@ import org.jetbrains.compose.resources.stringResource as cmpStringResource
 import androidx.core.os.BuildCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.compose.runtime.produceState
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.MyApp
 import android.widget.Toast
 import androidx.compose.runtime.Composable
 import me.rosuh.easywatermark.BuildConfig
+import me.rosuh.easywatermark.data.model.toEditorSelectionUi
 import me.rosuh.easywatermark.ui.about.AboutDevCard
 import me.rosuh.easywatermark.ui.about.AboutScreenIcons
 import me.rosuh.easywatermark.ui.about.AboutScreen
@@ -277,24 +280,59 @@ class ComposeMainActivity : ComponentActivity() {
                                 }
                             }
                             val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
-                            val state by viewModel.launchScreenUiStateFlow.collectAsStateWithLifecycle()
-                            val saveExportState by viewModel.saveExportUiState.collectAsStateWithLifecycle()
-                            val productRoute = ProductShellNav.routeFromLaunchUi(state.uiState)
+                            // P1: do not drive the whole product shell off a single fat Session collect.
+                            // Route / editor display / gallery list / export progress are separate collectors.
+                            val productRoute by viewModel.launchScreenUiStateFlow
+                                .map { ProductShellNav.routeFromLaunchUi(it.uiState) }
+                                .collectAsStateWithLifecycle(
+                                    initialValue = ProductShellNav.routeFromLaunchUi(
+                                        viewModel.launchScreenUiStateFlow.value.uiState,
+                                    ),
+                                )
+                            val editorWaterMark by viewModel.launchScreenUiStateFlow
+                                .map { it.waterMark }
+                                .collectAsStateWithLifecycle(
+                                    initialValue = viewModel.launchScreenUiStateFlow.value.waterMark,
+                                )
+                            // P0: immutable projection for filmstrip/preview (drops jobState/result vars).
+                            val editorSelection by viewModel.launchScreenUiStateFlow
+                                .map { st ->
+                                    st.selectedImageList.toEditorSelectionUi(st.curImageInfo)
+                                }
+                                .collectAsStateWithLifecycle(
+                                    initialValue = viewModel.launchScreenUiStateFlow.value
+                                        .let { it.selectedImageList.toEditorSelectionUi(it.curImageInfo) },
+                                )
                             val context = LocalContext.current
-                            val templates by viewModel.templateListFlow.collectAsStateWithLifecycle()
+                            // P2: templates collected only while the template sheet is open.
+                            var templateSheetOpen by remember { mutableStateOf(false) }
+                            val templates by produceState(
+                                initialValue = emptyList(),
+                                templateSheetOpen,
+                                viewModel,
+                            ) {
+                                if (!templateSheetOpen) {
+                                    value = emptyList()
+                                } else {
+                                    viewModel.templateListFlow.collect { value = it }
+                                }
+                            }
 
                             val doExport: () -> Unit = {
+                                // Export always reads live Session list (mutable jobState/result).
                                 viewModel.saveImage(
                                     context.contentResolver,
-                                    state.selectedImageList
+                                    viewModel.launchScreenUiStateFlow.value.selectedImageList,
                                 )
                             }
 
                             // Export port returns MediaRef; convert at the Android Intent edge.
-                            val outputUris = state.selectedImageList.mapNotNull { image ->
-                                uriFromExportResultData(image.result?.data)
-                            }
+                            fun currentOutputUris(): List<Uri> =
+                                viewModel.launchScreenUiStateFlow.value.selectedImageList.mapNotNull { image ->
+                                    uriFromExportResultData(image.result?.data)
+                                }
                             val shareExports: () -> Unit = {
+                                val outputUris = currentOutputUris()
                                 if (outputUris.isNotEmpty()) {
                                     val intent = Intent().apply {
                                         type = "image/*"
@@ -316,7 +354,7 @@ class ComposeMainActivity : ComponentActivity() {
                                 }
                             }
                             val openFirstExport: () -> Unit = {
-                                outputUris.firstOrNull()?.let { outputUri ->
+                                currentOutputUris().firstOrNull()?.let { outputUri ->
                                     val intent = Intent(Intent.ACTION_VIEW).apply {
                                         setDataAndType(outputUri, "image/*")
                                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -465,9 +503,9 @@ class ComposeMainActivity : ComponentActivity() {
                                         }
                                         ProductShellNav.Route.Editor -> {
                                             AndroidEditorScreen(
-                                                imageList = state.selectedImageList,
-                                                waterMark = state.waterMark,
-                                                selectedImage = state.curImageInfo,
+                                                imageList = editorSelection.images,
+                                                waterMark = editorWaterMark,
+                                                selectedImage = editorSelection.selected,
                                                 onBack = {
                                                     showEditorExitConfirm = true
                                                 },
@@ -478,8 +516,10 @@ class ComposeMainActivity : ComponentActivity() {
                                                     viewModel.applyConfig(change)
                                                 },
                                                 onIconPicked = viewModel::importWatermarkIcon,
-                                                onImageSelected = {
-                                                    viewModel.process(Action.EditorImageSelected(it))
+                                                onImageSelected = { ui ->
+                                                    viewModel.process(
+                                                        Action.EditorImageSelected(ui.toImageInfo()),
+                                                    )
                                                 },
                                                 onGoAboutScreen = {
                                                     viewModel.openAbout(
@@ -502,6 +542,9 @@ class ComposeMainActivity : ComponentActivity() {
                                                 },
                                                 onDeleteTemplate = { template ->
                                                     viewModel.deleteTemplate(template)
+                                                },
+                                                onTemplateSheetVisibilityChange = { open ->
+                                                    templateSheetOpen = open
                                                 },
                                             )
                                         }
@@ -554,6 +597,12 @@ class ComposeMainActivity : ComponentActivity() {
                             }
 
                             if (showGalleryDialog) {
+                                // P1/P3: gallery images collected only while dialog is open.
+                                val galleryImages by viewModel.launchScreenUiStateFlow
+                                    .map { it.imageList }
+                                    .collectAsStateWithLifecycle(
+                                        initialValue = viewModel.launchScreenUiStateFlow.value.imageList,
+                                    )
                                 Dialog(
                                     onDismissRequest = {
                                         showGalleryDialog = false
@@ -564,7 +613,7 @@ class ComposeMainActivity : ComponentActivity() {
                                     // Selection is local in the dialog (no per-tap list rebuild).
                                     // Commit once on FAB dismiss via selectGallery.
                                     GalleryDialog(
-                                        images = state.imageList,
+                                        images = galleryImages,
                                         onLoadImages = {
                                             viewModel.process(
                                                 Action.LoadImages(context.contentResolver)
@@ -585,7 +634,11 @@ class ComposeMainActivity : ComponentActivity() {
                             }
 
                             if (showSaveSheet) {
-                                val exportImages = state.selectedImageList
+                                // P1: export job ticks only recompose the save sheet, not Editor.
+                                val saveExportState by viewModel.saveExportUiState
+                                    .collectAsStateWithLifecycle()
+                                val exportImages =
+                                    viewModel.launchScreenUiStateFlow.value.selectedImageList
                                 val exportTotalCount = exportImages.size.coerceAtLeast(1)
                                 // D5: Session counts are source of truth (not host invent).
                                 val successCount = saveExportState.successCount
@@ -700,7 +753,8 @@ class ComposeMainActivity : ComponentActivity() {
                                         else -> cmpStringResource(Res.string.dialog_export_to_gallery)
                                     },
                                     primaryActionEnabled = !saveExportState.isSaving,
-                                    showOpenGallery = saveExportState.isFinished && outputUris.isNotEmpty(),
+                                    showOpenGallery = saveExportState.isFinished &&
+                                        currentOutputUris().isNotEmpty(),
                                     isExporting = recovery.isExporting,
                                     showCancelButton = recovery.showCancel,
                                     showRetryFailedButton = recovery.showRetryFailed,
