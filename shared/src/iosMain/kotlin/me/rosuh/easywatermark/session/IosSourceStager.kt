@@ -114,7 +114,11 @@ object IosSourceStager {
         return IosByteArrayInterop.fromNSData(data)
     }
 
-    /** Best-effort cleanup for tests; production leaves temp files to the OS temp policy. */
+    /**
+     * Best-effort unlink for app-owned temp sources (`ewm_src_*` / provisional).
+     * Production call sites: progressive adopt rollback, leave-editor release, host dispose,
+     * and supersede/cancel. OS temp scrub is only a last resort if a process is killed mid-import.
+     */
     fun deleteQuietly(path: String) {
         if (path.isBlank()) return
         runCatching {

@@ -55,7 +55,12 @@ internal class IosProgressiveImportController(
     private val hostAlive: () -> Boolean,
     private val onSlotsChanged: (EditorMediaSlotState) -> Unit = {},
     private val onImportChromeChanged: (inProgress: Boolean) -> Unit = {},
-    private val onReadyPublished: (focusPath: String?) -> Unit = {},
+    /**
+     * Awaited after the focused slot first becomes Ready (outside [mutationMutex]).
+     * Host must finish watermark-priority preview bind before returning so Swift's
+     * first-item-alone transfer lane does not open the second Photos transfer yet.
+     */
+    private val onFocusReadyForPreview: suspend (focusPath: String) -> Unit = {},
     /** Production delivery is Main; tests use null for deterministic synchronous NC delivery. */
     private val notificationDeliveryQueue: NSOperationQueue? = NSOperationQueue.mainQueue,
 ) {
@@ -159,6 +164,56 @@ internal class IosProgressiveImportController(
         readyPaths.clear()
         deletePendingFreshCleanupPaths(excluding = sessionHeld)
         activeGeneration = -1L
+    }
+
+    /**
+     * Leave-editor / empty-selection resource release (host still alive).
+     *
+     * Deletes app-owned `ewm_src_*` that Session no longer holds, drops controller maps/slots,
+     * and clears Pending chrome. Safe to call repeatedly; does **not** remove NotificationCenter
+     * observers (unlike [close]).
+     */
+    fun releaseUnheldSourcesAfterLeaveEditor() {
+        if (closed) return
+        hostScope.launch {
+            mutationMutex.withLock {
+                if (closed) return@withLock
+                val sessionHeld = sessionHeldSourcePaths()
+                readyPaths.values
+                    .filter { IosSourceStager.isOwnedSourcePath(it) && it !in sessionHeld }
+                    .forEach(IosSourceStager::deleteQuietly)
+                readyPaths.keys
+                    .filter { readyPaths[it] !in sessionHeld }
+                    .toList()
+                    .forEach { readyPaths.remove(it) }
+                deletePendingFreshCleanupPaths(excluding = sessionHeld)
+                // Session empty → drop progressive presentation entirely (Pending/Failed/Ready).
+                if (sessionHeld.isEmpty()) {
+                    readyPaths.clear()
+                    slots = EditorMediaSlotState(emptyList(), null)
+                    importInProgress = false
+                    onImportChromeChanged(false)
+                    activeGeneration = -1L
+                    onSlotsChanged(slots)
+                } else if (slots.slots.isNotEmpty()) {
+                    // Keep only Ready slots still held by Session.
+                    val kept = slots.slots.mapNotNull { slot ->
+                        when (slot) {
+                            is EditorMediaSlot.Ready ->
+                                slot.takeIf { it.image.uri.value in sessionHeld }
+                            else -> null
+                        }
+                    }
+                    slots = EditorMediaSlotState(
+                        slots = kept,
+                        focusedImportId = slots.focusedImportId
+                            ?.takeIf { id -> kept.any { it.importId == id } }
+                            ?: kept.firstOrNull()?.importId,
+                    )
+                    onSlotsChanged(slots)
+                }
+            }
+        }
     }
 
     private fun sessionHeldSourcePaths(): Set<String> =
@@ -292,14 +347,27 @@ internal class IosProgressiveImportController(
         val job = hostScope.launch(start = CoroutineStart.DEFAULT) {
             try {
                 preBodyGateForTests?.await()
-                val ack = mutationMutex.withLock {
+                val outcome = mutationMutex.withLock {
                     adoptFileReady(
                         generation = generation,
                         importId = importId,
                         provisionalPath = provisionalPath,
                     )
                 }
-                postAckOnce(ack == AdoptionAck.Published, ack.name.lowercase())
+                // Watermark-region priority: finish focus preview BEFORE ACKing Swift, so
+                // firstItemAlone does not start item-1 transfer while item-0 is still decoding.
+                val focusPath = outcome.focusPathForPreview
+                if (outcome.ack == AdoptionAck.Published && focusPath != null) {
+                    try {
+                        onFocusReadyForPreview(focusPath)
+                    } catch (_: Throwable) {
+                        // Preview failure must not block transfer ACK / provisional cleanup.
+                    }
+                }
+                postAckOnce(
+                    outcome.ack == AdoptionAck.Published,
+                    outcome.ack.name.lowercase(),
+                )
             } catch (c: CancellationException) {
                 postAckOnce(false, "cancelled")
                 throw c
@@ -314,6 +382,12 @@ internal class IosProgressiveImportController(
         }
         return job
     }
+
+    private data class AdoptOutcome(
+        val ack: AdoptionAck,
+        /** Non-null only when this adoption made (or re-confirmed) the focused Ready path. */
+        val focusPathForPreview: String? = null,
+    )
 
     /**
      * Test seam: drive the **production** file-ready job (not the direct adopt shortcut) so
@@ -350,11 +424,15 @@ internal class IosProgressiveImportController(
         generation: Long,
         importId: String,
         provisionalPath: String,
-    ): AdoptionAck {
-        if (closed || !hostAlive()) return AdoptionAck.Disposed
-        if (generation != activeGeneration) return AdoptionAck.StaleGeneration
-        if (!IosPickGenerationGate.isPhotoCurrent(generation)) return AdoptionAck.StaleGeneration
-        if (!IosSourceStager.isOwnedProvisionalPath(provisionalPath)) return AdoptionAck.InvalidPath
+    ): AdoptOutcome {
+        if (closed || !hostAlive()) return AdoptOutcome(AdoptionAck.Disposed)
+        if (generation != activeGeneration) return AdoptOutcome(AdoptionAck.StaleGeneration)
+        if (!IosPickGenerationGate.isPhotoCurrent(generation)) {
+            return AdoptOutcome(AdoptionAck.StaleGeneration)
+        }
+        if (!IosSourceStager.isOwnedProvisionalPath(provisionalPath)) {
+            return AdoptOutcome(AdoptionAck.InvalidPath)
+        }
         me.rosuh.easywatermark.session.ImportTimelineProbe.mark(
             "file_ready",
             generation,
@@ -368,13 +446,13 @@ internal class IosProgressiveImportController(
                 IosSourceStager.adoptOwnedFile(provisionalPath)
             }
         } catch (_: Throwable) {
-            return AdoptionAck.Error
+            return AdoptOutcome(AdoptionAck.Error)
         }
         // Injection point: cancel after stable copy to prove destination rollback.
         afterStableCopyForTests?.invoke(stablePath)
         if (!currentCoroutineContext().isActive) {
             IosSourceStager.deleteQuietly(stablePath)
-            return AdoptionAck.StaleGeneration
+            return AdoptOutcome(AdoptionAck.StaleGeneration)
         }
 
         // Fail closed: undecodable / metadata-less inputs must never become Ready or enter Session.
@@ -391,7 +469,7 @@ internal class IosProgressiveImportController(
                 slots = slots.markFailed(importId, "undecodable")
                 onSlotsChanged(slots)
             }
-            return AdoptionAck.Error
+            return AdoptOutcome(AdoptionAck.Error)
         }
         val image = ImageInfo(
             uri = MediaRef(stablePath),
@@ -405,11 +483,11 @@ internal class IosProgressiveImportController(
             !IosPickGenerationGate.isPhotoCurrent(generation)
         ) {
             IosSourceStager.deleteQuietly(stablePath)
-            return AdoptionAck.StaleGeneration
+            return AdoptOutcome(AdoptionAck.StaleGeneration)
         }
         if (slots.slot(importId) !is EditorMediaSlot.Pending) {
             IosSourceStager.deleteQuietly(stablePath)
-            return AdoptionAck.NotPublished
+            return AdoptOutcome(AdoptionAck.NotPublished)
         }
 
         // Build ready set in fixed slot order. Ownership is provisional until Session publish
@@ -420,6 +498,11 @@ internal class IosProgressiveImportController(
         val focusUri = nextSlots.focusedImportId?.let { id ->
             (nextSlots.slot(id) as? EditorMediaSlot.Ready)?.image?.uri
         }
+        // Only bind watermark preview when the focused slot is Ready AND this adoption is that
+        // focus item. Never fall back to "first Ready" while first is still Pending (that made
+        // item-1 paint as the main preview when item-0 was still transferring).
+        val focusPathForPreview =
+            if (importId == nextSlots.focusedImportId) focusUri?.value else null
 
         return try {
             val wm = waterMarkProvider()
@@ -440,9 +523,9 @@ internal class IosProgressiveImportController(
                     generation != activeGeneration ||
                     !IosPickGenerationGate.isPhotoCurrent(generation)
                 ) {
-                    AdoptionAck.StaleGeneration
+                    AdoptOutcome(AdoptionAck.StaleGeneration)
                 } else {
-                    AdoptionAck.NotPublished
+                    AdoptOutcome(AdoptionAck.NotPublished)
                 }
             }
 
@@ -455,8 +538,10 @@ internal class IosProgressiveImportController(
                 generation,
                 importId,
             )
-            onReadyPublished(focusUri?.value ?: readyImages.firstOrNull()?.uri?.value)
-            AdoptionAck.Published
+            AdoptOutcome(
+                ack = AdoptionAck.Published,
+                focusPathForPreview = focusPathForPreview,
+            )
         } catch (t: Throwable) {
             readyPaths.remove(importId)
             IosSourceStager.deleteQuietly(stablePath)
@@ -592,13 +677,15 @@ internal class IosProgressiveImportController(
         removedPath?.takeIf(IosSourceStager::isOwnedSourcePath)
             ?.let(IosSourceStager::deleteQuietly)
         postControl(REMOVE_REQUESTED, importId)
-        onReadyPublished(focusUri?.value ?: readyImages.firstOrNull()?.uri?.value)
+        // User-driven remove: rebind watermark for the new focus (no transfer ACK to gate).
+        scheduleFocusPreview(focusUri?.value ?: readyImages.firstOrNull()?.uri?.value)
         return true
     }
 
     /**
      * Test seam: drive file-ready without NotificationCenter.
      * When [requestId] is set, posts the same FILE_READY_RESULT bridge payload production uses.
+     * Mirrors production: awaits focus watermark-priority bind before ACK when focus becomes Ready.
      */
     internal suspend fun noteFileReadyForTests(
         generation: Long,
@@ -614,7 +701,7 @@ internal class IosProgressiveImportController(
             return AdoptionAck.Disposed
         }
         if (activeGeneration < 0L) activeGeneration = generation
-        val ack = try {
+        val outcome = try {
             mutationMutex.withLock { adoptFileReady(generation, importId, provisionalPath) }
         } catch (t: Throwable) {
             if (requestId != null) {
@@ -628,16 +715,34 @@ internal class IosProgressiveImportController(
             }
             return AdoptionAck.Error
         }
+        val focusPath = outcome.focusPathForPreview
+        if (outcome.ack == AdoptionAck.Published && focusPath != null) {
+            try {
+                onFocusReadyForPreview(focusPath)
+            } catch (_: Throwable) {
+            }
+        }
         if (requestId != null) {
             postAck(
                 generation = generation,
                 importId = importId,
                 requestId = requestId,
-                ok = ack == AdoptionAck.Published,
-                reason = ack.name.lowercase(),
+                ok = outcome.ack == AdoptionAck.Published,
+                reason = outcome.ack.name.lowercase(),
             )
         }
-        return ack
+        return outcome.ack
+    }
+
+    /** Fire-and-forget focus rebind (user tap / remove). Transfer path awaits via launchFileReadyJob. */
+    private fun scheduleFocusPreview(path: String?) {
+        if (path.isNullOrBlank() || closed || !hostAlive()) return
+        hostScope.launch {
+            try {
+                onFocusReadyForPreview(path)
+            } catch (_: Throwable) {
+            }
+        }
     }
 
     internal suspend fun noteFileFailedForTests(
@@ -714,7 +819,7 @@ internal class IosProgressiveImportController(
                 if (!published) return@withLock
                 slots = next
                 onSlotsChanged(slots)
-                onReadyPublished(focus.value)
+                scheduleFocusPreview(focus.value)
             }
         }
     }

@@ -170,21 +170,46 @@ class IosProductRootHost(
         waterMarkProvider = { services.waterMarkRepo.waterMark.first() },
         hostScope = hostScope,
         hostAlive = { !disposed },
+        onSlotsChanged = slotsChanged@{ state ->
+            // Keep dispose/leave-editor ownership set aligned with progressive Ready paths.
+            // Never take lifecycleLock here: progressive may still hold mutationMutex and
+            // releaseEditorMediaResources/dispose take lifecycleLock first — avoid deadlock.
+            if (disposed) return@slotsChanged
+            val readyOwned = state.slots
+                .mapNotNull { (it as? EditorMediaSlot.Ready)?.image?.uri?.value }
+                .filter { IosSourceStager.isOwnedSourcePath(it) }
+            hostScope.launch {
+                if (disposed) return@launch
+                lifecycleLock.lock()
+                try {
+                    if (disposed) return@launch
+                    val sessionHeld = services.session.launchScreenUiStateFlow.value
+                        .selectedImageList
+                        .map { it.uri.value }
+                        .toSet()
+                    val progressiveGone = ownedStagedPaths.filter { prior ->
+                        IosSourceStager.isOwnedSourcePath(prior) &&
+                            prior !in readyOwned &&
+                            prior !in sessionHeld
+                    }
+                    ownedStagedPaths.removeAll(progressiveGone.toSet())
+                    readyOwned.forEach { ownedStagedPaths.add(it) }
+                } finally {
+                    lifecycleLock.unlock()
+                }
+            }
+        },
         onImportChromeChanged = { inProgress ->
             if (inProgress) {
                 markedFirstFilmstripPixels = false
                 markedFirstWatermarkedPreview = false
             }
         },
-        onReadyPublished = { focusPath ->
-            if (focusPath != null && !disposed) {
-                // Placeholder / preview bind for newly published ready focus.
-                hostScope.launch {
-                    try {
-                        bindProgressiveFocus(focusPath)
-                    } catch (_: Throwable) {
-                    }
-                }
+        // Awaited before Swift firstItemAlone ACK: watermark region + focus filmstrip first,
+        // so item-0 paints before item-1 transfer starts.
+        onFocusReadyForPreview = { focusPath ->
+            if (!disposed) {
+                bindProgressiveFocus(focusPath)
             }
         },
     )
@@ -396,6 +421,7 @@ class IosProductRootHost(
         // Keep iconBytes: single small buffer needed for Image-mode editor chrome; Session still owns icon path.
         previewBitmap = null
         previewSourcePath = null
+        watermarkedPreviewSourcePath = null
         previewGen += 1
         filmstripThumbEpoch += 1
         previewImages.clearFromOwner()
@@ -403,6 +429,42 @@ class IosProductRootHost(
 
     /** Alias for Swift / ObjC memory-warning bridge. */
     fun onMemoryWarning() = trimCaches()
+
+    /**
+     * Leave-editor media lifecycle: drop presentation bitmaps, bounded preview caches, and
+     * app-owned staged source files that Session no longer holds.
+     *
+     * Call after Session [AppIntent.NavigateBack] (or any path that empties selection while the
+     * host stays alive). Idempotent. Does not cancel export (caller owns that) and does not
+     * [dispose] the host.
+     */
+    fun releaseEditorMediaResources() {
+        if (disposed) return
+        lifecycleLock.lock()
+        try {
+            if (disposed) return
+            sourceBytes = null
+            previewBitmap = null
+            previewSourcePath = null
+            watermarkedPreviewSourcePath = null
+            outputPath = null
+            previewGen += 1
+            filmstripThumbEpoch += 1
+            previewImages.clearFromOwner()
+            progressiveImport.releaseUnheldSourcesAfterLeaveEditor()
+            val sessionHeld = services.session.launchScreenUiStateFlow.value.selectedImageList
+                .map { it.uri.value }
+                .filter { it.isNotBlank() }
+                .toSet()
+            val toDelete = ownedStagedPaths.filter {
+                IosSourceStager.isOwnedSourcePath(it) && it !in sessionHeld
+            }
+            ownedStagedPaths.removeAll(toDelete.toSet())
+            toDelete.forEach(IosSourceStager::deleteQuietly)
+        } finally {
+            lifecycleLock.unlock()
+        }
+    }
 
     /**
      * E2 host close/dispose (single-scene B1):
@@ -513,6 +575,18 @@ class IosProductRootHost(
                     templateRepo.getAllTemplate().collect { templates = it }
                 } else {
                     templates = emptyList()
+                }
+            }
+            // Leave-editor lifecycle closed loop: Session emptied (back, last-image remove, etc.)
+            // while Host stays alive — free preview caches + app-owned ewm_src temps.
+            LaunchedEffect(launchUi.uiState, sessionImages.size) {
+                if (
+                    launchUi.uiState == LaunchScreenUiState.Launch &&
+                    sessionImages.isEmpty() &&
+                    !disposed
+                ) {
+                    showEditor = false
+                    releaseEditorMediaResources()
                 }
             }
             LaunchedEffect(Unit) {
@@ -953,9 +1027,11 @@ class IosProductRootHost(
                             )
                         },
                         onBack = {
-                            // Session NavigateBack owns Launch; clear optimistic shell flag.
+                            // Session NavigateBack owns Launch; clear optimistic shell flag
+                            // and release staged sources + preview bitmaps (leave-editor lifecycle).
                             showEditor = false
                             services.session.onBackPressed()
+                            releaseEditorMediaResources()
                         },
                         onAddMoreImages = onPickPhoto,
                         onShowSaveDialog = {
@@ -1361,55 +1437,89 @@ class IosProductRootHost(
         } // AppTheme
     } // ComposeUIViewController
 
+    /**
+     * Focus-first bind for progressive import (and user focus changes).
+     *
+     * Priority order — blocks Swift firstItemAlone ACK until watermark region is ready:
+     * 1. Watermark-region placeholder (fast main-canvas paint)
+     * 2. Watermarked preview (product-critical; awaited)
+     * 3. Focus filmstrip thumb (so list item 0 paints before later items transfer)
+     * 4. Background: remaining filmstrip thumbs (does not gate ACK)
+     */
     private suspend fun bindProgressiveFocus(focusPath: String) {
-        if (disposed) return
+        if (disposed || focusPath.isBlank()) return
         val previewBucket = committedPreviewBucket
-        val placeholder = previewImages.load(sourcePreviewKey(focusPath, previewBucket)) {
-            withContext(Dispatchers.Default) {
-                IosPreviewRaster.decodeSourcePlaceholder(
-                    focusPath,
-                    maxEdgePx = previewBucket,
-                )
-            }
-        }
-        if (disposed || placeholder == null) return
-        previewBitmap = placeholder
-        previewSourcePath = focusPath
-        watermarkedPreviewSourcePath = null
-        showEditor = true
-        val g = IosPickGenerationGate.currentPhotoGeneration()
-        me.rosuh.easywatermark.session.ImportTimelineProbe.mark(
-            "first_visible_placeholder",
-            g,
-            "focus",
-        )
-        previewGen += 1
-        val gen = previewGen
-        hostScope.launch {
-            try {
-                renderPreviewForCurrentSelection(gen = gen)
-                // Mark only after the render path returns a completed watermarked bind.
-                if (
-                    !markedFirstWatermarkedPreview &&
-                    previewBitmap != null &&
-                    watermarkedPreviewSourcePath != null
-                ) {
-                    markedFirstWatermarkedPreview = true
-                    me.rosuh.easywatermark.session.ImportTimelineProbe.mark(
-                        "first_watermarked_preview",
-                        IosPickGenerationGate.currentPhotoGeneration(),
-                        "preview",
+        val pickGen = IosPickGenerationGate.currentPhotoGeneration()
+
+        // 1) Watermark region — placeholder first.
+        val placeholder = runCatching {
+            previewImages.load(sourcePreviewKey(focusPath, previewBucket)) {
+                withContext(Dispatchers.Default) {
+                    IosPreviewRaster.decodeSourcePlaceholder(
+                        focusPath,
+                        maxEdgePx = previewBucket,
                     )
                 }
-            } catch (_: Throwable) {
             }
+        }.getOrNull()
+        if (disposed) return
+        showEditor = true
+        if (placeholder != null) {
+            previewBitmap = placeholder
+            previewSourcePath = focusPath
+            watermarkedPreviewSourcePath = null
+            me.rosuh.easywatermark.session.ImportTimelineProbe.mark(
+                "first_visible_placeholder",
+                pickGen,
+                "focus",
+            )
         }
+
+        // 2) Watermarked main preview — highest product priority; await before ACK.
+        previewGen += 1
+        val gen = previewGen
+        try {
+            renderPreviewForCurrentSelection(gen = gen)
+            if (
+                !markedFirstWatermarkedPreview &&
+                previewBitmap != null &&
+                watermarkedPreviewSourcePath != null
+            ) {
+                markedFirstWatermarkedPreview = true
+                me.rosuh.easywatermark.session.ImportTimelineProbe.mark(
+                    "first_watermarked_preview",
+                    IosPickGenerationGate.currentPhotoGeneration(),
+                    "preview",
+                )
+            }
+        } catch (_: Throwable) {
+        }
+        if (disposed) return
+
+        // 3) Focus filmstrip thumb — single-flight with visible produceState; done before ACK
+        // so item-0 list cell can paint while item-1 has not even started Photos transfer.
+        try {
+            val frozenBucket = filmstripBucketPx()
+            val key = filmstripKey(focusPath, frozenBucket)
+            previewImages.load(key) {
+                withContext(Dispatchers.Default) {
+                    decodeFilmstripThumb(focusPath, frozenBucket)
+                }
+            }
+        } catch (_: Throwable) {
+        }
+
+        // 4) Remaining filmstrip — never gates first-item ACK / transfer lane.
         hostScope.launch {
             try {
                 val launch = services.session.launchScreenUiStateFlow.value
-                val paths = launch.selectedImageList.map { it.uri.value }.filter { it.isNotBlank() }
-                // Prefetch only — first_filmstrip_pixels is marked when a Ready cell paints.
-                prefetchFilmstripThumbs(paths, IosPickGenerationGate.currentPhotoGeneration())
+                val paths = launch.selectedImageList
+                    .map { it.uri.value }
+                    .filter { it.isNotBlank() }
+                prefetchFilmstripThumbs(
+                    paths,
+                    IosPickGenerationGate.currentPhotoGeneration(),
+                )
             } catch (_: Throwable) {
             }
         }

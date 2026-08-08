@@ -347,11 +347,11 @@ class IosProgressiveAdoptionTest {
             hostScope = scope,
             hostAlive = { true },
             notificationDeliveryQueue = null,
-            onReadyPublished = { focus ->
-                // Simulate host visible-pixel / preview publication boundaries (privacy-safe ids).
+            onFocusReadyForPreview = { _ ->
+                // Simulate host watermark-priority bind (awaited before ACK in production).
                 ImportTimelineProbe.mark("first_visible_placeholder", gen, "focus")
-                ImportTimelineProbe.mark("first_filmstrip_pixels", gen, "cell")
                 ImportTimelineProbe.mark("first_watermarked_preview", gen, "preview")
+                ImportTimelineProbe.mark("first_filmstrip_pixels", gen, "cell")
             },
         )
         try {
@@ -371,14 +371,15 @@ class IosProgressiveAdoptionTest {
                 IosProgressiveImportController.AdoptionAck.Published,
                 controller.noteFileReadyForTests(gen, "a", writeProvisionalJpeg()),
             )
+            // Watermark-region marks precede filmstrip (host bindProgressiveFocus priority).
             val required = listOf(
                 "picker_callback",
                 "slots_published",
                 "file_ready",
                 "session_adopted",
                 "first_visible_placeholder",
-                "first_filmstrip_pixels",
                 "first_watermarked_preview",
+                "first_filmstrip_pixels",
             )
             assertTrue(
                 ImportTimelineProbe.containsTimelineInOrder(required),

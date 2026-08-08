@@ -119,6 +119,47 @@ class IosProductRootDisposeTest {
     }
 
     @Test
+    fun releaseEditorMediaResources_deletesUnheldOwnedTemps_andClearsCaches() = runBlocking {
+        val (services, store) = isolatedServices()
+        try {
+            val host = IosProductRootHost(
+                onPickPhoto = {},
+                onPickIcon = {},
+                onShare = {},
+                onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
+                services = services,
+            )
+            val staged = IosSourceStager.stageBytes(byteArrayOf(9, 8, 7, 6, 5, 4, 3, 2))
+            host.trackOwnedStagedPathForTests(staged)
+            val tiny = androidx.compose.ui.graphics.ImageBitmap(
+                2,
+                2,
+                androidx.compose.ui.graphics.ImageBitmapConfig.Argb8888,
+            )
+            host.putWmPreviewForTests(staged, tiny)
+            host.putFilmstripThumbForTests(staged, tiny)
+            assertTrue(host.cacheBudgetForTests().wmPreview > 0)
+
+            // Session empty (leave-editor) → unheld ewm_src must go, caches cleared, host alive.
+            host.releaseEditorMediaResources()
+            assertFalse(host.isDisposedForTests())
+            assertTrue(host.ownedStagedPathsForTests().isEmpty())
+            assertFalse(
+                NSFileManager.defaultManager.fileExistsAtPath(staged),
+                "leave-editor must remove unheld ewm_src temp",
+            )
+            val cleared = host.cacheBudgetForTests()
+            assertEquals(0, cleared.wmPreview)
+            assertEquals(0, cleared.filmstrip)
+            host.releaseEditorMediaResources()
+            host.dispose()
+        } finally {
+            store.clear()
+        }
+        Unit
+    }
+
+    @Test
     fun trimCaches_clearsBudgets_disposeStillIdempotent() = runBlocking {
         val (services, store) = isolatedServices()
         try {
