@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
 import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.ImageInfoUi
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.ui.compose.parseArgbHexColor
 import me.rosuh.easywatermark.data.model.WatermarkConfigRules
@@ -1117,11 +1118,12 @@ object IosSharedComposeHost {
 
     fun editorScreenShellWitness(): UIViewController = ComposeUIViewController {
         AppTheme {
+            // Filmstrip uses ImageInfoUi (P0 projection); Session still owns mutable ImageInfo.
             val images = remember {
                 listOf(
-                    ImageInfo(MediaRef("ios-cmp-witness-1")),
-                    ImageInfo(MediaRef("ios-cmp-witness-2")),
-                    ImageInfo(MediaRef("ios-cmp-witness-3")),
+                    ImageInfoUi(MediaRef("ios-cmp-witness-1")),
+                    ImageInfoUi(MediaRef("ios-cmp-witness-2")),
+                    ImageInfoUi(MediaRef("ios-cmp-witness-3")),
                 )
             }
             var selectedImage by remember { mutableStateOf(images.first()) }
