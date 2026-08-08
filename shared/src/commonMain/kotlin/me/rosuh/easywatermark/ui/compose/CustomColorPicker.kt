@@ -38,6 +38,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import me.rosuh.easywatermark.ui.theme.DesignEditorBg
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -106,7 +107,7 @@ fun CustomColorPickerSheet(
         sheetState = sheetState,
         // Align with TextContent / Template / Export sheets (not rounded Material default).
         shape = RectangleShape,
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = DesignEditorBg,
         tonalElevation = 0.dp,
     ) {
         Column(

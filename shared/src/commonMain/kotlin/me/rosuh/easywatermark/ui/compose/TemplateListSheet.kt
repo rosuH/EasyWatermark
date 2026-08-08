@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -22,6 +21,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import me.rosuh.easywatermark.ui.theme.DesignEditorBg
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -89,7 +89,9 @@ fun TemplateListSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         shape = RectangleShape,
-        containerColor = MaterialTheme.colorScheme.surface,
+        // Match export / text / color sheets (olive editor surface, not elevated M3 card).
+        containerColor = DesignEditorBg,
+        tonalElevation = 0.dp,
         modifier = Modifier.testTag(TEMPLATE_LIST_SHEET_TAG),
     ) {
         Column(
@@ -228,49 +230,35 @@ fun TemplateListSheet(
     }
 
     confirmUse?.let { template ->
-        AlertDialog(
+        EwmConfirmDialog(
             onDismissRequest = { confirmUse = null },
-            title = { Text(stringResource(Res.string.dialog_title_exist_confirm)) },
-            text = { Text(stringResource(Res.string.tips_use_this_template)) },
-            confirmButton = {
-                TextButton(
-                    enabled = enabled,
-                    onClick = {
-                        onUse(template)
-                        confirmUse = null
-                        onDismiss()
-                    },
-                    modifier = Modifier.testTag(TEMPLATE_USE_CONFIRM_BUTTON_TAG),
-                ) { Text(stringResource(Res.string.tips_confirm_dialog)) }
+            title = stringResource(Res.string.dialog_title_exist_confirm),
+            text = stringResource(Res.string.tips_use_this_template),
+            confirmLabel = stringResource(Res.string.tips_confirm_dialog),
+            dismissLabel = stringResource(Res.string.tips_cancel_dialog),
+            confirmEnabled = enabled,
+            confirmTestTag = TEMPLATE_USE_CONFIRM_BUTTON_TAG,
+            onConfirm = {
+                onUse(template)
+                confirmUse = null
+                onDismiss()
             },
-            dismissButton = {
-                TextButton(onClick = { confirmUse = null }) {
-                    Text(stringResource(Res.string.tips_cancel_dialog))
-                }
-            }
         )
     }
 
     confirmDelete?.let { template ->
-        AlertDialog(
+        EwmConfirmDialog(
             onDismissRequest = { confirmDelete = null },
-            title = { Text(stringResource(Res.string.dialog_title_exist_confirm)) },
-            text = { Text(stringResource(Res.string.tips_delete_template)) },
-            confirmButton = {
-                TextButton(
-                    enabled = enabled,
-                    onClick = {
-                        onDelete(template)
-                        confirmDelete = null
-                    },
-                    modifier = Modifier.testTag(TEMPLATE_DELETE_CONFIRM_BUTTON_TAG),
-                ) { Text(stringResource(Res.string.tips_confirm_dialog)) }
+            title = stringResource(Res.string.dialog_title_exist_confirm),
+            text = stringResource(Res.string.tips_delete_template),
+            confirmLabel = stringResource(Res.string.tips_confirm_dialog),
+            dismissLabel = stringResource(Res.string.tips_cancel_dialog),
+            confirmEnabled = enabled,
+            confirmTestTag = TEMPLATE_DELETE_CONFIRM_BUTTON_TAG,
+            onConfirm = {
+                onDelete(template)
+                confirmDelete = null
             },
-            dismissButton = {
-                TextButton(onClick = { confirmDelete = null }) {
-                    Text(stringResource(Res.string.tips_cancel_dialog))
-                }
-            }
         )
     }
 }
@@ -292,7 +280,8 @@ private fun TemplateEditSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         shape = RectangleShape,
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = DesignEditorBg,
+        tonalElevation = 0.dp,
         modifier = Modifier.testTag(TEMPLATE_EDIT_SHEET_TAG),
     ) {
         Column(

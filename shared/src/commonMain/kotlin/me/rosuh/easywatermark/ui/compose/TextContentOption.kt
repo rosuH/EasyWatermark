@@ -44,6 +44,7 @@ import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.dialog_title_edit_watermark
 import me.rosuh.easywatermark.shared.generated.resources.dialog_title_template_title
 import me.rosuh.easywatermark.shared.generated.resources.tips_confirm_dialog
+import me.rosuh.easywatermark.ui.theme.DesignEditorBg
 import me.rosuh.easywatermark.ui.theme.EwmTheme
 import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
 import me.rosuh.easywatermark.ui.theme.motionAllowsDecorativeLoop
@@ -161,7 +162,8 @@ private fun WatermarkTextEditSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         shape = RectangleShape,
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = DesignEditorBg,
+        tonalElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier

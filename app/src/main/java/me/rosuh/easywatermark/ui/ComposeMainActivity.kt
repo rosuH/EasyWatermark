@@ -24,12 +24,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -59,6 +57,7 @@ import me.rosuh.easywatermark.shared.generated.resources.copy_success
 import me.rosuh.easywatermark.shared.generated.resources.dev_comment
 import me.rosuh.easywatermark.shared.generated.resources.dialog_cancel_exist_confirm
 import me.rosuh.easywatermark.shared.generated.resources.dialog_content_exist_confirm
+import me.rosuh.easywatermark.ui.compose.EwmConfirmDialog
 import me.rosuh.easywatermark.shared.generated.resources.dialog_export_to_gallery
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_cd_done
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_cd_progress
@@ -443,33 +442,23 @@ class ComposeMainActivity : ComponentActivity() {
                             }
 
                             if (showEditorExitConfirm) {
-                                AlertDialog(
-                                    onDismissRequest = { },
+                                // Product olive confirm (same tokens as template use/delete).
+                                EwmConfirmDialog(
+                                    onDismissRequest = { showEditorExitConfirm = false },
+                                    title = cmpStringResource(Res.string.dialog_title_exist_confirm),
+                                    text = cmpStringResource(Res.string.dialog_content_exist_confirm),
+                                    confirmLabel = cmpStringResource(Res.string.tips_confirm_dialog),
+                                    dismissLabel = cmpStringResource(
+                                        Res.string.dialog_cancel_exist_confirm,
+                                    ),
                                     properties = DialogProperties(
                                         dismissOnBackPress = false,
                                         dismissOnClickOutside = false,
                                     ),
-                                    title = {
-                                        Text(cmpStringResource(Res.string.dialog_title_exist_confirm))
-                                    },
-                                    text = {
-                                        Text(cmpStringResource(Res.string.dialog_content_exist_confirm))
-                                    },
-                                    confirmButton = {
-                                        TextButton(
-                                            onClick = {
-                                                showEditorExitConfirm = false
-                                                viewModel.resetJobStatus()
-                                                viewModel.onBackPressed()
-                                            }
-                                        ) {
-                                            Text(cmpStringResource(Res.string.tips_confirm_dialog))
-                                        }
-                                    },
-                                    dismissButton = {
-                                        TextButton(onClick = { showEditorExitConfirm = false }) {
-                                            Text(cmpStringResource(Res.string.dialog_cancel_exist_confirm))
-                                        }
+                                    onConfirm = {
+                                        showEditorExitConfirm = false
+                                        viewModel.resetJobStatus()
+                                        viewModel.onBackPressed()
                                     },
                                 )
                             }
