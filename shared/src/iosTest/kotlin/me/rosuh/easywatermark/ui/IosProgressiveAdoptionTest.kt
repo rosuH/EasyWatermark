@@ -504,6 +504,63 @@ class IosProgressiveAdoptionTest {
             }
         }
 
+    /**
+     * Import first-Ready must await [onFocusReadyForPreview] (firstItemAlone ACK gate).
+     * User settle/tap must use [onUserFocusPreview] only — never re-enter the import bind.
+     */
+    @Test
+    fun importFocusAwait_isSeparateFromUserSettleFocus() = runTest(mainDispatcher) {
+        val services = defaultIosAppServices()
+        services.session.dispatchAndAwait(AppIntent.NavigateBack)
+        val scope = CoroutineScope(SupervisorJob() + mainDispatcher)
+        val gen = IosPickGenerationGate.nextPhotoGeneration()
+        val importFocusPaths = mutableListOf<String>()
+        val userFocusPaths = mutableListOf<String>()
+        val controller = IosProgressiveImportController(
+            session = services.session,
+            waterMarkProvider = { services.waterMarkRepo.waterMark.first() },
+            hostScope = scope,
+            hostAlive = { true },
+            notificationDeliveryQueue = null,
+            onFocusReadyForPreview = { path -> importFocusPaths += path },
+            onUserFocusPreview = { path -> userFocusPaths += path },
+        )
+        try {
+            controller.beginForTests(gen, listOf("a", "b"), append = false)
+            assertEquals(
+                IosProgressiveImportController.AdoptionAck.Published,
+                controller.noteFileReadyForTests(gen, "a", writeProvisionalJpeg()),
+            )
+            assertEquals(1, importFocusPaths.size, "first Ready focus must await import bind")
+            assertTrue(userFocusPaths.isEmpty(), "import must not use user settle bind")
+
+            // Non-focus Ready: no focus preview bind (focus stays on a).
+            assertEquals(
+                IosProgressiveImportController.AdoptionAck.Published,
+                controller.noteFileReadyForTests(gen, "b", writeProvisionalJpeg()),
+            )
+            assertEquals(1, importFocusPaths.size, "non-focus Ready must not re-bind import focus")
+            assertTrue(userFocusPaths.isEmpty())
+
+            // User filmstrip settle/tap on Ready b → user path only (awaitable test seam).
+            assertTrue(
+                controller.requestFocusReadyAndAwaitUserPreviewForTests("b"),
+                "focus publish for Ready b must succeed",
+            )
+            assertEquals(1, userFocusPaths.size, "settle/tap must call user focus preview")
+            assertEquals(1, importFocusPaths.size, "settle/tap must not call import ACK bind")
+            assertTrue(userFocusPaths.single().isNotBlank())
+            assertTrue(
+                services.session.launchScreenUiStateFlow.value.curImageInfo?.uri?.value ==
+                    userFocusPaths.single() ||
+                    services.session.launchScreenUiStateFlow.value.selectedImageList
+                        .any { it.uri.value == userFocusPaths.single() },
+            )
+        } finally {
+            controller.close()
+        }
+    }
+
     @Test
     fun fiftyPathProgressiveAdoption_doesNotRetainByteArraysOnSession() = runTest(mainDispatcher) {
         val services = defaultIosAppServices()

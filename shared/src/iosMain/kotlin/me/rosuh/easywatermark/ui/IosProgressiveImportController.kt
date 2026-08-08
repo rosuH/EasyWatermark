@@ -59,8 +59,16 @@ internal class IosProgressiveImportController(
      * Awaited after the focused slot first becomes Ready (outside [mutationMutex]).
      * Host must finish watermark-priority preview bind before returning so Swift's
      * first-item-alone transfer lane does not open the second Photos transfer yet.
+     *
+     * **Import-only** — never used for user filmstrip settle / tap / remove rebind.
      */
     private val onFocusReadyForPreview: suspend (focusPath: String) -> Unit = {},
+    /**
+     * User focus rebind (filmstrip settle, tap, remove). Fire-and-forget from
+     * [scheduleFocusPreview]; must not gate transfer ACK. Host should cancel via
+     * preview generation and avoid full-strip filmstrip prefetch.
+     */
+    private val onUserFocusPreview: suspend (focusPath: String) -> Unit = {},
     /** Production delivery is Main; tests use null for deterministic synchronous NC delivery. */
     private val notificationDeliveryQueue: NSOperationQueue? = NSOperationQueue.mainQueue,
 ) {
@@ -734,12 +742,15 @@ internal class IosProgressiveImportController(
         return outcome.ack
     }
 
-    /** Fire-and-forget focus rebind (user tap / remove). Transfer path awaits via launchFileReadyJob. */
+    /**
+     * Fire-and-forget user focus rebind (settle / tap / remove).
+     * Import first-Ready ACK path awaits [onFocusReadyForPreview] in [launchFileReadyJob] instead.
+     */
     private fun scheduleFocusPreview(path: String?) {
         if (path.isNullOrBlank() || closed || !hostAlive()) return
         hostScope.launch {
             try {
-                onFocusReadyForPreview(path)
+                onUserFocusPreview(path)
             } catch (_: Throwable) {
             }
         }
@@ -801,27 +812,47 @@ internal class IosProgressiveImportController(
     fun requestFocusReady(importId: String) {
         if (closed || !hostAlive()) return
         hostScope.launch {
-            mutationMutex.withLock {
-                val next = slots.focusReady(importId)
-                if (next === slots || next == slots) return@withLock
-                val selected = next.readyImagesInOrder()
-                val focus = (next.slot(importId) as? EditorMediaSlot.Ready)?.image?.uri ?: return@withLock
-                val generation = activeGeneration
-                val published = publishReadySelectionIf(
-                    stillValid = {
-                        !closed && hostAlive() && generation == activeGeneration &&
-                            IosPickGenerationGate.isPhotoCurrent(generation)
-                    },
-                    selected = selected,
-                    waterMark = waterMarkProvider(),
-                    focusUriIfNotFirst = focus.takeIf { selected.firstOrNull()?.uri != it },
-                )
-                if (!published) return@withLock
-                slots = next
-                onSlotsChanged(slots)
-                scheduleFocusPreview(focus.value)
-            }
+            val focusPath = mutationMutex.withLock { publishFocusReadyLocked(importId) }
+                ?: return@launch
+            // Fire-and-forget user bind (cancelable in host via previewGen).
+            scheduleFocusPreview(focusPath)
         }
+    }
+
+    /**
+     * Test seam: same Session focus publication as [requestFocusReady], then **awaits**
+     * [onUserFocusPreview] (production remains fire-and-forget for scroll).
+     */
+    internal suspend fun requestFocusReadyAndAwaitUserPreviewForTests(importId: String): Boolean {
+        if (closed || !hostAlive()) return false
+        val focusPath = mutationMutex.withLock { publishFocusReadyLocked(importId) } ?: return false
+        try {
+            onUserFocusPreview(focusPath)
+        } catch (_: Throwable) {
+        }
+        return true
+    }
+
+    /** @return focus path when Session focus publication succeeded; null when no-op/failed. */
+    private suspend fun publishFocusReadyLocked(importId: String): String? {
+        val next = slots.focusReady(importId)
+        if (next === slots || next == slots) return null
+        val selected = next.readyImagesInOrder()
+        val focus = (next.slot(importId) as? EditorMediaSlot.Ready)?.image?.uri ?: return null
+        val generation = activeGeneration
+        val published = publishReadySelectionIf(
+            stillValid = {
+                !closed && hostAlive() && generation == activeGeneration &&
+                    IosPickGenerationGate.isPhotoCurrent(generation)
+            },
+            selected = selected,
+            waterMark = waterMarkProvider(),
+            focusUriIfNotFirst = focus.takeIf { selected.firstOrNull()?.uri != it },
+        )
+        if (!published) return null
+        slots = next
+        onSlotsChanged(slots)
+        return focus.value
     }
 
     /** Shared UI request; Session mutation and Swift retry-source cleanup happen in that order. */

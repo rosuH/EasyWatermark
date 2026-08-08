@@ -205,14 +205,30 @@ class IosProductRootHost(
                 markedFirstWatermarkedPreview = false
             }
         },
-        // Awaited before Swift firstItemAlone ACK: watermark region + focus filmstrip first,
-        // so item-0 paints before item-1 transfer starts.
+        // Import first Ready only — awaited before Swift firstItemAlone ACK so item-0 paints
+        // before item-1 transfer starts. User settle/tap uses [onUserFocusPreview] instead.
         onFocusReadyForPreview = { focusPath ->
             if (!disposed) {
-                bindProgressiveFocus(focusPath)
+                bindProgressiveFocus(focusPath, ProgressiveFocusBindMode.ImportPriority)
+            }
+        },
+        // User filmstrip settle / tap / remove: Session already selected; light cancelable bind.
+        onUserFocusPreview = { focusPath ->
+            if (!disposed) {
+                bindProgressiveFocus(focusPath, ProgressiveFocusBindMode.UserScroll)
             }
         },
     )
+
+    /**
+     * How [bindProgressiveFocus] prioritizes work.
+     * - [ImportPriority]: await watermark + focus thumb before return (firstItemAlone ACK gate).
+     * - [UserScroll]: cancel via [previewGen]; cache-first paint; never full-strip prefetch.
+     */
+    private enum class ProgressiveFocusBindMode {
+        ImportPriority,
+        UserScroll,
+    }
 
 
     /**
@@ -1438,49 +1454,91 @@ class IosProductRootHost(
     } // ComposeUIViewController
 
     /**
-     * Focus-first bind for progressive import (and user focus changes).
+     * Focus-first bind for progressive import and user filmstrip focus.
      *
-     * Priority order — blocks Swift firstItemAlone ACK until watermark region is ready:
+     * **[ProgressiveFocusBindMode.ImportPriority]** (import first Ready only):
      * 1. Watermark-region placeholder (fast main-canvas paint)
-     * 2. Watermarked preview (product-critical; awaited)
-     * 3. Focus filmstrip thumb (so list item 0 paints before later items transfer)
-     * 4. Background: remaining filmstrip thumbs (does not gate ACK)
+     * 2. Watermarked preview (product-critical; awaited — gates Swift firstItemAlone ACK)
+     * 3. Focus filmstrip thumb (item-0 list cell before later transfers)
+     * Does **not** full-strip prefetch (visible produceState + batch deliver cover the strip).
+     *
+     * **[ProgressiveFocusBindMode.UserScroll]** (settle / tap / remove):
+     * Session select already completed; this path is cancelable via [previewGen].
+     * Cache-hit paints first; no forced placeholder decode; focus thumb only if missing;
+     * never full-strip [prefetchFilmstripThumbs].
      */
-    private suspend fun bindProgressiveFocus(focusPath: String) {
+    private suspend fun bindProgressiveFocus(
+        focusPath: String,
+        mode: ProgressiveFocusBindMode,
+    ) {
         if (disposed || focusPath.isBlank()) return
         val previewBucket = committedPreviewBucket
         val pickGen = IosPickGenerationGate.currentPhotoGeneration()
 
-        // 1) Watermark region — placeholder first.
-        val placeholder = runCatching {
-            previewImages.load(sourcePreviewKey(focusPath, previewBucket)) {
-                withContext(Dispatchers.Default) {
-                    IosPreviewRaster.decodeSourcePlaceholder(
-                        focusPath,
-                        maxEdgePx = previewBucket,
-                    )
-                }
-            }
-        }.getOrNull()
-        if (disposed) return
-        showEditor = true
-        if (placeholder != null) {
-            previewBitmap = placeholder
-            previewSourcePath = focusPath
-            watermarkedPreviewSourcePath = null
-            me.rosuh.easywatermark.session.ImportTimelineProbe.mark(
-                "first_visible_placeholder",
-                pickGen,
-                "focus",
-            )
+        // User scroll: already showing the correct watermarked preview — only fill missing thumb.
+        if (
+            mode == ProgressiveFocusBindMode.UserScroll &&
+            watermarkedPreviewSourcePath == focusPath &&
+            previewBitmap != null
+        ) {
+            ensureFocusFilmstripThumb(focusPath, onlyIfMissing = true)
+            return
         }
 
-        // 2) Watermarked main preview — highest product priority; await before ACK.
+        // User scroll: instant swap from watermarked cache without starting a new raster.
+        if (mode == ProgressiveFocusBindMode.UserScroll) {
+            previewImages.peekCached(watermarkedPreviewKey(focusPath, previewBucket))?.let { hit ->
+                showEditor = true
+                previewBitmap = hit
+                previewSourcePath = focusPath
+                watermarkedPreviewSourcePath = focusPath
+                // Still bump gen so any in-flight raster for a prior focus is dropped on publish.
+                previewGen += 1
+                ensureFocusFilmstripThumb(focusPath, onlyIfMissing = true)
+                return
+            }
+            // Cache-hit placeholder only — never force a placeholder decode on settle (watermark
+            // path will decode source once). Miss leaves prior preview until raster completes.
+            previewImages.peekCached(sourcePreviewKey(focusPath, previewBucket))?.let { hit ->
+                showEditor = true
+                previewBitmap = hit
+                previewSourcePath = focusPath
+                watermarkedPreviewSourcePath = null
+            }
+        } else {
+            // 1) Import: watermark region — placeholder first (may decode).
+            val placeholder = runCatching {
+                previewImages.load(sourcePreviewKey(focusPath, previewBucket)) {
+                    withContext(Dispatchers.Default) {
+                        IosPreviewRaster.decodeSourcePlaceholder(
+                            focusPath,
+                            maxEdgePx = previewBucket,
+                        )
+                    }
+                }
+            }.getOrNull()
+            if (disposed) return
+            showEditor = true
+            if (placeholder != null) {
+                previewBitmap = placeholder
+                previewSourcePath = focusPath
+                watermarkedPreviewSourcePath = null
+                me.rosuh.easywatermark.session.ImportTimelineProbe.mark(
+                    "first_visible_placeholder",
+                    pickGen,
+                    "focus",
+                )
+            }
+        }
+
+        // 2) Watermarked main preview — cancelable via previewGen on rapid user focus.
+        // ImportPriority awaits this before ACK; UserScroll still runs it but never full-strips.
         previewGen += 1
         val gen = previewGen
         try {
             renderPreviewForCurrentSelection(gen = gen)
             if (
+                mode == ProgressiveFocusBindMode.ImportPriority &&
                 !markedFirstWatermarkedPreview &&
                 previewBitmap != null &&
                 watermarkedPreviewSourcePath != null
@@ -1494,34 +1552,35 @@ class IosProductRootHost(
             }
         } catch (_: Throwable) {
         }
-        if (disposed) return
+        if (disposed || gen != previewGen) return
 
-        // 3) Focus filmstrip thumb — single-flight with visible produceState; done before ACK
-        // so item-0 list cell can paint while item-1 has not even started Photos transfer.
+        // 3) Focus filmstrip thumb — import always; user only when cache miss.
+        ensureFocusFilmstripThumb(
+            focusPath,
+            onlyIfMissing = mode == ProgressiveFocusBindMode.UserScroll,
+        )
+        // 4) Full-strip prefetch intentionally omitted on both modes of this hot path.
+        // Batch [deliverPickedPhotosBatch] still prefetches once after stage; visible cells
+        // load via produceState. Re-prefetching all selected paths on every focus was the
+        // dominant settle hang driver (see jank-repro-20260808-170839).
+    }
+
+    /** Decode/load the focused filmstrip cell into the shared repository (visible produceState peers). */
+    private suspend fun ensureFocusFilmstripThumb(
+        focusPath: String,
+        onlyIfMissing: Boolean,
+    ) {
+        if (disposed || focusPath.isBlank()) return
         try {
             val frozenBucket = filmstripBucketPx()
             val key = filmstripKey(focusPath, frozenBucket)
+            if (onlyIfMissing && previewImages.peekCached(key) != null) return
             previewImages.load(key) {
                 withContext(Dispatchers.Default) {
                     decodeFilmstripThumb(focusPath, frozenBucket)
                 }
             }
         } catch (_: Throwable) {
-        }
-
-        // 4) Remaining filmstrip — never gates first-item ACK / transfer lane.
-        hostScope.launch {
-            try {
-                val launch = services.session.launchScreenUiStateFlow.value
-                val paths = launch.selectedImageList
-                    .map { it.uri.value }
-                    .filter { it.isNotBlank() }
-                prefetchFilmstripThumbs(
-                    paths,
-                    IosPickGenerationGate.currentPhotoGeneration(),
-                )
-            } catch (_: Throwable) {
-            }
         }
     }
 
