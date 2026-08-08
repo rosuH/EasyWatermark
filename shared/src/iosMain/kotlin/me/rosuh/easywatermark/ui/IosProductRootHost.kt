@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,6 +20,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
@@ -55,10 +58,15 @@ import me.rosuh.easywatermark.domain.TemplateEditor
 import androidx.compose.ui.graphics.ImageBitmap
 import me.rosuh.easywatermark.render.IosByteArrayInterop
 import me.rosuh.easywatermark.render.IosImageDecoder
+import me.rosuh.easywatermark.render.IosPreviewImageRepository
+import me.rosuh.easywatermark.render.IosPreviewKey
 import me.rosuh.easywatermark.render.IosPreviewBench
+import me.rosuh.easywatermark.render.IosPreviewPurpose
 import me.rosuh.easywatermark.render.IosPreviewRaster
+import me.rosuh.easywatermark.render.PreviewResolutionPolicy
 import me.rosuh.easywatermark.session.AppIntent
 import me.rosuh.easywatermark.session.IosAppServices
+import me.rosuh.easywatermark.session.IosPickGenerationGate
 import me.rosuh.easywatermark.session.defaultIosAppServices
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.action_pick
@@ -156,6 +164,32 @@ class IosProductRootHost(
     /** Serializes dispose vs post-publish ownership adoption (Main / delivery continuations). */
     private val lifecycleLock = NSLock()
 
+    /** Progressive path-first import (NotificationCenter control plane; zero public API growth). */
+    private val progressiveImport = IosProgressiveImportController(
+        session = services.session,
+        waterMarkProvider = { services.waterMarkRepo.waterMark.first() },
+        hostScope = hostScope,
+        hostAlive = { !disposed },
+        onImportChromeChanged = { inProgress ->
+            if (inProgress) {
+                markedFirstFilmstripPixels = false
+                markedFirstWatermarkedPreview = false
+            }
+        },
+        onReadyPublished = { focusPath ->
+            if (focusPath != null && !disposed) {
+                // Placeholder / preview bind for newly published ready focus.
+                hostScope.launch {
+                    try {
+                        bindProgressiveFocus(focusPath)
+                    } catch (_: Throwable) {
+                    }
+                }
+            }
+        },
+    )
+
+
     /**
      * G4 file-first: host no longer permanently owns multi-item full-res source bytes.
      * Preview / export re-read staged `ewm_src_*` paths. Field retained only for dispose clear.
@@ -170,24 +204,24 @@ class IosProductRootHost(
     private var statusLine by mutableStateOf("")
     private var isBusy by mutableStateOf(false)
     /**
-     * Android BitmapCache analogue: watermarked [ImageBitmap] by source path.
-     * LinkedHashMap preserves insertion order for FIFO/byte-budget eviction (H2).
-     * Cleared on config change / memory pressure.
-     * Caps: [WM_PREVIEW_CACHE_MAX] entries + [WM_PREVIEW_BYTES_MAX] approx bytes.
+     * One lifecycle-owned cache/in-flight state machine for source previews, watermarked previews,
+     * filmstrip cells and export thumbs. It enforces a joint 40MiB source/preview and 8MiB
+     * filmstrip budget; [previewBitmap] below is merely the current visible reference.
      */
-    private val wmPreviewCache = linkedMapOf<String, ImageBitmap>()
-    /** Source-only placeholders (no watermark). */
-    private val sourcePlaceholderCache = linkedMapOf<String, ImageBitmap>()
+    private val previewImages = IosPreviewImageRepository(hostScope)
+    /** Current visible bitmap is not a second cache; identity marks whether it is watermarked. */
+    private var watermarkedPreviewSourcePath by mutableStateOf<String?>(null)
     /**
-     * Filmstrip cell cache (path → small bitmap). Prefetched when a batch is staged so
-     * fling does not cold-decode / flash empty cells.
+     * Invalidation generation for filmstrip thumbs.
+     * Bumped only on real invalidation (trim/dispose/bucket change/ownership replace) —
+     * **not** after successful prefetch. Prefetch writes the repository cache; visible cells
+     * seed from [IosPreviewImageRepository.peekCached] without restarting every produceState.
      */
-    private val filmstripThumbCache = linkedMapOf<String, ImageBitmap>()
-    /** Bumped after prefetch so produceState re-reads the map. */
     private var filmstripThumbEpoch by mutableStateOf(0)
-    /** Export-sheet thumbs. */
-    private val exportThumbCache = linkedMapOf<String, ImageBitmap>()
     private var previewGen: Int = 0
+    /** Once-per-generation timeline marks for first visible pixels / completed preview. */
+    private var markedFirstFilmstripPixels = false
+    private var markedFirstWatermarkedPreview = false
     /**
      * H0.1-fix: UI-only CLAMP draft offset for live preview paint.
      * Never written to Session / export / DataStore. Cleared on gesture end/cancel.
@@ -213,6 +247,35 @@ class IosProductRootHost(
  * switch is interactive and sticky across launches.
      */
     private var dynamicColorForced by mutableStateOf(IosDynamicColorPrefs.isForced())
+    /** Container-fit committed decode bucket; draft gestures always use the 720px policy bucket. */
+    private var committedPreviewBucket by mutableStateOf(PreviewResolutionPolicy.BUCKET_720)
+    /**
+     * Actual progressive filmstrip cell long-edge pixels from layout measurement.
+     * Starts at 0 until the first onSizeChanged; decode falls back to the 128 policy bucket.
+     */
+    private var measuredFilmstripCellPx by mutableStateOf(0)
+
+    private fun sourcePreviewKey(path: String, bucket: Int = committedPreviewBucket) =
+        IosPreviewKey(path, bucket, IosPreviewPurpose.SourcePlaceholder)
+
+    private fun watermarkedPreviewKey(path: String, bucket: Int = committedPreviewBucket) =
+        IosPreviewKey(path, bucket, IosPreviewPurpose.Watermarked)
+
+    private fun filmstripBucketPx(): Int =
+        PreviewResolutionPolicy.filmstripMaxEdgePx(
+            measuredCellPx = measuredFilmstripCellPx.takeIf { it > 0 } ?: 128,
+        )
+
+    /** Freeze bucket once per request — same value for cache key and decoder. */
+    private fun filmstripKey(path: String, frozenBucketPx: Int = filmstripBucketPx()) =
+        IosPreviewKey(
+            path,
+            frozenBucketPx,
+            IosPreviewPurpose.Filmstrip,
+        )
+
+    private fun exportThumbnailKey(path: String) =
+        IosPreviewKey(path, 96, IosPreviewPurpose.ExportThumbnail)
 
     private fun openAboutFromLaunch() {
         services.session.openAbout(LaunchScreenUiState.Launch)
@@ -244,12 +307,18 @@ class IosProductRootHost(
     )
 
     /** Test-only read of host preview identity (wm/placeholder path caches). */
-    internal fun previewIdentityForTests(): PreviewIdentitySnapshot =
-        PreviewIdentitySnapshot(
+    internal fun previewIdentityForTests(): PreviewIdentitySnapshot {
+        val snapshot = previewImages.snapshotForTestsImmediate()
+        return PreviewIdentitySnapshot(
             previewSourcePath = previewSourcePath,
-            wmCachePaths = wmPreviewCache.keys.toSet(),
-            placeholderCachePaths = sourcePlaceholderCache.keys.toSet(),
+            wmCachePaths = snapshot.cachedKeys
+                .filter { it.purpose == IosPreviewPurpose.Watermarked }
+                .mapTo(linkedSetOf()) { it.ownedPath },
+            placeholderCachePaths = snapshot.cachedKeys
+                .filter { it.purpose == IosPreviewPurpose.SourcePlaceholder }
+                .mapTo(linkedSetOf()) { it.ownedPath },
         )
+    }
 
     /** Test-only: whether [dispose] has completed at least once. */
     internal fun isDisposedForTests(): Boolean = disposed
@@ -275,35 +344,43 @@ class IosProductRootHost(
         val exportThumbBytes: Long = 0,
     )
 
-    internal fun cacheBudgetForTests(): CacheBudgetSnapshot =
-        CacheBudgetSnapshot(
-            wmPreview = wmPreviewCache.size,
-            placeholder = sourcePlaceholderCache.size,
-            filmstrip = filmstripThumbCache.size,
-            exportThumb = exportThumbCache.size,
+    internal fun cacheBudgetForTests(): CacheBudgetSnapshot {
+        val snapshot = previewImages.snapshotForTestsImmediate()
+        return CacheBudgetSnapshot(
+            wmPreview = snapshot.watermarkedEntries,
+            placeholder = snapshot.sourcePlaceholderEntries,
+            filmstrip = snapshot.filmstripEntries,
+            exportThumb = snapshot.exportThumbnailEntries,
             holdsSourceBytes = sourceBytes != null,
-            wmPreviewBytes = IosHostImageCacheBudgets.totalApproxBytes(wmPreviewCache),
-            placeholderBytes = IosHostImageCacheBudgets.totalApproxBytes(sourcePlaceholderCache),
-            filmstripBytes = IosHostImageCacheBudgets.totalApproxBytes(filmstripThumbCache),
-            exportThumbBytes = IosHostImageCacheBudgets.totalApproxBytes(exportThumbCache),
+            wmPreviewBytes = snapshot.watermarkedBytes,
+            placeholderBytes = snapshot.sourcePlaceholderBytes,
+            filmstripBytes = snapshot.filmstripBytes,
+            exportThumbBytes = snapshot.exportThumbnailBytes,
         )
+    }
 
     /** Test-only: insert a placeholder cache entry and enforce budgets (no Session change). */
     internal fun putPlaceholderForTests(path: String, bitmap: ImageBitmap) {
-        sourcePlaceholderCache[path] = bitmap
-        enforceCacheBudgets()
+        previewImages.putForTestsImmediate(
+            IosPreviewKey(path, 720, IosPreviewPurpose.SourcePlaceholder),
+            bitmap,
+        )
     }
 
     /** Test-only: insert a wm preview cache entry and enforce budgets. */
     internal fun putWmPreviewForTests(path: String, bitmap: ImageBitmap) {
-        wmPreviewCache[path] = bitmap
-        enforceCacheBudgets()
+        previewImages.putForTestsImmediate(
+            IosPreviewKey(path, 720, IosPreviewPurpose.Watermarked),
+            bitmap,
+        )
     }
 
     /** Test-only: insert a filmstrip thumb and enforce budgets. */
     internal fun putFilmstripThumbForTests(path: String, bitmap: ImageBitmap) {
-        filmstripThumbCache[path] = bitmap
-        enforceCacheBudgets()
+        previewImages.putForTestsImmediate(
+            IosPreviewKey(path, 96, IosPreviewPurpose.Filmstrip),
+            bitmap,
+        )
     }
 
     /**
@@ -321,42 +398,11 @@ class IosProductRootHost(
         previewSourcePath = null
         previewGen += 1
         filmstripThumbEpoch += 1
-        wmPreviewCache.clear()
-        sourcePlaceholderCache.clear()
-        filmstripThumbCache.clear()
-        exportThumbCache.clear()
+        previewImages.clearFromOwner()
     }
 
     /** Alias for Swift / ObjC memory-warning bridge. */
     fun onMemoryWarning() = trimCaches()
-
-    /**
-     * H2: FIFO eviction by insertion order until **entry caps** and **approx byte budgets** hold.
-     * Called after every cache put path (preview render, filmstrip prefetch, export thumb, tests).
-     * Never invents H3 CI SLOs — engineering caps only (see companion constants).
-     */
-    private fun enforceCacheBudgets() {
-        IosHostImageCacheBudgets.enforce(
-            wmPreviewCache,
-            maxEntries = WM_PREVIEW_CACHE_MAX,
-            maxBytes = WM_PREVIEW_BYTES_MAX,
-        )
-        IosHostImageCacheBudgets.enforce(
-            sourcePlaceholderCache,
-            maxEntries = PLACEHOLDER_CACHE_MAX,
-            maxBytes = PLACEHOLDER_BYTES_MAX,
-        )
-        IosHostImageCacheBudgets.enforce(
-            filmstripThumbCache,
-            maxEntries = FILMSTRIP_THUMB_CACHE_MAX,
-            maxBytes = FILMSTRIP_THUMB_BYTES_MAX,
-        )
-        IosHostImageCacheBudgets.enforce(
-            exportThumbCache,
-            maxEntries = EXPORT_THUMB_CACHE_MAX,
-            maxBytes = EXPORT_THUMB_BYTES_MAX,
-        )
-    }
 
     /**
      * E2 host close/dispose (single-scene B1):
@@ -373,8 +419,15 @@ class IosProductRootHost(
         try {
             if (disposed) return
             disposed = true
+            // Tear down NC observers first so process-wide NotificationCenter cannot deliver into
+            // a dead host (suite isolation + single-scene rebuild safety).
+            progressiveImport.close()
             services.session.cancelExport()
             previewGen += 1
+            // Synchronously mark the preview repository closed when uncontended *before*
+            // cancelling host children — otherwise a contended close coroutine can be aborted
+            // before writing closed=true.
+            previewImages.closeFromOwner()
             hostScope.coroutineContext.cancelChildren()
             // Clear presentation + caches (Main-thread host; lock serializes vs ownership adopt).
             sourceBytes = null
@@ -392,20 +445,27 @@ class IosProductRootHost(
             clampDraftOffset = null
             clampDraftSelectionId = null
             filmstripThumbEpoch += 1
-            wmPreviewCache.clear()
-            sourcePlaceholderCache.clear()
-            filmstripThumbCache.clear()
-            exportThumbCache.clear()
+            watermarkedPreviewSourcePath = null
+            // Process-wide Session may still reference these ewm_src paths after Host rebuild.
+            // Only delete host-tracked temps that Session no longer holds.
+            val sessionHeld = services.session.launchScreenUiStateFlow.value.selectedImageList
+                .map { it.uri.value }
+                .filter { it.isNotBlank() }
+                .toSet()
             val toDelete = ownedStagedPaths.toList()
             ownedStagedPaths.clear()
             toDelete.forEach { path ->
-                if (path.contains("ewm_src_")) {
+                if (path.contains("ewm_src_") && path !in sessionHeld) {
                     IosSourceStager.deleteQuietly(path)
                 }
             }
         } finally {
             lifecycleLock.unlock()
         }
+    }
+
+    init {
+        progressiveImport.installObservers()
     }
 
     companion object {
@@ -543,7 +603,8 @@ class IosProductRootHost(
                                 services.waterMarkRepo.toggleBounds(enabled)
                                 // Bounds flag is persisted; clear WM preview cache so editor
                                 // re-rasters on return (Android draws debug rects from config).
-                                wmPreviewCache.clear()
+                                previewImages.clearPurposeFromOwner(IosPreviewPurpose.Watermarked)
+                                watermarkedPreviewSourcePath = null
                             }
                         },
                         onToggleDynamicColor = { enabled ->
@@ -581,6 +642,72 @@ class IosProductRootHost(
                     val layoutClass = remember(maxWidth, maxHeight) {
                         editorLayoutClass(maxWidth.value, maxHeight.value)
                     }
+                    val density = LocalDensity.current
+                    val bucketImage = launchUi.curImageInfo ?: sessionImages.firstOrNull()
+                    val requestedPreviewBucket = remember(
+                        maxWidth,
+                        maxHeight,
+                        bucketImage?.uri,
+                        bucketImage?.width,
+                        bucketImage?.height,
+                        density,
+                    ) {
+                        PreviewResolutionPolicy.committedMaxEdgePxForFit(
+                            sourceWidthPx = bucketImage?.width ?: 0,
+                            sourceHeightPx = bucketImage?.height ?: 0,
+                            containerWidthPx = with(density) { maxWidth.toPx().toInt() },
+                            containerHeightPx = with(density) { maxHeight.toPx().toInt() },
+                        )
+                    }
+                    LaunchedEffect(requestedPreviewBucket) {
+                        if (committedPreviewBucket != requestedPreviewBucket) {
+                            committedPreviewBucket = requestedPreviewBucket
+                            val selected = launchUi.curImageInfo ?: sessionImages.firstOrNull()
+                            if (selected != null) {
+                                previewGen += 1
+                                hostScope.launch {
+                                    runCatching { renderPreviewForCurrentSelection(previewGen) }
+                                }
+                            }
+                        }
+                    }
+                    // Pending/Failed are Host-only presentation cells. Supplying them through an
+                    // internal CompositionLocal keeps the public EditorScreen/Shared.framework
+                    // surface unchanged while the shared chrome can render the fixed strip.
+                    val progressiveSlots = progressiveImport.slots
+                    val progressivePresentation = progressiveSlots
+                        .takeIf { it.slots.isNotEmpty() }
+                        ?.let { slotState ->
+                            EditorProgressiveSlotPresentation(
+                                state = slotState,
+                                importInProgress = progressiveImport.importInProgress,
+                                onSelectReady = progressiveImport::requestFocusReady,
+                                onRetry = progressiveImport::requestRetry,
+                                onRemove = progressiveImport::requestRemove,
+                                onPrioritize = progressiveImport::requestPrioritize,
+                                measuredCellPx = measuredFilmstripCellPx,
+                                onCellPxMeasured = { px ->
+                                    if (px > 0 && px != measuredFilmstripCellPx) {
+                                        val oldBucket = filmstripBucketPx()
+                                        measuredFilmstripCellPx = px
+                                        val newBucket = filmstripBucketPx()
+                                        // Bucket upgrade must not keep stale smaller thumbnails.
+                                        if (newBucket != oldBucket) {
+                                            filmstripThumbEpoch += 1
+                                            me.rosuh.easywatermark.session.ImportTimelineProbe.mark(
+                                                "filmstrip_bucket_changed",
+                                                progressiveImport.activeGeneration,
+                                                "b$oldBucket-b$newBucket",
+                                            )
+                                        }
+                                    }
+                                },
+                                nowMs = { progressiveImport.nowMonoMsForTests() },
+                            )
+                        }
+                    CompositionLocalProvider(
+                        LocalEditorProgressiveSlotPresentation provides progressivePresentation,
+                    ) {
                     EditorScreen(
                         imageList = sessionImages,
                         waterMark = waterMark,
@@ -609,7 +736,7 @@ class IosProductRootHost(
                                     previewSourcePath == dragPath &&
                                     displayPreview != null &&
                                     (
-                                        wmPreviewCache[dragPath] === displayPreview ||
+                                        watermarkedPreviewSourcePath == dragPath ||
                                             draftActiveForSelection
                                         )
                             // M2/M7: policy-aware first reveal + switch fade (iOS was hard-cut).
@@ -671,7 +798,7 @@ class IosProductRootHost(
                                                         return@clampPreviewOffsetDrag
                                                     }
                                                     if (
-                                                        wmPreviewCache[dragPath] !== displayPreview &&
+                                                        watermarkedPreviewSourcePath != dragPath &&
                                                         !draftActiveForSelection
                                                     ) {
                                                         return@clampPreviewOffsetDrag
@@ -692,7 +819,11 @@ class IosProductRootHost(
                                                     commitBench.mark("applyOffset")
                                                     clampDraftOffset = null
                                                     clampDraftSelectionId = null
-                                                    wmPreviewCache.remove(dragPath)
+                                                    previewImages.invalidateOwnedPathFromOwner(
+                                                        ownedPath = dragPath,
+                                                        purpose = IosPreviewPurpose.Watermarked,
+                                                    )
+                                                    watermarkedPreviewSourcePath = null
                                                     commitBench.mark("cacheEvict")
                                                     previewGen++
                                                     val gen = previewGen
@@ -723,27 +854,42 @@ class IosProductRootHost(
                             }
                         },
                         thumbnail = { imageInfo, contentDescription, thumbModifier ->
-                            // Prefer prefetched host cache; produceState only on cold miss.
+                            // Visible cells and background prefetch share one repository flight.
+                            // Bucket is frozen once per produceState key so a late decode cannot
+                            // land under a different size identity than its cache key.
+                            // Seed from peekCached so a completed prefetch paints without waiting
+                            // for (or restarting) produceState after a global epoch bump.
                             val path = imageInfo.uri.value
                             val epoch = filmstripThumbEpoch
-                            val cached = filmstripThumbCache[path]
-                            val thumbBitmap by produceState(initialValue = cached, path, epoch) {
-                                // produceState runs under Compose's StandaloneCoroutine: an
-                                // uncaught throw becomes K/N process abort (SIGABRT).
+                            val frozenBucket = filmstripBucketPx()
+                            val key = filmstripKey(path, frozenBucket)
+                            val cachedSeed =
+                                if (path.isBlank() || path == "preview") {
+                                    null
+                                } else {
+                                    previewImages.peekCached(key)
+                                }
+                            // produceState runs under Compose's StandaloneCoroutine: an uncaught
+                            // throw becomes K/N process abort (SIGABRT) — keep try/catch.
+                            val thumbBitmap by produceState<ImageBitmap?>(
+                                initialValue = cachedSeed,
+                                path,
+                                epoch,
+                                frozenBucket,
+                            ) {
                                 try {
                                     if (path.isBlank() || path == "preview") {
                                         value = null
                                         return@produceState
                                     }
-                                    filmstripThumbCache[path]?.let {
-                                        value = it
+                                    // Seeded from peekCached — keep pixels; keys change on real invalidation.
+                                    if (value != null) {
                                         return@produceState
                                     }
-                                    value = withContext(Dispatchers.Default) {
-                                        runCatching { decodeFilmstripThumb(path) }.getOrNull()
-                                    }?.also {
-                                        filmstripThumbCache[path] = it
-                                        enforceCacheBudgets()
+                                    value = previewImages.load(key) {
+                                        withContext(Dispatchers.Default) {
+                                            decodeFilmstripThumb(path, frozenBucket)
+                                        }
                                     }
                                 } catch (t: Throwable) {
                                     println("filmstrip produceState failed path=$path: ${t.message}")
@@ -751,6 +897,18 @@ class IosProductRootHost(
                                 }
                             }
                             if (thumbBitmap != null) {
+                                // First paint of a Ready filmstrip cell = visible pixels, not prefetch.
+                                SideEffect {
+                                    if (!markedFirstFilmstripPixels) {
+                                        markedFirstFilmstripPixels = true
+                                        me.rosuh.easywatermark.session.ImportTimelineProbe.mark(
+                                            "first_filmstrip_pixels",
+                                            me.rosuh.easywatermark.session.IosPickGenerationGate
+                                                .currentPhotoGeneration(),
+                                            "cell",
+                                        )
+                                    }
+                                }
                                 Image(
                                     bitmap = thumbBitmap!!,
                                     contentDescription = contentDescription,
@@ -801,6 +959,9 @@ class IosProductRootHost(
                         },
                         onAddMoreImages = onPickPhoto,
                         onShowSaveDialog = {
+                            // Block export while progressive import still has Pending/in-flight work
+                            // (fresh pick no longer clears Session until first Ready publishes).
+                            if (progressiveImport.importInProgress) return@EditorScreen
                             // C2: open shared Android Compose export panel (not immediate Photos write).
                             services.session.resetJobStatus()
                             sheetExportFinished = false
@@ -811,15 +972,17 @@ class IosProductRootHost(
                             // Android parity: select instantly; show placeholder; watermark async + cache.
                             scope.launch {
                                 val path = info.uri.value
+                                val previewBucket = committedPreviewBucket
                                 val switchBench = IosPreviewBench.scope("switch_image")
                                 try {
                                     services.session.dispatchAndAwait(AppIntent.SelectCurrent(info.uri))
                                     switchBench.mark("select")
 
                                     // 1) Instant watermarked cache hit
-                                    wmPreviewCache[path]?.let { cached ->
+                                    previewImages.cached(watermarkedPreviewKey(path, previewBucket))?.let { cached ->
                                         previewBitmap = cached
                                         previewSourcePath = path
+                                        watermarkedPreviewSourcePath = path
                                         switchBench.finish(
                                             mapOf(
                                                 "hit" to "wm",
@@ -830,14 +993,19 @@ class IosProductRootHost(
                                     }
 
                                     // 2) Instant source placeholder (no watermark) while raster runs
-                                    val placeholder = sourcePlaceholderCache[path]
-                                        ?: withContext(Dispatchers.Default) {
-                                            IosPreviewRaster.decodeSourcePlaceholder(path)
-                                        }?.also { sourcePlaceholderCache[path] = it }
+                                    val placeholder = previewImages.load(sourcePreviewKey(path, previewBucket)) {
+                                        withContext(Dispatchers.Default) {
+                                            IosPreviewRaster.decodeSourcePlaceholder(
+                                                path,
+                                                maxEdgePx = previewBucket,
+                                            )
+                                        }
+                                    }
                                     switchBench.mark("placeholder")
                                     if (placeholder != null) {
                                         previewBitmap = placeholder
                                         previewSourcePath = path
+                                        watermarkedPreviewSourcePath = null
                                     }
 
                                     // 3) Full watermarked preview (in-memory, no PNG encode)
@@ -865,7 +1033,8 @@ class IosProductRootHost(
                             }
                             scope.launch {
                                 // Config change invalidates watermarked cache (not source placeholders).
-                                wmPreviewCache.clear()
+                                previewImages.clearPurposeFromOwner(IosPreviewPurpose.Watermarked)
+                                watermarkedPreviewSourcePath = null
                                 previewGen += 1
                                 val gen = previewGen
                                 isBusy = true
@@ -925,6 +1094,7 @@ class IosProductRootHost(
                         modifier = Modifier.fillMaxSize(),
                         layoutClass = layoutClass,
                     )
+                    }
                     } // BoxWithConstraints Editor
                 }
                 } // when (route)
@@ -1134,31 +1304,21 @@ class IosProductRootHost(
                     onOpenGalleryClick = {},
                 ) { info, thumbModifier ->
                     // Per-source-path thumb off-main (never shared previewBitmap; never sync decode).
-                    // Sync remember{decode} froze the export LazyRow fling on first open.
+                    // Visible export cells share repository single-flight with any prefetch.
                     val path = info.uri.value
-                    val cached = exportThumbCache[path]
-                    val thumb by produceState(initialValue = cached, path) {
+                    val thumb by produceState<ImageBitmap?>(initialValue = null, path) {
                         try {
                             if (path.isBlank() || path == "preview") {
                                 value = previewBitmap
                                 return@produceState
                             }
-                            exportThumbCache[path]?.let {
-                                value = it
-                                return@produceState
-                            }
-                            value = withContext(Dispatchers.Default) {
-                                runCatching {
-                                    val data = NSData.dataWithContentsOfFile(path)
-                                        ?: return@runCatching null
-                                    IosImageDecoder.decodeThumbnail(
-                                        IosByteArrayInterop.fromNSData(data),
-                                        maxEdgePx = 96,
-                                    )
-                                }.getOrNull()
-                            }?.also {
-                                exportThumbCache[path] = it
-                                enforceCacheBudgets()
+                            value = previewImages.load(exportThumbnailKey(path)) {
+                                withContext(Dispatchers.Default) {
+                                    runCatching {
+                                        me.rosuh.easywatermark.render.IosImageIODecoder
+                                            .decodeThumbnail(path, maxEdgePx = 96)
+                                    }.getOrNull()
+                                }
                             }
                         } catch (t: Throwable) {
                             println("export thumb produceState failed path=$path: ${t.message}")
@@ -1201,9 +1361,63 @@ class IosProductRootHost(
         } // AppTheme
     } // ComposeUIViewController
 
+    private suspend fun bindProgressiveFocus(focusPath: String) {
+        if (disposed) return
+        val previewBucket = committedPreviewBucket
+        val placeholder = previewImages.load(sourcePreviewKey(focusPath, previewBucket)) {
+            withContext(Dispatchers.Default) {
+                IosPreviewRaster.decodeSourcePlaceholder(
+                    focusPath,
+                    maxEdgePx = previewBucket,
+                )
+            }
+        }
+        if (disposed || placeholder == null) return
+        previewBitmap = placeholder
+        previewSourcePath = focusPath
+        watermarkedPreviewSourcePath = null
+        showEditor = true
+        val g = IosPickGenerationGate.currentPhotoGeneration()
+        me.rosuh.easywatermark.session.ImportTimelineProbe.mark(
+            "first_visible_placeholder",
+            g,
+            "focus",
+        )
+        previewGen += 1
+        val gen = previewGen
+        hostScope.launch {
+            try {
+                renderPreviewForCurrentSelection(gen = gen)
+                // Mark only after the render path returns a completed watermarked bind.
+                if (
+                    !markedFirstWatermarkedPreview &&
+                    previewBitmap != null &&
+                    watermarkedPreviewSourcePath != null
+                ) {
+                    markedFirstWatermarkedPreview = true
+                    me.rosuh.easywatermark.session.ImportTimelineProbe.mark(
+                        "first_watermarked_preview",
+                        IosPickGenerationGate.currentPhotoGeneration(),
+                        "preview",
+                    )
+                }
+            } catch (_: Throwable) {
+            }
+        }
+        hostScope.launch {
+            try {
+                val launch = services.session.launchScreenUiStateFlow.value
+                val paths = launch.selectedImageList.map { it.uri.value }.filter { it.isNotBlank() }
+                // Prefetch only — first_filmstrip_pixels is marked when a Ready cell paints.
+                prefetchFilmstripThumbs(paths, IosPickGenerationGate.currentPhotoGeneration())
+            } catch (_: Throwable) {
+            }
+        }
+    }
+
     /**
      * Legacy optimistic shell only — does **not** stage or retain multi full-res owners.
-     * Production path is [deliverPickedPhotosBatch] (file-first).
+     * Production path is progressive NotificationCenter import; batch byte delivery remains for fixtures.
      */
     fun deliverPickedPhoto(bytes: ByteArray) {
         // G4: do not pin full-res bytes on the host; Session path is the durable owner.
@@ -1311,9 +1525,14 @@ class IosProductRootHost(
         val paths = launch.selectedImageList.map { it.uri.value }.filter { it.isNotBlank() }
         val focusPath = (launch.curImageInfo ?: launch.selectedImageList.firstOrNull())?.uri?.value
         if (renderPreview && focusPath != null) {
-            val cached = sourcePlaceholderCache[focusPath]
-            val placeholder = cached ?: withContext(Dispatchers.Default) {
-                IosPreviewRaster.decodeSourcePlaceholder(focusPath)
+            val previewBucket = committedPreviewBucket
+            val placeholder = previewImages.load(sourcePreviewKey(focusPath, previewBucket)) {
+                withContext(Dispatchers.Default) {
+                    IosPreviewRaster.decodeSourcePlaceholder(
+                        focusPath,
+                        maxEdgePx = previewBucket,
+                    )
+                }
             }
             // F16: re-validate after decode suspension before any host cache/preview write.
             me.rosuh.easywatermark.session.IosPickPublishProbe
@@ -1322,12 +1541,9 @@ class IosProductRootHost(
                 return
             }
             if (placeholder != null) {
-                if (cached == null) {
-                    sourcePlaceholderCache[focusPath] = placeholder
-                    enforceCacheBudgets()
-                }
                 previewBitmap = placeholder
                 previewSourcePath = focusPath
+                watermarkedPreviewSourcePath = null
             }
         }
 
@@ -1437,13 +1653,11 @@ class IosProductRootHost(
             } else if (!append) {
                 previousOwned.filter { it !in sessionOwned }.forEach { IosSourceStager.deleteQuietly(it) }
                 ownedStagedPaths.clear()
-                wmPreviewCache.clear()
-                sourcePlaceholderCache.clear()
-                filmstripThumbCache.clear()
-                exportThumbCache.clear()
+                previewImages.clearFromOwner()
                 filmstripThumbEpoch += 1
                 previewBitmap = null
                 previewSourcePath = null
+                watermarkedPreviewSourcePath = null
                 // Track current Session ewm_src paths (replace publishes full selection).
                 sessionOwned.forEach { ownedStagedPaths.add(it) }
             } else {
@@ -1487,32 +1701,47 @@ class IosProductRootHost(
         }
     }
 
-    private fun decodeFilmstripThumb(path: String): ImageBitmap? {
-        val data = NSData.dataWithContentsOfFile(path) ?: return null
-        return IosImageDecoder.decodeThumbnail(
-            IosByteArrayInterop.fromNSData(data),
-            maxEdgePx = 96,
-        )
+    private fun decodeFilmstripThumb(path: String, frozenBucketPx: Int): ImageBitmap? {
+        return runCatching {
+            me.rosuh.easywatermark.render.IosImageIODecoder.decodeThumbnail(
+                path,
+                maxEdgePx = frozenBucketPx,
+            )
+        }.getOrNull()
     }
 
     /**
-     * Decode missing filmstrip thumbs off-main; bumps [filmstripThumbEpoch] once when done.
-     * [pickGeneration] gates every cache write after suspension (F16).
+     * Decode missing filmstrip thumbs off-main into the repository cache.
+     *
+     * Deliberately does **not** bump [filmstripThumbEpoch]: a global epoch restart forces every
+     * visible cell's produceState to drop and re-await, which janks scroll during mass import.
+     * Visible cells seed from [IosPreviewImageRepository.peekCached] on composition; uncached
+     * cells still load via produceState. [pickGeneration] gates every cache write after suspension (F16).
+     * Bucket is frozen per request so a late decode cannot land under a different key/size.
      */
     private suspend fun prefetchFilmstripThumbs(paths: List<String>, pickGeneration: Long) {
         if (paths.isEmpty()) return
         if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
             return
         }
-        val missing = paths.filter { it.isNotBlank() && !filmstripThumbCache.containsKey(it) }
-        if (missing.isEmpty()) return
         // G4: bound concurrent filmstrip decodes to the same ceiling as stage concurrency.
         val gate = Semaphore(IOS_STAGING_MAX_CONCURRENCY)
-        val decoded = coroutineScope {
-            missing.map { path ->
+        val targets = paths.filter { it.isNotBlank() }
+        coroutineScope {
+            targets.map { path ->
                 async(Dispatchers.Default) {
                     gate.withPermit {
-                        path to runCatching { decodeFilmstripThumb(path) }.getOrNull()
+                        val frozenBucket = filmstripBucketPx()
+                        val key = filmstripKey(path, frozenBucket)
+                        previewImages.load(key) {
+                            val decoded = runCatching {
+                                decodeFilmstripThumb(path, frozenBucket)
+                            }.getOrNull()
+                            decoded?.takeIf {
+                                me.rosuh.easywatermark.session.IosPickGenerationGate
+                                    .isPhotoCurrent(pickGeneration)
+                            }
+                        }
                     }
                 }
             }.awaitAll()
@@ -1520,15 +1749,12 @@ class IosProductRootHost(
         if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
             return
         }
-        for ((path, thumb) in decoded) {
-            if (thumb != null) filmstripThumbCache[path] = thumb
-        }
-        enforceCacheBudgets()
-        withContext(Dispatchers.Main) {
-            if (me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
-                filmstripThumbEpoch += 1
-            }
-        }
+        // Evidence-only timeline mark — no UI invalidation (no filmstripThumbEpoch bump).
+        me.rosuh.easywatermark.session.ImportTimelineProbe.mark(
+            "filmstrip_prefetch_done",
+            pickGeneration,
+            "n${targets.size}",
+        )
     }
 
     /**
@@ -1566,7 +1792,8 @@ class IosProductRootHost(
             }
             IosIconPersistence.deleteIfOwned(previousRef.value)
             iconBytes = bytes
-            wmPreviewCache.clear()
+            previewImages.clearPurposeFromOwner(IosPreviewPurpose.Watermarked)
+            watermarkedPreviewSourcePath = null
             previewGen += 1
             renderPreviewForCurrentSelection(gen = previewGen)
         } finally {
@@ -1592,7 +1819,7 @@ class IosProductRootHost(
     /**
  * Fast in-memory preview (Android WaterMarkCanvas analogue):
  * - [IosPreviewRaster]: decode+scale+compose ImageBitmap, **no PNG encode/disk**
- * - [wmPreviewCache] hit → 0 raster work
+ * - repository watermarked hit → 0 raster work
  * - [gen] drops stale async results on rapid filmstrip taps
      */
     private suspend fun renderPreviewForCurrentSelection(
@@ -1609,16 +1836,18 @@ class IosProductRootHost(
         val sourcePath = cur.uri.value
         if (sourcePath.isBlank()) return
         val wm = services.waterMarkRepo.waterMark.first()
+        val previewBucket = committedPreviewBucket
         val ox = draftOffset?.first ?: cur.offsetX
         val oy = draftOffset?.second ?: cur.offsetY
         hostBench.mark("sessionRead")
 
         // Cache hit only for committed (non-draft) paints at exact Session offset.
         if (!isDraft) {
-            wmPreviewCache[sourcePath]?.let { cached ->
+            previewImages.cached(watermarkedPreviewKey(sourcePath, previewBucket))?.let { cached ->
                 if (gen != previewGen) return
                 previewBitmap = cached
                 previewSourcePath = sourcePath
+                watermarkedPreviewSourcePath = sourcePath
                 hostBench.mark("cacheHit")
                 hostBench.finish(
                     mapOf(
@@ -1632,13 +1861,34 @@ class IosProductRootHost(
             }
         }
 
-        val composed = withContext(Dispatchers.Default) {
-            IosPreviewRaster.renderWatermarked(
-                sourcePath = sourcePath,
-                waterMark = wm,
-                offsetX = ox,
-                offsetY = oy,
-            )
+        val composed = if (isDraft) {
+            withContext(Dispatchers.Default) {
+                IosPreviewRaster.renderWatermarked(
+                    sourcePath = sourcePath,
+                    waterMark = wm,
+                    offsetX = ox,
+                    offsetY = oy,
+                    maxEdgePx = PreviewResolutionPolicy.maxEdgeForPaint(
+                        isDraft = true,
+                        committedBucketPx = previewBucket,
+                    ),
+                )
+            }
+        } else {
+            previewImages.load(watermarkedPreviewKey(sourcePath, previewBucket)) {
+                withContext(Dispatchers.Default) {
+                    IosPreviewRaster.renderWatermarked(
+                        sourcePath = sourcePath,
+                        waterMark = wm,
+                        offsetX = ox,
+                        offsetY = oy,
+                        maxEdgePx = PreviewResolutionPolicy.maxEdgeForPaint(
+                            isDraft = false,
+                            committedBucketPx = previewBucket,
+                        ),
+                    )
+                }
+            } ?: return
         }
         hostBench.mark("raster")
         if (gen != previewGen) {
@@ -1648,12 +1898,11 @@ class IosProductRootHost(
 
         // Never cache draft bitmaps as committed path entries (export must not see draft paint).
         if (!isDraft) {
-            wmPreviewCache[sourcePath] = composed
-            enforceCacheBudgets()
             hostBench.mark("cachePut")
         }
         previewBitmap = composed
         previewSourcePath = sourcePath
+        watermarkedPreviewSourcePath = sourcePath.takeIf { !isDraft }
         hostBench.finish(
             mapOf(
                 "hit" to false,

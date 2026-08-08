@@ -207,49 +207,53 @@ class IosPickGenerationPublishBoundaryTest {
                 onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
                 services = graph.services,
             )
-            val aBytes = solidPng(Color(0xFF112233))
-            val g1 = IosPickGenerationGate.nextPhotoGeneration()
-            val atPreviewBind = CompletableDeferred<Unit>()
-            val release = CompletableDeferred<Unit>()
-            // Allow Session publish to succeed for G1, then pause before host preview bind.
-            IosPickPublishProbe.install(
-                beforeHostPreviewBind = { gen ->
-                    if (gen == g1) {
-                        atPreviewBind.complete(Unit)
-                        release.await()
+            try {
+                val aBytes = solidPng(Color(0xFF112233))
+                val g1 = IosPickGenerationGate.nextPhotoGeneration()
+                val atPreviewBind = CompletableDeferred<Unit>()
+                val release = CompletableDeferred<Unit>()
+                // Allow Session publish to succeed for G1, then pause before host preview bind.
+                IosPickPublishProbe.install(
+                    beforeHostPreviewBind = { gen ->
+                        if (gen == g1) {
+                            atPreviewBind.complete(Unit)
+                            release.await()
+                        }
+                    },
+                )
+
+                val job = async {
+                    runCatching {
+                        host.deliverPickedPhotosBatch(
+                            images = listOf(aBytes),
+                            append = false,
+                            renderPreview = true,
+                            pickGeneration = g1,
+                        )
                     }
-                },
-            )
-
-            val job = async {
-                runCatching {
-                    host.deliverPickedPhotosBatch(
-                        images = listOf(aBytes),
-                        append = false,
-                        renderPreview = true,
-                        pickGeneration = g1,
-                    )
                 }
-            }
-            atPreviewBind.await()
-            // Session may hold A (G1 published before host bind). Empty G2 invalidates host bind.
-            IosPickGenerationGate.nextPhotoGeneration()
-            release.complete(Unit)
-            job.await()
+                atPreviewBind.await()
+                // Session may hold A (G1 published before host bind). Empty G2 invalidates host bind.
+                IosPickGenerationGate.nextPhotoGeneration()
+                release.complete(Unit)
+                job.await()
 
-            val identity = host.previewIdentityForTests()
-            assertTrue(
-                identity.previewSourcePath == null ||
-                    !identity.previewSourcePath.orEmpty().contains("ewm_src_"),
-                "host preview must not bind A after empty G2 at preview boundary",
-            )
-            // Source placeholder cache must not keep A for a superseded generation bind.
-            // (Session may still hold A — host bind is the F16 target for this probe.)
-            assertTrue(
-                identity.placeholderCachePaths.none { it.contains("ewm_src_") } ||
-                    identity.previewSourcePath == null,
-                "host must not present A preview after G2 (identity=$identity)",
-            )
+                val identity = host.previewIdentityForTests()
+                assertTrue(
+                    identity.previewSourcePath == null ||
+                        !identity.previewSourcePath.orEmpty().contains("ewm_src_"),
+                    "host preview must not bind A after empty G2 at preview boundary",
+                )
+                // Source placeholder cache must not keep A for a superseded generation bind.
+                // (Session may still hold A — host bind is the F16 target for this probe.)
+                assertTrue(
+                    identity.placeholderCachePaths.none { it.contains("ewm_src_") } ||
+                        identity.previewSourcePath == null,
+                    "host must not present A preview after G2 (identity=$identity)",
+                )
+            } finally {
+                host.dispose()
+            }
         } finally {
             IosPickPublishProbe.clear()
             graph.close()
@@ -270,53 +274,57 @@ class IosPickGenerationPublishBoundaryTest {
                 onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
                 services = graph.services,
             )
-            // Need a photo selection so icon preview path can run; plant one first.
-            val photoGen = IosPickGenerationGate.nextPhotoGeneration()
-            graph.services.stagePickedImagesBytes(
-                imageBytesList = listOf(solidPng(Color(0xFF445566))),
-                append = false,
-                pickGeneration = photoGen,
-            )
+            try {
+                // Need a photo selection so icon preview path can run; plant one first.
+                val photoGen = IosPickGenerationGate.nextPhotoGeneration()
+                graph.services.stagePickedImagesBytes(
+                    imageBytesList = listOf(solidPng(Color(0xFF445566))),
+                    append = false,
+                    pickGeneration = photoGen,
+                )
 
-            val iconBytes = solidPng(Color(0xFF00AA88))
-            val g1 = IosPickGenerationGate.nextIconGeneration()
-            val atIcon = CompletableDeferred<Unit>()
-            val release = CompletableDeferred<Unit>()
-            IosPickPublishProbe.install(
-                beforeIconConfig = { gen ->
-                    if (gen == g1) {
-                        atIcon.complete(Unit)
-                        release.await()
+                val iconBytes = solidPng(Color(0xFF00AA88))
+                val g1 = IosPickGenerationGate.nextIconGeneration()
+                val atIcon = CompletableDeferred<Unit>()
+                val release = CompletableDeferred<Unit>()
+                IosPickPublishProbe.install(
+                    beforeIconConfig = { gen ->
+                        if (gen == g1) {
+                            atIcon.complete(Unit)
+                            release.await()
+                        }
+                    },
+                )
+
+                val beforeIconUri = graph.services.waterMarkRepo.waterMark.first().iconUri.value
+                val job = async {
+                    runCatching {
+                        host.deliverIconBytesAndAwait(iconBytes, pickGeneration = g1)
                     }
-                },
-            )
-
-            val beforeIconUri = graph.services.waterMarkRepo.waterMark.first().iconUri.value
-            val job = async {
-                runCatching {
-                    host.deliverIconBytesAndAwait(iconBytes, pickGeneration = g1)
                 }
+                atIcon.await()
+                IosPickGenerationGate.nextIconGeneration() // empty/failed G2 for icon edge
+                assertFalse(IosPickGenerationGate.isIconCurrent(g1))
+                release.complete(Unit)
+                val result = job.await()
+                assertTrue(
+                    result.isFailure && result.exceptionOrNull() is StalePickGenerationException,
+                    "icon G1 must fail closed (got ${result.exceptionOrNull()})",
+                )
+                // Host must not bind icon bytes from stale G1.
+                val identity = host.previewIdentityForTests()
+                // iconBytes is private; wm mode/config is source of truth after ApplyConfig.
+                val afterIconUri = graph.services.waterMarkRepo.waterMark.first().iconUri.value
+                // Either config was not applied, or if DataStore micro-window wrote, host bind skipped.
+                // applyConfigIf checks before write — stale at probe means no apply.
+                assertTrue(
+                    afterIconUri == beforeIconUri || afterIconUri.isEmpty(),
+                    "icon config must not publish G1 path after G2 (before=$beforeIconUri after=$afterIconUri)",
+                )
+                assertTrue(identity.previewSourcePath == null || identity.previewSourcePath!!.isNotBlank())
+            } finally {
+                host.dispose()
             }
-            atIcon.await()
-            IosPickGenerationGate.nextIconGeneration() // empty/failed G2 for icon edge
-            assertFalse(IosPickGenerationGate.isIconCurrent(g1))
-            release.complete(Unit)
-            val result = job.await()
-            assertTrue(
-                result.isFailure && result.exceptionOrNull() is StalePickGenerationException,
-                "icon G1 must fail closed (got ${result.exceptionOrNull()})",
-            )
-            // Host must not bind icon bytes from stale G1.
-            val identity = host.previewIdentityForTests()
-            // iconBytes is private; wm mode/config is source of truth after ApplyConfig.
-            val afterIconUri = graph.services.waterMarkRepo.waterMark.first().iconUri.value
-            // Either config was not applied, or if DataStore micro-window wrote, host bind skipped.
-            // applyConfigIf checks before write — stale at probe means no apply.
-            assertTrue(
-                afterIconUri == beforeIconUri || afterIconUri.isEmpty(),
-                "icon config must not publish G1 path after G2 (before=$beforeIconUri after=$afterIconUri)",
-            )
-            assertTrue(identity.previewSourcePath == null || identity.previewSourcePath!!.isNotBlank())
         } finally {
             IosPickPublishProbe.clear()
             graph.close()

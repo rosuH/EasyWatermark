@@ -288,12 +288,15 @@ class ClampPreviewOffsetHostWiringTest {
         )
 
         // Path + watermarked-display identity (not path alone — placeholders share previewSourcePath).
+        // Progressive rebuild: Host uses watermarkedPreviewSourcePath + single-flight repository
+        // instead of a raw wmPreviewCache map.
         assertTrue(
-            Regex(
-                """wmPreviewCache\s*\[\s*dragPath\s*\]\s*===\s*displayPreview""",
-            ).containsMatchIn(enableSlice),
-            "enable must require wmPreviewCache[dragPath] === displayPreview " +
-                "(watermarked cache, not placeholder)",
+            Regex("""watermarkedPreviewSourcePath\s*==\s*dragPath""")
+                .containsMatchIn(enableSlice) ||
+                Regex("""wmPreviewCache\s*\[\s*dragPath\s*\]\s*===\s*displayPreview""")
+                    .containsMatchIn(enableSlice),
+            "enable must require watermarked display identity " +
+                "(watermarkedPreviewSourcePath == dragPath or legacy wmPreviewCache match)",
         )
         assertTrue(
             Regex("""previewSourcePath\s*==\s*dragPath""")
@@ -302,7 +305,7 @@ class ClampPreviewOffsetHostWiringTest {
         )
         assertTrue(
             "watermarkedDisplayMatchesSelection" in enableSlice ||
-                Regex("""wmPreviewCache\s*\[\s*dragPath\s*\]\s*===\s*displayPreview""")
+                Regex("""watermarkedPreviewSourcePath\s*==\s*dragPath""")
                     .containsMatchIn(enableSlice),
             "enable path must name watermarked-display identity gate",
         )
@@ -312,7 +315,7 @@ class ClampPreviewOffsetHostWiringTest {
                     .containsMatchIn(imageSlice),
             "enabled= must use watermarkedDisplayMatchesSelection on this Image",
         )
-        // Callback triple identity + watermarked bitmap re-check.
+        // Callback triple identity + watermarked identity re-check.
         assertTrue(
             Regex("""previewSourcePath\s*!=\s*dragPath|previewSourcePath\s*==\s*dragPath""")
                 .containsMatchIn(callbackSlice),
@@ -320,10 +323,11 @@ class ClampPreviewOffsetHostWiringTest {
         )
         assertTrue(
             Regex(
-                """wmPreviewCache\s*\[\s*dragPath\s*\]\s*!==\s*displayPreview|""" +
-                    """wmPreviewCache\s*\[\s*dragPath\s*\]\s*===\s*displayPreview""",
+                """watermarkedPreviewSourcePath\s*!=\s*dragPath|""" +
+                    """watermarkedPreviewSourcePath\s*==\s*dragPath|""" +
+                    """wmPreviewCache\s*\[\s*dragPath\s*\]""",
             ).containsMatchIn(callbackSlice),
-            "callback must re-check wmPreviewCache[dragPath] vs displayPreview",
+            "callback must re-check watermarkedPreviewSourcePath vs dragPath",
         )
         assertTrue(
             "curImageInfo" in callbackSlice,
@@ -340,7 +344,7 @@ class ClampPreviewOffsetHostWiringTest {
             "callback must not fall through to selectedImageList.firstOrNull",
         )
 
-        // Order inside onOffsetCommit: applyOffset → selected-key cache remove → previewGen bump.
+        // Order inside onOffsetCommit: applyOffset → selected-key cache invalidate → previewGen bump.
         // H0.1-fix: onOffsetDraft may also bump previewGen for live paint.
         val commitIdx = callbackSlice.indexOf("onOffsetCommit")
         assertTrue(commitIdx >= 0, "onOffsetCommit required")
@@ -353,13 +357,13 @@ class ClampPreviewOffsetHostWiringTest {
             applyMatches.size,
             "onOffsetCommit must contain exactly one services.session.applyOffset(",
         )
-        val removeMatches = Regex("""wmPreviewCache\.remove\s*\(\s*dragPath\s*\)""")
-            .findAll(commitOnly)
-            .toList()
+        val removeMatches = Regex(
+            """previewImages\.invalidate(?:OwnedPath)?FromOwner\s*\(|wmPreviewCache\.remove\s*\(\s*dragPath\s*\)""",
+        ).findAll(commitOnly).toList()
         assertEquals(
             1,
             removeMatches.size,
-            "onOffsetCommit must remove exactly the selected path via wmPreviewCache.remove(dragPath)",
+            "onOffsetCommit must invalidate exactly the selected watermarked key once",
         )
         val genMatches = Regex("""previewGen\s*(\+\+|=\s*previewGen\s*\+\s*1)""")
             .findAll(commitOnly)
@@ -372,14 +376,14 @@ class ClampPreviewOffsetHostWiringTest {
         assertTrue(
             applyMatches.first().range.first < removeMatches.first().range.first &&
                 removeMatches.first().range.first < genMatches.first().range.first,
-            "order must be applyOffset → wmPreviewCache.remove(dragPath) → previewGen bump",
+            "order must be applyOffset → watermarked-key invalidate → previewGen bump",
         )
         assertTrue(
             "onOffsetDraft" in callbackSlice,
             "iOS must wire onOffsetDraft for live UI draft",
         )
         assertFalse(
-            "wmPreviewCache.clear()" in callbackSlice,
+            "wmPreviewCache.clear()" in callbackSlice || "previewImages.clear()" in callbackSlice,
             "callback must not clear the whole watermarked preview cache",
         )
         assertFalse(

@@ -164,64 +164,68 @@ class IosProductRootHostPreviewIdentityTest {
                     onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
                     services = graph.services,
                 )
-                val aBytes = solidPng(Color(0xFF203040))
-                val bBytes = solidPng(Color(0xFFE0A040))
+                try {
+                    val aBytes = solidPng(Color(0xFF203040))
+                    val bBytes = solidPng(Color(0xFFE0A040))
 
-                me.rosuh.easywatermark.session.IosPickGenerationGate.resetForTests()
-                val g1 = me.rosuh.easywatermark.session.IosPickGenerationGate.nextPhotoGeneration()
-                host.deliverPickedPhotosBatch(
-                    images = listOf(aBytes),
-                    append = false,
-                    renderPreview = true,
-                    pickGeneration = g1,
-                )
-                graph.trackSessionPaths()
-                val afterA = host.previewIdentityForTests()
-                val pathA = graph.services.session.launchScreenUiStateFlow.first()
-                    .curImageInfo?.uri?.value
-                assertNotNull(pathA, "Session focus after A")
-                assertEquals(
-                    pathA,
-                    afterA.previewSourcePath,
-                    "host previewSourcePath must bind to A after fresh deliver A",
-                )
-                assertTrue(
-                    pathA in afterA.placeholderCachePaths || afterA.previewSourcePath == pathA,
-                    "A placeholder or preview path must be present after deliver A",
-                )
+                    me.rosuh.easywatermark.session.IosPickGenerationGate.resetForTests()
+                    val g1 = me.rosuh.easywatermark.session.IosPickGenerationGate.nextPhotoGeneration()
+                    host.deliverPickedPhotosBatch(
+                        images = listOf(aBytes),
+                        append = false,
+                        renderPreview = true,
+                        pickGeneration = g1,
+                    )
+                    graph.trackSessionPaths()
+                    val afterA = host.previewIdentityForTests()
+                    val pathA = graph.services.session.launchScreenUiStateFlow.first()
+                        .curImageInfo?.uri?.value
+                    assertNotNull(pathA, "Session focus after A")
+                    assertEquals(
+                        pathA,
+                        afterA.previewSourcePath,
+                        "host previewSourcePath must bind to A after fresh deliver A",
+                    )
+                    assertTrue(
+                        pathA in afterA.placeholderCachePaths || afterA.previewSourcePath == pathA,
+                        "A placeholder or preview path must be present after deliver A",
+                    )
 
-                val g2 = me.rosuh.easywatermark.session.IosPickGenerationGate.nextPhotoGeneration()
-                host.deliverPickedPhotosBatch(
-                    images = listOf(bBytes),
-                    append = false,
-                    renderPreview = true,
-                    pickGeneration = g2,
-                )
-                graph.trackSessionPaths()
-                val launchB = graph.services.session.launchScreenUiStateFlow.first()
-                val pathB = launchB.curImageInfo?.uri?.value
-                assertNotNull(pathB, "Session focus after B")
-                assertNotEquals(pathA, pathB, "fresh B mints a new staged path")
-                assertEquals(listOf(pathB), launchB.selectedImageList.map { it.uri.value })
+                    val g2 = me.rosuh.easywatermark.session.IosPickGenerationGate.nextPhotoGeneration()
+                    host.deliverPickedPhotosBatch(
+                        images = listOf(bBytes),
+                        append = false,
+                        renderPreview = true,
+                        pickGeneration = g2,
+                    )
+                    graph.trackSessionPaths()
+                    val launchB = graph.services.session.launchScreenUiStateFlow.first()
+                    val pathB = launchB.curImageInfo?.uri?.value
+                    assertNotNull(pathB, "Session focus after B")
+                    assertNotEquals(pathA, pathB, "fresh B mints a new staged path")
+                    assertEquals(listOf(pathB), launchB.selectedImageList.map { it.uri.value })
 
-                val afterB = host.previewIdentityForTests()
-                assertEquals(
-                    pathB,
-                    afterB.previewSourcePath,
-                    "host previewSourcePath must bind to B after fresh deliver B",
-                )
-                assertFalse(
-                    pathA in afterB.wmCachePaths,
-                    "A must not remain in wmPreviewCache after fresh B",
-                )
-                assertFalse(
-                    pathA in afterB.placeholderCachePaths,
-                    "A must not remain in sourcePlaceholderCache after fresh B",
-                )
-                assertFalse(
-                    pathA == afterB.previewSourcePath,
-                    "displayed preview must not still claim path A",
-                )
+                    val afterB = host.previewIdentityForTests()
+                    assertEquals(
+                        pathB,
+                        afterB.previewSourcePath,
+                        "host previewSourcePath must bind to B after fresh deliver B",
+                    )
+                    assertFalse(
+                        pathA in afterB.wmCachePaths,
+                        "A must not remain in wmPreviewCache after fresh B",
+                    )
+                    assertFalse(
+                        pathA in afterB.placeholderCachePaths,
+                        "A must not remain in sourcePlaceholderCache after fresh B",
+                    )
+                    assertFalse(
+                        pathA == afterB.previewSourcePath,
+                        "displayed preview must not still claim path A",
+                    )
+                } finally {
+                    host.dispose()
+                }
             } finally {
                 graph.close()
             }
@@ -242,49 +246,53 @@ class IosProductRootHostPreviewIdentityTest {
                 onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
                 services = graph.services,
             )
-            val aBytes = solidPng(Color(0xFF203040))
-            val bBytes = solidPng(Color(0xFFE0A040))
+            try {
+                val aBytes = solidPng(Color(0xFF203040))
+                val bBytes = solidPng(Color(0xFFE0A040))
 
-            me.rosuh.easywatermark.session.IosPickGenerationGate.resetForTests()
-            val g1 = me.rosuh.easywatermark.session.IosPickGenerationGate.nextPhotoGeneration()
-            host.deliverPickedPhotosBatch(
-                images = listOf(aBytes),
-                append = false,
-                renderPreview = false,
-                pickGeneration = g1,
-            )
-            graph.trackSessionPaths()
-            val pathA = graph.services.session.launchScreenUiStateFlow.first()
-                .curImageInfo?.uri?.value
-            assertNotNull(pathA)
+                me.rosuh.easywatermark.session.IosPickGenerationGate.resetForTests()
+                val g1 = me.rosuh.easywatermark.session.IosPickGenerationGate.nextPhotoGeneration()
+                host.deliverPickedPhotosBatch(
+                    images = listOf(aBytes),
+                    append = false,
+                    renderPreview = false,
+                    pickGeneration = g1,
+                )
+                graph.trackSessionPaths()
+                val pathA = graph.services.session.launchScreenUiStateFlow.first()
+                    .curImageInfo?.uri?.value
+                assertNotNull(pathA)
 
-            val g2 = me.rosuh.easywatermark.session.IosPickGenerationGate.nextPhotoGeneration()
-            host.deliverPickedPhotosBatch(
-                images = listOf(bBytes),
-                append = false,
-                renderPreview = false,
-                pickGeneration = g2,
-            )
-            graph.trackSessionPaths()
-            val launchB = graph.services.session.launchScreenUiStateFlow.first()
-            val pathB = launchB.curImageInfo?.uri?.value
-            assertNotNull(pathB)
-            assertNotEquals(pathA, pathB)
-            assertEquals(pathB, launchB.selectedImageList.single().uri.value)
+                val g2 = me.rosuh.easywatermark.session.IosPickGenerationGate.nextPhotoGeneration()
+                host.deliverPickedPhotosBatch(
+                    images = listOf(bBytes),
+                    append = false,
+                    renderPreview = false,
+                    pickGeneration = g2,
+                )
+                graph.trackSessionPaths()
+                val launchB = graph.services.session.launchScreenUiStateFlow.first()
+                val pathB = launchB.curImageInfo?.uri?.value
+                assertNotNull(pathB)
+                assertNotEquals(pathA, pathB)
+                assertEquals(pathB, launchB.selectedImageList.single().uri.value)
 
-            // Real Session export seam (exportAndAwait → ExportPipelinePort.exportOne).
-            val focus = launchB.curImageInfo ?: launchB.selectedImageList.first()
-            graph.services.session.exportAndAwait(listOf(focus))
+                // Real Session export seam (exportAndAwait → ExportPipelinePort.exportOne).
+                val focus = launchB.curImageInfo ?: launchB.selectedImageList.first()
+                graph.services.session.exportAndAwait(listOf(focus))
 
-            assertEquals(
-                listOf(pathB),
-                graph.exportPort.receivedUris,
-                "export port must receive B's staged MediaRef only",
-            )
-            assertFalse(
-                pathA in graph.exportPort.receivedUris,
-                "A must never be export source after fresh B",
-            )
+                assertEquals(
+                    listOf(pathB),
+                    graph.exportPort.receivedUris,
+                    "export port must receive B's staged MediaRef only",
+                )
+                assertFalse(
+                    pathA in graph.exportPort.receivedUris,
+                    "A must never be export source after fresh B",
+                )
+            } finally {
+                host.dispose()
+            }
         } finally {
             graph.close()
         }

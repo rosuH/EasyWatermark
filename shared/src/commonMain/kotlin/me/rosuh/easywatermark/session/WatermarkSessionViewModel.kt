@@ -143,9 +143,18 @@ open class WatermarkSessionViewModel(
                     // E1: Session owns list/offset. Repo selection only rebinds cur to the
                     // Session list entry when the URI is present — never clobber Session offsets
                     // with a stale repo ImageInfo.
-                    val repoInfo = waterMarkRepo.selectedImage.value
-                    val match = before.launch.selectedImageList.firstOrNull { it.uri == repoInfo.uri }
-                    AppIntent.SyncCurrentImage(match ?: repoInfo)
+                    //
+                    // When the Session list is empty (progressive last-remove / leave-editor), do
+                    // **not** re-inject repository.selectedImage into curImageInfo — that URI may
+                    // already have been deleted as an owned ewm_src and must not reappear.
+                    val list = before.launch.selectedImageList
+                    if (list.isEmpty()) {
+                        AppIntent.SyncCurrentImage(null)
+                    } else {
+                        val repoInfo = waterMarkRepo.selectedImage.value
+                        val match = list.firstOrNull { it.uri == repoInfo.uri }
+                        AppIntent.SyncCurrentImage(match ?: repoInfo)
+                    }
                 }
                 else -> intent
             }

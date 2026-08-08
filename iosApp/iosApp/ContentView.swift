@@ -156,6 +156,7 @@ struct ContentView: View {
     @State private var isIconPickerPresented = false
     /// Serial photo-batch commit lane (generation + TOCTOU-safe stage). Issue 26 H2 / review F1.
     @State private var photoCommitSerial = PhotosPickerCommitSerial()
+    @State private var photoImportCoordinator = PhotoImportCoordinator()
     /// Serial icon-picker commit lane (same rule as source batches).
     @State private var iconCommitSerial = PhotosPickerCommitSerial()
 
@@ -295,6 +296,9 @@ struct ContentView: View {
             // Clear so re-selecting the same set can fire again.
             pickedItems = []
             Task {
+                // Do not let the previous FIFO batch continue to occupy Photos transfers while
+                // this newer picker result waits for the commit lane.
+                await photoImportCoordinator.supersede(with: generation)
                 await loadPhotos(
                     batch,
                     generation: generation,
@@ -311,6 +315,10 @@ struct ContentView: View {
         }
         .task { await runUITestFixtureIfRequested() }
         .task { await edge.loadUserConfigWitness() }
+        .task { await photoImportCoordinator.installControlObservers() }
+        .onDisappear {
+            Task { await photoImportCoordinator.close() }
+        }
     }
 
 #if DEBUG
@@ -357,17 +365,15 @@ struct ContentView: View {
     private func runUITestFixtureIfRequested() async {}
 #endif
 
-    /// Load selected photos.
+    /// Load selected photos (path-first progressive import).
     ///
-    /// UX sequence (deliberate):
+    /// UX sequence:
     /// 1. Jump to editor shell immediately (no wait on picker IO).
-    /// 2. Load **all** `PhotosPickerItem` bytes first (preserve order).
-    /// 3. Stage **once** as a single batch so the filmstrip appears complete —
-    ///    never grow 1→2→N while the user flings (that caused snap-back / refresh).
-    /// 4. Kotlin host prefetches filmstrip thumbs + first preview asynchronously.
-    ///
-    /// Late async batches: early drop via shouldDeliver; mutating stage only via
-    /// [PhotosPickerCommitSerial.commitIfNewest] (F5 one-in-flight FIFO + MainActor mutation).
+    /// 2. Transfer each asset via FileRepresentation into an app-owned provisional path
+    ///    with concurrency 2 and first-item priority (no full-batch Data retention).
+    /// 3. Host presents fixed Pending slots immediately; each Ready path is adopted into
+    ///    Session independently (order preserved). Filmstrip grows by Ready cells only.
+    /// 4. Generation gate + commit serial still drop superseded batches (F5/F6).
     ///
     /// - Parameter generation: frozen at selection-change edge (F6), not at Task start.
     /// - Parameter frozenAppend: in-editor intent frozen with that same selection event.
@@ -376,72 +382,53 @@ struct ContentView: View {
         generation: UInt64,
         frozenAppend: Bool,
     ) async {
-        guard let host = productRoot.host else {
+        guard productRoot.host != nil else {
             edge.reportFailure("Product root host not ready")
             return
         }
-        // 1) Show editor shell before any loadTransferable / decode work.
+        // 1) Show editor shell before any transfer/decode work (progressive slots fill after).
         if !frozenAppend {
             await MainActor.run {
-                host.showEditorShellImmediately()
+                productRoot.host?.showEditorShellImmediately()
             }
         }
 
-        // 2) Load payloads before staging (order-preserving).
-        // Bound concurrency + retries: unrestricted parallel Data loads on multi-select often
-        // drop 1+ items (nil/throw from Photos), so the filmstrip shows e.g. 5 of 6 and the
-        // main preview can stay blank while the focused slot is still cold or was the failed one.
-        let loadResults = await Self.loadPickerPayloads(items)
-        let payloads = loadResults.compactMap(\.bytes)
-        let failed = loadResults.filter { $0.bytes == nil }
-        if !failed.isEmpty {
-            let detail = failed.map { "\($0.index)(\($0.error ?? "nil"))" }.joined(separator: ", ")
-            await MainActor.run {
-                // Partial success is still useful — do not treat as hard workflow failure that
-                // clears the product root; surface a single summary for the missing slots.
-                edge.reportFailure(
-                    "Loaded \(payloads.count) of \(items.count) photos; failed index(es): \(detail)"
-                )
-            }
-            // NSLog reaches `simctl log stream` (plain print often does not).
-            NSLog(
-                "PhotosPicker partial load: Loaded %d of %d; failed index(es): %@",
-                payloads.count,
-                items.count,
-                detail,
-            )
-        } else {
-            NSLog("PhotosPicker load ok: %d of %d", payloads.count, items.count)
-        }
-
-        // Empty/failed batches must not resurrect an older generation (S2).
-        guard !payloads.isEmpty else { return }
-        // Cheap early drop (non-mutating). Authoritative gate is commitIfNewest below.
-        let latestAfterLoad = await MainActor.run { photoCommitSerial.currentLatest() }
+        // 2) Path-first progressive import: FileRepresentation + concurrency 2.
+        // Host receives begin/fileReady/fileFailed via NotificationCenter (zero public API growth).
+        // No full-batch Data/ByteArray retention (device OOM at ~48 HEIC under the old batch path).
+        let latestAfterStart = await MainActor.run { photoCommitSerial.currentLatest() }
         guard PhotosPickerBatchGate.shouldDeliver(
             candidate: generation,
-            latest: latestAfterLoad,
-        ) else { return }
+            latest: latestAfterStart,
+        ) else {
+            await photoImportCoordinator.cancelGeneration(generation)
+            return
+        }
 
-        // 3) FIFO one-in-flight EnterEditor commit on MainActor (F5).
-        // F9: if a newer selection cancelled this generation, commitIfNewest no-ops.
         do {
             try await photoCommitSerial.commitIfNewest(generation: generation) {
                 try Task.checkCancellation()
-                guard photoCommitSerial.isCurrent(generation) else { return }
-                try await host.deliverPickedPhotosBatch(
-                    images: payloads,
+                guard photoCommitSerial.isCurrent(generation) else {
+                    await photoImportCoordinator.cancelGeneration(generation)
+                    return
+                }
+                let result = await photoImportCoordinator.importBatch(
+                    items: items,
+                    generation: generation,
                     append: frozenAppend,
-                    // Fresh pick: raster first image. Add-more: keep current preview (focus preserved).
-                    renderPreview: !frozenAppend,
-                    pickGeneration: Int64(generation),
+                    prioritizeFirst: true
                 )
                 try Task.checkCancellation()
+                if result.successCount == 0 && result.failureCount > 0 {
+                    await MainActor.run {
+                        edge.reportFailure("Photo import failed for all selected items")
+                    }
+                }
             }
         } catch is CancellationError {
-            // Superseded by a newer photo selection (including empty/failed G2) — not a user error.
+            await photoImportCoordinator.cancelGeneration(generation)
         } catch {
-            // F11: Kotlin StalePickGenerationException surfaces as NSError — treat as supersession.
+            await photoImportCoordinator.cancelGeneration(generation)
             let ns = error as NSError
             if ns.localizedDescription.contains("stale pick generation") {
                 return
@@ -450,76 +437,6 @@ struct ContentView: View {
                 edge.reportFailure(error.localizedDescription)
             }
         }
-    }
-
-    /// One picker item after load attempts (order key = original selection index).
-    private struct PickerLoadResult: Sendable {
-        let index: Int
-        let bytes: KotlinByteArray?
-        let error: String?
-    }
-
-    /// Load [PhotosPickerItem] bytes with limited concurrency and short retries.
-    /// Returns one result per input index (nil bytes = failed after retries).
-    private static func loadPickerPayloads(_ items: [PhotosPickerItem]) async -> [PickerLoadResult] {
-        // Match progressive-import transfer cap (2): fewer concurrent FileProvider claims.
-        let maxConcurrent = 2
-        return await withTaskGroup(of: PickerLoadResult.self) { group in
-            var iterator = items.enumerated().makeIterator()
-            var collected: [PickerLoadResult] = []
-            collected.reserveCapacity(items.count)
-
-            func startOne() {
-                guard let (index, item) = iterator.next() else { return }
-                group.addTask {
-                    await loadOnePickerItem(item, index: index)
-                }
-            }
-
-            for _ in 0..<min(maxConcurrent, items.count) {
-                startOne()
-            }
-            for await result in group {
-                collected.append(result)
-                startOne()
-            }
-            return collected.sorted { $0.index < $1.index }
-        }
-    }
-
-    private static func loadOnePickerItem(
-        _ item: PhotosPickerItem,
-        index: Int,
-    ) async -> PickerLoadResult {
-        var lastError: String?
-        for attempt in 1...3 {
-            do {
-                if let data = try await item.loadTransferable(type: Data.self), !data.isEmpty {
-                    if attempt > 1 {
-                        NSLog(
-                            "PhotosPicker item %d loaded on attempt %d (%d bytes)",
-                            index,
-                            attempt,
-                            data.count,
-                        )
-                    }
-                    return PickerLoadResult(
-                        index: index,
-                        bytes: data.toKotlinByteArray(),
-                        error: nil,
-                    )
-                }
-                lastError = "empty Data (attempt \(attempt))"
-                NSLog("PhotosPicker item %d: %@", index, lastError!)
-            } catch {
-                lastError = error.localizedDescription
-                NSLog("PhotosPicker item %d attempt %d: %@", index, attempt, lastError!)
-            }
-            if attempt < 3 {
-                try? await Task.sleep(nanoseconds: 120_000_000 * UInt64(attempt))
-            }
-        }
-        return PickerLoadResult(index: index, bytes: nil, error: lastError)
     }
 
     private func loadIcon(_ item: PhotosPickerItem, generation: UInt64) async {

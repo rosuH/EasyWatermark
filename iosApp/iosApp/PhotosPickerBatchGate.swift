@@ -22,9 +22,14 @@ enum PhotosPickerBatchGate {
 
 /// MainActor FIFO / one-in-flight commit lane for one picker edge.
 ///
-/// **F14:** Generation tokens are issued solely by Kotlin [IosPickGenerationGate]
-/// (`nextPhotoGeneration` / `nextIconGeneration`). This class only stores the issued value for
-/// FIFO/cancel bookkeeping — it never invents a parallel counter that can restart at zero.
+/// **F14:** Generation tokens come from Kotlin [IosPickGenerationGate] only.
+///
+/// **FIFO + detach:**
+/// - [commitTail] keeps commit bodies non-reentrant (await previous fully before the next body).
+/// - [beginGeneration] cancels the prior [inFlight] so a cancelled body should settle quickly;
+///   obsolete generation **I/O** is cancelled separately by [PhotoImportCoordinator.cancelGeneration].
+/// - A superseded generation still occupies the FIFO slot only until its cancelled task returns —
+///   it must not start new transfer work after cancel.
 @MainActor
 final class PhotosPickerCommitSerial {
     private var latest: UInt64 = 0
@@ -37,7 +42,7 @@ final class PhotosPickerCommitSerial {
         case icon
     }
 
-    /// Issue next generation from Kotlin (process-wide) and cancel any older in-flight commit.
+    /// Issue next generation and cancel any older in-flight commit body.
     @discardableResult
     func beginGeneration(edge: PickEdge = .photo) -> UInt64 {
         let issued: Int64
@@ -63,8 +68,10 @@ final class PhotosPickerCommitSerial {
         generation: UInt64,
         body: @escaping @MainActor () async throws -> Void
     ) async throws {
+        guard isCurrent(generation) else { return }
         let previous = commitTail
         let task = Task<Void, Error> { @MainActor in
+            // FIFO non-reentry: wait for the previous commit task to finish (including cancelled).
             _ = await previous?.result
             try Task.checkCancellation()
             guard PhotosPickerBatchGate.shouldBeginCommit(
