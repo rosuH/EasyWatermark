@@ -575,7 +575,8 @@ class IosProductRootHost(
             ProvideMotionPolicy(platformMotionPolicy()) {
             val waterMark by services.waterMarkRepo.waterMark.collectAsState(WaterMark.default)
             val launchUi by services.session.launchScreenUiStateFlow.collectAsState()
-            val exportJob by services.session.exportJobState.collectAsState()
+            // exportJobState is collected only while the save sheet is open (see showSaveSheet
+            // block) so export ticks do not recompose the entire Editor / filmstrip tree.
             val sessionImages = launchUi.selectedImageList
             // E0: Session owns route; optimistic showEditor only while Session not yet Editor.
             val productRoute = when {
@@ -1145,13 +1146,19 @@ class IosProductRootHost(
                         },
                         onUseTemplate = { template ->
                             val content = template.content ?: return@EditorScreen
+                            // Same invalidate path as onConfigChange: watermarkedPreviewKey is
+                            // path+bucket only, so a cache hit would keep the old text raster.
                             scope.launch {
                                 isBusy = true
                                 try {
+                                    previewImages.clearPurposeFromOwner(IosPreviewPurpose.Watermarked)
+                                    watermarkedPreviewSourcePath = null
+                                    previewGen += 1
+                                    val gen = previewGen
                                     services.session.dispatchAndAwait(
                                         AppIntent.ApplyConfig(WatermarkConfigChange.Text(content)),
                                     )
-                                    reexportCurrent()
+                                    renderPreviewForCurrentSelection(gen = gen)
                                 } catch (t: Throwable) {
                                     statusLine = "Failed: ${t.message}"
                                 }
@@ -1205,6 +1212,9 @@ class IosProductRootHost(
 
             // C2: shared export panel (Android Compose parity). Photos write + Share are Swift edges.
             if (showSaveSheet) {
+                // Collect export job only inside the sheet composition — not at product root —
+                // so isSaving/completedCount ticks do not force Editor filmstrip/preview to recompose.
+                val exportJob by services.session.exportJobState.collectAsState()
                 val exportItems: List<ImageInfo> = sessionImages
                 // Always key progress off the live selection size (not stale exportJob.totalCount=0).
                 val exportTotal = exportItems.size.coerceAtLeast(
@@ -1337,11 +1347,14 @@ class IosProductRootHost(
                                 batchSize = images.size,
                                 result = photosResult,
                             )
+                            // Restore editor main preview if joint cache pressure blanked it mid-export.
+                            ensureEditorPreviewAfterExport()
                         } catch (_: Throwable) {
                             // I0: never surface raw Throwable.message in product chrome.
                             statusLine = exportErrorGeneric
                             isSaving = false
                             sheetExportFinished = true
+                            ensureEditorPreviewAfterExport()
                         }
                     }
                 }
@@ -1370,7 +1383,12 @@ class IosProductRootHost(
                     outcomeDetailLine = outcomeDetailLine,
                     itemKey = { it.uri.value },
                     onDismiss = {
-                        if (!exporting) showSaveSheet = false
+                        if (!exporting) {
+                            showSaveSheet = false
+                            // If export thumbs evicted the watermarked preview under budget pressure,
+                            // rebind so the editor does not stay blank after sheet close.
+                            rebindEditorPreviewIfBlank(scope)
+                        }
                     },
                     onFormatClick = { fmt ->
                         scope.launch {
@@ -1398,15 +1416,29 @@ class IosProductRootHost(
                     onOpenGalleryClick = {},
                 ) { info, thumbModifier ->
                     // Per-source-path thumb off-main (never shared previewBitmap; never sync decode).
-                    // Visible export cells share repository single-flight with any prefetch.
+                    // Seed from peekCached like filmstrip so LazyRow recycle does not flash blank.
                     val path = info.uri.value
-                    val thumb by produceState<ImageBitmap?>(initialValue = null, path) {
+                    val exportKey = exportThumbnailKey(path)
+                    val cachedSeed =
+                        if (path.isBlank() || path == "preview") {
+                            null
+                        } else {
+                            previewImages.peekCached(exportKey)
+                        }
+                    val thumb by produceState<ImageBitmap?>(
+                        initialValue = cachedSeed,
+                        path,
+                    ) {
                         try {
                             if (path.isBlank() || path == "preview") {
                                 value = previewBitmap
                                 return@produceState
                             }
-                            value = previewImages.load(exportThumbnailKey(path)) {
+                            // Seeded from peekCached — keep pixels on recycle.
+                            if (value != null) {
+                                return@produceState
+                            }
+                            value = previewImages.load(exportKey) {
                                 withContext(Dispatchers.Default) {
                                     runCatching {
                                         me.rosuh.easywatermark.render.IosImageIODecoder
@@ -2089,6 +2121,28 @@ class IosProductRootHost(
 
     private suspend fun reexportCurrent() {
         renderPreviewForCurrentSelection(gen = previewGen)
+    }
+
+    /**
+     * After export sheet work: if the main canvas lost its watermarked bitmap (joint budget
+     * eviction or gen race), re-raster the current selection so the editor is not blank.
+     */
+    private suspend fun ensureEditorPreviewAfterExport() {
+        if (disposed) return
+        val needsRebind = previewBitmap == null || watermarkedPreviewSourcePath == null
+        if (!needsRebind) return
+        previewGen += 1
+        val gen = previewGen
+        runCatching { renderPreviewForCurrentSelection(gen = gen) }
+    }
+
+    /** Fire-and-forget rebind from sheet dismiss (Main scope). */
+    private fun rebindEditorPreviewIfBlank(scope: CoroutineScope) {
+        if (disposed) return
+        if (previewBitmap != null && watermarkedPreviewSourcePath != null) return
+        scope.launch {
+            ensureEditorPreviewAfterExport()
+        }
     }
 
 }

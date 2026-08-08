@@ -340,9 +340,19 @@ internal class IosPreviewImageRepository(
             maxBytes = exportThumbnailBytesMax,
             matches = { it.purpose == IosPreviewPurpose.ExportThumbnail },
         )
+        // Joint non-filmstrip budget: prefer dropping export thumbs / placeholders before
+        // Watermarked so opening the export sheet + N× decode cannot blank the editor preview.
         evictOldestMatchingLocked(
             maxBytes = sourceAndPreviewBytesMax,
-            matches = { it.purpose != IosPreviewPurpose.Filmstrip },
+            matches = { it.purpose == IosPreviewPurpose.ExportThumbnail },
+        )
+        evictOldestMatchingLocked(
+            maxBytes = sourceAndPreviewBytesMax,
+            matches = { it.purpose == IosPreviewPurpose.SourcePlaceholder },
+        )
+        evictOldestMatchingLocked(
+            maxBytes = sourceAndPreviewBytesMax,
+            matches = { it.purpose == IosPreviewPurpose.Watermarked },
         )
         evictOldestMatchingLocked(
             maxBytes = filmstripBytesMax,

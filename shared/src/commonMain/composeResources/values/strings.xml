@@ -130,8 +130,8 @@
     <string name="dialog_title_template_title">Template List</string>
     <string name="tips_list_empty">Look pretty empty</string>
     <string name="dialog_button_add_template">Add</string>
-    <string name="tips_use_this_template">Use this template\?</string>
-    <string name="tips_delete_template">Delete the entry\?</string>
+    <string name="tips_use_this_template">Use this template?</string>
+    <string name="tips_delete_template">Delete the entry?</string>
     <string name="tips_database_init_error">Database init failed.</string>
     <string name="tile_mode_title_repeat">Repeat</string>
     <string name="tile_mode_title_decal">Single</string>

@@ -17,7 +17,6 @@ import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -77,15 +76,9 @@ fun <T> EditorOptionCarousel(
         else -> (optionWidth - itemWidth).coerceAtLeast(0.dp) / 2
     }
 
-    val selectedIndex = remember(options, selectedOption) {
-        selectedOption?.let { options.indexOf(it) }?.takeIf { it >= 0 } ?: -1
-    }
-    // Instant scroll — do not animateScroll (fights user fling after tab change).
-    LaunchedEffect(selectedIndex) {
-        if (selectedIndex in options.indices && options.isNotEmpty()) {
-            runCatching { listState.scrollToItem(selectedIndex) }
-        }
-    }
+    // Product: chip *tap* must not programmatically scroll the LazyRow (jump feels broken).
+    // Tab switches remount this composable via key(safeTabIndex) in EditorBottomControlsShell,
+    // so a fresh list starts at offset 0 without scrollToItem on every selection.
 
     LazyRow(
         modifier
