@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -23,12 +25,14 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImagePainter
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -171,8 +175,12 @@ private fun GalleryThumbnail(
             .crossfade(false)
             .build()
     }
+    // Chip bg only while loading/error; do not stretch the glyph to full-cell (reads as ugly
+    // stacked billboards). Center a small muted Phosphor Image instead.
+    var showChrome by remember(image.uri.value) { mutableStateOf(true) }
     Box(
         modifier = modifier.background(DesignChipSelected),
+        contentAlignment = Alignment.Center,
     ) {
         AsyncImage(
             model = request,
@@ -180,8 +188,17 @@ private fun GalleryThumbnail(
             imageLoader = imageLoader,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,
-            placeholder = placeholderPainter,
-            error = placeholderPainter,
+            onState = { state ->
+                showChrome = state !is AsyncImagePainter.State.Success
+            },
         )
+        if (showChrome) {
+            Icon(
+                painter = placeholderPainter,
+                contentDescription = null,
+                modifier = Modifier.size(28.dp),
+                tint = Color.White.copy(alpha = 0.32f),
+            )
+        }
     }
 }
