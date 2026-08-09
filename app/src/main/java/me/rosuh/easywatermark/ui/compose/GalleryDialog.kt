@@ -73,21 +73,18 @@ fun GalleryDialog(
     val imageLoader = remember(context) { context.galleryImageLoader() }
     val placeholderPainter = SharedProductDrawables.galleryPlaceholderPainter()
 
-    val onLoadImagesState = rememberUpdatedState(onLoadImages)
-    var showPartialBanner by remember {
-        mutableStateOf(context.hasPartialMediaAccessOnly())
-    }
+    val loadImages = rememberUpdatedState(onLoadImages)
+    var partialOnly by remember { mutableStateOf(context.hasPartialMediaAccessOnly()) }
     val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, context) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                showPartialBanner = context.hasPartialMediaAccessOnly()
-                // Full grant or "select more photos" both change the visible MediaStore set.
-                onLoadImagesState.value()
+    DisposableEffect(lifecycleOwner) {
+        val obs = LifecycleEventObserver { _, e ->
+            if (e == Lifecycle.Event.ON_RESUME) {
+                partialOnly = context.hasPartialMediaAccessOnly()
+                loadImages.value()
             }
         }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
     }
 
     val thumbnail: @Composable (GalleryImage, String, Modifier) -> Unit =
@@ -104,16 +101,6 @@ fun GalleryDialog(
             }
         }
 
-    val openAppSettings: () -> Unit = remember(context) {
-        {
-            val intent = Intent(
-                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                Uri.fromParts("package", context.packageName, null),
-            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            runCatching { context.startActivity(intent) }
-        }
-    }
-
     GalleryDialogShell(
         images = images,
         title = stringResource(Res.string.action_pick),
@@ -124,54 +111,46 @@ fun GalleryDialog(
         closeContentDescription = stringResource(Res.string.cd_back),
         searchContentDescription = stringResource(Res.string.cd_add_more_images),
         selectedCountContentDescription = stringResource(Res.string.cd_add_more_images),
-        backHandler = { onBack ->
-            BackHandler(onBack = onBack)
-        },
+        backHandler = { onBack -> BackHandler(onBack = onBack) },
         onLoadImages = onLoadImages,
         onDismiss = onDismiss,
         onPickImageViaSystem = onPickImageViaSystem,
-        banner = if (showPartialBanner) {
+        banner = if (!partialOnly) null else {
             {
-                PartialMediaAccessBanner(onOpenSettings = openAppSettings)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                ) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            stringResource(Res.string.tips_gallery_partial_access),
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.weight(1f).padding(end = 8.dp),
+                        )
+                        TextButton(
+                            onClick = {
+                                context.startActivity(
+                                    Intent(
+                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                        Uri.fromParts("package", context.packageName, null),
+                                    ),
+                                )
+                            },
+                        ) {
+                            Text(stringResource(Res.string.tips_gallery_partial_access_settings))
+                        }
+                    }
+                }
             }
-        } else {
-            null
         },
         thumbnail = thumbnail,
     )
-}
-
-@Composable
-private fun PartialMediaAccessBanner(
-    onOpenSettings: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(Res.string.tips_gallery_partial_access),
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(end = 8.dp),
-            )
-            TextButton(onClick = onOpenSettings) {
-                Text(
-                    text = stringResource(Res.string.tips_gallery_partial_access_settings),
-                    style = MaterialTheme.typography.labelLarge,
-                )
-            }
-        }
-    }
 }
 
 @Composable
