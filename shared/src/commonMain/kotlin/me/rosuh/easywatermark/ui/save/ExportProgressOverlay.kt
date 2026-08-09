@@ -3,8 +3,6 @@ package me.rosuh.easywatermark.ui.save
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
@@ -31,7 +29,6 @@ import me.rosuh.easywatermark.data.model.JobState
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.ic_save_done
 import me.rosuh.easywatermark.ui.theme.EwmTheme
-import me.rosuh.easywatermark.ui.theme.MotionPolicy
 import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
 import me.rosuh.easywatermark.ui.theme.md_theme_dark_tertiary
 import me.rosuh.easywatermark.ui.theme.motionDurationMs
@@ -83,20 +80,12 @@ fun ExportProgressOverlay(
             return
         }
         checkAppear.snapTo(0f)
-        if (motionPolicy == MotionPolicy.Full) {
-            checkAppear.animateTo(
-                1f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessMedium,
-                ),
-            )
-        } else {
-            checkAppear.animateTo(
-                1f,
-                animationSpec = tween(durationMillis = checkMs, easing = FastOutSlowInEasing),
-            )
-        }
+        // Tween only — bouncy spring on each success while exportTick recomposes the whole
+        // sheet was a measurable main-thread hitch during multi-image export.
+        checkAppear.animateTo(
+            1f,
+            animationSpec = tween(durationMillis = checkMs, easing = FastOutSlowInEasing),
+        )
     }
 
     LaunchedEffect(phase, wipeMs, checkMs) {

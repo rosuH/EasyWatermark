@@ -974,10 +974,12 @@ private fun SaveExportSheetAndroid(
         onExportClick = onExportClick,
         onOpenGalleryClick = onOpenGalleryClick,
     ) { info, thumbnailModifier ->
-        // exportTick forces overlay to re-read mutated [ImageInfo.jobState] during batch export.
-        val job = androidx.compose.runtime.remember(info.uri, exportTick) { info.jobState }
+        // exportTick invalidates this leaf so mutated [ImageInfo.jobState] is re-read. Do not
+        // remember a stale JobState across ticks — but also avoid extra work for stable Success.
+        @Suppress("UNUSED_VARIABLE")
+        val tick = exportTick
         me.rosuh.easywatermark.ui.save.ExportProgressOverlay(
-            jobState = job,
+            jobState = info.jobState,
             modifier = thumbnailModifier,
         ) {
             AsyncImage(

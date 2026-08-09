@@ -1,17 +1,10 @@
 package me.rosuh.easywatermark.ui.save
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -31,23 +24,19 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.shared.generated.resources.Res
@@ -138,9 +127,15 @@ fun <T> SaveExportSheetShell(
     val failure = exportFailureCount.coerceAtLeast(0)
     // Prefer structured ints; fall back to countsLine presence for older hosts mid-migrate.
     val showCounts = isExporting || total > 0 || countsLine.isNotBlank()
+    // Always reserve count-row height when the sheet has a selection — avoids ModalBottomSheet
+    // height jumps when counts appear at export start / hide on idle re-open.
+    val reserveCountsSlot = imageCount > 0 || total > 0 || showCounts
     val fadeMs = motionDurationMs(currentMotionPolicy(), EwmTheme.motion.contentSizeMs)
-    val fadeSpec = tween<Float>(durationMillis = fadeMs, easing = FastOutSlowInEasing)
-    val slideSpec = tween<IntOffset>(durationMillis = fadeMs, easing = FastOutSlowInEasing)
+    val countsAlpha by animateFloatAsState(
+        targetValue = if (showCounts) 1f else 0f,
+        animationSpec = tween(durationMillis = fadeMs, easing = FastOutSlowInEasing),
+        label = "exportCountsAlpha",
+    )
 
     val destinationCd = buildString {
         if (hasDestination) append(destinationLine)
@@ -233,70 +228,57 @@ fun <T> SaveExportSheetShell(
                 )
             }
 
-            AnimatedVisibility(
-                visible = showCounts,
-                enter = fadeIn(animationSpec = fadeSpec) +
-                    scaleIn(
-                        initialScale = 0.88f,
-                        animationSpec = fadeSpec,
-                    ) +
-                    slideInVertically(
-                        animationSpec = slideSpec,
-                        initialOffsetY = { it / 4 },
-                    ),
-                exit = fadeOut(animationSpec = fadeSpec) +
-                    scaleOut(
-                        targetScale = 0.92f,
-                        animationSpec = fadeSpec,
-                    ) +
-                    slideOutVertically(
-                        animationSpec = slideSpec,
-                        targetOffsetY = { it / 6 },
-                    ),
-            ) {
+            if (reserveCountsSlot) {
                 val displayTotal = when {
                     total > 0 -> total
                     imageCount > 0 -> imageCount
-                    else -> success + failure
+                    else -> (success + failure).coerceAtLeast(0)
                 }
-                Row(
+                // Fixed-height slot: fade chips in place (no slide/scale layout pass on the sheet).
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 16.dp)
-                        .testTag("sharedComposeExportCounts")
-                        .semantics {
-                            contentDescription = countsCd.ifBlank { statusCd }
-                            liveRegion = LiveRegionMode.Polite
-                        },
-                    horizontalArrangement = Arrangement.spacedBy(20.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                        .height(CountRowHeight),
+                    contentAlignment = Alignment.CenterStart,
                 ) {
-                    ExportCountChip(
-                        painter = painterResource(Res.drawable.ic_export_count_total),
-                        value = displayTotal,
-                        contentDescription = "total $displayTotal",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    ExportCountChip(
-                        painter = painterResource(Res.drawable.ic_export_count_success),
-                        value = success,
-                        contentDescription = "success $success",
-                        tint = DesignBrand,
-                    )
-                    ExportCountChip(
-                        painter = painterResource(Res.drawable.ic_export_count_fail),
-                        value = failure,
-                        contentDescription = "failed $failure",
-                        tint = if (failure > 0) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .graphicsLayer { alpha = countsAlpha }
+                            .testTag("sharedComposeExportCounts")
+                            .semantics {
+                                contentDescription = countsCd.ifBlank { statusCd }
+                                if (showCounts) liveRegion = LiveRegionMode.Polite
+                            },
+                        horizontalArrangement = Arrangement.spacedBy(20.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ExportCountChip(
+                            painter = painterResource(Res.drawable.ic_export_count_total),
+                            value = displayTotal,
+                            contentDescription = "total $displayTotal",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        ExportCountChip(
+                            painter = painterResource(Res.drawable.ic_export_count_success),
+                            value = success,
+                            contentDescription = "success $success",
+                            tint = DesignBrand,
+                        )
+                        ExportCountChip(
+                            painter = painterResource(Res.drawable.ic_export_count_fail),
+                            value = failure,
+                            contentDescription = "failed $failure",
+                            tint = if (failure > 0) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    }
                 }
-            }
-
-            if (!showCounts && countsCd.isNotBlank()) {
+            } else if (countsCd.isNotBlank()) {
                 Spacer(
                     Modifier
                         .size(0.dp)
@@ -313,15 +295,15 @@ fun <T> SaveExportSheetShell(
                 modifier = Modifier.padding(top = 20.dp),
             )
 
-            // Keep primary/cancel in one stable slot so Retry click does not unmount a button
-            // under the pointer and flash-dismiss the sheet.
+            // Fixed primary + secondary action chrome so Cancel/Retry/Share/Open-gallery
+            // never change ModalBottomSheet measured height.
+            Spacer(Modifier.height(28.dp))
             if (showCancelButton && onCancelClick != null) {
                 OutlinedButton(
                     onClick = onCancelClick,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 28.dp)
-                        .height(48.dp)
+                        .height(PrimaryButtonHeight)
                         .testTag("sharedComposeExportCancel")
                         .semantics { contentDescription = cancelLabel },
                     shape = RectangleShape,
@@ -334,8 +316,7 @@ fun <T> SaveExportSheetShell(
                     enabled = primaryActionEnabled,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 28.dp)
-                        .height(48.dp)
+                        .height(PrimaryButtonHeight)
                         .testTag("sharedComposeExportPrimary")
                         .semantics { contentDescription = primaryActionLabel },
                     shape = RectangleShape,
@@ -350,45 +331,47 @@ fun <T> SaveExportSheetShell(
                 }
             }
 
-            // Sticky Retry slot: once shown after a failed batch, stay composed through the
-            // isSaving transition so the button is not removed under the pointer (sheet flash).
-            var stickyRetry by remember { mutableStateOf(false) }
-            LaunchedEffect(showRetryFailedButton, isExporting) {
-                if (showRetryFailedButton) stickyRetry = true
-                else if (!isExporting) stickyRetry = false
-            }
-            if (onRetryFailedClick != null && stickyRetry) {
-                OutlinedButton(
-                    onClick = onRetryFailedClick,
-                    enabled = showRetryFailedButton && !isExporting,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 12.dp)
-                        .height(48.dp)
-                        .testTag("sharedComposeExportRetryFailed")
-                        .semantics { contentDescription = retryLabel },
-                    shape = RectangleShape,
-                ) {
-                    Text(retryLabel)
+            // Always reserve secondary column (Retry + Open gallery) — empty Spacer when idle.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(SecondaryActionsHeight),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                if (onRetryFailedClick != null && showRetryFailedButton && !isExporting) {
+                    OutlinedButton(
+                        onClick = onRetryFailedClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp)
+                            .height(PrimaryButtonHeight)
+                            .testTag("sharedComposeExportRetryFailed")
+                            .semantics { contentDescription = retryLabel },
+                        shape = RectangleShape,
+                    ) {
+                        Text(retryLabel)
+                    }
+                } else {
+                    Spacer(Modifier.height(12.dp + PrimaryButtonHeight))
                 }
-            }
-
-            if (showOpenGallery) {
-                TextButton(
-                    onClick = onOpenGalleryClick,
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .padding(top = 4.dp, bottom = 12.dp),
-                    shape = RectangleShape,
-                ) {
-                    Text(text = openGalleryLabel)
+                if (showOpenGallery) {
+                    TextButton(
+                        onClick = onOpenGalleryClick,
+                        modifier = Modifier.padding(top = 4.dp),
+                        shape = RectangleShape,
+                    ) {
+                        Text(text = openGalleryLabel)
+                    }
                 }
-            } else {
-                Spacer(Modifier.height(12.dp))
             }
         }
     }
 }
+
+private val CountRowHeight = 28.dp
+private val PrimaryButtonHeight = 48.dp
+/** Retry (12+48) + open-gallery text row ≈ 12+48+40. */
+private val SecondaryActionsHeight = 100.dp
 
 @Composable
 private fun ExportCountChip(
@@ -398,24 +381,10 @@ private fun ExportCountChip(
     tint: Color,
     modifier: Modifier = Modifier,
 ) {
-    // Mid-export count ticks: brief scale pulse so numbers don't hard-swap.
-    val pulse = remember { Animatable(1f) }
-    LaunchedEffect(value) {
-        if (pulse.value == 1f && value == 0) return@LaunchedEffect
-        pulse.snapTo(0.88f)
-        pulse.animateTo(
-            1f,
-            animationSpec = tween(durationMillis = 160, easing = FastOutSlowInEasing),
-        )
-    }
+    // No per-tick scale pulse: each success used to restart Animatable on the count row while
+    // every thumb also recomposed via exportTick — main-thread jank. Numbers update in place.
     Row(
-        modifier = modifier
-            .graphicsLayer {
-                val s = pulse.value
-                scaleX = s
-                scaleY = s
-            }
-            .semantics { this.contentDescription = contentDescription },
+        modifier = modifier.semantics { this.contentDescription = contentDescription },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
