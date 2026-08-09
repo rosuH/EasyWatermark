@@ -331,38 +331,34 @@ fun <T> SaveExportSheetShell(
                 }
             }
 
-            // Always reserve secondary column (Retry + Open gallery) — empty Spacer when idle.
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(SecondaryActionsHeight),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                if (onRetryFailedClick != null && showRetryFailedButton && !isExporting) {
-                    OutlinedButton(
-                        onClick = onRetryFailedClick,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 12.dp)
-                            .height(PrimaryButtonHeight)
-                            .testTag("sharedComposeExportRetryFailed")
-                            .semantics { contentDescription = retryLabel },
-                        shape = RectangleShape,
-                    ) {
-                        Text(retryLabel)
-                    }
-                } else {
-                    Spacer(Modifier.height(12.dp + PrimaryButtonHeight))
+            // Secondary actions only when needed — do not reserve an empty Retry-sized hole
+            // between Share and “View in gallery” (that was ~60dp of dead space).
+            if (onRetryFailedClick != null && showRetryFailedButton && !isExporting) {
+                OutlinedButton(
+                    onClick = onRetryFailedClick,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp)
+                        .height(PrimaryButtonHeight)
+                        .testTag("sharedComposeExportRetryFailed")
+                        .semantics { contentDescription = retryLabel },
+                    shape = RectangleShape,
+                ) {
+                    Text(retryLabel)
                 }
-                if (showOpenGallery) {
-                    TextButton(
-                        onClick = onOpenGalleryClick,
-                        modifier = Modifier.padding(top = 4.dp),
-                        shape = RectangleShape,
-                    ) {
-                        Text(text = openGalleryLabel)
-                    }
+            }
+            if (showOpenGallery) {
+                TextButton(
+                    onClick = onOpenGalleryClick,
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(top = 4.dp, bottom = 8.dp),
+                    shape = RectangleShape,
+                ) {
+                    Text(text = openGalleryLabel)
                 }
+            } else {
+                Spacer(Modifier.height(12.dp))
             }
         }
     }
@@ -370,8 +366,6 @@ fun <T> SaveExportSheetShell(
 
 private val CountRowHeight = 28.dp
 private val PrimaryButtonHeight = 48.dp
-/** Retry (12+48) + open-gallery text row ≈ 12+48+40. */
-private val SecondaryActionsHeight = 100.dp
 
 @Composable
 private fun ExportCountChip(
