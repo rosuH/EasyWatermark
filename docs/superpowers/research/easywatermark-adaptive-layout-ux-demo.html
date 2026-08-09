@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EasyWatermark · Adaptive Editor UX Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0f1419;
+    --bg-elev: #171d25;
+    --surface: #1c2430;
+    --surface-2: #243041;
+    --border: #2e3a4d;
+    --border-soft: #243041;
+    --text: #e8eef6;
+    --text-dim: #8b9bb0;
+    --text-mute: #5c6b7f;
+    --accent: #3d8bfd;
+    --accent-soft: rgba(61, 139, 253, 0.14);
+    --accent-border: rgba(61, 139, 253, 0.45);
+    --sage: #5cb88a;
+    --sage-soft: rgba(92, 184, 138, 0.14);
+    --amber: #e0a454;
+    --amber-soft: rgba(224, 164, 84, 0.14);
+    --rose: #e07a7a;
+    --rose-soft: rgba(224, 122, 122, 0.14);
+    --canvas-bg: #0a0d11;
+    --preview-photo: linear-gradient(145deg, #2a3544 0%, #1a222c 45%, #243040 100%);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --font: "DM Sans", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+    --shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100dvh;
+  }
+
+  .page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 28px 24px 80px;
+  }
+
+  header.hero {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(1.5rem, 2.5vw, 2rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .lede {
+    margin: 0;
+    max-width: 72ch;
+    color: var(--text-dim);
+    font-size: 15px;
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .chip {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+  }
+  .chip strong { color: var(--text); font-weight: 600; }
+
+  /* ── Stage ── */
+  .stage-panel {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .stage-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 16px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .stage-toolbar .label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .preset-btn {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-elev);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .preset-btn:hover {
+    border-color: var(--accent-border);
+    color: var(--text);
+  }
+  .preset-btn[aria-pressed="true"] {
+    background: var(--accent-soft);
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+  .width-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 200px;
+  }
+  .width-control input[type="range"] {
+    flex: 1;
+    accent-color: var(--accent);
+    min-width: 120px;
+  }
+  .width-readout {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    min-width: 7ch;
+    text-align: right;
+  }
+  .mode-badge {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .mode-badge.compact {
+    background: var(--rose-soft);
+    border-color: rgba(224, 122, 122, 0.35);
+    color: #f0a8a8;
+  }
+  .mode-badge.medium {
+    background: var(--amber-soft);
+    border-color: rgba(224, 164, 84, 0.35);
+    color: #ecc07a;
+  }
+  .mode-badge.expanded {
+    background: var(--accent-soft);
+    border-color: var(--accent-border);
+    color: #8bb8ff;
+  }
+  .mode-badge.wide {
+    background: var(--sage-soft);
+    border-color: rgba(92, 184, 138, 0.4);
+    color: #7fd4a8;
+  }
+
+  .stage-body {
+    padding: 24px 18px 28px;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(61, 139, 253, 0.06), transparent 60%),
+      var(--bg-elev);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .stage-meta {
+    width: 100%;
+    max-width: 1100px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px 16px;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .stage-meta strong { color: var(--text); font-weight: 600; }
+  .stage-meta .mono { font-family: var(--mono); font-size: 12px; }
+
+  /* Device chrome */
+  .device {
+    position: relative;
+    width: var(--device-w, 390px);
+    max-width: 100%;
+    transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--canvas-bg);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.03), 0 20px 50px rgba(0,0,0,0.4);
+    overflow: hidden;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .device { transition: none; }
+    .zone, .editor-shell, .pane-left, .pane-main, .pane-right { transition: none !important; }
+  }
+
+  .device-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 40px;
+    padding: 0 12px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-soft);
+    font-size: 12px;
+  }
+  .device-topbar .title {
+    font-weight: 600;
+    color: var(--text);
+  }
+  .device-topbar .actions {
+    display: flex;
+    gap: 8px;
+    color: var(--text-mute);
+  }
+  .device-topbar .pill {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--surface-2);
+    color: var(--text-dim);
+  }
+
+  /* Editor shell layouts */
+  .editor-shell {
+    display: grid;
+    min-height: 420px;
+    height: clamp(420px, 52vh, 560px);
+    background: var(--canvas-bg);
+  }
+
+  /* Compact / Medium: stacked */
+  .editor-shell.layout-stack {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto auto;
+    grid-template-areas:
+      "main"
+      "strip"
+      "tools";
+  }
+  .editor-shell.layout-stack .pane-left { display: none; }
+  .editor-shell.layout-stack .pane-right {
+    grid-area: tools;
+    max-height: 168px;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+  .editor-shell.layout-stack .pane-main { grid-area: main; }
+  .editor-shell.layout-stack .filmstrip { grid-area: strip; }
+
+  /* Expanded A: dual pane */
+  .editor-shell.layout-a {
+    grid-template-columns: 1fr min(360px, 38%);
+    grid-template-rows: 1fr auto;
+    grid-template-areas:
+      "main tools"
+      "strip tools";
+  }
+  .editor-shell.layout-a .pane-left { display: none; }
+  .editor-shell.layout-a .pane-main { grid-area: main; }
+  .editor-shell.layout-a .filmstrip { grid-area: strip; }
+  .editor-shell.layout-a .pane-right {
+    grid-area: tools;
+    border-left: 1px solid var(--border);
+    max-width: 360px;
+  }
+
+  /* Wide C: three zone */
+  .editor-shell.layout-c {
+    grid-template-columns: 220px 1fr min(320px, 28%);
+    grid-template-rows: 1fr auto;
+    grid-template-areas:
+      "left main tools"
+      "left strip tools";
+  }
+  .editor-shell.layout-c .pane-left {
+    display: flex;
+    grid-area: left;
+  }
+  .editor-shell.layout-c .pane-main { grid-area: main; }
+  .editor-shell.layout-c .filmstrip { grid-area: strip; }
+  .editor-shell.layout-c .pane-right {
+    grid-area: tools;
+    border-left: 1px solid var(--border);
+  }
+
+  .pane-left {
+    display: none;
+    flex-direction: column;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+    animation: slideInLeft 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-12px); }
+    to { opacity: 1; transform: none; }
+  }
+  .pane-left .pane-head {
+    padding: 10px 12px;
+    font-size: 11px;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--sage);
+    border-bottom: 1px solid var(--border-soft);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .pane-left .pane-head span.tag {
+    color: var(--text-mute);
+    font-size: 10px;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .lib-list {
+    flex: 1;
+    overflow: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .lib-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    background: var(--bg-elev);
+    cursor: default;
+  }
+  .lib-item.active {
+    border-color: var(--sage);
+    background: var(--sage-soft);
+  }
+  .lib-thumb {
+    width: 36px;
+    height: 36px;
+    border-radius: 4px;
+    background: var(--preview-photo);
+    flex-shrink: 0;
+  }
+  .lib-item .meta {
+    min-width: 0;
+    font-size: 11px;
+  }
+  .lib-item .meta .name {
+    color: var(--text);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .lib-item .meta .sub {
+    color: var(--text-mute);
+    font-family: var(--mono);
+    font-size: 10px;
+  }
+  .lib-foot {
+    padding: 8px;
+    border-top: 1px solid var(--border-soft);
+    font-size: 11px;
+    color: var(--text-mute);
+    text-align: center;
+  }
+
+  .pane-main {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: var(--canvas-bg);
+  }
+  .preview-area {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    position: relative;
+  }
+  .photo {
+    width: min(100%, 420px);
+    aspect-ratio: 4 / 3;
+    max-height: 100%;
+    border-radius: 4px;
+    background: var(--preview-photo);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+  }
+  .photo::before {
+    content: "PREVIEW";
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: rgba(255,255,255,0.18);
+  }
+  /* tiled watermark mock */
+  .wm-tile {
+    position: absolute;
+    inset: -20%;
+    background-image:
+      repeating-linear-gradient(
+        -28deg,
+        transparent 0 28px,
+        rgba(255,255,255,0.07) 28px 29px
+      );
+    pointer-events: none;
+  }
+  .zone-label {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 7px;
+    border-radius: 4px;
+    background: rgba(0,0,0,0.55);
+    color: var(--accent);
+    border: 1px solid var(--accent-border);
+    z-index: 2;
+    pointer-events: none;
+  }
+  .layout-c .pane-main .zone-label { color: var(--sage); border-color: rgba(92,184,138,0.4); }
+
+  .filmstrip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(28, 36, 48, 0.92);
+    border-top: 1px solid var(--border-soft);
+    overflow-x: auto;
+    min-height: 56px;
+  }
+  .filmstrip .fs-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-mute);
+    writing-mode: vertical-lr;
+    transform: rotate(180deg);
+    letter-spacing: 0.08em;
+    flex-shrink: 0;
+  }
+  .fs-cell {
+    width: 40px;
+    height: 40px;
+    border-radius: 2px;
+    background: var(--preview-photo);
+    flex-shrink: 0;
+    border: 1.5px solid transparent;
+    opacity: 0.75;
+  }
+  .fs-cell.selected {
+    border-color: var(--accent);
+    opacity: 1;
+    box-shadow: 0 0 0 2px var(--accent-soft);
+  }
+  .fs-cell:nth-child(3) { filter: hue-rotate(40deg); }
+  .fs-cell:nth-child(4) { filter: hue-rotate(90deg); }
+  .fs-cell:nth-child(5) { filter: hue-rotate(160deg); }
+  .fs-cell:nth-child(6) { filter: hue-rotate(220deg); }
+
+  .pane-right {
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    min-width: 0;
+    overflow: hidden;
+  }
+  .pane-right .pane-head {
+    padding: 10px 12px 0;
+  }
+  .tabs {
+    display: flex;
+    gap: 2px;
+    border-bottom: 1px solid var(--border-soft);
+    padding: 0 8px;
+  }
+  .tab {
+    font-size: 12px;
+    padding: 8px 12px;
+    color: var(--text-mute);
+    border-bottom: 2px solid transparent;
+    cursor: default;
+  }
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    font-weight: 600;
+  }
+  .controls-body {
+    flex: 1;
+    overflow: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .ctrl {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .ctrl label {
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex;
+    justify-content: space-between;
+  }
+  .ctrl label span {
+    font-family: var(--mono);
+    color: var(--text-mute);
+  }
+  .slider-mock {
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--accent) 45%, var(--border) 45%);
+  }
+  .chips-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .chip-mock {
+    font-size: 11px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    background: var(--bg-elev);
+  }
+  .chip-mock.on {
+    border-color: var(--accent-border);
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .text-field-mock {
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-elev);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  /* Transition callout under device */
+  .transition-callout {
+    width: 100%;
+    max-width: 1100px;
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    border: 1px dashed var(--border);
+    background: var(--surface);
+    font-size: 13px;
+    color: var(--text-dim);
+    min-height: 48px;
+  }
+  .transition-callout strong { color: var(--text); }
+  .transition-callout .arrow {
+    color: var(--accent);
+    font-family: var(--mono);
+    margin: 0 4px;
+  }
+  .transition-callout.leave-c { border-color: rgba(92, 184, 138, 0.4); }
+  .transition-callout.enter-c { border-color: rgba(92, 184, 138, 0.55); background: var(--sage-soft); }
+  .transition-callout.enter-a { border-color: var(--accent-border); background: var(--accent-soft); }
+  .transition-callout.stack { border-color: rgba(224, 164, 84, 0.35); }
+
+  /* ── Below: reference sections ── */
+  section.block {
+    margin-top: 40px;
+  }
+  section.block h2 {
+    margin: 0 0 8px;
+    font-size: 1.15rem;
+    letter-spacing: -0.01em;
+  }
+  section.block .sec-lede {
+    margin: 0 0 18px;
+    color: var(--text-dim);
+    font-size: 14px;
+    max-width: 70ch;
+  }
+
+  .grid-4 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+  }
+  .form-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .form-card .fc-head {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border-soft);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .form-card .fc-head h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .form-card .fc-head .bp {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-mute);
+  }
+  .form-card .fc-body {
+    padding: 12px;
+    flex: 1;
+  }
+  .mini-device {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--canvas-bg);
+    overflow: hidden;
+    height: 140px;
+    display: grid;
+    font-size: 9px;
+    font-family: var(--mono);
+  }
+  .mini-device .z {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.55);
+    text-align: center;
+    padding: 4px;
+    line-height: 1.25;
+  }
+  .mini-device .z.main { background: #151b24; color: var(--accent); }
+  .mini-device .z.strip { background: #1a222c; color: var(--text-mute); }
+  .mini-device .z.tools { background: var(--surface-2); color: #8bb8ff; }
+  .mini-device .z.left { background: #1a2a22; color: var(--sage); }
+
+  .mini-device.stack {
+    grid-template-rows: 1fr 22px 36px;
+  }
+  .mini-device.a {
+    grid-template-columns: 1fr 72px;
+    grid-template-rows: 1fr 22px;
+  }
+  .mini-device.a .z.main { grid-column: 1; grid-row: 1; }
+  .mini-device.a .z.strip { grid-column: 1; grid-row: 2; }
+  .mini-device.a .z.tools { grid-column: 2; grid-row: 1 / -1; }
+  .mini-device.c {
+    grid-template-columns: 48px 1fr 64px;
+    grid-template-rows: 1fr 22px;
+  }
+  .mini-device.c .z.left { grid-column: 1; grid-row: 1 / -1; }
+  .mini-device.c .z.main { grid-column: 2; grid-row: 1; }
+  .mini-device.c .z.strip { grid-column: 2; grid-row: 2; }
+  .mini-device.c .z.tools { grid-column: 3; grid-row: 1 / -1; }
+
+  .form-card ul {
+    margin: 12px 0 0;
+    padding: 0 0 0 16px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .form-card li { margin-bottom: 4px; }
+  .form-card li strong { color: var(--text); font-weight: 500; }
+
+  /* Flow diagram */
+  .flow {
+    display: grid;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+  }
+  .flow-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .flow-node {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-elev);
+    min-width: 120px;
+    text-align: center;
+  }
+  .flow-node small {
+    display: block;
+    margin-top: 4px;
+    color: var(--text-mute);
+    font-size: 10px;
+  }
+  .flow-node.n-compact { border-color: rgba(224,122,122,0.4); }
+  .flow-node.n-medium { border-color: rgba(224,164,84,0.4); }
+  .flow-node.n-a { border-color: var(--accent-border); background: var(--accent-soft); }
+  .flow-node.n-c { border-color: rgba(92,184,138,0.45); background: var(--sage-soft); }
+  .flow-edge {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-mute);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 72px;
+  }
+  .flow-edge .dir { color: var(--accent); font-size: 14px; }
+  .flow-note {
+    font-size: 12px;
+    color: var(--text-dim);
+    padding: 10px 12px;
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: 0 8px 8px 0;
+  }
+
+  table.decisions {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  table.decisions th,
+  table.decisions td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-soft);
+    vertical-align: top;
+  }
+  table.decisions th {
+    background: var(--surface-2);
+    font-size: 11px;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-mute);
+    font-weight: 500;
+  }
+  table.decisions tr:last-child td { border-bottom: none; }
+  table.decisions code {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: var(--bg-elev);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: #8bb8ff;
+  }
+  table.decisions .id {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--amber);
+    white-space: nowrap;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .legend i {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  footer.page-foot {
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-mute);
+    font-family: var(--mono);
+  }
+
+  /* Annotate active zones on hover in live stage */
+  .annot {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(0,0,0,0.6);
+    color: var(--text-dim);
+    z-index: 2;
+    max-width: 55%;
+    text-align: right;
+    line-height: 1.3;
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div class="eyebrow">EasyWatermark · grill-with-docs Round 1–2 locked</div>
+      <h1>Adaptive Editor UX Demo</h1>
+      <p class="lede">
+        可交互线框：拖动宽度或点预设，看 Compact / Medium / Supporting-pane (A) / Three-zone (C)
+        的预期形态，以及扩窗、缩窗时的硬切换动线（非实现预览）。
+      </p>
+      <div class="chips">
+        <span class="chip"><strong>H1</strong> hybrid A/B</span>
+        <span class="chip"><strong>D1</strong> dual-pane ≥840</span>
+        <span class="chip"><strong>C-W1</strong> three-zone ≥1440</span>
+        <span class="chip"><strong>C-L4</strong> left = session images</span>
+        <span class="chip"><strong>C-F1</strong> shrink → hard A</span>
+        <span class="chip"><strong>F1</strong> filmstrip in main</span>
+        <span class="chip"><strong>M1</strong> Medium = stack</span>
+        <span class="chip"><strong>K1</strong> no fold this period</span>
+      </div>
+    </header>
+
+    <!-- LIVE STAGE -->
+    <div class="stage-panel" id="stage">
+      <div class="stage-toolbar">
+        <span class="label">Presets</span>
+        <div class="presets" role="group" aria-label="Form factor presets">
+          <button type="button" class="preset-btn" data-w="390" aria-pressed="true">Phone 390</button>
+          <button type="button" class="preset-btn" data-w="720">Tablet port 720</button>
+          <button type="button" class="preset-btn" data-w="960">Tablet land 960</button>
+          <button type="button" class="preset-btn" data-w="1280">Desktop 1280</button>
+          <button type="button" class="preset-btn" data-w="1600">Wide 1600</button>
+        </div>
+        <div class="width-control">
+          <span class="label">Width</span>
+          <input type="range" id="widthRange" min="320" max="1680" value="390" step="10" aria-label="Window width in dp" />
+          <span class="width-readout" id="widthReadout">390 dp</span>
+        </div>
+        <span class="mode-badge compact" id="modeBadge">Compact · Stack (B density)</span>
+      </div>
+
+      <div class="stage-body">
+        <div class="stage-meta">
+          <div>
+            Scheme: <strong id="schemeName">Stacked · Immersive canvas density</strong>
+          </div>
+          <div class="mono" id="schemeRule">width &lt; 600 → Compact (M1 stack shared with Medium)</div>
+        </div>
+
+        <div class="device" id="device" style="--device-w: 390px" aria-label="Editor layout mock">
+          <div class="device-topbar">
+            <span class="title">← Editor</span>
+            <div class="actions">
+              <span class="pill" id="topbarScheme">A/B stack</span>
+              <span>Save</span>
+            </div>
+          </div>
+
+          <div class="editor-shell layout-stack" id="shell">
+            <!-- Left: Scheme C only -->
+            <aside class="pane-left" id="paneLeft" aria-hidden="true">
+              <div class="pane-head">
+                Session images
+                <span class="tag">C-L4 · not templates</span>
+              </div>
+              <div class="lib-list">
+                <div class="lib-item active">
+                  <div class="lib-thumb"></div>
+                  <div class="meta"><div class="name">IMG_2048.jpg</div><div class="sub">selected</div></div>
+                </div>
+                <div class="lib-item">
+                  <div class="lib-thumb" style="filter:hue-rotate(40deg)"></div>
+                  <div class="meta"><div class="name">vacation-02.png</div><div class="sub">ready</div></div>
+                </div>
+                <div class="lib-item">
+                  <div class="lib-thumb" style="filter:hue-rotate(120deg)"></div>
+                  <div class="meta"><div class="name">doc-scan.jpg</div><div class="sub">ready</div></div>
+                </div>
+                <div class="lib-item">
+                  <div class="lib-thumb" style="filter:hue-rotate(200deg)"></div>
+                  <div class="meta"><div class="name">receipt.webp</div><div class="sub">ready</div></div>
+                </div>
+              </div>
+              <div class="lib-foot">Templates → existing sheet</div>
+            </aside>
+
+            <!-- Main: preview + filmstrip always here (F1) -->
+            <div class="pane-main">
+              <span class="zone-label" id="mainZoneLabel">Primary · Preview</span>
+              <div class="preview-area">
+                <div class="photo">
+                  <div class="wm-tile"></div>
+                </div>
+                <div class="annot" id="mainAnnot">Canvas-first · max height</div>
+              </div>
+            </div>
+
+            <div class="filmstrip" id="filmstrip">
+              <span class="fs-label">FILM</span>
+              <div class="fs-cell selected"></div>
+              <div class="fs-cell"></div>
+              <div class="fs-cell"></div>
+              <div class="fs-cell"></div>
+              <div class="fs-cell"></div>
+            </div>
+
+            <!-- Right / bottom tools -->
+            <aside class="pane-right" id="paneRight">
+              <div class="pane-head">
+                <div class="tabs">
+                  <div class="tab active">Content</div>
+                  <div class="tab">Style</div>
+                  <div class="tab">Layout</div>
+                </div>
+              </div>
+              <div class="controls-body">
+                <div class="text-field-mock">© EasyWatermark</div>
+                <div class="ctrl">
+                  <label>Opacity <span>45%</span></label>
+                  <div class="slider-mock"></div>
+                </div>
+                <div class="ctrl">
+                  <label>Size <span>0.32</span></label>
+                  <div class="slider-mock" style="background:linear-gradient(90deg,var(--accent) 32%,var(--border) 32%)"></div>
+                </div>
+                <div class="chips-row">
+                  <span class="chip-mock on">Repeat</span>
+                  <span class="chip-mock">Clamp</span>
+                  <span class="chip-mock">° rotate</span>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <div class="transition-callout stack" id="transitionCallout">
+          <strong>当前动线：</strong> 单栏竖叠。扩窗到 <span class="mono">≥840</span> 时右侧 inspector <strong>硬出现</strong>（Supporting-pane A），filmstrip 仍挂在预览 pane。
+        </div>
+      </div>
+    </div>
+
+    <!-- Form factor cards -->
+    <section class="block">
+      <h2>四档形态一览</h2>
+      <p class="sec-lede">与 live stage 同一套规则；缩略图只表达分区，不表达真实像素密度。</p>
+      <div class="grid-4">
+        <article class="form-card">
+          <div class="fc-head">
+            <h3>Compact</h3>
+            <span class="bp">&lt; 600 dp</span>
+          </div>
+          <div class="fc-body">
+            <div class="mini-device stack">
+              <div class="z main">Preview</div>
+              <div class="z strip">Filmstrip (F1)</div>
+              <div class="z tools">Controls · bottom</div>
+            </div>
+            <ul>
+              <li><strong>Scheme</strong> stack + B density（canvas 优先高度）</li>
+              <li><strong>Filmstrip</strong> 预览正下方</li>
+              <li><strong>Tools</strong> 底栏；可后续做 peek/immersive</li>
+              <li>Phone portrait / fold cover</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="form-card">
+          <div class="fc-head">
+            <h3>Medium</h3>
+            <span class="bp">600 – 839 dp</span>
+          </div>
+          <div class="fc-body">
+            <div class="mini-device stack">
+              <div class="z main">Preview</div>
+              <div class="z strip">Filmstrip</div>
+              <div class="z tools">Controls · bottom</div>
+            </div>
+            <ul>
+              <li><strong>M1</strong> 与 Compact <em>同一骨架</em></li>
+              <li>仅间距/可读性可略松，不强制侧栏</li>
+              <li>避免 ~700dp 侧栏压扁 canvas</li>
+              <li>Tablet portrait 常见区</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="form-card">
+          <div class="fc-head">
+            <h3>Expanded · A</h3>
+            <span class="bp">840 – 1439 dp</span>
+          </div>
+          <div class="fc-body">
+            <div class="mini-device a">
+              <div class="z main">Preview</div>
+              <div class="z strip">Filmstrip</div>
+              <div class="z tools">Inspector<br/>≤360</div>
+            </div>
+            <ul>
+              <li><strong>Supporting-pane editor</strong></li>
+              <li>Primary ~⅔ + tools ≤360 / ~⅓</li>
+              <li>Filmstrip 只在 main 列（F1）</li>
+              <li>P0：全屏也先 polish A（P1）</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="form-card">
+          <div class="fc-head">
+            <h3>Wide · C</h3>
+            <span class="bp">≥ 1440 dp</span>
+          </div>
+          <div class="fc-body">
+            <div class="mini-device c">
+              <div class="z left">Images</div>
+              <div class="z main">Preview</div>
+              <div class="z strip">Film</div>
+              <div class="z tools">Inspector</div>
+            </div>
+            <ul>
+              <li><strong>Three-zone batch</strong>（C-W1）</li>
+              <li>左栏 = 会话图片（C-L4），模板仍 sheet</li>
+              <li>Filmstrip 仍在 main，不搬进左栏</li>
+              <li>缩到 &lt;1440 → <strong>硬切 A</strong>（C-F1）</li>
+            </ul>
+          </div>
+        </article>
+      </div>
+      <div class="legend">
+        <span><i style="background:#151b24;border:1px solid var(--accent)"></i>Primary preview</span>
+        <span><i style="background:#1a222c;border:1px solid var(--border)"></i>Filmstrip (session strip)</span>
+        <span><i style="background:var(--surface-2);border:1px solid var(--accent-border)"></i>Inspector / tools</span>
+        <span><i style="background:#1a2a22;border:1px solid rgba(92,184,138,0.45)"></i>Session image library (C only)</span>
+      </div>
+    </section>
+
+    <!-- Motion path -->
+    <section class="block">
+      <h2>屏幕切换动线</h2>
+      <p class="sec-lede">
+        断点切换是<strong>硬切布局类</strong>（不是半开左栏）。Session 选中图 / 水印配置跟 session 走，不跟栏位存活绑定。
+      </p>
+      <div class="flow">
+        <div class="flow-row">
+          <div class="flow-node n-compact">Compact<br/><small>&lt;600 · stack</small></div>
+          <div class="flow-edge"><span class="dir">→</span><span>宽↑</span></div>
+          <div class="flow-node n-medium">Medium<br/><small>600–839 · stack</small></div>
+          <div class="flow-edge"><span class="dir">→</span><span>≥840 · D1</span></div>
+          <div class="flow-node n-a">Expanded A<br/><small>preview | inspector</small></div>
+          <div class="flow-edge"><span class="dir">→</span><span>≥1440 · C-W1</span></div>
+          <div class="flow-node n-c">Wide C<br/><small>lib | preview | tools</small></div>
+        </div>
+        <div class="flow-row" style="margin-top:4px">
+          <div class="flow-node n-c">Wide C</div>
+          <div class="flow-edge"><span class="dir">←</span><span>C-F1 硬切</span></div>
+          <div class="flow-node n-a">Expanded A</div>
+          <div class="flow-edge"><span class="dir">←</span><span>侧栏下落为底栏</span></div>
+          <div class="flow-node n-medium">Medium / Compact</div>
+          <div class="flow-edge" style="opacity:0.5"><span class="dir">·</span><span>同骨架</span></div>
+          <div class="flow-node n-compact">Stack</div>
+        </div>
+        <div class="flow-note">
+          <strong>扩窗：</strong> stack → A 时 inspector 从底部迁到右侧；A → C 时左栏 session 图库 <em>插入</em>，filmstrip 位置不变。<br/>
+          <strong>缩窗：</strong> C → A 左栏直接消失（不留 rail）；A → stack 右侧 tools 回到底部。选中项与配置保留。<br/>
+          <strong>不做（本期）：</strong> 折叠 tabletop、半开左栏、fullscreen 特供第三套布局、模板进左栏。
+        </div>
+      </div>
+    </section>
+
+    <!-- Decisions table -->
+    <section class="block">
+      <h2>已锁定决策（grill Round 1–2）</h2>
+      <table class="decisions">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>议题</th>
+            <th>选择</th>
+            <th>UX 含义</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="id">H1</td>
+            <td>产品 IA</td>
+            <td>Hybrid A/B</td>
+            <td>窄屏 canvas 优先；宽屏 Supporting Pane Studio</td>
+          </tr>
+          <tr>
+            <td class="id">D1</td>
+            <td>双栏起点</td>
+            <td><code>≥840 dp</code></td>
+            <td>对齐 WSC Expanded；今日代码 1024 要下调</td>
+          </tr>
+          <tr>
+            <td class="id">C3 / C-W1</td>
+            <td>Scheme C</td>
+            <td>本期做 · <code>≥1440</code> 自动三区</td>
+            <td>与 A polish 并行；中档桌面仍是 A</td>
+          </tr>
+          <tr>
+            <td class="id">C-L4</td>
+            <td>C 左栏</td>
+            <td>会话图片；模板仍 sheet</td>
+            <td>先兑现 multi-image 密度</td>
+          </tr>
+          <tr>
+            <td class="id">C-F1</td>
+            <td>C 缩窗</td>
+            <td>硬切 A</td>
+            <td>不维护半三区 rail</td>
+          </tr>
+          <tr>
+            <td class="id">M1</td>
+            <td>Medium</td>
+            <td>与 Compact 同竖叠</td>
+            <td>600–839 不做侧栏</td>
+          </tr>
+          <tr>
+            <td class="id">F1</td>
+            <td>Filmstrip</td>
+            <td>永远在 main preview pane</td>
+            <td>C 左栏是库，不是 filmstrip 搬家</td>
+          </tr>
+          <tr>
+            <td class="id">P1</td>
+            <td>Desktop 全屏</td>
+            <td>先修 A 质量</td>
+            <td>全屏不是 C 的触发器</td>
+          </tr>
+          <tr>
+            <td class="id">K1 / S1</td>
+            <td>Fold / API</td>
+            <td>本期不做 fold；手写 layout class</td>
+            <td>不引入 SupportingPaneScaffold / SceneStrategy</td>
+          </tr>
+          <tr>
+            <td class="id">T1</td>
+            <td>术语</td>
+            <td>Supporting-pane editor</td>
+            <td>Glossary；代码可继续 <code>EditorLayoutClass</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer class="page-foot">
+      EasyWatermark adaptive IA UX demo · 2026-08-09 · not production UI ·
+      mirror: docs/superpowers/research/ · grill frontier still open for Round 3 docs packaging
+    </footer>
+  </div>
+
+<script>
+(function () {
+  const range = document.getElementById("widthRange");
+  const readout = document.getElementById("widthReadout");
+  const device = document.getElementById("device");
+  const shell = document.getElementById("shell");
+  const badge = document.getElementById("modeBadge");
+  const schemeName = document.getElementById("schemeName");
+  const schemeRule = document.getElementById("schemeRule");
+  const callout = document.getElementById("transitionCallout");
+  const topbarScheme = document.getElementById("topbarScheme");
+  const mainAnnot = document.getElementById("mainAnnot");
+  const paneLeft = document.getElementById("paneLeft");
+  const presetBtns = document.querySelectorAll(".preset-btn");
+
+  let prevMode = null;
+
+  function classify(w) {
+    if (w >= 1440) return "wide";
+    if (w >= 840) return "expanded";
+    if (w >= 600) return "medium";
+    return "compact";
+  }
+
+  function apply(w) {
+    const mode = classify(w);
+    // Cap visual device width so demo stays readable; logical width still drives mode
+    const visual = Math.min(w, 1100);
+    device.style.setProperty("--device-w", visual + "px");
+    readout.textContent = w + " dp";
+    range.value = w;
+
+    shell.classList.remove("layout-stack", "layout-a", "layout-c");
+    badge.className = "mode-badge " + mode;
+    callout.className = "transition-callout";
+
+    if (mode === "wide") {
+      shell.classList.add("layout-c");
+      badge.textContent = "Wide · Three-zone (C)";
+      schemeName.textContent = "Scheme C · Three-Zone Batch Studio";
+      schemeRule.textContent = "width ≥ 1440 → left session images | canvas | inspector";
+      topbarScheme.textContent = "C · three-zone";
+      mainAnnot.textContent = "Primary canvas · filmstrip stays here (F1)";
+      paneLeft.setAttribute("aria-hidden", "false");
+      callout.classList.add("enter-c");
+      callout.innerHTML =
+        "<strong>当前动线：</strong>三区。左栏 = 会话图片（C-L4）。" +
+        "缩到 <span class=\"mono\">&lt;1440</span> 时左栏 <strong>硬消失</strong>（C-F1）→ Supporting-pane A；" +
+        "选中图与配置保留。模板仍走 sheet。";
+    } else if (mode === "expanded") {
+      shell.classList.add("layout-a");
+      badge.textContent = "Expanded · Supporting-pane (A)";
+      schemeName.textContent = "Scheme A · Supporting Pane Studio";
+      schemeRule.textContent = "840 ≤ width < 1440 → preview | inspector (≤360), filmstrip under preview";
+      topbarScheme.textContent = "A · supporting pane";
+      mainAnnot.textContent = "Primary ~⅔ · tools side ≤360dp";
+      paneLeft.setAttribute("aria-hidden", "true");
+      callout.classList.add("enter-a");
+      if (prevMode === "wide") {
+        callout.innerHTML =
+          "<strong>刚从 C 缩入 A（C-F1）：</strong>左栏硬切掉，无半开 rail。" +
+          "布局 = preview + filmstrip | inspector。再扩到 ≥1440 左栏重新插入。";
+      } else if (prevMode === "medium" || prevMode === "compact") {
+        callout.innerHTML =
+          "<strong>刚从 stack 扩入 A（D1）：</strong>底栏 controls 迁到右侧 supporting pane。" +
+          "Filmstrip 留在 main 列下方，不横跨 inspector。";
+      } else {
+        callout.innerHTML =
+          "<strong>当前动线：</strong>Supporting-pane editor。" +
+          "再扩到 <span class=\"mono\">≥1440</span> 插入左栏进入 C；" +
+          "缩到 <span class=\"mono\">&lt;840</span> 侧栏落回底部 stack。";
+      }
+    } else if (mode === "medium") {
+      shell.classList.add("layout-stack");
+      badge.textContent = "Medium · Stack (M1)";
+      schemeName.textContent = "Stacked · same skeleton as Compact";
+      schemeRule.textContent = "600 ≤ width < 840 → vertical stack (no side pane)";
+      topbarScheme.textContent = "M1 · stack";
+      mainAnnot.textContent = "Same stack as phone · slightly roomier";
+      paneLeft.setAttribute("aria-hidden", "true");
+      callout.classList.add("stack");
+      if (prevMode === "expanded" || prevMode === "wide") {
+        callout.innerHTML =
+          "<strong>刚从双栏/三区缩入 Medium：</strong>inspector 回底部。" +
+          "不保留窄侧栏。再扩到 ≥840 恢复 A。";
+      } else {
+        callout.innerHTML =
+          "<strong>当前动线：</strong>Medium 与 Compact 同骨架（M1）。" +
+          "跨过 <span class=\"mono\">840</span> 才出现右侧 supporting pane。";
+      }
+    } else {
+      shell.classList.add("layout-stack");
+      badge.textContent = "Compact · Stack (B density)";
+      schemeName.textContent = "Stacked · Immersive canvas density";
+      schemeRule.textContent = "width < 600 → Compact stack; maximize preview height";
+      topbarScheme.textContent = "A/B stack";
+      mainAnnot.textContent = "Canvas-first · max height";
+      paneLeft.setAttribute("aria-hidden", "true");
+      callout.classList.add("stack");
+      callout.innerHTML =
+        "<strong>当前动线：</strong>单栏竖叠（B 密度）。" +
+        "扩窗到 <span class=\"mono\">≥840</span> 时右侧 inspector <strong>硬出现</strong>（Supporting-pane A），" +
+        "filmstrip 仍挂在预览 pane。";
+    }
+
+    // Preset pressed state
+    presetBtns.forEach(function (btn) {
+      btn.setAttribute("aria-pressed", String(Number(btn.dataset.w) === w));
+    });
+
+    prevMode = mode;
+  }
+
+  range.addEventListener("input", function () {
+    apply(Number(range.value));
+  });
+
+  presetBtns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      apply(Number(btn.dataset.w));
+    });
+  });
+
+  apply(390);
+})();
+</script>
+</body>
+</html>

@@ -1,26 +1,41 @@
 package me.rosuh.easywatermark.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.data.model.ImageInfoUi
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkConfigChange
 import me.rosuh.easywatermark.data.model.entity.Template
+import me.rosuh.easywatermark.data.model.toUiProjection
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.about_title_about
 import me.rosuh.easywatermark.shared.generated.resources.cd_add_more_images
@@ -32,7 +47,12 @@ import org.jetbrains.compose.resources.stringResource
 
 /**
  * Shared product editor screen. S-i18n-2: chrome labels from [Res]; hosts inject painters + slots.
- * I1: optional [layoutClass] — Compact/Medium keep vertical stack; Expanded uses preview + controls pane.
+ *
+ * ADR-0026 layout:
+ * - Compact / Medium: vertical stack (preview → filmstrip → bottom controls)
+ * - Expanded (≥840): supporting-pane A — main (preview + filmstrip) | fixed inspector rail
+ * - Wide (≥1440): three-zone C — session library | main (preview + filmstrip) | inspector
+ * Filmstrip always under the primary preview (F1), never in the inspector rail.
  */
 data class EditorUiIcons(
     val back: Painter,
@@ -47,7 +67,7 @@ data class EditorUiIcons(
 @Composable
 fun EditorScreen(
     /**
-     * Display list for filmstrip (immutable projection — no export jobState/result vars).
+     * Display list for filmstrip / C session library (immutable projection — no export jobState/result vars).
      * Prefer [me.rosuh.easywatermark.data.model.toUiProjection] at the host boundary.
      */
     imageList: List<ImageInfoUi>,
@@ -84,7 +104,7 @@ fun EditorScreen(
     onDeleteTemplate: (Template) -> Unit,
     modifier: Modifier = Modifier,
     /**
-     * I1 layout class from host window size. Default [EditorLayoutClass.Compact] keeps
+     * ADR-0026 layout class from host window size. Default [EditorLayoutClass.Compact] keeps
      * phone binary-compatible call sites.
      */
     layoutClass: EditorLayoutClass = EditorLayoutClass.Compact,
@@ -104,6 +124,14 @@ fun EditorScreen(
     val addMoreCd = stringResource(Res.string.cd_add_more_images)
     val saveCd = stringResource(Res.string.cd_save)
     val aboutCd = stringResource(Res.string.about_title_about)
+
+    val layoutTag = when (layoutClass) {
+        EditorLayoutClass.Compact -> "editorLayoutCompact"
+        EditorLayoutClass.Medium -> "editorLayoutMedium"
+        EditorLayoutClass.Expanded -> "editorLayoutExpanded"
+        EditorLayoutClass.Wide -> "editorLayoutWide"
+    }
+    val dualOrWide = layoutClass == EditorLayoutClass.Expanded || layoutClass == EditorLayoutClass.Wide
 
     EditorTemplateSheetHost(
         templates = templates,
@@ -126,13 +154,7 @@ fun EditorScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .safeDrawingPadding()
-                    .testTag(
-                        when (layoutClass) {
-                            EditorLayoutClass.Compact -> "editorLayoutCompact"
-                            EditorLayoutClass.Medium -> "editorLayoutMedium"
-                            EditorLayoutClass.Expanded -> "editorLayoutExpanded"
-                        },
-                    ),
+                    .testTag(layoutTag),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 EditorTopBar(
@@ -151,48 +173,73 @@ fun EditorScreen(
                     onGoAboutScreen = onGoAboutScreen,
                 )
 
-                if (layoutClass == EditorLayoutClass.Expanded) {
-                    // I1 expanded: preview (weight) + supporting controls column.
+                if (dualOrWide) {
+                    // A / C: horizontal chrome. Filmstrip stays in main column (F1).
                     Row(
                         modifier = Modifier
                             .weight(1f, fill = true)
                             .fillMaxWidth()
-                            .testTag("editorExpandedPaneRow"),
+                            .testTag(
+                                if (layoutClass == EditorLayoutClass.Wide) {
+                                    "editorWidePaneRow"
+                                } else {
+                                    "editorExpandedPaneRow"
+                                },
+                            ),
                     ) {
-                        EditorPreviewFrame(
-                            hasImage = hasPreviewContent,
-                            emptyText = emptyPreview,
+                        if (layoutClass == EditorLayoutClass.Wide) {
+                            // C-L4: session image library only (templates stay sheet).
+                            EditorSessionImageLibrary(
+                                images = imageList,
+                                selectedImage = selected,
+                                progressive = progressiveSlots,
+                                thumbnail = thumbnail,
+                                onImageSelected = onImageSelected,
+                                modifier = Modifier
+                                    .width(EDITOR_WIDE_SESSION_LIBRARY_MAX_DP.dp)
+                                    .fillMaxHeight()
+                                    .testTag("editorWideSessionLibrary"),
+                            )
+                        }
+
+                        // Primary pane: preview + filmstrip under canvas (F1).
+                        Column(
                             modifier = Modifier
                                 .weight(1f, fill = true)
                                 .fillMaxHeight()
-                                .testTag("sharedComposeWatermarkPreview"),
-                        ) { previewModifier ->
-                            preview(previewModifier)
+                                .testTag("editorPrimaryPreviewPane"),
+                        ) {
+                            EditorPreviewFrame(
+                                hasImage = hasPreviewContent,
+                                emptyText = emptyPreview,
+                                modifier = Modifier
+                                    .weight(1f, fill = true)
+                                    .fillMaxWidth()
+                                    .testTag("sharedComposeWatermarkPreview"),
+                            ) { previewModifier ->
+                                preview(previewModifier)
+                            }
+                            EditorMainFilmstrip(
+                                imageList = imageList,
+                                selected = selected,
+                                progressiveSlots = progressiveSlots,
+                                hasProgressiveSlots = hasProgressiveSlots,
+                                thumbnail = thumbnail,
+                                onImageSelected = onImageSelected,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
                         }
 
+                        // Supporting inspector — fixed max rail + padding (P1 A polish).
                         Column(
                             modifier = Modifier
+                                .width(EDITOR_EXPANDED_CONTROLS_PANE_MAX_DP.dp)
                                 .widthIn(max = EDITOR_EXPANDED_CONTROLS_PANE_MAX_DP.dp)
                                 .fillMaxHeight()
-                                .fillMaxWidth(0.38f)
+                                .padding(EDITOR_SUPPORTING_PANE_PADDING_DP.dp)
                                 .testTag("editorExpandedControlsPane"),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            if (progressiveSlots != null && hasProgressiveSlots) {
-                                EditorProgressivePhotoStrip(
-                                    presentation = progressiveSlots,
-                                    thumbnail = thumbnail,
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
-                            } else if (imageList.isNotEmpty()) {
-                                EditorPhotoStrip(
-                                    images = imageList,
-                                    selectedImage = selected,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    onImageSelected = onImageSelected,
-                                    thumbnail = thumbnail,
-                                )
-                            }
                             Box(modifier = Modifier.weight(1f, fill = true).fillMaxWidth()) {
                                 EditorBottomControls(
                                     waterMark = waterMark,
@@ -208,7 +255,7 @@ fun EditorScreen(
                         }
                     }
                 } else {
-                    // Compact / Medium: existing phone vertical stack.
+                    // Compact / Medium: phone vertical stack (M1).
                     EditorPreviewFrame(
                         hasImage = hasPreviewContent,
                         emptyText = emptyPreview,
@@ -220,21 +267,15 @@ fun EditorScreen(
                         preview(previewModifier)
                     }
 
-                    if (progressiveSlots != null && hasProgressiveSlots) {
-                        EditorProgressivePhotoStrip(
-                            presentation = progressiveSlots,
-                            thumbnail = thumbnail,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    } else if (imageList.isNotEmpty()) {
-                        EditorPhotoStrip(
-                            images = imageList,
-                            selectedImage = selected,
-                            modifier = Modifier.fillMaxWidth(),
-                            onImageSelected = onImageSelected,
-                            thumbnail = thumbnail,
-                        )
-                    }
+                    EditorMainFilmstrip(
+                        imageList = imageList,
+                        selected = selected,
+                        progressiveSlots = progressiveSlots,
+                        hasProgressiveSlots = hasProgressiveSlots,
+                        thumbnail = thumbnail,
+                        onImageSelected = onImageSelected,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
 
                     EditorBottomControls(
                         waterMark = waterMark,
@@ -245,6 +286,122 @@ fun EditorScreen(
                         iconOption = iconOption,
                         optionItem = optionItem,
                         modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Filmstrip under primary preview — F1 single ownership. */
+@Composable
+private fun EditorMainFilmstrip(
+    imageList: List<ImageInfoUi>,
+    selected: ImageInfoUi?,
+    progressiveSlots: EditorProgressiveSlotPresentation?,
+    hasProgressiveSlots: Boolean,
+    thumbnail: @Composable (image: ImageInfoUi, contentDescription: String, modifier: Modifier) -> Unit,
+    onImageSelected: (ImageInfoUi) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (progressiveSlots != null && hasProgressiveSlots) {
+        EditorProgressivePhotoStrip(
+            presentation = progressiveSlots,
+            thumbnail = thumbnail,
+            modifier = modifier.testTag("editorMainFilmstrip"),
+        )
+    } else if (imageList.isNotEmpty()) {
+        EditorPhotoStrip(
+            images = imageList,
+            selectedImage = selected,
+            modifier = modifier.testTag("editorMainFilmstrip"),
+            onImageSelected = onImageSelected,
+            thumbnail = thumbnail,
+        )
+    }
+}
+
+/**
+ * Three-zone C left rail: session images only (C-L4). Vertical list reuses [thumbnail];
+ * selection routes through the same [onImageSelected] as the filmstrip.
+ */
+@Composable
+private fun EditorSessionImageLibrary(
+    images: List<ImageInfoUi>,
+    selectedImage: ImageInfoUi?,
+    progressive: EditorProgressiveSlotPresentation?,
+    thumbnail: @Composable (image: ImageInfoUi, contentDescription: String, modifier: Modifier) -> Unit,
+    onImageSelected: (ImageInfoUi) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(2.dp)
+    val selectedUri = selectedImage?.uri?.value
+    val pad = EDITOR_SUPPORTING_PANE_PADDING_DP.dp
+    Column(
+        modifier = modifier
+            .padding(pad)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow),
+    ) {
+        // Prefer ready progressive slots when the host is mid-import; else session imageList.
+        val readyFromProgressive = progressive?.state?.slots
+            ?.filterIsInstance<EditorMediaSlot.Ready>()
+            ?.map { it.image.toUiProjection() }
+            .orEmpty()
+        val libraryImages = readyFromProgressive.ifEmpty { images }
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .testTag("editorSessionLibraryList"),
+            contentPadding = PaddingValues(vertical = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            items(
+                items = libraryImages,
+                key = { it.uri.value },
+            ) { image ->
+                val selected = image.uri.value == selectedUri
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onImageSelected(image) }
+                        .padding(horizontal = 4.dp)
+                        .testTag("editorSessionLibraryItem"),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(shape)
+                            .then(
+                                if (selected) {
+                                    Modifier.border(
+                                        width = 1.5.dp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = shape,
+                                    )
+                                } else {
+                                    Modifier
+                                },
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        thumbnail(image, "session image", Modifier.fillMaxSize().clip(shape))
+                    }
+                    Text(
+                        text = image.uri.value.substringAfterLast('/').ifEmpty { image.uri.value },
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = if (selected) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 2.dp),
                     )
                 }
             }

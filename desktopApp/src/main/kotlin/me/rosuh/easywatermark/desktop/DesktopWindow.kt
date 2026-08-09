@@ -42,6 +42,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import androidx.compose.ui.window.rememberWindowState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -642,7 +643,19 @@ fun launchDesktopWindow() = application {
         exitApplication()
     }
 
-    Window(onCloseRequest = ::closeDesktopWindow, title = "EasyWatermark — Desktop") {
+    // ADR-0026 E2E: optional initial size via -Dewm.desktop.widthDp / -Dewm.desktop.heightDp.
+    val e2eW = System.getProperty("ewm.desktop.widthDp")?.toFloatOrNull()
+    val e2eH = System.getProperty("ewm.desktop.heightDp")?.toFloatOrNull()
+    val windowState = if (e2eW != null && e2eH != null && e2eW > 0f && e2eH > 0f) {
+        rememberWindowState(width = e2eW.dp, height = e2eH.dp)
+    } else {
+        rememberWindowState()
+    }
+    Window(
+        onCloseRequest = ::closeDesktopWindow,
+        title = "EasyWatermark — Desktop",
+        state = windowState,
+    ) {
         AppTheme(darkTheme = true) {
             // I3: Desktop platformMotionPolicy is Full (no OS reduce-motion API).
             ProvideMotionPolicy(platformMotionPolicy()) {
