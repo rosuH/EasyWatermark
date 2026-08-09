@@ -1,6 +1,7 @@
 package me.rosuh.easywatermark.render
 
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.text.font.FontFamily
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.repo.IosIconPersistence
@@ -23,10 +24,6 @@ internal object IosPreviewRaster {
      * composition snappy on multi-megapixel camera stills while remaining sharp on phone DPI.
      */
     const val PREVIEW_MAX_EDGE_PX: Int = 720
-
-    private val fontFamily by lazy {
-        IosFontLoader.bundledFontFamily(latinFirst = true)
-    }
 
     /**
      * Fast source placeholder (no watermark) for instant filmstrip feedback while raster runs.
@@ -65,7 +62,12 @@ internal object IosPreviewRaster {
         } else {
             null
         }
-        val family = if (waterMark.markMode == WatermarkMode.Text) fontFamily else null
+        // ADR-0025: system default for Text; Image ignores family.
+        val family = if (waterMark.markMode == WatermarkMode.Text) {
+            FontFamily.Default
+        } else {
+            null
+        }
         val composed = CommonWatermarkPipeline.compose(
             background = background,
             config = waterMark,

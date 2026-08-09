@@ -2,6 +2,8 @@
 
 **Status:** Accepted (2026-06-13) · **Plan ref:** D10, D4
 
+> **Production font scope superseded by [ADR-0025](0025-system-default-watermark-fonts.md) (2026-08-09):** product Text mode uses system-default fonts; Noto is test-only. Golden two-tier + sRGB pin below still apply.
+
 ## Context
 Text rendering is not pixel-identical across platforms (Android Minikin vs Skia Paragraph; no Roboto on iOS). The default watermark starts with an emoji and the app ships 13 locales. iPhone photos are Display-P3 while Android decodes to sRGB.
 

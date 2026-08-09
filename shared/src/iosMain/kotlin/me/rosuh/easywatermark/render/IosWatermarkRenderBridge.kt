@@ -8,7 +8,7 @@ import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
-import platform.Foundation.NSBundle
+import androidx.compose.ui.text.font.FontFamily
 
 /**
  * iOS Swift-catchable render boundary (C3: routes through [IosFinalRenderSpine] + common pipeline).
@@ -17,7 +17,7 @@ import platform.Foundation.NSBundle
  * format policy lives on [IosExportPipelinePort], not here.
  *
  * RENDER vs ENCODE mapping is **structural** (separate try/catch around compose vs encode), not
- * message-string heuristics.
+ * message-string heuristics. ADR-0025: Text uses [FontFamily.Default] (no bundled face load).
  */
 object IosWatermarkRenderBridge {
 
@@ -28,7 +28,7 @@ object IosWatermarkRenderBridge {
     internal var encodeOverrideForTests: ((ImageBitmap, ImageFormat, Int) -> ByteArray)? = null
 
     /**
-     * Build the bundled font family, watermark [imageBytes], and encode PNG via the final spine.
+     * Watermark [imageBytes] with Text mode + system-default family; encode PNG via the final spine.
      * Defaults mirror the prior Swift call site. Failures rethrow as [IosRenderException].
      */
     @Throws(IosRenderException::class)
@@ -46,14 +46,8 @@ object IosWatermarkRenderBridge {
         colorArgb: Int = WaterMark.default.textColor,
         typeface: TextTypeface = WaterMark.default.textTypeface,
         textStyle: TextPaintStyle = WaterMark.default.textStyle,
-        latinFirst: Boolean = true,
-        bundle: NSBundle = NSBundle.mainBundle,
     ): IosRenderedPng {
-        val fontFamily = try {
-            IosFontLoader.bundledFontFamily(latinFirst = latinFirst, bundle = bundle)
-        } catch (t: Throwable) {
-            throw IosRenderException(IosRenderStage.FONT, t.message ?: "bundled font load failed", t)
-        }
+        val fontFamily = FontFamily.Default
 
         val config = WaterMark.default.copy(
             text = text,

@@ -10,7 +10,6 @@ import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.repo.IosIconPersistence
 import me.rosuh.easywatermark.render.IosByteArrayInterop
 import me.rosuh.easywatermark.render.IosFinalRenderSpine
-import me.rosuh.easywatermark.render.IosFontLoader
 import me.rosuh.easywatermark.render.IosRenderRequest
 import platform.Foundation.NSData
 import platform.Foundation.NSTemporaryDirectory
@@ -28,17 +27,16 @@ import platform.Foundation.writeToFile
  * Issue 22 §2.5: atomic write of encoded bytes precedes [ImageInfo] width/height mutation.
  * D1: returns typed [ExportOutcome] with [ExportedMedia] (ref/dims/format/bytes).
  *
- * C4.3 attempt 2: optional internal [textFontFamilyProvider] construction seam for Text-mode only.
- * The public no-arg constructor still defaults to [IosFontLoader.bundledFontFamily]. Image mode never
- * invokes the provider.
+ * Optional internal [textFontFamilyProvider] construction seam for Text-mode only (tests).
+ * Production defaults to [FontFamily.Default] (ADR-0025). Image mode never invokes the provider.
  */
 /** J5: Session export port — not called from Swift. */
 internal class IosExportPipelinePort internal constructor(
     private val textFontFamilyProvider: () -> FontFamily?,
 ) : ExportPipelinePort {
 
-    /** Production entry: Text mode uses the app-bundled Latin+CJK faces. */
-    constructor() : this({ IosFontLoader.bundledFontFamily(latinFirst = true) })
+    /** Production entry: Text mode uses the system default face (ADR-0025). */
+    constructor() : this({ FontFamily.Default })
 
     /**
      * Test-only atomic-write override so a failed write can be forced without message parsing

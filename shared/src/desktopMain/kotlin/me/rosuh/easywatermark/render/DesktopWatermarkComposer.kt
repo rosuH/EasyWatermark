@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.ImageBitmapConfig
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import me.rosuh.easywatermark.data.model.WatermarkMode
@@ -71,7 +72,6 @@ object DesktopWatermarkComposer {
         offsetX: Float = 0.5f,
         offsetY: Float = 0.5f,
         alpha: Float = 1f,
-        latinFirst: Boolean = true,
     ): ImageBitmap {
         val background = sampleBackground(bgWidth, bgHeight)
         val cell = DesktopWatermarkTextRenderer.renderTextCell(
@@ -82,7 +82,6 @@ object DesktopWatermarkComposer {
             color = Color.White,
             hGapPercent = hGapPercent,
             vGapPercent = vGapPercent,
-            latinFirst = latinFirst,
         )
         return WatermarkCellComposer.composeOverBackground(
             background = background,
@@ -119,11 +118,10 @@ object DesktopWatermarkComposer {
         offsetX: Float = 0.5f,
         offsetY: Float = 0.5f,
         alpha: Float = 1f,
-        latinFirst: Boolean = true,
     ): ComposedImage {
         val composed = composeSample(
             text, bgWidth, bgHeight, tileMode, textSize, degree,
-            hGapPercent, vGapPercent, offsetX, offsetY, alpha, latinFirst,
+            hGapPercent, vGapPercent, offsetX, offsetY, alpha,
         )
         return ComposedImage(composed.width, composed.height, DesktopWatermarkTextRenderer.encodePng(composed))
     }
@@ -138,8 +136,8 @@ object DesktopWatermarkComposer {
     /**
      * Production Desktop real-image composition (C2): decode → [CommonWatermarkPipeline.compose] →
      * encode. Paint policy (tile, alpha-once, geometry, Text/Image) is owned by the common pipeline.
-     * Desktop supplies EXIF-baked decode, bundled Latin+CJK [FontFamily], icon file bytes (caller),
-     * and encode format/quality from [DesktopRenderRequest.prefs].
+     * Desktop supplies EXIF-baked decode, system-default [FontFamily] (ADR-0025), icon file bytes
+     * (caller), and encode format/quality from [DesktopRenderRequest.prefs].
      *
      * [iconBytes] is required when [DesktopRenderRequest.config] is Image mode; ignored for Text.
      */
@@ -171,7 +169,7 @@ object DesktopWatermarkComposer {
                 icon = icon,
                 offsetX = request.offsetX,
                 offsetY = request.offsetY,
-                fontFamily = DesktopWatermarkTextRenderer.bundledLatinCjkFontFamily(),
+                fontFamily = FontFamily.Default,
             )
             width = composed.width
             height = composed.height

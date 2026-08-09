@@ -7,15 +7,14 @@ import UIKit
 //
 // Pipeline (all in `:shared`, decode-free commonMain + Skiko iOS backend):
 //   encoded image bytes
-//     -> IosFontLoader.bundledFontFamily(...)            (packaged Noto Latin+CJK faces, S4d-26)
-//     -> IosWatermarkRenderer.composeOverImage(...)      (decode via IosImageDecoder -> render cell
-//                                                          -> composeOverBackground; Skia bakes EXIF)
-//     -> IosWatermarkRenderer.encodePng(bitmap:)         (Skia PNG encode)
+//     -> FontFamily.Default (ADR-0025 system-default Text face; no bundled Noto)
+//     -> IosFinalRenderSpine / CommonWatermarkPipeline   (decode -> cell -> compose; Skia bakes EXIF)
+//     -> encode PNG
 //     -> Swift Data -> UIImage(data:)                    (display, done in the View)
 //
-// S4d-31: the render call now goes through `IosWatermarkRenderBridge.renderWatermarkedPng` (an
-// iOS-only `@Throws` boundary), so a font/decode/render/encode failure becomes a Swift `catch` →
-// `.failure(...)` instead of a fatal Kotlin/Native crash when C5.3 runs.
+// S4d-31: the render call goes through `IosWatermarkRenderBridge.renderWatermarkedPng` (an
+// iOS-only `@Throws` boundary), so a decode/render/encode failure becomes a Swift `catch` →
+// `.failure(...)` instead of a fatal Kotlin/Native crash.
 // S4d-58: XCUITest executes this path via the DEBUG fixture seam and proves preview + Save + Share.
 @MainActor
 final class WatermarkWorkflow: ObservableObject {
@@ -545,10 +544,9 @@ final class WatermarkWorkflow: ObservableObject {
 
     // `nonisolated` so the detached task can run it off the main actor (it touches no actor state).
     //
-    // S4d-31: goes through `IosWatermarkRenderBridge.renderWatermarkedPng`, the iOS-only `@Throws`
-    // boundary that wraps `bundledFontFamily → composeOverImage → encodePng`. Any font/decode/render/
-    // encode failure arrives here as a Swift-catchable error (an `IosRenderException` bridged to
-    // `NSError`) instead of a fatal Kotlin/Native crash, and is surfaced as `.failure(...)`.
+    // S4d-31 / ADR-0025: `IosWatermarkRenderBridge.renderWatermarkedPng` — system-default
+    // FontFamily.Default → compose → encodePng. Decode/render/encode failures arrive as
+    // Swift-catchable `IosRenderException` → `.failure(...)`.
     private nonisolated static func renderBlocking(imageData: Data, text: String, degree: Float, tileMode: WatermarkTileMode, alpha: Float, colorArgb: Int32, textSize: Float, hGap: Int32, vGap: Int32, typefaceKey: Int32, textStyleKey: Int32) -> Outcome {
         do {
             // `composeOverImage` (inside the bridge) renders the text in the passed `colorArgb` ARGB
@@ -570,9 +568,7 @@ final class WatermarkWorkflow: ObservableObject {
                 alpha: alpha,
                 colorArgb: colorArgb,
                 typeface: TextTypeface.companion.obtainSealedClass(key: typefaceKey),
-                textStyle: TextPaintStyle.companion.obtainSealedClass(key: textStyleKey),
-                latinFirst: true,
-                bundle: Bundle.main
+                textStyle: TextPaintStyle.companion.obtainSealedClass(key: textStyleKey)
             )
             return .success(rendered.png.toData(), Int(rendered.width), Int(rendered.height))
         } catch {

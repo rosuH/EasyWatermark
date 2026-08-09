@@ -31,8 +31,8 @@ EasyWatermark (`me.rosuh.easywatermark`) — a privacy-focused watermark app tha
 Platform source sets supply the edges:
 
 - `androidMain` — byte-faithful DataStore creation (`createPreferencesDataStore(context, name)` with `SharedPreferencesMigration`), Room builder in compatibility mode (framework SupportSQLite + `createFromAsset` locale seeds, no `sqlite-bundled`).
-- `desktopMain` — DataStore/Room builders under `~/.easywatermark` (`BundledSQLiteDriver`, locale-aware seed unpack), `DesktopImageDecoder` (AWT `ImageIO` + manual EXIF bake), `DesktopWatermarkComposer`/`DesktopWatermarkTextRenderer` (bundled Noto Latin+CJK via Skiko byte-`Font`), `DesktopExportPipelinePort`, `DesktopIconPersistence`, `DesktopSaveDecision`.
-- `iosMain` — DataStore/Room builders under `NSDocumentDirectory` (seeded), `IosImageDecoder` (Skia decode — already bakes EXIF, never re-rotate), `IosTextRasterEnv`/`IosFontLoader` (NSBundle font bytes → Skiko), `IosWatermarkRenderer`, `IosExportPipelinePort`, Swift-facing bridges (`IosWatermarkRenderBridge`, `IosWatermarkConfigBridge`, `IosUserConfigBridge`, `IosTemplateBridge`), `IosSharedComposeHost`/`IosProductRootHost`.
+- `desktopMain` — DataStore/Room builders under `~/.easywatermark` (`BundledSQLiteDriver`, locale-aware seed unpack), `DesktopImageDecoder` (AWT `ImageIO` + manual EXIF bake), `DesktopWatermarkComposer`/`DesktopWatermarkTextRenderer` (system-default `FontFamily.Default`, ADR-0025), `DesktopExportPipelinePort`, `DesktopIconPersistence`, `DesktopSaveDecision`.
+- `iosMain` — DataStore/Room builders under `NSDocumentDirectory` (seeded), `IosImageDecoder` (Skia decode — already bakes EXIF, never re-rotate), `IosTextRasterEnv` (system-default `FontFamily.Default` for product Text; ADR-0025; `IosFontLoader` internal/non-product), `IosWatermarkRenderer`, `IosExportPipelinePort`, Swift-facing bridges (`IosWatermarkRenderBridge`, `IosWatermarkConfigBridge`, `IosUserConfigBridge`, `IosTemplateBridge`), `IosSharedComposeHost`/`IosProductRootHost`.
 
 ### Runtime wiring
 
@@ -79,7 +79,7 @@ EXIF policy: Android decode uses `ExifInterface(InputStream)` on API 23+ and bak
 - **Weblate (until post-`master` retarget):** still owns `app/src/main/res/values-*/strings.xml`.
 - **Agents adding keys:** dual-write default EN to both string trees. Never hand-edit non-default locales.
 - **Packaging:** `:shared` `android { androidResources { enable = true } }`; do **not** substitute `org.jetbrains.compose.components.*` to AndroidX in `:app`.
-- **Do not** put watermark fonts or Room seed DBs into composeResources (existing platform boundaries).
+- **Do not** put watermark fonts or Room seed DBs into composeResources (existing platform boundaries). Production Text mode uses system-default fonts (ADR-0025) — no Noto in iOS app Resources or `desktopMain` resources; test-only Noto may live under `desktopTest` / `androidTest` assets.
 - **Non-Compose string reads:** use `sharedString(Res.string.*)` (Toast, Intent chooser, DataStore default text). Prefer `stringResource` inside Composables.
 - **Still Android-local (OK):** Material theme color attrs (`ContextExtension` / `R.color` / `R.attr`); launcher mipmaps; unused legacy XML drawables in `app/res` until cleaned.
 

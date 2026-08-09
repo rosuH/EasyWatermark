@@ -64,7 +64,7 @@ data class IosEncodedImage(
  * Product sRGB contract is the encode working surface ([explicitSrgbImageInfo] / [ImageInfo.makeS32]),
  * not a guarantee that decoded JPEG/PNG containers re-report a non-null sRGB profile.
  *
- * Production Text passes [IosFontLoader.bundledFontFamily]; Image does not load fonts.
+ * Production Text passes [FontFamily.Default] (ADR-0025); Image does not load fonts.
  * Preview remains [IosPreviewRaster] (720 budget, in-memory, no encode).
  */
 /** J5: export pipeline implementation — not called from Swift. */
@@ -115,7 +115,7 @@ internal object IosFinalRenderSpine {
     /**
      * Full-resolution product compose+encode.
      *
-     * @param fontFamily optional injectable family for tests; production Text should pass bundled CJK.
+     * @param fontFamily optional injectable family; production Text uses [FontFamily.Default] (ADR-0025).
      *   Image mode ignores fonts (pipeline Image path).
      */
     fun renderAndEncode(

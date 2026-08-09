@@ -12,10 +12,6 @@
 
 		EW0000000000000000000041 /* iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000031 /* iOSApp.swift */; };
 		EW0000000000000000000042 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000032 /* ContentView.swift */; };
-		EW0000000000000000000044 /* NotoSans-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000034 /* NotoSans-Regular.ttf */; };
-		EW0000000000000000000045 /* NotoSansSC-Regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000035 /* NotoSansSC-Regular.otf */; };
-		EW0000000000000000000046 /* OFL-NotoSans.txt in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000036 /* OFL-NotoSans.txt */; };
-		EW0000000000000000000047 /* OFL-NotoSansCJK.txt in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000037 /* OFL-NotoSansCJK.txt */; };
 		EW0000000000000000000048 /* KotlinInterop.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000038 /* KotlinInterop.swift */; };
 		EW0000000000000000000049 /* WatermarkWorkflow.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000039 /* WatermarkWorkflow.swift */; };
 		EW000000000000000000004A /* ImageExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW000000000000000000003A /* ImageExport.swift */; };
@@ -47,10 +43,6 @@
 		EW0000000000000000000030 /* iosApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iosApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EW0000000000000000000031 /* iOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSApp.swift; sourceTree = "<group>"; };
 		EW0000000000000000000032 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		EW0000000000000000000034 /* NotoSans-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "NotoSans-Regular.ttf"; sourceTree = "<group>"; };
-		EW0000000000000000000035 /* NotoSansSC-Regular.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "NotoSansSC-Regular.otf"; sourceTree = "<group>"; };
-		EW0000000000000000000036 /* OFL-NotoSans.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OFL-NotoSans.txt"; sourceTree = "<group>"; };
-		EW0000000000000000000037 /* OFL-NotoSansCJK.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OFL-NotoSansCJK.txt"; sourceTree = "<group>"; };
 		EW0000000000000000000038 /* KotlinInterop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KotlinInterop.swift; sourceTree = "<group>"; };
 		EW0000000000000000000039 /* WatermarkWorkflow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatermarkWorkflow.swift; sourceTree = "<group>"; };
 		EW000000000000000000003A /* ImageExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageExport.swift; sourceTree = "<group>"; };
@@ -129,21 +121,9 @@
 			isa = PBXGroup;
 			children = (
 				EW00000000000000000000A0 /* ic_log_transparent.dat */,
-				EW0000000000000000000014 /* Fonts */,
 				EW0000000000000000000094 /* Seed */,
 			);
 			path = Resources;
-			sourceTree = "<group>";
-		};
-		EW0000000000000000000014 /* Fonts */ = {
-			isa = PBXGroup;
-			children = (
-				EW0000000000000000000034 /* NotoSans-Regular.ttf */,
-				EW0000000000000000000035 /* NotoSansSC-Regular.otf */,
-				EW0000000000000000000036 /* OFL-NotoSans.txt */,
-				EW0000000000000000000037 /* OFL-NotoSansCJK.txt */,
-			);
-			path = Fonts;
 			sourceTree = "<group>";
 		};
 		EW0000000000000000000015 /* iosAppUITests */ = {
@@ -261,10 +241,6 @@
 				EW00000000000000000000B1 /* Assets.xcassets in Resources */,
 				EW00000000000000000000B3 /* InfoPlist.strings in Resources */,
 				EW00000000000000000000A1 /* ic_log_transparent.dat in Resources */,
-				EW0000000000000000000044 /* NotoSans-Regular.ttf in Resources */,
-				EW0000000000000000000045 /* NotoSansSC-Regular.otf in Resources */,
-				EW0000000000000000000046 /* OFL-NotoSans.txt in Resources */,
-				EW0000000000000000000047 /* OFL-NotoSansCJK.txt in Resources */,
 				EW0000000000000000000092 /* ewm-db-ch.db in Resources */,
 				EW0000000000000000000093 /* ewm-db-eng.db in Resources */,
 			);

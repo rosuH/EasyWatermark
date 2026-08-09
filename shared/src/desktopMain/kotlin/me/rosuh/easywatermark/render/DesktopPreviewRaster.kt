@@ -1,6 +1,7 @@
 package me.rosuh.easywatermark.render
 
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.text.font.FontFamily
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import java.io.File
@@ -51,7 +52,7 @@ object DesktopPreviewRaster {
             icon = icon,
             offsetX = offsetX,
             offsetY = offsetY,
-            fontFamily = DesktopWatermarkTextRenderer.bundledLatinCjkFontFamily(),
+            fontFamily = FontFamily.Default,
         )
     }
 

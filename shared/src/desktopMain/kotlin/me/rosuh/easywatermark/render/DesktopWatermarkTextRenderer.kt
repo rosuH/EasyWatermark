@@ -5,10 +5,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.createFontFamilyResolver
-import androidx.compose.ui.text.platform.Font
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.sp
@@ -22,39 +19,19 @@ import javax.imageio.ImageIO
 import javax.imageio.ImageWriteParam
 
 /**
- * The **Desktop (JVM/Skiko) production watermark text renderer** — platform half of the * commonMain text path ([WatermarkCellComposer.composeTextCell]). Android production also uses
+ * The **Desktop (JVM/Skiko) production watermark text renderer** — platform half of the
+ * commonMain text path ([WatermarkCellComposer.composeTextCell]). Android production also uses
  * commonMain text via `AndroidCommonRaster` (ADR-0018); native `WatermarkRenderer` / `StaticLayout`
  * is measurement/golden oracle only (not byte-identical, especially CJK).
  *
- * This object owns the two irreducibly-platform pieces ADR-0004 calls out for the text raster:
- * 1. the **font resolver** — desktop Skiko's `createFontFamilyResolver()` (no `Context`), and
- * 2. the **bundled font bytes** — Noto Sans (Latin) + Noto Sans SC (CJK), loaded from this module's
- * desktop **main** resources (`shared/src/desktopMain/resources/fonts/`) via the classpath, with
- * the Skiko byte-`Font` factory (`androidx.compose.ui.text.platform.Font`). **No
- * compose-resources / CMP-9547** (per the standing CMP constraint).
+ * Owns the irreducibly-platform **font resolver** — desktop Skiko's `createFontFamilyResolver()`
+ * (no `Context`). Production Text mode uses [FontFamily.Default] (ADR-0025); multi-MB Noto faces
+ * are test-only under `desktopTest/resources/fonts/`. **No compose-resources / CMP-9547.**
  *
- * Everything else (measure, size, rotate, paint) is the shared, platform-neutral
- * [WatermarkCellComposer.composeTextCell] — Desktop/iOS/Android common production share that core,
- * and the shared `WatermarkGeometry` drives cell sizing on every platform.
- *
- * Density is `Density(1f)` to match the production image-space convention (`1.sp == 1px`, S3a) —
- * the watermark is a fraction of the image, independent of host DPI.
- *
- * SCOPE: Desktop platform edge only. Verified by `:shared:desktopTest` (`DesktopTextRendererGoldenTest`)
- * and exercised by `:desktopApp`.
+ * Everything else (measure, size, rotate, paint) is shared [WatermarkCellComposer.composeTextCell].
+ * Density is `Density(1f)` (image-space: `1.sp == 1px`, S3a).
  */
 object DesktopWatermarkTextRenderer {
-
-    /**
-     * H2: process-wide immutable [FontFamily] caches — classpath font bytes load once per process
-     * (not per compose call). Latin-first vs CJK-first are distinct families.
-     */
-    private val fontFamilyLatinFirst: FontFamily by lazy(LazyThreadSafetyMode.PUBLICATION) {
-        loadBundledLatinCjkFontFamily(latinFirst = true)
-    }
-    private val fontFamilyCjkFirst: FontFamily by lazy(LazyThreadSafetyMode.PUBLICATION) {
-        loadBundledLatinCjkFontFamily(latinFirst = false)
-    }
 
     /**
      * H2: process-wide shared [FontFamily.Resolver] for [textRasterEnv] — avoids
@@ -64,28 +41,6 @@ object DesktopWatermarkTextRenderer {
         createFontFamilyResolver()
     }
 
-    private fun loadBundledLatinCjkFontFamily(latinFirst: Boolean): FontFamily {
-        fun bytes(path: String): ByteArray =
-            DesktopWatermarkTextRenderer::class.java.classLoader!!.getResourceAsStream(path)
-                ?.use { it.readBytes() }
-                ?: error("S4d-18 bundled desktop font not found on classpath: $path")
-        val latin = Font("NotoSansLatin", bytes("fonts/NotoSans-Regular.ttf"), FontWeight.Normal, FontStyle.Normal)
-        val cjk = Font("NotoSansSC", bytes("fonts/NotoSansSC-Regular.otf"), FontWeight.Normal, FontStyle.Normal)
-        return if (latinFirst) FontFamily(latin, cjk) else FontFamily(cjk, latin)
-    }
-
-    /**
-     * The bundled Latin + CJK watermark [FontFamily] for Desktop, loaded from
-     * `desktopMain/resources/fonts/` on the classpath. [latinFirst] lists the Latin face first (the
-     * owner's Latin+CJK order) so Latin keeps near-system line metrics while CJK resolves via
-     * fallback; `false` keeps the CJK-first order. Bold/Italic are synthesized (no bundled
-     * bold/italic faces, per ADR-0010).
-     *
-     * H2: process-wide singleton per [latinFirst] flag (classpath bytes read once).
-     */
-    fun bundledLatinCjkFontFamily(latinFirst: Boolean = true): FontFamily =
-        if (latinFirst) fontFamilyLatinFirst else fontFamilyCjkFirst
-
     /** The Desktop (Skiko) text-raster environment: shared resolver + image-space density. */
     fun textRasterEnv(density: Density = Density(1f)): TextRasterEnv = TextRasterEnv(
         fontFamilyResolver = sharedFontFamilyResolver,
@@ -94,17 +49,17 @@ object DesktopWatermarkTextRenderer {
     )
 
     /**
- * Render ONE watermark text cell through the shared [WatermarkCellComposer.composeTextCell] with
- * The bundled Desktop font, returning the offscreen [ImageBitmap]. *
- * @param text watermark text (may contain `\n` for multiline and CJK)
- * @param textSize the `WaterMark.textSize` value (image-space fraction of [imageWidth])
- * @param imageWidth target image width; `fontPx = WatermarkGeometry.fontPx(textSize, imageWidth)` (S3a)
- * @param degree rotation in degrees (matches `WaterMark.degree`)
- * @param color fill colour (default white, like the production text cell)
- * @param hGapPercent horizontal gap percent; @param vGapPercent vertical gap percent
- * @param latinFirst font fallback order (see [bundledLatinCjkFontFamily])
- * @param typeface : text typeface → Compose `fontWeight`/`fontStyle` (default Normal)
- * @param textStyle : paint style → Compose text `drawStyle` (default Fill)
+     * Render ONE watermark text cell through [WatermarkCellComposer.composeTextCell] with the
+     * system-default family (ADR-0025).
+     *
+     * @param text watermark text (may contain `\n` for multiline and CJK)
+     * @param textSize the `WaterMark.textSize` value (image-space fraction of [imageWidth])
+     * @param imageWidth target image width; `fontPx = WatermarkGeometry.fontPx(textSize, imageWidth)` (S3a)
+     * @param degree rotation in degrees (matches `WaterMark.degree`)
+     * @param color fill colour (default white, like the production text cell)
+     * @param hGapPercent horizontal gap percent; @param vGapPercent vertical gap percent
+     * @param typeface text typeface → Compose `fontWeight`/`fontStyle` (default Normal; synthesized)
+     * @param textStyle paint style → Compose text `drawStyle` (default Fill)
      */
     fun renderTextCell(
         text: String,
@@ -114,7 +69,6 @@ object DesktopWatermarkTextRenderer {
         color: Color = Color.White,
         hGapPercent: Int = 0,
         vGapPercent: Int = 0,
-        latinFirst: Boolean = true,
         typeface: TextTypeface = TextTypeface.Normal,
         textStyle: TextPaintStyle = TextPaintStyle.Fill,
     ): ImageBitmap {
@@ -124,7 +78,7 @@ object DesktopWatermarkTextRenderer {
             text = text,
             style = TextStyle(
                 fontSize = fontPx.sp,
-                fontFamily = bundledLatinCjkFontFamily(latinFirst),
+                fontFamily = FontFamily.Default,
                 fontWeight = fontWeight,
                 fontStyle = fontStyle,
                 drawStyle = textStyle.toComposeDrawStyle(),
@@ -202,9 +156,8 @@ object DesktopWatermarkTextRenderer {
         color: Color = Color.White,
         hGapPercent: Int = 0,
         vGapPercent: Int = 0,
-        latinFirst: Boolean = true,
     ): ByteArray = encodePng(
-        renderTextCell(text, textSize, imageWidth, degree, color, hGapPercent, vGapPercent, latinFirst),
+        renderTextCell(text, textSize, imageWidth, degree, color, hGapPercent, vGapPercent),
     )
 
     /**
@@ -235,11 +188,10 @@ object DesktopWatermarkTextRenderer {
         degree: Float = 0f,
         hGapPercent: Int = 0,
         vGapPercent: Int = 0,
-        latinFirst: Boolean = true,
         colorArgb: Int = 0xFFFFFFFF.toInt(),
     ): RenderedTextCell {
         val cell = renderTextCell(
-            text, textSize, imageWidth, degree, Color(colorArgb), hGapPercent, vGapPercent, latinFirst,
+            text, textSize, imageWidth, degree, Color(colorArgb), hGapPercent, vGapPercent,
         )
         return RenderedTextCell(cell.width, cell.height, encodePng(cell))
     }
