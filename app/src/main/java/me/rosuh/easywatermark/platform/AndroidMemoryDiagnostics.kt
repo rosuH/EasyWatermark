@@ -6,9 +6,14 @@ import android.app.ApplicationExitInfo
 import android.content.Context
 import android.os.Build
 import android.os.ProfilingManager
+import android.os.ProfilingResult
+import android.os.ProfilingTrigger
 import android.util.Log
+import androidx.annotation.RequiresApi
 import me.rosuh.easywatermark.BuildConfig
 import java.io.File
+import java.util.concurrent.Executors
+import java.util.function.Consumer
 
 /**
  * DEBUG-only memory observability for Android 17 memory-limiter kills.
@@ -18,6 +23,10 @@ import java.io.File
  */
 object AndroidMemoryDiagnostics {
     private const val TAG = "EwmMemoryLimiter"
+    private const val DUMP_DIR_NAME = "ewm-memory-dumps"
+
+    @Volatile
+    private var profilingListener: Consumer<ProfilingResult>? = null
 
     /**
      * Cold-start: dump recent [ApplicationExitInfo] rows; tag MemoryLimiter:AnonSwap kills.
@@ -55,9 +64,12 @@ object AndroidMemoryDiagnostics {
     }
 
     /**
-     * Best-effort [ProfilingManager] ANOMALY / OOM registration (API 35+).
-     * Results stay on-device; we only log the local path if the system reports one.
-     * Soft-fails on missing API / OEM gaps.
+     * Best-effort [ProfilingManager] wiring (DEBUG only):
+     * - API 35+: [ProfilingManager.registerForAllProfilingResults] → log local path only
+     * - API 36+: [ProfilingManager.addProfilingTriggers]
+     * - API 37+: [ProfilingTrigger.TRIGGER_TYPE_ANOMALY] + [ProfilingTrigger.TRIGGER_TYPE_OOM]
+     *
+     * Soft-fails on missing service / OEM gaps. **No upload.**
      */
     fun registerLocalProfilingTriggers(app: Application) {
         if (!BuildConfig.DEBUG) return
@@ -66,22 +78,122 @@ object AndroidMemoryDiagnostics {
             return
         }
         try {
-            val pm = app.getSystemService(ProfilingManager::class.java)
-            if (pm == null) {
-                Log.i(TAG, "ProfilingManager service null")
-                return
-            }
-            val dumpDir = File(app.cacheDir, "ewm-memory-dumps").apply { mkdirs() }
-            Log.i(
-                TAG,
-                "ProfilingManager present; local dump dir=${dumpDir.absolutePath} " +
-                    "(ANOMALY/OOM best-effort — no upload). " +
-                    "API surface varies by OEM; heap capture may require system UI consent.",
-            )
-            // Avoid hard-coding unstable ProfilingManager request builders across OEM builds.
-            // Presence + local dir is enough for dogfood; full trigger wiring is optional follow-up.
+            registerProfilingApi35(app)
         } catch (t: Throwable) {
             Log.w(TAG, "ProfilingManager register soft-fail: ${t.message}")
+        }
+    }
+
+    @RequiresApi(35)
+    private fun registerProfilingApi35(app: Application) {
+        val pm = app.getSystemService(ProfilingManager::class.java)
+        if (pm == null) {
+            Log.i(TAG, "ProfilingManager service null")
+            return
+        }
+        val dumpDir = File(app.cacheDir, DUMP_DIR_NAME).apply { mkdirs() }
+        val executor = Executors.newSingleThreadExecutor { r ->
+            Thread(r, "ewm-profiling").apply { isDaemon = true }
+        }
+        // Drop previous listener if Application recreated in process (tests / rare).
+        profilingListener?.let { prev ->
+            try {
+                pm.unregisterForAllProfilingResults(prev)
+            } catch (_: Throwable) {
+                // ignore
+            }
+        }
+        val listener = Consumer<ProfilingResult> { result ->
+            try {
+                handleProfilingResult(dumpDir, result)
+            } catch (t: Throwable) {
+                Log.w(TAG, "ProfilingResult handler fail: ${t.message}")
+            }
+        }
+        profilingListener = listener
+        pm.registerForAllProfilingResults(executor, listener)
+
+        if (Build.VERSION.SDK_INT >= 36) {
+            val triggerSummary = addMemoryRelatedTriggers(pm)
+            Log.i(
+                TAG,
+                "ProfilingManager registered triggers=[$triggerSummary] " +
+                    "local dump dir=${dumpDir.absolutePath} (no upload)",
+            )
+        } else {
+            Log.i(
+                TAG,
+                "ProfilingManager result listener registered (API 35 — no trigger API); " +
+                    "local dump dir=${dumpDir.absolutePath} (no upload)",
+            )
+        }
+    }
+
+    /**
+     * @return human-readable trigger list for logcat
+     */
+    @RequiresApi(36)
+    private fun addMemoryRelatedTriggers(pm: ProfilingManager): String {
+        val triggers = ArrayList<ProfilingTrigger>()
+        val names = ArrayList<String>()
+        if (Build.VERSION.SDK_INT >= 37) {
+            triggers.add(
+                ProfilingTrigger.Builder(ProfilingTrigger.TRIGGER_TYPE_ANOMALY).build(),
+            )
+            names.add("ANOMALY")
+            triggers.add(
+                ProfilingTrigger.Builder(ProfilingTrigger.TRIGGER_TYPE_OOM).build(),
+            )
+            names.add("OOM")
+        } else {
+            // API 36: no ANOMALY/OOM constants; keep listener path only for memory kills.
+            // Optionally register ANR so the trigger plumbing is exercised on 36 devices.
+            triggers.add(
+                ProfilingTrigger.Builder(ProfilingTrigger.TRIGGER_TYPE_ANR).build(),
+            )
+            names.add("ANR")
+        }
+        try {
+            pm.clearProfilingTriggers()
+        } catch (_: Throwable) {
+            // clear may be rate-limited or unsupported; still try add
+        }
+        pm.addProfilingTriggers(triggers)
+        return names.joinToString(",")
+    }
+
+    private fun handleProfilingResult(dumpDir: File, result: ProfilingResult) {
+        val path = result.resultFilePath
+        val err = result.errorCode
+        val tag = result.tag
+        val trigger = if (Build.VERSION.SDK_INT >= 36) {
+            try {
+                result.triggerType.toString()
+            } catch (_: Throwable) {
+                "?"
+            }
+        } else {
+            "n/a"
+        }
+        if (err == ProfilingResult.ERROR_NONE) {
+            Log.i(
+                TAG,
+                "ProfilingResult OK path=$path tag=$tag triggerType=$trigger " +
+                    "localNoteDir=${dumpDir.absolutePath}",
+            )
+            if (!path.isNullOrBlank()) {
+                runCatching {
+                    File(dumpDir, "last-result-path.txt").writeText(
+                        "path=$path\ntag=$tag\ntriggerType=$trigger\nts=${System.currentTimeMillis()}\n",
+                    )
+                }
+            }
+        } else {
+            Log.w(
+                TAG,
+                "ProfilingResult error=$err msg=${result.errorMessage} " +
+                    "tag=$tag triggerType=$trigger path=$path",
+            )
         }
     }
 

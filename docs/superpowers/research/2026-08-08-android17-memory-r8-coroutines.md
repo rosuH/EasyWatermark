@@ -170,7 +170,7 @@ All factual claims above trace to sources #1–#4 and repo file reads (`gradle/l
 | A | `BitmapCache.evictAll` / `trimForMemoryLevel` | **Done** | UI_HIDDEN → soft ~25% (`trimToSize(max/4)`); BACKGROUND+ → `evictAll`; **never recycle** |
 | B | `MyApp.onTrimMemory` | **Done** | Calls trim; DEBUG logs via `EwmMemoryLimiter` |
 | C | Historical `ApplicationExitInfo` | **Done** | DEBUG cold start; tags `MemoryLimiter:AnonSwap` |
-| D | ProfilingManager ANOMALY/OOM | **Done (soft)** | DEBUG API≥35 presence + local `cache/ewm-memory-dumps`; **no upload**; OEM API variance soft-fail |
+| D | ProfilingManager ANOMALY/OOM | **Done** | DEBUG: API≥35 `registerForAllProfilingResults` (local path log only); API≥36 `addProfilingTriggers`; API≥37 **ANOMALY+OOM**; **no upload** |
 | E | Export sheet bounded thumbs | **Done** | `MediaStoreThumbnail` + `galleryImageLoader` (not bare Coil URI) |
 | F | `scripts/android-memory-limiter-stress.sh` | **Done** | status/install/meminfo/exits/manual-limit/checklist; limiter no-op friendly |
 | G | R8 keep audit | **Done** | `docs/superpowers/research/2026-08-08-r8-keep-audit.md`; **zero** keep diffs |

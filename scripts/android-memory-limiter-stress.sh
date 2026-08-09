@@ -26,6 +26,9 @@ Commands:
   ignore-none          am memory-limiter ignore none
   checklist            Print multi-image export manual dogfood steps
   dry-run              status + meminfo + exits (no install)
+  dogfood              install+launch+meminfo+trim+meminfo+exits+logcat (device)
+  trim <LEVEL>         am send-trim-memory (e.g. HIDDEN|BACKGROUND|COMPLETE)
+  logcat-ewm           recent EwmMemoryLimiter lines
 
 Env:
   PKG_DEBUG  default me.rosuh.easywatermark.debug
@@ -126,6 +129,67 @@ case "$cmd" in
     echo "=== status ==="; limiter status || true
     echo "=== meminfo ==="; "$ADB" shell dumpsys meminfo "$PKG_DEBUG" 2>/dev/null | head -40 || true
     echo "=== exits / log tag ==="; "$ADB" logcat -d -s EwmMemoryLimiter | tail -20 || true
+    ;;
+  trim)
+    need_device
+    level="${1:?LEVEL required (HIDDEN|BACKGROUND|COMPLETE|...)}"
+    pid="$(pkg_pid)"
+    if [[ -z "$pid" ]]; then
+      echo "Package not running; launch first." >&2
+      exit 1
+    fi
+    echo "send-trim-memory pid=$pid level=$level"
+    "$ADB" shell am send-trim-memory "$pid" "$level" || \
+      "$ADB" shell am send-trim-memory "$PKG_DEBUG" "$level"
+    ;;
+  logcat-ewm)
+    need_device
+    "$ADB" logcat -d -s EwmMemoryLimiter:I EwmMemoryLimiter:W | tail -60
+    ;;
+  dogfood)
+    need_device
+    echo "=== dogfood: install-debug ==="
+    ./gradlew :app:assembleDebug --max-workers="$MAX_WORKERS"
+    "$ADB" install -r app/build/outputs/apk/debug/app-debug.apk
+    echo "=== clear logcat + launch ==="
+    "$ADB" logcat -c 2>/dev/null || true
+    "$ADB" shell am start -n "${PKG_DEBUG}/${ACTIVITY}"
+    sleep 3
+    echo "=== cold-start EwmMemoryLimiter (exit + Profiling) ==="
+    # Prefer tag filter; fall back to grep (some OEM log buffers drop -s early).
+    "$ADB" logcat -d -s EwmMemoryLimiter:I EwmMemoryLimiter:W 2>/dev/null | tail -40 \
+      || "$ADB" logcat -d 2>/dev/null | grep EwmMemoryLimiter | tail -40 || true
+    echo "=== meminfo BEFORE background trim ==="
+    "$ADB" shell dumpsys meminfo "$PKG_DEBUG" 2>/dev/null | head -50 || true
+    pid="$(pkg_pid)"
+    echo "pid=$pid"
+    # BACKGROUND/COMPLETE/HIDDEN cannot be forced while process is FOREGROUND.
+    echo "=== HOME then send-trim-memory HIDDEN / BACKGROUND / COMPLETE ==="
+    "$ADB" shell input keyevent KEYCODE_HOME || true
+    sleep 2
+    pid="$(pkg_pid)"
+    if [[ -n "$pid" ]]; then
+      "$ADB" shell am send-trim-memory "$pid" HIDDEN || true
+      sleep 1
+      "$ADB" shell am send-trim-memory "$pid" BACKGROUND || true
+      sleep 1
+      "$ADB" shell am send-trim-memory "$pid" COMPLETE || true
+    else
+      echo "pid empty after HOME (process may have been killed)"
+    fi
+    sleep 1
+    echo "=== meminfo AFTER background trim ==="
+    "$ADB" shell dumpsys meminfo "$PKG_DEBUG" 2>/dev/null | head -50 || true
+    echo "=== memory-limiter status ==="
+    limiter status || true
+    echo "=== EwmMemoryLimiter logcat ==="
+    "$ADB" logcat -d -s EwmMemoryLimiter:I EwmMemoryLimiter:W 2>/dev/null | tail -40 \
+      || "$ADB" logcat -d 2>/dev/null | grep EwmMemoryLimiter | tail -40 || true
+    echo "=== exit-info (snippet) ==="
+    "$ADB" shell dumpsys activity exit-info "$PKG_DEBUG" 2>/dev/null | head -40 || true
+    echo
+    echo "Manual residual: open export sheet with multi-select (bounded thumbs),"
+    echo "then export batch. Optional: manual-limit 256 and re-export."
     ;;
   checklist)
     cat <<'C'
