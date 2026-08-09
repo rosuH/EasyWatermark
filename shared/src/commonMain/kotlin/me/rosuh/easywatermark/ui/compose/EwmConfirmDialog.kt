@@ -6,19 +6,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
-import me.rosuh.easywatermark.ui.theme.DesignEditorBg
+import me.rosuh.easywatermark.ui.theme.EwmTheme
 
 /**
- * Product-styled confirm dialog aligned with editor olive sheets (export / text / template):
- * - [RectangleShape] (no M3 rounded card)
- * - [DesignEditorBg] container, zero tonal elevation
- * - Title / body / TextButton chrome matching sheet typography
+ * Product confirm dialog: inherits olive panel chrome from [EwmTheme.panel] /
+ * [me.rosuh.easywatermark.ui.theme.AppTheme] shapes (rectangle, DesignEditorBg, zero elev).
  *
- * Use for all product confirm/cancel prompts so AlertDialog defaults do not leak.
+ * Use for all product confirm/cancel prompts so raw [AlertDialog] M3 defaults do not leak.
  */
 @Composable
 fun EwmConfirmDialog(
@@ -38,9 +34,9 @@ fun EwmConfirmDialog(
         onDismissRequest = onDismissRequest,
         modifier = modifier,
         properties = properties,
-        shape = RectangleShape,
-        containerColor = DesignEditorBg,
-        tonalElevation = 0.dp,
+        shape = EwmTheme.panel.dialogShape,
+        containerColor = EwmTheme.panel.containerColor,
+        tonalElevation = EwmTheme.panel.tonalElevation,
         titleContentColor = MaterialTheme.colorScheme.onSurface,
         textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         title = {

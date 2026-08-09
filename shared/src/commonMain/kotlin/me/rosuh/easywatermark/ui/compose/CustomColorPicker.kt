@@ -22,7 +22,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -55,7 +54,6 @@ import me.rosuh.easywatermark.shared.generated.resources.tips_cancel_dialog
 import me.rosuh.easywatermark.shared.generated.resources.tips_choose_color_dialog
 import me.rosuh.easywatermark.shared.generated.resources.tips_confirm_dialog
 import me.rosuh.easywatermark.ui.theme.DesignBrand
-import me.rosuh.easywatermark.ui.theme.DesignEditorBg
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
@@ -102,13 +100,9 @@ fun CustomColorPickerSheet(
         hexDraft = formatArgbHexColor(previewArgb()).removePrefix("#").takeLast(6)
     }
 
-    ModalBottomSheet(
+    EwmModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        // Align with TextContent / Template / Export sheets (not rounded Material default).
-        shape = RectangleShape,
-        containerColor = DesignEditorBg,
-        tonalElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier

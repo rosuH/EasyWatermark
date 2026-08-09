@@ -8,6 +8,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import me.rosuh.easywatermark.ui.theme.AppTheme as SharedAppTheme
+import me.rosuh.easywatermark.ui.theme.EwmMaterialShapes
 
 
 /**
@@ -15,10 +16,12 @@ import me.rosuh.easywatermark.ui.theme.AppTheme as SharedAppTheme
  *
  * Signature is unchanged: `AppTheme(darkTheme, dynamicColor, content)`.
  *
- * - **Dynamic-color branch** (`dynamicColor && Build.VERSION.SDK_INT >= S`): unchanged —
- * Uses `dynamicDark/LightColorScheme(LocalContext.current)`. * - **Non-dynamic branch**: delegates to the commonMain [SharedAppTheme]
- * (`me.rosuh.easywatermark.ui.theme.AppTheme`), which builds the static
- * `Light/DarkColorScheme` from the relocated color tokens.
+ * - **Dynamic-color branch** (`dynamicColor && Build.VERSION.SDK_INT >= S`): uses
+ *   `dynamicDark/LightColorScheme(LocalContext.current)` **with [EwmMaterialShapes]** so product
+ *   dialogs/sheets still inherit rectangle panel chrome under Material You colors.
+ * - **Non-dynamic branch**: delegates to the commonMain [SharedAppTheme]
+ *   (`me.rosuh.easywatermark.ui.theme.AppTheme`), which builds the static
+ *   `Light/DarkColorScheme` + shapes from the relocated tokens.
  *
  * Parity (ADR-0011): production v2.10.0 is forced-dark (Theme.Material3.Dark, no DayNight).
  * The static color tokens + schemes now live in `:shared/commonMain` (`ui/theme/Color.kt` +
@@ -37,6 +40,7 @@ fun AppTheme(
         val colorScheme = if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         MaterialTheme(
             colorScheme = colorScheme,
+            shapes = EwmMaterialShapes,
             content = content,
         )
     } else {

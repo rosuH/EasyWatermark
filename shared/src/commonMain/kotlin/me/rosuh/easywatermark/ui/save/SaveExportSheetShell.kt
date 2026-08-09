@@ -10,7 +10,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -36,6 +35,7 @@ import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_list
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_retry_failed
 import me.rosuh.easywatermark.shared.generated.resources.privacy_confidence_export
 import me.rosuh.easywatermark.shared.generated.resources.tips_images_selected
+import me.rosuh.easywatermark.ui.compose.EwmModalBottomSheet
 import me.rosuh.easywatermark.ui.theme.DesignBrand
 import me.rosuh.easywatermark.ui.theme.DesignEditorBg
 import org.jetbrains.compose.resources.stringResource
@@ -97,17 +97,13 @@ fun <T> SaveExportSheetShell(
     val privacyExport = stringResource(Res.string.privacy_confidence_export)
     val statusCd = statusContentDescription.ifBlank { exportListSubtitle }
 
-    ModalBottomSheet(
+    EwmModalBottomSheet(
         onDismissRequest = {
             if (!isExporting) onDismiss()
         },
         sheetState = rememberModalBottomSheetState(
             skipPartiallyExpanded = true,
         ),
-        shape = RectangleShape,
-        // Match editor olive surface (not elevated Material surfaceVariant).
-        containerColor = DesignEditorBg,
-        tonalElevation = 0.dp,
     ) {
         Column(
             modifier = modifier

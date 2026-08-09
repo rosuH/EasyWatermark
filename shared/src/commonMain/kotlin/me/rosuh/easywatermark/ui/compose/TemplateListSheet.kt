@@ -17,11 +17,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import me.rosuh.easywatermark.ui.theme.DesignEditorBg
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -86,12 +84,8 @@ fun TemplateListSheet(
     var confirmDelete by remember { mutableStateOf<Template?>(null) }
     var selectedTemplateId by remember { mutableStateOf<Int?>(null) }
 
-    ModalBottomSheet(
+    EwmModalBottomSheet(
         onDismissRequest = onDismiss,
-        shape = RectangleShape,
-        // Match export / text / color sheets (olive editor surface, not elevated M3 card).
-        containerColor = DesignEditorBg,
-        tonalElevation = 0.dp,
         modifier = Modifier.testTag(TEMPLATE_LIST_SHEET_TAG),
     ) {
         Column(
@@ -277,11 +271,8 @@ private fun TemplateEditSheet(
     onDismiss: () -> Unit,
 ) {
     var draft by remember { mutableStateOf(initialText) }
-    ModalBottomSheet(
+    EwmModalBottomSheet(
         onDismissRequest = onDismiss,
-        shape = RectangleShape,
-        containerColor = DesignEditorBg,
-        tonalElevation = 0.dp,
         modifier = Modifier.testTag(TEMPLATE_EDIT_SHEET_TAG),
     ) {
         Column(

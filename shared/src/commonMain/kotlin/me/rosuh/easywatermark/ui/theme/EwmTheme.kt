@@ -1,6 +1,11 @@
 package me.rosuh.easywatermark.ui.theme
 
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -20,6 +25,33 @@ object EwmTheme {
     val space: EwmSpaceTokens = EwmSpaceTokens
     val motion: EwmMotionTokens = EwmMotionTokens
     val state: EwmStateTokens = EwmStateTokens
+    /** Olive editor dialog / ModalBottomSheet panel (Figma contract). */
+    val panel: EwmPanelTokens = EwmPanelTokens
+}
+
+/**
+ * Product panel chrome for confirms + bottom sheets.
+ * Shape inherits [MaterialTheme.shapes] after [AppTheme]; color/elevation stay fixed product tokens
+ * so dynamic-color Android does not restyle export/template sheets.
+ */
+object EwmPanelTokens {
+    /** Sheet / dialog shape — [MaterialTheme.shapes.large] under [AppTheme] (= [RectangleShape]). */
+    val shape: Shape
+        @Composable
+        @ReadOnlyComposable
+        get() = MaterialTheme.shapes.large
+
+    /** Confirm dialog shape — [MaterialTheme.shapes.extraLarge] under [AppTheme] (= [RectangleShape]). */
+    val dialogShape: Shape
+        @Composable
+        @ReadOnlyComposable
+        get() = MaterialTheme.shapes.extraLarge
+
+    /** Fallback when outside [MaterialTheme] (tests / previews without AppTheme). */
+    val rectangle: Shape get() = RectangleShape
+
+    val containerColor: Color get() = DesignEditorBg
+    val tonalElevation: Dp = 0.dp
 }
 
 /** Brand / surface colors from Figma handoff (preview_edit). */

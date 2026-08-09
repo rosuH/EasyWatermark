@@ -1,9 +1,12 @@
 package me.rosuh.easywatermark.ui.theme
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.dp
 
 // the platform-neutral static Material3 theme. Relocated verbatim from the former
 // `:app`-only `Theme.kt` (the static `LightColorScheme`/`DarkColorScheme` + the non-dynamic
@@ -11,6 +14,24 @@ import androidx.compose.runtime.Composable
 // in the `:app`-only `AppTheme(darkTheme, dynamicColor, content)` wrapper, which delegates
 // its non-dynamic branch here. No Android imports, no `Build.VERSION`, no `LocalContext` —
 // pure common Material3, compiled for Android + JVM/desktop + iOS.
+
+/** 0dp corners — visual rectangle; Material3 [Shapes] requires [CornerBasedShape]. */
+private val ProductPanelCornerShape = RoundedCornerShape(0.dp)
+
+/**
+ * Product Material3 shape scale for olive editor chrome.
+ *
+ * **Large / extraLarge** are 0dp rounded corners (rectangle) so AlertDialog and ModalBottomSheet
+ * inherit square panel chrome (no stock M3 rounded elevated card). **ExtraSmall / small /
+ * medium** keep the 2dp chip radius used by product controls ([EwmTheme.shapes.chipRadiusDp]).
+ */
+val EwmMaterialShapes = Shapes(
+    extraSmall = RoundedCornerShape(EwmTheme.shapes.chipRadiusDp),
+    small = RoundedCornerShape(EwmTheme.shapes.chipRadiusDp),
+    medium = RoundedCornerShape(EwmTheme.shapes.chipRadiusDp),
+    large = ProductPanelCornerShape,
+    extraLarge = ProductPanelCornerShape,
+)
 
 internal val LightColorScheme = lightColorScheme(
     primary = md_theme_light_primary,
@@ -79,7 +100,13 @@ internal val DarkColorScheme = darkColorScheme(
 /**
  * Platform-neutral static Material3 theme. Uses the relocated [LightColorScheme]/
  * [DarkColorScheme] only — no dynamic-color logic (that stays in the `:app`-only overload
- * Below, which delegates its non-dynamic branch here). *
+ * below, which delegates its non-dynamic branch here).
+ *
+ * Passes [EwmMaterialShapes] so product dialogs/sheets inherit rectangle panel chrome without
+ * per-call shape overrides. Panel surface color stays [DesignEditorBg] via
+ * [EwmTheme.colors.editorBackground] (dark `colorScheme.surface` already matches; sheets keep
+ * the product token so dynamic-color Android does not paint Material You into export chrome).
+ *
  * Parity (ADR-0011): production v2.10.0 is forced-dark, so [darkTheme] defaults to `true`.
  */
 @Composable
@@ -90,6 +117,7 @@ fun AppTheme(
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     MaterialTheme(
         colorScheme = colorScheme,
+        shapes = EwmMaterialShapes,
         content = content,
     )
 }
