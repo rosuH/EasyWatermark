@@ -45,6 +45,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
@@ -99,6 +100,9 @@ import me.rosuh.easywatermark.utils.ktx.toUri
 import me.rosuh.easywatermark.utils.ktx.uriFromExportResultData
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import me.rosuh.easywatermark.ui.compose.MediaStoreThumbnail
+import me.rosuh.easywatermark.ui.compose.galleryImageLoader
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.ui.compose.GalleryDialog
 import me.rosuh.easywatermark.ui.save.SaveExportSheetShell
@@ -982,8 +986,16 @@ private fun SaveExportSheetAndroid(
             jobState = info.jobState,
             modifier = thumbnailModifier,
         ) {
+            // WP-E: bounded MediaStore thumb (never bare full-URI Coil decode).
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val thumbPx = with(density) { 72.dp.roundToPx() }.coerceIn(96, 256)
+            val loader = remember(ctx) { ctx.galleryImageLoader() }
             AsyncImage(
-                model = info.uri.toUri(),
+                model = ImageRequest.Builder(ctx)
+                    .data(MediaStoreThumbnail(info.uri.toUri(), thumbPx))
+                    .build(),
+                imageLoader = loader,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),

@@ -8,6 +8,8 @@ import android.util.Log
 import androidx.core.content.edit
 import me.rosuh.cmonet.CMonet
 import me.rosuh.easywatermark.di.appModule
+import me.rosuh.easywatermark.platform.AndroidMemoryDiagnostics
+import me.rosuh.easywatermark.utils.bitmap.BitmapCache
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -37,7 +39,20 @@ class MyApp : Application() {
         CMonet.init(this, true)
         // I3: ContentResolver for platformMotionPolicy (animator scale / reduce motion).
         me.rosuh.easywatermark.platform.AndroidMotionContentResolver.install(contentResolver)
+        // WP-C/D: Android 17 memory-limiter observability (debug-only, local, no upload).
+        AndroidMemoryDiagnostics.logHistoricalExits(this)
+        AndroidMemoryDiagnostics.registerLocalProfilingTriggers(this)
         if (checkRecoveryMode()) return
+    }
+
+    /**
+     * WP-B: drop cached full-res bitmaps under system memory pressure.
+     * UI_HIDDEN → soft ~25%; BACKGROUND+ → evictAll. Never recycle from cache.
+     */
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        val action = BitmapCache.trimForMemoryLevel(level)
+        AndroidMemoryDiagnostics.logTrim(level, action)
     }
 
     private fun checkRecoveryMode(): Boolean {
