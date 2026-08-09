@@ -331,34 +331,46 @@ fun <T> SaveExportSheetShell(
                 }
             }
 
-            // Secondary actions only when needed — do not reserve an empty Retry-sized hole
-            // between Share and “View in gallery” (that was ~60dp of dead space).
-            if (onRetryFailedClick != null && showRetryFailedButton && !isExporting) {
-                OutlinedButton(
-                    onClick = onRetryFailedClick,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 12.dp)
-                        .height(PrimaryButtonHeight)
-                        .testTag("sharedComposeExportRetryFailed")
-                        .semantics { contentDescription = retryLabel },
-                    shape = RectangleShape,
+            // Fixed secondary chrome height from first open: content is top-aligned so
+            // Share ↔ “View in gallery” stay tight (no empty Retry hole between them). Unused
+            // space sits *below* the actions as sheet padding — ModalBottomSheet does not jump
+            // when Retry/Open-gallery appear after export finishes.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(SecondaryActionsHeight),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text(retryLabel)
+                    if (onRetryFailedClick != null && showRetryFailedButton && !isExporting) {
+                        OutlinedButton(
+                            onClick = onRetryFailedClick,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 12.dp)
+                                .height(PrimaryButtonHeight)
+                                .testTag("sharedComposeExportRetryFailed")
+                                .semantics { contentDescription = retryLabel },
+                            shape = RectangleShape,
+                        ) {
+                            Text(retryLabel)
+                        }
+                    }
+                    if (showOpenGallery) {
+                        TextButton(
+                            onClick = onOpenGalleryClick,
+                            modifier = Modifier.padding(
+                                top = if (showRetryFailedButton && !isExporting) 4.dp else 8.dp,
+                            ),
+                            shape = RectangleShape,
+                        ) {
+                            Text(text = openGalleryLabel)
+                        }
+                    }
                 }
-            }
-            if (showOpenGallery) {
-                TextButton(
-                    onClick = onOpenGalleryClick,
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .padding(top = 4.dp, bottom = 8.dp),
-                    shape = RectangleShape,
-                ) {
-                    Text(text = openGalleryLabel)
-                }
-            } else {
-                Spacer(Modifier.height(12.dp))
             }
         }
     }
@@ -366,6 +378,11 @@ fun <T> SaveExportSheetShell(
 
 private val CountRowHeight = 28.dp
 private val PrimaryButtonHeight = 48.dp
+/**
+ * Max secondary stack: Retry (12+48) + Open gallery (~40) ≈ 100.
+ * Always reserved so finish-state buttons do not remeasure the sheet.
+ */
+private val SecondaryActionsHeight = 100.dp
 
 @Composable
 private fun ExportCountChip(
