@@ -2,7 +2,9 @@ package me.rosuh.easywatermark.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.MaterialTheme
@@ -45,6 +47,8 @@ fun GalleryDialogShell(
     onDismiss: (selectedImages: List<Image>) -> Unit = {},
     onImageSelected: (image: Image, index: Int, isSelected: Boolean) -> Unit = { _, _, _ -> },
     onPickImageViaSystem: () -> Unit = {},
+    /** Optional strip under the top bar (e.g. Android partial photo-access banner). */
+    banner: (@Composable () -> Unit)? = null,
     thumbnail: @Composable (image: Image, contentDescription: String, modifier: Modifier) -> Unit,
 ) {
     // id → selected. Local only — never copy the full gallery list on each tap.
@@ -120,29 +124,36 @@ fun GalleryDialogShell(
                 )
             },
         ) { innerPadding ->
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
             ) {
-                GalleryImageGrid(
-                    images = images,
-                    checkIcon = checkIcon,
-                    isSelected = isSelected,
-                    onSetSelected = onSetSelected,
-                    thumbnail = thumbnail,
-                )
+                banner?.invoke()
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                ) {
+                    GalleryImageGrid(
+                        images = images,
+                        checkIcon = checkIcon,
+                        isSelected = isSelected,
+                        onSetSelected = onSetSelected,
+                        thumbnail = thumbnail,
+                    )
 
-                GallerySelectedCountFab(
-                    selectedCount = selectedCount,
-                    icon = selectedCountIcon,
-                    contentDescription = selectedCountContentDescription,
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                    onClick = {
-                        pendingDismissSelection = snapshotSelected()
-                        dialogHelper.triggerDismiss()
-                    },
-                )
+                    GallerySelectedCountFab(
+                        selectedCount = selectedCount,
+                        icon = selectedCountIcon,
+                        contentDescription = selectedCountContentDescription,
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                        onClick = {
+                            pendingDismissSelection = snapshotSelected()
+                            dialogHelper.triggerDismiss()
+                        },
+                    )
+                }
             }
         }
     }

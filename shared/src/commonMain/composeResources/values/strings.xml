@@ -143,6 +143,9 @@
     <string name="about_force_dynamic_color">Force Open Dynamic Color Support</string>
     <string name="about_show_bounds">Show Bounds</string>
     <string name="about_prefer_in_app_gallery">Use in-app gallery</string>
+    <!-- Android 14+ partial photo access (READ_MEDIA_VISUAL_USER_SELECTED without full library). -->
+    <string name="tips_gallery_partial_access">Only selected photos are shown. Allow full access in Settings to see your whole library.</string>
+    <string name="tips_gallery_partial_access_settings">Settings</string>
     <string name="tips_no_image_selected">No Image Selected</string>
     <string name="cd_navigate_up">Navigate up</string>
     <string name="cd_add_more_images">Add more images</string>

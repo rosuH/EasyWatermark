@@ -1,11 +1,27 @@
 package me.rosuh.easywatermark.ui.compose
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
@@ -13,6 +29,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
@@ -22,10 +41,13 @@ import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.action_pick
 import me.rosuh.easywatermark.shared.generated.resources.cd_add_more_images
 import me.rosuh.easywatermark.shared.generated.resources.cd_back
+import me.rosuh.easywatermark.shared.generated.resources.tips_gallery_partial_access
+import me.rosuh.easywatermark.shared.generated.resources.tips_gallery_partial_access_settings
 import me.rosuh.easywatermark.ui.GalleryDialogShell
 import me.rosuh.easywatermark.ui.Image as GalleryImage
 import me.rosuh.easywatermark.ui.SharedProductDrawables
 import me.rosuh.easywatermark.ui.theme.DesignChipSelected
+import me.rosuh.easywatermark.utils.ktx.hasPartialMediaAccessOnly
 import me.rosuh.easywatermark.utils.ktx.toUri
 import org.jetbrains.compose.resources.stringResource
 
@@ -51,6 +73,23 @@ fun GalleryDialog(
     val imageLoader = remember(context) { context.galleryImageLoader() }
     val placeholderPainter = SharedProductDrawables.galleryPlaceholderPainter()
 
+    val onLoadImagesState = rememberUpdatedState(onLoadImages)
+    var showPartialBanner by remember {
+        mutableStateOf(context.hasPartialMediaAccessOnly())
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, context) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                showPartialBanner = context.hasPartialMediaAccessOnly()
+                // Full grant or "select more photos" both change the visible MediaStore set.
+                onLoadImagesState.value()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     val thumbnail: @Composable (GalleryImage, String, Modifier) -> Unit =
         remember(thumbPx, imageLoader, placeholderPainter) {
             { image, contentDescription, modifier ->
@@ -64,6 +103,16 @@ fun GalleryDialog(
                 )
             }
         }
+
+    val openAppSettings: () -> Unit = remember(context) {
+        {
+            val intent = Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.fromParts("package", context.packageName, null),
+            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            runCatching { context.startActivity(intent) }
+        }
+    }
 
     GalleryDialogShell(
         images = images,
@@ -81,8 +130,48 @@ fun GalleryDialog(
         onLoadImages = onLoadImages,
         onDismiss = onDismiss,
         onPickImageViaSystem = onPickImageViaSystem,
+        banner = if (showPartialBanner) {
+            {
+                PartialMediaAccessBanner(onOpenSettings = openAppSettings)
+            }
+        } else {
+            null
+        },
         thumbnail = thumbnail,
     )
+}
+
+@Composable
+private fun PartialMediaAccessBanner(
+    onOpenSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(Res.string.tips_gallery_partial_access),
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp),
+            )
+            TextButton(onClick = onOpenSettings) {
+                Text(
+                    text = stringResource(Res.string.tips_gallery_partial_access_settings),
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+        }
+    }
 }
 
 @Composable
