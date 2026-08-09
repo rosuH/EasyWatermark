@@ -20,10 +20,17 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -142,12 +149,19 @@ fun <T> SaveExportSheetShell(
         }
     }
 
+    val exporting = rememberUpdatedState(isExporting)
+    val dismiss = rememberUpdatedState(onDismiss)
     EwmModalBottomSheet(
         onDismissRequest = {
-            if (!isExporting) onDismiss()
+            // Block dismiss while exporting (and during the eager isSaving frame before UI catches up).
+            if (!exporting.value) dismiss.value()
         },
         sheetState = rememberModalBottomSheetState(
             skipPartiallyExpanded = true,
+            confirmValueChange = { value ->
+                // Prevent scrim/drag hide while exporting — stops Retry-under-finger sheet flash.
+                !(exporting.value && value == SheetValue.Hidden)
+            },
         ),
     ) {
         Column(
@@ -275,6 +289,8 @@ fun <T> SaveExportSheetShell(
                 modifier = Modifier.padding(top = 20.dp),
             )
 
+            // Keep primary/cancel in one stable slot so Retry click does not unmount a button
+            // under the pointer and flash-dismiss the sheet.
             if (showCancelButton && onCancelClick != null) {
                 OutlinedButton(
                     onClick = onCancelClick,
@@ -310,9 +326,17 @@ fun <T> SaveExportSheetShell(
                 }
             }
 
-            if (showRetryFailedButton && onRetryFailedClick != null && !isExporting) {
+            // Sticky Retry slot: once shown after a failed batch, stay composed through the
+            // isSaving transition so the button is not removed under the pointer (sheet flash).
+            var stickyRetry by remember { mutableStateOf(false) }
+            LaunchedEffect(showRetryFailedButton, isExporting) {
+                if (showRetryFailedButton) stickyRetry = true
+                else if (!isExporting) stickyRetry = false
+            }
+            if (onRetryFailedClick != null && stickyRetry) {
                 OutlinedButton(
                     onClick = onRetryFailedClick,
+                    enabled = showRetryFailedButton && !isExporting,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 12.dp)

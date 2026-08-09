@@ -75,6 +75,8 @@ open class WatermarkSessionViewModel(
      */
     private val sessionMutex = Mutex()
     private var exportJob: Job? = null
+    /** Bumps on each [startExport] so a cancelled job's finally cannot clobber a newer run. */
+    private var exportGeneration: Int = 0
 
     init {
         viewModelScope.launch(Dispatchers.Default) {
@@ -256,6 +258,20 @@ open class WatermarkSessionViewModel(
 
     fun requestExport(images: List<ImageInfo>) {
         val resolved = resolveExportImages(images)
+        // Eager isSaving on the caller's frame (UI thread) so the export sheet cannot dismiss
+        // and bottom actions cannot unmount under the Retry finger before Default dispatch runs.
+        val priorSuccess = resolved.count { it.jobState is JobState.Success }
+        setExportJobState(
+            ExportJobState(
+                isSaving = true,
+                isFinished = false,
+                completedCount = priorSuccess,
+                totalCount = resolved.size,
+                successCount = priorSuccess,
+                failureCount = 0,
+                processedCount = priorSuccess,
+            ),
+        )
         dispatch(AppIntent.RequestExport(resolved))
     }
 
@@ -379,10 +395,11 @@ open class WatermarkSessionViewModel(
 
     private fun startExport(images: List<ImageInfo>): Job? {
         val pipeline = exportPipeline ?: return null
+        val generation = ++exportGeneration
         exportJob?.cancel()
         val job = viewModelScope.launch(Dispatchers.Default) {
             if (images.isEmpty()) {
-                setExportJobState(ExportJobState())
+                if (generation == exportGeneration) setExportJobState(ExportJobState())
                 return@launch
             }
             // D2 retry policy: preserve prior Success (no double-export); clear stuck Ing;
@@ -401,6 +418,7 @@ open class WatermarkSessionViewModel(
             var failureCount = 0
             var cancelledInFlight = 0
             fun publishExportState(saving: Boolean, finished: Boolean) {
+                if (generation != exportGeneration) return
                 val processed = successCount + failureCount + cancelledInFlight
                 setExportJobState(
                     ExportJobState(
