@@ -1183,24 +1183,28 @@ fun launchDesktopWindow() = application {
                     outputDir.path,
                 )
                 val filenamePolicyLine = stringResource(Res.string.dialog_save_filename_policy_desktop)
-                val countsLine = if (recovery.isExporting || recovery.isFinished) {
+                val exportCountTotal =
+                    if (recovery.isExporting || recovery.isFinished) {
+                        recovery.totalCount.coerceAtLeast(exportTotalFixed.coerceAtLeast(1))
+                    } else {
+                        0
+                    }
+                val exportCountSuccess =
+                    if (recovery.isExporting || recovery.isFinished) recovery.successCount else 0
+                val exportCountFailure =
+                    if (recovery.isExporting || recovery.isFinished) recovery.failureCount else 0
+                val countsLine = if (exportCountTotal > 0) {
                     stringResource(
                         Res.string.dialog_save_export_counts,
-                        recovery.processedCount
-                            .coerceAtLeast(recovery.successCount + recovery.failureCount),
-                        recovery.successCount,
-                        recovery.failureCount,
+                        exportCountTotal,
+                        exportCountSuccess,
+                        exportCountFailure,
                     )
                 } else {
                     ""
                 }
+                // No Saved-to-destination paint; keep generic error as a11y residual only.
                 val outcomeDetailLine = when {
-                    recovery.isAllSuccess || recovery.isPartial ->
-                        stringResource(
-                            Res.string.dialog_save_success_where,
-                            recovery.successCount,
-                            outputDir.path,
-                        )
                     recovery.isAllFailed ->
                         stringResource(Res.string.dialog_save_error_generic)
                     else -> ""
@@ -1285,6 +1289,9 @@ fun launchDesktopWindow() = application {
                     filenamePolicyLine = filenamePolicyLine,
                     countsLine = countsLine,
                     outcomeDetailLine = outcomeDetailLine,
+                    exportTotalCount = exportCountTotal,
+                    exportSuccessCount = exportCountSuccess,
+                    exportFailureCount = exportCountFailure,
                     itemKey = { it.uri.value },
                     onDismiss = {
                         if (!exportJobState.isSaving) showSaveSheet = false

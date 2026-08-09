@@ -695,25 +695,29 @@ class ComposeMainActivity : ComponentActivity() {
                                 val filenamePolicyLine = cmpStringResource(
                                     Res.string.dialog_save_filename_policy_android,
                                 )
-                                val countsLine = if (recovery.isExporting || recovery.isFinished) {
+                                // Icon counts: structured ints (total/success/fail). No Processed prose.
+                                // outcomeDetailLine: a11y-only residual for all-failed; never Saved-to-destination.
+                                val exportCountTotal =
+                                    if (recovery.isExporting || recovery.isFinished) {
+                                        recovery.totalCount.coerceAtLeast(exportImages.size.coerceAtLeast(1))
+                                    } else {
+                                        0
+                                    }
+                                val exportCountSuccess =
+                                    if (recovery.isExporting || recovery.isFinished) recovery.successCount else 0
+                                val exportCountFailure =
+                                    if (recovery.isExporting || recovery.isFinished) recovery.failureCount else 0
+                                val countsLine = if (exportCountTotal > 0) {
                                     cmpStringResource(
                                         Res.string.dialog_save_export_counts,
-                                        recovery.processedCount
-                                            .coerceAtLeast(recovery.successCount + recovery.failureCount),
-                                        recovery.successCount,
-                                        recovery.failureCount,
+                                        exportCountTotal,
+                                        exportCountSuccess,
+                                        exportCountFailure,
                                     )
                                 } else {
                                     ""
                                 }
-                                // I0: success says where + how many; failures use generic taxonomy (no raw Throwable).
                                 val outcomeDetailLine = when {
-                                    recovery.isAllSuccess || recovery.isPartial ->
-                                        cmpStringResource(
-                                            Res.string.dialog_save_success_where,
-                                            recovery.successCount,
-                                            cmpStringResource(Res.string.dialog_save_destination_album),
-                                        )
                                     recovery.isAllFailed ->
                                         cmpStringResource(Res.string.dialog_save_error_generic)
                                     else -> ""
@@ -736,6 +740,9 @@ class ComposeMainActivity : ComponentActivity() {
                                     filenamePolicyLine = filenamePolicyLine,
                                     countsLine = countsLine,
                                     outcomeDetailLine = outcomeDetailLine,
+                                    exportTotalCount = exportCountTotal,
+                                    exportSuccessCount = exportCountSuccess,
+                                    exportFailureCount = exportCountFailure,
                                     primaryActionLabel = when {
                                         saveExportState.isSaving -> cmpStringResource(Res.string.dialog_save_exporting)
                                         saveExportState.isFinished -> cmpStringResource(Res.string.share)
@@ -925,6 +932,9 @@ private fun SaveExportSheetAndroid(
     filenamePolicyLine: String = "",
     countsLine: String = "",
     outcomeDetailLine: String = "",
+    exportTotalCount: Int = 0,
+    exportSuccessCount: Int = 0,
+    exportFailureCount: Int = 0,
     /** Recomposition tick while exporting (processedCount / isSaving / isFinished). */
     exportTick: Int = 0,
     onDismiss: () -> Unit,
@@ -954,6 +964,9 @@ private fun SaveExportSheetAndroid(
         filenamePolicyLine = filenamePolicyLine,
         countsLine = countsLine,
         outcomeDetailLine = outcomeDetailLine,
+        exportTotalCount = exportTotalCount,
+        exportSuccessCount = exportSuccessCount,
+        exportFailureCount = exportFailureCount,
         itemKey = { it.uri.value },
         onDismiss = onDismiss,
         onFormatClick = onFormatClick,

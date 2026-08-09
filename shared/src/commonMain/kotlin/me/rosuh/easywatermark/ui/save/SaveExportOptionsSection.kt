@@ -3,15 +3,12 @@ package me.rosuh.easywatermark.ui.save
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
@@ -85,24 +82,15 @@ fun SaveExportOptionsSection(
                 .fillMaxWidth()
                 .alpha(qualityAlpha),
         ) {
-            Row(
+            // Quality title only — trailing number dropped (slider end label carries the value).
+            Text(
+                text = qualityLabel,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 20.dp, bottom = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = qualityLabel,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = if (qualityApplies) quality.toString() else "—",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
 
             // Production save dialog: stepSize=20 → 20 / 40 / 60 / 80 / 100 only.
             SliderOption(
