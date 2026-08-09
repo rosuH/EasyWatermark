@@ -95,8 +95,17 @@ class IosPreviewImageRepositoryTest {
         repo.putForTests(IosPreviewKey("watermarked", 720, IosPreviewPurpose.Watermarked), bitmap(100, 100))
         repo.putForTests(IosPreviewKey("export", 160, IosPreviewPurpose.ExportThumbnail), bitmap(100, 100))
         // Three 40k entries are jointly evicted to <=80k rather than each layer getting 80k.
-        assertTrue(repo.snapshot().previewBytes <= 80_000L)
-        assertTrue(repo.snapshot().cachedEntries <= 2)
+        val afterThree = repo.snapshot()
+        assertTrue(afterThree.previewBytes <= 80_000L)
+        assertTrue(afterThree.cachedEntries <= 2)
+        // Priority: ExportThumbnail first — editor Watermarked should survive when possible.
+        assertEquals(
+            0,
+            afterThree.exportThumbnailEntries,
+            "joint overflow must prefer dropping ExportThumbnail before Watermarked",
+        )
+        assertEquals(1, afterThree.watermarkedEntries)
+        assertEquals(1, afterThree.sourcePlaceholderEntries)
 
         repo.putForTests(IosPreviewKey("strip-a", 128, IosPreviewPurpose.Filmstrip), bitmap(60, 60))
         repo.putForTests(IosPreviewKey("strip-b", 128, IosPreviewPurpose.Filmstrip), bitmap(60, 60))

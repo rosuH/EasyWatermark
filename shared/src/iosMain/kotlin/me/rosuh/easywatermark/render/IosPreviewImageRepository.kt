@@ -340,20 +340,10 @@ internal class IosPreviewImageRepository(
             maxBytes = exportThumbnailBytesMax,
             matches = { it.purpose == IosPreviewPurpose.ExportThumbnail },
         )
-        // Joint non-filmstrip budget: prefer dropping export thumbs / placeholders before
-        // Watermarked so opening the export sheet + N× decode cannot blank the editor preview.
-        evictOldestMatchingLocked(
-            maxBytes = sourceAndPreviewBytesMax,
-            matches = { it.purpose == IosPreviewPurpose.ExportThumbnail },
-        )
-        evictOldestMatchingLocked(
-            maxBytes = sourceAndPreviewBytesMax,
-            matches = { it.purpose == IosPreviewPurpose.SourcePlaceholder },
-        )
-        evictOldestMatchingLocked(
-            maxBytes = sourceAndPreviewBytesMax,
-            matches = { it.purpose == IosPreviewPurpose.Watermarked },
-        )
+        // Joint non-filmstrip budget: total Source+Watermarked+Export bytes vs one cap.
+        // Prefer dropping Export → Source before Watermarked so export-sheet thumbs cannot
+        // blank the editor preview (bytes check is joint, not per-purpose).
+        evictJointNonFilmstripLocked(sourceAndPreviewBytesMax)
         evictOldestMatchingLocked(
             maxBytes = filmstripBytesMax,
             matches = { it.purpose == IosPreviewPurpose.Filmstrip },
@@ -373,6 +363,25 @@ internal class IosPreviewImageRepository(
     ) {
         while (bytesForLocked(matches) > maxBytes) {
             val oldest = cache.keys.firstOrNull(matches) ?: return
+            cache.remove(oldest)
+        }
+    }
+
+    /**
+     * While joint non-filmstrip bytes exceed [maxBytes], remove the oldest entry in priority
+     * order ExportThumbnail → SourcePlaceholder → Watermarked (never Filmstrip here).
+     */
+    private fun evictJointNonFilmstripLocked(maxBytes: Long) {
+        fun isNonFilmstrip(key: IosPreviewKey) =
+            key.purpose != IosPreviewPurpose.Filmstrip
+        while (bytesForLocked(::isNonFilmstrip) > maxBytes) {
+            val oldest = cache.keys.firstOrNull {
+                it.purpose == IosPreviewPurpose.ExportThumbnail
+            } ?: cache.keys.firstOrNull {
+                it.purpose == IosPreviewPurpose.SourcePlaceholder
+            } ?: cache.keys.firstOrNull {
+                it.purpose == IosPreviewPurpose.Watermarked
+            } ?: return
             cache.remove(oldest)
         }
     }
