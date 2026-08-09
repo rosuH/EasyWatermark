@@ -833,9 +833,12 @@ class IosProductRootHost(
                                             draftActiveForSelection
                                         )
                             // M2/M7: policy-aware first reveal + switch fade (iOS was hard-cut).
+                            // Ready-frame only: path is set with watermarked/source bind; hasContent
+                            // false while displayPreview null so key cannot advance on empty pixels.
                             AnimatedPreviewSurface(
                                 contentKey = previewSourcePath,
-                                hasContent = displayPreview != null,
+                                hasContent = displayPreview != null &&
+                                    !previewSourcePath.isNullOrEmpty(),
                                 modifier = previewModifier
                                     .fillMaxSize()
                                     .testTag("sharedComposeWatermarkPreview"),

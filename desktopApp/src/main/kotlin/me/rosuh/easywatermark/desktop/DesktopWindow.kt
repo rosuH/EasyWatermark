@@ -356,6 +356,8 @@ fun launchDesktopWindow() = application {
     val waterMark by repo.waterMark.collectAsState(WaterMark.default)
     // the rendered preview image (null until the first successful refresh).
     var preview by remember { mutableStateOf<ImageBitmap?>(null) }
+    /** URI of the Session image that [preview] currently represents (ready-frame identity). */
+    var previewReadyUri by remember { mutableStateOf<String?>(null) }
     // Config / import preview refresh — debounced (slider ticks).
     var previewGeneration by remember { mutableStateOf(0) }
     // H0.1-fix: offset-only / draft preview gen — **no** 250ms debounce, light in-memory raster.
@@ -458,7 +460,10 @@ fun launchDesktopWindow() = application {
             bench.finish(mapOf("staleGen" to true, "isDraft" to isDraft))
             return msg
         }
-        img?.let { preview = it }
+        img?.let {
+            preview = it
+            previewReadyUri = frozen.sourcePath
+        }
         bench.finish(
             mapOf(
                 "offsetX" to ox,
@@ -809,9 +814,10 @@ fun launchDesktopWindow() = application {
                                 val bmp = preview
                                 if (bmp != null) {
                                     val dragItem = selectedForStrip
+                                    // Ready-frame key = last composed preview URI (not bare selection).
                                     AnimatedPreviewSurface(
-                                        contentKey = dragItem?.uri?.value,
-                                        hasContent = true,
+                                        contentKey = previewReadyUri,
+                                        hasContent = previewReadyUri != null,
                                         modifier = Modifier.fillMaxSize(),
                                     ) {
                                         Image(

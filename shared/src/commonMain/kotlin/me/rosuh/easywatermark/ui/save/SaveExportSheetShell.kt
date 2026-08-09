@@ -3,8 +3,14 @@ package me.rosuh.easywatermark.ui.save
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -41,6 +47,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.shared.generated.resources.Res
@@ -133,6 +140,7 @@ fun <T> SaveExportSheetShell(
     val showCounts = isExporting || total > 0 || countsLine.isNotBlank()
     val fadeMs = motionDurationMs(currentMotionPolicy(), EwmTheme.motion.contentSizeMs)
     val fadeSpec = tween<Float>(durationMillis = fadeMs, easing = FastOutSlowInEasing)
+    val slideSpec = tween<IntOffset>(durationMillis = fadeMs, easing = FastOutSlowInEasing)
 
     val destinationCd = buildString {
         if (hasDestination) append(destinationLine)
@@ -227,8 +235,24 @@ fun <T> SaveExportSheetShell(
 
             AnimatedVisibility(
                 visible = showCounts,
-                enter = fadeIn(animationSpec = fadeSpec),
-                exit = fadeOut(animationSpec = fadeSpec),
+                enter = fadeIn(animationSpec = fadeSpec) +
+                    scaleIn(
+                        initialScale = 0.88f,
+                        animationSpec = fadeSpec,
+                    ) +
+                    slideInVertically(
+                        animationSpec = slideSpec,
+                        initialOffsetY = { it / 4 },
+                    ),
+                exit = fadeOut(animationSpec = fadeSpec) +
+                    scaleOut(
+                        targetScale = 0.92f,
+                        animationSpec = fadeSpec,
+                    ) +
+                    slideOutVertically(
+                        animationSpec = slideSpec,
+                        targetOffsetY = { it / 6 },
+                    ),
             ) {
                 val displayTotal = when {
                     total > 0 -> total
@@ -374,8 +398,24 @@ private fun ExportCountChip(
     tint: Color,
     modifier: Modifier = Modifier,
 ) {
+    // Mid-export count ticks: brief scale pulse so numbers don't hard-swap.
+    val pulse = remember { Animatable(1f) }
+    LaunchedEffect(value) {
+        if (pulse.value == 1f && value == 0) return@LaunchedEffect
+        pulse.snapTo(0.88f)
+        pulse.animateTo(
+            1f,
+            animationSpec = tween(durationMillis = 160, easing = FastOutSlowInEasing),
+        )
+    }
     Row(
-        modifier = modifier.semantics { this.contentDescription = contentDescription },
+        modifier = modifier
+            .graphicsLayer {
+                val s = pulse.value
+                scaleX = s
+                scaleY = s
+            }
+            .semantics { this.contentDescription = contentDescription },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {

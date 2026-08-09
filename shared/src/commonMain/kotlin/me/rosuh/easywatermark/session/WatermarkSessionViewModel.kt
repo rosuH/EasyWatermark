@@ -314,6 +314,10 @@ open class WatermarkSessionViewModel(
             withContext(Dispatchers.Main.immediate) {
                 // Single validity check immediately before any repo or StateFlow write.
                 if (!stillValid()) return@withContext
+                // Same selection-boundary reset as [enterEditor] (iOS progressive import path).
+                if (!_exportJobState.value.isSaving) {
+                    resetJobStatus()
+                }
                 val before = currentSnapshot()
                 val enter = reduceSessionUi(
                     before,
@@ -550,7 +554,14 @@ open class WatermarkSessionViewModel(
         selected: List<ImageInfo>,
         gallerySnapshot: List<Image> = emptyList(),
         waterMark: WaterMark = _launchScreenUiStateFlow.value.waterMark,
-    ) = dispatch(AppIntent.EnterEditor(selected, gallerySnapshot, waterMark))
+    ) {
+        // New selection batch must not inherit prior export finished/success chrome.
+        // Never wipe an in-flight export; filmstrip focus uses SelectCurrent (not this path).
+        if (!_exportJobState.value.isSaving) {
+            resetJobStatus()
+        }
+        dispatch(AppIntent.EnterEditor(selected, gallerySnapshot, waterMark))
+    }
 
     fun applyConfig(change: WatermarkConfigChange) = dispatch(AppIntent.ApplyConfig(change))
 

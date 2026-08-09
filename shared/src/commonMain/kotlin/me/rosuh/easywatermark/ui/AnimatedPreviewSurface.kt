@@ -16,39 +16,46 @@ import androidx.compose.ui.graphics.graphicsLayer
 import me.rosuh.easywatermark.ui.theme.EwmTheme
 import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
 import me.rosuh.easywatermark.ui.theme.motionDurationMs
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.ui.theme.previewCrossfadeDurationMs
 
 /**
  * Shared CMP preview surface motion (M2 crossfade + M7 first reveal).
  *
- * Hosts pass a stable [contentKey] (source path / uri). When the key changes and content is
- * ready, the new layer crossfades in over the previous (aspect-agnostic alpha blend — hosts that
- * need bounds morph keep their own Canvas path, e.g. Android [WaterMarkCanvas]).
+ * Hosts must pass a [contentKey] that identifies the **ready** frame (not a pending selection
+ * while still showing the previous bitmap). When key changes ahead of ready content, keep
+ * [hasContent]=false (or keep the old key) until the new frame is bound — otherwise the alpha
+ * dip finishes on the old pixels and the new bitmap hard-cuts in (the “random snap” path).
  *
- * First non-null content fades 0→1 ([EwmTheme.motion.firstPreviewRevealMs]).
- * All durations honor [currentMotionPolicy] (0 = snap).
+ * Snap is expected when:
+ * - [me.rosuh.easywatermark.ui.theme.MotionPolicy.Off] (0ms)
+ * - same [contentKey] (watermark config refresh — no re-reveal)
+ * - [hasContent] false / null-empty key (hold last frame, no flash)
  *
- * [content] is always the **current** ready frame; previous frame is held only as a snapshot
- * of the last composed content via [displayedKey] identity — callers should keep prior bitmap
- * until the next ready frame replaces it (typical host pattern).
+ * First non-null ready content fades 0→1 ([EwmTheme.motion.firstPreviewRevealMs]).
+ * Switch: alpha dip + slight scale settle; duration via [previewCrossfadeDurationMs].
  */
 @Composable
 fun AnimatedPreviewSurface(
     contentKey: String?,
     hasContent: Boolean,
     modifier: Modifier = Modifier,
+    /** 0 = similar aspect (min ms), 1 = extreme; default mid when host has no metrics. */
+    aspectDelta: Float = 0.35f,
     content: @Composable () -> Unit,
 ) {
     val policy = currentMotionPolicy()
     val revealMs = motionDurationMs(policy, EwmTheme.motion.firstPreviewRevealMs)
-    val crossfadeMs = previewCrossfadeDurationMs(policy, aspectDelta = 0.35f)
+    val crossfadeMs = previewCrossfadeDurationMs(policy, aspectDelta = aspectDelta)
 
     var displayedKey by remember { mutableStateOf<String?>(null) }
     val alpha = remember { Animatable(0f) }
+    val scale = remember { Animatable(1f) }
 
     LaunchedEffect(contentKey, hasContent, revealMs, crossfadeMs) {
         if (!hasContent || contentKey.isNullOrEmpty()) {
-            // Keep last painted frame alpha if we had one; don't force black flash.
+            // Hold last painted frame; do not advance displayedKey until ready content arrives.
             return@LaunchedEffect
         }
         val previous = displayedKey
@@ -57,42 +64,88 @@ fun AnimatedPreviewSurface(
                 // M7: first reveal
                 if (revealMs <= 0) {
                     alpha.snapTo(1f)
+                    scale.snapTo(1f)
                 } else {
                     alpha.snapTo(0f)
-                    alpha.animateTo(
-                        1f,
-                        animationSpec = tween(durationMillis = revealMs, easing = FastOutSlowInEasing),
-                    )
+                    scale.snapTo(0.97f)
+                    coroutineScope {
+                        launch {
+                            alpha.animateTo(
+                                1f,
+                                animationSpec = tween(
+                                    durationMillis = revealMs,
+                                    easing = FastOutSlowInEasing,
+                                ),
+                            )
+                        }
+                        launch {
+                            scale.animateTo(
+                                1f,
+                                animationSpec = tween(
+                                    durationMillis = revealMs,
+                                    easing = FastOutSlowInEasing,
+                                ),
+                            )
+                        }
+                    }
                 }
                 displayedKey = contentKey
             }
             previous != contentKey -> {
-                // M2: image switch — brief dip then settle (single-layer hosts).
+                // M2: ready-frame switch only (key of bound content changed).
                 if (crossfadeMs <= 0) {
                     alpha.snapTo(1f)
+                    scale.snapTo(1f)
                 } else {
-                    alpha.snapTo(0.15f)
-                    alpha.animateTo(
-                        1f,
-                        animationSpec = tween(
-                            durationMillis = crossfadeMs,
-                            easing = FastOutSlowInEasing,
-                        ),
-                    )
+                    alpha.snapTo(0.12f)
+                    scale.snapTo(0.98f)
+                    coroutineScope {
+                        launch {
+                            alpha.animateTo(
+                                1f,
+                                animationSpec = tween(
+                                    durationMillis = crossfadeMs,
+                                    easing = FastOutSlowInEasing,
+                                ),
+                            )
+                        }
+                        launch {
+                            scale.animateTo(
+                                1f,
+                                animationSpec = tween(
+                                    durationMillis = crossfadeMs,
+                                    easing = FastOutSlowInEasing,
+                                ),
+                            )
+                        }
+                    }
                 }
                 displayedKey = contentKey
             }
             else -> {
                 // Same key refresh (watermark config) — ensure fully visible, no re-reveal.
                 if (alpha.value < 1f) {
-                    if (revealMs <= 0) alpha.snapTo(1f) else alpha.animateTo(1f, tween(revealMs / 2))
+                    if (revealMs <= 0) {
+                        alpha.snapTo(1f)
+                        scale.snapTo(1f)
+                    } else {
+                        coroutineScope {
+                            launch { alpha.animateTo(1f, tween(revealMs / 2)) }
+                            launch { scale.animateTo(1f, tween(revealMs / 2)) }
+                        }
+                    }
                 }
             }
         }
     }
 
     Box(
-        modifier = modifier.graphicsLayer { this.alpha = alpha.value },
+        modifier = modifier.graphicsLayer {
+            this.alpha = alpha.value
+            val s = scale.value
+            scaleX = s
+            scaleY = s
+        },
         contentAlignment = Alignment.Center,
     ) {
         if (hasContent) {
