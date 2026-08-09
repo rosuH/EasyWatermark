@@ -129,3 +129,6 @@ hs_err_pid*
 .kotlin
 .weblate
 .weblate.ini
+
+# Local sample/test image corpus (large binary assets)
+sample-images/
