@@ -1,8 +1,13 @@
 package me.rosuh.easywatermark.ui.save
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,16 +69,14 @@ import org.jetbrains.compose.resources.stringResource
 /**
  * Shared CMP shell for the save/export modal sheet.
  *
- * Idle: format/quality + preview thumbs + primary CTA (no orphan icon chrome).
- * Exporting/finished: fixed icon counts (total / success / fail) — no Processed prose,
- * no “Saved N to Destination…” outcome line. a11y + I0 tags stay on zero-size nodes
- * when not painted. Thumb progress uses [ExportProgressOverlay].
+ * **Motion rule (no sheet jump):** chrome slots have fixed measured height. Allowed motion is
+ * paint-only — alpha, in-slot fade, label crossfade, thumb wipe/check. Forbidden: layout
+ * enter/exit that changes sheet height (slideInVertically on the sheet column,
+ * animateContentSize on the root, unreserved button rows).
  *
- * @param exportTotalCount fixed list size for 总量 icon (blank/0 = hide count row).
- * @param exportSuccessCount success count for ✓ icon.
- * @param exportFailureCount failure count for ✕ icon.
- * @param countsLine retained for I0 API/a11y CD; not painted as prose.
- * @param outcomeDetailLine retained for I0 API/a11y CD; never painted (owner: no Saved-to-destination).
+ * Idle: format/quality + preview thumbs + primary CTA.
+ * Exporting/finished: fixed icon counts (total / success / fail); no destination prose.
+ * Thumb progress uses [ExportProgressOverlay].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -131,11 +134,19 @@ fun <T> SaveExportSheetShell(
     // height jumps when counts appear at export start / hide on idle re-open.
     val reserveCountsSlot = imageCount > 0 || total > 0 || showCounts
     val fadeMs = motionDurationMs(currentMotionPolicy(), EwmTheme.motion.contentSizeMs)
+    val fadeSpec = tween<Float>(durationMillis = fadeMs, easing = FastOutSlowInEasing)
     val countsAlpha by animateFloatAsState(
         targetValue = if (showCounts) 1f else 0f,
-        animationSpec = tween(durationMillis = fadeMs, easing = FastOutSlowInEasing),
+        animationSpec = fadeSpec,
         label = "exportCountsAlpha",
     )
+    // Subtle in-slot scale (graphicsLayer only — does not remeasure the sheet).
+    val countsScale by animateFloatAsState(
+        targetValue = if (showCounts) 1f else 0.96f,
+        animationSpec = fadeSpec,
+        label = "exportCountsScale",
+    )
+    val showRetry = onRetryFailedClick != null && showRetryFailedButton && !isExporting
 
     val destinationCd = buildString {
         if (hasDestination) append(destinationLine)
@@ -234,7 +245,7 @@ fun <T> SaveExportSheetShell(
                     imageCount > 0 -> imageCount
                     else -> (success + failure).coerceAtLeast(0)
                 }
-                // Fixed-height slot: fade chips in place (no slide/scale layout pass on the sheet).
+                // Fixed-height slot: fade + slight scale in paint space only.
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -245,7 +256,12 @@ fun <T> SaveExportSheetShell(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .graphicsLayer { alpha = countsAlpha }
+                            .graphicsLayer {
+                                alpha = countsAlpha
+                                val s = countsScale
+                                scaleX = s
+                                scaleY = s
+                            }
                             .testTag("sharedComposeExportCounts")
                             .semantics {
                                 contentDescription = countsCd.ifBlank { statusCd }
@@ -295,46 +311,59 @@ fun <T> SaveExportSheetShell(
                 modifier = Modifier.padding(top = 20.dp),
             )
 
-            // Fixed primary + secondary action chrome so Cancel/Retry/Share/Open-gallery
-            // never change ModalBottomSheet measured height.
+            // Fixed primary + secondary chrome heights — label/button swaps paint inside slots.
             Spacer(Modifier.height(28.dp))
-            if (showCancelButton && onCancelClick != null) {
-                OutlinedButton(
-                    onClick = onCancelClick,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(PrimaryButtonHeight)
-                        .testTag("sharedComposeExportCancel")
-                        .semantics { contentDescription = cancelLabel },
-                    shape = RectangleShape,
-                ) {
-                    Text(cancelLabel)
-                }
-            } else {
-                Button(
-                    onClick = onExportClick,
-                    enabled = primaryActionEnabled,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(PrimaryButtonHeight)
-                        .testTag("sharedComposeExportPrimary")
-                        .semantics { contentDescription = primaryActionLabel },
-                    shape = RectangleShape,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = DesignBrand,
-                        contentColor = DesignEditorBg,
-                        disabledContainerColor = DesignBrand.copy(alpha = 0.4f),
-                        disabledContentColor = DesignEditorBg.copy(alpha = 0.6f),
-                    ),
-                ) {
-                    Text(primaryActionLabel)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(PrimaryButtonHeight),
+            ) {
+                if (showCancelButton && onCancelClick != null) {
+                    OutlinedButton(
+                        onClick = onCancelClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(PrimaryButtonHeight)
+                            .testTag("sharedComposeExportCancel")
+                            .semantics { contentDescription = cancelLabel },
+                        shape = RectangleShape,
+                    ) {
+                        Text(cancelLabel)
+                    }
+                } else {
+                    Button(
+                        onClick = onExportClick,
+                        enabled = primaryActionEnabled,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(PrimaryButtonHeight)
+                            .testTag("sharedComposeExportPrimary")
+                            .semantics { contentDescription = primaryActionLabel },
+                        shape = RectangleShape,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = DesignBrand,
+                            contentColor = DesignEditorBg,
+                            disabledContainerColor = DesignBrand.copy(alpha = 0.4f),
+                            disabledContentColor = DesignEditorBg.copy(alpha = 0.6f),
+                        ),
+                    ) {
+                        // Crossfade CTA copy in-place (Exporting / Share / Export) — no height change.
+                        AnimatedContent(
+                            targetState = primaryActionLabel,
+                            transitionSpec = {
+                                fadeIn(animationSpec = fadeSpec) togetherWith
+                                    fadeOut(animationSpec = fadeSpec)
+                            },
+                            label = "exportPrimaryLabel",
+                        ) { label ->
+                            Text(label)
+                        }
+                    }
                 }
             }
 
-            // Fixed secondary chrome height from first open: content is top-aligned so
-            // Share ↔ “View in gallery” stay tight (no empty Retry hole between them). Unused
-            // space sits *below* the actions as sheet padding — ModalBottomSheet does not jump
-            // when Retry/Open-gallery appear after export finishes.
+            // Fixed secondary height; fade content top-aligned so Share↔gallery stay tight and
+            // sheet measure never changes when Retry / Open-gallery appear.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -345,25 +374,35 @@ fun <T> SaveExportSheetShell(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    if (onRetryFailedClick != null && showRetryFailedButton && !isExporting) {
-                        OutlinedButton(
-                            onClick = onRetryFailedClick,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 12.dp)
-                                .height(PrimaryButtonHeight)
-                                .testTag("sharedComposeExportRetryFailed")
-                                .semantics { contentDescription = retryLabel },
-                            shape = RectangleShape,
-                        ) {
-                            Text(retryLabel)
+                    AnimatedVisibility(
+                        visible = showRetry,
+                        enter = fadeIn(animationSpec = fadeSpec),
+                        exit = fadeOut(animationSpec = fadeSpec),
+                    ) {
+                        if (onRetryFailedClick != null) {
+                            OutlinedButton(
+                                onClick = onRetryFailedClick,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 12.dp)
+                                    .height(PrimaryButtonHeight)
+                                    .testTag("sharedComposeExportRetryFailed")
+                                    .semantics { contentDescription = retryLabel },
+                                shape = RectangleShape,
+                            ) {
+                                Text(retryLabel)
+                            }
                         }
                     }
-                    if (showOpenGallery) {
+                    AnimatedVisibility(
+                        visible = showOpenGallery,
+                        enter = fadeIn(animationSpec = fadeSpec),
+                        exit = fadeOut(animationSpec = fadeSpec),
+                    ) {
                         TextButton(
                             onClick = onOpenGalleryClick,
                             modifier = Modifier.padding(
-                                top = if (showRetryFailedButton && !isExporting) 4.dp else 8.dp,
+                                top = if (showRetry) 4.dp else 8.dp,
                             ),
                             shape = RectangleShape,
                         ) {
