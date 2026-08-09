@@ -31,6 +31,7 @@ import me.rosuh.easywatermark.shared.generated.resources.ic_open_source
 import me.rosuh.easywatermark.shared.generated.resources.ic_picker_image
 import me.rosuh.easywatermark.shared.generated.resources.ic_privacy_cn
 import me.rosuh.easywatermark.shared.generated.resources.ic_privacy_en
+import me.rosuh.easywatermark.shared.generated.resources.ic_privacy_shield
 import me.rosuh.easywatermark.shared.generated.resources.ic_rate
 import me.rosuh.easywatermark.shared.generated.resources.ic_remove_item
 import me.rosuh.easywatermark.shared.generated.resources.ic_save
@@ -80,6 +81,7 @@ object SharedProductDrawables {
     val openSource: DrawableResource get() = Res.drawable.ic_open_source
     val privacyZh: DrawableResource get() = Res.drawable.ic_privacy_cn
     val privacyEn: DrawableResource get() = Res.drawable.ic_privacy_en
+    val privacyShield: DrawableResource get() = Res.drawable.ic_privacy_shield
     val avatarDev: DrawableResource get() = Res.drawable.bg_avatar_dev
     val avatarTovi: DrawableResource get() = Res.drawable.ic_avatar_tovi
     val close: DrawableResource get() = Res.drawable.ic_close_24dp
@@ -107,6 +109,7 @@ object SharedProductDrawables {
     @Composable fun openSourcePainter(): Painter = painterResource(openSource)
     @Composable fun privacyZhPainter(): Painter = painterResource(privacyZh)
     @Composable fun privacyEnPainter(): Painter = painterResource(privacyEn)
+    @Composable fun privacyShieldPainter(): Painter = painterResource(privacyShield)
     @Composable fun avatarDevPainter(): Painter = painterResource(avatarDev)
     @Composable fun avatarToviPainter(): Painter = painterResource(avatarTovi)
     @Composable fun closePainter(): Painter = painterResource(close)

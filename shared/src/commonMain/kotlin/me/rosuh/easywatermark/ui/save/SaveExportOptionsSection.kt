@@ -54,14 +54,16 @@ fun SaveExportOptionsSection(
                 animationSpec = tween(durationMillis = contentSizeMs, easing = FastOutSlowInEasing),
             ),
     ) {
-        Text(
-            text = title,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+        if (title.isNotBlank()) {
+            Text(
+                text = title,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
 
         // No secondary "格式" label under 输出格式 — chips alone are enough (less chrome).
         DesignChoiceChips(

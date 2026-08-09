@@ -45,7 +45,7 @@ fun <T> SaveExportPreviewBox(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 16.dp)
+            .padding(top = 20.dp)
             // Slightly shorter than the old 145.dp so format/quality + CTA fit under a
             // wrap-height sheet with dimmed editor peek (production export chrome).
             .height(110.dp)

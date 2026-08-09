@@ -1,14 +1,23 @@
 package me.rosuh.easywatermark.ui.save
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -33,11 +42,18 @@ import me.rosuh.easywatermark.shared.generated.resources.dialog_save_config_form
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_config_quality
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_list_title
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_retry_failed
+import me.rosuh.easywatermark.shared.generated.resources.ic_privacy_shield
+import me.rosuh.easywatermark.shared.generated.resources.ic_save
+import me.rosuh.easywatermark.shared.generated.resources.ic_save_done
 import me.rosuh.easywatermark.shared.generated.resources.privacy_confidence_export
 import me.rosuh.easywatermark.shared.generated.resources.tips_images_selected
 import me.rosuh.easywatermark.ui.compose.EwmModalBottomSheet
 import me.rosuh.easywatermark.ui.theme.DesignBrand
 import me.rosuh.easywatermark.ui.theme.DesignEditorBg
+import me.rosuh.easywatermark.ui.theme.EwmTheme
+import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
+import me.rosuh.easywatermark.ui.theme.motionDurationMs
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -45,7 +61,11 @@ import org.jetbrains.compose.resources.stringResource
  * S-i18n-2: labels from [Res].
  * D5: optional Cancel / Retry failed + progress semantics (not color-only).
  * I0: optional destination / filename-policy / outcome-detail lines (host-localized).
- * I4: privacy confidence line (on-device + EXIF strip / ADR-0009).
+ * I4: privacy confidence as icon residual signal (on-device + EXIF strip / ADR-0009);
+ *     full prose stays in contentDescription for a11y.
+ *
+ * Visual stance: less body copy, more whitespace; status via icons + [ExportProgressOverlay]
+ * motion on thumbs; live regions retained for progress/outcome.
  *
  * @param exportListSubtitle argument for [Res.string.dialog_save_export_list_title] (e.g. result summary).
  * @param imageCount used for empty-preview plural string when [items] is empty.
@@ -97,6 +117,24 @@ fun <T> SaveExportSheetShell(
     val privacyExport = stringResource(Res.string.privacy_confidence_export)
     val statusCd = statusContentDescription.ifBlank { exportListSubtitle }
 
+    val hasDestination = destinationLine.isNotBlank()
+    val hasFilenamePolicy = filenamePolicyLine.isNotBlank()
+    val hasCounts = countsLine.isNotBlank()
+    val hasOutcome = outcomeDetailLine.isNotBlank()
+    // Calm idle sheet: status prose only while exporting or when hosts surface counts/outcome.
+    val showStatusDetail = isExporting || hasCounts || hasOutcome
+    val fadeMs = motionDurationMs(currentMotionPolicy(), EwmTheme.motion.contentSizeMs)
+    val fadeSpec = tween<Float>(durationMillis = fadeMs, easing = FastOutSlowInEasing)
+
+    // Destination + policy stay available to a11y even when not painted as body text.
+    val destinationCd = buildString {
+        if (hasDestination) append(destinationLine)
+        if (hasFilenamePolicy) {
+            if (isNotEmpty()) append(". ")
+            append(filenamePolicyLine)
+        }
+    }
+
     EwmModalBottomSheet(
         onDismissRequest = {
             if (!isExporting) onDismiss()
@@ -110,7 +148,7 @@ fun <T> SaveExportSheetShell(
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
                 .navigationBarsPadding()
-                .padding(bottom = 16.dp),
+                .padding(bottom = 20.dp),
         ) {
             SaveExportOptionsSection(
                 title = outputTitle,
@@ -123,80 +161,141 @@ fun <T> SaveExportSheetShell(
                 onQualityChange = onQualityChange,
             )
 
-            if (destinationLine.isNotBlank()) {
-                Text(
-                    text = destinationLine,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 12.dp)
-                        .testTag("sharedComposeExportDestination"),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (filenamePolicyLine.isNotBlank()) {
-                Text(
-                    text = filenamePolicyLine,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp)
-                        .testTag("sharedComposeExportFilenamePolicy"),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            // I4: on-device + EXIF strip (ADR-0009) at export decision point.
-            Text(
-                text = privacyExport,
+            // Icon meta strip: privacy residual + destination (prose moved to CDs).
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp)
-                    .testTag("sharedComposeExportPrivacyConfidence"),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            Text(
-                text = exportListTitle,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp)
-                    // I2: polite live region so count/progress CD is announced (not color-only).
-                    .semantics {
-                        contentDescription = statusCd
-                        liveRegion = LiveRegionMode.Polite
-                    }
-                    .testTag("sharedComposeExportStatus"),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-
-            if (countsLine.isNotBlank()) {
-                Text(
-                    text = countsLine,
+                    .padding(top = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painter = painterResource(Res.drawable.ic_privacy_shield),
+                    contentDescription = privacyExport,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp)
+                        .size(22.dp)
+                        .testTag("sharedComposeExportPrivacyConfidence")
+                        .semantics { contentDescription = privacyExport },
+                )
+                if (hasDestination || hasFilenamePolicy) {
+                    Icon(
+                        painter = painterResource(Res.drawable.ic_save),
+                        contentDescription = destinationCd,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .size(22.dp)
+                            .testTag("sharedComposeExportDestination")
+                            .semantics { contentDescription = destinationCd },
+                    )
+                    // Filename policy shares destination icon CD; keep tag for I0 contract.
+                    Spacer(
+                        Modifier
+                            .size(0.dp)
+                            .testTag("sharedComposeExportFilenamePolicy")
+                            .semantics {
+                                contentDescription =
+                                    if (hasFilenamePolicy) filenamePolicyLine else destinationCd
+                            },
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                // Status live region lives on this compact status glyph (not a title wall).
+                Icon(
+                    painter = painterResource(
+                        if (hasOutcome && !isExporting) {
+                            Res.drawable.ic_save_done
+                        } else {
+                            Res.drawable.ic_save
+                        },
+                    ),
+                    contentDescription = statusCd,
+                    tint = when {
+                        isExporting -> DesignBrand
+                        hasOutcome -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+                    },
+                    modifier = Modifier
+                        .size(22.dp)
                         .semantics {
-                            contentDescription = countsLine
-                            if (isExporting) liveRegion = LiveRegionMode.Polite
+                            contentDescription = statusCd
+                            liveRegion = LiveRegionMode.Polite
                         }
-                        .testTag("sharedComposeExportCounts"),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        .testTag("sharedComposeExportStatus"),
                 )
             }
-            if (outcomeDetailLine.isNotBlank()) {
-                Text(
-                    text = outcomeDetailLine,
+
+            AnimatedVisibility(
+                visible = showStatusDetail,
+                enter = fadeIn(animationSpec = fadeSpec),
+                exit = fadeOut(animationSpec = fadeSpec),
+            ) {
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 4.dp)
-                        .testTag("sharedComposeExportOutcomeDetail"),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+                        .padding(top = 12.dp),
+                ) {
+                    if (isExporting || exportListSubtitle.isNotBlank()) {
+                        Text(
+                            text = if (isExporting) exportListSubtitle else exportListTitle,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .semantics {
+                                    contentDescription = statusCd
+                                    liveRegion = LiveRegionMode.Polite
+                                },
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                    if (hasCounts) {
+                        Text(
+                            text = countsLine,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 6.dp)
+                                .semantics {
+                                    contentDescription = countsLine
+                                    if (isExporting) liveRegion = LiveRegionMode.Polite
+                                }
+                                .testTag("sharedComposeExportCounts"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (hasOutcome) {
+                        Text(
+                            text = outcomeDetailLine,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 6.dp)
+                                .testTag("sharedComposeExportOutcomeDetail"),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+            }
+
+            // When status block is hidden, still expose counts/outcome tags if hosts send them
+            // (structural contract) — zero-size semantics nodes only if lines blank stay untagged.
+            if (!showStatusDetail) {
+                if (hasCounts) {
+                    Spacer(
+                        Modifier
+                            .size(0.dp)
+                            .testTag("sharedComposeExportCounts")
+                            .semantics { contentDescription = countsLine },
+                    )
+                }
+                if (hasOutcome) {
+                    Spacer(
+                        Modifier
+                            .size(0.dp)
+                            .testTag("sharedComposeExportOutcomeDetail")
+                            .semantics { contentDescription = outcomeDetailLine },
+                    )
+                }
             }
 
             SaveExportPreviewBox(
@@ -204,6 +303,7 @@ fun <T> SaveExportSheetShell(
                 emptyText = emptyPreviewText,
                 itemKey = itemKey,
                 thumbnail = thumbnail,
+                modifier = Modifier.padding(top = 8.dp),
             )
 
             if (showCancelButton && onCancelClick != null) {
@@ -211,7 +311,7 @@ fun <T> SaveExportSheetShell(
                     onClick = onCancelClick,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 20.dp)
+                        .padding(top = 28.dp)
                         .height(48.dp)
                         .testTag("sharedComposeExportCancel")
                         .semantics { contentDescription = cancelLabel },
@@ -225,7 +325,7 @@ fun <T> SaveExportSheetShell(
                     enabled = primaryActionEnabled,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 20.dp)
+                        .padding(top = 28.dp)
                         .height(48.dp)
                         .testTag("sharedComposeExportPrimary")
                         .semantics { contentDescription = primaryActionLabel },
@@ -246,7 +346,7 @@ fun <T> SaveExportSheetShell(
                     onClick = onRetryFailedClick,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 8.dp)
+                        .padding(top = 12.dp)
                         .height(48.dp)
                         .testTag("sharedComposeExportRetryFailed")
                         .semantics { contentDescription = retryLabel },
@@ -261,13 +361,13 @@ fun <T> SaveExportSheetShell(
                     onClick = onOpenGalleryClick,
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
-                        .padding(bottom = 20.dp),
+                        .padding(top = 4.dp, bottom = 12.dp),
                     shape = RectangleShape,
                 ) {
                     Text(text = openGalleryLabel)
                 }
             } else {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
             }
         }
     }
