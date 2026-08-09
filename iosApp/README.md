@@ -67,13 +67,11 @@ Once a watermarked PNG exists (`workflow.resultPNG`), `ContentView` shows an exp
 dependency** and no Frameworks-phase edit. S4d-58 proved both buttons at runtime through XCUITest:
 Save reaches "Saved to Photos" and Share presents the system share sheet.
 
-## Bundled fonts (C5.2)
+## Watermark fonts (ADR-0025)
 
-`NotoSans-Regular.ttf`, `NotoSansSC-Regular.otf`, `OFL-NotoSans.txt`, `OFL-NotoSansCJK.txt` are the
-**exact** artifacts from `shared/src/desktopMain/resources/fonts/` (same bytes; verified by sha256).
-They are Copy Bundle Resources, so the built `iosApp.app` contains them at its top level — the layout
-`IosFontLoader.loadFontBytes(name, type, NSBundle.mainBundle)` expects. The `.otf` CJK face is ~8 MB;
-it is an app-bundle resource, **not** a Kotlin/Gradle dependency.
+Production Text watermarks use the **system default** face (`FontFamily.Default` / platform resolver).
+Multi-MB Noto Latin+CJK files are **not** packaged in the iOS app bundle (removed with ADR-0025).
+Test-only Noto may still exist under `shared`/`app` **test** source sets for goldens — not in release.
 
 ## How `:shared` is wired in
 

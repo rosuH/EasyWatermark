@@ -16,21 +16,20 @@ import platform.posix.memcpy
 
 /**
  * iOS template **seed** loader — reads a bundled Android template seed DB (`ewm-db-ch.db` /
- * `ewm-db-eng.db`) from an [NSBundle] and returns its raw bytes, mirroring the [IosFontLoader] NSBundle
- * pattern (`pathForResource` → `NSData.dataWithContentsOfFile` → `ByteArray` via pinned `memcpy`).
+ * `ewm-db-eng.db`) from an [NSBundle] and returns its raw bytes via
+ * `pathForResource` → `NSData.dataWithContentsOfFile` → `ByteArray` (pinned `memcpy`).
  *
  * The seed DBs are the **same** authoritative Android assets (`app/src/main/assets/ewm-db-{ch,eng}.db`),
- * copied verbatim into `iosApp/iosApp/Resources/Seed/` and packaged into `iosApp.app` as Copy Bundle
- * Resources (`iosApp.xcodeproj`) — the proven font-bundling path. The production no-arg
- * `buildTemplateDatabase()` reads them from `NSBundle.mainBundle`; the `buildTemplateDatabase(dir, seedBytes)`
- * overload is the platform-agnostic seam (tests pass bytes directly, since a Kotlin/Native test executable's
- * bundle does not carry the app's Copy Bundle Resources — see `IosFontLoaderTest`).
+ * copied into `iosApp/iosApp/Resources/Seed/` and packaged into `iosApp.app` as Copy Bundle Resources.
+ * The production no-arg `buildTemplateDatabase()` reads them from `NSBundle.mainBundle`; the
+ * `buildTemplateDatabase(dir, seedBytes)` overload is the platform-agnostic seam (tests pass bytes
+ * directly — a Kotlin/Native test executable's bundle does not carry the app's Copy Bundle Resources).
  *
  * Locale-aware selection mirrors `TemplateDatabaseSeeds.defaultTemplateSeedLanguage()` (Desktop) and
  * `TemplateDatabaseBuilder.android.kt`: Chinese (`ch`) when the locale language contains `zh`, English
  * (`eng`) otherwise.
  *
- * Failure is loud (missing/unreadable/empty resource → [IllegalStateException]), matching [IosFontLoader].
+ * Failure is loud (missing/unreadable/empty resource → [IllegalStateException]).
  * No new dependency: Kotlin/Native bundled `platform.Foundation`/`platform.posix` interop only.
  */
 /** J5: seed unpack — not called from Swift. */

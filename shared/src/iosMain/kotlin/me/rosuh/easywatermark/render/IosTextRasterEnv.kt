@@ -1,37 +1,23 @@
 package me.rosuh.easywatermark.render
 
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.createFontFamilyResolver
-import androidx.compose.ui.text.platform.Font
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 
 /**
- * The **iOS text-raster environment + bundled-font boundary** — the iOS analogue of the Desktop * [DesktopWatermarkTextRenderer]'s env/font pieces. iOS, like desktop, uses a **Skiko** backend,
- * so the platform bootstrap is the same shape:
- * - the font resolver is the no-`Context` `createFontFamilyResolver()` (skiko), wired into the neutral
- * [TextRasterEnv];
- * - a bundled [FontFamily] is built from font **bytes** via the skiko byte-`Font` factory
- * (`androidx.compose.ui.text.platform.Font`) — **no compose-resources / CMP-9547**.
+ * iOS (Skiko) text-raster environment — analogue of Desktop's shared resolver + image-space density.
  *
- * Density is `Density(1f)` to match the image-space convention (`1.sp == 1px`, S3a) used on every platform.
+ * Production Text mode uses [FontFamily.Default] (ADR-0025). Bundled Noto face loading was removed
+ * with the production font payloads; there is no byte-`Font` / NSBundle loader on the product path.
  *
- * ### Font-byte acquisition is the caller's job (documented boundary, not a gap)
- * Unlike desktop (JVM classpath `getResourceAsStream`), iOS/Kotlin-Native has **no classpath resource
- * loader**, and `compose-resources` (the usual CMP bundling path) is **forbidden** here. So this boundary
- * deliberately takes the already-loaded font **`ByteArray`s as parameters** — it does NOT decide where they
- * come from. A production iOS app supplies them from the app bundle
- * (`NSBundle.mainBundle.pathForResource(...)` → `NSData` → `ByteArray`) when the iOS app target lands (C5);
- * a test supplies its own bytes. This keeps the slice honest: the *rendering* boundary is proven now;
- * *packaging* the 8 MB CJK font into an iOS bundle is a C5 concern (see `ios-decode-font-boundary.md`).
+ * Density is `Density(1f)` so `1.sp == 1px` in image space (S3a), matching other platforms.
  */
 /** J5: text raster env — not called from Swift. */
 internal object IosTextRasterEnv {
 
     /**
-     * H2: process-wide shared Skiko [FontFamily.Resolver] — avoid allocating a resolver per
+     * Process-wide shared Skiko [FontFamily.Resolver] — avoid allocating a resolver per
      * preview/export raster call. No Android Context (safe for process singleton).
      */
     private val sharedFontFamilyResolver by lazy {
@@ -44,23 +30,4 @@ internal object IosTextRasterEnv {
         density = density,
         layoutDirection = LayoutDirection.Ltr,
     )
-
-    /**
-     * Build the bundled Latin + CJK watermark [FontFamily] from the supplied font bytes (e.g. Noto Sans +
-     * Noto Sans SC), via the skiko byte-`Font` factory. [latinFirst] lists the Latin face first;
-     * `false` keeps CJK-first. Bold/Italic are synthesized (no bundled bold/italic faces, per ADR-0010).
-     * Byte acquisition is the caller's responsibility (see class KDoc).
-     *
-     * Note: production process-wide family cache lives in [IosFontLoader.bundledFontFamily]
-     * (bundle path). This API remains for tests / custom bytes.
-     */
-    fun bundledFontFamily(
-        latinBytes: ByteArray,
-        cjkBytes: ByteArray,
-        latinFirst: Boolean = true,
-    ): FontFamily {
-        val latin = Font("NotoSansLatin", latinBytes, FontWeight.Normal, FontStyle.Normal)
-        val cjk = Font("NotoSansSC", cjkBytes, FontWeight.Normal, FontStyle.Normal)
-        return if (latinFirst) FontFamily(latin, cjk) else FontFamily(cjk, latin)
-    }
 }

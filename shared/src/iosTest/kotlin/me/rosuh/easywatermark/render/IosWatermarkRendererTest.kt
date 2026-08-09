@@ -22,7 +22,7 @@ import kotlin.test.assertTrue
  * The **iOS renderer proof** (runs on `iosSimulatorArm64Test`). Proves the accepted commonMain * pipeline executes on the iOS (Skiko) target end-to-end: generate an image → Skia-encode → Skia-decode
  * ([IosImageDecoder]) → render a text cell + compose ([IosWatermarkRenderer]) → Skia-encode. Uses
  * [FontFamily.Default] (iOS system font) so the runtime proof does not depend on packaging the bundled CJK
- * font into an iOS bundle (that is C5; the bundled-font boundary [IosTextRasterEnv.bundledFontFamily] is
+ * font into an iOS bundle (historical C5 path; production uses [FontFamily.Default] per ADR-0025; the old
  * compile-proven separately). Structural/perceptual assertions, not byte-exact host pixels.
  */
 class IosWatermarkRendererTest {

@@ -21,7 +21,7 @@ import kotlin.test.assertTrue
  * The bridge is exercised over test-controlled DBs built with the parameterized `buildTemplateDatabase`
  * overloads (empty-store and seed-bytes), NOT the no-arg `buildTemplateDatabase()` — that path
  * reads the seed from `NSBundle.mainBundle`, which a Kotlin/Native test executable's bundle does not carry
- * (see `IosFontLoaderTest`). The no-arg seeded path used by `defaultIosTemplateBridge()` is proven by the
+ * (Kotlin/Native test bundle has no app Copy Bundle Resources). The no-arg seeded path used by `defaultIosTemplateBridge()` is proven by the
  * packaging gate (the seed ships in `iosApp.app`) + the live app.
  */
 class IosTemplateBridgeTest {

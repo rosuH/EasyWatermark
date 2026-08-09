@@ -32,7 +32,7 @@ Platform source sets supply the edges:
 
 - `androidMain` — byte-faithful DataStore creation (`createPreferencesDataStore(context, name)` with `SharedPreferencesMigration`), Room builder in compatibility mode (framework SupportSQLite + `createFromAsset` locale seeds, no `sqlite-bundled`).
 - `desktopMain` — DataStore/Room builders under `~/.easywatermark` (`BundledSQLiteDriver`, locale-aware seed unpack), `DesktopImageDecoder` (AWT `ImageIO` + manual EXIF bake), `DesktopWatermarkComposer`/`DesktopWatermarkTextRenderer` (system-default `FontFamily.Default`, ADR-0025), `DesktopExportPipelinePort`, `DesktopIconPersistence`, `DesktopSaveDecision`.
-- `iosMain` — DataStore/Room builders under `NSDocumentDirectory` (seeded), `IosImageDecoder` (Skia decode — already bakes EXIF, never re-rotate), `IosTextRasterEnv` (system-default `FontFamily.Default` for product Text; ADR-0025; `IosFontLoader` internal/non-product), `IosWatermarkRenderer`, `IosExportPipelinePort`, Swift-facing bridges (`IosWatermarkRenderBridge`, `IosWatermarkConfigBridge`, `IosUserConfigBridge`, `IosTemplateBridge`), `IosSharedComposeHost`/`IosProductRootHost`.
+- `iosMain` — DataStore/Room builders under `NSDocumentDirectory` (seeded), `IosImageDecoder` (Skia decode — already bakes EXIF, never re-rotate), `IosTextRasterEnv` (system-default `FontFamily.Default` for product Text; ADR-0025), `IosWatermarkRenderer`, `IosExportPipelinePort`, Swift-facing bridges (`IosWatermarkRenderBridge`, `IosWatermarkConfigBridge`, `IosUserConfigBridge`, `IosTemplateBridge`), `IosSharedComposeHost`/`IosProductRootHost`.
 
 ### Runtime wiring
 

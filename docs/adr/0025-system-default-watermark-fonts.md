@@ -34,7 +34,7 @@ Package-size research (2026-08-09) showed **NotoSansSC ~7.9 MB + NotoSans Lati
 - **Size win:** ~8.5 MB removed from iOS Resources and Desktop main classpath (each).
 - **Visual delta:** Text watermarks follow the host UI/system font (San Francisco / Roboto / JVM logical fonts, plus OS CJK fallbacks when installed). Cross-platform glyph identity is no longer a product goal.
 - **Preview ≡ export font source:** both use the same system-default family on a given platform (no preview-bundled / export-bundled split).
-- **IosFontLoader / byte-`Font` bundle path:** no longer the production default. May remain internal for optional tooling or loud-failure tests; product export/preview/bridges must not require Noto files in the app bundle.
+- **IosFontLoader / byte-`Font` bundle path:** **removed** from product tree (cleanup after ADR-0025). Product export/preview/bridges use `FontFamily.Default` only; test-only Noto may live under `desktopTest` / `androidTest`.
 - **ADR-0010** remains the source for golden two-tier strategy and sRGB pin; only its **production font bundling** scope is superseded here.
 
 ## Glossary delta

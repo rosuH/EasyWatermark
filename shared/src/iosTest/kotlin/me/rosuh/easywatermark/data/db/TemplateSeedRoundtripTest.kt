@@ -22,7 +22,7 @@ import kotlin.test.assertTrue
  * `TemplateDatabaseSeedingTest`). RUNS on `iosSimulatorArm64Test`.
  *
  * A Kotlin/Native test executable's bundle does NOT carry the app's Copy Bundle Resources (see
- * `IosFontLoaderTest`), so the test cannot read the bundled `ewm-db-*.db` via `NSBundle.mainBundle`.
+ * app Copy Bundle Resources), so the test cannot read the bundled `ewm-db-*.db` via `NSBundle.mainBundle`.
  * Instead it proves the platform-agnostic **seed-copy-then-open** mechanism end-to-end with a real Room
  * SQLite file as the seed: build an empty DB, add rows, close (so the on-disk file is a valid, complete
  * Room DB matching the commonMain schema + identity hash), read its bytes, then seed a FRESH dir from those
@@ -89,7 +89,7 @@ class TemplateSeedRoundtripTest {
 
     @Test
     fun template_seed_loader_loud_failure_for_missing_resource() {
-        // The test executable's bundle has no packaged seed → loud failure (mirrors IosFontLoaderTest).
+        // The test executable's bundle has no packaged seed → loud failure.
         val e = assertFailsWith<IllegalStateException> {
             IosTemplateSeed.loadSeedBytes(language = "definitely-missing-lang-xyz", bundle = NSBundle.mainBundle)
         }

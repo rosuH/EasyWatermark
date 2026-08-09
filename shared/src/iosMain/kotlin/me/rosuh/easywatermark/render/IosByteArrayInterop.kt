@@ -18,8 +18,8 @@ import platform.posix.memcpy
  * image-sized buffers **one byte at a time** — O(n) Swift calls per picked photo and per encoded PNG.
  *
  * This object moves the copy to a single native `memcpy`, bridging through Foundation `NSData` (which
- * Swift `Data` bridges to/from for free). It is the bulk analogue of the private `NSData → ByteArray`
- * copy already used by [IosFontLoader] (same `usePinned` + `memcpy` pattern, **no new dependency** —
+ * Swift `Data` bridges to/from for free). Same `usePinned` + `memcpy` pattern as other iosMain
+ * NSData↔ByteArray edges (e.g. [me.rosuh.easywatermark.data.db.IosTemplateSeed]; **no new dependency** —
  * `platform.Foundation`/`platform.posix` are Kotlin/Native bundled interop).
  *
  * **Byte-exact, no reinterpretation:** `memcpy` copies raw bytes, so every value round-trips including
