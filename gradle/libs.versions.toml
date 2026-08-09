@@ -1,19 +1,17 @@
 [versions]
-# Pin to stable AGP for Android Studio compatibility (Studio max supported: 9.2.1).
-# Do not use AGP 9.3+/9.4 alphas unless Studio is upgraded past that floor.
-agp = "9.2.1"
-# S4d-360: Kotlin 2.4.0 + KSP 2.3.10 — highest Maven-published KSP for this Kotlin line.
-# Official metadata (repo1.maven.org, symbol-processing-gradle-plugin): latest/release = 2.3.10
-# (lastUpdated 20260709). Hard rule: do NOT pair Kotlin 2.4.20-Beta1 with a KSP that only
-# targets 2.4.0; no KSP for 2.4.20-Beta1 is published. See build/s4d360-compatibility.md.
-kotlin = "2.4.0"
-ksp = "2.3.10"
+# AGP 9.3.1 (owner-authorized H). Requires Gradle ≥ 9.5 (wrapper 9.7.0).
+# Studio IDE sync may lag CLI; CLI assemble is the gate for this slice.
+agp = "9.3.1"
+# Kotlin 2.4.10 + KSP 2.3.11 (slices D+A). Standalone KSP 2.3.x line.
+# Hard rule: do NOT adopt Kotlin 2.4.20-Beta* (no supported KSP pair). See build/s4d360-compatibility.md.
+kotlin = "2.4.10"
+ksp = "2.3.11"
 koin-bom = "4.2.2"
 toolsGradle = "7.4.2"
 ktlintGradle = "11.3.1"
 androidxActivity = "1.13.0"
-androidxConstraintLayoutCompose = "1.1.1"
-androidxNavigationCompose = "2.10.0-alpha06"
+androidxConstraintLayoutCompose = "1.1.2"
+androidxNavigationCompose = "2.10.0-beta01"
 kotlinxSerialization = "1.11.0"
 coroutines = "1.11.0"
 lifecycle = "2.11.0"
@@ -29,7 +27,7 @@ datastorePreference = "1.3.0-alpha09"
 exifInterface = "1.4.2"
 compressor = "3.0.1"
 # Android-only custom color dialog (production parity; Compose ColorOption edge).
-colorpicker = "2.3.0"
+colorpicker = "2.4.0"
 benchmark = "1.5.0-alpha07"
 profileinstaller = "1.4.1"
 junit = "4.13.2"
@@ -41,14 +39,14 @@ androidxTestRunner = "1.7.0"
 robolectric = "4.16.1"
 # Absolute latest Compose BOM (Google Maven). BOM governs compose UI/foundation/etc.
 # Material3 explicit pin may skew BOM — owner absolute-latest policy.
-androidxComposeBom = "2026.06.01"
+androidxComposeBom = "2026.07.01"
 # Absolute latest CMP plugin (Maven Central), non-SNAPSHOT.
-composeMultiplatform = "1.12.0-beta01"
+composeMultiplatform = "1.12.0-beta03"
 accompanist = "0.37.3"
 # C3 Tier-2a (S4d-38): Coil 3 (io.coil-kt.coil3, package coil3). Compose-only; no network artifact
 # (all image models are local Uris); coil-svg dropped (SvgDecoder was never registered).
 coil = "3.5.0"
-material3 = "1.5.0-alpha23"
+material3 = "1.5.0-alpha25"
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -71,7 +69,7 @@ kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 # S4d-91: Room Gradle plugin (KMP schema/codegen) — applied to :shared only for the Room KMP
 # toolchain proof. Reuses the existing room version. :app keeps classic KSP Android Room.
 androidx-room = { id = "androidx.room", version.ref = "room" }
-# skydoves compose-stability-analyzer — Kotlin 2.4.0 matches plugin 0.12.0
+# skydoves compose-stability-analyzer — Kotlin 2.4.10 matches plugin 0.12.0
 # (TraceRecomposition / DEBUG heatmap; apply on :app only).
 stability-analyzer = { id = "com.github.skydoves.compose.stability.analyzer", version = "0.12.0" }
 
@@ -82,7 +80,7 @@ agp = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
 ksp = { module = "com.google.devtools.ksp:symbol-processing", version.ref = "ksp" }
 # S4d-361: use official alpha BOM so Material3 pre-release (catalog material3) is not forced to stable 1.4.0.
-# Alias name + call sites unchanged; artifact is compose-bom-alpha (Google Maven latest matching 2026.06.01).
+# Alias name + call sites unchanged; artifact is compose-bom-alpha (Google Maven latest matching 2026.07.01).
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom-alpha", version.ref = "androidxComposeBom" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 androidx-compose-material3-windowSizeClass = { group = "androidx.compose.material3", name = "material3-window-size-class" }
