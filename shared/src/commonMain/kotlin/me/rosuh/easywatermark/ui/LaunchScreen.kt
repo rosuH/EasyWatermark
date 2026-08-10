@@ -13,14 +13,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.testTag
+import kotlinx.coroutines.delay
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.about_title_about
 import me.rosuh.easywatermark.shared.generated.resources.tips_pick_image
@@ -47,6 +51,15 @@ fun LaunchScreen(
     val aboutContentDescription = stringResource(Res.string.about_title_about)
     val aboutInteraction = remember { MutableInteractionSource() }
     val aboutPressed by aboutInteraction.collectIsPressedAsState()
+    // After first Launch paint settles, warm About bitmaps so first About open is not cold.
+    var warmAbout by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(450)
+        warmAbout = true
+    }
+    if (warmAbout) {
+        SharedProductDrawables.warmAboutResources()
+    }
 
     // Full-bleed background (edge-to-edge); content respects safe drawing insets.
     Surface(

@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -157,84 +158,96 @@ fun AboutScreen(
                 )
             },
     ) {
-        Column(
+        // Same inset + bottom chrome geometry as [LaunchScreen]: back sits where Launch's
+        // about entry is (BottomCenter + 3% height), so open/close keeps one thumb target.
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .safeDrawingPadding()
-                .verticalScroll(rememberScrollState())
-                .testTag(if (useLargeLayout) "aboutLargeLayout" else "aboutCompactLayout"),
-            horizontalAlignment = if (useLargeLayout) Alignment.CenterHorizontally else Alignment.Start,
+                .safeDrawingPadding(),
         ) {
+            val bottomChromePad = maxHeight * 0.03f
             Column(
                 modifier = Modifier
-                    .then(
-                        if (useLargeLayout) {
-                            Modifier.widthIn(max = ABOUT_CONTENT_MAX_WIDTH_DP.dp)
-                        } else {
-                            Modifier
-                        },
-                    )
-                    .fillMaxWidth(),
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    // Clear the floating back IconButton (48.dp) + Launch-matched bottom pad.
+                    .padding(bottom = 48.dp + bottomChromePad)
+                    .testTag(if (useLargeLayout) "aboutLargeLayout" else "aboutCompactLayout"),
+                horizontalAlignment = if (useLargeLayout) Alignment.CenterHorizontally else Alignment.Start,
             ) {
-                // Production: logo near top (marginTop ~36dp), not vertically centered in a tall hero.
-                Box(
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(AboutHeroHeight)
-                        .padding(horizontal = 4.dp),
+                        .then(
+                            if (useLargeLayout) {
+                                Modifier.widthIn(max = ABOUT_CONTENT_MAX_WIDTH_DP.dp)
+                            } else {
+                                Modifier
+                            },
+                        )
+                        .fillMaxWidth(),
                 ) {
-                    IconButton(
-                        onClick = onBack,
+                    // Production: logo near top (marginTop ~36dp), not vertically centered in a tall hero.
+                    Box(
                         modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .testTag("aboutBack"),
+                            .fillMaxWidth()
+                            .height(AboutHeroHeight)
+                            .padding(horizontal = 4.dp),
+                        contentAlignment = Alignment.TopCenter,
                     ) {
-                        Icon(
-                            painter = icons.back,
-                            contentDescription = backCd,
-                            tint = MaterialTheme.colorScheme.onSurface,
+                        logo(
+                            Modifier
+                                .padding(top = AboutLogoTopPadding)
+                                .size(AboutLogoSize),
                         )
                     }
-                    logo(
-                        Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = AboutLogoTopPadding)
-                            .size(AboutLogoSize),
+
+                    SectionHeader(infoTitle)
+                    AboutRow(icons.version, versionTitle, trailing = versionName, onClick = onVersion)
+                    AboutRow(icons.rating, ratingTitle, onClick = onRate)
+                    AboutRow(icons.feedback, feedbackTitle, onClick = onFeedback)
+
+                    SectionHeader(aboutTitle)
+                    AboutRow(icons.updateLog, updateLogTitle, onClick = onUpdateLog)
+                    AboutRow(icons.openSource, openSourceTitle, onClick = onOpenSource)
+                    AboutRow(icons.privacyZh, privacyZhTitle, onClick = onPrivacyZh)
+                    AboutRow(icons.privacyEn, privacyEnTitle, onClick = onPrivacyEn)
+
+                    Spacer(Modifier.height(24.dp))
+                    DevFooter(
+                        developerCard = developerCard,
+                        designerCard = designerCard,
+                        onDeveloper = onDeveloper,
+                        onDesigner = onDesigner,
+                        sideBySide = useLargeLayout,
                     )
+                    Spacer(Modifier.height(24.dp))
+
+                    // Debug / prefs toggles — full-row hit target + brand Switch colors (not stock M3).
+                    SwitchRow(dynamicColorLabel, dynamicColorOn, onToggleDynamicColor)
+                    SwitchRow(showBoundsLabel, showBounds, onToggleBounds)
+                    if (showPreferInAppGallerySwitch) {
+                        SwitchRow(
+                            preferInAppGalleryLabel,
+                            preferInAppGallery,
+                            onTogglePreferInAppGallery,
+                        )
+                    }
+                    Spacer(Modifier.height(24.dp))
                 }
+            }
 
-                SectionHeader(infoTitle)
-                AboutRow(icons.version, versionTitle, trailing = versionName, onClick = onVersion)
-                AboutRow(icons.rating, ratingTitle, onClick = onRate)
-                AboutRow(icons.feedback, feedbackTitle, onClick = onFeedback)
-
-                SectionHeader(aboutTitle)
-                AboutRow(icons.updateLog, updateLogTitle, onClick = onUpdateLog)
-                AboutRow(icons.openSource, openSourceTitle, onClick = onOpenSource)
-                AboutRow(icons.privacyZh, privacyZhTitle, onClick = onPrivacyZh)
-                AboutRow(icons.privacyEn, privacyEnTitle, onClick = onPrivacyEn)
-
-                Spacer(Modifier.height(24.dp))
-                DevFooter(
-                    developerCard = developerCard,
-                    designerCard = designerCard,
-                    onDeveloper = onDeveloper,
-                    onDesigner = onDesigner,
-                    sideBySide = useLargeLayout,
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = bottomChromePad)
+                    .testTag("aboutBack"),
+            ) {
+                Icon(
+                    painter = icons.back,
+                    contentDescription = backCd,
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
-                Spacer(modifier.height(24.dp))
-
-                // Debug / prefs toggles — full-row hit target + brand Switch colors (not stock M3).
-                SwitchRow(dynamicColorLabel, dynamicColorOn, onToggleDynamicColor)
-                SwitchRow(showBoundsLabel, showBounds, onToggleBounds)
-                if (showPreferInAppGallerySwitch) {
-                    SwitchRow(
-                        preferInAppGalleryLabel,
-                        preferInAppGallery,
-                        onTogglePreferInAppGallery,
-                    )
-                }
-                Spacer(modifier.height(24.dp))
             }
         }
     }
@@ -451,8 +464,8 @@ private val AboutLogoSize = 64.dp
 /** Production logo sits high (marginTop ~36dp), not mid-hero. */
 private val AboutLogoTopPadding = 8.dp
 
-/** Compact hero: back row + logo (~64) + small bottom gap. */
-private val AboutHeroHeight = 100.dp
+/** Compact hero: logo only (~64) + small vertical gap (back is bottom chrome like Launch). */
+private val AboutHeroHeight = 88.dp
 
 /** Equal-size developer / designer cards (avatar 56 + vertical padding). */
 private val AboutDevCardHeight = 88.dp

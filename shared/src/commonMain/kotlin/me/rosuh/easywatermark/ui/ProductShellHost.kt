@@ -11,11 +11,14 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
+import me.rosuh.easywatermark.ui.theme.DesignEditorBg
 import me.rosuh.easywatermark.ui.theme.EwmTheme
 import me.rosuh.easywatermark.ui.theme.MotionPolicy
 import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
@@ -36,17 +39,27 @@ fun ProductShellHost(
     content: @Composable (route: ProductShellNav.Route) -> Unit,
 ) {
     val motionPolicy = currentMotionPolicy()
-    AnimatedContent(
-        targetState = route,
-        transitionSpec = {
-            ProductShellTransitions.transform(initialState, targetState, motionPolicy)
-        },
-        contentAlignment = Alignment.Center,
-        label = "productShellRoute",
-        // No clip — scale/slide of About must not be cut by the shell bounds.
-        modifier = modifier.fillMaxSize(),
-    ) { target ->
-        content(target)
+    // Outer Box owns the product olive fill. About enter/exit uses scaleIn/Out; the letterbox
+    // around scaled pages must never show Compose/Desktop default white (owner recording
+    // 2026-08-10). Use DesignEditorBg — not Material background — so light-scheme / host
+    // defaults cannot reintroduce a white flash.
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(DesignEditorBg),
+    ) {
+        AnimatedContent(
+            targetState = route,
+            transitionSpec = {
+                ProductShellTransitions.transform(initialState, targetState, motionPolicy)
+            },
+            contentAlignment = Alignment.Center,
+            label = "productShellRoute",
+            // No clip — scale/slide of About must not be cut by the shell bounds.
+            modifier = Modifier.fillMaxSize(),
+        ) { target ->
+            content(target)
+        }
     }
 }
 

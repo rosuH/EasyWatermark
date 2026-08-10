@@ -106,9 +106,16 @@ fun <T> SaveExportSheetShell(
     exportFailureCount: Int = 0,
     /**
      * ≥840 path: centered dialog instead of phone bottom drawer (H4).
-     * Compact/Medium keep the sheet.
+     * Compact/Medium keep the sheet. Desktop uses the sheet (not center dialog) so
+     * export chrome stays bottom-anchored like phone (owner 2026-08-10).
      */
     useLargeDialog: Boolean = false,
+    /**
+     * Desktop (and future hosts): when non-null, show a visible destination row with a
+     * "choose folder" action. Android/iOS leave null (album/Photos are not user-picked paths).
+     */
+    onChooseDestination: (() -> Unit)? = null,
+    chooseDestinationLabel: String = "",
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
     onFormatClick: (newFormat: ImageFormat) -> Unit,
@@ -194,22 +201,52 @@ fun <T> SaveExportSheetShell(
                 onQualityChange = onQualityChange,
             )
 
-            // a11y + structural tags only — no idle visual icon strip.
+            // Destination: visible path row when host provides [destinationLine]; optional
+            // choose-folder action (Desktop). Filename policy stays a11y-only residual.
             // Privacy confidence copy removed (codex/remove-privacy-confidence-copy).
-            if (hasDestination || hasFilenamePolicy) {
+            if (hasDestination) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp)
+                        .testTag("sharedComposeExportDestination")
+                        .semantics { contentDescription = destinationCd },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = destinationLine,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (onChooseDestination != null && chooseDestinationLabel.isNotBlank()) {
+                        TextButton(
+                            onClick = onChooseDestination,
+                            enabled = primaryActionEnabled && !isExporting,
+                            modifier = Modifier.testTag("sharedComposeExportChooseDestination"),
+                            shape = RectangleShape,
+                        ) {
+                            Text(chooseDestinationLabel)
+                        }
+                    }
+                }
+            } else if (hasFilenamePolicy) {
                 Spacer(
                     Modifier
                         .size(0.dp)
                         .testTag("sharedComposeExportDestination")
                         .semantics { contentDescription = destinationCd },
                 )
+            }
+            if (hasFilenamePolicy) {
                 Spacer(
                     Modifier
                         .size(0.dp)
                         .testTag("sharedComposeExportFilenamePolicy")
                         .semantics {
-                            contentDescription =
-                                if (hasFilenamePolicy) filenamePolicyLine else destinationCd
+                            contentDescription = filenamePolicyLine
                         },
                 )
             }

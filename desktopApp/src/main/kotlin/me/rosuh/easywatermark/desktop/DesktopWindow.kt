@@ -97,11 +97,13 @@ import me.rosuh.easywatermark.shared.generated.resources.desktop_import_failed
 import me.rosuh.easywatermark.shared.generated.resources.desktop_imported
 import me.rosuh.easywatermark.shared.generated.resources.desktop_importing
 import me.rosuh.easywatermark.shared.generated.resources.desktop_ready_status
+import me.rosuh.easywatermark.shared.generated.resources.desktop_choose_folder
+import me.rosuh.easywatermark.shared.generated.resources.desktop_choose_folder_dialog_title
+import me.rosuh.easywatermark.shared.generated.resources.desktop_export
 import me.rosuh.easywatermark.shared.generated.resources.desktop_save_as
 import me.rosuh.easywatermark.shared.generated.resources.desktop_save_as_dialog_title
 import me.rosuh.easywatermark.shared.generated.resources.desktop_save_as_failed
 import me.rosuh.easywatermark.shared.generated.resources.desktop_saved_as
-import me.rosuh.easywatermark.shared.generated.resources.dialog_export_to_gallery
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_cd_done
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_cd_progress
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_failed
@@ -120,7 +122,6 @@ import me.rosuh.easywatermark.ui.sharedString
 import me.rosuh.easywatermark.ui.EditorBottomControls
 import me.rosuh.easywatermark.ui.EditorScreen
 import me.rosuh.easywatermark.ui.editorLayoutClass
-import me.rosuh.easywatermark.ui.usesLargeScreenDialog
 import me.rosuh.easywatermark.shared.generated.resources.dev_comment
 import me.rosuh.easywatermark.ui.about.AboutDevCard
 import me.rosuh.easywatermark.ui.about.AboutScreenIcons
@@ -152,6 +153,7 @@ import me.rosuh.easywatermark.ui.save.SaveExportSheetShell
 
 import me.rosuh.easywatermark.platform.platformMotionPolicy
 import me.rosuh.easywatermark.ui.theme.AppTheme
+import me.rosuh.easywatermark.ui.theme.DesignEditorBg
 import me.rosuh.easywatermark.ui.theme.ProvideMotionPolicy
 import org.jetbrains.compose.resources.stringResource
 import java.awt.Desktop
@@ -160,6 +162,7 @@ import java.awt.datatransfer.DataFlavor
 import java.io.File
 import java.net.URI
 import java.util.prefs.Preferences
+import javax.swing.JFileChooser
 
 /** Best-effort Open-dialog filename filter (honored on macOS; ignored on some platforms — harmless). */
 // J3: capability-true extensions (WebP only if ImageIO can decode — stock JDK usually cannot).
@@ -307,8 +310,10 @@ fun launchDesktopWindow() = application {
     // Persist window state under OS-native app-data (J3 DesktopAppPaths; legacy ~/.easywatermark
     // copy-forward when empty). Headless/demo witnesses stay under build/ (Main.kt).
     val appDataDir = remember { resolveDesktopAppDataDir() }
-    // Real Save/Export batch destination (unique names). Save As uses the user-chosen path exactly.
-    val outputDir = remember { resolveDesktopOutputDir() }
+    // Real Save/Export batch destination (unique names). User can change via export-sheet
+    // folder chooser. Save As uses the user-chosen file path exactly.
+    val outputDirState = remember { mutableStateOf(resolveDesktopOutputDir()) }
+    var outputDir by outputDirState
     // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
     val repo = remember { DesktopWatermarkFlow.buildRepository(dir = appDataDir) }
     val editor = remember { WatermarkConfigEditor(repo) }
@@ -316,11 +321,14 @@ fun launchDesktopWindow() = application {
     val userConfigRepo = remember { DesktopWatermarkFlow.buildUserConfigRepository(dir = appDataDir) }
     // Shared session + Desktop export port (unique destination). Preview uses runSaveFlow temp;
     // Save As uses DesktopSaveAsDestination.renderAndSaveExact.
+    // outputDirProvider always reads the latest folder (chooser can change mid-session).
     val session = remember {
         WatermarkSessionViewModel(
             waterMarkRepo = repo,
             userConfigRepo = userConfigRepo,
-            exportPipeline = DesktopExportPipelinePort(outputDirProvider = { outputDir }),
+            exportPipeline = DesktopExportPipelinePort(
+                outputDirProvider = { outputDirState.value },
+            ),
         )
     }
     val exportJobState by session.exportJobState.collectAsState()
@@ -839,9 +847,32 @@ fun launchDesktopWindow() = application {
                 })
             }
         }
-        SideEffect { desktopFrame = window }
+        SideEffect {
+            desktopFrame = window
+            // macOS option 2: fullWindowContent + transparent title bar + olive fill.
+            applyProductWindowChrome(window)
+        }
+        // Re-apply after first layout — some AWT peers only honor title-bar client
+        // properties once the native window is realized.
+        LaunchedEffect(window) {
+            applyProductWindowChrome(window)
+            delay(32)
+            applyProductWindowChrome(window)
+        }
         AppTheme(darkTheme = true) {
             // I3: Desktop platformMotionPolicy is Full (no OS reduce-motion API).
+            // Window-root olive paints edge-to-edge (including under macOS traffic lights).
+            // Product content is inset so back/export chrome clears the title-bar band.
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(DesignEditorBg),
+            ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .macFullWindowContentInsets(),
+            ) {
             ProvideMotionPolicy(platformMotionPolicy()) {
             // E1: Session-only current for filmstrip (no host selectedSessionImage mirror).
             val selectedForStrip = launchUi.curImageInfo
@@ -1317,7 +1348,8 @@ fun launchDesktopWindow() = application {
                 val primaryLabel = when {
                     recovery.isExporting -> stringResource(Res.string.dialog_save_exporting)
                     recovery.isFinished -> stringResource(Res.string.share)
-                    else -> stringResource(Res.string.dialog_export_to_gallery)
+                    // Desktop is folder export, not phone album.
+                    else -> stringResource(Res.string.desktop_export)
                 }
                 val resultSummaryText = when {
                     recovery.isExporting -> stringResource(
@@ -1394,10 +1426,24 @@ fun launchDesktopWindow() = application {
                         stringResource(Res.string.dialog_save_error_generic)
                     else -> ""
                 }
-                // Desktop-only Save As (exact path) — not unique batch export naming.
-                val saveAsLabel = stringResource(Res.string.desktop_save_as)
-                val saveAsDialogTitle = stringResource(Res.string.desktop_save_as_dialog_title)
+                val chooseFolderLabel = stringResource(Res.string.desktop_choose_folder)
+                val chooseFolderTitle = stringResource(Res.string.desktop_choose_folder_dialog_title)
                 val exportErrorGeneric = stringResource(Res.string.dialog_save_error_generic)
+                val pickExportFolder: () -> Unit = {
+                    // Swing directory chooser (AWT FileDialog has no reliable folder mode).
+                    val chooser = JFileChooser(outputDir).apply {
+                        fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
+                        dialogTitle = chooseFolderTitle
+                        isAcceptAllFileFilterUsed = false
+                    }
+                    val result = chooser.showOpenDialog(window)
+                    if (result == JFileChooser.APPROVE_OPTION) {
+                        chooser.selectedFile?.takeIf { it.isDirectory }?.let { picked ->
+                            outputDir = picked
+                            status = "Export folder: ${picked.path}"
+                        }
+                    }
+                }
                 val runBatchExport: () -> Unit = {
                     scope.launch {
                         busy = true
@@ -1441,22 +1487,11 @@ fun launchDesktopWindow() = application {
                         }
                     }
                 }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.End,
-                ) {
-                    Button(
-                        onClick = { saveAsExactPath(window, dialogTitle = saveAsDialogTitle) },
-                        enabled = !exportJobState.isSaving && !busy,
-                    ) {
-                        Text(saveAsLabel)
-                    }
-                }
+                // Bottom sheet (not center dialog): matches phone export chrome; avoids
+                // floating mid-window panel on Desktop (owner 2026-08-10).
                 SaveExportSheetShell(
                     items = exportItems,
-                    useLargeDialog = true,
+                    useLargeDialog = false,
                     selectedFormat = outputFormat,
                     quality = outputQuality,
                     primaryActionLabel = primaryLabel,
@@ -1478,6 +1513,8 @@ fun launchDesktopWindow() = application {
                     exportTotalCount = exportCountTotal,
                     exportSuccessCount = exportCountSuccess,
                     exportFailureCount = exportCountFailure,
+                    onChooseDestination = pickExportFolder,
+                    chooseDestinationLabel = chooseFolderLabel,
                     itemKey = { it.uri.value },
                     onDismiss = {
                         if (!exportJobState.isSaving) showSaveSheet = false
@@ -1569,6 +1606,8 @@ fun launchDesktopWindow() = application {
                 }
             }
             } // ProvideMotionPolicy
+            } // mac full-window content inset
+            } // window-root olive Box
         } // AppTheme
     } // Window
 }

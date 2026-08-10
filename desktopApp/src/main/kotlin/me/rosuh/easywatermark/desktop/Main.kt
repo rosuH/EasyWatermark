@@ -29,6 +29,8 @@ import java.io.File
  */
 fun main(args: Array<String>) {
     if (args.none { it == "--headless" }) {
+        // Before AWT/Compose: macOS dark title-bar appearance (product is forced-dark olive).
+        installDesktopProductAppearanceEarly()
         // Default (no-arg) launch -> the Compose Desktop window.
         launchDesktopWindow()
         return

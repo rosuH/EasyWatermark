@@ -13,11 +13,17 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import me.rosuh.easywatermark.data.model.ImageInfoUi
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
@@ -124,6 +130,15 @@ fun EditorScreen(
         EditorLayoutClass.Wide -> "editorLayoutWide"
     }
     val dualOrWide = layoutClass == EditorLayoutClass.Expanded || layoutClass == EditorLayoutClass.Wide
+    // Editor → About path may skip Launch; warm About bitmaps after first editor frame.
+    var warmAbout by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(500)
+        warmAbout = true
+    }
+    if (warmAbout) {
+        SharedProductDrawables.warmAboutResources()
+    }
 
     EditorTemplateSheetHost(
         templates = templates,

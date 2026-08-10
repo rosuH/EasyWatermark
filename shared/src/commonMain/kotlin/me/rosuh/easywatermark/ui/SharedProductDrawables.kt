@@ -113,6 +113,25 @@ object SharedProductDrawables {
     @Composable fun avatarDevPainter(): Painter = painterResource(avatarDev)
     @Composable fun avatarToviPainter(): Painter = painterResource(avatarTovi)
     @Composable fun closePainter(): Painter = painterResource(close)
+
+    /**
+     * Touch About-only drawables so first About open does not pay cold decode on the
+     * same frames as ProductShell AnimatedContent enter (Launch/Editor idle warm).
+     * [bg_avatar_dev] is 512×512 WebP — dominant cost on first About.
+     */
+    @Composable
+    fun warmAboutResources() {
+        logoAboutPainter()
+        avatarDevPainter()
+        avatarToviPainter()
+        versionPainter()
+        ratePainter()
+        feedbackPainter()
+        updateLogPainter()
+        openSourcePainter()
+        privacyZhPainter()
+        privacyEnPainter()
+    }
     @Composable fun searchPainter(): Painter = painterResource(search)
     @Composable fun galleryCheckPainter(): Painter = painterResource(galleryCheck)
     @Composable fun saveDonePainter(): Painter = painterResource(saveDone)

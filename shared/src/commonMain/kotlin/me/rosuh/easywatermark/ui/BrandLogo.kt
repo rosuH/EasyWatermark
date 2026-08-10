@@ -11,7 +11,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
@@ -86,7 +91,21 @@ fun GradientMaskedLogo(
     animate: Boolean = true,
 ) {
     // I3: Reduced/Off suppress infinite decorative sweep even if caller passed animate=true.
-    val effectiveAnimate = animate && motionAllowsDecorativeLoop(currentMotionPolicy())
+    val motionOk = motionAllowsDecorativeLoop(currentMotionPolicy())
+    // First paint stays static so About/Launch open does not pay Offscreen+infiniteTransition
+    // setup on the same frame as route AnimatedContent + first resource decode (cold open jank).
+    var sweepReady by remember { mutableStateOf(false) }
+    LaunchedEffect(animate, motionOk) {
+        if (!animate || !motionOk) {
+            sweepReady = false
+            return@LaunchedEffect
+        }
+        // Two frames: first layout/draw of static logo, then enable sweep.
+        withFrameNanos { }
+        withFrameNanos { }
+        sweepReady = true
+    }
+    val effectiveAnimate = animate && motionOk && sweepReady
     if (!effectiveAnimate) {
         Image(
             painter = painter,

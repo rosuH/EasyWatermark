@@ -47,6 +47,9 @@
     <string name="share">Share</string>
     <string name="desktop_save_as">Save As…</string>
     <string name="desktop_save_as_dialog_title">Save As</string>
+    <string name="desktop_export">Export</string>
+    <string name="desktop_choose_folder">Choose folder…</string>
+    <string name="desktop_choose_folder_dialog_title">Choose export folder</string>
     <string name="desktop_importing">Importing %1$d image(s)…</string>
     <string name="desktop_imported">Imported %1$d image(s) (no export)</string>
     <string name="desktop_import_failed">Import failed: %1$s</string>
