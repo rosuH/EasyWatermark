@@ -175,7 +175,7 @@ private fun ContentForm(
         val spec = specByType[type] ?: EditorOptionSpec(type)
         when (type) {
             FuncType.Text -> {
-                FormFieldLabel(textLabel)
+                // Title + template icon are owned by InlineTextContentField (same row).
                 EditorOptionControl(
                     spec = spec,
                     waterMark = waterMark,

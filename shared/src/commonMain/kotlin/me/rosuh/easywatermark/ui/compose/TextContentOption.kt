@@ -44,6 +44,7 @@ import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.dialog_title_edit_watermark
 import me.rosuh.easywatermark.shared.generated.resources.dialog_title_template_title
 import me.rosuh.easywatermark.shared.generated.resources.tips_confirm_dialog
+import me.rosuh.easywatermark.shared.generated.resources.water_mark_mode_text
 
 import me.rosuh.easywatermark.ui.theme.EwmTheme
 import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
@@ -167,7 +168,7 @@ fun TextContentOption(
 
 /**
  * Side-pane form text field — live edit without the phone modal sheet.
- * Template entry is a text button under the field (DEMO “从模板选择…”).
+ * Title + template icon share one row; field fills width below.
  */
 @Composable
 private fun InlineTextContentField(
@@ -180,12 +181,50 @@ private fun InlineTextContentField(
 ) {
     // Local draft so typing is smooth; external text (template apply) resets draft.
     var draft by remember(text) { mutableStateOf(text) }
+    val title = stringResource(Res.string.water_mark_mode_text)
+    val templateCd = stringResource(Res.string.dialog_title_template_title)
     Column(
         modifier = modifier
             .fillMaxWidth()
             .testTag(TEXT_CONTENT_INLINE_TAG),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        // Title + template affordance on one row (owner layout polish).
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("watermarkTextContentTitle"),
+            )
+            if (templateIcon != null) {
+                IconButton(
+                    enabled = enabled,
+                    onClick = onGoTemplateList,
+                    modifier = Modifier.testTag(TEXT_CONTENT_TEMPLATE_ICON_TAG),
+                ) {
+                    Icon(
+                        painter = templateIcon,
+                        contentDescription = templateCd,
+                    )
+                }
+            } else {
+                Button(
+                    enabled = enabled,
+                    onClick = onGoTemplateList,
+                    shape = RectangleShape,
+                    modifier = Modifier.testTag(TEXT_CONTENT_TEMPLATE_ICON_TAG),
+                ) {
+                    Text(text = templateCd)
+                }
+            }
+        }
         OutlinedTextField(
             value = draft,
             onValueChange = {
@@ -200,32 +239,6 @@ private fun InlineTextContentField(
                 .fillMaxWidth()
                 .testTag(TEXT_CONTENT_EDIT_FIELD_TAG),
         )
-        // Template affordance — icon if host supplied one, else plain text button.
-        if (templateIcon != null) {
-            IconButton(
-                enabled = enabled,
-                onClick = onGoTemplateList,
-                modifier = Modifier
-                    .align(Alignment.Start)
-                    .testTag(TEXT_CONTENT_TEMPLATE_ICON_TAG),
-            ) {
-                Icon(
-                    painter = templateIcon,
-                    contentDescription = stringResource(Res.string.dialog_title_template_title),
-                )
-            }
-        } else {
-            Button(
-                enabled = enabled,
-                onClick = onGoTemplateList,
-                shape = RectangleShape,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(TEXT_CONTENT_TEMPLATE_ICON_TAG),
-            ) {
-                Text(text = stringResource(Res.string.dialog_title_template_title))
-            }
-        }
     }
 }
 

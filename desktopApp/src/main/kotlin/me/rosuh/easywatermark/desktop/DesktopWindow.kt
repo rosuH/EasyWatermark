@@ -653,8 +653,7 @@ fun launchDesktopWindow() = application {
         }
         // E2E: multiline watermark text for H1/H2 shots (literal \n in property → real newlines).
         System.getProperty("ewm.desktop.forceText")?.trim()?.takeIf { it.isNotEmpty() }?.let { rawText ->
-            val text = rawText.replace("\n", "
-")
+            val text = rawText.replace("\\n", "\n")
             session.applyConfig(
                 me.rosuh.easywatermark.data.model.WatermarkConfigChange.Text(text),
             )

@@ -7,9 +7,11 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
@@ -77,7 +79,9 @@ fun SliderOption(
      */
     label: String? = null,
     /**
-     * When true and [label] is non-blank, paint a visible left label (form inspector).
+     * When true and [label] is non-blank, paint a form inspector layout:
+     * **label row** (title start + mono value end) **above** a full-width track.
+     * Avoids unequal track widths from different title lengths.
      * Phone bottom chrome keeps false so layout stays track+value only.
      */
     showLabel: Boolean = false,
@@ -135,67 +139,52 @@ fun SliderOption(
         }
     }
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            // I2: name + value/state; disabled when not interactive.
-            .semantics(mergeDescendants = true) {
-                contentDescription = a11yName
-                stateDescription = valueDisplay
-                if (!enabled) disabled()
-            }
-            .focusable(enabled = enabled, interactionSource = interactionSource)
-            .onPreviewKeyEvent { event ->
-                if (!enabled || event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                val units = if (event.isShiftPressed) 10 else 1
-                when (event.key) {
-                    Key.DirectionLeft, Key.DirectionDown -> {
-                        applyStep(-units)
-                        true
-                    }
-                    Key.DirectionRight, Key.DirectionUp -> {
-                        applyStep(units)
-                        true
-                    }
-                    else -> false
-                }
-            }
-            .pointerInput(enabled, coerced, safeRange, step) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        if (!enabled || event.type != PointerEventType.Scroll) continue
-                        val scroll = event.changes.firstOrNull()?.scrollDelta ?: continue
-                        // Vertical wheel preferred; horizontal trackpad also steps.
-                        val delta = when {
-                            scroll.y != 0f -> -scroll.y.sign.toInt().coerceIn(-1, 1)
-                            scroll.x != 0f -> scroll.x.sign.toInt().coerceIn(-1, 1)
-                            else -> 0
-                        }
-                        if (delta != 0) {
-                            applyStep(delta)
-                            event.changes.forEach { it.consume() }
-                        }
-                    }
-                }
-            }
-            .testTag("sliderOption"),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        if (showLabel && !label.isNullOrBlank()) {
-            Text(
-                text = label,
-                color = if (enabled) Color.White.copy(alpha = 0.78f) else Color.White.copy(alpha = 0.4f),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .widthIn(min = 40.dp, max = 88.dp)
-                    .testTag("sliderLabel"),
-            )
+    val interactionModifier = Modifier
+        .fillMaxWidth()
+        // I2: name + value/state; disabled when not interactive.
+        .semantics(mergeDescendants = true) {
+            contentDescription = a11yName
+            stateDescription = valueDisplay
+            if (!enabled) disabled()
         }
+        .focusable(enabled = enabled, interactionSource = interactionSource)
+        .onPreviewKeyEvent { event ->
+            if (!enabled || event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+            val units = if (event.isShiftPressed) 10 else 1
+            when (event.key) {
+                Key.DirectionLeft, Key.DirectionDown -> {
+                    applyStep(-units)
+                    true
+                }
+                Key.DirectionRight, Key.DirectionUp -> {
+                    applyStep(units)
+                    true
+                }
+                else -> false
+            }
+        }
+        .pointerInput(enabled, coerced, safeRange, step) {
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent()
+                    if (!enabled || event.type != PointerEventType.Scroll) continue
+                    val scroll = event.changes.firstOrNull()?.scrollDelta ?: continue
+                    // Vertical wheel preferred; horizontal trackpad also steps.
+                    val delta = when {
+                        scroll.y != 0f -> -scroll.y.sign.toInt().coerceIn(-1, 1)
+                        scroll.x != 0f -> scroll.x.sign.toInt().coerceIn(-1, 1)
+                        else -> 0
+                    }
+                    if (delta != 0) {
+                        applyStep(delta)
+                        event.changes.forEach { it.consume() }
+                    }
+                }
+            }
+        }
+        .testTag("sliderOption")
+
+    val sliderControl: @Composable (Modifier) -> Unit = { sliderModifier ->
         Slider(
             value = snap(coerced),
             onValueChange = { onValueChange(snap(it)) },
@@ -203,8 +192,7 @@ fun SliderOption(
             enabled = enabled,
             steps = steps,
             valueRange = safeRange,
-            modifier = Modifier
-                .weight(1f)
+            modifier = sliderModifier
                 .height(SliderHitHeight)
                 .testTag("sliderTrack"),
             colors = colors,
@@ -234,6 +222,9 @@ fun SliderOption(
                 }
             },
         )
+    }
+
+    val valueLabel: @Composable () -> Unit = {
         // Value label only — no white bubble (owner request / design polish).
         // Form path uses mono so DEMO right-value reads as a metric, not body copy.
         Text(
@@ -247,6 +238,45 @@ fun SliderOption(
                 .widthIn(min = 28.dp)
                 .testTag("sliderValue"),
         )
+    }
+
+    if (showLabel && !label.isNullOrBlank()) {
+        // Form inspector: title + value on one row; full-width track below (equal track widths).
+        Column(
+            modifier = modifier.then(interactionModifier),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = label,
+                    color = if (enabled) Color.White.copy(alpha = 0.78f) else Color.White.copy(alpha = 0.4f),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .padding(end = 8.dp)
+                        .testTag("sliderLabel"),
+                )
+                valueLabel()
+            }
+            sliderControl(Modifier.fillMaxWidth())
+        }
+    } else {
+        // Phone bottom chrome: track + value on one row (no title).
+        Row(
+            modifier = modifier.then(interactionModifier),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            sliderControl(Modifier.weight(1f))
+            valueLabel()
+        }
     }
 }
 

@@ -291,7 +291,7 @@ Optional: split ACSP per batch (A, then B+C, then D+E+F) **only if** each sessio
 | Batch | State |
 |---|---|
 | Research report | done |
-| This goal/plan | **authored** |
+| This goal/plan | **done Accept** |
 | A Multiline P0 | **done** |
 | B Export/Template | **done** |
 | C About | **done** |
