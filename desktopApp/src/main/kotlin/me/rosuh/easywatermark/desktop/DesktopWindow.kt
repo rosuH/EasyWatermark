@@ -573,6 +573,22 @@ fun launchDesktopWindow() = application {
         }
     }
 
+    // ADR-0026 E2E: optional auto-import without FileDialog.
+    // -Dewm.desktop.autoOpen=/path/a.png[,/path/b.png] — colon-separated list also accepted.
+    // Production launches omit the property (no auto-import).
+    LaunchedEffect(Unit) {
+        val raw = System.getProperty("ewm.desktop.autoOpen")?.trim().orEmpty()
+        if (raw.isEmpty()) return@LaunchedEffect
+        val files = raw.split(',', ';')
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .map { File(it) }
+            .filter { it.isFile }
+        if (files.isNotEmpty()) {
+            openImageFilesBatch(files, append = false)
+        }
+    }
+
     // Drop → same import-only batch as Open / Add more (append when editor already has images).
     val importBatchLatest = rememberUpdatedState(
         newValue = { files: List<File>, append: Boolean -> openImageFilesBatch(files, append) },
@@ -1338,17 +1354,6 @@ fun launchDesktopWindow() = application {
                     exportSuccessCount = exportCountSuccess,
                     exportFailureCount = exportCountFailure,
                     itemKey = { it.uri.value },
-                    // Prefer already-decoded filmstrip/export thumbs; ImageInfo 1×1 is unknown.
-                    itemAspectRatio = { info ->
-                        val thumb = desktopThumbCache[info.uri.value]
-                        when {
-                            thumb != null && thumb.width > 1 && thumb.height > 1 ->
-                                thumb.width.toFloat() / thumb.height.toFloat()
-                            info.width > 1 && info.height > 1 ->
-                                info.width.toFloat() / info.height.toFloat()
-                            else -> null
-                        }
-                    },
                     onDismiss = {
                         if (!exportJobState.isSaving) showSaveSheet = false
                     },

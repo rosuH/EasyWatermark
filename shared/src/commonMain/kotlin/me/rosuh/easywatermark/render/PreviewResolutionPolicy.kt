@@ -17,6 +17,18 @@ internal object PreviewResolutionPolicy {
     const val BUCKET_1920: Int = 1920
 
     /**
+     * Map measured preview-box width/height (px) to a committed long-edge bucket.
+     * Uses the longer side so Fit-letterboxed content still tracks the display scale.
+     * Desktop/iOS preview hosts that only know the box size (not source pixels) use this.
+     */
+    fun committedMaxEdgePx(previewBoxWidthPx: Int, previewBoxHeightPx: Int): Int {
+        if (previewBoxWidthPx <= 0 || previewBoxHeightPx <= 0) {
+            return BUCKET_720
+        }
+        return bucketForLongEdge(maxOf(previewBoxWidthPx, previewBoxHeightPx))
+    }
+
+    /**
      * ContentScale.Fit's displayed long edge with 10% headroom, rounded into the approved
      * committed buckets.  Invalid metadata/constraints intentionally falls back to the safe 720.
      */

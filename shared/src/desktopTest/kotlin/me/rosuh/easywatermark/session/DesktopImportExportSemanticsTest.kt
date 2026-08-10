@@ -204,7 +204,14 @@ class DesktopImportExportSemanticsTest {
         // Save As body
         val saveStart = text.indexOf("fun saveAsExactPath")
         assertTrue(saveStart >= 0)
-        val saveEnd = text.indexOf("Window(onCloseRequest", saveStart)
+        // DesktopWindow uses multi-line `Window(\n onCloseRequest = …)`; do not require
+        // a single-line `Window(onCloseRequest` match (that ballooned saveBody and false-failed).
+        val saveEndCandidates = listOf(
+            text.indexOf("\n    fun closeDesktopWindow", saveStart),
+            text.indexOf("Window(\n", saveStart),
+            text.indexOf("Window(onCloseRequest", saveStart),
+        ).filter { it > saveStart }
+        val saveEnd = saveEndCandidates.minOrNull() ?: -1
         val saveBody = text.substring(saveStart, if (saveEnd > saveStart) saveEnd else text.length)
         assertTrue("DesktopSaveAsDestination.renderAndSaveExact" in saveBody)
         assertTrue("DesktopRenderRequest" in saveBody)
