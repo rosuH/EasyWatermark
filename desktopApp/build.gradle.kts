@@ -55,6 +55,16 @@ dependencies {
 compose.desktop {
     application {
         mainClass = "me.rosuh.easywatermark.desktop.MainKt"
+        // ADR-0026 E2E: optional -PewmAutoOpen / -PewmW / -PewmH → app JVM system properties.
+        // Production `run` / distributable omit these properties (no auto-import, default window size).
+        // Accept both Pewm* (task brief) and ewm* spellings.
+        fun prop(vararg names: String): String? =
+            names.firstNotNullOfOrNull { providers.gradleProperty(it).orNull }
+        listOfNotNull(
+            prop("EwmAutoOpen", "ewmAutoOpen")?.let { "-Dewm.desktop.autoOpen=$it" },
+            prop("EwmW", "ewmW")?.let { "-Dewm.desktop.widthDp=$it" },
+            prop("EwmH", "ewmH")?.let { "-Dewm.desktop.heightDp=$it" },
+        ).forEach { jvmArgs += it }
         nativeDistributions {
             packageName = "EasyWatermark"
             // S4d-175: single-sourced from the Android app version (buildSrc Apps.versionName), shared with :app.

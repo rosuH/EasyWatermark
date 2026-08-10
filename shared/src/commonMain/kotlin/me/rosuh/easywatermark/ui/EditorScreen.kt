@@ -230,29 +230,21 @@ fun EditorScreen(
                             )
                         }
 
-                        // Supporting inspector — fixed max rail + padding (P1 A polish).
-                        Column(
+                        // Supporting form inspector — top tabs + scroll body (no phone Center chrome).
+                        EditorInspectorPanel(
+                            waterMark = waterMark,
+                            templateIcon = icons.templateList,
+                            onValueChange = onConfigChange,
+                            onGoTemplateList = showTemplateSheet,
+                            colorOption = colorOption,
+                            iconOption = iconOption,
                             modifier = Modifier
                                 .width(EDITOR_EXPANDED_CONTROLS_PANE_MAX_DP.dp)
                                 .widthIn(max = EDITOR_EXPANDED_CONTROLS_PANE_MAX_DP.dp)
                                 .fillMaxHeight()
                                 .padding(EDITOR_SUPPORTING_PANE_PADDING_DP.dp)
                                 .testTag("editorExpandedControlsPane"),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            Box(modifier = Modifier.weight(1f, fill = true).fillMaxWidth()) {
-                                EditorBottomControls(
-                                    waterMark = waterMark,
-                                    templateIcon = icons.templateList,
-                                    onValueChange = onConfigChange,
-                                    onGoTemplateList = showTemplateSheet,
-                                    colorOption = colorOption,
-                                    iconOption = iconOption,
-                                    optionItem = optionItem,
-                                    modifier = Modifier.fillMaxSize(),
-                                )
-                            }
-                        }
+                        )
                     }
                 } else {
                     // Compact / Medium: phone vertical stack (M1).

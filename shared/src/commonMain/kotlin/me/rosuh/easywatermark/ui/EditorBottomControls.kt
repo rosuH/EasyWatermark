@@ -83,8 +83,14 @@ fun EditorBottomControls(
     )
 }
 
+/**
+ * Shared option body for phone bottom chrome and Expanded/Wide form inspector.
+ *
+ * [framed] true (default): [EditorOptionControlFrame] Center + fixed phone slot padding.
+ * false: top-aligned fill-width body for the form inspector (no Center dead zone).
+ */
 @Composable
-private fun EditorOptionControl(
+internal fun EditorOptionControl(
     spec: EditorOptionSpec,
     waterMark: WaterMark,
     templateIcon: Painter?,
@@ -94,10 +100,9 @@ private fun EditorOptionControl(
     colorOption: @Composable (Modifier, WaterMark, (Int) -> Unit) -> Unit,
     iconOption: @Composable (Modifier, WaterMark, (MediaRef) -> Unit) -> Unit,
     modifier: Modifier = Modifier,
+    framed: Boolean = true,
 ) {
-    EditorOptionControlFrame(
-        modifier = modifier.testTag("editorControl-${spec.type.stableKey()}"),
-    ) { innerModifier ->
+    val body: @Composable (Modifier) -> Unit = { innerModifier ->
         when (spec.type) {
             FuncType.Alpha -> {
                 SliderOption(
@@ -199,5 +204,14 @@ private fun EditorOptionControl(
                 )
             }
         }
+    }
+
+    val tagged = modifier.testTag("editorControl-${spec.type.stableKey()}")
+    if (framed) {
+        EditorOptionControlFrame(modifier = tagged) { innerModifier ->
+            body(innerModifier)
+        }
+    } else {
+        body(tagged)
     }
 }
