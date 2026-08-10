@@ -10,11 +10,17 @@ import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSUUID
 import platform.Foundation.writeToFile
 
+/**
+ * Fail-closed thumbnail decode for corrupt staged files.
+ *
+ * Progressive host filmstrip uses path-first ImageIO; Export thumbs share the same
+ * closed contract via [IosExportThumbnailLoader.decodeFileOrNull] (null, never crash).
+ */
 @OptIn(ExperimentalForeignApi::class)
 class IosFilmstripThumbnailFailureTest {
 
     @Test
-    fun corruptSelectedSource_returnsPlaceholderInsteadOfCrashing() {
+    fun corruptSelectedSource_returnsNullInsteadOfCrashing() {
         val path = NSTemporaryDirectory() +
             "filmstrip_corrupt_${NSUUID().UUIDString()}.jpg"
         assertTrue(
@@ -23,7 +29,7 @@ class IosFilmstripThumbnailFailureTest {
         )
 
         try {
-            assertNull(decodeIosFilmstripThumbOrNull(path))
+            assertNull(IosExportThumbnailLoader.decodeFileOrNull(path, maxEdgePx = 96))
         } finally {
             NSFileManager.defaultManager.removeItemAtPath(path, error = null)
         }

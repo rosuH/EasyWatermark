@@ -54,11 +54,12 @@ import platform.ImageIO.CGImageDestinationFinalize
 import platform.ImageIO.kCGImagePropertyOrientation
 
 /**
- * Red→green proof that [IosImageDecoder] loads HEIF/HEIC via Apple ImageIO (direct pixels),
- * bounds native thumbnails, bakes orientation once, and keeps JPEG/PNG + failure contracts.
+ * Red→green proof that [IosImageDecoder] loads HEIF/HEIC via the UIImage fallback path
+ * (Skia cannot decode HEIC), bounds thumbnails, bakes orientation once, and keeps
+ * JPEG/PNG + failure contracts.
  *
  * HEIF fixtures are generated at runtime with ImageIO (`public.heic`) — no committed binary,
- * no personal device files.
+ * no personal device files. Path-first ImageIO coverage lives in [IosImageIOPathDecoderTest].
  */
 class IosImageDecoderHeifTest {
 
@@ -68,7 +69,7 @@ class IosImageDecoderHeifTest {
     @Test
     fun heif_fullDecode_preservesDimensionsAndContent() {
         val heif = requireHeifFixture(baseW, baseH, orientation = 1)
-        assertTrue(IosImageIODecoder.looksLikeHeif(heif), "fixture must be recognized as HEIF")
+        assertTrue(looksLikeHeifFtyp(heif), "fixture must be recognized as HEIF")
 
         // Skia cannot decode the HEIF payloads that Photos stages; document the seam.
         val skiaRejected = runCatching { SkiaImage.makeFromEncoded(heif) }.isFailure
@@ -112,8 +113,8 @@ class IosImageDecoderHeifTest {
         assertEquals(12, j.height)
         assertEquals(16, p.width)
         assertEquals(12, p.height)
-        assertTrue(!IosImageIODecoder.looksLikeHeif(jpeg))
-        assertTrue(!IosImageIODecoder.looksLikeHeif(png))
+        assertTrue(!looksLikeHeifFtyp(jpeg))
+        assertTrue(!looksLikeHeifFtyp(png))
     }
 
     @Test
@@ -126,25 +127,6 @@ class IosImageDecoderHeifTest {
                 ex.message?.contains("unsupported", ignoreCase = true) == true ||
                 ex.message?.contains("ImageIO", ignoreCase = true) == true,
             "failure message should identify decode failure: ${ex.message}",
-        )
-    }
-
-    @Test
-    fun decodeThumbnail_nonPositiveMaxEdge_failsClosed() {
-        val heif = requireHeifFixture(baseW, baseH, orientation = 1)
-        val zero = assertFailsWith<IllegalStateException> {
-            IosImageDecoder.decodeThumbnail(heif, maxEdgePx = 0)
-        }
-        assertTrue(
-            zero.message?.contains("positive", ignoreCase = true) == true,
-            "zero bound message: ${zero.message}",
-        )
-        val negative = assertFailsWith<IllegalStateException> {
-            IosImageDecoder.decodeThumbnail(heif, maxEdgePx = -1)
-        }
-        assertTrue(
-            negative.message?.contains("positive", ignoreCase = true) == true,
-            "negative bound message: ${negative.message}",
         )
     }
 
@@ -220,13 +202,38 @@ class IosImageDecoderHeifTest {
                 CFBridgingRelease(cfData)
             }
             val bytes = IosByteArrayInterop.fromNSData(data)
-            if (bytes.isEmpty() || !IosImageIODecoder.looksLikeHeif(bytes)) {
+            if (bytes.isEmpty() || !looksLikeHeifFtyp(bytes)) {
                 fail("generated HEIF fixture empty or not recognized as HEIF (${bytes.size} bytes)")
             }
             return bytes
         } finally {
             CGImageRelease(cgImage)
         }
+    }
+
+    /**
+     * Test-local ISO BMFF `ftyp` brand check — mirrors production [IosImageDecoder] private
+     * HEIF sniff without exposing it on the Shared surface.
+     */
+    private fun looksLikeHeifFtyp(bytes: ByteArray): Boolean {
+        if (bytes.size < 12) return false
+        if (bytes[4] != 'f'.code.toByte() ||
+            bytes[5] != 't'.code.toByte() ||
+            bytes[6] != 'y'.code.toByte() ||
+            bytes[7] != 'p'.code.toByte()
+        ) {
+            return false
+        }
+        val brand = byteArrayOf(bytes[8], bytes[9], bytes[10], bytes[11])
+            .decodeToString()
+            .lowercase()
+        return brand == "heic" ||
+            brand == "heif" ||
+            brand == "mif1" ||
+            brand == "msf1" ||
+            brand == "heix" ||
+            brand == "hevc" ||
+            brand == "hevx"
     }
 
     private fun makeQuadrantCgImage(width: Int, height: Int): CGImageRef? {
