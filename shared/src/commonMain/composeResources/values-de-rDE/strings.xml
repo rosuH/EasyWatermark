@@ -89,4 +89,9 @@
     <string name="title_tile_mode">Kachel-Modus</string>
     <string name="tile_mode_title_repeat">Wiederholen</string>
     <string name="tile_mode_title_decal">Einzeln</string>
+    <!-- Form inspector section headers (Expanded/Wide DEMO rhythm) -->
+    <string name="inspector_section_mode">Modus</string>
+    <string name="inspector_section_tile">Kacheln</string>
+    <string name="inspector_section_look">Erscheinungsbild</string>
+    <string name="inspector_section_gaps">Abstand</string>
 </resources>

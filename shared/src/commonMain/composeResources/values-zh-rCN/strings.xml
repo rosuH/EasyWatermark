@@ -95,4 +95,9 @@
 
     <!-- S-i18n-0 packaging spike (retained after Phase 1). -->
     <string name="cmp_spike_hello">CMP 探针你好</string>
+    <!-- Form inspector section headers (Expanded/Wide DEMO rhythm) -->
+    <string name="inspector_section_mode">模式</string>
+    <string name="inspector_section_tile">平铺</string>
+    <string name="inspector_section_look">外观</string>
+    <string name="inspector_section_gaps">间距</string>
 </resources>

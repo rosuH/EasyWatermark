@@ -54,11 +54,33 @@ fun formatArgbHexColor(color: Int): String {
     return "#" + unsigned.toString(16).uppercase().padStart(8, '0')
 }
 
+/**
+ * Normalize pasted HEX before parse: strip `#` / `0x`, spaces, keep hex digits only (F3).
+ * Returns uppercase hex body without `#` (may be empty).
+ */
+fun normalizeArgbHexInput(text: String): String {
+    var raw = text.trim()
+    if (raw.startsWith("#")) raw = raw.substring(1)
+    if (raw.startsWith("0x", ignoreCase = true) || raw.startsWith("0X")) {
+        raw = raw.substring(2)
+    }
+    return buildString(raw.length) {
+        for (c in raw) {
+            if (c in '0'..'9' || c in 'a'..'f' || c in 'A'..'F') append(c.uppercaseChar())
+        }
+    }
+}
+
 fun parseArgbHexColor(text: String): Int? {
-    val raw = text.trim().removePrefix("#")
-    val isHex = raw.isNotEmpty() && raw.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }
-    if (!isHex) return null
+    val raw = normalizeArgbHexInput(text)
+    if (raw.isEmpty()) return null
     return when (raw.length) {
+        3 -> {
+            // #RGB → #RRGGBB opaque
+            val r = raw[0]; val g = raw[1]; val b = raw[2]
+            val expanded = "$r$r$g$g$b$b"
+            expanded.toLongOrNull(16)?.let { (0xFF000000L or it).toInt() }
+        }
         6 -> raw.toLongOrNull(16)?.let { (0xFF000000L or it).toInt() }
         8 -> raw.toLongOrNull(16)?.toInt()
         else -> null
@@ -123,9 +145,13 @@ fun TextColorOption(
         if (showCustomInput) {
             OutlinedTextField(
                 value = customText,
-                onValueChange = onCustomTextChange,
+                onValueChange = { raw ->
+                    val body = normalizeArgbHexInput(raw)
+                    onCustomTextChange(if (body.isEmpty()) raw else "#$body")
+                },
                 enabled = enabled,
                 label = { Text(stringResource(Res.string.color_custom)) },
+                isError = customText.isNotBlank() && parseArgbHexColor(customText) == null,
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )

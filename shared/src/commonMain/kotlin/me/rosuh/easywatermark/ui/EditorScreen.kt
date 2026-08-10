@@ -1,41 +1,28 @@
 package me.rosuh.easywatermark.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.data.model.ImageInfoUi
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkConfigChange
 import me.rosuh.easywatermark.data.model.entity.Template
-import me.rosuh.easywatermark.data.model.toUiProjection
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.about_title_about
 import me.rosuh.easywatermark.shared.generated.resources.cd_add_more_images
@@ -48,10 +35,10 @@ import org.jetbrains.compose.resources.stringResource
 /**
  * Shared product editor screen. S-i18n-2: chrome labels from [Res]; hosts inject painters + slots.
  *
- * ADR-0026 layout:
+ * ADR-0026 layout (owner 2026-08-10: drop three-zone left rail):
  * - Compact / Medium: vertical stack (preview → filmstrip → bottom controls)
- * - Expanded (≥840): supporting-pane A — main (preview + filmstrip) | fixed inspector rail
- * - Wide (≥1440): three-zone C — session library | main (preview + filmstrip) | inspector
+ * - Expanded / Wide (≥840, including ≥1440): supporting-pane A — main (preview + filmstrip) | form inspector
+ * Session switching is filmstrip-only; no left session library rail.
  * Filmstrip always under the primary preview (F1), never in the inspector rail.
  */
 data class EditorUiIcons(
@@ -67,8 +54,8 @@ data class EditorUiIcons(
 @Composable
 fun EditorScreen(
     /**
-     * Display list for filmstrip / C session library (immutable projection — no export jobState/result vars).
-     * Prefer [me.rosuh.easywatermark.data.model.toUiProjection] at the host boundary.
+     * Display list for filmstrip (immutable projection — no export jobState/result vars).
+     * Prefer host-side UI projection at the boundary.
      */
     imageList: List<ImageInfoUi>,
     waterMark: WaterMark,
@@ -142,6 +129,7 @@ fun EditorScreen(
         templates = templates,
         editIcon = icons.templateEdit,
         deleteIcon = icons.templateDelete,
+        useLargeDialog = usesFormInspectorPath(layoutClass),
         newTemplateInitialText = waterMark.text,
         onUse = onUseTemplate,
         onAdd = onAddTemplate,
@@ -179,7 +167,8 @@ fun EditorScreen(
                 )
 
                 if (dualOrWide) {
-                    // A / C: horizontal chrome. Filmstrip stays in main column (F1).
+                    // Supporting-pane A for Expanded and Wide: preview+filmstrip | form inspector.
+                    // Wide no longer mounts a left session library (owner 2026-08-10).
                     Row(
                         modifier = Modifier
                             .weight(1f, fill = true)
@@ -192,21 +181,6 @@ fun EditorScreen(
                                 },
                             ),
                     ) {
-                        if (layoutClass == EditorLayoutClass.Wide) {
-                            // C-L4: session image library only (templates stay sheet).
-                            EditorSessionImageLibrary(
-                                images = imageList,
-                                selectedImage = selected,
-                                progressive = progressiveSlots,
-                                thumbnail = thumbnail,
-                                onImageSelected = onImageSelected,
-                                modifier = Modifier
-                                    .width(EDITOR_WIDE_SESSION_LIBRARY_MAX_DP.dp)
-                                    .fillMaxHeight()
-                                    .testTag("editorWideSessionLibrary"),
-                            )
-                        }
-
                         // Primary pane: preview + filmstrip under canvas (F1).
                         Column(
                             modifier = Modifier
@@ -319,90 +293,3 @@ private fun EditorMainFilmstrip(
     }
 }
 
-/**
- * Three-zone C left rail: session images only (C-L4). Vertical list reuses [thumbnail];
- * selection routes through the same [onImageSelected] as the filmstrip.
- */
-@Composable
-private fun EditorSessionImageLibrary(
-    images: List<ImageInfoUi>,
-    selectedImage: ImageInfoUi?,
-    progressive: EditorProgressiveSlotPresentation?,
-    thumbnail: @Composable (image: ImageInfoUi, contentDescription: String, modifier: Modifier) -> Unit,
-    onImageSelected: (ImageInfoUi) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val shape = RoundedCornerShape(2.dp)
-    val selectedUri = selectedImage?.uri?.value
-    val pad = EDITOR_SUPPORTING_PANE_PADDING_DP.dp
-    Column(
-        modifier = modifier
-            .padding(pad)
-            .background(MaterialTheme.colorScheme.surfaceContainerLow),
-    ) {
-        // Prefer ready progressive slots when the host is mid-import; else session imageList.
-        val readyFromProgressive = progressive?.state?.slots
-            ?.filterIsInstance<EditorMediaSlot.Ready>()
-            ?.map { it.image.toUiProjection() }
-            .orEmpty()
-        val libraryImages = readyFromProgressive.ifEmpty { images }
-
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .testTag("editorSessionLibraryList"),
-            contentPadding = PaddingValues(vertical = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            items(
-                items = libraryImages,
-                key = { it.uri.value },
-            ) { image ->
-                val selected = image.uri.value == selectedUri
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onImageSelected(image) }
-                        .padding(horizontal = 4.dp)
-                        .testTag("editorSessionLibraryItem"),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(72.dp)
-                            .clip(shape)
-                            .then(
-                                if (selected) {
-                                    Modifier.border(
-                                        width = 1.5.dp,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        shape = shape,
-                                    )
-                                } else {
-                                    Modifier
-                                },
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        thumbnail(image, "session image", Modifier.fillMaxSize().clip(shape))
-                    }
-                    Text(
-                        text = image.uri.value.substringAfterLast('/').ifEmpty { image.uri.value },
-                        style = MaterialTheme.typography.labelSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = if (selected) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 2.dp),
-                    )
-                }
-            }
-        }
-    }
-}

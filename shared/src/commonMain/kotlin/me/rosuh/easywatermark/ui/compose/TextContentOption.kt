@@ -130,7 +130,7 @@ fun TextContentOption(
             text = text,
             style = MaterialTheme.typography.bodyLarge,
             color = muted,
-            maxLines = 1,
+            maxLines = WatermarkTextFieldDefaults.summaryMaxLines,
             overflow = TextOverflow.Ellipsis,
             // weight(fill=false): content-sized up to remaining width so the packed row stays centered.
             modifier = Modifier.weight(1f, fill = false),
@@ -193,7 +193,9 @@ private fun InlineTextContentField(
                 onTextChange(it)
             },
             enabled = enabled,
-            singleLine = true,
+            singleLine = WatermarkTextFieldDefaults.singleLine,
+            minLines = WatermarkTextFieldDefaults.formMinLines,
+            maxLines = WatermarkTextFieldDefaults.formMaxLines,
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag(TEXT_CONTENT_EDIT_FIELD_TAG),
@@ -279,6 +281,9 @@ private fun WatermarkTextEditSheet(
                 value = draft,
                 onValueChange = { draft = it },
                 enabled = enabled,
+                singleLine = WatermarkTextFieldDefaults.singleLine,
+                minLines = WatermarkTextFieldDefaults.sheetMinLines,
+                maxLines = WatermarkTextFieldDefaults.sheetMaxLines,
                 modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentHeight()

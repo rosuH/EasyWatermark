@@ -30,6 +30,14 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import me.rosuh.easywatermark.data.model.ImageInfoUi
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.foundation.focusable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -73,6 +81,44 @@ internal object EditorFilmstripInteraction {
     ): Boolean = canSelect && itemKey != lastAppliedKey
 
     /**
+     * ←/→ when filmstrip focused: next/prev selectable index, or null if none.
+     * [delta] is typically -1 or +1.
+     */
+    fun <T> adjacentSelectableIndex(
+        items: List<T>,
+        keyOf: (T) -> String,
+        canSelect: (T) -> Boolean,
+        selectedKey: String?,
+        delta: Int,
+    ): Int? {
+        if (items.isEmpty() || delta == 0) return null
+        val selectedIndex = items.indexOfFirst { keyOf(it) == selectedKey }
+        return adjacentSelectableIndex(
+            count = items.size,
+            selectedIndex = selectedIndex,
+            delta = delta,
+            canSelectAt = { idx -> canSelect(items[idx]) },
+        )
+    }
+
+    /** Index form used by unit tests and simple hosts. */
+    fun adjacentSelectableIndex(
+        count: Int,
+        selectedIndex: Int,
+        delta: Int,
+        canSelectAt: (Int) -> Boolean,
+    ): Int? {
+        if (count <= 0 || delta == 0) return null
+        val start = selectedIndex.coerceIn(-1, count - 1)
+        var i = start + delta
+        while (i in 0 until count) {
+            if (canSelectAt(i)) return i
+            i += delta
+        }
+        return null
+    }
+
+    /**
      * User fling/drag settle publishes only after real user scroll ends on a selectable
      * center cell whose key differs from the last applied selection.
      */
@@ -103,6 +149,24 @@ internal object EditorFilmstripInteraction {
         if (userScrollInProgress) return false
         if (selectedKey == lastAppliedKey && atCenter) return false
         return !atCenter
+    }
+
+    /**
+     * Viewport width change (window resize) invalidates center contentPadding alignment.
+     * Always re-snap the current selection under the fixed frame when width actually changes
+     * after the first measure; ignore the initial 0 → W measure so selection effect owns first paint.
+     */
+    fun shouldRecenterOnViewportResize(
+        selectedKey: String?,
+        previousWidthPx: Int,
+        newWidthPx: Int,
+        userScrollInProgress: Boolean,
+    ): Boolean {
+        if (selectedKey == null) return false
+        if (userScrollInProgress) return false
+        if (newWidthPx <= 0) return false
+        if (previousWidthPx <= 0) return false
+        return previousWidthPx != newWidthPx
     }
 
     /** Effect key is selection only — list size must not yank scroll on append. */
@@ -171,11 +235,13 @@ internal fun <T> EditorFilmstripScaffold(
     itemContent: @Composable (item: T, contentModifier: Modifier) -> Unit,
 ) {
     val listState = rememberLazyListState()
+    val focusRequester = remember { FocusRequester() }
     val overscroll = rememberOverscrollEffect()
     val snapFling = rememberSnapFlingBehavior(lazyListState = listState)
     val coroutineScope = rememberCoroutineScope()
     val composeHaptic = LocalHapticFeedback.current
     var stripWidth by remember { mutableStateOf(0.dp) }
+    var stripWidthPx by remember { mutableStateOf(0) }
     val cellSize = EditorFilmstripMetrics.CellSize
     val density = LocalDensity.current
     val frameShape = RoundedCornerShape(EditorFilmstripMetrics.FrameRadius)
@@ -189,6 +255,7 @@ internal fun <T> EditorFilmstripScaffold(
     val canSelectState = rememberUpdatedState(canSelect)
     val onItemSelectedState = rememberUpdatedState(onItemSelected)
     val lastAppliedState = rememberUpdatedState(lastAppliedKey)
+    val selectedKeyState = rememberUpdatedState(selectedKey)
 
     fun applyCenteredSelection(target: T, fromUser: Boolean) {
         val key = keyOfState.value(target)
@@ -208,11 +275,15 @@ internal fun <T> EditorFilmstripScaffold(
         onItemSelectedState.value(target)
     }
 
-    suspend fun scrollToIndexProgrammatic(index: Int) {
-        // Mark *before* animate so isScrollInProgress=true never counts as user fling.
+    suspend fun scrollToIndexProgrammatic(index: Int, animated: Boolean = true) {
+        // Mark *before* scroll so isScrollInProgress=true never counts as user fling.
         programmaticScroll = true
         try {
-            listState.animateScrollToItem(index)
+            if (animated) {
+                listState.animateScrollToItem(index)
+            } else {
+                listState.scrollToItem(index)
+            }
         } finally {
             programmaticScroll = false
         }
@@ -239,8 +310,36 @@ internal fun <T> EditorFilmstripScaffold(
         // Keep lastApplied in sync with parent selection even if we only re-center.
         lastAppliedKey = selectedKey
         if (needsRecenter) {
-            scrollToIndexProgrammatic(index)
+            scrollToIndexProgrammatic(index, animated = true)
         }
+    }
+
+    // Window / dual-pane resize changes center contentPadding; re-snap selection under the fixed frame.
+    // Instant scroll — animate would fight continuous resize.
+    var lastStripWidthPx by remember { mutableStateOf(0) }
+    LaunchedEffect(stripWidthPx) {
+        val previous = lastStripWidthPx
+        lastStripWidthPx = stripWidthPx
+        val key = selectedKeyState.value
+        val userScrollInProgress = listState.isScrollInProgress && !programmaticScroll
+        if (!EditorFilmstripInteraction.shouldRecenterOnViewportResize(
+                selectedKey = key,
+                previousWidthPx = previous,
+                newWidthPx = stripWidthPx,
+                userScrollInProgress = userScrollInProgress,
+            )
+        ) {
+            return@LaunchedEffect
+        }
+        val current = itemsState.value
+        if (current.isEmpty() || key == null) return@LaunchedEffect
+        val index = current.indexOfFirst { keyOfState.value(it) == key }
+        if (index < 0) return@LaunchedEffect
+        // Let LazyRow apply the new contentPadding from this width before scrolling.
+        withFrameNanos { }
+        withFrameNanos { }
+        lastAppliedKey = key
+        scrollToIndexProgrammatic(index, animated = false)
     }
 
     // After *user* scroll/fling settles: select the cell under the fixed center frame.
@@ -294,9 +393,38 @@ internal fun <T> EditorFilmstripScaffold(
             .fillMaxWidth()
             .height(EditorFilmstripMetrics.RailHeight)
             .onGloballyPositioned {
-                stripWidth = with(density) { it.size.width.toDp() }
+                val wPx = it.size.width
+                if (wPx != stripWidthPx) {
+                    stripWidthPx = wPx
+                    stripWidth = with(density) { wPx.toDp() }
+                }
             }
-            .testTag(testTag),
+            .testTag(testTag)
+            .focusRequester(focusRequester)
+            .focusable()
+            .onPreviewKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                val delta = when (event.key) {
+                    Key.DirectionLeft -> -1
+                    Key.DirectionRight -> 1
+                    else -> return@onPreviewKeyEvent false
+                }
+                val current = itemsState.value
+                if (current.isEmpty()) return@onPreviewKeyEvent false
+                val nextIndex = EditorFilmstripInteraction.adjacentSelectableIndex(
+                    items = current,
+                    keyOf = keyOfState.value,
+                    canSelect = canSelectState.value,
+                    selectedKey = selectedKeyState.value,
+                    delta = delta,
+                ) ?: return@onPreviewKeyEvent true
+                val target = current[nextIndex]
+                applyCenteredSelection(target, fromUser = true)
+                coroutineScope.launch {
+                    scrollToIndexProgrammatic(nextIndex)
+                }
+                true
+            },
         contentAlignment = Alignment.Center,
     ) {
         LazyRow(

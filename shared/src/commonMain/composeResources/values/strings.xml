@@ -9,6 +9,11 @@
     <string name="title_layout">Layout</string>
     <string name="title_style">Style</string>
     <string name="title_content">Content</string>
+    <!-- Form inspector section headers (Expanded/Wide DEMO rhythm). -->
+    <string name="inspector_section_mode">Mode</string>
+    <string name="inspector_section_tile">Tile</string>
+    <string name="inspector_section_look">Appearance</string>
+    <string name="inspector_section_gaps">Spacing</string>
     <string name="tips_do_not_choose_image">No picture selected</string>
     <string name="tips_choose_color_dialog">Choose color</string>
     <string name="tips_confirm_dialog">Confirm</string>

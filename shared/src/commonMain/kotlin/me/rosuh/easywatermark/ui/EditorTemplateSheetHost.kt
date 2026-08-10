@@ -20,6 +20,8 @@ fun EditorTemplateSheetHost(
     deleteIcon: Painter? = null,
     enabled: Boolean = true,
     newTemplateInitialText: String = "",
+    /** ≥840 dual-pane: template list as centered dialog. */
+    useLargeDialog: Boolean = false,
     onUse: (Template) -> Unit,
     onAdd: (String) -> Unit,
     onUpdate: (Template) -> Unit,
@@ -47,6 +49,7 @@ fun EditorTemplateSheetHost(
             deleteIcon = deleteIcon,
             enabled = enabled,
             newTemplateInitialText = newTemplateInitialText,
+            useLargeDialog = useLargeDialog,
             onDismiss = {
                 showTemplateSheet = false
                 onSheetVisibilityChange(false)

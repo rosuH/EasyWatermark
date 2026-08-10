@@ -9,17 +9,20 @@ import java.io.File
 /**
  * Desktop **on-screen editor preview** raster (H0.1-fix) — iOS [IosPreviewRaster] analogue.
  *
- * Unlike [DesktopRenderSaveSpine] / Save As:
+ * ## Resolution policy (see [PreviewResolutionPolicy])
+ *
+ * - **Draft** (CLAMP drag): long edge [PREVIEW_MAX_EDGE_PX] = 720 — latency.
+ * - **Committed**: display-driven bucket from the measured preview pane (Fit + density px),
+ *   via [committedMaxEdgePx] / [committedMaxEdgePxForFit] — sharpness for large dual-pane.
+ * - **Export / Save As**: full-res [DesktopRenderSaveSpine] — never this path.
+ *
+ * Decode downscales only when source long edge **exceeds** [maxEdgePx]; small sources stay native.
+ *
+ * Unlike Save As:
  * - never encodes product JPEG/PNG for disk
  * - never writes temp export files
- * - decodes + downscales source to [maxEdgePx]
- *   (default [PREVIEW_MAX_EDGE_PX] = 720 for draft; committed uses
- *   [PreviewResolutionPolicy.committedMaxEdgePx] from the measured preview box)
  * - paints through [CommonWatermarkPipeline.compose] with the given offset
  * - returns an in-memory [ImageBitmap] for Compose [Image]
- *
- * Export / Save As continue to use full-res [DesktopRenderSaveSpine] with **committed** Session
- * offsets only — this path is preview-only and may use UI draft offsets.
  */
 object DesktopPreviewRaster {
 
@@ -27,11 +30,27 @@ object DesktopPreviewRaster {
     const val PREVIEW_MAX_EDGE_PX: Int = PreviewResolutionPolicy.PLACEHOLDER_MAX_EDGE_PX
 
     /**
-     * Map measured preview-box width/height (px) to a committed long-edge bucket.
+     * Map measured preview-box width/height (**layout px**, density-applied) to a committed bucket.
      * Same policy as iOS ([PreviewResolutionPolicy]).
      */
     fun committedMaxEdgePx(previewBoxWidthPx: Int, previewBoxHeightPx: Int): Int =
         PreviewResolutionPolicy.committedMaxEdgePx(previewBoxWidthPx, previewBoxHeightPx)
+
+    /**
+     * Preferred committed bucket when source dims are known (import probe / ImageInfo).
+     * Matches iOS [IosProductRootHost] Fit path so large Desktop panes request enough pixels.
+     */
+    fun committedMaxEdgePxForFit(
+        sourceWidthPx: Int,
+        sourceHeightPx: Int,
+        containerWidthPx: Int,
+        containerHeightPx: Int,
+    ): Int = PreviewResolutionPolicy.committedMaxEdgePxForFit(
+        sourceWidthPx = sourceWidthPx,
+        sourceHeightPx = sourceHeightPx,
+        containerWidthPx = containerWidthPx,
+        containerHeightPx = containerHeightPx,
+    )
 
     /**
      * Production helper: max edge for one light-preview paint.

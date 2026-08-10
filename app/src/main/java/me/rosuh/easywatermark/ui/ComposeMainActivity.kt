@@ -45,6 +45,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -91,8 +92,10 @@ import androidx.compose.runtime.Composable
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.data.model.toEditorSelectionUi
 import me.rosuh.easywatermark.ui.about.AboutDevCard
-import me.rosuh.easywatermark.ui.about.AboutScreenIcons
 import me.rosuh.easywatermark.ui.about.AboutScreen
+import me.rosuh.easywatermark.ui.about.AboutScreenIcons
+import me.rosuh.easywatermark.ui.editorLayoutClass
+import me.rosuh.easywatermark.ui.usesLargeScreenDialog
 import me.rosuh.easywatermark.ui.about.AboutViewModel
 import me.rosuh.easywatermark.ui.about.OpenSourceScreen
 import me.rosuh.easywatermark.utils.ktx.openLink
@@ -549,11 +552,13 @@ class ComposeMainActivity : ComponentActivity() {
                                             var forceDynamicColor by remember {
                                                 mutableStateOf(dynamicColorCapability.isForcedSupport())
                                             }
+                                            val aboutWidthDp = LocalConfiguration.current.screenWidthDp
                                             AboutScreenAndroid(
                                                 versionName = BuildConfig.VERSION_NAME,
                                                 showBounds = wm?.enableBounds ?: false,
                                                 dynamicColorOn = forceDynamicColor,
                                                 preferInAppGallery = userPreferences.preferInAppGallery,
+                                                useLargeLayout = aboutWidthDp >= 840,
                                                 onBack = { viewModel.onBackPressed() },
                                                 onOpenLink = { url ->
                                                     this@ComposeMainActivity.openLink(url)
@@ -733,11 +738,13 @@ class ComposeMainActivity : ComponentActivity() {
                                         failureCount * 1000 +
                                         (if (saveExportState.isSaving) 1 else 0) +
                                         (if (saveExportState.isFinished) 2 else 0)
+                                val exportWidthDp = LocalConfiguration.current.screenWidthDp
                                 SaveExportSheetAndroid(
                                     imageCount = exportImages.size,
                                     images = exportImages,
                                     selectedFormatLabel = userPreferences.outputFormat,
                                     quality = userPreferences.compressLevel,
+                                    useLargeDialog = exportWidthDp >= 840,
                                     resultSummaryText = resultSummaryText,
                                     statusContentDescription = statusCd,
                                     destinationLine = destinationLine,
@@ -819,6 +826,7 @@ private fun AboutScreenAndroid(
     onToggleBounds: (Boolean) -> Unit,
     onToggleDynamicColor: (Boolean) -> Unit,
     onTogglePreferInAppGallery: (Boolean) -> Unit,
+    useLargeLayout: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     AboutScreen(
@@ -860,6 +868,7 @@ private fun AboutScreenAndroid(
         showPreferInAppGallerySwitch = true,
         preferInAppGallery = preferInAppGallery,
         onTogglePreferInAppGallery = onTogglePreferInAppGallery,
+        useLargeLayout = useLargeLayout,
         modifier = modifier,
         logo = { logoModifier ->
             me.rosuh.easywatermark.ui.AboutPageLogo(
@@ -939,6 +948,7 @@ private fun SaveExportSheetAndroid(
     exportTotalCount: Int = 0,
     exportSuccessCount: Int = 0,
     exportFailureCount: Int = 0,
+    useLargeDialog: Boolean = false,
     /** Recomposition tick while exporting (processedCount / isSaving / isFinished). */
     exportTick: Int = 0,
     onDismiss: () -> Unit,
@@ -955,6 +965,7 @@ private fun SaveExportSheetAndroid(
         items = images,
         selectedFormat = selectedFormatLabel,
         quality = quality,
+        useLargeDialog = useLargeDialog,
         exportListSubtitle = resultSummaryText,
         imageCount = imageCount,
         primaryActionLabel = primaryActionLabel,

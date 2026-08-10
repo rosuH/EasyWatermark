@@ -89,4 +89,9 @@
     <string name="title_tile_mode">Modo de baldosas</string>
     <string name="tile_mode_title_repeat">Repetir</string>
     <string name="tile_mode_title_decal">Único</string>
+    <!-- Form inspector section headers (Expanded/Wide DEMO rhythm) -->
+    <string name="inspector_section_mode">Modo</string>
+    <string name="inspector_section_tile">Mosaico</string>
+    <string name="inspector_section_look">Apariencia</string>
+    <string name="inspector_section_gaps">Espaciado</string>
 </resources>

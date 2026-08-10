@@ -3,6 +3,7 @@ package me.rosuh.easywatermark.ui.compose
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,6 +27,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
@@ -43,6 +52,7 @@ import me.rosuh.easywatermark.ui.AccessibilitySemantics
 import me.rosuh.easywatermark.ui.theme.DesignEditorBg
 import me.rosuh.easywatermark.ui.theme.DesignSliderTrack
 import kotlin.math.roundToInt
+import kotlin.math.sign
 
 /**
  * Design-aligned slider (Figma `slider` component):
@@ -99,16 +109,7 @@ fun SliderOption(
         span <= 1f -> 0
         else -> (span.roundToInt() - 1).coerceAtLeast(0)
     }
-    val snap: (Float) -> Float = { raw ->
-        val clamped = raw.coerceIn(safeRange.start, safeRange.endInclusive)
-        if (step != null && step > 0f) {
-            val start = safeRange.start
-            val n = ((clamped - start) / step).roundToInt()
-            (start + n * step).coerceIn(safeRange.start, safeRange.endInclusive)
-        } else {
-            clamped.roundToInt().toFloat()
-        }
-    }
+    val snap: (Float) -> Float = { raw -> snapSliderValue(raw, safeRange, step) }
     val interactionSource = remember { MutableInteractionSource() }
     val activeColor = if (enabled) Color.White else Color.White.copy(alpha = 0.4f)
     val inactiveColor = if (enabled) DesignSliderTrack else DesignSliderTrack.copy(alpha = 0.5f)
@@ -125,6 +126,15 @@ fun SliderOption(
         disabledInactiveTickColor = Color.Transparent,
     )
 
+    fun applyStep(deltaUnits: Int) {
+        if (!enabled || deltaUnits == 0) return
+        val next = sliderStepValue(coerced, safeRange, step, deltaUnits)
+        if (next != snap(coerced)) {
+            onValueChange(next)
+            onValueChangeFinished?.invoke()
+        }
+    }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -133,6 +143,41 @@ fun SliderOption(
                 contentDescription = a11yName
                 stateDescription = valueDisplay
                 if (!enabled) disabled()
+            }
+            .focusable(enabled = enabled, interactionSource = interactionSource)
+            .onPreviewKeyEvent { event ->
+                if (!enabled || event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                val units = if (event.isShiftPressed) 10 else 1
+                when (event.key) {
+                    Key.DirectionLeft, Key.DirectionDown -> {
+                        applyStep(-units)
+                        true
+                    }
+                    Key.DirectionRight, Key.DirectionUp -> {
+                        applyStep(units)
+                        true
+                    }
+                    else -> false
+                }
+            }
+            .pointerInput(enabled, coerced, safeRange, step) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        if (!enabled || event.type != PointerEventType.Scroll) continue
+                        val scroll = event.changes.firstOrNull()?.scrollDelta ?: continue
+                        // Vertical wheel preferred; horizontal trackpad also steps.
+                        val delta = when {
+                            scroll.y != 0f -> -scroll.y.sign.toInt().coerceIn(-1, 1)
+                            scroll.x != 0f -> scroll.x.sign.toInt().coerceIn(-1, 1)
+                            else -> 0
+                        }
+                        if (delta != 0) {
+                            applyStep(delta)
+                            event.changes.forEach { it.consume() }
+                        }
+                    }
+                }
             }
             .testTag("sliderOption"),
         verticalAlignment = Alignment.CenterVertically,

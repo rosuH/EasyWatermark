@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -46,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlin.math.absoluteValue
 import me.rosuh.easywatermark.shared.generated.resources.Res
+import me.rosuh.easywatermark.ui.ABOUT_CONTENT_MAX_WIDTH_DP
 import me.rosuh.easywatermark.ui.theme.DesignBrand
 import me.rosuh.easywatermark.ui.theme.DesignEditorBg
 import me.rosuh.easywatermark.ui.theme.DesignSliderTrack
@@ -109,6 +111,11 @@ fun AboutScreen(
     showPreferInAppGallerySwitch: Boolean = false,
     preferInAppGallery: Boolean = false,
     onTogglePreferInAppGallery: (Boolean) -> Unit = {},
+    /**
+     * ≥840 dual-pane / Desktop: limit content width and show Dev+Designer side-by-side (H5).
+     * Compact/Medium keep full-bleed scroll + pager cards.
+     */
+    useLargeLayout: Boolean = false,
     logo: @Composable (modifier: Modifier) -> Unit,
 ) {
     val infoTitle = stringResource(Res.string.about_title_info)
@@ -154,64 +161,81 @@ fun AboutScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .safeDrawingPadding()
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .testTag(if (useLargeLayout) "aboutLargeLayout" else "aboutCompactLayout"),
+            horizontalAlignment = if (useLargeLayout) Alignment.CenterHorizontally else Alignment.Start,
         ) {
-            // Production: logo near top (marginTop ~36dp), not vertically centered in a tall hero.
-            Box(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(AboutHeroHeight)
-                    .padding(horizontal = 4.dp),
+                    .then(
+                        if (useLargeLayout) {
+                            Modifier.widthIn(max = ABOUT_CONTENT_MAX_WIDTH_DP.dp)
+                        } else {
+                            Modifier
+                        },
+                    )
+                    .fillMaxWidth(),
             ) {
-                IconButton(
-                    onClick = onBack,
-                    modifier = Modifier.align(Alignment.TopStart),
+                // Production: logo near top (marginTop ~36dp), not vertically centered in a tall hero.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(AboutHeroHeight)
+                        .padding(horizontal = 4.dp),
                 ) {
-                    Icon(
-                        painter = icons.back,
-                        contentDescription = backCd,
-                        tint = MaterialTheme.colorScheme.onSurface,
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .testTag("aboutBack"),
+                    ) {
+                        Icon(
+                            painter = icons.back,
+                            contentDescription = backCd,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                    logo(
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = AboutLogoTopPadding)
+                            .size(AboutLogoSize),
                     )
                 }
-                logo(
-                    Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = AboutLogoTopPadding)
-                        .size(AboutLogoSize),
+
+                SectionHeader(infoTitle)
+                AboutRow(icons.version, versionTitle, trailing = versionName, onClick = onVersion)
+                AboutRow(icons.rating, ratingTitle, onClick = onRate)
+                AboutRow(icons.feedback, feedbackTitle, onClick = onFeedback)
+
+                SectionHeader(aboutTitle)
+                AboutRow(icons.updateLog, updateLogTitle, onClick = onUpdateLog)
+                AboutRow(icons.openSource, openSourceTitle, onClick = onOpenSource)
+                AboutRow(icons.privacyZh, privacyZhTitle, onClick = onPrivacyZh)
+                AboutRow(icons.privacyEn, privacyEnTitle, onClick = onPrivacyEn)
+
+                Spacer(Modifier.height(24.dp))
+                DevFooter(
+                    developerCard = developerCard,
+                    designerCard = designerCard,
+                    onDeveloper = onDeveloper,
+                    onDesigner = onDesigner,
+                    sideBySide = useLargeLayout,
                 )
+                Spacer(modifier.height(24.dp))
+
+                // Debug / prefs toggles — full-row hit target + brand Switch colors (not stock M3).
+                SwitchRow(dynamicColorLabel, dynamicColorOn, onToggleDynamicColor)
+                SwitchRow(showBoundsLabel, showBounds, onToggleBounds)
+                if (showPreferInAppGallerySwitch) {
+                    SwitchRow(
+                        preferInAppGalleryLabel,
+                        preferInAppGallery,
+                        onTogglePreferInAppGallery,
+                    )
+                }
+                Spacer(modifier.height(24.dp))
             }
-
-            SectionHeader(infoTitle)
-            AboutRow(icons.version, versionTitle, trailing = versionName, onClick = onVersion)
-            AboutRow(icons.rating, ratingTitle, onClick = onRate)
-            AboutRow(icons.feedback, feedbackTitle, onClick = onFeedback)
-
-            SectionHeader(aboutTitle)
-            AboutRow(icons.updateLog, updateLogTitle, onClick = onUpdateLog)
-            AboutRow(icons.openSource, openSourceTitle, onClick = onOpenSource)
-            AboutRow(icons.privacyZh, privacyZhTitle, onClick = onPrivacyZh)
-            AboutRow(icons.privacyEn, privacyEnTitle, onClick = onPrivacyEn)
-
-            Spacer(Modifier.height(24.dp))
-            DevFooter(
-                developerCard = developerCard,
-                designerCard = designerCard,
-                onDeveloper = onDeveloper,
-                onDesigner = onDesigner,
-            )
-            Spacer(Modifier.height(24.dp))
-
-            // Debug / prefs toggles — full-row hit target + brand Switch colors (not stock M3).
-            SwitchRow(dynamicColorLabel, dynamicColorOn, onToggleDynamicColor)
-            SwitchRow(showBoundsLabel, showBounds, onToggleBounds)
-            if (showPreferInAppGallerySwitch) {
-                SwitchRow(
-                    preferInAppGalleryLabel,
-                    preferInAppGallery,
-                    onTogglePreferInAppGallery,
-                )
-            }
-            Spacer(Modifier.height(24.dp))
         }
     }
 }
@@ -305,32 +329,52 @@ private fun DevFooter(
     designerCard: AboutDevCard,
     onDeveloper: () -> Unit,
     onDesigner: () -> Unit,
+    sideBySide: Boolean = false,
 ) {
     val cards = listOf(developerCard to onDeveloper, designerCard to onDesigner)
-    val pagerState = rememberPagerState(pageCount = { cards.size })
-    // Fixed height so developer / designer cards match regardless of description length.
     val cardHeight = AboutDevCardHeight
+    if (sideBySide) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .testTag("aboutDevCardsSideBySide"),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            cards.forEach { (card, onClick) ->
+                DevPersonCard(
+                    card = card,
+                    onClick = onClick,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(cardHeight),
+                )
+            }
+        }
+        return
+    }
+    val pagerState = rememberPagerState(pageCount = { cards.size })
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         HorizontalPager(
             state = pagerState,
-            // Peek side card; center page is full “first” size after scale.
             contentPadding = PaddingValues(horizontal = 36.dp),
             pageSpacing = 12.dp,
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(cardHeight + 8.dp),
+                .height(cardHeight + 8.dp)
+                .testTag("aboutDevCardsPager"),
         ) { page ->
             val (card, onClick) = cards[page]
-            Card(
+            DevPersonCard(
+                card = card,
+                onClick = onClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(cardHeight)
-                    // Read pager offset in Draw so both cards share the same layout size and only
-                    // scale/alpha animate: center → full, side → smaller (carousel focus).
                     .graphicsLayer {
                         val pageOffset = (
                             (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
@@ -342,50 +386,60 @@ private fun DevFooter(
                         scaleY = scale
                         alpha = AboutDevCardSideAlpha +
                             (1f - AboutDevCardSideAlpha) * focus
-                    }
-                    .clickable(onClick = onClick),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                ),
-                shape = RoundedCornerShape(12.dp),
+                    },
+            )
+        }
+    }
+}
+
+@Composable
+private fun DevPersonCard(
+    card: AboutDevCard,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+        ),
+        shape = RoundedCornerShape(12.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Image(
+                painter = card.avatar,
+                contentDescription = card.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(AboutDevAvatarSize)
+                    .clip(RoundedCornerShape(AboutDevAvatarSize / 2)),
+            )
+            Column(
+                modifier = Modifier
+                    .padding(start = 16.dp)
+                    .weight(1f),
+                verticalArrangement = Arrangement.Center,
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Image(
-                        painter = card.avatar,
-                        contentDescription = card.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(AboutDevAvatarSize)
-                            .clip(RoundedCornerShape(AboutDevAvatarSize / 2)),
-                    )
-                    Column(
-                        modifier = Modifier
-                            .padding(start = 16.dp)
-                            .weight(1f),
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        Text(
-                            text = card.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = card.description,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
+                Text(
+                    text = card.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(modifier.height(4.dp))
+                Text(
+                    text = card.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }

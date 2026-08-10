@@ -89,4 +89,9 @@
     <string name="dialog_title_edit_watermark">\"Editar Marca D\'água\"</string>
     <string name="dialog_title_template_title">Lista de Modelos</string>
     <string name="dialog_button_add_template">Adicionar</string>
+    <!-- Form inspector section headers (Expanded/Wide DEMO rhythm) -->
+    <string name="inspector_section_mode">Modo</string>
+    <string name="inspector_section_tile">Mosaico</string>
+    <string name="inspector_section_look">Aparência</string>
+    <string name="inspector_section_gaps">Espaçamento</string>
 </resources>

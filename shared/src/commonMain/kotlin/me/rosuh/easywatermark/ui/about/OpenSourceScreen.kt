@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
@@ -20,9 +21,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.shared.generated.resources.Res
+import me.rosuh.easywatermark.ui.LONG_TEXT_MAX_WIDTH_DP
 import me.rosuh.easywatermark.shared.generated.resources.about_title_open_source
 import me.rosuh.easywatermark.shared.generated.resources.cd_back
 import me.rosuh.easywatermark.shared.generated.resources.open_source_desc_about_lib
@@ -55,7 +58,14 @@ fun OpenSourceScreen(
                 .fillMaxSize()
                 .safeDrawingPadding()
                 .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = LONG_TEXT_MAX_WIDTH_DP.dp)
+                    .fillMaxWidth()
+                    .testTag("openSourceContentMaxWidth"),
+            ) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -86,6 +96,7 @@ fun OpenSourceScreen(
             }
 
             Spacer(Modifier.height(24.dp))
+            }
         }
     }
 }

@@ -5,17 +5,55 @@ import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.ui.Image
 import java.io.File
+import javax.imageio.ImageIO
 
 /**
  * Desktop **import-only** selection seam used by Open / Add more / Drop.
  *
  * Builds Session [ImageInfo] lists and commits [AppIntent.EnterEditor].
  * Does **not** choose export destinations or call [ExportPipelinePort] / [WatermarkSessionViewModel.exportAndAwait].
+ *
+ * Populates [ImageInfo.width]/[ImageInfo.height] from the image header (ImageIO reader, no full
+ * decode) so [me.rosuh.easywatermark.render.PreviewResolutionPolicy.committedMaxEdgePxForFit] can
+ * size the light preview to the Fit rect on large screens.
  */
 object DesktopSessionImport {
 
     fun imageInfosFromFiles(files: List<File>): List<ImageInfo> =
-        files.map { ImageInfo(MediaRef(it.absolutePath)) }
+        files.map { file ->
+            val (w, h) = probeImageSize(file)
+            ImageInfo(
+                uri = MediaRef(file.absolutePath),
+                width = w,
+                height = h,
+            )
+        }
+
+    /**
+     * Best-effort header probe. Returns (1, 1) if the format is unknown so Fit policy falls back
+     * to container-only buckets rather than inventing geometry.
+     */
+    internal fun probeImageSize(file: File): Pair<Int, Int> {
+        if (!file.isFile) return 1 to 1
+        return try {
+            ImageIO.createImageInputStream(file).use { stream ->
+                if (stream == null) return 1 to 1
+                val readers = ImageIO.getImageReaders(stream)
+                if (!readers.hasNext()) return 1 to 1
+                val reader = readers.next()
+                try {
+                    reader.input = stream
+                    val w = reader.getWidth(0)
+                    val h = reader.getHeight(0)
+                    if (w > 0 && h > 0) w to h else 1 to 1
+                } finally {
+                    reader.dispose()
+                }
+            }
+        } catch (_: Exception) {
+            1 to 1
+        }
+    }
 
     /**
      * [append]=false replaces the selection (Launch Open).

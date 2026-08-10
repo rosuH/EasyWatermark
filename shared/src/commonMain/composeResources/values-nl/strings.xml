@@ -89,4 +89,9 @@
     <string name="tip_not_mail_found">Geen e-mailclient gedetecteerd. U kan ook de foutmelding doorgeven in de appstore of op GitHub.</string>
     <string name="dialog_title_exist_confirm">Waarschuwing</string>
     <string name="text_paint_fill">Vul</string>
+    <!-- Form inspector section headers (Expanded/Wide DEMO rhythm) -->
+    <string name="inspector_section_mode">Modus</string>
+    <string name="inspector_section_tile">Tegel</string>
+    <string name="inspector_section_look">Uiterlijk</string>
+    <string name="inspector_section_gaps">Afstand</string>
 </resources>

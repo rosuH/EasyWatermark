@@ -166,4 +166,73 @@ class EditorFilmstripMetricsTest {
             "never fight an in-progress user fling",
         )
     }
+
+    @Test
+    fun viewportResize_requestsRecenter_withoutUserScroll() {
+        assertTrue(
+            EditorFilmstripInteraction.shouldRecenterOnViewportResize(
+                selectedKey = "sel",
+                previousWidthPx = 800,
+                newWidthPx = 1200,
+                userScrollInProgress = false,
+            ),
+            "window resize must re-snap selection under fixed center frame",
+        )
+        assertFalse(
+            EditorFilmstripInteraction.shouldRecenterOnViewportResize(
+                selectedKey = "sel",
+                previousWidthPx = 0,
+                newWidthPx = 800,
+                userScrollInProgress = false,
+            ),
+            "first measure 0→W must not double-fire resize path",
+        )
+        assertFalse(
+            EditorFilmstripInteraction.shouldRecenterOnViewportResize(
+                selectedKey = "sel",
+                previousWidthPx = 800,
+                newWidthPx = 800,
+                userScrollInProgress = false,
+            ),
+            "same width is a no-op",
+        )
+        assertFalse(
+            EditorFilmstripInteraction.shouldRecenterOnViewportResize(
+                selectedKey = null,
+                previousWidthPx = 800,
+                newWidthPx = 1200,
+                userScrollInProgress = false,
+            ),
+            "no selection → no resize recenter",
+        )
+        assertFalse(
+            EditorFilmstripInteraction.shouldRecenterOnViewportResize(
+                selectedKey = "sel",
+                previousWidthPx = 800,
+                newWidthPx = 1200,
+                userScrollInProgress = true,
+            ),
+            "do not fight user fling during resize",
+        )
+    }
+
+    @Test
+    fun adjacent_selectable_steps_over_disabled() {
+        val canSelect = booleanArrayOf(true, false, true)
+        val next = EditorFilmstripInteraction.adjacentSelectableIndex(
+            count = canSelect.size,
+            selectedIndex = 0,
+            delta = 1,
+            canSelectAt = { canSelect[it] },
+        )
+        assertEquals(2, next)
+        val prev = EditorFilmstripInteraction.adjacentSelectableIndex(
+            count = canSelect.size,
+            selectedIndex = 2,
+            delta = -1,
+            canSelectAt = { canSelect[it] },
+        )
+        assertEquals(0, prev)
+    }
 }
+

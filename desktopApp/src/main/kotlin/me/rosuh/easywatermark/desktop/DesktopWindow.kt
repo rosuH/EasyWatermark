@@ -27,12 +27,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.awtTransferable
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.painter.Painter
@@ -42,9 +51,11 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import androidx.compose.ui.input.key.KeyShortcut
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -109,6 +120,7 @@ import me.rosuh.easywatermark.ui.sharedString
 import me.rosuh.easywatermark.ui.EditorBottomControls
 import me.rosuh.easywatermark.ui.EditorScreen
 import me.rosuh.easywatermark.ui.editorLayoutClass
+import me.rosuh.easywatermark.ui.usesLargeScreenDialog
 import me.rosuh.easywatermark.shared.generated.resources.dev_comment
 import me.rosuh.easywatermark.ui.about.AboutDevCard
 import me.rosuh.easywatermark.ui.about.AboutScreenIcons
@@ -365,10 +377,12 @@ fun launchDesktopWindow() = application {
     var previewGeneration by remember { mutableStateOf(0) }
     // H0.1-fix: offset-only / draft preview gen — **no** 250ms debounce, light in-memory raster.
     var offsetPreviewGeneration by remember { mutableStateOf(0) }
-    // Committed long-edge bucket from measured preview box (px). Draft paints stay at 720.
+    // Committed long-edge bucket from Fit+source+container (px). Draft paints stay at 720.
     var committedPreviewMaxEdgePx by remember {
         mutableStateOf(DesktopPreviewRaster.PREVIEW_MAX_EDGE_PX)
     }
+    // Last measured preview pane size in layout px (density-applied via onSizeChanged).
+    var previewBoxSizePx by remember { mutableStateOf(IntSize.Zero) }
     // UI-only CLAMP drag draft (never Session/export). selectionId + offsets.
     var clampDraft by remember { mutableStateOf<Triple<String, Float, Float>?>(null) }
     // E0: Session owns product route; FileDialog stays Desktop edge.
@@ -491,16 +505,31 @@ fun launchDesktopWindow() = application {
     }
 
     /**
-     * Measured preview-box size (px) → committed long-edge bucket.
-     * Only acts when the bucket changes: one committed light-preview generation.
-     * Same-bucket resize is a no-op.
+     * Recompute committed preview long-edge from pane size + current source dims (Fit policy).
+     * Aligns Desktop with iOS: enough decode pixels so large dual-pane does not upscale soft bitmaps.
+     * Same-bucket changes are a no-op (no extra paint).
      */
-    fun onPreviewBoxSizeChanged(size: IntSize) {
-        if (size.width <= 0 || size.height <= 0) return
-        val next = DesktopPreviewRaster.committedMaxEdgePx(size.width, size.height)
+    fun recomputeCommittedPreviewBucket(box: IntSize = previewBoxSizePx) {
+        if (box.width <= 0 || box.height <= 0) return
+        val item = session.launchScreenUiStateFlow.value.curImageInfo
+            ?: session.launchScreenUiStateFlow.value.selectedImageList.firstOrNull()
+        val next = DesktopPreviewRaster.committedMaxEdgePxForFit(
+            sourceWidthPx = item?.width ?: 0,
+            sourceHeightPx = item?.height ?: 0,
+            containerWidthPx = box.width,
+            containerHeightPx = box.height,
+        )
         if (next == committedPreviewMaxEdgePx) return
         committedPreviewMaxEdgePx = next
         offsetPreviewGeneration += 1
+    }
+
+    /** Measured preview-box size (layout px) → store + recompute Fit bucket. */
+    fun onPreviewBoxSizeChanged(size: IntSize) {
+        if (size.width <= 0 || size.height <= 0) return
+        if (size == previewBoxSizePx) return
+        previewBoxSizePx = size
+        recomputeCommittedPreviewBucket(size)
     }
 
     // Config / import: keep 250ms debounce for high-frequency slider ticks, then kick light path.
@@ -561,6 +590,8 @@ fun launchDesktopWindow() = application {
                 // H0.1-fix: light in-memory preview (no saveFlow); clear any CLAMP draft.
                 if (ok) {
                     clampDraft = null
+                    // Import now probes source W×H — recompute Fit bucket before first paint.
+                    recomputeCommittedPreviewBucket()
                     offsetPreviewGeneration += 1
                     val gen = offsetPreviewGeneration
                     status = "$msg · ${refreshPreviewLight(gen = gen, isDraft = false)}"
@@ -572,6 +603,36 @@ fun launchDesktopWindow() = application {
             }
         }
     }
+
+    fun pickOpenImages(owner: java.awt.Frame, append: Boolean = false) {
+        val dialog = FileDialog(owner, if (append) "Add images" else "Open image", FileDialog.LOAD).apply {
+            isMultipleMode = true
+            setFilenameFilter { _, fileName ->
+                fileName.substringAfterLast('.', "").lowercase() in IMAGE_EXTENSIONS
+            }
+            // D3: remember last open directory when available.
+            runCatching {
+                val prefs = Preferences.userRoot().node("me.rosuh.easywatermark.desktop")
+                prefs.get("lastOpenDir", null)?.let { directory = it }
+            }
+            isVisible = true
+            runCatching {
+                directory?.let {
+                    Preferences.userRoot().node("me.rosuh.easywatermark.desktop").put("lastOpenDir", it)
+                }
+            }
+        }
+        val files = DesktopSaveDecision.supportedImageFiles(dialog.files.toList(), IMAGE_EXTENSIONS)
+        if (files.isNotEmpty()) openImageFilesBatch(files, append = append)
+    }
+
+    fun openExportSheet() {
+        if (busy) return
+        session.resetJobStatus()
+        showSaveSheet = true
+    }
+
+    
 
     // ADR-0026 E2E: optional auto-import without FileDialog.
     // -Dewm.desktop.autoOpen=/path/a.png[,/path/b.png] — colon-separated list also accepted.
@@ -590,15 +651,42 @@ fun launchDesktopWindow() = application {
                 ),
             )
         }
+        // E2E: multiline watermark text for H1/H2 shots (literal \n in property → real newlines).
+        System.getProperty("ewm.desktop.forceText")?.trim()?.takeIf { it.isNotEmpty() }?.let { rawText ->
+            val text = rawText.replace("\n", "
+")
+            session.applyConfig(
+                me.rosuh.easywatermark.data.model.WatermarkConfigChange.Text(text),
+            )
+        }
         val raw = System.getProperty("ewm.desktop.autoOpen")?.trim().orEmpty()
-        if (raw.isEmpty()) return@LaunchedEffect
-        val files = raw.split(',', ';')
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-            .map { File(it) }
-            .filter { it.isFile }
-        if (files.isNotEmpty()) {
-            openImageFilesBatch(files, append = false)
+        if (raw.isNotEmpty()) {
+            val files = raw.split(',', ';')
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .map { File(it) }
+                .filter { it.isFile }
+            if (files.isNotEmpty()) {
+                openImageFilesBatch(files, append = false)
+            }
+        }
+        // Agent-only presentation flags (never set in production launches).
+        when (System.getProperty("ewm.desktop.openSheet")?.trim()?.lowercase()) {
+            "export", "save" -> {
+                // Wait one frame so import can enter Editor before export chrome.
+                kotlinx.coroutines.delay(700)
+                openExportSheet()
+            }
+            "about" -> {
+                kotlinx.coroutines.delay(400)
+                session.openAbout(
+                    if (productRoute == ProductShellNav.Route.Editor) {
+                        me.rosuh.easywatermark.ui.LaunchScreenUiState.Editor
+                    } else {
+                        me.rosuh.easywatermark.ui.LaunchScreenUiState.Launch
+                    },
+                )
+            }
         }
     }
 
@@ -706,11 +794,53 @@ fun launchDesktopWindow() = application {
     } else {
         rememberWindowState()
     }
+    var desktopFrame by remember { mutableStateOf<java.awt.Frame?>(null) }
     Window(
         onCloseRequest = ::closeDesktopWindow,
         title = "EasyWatermark — Desktop",
         state = windowState,
+        onPreviewKeyEvent = preview@{ event ->
+            if (event.type != KeyEventType.KeyDown) return@preview false
+            val chord = event.isMetaPressed || event.isCtrlPressed
+            if (!chord) return@preview false
+            when (event.key) {
+                Key.O -> {
+                    // Open / add images (Launch or Editor). Frame from content SideEffect.
+                    val frame = desktopFrame
+                    if (frame != null) {
+                        pickOpenImages(frame, append = productRoute == ProductShellNav.Route.Editor)
+                    }
+                    true
+                }
+                Key.S -> {
+                    // Save / export entry (H6).
+                    if (productRoute == ProductShellNav.Route.Editor) {
+                        openExportSheet()
+                        true
+                    } else {
+                        false
+                    }
+                }
+                else -> false
+            }
+        },
     ) {
+        // H6: MenuBar + KeyShortcut (Cmd/Ctrl). Window onKeyEvent also handles O/S.
+        val isMac = System.getProperty("os.name").orEmpty().lowercase().contains("mac")
+        fun accel(key: Key, shift: Boolean = false) =
+            if (isMac) KeyShortcut(key, meta = true, shift = shift)
+            else KeyShortcut(key, ctrl = true, shift = shift)
+        MenuBar {
+            Menu("File", mnemonic = 'F') {
+                Item("Open…", shortcut = accel(Key.O), onClick = { pickOpenImages(window, append = false) })
+                Item("Add images…", shortcut = accel(Key.O, shift = true), onClick = { pickOpenImages(window, append = true) })
+                Item("Export…", shortcut = accel(Key.S), onClick = { openExportSheet() })
+                Item("Save As…", shortcut = accel(Key.S, shift = true), onClick = {
+                    saveAsExactPath(window, dialogTitle = "Save As")
+                })
+            }
+        }
+        SideEffect { desktopFrame = window }
         AppTheme(darkTheme = true) {
             // I3: Desktop platformMotionPolicy is Full (no OS reduce-motion API).
             ProvideMotionPolicy(platformMotionPolicy()) {
@@ -741,19 +871,7 @@ fun launchDesktopWindow() = application {
                 ProductShellNav.Route.Launch -> {
                     me.rosuh.easywatermark.ui.LaunchScreen(
                         aboutIcon = aboutPainter,
-                        onPickImage = {
-                            val dialog = FileDialog(window, "Open image", FileDialog.LOAD).apply {
-                                isMultipleMode = true
-                                setFilenameFilter { _, fileName ->
-                                    fileName.substringAfterLast('.', "").lowercase() in IMAGE_EXTENSIONS
-                                }
-                                isVisible = true
-                            }
-                            val files = DesktopSaveDecision.supportedImageFiles(dialog.files.toList(), IMAGE_EXTENSIONS)
-                            if (files.isNotEmpty()) {
-                                openImageFilesBatch(files)
-                            }
-                        },
+                        onPickImage = { pickOpenImages(window, append = false) },
                         onGoAbout = {
                             session.openAbout(me.rosuh.easywatermark.ui.LaunchScreenUiState.Launch)
                         },
@@ -837,6 +955,7 @@ fun launchDesktopWindow() = application {
                                 "Dynamic color flag off"
                             }
                         },
+                        useLargeLayout = true,
                         logo = { modifier ->
                             me.rosuh.easywatermark.ui.AboutPageLogo(
                                 modifier = modifier,
@@ -894,6 +1013,8 @@ fun launchDesktopWindow() = application {
                                             bitmap = bmp,
                                             contentDescription = "Watermark preview",
                                             contentScale = ContentScale.Fit,
+                                            // Prefer sharp sampling when Fit is near 1:1 or slightly soft.
+                                            filterQuality = FilterQuality.High,
                                             modifier = Modifier
                                                 .fillMaxSize()
                                                 .padding(12.dp)
@@ -1045,22 +1166,8 @@ fun launchDesktopWindow() = application {
                             )
                         },
                         onBack = { session.onBackPressed() },
-                        onAddMoreImages = {
-                            val dialog = FileDialog(window, "Open image", FileDialog.LOAD).apply {
-                                isMultipleMode = true
-                                setFilenameFilter { _, fileName ->
-                                    fileName.substringAfterLast('.', "").lowercase() in IMAGE_EXTENSIONS
-                                }
-                                isVisible = true
-                            }
-                            val files = DesktopSaveDecision.supportedImageFiles(dialog.files.toList(), IMAGE_EXTENSIONS)
-                            if (files.isNotEmpty()) openImageFilesBatch(files, append = true)
-                        },
-                        onShowSaveDialog = {
-                            // Open Android-parity export panel; do not write files until primary CTA.
-                            session.resetJobStatus()
-                            showSaveSheet = true
-                        },
+                        onAddMoreImages = { pickOpenImages(window, append = true) },
+                        onShowSaveDialog = { openExportSheet() },
                         onGoAboutScreen = {
                             session.openAbout(me.rosuh.easywatermark.ui.LaunchScreenUiState.Editor)
                         },
@@ -1071,6 +1178,8 @@ fun launchDesktopWindow() = application {
                                 session.dispatchAndAwait(
                                     AppIntent.SelectCurrent(info.uri),
                                 )
+                                // Source dims may differ per item → Fit bucket may change.
+                                recomputeCommittedPreviewBucket()
                                 previewGeneration++
                             }
                         },
@@ -1348,6 +1457,7 @@ fun launchDesktopWindow() = application {
                 }
                 SaveExportSheetShell(
                     items = exportItems,
+                    useLargeDialog = true,
                     selectedFormat = outputFormat,
                     quality = outputQuality,
                     primaryActionLabel = primaryLabel,

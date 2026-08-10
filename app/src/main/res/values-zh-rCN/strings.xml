@@ -90,4 +90,9 @@
     <string name="title_tile_mode">平铺格式</string>
     <string name="tile_mode_title_repeat">重复</string>
     <string name="tile_mode_title_decal">单个</string>
+    <!-- Form inspector section headers (Expanded/Wide DEMO rhythm) -->
+    <string name="inspector_section_mode">模式</string>
+    <string name="inspector_section_tile">平铺</string>
+    <string name="inspector_section_look">外观</string>
+    <string name="inspector_section_gaps">间距</string>
 </resources>

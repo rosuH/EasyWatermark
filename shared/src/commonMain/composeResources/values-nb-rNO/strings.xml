@@ -89,4 +89,9 @@
     <string name="config_default_water_mark_text">👋 IKKE DEL</string>
     <string name="tips_not_app_can_open_images">Ingen filbehandler oppdaget.</string>
     <string name="error_save_oom">Utilstrekkelig minne. Frigjør minne og prøv igjen.</string>
+    <!-- Form inspector section headers (Expanded/Wide DEMO rhythm) -->
+    <string name="inspector_section_mode">Modus</string>
+    <string name="inspector_section_tile">Flis</string>
+    <string name="inspector_section_look">Utseende</string>
+    <string name="inspector_section_gaps">Avstand</string>
 </resources>

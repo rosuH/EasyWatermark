@@ -90,6 +90,9 @@ import me.rosuh.easywatermark.ui.about.AboutDevCard
 import me.rosuh.easywatermark.ui.about.AboutScreen
 import me.rosuh.easywatermark.ui.about.AboutScreenIcons
 import me.rosuh.easywatermark.ui.about.OpenSourceScreen
+import me.rosuh.easywatermark.ui.EditorLayoutClass
+import me.rosuh.easywatermark.ui.editorLayoutClass
+import me.rosuh.easywatermark.ui.usesLargeScreenDialog
 import me.rosuh.easywatermark.ui.compose.IconWatermarkOption
 import me.rosuh.easywatermark.ui.compose.TextColorOption
 import me.rosuh.easywatermark.ui.compose.formatArgbHexColor
@@ -278,6 +281,8 @@ class IosProductRootHost(
     private var showEditor by mutableStateOf(false)
     /** C2: shared Android Compose export panel; Photos/Share stay Swift callbacks. */
     private var showSaveSheet by mutableStateOf(false)
+    /** Last editor layout class for export sheet ≥840 dialog (export host is outside Editor BoxWithConstraints). */
+    private var lastEditorLayoutClass by mutableStateOf(EditorLayoutClass.Compact)
     private var outputFormat by mutableStateOf(ImageFormat.JPEG)
     private var outputQuality by mutableStateOf(80)
     /** After a successful sheet export, primary CTA flips to Share (Android parity). */
@@ -654,7 +659,10 @@ class IosProductRootHost(
                 ProductShellNav.Route.About -> {
                     // Live watermark config (enableBounds for Show Bounds switch).
                     val aboutShowBounds = waterMark.enableBounds
+                    BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val aboutLarge = maxWidth.value >= 840f
                     AboutScreen(
+
                         versionName = ProductVersion.NAME,
                         showBounds = aboutShowBounds,
                         dynamicColorOn = dynamicColorForced,
@@ -717,7 +725,9 @@ class IosProductRootHost(
                                 animate = true,
                             )
                         },
+                        useLargeLayout = aboutLarge,
                     )
+                    } // BoxWithConstraints About
                 }
 
                 ProductShellNav.Route.Editor -> {
@@ -734,6 +744,7 @@ class IosProductRootHost(
                     val layoutClass = remember(maxWidth, maxHeight) {
                         editorLayoutClass(maxWidth.value, maxHeight.value)
                     }
+                    lastEditorLayoutClass = layoutClass
                     val density = LocalDensity.current
                     val bucketImage = launchUi.curImageInfo ?: sessionImages.firstOrNull()
                     val requestedPreviewBucket = remember(
@@ -1367,6 +1378,7 @@ class IosProductRootHost(
                 }
                 SaveExportSheetShell(
                     items = listItems,
+                    useLargeDialog = usesLargeScreenDialog(lastEditorLayoutClass),
                     selectedFormat = outputFormat,
                     quality = outputQuality,
                     primaryActionLabel = primaryLabel,

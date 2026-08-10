@@ -7,7 +7,7 @@ package me.rosuh.easywatermark.ui
  * - Compact: width &lt; 600 — vertical stack (B density)
  * - Medium: 600 ≤ width &lt; 840 — same stack as Compact (M1)
  * - Expanded: 840 ≤ width &lt; 1440 — supporting-pane A (preview+filmstrip | inspector) (D1)
- * - Wide: width ≥ 1440 — three-zone C (session images | canvas+filmstrip | inspector) (C-W1)
+ * - Wide: width ≥ 1440 — same dual-pane chrome as Expanded (owner 2026-08-10: no three-zone left rail)
  *
  * Fixtures:
  * | Size | Class |
@@ -16,7 +16,7 @@ package me.rosuh.easywatermark.ui
  * | 839×800 | Medium |
  * | 840×800 | Expanded |
  * | 1280×800 | Expanded |
- * | 1440×900 | Wide |
+ * | 1440×900 | Wide (layout chrome = Expanded dual-pane) |
  */
 enum class EditorLayoutClass {
     Compact,
@@ -31,7 +31,10 @@ const val EDITOR_LAYOUT_MEDIUM_MIN_WIDTH_DP: Float = 600f
 /** Width at which supporting-pane A ([EditorLayoutClass.Expanded]) begins (inclusive), in Dp. ADR-0026 D1. */
 const val EDITOR_LAYOUT_EXPANDED_MIN_WIDTH_DP: Float = 840f
 
-/** Width at which three-zone C ([EditorLayoutClass.Wide]) begins (inclusive), in Dp. ADR-0026 C-W1. */
+/**
+ * Width band for [EditorLayoutClass.Wide] (inclusive), in Dp.
+ * Historically ADR-0026 C-W1 three-zone; chrome is dual-pane same as Expanded (owner 2026-08-10).
+ */
 const val EDITOR_LAYOUT_WIDE_MIN_WIDTH_DP: Float = 1440f
 
 /**
@@ -57,11 +60,8 @@ fun editorLayoutClass(widthDp: Float, heightDp: Float = 0f): EditorLayoutClass {
  */
 const val GALLERY_ADAPTIVE_MIN_CELL_DP: Float = 80f
 
-/** Supporting-pane / three-zone inspector max width (Dp). Fixed rail — A polish P1. */
+/** Supporting-pane inspector max width (Dp). Fixed rail — A polish P1. */
 const val EDITOR_EXPANDED_CONTROLS_PANE_MAX_DP: Float = 360f
-
-/** Three-zone C left session-library max width (Dp). */
-const val EDITOR_WIDE_SESSION_LIBRARY_MAX_DP: Float = 280f
 
 /** Horizontal padding inside supporting panes (Dp) — A polish letterbox/clip fix. */
 const val EDITOR_SUPPORTING_PANE_PADDING_DP: Float = 12f

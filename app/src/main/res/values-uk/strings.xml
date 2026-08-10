@@ -1,3 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Form inspector section headers (Expanded/Wide DEMO rhythm) -->
+    <string name="inspector_section_mode">Режим</string>
+    <string name="inspector_section_tile">Плитка</string>
+    <string name="inspector_section_look">Вигляд</string>
+    <string name="inspector_section_gaps">Відступи</string>
 </resources>

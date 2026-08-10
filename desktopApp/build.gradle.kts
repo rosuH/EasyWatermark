@@ -66,6 +66,8 @@ compose.desktop {
             prop("EwmH", "ewmH")?.let { "-Dewm.desktop.heightDp=$it" },
             prop("EwmInspectorTab", "ewmInspectorTab")?.let { "-Dewm.desktop.inspectorTab=$it" },
             prop("EwmForceMarkMode", "ewmForceMarkMode")?.let { "-Dewm.desktop.forceMarkMode=$it" },
+            prop("EwmForceText", "ewmForceText")?.let { "-Dewm.desktop.forceText=$it" },
+            prop("EwmOpenSheet", "ewmOpenSheet")?.let { "-Dewm.desktop.openSheet=$it" },
         ).forEach { jvmArgs += it }
         nativeDistributions {
             packageName = "EasyWatermark"

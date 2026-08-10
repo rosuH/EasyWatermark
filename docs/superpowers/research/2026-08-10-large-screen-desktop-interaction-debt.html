@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EasyWatermark · 大屏/桌面交互债研究报告</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --font: "Plus Jakarta Sans", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+    --bg: #0c0f12;
+    --bg-elev: #13181f;
+    --surface: #1a212b;
+    --surface-2: #222b38;
+    --border: #2f3b4d;
+    --text: #eef2f7;
+    --text-dim: #8b9bb0;
+    --text-mute: #5c6b7f;
+    --amber: #e8c547;
+    --amber-soft: rgba(232, 197, 71, 0.12);
+    --amber-border: rgba(232, 197, 71, 0.4);
+    --ok: #5cb88a;
+    --ok-soft: rgba(92, 184, 138, 0.12);
+    --danger: #e07a7a;
+    --danger-soft: rgba(224, 122, 122, 0.12);
+    --teal: #5bc0be;
+    --teal-soft: rgba(91, 192, 190, 0.12);
+    --blue: #7aa2f7;
+    --blue-soft: rgba(122, 162, 247, 0.12);
+    --radius: 10px;
+    --shadow: 0 16px 48px rgba(0,0,0,.4);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+    min-height: 100dvh;
+    background-image:
+      radial-gradient(ellipse at 12% 0%, var(--amber-soft) 0%, transparent 42%),
+      radial-gradient(ellipse at 88% 12%, var(--teal-soft) 0%, transparent 38%);
+  }
+  a { color: var(--amber); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  a:hover { color: #f5d76e; }
+  .page { max-width: 1120px; margin: 0 auto; padding: 28px 22px 96px; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 8px;
+  }
+  h1 {
+    margin: 0 0 12px;
+    font-size: clamp(1.5rem, 2.6vw, 2rem);
+    font-weight: 700;
+    letter-spacing: -.02em;
+    line-height: 1.2;
+  }
+  .lede {
+    margin: 0 0 22px;
+    max-width: 72ch;
+    color: var(--text-dim);
+    font-size: 15.5px;
+  }
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+  .chip {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+  }
+  .chip strong { color: var(--text); font-weight: 600; }
+  .toc {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+    margin-bottom: 36px;
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .toc a {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    text-decoration: none;
+  }
+  .toc a:hover { color: var(--amber); }
+  h2 {
+    margin: 40px 0 12px;
+    font-size: 1.2rem;
+    letter-spacing: -.01em;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  h2 .n {
+    font-family: var(--mono);
+    color: var(--amber);
+    font-size: 12px;
+    margin-right: 8px;
+  }
+  h3 {
+    margin: 22px 0 8px;
+    font-size: 0.98rem;
+    font-weight: 600;
+  }
+  p, li { font-size: 14.5px; color: var(--text-dim); }
+  p { margin: 0 0 12px; max-width: 78ch; }
+  ul, ol { margin: 0 0 14px; padding-left: 1.25em; }
+  li { margin-bottom: 6px; }
+  li strong { color: var(--text); }
+  code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--surface-2);
+    color: var(--teal);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  .callout {
+    border: 1px solid var(--amber-border);
+    background: var(--amber-soft);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin: 16px 0 22px;
+  }
+  .callout strong { color: var(--amber); }
+  .callout p { margin: 0; color: var(--text); max-width: none; }
+  .callout.danger {
+    border-color: rgba(224,122,122,.45);
+    background: var(--danger-soft);
+  }
+  .callout.danger strong { color: var(--danger); }
+  .callout.ok {
+    border-color: rgba(92,184,138,.4);
+    background: var(--ok-soft);
+  }
+  .callout.ok strong { color: var(--ok); }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 14px 0 20px;
+  }
+  @media (max-width: 800px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+  .ve-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    min-width: 0;
+  }
+  .ve-card--hero {
+    background: linear-gradient(160deg, rgba(232,197,71,.08), transparent 55%), var(--surface);
+    border-color: var(--amber-border);
+  }
+  .ve-card--danger { border-left: 3px solid var(--danger); }
+  .ve-card--ok { border-left: 3px solid var(--ok); }
+  .ve-card--warn { border-left: 3px solid var(--amber); }
+  .ve-card--info { border-left: 3px solid var(--teal); }
+  .ve-card__label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 8px;
+  }
+  .ve-card h3 { margin: 0 0 8px; color: var(--text); }
+  .ve-card p, .ve-card li { font-size: 13.5px; }
+  .path-flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 8px;
+    margin: 14px 0 20px;
+  }
+  .path-step {
+    flex: 1 1 140px;
+    min-width: 120px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .path-step .k {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+  .path-step .v { font-size: 13px; color: var(--text); margin-top: 6px; font-weight: 600; }
+  .path-step .d { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+  .path-arrow {
+    display: flex;
+    align-items: center;
+    color: var(--text-mute);
+    font-family: var(--mono);
+    font-size: 16px;
+    padding: 0 2px;
+  }
+  .table-wrap {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 12px 0 22px;
+    background: var(--surface);
+  }
+  .table-scroll { overflow-x: auto; }
+  table.data {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  table.data th {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    text-align: left;
+    padding: 10px 12px;
+    color: var(--text-mute);
+    background: var(--bg-elev);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  table.data td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    color: var(--text-dim);
+  }
+  table.data tr:last-child td { border-bottom: none; }
+  table.data tbody tr:hover td { background: rgba(255,255,255,.02); }
+  table.data td.wide { min-width: 160px; max-width: 320px; }
+  .status {
+    display: inline-flex;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  .status--p0 { background: var(--danger-soft); color: var(--danger); }
+  .status--p1 { background: var(--amber-soft); color: var(--amber); }
+  .status--p2 { background: var(--blue-soft); color: var(--blue); }
+  .status--ok { background: var(--ok-soft); color: var(--ok); }
+  .status--gap { background: var(--danger-soft); color: var(--danger); }
+  .status--partial { background: var(--amber-soft); color: var(--amber); }
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin: 14px 0 22px;
+  }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .kpi .v {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -.03em;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi .l {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--text-mute);
+    margin-top: 4px;
+  }
+  .mock {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 10px;
+    margin: 12px 0 18px;
+  }
+  @media (max-width: 700px) { .mock { grid-template-columns: 1fr; } }
+  .mock-pane {
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    background: var(--bg-elev);
+    padding: 12px;
+    min-height: 120px;
+  }
+  .mock-pane.bad { border-color: rgba(224,122,122,.5); background: rgba(224,122,122,.06); }
+  .mock-pane.good { border-color: rgba(92,184,138,.45); background: rgba(92,184,138,.06); }
+  .mock-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 10px;
+  }
+  .mock-title.bad { color: var(--danger); }
+  .mock-title.good { color: var(--ok); }
+  .fake-field {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--surface);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .fake-field.multi {
+    white-space: pre-line;
+    min-height: 64px;
+    line-height: 1.4;
+  }
+  .principle {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .principle:last-child { border-bottom: none; }
+  .principle .num {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--amber);
+  }
+  .principle h4 { margin: 0 0 4px; color: var(--text); font-size: 14px; }
+  .principle p { margin: 0; font-size: 13px; }
+  footer.foot {
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-mute);
+  }
+  .nav-side {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    backdrop-filter: blur(10px);
+    background: rgba(12,15,18,.85);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 0;
+    margin: -28px -22px 24px;
+    padding-left: 22px;
+    padding-right: 22px;
+  }
+  .nav-side-inner {
+    max-width: 1120px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+  }
+  .nav-side a {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-mute);
+    text-decoration: none;
+  }
+  .nav-side a:hover { color: var(--amber); }
+</style>
+</head>
+<body>
+<div class="page">
+  <nav class="nav-side" aria-label="章节">
+    <div class="nav-side-inner">
+      <a href="#trigger">触发点</a>
+      <a href="#root">根因</a>
+      <a href="#taxonomy">债分类</a>
+      <a href="#matrix">清单矩阵</a>
+      <a href="#about">About</a>
+      <a href="#principles">原则</a>
+      <a href="#roadmap">路线图</a>
+    </div>
+  </nav>
+
+  <div class="eyebrow">Research · UX / Adaptive · 2026-08-10</div>
+  <h1>大屏与桌面交互债研究报告</h1>
+  <p class="lede">
+    以「文字看不到换行、无法编辑第二行」为切入点，梳理 EasyWatermark 在
+    <strong style="color:var(--text)">Expanded / Wide / Desktop</strong>
+    上从「手机控件竖放」迁到「真桌面工作区」时，仍缺的交互层（不止布局断点）。
+    范围：编辑器 Form Inspector、水印文本、导出/模板、About、Desktop 宿主能力。
+  </p>
+  <div class="meta-row">
+    <span class="chip"><strong>Trigger</strong> multiline text / form path</span>
+    <span class="chip"><strong>Layout</strong> ADR-0026 dual-pane ≥840</span>
+    <span class="chip"><strong>Engine</strong> MultiParagraph 已支持换行</span>
+    <span class="chip"><strong>UI gap</strong> inline field singleLine=true</span>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="v">1</div><div class="l">P0 产品断点</div></div>
+    <div class="kpi"><div class="v">12+</div><div class="l">可列交互债项</div></div>
+    <div class="kpi"><div class="v">0</div><div class="l">About 自适应</div></div>
+    <div class="kpi"><div class="v">2</div><div class="l">文本编辑路径</div></div>
+  </div>
+
+  <!-- 1 Trigger -->
+  <h2 id="trigger"><span class="n">01</span>触发案例：多行水印文本</h2>
+  <div class="callout danger">
+    <p><strong>用户现象：</strong>大屏/Desktop 右侧 Form 里编辑水印文字时，看不到换行，也无法输入/编辑第二行内容。</p>
+  </div>
+
+  <div class="mock">
+    <div class="mock-pane bad">
+      <div class="mock-title bad">现状 · form inline（Desktop / ≥840）</div>
+      <div class="fake-field">第一行内容第二行被吃掉……</div>
+      <p style="margin:10px 0 0;font-size:12px;color:var(--text-mute)">
+        <code>InlineTextContentField</code> → <code>singleLine = true</code><br/>
+        Enter 被吞 / 不增高 / 不显示 \n
+      </p>
+    </div>
+    <div class="mock-pane good">
+      <div class="mock-title good">期望 · 工作区文本</div>
+      <div class="fake-field multi">第一行内容
+第二行内容
+第三行可选…</div>
+      <p style="margin:10px 0 0;font-size:12px;color:var(--text-mute)">
+        minLines≥2–4 · Enter 换行 · 渲染引擎已能画多行 cell
+      </p>
+    </div>
+  </div>
+
+  <div class="path-flow">
+    <div class="path-step">
+      <div class="k">Phone</div>
+      <div class="v">摘要行 + Sheet</div>
+      <div class="d"><code>WatermarkTextEditSheet</code> 未强制 singleLine → 可多行</div>
+    </div>
+    <div class="path-arrow">→</div>
+    <div class="path-step">
+      <div class="k">Form path</div>
+      <div class="v">内联 OutlinedTextField</div>
+      <div class="d"><code>singleLine=true</code> · 专为大屏「快改」加的，却砍掉多行</div>
+    </div>
+    <div class="path-arrow">→</div>
+    <div class="path-step">
+      <div class="k">Raster</div>
+      <div class="v">MultiParagraph</div>
+      <div class="d">引擎已按行居中；有 \n 就能画</div>
+    </div>
+    <div class="path-arrow">→</div>
+    <div class="path-step">
+      <div class="k">结果</div>
+      <div class="v">大屏能力倒退</div>
+      <div class="d">手机 sheet 能做的事，侧栏反而做不了</div>
+    </div>
+  </div>
+
+  <!-- 2 Root -->
+  <h2 id="root"><span class="n">02</span>根因与模式</h2>
+  <div class="grid-2">
+    <div class="ve-card ve-card--danger">
+      <div class="ve-card__label">代码事实</div>
+      <h3><code>TextContentOption.kt</code></h3>
+      <ul>
+        <li><strong>inlineEdit=true</strong>（Form Inspector）：<code>singleLine = true</code></li>
+        <li><strong>inlineEdit=false</strong>（底栏）：摘要 <code>maxLines=1</code> + 弹层字段<strong>不</strong>设 singleLine</li>
+        <li>模板编辑 Sheet 字段同样允许多行</li>
+      </ul>
+    </div>
+    <div class="ve-card ve-card--ok">
+      <div class="ve-card__label">渲染事实</div>
+      <h3><code>WatermarkCellComposer</code></h3>
+      <ul>
+        <li>TextMeasurer / MultiParagraph 测整段文本</li>
+        <li>注释明确按行居中（多行水印合法）</li>
+        <li><strong>产品能力 = 引擎 OK + UI 路径被掐</strong></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout">
+    <p><strong>抽象模式：</strong>「为了在侧栏塞下手机控件，把交互降级成 single-purpose 缩略版」，而不是「用侧栏空间升级成桌面级编辑」。
+    同类债会在：短字段、弹层改内联、底栏手势、About 列表、导出 sheet 上反复出现。</p>
+  </div>
+
+  <!-- 3 Taxonomy -->
+  <h2 id="taxonomy"><span class="n">03</span>交互债分类（从触发点推广）</h2>
+  <p>布局 IA（ADR-0026 双栏）只解决「放哪里」。大屏还要解决「怎么用」——五类债：</p>
+
+  <div class="grid-2">
+    <div class="ve-card ve-card--warn" style="--i:0">
+      <div class="ve-card__label">A · 输入保真</div>
+      <h3>编辑能力不能比手机差</h3>
+      <p>多行文本、长内容滚动、校验错误常驻、撤销/重做入口。侧栏应是<strong>升级</strong>而非阉割。</p>
+    </div>
+    <div class="ve-card ve-card--warn" style="--i:1">
+      <div class="ve-card__label">B · 空间形态</div>
+      <h3>弹层 → 内联 / 固定面板</div>
+      <p>手机靠 sheet 争取垂直空间；宽屏应默认内联，避免 FileDialog + Modal 叠层。About 列表可改双栏「目录|详情」。</p>
+    </div>
+    <div class="ve-card ve-card--info" style="--i:2">
+      <div class="ve-card__label">C · 指针与键盘</div>
+      <h3>Hover / 快捷键 / 焦点环</h3>
+      <p>Desktop 缺：滑块微调（滚轮/方向键）、Ctrl+S 保存、Tab 焦点顺序、拖放与菜单等价入口。</p>
+    </div>
+    <div class="ve-card ve-card--info" style="--i:3">
+      <div class="ve-card__label">D · 视口与像素</div>
+      <h3>预览清晰 + 控件跟布局</h3>
+      <p>已做：Fit bucket / filmstrip 随宽重居中。仍欠：缩放手柄、About 满宽浪费、导出 sheet 在宽窗仍像手机抽屉。</p>
+    </div>
+    <div class="ve-card" style="--i:4">
+      <div class="ve-card__label">E · 信息密度</div>
+      <h3>分区、并排、持久可见</h3>
+      <p>Form 分区标题已 i18n。仍可：Style 滑块与色板同屏；导出选项与文件列表分栏；About 开源说明可读宽度。</p>
+    </div>
+    <div class="ve-card" style="--i:5">
+      <div class="ve-card__label">F · 跨窗一致</div>
+      <h3>同代码路径，异形态</h3>
+      <p><code>formPath</code> / <code>layoutClass</code> 分支要有契约测试：大屏路径不得偷偷砍功能（如 multiline）。</p>
+    </div>
+  </div>
+
+  <!-- 4 Matrix -->
+  <h2 id="matrix"><span class="n">04</span>产品面清单矩阵</h2>
+  <p>优先级：P0 功能倒退/数据丢失感 · P1 明显桌面违和 · P2 体验加分。</p>
+
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>域</th>
+            <th>现状（大屏/Desktop）</th>
+            <th>问题</th>
+            <th>建议方向</th>
+            <th>P</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="wide"><strong>水印文本 · Form 内联</strong><br/><code>TextContentOption.inlineEdit</code></td>
+            <td><code>singleLine=true</code></td>
+            <td>无换行、看不见第二行；与引擎多行能力矛盾</td>
+            <td>Form：minLines=3–5、maxLines=8、softWrap；Enter=换行；可选「展开编辑」</td>
+            <td><span class="status status--p0">P0</span></td>
+          </tr>
+          <tr>
+            <td class="wide"><strong>水印文本 · 底栏摘要</strong></td>
+            <td><code>maxLines=1</code> + ellipsis</td>
+            <td>多行水印在底栏完全不可见结构</td>
+            <td>Compact 可保留 1 行；Medium+ 摘要 2 行或 chip「3 行」</td>
+            <td><span class="status status--p1">P1</span></td>
+          </tr>
+          <tr>
+            <td class="wide"><strong>文本 Sheet（手机路径）</strong></td>
+            <td>未强制 singleLine</td>
+            <td>OK；与 form 行为不一致</td>
+            <td>统一「产品允许 multiline」契约；两路径共用 TextField defaults</td>
+            <td><span class="status status--ok">对齐</span></td>
+          </tr>
+          <tr>
+            <td class="wide"><strong>模板内容编辑</strong><br/><code>TemplateListSheet</code></td>
+            <td>字段默认可多行</td>
+            <td>列表项 <code>maxLines=2</code> 尚可；大屏 sheet 仍全宽底栏风格</td>
+            <td>Expanded：侧栏内嵌模板列表或 dialog 居中 max-width</td>
+            <td><span class="status status--p1">P1</span></td>
+          </tr>
+          <tr>
+            <td class="wide"><strong>颜色 HEX 输入</strong></td>
+            <td><code>singleLine</code> 合理</td>
+            <td>无实时 swatch 旁路、Desktop 粘贴 #RRGGBB 体验一般</td>
+            <td>保持单行；加粘贴规范化 + 错误提示常驻</td>
+            <td><span class="status status--p2">P2</span></td>
+          </tr>
+          <tr>
+            <td class="wide"><strong>滑块（大小/透明/角度/间距）</strong></td>
+            <td>Form 左 label 右值</td>
+            <td>无键盘步进、无双击重置、无滚轮微调</td>
+            <td>方向键 ±1、Shift±10；滚轮；双击恢复默认</td>
+            <td><span class="status status--p1">P1</span></td>
+          </tr>
+          <tr>
+            <td class="wide"><strong>图标/贴纸选择</strong></td>
+            <td>Desktop FileDialog；大黄按钮</td>
+            <td>无拖放换图标、无最近用列表、无剪贴板图片</td>
+            <td>Drop target + 最近文件 + 粘贴图片</td>
+            <td><span class="status status--p1">P1</span></td>
+          </tr>
+          <tr>
+            <td class="wide"><strong>Filmstrip 选图</strong></td>
+            <td>中心黄框 + snap（已修 resize）</td>
+            <td>无键盘左右切换、无 hover 预览大图</td>
+            <td>←/→ 切换；hover 轻微放大</td>
+            <td><span class="status status--p2">P2</span></td>
+          </tr>
+          <tr>
+            <td class="wide"><strong>预览分辨率</strong></td>
+            <td>Fit bucket 至 3840；draft 720</td>
+            <td>lowres 源仍糊（源限制）；拖拽时变糊可感知</td>
+            <td>文档化；draft 可升 1080 on Desktop</td>
+            <td><span class="status status--partial">部分</span></td>
+          </tr>
+          <tr>
+            <td class="wide"><strong>导出 Save sheet</strong></td>
+            <td>ModalBottomSheet 手机抽屉语义</td>
+            <td>宽屏仍从底升起，选项/列表纵向堆叠浪费横向</td>
+            <td>≥840：居中 dialog 或左右分栏「选项 | 文件列表」</td>
+            <td><span class="status status--p1">P1</span></td>
+          </tr>
+          <tr>
+            <td class="wide"><strong>Desktop 文件 IO</strong></td>
+            <td>AWT FileDialog</td>
+            <td>与系统拖放并存；无最近路径；无快捷键</td>
+            <td>Cmd/Ctrl+O/S/Shift+S；记住目录</td>
+            <td><span class="status status--p1">P1</span></td>
+          </tr>
+          <tr>
+            <td class="wide"><strong>About 页</strong></td>
+            <td>单列 scroll + 底部门户 pager</td>
+            <td>大屏两侧留白；开发者卡仍横向滑动像手机；开关与外链无分栏</td>
+            <td>见下节</td>
+            <td><span class="status status--p1">P1</span></td>
+          </tr>
+          <tr>
+            <td class="wide"><strong>开源许可 / 长文</strong></td>
+            <td>卡片堆叠</td>
+            <td>可读行长过宽或过窄；无目录锚点</td>
+            <td>max-width ~65ch 居中；≥840 左侧 TOC</td>
+            <td><span class="status status--p2">P2</span></td>
+          </tr>
+          <tr>
+            <td class="wide"><strong>焦点与无障碍</strong></td>
+            <td>Compose 默认</td>
+            <td>Desktop Tab 顺序、焦点环在深色底对比不足</td>
+            <td>显式 focus order；高对比 focus</td>
+            <td><span class="status status--p2">P2</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 5 About -->
+  <h2 id="about"><span class="n">05</span>About 页专项</h2>
+  <p>
+    <code>AboutScreenShell</code> 当前是<strong>手机纵向叙事</strong>：全屏光晕 → 顶栏 logo → Section 列表行 → 底部
+    <code>HorizontalPager</code> 开发者/设计师卡。没有 <code>layoutClass</code> / <code>BoxWithConstraints</code> 分支。
+  </p>
+
+  <div class="grid-2">
+    <div class="ve-card ve-card--danger">
+      <div class="ve-card__label">大屏问题</div>
+      <ul>
+        <li>内容列拉满窗口 → 行点击热区过长，视线扫描成本高</li>
+        <li>Dev 卡仍用 pager 滑动 —— 桌面用户期望并排两卡或 grid</li>
+        <li>版本/评分/反馈与「开关项」混在同一线性流，无「设置 | 关于信息」分区密度</li>
+        <li>开源/隐私二级页同样单列，未复用双栏阅读模式</li>
+      </ul>
+    </div>
+    <div class="ve-card ve-card--ok">
+      <div class="ve-card__label">建议形态（≥840）</div>
+      <ul>
+        <li><strong>左：</strong>导航列表（信息 / 关于 / 偏好开关）</li>
+        <li><strong>右：</strong>选中项详情或外链确认</li>
+        <li>Dev/Designer：并排两卡，取消强制 pager</li>
+        <li>内容 max-width 限制（约 720–840dp 居中）防超长行</li>
+        <li>Desktop：外链用系统浏览器；评分/反馈禁用或改「复制地址」</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout ok">
+    <p><strong>与编辑器一致的原则：</strong>Compact 保留现有 About 滚动叙事（品牌感）；Expanded+ 再分栏。
+    不要为了大屏拆掉橄榄色光晕品牌，只改信息架构与点击目标密度。</p>
+  </div>
+
+  <!-- 6 Principles -->
+  <h2 id="principles"><span class="n">06</span>设计原则（落地检查单）</h2>
+  <div class="ve-card">
+    <div class="principle">
+      <div class="num">01</div>
+      <div>
+        <h4>大屏路径不得功能倒退</h4>
+        <p>凡 <code>formPath</code> / dual-pane 分支，能力集合 ≥ 手机路径（multiline、模板、校验）。允许形态变，不允许能力删。</p>
+      </div>
+    </div>
+    <div class="principle">
+      <div class="num">02</div>
+      <div>
+        <h4>空间换持久可见，而不是换阉割控件</h4>
+        <p>侧栏垂直空间应用来多行输入、分区、并排滑块+色板，而不是把字段压成 singleLine 摘要。</p>
+      </div>
+    </div>
+    <div class="principle">
+      <div class="num">03</div>
+      <div>
+        <h4>指针+键盘是一等公民（Desktop）</h4>
+        <p>每个高频操作：点击、快捷键、（可选）菜单三项等价。拖放与 FileDialog 等价。</p>
+      </div>
+    </div>
+    <div class="principle">
+      <div class="num">04</div>
+      <div>
+        <h4>弹层有「大屏变体」</h4>
+        <p>Bottom sheet → 居中 dialog / 侧栏内嵌 / 分栏。断点与编辑器 840 对齐。</p>
+      </div>
+    </div>
+    <div class="principle">
+      <div class="num">05</div>
+      <div>
+        <h4>可读宽度与触控热区解耦</h4>
+        <p>About/开源：限制 measure；列表行在宽屏限制内容宽或用双栏，避免 1400px 宽点击条。</p>
+      </div>
+    </div>
+    <div class="principle">
+      <div class="num">06</div>
+      <div>
+        <h4>契约测试锁住路径差异</h4>
+        <p>例如：<code>inlineEdit</code> 字段必须 <code>!singleLine</code> 或 minLines≥2；resize 后 filmstrip 居中；预览 bucket≥容器 Fit。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7 Roadmap -->
+  <h2 id="roadmap"><span class="n">07</span>建议落地顺序</h2>
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>批次</th>
+            <th>项</th>
+            <th>验收</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="status status--p0">P0</span></td>
+            <td class="wide"><strong>多行文本 Form 路径</strong>：去掉 inline singleLine；minLines=3；与 sheet 行为对齐；确认渲染含 \n</td>
+            <td>Desktop 侧栏可输入三行；预览 cell 三行居中；电话路径无回归</td>
+          </tr>
+          <tr>
+            <td><span class="status status--p0">P0</span></td>
+            <td class="wide"><strong>路径契约测试</strong>：inline 与 sheet 共享「允许换行」断言</td>
+            <td>单元/截图门禁防再阉割</td>
+          </tr>
+          <tr>
+            <td><span class="status status--p1">P1</span></td>
+            <td class="wide"><strong>导出 sheet 大屏变体</strong>：≥840 居中或双栏</td>
+            <td>宽窗不再「手机抽屉」感</td>
+          </tr>
+          <tr>
+            <td><span class="status status--p1">P1</span></td>
+            <td class="wide"><strong>About ≥840</strong>：内容限宽 + Dev 双卡并排；可选左右导航</td>
+            <td>1470 宽截图对比</td>
+          </tr>
+          <tr>
+            <td><span class="status status--p1">P1</span></td>
+            <td class="wide"><strong>Desktop 快捷键与拖放</strong>：O/S、图标 drop</td>
+            <td>无 FileDialog 完成开图/存图主干</td>
+          </tr>
+          <tr>
+            <td><span class="status status--p1">P1</span></td>
+            <td class="wide"><strong>滑块键盘/滚轮</strong></td>
+            <td>无鼠标拖拽可调参</td>
+          </tr>
+          <tr>
+            <td><span class="status status--p2">P2</span></td>
+            <td class="wide">Filmstrip 键控、焦点环、开源 TOC、draft 预览更高 bucket</td>
+            <td>体验打磨清单</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="callout">
+    <p><strong>与既有决策关系：</strong>ADR-0026 解决「窗格放哪」；Form Inspector DEMO 解决「控件长什么样」；
+    <em>本报告</em>补第三层——「大屏上的操作是否完整、是否桌面化」。三层都齐，Desktop 才不像「放大的手机」。</p>
+  </div>
+
+  <h2 id="refs"><span class="n">08</span>代码与文档锚点</h2>
+  <ul>
+    <li><code>shared/.../ui/compose/TextContentOption.kt</code> — <code>InlineTextContentField</code> / <code>WatermarkTextEditSheet</code></li>
+    <li><code>shared/.../ui/EditorInspectorPanel.kt</code> — form 形态</li>
+    <li><code>shared/.../render/WatermarkCellComposer.kt</code> — 多行测量/绘制</li>
+    <li><code>shared/.../ui/about/AboutScreenShell.kt</code> — 单列 About</li>
+    <li><code>shared/.../ui/save/SaveExportSheetShell.kt</code> — 导出抽屉</li>
+    <li><code>desktopApp/.../DesktopWindow.kt</code> — FileDialog / 预览 bucket</li>
+    <li><code>docs/adr/0026-adaptive-editor-layout-ia.md</code> — 布局断点（已撤三区左轨）</li>
+    <li><code>docs/superpowers/research/easywatermark-inspector-panel-redesign-demo.html</code> — Form DEMO</li>
+  </ul>
+
+  <footer class="foot">
+    EasyWatermark · Large-screen / Desktop interaction debt · 2026-08-10<br/>
+    Trigger: multiline watermark text invisible / uneditable on form path · visual-explainer research report<br/>
+    Mirror: docs/superpowers/research/ · ~/.agent/diagrams/
+  </footer>
+</div>
+</body>
+</html>

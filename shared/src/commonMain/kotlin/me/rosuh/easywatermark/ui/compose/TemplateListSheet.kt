@@ -73,6 +73,8 @@ fun TemplateListSheet(
     deleteIcon: Painter? = null,
     enabled: Boolean = true,
     newTemplateInitialText: String = "",
+    /** ≥840: centered dialog; Compact/Medium keep bottom sheet. */
+    useLargeDialog: Boolean = false,
     onDismiss: () -> Unit,
     onUse: (Template) -> Unit,
     onAdd: (String) -> Unit,
@@ -84,16 +86,14 @@ fun TemplateListSheet(
     var confirmDelete by remember { mutableStateOf<Template?>(null) }
     var selectedTemplateId by remember { mutableStateOf<Int?>(null) }
 
-    EwmModalBottomSheet(
-        onDismissRequest = onDismiss,
-        modifier = Modifier.testTag(TEMPLATE_LIST_SHEET_TAG),
-    ) {
+    val body: @Composable () -> Unit = {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .navigationBarsPadding()
+                .then(if (useLargeDialog) Modifier else Modifier.navigationBarsPadding())
                 .padding(bottom = 20.dp)
+                .testTag(TEMPLATE_LIST_SHEET_TAG),
         ) {
             // Header: title + add
             Row(
@@ -201,6 +201,20 @@ fun TemplateListSheet(
                 }
             }
         }
+    }
+
+    if (useLargeDialog) {
+        EwmContentDialog(
+            onDismissRequest = onDismiss,
+            maxWidth = me.rosuh.easywatermark.ui.TEMPLATE_DIALOG_MAX_WIDTH_DP.dp,
+            testTag = "templateListDialogHost",
+            content = body,
+        )
+    } else {
+        EwmModalBottomSheet(
+            onDismissRequest = onDismiss,
+            content = { body() },
+        )
     }
 
     // add / edit content sheet

@@ -26,6 +26,10 @@ import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkConfigChange
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.shared.generated.resources.Res
+import me.rosuh.easywatermark.shared.generated.resources.inspector_section_gaps
+import me.rosuh.easywatermark.shared.generated.resources.inspector_section_look
+import me.rosuh.easywatermark.shared.generated.resources.inspector_section_mode
+import me.rosuh.easywatermark.shared.generated.resources.inspector_section_tile
 import me.rosuh.easywatermark.shared.generated.resources.title_content
 import me.rosuh.easywatermark.shared.generated.resources.title_layout
 import me.rosuh.easywatermark.shared.generated.resources.title_style
@@ -149,7 +153,7 @@ private fun ContentForm(
     val textLabel = stringResource(Res.string.water_mark_mode_text)
     val iconLabel = stringResource(Res.string.water_mark_mode_image)
 
-    FormSectionLabel("MODE")
+    FormSectionLabel(stringResource(Res.string.inspector_section_mode))
     DesignChoiceChips(
         options = listOf(
             DesignChoiceOption(label = textLabel, value = WatermarkMode.Text),
@@ -224,7 +228,7 @@ private fun StyleForm(
     }
 
     if (tile.isNotEmpty()) {
-        FormSectionLabel("TILE")
+        FormSectionLabel(stringResource(Res.string.inspector_section_tile))
         tile.forEach { spec ->
             FormOptionBody(
                 spec = spec,
@@ -245,7 +249,7 @@ private fun StyleForm(
         )
     }
     if (appearance.isNotEmpty()) {
-        FormSectionLabel("LOOK")
+        FormSectionLabel(stringResource(Res.string.inspector_section_look))
         appearance.forEach { spec ->
             FormOptionBody(
                 spec = spec,
@@ -264,7 +268,7 @@ private fun LayoutForm(
     onValueChange: (WatermarkConfigChange) -> Unit,
     layoutOptions: List<EditorOptionSpec>,
 ) {
-    FormSectionLabel("GAPS")
+    FormSectionLabel(stringResource(Res.string.inspector_section_gaps))
     layoutOptions.forEach { spec ->
         FormOptionBody(
             spec = spec,

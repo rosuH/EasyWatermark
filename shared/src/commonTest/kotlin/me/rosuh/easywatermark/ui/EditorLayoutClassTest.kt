@@ -5,7 +5,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * ADR-0026 layout class fixtures — Compact / Medium stack, Expanded@840, Wide@1440.
+ * ADR-0026 layout class fixtures — Compact / Medium stack, Expanded@840 dual-pane,
+ * Wide@1440 classified but same dual-pane chrome (no left session rail).
  */
 class EditorLayoutClassTest {
 
@@ -49,18 +50,17 @@ class EditorLayoutClassTest {
     }
 
     @Test
-    fun expanded_usesSupportingPane_wide_usesThreeZone() {
+    fun expandedAndWide_useSupportingPaneTokens() {
         assertEquals(EditorLayoutClass.Expanded, editorLayoutClass(840f, 768f))
         assertEquals(EditorLayoutClass.Wide, editorLayoutClass(1440f, 900f))
         assertTrue(EDITOR_EXPANDED_CONTROLS_PANE_MAX_DP in 280f..480f)
-        assertTrue(EDITOR_WIDE_SESSION_LIBRARY_MAX_DP in 200f..320f)
         assertEquals(840f, EDITOR_LAYOUT_EXPANDED_MIN_WIDTH_DP)
         assertEquals(1440f, EDITOR_LAYOUT_WIDE_MIN_WIDTH_DP)
     }
 
     @Test
-    fun hardCut_belowWide_isExpanded() {
-        // C-F1: shrink below 1440 → A (Expanded), not a half-rail.
+    fun wideBand_stillClassifiedAt1440_dualPaneChrome() {
+        // Wide remains a width band; chrome matches Expanded (no three-zone left rail).
         assertEquals(EditorLayoutClass.Expanded, editorLayoutClass(1439f, 900f))
         assertEquals(EditorLayoutClass.Wide, editorLayoutClass(1440f, 900f))
     }

@@ -52,6 +52,15 @@ class DesktopPreviewRasterAdaptiveResolutionTest {
             DesktopPreviewRaster.maxEdgeForPaint(isDraft = false, committedBucketPx = 1920),
         )
         assertEquals(1440, DesktopPreviewRaster.committedMaxEdgePx(1206, 800))
+        assertEquals(
+            2560,
+            DesktopPreviewRaster.committedMaxEdgePxForFit(
+                sourceWidthPx = 4000,
+                sourceHeightPx = 3000,
+                containerWidthPx = 2000,
+                containerHeightPx = 1500,
+            ),
+        )
     }
 
     @Test

@@ -180,7 +180,7 @@ fun CustomColorPickerSheet(
                 OutlinedTextField(
                     value = hexDraft,
                     onValueChange = { raw ->
-                        hexDraft = raw.filter { it.isLetterOrDigit() }.take(6).uppercase()
+                        hexDraft = normalizeArgbHexInput(raw).take(6)
                         parseArgbHexColor(hexDraft)?.let { parsed ->
                             val (h, s, v) = argbToHsv(parsed)
                             hue = h

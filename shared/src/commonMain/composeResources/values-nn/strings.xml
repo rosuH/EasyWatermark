@@ -85,4 +85,9 @@
     <string name="tips_list_empty">Ser tolleg tomt ut</string>
     <string name="tips_use_this_template">Nytt denne malen\?</string>
     <string name="tips_delete_template">Slett oppføringa\?</string>
+    <!-- Form inspector section headers (Expanded/Wide DEMO rhythm) -->
+    <string name="inspector_section_mode">Modus</string>
+    <string name="inspector_section_tile">Flis</string>
+    <string name="inspector_section_look">Utsjånad</string>
+    <string name="inspector_section_gaps">Avstand</string>
 </resources>

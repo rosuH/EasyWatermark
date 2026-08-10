@@ -56,6 +56,8 @@ import me.rosuh.easywatermark.shared.generated.resources.ic_export_count_fail
 import me.rosuh.easywatermark.shared.generated.resources.ic_export_count_success
 import me.rosuh.easywatermark.shared.generated.resources.ic_export_count_total
 import me.rosuh.easywatermark.shared.generated.resources.tips_images_selected
+import me.rosuh.easywatermark.ui.EXPORT_DIALOG_MAX_WIDTH_DP
+import me.rosuh.easywatermark.ui.compose.EwmContentDialog
 import me.rosuh.easywatermark.ui.compose.EwmModalBottomSheet
 import me.rosuh.easywatermark.ui.theme.DesignBrand
 import me.rosuh.easywatermark.ui.theme.DesignEditorBg
@@ -102,6 +104,11 @@ fun <T> SaveExportSheetShell(
     exportTotalCount: Int = 0,
     exportSuccessCount: Int = 0,
     exportFailureCount: Int = 0,
+    /**
+     * ≥840 path: centered dialog instead of phone bottom drawer (H4).
+     * Compact/Medium keep the sheet.
+     */
+    useLargeDialog: Boolean = false,
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
     onFormatClick: (newFormat: ImageFormat) -> Unit,
@@ -163,25 +170,18 @@ fun <T> SaveExportSheetShell(
 
     val exporting = rememberUpdatedState(isExporting)
     val dismiss = rememberUpdatedState(onDismiss)
-    EwmModalBottomSheet(
-        onDismissRequest = {
-            // Block dismiss while exporting (and during the eager isSaving frame before UI catches up).
-            if (!exporting.value) dismiss.value()
-        },
-        sheetState = rememberModalBottomSheetState(
-            skipPartiallyExpanded = true,
-            confirmValueChange = { value ->
-                // Prevent scrim/drag hide while exporting — stops Retry-under-finger sheet flash.
-                !(exporting.value && value == SheetValue.Hidden)
-            },
-        ),
-    ) {
+    val onDismissRequest = {
+        // Block dismiss while exporting (and during the eager isSaving frame before UI catches up).
+        if (!exporting.value) dismiss.value()
+    }
+    val body: @Composable () -> Unit = {
         Column(
             modifier = modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .navigationBarsPadding()
-                .padding(bottom = 20.dp),
+                .then(if (useLargeDialog) Modifier else Modifier.navigationBarsPadding())
+                .padding(bottom = 20.dp)
+                .testTag(if (useLargeDialog) "sharedComposeExportDialog" else "sharedComposeExportSheet"),
         ) {
             SaveExportOptionsSection(
                 title = outputTitle,
@@ -405,6 +405,26 @@ fun <T> SaveExportSheetShell(
                 }
             }
         }
+    }
+    if (useLargeDialog) {
+        EwmContentDialog(
+            onDismissRequest = onDismissRequest,
+            maxWidth = EXPORT_DIALOG_MAX_WIDTH_DP.dp,
+            testTag = "sharedComposeExportDialogHost",
+            content = body,
+        )
+    } else {
+        EwmModalBottomSheet(
+            onDismissRequest = onDismissRequest,
+            sheetState = rememberModalBottomSheetState(
+                skipPartiallyExpanded = true,
+                confirmValueChange = { value ->
+                    // Prevent scrim/drag hide while exporting — stops Retry-under-finger sheet flash.
+                    !(exporting.value && value == SheetValue.Hidden)
+                },
+            ),
+            content = { body() },
+        )
     }
 }
 
