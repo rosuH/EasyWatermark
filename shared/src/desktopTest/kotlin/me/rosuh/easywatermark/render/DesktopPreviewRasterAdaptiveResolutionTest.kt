@@ -38,9 +38,15 @@ class DesktopPreviewRasterAdaptiveResolutionTest {
     }
 
     @Test
-    fun maxEdgeForPaint_matchesSharedPolicy_draft720_committedBucket() {
+    fun maxEdgeForPaint_matchesSharedPolicy_draftFloor_whenCommittedLarge() {
+        // Draft stays 720 on small committed panes; when committed is already large (≥1080),
+        // draft floor rises to 1080 so Desktop CLAMP drag is less soft (F1).
         assertEquals(
             720,
+            DesktopPreviewRaster.maxEdgeForPaint(isDraft = true, committedBucketPx = 720),
+        )
+        assertEquals(
+            1080,
             DesktopPreviewRaster.maxEdgeForPaint(isDraft = true, committedBucketPx = 1440),
         )
         assertEquals(
