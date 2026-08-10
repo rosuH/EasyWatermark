@@ -77,9 +77,17 @@ C2 was previously blocked by byte-parity failures (rotated non-uniform icons; CJ
     (JPEG white-flatten + selected quality; PNG alpha preserve). Temp extension from actual format.
 - Compatibility `IosWatermarkRenderBridge` PNG APIs route through the spine with PNG prefs;
   Swift ABI unchanged. Cell/golden helpers remain in `IosWatermarkRenderer` as test/witness only.
-- Skia decode already bakes EXIF; final encoder does not re-rotate; newly encoded output has no
-  source EXIF. Physical camera-size runtime witness remains **RUNTIME_PENDING** (issue 22).
+- Decode bakes orientation once at the iOS edge: JPEG/PNG via Skia `makeFromEncoded`; HEIF/HEIC
+  via Apple ImageIO (direct pixel bridge, no encoded intermediate). Final encoder does not
+  re-rotate; newly encoded output has no source EXIF. Physical camera-size runtime witness remains
+  **RUNTIME_PENDING** (issue 22).
 - C4 / Stage D / Stage H unauthorized by this status block.
+
+### Status update (2026-07-26 — iOS HEIF/HEIC ImageIO decode edge)
+
+- Current path: `IosImageDecoder` keeps JPEG/PNG on Skia; known HEIF/HEIC uses `IosImageIODecoder`
+  (primary image index, orientation-aware native thumbnails with fail-closed bounds, full decode
+  without a 4096 UI-loader cap). Does not change Option C2 composition ownership.
 
 ### Status update (2026-07-21 — Stage C3 attempt-2 review repairs)
 

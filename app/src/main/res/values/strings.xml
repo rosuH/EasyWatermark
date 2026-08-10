@@ -143,12 +143,6 @@
     <string name="cd_selected">Selected</string>
     <string name="cd_unselected">Not selected</string>
     <string name="cd_checkbox">Checkbox</string>
-    <!-- I4 privacy confidence (dual-write with composeResources; ADR-0009 EXIF strip) -->
-    <string name="privacy_on_device">Processing stays on this device.</string>
-    <string name="privacy_selected_only">Only images you choose are opened.</string>
-    <string name="privacy_exif_strip">Exported photos remove location and camera metadata.</string>
-    <string name="privacy_confidence_pick">On-device only. Opens only the images you select.</string>
-    <string name="privacy_confidence_export">On-device only. Exported files strip location/camera metadata (EXIF).</string>
     <string name="ios_import_preparing">Preparing photos…</string>
     <string name="ios_import_failed_retry">Could not import. Tap to retry.</string>
     <string name="ios_import_pending">Preparing</string>

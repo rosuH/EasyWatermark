@@ -55,7 +55,6 @@ import me.rosuh.easywatermark.shared.generated.resources.dialog_save_retry_faile
 import me.rosuh.easywatermark.shared.generated.resources.ic_export_count_fail
 import me.rosuh.easywatermark.shared.generated.resources.ic_export_count_success
 import me.rosuh.easywatermark.shared.generated.resources.ic_export_count_total
-import me.rosuh.easywatermark.shared.generated.resources.privacy_confidence_export
 import me.rosuh.easywatermark.shared.generated.resources.tips_images_selected
 import me.rosuh.easywatermark.ui.compose.EwmModalBottomSheet
 import me.rosuh.easywatermark.ui.theme.DesignBrand
@@ -119,7 +118,6 @@ fun <T> SaveExportSheetShell(
     val openGalleryLabel = stringResource(Res.string.dialog_open_in_gallery)
     val cancelLabel = stringResource(Res.string.dialog_save_cancel_export)
     val retryLabel = stringResource(Res.string.dialog_save_retry_failed)
-    val privacyExport = stringResource(Res.string.privacy_confidence_export)
     val statusCd = statusContentDescription.ifBlank { exportListSubtitle }
 
     val hasDestination = destinationLine.isNotBlank()
@@ -197,12 +195,7 @@ fun <T> SaveExportSheetShell(
             )
 
             // a11y + structural tags only — no idle visual icon strip.
-            Spacer(
-                Modifier
-                    .size(0.dp)
-                    .testTag("sharedComposeExportPrivacyConfidence")
-                    .semantics { contentDescription = privacyExport },
-            )
+            // Privacy confidence copy removed (codex/remove-privacy-confidence-copy).
             if (hasDestination || hasFilenamePolicy) {
                 Spacer(
                     Modifier
