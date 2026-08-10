@@ -575,8 +575,21 @@ fun launchDesktopWindow() = application {
 
     // ADR-0026 E2E: optional auto-import without FileDialog.
     // -Dewm.desktop.autoOpen=/path/a.png[,/path/b.png] — colon-separated list also accepted.
-    // Production launches omit the property (no auto-import).
+    // -Dewm.desktop.forceMarkMode=text|image — pin Content segment for hard-door screenshots.
+    // Production launches omit these properties.
     LaunchedEffect(Unit) {
+        when (System.getProperty("ewm.desktop.forceMarkMode")?.trim()?.lowercase()) {
+            "text", "0" -> session.applyConfig(
+                me.rosuh.easywatermark.data.model.WatermarkConfigChange.MarkMode(
+                    me.rosuh.easywatermark.data.model.WatermarkMode.Text,
+                ),
+            )
+            "image", "icon", "1" -> session.applyConfig(
+                me.rosuh.easywatermark.data.model.WatermarkConfigChange.MarkMode(
+                    me.rosuh.easywatermark.data.model.WatermarkMode.Image,
+                ),
+            )
+        }
         val raw = System.getProperty("ewm.desktop.autoOpen")?.trim().orEmpty()
         if (raw.isEmpty()) return@LaunchedEffect
         val files = raw.split(',', ';')
@@ -686,6 +699,8 @@ fun launchDesktopWindow() = application {
     // ADR-0026 E2E: optional initial size via -Dewm.desktop.widthDp / -Dewm.desktop.heightDp.
     val e2eW = System.getProperty("ewm.desktop.widthDp")?.toFloatOrNull()
     val e2eH = System.getProperty("ewm.desktop.heightDp")?.toFloatOrNull()
+    // Form-inspector E2E: 0=Content 1=Style 2=Layout (default Content).
+    val e2eInspectorTab = System.getProperty("ewm.desktop.inspectorTab")?.toIntOrNull() ?: 0
     val windowState = if (e2eW != null && e2eH != null && e2eW > 0f && e2eH > 0f) {
         rememberWindowState(width = e2eW.dp, height = e2eH.dp)
     } else {
@@ -1145,6 +1160,7 @@ fun launchDesktopWindow() = application {
                         },
                         modifier = Modifier.fillMaxSize(),
                         layoutClass = layoutClass,
+                        initialInspectorTab = e2eInspectorTab,
                     )
                     } // BoxWithConstraints Editor
                 }

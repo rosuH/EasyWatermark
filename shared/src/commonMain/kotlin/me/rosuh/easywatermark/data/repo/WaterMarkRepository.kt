@@ -227,6 +227,11 @@ class WaterMarkRepository(
         dataStore.edit { it[KEY_MODE] = WatermarkMode.Text.value }
     }
 
+    /** Persist mark mode only (form Text|Icon segment); does not touch text/icon payloads. */
+    suspend fun updateMarkMode(mode: WatermarkMode) {
+        dataStore.edit { it[KEY_MODE] = mode.value }
+    }
+
     suspend fun toggleBounds(enable: Boolean) {
         dataStore.edit { it[KEY_ENABLE_BOUNDS] = enable }
     }

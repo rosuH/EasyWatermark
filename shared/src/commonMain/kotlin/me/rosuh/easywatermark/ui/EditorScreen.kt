@@ -110,6 +110,11 @@ fun EditorScreen(
     layoutClass: EditorLayoutClass = EditorLayoutClass.Compact,
     /** Optional: host learns when template sheet opens/closes (defer template Flow collect). */
     onTemplateSheetVisibilityChange: (Boolean) -> Unit = {},
+    /**
+     * Expanded/Wide form inspector initial tab (0 Content / 1 Style / 2 Layout).
+     * Desktop E2E uses `-Dewm.desktop.inspectorTab`. Ignored on Compact/Medium.
+     */
+    initialInspectorTab: Int = 0,
 ) {
     val progressiveSlots = LocalEditorProgressiveSlotPresentation.current
     val selected = selectedImage ?: imageList.firstOrNull()
@@ -238,6 +243,7 @@ fun EditorScreen(
                             onGoTemplateList = showTemplateSheet,
                             colorOption = colorOption,
                             iconOption = iconOption,
+                            initialTabIndex = initialInspectorTab,
                             modifier = Modifier
                                 .width(EDITOR_EXPANDED_CONTROLS_PANE_MAX_DP.dp)
                                 .widthIn(max = EDITOR_EXPANDED_CONTROLS_PANE_MAX_DP.dp)

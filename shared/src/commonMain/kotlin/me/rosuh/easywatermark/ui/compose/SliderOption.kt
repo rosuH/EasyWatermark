@@ -31,8 +31,10 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -64,6 +66,11 @@ fun SliderOption(
      * [contentDescription]; omit when a visible text label already merges in the parent.
      */
     label: String? = null,
+    /**
+     * When true and [label] is non-blank, paint a visible left label (form inspector).
+     * Phone bottom chrome keeps false so layout stays track+value only.
+     */
+    showLabel: Boolean = false,
     /**
  * Snap interval within [valueRange] (e.g. `20f` → 20/40/60/80/100).
  * `null` = integer steps across the full span (editor default).
@@ -131,6 +138,19 @@ fun SliderOption(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        if (showLabel && !label.isNullOrBlank()) {
+            Text(
+                text = label,
+                color = if (enabled) Color.White.copy(alpha = 0.78f) else Color.White.copy(alpha = 0.4f),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .widthIn(min = 40.dp, max = 88.dp)
+                    .testTag("sliderLabel"),
+            )
+        }
         Slider(
             value = snap(coerced),
             onValueChange = { onValueChange(snap(it)) },
@@ -170,11 +190,13 @@ fun SliderOption(
             },
         )
         // Value label only — no white bubble (owner request / design polish).
+        // Form path uses mono so DEMO right-value reads as a metric, not body copy.
         Text(
             text = valueDisplay,
             color = if (enabled) Color.White else Color.White.copy(alpha = 0.4f),
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
+            fontFamily = if (showLabel) FontFamily.Monospace else FontFamily.Default,
             textAlign = TextAlign.End,
             modifier = Modifier
                 .widthIn(min = 28.dp)

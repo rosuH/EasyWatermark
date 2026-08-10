@@ -88,6 +88,7 @@ fun EditorBottomControls(
  *
  * [framed] true (default): [EditorOptionControlFrame] Center + fixed phone slot padding.
  * false: top-aligned fill-width body for the form inspector (no Center dead zone).
+ * [formPath] true: inline text edit + slider left label (Expanded/Wide only).
  */
 @Composable
 internal fun EditorOptionControl(
@@ -101,6 +102,7 @@ internal fun EditorOptionControl(
     iconOption: @Composable (Modifier, WaterMark, (MediaRef) -> Unit) -> Unit,
     modifier: Modifier = Modifier,
     framed: Boolean = true,
+    formPath: Boolean = false,
 ) {
     val body: @Composable (Modifier) -> Unit = { innerModifier ->
         when (spec.type) {
@@ -111,6 +113,7 @@ internal fun EditorOptionControl(
                     valueRange = spec.valueRange,
                     // I2: product name for slider semantics.
                     label = spec.type.label(),
+                    showLabel = formPath,
                     // F2: emit typed command at control source (0..100 percent).
                     onValueChange = { onValueChange(WatermarkConfigChange.AlphaPercent(it)) },
                 )
@@ -122,6 +125,7 @@ internal fun EditorOptionControl(
                     currentValue = waterMark.textSize,
                     valueRange = spec.valueRange,
                     label = spec.type.label(),
+                    showLabel = formPath,
                     onValueChange = { onValueChange(WatermarkConfigChange.TextSize(it)) },
                 )
             }
@@ -132,6 +136,7 @@ internal fun EditorOptionControl(
                     currentValue = waterMark.vGap.toFloat(),
                     valueRange = spec.valueRange,
                     label = spec.type.label(),
+                    showLabel = formPath,
                     // Preserve legacy (Float).roundToInt() at emission.
                     onValueChange = {
                         onValueChange(WatermarkConfigChange.VerticalGap(it.roundToInt()))
@@ -145,6 +150,7 @@ internal fun EditorOptionControl(
                     currentValue = waterMark.hGap.toFloat(),
                     valueRange = spec.valueRange,
                     label = spec.type.label(),
+                    showLabel = formPath,
                     onValueChange = {
                         onValueChange(WatermarkConfigChange.HorizontalGap(it.roundToInt()))
                     },
@@ -157,6 +163,7 @@ internal fun EditorOptionControl(
                     currentValue = waterMark.degree,
                     valueRange = spec.valueRange,
                     label = spec.type.label(),
+                    showLabel = formPath,
                     onValueChange = { onValueChange(WatermarkConfigChange.Degree(it)) },
                 )
             }
@@ -179,6 +186,7 @@ internal fun EditorOptionControl(
                     templateIcon = templateIcon,
                     modifier = innerModifier,
                     openSignal = optionActivationSignal,
+                    inlineEdit = formPath,
                     onTextChange = { onValueChange(WatermarkConfigChange.Text(it)) },
                     onGoTemplateList = onGoTemplateList,
                 )

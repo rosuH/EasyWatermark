@@ -72,9 +72,26 @@ fun TextContentOption(
  * Keep `0` for passive display of the current text summary.
      */
     openSignal: Int = 0,
+    /**
+     * Form inspector path: always-visible [OutlinedTextField] + optional template link.
+     * Phone bottom chrome keeps false (summary row + modal sheet).
+     */
+    inlineEdit: Boolean = false,
     onTextChange: (String) -> Unit,
     onGoTemplateList: () -> Unit = {},
 ) {
+    if (inlineEdit) {
+        InlineTextContentField(
+            text = text,
+            templateIcon = templateIcon,
+            enabled = enabled,
+            onTextChange = onTextChange,
+            onGoTemplateList = onGoTemplateList,
+            modifier = modifier,
+        )
+        return
+    }
+
     var showEditSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(openSignal) {
@@ -145,6 +162,68 @@ fun TextContentOption(
                 onGoTemplateList()
             },
         )
+    }
+}
+
+/**
+ * Side-pane form text field — live edit without the phone modal sheet.
+ * Template entry is a text button under the field (DEMO “从模板选择…”).
+ */
+@Composable
+private fun InlineTextContentField(
+    text: String,
+    templateIcon: Painter?,
+    enabled: Boolean,
+    onTextChange: (String) -> Unit,
+    onGoTemplateList: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // Local draft so typing is smooth; external text (template apply) resets draft.
+    var draft by remember(text) { mutableStateOf(text) }
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag(TEXT_CONTENT_INLINE_TAG),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        OutlinedTextField(
+            value = draft,
+            onValueChange = {
+                draft = it
+                onTextChange(it)
+            },
+            enabled = enabled,
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(TEXT_CONTENT_EDIT_FIELD_TAG),
+        )
+        // Template affordance — icon if host supplied one, else plain text button.
+        if (templateIcon != null) {
+            IconButton(
+                enabled = enabled,
+                onClick = onGoTemplateList,
+                modifier = Modifier
+                    .align(Alignment.Start)
+                    .testTag(TEXT_CONTENT_TEMPLATE_ICON_TAG),
+            ) {
+                Icon(
+                    painter = templateIcon,
+                    contentDescription = stringResource(Res.string.dialog_title_template_title),
+                )
+            }
+        } else {
+            Button(
+                enabled = enabled,
+                onClick = onGoTemplateList,
+                shape = RectangleShape,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(TEXT_CONTENT_TEMPLATE_ICON_TAG),
+            ) {
+                Text(text = stringResource(Res.string.dialog_title_template_title))
+            }
+        }
     }
 }
 
@@ -223,6 +302,7 @@ private fun WatermarkTextEditSheet(
 
 /** Stable Compose testTag ids for XCUITest (not user-facing accessibility strings). */
 const val TEXT_CONTENT_ROW_TAG = "watermarkTextContent"
+const val TEXT_CONTENT_INLINE_TAG = "watermarkTextContentInline"
 const val TEXT_CONTENT_EDIT_FIELD_TAG = "watermarkTextEditField"
 const val TEXT_CONTENT_CONFIRM_TAG = "watermarkTextConfirm"
 const val TEXT_CONTENT_TEMPLATE_ICON_TAG = "watermarkTextTemplateIcon"

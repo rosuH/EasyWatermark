@@ -197,6 +197,7 @@ open class WatermarkSessionViewModel(
         when (change) {
             is WatermarkConfigChange.Text -> configEditor.updateText(change.text)
             is WatermarkConfigChange.Icon -> configEditor.updateIcon(change.icon)
+            is WatermarkConfigChange.MarkMode -> configEditor.updateMarkMode(change.mode)
             is WatermarkConfigChange.Color -> configEditor.updateTextColor(change.color)
             is WatermarkConfigChange.AlphaPercent -> configEditor.updateAlpha(change.percent)
             is WatermarkConfigChange.Degree -> configEditor.updateDegree(change.degree)

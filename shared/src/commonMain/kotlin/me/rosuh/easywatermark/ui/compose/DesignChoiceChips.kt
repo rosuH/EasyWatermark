@@ -44,6 +44,11 @@ fun <T> DesignChoiceChips(
     onSelected: (T) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    /**
+     * When true, each chip takes equal remaining width (form Text|Icon segment).
+     * Default false keeps content-sized chips for Style typeface / tile rows.
+     */
+    equalWidth: Boolean = false,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -60,6 +65,7 @@ fun <T> DesignChoiceChips(
             }
             Box(
                 modifier = Modifier
+                    .then(if (equalWidth) Modifier.weight(1f) else Modifier)
                     .widthIn(min = 56.dp)
                     .height(40.dp)
                     .clip(RoundedCornerShape(2.dp))

@@ -15,6 +15,8 @@ package me.rosuh.easywatermark.data.model
 sealed class WatermarkConfigChange {
     data class Text(val text: String) : WatermarkConfigChange()
     data class Icon(val icon: MediaRef) : WatermarkConfigChange()
+    /** Switch mark mode without rewriting text/icon payload (form Text|Icon segment). */
+    data class MarkMode(val mode: WatermarkMode) : WatermarkConfigChange()
     data class Color(val color: Int) : WatermarkConfigChange()
     /** Alpha as a 0..100 percent (the editor slider value); converted to a byte by `updateAlpha`. */
     data class AlphaPercent(val percent: Float) : WatermarkConfigChange()

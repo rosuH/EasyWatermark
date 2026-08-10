@@ -19,20 +19,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import me.rosuh.easywatermark.data.model.FuncType
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkConfigChange
+import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.title_content
 import me.rosuh.easywatermark.shared.generated.resources.title_layout
 import me.rosuh.easywatermark.shared.generated.resources.title_style
+import me.rosuh.easywatermark.shared.generated.resources.water_mark_mode_image
+import me.rosuh.easywatermark.shared.generated.resources.water_mark_mode_text
+import me.rosuh.easywatermark.ui.compose.DesignChoiceChips
+import me.rosuh.easywatermark.ui.compose.DesignChoiceOption
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * Expanded/Wide supporting-pane inspector (form chrome).
+ * Expanded/Wide supporting-pane inspector — DEMO form morphology.
  *
- * Top Content/Style/Layout tabs + top-aligned scroll body with **all** fields for the
- * selected tab. Does not use [EditorOptionControlFrame] Center void or the phone carousel.
+ * Top Content/Style/Layout tabs + top-aligned scroll body.
+ * Content: equal-width Text|Icon segment, only active-mode fields, inline text edit.
+ * Style/Layout: labeled form sliders (left label + mono value).
  *
  * Compact/Medium keep [EditorBottomControls].
  */
@@ -53,19 +61,29 @@ fun EditorInspectorPanel(
         onIcon: (MediaRef) -> Unit,
     ) -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * Optional E2E initial tab (0=Content, 1=Style, 2=Layout). Desktop `-Dewm.desktop.inspectorTab`.
+     */
+    initialTabIndex: Int = 0,
     contentOptions: List<EditorOptionSpec> = EditorOptionCatalog.content,
     styleOptions: List<EditorOptionSpec> = EditorOptionCatalog.style,
     layoutOptions: List<EditorOptionSpec> = EditorOptionCatalog.layout,
 ) {
-    val tabs = listOf(
-        stringResource(Res.string.title_content) to contentOptions,
-        stringResource(Res.string.title_style) to styleOptions,
-        stringResource(Res.string.title_layout) to layoutOptions,
+    val tabLabels = listOf(
+        stringResource(Res.string.title_content),
+        stringResource(Res.string.title_style),
+        stringResource(Res.string.title_layout),
     )
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val safeTabIndex = selectedTabIndex.coerceIn(tabs.indices)
-    val selectedOptions = tabs[safeTabIndex].second
+    var selectedTabIndex by remember {
+        mutableIntStateOf(initialTabIndex.coerceIn(0, tabLabels.lastIndex))
+    }
+    val safeTabIndex = selectedTabIndex.coerceIn(0, tabLabels.lastIndex)
     val scroll = rememberScrollState()
+
+    // Spec lookup for ranges (style/layout catalogs).
+    val specByType = remember(contentOptions, styleOptions, layoutOptions) {
+        (contentOptions + styleOptions + layoutOptions).associateBy { it.type }
+    }
 
     Column(
         modifier = modifier
@@ -75,9 +93,9 @@ fun EditorInspectorPanel(
     ) {
         EditorBottomTabRow(
             selectedTabIndex = safeTabIndex,
-            labels = tabs.map { it.first },
+            labels = tabLabels,
             onTabSelected = { index ->
-                if (index in tabs.indices) selectedTabIndex = index
+                if (index in tabLabels.indices) selectedTabIndex = index
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -94,15 +112,25 @@ fun EditorInspectorPanel(
             verticalArrangement = Arrangement.spacedBy(14.dp),
             horizontalAlignment = Alignment.Start,
         ) {
-            selectedOptions.forEach { spec ->
-                EditorInspectorField(
-                    spec = spec,
+            when (safeTabIndex) {
+                0 -> ContentForm(
                     waterMark = waterMark,
                     templateIcon = templateIcon,
                     onValueChange = onValueChange,
                     onGoTemplateList = onGoTemplateList,
-                    colorOption = colorOption,
                     iconOption = iconOption,
+                    specByType = specByType,
+                )
+                1 -> StyleForm(
+                    waterMark = waterMark,
+                    onValueChange = onValueChange,
+                    colorOption = colorOption,
+                    styleOptions = styleOptions,
+                )
+                else -> LayoutForm(
+                    waterMark = waterMark,
+                    onValueChange = onValueChange,
+                    layoutOptions = layoutOptions,
                 )
             }
         }
@@ -110,14 +138,151 @@ fun EditorInspectorPanel(
 }
 
 @Composable
-private fun EditorInspectorField(
-    spec: EditorOptionSpec,
+private fun ContentForm(
     waterMark: WaterMark,
     templateIcon: Painter?,
     onValueChange: (WatermarkConfigChange) -> Unit,
     onGoTemplateList: () -> Unit,
-    colorOption: @Composable (Modifier, WaterMark, (Int) -> Unit) -> Unit,
     iconOption: @Composable (Modifier, WaterMark, (MediaRef) -> Unit) -> Unit,
+    specByType: Map<FuncType, EditorOptionSpec>,
+) {
+    val textLabel = stringResource(Res.string.water_mark_mode_text)
+    val iconLabel = stringResource(Res.string.water_mark_mode_image)
+
+    FormSectionLabel("MODE")
+    DesignChoiceChips(
+        options = listOf(
+            DesignChoiceOption(label = textLabel, value = WatermarkMode.Text),
+            DesignChoiceOption(label = iconLabel, value = WatermarkMode.Image),
+        ),
+        selected = waterMark.markMode,
+        onSelected = { mode ->
+            if (mode != waterMark.markMode) {
+                onValueChange(WatermarkConfigChange.MarkMode(mode))
+            }
+        },
+        equalWidth = true,
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("editorInspectorModeSegment"),
+    )
+
+    EditorInspectorFormFields.contentFields(waterMark.markMode).forEach { type ->
+        val spec = specByType[type] ?: EditorOptionSpec(type)
+        when (type) {
+            FuncType.Text -> {
+                FormFieldLabel(textLabel)
+                EditorOptionControl(
+                    spec = spec,
+                    waterMark = waterMark,
+                    templateIcon = templateIcon,
+                    optionActivationSignal = 0,
+                    onValueChange = onValueChange,
+                    onGoTemplateList = onGoTemplateList,
+                    colorOption = { _, _, _ -> },
+                    iconOption = iconOption,
+                    framed = false,
+                    formPath = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            FuncType.Icon -> {
+                FormFieldLabel(iconLabel)
+                EditorOptionControl(
+                    spec = spec,
+                    waterMark = waterMark,
+                    templateIcon = templateIcon,
+                    optionActivationSignal = 0,
+                    onValueChange = onValueChange,
+                    onGoTemplateList = onGoTemplateList,
+                    colorOption = { _, _, _ -> },
+                    iconOption = iconOption,
+                    framed = false,
+                    formPath = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            else -> Unit
+        }
+    }
+}
+
+@Composable
+private fun StyleForm(
+    waterMark: WaterMark,
+    onValueChange: (WatermarkConfigChange) -> Unit,
+    colorOption: @Composable (Modifier, WaterMark, (Int) -> Unit) -> Unit,
+    styleOptions: List<EditorOptionSpec>,
+) {
+    // DEMO rhythm: 平铺 (tile) → size/alpha/degree → 外观 (typeface/color)
+    val tile = styleOptions.filter { it.type == FuncType.TileMode }
+    val metrics = styleOptions.filter {
+        it.type == FuncType.TextSize || it.type == FuncType.Alpha || it.type == FuncType.Degree
+    }
+    val appearance = styleOptions.filter {
+        it.type == FuncType.TextTypeFace || it.type == FuncType.Color
+    }
+
+    if (tile.isNotEmpty()) {
+        FormSectionLabel("TILE")
+        tile.forEach { spec ->
+            FormOptionBody(
+                spec = spec,
+                waterMark = waterMark,
+                onValueChange = onValueChange,
+                colorOption = colorOption,
+                showOuterLabel = false,
+            )
+        }
+    }
+    metrics.forEach { spec ->
+        FormOptionBody(
+            spec = spec,
+            waterMark = waterMark,
+            onValueChange = onValueChange,
+            colorOption = colorOption,
+            showOuterLabel = false, // slider carries left label
+        )
+    }
+    if (appearance.isNotEmpty()) {
+        FormSectionLabel("LOOK")
+        appearance.forEach { spec ->
+            FormOptionBody(
+                spec = spec,
+                waterMark = waterMark,
+                onValueChange = onValueChange,
+                colorOption = colorOption,
+                showOuterLabel = spec.type == FuncType.Color,
+            )
+        }
+    }
+}
+
+@Composable
+private fun LayoutForm(
+    waterMark: WaterMark,
+    onValueChange: (WatermarkConfigChange) -> Unit,
+    layoutOptions: List<EditorOptionSpec>,
+) {
+    FormSectionLabel("GAPS")
+    layoutOptions.forEach { spec ->
+        FormOptionBody(
+            spec = spec,
+            waterMark = waterMark,
+            onValueChange = onValueChange,
+            colorOption = { _, _, _ -> },
+            showOuterLabel = false,
+        )
+    }
+}
+
+@Composable
+private fun FormOptionBody(
+    spec: EditorOptionSpec,
+    waterMark: WaterMark,
+    onValueChange: (WatermarkConfigChange) -> Unit,
+    colorOption: @Composable (Modifier, WaterMark, (Int) -> Unit) -> Unit,
+    showOuterLabel: Boolean,
 ) {
     Column(
         modifier = Modifier
@@ -126,24 +291,45 @@ private fun EditorInspectorField(
         verticalArrangement = Arrangement.spacedBy(6.dp),
         horizontalAlignment = Alignment.Start,
     ) {
-        Text(
-            text = spec.type.label(),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        // Form rows: no Center frame; Text openSignal stays 0 (tap-to-edit only).
+        if (showOuterLabel) {
+            FormFieldLabel(spec.type.label())
+        }
         EditorOptionControl(
             spec = spec,
             waterMark = waterMark,
-            templateIcon = templateIcon,
+            templateIcon = null,
             optionActivationSignal = 0,
             onValueChange = onValueChange,
-            onGoTemplateList = onGoTemplateList,
+            onGoTemplateList = {},
             colorOption = colorOption,
-            iconOption = iconOption,
+            iconOption = { _, _, _ -> },
             framed = false,
+            formPath = true,
             modifier = Modifier.fillMaxWidth(),
         )
     }
+}
+
+@Composable
+private fun FormSectionLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+        letterSpacing = 0.8.sp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 2.dp)
+            .testTag("editorInspectorSection"),
+    )
+}
+
+@Composable
+private fun FormFieldLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }

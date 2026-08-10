@@ -738,6 +738,9 @@ internal class IosEditorScreenHost(
                                             // Icon bytes arrive via PhotosPicker + update(); picker is the edge.
                                             onPickIcon()
                                         }
+                                        is WatermarkConfigChange.MarkMode -> {
+                                            // Form-only mode switch; product shell applies via bridges when wired.
+                                        }
                                     }
                                 },
                                 onGoTemplateList = { /* Swift Templates strip remains until full ProductApp */ },
