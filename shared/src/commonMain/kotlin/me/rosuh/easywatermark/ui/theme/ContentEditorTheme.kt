@@ -15,6 +15,7 @@ import com.materialkolor.dynamicColorScheme
 import com.materialkolor.ktx.themeColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
 /**
@@ -27,8 +28,14 @@ object ContentEditorTheme {
     const val SEED_DEBOUNCE_MS = 120L
 
     /**
+     * Max long-edge for MCU / MaterialKolor quantize input.
+     * Hosts must downscale before [seedFromImage] — never feed full preview / full-res.
+     */
+    const val SEED_MAX_EDGE = 128
+
+    /**
      * Extract theme seed from [bitmap]. Returns null on failure so callers fall back to brand.
-     * Safe to call off the main thread.
+     * Safe to call off the main thread. Callers should pass ≤ [SEED_MAX_EDGE] bitmaps.
      */
     fun seedFromImage(
         bitmap: ImageBitmap,
@@ -52,9 +59,28 @@ object ContentEditorTheme {
 }
 
 /**
+ * Monotonic job token so filmstrip churn discards stale quantize results even when
+ * CPU-bound [ContentEditorTheme.seedFromImage] does not cooperate with cancellation mid-flight.
+ */
+internal class ContentThemeJobSequencer {
+    private var latest: Int = 0
+
+    fun begin(): Int {
+        latest += 1
+        return latest
+    }
+
+    fun isCurrent(token: Int): Boolean = token == latest
+}
+
+/**
  * Applies content editor theme over [content] when [enabled] and a seed can be derived from
  * [seedBitmap]. Debounces selection changes. On failure / null bitmap / disabled → static brand
  * [AppTheme].
+ *
+ * Stale jobs: each launch takes a [ContentThemeJobSequencer] token; results apply only if still
+ * current after debounce + Default work (and [ensureActive] after suspension). Rapid seedKey
+ * changes cancel the prior [LaunchedEffect] and also fail the token check.
  *
  * [onChromeColorChange] reports the Editor chrome fill for hosts that paint **outside** this
  * subtree (Desktop root Box / AWT title band). Emits [EditorChromeColor.brand] when content
@@ -87,22 +113,31 @@ fun ContentEditorThemeHost(
     }
 
     var scheme by remember { mutableStateOf<ColorScheme?>(null) }
+    val jobSeq = remember { ContentThemeJobSequencer() }
 
     LaunchedEffect(enabled, seedKey, seedBitmap) {
+        val token = jobSeq.begin()
         if (seedBitmap == null) {
-            scheme = null
-            onChromeColorChange?.invoke(EditorChromeColor.brand)
+            if (jobSeq.isCurrent(token)) {
+                scheme = null
+                onChromeColorChange?.invoke(EditorChromeColor.brand)
+            }
             return@LaunchedEffect
         }
         delay(ContentEditorTheme.SEED_DEBOUNCE_MS)
+        ensureActive()
+        if (!jobSeq.isCurrent(token)) return@LaunchedEffect
+        val bitmap = seedBitmap
         val next = withContext(Dispatchers.Default) {
             try {
-                val seed = ContentEditorTheme.seedFromImage(seedBitmap) ?: return@withContext null
+                val seed = ContentEditorTheme.seedFromImage(bitmap) ?: return@withContext null
                 ContentEditorTheme.darkSchemeFromSeed(seed)
             } catch (_: Throwable) {
                 null
             }
         }
+        ensureActive()
+        if (!jobSeq.isCurrent(token)) return@LaunchedEffect
         scheme = next
         onChromeColorChange?.invoke(EditorChromeColor.resolve(next))
     }

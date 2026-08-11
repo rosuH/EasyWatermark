@@ -56,6 +56,7 @@ import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.render.AndroidCommonRaster
 import me.rosuh.easywatermark.ui.compose.ColorOption
 import me.rosuh.easywatermark.ui.compose.IconOption
+import me.rosuh.easywatermark.ui.theme.ContentEditorTheme
 import me.rosuh.easywatermark.ui.theme.ContentEditorThemeHost
 import me.rosuh.easywatermark.ui.theme.EwmTheme
 import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
@@ -110,8 +111,11 @@ fun AndroidEditorScreen(
         }
         value = withContext(Dispatchers.IO) {
             try {
-                loadFilmstripThumbBitmap(context, seedSel.uri.toUri(), ContentThemeSeedPx)
-                    ?.asImageBitmap()
+                loadFilmstripThumbBitmap(
+                    context,
+                    seedSel.uri.toUri(),
+                    ContentEditorTheme.SEED_MAX_EDGE,
+                )?.asImageBitmap()
             } catch (_: Exception) {
                 null
             }
@@ -206,8 +210,6 @@ fun AndroidEditorScreen(
 }
 
 private const val FilmstripThumbPx = 160
-/** Bounded decode for content-theme seed (MCU quantize; not full-res). */
-private const val ContentThemeSeedPx = 128
 
 /**
  * Filmstrip cell: MediaStore system thumb → BitmapUtils (EXIF) fallback.

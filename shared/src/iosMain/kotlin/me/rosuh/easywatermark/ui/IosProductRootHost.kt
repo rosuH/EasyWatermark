@@ -99,6 +99,7 @@ import me.rosuh.easywatermark.ui.compose.formatArgbHexColor
 import me.rosuh.easywatermark.ui.save.SaveExportSheetShell
 import me.rosuh.easywatermark.platform.platformMotionPolicy
 import me.rosuh.easywatermark.ui.theme.AppTheme
+import me.rosuh.easywatermark.ui.theme.ContentEditorTheme
 import me.rosuh.easywatermark.ui.theme.ContentEditorThemeHost
 import me.rosuh.easywatermark.ui.theme.ProvideMotionPolicy
 import org.jetbrains.compose.resources.stringResource
@@ -808,11 +809,32 @@ class IosProductRootHost(
                     CompositionLocalProvider(
                         LocalEditorProgressiveSlotPresentation provides progressivePresentation,
                     ) {
+                    // ADR-0027: MCU seed must be ≤ SEED_MAX_EDGE (match Android), never full previewBitmap.
+                    val themeSeedKey = previewSourcePath
+                        ?: (launchUi.curImageInfo ?: sessionImages.firstOrNull())?.uri?.value
+                    val themeSeedBitmap by produceState<ImageBitmap?>(
+                        initialValue = null,
+                        themeSeedKey,
+                        followPhoto,
+                    ) {
+                        if (!followPhoto || themeSeedKey.isNullOrBlank()) {
+                            value = null
+                            return@produceState
+                        }
+                        val path = themeSeedKey
+                        value = withContext(Dispatchers.Default) {
+                            runCatching {
+                                me.rosuh.easywatermark.render.IosImageIODecoder.decodeThumbnail(
+                                    path,
+                                    maxEdgePx = ContentEditorTheme.SEED_MAX_EDGE,
+                                )
+                            }.getOrNull()
+                        }
+                    }
                     ContentEditorThemeHost(
                         enabled = followPhoto,
-                        seedBitmap = previewBitmap,
-                        seedKey = previewSourcePath
-                            ?: (launchUi.curImageInfo ?: sessionImages.firstOrNull())?.uri?.value,
+                        seedBitmap = themeSeedBitmap,
+                        seedKey = themeSeedKey,
                     ) {
                     EditorScreen(
                         imageList = sessionImages.map { it.toUiProjection() },

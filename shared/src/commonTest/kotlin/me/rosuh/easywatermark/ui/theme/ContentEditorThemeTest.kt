@@ -4,6 +4,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.ImageBitmapConfig
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -37,6 +39,22 @@ class ContentEditorThemeTest {
         val brandScheme = ContentEditorTheme.darkSchemeFromSeed(DesignBrand)
         val blueScheme = ContentEditorTheme.darkSchemeFromSeed(Color(0xFF1565C0))
         assertNotEquals(brandScheme.primary, blueScheme.primary)
+    }
+
+    @Test
+    fun seedMaxEdge_matchesAndroidPolicy() {
+        assertEquals(128, ContentEditorTheme.SEED_MAX_EDGE)
+    }
+
+    @Test
+    fun jobSequencer_staleTokenCannotApplyAfterNewerBegin() {
+        val seq = ContentThemeJobSequencer()
+        val first = seq.begin()
+        assertTrue(seq.isCurrent(first))
+        val second = seq.begin()
+        assertTrue(seq.isCurrent(second))
+        assertFalse(seq.isCurrent(first), "stale filmstrip job must not apply after newer seedKey")
+        assertEquals(second, first + 1)
     }
 }
 
