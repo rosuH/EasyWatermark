@@ -79,6 +79,8 @@ kotlin {
             // compose.material3 accessor (resolved material3:1.9.0 → foundation:1.9.1 skew).
             // See build/s4d359-foundation-skew.md.
             implementation("org.jetbrains.compose.material3:material3:1.12.0-alpha03")
+            // ADR-0027: MaterialKolor for content editor theme (seed → full dark ColorScheme).
+            implementation(libs.material.kolor)
             // S4d-74: KMP DataStore Preferences.
             implementation(libs.datastore)
             implementation(libs.datastore.preference)

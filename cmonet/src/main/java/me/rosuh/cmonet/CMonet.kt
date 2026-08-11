@@ -34,16 +34,27 @@ object CMonet {
         return isDynamicColorAvailable
     }
 
-    /** True only when the user force-toggle is on (About switch state). */
-    fun isForceSupportDynamicColor(): Boolean = monetManufacturer.isForceSupport()
+    /** User preference: follow system wallpaper Material You (About switch). */
+    fun isFollowWallpaper(): Boolean = monetManufacturer.isFollowWallpaper()
 
-    fun forceSupportDynamicColor() {
-        Log.d(TAG, "forceSupportDynamicColor")
-        monetManufacturer.setForceSupport(true)
+    fun setFollowWallpaper(enabled: Boolean) {
+        Log.d(TAG, "setFollowWallpaper $enabled")
+        monetManufacturer.setFollowWallpaper(enabled)
     }
 
+    /** @deprecated Prefer [isFollowWallpaper]. */
+    @Deprecated("Use isFollowWallpaper", ReplaceWith("isFollowWallpaper()"))
+    fun isForceSupportDynamicColor(): Boolean = isFollowWallpaper()
+
+    /** @deprecated Prefer [setFollowWallpaper]. */
+    @Deprecated("Use setFollowWallpaper", ReplaceWith("setFollowWallpaper(true)"))
+    fun forceSupportDynamicColor() {
+        setFollowWallpaper(true)
+    }
+
+    /** @deprecated Prefer [setFollowWallpaper]. */
+    @Deprecated("Use setFollowWallpaper", ReplaceWith("setFollowWallpaper(false)"))
     fun disableSupportDynamicColor() {
-        Log.d(TAG, "disableSupportDynamicColor")
-        monetManufacturer.setForceSupport(false)
+        setFollowWallpaper(false)
     }
 }

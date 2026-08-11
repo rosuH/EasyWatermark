@@ -47,6 +47,8 @@ accompanist = "0.37.3"
 # (all image models are local Uris); coil-svg dropped (SvgDecoder was never registered).
 coil = "3.5.0"
 material3 = "1.5.0-alpha25"
+# ADR-0027: content editor theme (MCU KMP). Single dep slice; wallpaper stays system APIs.
+materialKolor = "5.0.0"
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -100,6 +102,7 @@ androidx-constraintlayout-compose = { group = "androidx.constraintlayout", name 
 
 
 coil-kt-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+material-kolor = { group = "com.materialkolor", name = "material-kolor", version.ref = "materialKolor" }
 
 kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlin" }
 kotlin-coroutine-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }

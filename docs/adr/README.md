@@ -22,8 +22,9 @@ Decisions trace to the CMP migration plan (`docs/superpowers/plans/2026-06-12-cm
 | [0011](0011-production-ui-parity-baseline.md) | Production v2.10.0 is the UI parity baseline | Accepted |
 | [0012](0012-ai-friendly-docs-system.md) | AI-friendly repo: CLAUDE/CONTEXT/ADR + docs-with-code gate | Accepted |
 | [0013](0013-desktop-positioning.md) | Desktop: validation target vs shipped product | **Proposed** |
-| [0014](0014-parity-micro-decisions.md) | Parity micro-decisions: palette kept, pinch stays off, quality snapping kept | Accepted |
+| [0014](0014-parity-micro-decisions.md) | Parity micro-decisions: palette path superseded for product by [0027](0027-wallpaper-and-content-editor-theme.md); pinch off; quality snapping | Accepted (+ 0027 addendum) |
 | [0015](0015-parity-vs-compose-idiom-tensions.md) | Parity-vs-Compose-idiom tensions: B (text-edit modal) implemented; A (back arrow) & C (segmented) kept with rationale | Accepted (revertable) |
 | [0016](0016-mainactivity-integration-and-legacy-retirement.md) | MainActivity integration: ACTION_SEND→ComposeMainActivity, crash recovery→Compose, legacy Activity retirement | **Proposed** (design for final block) |
 | [0025](0025-system-default-watermark-fonts.md) | System-default watermark Text fonts (drop production Noto) | **Accepted** (2026-08-09) |
-| [0026](0026-adaptive-editor-layout-ia.md) | Adaptive editor layout IA (Supporting-pane + optional Three-zone) | **Accepted** (2026-08-09) |
+| [0026](0026-adaptive-editor-layout-ia.md) | Adaptive editor layout IA (Supporting-pane; three-zone withdrawn) | **Accepted** (amended 2026-08-10) |
+| [0027](0027-wallpaper-and-content-editor-theme.md) | Wallpaper dynamic color (Android, no OEM list) + Content editor theme (photo seed, all platforms) | **Accepted** (2026-08-11) |

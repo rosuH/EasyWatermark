@@ -153,6 +153,7 @@ import me.rosuh.easywatermark.ui.save.SaveExportSheetShell
 
 import me.rosuh.easywatermark.platform.platformMotionPolicy
 import me.rosuh.easywatermark.ui.theme.AppTheme
+import me.rosuh.easywatermark.ui.theme.ContentEditorThemeHost
 import me.rosuh.easywatermark.ui.theme.DesignEditorBg
 import me.rosuh.easywatermark.ui.theme.ProvideMotionPolicy
 import org.jetbrains.compose.resources.stringResource
@@ -198,14 +199,18 @@ private fun openUrlInBrowser(url: String): String? {
     }
 }
 
-/** Sticky "Force Dynamic Color" flag (Android CMonet parity; no Material You on Desktop). */
-private object DesktopDynamicColorPrefs {
-    private const val KEY = "force_dynamic_color"
+/**
+ * Desktop Content editor theme pref (ADR-0027).
+ * Wallpaper Material You does not exist on Desktop — only follow-photo.
+ * Legacy force_dynamic_color is ignored (was a no-op).
+ */
+private object DesktopContentThemePrefs {
+    private const val KEY = "follow_photo"
     private val prefs: Preferences =
         Preferences.userRoot().node("me/rosuh/easywatermark/desktop")
 
-    fun isForced(): Boolean = prefs.getBoolean(KEY, false)
-    fun setForced(enabled: Boolean) {
+    fun isFollowPhoto(): Boolean = prefs.getBoolean(KEY, true)
+    fun setFollowPhoto(enabled: Boolean) {
         prefs.putBoolean(KEY, enabled)
     }
 }
@@ -369,7 +374,7 @@ fun launchDesktopWindow() = application {
     var showSaveSheet by remember { mutableStateOf(false) }
     // About open-source overlay (shared OpenSourceScreen; same as Android/iOS).
     var showOpenSource by remember { mutableStateOf(false) }
-    var dynamicColorForced by remember { mutableStateOf(DesktopDynamicColorPrefs.isForced()) }
+    var followPhoto by remember { mutableStateOf(DesktopContentThemePrefs.isFollowPhoto()) }
     /**
  * Filmstrip + export-sheet thumbs. Full [DesktopImageDecoder.decode] of multi-megapixel
  * Files on the UI thread freezes ModalBottomSheet open — always use [decodeThumbnail] off-EDT.     */
@@ -921,7 +926,16 @@ fun launchDesktopWindow() = application {
                     AboutScreen(
                         versionName = ProductVersion.NAME,
                         showBounds = aboutShowBounds,
-                        dynamicColorOn = dynamicColorForced,
+                        showFollowWallpaperSwitch = false,
+                        followPhotoOn = followPhoto,
+                        onToggleFollowPhoto = { enabled ->
+                            DesktopContentThemePrefs.setFollowPhoto(enabled)
+                            followPhoto = enabled
+                            // Also persist to shared UserConfig when available.
+                            scope.launch {
+                                runCatching { userConfigRepo.updateFollowPhoto(enabled) }
+                            }
+                        },
                         icons = AboutScreenIcons(
                             back = backPainter,
                             version = versionPainter,
@@ -976,15 +990,6 @@ fun launchDesktopWindow() = application {
                                 repo.toggleBounds(enabled)
                             }
                         },
-                        onToggleDynamicColor = { enabled ->
-                            DesktopDynamicColorPrefs.setForced(enabled)
-                            dynamicColorForced = enabled
-                            status = if (enabled) {
-                                "Dynamic color flag on (Android Material You)"
-                            } else {
-                                "Dynamic color flag off"
-                            }
-                        },
                         useLargeLayout = true,
                         logo = { modifier ->
                             me.rosuh.easywatermark.ui.AboutPageLogo(
@@ -1000,6 +1005,12 @@ fun launchDesktopWindow() = application {
                         mutableStateOf(formatArgbHexColor(waterMark.textColor))
                     }
                     // I1: window size in Dp → pure EditorLayoutClass (Expanded on typical Desktop).
+                    ContentEditorThemeHost(
+                        enabled = followPhoto,
+                        // Use ready watermarked preview when available; falls back to brand until paint.
+                        seedBitmap = preview,
+                        seedKey = previewReadyUri ?: selectedForStrip?.uri?.value,
+                    ) {
                     BoxWithConstraints(modifier = shellModifier) {
                     val layoutClass = remember(maxWidth, maxHeight) {
                         editorLayoutClass(maxWidth.value, maxHeight.value)
@@ -1301,7 +1312,8 @@ fun launchDesktopWindow() = application {
                         layoutClass = layoutClass,
                         initialInspectorTab = e2eInspectorTab,
                     )
-                    } // BoxWithConstraints Editor
+                    }
+                    } // ContentEditorThemeHost // BoxWithConstraints Editor
                 }
             }
             } // ProductShellHost

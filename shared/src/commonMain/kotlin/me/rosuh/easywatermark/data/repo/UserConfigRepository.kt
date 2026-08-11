@@ -9,6 +9,7 @@ import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.repo.UserConfigRepository.PreferenceKeys.KEY_CHANGE_LOG
 import me.rosuh.easywatermark.data.repo.UserConfigRepository.PreferenceKeys.KEY_COMPRESS_LEVEL
+import me.rosuh.easywatermark.data.repo.UserConfigRepository.PreferenceKeys.KEY_FOLLOW_PHOTO
 import me.rosuh.easywatermark.data.repo.UserConfigRepository.PreferenceKeys.KEY_OUTPUT_FORMAT
 import me.rosuh.easywatermark.data.repo.UserConfigRepository.PreferenceKeys.KEY_PREFER_IN_APP_GALLERY
 import okio.IOException
@@ -20,6 +21,8 @@ class UserConfigRepository(private val dataStore: DataStore<Preferences>) {
         val KEY_COMPRESS_LEVEL = intPreferencesKey(SP_KEY_COMPRESS_LEVEL)
 
         val KEY_PREFER_IN_APP_GALLERY = booleanPreferencesKey(SP_KEY_PREFER_IN_APP_GALLERY)
+
+        val KEY_FOLLOW_PHOTO = booleanPreferencesKey(SP_KEY_FOLLOW_PHOTO)
 
         // Mirrors WaterMarkRepository.SP_KEY_CHANGE_LOG; keep persisted key byte-identical.
         val KEY_CHANGE_LOG = stringPreferencesKey("sp_water_mark_config_key_change_log")
@@ -39,7 +42,9 @@ class UserConfigRepository(private val dataStore: DataStore<Preferences>) {
                 .coerceAtMost(100)
             val compressLevel = if (savedValue % 20 != 0) DEFAULT_COMPRESS_LEVEL else savedValue
             val preferInAppGallery = it[KEY_PREFER_IN_APP_GALLERY] ?: false
-            UserPreferences(outputFormat, compressLevel, preferInAppGallery)
+            // ADR-0027 default ON when key absent.
+            val followPhoto = it[KEY_FOLLOW_PHOTO] ?: true
+            UserPreferences(outputFormat, compressLevel, preferInAppGallery, followPhoto)
         }
 
     suspend fun updateFormat(
@@ -64,6 +69,12 @@ class UserConfigRepository(private val dataStore: DataStore<Preferences>) {
         }
     }
 
+    suspend fun updateFollowPhoto(followPhoto: Boolean) {
+        dataStore.edit {
+            it[KEY_FOLLOW_PHOTO] = followPhoto
+        }
+    }
+
     suspend fun saveVersionCode(versionCode: Int) {
         dataStore.edit {
             it[KEY_CHANGE_LOG] = versionCode.toString()
@@ -77,5 +88,6 @@ class UserConfigRepository(private val dataStore: DataStore<Preferences>) {
         const val SP_KEY_FORMAT = "${SP_NAME}_key_format"
         const val SP_KEY_COMPRESS_LEVEL = "${SP_NAME}_key_compress_level"
         const val SP_KEY_PREFER_IN_APP_GALLERY = "${SP_NAME}_key_prefer_in_app_gallery"
+        const val SP_KEY_FOLLOW_PHOTO = "${SP_NAME}_key_follow_photo"
     }
 }

@@ -148,7 +148,11 @@
     <string name="recovery_send_email">Send email</string>
     <string name="recovery_send_telegram">Send Telegram</string>
     <string name="recovery_jump_to_store">Jump to Store</string>
-    <string name="about_force_dynamic_color">Force Open Dynamic Color Support</string>
+    <!-- ADR-0027: honest About labels (wallpaper Android-only; photo all platforms). -->
+    <string name="about_follow_wallpaper">Follow wallpaper colors</string>
+    <string name="about_follow_photo">Theme editor from photo</string>
+    <!-- Legacy key kept for Weblate until retarget; product UI uses about_follow_*. -->
+    <string name="about_force_dynamic_color">Follow wallpaper colors</string>
     <string name="about_show_bounds">Show Bounds</string>
     <string name="about_prefer_in_app_gallery">Use in-app gallery</string>
     <!-- Android 14+ partial photo access (READ_MEDIA_VISUAL_USER_SELECTED without full library). -->

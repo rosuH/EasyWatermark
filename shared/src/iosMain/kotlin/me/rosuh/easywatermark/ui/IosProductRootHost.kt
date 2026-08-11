@@ -99,6 +99,7 @@ import me.rosuh.easywatermark.ui.compose.formatArgbHexColor
 import me.rosuh.easywatermark.ui.save.SaveExportSheetShell
 import me.rosuh.easywatermark.platform.platformMotionPolicy
 import me.rosuh.easywatermark.ui.theme.AppTheme
+import me.rosuh.easywatermark.ui.theme.ContentEditorThemeHost
 import me.rosuh.easywatermark.ui.theme.ProvideMotionPolicy
 import org.jetbrains.compose.resources.stringResource
 import platform.Foundation.NSData
@@ -293,7 +294,7 @@ class IosProductRootHost(
  * iOS has no Material You; still persist a force flag (Android CMonet parity) so the About
  * switch is interactive and sticky across launches.
      */
-    private var dynamicColorForced by mutableStateOf(IosDynamicColorPrefs.isForced())
+    private var followPhoto by mutableStateOf(IosContentThemePrefs.isFollowPhoto())
     /** Container-fit committed decode bucket; draft gestures always use the 720px policy bucket. */
     private var committedPreviewBucket by mutableStateOf(PreviewResolutionPolicy.BUCKET_720)
     /**
@@ -662,10 +663,17 @@ class IosProductRootHost(
                     BoxWithConstraints(Modifier.fillMaxSize()) {
                     val aboutLarge = maxWidth.value >= 840f
                     AboutScreen(
-
                         versionName = ProductVersion.NAME,
                         showBounds = aboutShowBounds,
-                        dynamicColorOn = dynamicColorForced,
+                        showFollowWallpaperSwitch = false,
+                        followPhotoOn = followPhoto,
+                        onToggleFollowPhoto = { enabled ->
+                            IosContentThemePrefs.setFollowPhoto(enabled)
+                            followPhoto = enabled
+                            scope.launch {
+                                runCatching { services.userConfigRepo.updateFollowPhoto(enabled) }
+                            }
+                        },
                         icons = AboutScreenIcons(
                             back = backPainter,
                             version = versionPainter,
@@ -705,17 +713,6 @@ class IosProductRootHost(
                                 // re-rasters on return (Android draws debug rects from config).
                                 previewImages.clearPurposeFromOwner(IosPreviewPurpose.Watermarked)
                                 watermarkedPreviewSourcePath = null
-                            }
-                        },
-                        onToggleDynamicColor = { enabled ->
-                            IosDynamicColorPrefs.setForced(enabled)
-                            dynamicColorForced = enabled
-                            // Production toast: "Reboot and you'll get what you want."
-                            // iOS has no Material You — flag is sticky for parity only.
-                            statusLine = if (enabled) {
-                                "Dynamic color flag on (Android Material You)"
-                            } else {
-                                "Dynamic color flag off"
                             }
                         },
                         // Production: large hero About logo + gradient animation.
@@ -810,6 +807,12 @@ class IosProductRootHost(
                         }
                     CompositionLocalProvider(
                         LocalEditorProgressiveSlotPresentation provides progressivePresentation,
+                    ) {
+                    ContentEditorThemeHost(
+                        enabled = followPhoto,
+                        seedBitmap = previewBitmap,
+                        seedKey = previewSourcePath
+                            ?: (launchUi.curImageInfo ?: sessionImages.firstOrNull())?.uri?.value,
                     ) {
                     EditorScreen(
                         imageList = sessionImages.map { it.toUiProjection() },
@@ -1210,6 +1213,7 @@ class IosProductRootHost(
                         layoutClass = layoutClass,
                     )
                     }
+                                        } // ContentEditorThemeHost
                     } // BoxWithConstraints Editor
                 }
                 } // when (route)
@@ -2181,16 +2185,19 @@ private const val ABOUT_URL_DEV = "https://github.com/rosuH"
 private const val ABOUT_URL_DESIGNER = "https://tovi.fun/"
 
 /**
- * Sticky About "Force Dynamic Color" preference on iOS.
- * Material You is Android-only; this keeps the switch interactive/persistent for parity.
+ * ADR-0027: Content editor theme follow-photo (iOS). No wallpaper Material You.
+ * Legacy force_dynamic_color key is ignored.
  */
-private object IosDynamicColorPrefs {
-    private const val KEY = "sp_force_dynamic_color_ios"
+private object IosContentThemePrefs {
+    private const val KEY = "sp_follow_photo_ios"
 
-    fun isForced(): Boolean =
-        NSUserDefaults.standardUserDefaults.boolForKey(KEY)
+    fun isFollowPhoto(): Boolean {
+        val defaults = NSUserDefaults.standardUserDefaults
+        if (defaults.objectForKey(KEY) == null) return true
+        return defaults.boolForKey(KEY)
+    }
 
-    fun setForced(enabled: Boolean) {
+    fun setFollowPhoto(enabled: Boolean) {
         NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = KEY)
     }
 }

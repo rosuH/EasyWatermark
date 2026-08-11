@@ -3,20 +3,15 @@ package me.rosuh.easywatermark.platform
 import me.rosuh.cmonet.CMonet
 
 /**
- * Android [DynamicColorCapability] — delegates exactly to the existing `:cmonet` [CMonet] object, so
- * The OEM allowlist and the persisted force-support flag (SharedPreferences `sp_water_mark_c_monet`, * key `dynamic_color_force`) are preserved byte-for-byte (Option A). This is a pure indirection:
- * behavior is identical to the prior direct `CMonet.*` call sites.
+ * Android [DynamicColorCapability] — wallpaper Material You via `:cmonet` (ADR-0027).
+ * No OEM allowlist; follow-wallpaper preference (legacy `dynamic_color_force` migration in cmonet).
  */
 class AndroidDynamicColorCapability : DynamicColorCapability {
     override fun isAvailable(): Boolean = CMonet.isDynamicColorAvailable()
 
-    override fun isForcedSupport(): Boolean = CMonet.isForceSupportDynamicColor()
+    override fun isFollowWallpaper(): Boolean = CMonet.isFollowWallpaper()
 
-    override fun setForcedSupport(enabled: Boolean) {
-        if (enabled) {
-            CMonet.forceSupportDynamicColor()
-        } else {
-            CMonet.disableSupportDynamicColor()
-        }
+    override fun setFollowWallpaper(enabled: Boolean) {
+        CMonet.setFollowWallpaper(enabled)
     }
 }

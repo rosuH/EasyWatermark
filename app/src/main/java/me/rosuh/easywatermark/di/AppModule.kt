@@ -23,6 +23,6 @@ val appModule = module {
         MainViewModel(get(), get(), get())
     }
     viewModel {
-        AboutViewModel(get(), get())
+        AboutViewModel(get(), get(), get())
     }
 }

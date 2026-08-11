@@ -87,4 +87,6 @@ class SimpleSp(
             }
         }
     }
+
+    override fun contains(key: String): Boolean = sp.contains(key)
 }

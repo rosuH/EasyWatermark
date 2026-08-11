@@ -52,7 +52,8 @@ import me.rosuh.easywatermark.ui.ABOUT_CONTENT_MAX_WIDTH_DP
 import me.rosuh.easywatermark.ui.theme.DesignBrand
 import me.rosuh.easywatermark.ui.theme.DesignEditorBg
 import me.rosuh.easywatermark.ui.theme.DesignSliderTrack
-import me.rosuh.easywatermark.shared.generated.resources.about_force_dynamic_color
+import me.rosuh.easywatermark.shared.generated.resources.about_follow_photo
+import me.rosuh.easywatermark.shared.generated.resources.about_follow_wallpaper
 import me.rosuh.easywatermark.shared.generated.resources.about_prefer_in_app_gallery
 import me.rosuh.easywatermark.shared.generated.resources.about_show_bounds
 import me.rosuh.easywatermark.shared.generated.resources.about_title_about
@@ -91,7 +92,6 @@ data class AboutDevCard(
 fun AboutScreen(
     versionName: String,
     showBounds: Boolean,
-    dynamicColorOn: Boolean,
     icons: AboutScreenIcons,
     developerCard: AboutDevCard,
     designerCard: AboutDevCard,
@@ -106,8 +106,17 @@ fun AboutScreen(
     onDeveloper: () -> Unit,
     onDesigner: () -> Unit,
     onToggleBounds: (Boolean) -> Unit,
-    onToggleDynamicColor: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * ADR-0027: Android-only wallpaper Material You preference.
+     * When false, hide the Follow wallpaper switch (iOS/Desktop).
+     */
+    showFollowWallpaperSwitch: Boolean = false,
+    followWallpaperOn: Boolean = false,
+    onToggleFollowWallpaper: (Boolean) -> Unit = {},
+    /** Content editor theme from current photo (all platforms). Default on. */
+    followPhotoOn: Boolean = true,
+    onToggleFollowPhoto: (Boolean) -> Unit = {},
     /** Android-only: show preference for in-app MediaStore gallery vs system Photo Picker. */
     showPreferInAppGallerySwitch: Boolean = false,
     preferInAppGallery: Boolean = false,
@@ -128,7 +137,8 @@ fun AboutScreen(
     val openSourceTitle = stringResource(Res.string.about_title_open_source)
     val privacyZhTitle = stringResource(Res.string.about_title_privacy_statement_zh)
     val privacyEnTitle = stringResource(Res.string.about_title_privacy_statement)
-    val dynamicColorLabel = stringResource(Res.string.about_force_dynamic_color)
+    val followWallpaperLabel = stringResource(Res.string.about_follow_wallpaper)
+    val followPhotoLabel = stringResource(Res.string.about_follow_photo)
     val showBoundsLabel = stringResource(Res.string.about_show_bounds)
     val preferInAppGalleryLabel = stringResource(Res.string.about_prefer_in_app_gallery)
     val backCd = stringResource(Res.string.cd_back)
@@ -222,8 +232,11 @@ fun AboutScreen(
                     )
                     Spacer(Modifier.height(24.dp))
 
-                    // Debug / prefs toggles — full-row hit target + brand Switch colors (not stock M3).
-                    SwitchRow(dynamicColorLabel, dynamicColorOn, onToggleDynamicColor)
+                    // Prefs toggles — full-row hit target + brand Switch colors (not stock M3).
+                    if (showFollowWallpaperSwitch) {
+                        SwitchRow(followWallpaperLabel, followWallpaperOn, onToggleFollowWallpaper)
+                    }
+                    SwitchRow(followPhotoLabel, followPhotoOn, onToggleFollowPhoto)
                     SwitchRow(showBoundsLabel, showBounds, onToggleBounds)
                     if (showPreferInAppGallerySwitch) {
                         SwitchRow(
@@ -476,7 +489,7 @@ private const val AboutDevCardSideScale = 0.88f
 private const val AboutDevCardSideAlpha = 0.72f
 
 /** @deprecated Use [AboutScreen]. Temporary alias while hosts migrate. */
-@Deprecated("Use AboutScreen", ReplaceWith("AboutScreen(versionName, showBounds, dynamicColorOn, icons, developerCard, designerCard, onBack, onVersion, onRate, onFeedback, onUpdateLog, onOpenSource, onPrivacyZh, onPrivacyEn, onDeveloper, onDesigner, onToggleBounds, onToggleDynamicColor, modifier, logo)"))
+@Deprecated("Use AboutScreen")
 @Composable
 fun AboutScreenShell(
     versionName: String,
@@ -503,7 +516,6 @@ fun AboutScreenShell(
     AboutScreen(
         versionName = versionName,
         showBounds = showBounds,
-        dynamicColorOn = dynamicColorOn,
         icons = icons,
         developerCard = developerCard,
         designerCard = designerCard,
@@ -518,7 +530,9 @@ fun AboutScreenShell(
         onDeveloper = onDeveloper,
         onDesigner = onDesigner,
         onToggleBounds = onToggleBounds,
-        onToggleDynamicColor = onToggleDynamicColor,
+        showFollowWallpaperSwitch = true,
+        followWallpaperOn = dynamicColorOn,
+        onToggleFollowWallpaper = onToggleDynamicColor,
         modifier = modifier,
         logo = logo,
     )

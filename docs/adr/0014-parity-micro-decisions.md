@@ -51,6 +51,14 @@ snapping, and the icon scaling filter decisions are unchanged.
 > Related but separate: `:cmonet` Material You dynamic-color is **live** and is NOT touched here — it
 > migrates later as the ADR-0007 `isDynamicColorAvailable()` capability (a device-gated slice).
 
+## Addendum (2026-08-11) — content theme reopened under ADR-0027
+
+S4d-41 correctly dropped **dormant** Palette plumbing. Product later reopened **photo-driven Editor
+theming** as a deliberate feature: not a silent restore of `androidx.palette` bg-only chrome, but a
+full **Content editor theme** (seed → M3 `ColorScheme` for the Editor session). See **ADR-0027**.
+The “do not silent-restore Palette” rule still holds; implementation must follow 0027 (MaterialKolor /
+MCU path, default on, photo priority in Editor).
+
 ## Consequences
 - Fewer open questions before C2a; deviations from any of these require updating this ADR.
 - The palette background-color feature is removed from the Compose build (S4d-41); reintroducing it is a new feature ADR.

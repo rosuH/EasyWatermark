@@ -247,6 +247,13 @@ class MainViewModel (
         }
     }
 
+    /** ADR-0027: Content editor theme follows selected photo. */
+    fun setFollowPhoto(enabled: Boolean) {
+        viewModelScope.launch {
+            userRepo.updateFollowPhoto(enabled)
+        }
+    }
+
     /**
      * E3: Session owns selection list. Remove one item and re-publish via EnterEditor
      * (or NavigateBack when empty). Does not call [WaterMarkRepository] list/select APIs.

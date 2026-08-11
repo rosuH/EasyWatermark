@@ -239,9 +239,11 @@ class ComposeMainActivity : ComponentActivity() {
                     this
                 )
             ) {
-                // Parity (ADR-0011): production applies Material You on dynamic-color-allowed devices.
-                // routed through the ADR-0007 DynamicColorCapability (Android delegates to :cmonet).
-                AppTheme(dynamicColor = dynamicColorCapability.isAvailable()) {
+                // ADR-0027: wallpaper MY = system available ∧ follow-wallpaper pref (reactive).
+                var wallpaperDynamicOn by remember {
+                    mutableStateOf(dynamicColorCapability.isAvailable())
+                }
+                AppTheme(dynamicColor = wallpaperDynamicOn) {
                     me.rosuh.easywatermark.ui.theme.ProvideMotionPolicy(motionPolicy) {
                     val surfaceColor = MaterialTheme.colorScheme.surface
                     val isDark = surfaceColor.luminance() < 0.5f
@@ -499,6 +501,7 @@ class ComposeMainActivity : ComponentActivity() {
                                         }
                                         ProductShellNav.Route.Editor -> {
                                             AndroidEditorScreen(
+                                                followPhoto = userPreferences.followPhoto,
                                                 imageList = editorSelection.images,
                                                 waterMark = editorWaterMark,
                                                 selectedImage = editorSelection.selected,
@@ -546,17 +549,16 @@ class ComposeMainActivity : ComponentActivity() {
                                         }
                                         ProductShellNav.Route.About -> {
                                             val wm by aboutViewModel.waterMark.collectAsStateWithLifecycle()
-                                            // Bind to the force-toggle SP flag, NOT isAvailable():
-                                            // on Samsung/Google, isAvailable() stays true even when
-                                            // force is off, so a controlled Switch never visually flips.
-                                            var forceDynamicColor by remember {
-                                                mutableStateOf(dynamicColorCapability.isForcedSupport())
+                                            // Follow wallpaper is the preference bit (not isAvailable).
+                                            var followWallpaper by remember {
+                                                mutableStateOf(dynamicColorCapability.isFollowWallpaper())
                                             }
                                             val aboutWidthDp = LocalConfiguration.current.screenWidthDp
                                             AboutScreenAndroid(
                                                 versionName = BuildConfig.VERSION_NAME,
                                                 showBounds = wm?.enableBounds ?: false,
-                                                dynamicColorOn = forceDynamicColor,
+                                                followWallpaperOn = followWallpaper,
+                                                followPhotoOn = userPreferences.followPhoto,
                                                 preferInAppGallery = userPreferences.preferInAppGallery,
                                                 useLargeLayout = aboutWidthDp >= 840,
                                                 onBack = { viewModel.onBackPressed() },
@@ -565,14 +567,13 @@ class ComposeMainActivity : ComponentActivity() {
                                                 },
                                                 onOpenSource = { showOpenSource = true },
                                                 onToggleBounds = { aboutViewModel.toggleBounds(it) },
-                                                onToggleDynamicColor = { enabled ->
-                                                    aboutViewModel.toggleSupportDynamicColor(enabled)
-                                                    forceDynamicColor = enabled
-                                                    Toast.makeText(
-                                                        this@ComposeMainActivity,
-                                                        "Reboot and you'll get what you want.",
-                                                        Toast.LENGTH_SHORT,
-                                                    ).show()
+                                                onToggleFollowWallpaper = { enabled ->
+                                                    aboutViewModel.toggleFollowWallpaper(enabled)
+                                                    followWallpaper = enabled
+                                                    wallpaperDynamicOn = dynamicColorCapability.isAvailable()
+                                                },
+                                                onToggleFollowPhoto = { enabled ->
+                                                    viewModel.setFollowPhoto(enabled)
                                                 },
                                                 onTogglePreferInAppGallery = { enabled ->
                                                     viewModel.setPreferInAppGallery(enabled)
@@ -818,13 +819,15 @@ class ComposeMainActivity : ComponentActivity() {
 private fun AboutScreenAndroid(
     versionName: String,
     showBounds: Boolean,
-    dynamicColorOn: Boolean,
+    followWallpaperOn: Boolean,
+    followPhotoOn: Boolean,
     preferInAppGallery: Boolean,
     onBack: () -> Unit,
     onOpenLink: (String) -> Unit,
     onOpenSource: () -> Unit,
     onToggleBounds: (Boolean) -> Unit,
-    onToggleDynamicColor: (Boolean) -> Unit,
+    onToggleFollowWallpaper: (Boolean) -> Unit,
+    onToggleFollowPhoto: (Boolean) -> Unit,
     onTogglePreferInAppGallery: (Boolean) -> Unit,
     useLargeLayout: Boolean = false,
     modifier: Modifier = Modifier,
@@ -832,7 +835,11 @@ private fun AboutScreenAndroid(
     AboutScreen(
         versionName = versionName,
         showBounds = showBounds,
-        dynamicColorOn = dynamicColorOn,
+        showFollowWallpaperSwitch = true,
+        followWallpaperOn = followWallpaperOn,
+        onToggleFollowWallpaper = onToggleFollowWallpaper,
+        followPhotoOn = followPhotoOn,
+        onToggleFollowPhoto = onToggleFollowPhoto,
         icons = AboutScreenIcons(
             back = SharedProductDrawables.backPainter(),
             version = SharedProductDrawables.versionPainter(),
@@ -864,7 +871,6 @@ private fun AboutScreenAndroid(
         onDeveloper = { onOpenLink(ABOUT_URL_DEV) },
         onDesigner = { onOpenLink(ABOUT_URL_DESIGNER) },
         onToggleBounds = onToggleBounds,
-        onToggleDynamicColor = onToggleDynamicColor,
         showPreferInAppGallerySwitch = true,
         preferInAppGallery = preferInAppGallery,
         onTogglePreferInAppGallery = onTogglePreferInAppGallery,

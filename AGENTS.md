@@ -14,7 +14,7 @@ EasyWatermark (`me.rosuh.easywatermark`) — a privacy-focused watermark app tha
 - `:app` — Android app. Thin platform shell over `:shared`: sole Activity, Android ports, native renderer, MediaStore/decode/save IO, Koin DI.
 - `:desktopApp` — Compose Desktop app. Embeds the shared UI shell; `--headless` CLI path for automation.
 - `iosApp` — Xcode/SwiftUI shell. Links the dynamic `Shared.framework`, hosts the shared Compose UI, owns PHPicker/Photos/share-sheet system edges.
-- `:cmonet` — Material You dynamic-color gate, Android-only, behind `DynamicColorCapability` (ADR-0007). `:baseBenchmarks` / `:macrobenchmark` — perf. `buildSrc` — build constants.
+- `:cmonet` — Wallpaper Material You gate, Android-only, behind `DynamicColorCapability` (ADR-0007; product policy **ADR-0027**: no OEM allowlist, separate **Content editor theme** from photo seed). `:baseBenchmarks` / `:macrobenchmark` — perf. `buildSrc` — build constants.
 
 ### Layering inside `:shared`
 
@@ -102,7 +102,7 @@ EXIF policy: Android decode uses `ExifInterface(InputStream)` on API 23+ and bak
 - **Editor adaptive IA (ADR-0026, amended 2026-08-10):** Supporting-pane dual-pane at **≥840 dp** (preview + filmstrip | form inspector) including **≥1440** (no left session library — filmstrip only); Medium 600–839 stacks like Compact; no fold APIs this period; hand-rolled layout class (not SupportingPaneScaffold/Nav3 SceneStrategy yet). UX morph demo: `docs/superpowers/research/easywatermark-adaptive-layout-ux-demo.html` (may still show historical three-zone).
 - **No shared-ViewModel/reducer/IO `expect` extraction without a named real off-Android consumer or an explicit owner decision.**
 - **DataStore creation is plain per-platform functions — never a commonMain `expect`/`actual`.** Android creation stays byte-faithful (`PreferenceDataStoreFactory.create(produceFile, migrations)`), and does not route through the common helper.
-- **No direct `CMonet` in migrated Compose consumers** — use `DynamicColorCapability`. Absorbing `:cmonet` is an owner-gated follow-up (ADR-0007).
+- **No direct `CMonet` in migrated Compose consumers** — use `DynamicColorCapability` for **wallpaper** only. Content editor theme is a separate path (ADR-0027). Absorbing `:cmonet` is an owner-gated follow-up (ADR-0007).
 - **Golden gates:** the strict pinned-environment FNV gate (`WATERMARK_GOLDEN_STRICT=true`) is local-only — never re-add it to PR CI (ADR-0010). Verify renders by VIEWING screenshots, not byte sizes.
 - **Decision forks get an ADR** in `docs/adr/` (use the `grill-with-docs` flow); status `Proposed` until the developer signs off.
 - When unsure about an Android/KMP API, prefer `android docs search` over training data.
