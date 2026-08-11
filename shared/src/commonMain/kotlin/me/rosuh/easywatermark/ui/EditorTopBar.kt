@@ -12,12 +12,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.testTag
-import me.rosuh.easywatermark.ui.theme.DesignEditorBg
+import me.rosuh.easywatermark.ui.theme.editorChromeColor
 
 /**
  * Editor top bar (production layout). Icons supplied by the host (Android resources / platform bag).
  *
- * Design (Figma preview_edit): seamless olive editor bg, white action icons; no elevated surface.
+ * Design (Figma preview_edit): seamless editor chrome, white action icons; no elevated surface.
+ * Container uses [editorChromeColor] so content editor theme (photo seed) matches body/title band.
  * Back icon size/tint matches About ([AboutScreen] IconButton + default 24.dp + onSurface).
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,10 +38,8 @@ fun EditorTopBar(
     onShowSaveDialog: () -> Unit = {},
     onGoAboutScreen: () -> Unit = {},
 ) {
-    val container = MaterialTheme.colorScheme.background.takeIf {
-        it != Color.Unspecified
-    } ?: DesignEditorBg
-    // Design action icons are solid white on olive bg
+    val container = editorChromeColor()
+    // Design action icons are solid white on dark chrome
     val iconTint = Color.White
     TopAppBar(
         modifier = modifier,

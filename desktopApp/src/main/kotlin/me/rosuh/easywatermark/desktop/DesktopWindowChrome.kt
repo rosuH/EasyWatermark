@@ -2,6 +2,7 @@ package me.rosuh.easywatermark.desktop
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import java.awt.Color
@@ -9,12 +10,7 @@ import java.awt.Window
 import javax.swing.JRootPane
 import javax.swing.RootPaneContainer
 import javax.swing.SwingUtilities
-
-/**
- * Product olive for AWT/Swing window chrome — matches commonMain [DesignEditorBg] `0xFF262611`.
- * Kept as a plain AWT color so chrome install does not depend on Compose runtime.
- */
-private val ProductWindowOlive = Color(0x26, 0x26, 0x11)
+import me.rosuh.easywatermark.ui.theme.DesignEditorBg
 
 /** True when running on macOS (Darwin). */
 internal fun isMacOs(): Boolean =
@@ -22,7 +18,7 @@ internal fun isMacOs(): Boolean =
 
 /**
  * Top inset for product content when macOS fullWindowContent is active so controls sit
- * **below** the traffic-light strip (not under it). Olive background still paints edge-to-edge.
+ * **below** the traffic-light strip (not under it). Background still paints edge-to-edge.
  *
  * ~52.dp matches a standard title-bar band on Retina-scale Compose Desktop windows; slightly
  * taller than the minimal 28pt bar so IconButtons clear the lights comfortably.
@@ -42,22 +38,29 @@ internal fun installDesktopProductAppearanceEarly() {
 }
 
 /**
- * Tint the live window so system title-bar / edges match the product olive surface.
+ * Tint the live window so system title-bar / edges match the product surface.
  *
- * **macOS (option 2):** fullWindowContent + transparent title bar so Compose olive paints
+ * [chrome] defaults to brand olive; pass the photo-seeded Editor chrome (ADR-0027 option B)
+ * when Content editor theme is active so the mac title band matches the body.
+ *
+ * **macOS (option 2):** fullWindowContent + transparent title bar so Compose fill paints
  * under the traffic lights. Pair with [macFullWindowContentInsets] so interactive chrome is
  * not under the lights. Title text is hidden (product surface is the brand).
- * **Windows / Linux:** olive AWT backgrounds only.
+ * **Windows / Linux:** AWT backgrounds only.
  */
-internal fun applyProductWindowChrome(window: Window) {
+internal fun applyProductWindowChrome(
+    window: Window,
+    chrome: ComposeColor = DesignEditorBg,
+) {
+    val awt = chrome.toAwtColor()
     val apply = Runnable {
         try {
-            window.background = ProductWindowOlive
+            window.background = awt
             val rootContainer = window as? RootPaneContainer
-            rootContainer?.contentPane?.background = ProductWindowOlive
+            rootContainer?.contentPane?.background = awt
             val root = rootContainer?.rootPane
             if (root != null) {
-                root.background = ProductWindowOlive
+                root.background = awt
                 applyMacFullWindowContent(root)
             }
         } catch (_: Throwable) {
@@ -71,18 +74,27 @@ internal fun applyProductWindowChrome(window: Window) {
     }
 }
 
+/** Compose sRGB → AWT (ignores color space; product colors are opaque sRGB). */
+internal fun ComposeColor.toAwtColor(): Color {
+    val a = (alpha * 255f + 0.5f).toInt().coerceIn(0, 255)
+    val r = (red * 255f + 0.5f).toInt().coerceIn(0, 255)
+    val g = (green * 255f + 0.5f).toInt().coerceIn(0, 255)
+    val b = (blue * 255f + 0.5f).toInt().coerceIn(0, 255)
+    return Color(r, g, b, a)
+}
+
 /**
  * Top padding for product UI when macOS full-window content is active; identity elsewhere.
- * Apply to the **content** layer only — keep the olive root fill edge-to-edge under the lights.
+ * Apply to the **content** layer only — keep the root fill edge-to-edge under the lights.
  */
 internal fun Modifier.macFullWindowContentInsets(): Modifier =
     if (isMacOs()) padding(top = MacFullWindowContentTopInset) else this
 
 private fun applyMacFullWindowContent(root: JRootPane) {
     if (!isMacOs()) return
-    // Content draws under the title bar → product olive is the visible title-bar color.
+    // Content draws under the title bar → product fill is the visible title-bar color.
     root.putClientProperty("apple.awt.fullWindowContent", true)
     root.putClientProperty("apple.awt.transparentTitleBar", true)
-    // Hide system title string (would float over olive with system typography).
+    // Hide system title string (would float over product fill with system typography).
     root.putClientProperty("apple.awt.windowTitleVisible", false)
 }

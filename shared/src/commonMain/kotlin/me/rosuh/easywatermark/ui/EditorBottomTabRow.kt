@@ -19,8 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import me.rosuh.easywatermark.ui.theme.DesignBrand
-import me.rosuh.easywatermark.ui.theme.DesignEditorBg
+import me.rosuh.easywatermark.ui.theme.editorAccentColor
+import me.rosuh.easywatermark.ui.theme.editorChromeColor
 import me.rosuh.easywatermark.ui.theme.DesignNeutralMuted
 
 /**
@@ -45,12 +45,8 @@ fun EditorBottomTabRow(
     modifier: Modifier = Modifier,
     onIndicatorPosition: (startPx: Int, endPx: Int) -> Unit = { _, _ -> },
 ) {
-    val brand = MaterialTheme.colorScheme.primary.takeIf {
-        it != Color.Unspecified
-    } ?: DesignBrand
-    val container = MaterialTheme.colorScheme.background.takeIf {
-        it != Color.Unspecified
-    } ?: DesignEditorBg
+    val brand = editorAccentColor()
+    val container = editorChromeColor()
     // Clamp for safety if caller ever passes an out-of-range index during a tab list swap.
     val safeIndex = selectedTabIndex.coerceIn(0, (labels.size - 1).coerceAtLeast(0))
 

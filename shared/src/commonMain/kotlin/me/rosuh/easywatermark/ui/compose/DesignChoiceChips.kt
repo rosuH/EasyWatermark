@@ -28,14 +28,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import me.rosuh.easywatermark.ui.theme.DesignBrand
-import me.rosuh.easywatermark.ui.theme.DesignChipSelected
 import me.rosuh.easywatermark.ui.theme.DesignNeutralMuted
+import me.rosuh.easywatermark.ui.theme.editorAccentColor
+import me.rosuh.easywatermark.ui.theme.editorSelectedContainerColor
 
 /**
  * Design-aligned choice chips for Style tab (tile mode, typeface, paint style).
- * Matches editor option chips: selected fill `#2C2C14` r=2, brand / muted labels — not Material
- * SegmentedButton.
+ * Selected fill/label track ambient Material scheme (content editor theme primary) with brand
+ * fallbacks — not a hard-coded amber that fights photo-seeded chrome (ADR-0027 option B).
  */
 @Composable
 fun <T> DesignChoiceChips(
@@ -50,6 +50,8 @@ fun <T> DesignChoiceChips(
      */
     equalWidth: Boolean = false,
 ) {
+    val accent = editorAccentColor()
+    val selectedContainer = editorSelectedContainerColor()
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
@@ -57,10 +59,10 @@ fun <T> DesignChoiceChips(
     ) {
         options.forEachIndexed { index, option ->
             val isSelected = option.value == selected
-            val bg = if (isSelected) DesignChipSelected else Color.Transparent
+            val bg = if (isSelected) selectedContainer else Color.Transparent
             val fg = when {
                 !enabled -> DesignNeutralMuted.copy(alpha = 0.4f)
-                isSelected -> DesignBrand
+                isSelected -> accent
                 else -> DesignNeutralMuted
             }
             Box(

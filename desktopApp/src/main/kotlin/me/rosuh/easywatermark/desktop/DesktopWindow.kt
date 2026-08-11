@@ -154,7 +154,7 @@ import me.rosuh.easywatermark.ui.save.SaveExportSheetShell
 import me.rosuh.easywatermark.platform.platformMotionPolicy
 import me.rosuh.easywatermark.ui.theme.AppTheme
 import me.rosuh.easywatermark.ui.theme.ContentEditorThemeHost
-import me.rosuh.easywatermark.ui.theme.DesignEditorBg
+import me.rosuh.easywatermark.ui.theme.EditorChromeColor
 import me.rosuh.easywatermark.ui.theme.ProvideMotionPolicy
 import org.jetbrains.compose.resources.stringResource
 import java.awt.Desktop
@@ -375,6 +375,8 @@ fun launchDesktopWindow() = application {
     // About open-source overlay (shared OpenSourceScreen; same as Android/iOS).
     var showOpenSource by remember { mutableStateOf(false) }
     var followPhoto by remember { mutableStateOf(DesktopContentThemePrefs.isFollowPhoto()) }
+    // ADR-0027 option B: root/AWT chrome tracks content scheme in Editor; brand olive elsewhere.
+    var windowChromeColor by remember { mutableStateOf(EditorChromeColor.brand) }
     /**
  * Filmstrip + export-sheet thumbs. Full [DesktopImageDecoder.decode] of multi-megapixel
  * Files on the UI thread freezes ModalBottomSheet open — always use [decodeThumbnail] off-EDT.     */
@@ -401,6 +403,12 @@ fun launchDesktopWindow() = application {
     // E0: Session owns product route; FileDialog stays Desktop edge.
     val launchUi by session.launchScreenUiStateFlow.collectAsState()
     val productRoute = ProductShellNav.routeFromLaunchUi(launchUi.uiState)
+    // Leave Editor (or follow-photo off) → brand olive root/AWT immediately.
+    LaunchedEffect(productRoute, followPhoto) {
+        if (productRoute != ProductShellNav.Route.Editor || !followPhoto) {
+            windowChromeColor = EditorChromeColor.brand
+        }
+    }
     val sessionImages = launchUi.selectedImageList
     LaunchedEffect(Unit) {
         userConfigRepo.userPreferences.first().let {
@@ -854,15 +862,19 @@ fun launchDesktopWindow() = application {
         }
         SideEffect {
             desktopFrame = window
-            // macOS option 2: fullWindowContent + transparent title bar + olive fill.
-            applyProductWindowChrome(window)
+            // macOS option 2: fullWindowContent + transparent title bar; fill = windowChromeColor.
+            applyProductWindowChrome(window, windowChromeColor)
         }
         // Re-apply after first layout — some AWT peers only honor title-bar client
         // properties once the native window is realized.
         LaunchedEffect(window) {
-            applyProductWindowChrome(window)
+            applyProductWindowChrome(window, windowChromeColor)
             delay(32)
-            applyProductWindowChrome(window)
+            applyProductWindowChrome(window, windowChromeColor)
+        }
+        // Content theme / route changes update AWT chrome to match Compose root fill.
+        LaunchedEffect(windowChromeColor) {
+            applyProductWindowChrome(window, windowChromeColor)
         }
         AppTheme(darkTheme = true) {
             // I3: Desktop platformMotionPolicy is Full (no OS reduce-motion API).
@@ -871,7 +883,7 @@ fun launchDesktopWindow() = application {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(DesignEditorBg),
+                    .background(windowChromeColor),
             ) {
             Box(
                 modifier = Modifier
@@ -901,7 +913,7 @@ fun launchDesktopWindow() = application {
             // Drop is import-only on Launch and Editor (never writes output).
             val shellModifier = Modifier.fillMaxSize()
                 .dragAndDropTarget(shouldStartDragAndDrop = { hasFileList(it) }, target = dropTarget)
-            ProductShellHost(route = productRoute) { route ->
+            ProductShellHost(route = productRoute, chromeColor = windowChromeColor) { route ->
             when (route) {
                 ProductShellNav.Route.Launch -> {
                     me.rosuh.easywatermark.ui.LaunchScreen(
@@ -1010,6 +1022,7 @@ fun launchDesktopWindow() = application {
                         // Use ready watermarked preview when available; falls back to brand until paint.
                         seedBitmap = preview,
                         seedKey = previewReadyUri ?: selectedForStrip?.uri?.value,
+                        onChromeColorChange = { windowChromeColor = it },
                     ) {
                     BoxWithConstraints(modifier = shellModifier) {
                     val layoutClass = remember(maxWidth, maxHeight) {

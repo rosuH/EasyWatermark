@@ -31,8 +31,9 @@ object EwmTheme {
 
 /**
  * Product panel chrome for confirms + bottom sheets.
- * Shape inherits [MaterialTheme.shapes] after [AppTheme]; color/elevation stay fixed product tokens
- * so dynamic-color Android does not restyle export/template sheets.
+ * Shape inherits [MaterialTheme.shapes] after [AppTheme].
+ * Container fill tracks [editorChromeColor] so content editor theme (ADR-0027) paints sheets
+ * with the photo surface; brand olive remains the fallback outside a scheme.
  */
 object EwmPanelTokens {
     /** Sheet / dialog shape — [MaterialTheme.shapes.large] under [AppTheme] (= [RectangleShape]). */
@@ -50,14 +51,30 @@ object EwmPanelTokens {
     /** Fallback when outside [MaterialTheme] (tests / previews without AppTheme). */
     val rectangle: Shape get() = RectangleShape
 
-    val containerColor: Color get() = DesignEditorBg
+    val containerColor: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = editorChromeColor()
+
+    /** Non-composable brand fallback for hosts/tests without ambient theme. */
+    val brandContainerColor: Color get() = DesignEditorBg
+
     val tonalElevation: Dp = 0.dp
 }
 
 /** Brand / surface colors from Figma handoff (preview_edit). */
 object EwmColorTokens {
     val brand: Color get() = DesignBrand
+    /** Static brand olive. Prefer [editorChromeColor] in Composables under content theme. */
     val editorBackground: Color get() = DesignEditorBg
+    /**
+     * Live editor surface fill — content scheme background when themed, else brand olive.
+     * ADR-0027 option B single chrome source for Compose consumers.
+     */
+    val editorChrome: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = editorChromeColor()
     val chipSelected: Color get() = DesignChipSelected
     val exportPill: Color get() = DesignExportPill
     val sliderTrack: Color get() = DesignSliderTrack

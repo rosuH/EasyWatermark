@@ -17,11 +17,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.IntOffset
-import me.rosuh.easywatermark.ui.theme.DesignEditorBg
 import me.rosuh.easywatermark.ui.theme.EwmTheme
 import me.rosuh.easywatermark.ui.theme.MotionPolicy
 import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
+import me.rosuh.easywatermark.ui.theme.editorChromeColor
 import me.rosuh.easywatermark.ui.theme.motionDurationMs
 
 /**
@@ -31,22 +32,27 @@ import me.rosuh.easywatermark.ui.theme.motionDurationMs
  *
  * Launch↔Editor uses short horizontal slide + fade (not production LaunchView spring morph) —
  * intentional product route transition per ADR-0023.
+ *
+ * @param chromeColor Optional letterbox fill. Desktop passes window chrome so title band and body
+ * share one source under content editor theme (ADR-0027 option B). Null → [editorChromeColor].
  */
 @Composable
 fun ProductShellHost(
     route: ProductShellNav.Route,
     modifier: Modifier = Modifier,
+    chromeColor: Color? = null,
     content: @Composable (route: ProductShellNav.Route) -> Unit,
 ) {
     val motionPolicy = currentMotionPolicy()
-    // Outer Box owns the product olive fill. About enter/exit uses scaleIn/Out; the letterbox
+    // Outer Box owns the product chrome fill. About enter/exit uses scaleIn/Out; the letterbox
     // around scaled pages must never show Compose/Desktop default white (owner recording
-    // 2026-08-10). Use DesignEditorBg — not Material background — so light-scheme / host
-    // defaults cannot reintroduce a white flash.
+    // 2026-08-10). Prefer explicit [chromeColor] (Desktop window chrome) or ambient scheme
+    // via editorChromeColor() — never a hard-coded olive that fights photo theme.
+    val chrome = chromeColor ?: editorChromeColor()
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(DesignEditorBg),
+            .background(chrome),
     ) {
         AnimatedContent(
             targetState = route,

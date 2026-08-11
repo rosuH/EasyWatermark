@@ -53,8 +53,12 @@ object ContentEditorTheme {
 
 /**
  * Applies content editor theme over [content] when [enabled] and a seed can be derived from
- * [seedBitmap]. Debounces selection changes; animates via short MaterialTheme swap (host may
- * also animate route). On failure / null bitmap / disabled → static brand [AppTheme].
+ * [seedBitmap]. Debounces selection changes. On failure / null bitmap / disabled → static brand
+ * [AppTheme].
+ *
+ * [onChromeColorChange] reports the Editor chrome fill for hosts that paint **outside** this
+ * subtree (Desktop root Box / AWT title band). Emits [EditorChromeColor.brand] when content
+ * theme is off or seed is not ready.
  *
  * Call only around the **Editor** surface so Launch/About keep brand (+ Android wallpaper).
  */
@@ -67,9 +71,17 @@ fun ContentEditorThemeHost(
      * even if the bitmap instance is reused.
      */
     seedKey: Any? = seedBitmap,
+    /**
+     * Desktop (and similar) window chrome outside this host. Always invoked with the color that
+     * root/AWT should use — brand olive when inactive / loading, scheme background when ready.
+     */
+    onChromeColorChange: ((Color) -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     if (!enabled) {
+        LaunchedEffect(Unit) {
+            onChromeColorChange?.invoke(EditorChromeColor.brand)
+        }
         AppTheme(darkTheme = true, content = content)
         return
     }
@@ -79,6 +91,7 @@ fun ContentEditorThemeHost(
     LaunchedEffect(enabled, seedKey, seedBitmap) {
         if (seedBitmap == null) {
             scheme = null
+            onChromeColorChange?.invoke(EditorChromeColor.brand)
             return@LaunchedEffect
         }
         delay(ContentEditorTheme.SEED_DEBOUNCE_MS)
@@ -91,6 +104,7 @@ fun ContentEditorThemeHost(
             }
         }
         scheme = next
+        onChromeColorChange?.invoke(EditorChromeColor.resolve(next))
     }
 
     val active = scheme
