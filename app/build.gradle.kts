@@ -262,8 +262,8 @@ dependencies {
 
 //    implementation("com.google.accompanist:accompanist-permissions:0.33.2-alpha")
     implementation(libs.accompanist.permissions)
-    // S4d-38: Coil 3 Compose only (io.coil-kt.coil3:coil-compose). ImageRequest comes transitively from
-    // coil-core; no coil base/View artifact, no coil-svg (SvgDecoder unused), no coil-network (local Uris).
+    // ADR-0028: Coil 3 lives on :shared (api). Keep optional direct dep for app-only AsyncImage call sites
+    // until fully migrated; no coil-network.
     implementation(libs.coil.kt.compose)
 
 //    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")

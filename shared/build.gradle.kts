@@ -81,6 +81,9 @@ kotlin {
             implementation("org.jetbrains.compose.material3:material3:1.12.0-alpha03")
             // ADR-0027: MaterialKolor for content editor theme (seed → full dark ColorScheme).
             implementation(libs.material.kolor)
+            // ADR-0028: Coil 3 Compose for product UI thumbs (no coil-network).
+            // api so :app / desktop hosts can share ImageLoader / AsyncImage types if needed.
+            api(libs.coil.kt.compose)
             // S4d-74: KMP DataStore Preferences.
             implementation(libs.datastore)
             implementation(libs.datastore.preference)

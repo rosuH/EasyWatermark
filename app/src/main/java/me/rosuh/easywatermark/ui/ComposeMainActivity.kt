@@ -102,12 +102,10 @@ import me.rosuh.easywatermark.utils.ktx.openLink
 import me.rosuh.easywatermark.utils.ktx.toUri
 import me.rosuh.easywatermark.utils.ktx.uriFromExportResultData
 import androidx.compose.ui.layout.ContentScale
-import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
-import me.rosuh.easywatermark.ui.compose.MediaStoreThumbnail
-import me.rosuh.easywatermark.ui.compose.galleryImageLoader
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.ui.compose.GalleryDialog
+import me.rosuh.easywatermark.ui.image.ProductAsyncImage
+import me.rosuh.easywatermark.ui.image.ProductThumb
 import me.rosuh.easywatermark.ui.save.SaveExportSheetShell
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -1005,16 +1003,14 @@ private fun SaveExportSheetAndroid(
             jobState = info.jobState,
             modifier = thumbnailModifier,
         ) {
-            // WP-E: bounded MediaStore thumb (never bare full-URI Coil decode).
-            val ctx = androidx.compose.ui.platform.LocalContext.current
+            // ADR-0028: ProductThumb → MediaStore Fetcher (never bare full-URI Coil decode).
             val density = androidx.compose.ui.platform.LocalDensity.current
-            val thumbPx = with(density) { 72.dp.roundToPx() }.coerceIn(96, 256)
-            val loader = remember(ctx) { ctx.galleryImageLoader() }
-            AsyncImage(
-                model = ImageRequest.Builder(ctx)
-                    .data(MediaStoreThumbnail(info.uri.toUri(), thumbPx))
-                    .build(),
-                imageLoader = loader,
+            val thumbPx = with(density) { 72.dp.roundToPx() }.coerceIn(
+                ProductThumb.UI_THUMB_MAX_EDGE,
+                256,
+            )
+            ProductAsyncImage(
+                thumb = ProductThumb(ref = info.uri, maxEdgePx = thumbPx),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),

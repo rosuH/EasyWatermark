@@ -1,16 +1,10 @@
 package me.rosuh.easywatermark.ui
 
-import android.content.ContentUris
-import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Shader
 import android.net.Uri
-import android.os.Build
-import android.provider.MediaStore
-import android.util.Size as AndroidSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -27,7 +21,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -56,14 +49,15 @@ import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.render.AndroidCommonRaster
 import me.rosuh.easywatermark.ui.compose.ColorOption
 import me.rosuh.easywatermark.ui.compose.IconOption
-import me.rosuh.easywatermark.ui.theme.ContentEditorTheme
+import me.rosuh.easywatermark.ui.image.ProductAsyncImage
+import me.rosuh.easywatermark.ui.image.ProductThumb
+import me.rosuh.easywatermark.ui.image.rememberProductThumbBitmap
 import me.rosuh.easywatermark.ui.theme.ContentEditorThemeHost
 import me.rosuh.easywatermark.ui.theme.EwmTheme
 import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
 import me.rosuh.easywatermark.ui.theme.motionDurationMs
 import me.rosuh.easywatermark.ui.theme.previewCrossfadeDurationMs
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
-import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResourceSync
 import me.rosuh.easywatermark.utils.ktx.obtainTileMode
 import me.rosuh.easywatermark.utils.ktx.toUri
 import kotlin.math.abs
@@ -101,26 +95,14 @@ fun AndroidEditorScreen(
     followPhoto: Boolean = true,
 ) {
     val colorModel = remember { FuncTitleModel(FuncType.Color) }
-    val context = LocalContext.current
     val seedSel = selectedImage ?: imageList.firstOrNull()
     val seedUri = seedSel?.uri?.value
-    val seedBitmap by produceState<ImageBitmap?>(initialValue = null, seedUri, followPhoto) {
-        if (!followPhoto || seedSel == null) {
-            value = null
-            return@produceState
-        }
-        value = withContext(Dispatchers.IO) {
-            try {
-                loadFilmstripThumbBitmap(
-                    context,
-                    seedSel.uri.toUri(),
-                    ContentEditorTheme.SEED_MAX_EDGE,
-                )?.asImageBitmap()
-            } catch (_: Exception) {
-                null
-            }
-        }
-    }
+    // ADR-0028: theme seed via product Coil path (shared max-edge with filmstrip).
+    val seedBitmap = rememberProductThumbBitmap(
+        ref = seedSel?.uri,
+        maxEdgePx = ProductThumb.UI_THUMB_MAX_EDGE,
+        enabled = followPhoto,
+    )
 
     // I1: host feeds window size in Dp → pure EditorLayoutClass (no Android types in commonMain).
     // ADR-0027: content theme outranks wallpaper for the entire Editor surface.
@@ -158,8 +140,7 @@ fun AndroidEditorScreen(
                     )
                 }
             },
-            // Use the same MediaStore/EXIF decode path as the big preview — Coil fails blank on
-            // some content URIs / HEIC / EXIF-odd files that BitmapUtils still decodes fine.
+            // ADR-0028: ProductThumb → MediaStore Fetcher (not bare content Uri).
             thumbnail = { imageInfo, contentDescription, thumbnailModifier ->
                 EditorFilmstripThumb(
                     imageInfo = imageInfo,
@@ -209,11 +190,8 @@ fun AndroidEditorScreen(
     } // ContentEditorThemeHost
 }
 
-private const val FilmstripThumbPx = 160
-
 /**
- * Filmstrip cell: MediaStore system thumb → BitmapUtils (EXIF) fallback.
- * Avoids Coil content-URI blanks that still decode fine for the main preview.
+ * Filmstrip cell via product Coil path (ADR-0028). MediaStore Fetcher on Android.
  */
 @TraceRecomposition(tag = "editor-filmstrip", threshold = 2)
 @Composable
@@ -222,72 +200,17 @@ private fun EditorFilmstripThumb(
     contentDescription: String,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-    val uriValue = imageInfo.uri.value
-    val bitmap by produceState<Bitmap?>(initialValue = null, uriValue) {
-        value = withContext(Dispatchers.IO) {
-            loadFilmstripThumbBitmap(context, imageInfo.uri.toUri(), FilmstripThumbPx)
-        }
-    }
-    val bmp = bitmap
-    if (bmp != null && !bmp.isRecycled) {
-        Image(
-            bitmap = bmp.asImageBitmap(),
-            contentDescription = contentDescription,
-            contentScale = ContentScale.Crop,
-            modifier = modifier,
-        )
-    } else {
-        Box(
-            modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
-        )
-    }
-}
-
-/**
- * Prefer system MediaStore thumbnails (fast, correct for gallery content URIs).
- * Fall back to the same EXIF-aware decoder used by [WaterMarkCanvas].
- */
-private fun loadFilmstripThumbBitmap(context: Context, uri: Uri, sizePx: Int): Bitmap? {
-    val size = sizePx.coerceIn(64, 320)
-    // 1) MediaStore / ContentResolver thumbnail (API 29+)
-    if (Build.VERSION.SDK_INT >= 29) {
-        try {
-            val thumb = context.contentResolver.loadThumbnail(uri, AndroidSize(size, size), null)
-            if (thumb != null && !thumb.isRecycled) return thumb
-        } catch (_: Exception) {
-            // fall through
-        }
-    } else {
-        try {
-            @Suppress("DEPRECATION")
-            val id = ContentUris.parseId(uri)
-            val opts = BitmapFactory.Options().apply {
-                inPreferredConfig = Bitmap.Config.RGB_565
-            }
-            @Suppress("DEPRECATION")
-            val thumb = MediaStore.Images.Thumbnails.getThumbnail(
-                context.contentResolver,
-                id,
-                MediaStore.Images.Thumbnails.MINI_KIND,
-                opts,
-            )
-            if (thumb != null && !thumb.isRecycled) return thumb
-        } catch (_: Exception) {
-            // fall through
-        }
-    }
-    // 2) Full decode path with EXIF (same as preview) — subsampled to thumb size.
-    return try {
-        decodeSampledBitmapFromResourceSync(
-            context.contentResolver,
-            uri,
-            size,
-            size,
-        ).data?.bitmap
-    } catch (_: Exception) {
-        null
-    }
+    ProductAsyncImage(
+        thumb = ProductThumb(
+            ref = imageInfo.uri,
+            maxEdgePx = ProductThumb.UI_THUMB_MAX_EDGE,
+        ),
+        contentDescription = contentDescription,
+        contentScale = ContentScale.Crop,
+        modifier = modifier.background(
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+        ),
+    )
 }
 
 /**

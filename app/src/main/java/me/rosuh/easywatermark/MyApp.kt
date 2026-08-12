@@ -37,6 +37,8 @@ class MyApp : Application() {
             modules(appModule)
         }
         CMonet.init(this, true)
+        // ADR-0028: process-wide Coil ImageLoader (MediaStore ProductThumb Fetcher).
+        me.rosuh.easywatermark.ui.image.installProductImageLoaderFactory()
         // I3: ContentResolver for platformMotionPolicy (animator scale / reduce motion).
         me.rosuh.easywatermark.platform.AndroidMotionContentResolver.install(contentResolver)
         // WP-C/D: Android 17 memory-limiter observability (debug-only, local, no upload).

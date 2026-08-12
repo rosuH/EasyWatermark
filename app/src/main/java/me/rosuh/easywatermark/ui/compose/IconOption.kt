@@ -4,15 +4,17 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
-import coil3.compose.AsyncImage
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.action_pick
 import me.rosuh.easywatermark.shared.generated.resources.water_mark_mode_image
-import me.rosuh.easywatermark.utils.ktx.toUri
+import me.rosuh.easywatermark.ui.image.ProductAsyncImage
+import me.rosuh.easywatermark.ui.image.ProductThumb
 import org.jetbrains.compose.resources.stringResource
 
 @Preview
@@ -44,10 +46,15 @@ fun IconOption(
             )
         },
         preview = {
-            AsyncImage(
-                model = waterMark.iconUri.toUri(),
-                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+            // ADR-0028: ProductThumb (app-owned file / content ref) — not bare Uri AsyncImage.
+            ProductAsyncImage(
+                thumb = ProductThumb(
+                    ref = waterMark.iconUri,
+                    maxEdgePx = ProductThumb.UI_THUMB_MAX_EDGE,
+                ),
+                contentScale = ContentScale.Crop,
                 contentDescription = stringResource(Res.string.water_mark_mode_image),
+                modifier = Modifier.fillMaxSize(),
             )
         },
     )

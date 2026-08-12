@@ -312,6 +312,8 @@ private data class FrozenItemInput(
  * **Preview:** app-private temp only; never becomes [lastSavedFile].
  */
 fun launchDesktopWindow() = application {
+    // ADR-0028: process-wide Coil ImageLoader (path ProductThumb Fetcher).
+    me.rosuh.easywatermark.ui.image.installProductImageLoaderFactory()
     // Persist window state under OS-native app-data (J3 DesktopAppPaths; legacy ~/.easywatermark
     // copy-forward when empty). Headless/demo witnesses stay under build/ (Main.kt).
     val appDataDir = remember { resolveDesktopAppDataDir() }
@@ -377,11 +379,7 @@ fun launchDesktopWindow() = application {
     var followPhoto by remember { mutableStateOf(DesktopContentThemePrefs.isFollowPhoto()) }
     // ADR-0027 option B: root/AWT chrome tracks content scheme in Editor; brand olive elsewhere.
     var windowChromeColor by remember { mutableStateOf(EditorChromeColor.brand) }
-    /**
- * Filmstrip + export-sheet thumbs. Full [DesktopImageDecoder.decode] of multi-megapixel
- * Files on the UI thread freezes ModalBottomSheet open — always use [decodeThumbnail] off-EDT.     */
-    val desktopThumbCache = remember { mutableMapOf<String, ImageBitmap>() }
-    var desktopThumbEpoch by remember { mutableStateOf(0) }
+    // ADR-0028: filmstrip/export thumbs via ProductAsyncImage (Coil path Fetcher).
     // U2: watermark config is session/repo-owned — collect once; no parallel mutableStateOf mirrors.
     val waterMark by repo.waterMark.collectAsState(WaterMark.default)
     // the rendered preview image (null until the first successful refresh).
@@ -1133,36 +1131,17 @@ fun launchDesktopWindow() = application {
                             }
                         },
                         thumbnail = { imageInfo, contentDescription, thumbModifier ->
-                            val path = imageInfo.uri.value
-                            val epoch = desktopThumbEpoch
-                            val cached = desktopThumbCache[path]
-                            val bmp by produceState(initialValue = cached, path, epoch) {
-                                if (path.isBlank()) {
-                                    value = null
-                                    return@produceState
-                                }
-                                desktopThumbCache[path]?.let {
-                                    value = it
-                                    return@produceState
-                                }
-                                value = withContext(Dispatchers.IO) {
-                                    runCatching {
-                                        DesktopImageDecoder.decodeThumbnail(File(path), maxEdgePx = 96)
-                                    }.getOrNull()
-                                }?.also { desktopThumbCache[path] = it }
-                            }
-                            if (bmp != null) {
-                                Image(
-                                    bitmap = bmp!!,
-                                    contentDescription = contentDescription,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = thumbModifier,
-                                )
-                            } else {
-                                Box(
-                                    modifier = thumbModifier.background(MaterialTheme.colorScheme.surfaceVariant),
-                                )
-                            }
+                            me.rosuh.easywatermark.ui.image.ProductAsyncImage(
+                                thumb = me.rosuh.easywatermark.ui.image.ProductThumb(
+                                    ref = imageInfo.uri,
+                                    maxEdgePx = me.rosuh.easywatermark.ui.image.ProductThumb.UI_THUMB_MAX_EDGE,
+                                ),
+                                contentDescription = contentDescription,
+                                contentScale = ContentScale.Crop,
+                                modifier = thumbModifier.background(
+                                    MaterialTheme.colorScheme.surfaceVariant,
+                                ),
+                            )
                         },
                         optionItem = { spec, selected ->
                             val label = desktopOptionLabel(spec.type)
@@ -1345,21 +1324,7 @@ fun launchDesktopWindow() = application {
             // C2: shared Android Compose export panel; Desktop only implements FS write + reveal/share edges.
             if (showSaveSheet) {
                 val exportItems = sessionImages
-                // Prefetch export thumbs off-EDT so sheet open is not blocked on full-res ImageIO.
-                LaunchedEffect(exportItems.map { it.uri.value }) {
-                    val missing = exportItems.map { it.uri.value }.filter {
-                        it.isNotBlank() && !desktopThumbCache.containsKey(it)
-                    }
-                    if (missing.isEmpty()) return@LaunchedEffect
-                    withContext(Dispatchers.IO) {
-                        for (path in missing) {
-                            runCatching {
-                                DesktopImageDecoder.decodeThumbnail(File(path), maxEdgePx = 96)
-                            }.getOrNull()?.let { desktopThumbCache[path] = it }
-                        }
-                    }
-                    desktopThumbEpoch += 1
-                }
+                // ADR-0028: export thumbs load via ProductAsyncImage; Coil memory cache handles hits.
                 val exportTotalFixed = exportItems.size
                 val recovery = me.rosuh.easywatermark.ui.save.ExportRecoveryUi.fromJob(
                     isSaving = exportJobState.isSaving,
@@ -1583,24 +1548,6 @@ fun launchDesktopWindow() = application {
                         }
                     },
                 ) { info, thumbModifier ->
-                    val path = info.uri.value
-                    val epoch = desktopThumbEpoch
-                    val cached = desktopThumbCache[path]
-                    val bmp by produceState(initialValue = cached, path, epoch) {
-                        if (path.isBlank()) {
-                            value = null
-                            return@produceState
-                        }
-                        desktopThumbCache[path]?.let {
-                            value = it
-                            return@produceState
-                        }
-                        value = withContext(Dispatchers.IO) {
-                            runCatching {
-                                DesktopImageDecoder.decodeThumbnail(File(path), maxEdgePx = 96)
-                            }.getOrNull()
-                        }?.also { desktopThumbCache[path] = it }
-                    }
                     val job = remember(
                         info.uri,
                         exportJobState.processedCount,
@@ -1613,20 +1560,17 @@ fun launchDesktopWindow() = application {
                         jobState = job,
                         modifier = thumbModifier,
                     ) {
-                        if (bmp != null) {
-                            Image(
-                                bitmap = bmp!!,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                            )
-                        }
+                        me.rosuh.easywatermark.ui.image.ProductAsyncImage(
+                            thumb = me.rosuh.easywatermark.ui.image.ProductThumb(
+                                ref = info.uri,
+                                maxEdgePx = me.rosuh.easywatermark.ui.image.ProductThumb.UI_THUMB_MAX_EDGE,
+                            ),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize().background(
+                                MaterialTheme.colorScheme.surfaceVariant,
+                            ),
+                        )
                     }
                 }
             }

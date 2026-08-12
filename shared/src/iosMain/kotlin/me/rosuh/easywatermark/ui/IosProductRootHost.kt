@@ -577,6 +577,8 @@ class IosProductRootHost(
     }
 
     fun viewController(): UIViewController = ComposeUIViewController {
+        // ADR-0028: process-wide Coil ImageLoader (path ProductThumb Fetcher).
+        me.rosuh.easywatermark.ui.image.installProductImageLoaderFactory()
         AppTheme(darkTheme = true) {
             // I3: UIAccessibility reduce motion → MotionPolicy.Reduced when enabled.
             ProvideMotionPolicy(platformMotionPolicy()) {
@@ -809,28 +811,15 @@ class IosProductRootHost(
                     CompositionLocalProvider(
                         LocalEditorProgressiveSlotPresentation provides progressivePresentation,
                     ) {
-                    // ADR-0027: MCU seed must be ≤ SEED_MAX_EDGE (match Android), never full previewBitmap.
-                    val themeSeedKey = previewSourcePath
-                        ?: (launchUi.curImageInfo ?: sessionImages.firstOrNull())?.uri?.value
-                    val themeSeedBitmap by produceState<ImageBitmap?>(
-                        initialValue = null,
-                        themeSeedKey,
-                        followPhoto,
-                    ) {
-                        if (!followPhoto || themeSeedKey.isNullOrBlank()) {
-                            value = null
-                            return@produceState
-                        }
-                        val path = themeSeedKey
-                        value = withContext(Dispatchers.Default) {
-                            runCatching {
-                                me.rosuh.easywatermark.render.IosImageIODecoder.decodeThumbnail(
-                                    path,
-                                    maxEdgePx = ContentEditorTheme.SEED_MAX_EDGE,
-                                )
-                            }.getOrNull()
-                        }
-                    }
+                    // ADR-0027/0028: MCU seed via product Coil path (shared max-edge with filmstrip).
+                    val themeSeedRef = (launchUi.curImageInfo ?: sessionImages.firstOrNull())?.uri
+                        ?: previewSourcePath?.let { MediaRef(it) }
+                    val themeSeedKey = themeSeedRef?.value
+                    val themeSeedBitmap = me.rosuh.easywatermark.ui.image.rememberProductThumbBitmap(
+                        ref = themeSeedRef,
+                        maxEdgePx = me.rosuh.easywatermark.ui.image.ProductThumb.UI_THUMB_MAX_EDGE,
+                        enabled = followPhoto,
+                    )
                     ContentEditorThemeHost(
                         enabled = followPhoto,
                         seedBitmap = themeSeedBitmap,
@@ -986,50 +975,10 @@ class IosProductRootHost(
                             }
                         },
                         thumbnail = { imageInfo, contentDescription, thumbModifier ->
-                            // Visible cells and background prefetch share one repository flight.
-                            // Bucket is frozen once per produceState key so a late decode cannot
-                            // land under a different size identity than its cache key.
-                            // Seed from peekCached so a completed prefetch paints without waiting
-                            // for (or restarting) produceState after a global epoch bump.
+                            // ADR-0028: product Coil path (IosImageIODecoder via ProductThumb Fetcher).
+                            // Shared max-edge with theme seed for memory-cache hits.
                             val path = imageInfo.uri.value
-                            val epoch = filmstripThumbEpoch
-                            val frozenBucket = filmstripBucketPx()
-                            val key = filmstripKey(path, frozenBucket)
-                            val cachedSeed =
-                                if (path.isBlank() || path == "preview") {
-                                    null
-                                } else {
-                                    previewImages.peekCached(key)
-                                }
-                            // produceState runs under Compose's StandaloneCoroutine: an uncaught
-                            // throw becomes K/N process abort (SIGABRT) — keep try/catch.
-                            val thumbBitmap by produceState<ImageBitmap?>(
-                                initialValue = cachedSeed,
-                                path,
-                                epoch,
-                                frozenBucket,
-                            ) {
-                                try {
-                                    if (path.isBlank() || path == "preview") {
-                                        value = null
-                                        return@produceState
-                                    }
-                                    // Seeded from peekCached — keep pixels; keys change on real invalidation.
-                                    if (value != null) {
-                                        return@produceState
-                                    }
-                                    value = previewImages.load(key) {
-                                        withContext(Dispatchers.Default) {
-                                            decodeFilmstripThumb(path, frozenBucket)
-                                        }
-                                    }
-                                } catch (t: Throwable) {
-                                    println("filmstrip produceState failed path=$path: ${t.message}")
-                                    value = null
-                                }
-                            }
-                            if (thumbBitmap != null) {
-                                // First paint of a Ready filmstrip cell = visible pixels, not prefetch.
+                            if (path.isNotBlank() && path != "preview" && !markedFirstFilmstripPixels) {
                                 SideEffect {
                                     if (!markedFirstFilmstripPixels) {
                                         markedFirstFilmstripPixels = true
@@ -1041,19 +990,18 @@ class IosProductRootHost(
                                         )
                                     }
                                 }
-                                Image(
-                                    bitmap = thumbBitmap!!,
-                                    contentDescription = contentDescription,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = thumbModifier,
-                                )
-                            } else {
-                                Box(
-                                    modifier = thumbModifier.background(
-                                        MaterialTheme.colorScheme.surfaceVariant,
-                                    ),
-                                )
                             }
+                            me.rosuh.easywatermark.ui.image.ProductAsyncImage(
+                                thumb = me.rosuh.easywatermark.ui.image.ProductThumb(
+                                    ref = imageInfo.uri,
+                                    maxEdgePx = me.rosuh.easywatermark.ui.image.ProductThumb.UI_THUMB_MAX_EDGE,
+                                ),
+                                contentDescription = contentDescription,
+                                contentScale = ContentScale.Crop,
+                                modifier = thumbModifier.background(
+                                    MaterialTheme.colorScheme.surfaceVariant,
+                                ),
+                            )
                         },
                         optionItem = { spec, selected ->
                             val label = spec.type.label()
@@ -1463,45 +1411,7 @@ class IosProductRootHost(
                     },
                     onOpenGalleryClick = {},
                 ) { info, thumbModifier ->
-                    // Per-source-path thumb off-main (never shared previewBitmap; never sync decode).
-                    // Seed from peekCached like filmstrip so LazyRow recycle does not flash blank.
-                    val path = info.uri.value
-                    val exportKey = exportThumbnailKey(path)
-                    val cachedSeed =
-                        if (path.isBlank() || path == "preview") {
-                            null
-                        } else {
-                            previewImages.peekCached(exportKey)
-                        }
-                    val thumb by produceState<ImageBitmap?>(
-                        initialValue = cachedSeed,
-                        path,
-                    ) {
-                        try {
-                            if (path.isBlank() || path == "preview") {
-                                value = previewBitmap
-                                return@produceState
-                            }
-                            // Seeded from peekCached — keep pixels on recycle.
-                            if (value != null) {
-                                return@produceState
-                            }
-                            value = previewImages.load(exportKey) {
-                                withContext(Dispatchers.Default) {
-                                    runCatching {
-                                        me.rosuh.easywatermark.render.IosImageIODecoder
-                                            .decodeThumbnail(path, maxEdgePx = 96)
-                                    }.getOrNull()
-                                }
-                            }
-                        } catch (t: Throwable) {
-                            println("export thumb produceState failed path=$path: ${t.message}")
-                            value = null
-                        }
-                    }
-                    val displayThumb = thumb
-                        ?: previewBitmap.takeIf { path == "preview" || path.isBlank() }
-                    // exportJob in key forces recompose when batch progress advances.
+                    // ADR-0028: export-sheet chrome thumbs via ProductAsyncImage (not preview compose).
                     val job = remember(
                         info.uri,
                         exportJob.completedCount,
@@ -1514,20 +1424,17 @@ class IosProductRootHost(
                         jobState = job,
                         modifier = thumbModifier,
                     ) {
-                        if (displayThumb != null) {
-                            Image(
-                                bitmap = displayThumb,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                            )
-                        }
+                        me.rosuh.easywatermark.ui.image.ProductAsyncImage(
+                            thumb = me.rosuh.easywatermark.ui.image.ProductThumb(
+                                ref = info.uri,
+                                maxEdgePx = me.rosuh.easywatermark.ui.image.ProductThumb.UI_THUMB_MAX_EDGE,
+                            ),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize().background(
+                                MaterialTheme.colorScheme.surfaceVariant,
+                            ),
+                        )
                     }
                 }
             }

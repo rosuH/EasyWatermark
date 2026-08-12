@@ -36,11 +36,6 @@ import coil3.compose.AsyncImagePainter
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import coil3.ImageLoader
-import coil3.compose.AsyncImage
-import coil3.request.CachePolicy
-import coil3.request.ImageRequest
-import coil3.request.crossfade
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.action_pick
 import me.rosuh.easywatermark.shared.generated.resources.cd_add_more_images
@@ -50,9 +45,10 @@ import me.rosuh.easywatermark.shared.generated.resources.tips_gallery_partial_ac
 import me.rosuh.easywatermark.ui.GalleryDialogShell
 import me.rosuh.easywatermark.ui.Image as GalleryImage
 import me.rosuh.easywatermark.ui.SharedProductDrawables
+import me.rosuh.easywatermark.ui.image.ProductAsyncImage
+import me.rosuh.easywatermark.ui.image.ProductThumb
 import me.rosuh.easywatermark.ui.theme.DesignChipSelected
 import me.rosuh.easywatermark.utils.ktx.hasPartialMediaAccessOnly
-import me.rosuh.easywatermark.utils.ktx.toUri
 import org.jetbrains.compose.resources.stringResource
 
 @Preview
@@ -68,13 +64,15 @@ fun GalleryDialog(
     onDismiss: (selectedImages: List<GalleryImage>) -> Unit = {},
     onPickImageViaSystem: () -> Unit = {},
 ) {
-    // Cell is ~1/4 screen; decode only a small MediaStore thumb (not the full still).
+    // Cell is ~1/4 screen; ADR-0028 ProductThumb → MediaStore Fetcher (shared UI edge).
     val density = LocalDensity.current
     val thumbPx = remember(density.density) {
-        with(density) { 96.dp.roundToPx() }.coerceIn(128, 256)
+        with(density) { 96.dp.roundToPx() }.coerceIn(
+            ProductThumb.UI_THUMB_MAX_EDGE,
+            256,
+        )
     }
     val context = LocalContext.current
-    val imageLoader = remember(context) { context.galleryImageLoader() }
     val placeholderPainter = SharedProductDrawables.galleryPlaceholderPainter()
 
     val loadImages = rememberUpdatedState(onLoadImages)
@@ -92,14 +90,13 @@ fun GalleryDialog(
     }
 
     val thumbnail: @Composable (GalleryImage, String, Modifier) -> Unit =
-        remember(thumbPx, imageLoader, placeholderPainter) {
+        remember(thumbPx, placeholderPainter) {
             { image, contentDescription, modifier ->
                 GalleryThumbnail(
                     image = image,
                     contentDescription = contentDescription,
                     modifier = modifier,
                     thumbPx = thumbPx,
-                    imageLoader = imageLoader,
                     placeholderPainter = placeholderPainter,
                 )
             }
@@ -163,18 +160,8 @@ private fun GalleryThumbnail(
     contentDescription: String,
     modifier: Modifier,
     thumbPx: Int,
-    imageLoader: ImageLoader,
     placeholderPainter: Painter,
 ) {
-    val context = LocalContext.current
-    val request = remember(image.uri.value, thumbPx) {
-        ImageRequest.Builder(context)
-            .data(MediaStoreThumbnail(image.uri.toUri(), thumbPx))
-            .memoryCachePolicy(CachePolicy.ENABLED)
-            .diskCachePolicy(CachePolicy.DISABLED) // MediaStore already thumbs; skip double disk cache
-            .crossfade(false)
-            .build()
-    }
     // Chip bg only while loading/error; do not stretch the glyph to full-cell (reads as ugly
     // stacked billboards). Center a small muted Phosphor Image instead.
     var showChrome by remember(image.uri.value) { mutableStateOf(true) }
@@ -182,10 +169,9 @@ private fun GalleryThumbnail(
         modifier = modifier.background(DesignChipSelected),
         contentAlignment = Alignment.Center,
     ) {
-        AsyncImage(
-            model = request,
+        ProductAsyncImage(
+            thumb = ProductThumb(ref = image.uri, maxEdgePx = thumbPx),
             contentDescription = contentDescription,
-            imageLoader = imageLoader,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,
             onState = { state ->

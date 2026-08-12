@@ -103,6 +103,7 @@ EXIF policy: Android decode uses `ExifInterface(InputStream)` on API 23+ and bak
 - **No shared-ViewModel/reducer/IO `expect` extraction without a named real off-Android consumer or an explicit owner decision.**
 - **DataStore creation is plain per-platform functions — never a commonMain `expect`/`actual`.** Android creation stays byte-faithful (`PreferenceDataStoreFactory.create(produceFile, migrations)`), and does not route through the common helper.
 - **No direct `CMonet` in migrated Compose consumers** — use `DynamicColorCapability` for **wallpaper** only. Content editor theme is a separate path (ADR-0027). Absorbing `:cmonet` is an owner-gated follow-up (ADR-0007).
+- **UI image loading (ADR-0028):** Coil 3 on KMP for gallery/filmstrip/save thumbs/icon/theme-seed — **not** bare content Uri; **not** watermark compose/export decode. Single platform `ImageLoader`; Android keeps MediaStore thumbnail Fetcher.
 - **Golden gates:** the strict pinned-environment FNV gate (`WATERMARK_GOLDEN_STRICT=true`) is local-only — never re-add it to PR CI (ADR-0010). Verify renders by VIEWING screenshots, not byte sizes.
 - **Decision forks get an ADR** in `docs/adr/` (use the `grill-with-docs` flow); status `Proposed` until the developer signs off.
 - When unsure about an Android/KMP API, prefer `android docs search` over training data.
