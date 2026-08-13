@@ -8,6 +8,7 @@ import kotlin.test.assertTrue
 import me.rosuh.easywatermark.ui.theme.previewCrossfadeDurationMs
 import me.rosuh.easywatermark.ui.theme.MotionPolicy
 import me.rosuh.easywatermark.render.PreviewResolutionPolicy
+import me.rosuh.easywatermark.render.PreviewWorkingSetBudget
 
 /**
  * Structural + budget diagnosis for filmstrip scroll / image switch at ~50 images.
@@ -25,7 +26,7 @@ class FiftyImageFilmstripSwitchDiagnosisTest {
     }
 
     @Test
-    fun watermarkedCache_cannotHoldFiftyPreviews_butNeighborWindowFitsAt1080() {
+    fun watermarkedCache_cannotHoldFiftyPreviews_butNeighborWindowFitsAtCurrentLongEdge() {
         val repoSrc = readFirst(
             "shared/src/iosMain/kotlin/me/rosuh/easywatermark/render/IosPreviewImageRepository.kt",
             "src/iosMain/kotlin/me/rosuh/easywatermark/render/IosPreviewImageRepository.kt",
@@ -33,46 +34,39 @@ class FiftyImageFilmstripSwitchDiagnosisTest {
         val entryCap = Regex(
             """DEFAULT_WATERMARKED_ENTRIES_MAX:\s*Int\s*=\s*(\d+)""",
         ).find(repoSrc)!!.groupValues[1].toInt()
-        val byteCapMiB = Regex(
+        val floorMiB = Regex(
             """DEFAULT_WATERMARKED_BYTES_MAX:\s*Long\s*=\s*(\d+)L\s*\*\s*1024\s*\*\s*1024""",
         ).find(repoSrc)!!.groupValues[1].toLong()
-        val jointMiB = Regex(
-            """SOURCE_AND_PREVIEW_BYTES_MAX:\s*Long\s*=\s*(\d+)L\s*\*\s*1024\s*\*\s*1024""",
-        ).find(repoSrc)!!.groupValues[1].toLong()
-        val byteCap = byteCapMiB * 1024 * 1024
-        val jointCap = jointMiB * 1024 * 1024
-        // R1 production constants.
         assertEquals(48, entryCap)
-        assertEquals(48L * 1024 * 1024, byteCap)
-        assertEquals(64L * 1024 * 1024, jointCap)
+        assertEquals(48L, floorMiB)
+        assertEquals(1920, PreviewResolutionPolicy.PHONE_PREVIEW_MAX_LONG_EDGE_PX)
 
+        val highMem = 8L shl 30
         for (edge in listOf(
             PreviewResolutionPolicy.BUCKET_720,
             PreviewResolutionPolicy.BUCKET_1080,
             PreviewResolutionPolicy.BUCKET_1440,
             PreviewResolutionPolicy.BUCKET_1920,
         )) {
-            val bytesPer = edge.toLong() * edge * 4
-            val byBytes = (byteCap / bytesPer).toInt()
+            val caps = PreviewWorkingSetBudget.caps(edge, highMem)
+            val bytesPer = PreviewWorkingSetBudget.bytesPerFrame(edge)
+            val byBytes = (caps.watermarkedBytesMax / bytesPer).toInt()
             val effective = minOf(entryCap, byBytes)
             assertTrue(
                 effective < 50,
                 "edge=$edge effective capacity $effective must be << 50 images",
             )
             if (edge == PreviewResolutionPolicy.BUCKET_720) {
-                assertTrue(effective >= 20, "R1: ≥20×720 WM frames by bytes (got $effective)")
+                assertTrue(effective >= 20, "floor: ≥20×720 WM frames by bytes (got $effective)")
             }
-            // R1: focus+±2 must fit at 1080 under both purpose and joint caps.
-            if (edge == PreviewResolutionPolicy.BUCKET_1080) {
-                assertTrue(
-                    bytesPer * 5 <= byteCap,
-                    "edge=$edge: focus+±2 must fit watermarkedBytesMax",
-                )
-                assertTrue(
-                    bytesPer * 5 <= jointCap,
-                    "edge=$edge: focus+±2 must fit joint budget",
-                )
-            }
+            assertTrue(
+                bytesPer * 5 <= caps.watermarkedBytesMax,
+                "edge=$edge: focus+±2 must fit watermarkedBytesMax",
+            )
+            assertTrue(
+                bytesPer * 5 <= caps.jointBytesMax,
+                "edge=$edge: focus+±2 must fit joint budget",
+            )
         }
     }
 
@@ -131,11 +125,17 @@ class FiftyImageFilmstripSwitchDiagnosisTest {
         // Neighbor raster must hop Default — repository completion is host Main.
         val neighborFn = host.indexOf("private suspend fun warmNeighborWatermarkedPreviews")
         assertTrue(neighborFn >= 0, "missing warmNeighborWatermarkedPreviews")
-        val neighborBody = host.substring(neighborFn, (neighborFn + 2200).coerceAtMost(host.length))
+        val neighborBody = host.substring(neighborFn, (neighborFn + 2800).coerceAtMost(host.length))
         assertTrue(
             neighborBody.contains("withContext(Dispatchers.Default)") &&
-                neighborBody.contains("renderWatermarked"),
-            "neighbor WM raster must withContext(Default) so filmstrip tap does not freeze Main",
+                neighborBody.contains("renderWatermarked") &&
+                neighborBody.contains("background = source"),
+            "neighbor WM raster must withContext(Default) and reuse the cached source bitmap",
+        )
+        assertTrue(
+            host.contains("applyPreviewWorkingSetCaps") &&
+                host.contains("PreviewWorkingSetBudget.caps"),
+            "host byte caps must follow PreviewWorkingSetBudget at the current preview long-edge",
         )
         assertTrue(
             host.contains("never full-strip") || host.contains("never full strip") ||
@@ -151,7 +151,15 @@ class FiftyImageFilmstripSwitchDiagnosisTest {
             "shared/src/iosMain/kotlin/me/rosuh/easywatermark/ui/image/IosHeifImageDecoder.kt",
             "src/iosMain/kotlin/me/rosuh/easywatermark/ui/image/IosHeifImageDecoder.kt",
         )
-        assertTrue(heif.contains("IosImageIODecoder.decodeThumbnailSkia"))
+        assertTrue(heif.contains("IosImageIODecoder.decodeThumbnailBitmapWithMetadata"))
+        assertFalse(
+            heif.contains("IosImageIODecoder.metadata("),
+            "HEIF Coil decoder must not open a second CGImageSource via metadata(path)",
+        )
+        assertFalse(
+            heif.contains("allocPixels"),
+            "HEIF Coil decoder must not extra-copy ImageIO pixels into a second Bitmap",
+        )
         assertTrue(
             heif.contains("policy.resolveIsSampled"),
             "HEIF decoder must take isSampled from IosHeifDecodePolicy",

@@ -58,6 +58,21 @@ class IosImageIOPathDecoderTest {
     }
 
     @Test
+    fun metadataAndThumbnail_fromOneSource_openOnce() {
+        val path = write("once.jpg", jpegWithOrientation(1))
+        IosImageIOOwnershipProbe.resetForTests()
+        val decoded = IosImageIODecoder.decodeThumbnailBitmapWithMetadata(path, 12)
+        val counts = IosImageIOOwnershipProbe.snapshotForTests()
+        assertEquals(1, counts.sourcesCreated, "size+thumbnail must share one CGImageSource")
+        assertEquals(1, counts.sourcesReleased)
+        assertEquals(1, counts.imagesCreated)
+        assertEquals(1, counts.imagesReleased)
+        assertTrue(decoded.metadata.width > 0 && decoded.metadata.height > 0)
+        assertTrue(decoded.bitmap.width > 0 && decoded.bitmap.height > 0)
+        assertTrue(maxOf(decoded.bitmap.width, decoded.bitmap.height) <= 12)
+    }
+
+    @Test
     fun heifPathMetadataAndThumbnail_areDecodedThroughImageIO() {
         // Tiny HEIF fixture generated once from the product icon with macOS ImageIO. Keeping it
         // inline makes this a real URL/FileRepresentation-format test rather than an SDK-capability

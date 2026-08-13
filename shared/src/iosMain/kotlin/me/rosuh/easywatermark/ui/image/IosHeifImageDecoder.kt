@@ -10,7 +10,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.render.IosImageIODecoder
 import okio.BufferedSource
-import org.jetbrains.skia.Bitmap
 
 /**
  * Coil [Decoder] for HEIC/HEIF on iOS.
@@ -37,30 +36,21 @@ internal class IosHeifImageDecoder(
         )
         val path = result.source.file().toString()
         if (path.isBlank()) return@withContext null
-        val sourceLong = runCatching {
-            val meta = IosImageIODecoder.metadata(path)
-            maxOf(meta.width, meta.height)
-        }.getOrDefault(0)
-        val skia = runCatching {
-            IosImageIODecoder.decodeThumbnailSkia(
+        val decoded = runCatching {
+            IosImageIODecoder.decodeThumbnailBitmapWithMetadata(
                 sourcePath = path,
                 maxEdgePx = maxEdge,
                 shouldCache = policy.imageIoShouldCache,
             )
         }.getOrNull() ?: return@withContext null
-        try {
-            val bitmap = Bitmap()
-            if (!bitmap.allocPixels(skia.imageInfo)) return@withContext null
-            if (!skia.readPixels(bitmap)) return@withContext null
-            bitmap.setImmutable()
-            val outLong = maxOf(bitmap.width, bitmap.height)
-            DecodeResult(
-                image = bitmap.asImage(),
-                isSampled = policy.resolveIsSampled(sourceLong, outLong),
-            )
-        } finally {
-            skia.close()
-        }
+        // Coil DecodeResult owns [decoded.bitmap]. ImageIO already drew pixels once.
+        val bitmap = decoded.bitmap
+        val sourceLong = maxOf(decoded.metadata.width, decoded.metadata.height)
+        val outLong = maxOf(bitmap.width, bitmap.height)
+        DecodeResult(
+            image = bitmap.asImage(),
+            isSampled = policy.resolveIsSampled(sourceLong, outLong),
+        )
     }
 
     class Factory(

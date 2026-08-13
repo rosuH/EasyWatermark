@@ -92,6 +92,51 @@ class IosPreviewRasterTest {
         assertTrue(bitmapsNearlyEqual(preview, viaPipeline), "Preview must match common pipeline paint")
     }
 
+    @Test
+    fun injectedBackground_secondRender_doesNotOpenImageIO() {
+        val dir = NSTemporaryDirectory()
+        val sourcePath = dir + "c3_reuse_src_" + NSUUID().UUIDString() + ".png"
+        val sourceBytes = IosWatermarkRenderer.encodePng(solid(640, 480, Color(0xFF405060)))
+        assertTrue(IosByteArrayInterop.toNSData(sourceBytes).writeToFile(sourcePath, atomically = true))
+
+        IosImageIOOwnershipProbe.resetForTests()
+        IosDecodePurposeProbe.resetForTests()
+        val background = IosImageIODecoder.decodeThumbnail(sourcePath, 720)
+        val sourcesAfterDecode = IosImageIOOwnershipProbe.snapshotForTests().sourcesCreated
+        assertTrue(sourcesAfterDecode >= 1)
+        IosDecodePurposeProbe.resetForTests()
+
+        val wm = WaterMark.default.copy(
+            markMode = WatermarkMode.Text,
+            text = "reuse",
+            textSize = 14f,
+            degree = 0f,
+            alpha = 255,
+        )
+        val first = IosPreviewRaster.renderWatermarked(
+            sourcePath = sourcePath,
+            waterMark = wm,
+            background = background,
+        )
+        val second = IosPreviewRaster.renderWatermarked(
+            sourcePath = sourcePath,
+            waterMark = wm.copy(alpha = 180),
+            background = background,
+        )
+        assertEquals(background.width, first.width)
+        assertEquals(background.height, second.height)
+        assertEquals(
+            0,
+            IosDecodePurposeProbe.snapshotForTests().watermarkedPreview,
+            "injected background must not ImageIO-decode inside renderWatermarked",
+        )
+        assertEquals(
+            sourcesAfterDecode,
+            IosImageIOOwnershipProbe.snapshotForTests().sourcesCreated,
+            "config change on an injected source must not open another CGImageSource",
+        )
+    }
+
     /** Real temp-dir listing of `ewm_out_*` basenames via [NSFileManager]. Fail-loud if unreadable. */
     private fun listEwmOut(tmp: String): Set<String> {
         val path = tmp.trimEnd('/')

@@ -54,14 +54,14 @@ internal data class IosPreviewRepositorySnapshot(
  */
 internal class IosPreviewImageRepository(
     private val ownerScope: CoroutineScope,
-    private val sourceAndPreviewBytesMax: Long = SOURCE_AND_PREVIEW_BYTES_MAX,
+    private var sourceAndPreviewBytesMax: Long = SOURCE_AND_PREVIEW_BYTES_MAX,
     private val filmstripBytesMax: Long = FILMSTRIP_BYTES_MAX,
     private val watermarkedEntriesMax: Int = DEFAULT_WATERMARKED_ENTRIES_MAX,
     private val sourcePlaceholderEntriesMax: Int = DEFAULT_SOURCE_PLACEHOLDER_ENTRIES_MAX,
     private val filmstripEntriesMax: Int = DEFAULT_FILMSTRIP_ENTRIES_MAX,
     private val exportThumbnailEntriesMax: Int = DEFAULT_EXPORT_THUMBNAIL_ENTRIES_MAX,
-    private val watermarkedBytesMax: Long = DEFAULT_WATERMARKED_BYTES_MAX,
-    private val sourcePlaceholderBytesMax: Long = DEFAULT_SOURCE_PLACEHOLDER_BYTES_MAX,
+    private var watermarkedBytesMax: Long = DEFAULT_WATERMARKED_BYTES_MAX,
+    private var sourcePlaceholderBytesMax: Long = DEFAULT_SOURCE_PLACEHOLDER_BYTES_MAX,
     private val exportThumbnailBytesMax: Long = DEFAULT_EXPORT_THUMBNAIL_BYTES_MAX,
 ) {
     private data class InFlight(
@@ -230,6 +230,37 @@ internal class IosPreviewImageRepository(
 
     fun invalidateFromOwner(key: IosPreviewKey) {
         completionScope.launch(start = CoroutineStart.UNDISPATCHED) { invalidate(key) }
+    }
+
+    /**
+     * Apply formula caps for the current preview long-edge. Sync when the mutex is free so
+     * Host layout / bench pin takes effect before the next put.
+     */
+    fun applyWorkingSetCapsFromOwner(caps: PreviewWorkingSetCaps) {
+        if (mutex.tryLock()) {
+            try {
+                applyWorkingSetCapsLocked(caps)
+            } finally {
+                mutex.unlock()
+            }
+            return
+        }
+        completionScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            mutex.withLock { applyWorkingSetCapsLocked(caps) }
+        }
+    }
+
+    suspend fun applyWorkingSetCaps(caps: PreviewWorkingSetCaps) {
+        mutex.withLock { applyWorkingSetCapsLocked(caps) }
+    }
+
+    private fun applyWorkingSetCapsLocked(caps: PreviewWorkingSetCaps) {
+        sourcePlaceholderBytesMax = caps.sourceBytesMax
+        watermarkedBytesMax = caps.watermarkedBytesMax
+        sourceAndPreviewBytesMax = caps.jointBytesMax
+        if (!closed) {
+            enforceBudgetsLocked()
+        }
     }
 
     fun invalidateOwnedPathFromOwner(ownedPath: String, purpose: IosPreviewPurpose) {
@@ -419,21 +450,19 @@ internal class IosPreviewImageRepository(
 
     companion object {
         /**
-         * Joint Source+Watermarked+Export budget (R1 2026-08-12).
-         * Ceiling kept at 64 MiB (owner confirmation gate); enough for focus+±2 at 1080
-         * and dozens of 720 watermarked frames without thrashing the just-painted focus.
+         * Constructor-default joint floor (R1). Live Host caps come from
+         * [PreviewWorkingSetBudget] for the current preview long-edge.
          */
         const val SOURCE_AND_PREVIEW_BYTES_MAX: Long = 64L * 1024 * 1024
         const val FILMSTRIP_BYTES_MAX: Long = 8L * 1024 * 1024
         /**
-         * Watermarked working set (R1): hold focus + ±2 neighbors + recent scrub history.
-         * ~48 × 720² ARGB ≈ 96 MiB theoretical; joint + byte caps clamp real retention.
+         * Entry cap stays 48; byte caps follow the current preview long-edge.
          */
         const val DEFAULT_WATERMARKED_ENTRIES_MAX: Int = 48
         const val DEFAULT_SOURCE_PLACEHOLDER_ENTRIES_MAX: Int = 12
         const val DEFAULT_FILMSTRIP_ENTRIES_MAX: Int = 48
         const val DEFAULT_EXPORT_THUMBNAIL_ENTRIES_MAX: Int = 48
-        /** ~23×720 or ~10×1080 watermarked frames before purpose-byte eviction. */
+        /** Watermarked purpose floor — 720 panes stay at 48 MiB. */
         const val DEFAULT_WATERMARKED_BYTES_MAX: Long = 48L * 1024 * 1024
         const val DEFAULT_SOURCE_PLACEHOLDER_BYTES_MAX: Long = 12L * 1024 * 1024
         const val DEFAULT_EXPORT_THUMBNAIL_BYTES_MAX: Long = 8L * 1024 * 1024

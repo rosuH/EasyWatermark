@@ -16,12 +16,11 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * R1 budget gates for ~50-image editor sessions.
+ * Working-set budget gates for ~50-image editor sessions.
  *
- * Production caps (2026-08-12 R1): watermarked 48 entries / 48 MiB purpose + 64 MiB joint.
- * At 720, sequential scrub still cannot hold all 50 (byte math), but focus+±2 at 1080 fits
- * without thrashing the just-painted focus. Filmstrip purpose capacity is orthogonal — Coil
- * owns product UI thumbs (R3).
+ * Purpose floors stay 12 / 48 MiB at 720. Live caps follow [PreviewWorkingSetBudget] so
+ * focus + ±2 at the current preview long-edge (phone 1920) fit. Filmstrip purpose capacity
+ * is orthogonal — Coil owns product UI thumbs (R3).
  */
 class IosPreviewFiftyImageBudgetTest {
 
@@ -90,40 +89,58 @@ class IosPreviewFiftyImageBudgetTest {
     }
 
     @Test
-    fun neighborPrefetchWindow_at1080_fitsWithoutThrashingFocus() = runTest {
-        // R1: focus + ±2 (5 frames) at 1080 must fit watermarked purpose + joint budgets.
+    fun neighborPrefetchWindow_atCurrentLongEdge_fitsWithoutThrashingFocus() = runTest {
+        val edge = PreviewResolutionPolicy.PHONE_PREVIEW_MAX_LONG_EDGE_PX
+        val caps = PreviewWorkingSetBudget.caps(edge, physicalMemoryBytes = 8L shl 30)
         val repo = repository()
-        val edge = PreviewResolutionPolicy.BUCKET_1080
-        val bmp = square(edge)
+        repo.applyWorkingSetCaps(caps)
+        val bmp = fourByThree(edge)
         val bytesPer = IosPreviewImageRepository.approxBytes(bmp)
         val needForFive = bytesPer * 5
         assertTrue(
-            needForFive <= IosPreviewImageRepository.DEFAULT_WATERMARKED_BYTES_MAX,
+            needForFive <= caps.watermarkedBytesMax,
             "focus+±2 at ${edge}px must fit watermarkedBytesMax " +
-                "(need=$needForFive cap=${IosPreviewImageRepository.DEFAULT_WATERMARKED_BYTES_MAX})",
+                "(need=$needForFive cap=${caps.watermarkedBytesMax})",
         )
         assertTrue(
-            needForFive <= IosPreviewImageRepository.SOURCE_AND_PREVIEW_BYTES_MAX,
+            needForFive <= caps.jointBytesMax,
             "focus+±2 must also fit joint source+preview budget",
         )
 
-        val paths = listOf(10, 8, 9, 11, 12).map { "/tmp/ewm_src_$it" }
-        for (p in paths) {
+        val focus = "/tmp/ewm_src_10"
+        val neighbors = listOf(8, 9, 11, 12).map { "/tmp/ewm_src_$it" }
+        // Neighbors first, then the just-painted focus — ±2 must not evict it.
+        for (p in neighbors) {
             repo.putForTests(IosPreviewKey(p, edge, IosPreviewPurpose.Watermarked), bmp)
         }
-        val snap = repo.snapshot()
-        assertTrue(snap.watermarkedBytes <= IosPreviewImageRepository.DEFAULT_WATERMARKED_BYTES_MAX)
-        assertEquals(
-            5,
-            snap.watermarkedEntries,
-            "prefetch of 5×${edge}px must keep all neighbors (got ${snap.watermarkedEntries})",
+        repo.putForTests(IosPreviewKey(focus, edge, IosPreviewPurpose.Watermarked), bmp)
+        assertNotNull(
+            repo.cached(IosPreviewKey(focus, edge, IosPreviewPurpose.Watermarked)),
+            "focus must survive ±2 prefetch",
         )
-        for (p in paths) {
+        for (p in neighbors) {
             assertNotNull(
                 repo.cached(IosPreviewKey(p, edge, IosPreviewPurpose.Watermarked)),
                 "neighbor $p must remain after focus+±2 warm",
             )
         }
+
+        repo.putForTests(IosPreviewKey("/tmp/ewm_src_13", edge, IosPreviewPurpose.Watermarked), bmp)
+        assertNull(
+            repo.cached(IosPreviewKey(neighbors.first(), edge, IosPreviewPurpose.Watermarked)),
+            "6th 4:3 frame at $edge must evict the oldest neighbor",
+        )
+        assertNotNull(
+            repo.cached(IosPreviewKey(focus, edge, IosPreviewPurpose.Watermarked)),
+            "focus must survive a 6th frame (oldest neighbor evicted first)",
+        )
+        assertNotNull(
+            repo.cached(IosPreviewKey("/tmp/ewm_src_13", edge, IosPreviewPurpose.Watermarked)),
+            "newest frame must remain after eviction",
+        )
+        val snap = repo.snapshot()
+        assertTrue(snap.watermarkedBytes <= caps.watermarkedBytesMax)
+        assertTrue(snap.watermarkedEntries <= 5)
     }
 
     @Test
@@ -161,4 +178,9 @@ class IosPreviewFiftyImageBudgetTest {
 
     private fun square(edge: Int): ImageBitmap =
         ImageBitmap(edge, edge, ImageBitmapConfig.Argb8888)
+
+    private fun fourByThree(longEdge: Int): ImageBitmap {
+        val shortEdge = kotlin.math.ceil(longEdge * 3.0 / 4.0).toInt()
+        return ImageBitmap(longEdge, shortEdge, ImageBitmapConfig.Argb8888)
+    }
 }

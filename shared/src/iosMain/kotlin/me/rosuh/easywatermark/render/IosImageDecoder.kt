@@ -118,9 +118,7 @@ internal object IosImageDecoder {
 
     /** ImageIO thumbnail at source long-edge = full-res, EXIF-baked HEIF. No JPEG transcode. */
     private fun decodeHeifViaImageIO(bytes: ByteArray): SkiaImage? = runCatching {
-        val meta = IosImageIODecoder.metadataFromBytes(bytes)
-        val edge = maxOf(meta.width, meta.height).coerceAtLeast(1)
-        IosImageIODecoder.decodeThumbnailSkiaFromBytes(bytes, edge, shouldCache = false)
+        IosImageIODecoder.decodePrimarySkiaFromBytes(bytes, shouldCache = false)
     }.getOrNull()
 
     /**

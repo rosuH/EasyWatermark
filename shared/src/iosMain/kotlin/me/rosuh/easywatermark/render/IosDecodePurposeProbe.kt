@@ -20,7 +20,7 @@ internal object IosDecodePurposeProbe {
         /** Coil [ProductThumbFetcher] product UI thumbs. */
         ProductThumbCoil,
 
-        /** [IosPreviewRaster.renderWatermarked] background decode. */
+        /** [IosPreviewRaster.renderWatermarked] ImageIO decode when no background was injected. */
         WatermarkedPreview,
 
         /** Source placeholder decode (no watermark). */

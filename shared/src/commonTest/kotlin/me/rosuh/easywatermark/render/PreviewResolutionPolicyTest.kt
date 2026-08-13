@@ -54,6 +54,38 @@ class PreviewResolutionPolicyTest {
     }
 
     @Test
+    fun phoneMaxLongEdge_capsHugeContainerAt1920() {
+        assertEquals(
+            PreviewResolutionPolicy.PHONE_PREVIEW_MAX_LONG_EDGE_PX,
+            PreviewResolutionPolicy.committedMaxEdgePx(
+                previewBoxWidthPx = 1206,
+                previewBoxHeightPx = 2622,
+                maxLongEdgePx = PreviewResolutionPolicy.PHONE_PREVIEW_MAX_LONG_EDGE_PX,
+            ),
+        )
+        assertEquals(
+            PreviewResolutionPolicy.PHONE_PREVIEW_MAX_LONG_EDGE_PX,
+            PreviewResolutionPolicy.committedMaxEdgePxForFit(
+                sourceWidthPx = 1,
+                sourceHeightPx = 1,
+                containerWidthPx = 1206,
+                containerHeightPx = 2622,
+                maxLongEdgePx = PreviewResolutionPolicy.PHONE_PREVIEW_MAX_LONG_EDGE_PX,
+            ),
+        )
+        assertEquals(
+            PreviewResolutionPolicy.PHONE_PREVIEW_MAX_LONG_EDGE_PX,
+            PreviewResolutionPolicy.committedMaxEdgePxForFit(
+                sourceWidthPx = 8000,
+                sourceHeightPx = 8000,
+                containerWidthPx = 5000,
+                containerHeightPx = 5000,
+                maxLongEdgePx = PreviewResolutionPolicy.PHONE_PREVIEW_MAX_LONG_EDGE_PX,
+            ),
+        )
+    }
+
+    @Test
     fun missingSourceDims_fallBackToContainerBucket() {
         assertEquals(
             PreviewResolutionPolicy.BUCKET_1920,

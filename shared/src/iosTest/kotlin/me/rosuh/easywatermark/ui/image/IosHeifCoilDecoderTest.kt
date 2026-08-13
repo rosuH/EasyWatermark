@@ -39,9 +39,17 @@ class IosHeifCoilDecoderTest {
                 .size(128)
                 .precision(Precision.INEXACT)
                 .build()
+            me.rosuh.easywatermark.render.IosImageIOOwnershipProbe.resetForTests()
             val first = loader.execute(req())
             assertIs<SuccessResult>(first)
             assertTrue(first.image.width > 0 && first.image.height > 0)
+            val opens = me.rosuh.easywatermark.render.IosImageIOOwnershipProbe
+                .snapshotForTests().sourcesCreated
+            assertEquals(
+                1,
+                opens,
+                "HEIF Coil decode must open CGImageSource once (got $opens)",
+            )
             val second = loader.execute(req())
             assertIs<SuccessResult>(second)
             assertEquals(DataSource.MEMORY_CACHE, second.dataSource)

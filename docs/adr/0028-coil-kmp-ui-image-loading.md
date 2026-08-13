@@ -88,3 +88,7 @@ Implement as **one coordinated change** (not Android-only phase then iOS later):
 - `:app` Coil dependency moves/centers on `:shared`; Android retains MediaStore Fetcher semantics.  
 - Implementation is a large cross-platform slice; treat as owner-gated milestone with full-target compile and UI regression list.  
 - Does **not** by itself fix multi-image watermarked **preview** RAM (ADR-0027 hang item 3); that remains a separate budget ADR/task.
+
+## Amendment (2026-08-13) — preview source reuse is not Coil
+
+Editor preview still composes through `CommonWatermarkPipeline`. iOS now caches the decoded **source** bitmap (path + preview long-edge) in the existing Source purpose and injects it into `IosPreviewRaster.renderWatermarked`. Changing text / alpha / gap / rotation must not ImageIO-decode that path again. Byte caps for Source / Watermarked / joint are derived from the current **preview long-edge** (phone ceiling 1920) and device memory. Coil remains filmstrip / chrome only. Export stays full-res.

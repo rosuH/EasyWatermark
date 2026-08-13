@@ -47,6 +47,9 @@ internal object IosPreviewRaster {
     /**
      * Watermarked preview [ImageBitmap] for [sourcePath] with current [waterMark] config.
      * In-memory only — no encode/write.
+     *
+     * When [background] is already the decode at [maxEdgePx], skip ImageIO. Host caches that
+     * bitmap under [IosPreviewPurpose.SourcePlaceholder] so a config change only recomposes.
      */
     fun renderWatermarked(
         sourcePath: String,
@@ -54,11 +57,18 @@ internal object IosPreviewRaster {
         offsetX: Float = 0.5f,
         offsetY: Float = 0.5f,
         maxEdgePx: Int = PREVIEW_MAX_EDGE_PX,
+        background: ImageBitmap? = null,
     ): ImageBitmap {
         val bench = IosPreviewBench.scope("wm_preview")
-        IosDecodePurposeProbe.record(IosDecodePurposeProbe.Purpose.WatermarkedPreview)
-        val background = decodePathThumbnail(sourcePath, maxEdgePx)
-        bench.mark("imageIOThumbnail")
+        val source = if (background != null) {
+            bench.mark("sourceReuse")
+            background
+        } else {
+            IosDecodePurposeProbe.record(IosDecodePurposeProbe.Purpose.WatermarkedPreview)
+            val decoded = decodePathThumbnail(sourcePath, maxEdgePx)
+            bench.mark("imageIOThumbnail")
+            decoded
+        }
 
         val icon = if (waterMark.markMode == WatermarkMode.Image) {
             val iconBytes = IosIconPersistence.readIconBytes(waterMark.iconUri)
@@ -73,7 +83,7 @@ internal object IosPreviewRaster {
             null
         }
         val composed = CommonWatermarkPipeline.compose(
-            background = background,
+            background = source,
             config = waterMark,
             env = IosTextRasterEnv.textRasterEnv(),
             icon = icon,

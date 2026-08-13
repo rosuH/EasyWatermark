@@ -49,15 +49,28 @@ internal object PreviewResolutionPolicy {
     const val BUCKET_3840: Int = 3840
 
     /**
+     * Phone idle-preview long-edge ceiling. Export stays full-res.
+     * Decode keeps source aspect; this only caps the longer side.
+     */
+    const val PHONE_PREVIEW_MAX_LONG_EDGE_PX: Int = BUCKET_1920
+
+    /**
      * Map measured preview-box width/height (px) to a committed long-edge bucket.
      * Uses the longer side so Fit-letterboxed content still tracks the display scale.
      * Desktop/iOS preview hosts that only know the box size (not source pixels) use this.
      */
-    fun committedMaxEdgePx(previewBoxWidthPx: Int, previewBoxHeightPx: Int): Int {
+    fun committedMaxEdgePx(
+        previewBoxWidthPx: Int,
+        previewBoxHeightPx: Int,
+        maxLongEdgePx: Int = BUCKET_3840,
+    ): Int {
         if (previewBoxWidthPx <= 0 || previewBoxHeightPx <= 0) {
             return BUCKET_720
         }
-        return bucketForLongEdge(maxOf(previewBoxWidthPx, previewBoxHeightPx))
+        return clampToMaxLongEdge(
+            bucketForLongEdge(maxOf(previewBoxWidthPx, previewBoxHeightPx)),
+            maxLongEdgePx,
+        )
     }
 
     /**
@@ -73,6 +86,7 @@ internal object PreviewResolutionPolicy {
         sourceHeightPx: Int,
         containerWidthPx: Int,
         containerHeightPx: Int,
+        maxLongEdgePx: Int = BUCKET_3840,
     ): Int {
         if (
             sourceWidthPx <= 0 || sourceHeightPx <= 0 ||
@@ -82,14 +96,22 @@ internal object PreviewResolutionPolicy {
         }
         // Unknown/default ImageInfo (1×1) → treat as missing source metadata.
         if (sourceWidthPx <= 1 && sourceHeightPx <= 1) {
-            return committedMaxEdgePx(containerWidthPx, containerHeightPx)
+            return committedMaxEdgePx(containerWidthPx, containerHeightPx, maxLongEdgePx)
         }
         val scale = minOf(
             containerWidthPx.toDouble() / sourceWidthPx.toDouble(),
             containerHeightPx.toDouble() / sourceHeightPx.toDouble(),
         )
         val displayLongEdge = maxOf(sourceWidthPx, sourceHeightPx) * scale
-        return bucketForLongEdge(ceil(displayLongEdge * 1.10).toInt())
+        return clampToMaxLongEdge(
+            bucketForLongEdge(ceil(displayLongEdge * 1.10).toInt()),
+            maxLongEdgePx,
+        )
+    }
+
+    private fun clampToMaxLongEdge(edgePx: Int, maxLongEdgePx: Int): Int {
+        val cap = bucketForLongEdge(maxLongEdgePx.coerceAtLeast(BUCKET_720))
+        return edgePx.coerceAtMost(cap)
     }
 
     /** Actual 40dp filmstrip cell pixels map to a bounded native thumbnail request. */

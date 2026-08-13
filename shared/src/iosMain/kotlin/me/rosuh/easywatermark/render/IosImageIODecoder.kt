@@ -54,6 +54,12 @@ internal data class IosImageMetadata(
     val orientation: Int,
 )
 
+/** One [CGImageSource] open: oriented metadata + Skia bitmap Coil can wrap. */
+internal data class IosThumbnailBitmap(
+    val metadata: IosImageMetadata,
+    val bitmap: org.jetbrains.skia.Bitmap,
+)
+
 /**
  * Path-first ImageIO edge for picker-owned sources.
  *
@@ -79,7 +85,7 @@ internal object IosImageIODecoder {
 
     /**
      * Same ImageIO thumbnail as [decodeThumbnail], but stop at Skia (no Compose
-     * [ImageBitmap] / pixel-repack). Used by the Coil HEIF decoder.
+     * [ImageBitmap] / pixel-repack).
      */
     fun decodeThumbnailSkia(
         sourcePath: String,
@@ -89,6 +95,55 @@ internal object IosImageIODecoder {
         require(maxEdgePx > 0) { "IosImageIODecoder: thumbnail max edge must be positive" }
         return withUrlSource(sourcePath) { source ->
             decodeThumbnailFromSource(source, maxEdgePx, shouldCache, sourcePath)
+        }
+    }
+
+    /**
+     * Size + thumbnail from **one** `CGImageSource` open. Coil owns the returned bitmap;
+     * do not close it after [org.jetbrains.skia.Bitmap] is wrapped as a Coil Image.
+     */
+    fun decodeThumbnailBitmapWithMetadata(
+        sourcePath: String,
+        maxEdgePx: Int,
+        shouldCache: Boolean = false,
+    ): IosThumbnailBitmap {
+        require(maxEdgePx > 0) { "IosImageIODecoder: thumbnail max edge must be positive" }
+        return withUrlSource(sourcePath) { source ->
+            val metadata = readMetadata(source, sourcePath)
+            val bitmap = decodeThumbnailBitmapFromSource(source, maxEdgePx, shouldCache, sourcePath)
+            IosThumbnailBitmap(metadata, bitmap)
+        }
+    }
+
+    /**
+     * Metadata + thumbnail Image from one in-memory source (export / [IosImageDecoder] HEIF).
+     */
+    fun decodeThumbnailSkiaWithMetadataFromBytes(
+        bytes: ByteArray,
+        maxEdgePx: Int,
+        shouldCache: Boolean = false,
+    ): Pair<IosImageMetadata, org.jetbrains.skia.Image> {
+        require(maxEdgePx > 0) { "IosImageIODecoder: thumbnail max edge must be positive" }
+        require(bytes.isNotEmpty()) { "IosImageIODecoder: empty image bytes" }
+        return withDataSource(bytes) { source ->
+            val label = "bytes(${bytes.size})"
+            val metadata = readMetadata(source, label)
+            val image = decodeThumbnailFromSource(source, maxEdgePx, shouldCache, label)
+            metadata to image
+        }
+    }
+
+    /** Full-res HEIF (thumbnail max = source long edge) from one `CGImageSource`. */
+    fun decodePrimarySkiaFromBytes(
+        bytes: ByteArray,
+        shouldCache: Boolean = false,
+    ): org.jetbrains.skia.Image {
+        require(bytes.isNotEmpty()) { "IosImageIODecoder: empty image bytes" }
+        return withDataSource(bytes) { source ->
+            val label = "bytes(${bytes.size})"
+            val metadata = readMetadata(source, label)
+            val edge = maxOf(metadata.width, metadata.height).coerceAtLeast(1)
+            decodeThumbnailFromSource(source, edge, shouldCache, label)
         }
     }
 
@@ -145,6 +200,25 @@ internal object IosImageIODecoder {
         try {
             IosImageIOOwnershipProbe.throwAfterCreateForTests?.invoke()
             return cgImageToSkia(cgImage)
+        } finally {
+            CGImageRelease(cgImage)
+            IosImageIOOwnershipProbe.didReleaseImage()
+        }
+    }
+
+    private fun decodeThumbnailBitmapFromSource(
+        source: CGImageSourceRef,
+        maxEdgePx: Int,
+        shouldCache: Boolean,
+        label: String,
+    ): org.jetbrains.skia.Bitmap {
+        val index = CGImageSourceGetPrimaryImageIndex(source)
+        val cgImage = createThumbnail(source, index, maxEdgePx, shouldCache)
+            ?: error("IosImageIODecoder: thumbnail failed for '$label' @ $maxEdgePx")
+        IosImageIOOwnershipProbe.didCreateImage()
+        try {
+            IosImageIOOwnershipProbe.throwAfterCreateForTests?.invoke()
+            return cgImageToSkiaBitmap(cgImage)
         } finally {
             CGImageRelease(cgImage)
             IosImageIOOwnershipProbe.didReleaseImage()
@@ -221,6 +295,33 @@ internal object IosImageIODecoder {
 
     /** Copy a +1 CGImage into an owned Skia raster; no retained native pixel buffer escapes. */
     private fun cgImageToSkia(image: CGImageRef): SkiaImage {
+        val (pixels, width, height, rowBytes) = copyCgImagePixels(image)
+        return SkiaImage.makeRaster(
+            ImageInfo.makeS32(width, height, ColorAlphaType.PREMUL),
+            pixels,
+            rowBytes,
+        )
+    }
+
+    private fun cgImageToSkiaBitmap(image: CGImageRef): org.jetbrains.skia.Bitmap {
+        val (pixels, width, height, rowBytes) = copyCgImagePixels(image)
+        val bitmap = org.jetbrains.skia.Bitmap()
+        val info = ImageInfo.makeS32(width, height, ColorAlphaType.PREMUL)
+        if (!bitmap.installPixels(info, pixels, rowBytes)) {
+            error("IosImageIODecoder: installPixels failed for ${width}x$height")
+        }
+        bitmap.setImmutable()
+        return bitmap
+    }
+
+    private data class RgbaPixels(
+        val bytes: ByteArray,
+        val width: Int,
+        val height: Int,
+        val rowBytes: Int,
+    )
+
+    private fun copyCgImagePixels(image: CGImageRef): RgbaPixels {
         val width = CGImageGetWidth(image).toLong()
         val height = CGImageGetHeight(image).toLong()
         require(width in 1..Int.MAX_VALUE && height in 1..Int.MAX_VALUE) {
@@ -260,11 +361,7 @@ internal object IosImageIODecoder {
         } finally {
             CGColorSpaceRelease(colorSpace)
         }
-        return SkiaImage.makeRaster(
-            ImageInfo.makeS32(width.toInt(), height.toInt(), ColorAlphaType.PREMUL),
-            pixels,
-            rowBytes.toInt(),
-        )
+        return RgbaPixels(pixels, width.toInt(), height.toInt(), rowBytes.toInt())
     }
 }
 

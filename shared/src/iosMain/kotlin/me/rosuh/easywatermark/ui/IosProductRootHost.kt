@@ -58,6 +58,7 @@ import me.rosuh.easywatermark.render.IosPreviewBench
 import me.rosuh.easywatermark.render.IosPreviewPurpose
 import me.rosuh.easywatermark.render.IosPreviewRaster
 import me.rosuh.easywatermark.render.PreviewResolutionPolicy
+import me.rosuh.easywatermark.render.PreviewWorkingSetBudget
 import me.rosuh.easywatermark.session.AppIntent
 import me.rosuh.easywatermark.session.IosAppServices
 import me.rosuh.easywatermark.session.IosPickGenerationGate
@@ -98,8 +99,11 @@ import me.rosuh.easywatermark.ui.theme.ProvideMotionPolicy
 import org.jetbrains.compose.resources.stringResource
 import platform.Foundation.NSData
 import platform.Foundation.NSFileManager
+import platform.Foundation.NSProcessInfo
 import platform.Foundation.NSUserDefaults
 import platform.Foundation.dataWithContentsOfFile
+import platform.UIKit.UIDevice
+import platform.UIKit.UIUserInterfaceIdiomPhone
 import platform.UIKit.UIViewController
 import platform.Foundation.NSLock
 import kotlin.experimental.ExperimentalObjCName
@@ -254,11 +258,18 @@ class IosProductRootHost(
     private var isBusy by mutableStateOf(false)
     /**
      * One lifecycle-owned cache/in-flight state machine for source/watermarked/export thumbs.
-     * Joint source+preview budget is [IosPreviewImageRepository.SOURCE_AND_PREVIEW_BYTES_MAX]
-     * (R1: 64 MiB). Filmstrip UI chrome is Coil-only (R3) — repository Filmstrip purpose is
+     * Byte caps follow [PreviewWorkingSetBudget] for the current preview long-edge.
+     * Filmstrip UI chrome is Coil-only (R3) — repository Filmstrip purpose is
      * retained for tests/legacy only, not warmed on the product path.
      */
-    private val previewImages = IosPreviewImageRepository(hostScope)
+    private val previewImages = IosPreviewImageRepository(hostScope).also { repo ->
+        repo.applyWorkingSetCapsFromOwner(
+            PreviewWorkingSetBudget.caps(
+                longEdgePx = PreviewResolutionPolicy.BUCKET_720,
+                physicalMemoryBytes = iosPhysicalMemoryBytes(),
+            ),
+        )
+    }
     /** Current visible bitmap is not a second cache; identity marks whether it is watermarked. */
     private var watermarkedPreviewSourcePath by mutableStateOf<String?>(null)
     private var previewGen: Int = 0
@@ -418,7 +429,10 @@ class IosProductRootHost(
      * [renderPreviewForCurrentSelection], then neighbor WM prefetch (R1).
      * Returns wall-clock ms and whether WM was a cache hit.
      */
-    internal suspend fun switchImageAndAwaitForTests(path: String): SwitchImageTiming {
+    internal suspend fun switchImageAndAwaitForTests(
+        path: String,
+        awaitNeighbors: Boolean = true,
+    ): SwitchImageTiming {
         require(path.isNotBlank()) { "switchImageAndAwaitForTests: blank path" }
         val start = kotlin.time.TimeSource.Monotonic.markNow()
         val previewBucket = committedPreviewBucket
@@ -431,7 +445,9 @@ class IosProductRootHost(
         if (instantHit) {
             previewGen += 1
             // Match product path: warm ±2 after paint so sequential N=50 hits neighbors.
-            prefetchNeighborWatermarkedPreviewsAndAwait(path, previewGen)
+            if (awaitNeighbors) {
+                prefetchNeighborWatermarkedPreviewsAndAwait(path, previewGen)
+            }
             return SwitchImageTiming(
                 totalMs = start.elapsedNow().inWholeMilliseconds,
                 hit = "wm_optimistic",
@@ -442,12 +458,15 @@ class IosProductRootHost(
             previewSourcePath = path
             watermarkedPreviewSourcePath = path
             previewGen += 1
-            prefetchNeighborWatermarkedPreviewsAndAwait(path, previewGen)
+            if (awaitNeighbors) {
+                prefetchNeighborWatermarkedPreviewsAndAwait(path, previewGen)
+            }
             return SwitchImageTiming(
                 totalMs = start.elapsedNow().inWholeMilliseconds,
                 hit = "wm",
             )
         }
+        val sourceHit = previewImages.peekCached(sourcePreviewKey(path, previewBucket)) != null
         previewImages.peekCached(sourcePreviewKey(path, previewBucket))?.let { hit ->
             previewBitmap = hit
             previewSourcePath = path
@@ -463,12 +482,12 @@ class IosProductRootHost(
             forceOffsetX = info?.offsetX,
             forceOffsetY = info?.offsetY,
         )
-        if (gen == previewGen) {
+        if (awaitNeighbors && gen == previewGen) {
             prefetchNeighborWatermarkedPreviewsAndAwait(path, gen)
         }
         return SwitchImageTiming(
             totalMs = start.elapsedNow().inWholeMilliseconds,
-            hit = "miss",
+            hit = if (sourceHit) "source" else "miss",
         )
     }
 
@@ -477,6 +496,55 @@ class IosProductRootHost(
         val totalMs: Long,
         val hit: String,
     )
+
+    internal fun pinPreviewBucketForBench(edgePx: Int) {
+        committedPreviewBucket = edgePx
+        applyPreviewWorkingSetCaps(edgePx)
+    }
+
+    /**
+     * Clear watermarked frames and recompose the current path from the cached source.
+     * Bench/test seam: source ImageIO count must stay flat when the long-edge matches.
+     */
+    internal suspend fun recomposeWatermarkFromCachedSourceForTests(): String {
+        val path = previewSourcePath
+            ?: services.session.launchScreenUiStateFlow.value.curImageInfo?.uri?.value
+            ?: return "no_path"
+        previewImages.clearPurpose(IosPreviewPurpose.Watermarked)
+        watermarkedPreviewSourcePath = null
+        previewGen += 1
+        val gen = previewGen
+        val sourcesBefore = me.rosuh.easywatermark.render.IosImageIOOwnershipProbe
+            .snapshotForTests().sourcesCreated
+        val placeholderBefore = me.rosuh.easywatermark.render.IosDecodePurposeProbe
+            .snapshotForTests().sourcePlaceholder
+        renderPreviewForCurrentSelection(gen = gen, forcePath = path)
+        val sourcesAfter = me.rosuh.easywatermark.render.IosImageIOOwnershipProbe
+            .snapshotForTests().sourcesCreated
+        val placeholderAfter = me.rosuh.easywatermark.render.IosDecodePurposeProbe
+            .snapshotForTests().sourcePlaceholder
+        return if (sourcesAfter == sourcesBefore && placeholderAfter == placeholderBefore) {
+            "source_reuse"
+        } else {
+            "decoded"
+        }
+    }
+
+    private fun applyPreviewWorkingSetCaps(longEdgePx: Int) {
+        previewImages.applyWorkingSetCapsFromOwner(
+            PreviewWorkingSetBudget.caps(
+                longEdgePx = longEdgePx,
+                physicalMemoryBytes = iosPhysicalMemoryBytes(),
+            ),
+        )
+    }
+
+    internal fun previewBucketForBench(): Int = committedPreviewBucket
+
+    internal fun sessionSourcePathsForBench(): List<String> =
+        services.session.launchScreenUiStateFlow.value.selectedImageList
+            .map { it.uri.value }
+            .filter { it.isNotBlank() }
 
     /**
      * G4 memory-pressure seam: clear host image caches and presentation bitmaps without
@@ -615,9 +683,8 @@ class IosProductRootHost(
             IosPreviewImageRepository.DEFAULT_EXPORT_THUMBNAIL_ENTRIES_MAX
 
         /**
-         * H2: approximate byte budgets (ARGB_8888 ≈ w×h×4). Engineering defaults —
-         * **not** H3 release SLOs / CI hard gates.
-         * R1: 48 MiB watermarked purpose (~23×720 frames).
+         * Constructor-default floors (lockstep with [IosPreviewImageRepository] defaults).
+         * Live Host instance applies [PreviewWorkingSetBudget] at the current preview long-edge.
          */
         const val WM_PREVIEW_BYTES_MAX: Long =
             IosPreviewImageRepository.DEFAULT_WATERMARKED_BYTES_MAX
@@ -655,6 +722,11 @@ class IosProductRootHost(
                     templateRepo.getAllTemplate().collect { templates = it }
                 } else {
                     templates = emptyList()
+                }
+            }
+            LaunchedEffect(Unit) {
+                if (IosDevicePerfBench.requested()) {
+                    IosDevicePerfBench.run(this@IosProductRootHost)
                 }
             }
             // Leave-editor lifecycle closed loop: Session emptied (back, last-image remove, etc.)
@@ -813,11 +885,13 @@ class IosProductRootHost(
                             sourceHeightPx = bucketImage?.height ?: 0,
                             containerWidthPx = with(density) { maxWidth.toPx().toInt() },
                             containerHeightPx = with(density) { maxHeight.toPx().toInt() },
+                            maxLongEdgePx = iosPreviewMaxLongEdgePx(),
                         )
                     }
                     LaunchedEffect(requestedPreviewBucket) {
                         if (committedPreviewBucket != requestedPreviewBucket) {
                             committedPreviewBucket = requestedPreviewBucket
+                            applyPreviewWorkingSetCaps(requestedPreviewBucket)
                             val selected = launchUi.curImageInfo ?: sessionImages.firstOrNull()
                             if (selected != null) {
                                 previewGen += 1
@@ -1142,6 +1216,9 @@ class IosProductRootHost(
                                     }
 
                                     // 2) Cached source placeholder only (no forced decode on switch).
+                                    val sourceHit = previewImages.peekCached(
+                                        sourcePreviewKey(path, previewBucket),
+                                    ) != null
                                     previewImages.peekCached(
                                         sourcePreviewKey(path, previewBucket),
                                     )?.let { hit ->
@@ -1165,7 +1242,7 @@ class IosProductRootHost(
                                     }
                                     switchBench.finish(
                                         mapOf(
-                                            "hit" to "miss",
+                                            "hit" to if (sourceHit) "source" else "miss",
                                             "path" to path.substringAfterLast('/'),
                                         ),
                                     )
@@ -2016,20 +2093,30 @@ class IosProductRootHost(
             }
         }
 
+        val paintEdge = PreviewResolutionPolicy.maxEdgeForPaint(
+            isDraft = isDraft,
+            committedBucketPx = previewBucket,
+        )
         val composed = if (isDraft) {
+            // Draft uses a shorter long-edge and must not write committed Source keys.
             withContext(Dispatchers.Default) {
                 IosPreviewRaster.renderWatermarked(
                     sourcePath = sourcePath,
                     waterMark = wm,
                     offsetX = ox,
                     offsetY = oy,
-                    maxEdgePx = PreviewResolutionPolicy.maxEdgeForPaint(
-                        isDraft = true,
-                        committedBucketPx = previewBucket,
-                    ),
+                    maxEdgePx = paintEdge,
                 )
             }
         } else {
+            val source = previewImages.load(sourcePreviewKey(sourcePath, previewBucket)) {
+                withContext(Dispatchers.Default) {
+                    IosPreviewRaster.decodeSourcePlaceholder(
+                        sourcePath,
+                        maxEdgePx = previewBucket,
+                    )
+                }
+            } ?: return
             previewImages.load(watermarkedPreviewKey(sourcePath, previewBucket)) {
                 withContext(Dispatchers.Default) {
                     IosPreviewRaster.renderWatermarked(
@@ -2037,10 +2124,8 @@ class IosProductRootHost(
                         waterMark = wm,
                         offsetX = ox,
                         offsetY = oy,
-                        maxEdgePx = PreviewResolutionPolicy.maxEdgeForPaint(
-                            isDraft = false,
-                            committedBucketPx = previewBucket,
-                        ),
+                        maxEdgePx = paintEdge,
+                        background = source,
                     )
                 }
             } ?: return
@@ -2089,7 +2174,7 @@ class IosProductRootHost(
     /**
      * Warm ±2 neighbor watermarked previews after a focus paint so the next filmstrip
      * fling hits cache. Bounded, cancelable via [previewGen], never full-strip.
-     * R1 budgets ensure focus+±2 at 1080 fit without thrashing the just-painted focus.
+     * Working-set budgets follow the current preview long-edge so focus+±2 stay resident.
      */
     private fun prefetchNeighborWatermarkedPreviews(focusPath: String, gen: Int) {
         if (disposed || focusPath.isBlank()) return
@@ -2130,6 +2215,11 @@ class IosProductRootHost(
             val key = watermarkedPreviewKey(path, bucket)
             if (previewImages.peekCached(key) != null) continue
             runCatching {
+                val source = previewImages.load(sourcePreviewKey(path, bucket)) {
+                    withContext(Dispatchers.Default) {
+                        IosPreviewRaster.decodeSourcePlaceholder(path, maxEdgePx = bucket)
+                    }
+                } ?: return@runCatching
                 previewImages.load(key) {
                     // Repository completion inherits hostScope (Main). Raster must hop
                     // off Main — otherwise filmstrip tap freezes UI while ±2 neighbors
@@ -2144,6 +2234,7 @@ class IosProductRootHost(
                                 isDraft = false,
                                 committedBucketPx = bucket,
                             ),
+                            background = source,
                         )
                     }
                 }
@@ -2189,6 +2280,17 @@ private const val ABOUT_URL_PRIVACY_EN =
     "https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy.md"
 private const val ABOUT_URL_DEV = "https://github.com/rosuH"
 private const val ABOUT_URL_DESIGNER = "https://tovi.fun/"
+
+/** Phone idle preview long-edge cap (1920). iPad / export stay uncapped here. */
+private fun iosPreviewMaxLongEdgePx(): Int =
+    if (UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPhone) {
+        PreviewResolutionPolicy.PHONE_PREVIEW_MAX_LONG_EDGE_PX
+    } else {
+        PreviewResolutionPolicy.BUCKET_3840
+    }
+
+private fun iosPhysicalMemoryBytes(): Long =
+    NSProcessInfo.processInfo.physicalMemory.toLong()
 
 /**
  * ADR-0027: Content editor theme follow-photo (iOS). No wallpaper Material You.

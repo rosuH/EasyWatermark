@@ -134,6 +134,12 @@ class IosFiftyImageSessionLatencyTest {
                         "R3: import must not ImageIO-decode FilmstripRepo " +
                             "(filmstripRepo=${afterImport.filmstripRepo})",
                     )
+                    val recompose = host.recomposeWatermarkFromCachedSourceForTests()
+                    assertEquals(
+                        "source_reuse",
+                        recompose,
+                        "same path + same preview long-edge must recompose without ImageIO",
+                    )
 
                     // --- Phase B: sequential switch across all 50 (product switch + neighbor await) ---
                     val switchMs = LongArray(n)
@@ -161,10 +167,12 @@ class IosFiftyImageSessionLatencyTest {
                         hitMs.size >= 30,
                         "R1 expected majority cache hits (hits=${hitMs.size})",
                     )
-                    // Still some real WM work on cold indices.
-                    assertTrue(
-                        wmDuringSwitch >= 1 || missMs.isNotEmpty(),
-                        "switch phase should still raster some misses when needed " +
+                    // Source reuse: renderWatermarked must not ImageIO on switch when
+                    // Host injects the cached source. Misses can now be zero.
+                    assertEquals(
+                        0,
+                        wmDuringSwitch,
+                        "switch must compose from injected source " +
                             "(wmDelta=$wmDuringSwitch misses=${missMs.size})",
                     )
                     assertEquals(
