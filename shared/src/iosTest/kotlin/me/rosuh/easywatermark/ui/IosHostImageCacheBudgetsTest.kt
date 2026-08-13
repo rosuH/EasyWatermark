@@ -61,17 +61,26 @@ class IosHostImageCacheBudgetsTest {
         assertTrue(IosProductRootHost.WM_PREVIEW_BYTES_MAX > 0)
         assertTrue(IosProductRootHost.WM_PREVIEW_CACHE_MAX > 0)
         // Document: entry-only G4 would keep 8 huge bitmaps; byte budget also constrains.
-        val huge = bmp(2000, 2000) // ~16MB each
+        // Floor is 48 MiB (R1 / PreviewWorkingSetBudget), not the historical 16 MiB.
+        val huge = bmp(2000, 2000) // ~16 MiB each
+        val per = IosHostImageCacheBudgets.approxBytes(huge)
+        val cap = IosProductRootHost.WM_PREVIEW_BYTES_MAX
+        val fit = (cap / per).toInt().coerceAtLeast(1)
         val map = linkedMapOf<String, ImageBitmap>()
-        map["a"] = huge
-        map["b"] = huge
+        repeat(fit + 1) { i -> map["h$i"] = huge }
         IosHostImageCacheBudgets.enforce(
             map,
             maxEntries = IosProductRootHost.WM_PREVIEW_CACHE_MAX,
-            maxBytes = IosProductRootHost.WM_PREVIEW_BYTES_MAX,
+            maxBytes = cap,
         )
-        // 2 × 16MB > 16MB budget → at most one entry remains.
-        assertTrue(map.size <= 1, "byte budget must drop multi-huge entries; size=${map.size}")
+        assertTrue(
+            map.size <= fit,
+            "byte budget must drop the overflow huge entry; size=${map.size} fit=$fit cap=$cap",
+        )
+        assertTrue(
+            IosHostImageCacheBudgets.totalApproxBytes(map) <= cap,
+            "remaining bytes exceed WM_PREVIEW_BYTES_MAX",
+        )
         @Suppress("UNUSED_VARIABLE")
         val unused = services
     }
