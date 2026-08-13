@@ -6,7 +6,8 @@ import me.rosuh.easywatermark.ui.theme.ContentEditorTheme
 /**
  * Coil `data` for product UI chrome thumbs (ADR-0028).
  *
- * Platform Fetchers map this to MediaStore / path / ImageIO sampling — never bare full content open.
+ * Platform Fetchers map this to MediaStore (Android) or a file source
+ * (Desktop/iOS JPEG/PNG → Coil/Skia size; iOS HEIC → ImageIO). Never bare full content open.
  * [maxEdgePx] is part of the memory-cache key so filmstrip + theme seed share entries when equal.
  */
 data class ProductThumb(

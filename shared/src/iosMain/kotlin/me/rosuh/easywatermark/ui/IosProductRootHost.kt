@@ -1019,7 +1019,7 @@ class IosProductRootHost(
                             }
                         },
                         thumbnail = { imageInfo, contentDescription, thumbModifier ->
-                            // ADR-0028: product Coil path (IosImageIODecoder via ProductThumb Fetcher).
+                            // ADR-0028: Coil ProductThumb. JPEG/PNG = Skia; HEIC = IosHeifImageDecoder.
                             // Shared max-edge with theme seed for memory-cache hits.
                             val path = imageInfo.uri.value
                             if (path.isNotBlank() && path != "preview" && !markedFirstFilmstripPixels) {

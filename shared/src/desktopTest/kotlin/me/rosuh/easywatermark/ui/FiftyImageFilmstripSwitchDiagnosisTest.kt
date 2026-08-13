@@ -143,11 +143,26 @@ class FiftyImageFilmstripSwitchDiagnosisTest {
             "neighbor path must stay non-full-strip",
         )
         val fetcher = readIosImage("ProductThumbFetcher.ios.kt")
-        assertTrue(fetcher.contains("IosImageIODecoder.decodeThumbnail"))
-        assertTrue(fetcher.contains("toSkiaBitmapOrNull") || fetcher.contains("readPixels"))
         assertTrue(
-            fetcher.contains("isSampled = false"),
-            "isSampled=false required for Coil memory hits on LazyRow recycle",
+            fetcher.contains("SourceFetchResult"),
+            "iOS ProductThumbFetcher must hand a file source to Coil decoders",
+        )
+        val heif = readFirst(
+            "shared/src/iosMain/kotlin/me/rosuh/easywatermark/ui/image/IosHeifImageDecoder.kt",
+            "src/iosMain/kotlin/me/rosuh/easywatermark/ui/image/IosHeifImageDecoder.kt",
+        )
+        assertTrue(heif.contains("IosImageIODecoder.decodeThumbnailSkia"))
+        assertTrue(
+            heif.contains("policy.resolveIsSampled"),
+            "HEIF decoder must take isSampled from IosHeifDecodePolicy",
+        )
+        val policy = readFirst(
+            "shared/src/iosMain/kotlin/me/rosuh/easywatermark/ui/image/IosHeifDecodePolicy.kt",
+            "src/iosMain/kotlin/me/rosuh/easywatermark/ui/image/IosHeifDecodePolicy.kt",
+        )
+        assertTrue(
+            policy.contains("sampled = SampledMode.Never"),
+            "ProductUi HEIF must be Never-sampled so LazyRow memory-hits",
         )
     }
 

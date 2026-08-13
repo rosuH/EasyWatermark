@@ -54,8 +54,9 @@ import platform.ImageIO.CGImageDestinationFinalize
 import platform.ImageIO.kCGImagePropertyOrientation
 
 /**
- * Red→green proof that [IosImageDecoder] loads HEIF/HEIC via the UIImage fallback path
- * (Skia cannot decode HEIC), bounds thumbnails, bakes orientation once, and keeps
+ * Red→green proof that [IosImageDecoder] loads HEIF/HEIC via ImageIO
+ * (`IosImageIODecoder`, same engine as the Coil [me.rosuh.easywatermark.ui.image.IosHeifImageDecoder]),
+ * not Skia and not UIImage→JPEG. Bounds thumbnails, bakes orientation once, keeps
  * JPEG/PNG + failure contracts.
  *
  * HEIF fixtures are generated at runtime with ImageIO (`public.heic`) — no committed binary,
@@ -75,7 +76,12 @@ class IosImageDecoderHeifTest {
         val skiaRejected = runCatching { SkiaImage.makeFromEncoded(heif) }.isFailure
         assertTrue(skiaRejected, "precondition: Skia must not decode this HEIF fixture")
 
+        IosImageIOOwnershipProbe.resetForTests()
         val decoded = IosImageDecoder.decode(heif)
+        val probe = IosImageIOOwnershipProbe.snapshotForTests()
+        assertTrue(probe.sourcesCreated >= 1, "HEIF full decode must go through ImageIO")
+        assertEquals(probe.sourcesCreated, probe.sourcesReleased)
+        assertEquals(probe.imagesCreated, probe.imagesReleased)
         assertEquals(baseW, decoded.width, "full HEIF decode width")
         assertEquals(baseH, decoded.height, "full HEIF decode height")
         assertEquals(Quad.TL, brightestQuadrant(decoded), "bright block stays top-left (orientation 1)")

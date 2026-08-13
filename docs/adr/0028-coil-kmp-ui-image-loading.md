@@ -43,7 +43,9 @@ Displaying an **already composed** `ImageBitmap` in the preview slot is not “C
 
 - Common model (name may vary): **`ProductThumb(ref: MediaRef, maxEdgePx: Int, purpose: …)`** (or equivalent).  
 - **Android:** product path must **not** use bare `.data(contentUri)` for gallery/session media. Map to **MediaStore thumbnail fetch** (existing `MediaStoreThumbnail` logic promoted under the common model / androidMain Fetcher).  
-- **iOS/Desktop:** Fetcher/decode from path/`MediaRef` with **maxEdge** sampling (ImageIO / AWT), never full-res for UI thumbs.  
+- **iOS/Desktop:** Fetcher/decode from path/`MediaRef` with **maxEdge** sampling, never full-res for UI thumbs.  
+  **iOS amendment (2026-08-13):** `ProductThumbFetcher` hands a file [SourceFetchResult]. JPEG/PNG use Coil’s Skia decoder + request size. HEIC/HEIF use [IosHeifImageDecoder] (ImageIO thumbnail) — Skia `makeFromEncoded` cannot decode HEIF (coil#2318, skiko#942). Decoder is **policy-driven** (`IosHeifDecodePolicy.ProductUi` for filmstrip/seed; `Preview` for larger HEIF; per-request `iosHeifMaxEdgePx`).  
+  **Desktop amendment (2026-08-13):** same SourceFetch + Skia downsample (A/B: ~4ms vs ~15ms ImageIO+repack on 3000×2000 JPEG → 128). [DesktopProductSkiaDecoder] is Coil’s Skia path with `isSampled=false` for LazyRow memory hits. Do **not** re-bake JPEG EXIF — skiko `makeFromEncoded` already applies orientation (`SkiaExifDecodeProbeTest`).  
 - Coil **ImageRequest** official params (`.size`, cache policies, crossfade, bitmapConfig, extras) stack **on top of** custom data — they do not replace the MediaStore/read-source strategy.
 
 ### 4. Size and cache sharing (Q10=A)

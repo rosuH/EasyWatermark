@@ -35,8 +35,10 @@ import platform.Foundation.NSString
 import platform.Foundation.NSURL
 import platform.Foundation.create
 import platform.Foundation.numberWithInt
+import platform.CoreFoundation.CFDataRef
 import platform.ImageIO.CGImageSourceCopyPropertiesAtIndex
 import platform.ImageIO.CGImageSourceCreateThumbnailAtIndex
+import platform.ImageIO.CGImageSourceCreateWithData
 import platform.ImageIO.CGImageSourceCreateWithURL
 import platform.ImageIO.CGImageSourceGetPrimaryImageIndex
 import platform.ImageIO.CGImageSourceRef
@@ -55,22 +57,65 @@ internal data class IosImageMetadata(
 /**
  * Path-first ImageIO edge for picker-owned sources.
  *
- * The input is an app-owned filesystem path, never a full `NSData -> ByteArray` bridge. Native
- * thumbnails ask ImageIO to subsample and bake EXIF orientation in one operation for JPEG, PNG,
- * HEIF, and every other ImageIO-supported picker format. Final export remains on its separate
- * full-resolution `IosFinalRenderSpine` path.
+ * Path-first for picker-owned files; bytes overload exists for [IosImageDecoder] HEIF
+ * (export/in-memory). Native thumbnails subsample and bake EXIF in one operation. Final export
+ * still goes through [IosFinalRenderSpine], which now uses this ImageIO HEIF path instead of
+ * UIImage→JPEG.
  */
 internal object IosImageIODecoder {
     private const val BYTES_PER_PIXEL = 4
 
-    fun metadata(sourcePath: String): IosImageMetadata = withSource(sourcePath) { source ->
+    fun metadata(sourcePath: String): IosImageMetadata = withUrlSource(sourcePath) { source ->
+        readMetadata(source, sourcePath)
+    }
+
+    fun metadataFromBytes(bytes: ByteArray): IosImageMetadata = withDataSource(bytes) { source ->
+        readMetadata(source, "bytes(${bytes.size})")
+    }
+
+    /** Decode an orientation-aware ImageIO thumbnail bounded to [maxEdgePx]. */
+    fun decodeThumbnail(sourcePath: String, maxEdgePx: Int): ImageBitmap =
+        decodeThumbnailSkia(sourcePath, maxEdgePx).toComposeImageBitmap()
+
+    /**
+     * Same ImageIO thumbnail as [decodeThumbnail], but stop at Skia (no Compose
+     * [ImageBitmap] / pixel-repack). Used by the Coil HEIF decoder.
+     */
+    fun decodeThumbnailSkia(
+        sourcePath: String,
+        maxEdgePx: Int,
+        shouldCache: Boolean = false,
+    ): org.jetbrains.skia.Image {
+        require(maxEdgePx > 0) { "IosImageIODecoder: thumbnail max edge must be positive" }
+        return withUrlSource(sourcePath) { source ->
+            decodeThumbnailFromSource(source, maxEdgePx, shouldCache, sourcePath)
+        }
+    }
+
+    /**
+     * Same ImageIO thumbnail from in-memory bytes (export / [IosImageDecoder] HEIF).
+     * Prefer the path overload for picker-owned files.
+     */
+    fun decodeThumbnailSkiaFromBytes(
+        bytes: ByteArray,
+        maxEdgePx: Int,
+        shouldCache: Boolean = false,
+    ): org.jetbrains.skia.Image {
+        require(maxEdgePx > 0) { "IosImageIODecoder: thumbnail max edge must be positive" }
+        require(bytes.isNotEmpty()) { "IosImageIODecoder: empty image bytes" }
+        return withDataSource(bytes) { source ->
+            decodeThumbnailFromSource(source, maxEdgePx, shouldCache, "bytes(${bytes.size})")
+        }
+    }
+
+    private fun readMetadata(source: CGImageSourceRef, label: String): IosImageMetadata {
         val index = CGImageSourceGetPrimaryImageIndex(source)
         val properties = CGImageSourceCopyPropertiesAtIndex(source, index, null)
-            ?: error("IosImageIODecoder: metadata unavailable for '$sourcePath'")
+            ?: error("IosImageIODecoder: metadata unavailable for '$label'")
         try {
             @Suppress("UNCHECKED_CAST")
             val dictionary = CFBridgingRelease(properties) as? NSDictionary
-                ?: error("IosImageIODecoder: metadata bridge failed for '$sourcePath'")
+                ?: error("IosImageIODecoder: metadata bridge failed for '$label'")
             val width = propertyInt(dictionary, kCGImagePropertyPixelWidth, "PixelWidth")
             val height = propertyInt(dictionary, kCGImagePropertyPixelHeight, "PixelHeight")
             val orientation = propertyInt(dictionary, kCGImagePropertyOrientation, "Orientation")
@@ -78,34 +123,35 @@ internal object IosImageIODecoder {
             val orientedWidth = if (orientation in 5..8) height else width
             val orientedHeight = if (orientation in 5..8) width else height
             require(orientedWidth > 0 && orientedHeight > 0) {
-                "IosImageIODecoder: invalid metadata ${orientedWidth}x$orientedHeight for '$sourcePath'"
+                "IosImageIODecoder: invalid metadata ${orientedWidth}x$orientedHeight for '$label'"
             }
-            IosImageMetadata(orientedWidth, orientedHeight, orientation)
+            return IosImageMetadata(orientedWidth, orientedHeight, orientation)
         } catch (t: Throwable) {
             // `CFBridgingRelease` transferred the properties reference; no CFRelease here.
             throw t
         }
     }
 
-    /** Decode an orientation-aware ImageIO thumbnail bounded to [maxEdgePx]. */
-    fun decodeThumbnail(sourcePath: String, maxEdgePx: Int): ImageBitmap {
-        require(maxEdgePx > 0) { "IosImageIODecoder: thumbnail max edge must be positive" }
-        return withSource(sourcePath) { source ->
-            val index = CGImageSourceGetPrimaryImageIndex(source)
-            val cgImage = createThumbnail(source, index, maxEdgePx)
-                ?: error("IosImageIODecoder: thumbnail failed for '$sourcePath' @ $maxEdgePx")
-            IosImageIOOwnershipProbe.didCreateImage()
-            try {
-                IosImageIOOwnershipProbe.throwAfterCreateForTests?.invoke()
-                cgImageToSkia(cgImage).toComposeImageBitmap()
-            } finally {
-                CGImageRelease(cgImage)
-                IosImageIOOwnershipProbe.didReleaseImage()
-            }
+    private fun decodeThumbnailFromSource(
+        source: CGImageSourceRef,
+        maxEdgePx: Int,
+        shouldCache: Boolean,
+        label: String,
+    ): org.jetbrains.skia.Image {
+        val index = CGImageSourceGetPrimaryImageIndex(source)
+        val cgImage = createThumbnail(source, index, maxEdgePx, shouldCache)
+            ?: error("IosImageIODecoder: thumbnail failed for '$label' @ $maxEdgePx")
+        IosImageIOOwnershipProbe.didCreateImage()
+        try {
+            IosImageIOOwnershipProbe.throwAfterCreateForTests?.invoke()
+            return cgImageToSkia(cgImage)
+        } finally {
+            CGImageRelease(cgImage)
+            IosImageIOOwnershipProbe.didReleaseImage()
         }
     }
 
-    private inline fun <T> withSource(sourcePath: String, block: (CGImageSourceRef) -> T): T {
+    private inline fun <T> withUrlSource(sourcePath: String, block: (CGImageSourceRef) -> T): T {
         require(sourcePath.isNotBlank()) { "IosImageIODecoder: blank source path" }
         val url = NSURL.fileURLWithPath(sourcePath)
         val cfUrl = CFBridgingRetain(url)
@@ -116,6 +162,23 @@ internal object IosImageIODecoder {
         } finally {
             CFBridgingRelease(cfUrl)
         } ?: error("IosImageIODecoder: unreadable/unsupported '$sourcePath'")
+        return withOwnedSource(source, block)
+    }
+
+    private inline fun <T> withDataSource(bytes: ByteArray, block: (CGImageSourceRef) -> T): T {
+        val nsData = IosByteArrayInterop.toNSData(bytes)
+        val cfData = CFBridgingRetain(nsData)
+            ?: error("IosImageIODecoder: data bridge failed (${bytes.size} bytes)")
+        val source = try {
+            @Suppress("UNCHECKED_CAST")
+            CGImageSourceCreateWithData(cfData as CFDataRef, null)
+        } finally {
+            CFBridgingRelease(cfData)
+        } ?: error("IosImageIODecoder: unreadable/unsupported ${bytes.size}-byte image")
+        return withOwnedSource(source, block)
+    }
+
+    private inline fun <T> withOwnedSource(source: CGImageSourceRef, block: (CGImageSourceRef) -> T): T {
         IosImageIOOwnershipProbe.didCreateSource()
         try {
             return block(source)
@@ -129,11 +192,15 @@ internal object IosImageIODecoder {
         source: CGImageSourceRef,
         index: ULong,
         maxEdgePx: Int,
+        shouldCache: Boolean = false,
     ): CGImageRef? {
         val options = NSMutableDictionary().apply {
             setObject(NSNumber.numberWithInt(1), forKey = NSString.create(string = "kCGImageSourceCreateThumbnailFromImageAlways"))
             setObject(NSNumber.numberWithInt(1), forKey = NSString.create(string = "kCGImageSourceCreateThumbnailWithTransform"))
-            setObject(NSNumber.numberWithInt(0), forKey = NSString.create(string = "kCGImageSourceShouldCache"))
+            setObject(
+                NSNumber.numberWithInt(if (shouldCache) 1 else 0),
+                forKey = NSString.create(string = "kCGImageSourceShouldCache"),
+            )
             setObject(NSNumber.numberWithInt(maxEdgePx), forKey = NSString.create(string = "kCGImageSourceThumbnailMaxPixelSize"))
         }
         val cfOptions = CFBridgingRetain(options)

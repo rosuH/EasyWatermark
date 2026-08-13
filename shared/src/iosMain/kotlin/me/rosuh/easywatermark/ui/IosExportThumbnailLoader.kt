@@ -1,10 +1,7 @@
 package me.rosuh.easywatermark.ui
 
 import androidx.compose.ui.graphics.ImageBitmap
-import me.rosuh.easywatermark.render.IosByteArrayInterop
-import me.rosuh.easywatermark.render.IosImageDecoder
-import platform.Foundation.NSData
-import platform.Foundation.dataWithContentsOfFile
+import me.rosuh.easywatermark.render.IosImageIODecoder
 import kotlin.math.max
 
 /**
@@ -28,7 +25,7 @@ internal object IosExportThumbnailLoader {
 
     data class Entry(
         val bitmap: ImageBitmap,
-        /** maxEdgePx passed to [IosImageDecoder.decodeThumbnail] when this entry was built. */
+        /** maxEdgePx passed to [IosImageIODecoder.decodeThumbnail] when this entry was built. */
         val requestedMaxEdgePx: Int,
     ) {
         val bitmapLongEdgePx: Int
@@ -72,12 +69,8 @@ internal object IosExportThumbnailLoader {
      */
     fun decodeFileOrNull(path: String, maxEdgePx: Int): Entry? {
         if (path.isBlank() || maxEdgePx <= 0) return null
-        val data = NSData.dataWithContentsOfFile(path) ?: return null
         return runCatching {
-            val bmp = IosImageDecoder.decodeThumbnail(
-                IosByteArrayInterop.fromNSData(data),
-                maxEdgePx = maxEdgePx,
-            )
+            val bmp = IosImageIODecoder.decodeThumbnail(path, maxEdgePx)
             Entry(bitmap = bmp, requestedMaxEdgePx = maxEdgePx)
         }.getOrNull()
     }

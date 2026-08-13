@@ -23,18 +23,18 @@ import platform.UIKit.UIImageJPEGRepresentation
  * Decodes a real encoded image (PNG/JPEG/HEIC/…) into a Compose [ImageBitmap] for product paint.
  * C3 Final Export ([IosFinalRenderSpine]) and Preview ([IosPreviewRaster]) call full-res
  * [decode] / [decodeThumbnail] here, then compose via [CommonWatermarkPipeline]; never re-rotate
- * after a successful decode (Skia bakes EXIF for JPEG/PNG; UIImage path bakes orientation by draw).
+ * after a successful decode (Skia bakes EXIF for JPEG/PNG; ImageIO bakes HEIF orientation).
  *
  * Primary path is **Skia** (`Image.makeFromEncoded`) — no extra dependency. Skia covers JPEG/PNG/WebP
  * well but **does not decode HEIC/HEIF** (common from iPhone Photos with
- * `preferredItemEncoding = .current`). When Skia fails (or the container is clearly HEIF), we fall
- * back to **UIKit `UIImage`** → orientation-baked intermediate JPEG → Skia. That keeps commonMain
- * decode-free and avoids a blank focused preview when the first multi-pick asset is HEIC.
+ * `preferredItemEncoding = .current`). HEIF uses **ImageIO** (`IosImageIODecoder` — same native
+ * thumbnail + EXIF bake as the Coil HEIF decoder), not a
+ * UIImage→JPEG transcode. UIImage remains a last-resort fallback for other platform-only codecs.
  *
  * ## EXIF / orientation
  * - Skia path: `makeFromEncoded` already bakes JPEG EXIF orientation (see `IosExifOrientationTest`).
- * - UIImage path: draw into a graphics context at `UIImage.size` so `imageOrientation` is baked into
- *   pixels before re-encode; Skia then sees an upright buffer with no further transform.
+ * - ImageIO HEIF: `CGImageSourceCreateThumbnailAtIndex` + `CreateThumbnailWithTransform`.
+ * - UIImage fallback: draw into a graphics context at `UIImage.size` so `imageOrientation` is baked.
  */
 /** J5: decode edge — not called from Swift (goes through bridges). */
 internal object IosImageDecoder {
@@ -53,6 +53,12 @@ internal object IosImageDecoder {
      * (≈40dp) so multi-pick does not decode multi-megapixel bitmaps for every thumbnail.
      */
     fun decodeThumbnail(bytes: ByteArray, maxEdgePx: Int = 160): ImageBitmap {
+        if (looksLikeHeif(bytes)) {
+            runCatching {
+                IosImageIODecoder.decodeThumbnailSkiaFromBytes(bytes, maxEdgePx)
+                    .toComposeImageBitmap()
+            }.getOrNull()?.let { return it }
+        }
         return scaleSkia(decodeSkia(bytes), maxEdgePx).toComposeImageBitmap()
     }
 
@@ -91,8 +97,9 @@ internal object IosImageDecoder {
     }
 
     private fun decodeSkia(bytes: ByteArray): SkiaImage {
-        // HEIF containers are never handled by current skiko — skip the doomed primary path.
-        if (!looksLikeHeif(bytes)) {
+        if (looksLikeHeif(bytes)) {
+            decodeHeifViaImageIO(bytes)?.let { return it }
+        } else {
             try {
                 return SkiaImage.makeFromEncoded(bytes)
             } catch (_: Throwable) {
@@ -105,12 +112,19 @@ internal object IosImageDecoder {
         }
         error(
             "IosImageDecoder: could not decode the supplied ${bytes.size}-byte image " +
-                "(Skia + UIImage both failed; container may be unsupported/corrupt)",
+                "(Skia + ImageIO + UIImage all failed; container may be unsupported/corrupt)",
         )
     }
 
+    /** ImageIO thumbnail at source long-edge = full-res, EXIF-baked HEIF. No JPEG transcode. */
+    private fun decodeHeifViaImageIO(bytes: ByteArray): SkiaImage? = runCatching {
+        val meta = IosImageIODecoder.metadataFromBytes(bytes)
+        val edge = maxOf(meta.width, meta.height).coerceAtLeast(1)
+        IosImageIODecoder.decodeThumbnailSkiaFromBytes(bytes, edge, shouldCache = false)
+    }.getOrNull()
+
     /**
-     * UIImage → orientation-baked JPEG → Skia. Used for HEIC/HEIF and as a Skia-failure fallback.
+     * UIImage → orientation-baked JPEG → Skia. Last-resort fallback when Skia/ImageIO cannot decode.
      * Intermediate is JPEG (not PNG) to bound memory on 12MP camera frames.
      */
     private fun decodeViaUIImage(bytes: ByteArray): SkiaImage? {
