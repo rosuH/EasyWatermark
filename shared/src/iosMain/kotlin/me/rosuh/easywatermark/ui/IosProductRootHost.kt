@@ -28,18 +28,11 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancelChildren
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.session.IosSourceStager
-import me.rosuh.easywatermark.session.IOS_STAGING_MAX_CONCURRENCY
-import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import me.rosuh.easywatermark.ProductVersion
 import me.rosuh.easywatermark.data.db.buildTemplateDatabase
@@ -173,7 +166,11 @@ class IosProductRootHost(
     /** Progressive path-first import (NotificationCenter control plane; zero public API growth). */
     private val progressiveImport = IosProgressiveImportController(
         session = services.session,
-        waterMarkProvider = { services.waterMarkRepo.waterMark.first() },
+        // Session launch already mirrors repo waterMark (SyncWaterMark). Avoid DataStore
+        // cold-read on every filmstrip focus — that was a major switch latency tax.
+        waterMarkProvider = {
+            services.session.launchScreenUiStateFlow.value.waterMark
+        },
         hostScope = hostScope,
         hostAlive = { !disposed },
         onSlotsChanged = slotsChanged@{ state ->
@@ -224,6 +221,11 @@ class IosProductRootHost(
                 bindProgressiveFocus(focusPath, ProgressiveFocusBindMode.UserScroll)
             }
         },
+        onOptimisticFocusPaint = { focusPath ->
+            if (!disposed) {
+                paintWatermarkedCacheHitIfPresent(focusPath)
+            }
+        },
     )
 
     /**
@@ -251,20 +253,14 @@ class IosProductRootHost(
     private var statusLine by mutableStateOf("")
     private var isBusy by mutableStateOf(false)
     /**
-     * One lifecycle-owned cache/in-flight state machine for source previews, watermarked previews,
-     * filmstrip cells and export thumbs. It enforces a joint 40MiB source/preview and 8MiB
-     * filmstrip budget; [previewBitmap] below is merely the current visible reference.
+     * One lifecycle-owned cache/in-flight state machine for source/watermarked/export thumbs.
+     * Joint source+preview budget is [IosPreviewImageRepository.SOURCE_AND_PREVIEW_BYTES_MAX]
+     * (R1: 64 MiB). Filmstrip UI chrome is Coil-only (R3) — repository Filmstrip purpose is
+     * retained for tests/legacy only, not warmed on the product path.
      */
     private val previewImages = IosPreviewImageRepository(hostScope)
     /** Current visible bitmap is not a second cache; identity marks whether it is watermarked. */
     private var watermarkedPreviewSourcePath by mutableStateOf<String?>(null)
-    /**
-     * Invalidation generation for filmstrip thumbs.
-     * Bumped only on real invalidation (trim/dispose/bucket change/ownership replace) —
-     * **not** after successful prefetch. Prefetch writes the repository cache; visible cells
-     * seed from [IosPreviewImageRepository.peekCached] without restarting every produceState.
-     */
-    private var filmstripThumbEpoch by mutableStateOf(0)
     private var previewGen: Int = 0
     /** Once-per-generation timeline marks for first visible pixels / completed preview. */
     private var markedFirstFilmstripPixels = false
@@ -309,22 +305,6 @@ class IosProductRootHost(
 
     private fun watermarkedPreviewKey(path: String, bucket: Int = committedPreviewBucket) =
         IosPreviewKey(path, bucket, IosPreviewPurpose.Watermarked)
-
-    private fun filmstripBucketPx(): Int =
-        PreviewResolutionPolicy.filmstripMaxEdgePx(
-            measuredCellPx = measuredFilmstripCellPx.takeIf { it > 0 } ?: 128,
-        )
-
-    /** Freeze bucket once per request — same value for cache key and decoder. */
-    private fun filmstripKey(path: String, frozenBucketPx: Int = filmstripBucketPx()) =
-        IosPreviewKey(
-            path,
-            frozenBucketPx,
-            IosPreviewPurpose.Filmstrip,
-        )
-
-    private fun exportThumbnailKey(path: String) =
-        IosPreviewKey(path, 96, IosPreviewPurpose.ExportThumbnail)
 
     private fun openAboutFromLaunch() {
         services.session.openAbout(LaunchScreenUiState.Launch)
@@ -424,13 +404,79 @@ class IosProductRootHost(
         )
     }
 
-    /** Test-only: insert a filmstrip thumb and enforce budgets. */
+    /** Test-only: insert a filmstrip-purpose entry (budget math / dispose tests; not product UI). */
     internal fun putFilmstripThumbForTests(path: String, bitmap: ImageBitmap) {
         previewImages.putForTestsImmediate(
             IosPreviewKey(path, 96, IosPreviewPurpose.Filmstrip),
             bitmap,
         )
     }
+
+    /**
+     * Test seam: same critical path as product [onImageSelected] without Compose —
+     * optimistic WM peek → [AppIntent.SelectCurrent] → miss → full
+     * [renderPreviewForCurrentSelection], then neighbor WM prefetch (R1).
+     * Returns wall-clock ms and whether WM was a cache hit.
+     */
+    internal suspend fun switchImageAndAwaitForTests(path: String): SwitchImageTiming {
+        require(path.isNotBlank()) { "switchImageAndAwaitForTests: blank path" }
+        val start = kotlin.time.TimeSource.Monotonic.markNow()
+        val previewBucket = committedPreviewBucket
+        val instantHit = paintWatermarkedCacheHitIfPresent(path)
+        services.session.dispatchAndAwait(
+            me.rosuh.easywatermark.session.AppIntent.SelectCurrent(
+                me.rosuh.easywatermark.data.model.MediaRef(path),
+            ),
+        )
+        if (instantHit) {
+            previewGen += 1
+            // Match product path: warm ±2 after paint so sequential N=50 hits neighbors.
+            prefetchNeighborWatermarkedPreviewsAndAwait(path, previewGen)
+            return SwitchImageTiming(
+                totalMs = start.elapsedNow().inWholeMilliseconds,
+                hit = "wm_optimistic",
+            )
+        }
+        previewImages.cached(watermarkedPreviewKey(path, previewBucket))?.let {
+            previewBitmap = it
+            previewSourcePath = path
+            watermarkedPreviewSourcePath = path
+            previewGen += 1
+            prefetchNeighborWatermarkedPreviewsAndAwait(path, previewGen)
+            return SwitchImageTiming(
+                totalMs = start.elapsedNow().inWholeMilliseconds,
+                hit = "wm",
+            )
+        }
+        previewImages.peekCached(sourcePreviewKey(path, previewBucket))?.let { hit ->
+            previewBitmap = hit
+            previewSourcePath = path
+            watermarkedPreviewSourcePath = null
+        }
+        previewGen += 1
+        val gen = previewGen
+        val info = services.session.launchScreenUiStateFlow.value.selectedImageList
+            .firstOrNull { it.uri.value == path }
+        renderPreviewForCurrentSelection(
+            gen = gen,
+            forcePath = path,
+            forceOffsetX = info?.offsetX,
+            forceOffsetY = info?.offsetY,
+        )
+        if (gen == previewGen) {
+            prefetchNeighborWatermarkedPreviewsAndAwait(path, gen)
+        }
+        return SwitchImageTiming(
+            totalMs = start.elapsedNow().inWholeMilliseconds,
+            hit = "miss",
+        )
+    }
+
+    /** Timing result for [switchImageAndAwaitForTests]. */
+    internal data class SwitchImageTiming(
+        val totalMs: Long,
+        val hit: String,
+    )
 
     /**
      * G4 memory-pressure seam: clear host image caches and presentation bitmaps without
@@ -447,7 +493,6 @@ class IosProductRootHost(
         previewSourcePath = null
         watermarkedPreviewSourcePath = null
         previewGen += 1
-        filmstripThumbEpoch += 1
         previewImages.clearFromOwner()
     }
 
@@ -473,7 +518,6 @@ class IosProductRootHost(
             watermarkedPreviewSourcePath = null
             outputPath = null
             previewGen += 1
-            filmstripThumbEpoch += 1
             previewImages.clearFromOwner()
             progressiveImport.releaseUnheldSourcesAfterLeaveEditor()
             val sessionHeld = services.session.launchScreenUiStateFlow.value.selectedImageList
@@ -530,7 +574,6 @@ class IosProductRootHost(
             showOpenSource = false
             clampDraftOffset = null
             clampDraftSelectionId = null
-            filmstripThumbEpoch += 1
             watermarkedPreviewSourcePath = null
             // Process-wide Session may still reference these ewm_src paths after Host rebuild.
             // Only delete host-tracked temps that Session no longer holds.
@@ -555,25 +598,35 @@ class IosProductRootHost(
     }
 
     companion object {
-        /** G4: watermarked preview cache entry cap (secondary safety). */
-        const val WM_PREVIEW_CACHE_MAX: Int = 8
+        /**
+         * G4/H2 host mirrors of [IosPreviewImageRepository] production caps (R1 2026-08-12).
+         * Keep in lockstep with repository companion — tests assert host constants.
+         */
+        const val WM_PREVIEW_CACHE_MAX: Int =
+            IosPreviewImageRepository.DEFAULT_WATERMARKED_ENTRIES_MAX
         /** G4: source-only placeholder cache entry cap. */
-        const val PLACEHOLDER_CACHE_MAX: Int = 12
-        /** G4: filmstrip thumb cache entry cap. */
-        const val FILMSTRIP_THUMB_CACHE_MAX: Int = 48
+        const val PLACEHOLDER_CACHE_MAX: Int =
+            IosPreviewImageRepository.DEFAULT_SOURCE_PLACEHOLDER_ENTRIES_MAX
+        /** G4: filmstrip-purpose entry cap (repo only; Coil owns product UI thumbs). */
+        const val FILMSTRIP_THUMB_CACHE_MAX: Int =
+            IosPreviewImageRepository.DEFAULT_FILMSTRIP_ENTRIES_MAX
         /** G4: export-sheet thumb cache entry cap. */
-        const val EXPORT_THUMB_CACHE_MAX: Int = 48
+        const val EXPORT_THUMB_CACHE_MAX: Int =
+            IosPreviewImageRepository.DEFAULT_EXPORT_THUMBNAIL_ENTRIES_MAX
 
         /**
          * H2: approximate byte budgets (ARGB_8888 ≈ w×h×4). Engineering defaults —
          * **not** H3 release SLOs / CI hard gates.
-         * WM preview max-edge 720 → ~2MB/entry; 8× ≈ 16MB ceiling.
+         * R1: 48 MiB watermarked purpose (~23×720 frames).
          */
-        const val WM_PREVIEW_BYTES_MAX: Long = 16L * 1024 * 1024
-        const val PLACEHOLDER_BYTES_MAX: Long = 12L * 1024 * 1024
-        /** Filmstrip thumbs ~96px edge → small; keep modest multi-image set. */
-        const val FILMSTRIP_THUMB_BYTES_MAX: Long = 8L * 1024 * 1024
-        const val EXPORT_THUMB_BYTES_MAX: Long = 8L * 1024 * 1024
+        const val WM_PREVIEW_BYTES_MAX: Long =
+            IosPreviewImageRepository.DEFAULT_WATERMARKED_BYTES_MAX
+        const val PLACEHOLDER_BYTES_MAX: Long =
+            IosPreviewImageRepository.DEFAULT_SOURCE_PLACEHOLDER_BYTES_MAX
+        const val FILMSTRIP_THUMB_BYTES_MAX: Long =
+            IosPreviewImageRepository.FILMSTRIP_BYTES_MAX
+        const val EXPORT_THUMB_BYTES_MAX: Long =
+            IosPreviewImageRepository.DEFAULT_EXPORT_THUMBNAIL_BYTES_MAX
     }
 
     fun viewController(): UIViewController = ComposeUIViewController {
@@ -791,18 +844,9 @@ class IosProductRootHost(
                                 measuredCellPx = measuredFilmstripCellPx,
                                 onCellPxMeasured = { px ->
                                     if (px > 0 && px != measuredFilmstripCellPx) {
-                                        val oldBucket = filmstripBucketPx()
+                                        // Coil ProductAsyncImage uses fixed UI_THUMB_MAX_EDGE —
+                                        // measured cell only feeds progressive chrome layout.
                                         measuredFilmstripCellPx = px
-                                        val newBucket = filmstripBucketPx()
-                                        // Bucket upgrade must not keep stale smaller thumbnails.
-                                        if (newBucket != oldBucket) {
-                                            filmstripThumbEpoch += 1
-                                            me.rosuh.easywatermark.session.ImportTimelineProbe.mark(
-                                                "filmstrip_bucket_changed",
-                                                progressiveImport.activeGeneration,
-                                                "b$oldBucket-b$newBucket",
-                                            )
-                                        }
                                     }
                                 },
                                 nowMs = { progressiveImport.nowMonoMsForTests() },
@@ -1051,49 +1095,74 @@ class IosProductRootHost(
                         },
                         onGoAboutScreen = { openAboutFromEditor() },
                         onImageSelected = { info ->
-                            // Android parity: select instantly; show placeholder; watermark async + cache.
+                            // Paint cache first (hard-cut), then SelectCurrent; avoid DataStore waits.
                             scope.launch {
                                 val path = info.uri.value
                                 val previewBucket = committedPreviewBucket
                                 val switchBench = IosPreviewBench.scope("switch_image")
                                 try {
+                                    // 0) Optimistic WM cache paint before Session (main-thread peek).
+                                    val instantHit = paintWatermarkedCacheHitIfPresent(path)
+                                    if (instantHit) {
+                                        switchBench.mark("wm_peek")
+                                    }
+
+                                    // SelectCurrent without blocking paint; await for offset identity.
                                     services.session.dispatchAndAwait(AppIntent.SelectCurrent(info.uri))
                                     switchBench.mark("select")
 
-                                    // 1) Instant watermarked cache hit
-                                    previewImages.cached(watermarkedPreviewKey(path, previewBucket))?.let { cached ->
-                                        previewBitmap = cached
-                                        previewSourcePath = path
-                                        watermarkedPreviewSourcePath = path
+                                    // 1) Instant watermarked cache hit (post-select path for mutex race).
+                                    if (!instantHit) {
+                                        previewImages.cached(
+                                            watermarkedPreviewKey(path, previewBucket),
+                                        )?.let { cached ->
+                                            previewBitmap = cached
+                                            previewSourcePath = path
+                                            watermarkedPreviewSourcePath = path
+                                            previewGen += 1
+                                            prefetchNeighborWatermarkedPreviews(path, previewGen)
+                                            switchBench.finish(
+                                                mapOf(
+                                                    "hit" to "wm",
+                                                    "path" to path.substringAfterLast('/'),
+                                                ),
+                                            )
+                                            return@launch
+                                        }
+                                    } else {
+                                        previewGen += 1
+                                        prefetchNeighborWatermarkedPreviews(path, previewGen)
                                         switchBench.finish(
                                             mapOf(
-                                                "hit" to "wm",
+                                                "hit" to "wm_optimistic",
                                                 "path" to path.substringAfterLast('/'),
                                             ),
                                         )
                                         return@launch
                                     }
 
-                                    // 2) Instant source placeholder (no watermark) while raster runs
-                                    val placeholder = previewImages.load(sourcePreviewKey(path, previewBucket)) {
-                                        withContext(Dispatchers.Default) {
-                                            IosPreviewRaster.decodeSourcePlaceholder(
-                                                path,
-                                                maxEdgePx = previewBucket,
-                                            )
-                                        }
-                                    }
-                                    switchBench.mark("placeholder")
-                                    if (placeholder != null) {
-                                        previewBitmap = placeholder
+                                    // 2) Cached source placeholder only (no forced decode on switch).
+                                    previewImages.peekCached(
+                                        sourcePreviewKey(path, previewBucket),
+                                    )?.let { hit ->
+                                        previewBitmap = hit
                                         previewSourcePath = path
                                         watermarkedPreviewSourcePath = null
                                     }
+                                    switchBench.mark("placeholder")
 
                                     // 3) Full watermarked preview (in-memory, no PNG encode)
                                     previewGen += 1
                                     val gen = previewGen
-                                    renderPreviewForCurrentSelection(gen = gen)
+                                    renderPreviewForCurrentSelection(
+                                        gen = gen,
+                                        forcePath = path,
+                                        forceOffsetX = info.offsetX,
+                                        forceOffsetY = info.offsetY,
+                                    )
+                                    if (gen == previewGen) {
+                                        prefetchNeighborWatermarkedPreviews(path, gen)
+                                    }
                                     switchBench.finish(
                                         mapOf(
                                             "hit" to "miss",
@@ -1448,13 +1517,11 @@ class IosProductRootHost(
      * **[ProgressiveFocusBindMode.ImportPriority]** (import first Ready only):
      * 1. Watermark-region placeholder (fast main-canvas paint)
      * 2. Watermarked preview (product-critical; awaited — gates Swift firstItemAlone ACK)
-     * 3. Focus filmstrip thumb (item-0 list cell before later transfers)
-     * Does **not** full-strip prefetch (visible produceState + batch deliver cover the strip).
+     * Filmstrip UI is Coil-only (R3) — no repository Filmstrip warm here.
      *
      * **[ProgressiveFocusBindMode.UserScroll]** (settle / tap / remove):
      * Session select already completed; this path is cancelable via [previewGen].
-     * Cache-hit paints first; no forced placeholder decode; focus thumb only if missing;
-     * never full-strip [prefetchFilmstripThumbs].
+     * Cache-hit paints first; no forced placeholder decode; neighbor WM prefetch only.
      */
     private suspend fun bindProgressiveFocus(
         focusPath: String,
@@ -1464,13 +1531,13 @@ class IosProductRootHost(
         val previewBucket = committedPreviewBucket
         val pickGen = IosPickGenerationGate.currentPhotoGeneration()
 
-        // User scroll: already showing the correct watermarked preview — only fill missing thumb.
+        // User scroll: already showing the correct watermarked preview — neighbor WM only.
         if (
             mode == ProgressiveFocusBindMode.UserScroll &&
             watermarkedPreviewSourcePath == focusPath &&
             previewBitmap != null
         ) {
-            ensureFocusFilmstripThumb(focusPath, onlyIfMissing = true)
+            prefetchNeighborWatermarkedPreviews(focusPath, previewGen)
             return
         }
 
@@ -1483,7 +1550,8 @@ class IosProductRootHost(
                 watermarkedPreviewSourcePath = focusPath
                 // Still bump gen so any in-flight raster for a prior focus is dropped on publish.
                 previewGen += 1
-                ensureFocusFilmstripThumb(focusPath, onlyIfMissing = true)
+                val gen = previewGen
+                prefetchNeighborWatermarkedPreviews(focusPath, gen)
                 return
             }
             // Cache-hit placeholder only — never force a placeholder decode on settle (watermark
@@ -1522,10 +1590,18 @@ class IosProductRootHost(
 
         // 2) Watermarked main preview — cancelable via previewGen on rapid user focus.
         // ImportPriority awaits this before ACK; UserScroll still runs it but never full-strips.
+        // forcePath so optimistic focus works even before Session SelectCurrent lands.
         previewGen += 1
         val gen = previewGen
+        val focusInfo = services.session.launchScreenUiStateFlow.value.selectedImageList
+            .firstOrNull { it.uri.value == focusPath }
         try {
-            renderPreviewForCurrentSelection(gen = gen)
+            renderPreviewForCurrentSelection(
+                gen = gen,
+                forcePath = focusPath,
+                forceOffsetX = focusInfo?.offsetX,
+                forceOffsetY = focusInfo?.offsetY,
+            )
             if (
                 mode == ProgressiveFocusBindMode.ImportPriority &&
                 !markedFirstWatermarkedPreview &&
@@ -1543,33 +1619,9 @@ class IosProductRootHost(
         }
         if (disposed || gen != previewGen) return
 
-        // 3) Focus filmstrip thumb — import always; user only when cache miss.
-        ensureFocusFilmstripThumb(
-            focusPath,
-            onlyIfMissing = mode == ProgressiveFocusBindMode.UserScroll,
-        )
-        // 4) Full-strip prefetch intentionally omitted on both modes of this hot path.
-        // Batch [deliverPickedPhotosBatch] still prefetches once after stage; visible cells
-        // load via produceState. Re-prefetching all selected paths on every focus was the
-        // dominant settle hang driver (see jank-repro-20260808-170839).
-    }
-
-    /** Decode/load the focused filmstrip cell into the shared repository (visible produceState peers). */
-    private suspend fun ensureFocusFilmstripThumb(
-        focusPath: String,
-        onlyIfMissing: Boolean,
-    ) {
-        if (disposed || focusPath.isBlank()) return
-        try {
-            val frozenBucket = filmstripBucketPx()
-            val key = filmstripKey(focusPath, frozenBucket)
-            if (onlyIfMissing && previewImages.peekCached(key) != null) return
-            previewImages.load(key) {
-                withContext(Dispatchers.Default) {
-                    decodeFilmstripThumb(focusPath, frozenBucket)
-                }
-            }
-        } catch (_: Throwable) {
+        // Neighbor WM prefetch (R1) — filmstrip UI is Coil-only (R3), no FilmstripRepo warm.
+        if (mode == ProgressiveFocusBindMode.UserScroll) {
+            prefetchNeighborWatermarkedPreviews(focusPath, gen)
         }
     }
 
@@ -1708,14 +1760,7 @@ class IosProductRootHost(
         if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
             return
         }
-        val filmstripPaths = paths
-        val filmstripPickGen = pickGeneration
-        hostScope.launch {
-            try {
-                prefetchFilmstripThumbs(filmstripPaths, filmstripPickGen)
-            } catch (_: Throwable) {
-            }
-        }
+        // R3: filmstrip UI is Coil ProductAsyncImage — do not warm FilmstripRepo on import.
 
         if (!renderPreview) {
             return
@@ -1812,7 +1857,6 @@ class IosProductRootHost(
                 previousOwned.filter { it !in sessionOwned }.forEach { IosSourceStager.deleteQuietly(it) }
                 ownedStagedPaths.clear()
                 previewImages.clearFromOwner()
-                filmstripThumbEpoch += 1
                 previewBitmap = null
                 previewSourcePath = null
                 watermarkedPreviewSourcePath = null
@@ -1857,62 +1901,6 @@ class IosProductRootHost(
             if (!path.contains("ewm_src_")) return@all true
             fm.fileExistsAtPath(path)
         }
-    }
-
-    private fun decodeFilmstripThumb(path: String, frozenBucketPx: Int): ImageBitmap? {
-        return runCatching {
-            me.rosuh.easywatermark.render.IosImageIODecoder.decodeThumbnail(
-                path,
-                maxEdgePx = frozenBucketPx,
-            )
-        }.getOrNull()
-    }
-
-    /**
-     * Decode missing filmstrip thumbs off-main into the repository cache.
-     *
-     * Deliberately does **not** bump [filmstripThumbEpoch]: a global epoch restart forces every
-     * visible cell's produceState to drop and re-await, which janks scroll during mass import.
-     * Visible cells seed from [IosPreviewImageRepository.peekCached] on composition; uncached
-     * cells still load via produceState. [pickGeneration] gates every cache write after suspension (F16).
-     * Bucket is frozen per request so a late decode cannot land under a different key/size.
-     */
-    private suspend fun prefetchFilmstripThumbs(paths: List<String>, pickGeneration: Long) {
-        if (paths.isEmpty()) return
-        if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
-            return
-        }
-        // G4: bound concurrent filmstrip decodes to the same ceiling as stage concurrency.
-        val gate = Semaphore(IOS_STAGING_MAX_CONCURRENCY)
-        val targets = paths.filter { it.isNotBlank() }
-        coroutineScope {
-            targets.map { path ->
-                async(Dispatchers.Default) {
-                    gate.withPermit {
-                        val frozenBucket = filmstripBucketPx()
-                        val key = filmstripKey(path, frozenBucket)
-                        previewImages.load(key) {
-                            val decoded = runCatching {
-                                decodeFilmstripThumb(path, frozenBucket)
-                            }.getOrNull()
-                            decoded?.takeIf {
-                                me.rosuh.easywatermark.session.IosPickGenerationGate
-                                    .isPhotoCurrent(pickGeneration)
-                            }
-                        }
-                    }
-                }
-            }.awaitAll()
-        }
-        if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
-            return
-        }
-        // Evidence-only timeline mark — no UI invalidation (no filmstripThumbEpoch bump).
-        me.rosuh.easywatermark.session.ImportTimelineProbe.mark(
-            "filmstrip_prefetch_done",
-            pickGeneration,
-            "n${targets.size}",
-        )
     }
 
     /**
@@ -1975,28 +1963,37 @@ class IosProductRootHost(
     }
 
     /**
- * Fast in-memory preview (Android WaterMarkCanvas analogue):
- * - [IosPreviewRaster]: decode+scale+compose ImageBitmap, **no PNG encode/disk**
- * - repository watermarked hit → 0 raster work
- * - [gen] drops stale async results on rapid filmstrip taps
+     * Fast in-memory preview (Android WaterMarkCanvas analogue):
+     * - [IosPreviewRaster]: decode+scale+compose ImageBitmap, **no PNG encode/disk**
+     * - repository watermarked hit → 0 raster work
+     * - [gen] drops stale async results on rapid filmstrip taps
+     * - [forcePath] paints a specific Ready path before Session SelectCurrent lands (optimistic focus)
      */
     private suspend fun renderPreviewForCurrentSelection(
         gen: Int,
         draftOffset: Pair<Float, Float>? = null,
+        forcePath: String? = null,
+        forceOffsetX: Float? = null,
+        forceOffsetY: Float? = null,
     ) {
         // H0.1: host-level stages around IosPreviewRaster (read/decode/compose logged there too).
         val isDraft = draftOffset != null
         val hostBench = ClampDragBench.previewScope(
             if (isDraft) "ios_draft_preview" else "ios_preview_refresh",
         )
-        val launch = services.session.launchScreenUiStateFlow.first()
-        val cur = launch.curImageInfo ?: launch.selectedImageList.firstOrNull() ?: return
-        val sourcePath = cur.uri.value
+        // StateFlow snapshot — never DataStore.first() on the switch hot path.
+        val launch = services.session.launchScreenUiStateFlow.value
+        val cur = when {
+            forcePath != null -> launch.selectedImageList.firstOrNull { it.uri.value == forcePath }
+                ?: launch.curImageInfo?.takeIf { it.uri.value == forcePath }
+            else -> launch.curImageInfo ?: launch.selectedImageList.firstOrNull()
+        }
+        val sourcePath = forcePath ?: cur?.uri?.value.orEmpty()
         if (sourcePath.isBlank()) return
-        val wm = services.waterMarkRepo.waterMark.first()
+        val wm = launch.waterMark
         val previewBucket = committedPreviewBucket
-        val ox = draftOffset?.first ?: cur.offsetX
-        val oy = draftOffset?.second ?: cur.offsetY
+        val ox = draftOffset?.first ?: forceOffsetX ?: cur?.offsetX ?: 0.5f
+        val oy = draftOffset?.second ?: forceOffsetY ?: cur?.offsetY ?: 0.5f
         hostBench.mark("sessionRead")
 
         // Cache hit only for committed (non-draft) paints at exact Session offset.
@@ -2072,6 +2069,86 @@ class IosProductRootHost(
                 "offsetY" to oy,
             ),
         )
+    }
+
+    /**
+     * Main-thread optimistic paint: if a watermarked frame is already cached for [path],
+     * swap the canvas immediately (before Session SelectCurrent). No decode.
+     */
+    private fun paintWatermarkedCacheHitIfPresent(path: String): Boolean {
+        if (path.isBlank() || disposed) return false
+        val hit = previewImages.peekCached(watermarkedPreviewKey(path, committedPreviewBucket))
+            ?: return false
+        previewBitmap = hit
+        previewSourcePath = path
+        watermarkedPreviewSourcePath = path
+        showEditor = true
+        return true
+    }
+
+    /**
+     * Warm ±2 neighbor watermarked previews after a focus paint so the next filmstrip
+     * fling hits cache. Bounded, cancelable via [previewGen], never full-strip.
+     * R1 budgets ensure focus+±2 at 1080 fit without thrashing the just-painted focus.
+     */
+    private fun prefetchNeighborWatermarkedPreviews(focusPath: String, gen: Int) {
+        if (disposed || focusPath.isBlank()) return
+        hostScope.launch(Dispatchers.Default) {
+            warmNeighborWatermarkedPreviews(focusPath, gen)
+        }
+    }
+
+    /**
+     * Same as [prefetchNeighborWatermarkedPreviews] but awaits completion — test seam for
+     * sequential N=50 switch so neighbor hits are visible on the next index.
+     */
+    private suspend fun prefetchNeighborWatermarkedPreviewsAndAwait(focusPath: String, gen: Int) {
+        if (disposed || focusPath.isBlank()) return
+        withContext(Dispatchers.Default) {
+            warmNeighborWatermarkedPreviews(focusPath, gen)
+        }
+    }
+
+    private suspend fun warmNeighborWatermarkedPreviews(focusPath: String, gen: Int) {
+        val launch = services.session.launchScreenUiStateFlow.value
+        val list = launch.selectedImageList
+        val idx = list.indexOfFirst { it.uri.value == focusPath }
+        if (idx < 0) return
+        val neighbors = buildList {
+            for (delta in listOf(-2, -1, 1, 2)) {
+                val i = idx + delta
+                if (i in list.indices) add(list[i])
+            }
+        }
+        if (neighbors.isEmpty()) return
+        val wm = launch.waterMark
+        val bucket = committedPreviewBucket
+        for (info in neighbors) {
+            if (disposed || gen != previewGen) return
+            val path = info.uri.value
+            if (path.isBlank()) continue
+            val key = watermarkedPreviewKey(path, bucket)
+            if (previewImages.peekCached(key) != null) continue
+            runCatching {
+                previewImages.load(key) {
+                    // Repository completion inherits hostScope (Main). Raster must hop
+                    // off Main — otherwise filmstrip tap freezes UI while ±2 neighbors
+                    // ImageIO+compose (product 2026-08-13).
+                    withContext(Dispatchers.Default) {
+                        IosPreviewRaster.renderWatermarked(
+                            sourcePath = path,
+                            waterMark = wm,
+                            offsetX = info.offsetX,
+                            offsetY = info.offsetY,
+                            maxEdgePx = PreviewResolutionPolicy.maxEdgeForPaint(
+                                isDraft = false,
+                                committedBucketPx = bucket,
+                            ),
+                        )
+                    }
+                }
+            }
+        }
     }
 
     private suspend fun reexportCurrent() {

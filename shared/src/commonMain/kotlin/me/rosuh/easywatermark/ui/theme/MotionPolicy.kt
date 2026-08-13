@@ -65,21 +65,20 @@ fun motionAllowsDecorativeLoop(policy: MotionPolicy): Boolean = policy == Motion
 fun motionAllowsTimedAnimation(policy: MotionPolicy): Boolean = policy != MotionPolicy.Off
 
 /**
- * Aspect-aware multi-image preview crossfade duration under [policy].
- * [aspectDelta] in 0..1 (0 = same aspect, 1 = extreme change). Off → 0.
+ * Multi-image preview **switch** duration under [policy].
+ *
+ * Product 2026-08-12: hard-cut (always 0). Filmstrip focus must feel instant; alpha/scale
+ * settle on switch felt laggy even when the watermarked frame was already ready.
+ * Tokens [EwmMotionTokens.previewCrossfadeMinMs]/[MaxMs] retained for possible later
+ * re-enable; [aspectDelta] kept so call sites need not change.
  */
+@Suppress("UNUSED_PARAMETER")
 fun previewCrossfadeDurationMs(
     policy: MotionPolicy,
     aspectDelta: Float,
     minFullMs: Int = EwmMotionTokens.previewCrossfadeMinMs,
     maxFullMs: Int = EwmMotionTokens.previewCrossfadeMaxMs,
-): Int {
-    val minMs = motionDurationMs(policy, minFullMs)
-    val maxMs = motionDurationMs(policy, maxFullMs)
-    if (minMs <= 0 && maxMs <= 0) return 0
-    val t = aspectDelta.coerceIn(0f, 1f)
-    return (minMs + (maxMs - minMs) * t).toInt().coerceAtLeast(0)
-}
+): Int = 0
 
 /**
  * Map Android [Settings.Global.ANIMATOR_DURATION_SCALE] (and similar) to a policy.

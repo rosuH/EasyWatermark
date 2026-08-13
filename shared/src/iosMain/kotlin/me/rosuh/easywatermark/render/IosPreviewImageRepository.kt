@@ -418,13 +418,23 @@ internal class IosPreviewImageRepository(
         )
 
     companion object {
-        const val SOURCE_AND_PREVIEW_BYTES_MAX: Long = 40L * 1024 * 1024
+        /**
+         * Joint Source+Watermarked+Export budget (R1 2026-08-12).
+         * Ceiling kept at 64 MiB (owner confirmation gate); enough for focus+±2 at 1080
+         * and dozens of 720 watermarked frames without thrashing the just-painted focus.
+         */
+        const val SOURCE_AND_PREVIEW_BYTES_MAX: Long = 64L * 1024 * 1024
         const val FILMSTRIP_BYTES_MAX: Long = 8L * 1024 * 1024
-        const val DEFAULT_WATERMARKED_ENTRIES_MAX: Int = 8
+        /**
+         * Watermarked working set (R1): hold focus + ±2 neighbors + recent scrub history.
+         * ~48 × 720² ARGB ≈ 96 MiB theoretical; joint + byte caps clamp real retention.
+         */
+        const val DEFAULT_WATERMARKED_ENTRIES_MAX: Int = 48
         const val DEFAULT_SOURCE_PLACEHOLDER_ENTRIES_MAX: Int = 12
         const val DEFAULT_FILMSTRIP_ENTRIES_MAX: Int = 48
         const val DEFAULT_EXPORT_THUMBNAIL_ENTRIES_MAX: Int = 48
-        const val DEFAULT_WATERMARKED_BYTES_MAX: Long = 16L * 1024 * 1024
+        /** ~23×720 or ~10×1080 watermarked frames before purpose-byte eviction. */
+        const val DEFAULT_WATERMARKED_BYTES_MAX: Long = 48L * 1024 * 1024
         const val DEFAULT_SOURCE_PLACEHOLDER_BYTES_MAX: Long = 12L * 1024 * 1024
         const val DEFAULT_EXPORT_THUMBNAIL_BYTES_MAX: Long = 8L * 1024 * 1024
 

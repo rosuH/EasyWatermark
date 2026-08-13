@@ -15,6 +15,7 @@ import coil3.compose.LocalPlatformContext
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import coil3.size.Precision
 import me.rosuh.easywatermark.data.model.MediaRef
 
 /**
@@ -38,10 +39,18 @@ fun ProductAsyncImage(
     }
     val context = LocalPlatformContext.current
     val request = remember(thumb.ref.value, thumb.maxEdgePx, thumb.purpose) {
+        val cacheKey = productThumbCacheKey(thumb.ref.value, thumb.maxEdgePx)
         ImageRequest.Builder(context)
             .data(thumb)
+            // Explicit key + placeholder so LazyRow recycle shows the memory-cached
+            // pixels on first frame instead of Empty→blank while the request restarts.
+            .memoryCacheKey(cacheKey)
+            .placeholderMemoryCacheKey(cacheKey)
             .memoryCachePolicy(CachePolicy.ENABLED)
             .diskCachePolicy(CachePolicy.DISABLED)
+            // Match Fetcher max-edge; INEXACT so cache hits accept the decoded thumb.
+            .size(thumb.maxEdgePx)
+            .precision(Precision.INEXACT)
             .crossfade(false)
             .build()
     }

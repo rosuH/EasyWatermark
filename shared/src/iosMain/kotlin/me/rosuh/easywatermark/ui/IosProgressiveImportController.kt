@@ -69,6 +69,11 @@ internal class IosProgressiveImportController(
      * preview generation and avoid full-strip filmstrip prefetch.
      */
     private val onUserFocusPreview: suspend (focusPath: String) -> Unit = {},
+    /**
+     * Main-thread cache peek only (no raster). Used so filmstrip tap paints a WM hit
+     * before Session mutex, without starting a second [onUserFocusPreview] bind.
+     */
+    private val onOptimisticFocusPaint: (focusPath: String) -> Unit = {},
     /** Production delivery is Main; tests use null for deterministic synchronous NC delivery. */
     private val notificationDeliveryQueue: NSOperationQueue? = NSOperationQueue.mainQueue,
 ) {
@@ -812,9 +817,15 @@ internal class IosProgressiveImportController(
     fun requestFocusReady(importId: String) {
         if (closed || !hostAlive()) return
         hostScope.launch {
+            // Peek-only before Session (never a full bind — that raced a second bind and
+            // stacked neighbor rasters on Main). One UserScroll bind after publish.
+            val optimisticPath = (slots.slot(importId) as? EditorMediaSlot.Ready)
+                ?.image?.uri?.value
+            if (!optimisticPath.isNullOrBlank()) {
+                onOptimisticFocusPaint(optimisticPath)
+            }
             val focusPath = mutationMutex.withLock { publishFocusReadyLocked(importId) }
                 ?: return@launch
-            // Fire-and-forget user bind (cancelable in host via previewGen).
             scheduleFocusPreview(focusPath)
         }
     }

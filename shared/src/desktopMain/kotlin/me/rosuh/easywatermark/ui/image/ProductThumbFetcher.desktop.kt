@@ -32,9 +32,13 @@ class ProductThumbFetcher(
         }.getOrNull() ?: return@withContext null
         // Compose Desktop ImageBitmap → Skia pixels → coil BitmapImage
         val skiaBitmap = imageBitmap.toSkiaBitmapOrNull() ?: return@withContext null
+        // isSampled=false: ProductThumb maxEdge is the product-final UI size, not an
+        // intermediate sample. Coil AsyncImage uses Size.ORIGINAL + Precision.INEXACT;
+        // sampled cache entries fail size validation and never memory-hit → blank
+        // flash on LazyRow recycle (filmstrip scroll away/back).
         ImageFetchResult(
             image = skiaBitmap.asImage(),
-            isSampled = true,
+            isSampled = false,
             dataSource = DataSource.DISK,
         )
     }
@@ -51,6 +55,10 @@ class ProductThumbFetcher(
 /**
  * Read Compose [androidx.compose.ui.graphics.ImageBitmap] pixels into a Skia [Bitmap]
  * for Coil's multiplatform BitmapImage path.
+ *
+ * Compose [ImageBitmap.readPixels] yields packed ARGB ints. Skia N32 on little-endian is
+ * BGRA_8888 — writing RGBA into [ImageInfo.makeN32Premul] swapped R/B on filmstrip thumbs
+ * (and content-theme seeds that share the Coil path). Pack BGRA for N32.
  */
 private fun androidx.compose.ui.graphics.ImageBitmap.toSkiaBitmapOrNull(): Bitmap? {
     return try {
@@ -59,21 +67,19 @@ private fun androidx.compose.ui.graphics.ImageBitmap.toSkiaBitmapOrNull(): Bitma
         if (w <= 0 || h <= 0) return null
         val pixels = IntArray(w * h)
         readPixels(pixels)
-        // Compose ARGB ints → Skia N32 premul via encoded PNG round-trip is heavy;
-        // use Skia Bitmap.installPixels with RGBA.
-        val rgba = ByteArray(w * h * 4)
+        val bgra = ByteArray(w * h * 4)
         var i = 0
         var o = 0
         while (i < pixels.size) {
             val c = pixels[i++]
-            rgba[o++] = ((c shr 16) and 0xFF).toByte() // R
-            rgba[o++] = ((c shr 8) and 0xFF).toByte() // G
-            rgba[o++] = (c and 0xFF).toByte() // B
-            rgba[o++] = ((c ushr 24) and 0xFF).toByte() // A
+            bgra[o++] = (c and 0xFF).toByte() // B
+            bgra[o++] = ((c shr 8) and 0xFF).toByte() // G
+            bgra[o++] = ((c shr 16) and 0xFF).toByte() // R
+            bgra[o++] = ((c ushr 24) and 0xFF).toByte() // A
         }
         val skiaImage = SkiaImage.makeRaster(
             imageInfo = org.jetbrains.skia.ImageInfo.makeN32Premul(w, h),
-            bytes = rgba,
+            bytes = bgra,
             rowBytes = w * 4,
         )
         val bmp = Bitmap()

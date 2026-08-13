@@ -39,10 +39,13 @@ fun rememberProductThumbBitmap(
         value = withContext(Dispatchers.Default) {
             runCatching {
                 val loader = SingletonImageLoader.get(context)
+                val cacheKey = productThumbCacheKey(ref.value, maxEdgePx)
                 val request = ImageRequest.Builder(context)
                     .data(ProductThumb(ref, maxEdgePx, ProductThumb.Purpose.ThemeSeed))
+                    .memoryCacheKey(cacheKey)
                     .memoryCachePolicy(CachePolicy.ENABLED)
                     .diskCachePolicy(CachePolicy.DISABLED)
+                    .size(maxEdgePx)
                     .build()
                 val result = loader.execute(request)
                 val image = (result as? SuccessResult)?.image ?: return@runCatching null

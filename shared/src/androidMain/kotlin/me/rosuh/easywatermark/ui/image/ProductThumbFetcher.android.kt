@@ -34,9 +34,13 @@ class ProductThumbFetcher(
         val uri = Uri.parse(data.ref.value)
         val size = data.maxEdgePx.coerceIn(64, 512)
         val bitmap = loadThumbBitmap(context, uri, size) ?: return@withContext null
+        // isSampled=false: ProductThumb maxEdge is the product-final UI size, not an
+        // intermediate sample. Coil AsyncImage uses Size.ORIGINAL + Precision.INEXACT;
+        // sampled cache entries fail size validation and never memory-hit → blank
+        // flash on LazyRow recycle (filmstrip scroll away/back).
         ImageFetchResult(
             image = bitmap.asImage(),
-            isSampled = true,
+            isSampled = false,
             dataSource = DataSource.DISK,
         )
     }

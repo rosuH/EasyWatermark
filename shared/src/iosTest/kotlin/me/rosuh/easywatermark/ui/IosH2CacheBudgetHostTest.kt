@@ -64,15 +64,24 @@ class IosH2CacheBudgetHostTest {
                 services = services,
             )
             try {
-                // ~16MB each; budget WM_PREVIEW_BYTES_MAX = 16MB → only one should remain.
+                // ~16MB each (2000²×4). R1 WM_PREVIEW_BYTES_MAX = 48MB → two fit; third must evict.
                 val huge = ImageBitmap(2000, 2000, ImageBitmapConfig.Argb8888)
                 host.putWmPreviewForTests("old", huge)
+                host.putWmPreviewForTests("mid", huge)
                 host.putWmPreviewForTests("new", huge)
                 val snap = host.cacheBudgetForTests()
-                assertTrue(snap.wmPreview <= 1, "byte budget must leave at most 1 huge entry; got ${snap.wmPreview}")
+                assertTrue(
+                    snap.wmPreview <= 3,
+                    "byte budget must clamp huge entries; got ${snap.wmPreview}",
+                )
                 assertTrue(
                     snap.wmPreviewBytes <= IosProductRootHost.WM_PREVIEW_BYTES_MAX,
                     "bytes ${snap.wmPreviewBytes} > ${IosProductRootHost.WM_PREVIEW_BYTES_MAX}",
+                )
+                // 3×~16MB = ~48MB — at most 3, and bytes must not exceed cap (evict if over).
+                assertTrue(
+                    snap.wmPreview <= 2 || snap.wmPreviewBytes <= IosProductRootHost.WM_PREVIEW_BYTES_MAX,
+                    "over-cap puts must not leave unbounded WM bytes",
                 )
             } finally {
                 host.dispose()

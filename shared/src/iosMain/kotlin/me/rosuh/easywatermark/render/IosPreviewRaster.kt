@@ -33,6 +33,7 @@ internal object IosPreviewRaster {
     fun decodeSourcePlaceholder(sourcePath: String, maxEdgePx: Int = PREVIEW_MAX_EDGE_PX): ImageBitmap? {
         val bench = IosPreviewBench.scope("placeholder")
         return try {
+            IosDecodePurposeProbe.record(IosDecodePurposeProbe.Purpose.SourcePlaceholder)
             val bmp = decodePathThumbnail(sourcePath, maxEdgePx)
             bench.mark("imageIOThumbnail")
             bench.finish(mapOf("path" to sourcePath.substringAfterLast('/'), "w" to bmp.width, "h" to bmp.height))
@@ -55,6 +56,7 @@ internal object IosPreviewRaster {
         maxEdgePx: Int = PREVIEW_MAX_EDGE_PX,
     ): ImageBitmap {
         val bench = IosPreviewBench.scope("wm_preview")
+        IosDecodePurposeProbe.record(IosDecodePurposeProbe.Purpose.WatermarkedPreview)
         val background = decodePathThumbnail(sourcePath, maxEdgePx)
         bench.mark("imageIOThumbnail")
 

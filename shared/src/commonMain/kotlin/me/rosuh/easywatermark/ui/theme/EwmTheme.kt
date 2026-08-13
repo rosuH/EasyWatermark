@@ -150,12 +150,13 @@ object EwmMotionTokens {
     const val gallerySelectScale: Float = 0.8f
 
     /**
-     * Multi-image preview switch crossfade floor (aspect-similar switches stay snappy).
-     * Ceiling [previewCrossfadeMaxMs]; aspect-delta interpolates between them.
+     * Historical multi-image preview switch crossfade floor (aspect-similar).
+     * Product 2026-08-12: [previewCrossfadeDurationMs] always returns 0 (hard-cut switch).
+     * Tokens kept for possible re-enable / tests that document the design range.
      */
     const val previewCrossfadeMinMs: Int = 180
 
-    /** Multi-image preview switch crossfade ceiling (large aspect deltas). */
+    /** Historical multi-image preview switch crossfade ceiling (large aspect deltas). */
     const val previewCrossfadeMaxMs: Int = 320
 
     /** First watermark preview alpha reveal (prod WaterMarkImageView drawableAlpha 450ms). */

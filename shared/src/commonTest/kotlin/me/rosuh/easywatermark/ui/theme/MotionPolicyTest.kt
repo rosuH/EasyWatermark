@@ -82,20 +82,13 @@ class MotionPolicyTest {
     }
 
     @Test
-    fun previewCrossfade_aspectAware_andOff() {
+    fun previewCrossfade_productHardCut_alwaysZero() {
+        // Product 2026-08-12: multi-image switch is hard-cut (no fade settle).
         assertEquals(0, previewCrossfadeDurationMs(MotionPolicy.Off, 0f))
         assertEquals(0, previewCrossfadeDurationMs(MotionPolicy.Off, 1f))
-        assertEquals(
-            EwmTheme.motion.previewCrossfadeMinMs,
-            previewCrossfadeDurationMs(MotionPolicy.Full, 0f),
-        )
-        assertEquals(
-            EwmTheme.motion.previewCrossfadeMaxMs,
-            previewCrossfadeDurationMs(MotionPolicy.Full, 1f),
-        )
-        val mid = previewCrossfadeDurationMs(MotionPolicy.Full, 0.5f)
-        assertTrue(mid in EwmTheme.motion.previewCrossfadeMinMs..EwmTheme.motion.previewCrossfadeMaxMs)
-        // Reduced is scaled (floor may still be >0).
-        assertTrue(previewCrossfadeDurationMs(MotionPolicy.Reduced, 1f) < EwmTheme.motion.previewCrossfadeMaxMs)
+        assertEquals(0, previewCrossfadeDurationMs(MotionPolicy.Full, 0f))
+        assertEquals(0, previewCrossfadeDurationMs(MotionPolicy.Full, 1f))
+        assertEquals(0, previewCrossfadeDurationMs(MotionPolicy.Full, 0.5f))
+        assertEquals(0, previewCrossfadeDurationMs(MotionPolicy.Reduced, 1f))
     }
 }

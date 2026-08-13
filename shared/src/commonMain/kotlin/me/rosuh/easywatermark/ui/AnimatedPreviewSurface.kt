@@ -21,32 +21,32 @@ import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.ui.theme.previewCrossfadeDurationMs
 
 /**
- * Shared CMP preview surface motion (M2 crossfade + M7 first reveal).
+ * Shared CMP preview surface motion (M7 first reveal; multi-image switch is hard-cut).
  *
  * Hosts must pass a [contentKey] that identifies the **ready** frame (not a pending selection
  * while still showing the previous bitmap). When key changes ahead of ready content, keep
- * [hasContent]=false (or keep the old key) until the new frame is bound — otherwise the alpha
- * dip finishes on the old pixels and the new bitmap hard-cuts in (the “random snap” path).
+ * [hasContent]=false (or keep the old key) until the new frame is bound.
  *
  * Snap is expected when:
+ * - multi-image switch (product: no switch crossfade — [previewCrossfadeDurationMs] is 0)
  * - [me.rosuh.easywatermark.ui.theme.MotionPolicy.Off] (0ms)
  * - same [contentKey] (watermark config refresh — no re-reveal)
  * - [hasContent] false / null-empty key (hold last frame, no flash)
  *
  * First non-null ready content fades 0→1 ([EwmTheme.motion.firstPreviewRevealMs]).
- * Switch: alpha dip + slight scale settle; duration via [previewCrossfadeDurationMs].
  */
 @Composable
 fun AnimatedPreviewSurface(
     contentKey: String?,
     hasContent: Boolean,
     modifier: Modifier = Modifier,
-    /** 0 = similar aspect (min ms), 1 = extreme; default mid when host has no metrics. */
+    /** Unused after product hard-cut; kept for call-site ABI. */
     aspectDelta: Float = 0.35f,
     content: @Composable () -> Unit,
 ) {
     val policy = currentMotionPolicy()
     val revealMs = motionDurationMs(policy, EwmTheme.motion.firstPreviewRevealMs)
+    // Product: always hard-cut multi-image switches (function is fixed at 0).
     val crossfadeMs = previewCrossfadeDurationMs(policy, aspectDelta = aspectDelta)
 
     var displayedKey by remember { mutableStateOf<String?>(null) }
@@ -92,34 +92,9 @@ fun AnimatedPreviewSurface(
                 displayedKey = contentKey
             }
             previous != contentKey -> {
-                // M2: ready-frame switch only (key of bound content changed).
-                if (crossfadeMs <= 0) {
-                    alpha.snapTo(1f)
-                    scale.snapTo(1f)
-                } else {
-                    alpha.snapTo(0.12f)
-                    scale.snapTo(0.98f)
-                    coroutineScope {
-                        launch {
-                            alpha.animateTo(
-                                1f,
-                                animationSpec = tween(
-                                    durationMillis = crossfadeMs,
-                                    easing = FastOutSlowInEasing,
-                                ),
-                            )
-                        }
-                        launch {
-                            scale.animateTo(
-                                1f,
-                                animationSpec = tween(
-                                    durationMillis = crossfadeMs,
-                                    easing = FastOutSlowInEasing,
-                                ),
-                            )
-                        }
-                    }
-                }
+                // Multi-image switch: hard-cut (no alpha dip) so filmstrip focus feels instant.
+                alpha.snapTo(1f)
+                scale.snapTo(1f)
                 displayedKey = contentKey
             }
             else -> {
