@@ -28,6 +28,7 @@ import me.rosuh.easywatermark.data.repo.IosWatermarkConfigBridge
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.render.IosWatermarkRenderer
+import me.rosuh.easywatermark.render.PreviewWorkingSetBudget
 import me.rosuh.easywatermark.ui.IosProductRootHost
 import platform.Foundation.NSUUID
 import kotlin.test.AfterTest
@@ -156,8 +157,14 @@ class IosG4StagingMemoryTest {
         }
     }
 
+    /**
+     * The host constants are the pre-layout *floors*; a live host immediately applies
+     * [PreviewWorkingSetBudget], so the caps that actually bind the editor preview layers are the
+     * working set (focus + ±2), plus one Source slot for a CLAMP draft decode. Filmstrip and
+     * export thumbs are not part of the working set and keep their constant caps.
+     */
     @Test
-    fun hostCacheBudgets_evictFifo_andTrimClearsWithoutSessionWipe() = runTest(mainDispatcher) {
+    fun hostCacheBudgets_evictToWorkingSet_andTrimClearsWithoutSessionWipe() = runTest(mainDispatcher) {
         val graph = isolatedGraph()
         try {
             val gen = IosPickGenerationGate.nextPhotoGeneration()
@@ -181,15 +188,14 @@ class IosG4StagingMemoryTest {
             )
             try {
                 val tiny = ImageBitmap(2, 2, ImageBitmapConfig.Argb8888)
-                // Fill past WM budget (8).
-                val wmMax = IosProductRootHost.WM_PREVIEW_CACHE_MAX
-                for (i in 0 until wmMax + 4) {
+                val wmMax = PreviewWorkingSetBudget.WORKING_SET_FRAMES
+                for (i in 0 until IosProductRootHost.WM_PREVIEW_CACHE_MAX + 4) {
                     host.putWmPreviewForTests("wm_$i", tiny)
                 }
                 assertEquals(wmMax, host.cacheBudgetForTests().wmPreview)
 
-                val placeMax = IosProductRootHost.PLACEHOLDER_CACHE_MAX
-                for (i in 0 until placeMax + 3) {
+                val placeMax = PreviewWorkingSetBudget.WORKING_SET_FRAMES + 1
+                for (i in 0 until IosProductRootHost.PLACEHOLDER_CACHE_MAX + 3) {
                     host.putPlaceholderForTests("ph_$i", tiny)
                 }
                 assertEquals(placeMax, host.cacheBudgetForTests().placeholder)

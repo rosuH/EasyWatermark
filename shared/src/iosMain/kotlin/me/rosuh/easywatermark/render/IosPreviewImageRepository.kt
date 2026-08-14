@@ -56,8 +56,8 @@ internal class IosPreviewImageRepository(
     private val ownerScope: CoroutineScope,
     private var sourceAndPreviewBytesMax: Long = SOURCE_AND_PREVIEW_BYTES_MAX,
     private val filmstripBytesMax: Long = FILMSTRIP_BYTES_MAX,
-    private val watermarkedEntriesMax: Int = DEFAULT_WATERMARKED_ENTRIES_MAX,
-    private val sourcePlaceholderEntriesMax: Int = DEFAULT_SOURCE_PLACEHOLDER_ENTRIES_MAX,
+    private var watermarkedEntriesMax: Int = DEFAULT_WATERMARKED_ENTRIES_MAX,
+    private var sourcePlaceholderEntriesMax: Int = DEFAULT_SOURCE_PLACEHOLDER_ENTRIES_MAX,
     private val filmstripEntriesMax: Int = DEFAULT_FILMSTRIP_ENTRIES_MAX,
     private val exportThumbnailEntriesMax: Int = DEFAULT_EXPORT_THUMBNAIL_ENTRIES_MAX,
     private var watermarkedBytesMax: Long = DEFAULT_WATERMARKED_BYTES_MAX,
@@ -272,6 +272,10 @@ internal class IosPreviewImageRepository(
         sourcePlaceholderBytesMax = caps.sourceBytesMax
         watermarkedBytesMax = caps.watermarkedBytesMax
         sourceAndPreviewBytesMax = caps.jointBytesMax
+        // Entry counts, not bytes, are what hold the working set at focus + ±2 for every aspect
+        // ratio. The constructor defaults (48 / 12) stay as the pre-layout floor.
+        watermarkedEntriesMax = caps.watermarkedEntriesMax
+        sourcePlaceholderEntriesMax = caps.sourceEntriesMax
         if (!closed) {
             enforceBudgetsLocked()
         }
@@ -386,8 +390,6 @@ internal class IosPreviewImageRepository(
             matches = { it.purpose == IosPreviewPurpose.ExportThumbnail },
         )
         // Joint non-filmstrip budget: total Source+Watermarked+Export bytes vs one cap.
-        // Prefer dropping Export → Source before Watermarked so export-sheet thumbs cannot
-        // blank the editor preview (bytes check is joint, not per-purpose).
         evictJointNonFilmstripLocked(sourceAndPreviewBytesMax)
         evictLeastRecentlyUsedMatchingLocked(
             maxBytes = filmstripBytesMax,
@@ -415,7 +417,16 @@ internal class IosPreviewImageRepository(
 
     /**
      * While joint non-filmstrip bytes exceed [maxBytes], remove the least recently used entry in
-     * priority order ExportThumbnail → SourcePlaceholder → Watermarked (never Filmstrip here).
+     * priority order ExportThumbnail → Watermarked → SourcePlaceholder (never Filmstrip here).
+     *
+     * Watermarked goes before SourcePlaceholder because the two cost very different amounts to
+     * rebuild: a Watermarked frame whose Source is still resident is a compose, while a Source is
+     * a cold ImageIO decode, and on device the decode is ~94% of a 12MP paint. Dropping the cheap
+     * one first is what makes memory pressure cost a recompose instead of a re-decode.
+     *
+     * Evicting the focus frame's Watermarked entry cannot blank the screen: the Host holds the
+     * visible bitmap in `previewBitmap`, so the cache only decides what a *return* to a frame
+     * costs. LRU order also means the focus is the last Watermarked entry considered.
      */
     private fun evictJointNonFilmstripLocked(maxBytes: Long) {
         fun isNonFilmstrip(key: IosPreviewKey) =
@@ -424,9 +435,9 @@ internal class IosPreviewImageRepository(
             val leastRecent = cache.keys.firstOrNull {
                 it.purpose == IosPreviewPurpose.ExportThumbnail
             } ?: cache.keys.firstOrNull {
-                it.purpose == IosPreviewPurpose.SourcePlaceholder
-            } ?: cache.keys.firstOrNull {
                 it.purpose == IosPreviewPurpose.Watermarked
+            } ?: cache.keys.firstOrNull {
+                it.purpose == IosPreviewPurpose.SourcePlaceholder
             } ?: return
             cache.remove(leastRecent)
         }

@@ -147,7 +147,88 @@ class IosPreviewFiftyImageBudgetTest {
         )
         val snap = repo.snapshot()
         assertTrue(snap.watermarkedBytes <= caps.watermarkedBytesMax)
-        assertTrue(snap.watermarkedEntries <= 5)
+        assertEquals(
+            PreviewWorkingSetBudget.WORKING_SET_FRAMES,
+            snap.watermarkedEntries,
+            "the working set is exactly focus + ±2, not merely 'at most' five",
+        )
+    }
+
+    /**
+     * The aspect-ratio regression this suite used to miss entirely.
+     *
+     * The byte formula modelled a 4:3 frame, so a 1:1 or 5:4 source overshot it and only 3 of the
+     * promised 5 frames stayed resident — invisibly, because the only fixture here was 4:3.
+     * Residency is now controlled by entry count, so the invariant has to hold for every aspect.
+     */
+    @Test
+    fun workingSet_holdsFocusAndBothNeighbours_forEveryAspectRatio() = runTest {
+        // Long edge each aspect actually gets from the Fit path in a phone portrait pane: a square
+        // source is fitted to the pane *width*, so it never reaches the 1920 bucket that a 4:3
+        // source does.
+        val cases = listOf(
+            Triple("4:3", PreviewResolutionPolicy.PHONE_PREVIEW_MAX_LONG_EDGE_PX, 3.0 / 4.0),
+            Triple("5:4", PreviewResolutionPolicy.PHONE_PREVIEW_MAX_LONG_EDGE_PX, 4.0 / 5.0),
+            Triple("1:1", PreviewResolutionPolicy.BUCKET_1440, 1.0),
+        )
+        for ((name, edge, shortEdgeRatio) in cases) {
+            val caps = PreviewWorkingSetBudget.caps(edge, physicalMemoryBytes = 8L shl 30)
+            val repo = repository()
+            repo.applyWorkingSetCaps(caps)
+            val bmp = ImageBitmap(
+                edge,
+                kotlin.math.ceil(edge * shortEdgeRatio).toInt(),
+                ImageBitmapConfig.Argb8888,
+            )
+            // Production insert order: the painted focus first, then ±2 warming around it.
+            val focus = 10
+            val window = listOf(focus, focus - 1, focus + 1, focus - 2, focus + 2)
+            for (i in window) {
+                repo.putForTests(
+                    IosPreviewKey("/tmp/ewm_src_$i", edge, IosPreviewPurpose.Watermarked),
+                    bmp,
+                )
+            }
+            val resident = repo.snapshot().cachedKeys
+            for (i in window) {
+                assertTrue(
+                    resident.contains(
+                        IosPreviewKey("/tmp/ewm_src_$i", edge, IosPreviewPurpose.Watermarked),
+                    ),
+                    "$name at ${edge}px: focus+±2 must all stay resident, missing frame $i " +
+                        "(resident=${resident.size}, cap=${caps.watermarkedBytesMax}B)",
+                )
+            }
+            assertEquals(
+                PreviewWorkingSetBudget.WORKING_SET_FRAMES,
+                repo.snapshot().watermarkedEntries,
+                "$name at ${edge}px must hold exactly the working set",
+            )
+        }
+    }
+
+    /**
+     * Cost-asymmetric eviction (S1: cold decode is ~94% of a 12MP paint, compose is the remainder).
+     * Under joint pressure the cheap-to-rebuild Watermarked frame must go before the expensive
+     * SourcePlaceholder decode.
+     */
+    @Test
+    fun jointPressure_dropsWatermarkedBeforeSourceDecode() = runTest {
+        val repo = repository(previewBudget = 60_000L)
+        val bmp = ImageBitmap(100, 100, ImageBitmapConfig.Argb8888) // 40 000 B each
+        repo.putForTests(IosPreviewKey("a", 720, IosPreviewPurpose.SourcePlaceholder), bmp)
+        repo.putForTests(IosPreviewKey("a", 720, IosPreviewPurpose.Watermarked), bmp)
+        val snap = repo.snapshot()
+        assertEquals(
+            1,
+            snap.sourcePlaceholderEntries,
+            "the source decode must survive joint pressure",
+        )
+        assertEquals(
+            0,
+            snap.watermarkedEntries,
+            "the composable watermarked frame is the cheap one to rebuild, so it goes first",
+        )
     }
 
     @Test
@@ -178,9 +259,12 @@ class IosPreviewFiftyImageBudgetTest {
         )
     }
 
-    private fun TestScope.repository(): IosPreviewImageRepository =
+    private fun TestScope.repository(
+        previewBudget: Long = IosPreviewImageRepository.SOURCE_AND_PREVIEW_BYTES_MAX,
+    ): IosPreviewImageRepository =
         IosPreviewImageRepository(
             ownerScope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler)),
+            sourceAndPreviewBytesMax = previewBudget,
         )
 
     private fun square(edge: Int): ImageBitmap =

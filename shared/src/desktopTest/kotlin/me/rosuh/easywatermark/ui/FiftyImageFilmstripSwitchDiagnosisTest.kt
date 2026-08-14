@@ -1,6 +1,7 @@
 package me.rosuh.easywatermark.ui
 
 import java.io.File
+import kotlin.math.ceil
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -49,22 +50,30 @@ class FiftyImageFilmstripSwitchDiagnosisTest {
             PreviewResolutionPolicy.BUCKET_1920,
         )) {
             val caps = PreviewWorkingSetBudget.caps(edge, highMem)
-            val bytesPer = PreviewWorkingSetBudget.bytesPerFrame(edge)
-            val byBytes = (caps.watermarkedBytesMax / bytesPer).toInt()
-            val effective = minOf(entryCap, byBytes)
+            // bytesPerFrame is the worst-case (square) fence, not a frame prediction, so capacity
+            // claims have to be measured against a real 4:3 frame at this long edge.
+            val realFrame = edge.toLong() * ceil(edge * 3.0 / 4.0).toLong() * 4L
+            val byBytes = (caps.watermarkedBytesMax / realFrame).toInt()
+            val effective = minOf(caps.watermarkedEntriesMax, byBytes)
             assertTrue(
                 effective < 50,
                 "edge=$edge effective capacity $effective must be << 50 images",
             )
             if (edge == PreviewResolutionPolicy.BUCKET_720) {
-                assertTrue(effective >= 20, "floor: ≥20×720 WM frames by bytes (got $effective)")
+                assertTrue(byBytes >= 20, "floor: ≥20×720 WM frames by bytes (got $byBytes)")
             }
+            // Entry count, not bytes, is what holds residency at focus + ±2 now.
+            assertEquals(
+                PreviewWorkingSetBudget.WORKING_SET_FRAMES,
+                effective,
+                "edge=$edge: the working set must be the binding cap",
+            )
             assertTrue(
-                bytesPer * 5 <= caps.watermarkedBytesMax,
+                realFrame * 5 <= caps.watermarkedBytesMax,
                 "edge=$edge: focus+±2 must fit watermarkedBytesMax",
             )
             assertTrue(
-                bytesPer * 5 <= caps.jointBytesMax,
+                realFrame * 5 <= caps.jointBytesMax,
                 "edge=$edge: focus+±2 must fit joint budget",
             )
         }

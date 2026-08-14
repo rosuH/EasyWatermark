@@ -28,7 +28,7 @@ class IosImageIOSubsampleTest {
     fun factor_neverSubsamplesBelowTheRequestedEdge() {
         // 4032 long edge (12MP camera HEIC) at the filmstrip thumb edge: /8 is still 504 ≥ 128.
         assertEquals(8, IosImageIODecoder.subsampleFactorFor(4032, 128))
-        // At the phone preview 长边, /2 is 2016 ≥ 1920 but /4 would be 1008 — must pick 2.
+        // At the phone preview long edge, /2 is 2016 ≥ 1920 but /4 would be 1008 — must pick 2.
         assertEquals(2, IosImageIODecoder.subsampleFactorFor(4032, 1920))
         // A source barely above the request cannot be reduced at all.
         assertEquals(IosImageIODecoder.NO_SUBSAMPLE, IosImageIODecoder.subsampleFactorFor(2000, 1920))

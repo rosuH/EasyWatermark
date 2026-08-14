@@ -12,7 +12,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 /**
- * S2: the 水印预览缓存 must evict by recency, not by insertion.
+ * S2: the watermarked preview cache must evict by recency, not by insertion.
  *
  * The pre-existing budget test inserts neighbors **then** focus, an order production never uses.
  * Production inserts focus first (`renderPreviewForCurrentSelection`) and then ±2
@@ -58,36 +58,41 @@ class IosPreviewLruProductionOrderTest {
 
     @Test
     fun watermarked_readMakesEntryOutliveAnOlderUnreadEntry() = runTest {
-        assertRecencyDecidesVictim(::wm)
+        assertRecencyDecidesVictim(::wm) { it.watermarkedEntriesMax }
     }
 
     @Test
     fun sourcePlaceholder_readMakesEntryOutliveAnOlderUnreadEntry() = runTest {
         // Source is the expensive purpose (219 ms cold ImageIO vs 9 ms compose), so recency
         // matters here even more than for Watermarked.
-        assertRecencyDecidesVictim(::source)
+        assertRecencyDecidesVictim(::source) { it.sourceEntriesMax }
     }
 
     private suspend fun assertRecencyDecidesVictim(
         key: (String, Int) -> IosPreviewKey,
+        capacityOf: (PreviewWorkingSetCaps) -> Int,
     ) {
         val edge = PreviewResolutionPolicy.PHONE_PREVIEW_MAX_LONG_EDGE_PX
+        val caps = PreviewWorkingSetBudget.caps(edge, physicalMemoryBytes = 8L shl 30)
         val repo = repositoryAtWorkingSetCaps(edge)
         val frame = fourByThree(edge)
+        // Each purpose has its own residency cap (sources carry a CLAMP-draft slot), so fill to
+        // that purpose's capacity rather than assuming both are the working-set size.
+        val capacity = capacityOf(caps)
 
-        for (index in 0 until WORKING_SET) {
+        for (index in 0 until capacity) {
             repo.putForTests(key(index.toString(), edge), frame)
         }
         // Touch the least recently used entry, and only that one.
         assertNotNull(repo.cached(key("0", edge)), "entry 0 must be resident before the touch")
 
-        repo.putForTests(key(WORKING_SET.toString(), edge), frame)
+        repo.putForTests(key(capacity.toString(), edge), frame)
 
         assertNotNull(repo.cached(key("0", edge)), "a read entry must not be the next victim")
         assertNull(repo.cached(key("1", edge)), "the least recently used entry must be evicted")
     }
 
-    /** Live Host caps for the current 预览长边, where focus + ±2 is exactly the resident set. */
+    /** Live Host caps for the current preview long edge, where focus + ±2 is the resident set. */
     private suspend fun repositoryAtWorkingSetCaps(edge: Int): IosPreviewImageRepository {
         val repo = IosPreviewImageRepository(
             ownerScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined),
