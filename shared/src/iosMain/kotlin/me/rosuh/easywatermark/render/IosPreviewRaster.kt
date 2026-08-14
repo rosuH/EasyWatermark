@@ -74,8 +74,7 @@ internal object IosPreviewRaster {
         }
 
         val icon = if (waterMark.markMode == WatermarkMode.Image) {
-            val iconBytes = IosIconPersistence.readIconBytes(waterMark.iconUri)
-            IosImageDecoder.decodeThumbnail(iconBytes, maxEdgePx = ICON_MAX_EDGE_PX)
+            IosWatermarkIconCache.decoded(waterMark.iconUri, ICON_MAX_EDGE_PX)
                 .also { bench.mark(IosPreviewBench.STAGE_ICON) }
         } else {
             null

@@ -153,6 +153,21 @@ internal object IosDevicePerfBench {
             log(switchLine(lap = 2, timing = t, path = path))
         }
 
+        // Lap 3 warms ±2 like production does, which is the only lap where the cache's eviction
+        // policy is observable: laps 1/2 never populate neighbors, so they miss under any policy.
+        val lap3 = ArrayList<IosProductRootHost.SwitchImageTiming>(paths.size)
+        for (path in paths) {
+            val t = host.switchImageAndAwaitForTests(path, awaitNeighbors = true)
+            lap3 += t
+            log(switchLine(lap = 3, timing = t, path = path))
+        }
+        val lap4 = ArrayList<IosProductRootHost.SwitchImageTiming>(paths.size)
+        for (path in paths) {
+            val t = host.switchImageAndAwaitForTests(path, awaitNeighbors = true)
+            lap4 += t
+            log(switchLine(lap = 4, timing = t, path = path))
+        }
+
         val recompose = host.recomposeWatermarkFromCachedSourceForTests()
         log("DEVICE_PERF_RECOMPOSE hit=$recompose")
 
@@ -179,8 +194,14 @@ internal object IosDevicePerfBench {
                 "switch_l2_wm=${l2Kinds["watermarked"] ?: 0} " +
                 "switch_l2_source=${l2Kinds["source"] ?: 0} " +
                 "switch_l2_miss=${l2Kinds["miss"] ?: 0} " +
+                "switch_l3_med=${median(lap3.map { it.totalMs })} " +
+                "switch_l3_hits=${lap3.count { it.hit != "miss" }}/${lap3.size} " +
+                "switch_l4_med=${median(lap4.map { it.totalMs })} " +
+                "switch_l4_hits=${lap4.count { it.hit != "miss" }}/${lap4.size} " +
+                "switch_l4_hits_detail=${lap4.joinToString(",") { it.hit }} " +
                 switchSplitSummary(lap = 1, timings = lap1) +
                 switchSplitSummary(lap = 2, timings = lap2) +
+                switchSplitSummary(lap = 4, timings = lap4) +
                 "recompose=$recompose " +
                 "io128_ms=${io128.joinToString(",")} " +
                 "coil_cold_ms=${coilCold.joinToString(",")} " +

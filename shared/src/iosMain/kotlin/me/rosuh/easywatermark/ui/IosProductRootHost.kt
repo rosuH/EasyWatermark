@@ -57,6 +57,7 @@ import me.rosuh.easywatermark.render.IosPreviewKey
 import me.rosuh.easywatermark.render.IosPreviewBench
 import me.rosuh.easywatermark.render.IosPreviewPurpose
 import me.rosuh.easywatermark.render.IosPreviewRaster
+import me.rosuh.easywatermark.render.IosWatermarkIconCache
 import me.rosuh.easywatermark.render.PreviewResolutionPolicy
 import me.rosuh.easywatermark.render.PreviewWorkingSetBudget
 import me.rosuh.easywatermark.session.AppIntent
@@ -592,6 +593,7 @@ class IosProductRootHost(
         watermarkedPreviewSourcePath = null
         previewGen += 1
         previewImages.clearFromOwner()
+        IosWatermarkIconCache.invalidate()
     }
 
     /** Alias for Swift / ObjC memory-warning bridge. */

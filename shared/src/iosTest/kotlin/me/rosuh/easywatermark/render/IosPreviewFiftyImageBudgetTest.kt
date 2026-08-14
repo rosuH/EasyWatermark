@@ -109,33 +109,40 @@ class IosPreviewFiftyImageBudgetTest {
 
         val focus = "/tmp/ewm_src_10"
         val neighbors = listOf(8, 9, 11, 12).map { "/tmp/ewm_src_$it" }
-        // Neighbors first, then the just-painted focus — ±2 must not evict it.
+        // Neighbors first, then the just-painted focus. Production uses the opposite order — see
+        // IosPreviewLruProductionOrderTest; this case keeps the capacity claim under either order.
         for (p in neighbors) {
             repo.putForTests(IosPreviewKey(p, edge, IosPreviewPurpose.Watermarked), bmp)
         }
         repo.putForTests(IosPreviewKey(focus, edge, IosPreviewPurpose.Watermarked), bmp)
-        assertNotNull(
-            repo.cached(IosPreviewKey(focus, edge, IosPreviewPurpose.Watermarked)),
+        // Residency via snapshot, not cached(): the cache is LRU now, so a verification read is
+        // itself a recency event and would decide the eviction this test is about to measure.
+        val afterWarm = repo.snapshot().cachedKeys
+        assertTrue(
+            afterWarm.contains(IosPreviewKey(focus, edge, IosPreviewPurpose.Watermarked)),
             "focus must survive ±2 prefetch",
         )
         for (p in neighbors) {
-            assertNotNull(
-                repo.cached(IosPreviewKey(p, edge, IosPreviewPurpose.Watermarked)),
+            assertTrue(
+                afterWarm.contains(IosPreviewKey(p, edge, IosPreviewPurpose.Watermarked)),
                 "neighbor $p must remain after focus+±2 warm",
             )
         }
 
         repo.putForTests(IosPreviewKey("/tmp/ewm_src_13", edge, IosPreviewPurpose.Watermarked), bmp)
-        assertNull(
-            repo.cached(IosPreviewKey(neighbors.first(), edge, IosPreviewPurpose.Watermarked)),
-            "6th 4:3 frame at $edge must evict the oldest neighbor",
+        val afterSixth = repo.snapshot().cachedKeys
+        assertTrue(
+            !afterSixth.contains(
+                IosPreviewKey(neighbors.first(), edge, IosPreviewPurpose.Watermarked),
+            ),
+            "6th 4:3 frame at $edge must evict the least recently used neighbor",
         )
-        assertNotNull(
-            repo.cached(IosPreviewKey(focus, edge, IosPreviewPurpose.Watermarked)),
-            "focus must survive a 6th frame (oldest neighbor evicted first)",
+        assertTrue(
+            afterSixth.contains(IosPreviewKey(focus, edge, IosPreviewPurpose.Watermarked)),
+            "focus must survive a 6th frame",
         )
-        assertNotNull(
-            repo.cached(IosPreviewKey("/tmp/ewm_src_13", edge, IosPreviewPurpose.Watermarked)),
+        assertTrue(
+            afterSixth.contains(IosPreviewKey("/tmp/ewm_src_13", edge, IosPreviewPurpose.Watermarked)),
             "newest frame must remain after eviction",
         )
         val snap = repo.snapshot()

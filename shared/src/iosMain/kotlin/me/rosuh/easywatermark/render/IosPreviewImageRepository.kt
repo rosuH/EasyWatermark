@@ -91,7 +91,7 @@ internal class IosPreviewImageRepository(
         require(key.pixelBucket > 0) { "IosPreviewImageRepository: non-positive bucket" }
         val deferred: Deferred<ImageBitmap?> = mutex.withLock {
             if (closed) return@withLock completedDeferred(null)
-            cache[key]?.let { return@withLock completedDeferred(it) }
+            touchLocked(key)?.let { return@withLock completedDeferred(it) }
             inFlight[key]?.deferred ?: startCompletionLocked(key, decoder)
         }
         // Deliberately no NonCancellable wrapper: caller cancellation is normal UI lifecycle.
@@ -100,7 +100,7 @@ internal class IosPreviewImageRepository(
 
     /** Cache-only lookup; unlike [load], this never begins a decode. */
     suspend fun cached(key: IosPreviewKey): ImageBitmap? = mutex.withLock {
-        if (closed) null else cache[key]
+        if (closed) null else touchLocked(key)
     }
 
     /**
@@ -113,10 +113,24 @@ internal class IosPreviewImageRepository(
         if (!mutex.tryLock()) return null
         try {
             if (closed) return null
-            return cache[key]
+            return touchLocked(key)
         } finally {
             mutex.unlock()
         }
+    }
+
+    /**
+     * LRU recency update: re-insert a hit at the tail of the insertion-ordered [cache].
+     *
+     * Eviction picks `cache.keys.firstOrNull(...)`, so without this the cache is FIFO and a
+     * forward filmstrip scan evicts the frame the user is looking at. Production inserts focus
+     * first and then ±2, which is the exact order under which FIFO discards the focus frame and
+     * re-composes it one tap later.
+     */
+    private fun touchLocked(key: IosPreviewKey): ImageBitmap? {
+        val value = cache.remove(key) ?: return null
+        cache[key] = value
+        return value
     }
 
     suspend fun invalidate(key: IosPreviewKey) {
@@ -359,15 +373,15 @@ internal class IosPreviewImageRepository(
         evictToEntryCapLocked(IosPreviewPurpose.SourcePlaceholder, sourcePlaceholderEntriesMax)
         evictToEntryCapLocked(IosPreviewPurpose.Filmstrip, filmstripEntriesMax)
         evictToEntryCapLocked(IosPreviewPurpose.ExportThumbnail, exportThumbnailEntriesMax)
-        evictOldestMatchingLocked(
+        evictLeastRecentlyUsedMatchingLocked(
             maxBytes = watermarkedBytesMax,
             matches = { it.purpose == IosPreviewPurpose.Watermarked },
         )
-        evictOldestMatchingLocked(
+        evictLeastRecentlyUsedMatchingLocked(
             maxBytes = sourcePlaceholderBytesMax,
             matches = { it.purpose == IosPreviewPurpose.SourcePlaceholder },
         )
-        evictOldestMatchingLocked(
+        evictLeastRecentlyUsedMatchingLocked(
             maxBytes = exportThumbnailBytesMax,
             matches = { it.purpose == IosPreviewPurpose.ExportThumbnail },
         )
@@ -375,7 +389,7 @@ internal class IosPreviewImageRepository(
         // Prefer dropping Export → Source before Watermarked so export-sheet thumbs cannot
         // blank the editor preview (bytes check is joint, not per-purpose).
         evictJointNonFilmstripLocked(sourceAndPreviewBytesMax)
-        evictOldestMatchingLocked(
+        evictLeastRecentlyUsedMatchingLocked(
             maxBytes = filmstripBytesMax,
             matches = { it.purpose == IosPreviewPurpose.Filmstrip },
         )
@@ -383,37 +397,38 @@ internal class IosPreviewImageRepository(
 
     private fun evictToEntryCapLocked(purpose: IosPreviewPurpose, maxEntries: Int) {
         while (cache.keys.count { it.purpose == purpose } > maxEntries) {
-            val oldest = cache.keys.firstOrNull { it.purpose == purpose } ?: return
-            cache.remove(oldest)
+            val leastRecent = cache.keys.firstOrNull { it.purpose == purpose } ?: return
+            cache.remove(leastRecent)
         }
     }
 
-    private fun evictOldestMatchingLocked(
+    /** [touchLocked] keeps [cache] in LRU order, so the head is the least recently used entry. */
+    private fun evictLeastRecentlyUsedMatchingLocked(
         maxBytes: Long,
         matches: (IosPreviewKey) -> Boolean,
     ) {
         while (bytesForLocked(matches) > maxBytes) {
-            val oldest = cache.keys.firstOrNull(matches) ?: return
-            cache.remove(oldest)
+            val leastRecent = cache.keys.firstOrNull(matches) ?: return
+            cache.remove(leastRecent)
         }
     }
 
     /**
-     * While joint non-filmstrip bytes exceed [maxBytes], remove the oldest entry in priority
-     * order ExportThumbnail → SourcePlaceholder → Watermarked (never Filmstrip here).
+     * While joint non-filmstrip bytes exceed [maxBytes], remove the least recently used entry in
+     * priority order ExportThumbnail → SourcePlaceholder → Watermarked (never Filmstrip here).
      */
     private fun evictJointNonFilmstripLocked(maxBytes: Long) {
         fun isNonFilmstrip(key: IosPreviewKey) =
             key.purpose != IosPreviewPurpose.Filmstrip
         while (bytesForLocked(::isNonFilmstrip) > maxBytes) {
-            val oldest = cache.keys.firstOrNull {
+            val leastRecent = cache.keys.firstOrNull {
                 it.purpose == IosPreviewPurpose.ExportThumbnail
             } ?: cache.keys.firstOrNull {
                 it.purpose == IosPreviewPurpose.SourcePlaceholder
             } ?: cache.keys.firstOrNull {
                 it.purpose == IosPreviewPurpose.Watermarked
             } ?: return
-            cache.remove(oldest)
+            cache.remove(leastRecent)
         }
     }
 
