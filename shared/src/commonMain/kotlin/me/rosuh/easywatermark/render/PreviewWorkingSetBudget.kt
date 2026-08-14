@@ -26,14 +26,35 @@ internal object PreviewWorkingSetBudget {
     /**
      * Worst-case ARGB bytes for one decoded frame whose long edge is [longEdgePx].
      *
-     * Square, not 4:3: a fence has to assume the largest frame it can be asked to hold, and any
-     * source at 1:1 or wider-than-tall-inverted (1:1, 5:4, panorama crops) reaches it.
+     * Square, not 4:3. For a fixed long edge the area is `longEdge × shortEdge`, so it peaks when
+     * the short edge equals the long edge — 1:1 is the most expensive shape a frame can be, and
+     * every other aspect ratio (4:3, 5:4, and panoramas most of all) costs strictly less. A fence
+     * has to assume the largest frame it can be asked to hold, which is why it sits at 1:1.
+     *
+     * This is **larger** than the old 4:3 model by 4/3, so it raises every byte cap. That is
+     * deliberate — the old model under-counted real frames and silently evicted them — and it is
+     * bounded: see [caps] for the ceiling that clamps the result.
      */
     fun bytesPerFrame(longEdgePx: Int): Long {
         val edge = longEdgePx.coerceAtLeast(1).toLong()
         return edge * edge * 4L
     }
 
+    /**
+     * Per-purpose and joint byte fences for [longEdgePx], clamped by device memory.
+     *
+     * Worst-case resident bytes at the phone 1920 cap, high-memory: each purpose is fenced at
+     * 64 MiB and the joint at 128 MiB, so six square sources (6 × 14.7 MiB = 88 MiB) can **not**
+     * go resident — the per-purpose fence evicts to four, and the joint fence holds
+     * Source + Watermarked + ExportThumbnail at 128 MiB total. On a device below
+     * [LOW_MEMORY_THRESHOLD_BYTES] those become 32 MiB per purpose and 64 MiB joint (two square
+     * sources). So the entry headroom is bounded by bytes rather than trusted.
+     *
+     * The honest cost: moving the fence from 4:3 to 1:1 raises worst-case resident non-filmstrip
+     * bytes at 1920 from 105.5 MiB to 128 MiB. That is a real increase on a platform that gets
+     * jetsammed, accepted because the alternative was evicting frames the code promised to keep,
+     * and it stays at the already-approved 128 MiB ceiling rather than above it.
+     */
     fun caps(longEdgePx: Int, physicalMemoryBytes: Long): PreviewWorkingSetCaps {
         val fiveFrames = WORKING_SET_FRAMES * bytesPerFrame(longEdgePx)
         var sourceBytesMax = maxOf(SOURCE_BYTES_FLOOR, fiveFrames)

@@ -104,6 +104,26 @@ Frames-per-layer by bytes after the change (high-memory):
 | 1440 | 8 | 7 | 6 | entries (5) |
 | 1920 | 6 | 5 | 4 | entries (5) |
 
+### Memory cost of the fence change (state this, don't make the reader derive it)
+
+Moving `bytesPerFrame` from a 4:3 model to a 1:1 fence **raises** every byte cap by 4/3. The diff
+reads like a tightening; it is the opposite, and this app runs on a platform that gets jetsammed.
+
+| At phone 1920 cap | Old (4:3 model) | New (1:1 fence) |
+|---|---:|---:|
+| Per-purpose fence | 52.7 MiB | 64 MiB |
+| Worst-case resident non-filmstrip | 105.5 MiB | **128 MiB** |
+
+The increase is real (+21%) and bounded: it lands exactly on the already-approved
+`HIGH_MEMORY_JOINT_MAX`, not above it. Below the 3.5 GiB threshold the joint compresses to 64 MiB
+(32 MiB per purpose).
+
+The six-source entry headroom is **bounded by bytes, not trusted**: six square 1920 sources would be
+88 MiB, so the 64 MiB per-purpose fence evicts to four. At 1920 the sixth slot is unreachable for
+any aspect (even 4:3 clamps to 5); it only becomes usable at 1440 and below, where frames are small.
+`PreviewWorkingSetBudgetTest.squareFence_worstCaseResidentBytes_areClampedByTheJointCeiling` pins
+this so the headroom cannot silently become the binding cap later.
+
 Entry count binds at every phone bucket, for every aspect that reaches it. A true 1:1 source cannot
 reach 1920 through the Fit path — it is fitted to the pane *width*, landing at 1440 — so the 1:1
 column at 1920 is only reachable via the metadata-missing fallback, which is deliberately

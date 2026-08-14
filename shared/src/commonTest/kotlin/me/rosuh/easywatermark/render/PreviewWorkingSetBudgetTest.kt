@@ -36,6 +36,34 @@ class PreviewWorkingSetBudgetTest {
         }
     }
 
+    /**
+     * The square fence raises every byte cap by 4/3, so the entry headroom must be bounded by
+     * bytes rather than trusted. Worst case is six square sources at the phone 1920 cap.
+     */
+    @Test
+    fun squareFence_worstCaseResidentBytes_areClampedByTheJointCeiling() {
+        val edge = PreviewResolutionPolicy.PHONE_PREVIEW_MAX_LONG_EDGE_PX
+        val squareFrame = PreviewWorkingSetBudget.bytesPerFrame(edge)
+
+        val high = PreviewWorkingSetBudget.caps(edge, eightGib)
+        assertTrue(
+            high.sourceEntriesMax * squareFrame > high.sourceBytesMax,
+            "the entry headroom must be unreachable for square frames — otherwise the fence is " +
+                "not what bounds memory",
+        )
+        assertEquals(4, (high.sourceBytesMax / squareFrame).toInt())
+        assertEquals(
+            PreviewWorkingSetBudget.HIGH_MEMORY_JOINT_MAX,
+            high.jointBytesMax,
+            "worst-case resident non-filmstrip bytes are the joint cap, and it must not drift " +
+                "above the approved 128 MiB ceiling",
+        )
+
+        val low = PreviewWorkingSetBudget.caps(edge, threeGib)
+        assertEquals(PreviewWorkingSetBudget.LOW_MEMORY_JOINT_MAX, low.jointBytesMax)
+        assertEquals(2, (low.sourceBytesMax / squareFrame).toInt())
+    }
+
     @Test
     fun entryCaps_areTheWorkingSetControl() {
         val caps = PreviewWorkingSetBudget.caps(
