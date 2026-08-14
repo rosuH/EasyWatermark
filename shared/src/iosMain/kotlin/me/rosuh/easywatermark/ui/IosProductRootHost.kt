@@ -283,6 +283,28 @@ class IosProductRootHost(
      */
     private var clampDraftOffset by mutableStateOf<Pair<Float, Float>?>(null)
     private var clampDraftSelectionId by mutableStateOf<String?>(null)
+
+    /** One draft render in flight, newest offset wins. See [IosDraftRenderConflator]. */
+    private data class ClampDraftRequest(
+        val path: String,
+        val offsetX: Float,
+        val offsetY: Float,
+    )
+
+    private val clampDraftRenders = IosDraftRenderConflator<ClampDraftRequest>(
+        scope = hostScope,
+    ) { request ->
+        if (disposed) return@IosDraftRenderConflator
+        previewGen += 1
+        val gen = previewGen
+        runCatching {
+            renderPreviewForCurrentSelection(
+                gen = gen,
+                draftOffset = request.offsetX to request.offsetY,
+                forcePath = request.path,
+            )
+        }
+    }
     private var isSaving by mutableStateOf(false)
     /**
      * Presentation-only optimistic editor shell while picker IO runs (Session still Launch).
@@ -652,6 +674,7 @@ class IosProductRootHost(
             // Tear down NC observers first so process-wide NotificationCenter cannot deliver into
             // a dead host (suite isolation + single-scene rebuild safety).
             progressiveImport.close()
+            clampDraftRenders.close()
             services.session.cancelExport()
             previewGen += 1
             // Synchronously mark the preview repository closed when uncontended *before*
@@ -1043,17 +1066,12 @@ class IosProductRootHost(
                                                     }
                                                     clampDraftOffset = x to y
                                                     clampDraftSelectionId = dragPath
-                                                    previewGen += 1
-                                                    val gen = previewGen
-                                                    hostScope.launch {
-                                                        try {
-                                                            renderPreviewForCurrentSelection(
-                                                                gen = gen,
-                                                                draftOffset = x to y,
-                                                            )
-                                                        } catch (_: Throwable) {
-                                                        }
-                                                    }
+                                                    // Conflated: the gesture never queues more
+                                                    // than one pending render, and the newest
+                                                    // offset is the one that paints.
+                                                    clampDraftRenders.submit(
+                                                        ClampDraftRequest(dragPath, x, y),
+                                                    )
                                                 },
                                                 onOffsetDraftClear = {
                                                     clampDraftOffset = null
@@ -1099,13 +1117,18 @@ class IosProductRootHost(
                                                     previewGen++
                                                     val gen = previewGen
                                                     commitBench.mark("previewGenBump")
+                                                    val draftCounts =
+                                                        clampDraftRenders.countsForTests()
                                                     commitBench.finish(
                                                         mapOf(
                                                             "offsetX" to x,
                                                             "offsetY" to y,
                                                             "path" to dragPath.substringAfterLast('/'),
+                                                            "draftSamples" to draftCounts.submitted,
+                                                            "draftRenders" to draftCounts.rendered,
                                                         ),
                                                     )
+                                                    clampDraftRenders.resetCountsForTests()
                                                     hostScope.launch {
                                                         try {
                                                             renderPreviewForCurrentSelection(
@@ -2130,7 +2153,20 @@ class IosProductRootHost(
             committedBucketPx = previewBucket,
         )
         val composed = if (isDraft) {
-            // Draft uses a shorter long-edge and must not write committed Source keys.
+            // Reuse the Source decode across the whole gesture: that is what turns a drag from
+            // "decode + compose per frame" into "one decode per drag, compose per frame", and
+            // decode is ~94% of a cold 12MP paint.
+            //
+            // Sharing this entry with the committed path is safe because a Source placeholder is
+            // the un-watermarked decode — offset plays no part in it — so when the draft edge
+            // happens to equal the committed bucket (any committed bucket ≤1080) this is simply a
+            // hit on the entry the committed render already stored. The invariant that matters is
+            // that a draft never writes a *Watermarked* entry, enforced at the cachePut below.
+            val draftSource = previewImages.load(sourcePreviewKey(sourcePath, paintEdge)) {
+                withContext(Dispatchers.Default) {
+                    IosPreviewRaster.decodeSourcePlaceholder(sourcePath, maxEdgePx = paintEdge)
+                }
+            }
             withContext(Dispatchers.Default) {
                 IosPreviewRaster.renderWatermarked(
                     sourcePath = sourcePath,
@@ -2138,6 +2174,7 @@ class IosProductRootHost(
                     offsetX = ox,
                     offsetY = oy,
                     maxEdgePx = paintEdge,
+                    background = draftSource,
                 )
             }
         } else {
