@@ -783,6 +783,11 @@ class IosProductRootHost(
                 if (IosDevicePerfBench.requested()) {
                     IosDevicePerfBench.run(this@IosProductRootHost)
                 }
+                if (IosCgImageTransferDeviceBench.requested()) {
+                    withContext(Dispatchers.Default) {
+                        IosCgImageTransferDeviceBench.run()
+                    }
+                }
             }
             // Leave-editor lifecycle closed loop: Session emptied (back, last-image remove, etc.)
             // while Host stays alive — free preview caches + app-owned ewm_src temps.

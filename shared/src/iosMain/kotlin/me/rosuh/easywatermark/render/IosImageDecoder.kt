@@ -3,6 +3,7 @@
 package me.rosuh.easywatermark.render
 
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asComposeImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.useContents
@@ -44,6 +45,12 @@ internal object IosImageDecoder {
      * Skia nor UIImage can decode so callers fail loudly instead of propagating a bad image.
      */
     fun decode(bytes: ByteArray): ImageBitmap {
+        if (looksLikeHeif(bytes)) {
+            runCatching {
+                IosImageIODecoder.decodePrimaryBitmapFromBytes(bytes, shouldCache = false)
+                    .asComposeImageBitmap()
+            }.getOrNull()?.let { return it }
+        }
         val skiaImage = decodeSkia(bytes)
         return skiaImage.toComposeImageBitmap()
     }
@@ -55,8 +62,8 @@ internal object IosImageDecoder {
     fun decodeThumbnail(bytes: ByteArray, maxEdgePx: Int = 160): ImageBitmap {
         if (looksLikeHeif(bytes)) {
             runCatching {
-                IosImageIODecoder.decodeThumbnailSkiaFromBytes(bytes, maxEdgePx)
-                    .toComposeImageBitmap()
+                IosImageIODecoder.decodeThumbnailBitmapFromBytes(bytes, maxEdgePx)
+                    .asComposeImageBitmap()
             }.getOrNull()?.let { return it }
         }
         return scaleSkia(decodeSkia(bytes), maxEdgePx).toComposeImageBitmap()
