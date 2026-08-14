@@ -7,7 +7,13 @@ package me.rosuh.easywatermark.render
  * and because the byte formula modelled a 4:3 frame it under-counted every source at or above
  * 1:1 — so a square or 5:4 photo silently held 3 frames while the code promised 5, with no test
  * catching it because the fixture was 4:3. Sizing the fence for the worst aspect ratio and
- * capping entries at the actual working set makes the promise checkable and aspect-independent.
+ * capping entries at the actual working set makes the promise checkable.
+ *
+ * Checkable, not aspect-independent: at the phone 1920 cap the compressed 64 MiB per-purpose fence
+ * still binds before [PreviewWorkingSetCaps.sourceEntriesMax], so residency is 4 frames at 1:1 and
+ * 5 at 5:4 or wider. Square is the one aspect that does not reach focus + ±2, and reaching it would
+ * mean raising [HIGH_MEMORY_JOINT_MAX] to ~141 MiB — an owner call, not a silent one. See
+ * `PreviewWorkingSetBudgetTest.squareFence_worstCaseResidentBytes_areClampedByTheJointCeiling`.
  *
  * Historical floors keep a 720 pane from shrinking below the R1 12 / 48 MiB purpose caps. Device
  * memory only **compresses** the joint when the formula would exceed the ceiling — it never

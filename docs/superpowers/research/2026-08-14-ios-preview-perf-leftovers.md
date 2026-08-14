@@ -85,9 +85,20 @@ Two defects, both invisible to the tests that existed.
    or above 1:1 (a 1920 square frame is 14.7 MiB against an 11.06 MiB model). Byte eviction held 3
    frames while the code promised focus + ±2 — and the only fixture was 4:3, so no test failed.
    Bytes are now a fence sized for the **worst** aspect ratio, and **per-purpose entry counts**
-   control residency, which makes the promise aspect-independent. Sources get one extra slot,
+   control residency, which makes the promise checkable. Sources get one extra slot,
    because a CLAMP draft legitimately decodes a sixth source mid-gesture and evicting a neighbour's
    decode is the worst available trade.
+
+   **Known limit — square still misses the promise.** Checkable is not the same as
+   aspect-independent, and the fix does not fully land at 1:1. At the phone 1920 cap the joint
+   pre-clamp is 140.62 MiB against the 128 MiB ceiling, so both purposes compress to exactly
+   64.00 MiB; a square frame is 14.06 MiB, so 4 fit, not 5. Residency by aspect at 1920 is 1:1 → 4,
+   5:4 → 5, 4:3 → 6, 16:9 → 8, with entry counts binding only above that. So this went from 3 frames
+   to 4–5 rather than to a uniform 5. Closing it means raising `HIGH_MEMORY_JOINT_MAX` to ~141 MiB,
+   which was **not** done: that is a further memory increase on a platform that gets jetsammed, to
+   buy one cached neighbour for square photos, and it is an owner decision rather than an
+   implementation detail. `squareFence_worstCaseResidentBytes_areClampedByTheJointCeiling` pins the
+   4 (and 2 on low-memory devices) so the shortfall is asserted rather than described.
 
 2. **Eviction priority.** Joint pressure dropped `SourcePlaceholder` before `Watermarked`. Given
    S1, that is backwards: a Watermarked frame whose source is resident is a ~7 ms compose, a source
