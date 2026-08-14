@@ -136,9 +136,14 @@ internal object IosDevicePerfBench {
             coilWarm += timeCoil(loader, ctx, path, cache = true)
         }
 
-        val io = measureIoSizes(paths, listOf(128, bucket))
-        val io128 = io.pooled(128)
-        val ioBucket = io.pooled(bucket)
+        val plain128 = IoMode(128, subsample = false)
+        val sub128 = IoMode(128, subsample = true)
+        val plainBucket = IoMode(bucket, subsample = false)
+        val subBucket = IoMode(bucket, subsample = true)
+        val io = measureIoModes(paths, listOf(plain128, sub128, plainBucket, subBucket))
+        val io128 = io.pooled(plain128)
+        val ioBucket = io.pooled(plainBucket)
+        logSubsampleShape(paths, listOf(128, bucket))
 
         val lap1 = ArrayList<IosProductRootHost.SwitchImageTiming>(paths.size)
         for (path in paths) {
@@ -180,12 +185,16 @@ internal object IosDevicePerfBench {
         log(
             "DEVICE_PERF_SUMMARY n=${paths.size} bucket=$bucket source=$source " +
                 "io128_med=${median(io128)} io${bucket}_med=${median(ioBucket)} " +
-                "io128_first_med=${median(io.first(128))} " +
-                "io128_second_med=${median(io.second(128))} " +
-                "io128_warm_med=${median(io.warmOf(128))} " +
-                "io${bucket}_first_med=${median(io.first(bucket))} " +
-                "io${bucket}_second_med=${median(io.second(bucket))} " +
-                "io${bucket}_warm_med=${median(io.warmOf(bucket))} " +
+                "io128_sub_med=${median(io.pooled(sub128))} " +
+                "io${bucket}_sub_med=${median(io.pooled(subBucket))} " +
+                "io128_first_med=${median(io.first(plain128))} " +
+                "io128_second_med=${median(io.second(plain128))} " +
+                "io128_warm_med=${median(io.warmOf(plain128))} " +
+                "io128_sub_warm_med=${median(io.warmOf(sub128))} " +
+                "io${bucket}_first_med=${median(io.first(plainBucket))} " +
+                "io${bucket}_second_med=${median(io.second(plainBucket))} " +
+                "io${bucket}_warm_med=${median(io.warmOf(plainBucket))} " +
+                "io${bucket}_sub_warm_med=${median(io.warmOf(subBucket))} " +
                 "coil_cold_med=${median(coilCold)} coil_warm_med=${median(coilWarm)} " +
                 "switch_l1_med=${median(lap1.map { it.totalMs })} " +
                 "switch_l1_hits=${lap1.count { it.hit != "miss" }}/${lap1.size} " +
@@ -221,53 +230,87 @@ internal object IosDevicePerfBench {
      * alternates per file so each size takes an equal share of first/second position, and a second
      * lap over the whole list reports warm separately from first-touch.
      */
-    private class IoSamples(sizes: List<Int>) {
-        private val firstPosition = sizes.associateWith { ArrayList<Long>() }
-        private val secondPosition = sizes.associateWith { ArrayList<Long>() }
-        private val warm = sizes.associateWith { ArrayList<Long>() }
-
-        fun addLapOne(size: Int, ms: Long, wasFirst: Boolean) {
-            val bucket = if (wasFirst) firstPosition else secondPosition
-            bucket[size]?.add(ms)
-        }
-
-        fun addWarm(size: Int, ms: Long) {
-            warm[size]?.add(ms)
-        }
-
-        fun first(size: Int): List<Long> = firstPosition[size].orEmpty()
-        fun second(size: Int): List<Long> = secondPosition[size].orEmpty()
-        fun warmOf(size: Int): List<Long> = warm[size].orEmpty()
-
-        /** Order-balanced median input: both positions of lap one. */
-        fun pooled(size: Int): List<Long> = first(size) + second(size)
+    /** One measured decode configuration: requested long edge × subsample strategy. */
+    private data class IoMode(val size: Int, val subsample: Boolean) {
+        val label: String get() = if (subsample) "${size}sub" else "$size"
     }
 
-    private fun measureIoSizes(paths: List<String>, sizes: List<Int>): IoSamples {
-        val distinct = sizes.distinct()
+    private class IoSamples(modes: List<IoMode>) {
+        private val firstPosition = modes.associateWith { ArrayList<Long>() }
+        private val secondPosition = modes.associateWith { ArrayList<Long>() }
+        private val warm = modes.associateWith { ArrayList<Long>() }
+
+        fun addLapOne(mode: IoMode, ms: Long, wasFirst: Boolean) {
+            val bucket = if (wasFirst) firstPosition else secondPosition
+            bucket[mode]?.add(ms)
+        }
+
+        fun addWarm(mode: IoMode, ms: Long) {
+            warm[mode]?.add(ms)
+        }
+
+        fun first(mode: IoMode): List<Long> = firstPosition[mode].orEmpty()
+        fun second(mode: IoMode): List<Long> = secondPosition[mode].orEmpty()
+        fun warmOf(mode: IoMode): List<Long> = warm[mode].orEmpty()
+
+        /** Order-balanced median input: both positions of lap one. */
+        fun pooled(mode: IoMode): List<Long> = first(mode) + second(mode)
+    }
+
+    private fun measureIoModes(paths: List<String>, modes: List<IoMode>): IoSamples {
+        val distinct = modes.distinct()
         val samples = IoSamples(distinct)
         paths.forEachIndexed { index, path ->
-            val order = if (index % 2 == 0) distinct else distinct.reversed()
-            order.forEachIndexed { position, size ->
-                val ms = timeMs { IosImageIODecoder.decodeThumbnail(path, size) }
-                samples.addLapOne(size, ms, wasFirst = position == 0)
+            // Rotate so no single mode always pays a file's first open.
+            val order = List(distinct.size) { distinct[(it + index) % distinct.size] }
+            order.forEachIndexed { position, mode ->
+                val ms = timeMs {
+                    IosImageIODecoder.decodeThumbnail(path, mode.size, allowSubsample = mode.subsample)
+                }
+                samples.addLapOne(mode, ms, wasFirst = position == 0)
                 log(
-                    "DEVICE_PERF_IO lap=1 size=$size pos=${position + 1} ms=$ms " +
+                    "DEVICE_PERF_IO lap=1 mode=${mode.label} pos=${position + 1} ms=$ms " +
                         "path=${path.substringAfterLast('/')}",
                 )
             }
         }
         for (path in paths) {
-            for (size in distinct) {
-                val ms = timeMs { IosImageIODecoder.decodeThumbnail(path, size) }
-                samples.addWarm(size, ms)
+            for (mode in distinct) {
+                val ms = timeMs {
+                    IosImageIODecoder.decodeThumbnail(path, mode.size, allowSubsample = mode.subsample)
+                }
+                samples.addWarm(mode, ms)
                 log(
-                    "DEVICE_PERF_IO lap=2 size=$size ms=$ms " +
+                    "DEVICE_PERF_IO lap=2 mode=${mode.label} ms=$ms " +
                         "path=${path.substringAfterLast('/')}",
                 )
             }
         }
         return samples
+    }
+
+    /** Output size must be identical with and without subsampling — only the decode cost moves. */
+    private fun logSubsampleShape(paths: List<String>, sizes: List<Int>) {
+        for (path in paths) {
+            for (size in sizes) {
+                val plain = runCatching { IosImageIODecoder.decodeThumbnail(path, size) }.getOrNull()
+                val sub = runCatching {
+                    IosImageIODecoder.decodeThumbnail(path, size, allowSubsample = true)
+                }.getOrNull()
+                val meta = runCatching { IosImageIODecoder.metadata(path) }.getOrNull()
+                val factor = if (meta == null) {
+                    -1
+                } else {
+                    IosImageIODecoder.subsampleFactorFor(maxOf(meta.width, meta.height), size)
+                }
+                log(
+                    "DEVICE_PERF_IO_SHAPE size=$size factor=$factor " +
+                        "plain=${plain?.width ?: -1}x${plain?.height ?: -1} " +
+                        "sub=${sub?.width ?: -1}x${sub?.height ?: -1} " +
+                        "path=${path.substringAfterLast('/')}",
+                )
+            }
+        }
     }
 
     private suspend fun stageAlbumDropIfTwelveMp(host: IosProductRootHost): List<String> {

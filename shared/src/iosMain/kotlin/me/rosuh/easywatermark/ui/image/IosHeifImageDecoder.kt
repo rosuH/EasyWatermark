@@ -16,12 +16,19 @@ import okio.BufferedSource
  *
  * Default Coil uses Skia `Image.makeFromEncoded`, which cannot decode HEIF
  * (coil#2318, skiko#942). This decoder uses ImageIO
- * `CGImageSourceCreateThumbnailAtIndex` at a **policy-resolved** long-edge —
- * native subsample + EXIF bake, no full-res decode and no JPEG transcode.
+ * `CGImageSourceCreateThumbnailAtIndex` at a **policy-resolved** long-edge, which
+ * bakes EXIF orientation and avoids a JPEG transcode.
  *
- * [Factory] takes [IosHeifDecodePolicy] so filmstrip (128, never-sampled) and
- * preview/export-adjacent HEIF (up to 3840, infer sampled) share one implementation.
- * Per-request [iosHeifMaxEdgePx] extras override the edge without swapping factories.
+ * It does **not** avoid a full-res decode by itself: `...ThumbnailFromImageAlways`
+ * decodes the whole image and then scales, so a 128 px request on a 12MP HEIC costs
+ * as much as a 1920 px one (measured order-balanced on an iPhone 16 Pro, it costs
+ * *more*). Reduction only moves into the decoder when the policy sets
+ * [IosHeifDecodePolicy.allowSubsample], which adds `kCGImageSourceSubsampleFactor`.
+ *
+ * [Factory] takes [IosHeifDecodePolicy] so filmstrip (128, never-sampled, subsampled)
+ * and preview/export-adjacent HEIF (up to 3840, infer sampled, not subsampled) share
+ * one implementation. Per-request [iosHeifMaxEdgePx] extras override the edge without
+ * swapping factories.
  */
 internal class IosHeifImageDecoder(
     private val result: SourceFetchResult,
@@ -41,6 +48,7 @@ internal class IosHeifImageDecoder(
                 sourcePath = path,
                 maxEdgePx = maxEdge,
                 shouldCache = policy.imageIoShouldCache,
+                allowSubsample = policy.allowSubsample,
             )
         }.getOrNull() ?: return@withContext null
         // Coil DecodeResult owns [decoded.bitmap]. ImageIO already drew pixels once.

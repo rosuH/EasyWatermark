@@ -71,6 +71,33 @@ internal data class IosThumbnailBitmap(
 internal object IosImageIODecoder {
     private const val BYTES_PER_PIXEL = 4
 
+    /** Sentinel for "omit `kCGImageSourceSubsampleFactor`". */
+    const val NO_SUBSAMPLE: Int = 1
+
+    /** The only factors `kCGImageSourceSubsampleFactor` accepts, largest first. */
+    private val SUBSAMPLE_FACTORS = intArrayOf(8, 4, 2)
+
+    /**
+     * Largest documented subsample factor whose subsampled long edge is still at least
+     * [maxEdgePx], or [NO_SUBSAMPLE].
+     *
+     * `kCGImageSourceCreateThumbnailFromImageAlways` decodes the **full** image and then scales,
+     * which is why a 128 px request on a 12MP HEIC is not cheaper than a 1920 px one — measured
+     * order-balanced on an iPhone 16 Pro it is actually *more* expensive, since it pays the same
+     * decode plus a heavier downsample. Subsampling moves that reduction into the decoder.
+     *
+     * Choosing the factor from the source's own long edge is what keeps this quality-safe: the
+     * subsampled image never drops below the requested thumbnail size, so
+     * `kCGImageSourceThumbnailMaxPixelSize` still produces identical output dimensions and never
+     * upscales. If a codec cannot honor the factor, ImageIO returns a *larger* or full-size image,
+     * so the worst case is no speedup rather than a soft thumbnail.
+     */
+    fun subsampleFactorFor(sourceLongEdgePx: Int, maxEdgePx: Int): Int {
+        if (sourceLongEdgePx <= 0 || maxEdgePx <= 0) return NO_SUBSAMPLE
+        return SUBSAMPLE_FACTORS.firstOrNull { sourceLongEdgePx / it >= maxEdgePx }
+            ?: NO_SUBSAMPLE
+    }
+
     fun metadata(sourcePath: String): IosImageMetadata = withUrlSource(sourcePath) { source ->
         readMetadata(source, sourcePath)
     }
@@ -80,8 +107,13 @@ internal object IosImageIODecoder {
     }
 
     /** Decode an orientation-aware ImageIO thumbnail bounded to [maxEdgePx]. */
-    fun decodeThumbnail(sourcePath: String, maxEdgePx: Int): ImageBitmap =
-        decodeThumbnailSkia(sourcePath, maxEdgePx).toComposeImageBitmap()
+    fun decodeThumbnail(
+        sourcePath: String,
+        maxEdgePx: Int,
+        allowSubsample: Boolean = false,
+    ): ImageBitmap =
+        decodeThumbnailSkia(sourcePath, maxEdgePx, allowSubsample = allowSubsample)
+            .toComposeImageBitmap()
 
     /**
      * Same ImageIO thumbnail as [decodeThumbnail], but stop at Skia (no Compose
@@ -91,10 +123,11 @@ internal object IosImageIODecoder {
         sourcePath: String,
         maxEdgePx: Int,
         shouldCache: Boolean = false,
+        allowSubsample: Boolean = false,
     ): org.jetbrains.skia.Image {
         require(maxEdgePx > 0) { "IosImageIODecoder: thumbnail max edge must be positive" }
         return withUrlSource(sourcePath) { source ->
-            decodeThumbnailFromSource(source, maxEdgePx, shouldCache, sourcePath)
+            decodeThumbnailFromSource(source, maxEdgePx, shouldCache, sourcePath, allowSubsample)
         }
     }
 
@@ -106,11 +139,22 @@ internal object IosImageIODecoder {
         sourcePath: String,
         maxEdgePx: Int,
         shouldCache: Boolean = false,
+        allowSubsample: Boolean = false,
     ): IosThumbnailBitmap {
         require(maxEdgePx > 0) { "IosImageIODecoder: thumbnail max edge must be positive" }
         return withUrlSource(sourcePath) { source ->
             val metadata = readMetadata(source, sourcePath)
-            val bitmap = decodeThumbnailBitmapFromSource(source, maxEdgePx, shouldCache, sourcePath)
+            val bitmap = decodeThumbnailBitmapFromSource(
+                source = source,
+                maxEdgePx = maxEdgePx,
+                shouldCache = shouldCache,
+                label = sourcePath,
+                subsampleFactor = if (allowSubsample) {
+                    subsampleFactorFor(maxOf(metadata.width, metadata.height), maxEdgePx)
+                } else {
+                    NO_SUBSAMPLE
+                },
+            )
             IosThumbnailBitmap(metadata, bitmap)
         }
     }
@@ -192,9 +236,17 @@ internal object IosImageIODecoder {
         maxEdgePx: Int,
         shouldCache: Boolean,
         label: String,
+        allowSubsample: Boolean = false,
     ): org.jetbrains.skia.Image {
         val index = CGImageSourceGetPrimaryImageIndex(source)
-        val cgImage = createThumbnail(source, index, maxEdgePx, shouldCache)
+        val subsampleFactor = if (allowSubsample) {
+            // Properties-only read: no pixel decode, same open.
+            val metadata = readMetadata(source, label)
+            subsampleFactorFor(maxOf(metadata.width, metadata.height), maxEdgePx)
+        } else {
+            NO_SUBSAMPLE
+        }
+        val cgImage = createThumbnail(source, index, maxEdgePx, shouldCache, subsampleFactor)
             ?: error("IosImageIODecoder: thumbnail failed for '$label' @ $maxEdgePx")
         IosImageIOOwnershipProbe.didCreateImage()
         try {
@@ -211,9 +263,10 @@ internal object IosImageIODecoder {
         maxEdgePx: Int,
         shouldCache: Boolean,
         label: String,
+        subsampleFactor: Int = NO_SUBSAMPLE,
     ): org.jetbrains.skia.Bitmap {
         val index = CGImageSourceGetPrimaryImageIndex(source)
-        val cgImage = createThumbnail(source, index, maxEdgePx, shouldCache)
+        val cgImage = createThumbnail(source, index, maxEdgePx, shouldCache, subsampleFactor)
             ?: error("IosImageIODecoder: thumbnail failed for '$label' @ $maxEdgePx")
         IosImageIOOwnershipProbe.didCreateImage()
         try {
@@ -267,8 +320,11 @@ internal object IosImageIODecoder {
         index: ULong,
         maxEdgePx: Int,
         shouldCache: Boolean = false,
+        subsampleFactor: Int = NO_SUBSAMPLE,
     ): CGImageRef? {
         val options = NSMutableDictionary().apply {
+            // ...FromImageAlways (not ...IfAbsent): IfAbsent returns whatever embedded thumbnail
+            // the file happens to carry, at an unpredictable and possibly tiny size.
             setObject(NSNumber.numberWithInt(1), forKey = NSString.create(string = "kCGImageSourceCreateThumbnailFromImageAlways"))
             setObject(NSNumber.numberWithInt(1), forKey = NSString.create(string = "kCGImageSourceCreateThumbnailWithTransform"))
             setObject(
@@ -276,6 +332,12 @@ internal object IosImageIODecoder {
                 forKey = NSString.create(string = "kCGImageSourceShouldCache"),
             )
             setObject(NSNumber.numberWithInt(maxEdgePx), forKey = NSString.create(string = "kCGImageSourceThumbnailMaxPixelSize"))
+            if (subsampleFactor > NO_SUBSAMPLE) {
+                setObject(
+                    NSNumber.numberWithInt(subsampleFactor),
+                    forKey = NSString.create(string = "kCGImageSourceSubsampleFactor"),
+                )
+            }
         }
         val cfOptions = CFBridgingRetain(options)
             ?: error("IosImageIODecoder: options bridge failed")

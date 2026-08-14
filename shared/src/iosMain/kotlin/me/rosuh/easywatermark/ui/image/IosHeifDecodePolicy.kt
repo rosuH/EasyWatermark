@@ -22,6 +22,13 @@ internal data class IosHeifDecodePolicy(
     val sampled: SampledMode,
     /** ImageIO `kCGImageSourceShouldCache` — off for scroll thumbs (don't pin decode cache). */
     val imageIoShouldCache: Boolean,
+    /**
+     * Let ImageIO reduce inside the decoder via `kCGImageSourceSubsampleFactor` instead of
+     * decoding the full image and scaling. On for small product-UI thumbs, where the reduction
+     * ratio is large enough for a documented 2/4/8 factor to still exceed the requested edge.
+     * Off for the editor preview path, which stays byte-for-byte as shipped.
+     */
+    val allowSubsample: Boolean = false,
 ) {
     enum class SampledMode {
         /** Always `isSampled=false` (product UI thumbs + LazyRow memory-cache contract). */
@@ -55,6 +62,7 @@ internal data class IosHeifDecodePolicy(
             maxEdgePx = 512,
             sampled = SampledMode.Never,
             imageIoShouldCache = false,
+            allowSubsample = true,
         )
 
         val Preview = IosHeifDecodePolicy(
@@ -64,6 +72,7 @@ internal data class IosHeifDecodePolicy(
             maxEdgePx = 3840,
             sampled = SampledMode.InferFromSource,
             imageIoShouldCache = false,
+            allowSubsample = false,
         )
     }
 }
