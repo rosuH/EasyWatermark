@@ -39,8 +39,9 @@ import org.jetbrains.compose.resources.painterResource
  * (`ic_log_transparent`).
  *
  * When [animate] is true **and** [currentMotionPolicy] allows decorative loops (Full),
- * applies a Compose 1.12 [MeshGradientPainter] color wash (organic vertex motion),
- * masked to the logo alpha via Offscreen + SrcAtop. Reduced/Off → static Image.
+ * applies a Compose 1.12 [MeshGradientPainter] color wash that sweeps like the former
+ * linear gradient (same timing / reverse infinite), masked to logo alpha via Offscreen +
+ * SrcAtop. Reduced/Off → static Image.
  */
 @Composable
 fun BrandLogo(
@@ -80,8 +81,8 @@ fun AboutPageLogo(
  * Shared mesh-gradient-mask logo (Compose 1.12 [MeshGradientPainter]).
  *
  * Palette matches the former linear ColoredImageVIew stops
- * (#FFA51F / #FFD703 / #C0FF39 / #00FFE0). Inner vertices drift over
- * [EwmTheme.motion.logoSweepMs], reverse infinite (Full motion only).
+ * (#FFA51F / #FFD703 / #C0FF39 / #00FFE0). Sweep phase matches production
+ * `pos` 1→0.1 over [EwmTheme.motion.logoSweepMs], reverse infinite (Full only).
  */
 @Composable
 fun GradientMaskedLogo(
@@ -118,32 +119,35 @@ fun GradientMaskedLogo(
 
     val sweepMs = EwmTheme.motion.logoSweepMs
     val transition = rememberInfiniteTransition(label = "logoMesh")
-    val meshShift by transition.animateFloat(
-        initialValue = -1f,
-        targetValue = 1f,
+    // Same phase as the old linear Brush sweep (1 → 0.1, reverse).
+    val pos by transition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.1f,
         animationSpec = infiniteRepeatable(
             animation = tween(durationMillis = sweepMs, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse,
         ),
-        label = "logoMeshShift",
+        label = "logoMeshPos",
     )
 
-    // Painter block runs in DrawScope and re-reads [meshShift] each frame — no realloc.
+    // Painter block re-runs in DrawScope each draw and reads [pos]. Keep one instance.
     val meshPainter = remember {
         MeshGradientPainter(rows = 2, columns = 2, hasBicubicColor = true) {
-            val dx = meshShift * 0.08f
-            val dy = meshShift * 0.06f
+            // Large field travel so the wash is as readable as the old linear sweep.
+            // pos=1 → colors biased top-left/amber; pos=0.1 → pull toward cyan bottom-right.
+            val ox = (1.1f - pos) * 0.9f - 0.45f
+            val oy = pos * 0.65f - 0.25f
             // Row 0
             setVertex(0, 0, Offset(0f, 0f), LogoAmber)
-            setVertex(0, 1, Offset(0.5f + dx * 0.4f, 0f + dy * 0.2f), LogoGold)
+            setVertex(0, 1, Offset((0.5f + ox * 0.55f).coerceIn(0.05f, 0.95f), (0f + oy * 0.35f).coerceIn(0f, 0.45f)), LogoGold)
             setVertex(0, 2, Offset(1f, 0f), LogoLime)
-            // Row 1 (interior drift)
-            setVertex(1, 0, Offset(0f + dy * 0.3f, 0.5f + dx * 0.3f), LogoGold)
-            setVertex(1, 1, Offset(0.45f + dx, 0.4f - dy), LogoLime)
-            setVertex(1, 2, Offset(1f - dy * 0.2f, 0.55f + dx * 0.2f), LogoCyan)
+            // Row 1 (interior carries most of the sweep)
+            setVertex(1, 0, Offset((0f + oy * 0.25f).coerceIn(0f, 0.35f), (0.5f + ox * 0.2f).coerceIn(0.15f, 0.85f)), LogoGold)
+            setVertex(1, 1, Offset((0.4f + ox).coerceIn(0.1f, 0.9f), (0.45f - oy * 0.55f).coerceIn(0.1f, 0.9f)), LogoLime)
+            setVertex(1, 2, Offset((1f - oy * 0.2f).coerceIn(0.65f, 1f), (0.5f + ox * 0.25f).coerceIn(0.15f, 0.85f)), LogoCyan)
             // Row 2
             setVertex(2, 0, Offset(0f, 1f), LogoLime)
-            setVertex(2, 1, Offset(0.5f - dx * 0.3f, 1f), LogoCyan)
+            setVertex(2, 1, Offset((0.5f - ox * 0.4f).coerceIn(0.05f, 0.95f), 1f), LogoCyan)
             setVertex(2, 2, Offset(1f, 1f), LogoCyan)
         }
     }
@@ -163,7 +167,13 @@ fun GradientMaskedLogo(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer { blendMode = BlendMode.SrcAtop }
+                // Read [pos] here so the layer invalidates every frame even if Painter
+                // snapshot observation misses on a given backend.
+                .graphicsLayer {
+                    blendMode = BlendMode.SrcAtop
+                    // Tiny no-op dependence keeps the read live without visible jitter.
+                    translationX = pos * 0.001f
+                }
                 .paint(meshPainter),
         )
     }
