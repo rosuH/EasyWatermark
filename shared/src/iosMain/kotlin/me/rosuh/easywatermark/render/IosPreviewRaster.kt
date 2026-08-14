@@ -27,6 +27,9 @@ internal object IosPreviewRaster {
      */
     const val PREVIEW_MAX_EDGE_PX: Int = PreviewResolutionPolicy.PLACEHOLDER_MAX_EDGE_PX
 
+    /** Watermark icon decode long-edge; independent of the photo preview long-edge. */
+    const val ICON_MAX_EDGE_PX: Int = 256
+
     /**
      * Fast source placeholder (no watermark) for instant filmstrip feedback while raster runs.
      */
@@ -35,7 +38,7 @@ internal object IosPreviewRaster {
         return try {
             IosDecodePurposeProbe.record(IosDecodePurposeProbe.Purpose.SourcePlaceholder)
             val bmp = decodePathThumbnail(sourcePath, maxEdgePx)
-            bench.mark("imageIOThumbnail")
+            bench.mark(IosPreviewBench.STAGE_IMAGE_IO)
             bench.finish(mapOf("path" to sourcePath.substringAfterLast('/'), "w" to bmp.width, "h" to bmp.height))
             bmp
         } catch (t: Throwable) {
@@ -66,13 +69,14 @@ internal object IosPreviewRaster {
         } else {
             IosDecodePurposeProbe.record(IosDecodePurposeProbe.Purpose.WatermarkedPreview)
             val decoded = decodePathThumbnail(sourcePath, maxEdgePx)
-            bench.mark("imageIOThumbnail")
+            bench.mark(IosPreviewBench.STAGE_IMAGE_IO)
             decoded
         }
 
         val icon = if (waterMark.markMode == WatermarkMode.Image) {
             val iconBytes = IosIconPersistence.readIconBytes(waterMark.iconUri)
-            IosImageDecoder.decodeThumbnail(iconBytes, maxEdgePx = 256)
+            IosImageDecoder.decodeThumbnail(iconBytes, maxEdgePx = ICON_MAX_EDGE_PX)
+                .also { bench.mark(IosPreviewBench.STAGE_ICON) }
         } else {
             null
         }
@@ -91,7 +95,7 @@ internal object IosPreviewRaster {
             offsetY = offsetY,
             fontFamily = family,
         )
-        bench.mark("compose")
+        bench.mark(IosPreviewBench.STAGE_COMPOSE)
         bench.finish(
             mapOf(
                 "path" to sourcePath.substringAfterLast('/'),

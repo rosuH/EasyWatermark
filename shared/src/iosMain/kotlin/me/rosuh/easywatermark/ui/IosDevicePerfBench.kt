@@ -121,8 +121,6 @@ internal object IosDevicePerfBench {
 
         val coilCold = ArrayList<Long>(paths.size)
         val coilWarm = ArrayList<Long>(paths.size)
-        val io128 = ArrayList<Long>(paths.size)
-        val ioBucket = ArrayList<Long>(paths.size)
         val ctx = PlatformContext.INSTANCE
         val loader = buildProductImageLoader(ctx)
 
@@ -133,24 +131,26 @@ internal object IosDevicePerfBench {
                 "DEVICE_PERF_SRC path=${path.substringAfterLast('/')} fmt=$fmt " +
                     "w=${meta?.width ?: 0} h=${meta?.height ?: 0}",
             )
-            io128 += timeMs { IosImageIODecoder.decodeThumbnail(path, 128) }
-            ioBucket += timeMs { IosImageIODecoder.decodeThumbnail(path, bucket) }
             coilCold += timeCoil(loader, ctx, path, cache = false)
             timeCoil(loader, ctx, path, cache = true)
             coilWarm += timeCoil(loader, ctx, path, cache = true)
         }
 
-        val lap1 = ArrayList<Pair<String, Long>>(paths.size)
+        val io = measureIoSizes(paths, listOf(128, bucket))
+        val io128 = io.pooled(128)
+        val ioBucket = io.pooled(bucket)
+
+        val lap1 = ArrayList<IosProductRootHost.SwitchImageTiming>(paths.size)
         for (path in paths) {
             val t = host.switchImageAndAwaitForTests(path, awaitNeighbors = false)
-            lap1 += t.hit to t.totalMs
-            log("DEVICE_PERF_SWITCH lap=1 hit=${t.hit} ms=${t.totalMs} path=${path.substringAfterLast('/')}")
+            lap1 += t
+            log(switchLine(lap = 1, timing = t, path = path))
         }
-        val lap2 = ArrayList<Pair<String, Long>>(paths.size)
+        val lap2 = ArrayList<IosProductRootHost.SwitchImageTiming>(paths.size)
         for (path in paths) {
             val t = host.switchImageAndAwaitForTests(path, awaitNeighbors = false)
-            lap2 += t.hit to t.totalMs
-            log("DEVICE_PERF_SWITCH lap=2 hit=${t.hit} ms=${t.totalMs} path=${path.substringAfterLast('/')}")
+            lap2 += t
+            log(switchLine(lap = 2, timing = t, path = path))
         }
 
         val recompose = host.recomposeWatermarkFromCachedSourceForTests()
@@ -161,26 +161,92 @@ internal object IosDevicePerfBench {
             "source" -> "source"
             else -> "miss"
         }
-        val l2Kinds = lap2.groupingBy { hitKind(it.first) }.eachCount()
+        val l2Kinds = lap2.groupingBy { hitKind(it.hit) }.eachCount()
         log(
             "DEVICE_PERF_SUMMARY n=${paths.size} bucket=$bucket source=$source " +
                 "io128_med=${median(io128)} io${bucket}_med=${median(ioBucket)} " +
+                "io128_first_med=${median(io.first(128))} " +
+                "io128_second_med=${median(io.second(128))} " +
+                "io128_warm_med=${median(io.warmOf(128))} " +
+                "io${bucket}_first_med=${median(io.first(bucket))} " +
+                "io${bucket}_second_med=${median(io.second(bucket))} " +
+                "io${bucket}_warm_med=${median(io.warmOf(bucket))} " +
                 "coil_cold_med=${median(coilCold)} coil_warm_med=${median(coilWarm)} " +
-                "switch_l1_med=${median(lap1.map { it.second })} " +
-                "switch_l1_hits=${lap1.count { it.first != "miss" }}/${lap1.size} " +
-                "switch_l2_med=${median(lap2.map { it.second })} " +
-                "switch_l2_hits=${lap2.count { it.first != "miss" }}/${lap2.size} " +
+                "switch_l1_med=${median(lap1.map { it.totalMs })} " +
+                "switch_l1_hits=${lap1.count { it.hit != "miss" }}/${lap1.size} " +
+                "switch_l2_med=${median(lap2.map { it.totalMs })} " +
+                "switch_l2_hits=${lap2.count { it.hit != "miss" }}/${lap2.size} " +
                 "switch_l2_wm=${l2Kinds["watermarked"] ?: 0} " +
                 "switch_l2_source=${l2Kinds["source"] ?: 0} " +
                 "switch_l2_miss=${l2Kinds["miss"] ?: 0} " +
+                switchSplitSummary(lap = 1, timings = lap1) +
+                switchSplitSummary(lap = 2, timings = lap2) +
                 "recompose=$recompose " +
                 "io128_ms=${io128.joinToString(",")} " +
                 "coil_cold_ms=${coilCold.joinToString(",")} " +
-                "switch_l1_ms=${lap1.joinToString(",") { it.second.toString() }} " +
-                "switch_l2_ms=${lap2.joinToString(",") { it.second.toString() }} " +
-                "switch_l2_hits_detail=${lap2.joinToString(",") { it.first }}",
+                "switch_l1_ms=${lap1.joinToString(",") { it.totalMs.toString() }} " +
+                "switch_l2_ms=${lap2.joinToString(",") { it.totalMs.toString() }} " +
+                "switch_l2_hits_detail=${lap2.joinToString(",") { it.hit }}",
         )
         log("DEVICE_PERF_DONE")
+    }
+
+    /**
+     * Per-size ImageIO thumbnail timings with the order bias removed.
+     *
+     * The previous shape timed 128 and then the preview bucket on the next line for the **same**
+     * file, so the bucket sample was always the warm one while 128 always paid that file's first
+     * open — which is why a 1920 decode looked cheaper than a 128 one. Here the size order
+     * alternates per file so each size takes an equal share of first/second position, and a second
+     * lap over the whole list reports warm separately from first-touch.
+     */
+    private class IoSamples(sizes: List<Int>) {
+        private val firstPosition = sizes.associateWith { ArrayList<Long>() }
+        private val secondPosition = sizes.associateWith { ArrayList<Long>() }
+        private val warm = sizes.associateWith { ArrayList<Long>() }
+
+        fun addLapOne(size: Int, ms: Long, wasFirst: Boolean) {
+            val bucket = if (wasFirst) firstPosition else secondPosition
+            bucket[size]?.add(ms)
+        }
+
+        fun addWarm(size: Int, ms: Long) {
+            warm[size]?.add(ms)
+        }
+
+        fun first(size: Int): List<Long> = firstPosition[size].orEmpty()
+        fun second(size: Int): List<Long> = secondPosition[size].orEmpty()
+        fun warmOf(size: Int): List<Long> = warm[size].orEmpty()
+
+        /** Order-balanced median input: both positions of lap one. */
+        fun pooled(size: Int): List<Long> = first(size) + second(size)
+    }
+
+    private fun measureIoSizes(paths: List<String>, sizes: List<Int>): IoSamples {
+        val distinct = sizes.distinct()
+        val samples = IoSamples(distinct)
+        paths.forEachIndexed { index, path ->
+            val order = if (index % 2 == 0) distinct else distinct.reversed()
+            order.forEachIndexed { position, size ->
+                val ms = timeMs { IosImageIODecoder.decodeThumbnail(path, size) }
+                samples.addLapOne(size, ms, wasFirst = position == 0)
+                log(
+                    "DEVICE_PERF_IO lap=1 size=$size pos=${position + 1} ms=$ms " +
+                        "path=${path.substringAfterLast('/')}",
+                )
+            }
+        }
+        for (path in paths) {
+            for (size in distinct) {
+                val ms = timeMs { IosImageIODecoder.decodeThumbnail(path, size) }
+                samples.addWarm(size, ms)
+                log(
+                    "DEVICE_PERF_IO lap=2 size=$size ms=$ms " +
+                        "path=${path.substringAfterLast('/')}",
+                )
+            }
+        }
+        return samples
     }
 
     private suspend fun stageAlbumDropIfTwelveMp(host: IosProductRootHost): List<String> {
@@ -287,6 +353,27 @@ internal object IosDevicePerfBench {
         )
         return ms
     }
+
+    private fun switchLine(
+        lap: Int,
+        timing: IosProductRootHost.SwitchImageTiming,
+        path: String,
+    ): String =
+        "DEVICE_PERF_SWITCH lap=$lap hit=${timing.hit} ms=${timing.totalMs} " +
+            "decode=${timing.decodeMs} compose=${timing.composeMs} " +
+            "icon=${timing.iconMs} dispatch=${timing.dispatchMs} other=${timing.otherMs} " +
+            "path=${path.substringAfterLast('/')}"
+
+    /** `other` is the named remainder: Session propagation, cache/mutex, Skia→Compose repack. */
+    private fun switchSplitSummary(
+        lap: Int,
+        timings: List<IosProductRootHost.SwitchImageTiming>,
+    ): String =
+        "switch_l${lap}_decode_med=${median(timings.map { it.decodeMs })} " +
+            "switch_l${lap}_compose_med=${median(timings.map { it.composeMs })} " +
+            "switch_l${lap}_icon_med=${median(timings.map { it.iconMs })} " +
+            "switch_l${lap}_dispatch_med=${median(timings.map { it.dispatchMs })} " +
+            "switch_l${lap}_other_med=${median(timings.map { it.otherMs })} "
 
     private inline fun timeMs(block: () -> Unit): Long {
         val mark = TimeSource.Monotonic.markNow()

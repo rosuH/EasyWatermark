@@ -435,36 +435,37 @@ class IosProductRootHost(
     ): SwitchImageTiming {
         require(path.isNotBlank()) { "switchImageAndAwaitForTests: blank path" }
         val start = kotlin.time.TimeSource.Monotonic.markNow()
+        // Attribution window covers only the focus paint; ±2 neighbor warming runs after the
+        // switch wall clock and must not be charged to it.
+        IosPreviewBench.Attribution.begin()
         val previewBucket = committedPreviewBucket
         val instantHit = paintWatermarkedCacheHitIfPresent(path)
+        val dispatchStart = kotlin.time.TimeSource.Monotonic.markNow()
         services.session.dispatchAndAwait(
             me.rosuh.easywatermark.session.AppIntent.SelectCurrent(
                 me.rosuh.easywatermark.data.model.MediaRef(path),
             ),
         )
+        val dispatchMs = dispatchStart.elapsedNow().inWholeMilliseconds
         if (instantHit) {
+            val timing = switchTiming(start, dispatchMs, "wm_optimistic")
             previewGen += 1
             // Match product path: warm ±2 after paint so sequential N=50 hits neighbors.
             if (awaitNeighbors) {
                 prefetchNeighborWatermarkedPreviewsAndAwait(path, previewGen)
             }
-            return SwitchImageTiming(
-                totalMs = start.elapsedNow().inWholeMilliseconds,
-                hit = "wm_optimistic",
-            )
+            return timing
         }
         previewImages.cached(watermarkedPreviewKey(path, previewBucket))?.let {
             previewBitmap = it
             previewSourcePath = path
             watermarkedPreviewSourcePath = path
+            val timing = switchTiming(start, dispatchMs, "wm")
             previewGen += 1
             if (awaitNeighbors) {
                 prefetchNeighborWatermarkedPreviewsAndAwait(path, previewGen)
             }
-            return SwitchImageTiming(
-                totalMs = start.elapsedNow().inWholeMilliseconds,
-                hit = "wm",
-            )
+            return timing
         }
         val sourceHit = previewImages.peekCached(sourcePreviewKey(path, previewBucket)) != null
         previewImages.peekCached(sourcePreviewKey(path, previewBucket))?.let { hit ->
@@ -482,12 +483,36 @@ class IosProductRootHost(
             forceOffsetX = info?.offsetX,
             forceOffsetY = info?.offsetY,
         )
+        val timing = switchTiming(start, dispatchMs, if (sourceHit) "source" else "miss")
         if (awaitNeighbors && gen == previewGen) {
             prefetchNeighborWatermarkedPreviewsAndAwait(path, gen)
         }
+        return timing
+    }
+
+    /**
+     * Close the [IosPreviewBench.Attribution] window and split the switch wall clock into the
+     * raster stages that ran inside it. `otherMs` is the deliberately-named remainder: Session
+     * state propagation, repository mutex/cache work, Skia→Compose repack, and dispatch hops.
+     */
+    private fun switchTiming(
+        start: kotlin.time.TimeSource.Monotonic.ValueTimeMark,
+        dispatchMs: Long,
+        hit: String,
+    ): SwitchImageTiming {
+        val totalMs = start.elapsedNow().inWholeMilliseconds
+        val stages = IosPreviewBench.Attribution.end()
+        val decodeMs = IosPreviewBench.Attribution.decodeMs(stages)
+        val composeMs = IosPreviewBench.Attribution.composeMs(stages)
+        val iconMs = IosPreviewBench.Attribution.iconMs(stages)
         return SwitchImageTiming(
-            totalMs = start.elapsedNow().inWholeMilliseconds,
-            hit = if (sourceHit) "source" else "miss",
+            totalMs = totalMs,
+            hit = hit,
+            dispatchMs = dispatchMs,
+            decodeMs = decodeMs,
+            composeMs = composeMs,
+            iconMs = iconMs,
+            otherMs = (totalMs - dispatchMs - decodeMs - composeMs - iconMs).coerceAtLeast(0L),
         )
     }
 
@@ -495,6 +520,11 @@ class IosProductRootHost(
     internal data class SwitchImageTiming(
         val totalMs: Long,
         val hit: String,
+        val dispatchMs: Long = 0L,
+        val decodeMs: Long = 0L,
+        val composeMs: Long = 0L,
+        val iconMs: Long = 0L,
+        val otherMs: Long = 0L,
     )
 
     internal fun pinPreviewBucketForBench(edgePx: Int) {
