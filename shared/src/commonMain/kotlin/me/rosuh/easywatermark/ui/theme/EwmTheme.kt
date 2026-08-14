@@ -164,6 +164,12 @@ object EwmMotionTokens {
 
     /** Soft caret blink half-cycle in text content summary (decorative loop). */
     const val textCaretBlinkMs: Int = 900
+
+    /**
+     * Content editor theme (ADR-0027) brand → photo seed ColorScheme settle.
+     * Keep short: longer feels like a full UI refresh after first image load.
+     */
+    const val contentThemeTransitionMs: Int = 240
 }
 
 /** State colors (error / success washes) — not a full semantic palette. */

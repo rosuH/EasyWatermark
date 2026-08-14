@@ -56,6 +56,29 @@ class ContentEditorThemeTest {
         assertFalse(seq.isCurrent(first), "stale filmstrip job must not apply after newer seedKey")
         assertEquals(second, first + 1)
     }
+
+    @Test
+    fun targetScheme_nullIsBrandDark_sameAsAppTheme() {
+        val brand = ContentEditorTheme.targetScheme(null)
+        assertEquals(DarkColorScheme.background, brand.background)
+        assertEquals(DesignEditorBg, brand.background)
+        assertEquals(DarkColorScheme.primary, brand.primary)
+    }
+
+    @Test
+    fun targetScheme_photoWinsWhenPresent() {
+        val photo = ContentEditorTheme.darkSchemeFromSeed(Color(0xFF1565C0))
+        assertEquals(photo.primary, ContentEditorTheme.targetScheme(photo).primary)
+        assertNotEquals(DarkColorScheme.primary, photo.primary)
+    }
+
+    @Test
+    fun contentThemeTransition_isShortAndMotionAware() {
+        assertEquals(240, EwmTheme.motion.contentThemeTransitionMs)
+        assertEquals(240, motionDurationMs(MotionPolicy.Full, EwmTheme.motion.contentThemeTransitionMs))
+        assertEquals(96, motionDurationMs(MotionPolicy.Reduced, EwmTheme.motion.contentThemeTransitionMs))
+        assertEquals(0, motionDurationMs(MotionPolicy.Off, EwmTheme.motion.contentThemeTransitionMs))
+    }
 }
 
 private fun Color.luminance(): Float {

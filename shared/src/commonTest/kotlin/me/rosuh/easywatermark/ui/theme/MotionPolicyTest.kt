@@ -77,6 +77,8 @@ class MotionPolicyTest {
         assertTrue(EwmTheme.motion.previewCrossfadeMaxMs >= EwmTheme.motion.previewCrossfadeMinMs)
         assertTrue(EwmTheme.motion.firstPreviewRevealMs > 0)
         assertTrue(EwmTheme.motion.exportCheckAppearMs > 0)
+        assertTrue(EwmTheme.motion.contentThemeTransitionMs > 0)
+        assertTrue(EwmTheme.motion.contentThemeTransitionMs <= EwmTheme.motion.shellShortMs)
         // Off maps all to 0
         assertEquals(0, motionDurationMs(MotionPolicy.Off, EwmTheme.motion.exportWipeMs))
     }

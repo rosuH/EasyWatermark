@@ -39,7 +39,7 @@ _Avoid:_ one “dynamic color” flag meaning both; calling iOS/Desktop “Mater
 ### 3. Content editor theme (all platforms)
 
 - **Scope:** entire **Editor** surface (preview + inspector / supporting pane), a **full** dark M3 `ColorScheme` — not a single background wash.
-- **Seed:** currently selected session image (filmstrip focus). Change selection → recompute (debounce + short transition).
+- **Seed:** currently selected session image (filmstrip focus). Change selection → recompute (debounce + short transition). Hosts must apply brand→photo via a **single** `MaterialTheme` call site (no if/else remount of the Editor tree) so first-image seed does not flash as a full UI refresh.
 - **Default:** **on**.
 - **Priority:** while Editor is shown and follow-photo is on, **content theme outranks** wallpaper dynamic color on Android for that surface.
 - **Brand:** **pure seed** — no harmonize toward brand amber `#FFB800` inside Editor. Amber returns when content theme is off or user leaves Editor.

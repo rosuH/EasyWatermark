@@ -1,9 +1,12 @@
 package me.rosuh.easywatermark.ui.theme
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -12,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamicColorScheme
+import com.materialkolor.ktx.animateColorScheme
 import com.materialkolor.ktx.themeColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -56,6 +60,13 @@ object ContentEditorTheme {
             isDark = true,
             style = PaletteStyle.TonalSpot,
         )
+
+    /**
+     * Target scheme for the Editor host. Photo scheme when ready; otherwise the same static
+     * dark brand scheme [AppTheme] uses. Keeping one target type lets the host wrap content in a
+     * **single** [MaterialTheme] instead of if/else remounting the Editor tree (first-image jump).
+     */
+    fun targetScheme(photoScheme: ColorScheme?): ColorScheme = photoScheme ?: DarkColorScheme
 }
 
 /**
@@ -76,15 +87,19 @@ internal class ContentThemeJobSequencer {
 /**
  * Applies content editor theme over [content] when [enabled] and a seed can be derived from
  * [seedBitmap]. Debounces selection changes. On failure / null bitmap / disabled → static brand
- * [AppTheme].
+ * scheme (same tokens as [AppTheme]).
  *
  * Stale jobs: each launch takes a [ContentThemeJobSequencer] token; results apply only if still
  * current after debounce + Default work (and [ensureActive] after suspension). Rapid seedKey
  * changes cancel the prior [LaunchedEffect] and also fail the token check.
  *
+ * **No if/else theme remount:** brand and photo share one [MaterialTheme] call site so the first
+ * photo seed does not dispose/recreate the Editor subtree (that remount looked like a full UI
+ * refresh). ADR-0027 short transition via MaterialKolor [animateColorScheme].
+ *
  * [onChromeColorChange] reports the Editor chrome fill for hosts that paint **outside** this
- * subtree (Desktop root Box / AWT title band). Emits [EditorChromeColor.brand] when content
- * theme is off or seed is not ready.
+ * subtree (Desktop root Box / AWT title band). Tracks the **animated** background so external
+ * chrome does not hard-cut ahead of the Compose surface.
  *
  * Call only around the **Editor** surface so Launch/About keep brand (+ Android wallpaper).
  */
@@ -120,7 +135,6 @@ fun ContentEditorThemeHost(
         if (seedBitmap == null) {
             if (jobSeq.isCurrent(token)) {
                 scheme = null
-                onChromeColorChange?.invoke(EditorChromeColor.brand)
             }
             return@LaunchedEffect
         }
@@ -139,17 +153,25 @@ fun ContentEditorThemeHost(
         ensureActive()
         if (!jobSeq.isCurrent(token)) return@LaunchedEffect
         scheme = next
-        onChromeColorChange?.invoke(EditorChromeColor.resolve(next))
     }
 
-    val active = scheme
-    if (active != null) {
-        MaterialTheme(
-            colorScheme = active,
-            shapes = EwmMaterialShapes,
-            content = content,
-        )
-    } else {
-        AppTheme(darkTheme = true, content = content)
+    val target = ContentEditorTheme.targetScheme(scheme)
+    val transitionMs = motionDurationMs(
+        currentMotionPolicy(),
+        EwmTheme.motion.contentThemeTransitionMs,
+    )
+    val animated = animateColorScheme(
+        colorScheme = target,
+        animationSpec = {
+            tween(durationMillis = transitionMs, easing = FastOutSlowInEasing)
+        },
+    )
+    SideEffect {
+        onChromeColorChange?.invoke(animated.background)
     }
+    MaterialTheme(
+        colorScheme = animated,
+        shapes = EwmMaterialShapes,
+        content = content,
+    )
 }
