@@ -18,12 +18,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.paint
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.MeshGradientPainter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
@@ -39,8 +39,8 @@ import org.jetbrains.compose.resources.painterResource
  * (`ic_log_transparent`).
  *
  * When [animate] is true **and** [currentMotionPolicy] allows decorative loops (Full),
- * applies production sweeping multi-stop gradient (2.5s reverse infinite).
- * Reduced/Off → static Image (I3 MotionPolicy).
+ * applies a Compose 1.12 [MeshGradientPainter] color wash (organic vertex motion),
+ * masked to the logo alpha via Offscreen + SrcAtop. Reduced/Off → static Image.
  */
 @Composable
 fun BrandLogo(
@@ -58,7 +58,7 @@ fun BrandLogo(
 }
 
 /**
- * About-page hero logo (`ic_logo_about_page`). Same gradient animation as launch.
+ * About-page hero logo (`ic_logo_about_page`). Same mesh animation as launch.
  * Default size matches production xxhdpi asset (192px → **64.dp**).
  */
 @Composable
@@ -77,10 +77,11 @@ fun AboutPageLogo(
 }
 
 /**
- * Shared gradient-mask logo (parity with Android [me.rosuh.easywatermark.ui.widget.ColoredImageVIew]).
+ * Shared mesh-gradient-mask logo (Compose 1.12 [MeshGradientPainter]).
  *
- * Gradient stops match production static palette (#FFA51F → #FFD703 → #C0FF39 → #00FFE0).
- * Sweep position animates 1→0.1 over [EwmTheme.motion.logoSweepMs], reverse infinite (Full only).
+ * Palette matches the former linear ColoredImageVIew stops
+ * (#FFA51F / #FFD703 / #C0FF39 / #00FFE0). Inner vertices drift over
+ * [EwmTheme.motion.logoSweepMs], reverse infinite (Full motion only).
  */
 @Composable
 fun GradientMaskedLogo(
@@ -90,22 +91,21 @@ fun GradientMaskedLogo(
     size: Dp = 180.dp,
     animate: Boolean = true,
 ) {
-    // I3: Reduced/Off suppress infinite decorative sweep even if caller passed animate=true.
+    // I3: Reduced/Off suppress infinite decorative mesh even if caller passed animate=true.
     val motionOk = motionAllowsDecorativeLoop(currentMotionPolicy())
-    // First paint stays static so About/Launch open does not pay Offscreen+infiniteTransition
-    // setup on the same frame as route AnimatedContent + first resource decode (cold open jank).
-    var sweepReady by remember { mutableStateOf(false) }
+    // First paint stays static so About/Launch open does not pay Offscreen+mesh setup
+    // on the same frame as route AnimatedContent + first resource decode (cold open jank).
+    var meshReady by remember { mutableStateOf(false) }
     LaunchedEffect(animate, motionOk) {
         if (!animate || !motionOk) {
-            sweepReady = false
+            meshReady = false
             return@LaunchedEffect
         }
-        // Two frames: first layout/draw of static logo, then enable sweep.
         withFrameNanos { }
         withFrameNanos { }
-        sweepReady = true
+        meshReady = true
     }
-    val effectiveAnimate = animate && motionOk && sweepReady
+    val effectiveAnimate = animate && motionOk && meshReady
     if (!effectiveAnimate) {
         Image(
             painter = painter,
@@ -117,35 +117,42 @@ fun GradientMaskedLogo(
     }
 
     val sweepMs = EwmTheme.motion.logoSweepMs
-    val transition = rememberInfiniteTransition(label = "logoGradient")
-    val pos by transition.animateFloat(
-        initialValue = 1f,
-        targetValue = 0.1f,
+    val transition = rememberInfiniteTransition(label = "logoMesh")
+    val meshShift by transition.animateFloat(
+        initialValue = -1f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(
             animation = tween(durationMillis = sweepMs, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse,
         ),
-        label = "logoGradientPos",
+        label = "logoMeshShift",
     )
+
+    // Painter block runs in DrawScope and re-reads [meshShift] each frame — no realloc.
+    val meshPainter = remember {
+        MeshGradientPainter(rows = 2, columns = 2, hasBicubicColor = true) {
+            val dx = meshShift * 0.08f
+            val dy = meshShift * 0.06f
+            // Row 0
+            setVertex(0, 0, Offset(0f, 0f), LogoAmber)
+            setVertex(0, 1, Offset(0.5f + dx * 0.4f, 0f + dy * 0.2f), LogoGold)
+            setVertex(0, 2, Offset(1f, 0f), LogoLime)
+            // Row 1 (interior drift)
+            setVertex(1, 0, Offset(0f + dy * 0.3f, 0.5f + dx * 0.3f), LogoGold)
+            setVertex(1, 1, Offset(0.45f + dx, 0.4f - dy), LogoLime)
+            setVertex(1, 2, Offset(1f - dy * 0.2f, 0.55f + dx * 0.2f), LogoCyan)
+            // Row 2
+            setVertex(2, 0, Offset(0f, 1f), LogoLime)
+            setVertex(2, 1, Offset(0.5f - dx * 0.3f, 1f), LogoCyan)
+            setVertex(2, 2, Offset(1f, 1f), LogoCyan)
+        }
+    }
 
     Box(
         modifier = modifier
             .size(size)
             // Offscreen layer so SrcAtop masks the logo alpha (same as Canvas.saveLayer).
-            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-            .drawWithCache {
-                val w = this.size.width
-                val h = this.size.height
-                val brush = Brush.linearGradient(
-                    colorStops = LogoGradientStops,
-                    start = Offset((1.1f - pos) * w * 2f, pos * h),
-                    end = Offset(0f, h),
-                )
-                onDrawWithContent {
-                    drawContent()
-                    drawRect(brush = brush, blendMode = BlendMode.SrcAtop)
-                }
-            },
+            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen },
     ) {
         Image(
             painter = painter,
@@ -153,13 +160,17 @@ fun GradientMaskedLogo(
             contentScale = ContentScale.Fit,
             modifier = Modifier.fillMaxSize(),
         )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { blendMode = BlendMode.SrcAtop }
+                .paint(meshPainter),
+        )
     }
 }
 
-/** Production ColoredImageVIew non-dynamic color stops + positions. */
-private val LogoGradientStops: Array<Pair<Float, Color>> = arrayOf(
-    0f to Color(0xFFFFA51F),
-    0.5f to Color(0xFFFFD703),
-    0.7f to Color(0xFFC0FF39),
-    0.99f to Color(0xFF00FFE0),
-)
+/** Production logo palette (former linear ColoredImageVIew stops). */
+private val LogoAmber = Color(0xFFFFA51F)
+private val LogoGold = Color(0xFFFFD703)
+private val LogoLime = Color(0xFFC0FF39)
+private val LogoCyan = Color(0xFF00FFE0)

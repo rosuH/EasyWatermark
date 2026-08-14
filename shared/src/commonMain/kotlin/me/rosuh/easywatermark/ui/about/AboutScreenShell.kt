@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -168,20 +167,19 @@ fun AboutScreen(
                 )
             },
     ) {
-        // Same inset + bottom chrome geometry as [LaunchScreen]: back sits where Launch's
-        // about entry is (BottomCenter + 3% height), so open/close keeps one thumb target.
-        BoxWithConstraints(
+        // Back at top-start (production About / Material convention). Launch keeps its
+        // info entry at BottomCenter; About does not mirror that thumb target.
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .safeDrawingPadding(),
         ) {
-            val bottomChromePad = maxHeight * 0.03f
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    // Clear the floating back IconButton (48.dp) + Launch-matched bottom pad.
-                    .padding(bottom = 48.dp + bottomChromePad)
+                    // Clear the floating back IconButton at top (48.dp).
+                    .padding(top = 48.dp)
                     .testTag(if (useLargeLayout) "aboutLargeLayout" else "aboutCompactLayout"),
                 horizontalAlignment = if (useLargeLayout) Alignment.CenterHorizontally else Alignment.Start,
             ) {
@@ -252,8 +250,7 @@ fun AboutScreen(
             IconButton(
                 onClick = onBack,
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = bottomChromePad)
+                    .align(Alignment.TopStart)
                     .testTag("aboutBack"),
             ) {
                 Icon(

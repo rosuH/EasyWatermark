@@ -11,6 +11,7 @@ toolsGradle = "7.4.2"
 ktlintGradle = "11.3.1"
 androidxActivity = "1.13.0"
 androidxConstraintLayoutCompose = "1.1.2"
+# Keep Navigation on 2.10.0-beta01: 2.10.0-rc01 declares minSdk 24; product minSdk stays 23.
 androidxNavigationCompose = "2.10.0-beta01"
 kotlinxSerialization = "1.11.0"
 coroutines = "1.11.0"
@@ -23,7 +24,7 @@ room = "2.8.4"
 # S4d-142/S4d-231: androidx.sqlite — off-Android BundledSQLiteDriver only (desktop/iOS).
 # Absolute latest published: 2.7.0. Android stays framework SupportSQLite compatibility mode.
 sqlite = "2.7.0"
-datastorePreference = "1.3.0-alpha09"
+datastorePreference = "1.3.0-alpha10"
 exifInterface = "1.4.2"
 compressor = "3.0.1"
 # Android-only custom color dialog (production parity; Compose ColorOption edge).
@@ -37,16 +38,22 @@ extJunit = "1.3.0"
 # Align with androidx.test:core resolved by ext:junit (1.7.0 line).
 androidxTestRunner = "1.7.0"
 robolectric = "4.16.1"
-# Absolute latest Compose BOM (Google Maven). BOM governs compose UI/foundation/etc.
-# Material3 explicit pin may skew BOM — owner absolute-latest policy.
-androidxComposeBom = "2026.07.01"
-# Absolute latest CMP plugin (Maven Central), non-SNAPSHOT.
-composeMultiplatform = "1.12.0-beta03"
+# Compose Aug '26 stable BOM → UI/foundation/runtime 1.12.0.
+# Keep artifact as compose-bom (not bom-alpha): alpha 2026.08.00 jumps UI to 1.13.0-alpha01.
+# Material3 MUST stay an explicit 1.5.x-alpha pin matching CMP (JetBrains material3
+# 1.12.0-alpha03 → androidx 1.5.0-alpha22). Use platform() not enforcedPlatform so the
+# stable BOM cannot force material3 back to 1.4.0 (EditorTopBar NoSuchMethodError).
+# Rollback HEAD before this Compose slice: cf847acc.
+androidxComposeBom = "2026.08.00"
+# Absolute latest CMP plugin (Maven Central), non-SNAPSHOT. Based on Compose UI 1.12.0-rc01.
+composeMultiplatform = "1.12.0-rc01"
 accompanist = "0.37.3"
 # C3 Tier-2a (S4d-38): Coil 3 (io.coil-kt.coil3, package coil3). Compose-only; no network artifact
 # (all image models are local Uris); coil-svg dropped (SvgDecoder was never registered).
 coil = "3.5.0"
-material3 = "1.5.0-alpha25"
+# Align with CMP JetBrains material3:1.12.0-alpha03 (= androidx 1.5.0-alpha22). Do not
+# float ahead of CMP — :app BOM must not win with stable 1.4.0 either.
+material3 = "1.5.0-alpha22"
 # ADR-0027: content editor theme (MCU KMP). Single dep slice; wallpaper stays system APIs.
 materialKolor = "5.0.0"
 
@@ -81,9 +88,8 @@ stability-analyzer = { id = "com.github.skydoves.compose.stability.analyzer", ve
 agp = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
 ksp = { module = "com.google.devtools.ksp:symbol-processing", version.ref = "ksp" }
-# S4d-361: use official alpha BOM so Material3 pre-release (catalog material3) is not forced to stable 1.4.0.
-# Alias name + call sites unchanged; artifact is compose-bom-alpha (Google Maven latest matching 2026.07.01).
-androidx-compose-bom = { group = "androidx.compose", name = "compose-bom-alpha", version.ref = "androidxComposeBom" }
+# Compose Aug '26: stable compose-bom (1.12.0). Material3 pre-release stays an explicit catalog pin.
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "androidxComposeBom" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 androidx-compose-material3-windowSizeClass = { group = "androidx.compose.material3", name = "material3-window-size-class" }
 androidx-compose-ui-ui = { group = "androidx.compose.ui", name = "ui" }

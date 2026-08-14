@@ -42,11 +42,25 @@ configurations.all {
                 !selector.group.startsWith("org.jetbrains.compose.components")
             ) {
                 val androidxGroup = selector.group.replaceFirst("org.jetbrains.compose", "androidx.compose")
+                // JetBrains Material3 version line (1.12.0-alpha03) ≠ androidx (1.5.0-alpha22).
+                val version = if (selector.group == "org.jetbrains.compose.material3") {
+                    libs.versions.material3.get()
+                } else {
+                    selector.version
+                }
                 useTarget(
-                    "$androidxGroup:${selector.module}:${selector.version}",
+                    "$androidxGroup:${selector.module}:$version",
                     "C4.3: unify Compose lineage to AndroidX on Android",
                 )
             }
+        }
+    }
+    // Stable compose-bom lists material3 1.4.0; keep the whole material3 atomic group on the
+    // catalog pin so EditorTopBar's TopAppBar matches the CMP-compiled signature.
+    resolutionStrategy.eachDependency {
+        if (requested.group == "androidx.compose.material3") {
+            useVersion(libs.versions.material3.get())
+            because("Pin androidx Material3 to catalog (CMP-aligned); ignore stable BOM 1.4.0")
         }
     }
 }
@@ -235,11 +249,11 @@ dependencies {
 //    val composeBom = platform("androidx.compose:compose-bom:2023.10.00")
 //    implementation(composeBom)
 //    androidTestImplementation(composeBom)
-    implementation(enforcedPlatform(libs.androidx.compose.bom))
-    androidTestImplementation(enforcedPlatform(libs.androidx.compose.bom))
-    //    implementation("androidx.compose.material3:material3:1.2.0-alpha09")
-//    implementation("androidx.compose.material3:material3-window-size-class:1.1.2")
-//    implementation(libs.material)
+    implementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    // Material3 stays an explicit catalog pin (1.5.0-alpha22 ↔ CMP). Do not use
+    // enforcedPlatform(compose-bom): stable BOM lists material3 1.4.0 and would win,
+    // causing EditorTopBar TopAppBar NoSuchMethodError at runtime.
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material3.windowSizeClass)
 //    implementation("androidx.compose.ui:ui")
