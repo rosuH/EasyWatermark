@@ -786,6 +786,9 @@ class IosProductRootHost(
                 if (IosDevicePerfBench.requested()) {
                     IosDevicePerfBench.run(this@IosProductRootHost)
                 }
+                if (IosDevicePerfBench.photoKitRequested()) {
+                    IosDevicePerfBench.runPhotoKit(this@IosProductRootHost)
+                }
                 if (IosCgImageTransferDeviceBench.requested()) {
                     withContext(Dispatchers.Default) {
                         IosCgImageTransferDeviceBench.run()

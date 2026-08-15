@@ -27,6 +27,8 @@
 	<true/>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Save your watermarked photo to your library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Used to show faster previews of the photos you pick. Everything is processed on your device — no network, no upload, no tracking.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

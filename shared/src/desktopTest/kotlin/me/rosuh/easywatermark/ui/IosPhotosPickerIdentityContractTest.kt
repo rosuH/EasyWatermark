@@ -215,6 +215,36 @@ class IosPhotosPickerIdentityContractTest {
     }
 
     @Test
+    fun p2_product_host_switch_path_does_not_call_photokit() {
+        val host = resolveRepoFile(
+            "shared/src/iosMain/kotlin/me/rosuh/easywatermark/ui/IosProductRootHost.kt",
+        ).readText()
+        val onImageStart = host.indexOf("onImageSelected =")
+        val bindStart = host.indexOf("private suspend fun bindProgressiveFocus")
+        assertTrue(onImageStart >= 0 && bindStart >= 0)
+        val onImage = host.substring(onImageStart, (onImageStart + 2500).coerceAtMost(host.length))
+        val bind = host.substring(bindStart, (bindStart + 3500).coerceAtMost(host.length))
+        assertFalse("PHImageManager" in onImage)
+        assertFalse("IosPhotoKitImageSource" in onImage)
+        assertFalse("IosPhotoLibraryAccess" in onImage)
+        assertFalse("requestOnceIfNeeded" in onImage)
+        assertFalse("PHImageManager" in bind)
+        assertFalse("IosPhotoKitImageSource" in bind)
+        assertFalse("IosPhotoLibraryAccess" in bind)
+        assertTrue(
+            "IosDevicePerfBench.photoKitRequested" in host,
+            "PhotoKit bench entry may exist; production switch path must stay PhotoKit-free",
+        )
+        val plist = resolveRepoFile("iosApp/iosApp/Info.plist").readText()
+        assertTrue("NSPhotoLibraryUsageDescription" in plist)
+        assertTrue("NSPhotoLibraryAddUsageDescription" in plist)
+        assertTrue(
+            "Save your watermarked photo to your library." in plist,
+            "Add-only usage string must stay unchanged",
+        )
+    }
+
+    @Test
     fun pbxproj_includes_photos_picker_batch_gate() {
         val pbx = resolveRepoFile("iosApp/iosApp.xcodeproj/project.pbxproj").readText()
         assertTrue(

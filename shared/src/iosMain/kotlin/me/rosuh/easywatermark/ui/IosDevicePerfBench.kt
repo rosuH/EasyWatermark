@@ -12,8 +12,11 @@ import kotlinx.coroutines.delay
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.render.IosByteArrayInterop
 import me.rosuh.easywatermark.render.IosImageIODecoder
+import me.rosuh.easywatermark.render.IosPhotoKitImageSource
 import me.rosuh.easywatermark.render.IosWatermarkRenderer
 import me.rosuh.easywatermark.render.PreviewResolutionPolicy
+import me.rosuh.easywatermark.session.IosAssetIdentityRegistry
+import me.rosuh.easywatermark.session.IosPhotoLibraryAccess
 import me.rosuh.easywatermark.session.IosPickGenerationGate
 import me.rosuh.easywatermark.ui.image.ProductThumb
 import me.rosuh.easywatermark.ui.image.buildProductImageLoader
@@ -57,9 +60,21 @@ import androidx.compose.ui.unit.LayoutDirection
  */
 internal object IosDevicePerfBench {
     private const val ARG = "-ewmDevicePerfBench"
+    private const val PHOTO_KIT_ARG = "-ewmPhotoKitFastPath"
+    private const val PHOTO_KIT_DEFAULTS_KEY = "ewmPhotoKitFastPath"
+    private const val PHOTO_KIT_DEADLINE_MS = 250L
 
     fun requested(): Boolean =
         NSProcessInfo.processInfo.arguments.any { it?.toString() == ARG }
+
+    /** Bench-only. Default production launch must stay false. */
+    fun photoKitRequested(): Boolean {
+        if (NSProcessInfo.processInfo.arguments.any { it?.toString() == PHOTO_KIT_ARG }) {
+            return true
+        }
+        return platform.Foundation.NSUserDefaults.standardUserDefaults
+            .boolForKey(PHOTO_KIT_DEFAULTS_KEY)
+    }
 
     private fun log(line: String) {
         println(line)
@@ -217,6 +232,45 @@ internal object IosDevicePerfBench {
                 "switch_l1_ms=${lap1.joinToString(",") { it.totalMs.toString() }} " +
                 "switch_l2_ms=${lap2.joinToString(",") { it.totalMs.toString() }} " +
                 "switch_l2_hits_detail=${lap2.joinToString(",") { it.hit }}",
+        )
+        log("DEVICE_PERF_DONE")
+    }
+
+    /**
+     * ADR-0029 P2 measurement arm. Does **not** paint the editor or write preview caches.
+     * Redacted: no paths, no localIdentifiers.
+     */
+    suspend fun runPhotoKit(host: IosProductRootHost) {
+        val status = IosPhotoLibraryAccess.requestOnceIfNeeded()
+        val target = host.previewBucketForBench().takeIf { it > 0 }
+            ?: PreviewResolutionPolicy.PHONE_PREVIEW_MAX_LONG_EDGE_PX
+        val paths = host.sessionSourcePathsForBench()
+        val ids = IosAssetIdentityRegistry.idsForOwnedPaths(paths)
+        var resolveHit = 0
+        var timeout = 0
+        var miss = 0
+        val degraded = ArrayList<Long>()
+        val finals = ArrayList<Long>()
+        for (id in ids) {
+            val asset = IosPhotoKitImageSource.resolveAsset(id)
+            if (asset == null) {
+                miss += 1
+                continue
+            }
+            resolveHit += 1
+            val timing = IosPhotoKitImageSource.requestTimed(asset, target, PHOTO_KIT_DEADLINE_MS)
+            timing.degradedMs?.let { degraded += it }
+            timing.finalMs?.let { finals += it }
+            when {
+                timing.timedOut -> timeout += 1
+                timing.missed || timing.frame == null -> miss += 1
+            }
+        }
+        log(
+            "DEVICE_PERF_PHOTOKIT auth=${IosPhotoLibraryAccess.logLabel(status)} " +
+                "n=${ids.size} resolve_hit=$resolveHit/${ids.size} " +
+                "degraded_med=${median(degraded)} final_med=${median(finals)} " +
+                "timeout=$timeout miss=$miss target=$target",
         )
         log("DEVICE_PERF_DONE")
     }

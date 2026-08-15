@@ -1,3 +1,4 @@
 /* Traditional Chinese — match Android values-zh-rTW app_name */
 "CFBundleDisplayName" = "簡單浮水印";
 "CFBundleName" = "簡單浮水印";
+"NSPhotoLibraryUsageDescription" = "用於更快地顯示你選擇的照片預覽。所有處理都在本機完成，不聯網、不上傳、不統計。";
