@@ -1,2 +1,0 @@
-{"bug_type":"226","timestamp":"2026-08-07 17:17:33.00 +0800","os_version":"iPhone OS 27.0 (24A5390f)","roots_installed":0,"incident_id":"E42F13D0-A65B-4378-B601-F2CF5A14DACE"}
-{"postTime":1786094253426,"events":[{"build":"24A5390f","product":"iPhone OS","success_count":0,"eventLinkID":"3AE544B4-4BA3-4D5D-9B19-24E99764510F","eventType":"swtransparencyHealthSummary","soft_failure_count":0,"topic":"SWTransparencyAnalytics","version":"27.0","modelid":"iPhone17,1","T":1,"hard_failure_count":0}]}

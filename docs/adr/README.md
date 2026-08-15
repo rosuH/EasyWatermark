@@ -29,4 +29,3 @@ Decisions trace to the CMP migration plan (`docs/superpowers/plans/2026-06-12-cm
 | [0026](0026-adaptive-editor-layout-ia.md) | Adaptive editor layout IA (Supporting-pane; three-zone withdrawn) | **Accepted** (amended 2026-08-10) |
 | [0027](0027-wallpaper-and-content-editor-theme.md) | Wallpaper dynamic color (Android, no OEM list) + Content editor theme (photo seed, all platforms) | **Accepted** (2026-08-11) |
 | [0028](0028-coil-kmp-ui-image-loading.md) | Coil KMP for UI image loading; exclude watermark compose/export; MediaStore Fetcher on Android | **Accepted** (2026-08-11) |
-| [0029](0029-ios-photokit-read-for-preview-thumbs.md) | iOS PhotoKit read access for preview / chrome thumbs (path Session unchanged) | **Accepted** (owner 2026-08-15) |
