@@ -78,6 +78,49 @@ class ProductShellNavTest {
     }
 
     @Test
+    fun overlayBase_about_keepsLaunchOrEditor() {
+        assertEquals(
+            ProductShellNav.Route.Launch,
+            ProductShellNav.overlayBase(
+                ProductShellNav.Route.About,
+                ProductShellNav.Route.Launch,
+            ),
+        )
+        assertEquals(
+            ProductShellNav.Route.Editor,
+            ProductShellNav.overlayBase(
+                ProductShellNav.Route.About,
+                ProductShellNav.Route.Editor,
+            ),
+        )
+        assertEquals(
+            ProductShellNav.Route.Launch,
+            ProductShellNav.overlayBase(
+                ProductShellNav.Route.About,
+                ProductShellNav.Route.About,
+            ),
+        )
+    }
+
+    @Test
+    fun overlayBase_notAbout_isIdentity() {
+        assertEquals(
+            ProductShellNav.Route.Editor,
+            ProductShellNav.overlayBase(
+                ProductShellNav.Route.Editor,
+                ProductShellNav.Route.Launch,
+            ),
+        )
+        assertEquals(
+            ProductShellNav.Route.Launch,
+            ProductShellNav.overlayBase(
+                ProductShellNav.Route.Launch,
+                ProductShellNav.Route.Editor,
+            ),
+        )
+    }
+
+    @Test
     fun productShellTransitions_aboutKinds() {
         assertEquals(
             ProductShellTransitions.TransitionKind.ToAbout,

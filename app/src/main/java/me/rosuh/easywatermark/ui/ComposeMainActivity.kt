@@ -295,6 +295,13 @@ class ComposeMainActivity : ComponentActivity() {
                                         viewModel.launchScreenUiStateFlow.value.uiState,
                                     ),
                                 )
+                            val aboutReturn by viewModel.launchScreenUiStateFlow
+                                .map { ProductShellNav.routeFromLaunchUi(it.aboutReturnUiState) }
+                                .collectAsStateWithLifecycle(
+                                    initialValue = ProductShellNav.routeFromLaunchUi(
+                                        viewModel.launchScreenUiStateFlow.value.aboutReturnUiState,
+                                    ),
+                                )
                             val editorWaterMark by viewModel.launchScreenUiStateFlow
                                 .map { it.waterMark }
                                 .collectAsStateWithLifecycle(
@@ -477,6 +484,7 @@ class ComposeMainActivity : ComponentActivity() {
                             ) {
                                 ProductShellHost(
                                     route = productRoute,
+                                    aboutReturn = aboutReturn,
                                 ) { route ->
                                     when (route) {
                                         ProductShellNav.Route.Launch -> {

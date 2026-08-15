@@ -401,9 +401,12 @@ fun launchDesktopWindow() = application {
     // E0: Session owns product route; FileDialog stays Desktop edge.
     val launchUi by session.launchScreenUiStateFlow.collectAsState()
     val productRoute = ProductShellNav.routeFromLaunchUi(launchUi.uiState)
+    val aboutReturn = ProductShellNav.routeFromLaunchUi(launchUi.aboutReturnUiState)
+    val shellBase = ProductShellNav.overlayBase(productRoute, aboutReturn)
     // Leave Editor (or follow-photo off) → brand olive root/AWT immediately.
-    LaunchedEffect(productRoute, followPhoto) {
-        if (productRoute != ProductShellNav.Route.Editor || !followPhoto) {
+    // About overlay keeps Editor live — do not snap chrome while Editor is still under About.
+    LaunchedEffect(shellBase, followPhoto) {
+        if (shellBase != ProductShellNav.Route.Editor || !followPhoto) {
             windowChromeColor = EditorChromeColor.brand
         }
     }
@@ -911,7 +914,11 @@ fun launchDesktopWindow() = application {
             // Drop is import-only on Launch and Editor (never writes output).
             val shellModifier = Modifier.fillMaxSize()
                 .dragAndDropTarget(shouldStartDragAndDrop = { hasFileList(it) }, target = dropTarget)
-            ProductShellHost(route = productRoute, chromeColor = windowChromeColor) { route ->
+            ProductShellHost(
+                route = productRoute,
+                aboutReturn = aboutReturn,
+                chromeColor = windowChromeColor,
+            ) { route ->
             when (route) {
                 ProductShellNav.Route.Launch -> {
                     me.rosuh.easywatermark.ui.LaunchScreen(

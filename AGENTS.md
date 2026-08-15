@@ -26,7 +26,7 @@ EasyWatermark (`me.rosuh.easywatermark`) — a privacy-focused watermark app tha
 - `domain/` — editor use-cases over the repos: `WatermarkConfigEditor`, `OutputPrefsEditor`, `TemplateEditor`.
 - `session/` — product state machine: `WatermarkSessionViewModel` + `SessionReducer` + `AppIntent`, with platform capabilities injected as ports (`ExportPipelinePort`, `MediaLibraryPort`). ADR-0017.
 - `render/` — engine: `WatermarkGeometry` (image-space sizing: `REF_WIDTH` 1000, gap/diagonal/rotated-AABB math), `WatermarkCellComposer` (`composeTextCell` / `composeIconCell` / `composeOverBackground`), and product composition entry `CommonWatermarkPipeline` (optional last `FontFamily? = null` for Text mode; omitted/`null` = default resolver path; Image mode ignores family). Decode, font file load, encode, and system I/O stay platform edges. Text rastering via `TextRasterEnv` (FontFamily.Resolver + Density) and `TextMeasurer`/`MultiParagraph`.
-- `ui/` — shared Compose Multiplatform UI: `Routes` (typed `@Serializable` nav), `ProductShellNav`/`ProductShellHost`, `LaunchScreen`, `EditorScreen` (+ option controls, template sheet, gallery dialog, save/export sheet), `about/`, `theme/`. Strings/drawables via `composeResources`.
+- `ui/` — shared Compose Multiplatform UI: `Routes` (typed `@Serializable` nav), `ProductShellNav`/`ProductShellHost` (Launch↔Editor swap; About overlays the live Launch/Editor tree), `LaunchScreen`, `EditorScreen` (+ option controls, template sheet, gallery dialog, save/export sheet), `about/`, `theme/`. Strings/drawables via `composeResources`.
 
 Platform source sets supply the edges:
 

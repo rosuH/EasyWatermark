@@ -6,8 +6,9 @@ import me.rosuh.easywatermark.data.model.ImageInfo
  * Pure product-shell navigation helpers shared by Android / iOS / Desktop hosts and tests.
  *
  * Route **UI + transitions** live in [ProductShellHost]. Session owns product route via
- * [LaunchScreenUiState] (E0); hosts map with [routeFromLaunchUi]. These helpers are pure
- * transition aids only — not a second route owner.
+ * [LaunchScreenUiState] (E0); hosts map with [routeFromLaunchUi]. About is an overlay on
+ * the live Launch/Editor tree ([overlayBase]); these helpers are pure transition aids
+ * only — not a second route owner.
  */
 object ProductShellNav {
     enum class Route {
@@ -44,6 +45,13 @@ object ProductShellNav {
         LaunchScreenUiState.Launch, LaunchScreenUiState.Editor -> from
         LaunchScreenUiState.GalleryDialog, LaunchScreenUiState.About -> LaunchScreenUiState.Launch
     }
+
+    /**
+     * Screen that stays composed under an About overlay.
+     * About is not a replacement route — [aboutReturn] (Launch or Editor) stays live.
+     */
+    fun overlayBase(route: Route, aboutReturn: Route): Route =
+        if (route == Route.About) aboutBack(aboutReturn) else route
 
     /**
  * Merge newly picked images into the session selection.

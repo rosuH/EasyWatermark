@@ -5,9 +5,10 @@ import kotlinx.serialization.Serializable
 /**
  * Legacy typed Navigation-Compose destinations (plan D3 / C1.2).
  *
- * Product Launch / Editor / About now use [ProductShellNav] + [ProductShellHost] (shared
- * AnimatedContent transitions). These `@Serializable` route objects are retained only as
- * Historical symbols; do not wire new product navigation through Navigation Compose. */
+ * Product Launch / Editor / About now use [ProductShellNav] + [ProductShellHost]
+ * (Launch↔Editor AnimatedContent; About overlays the live base). These
+ * `@Serializable` route objects are retained only as historical symbols; do not
+ * wire new product navigation through Navigation Compose. */
 @Serializable
 object LaunchRoute
 

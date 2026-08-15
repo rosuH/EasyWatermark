@@ -94,8 +94,10 @@ fun GradientMaskedLogo(
 ) {
     // I3: Reduced/Off suppress infinite decorative mesh even if caller passed animate=true.
     val motionOk = motionAllowsDecorativeLoop(currentMotionPolicy())
-    // First paint stays static so About/Launch open does not pay Offscreen+mesh setup
-    // on the same frame as route AnimatedContent + first resource decode (cold open jank).
+    val obscured = LocalShellObscured.current
+    // First paint stays static so cold Launch/About open does not pay Offscreen+mesh
+    // setup on the same frame as first resource decode. Do not key this on [obscured]:
+    // About overlay must not reset meshReady or return remounts Offscreen mid-pop.
     var meshReady by remember { mutableStateOf(false) }
     LaunchedEffect(animate, motionOk) {
         if (!animate || !motionOk) {
@@ -106,7 +108,7 @@ fun GradientMaskedLogo(
         withFrameNanos { }
         meshReady = true
     }
-    val effectiveAnimate = animate && motionOk && meshReady
+    val effectiveAnimate = animate && motionOk && meshReady && !obscured
     if (!effectiveAnimate) {
         Image(
             painter = painter,
