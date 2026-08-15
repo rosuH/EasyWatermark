@@ -1,0 +1,143 @@
+{"roots_installed":0,"app_name":"wxkb_plugin","timestamp":"2026-08-06 18:22:52.00 +0800","app_version":"3.5.3","slice_uuid":"7322F783-F49D-3ABE-83F8-05B2DEE7C221","adam_id":"1618175312","build_version":"736","bundleID":"com.tencent.wetype.keyboard","duration_ms":"80397833","is_first_party":0,"share_with_app_devs":1,"bug_type":"145","os_version":"iPhone OS 27.0 (24A5390f)","distributor_id":"com.apple.AppStore","name":"wxkb_plugin","incident_id":"6E186A92-F60E-438F-9990-D7C9AD57AA54"}
+Date/Time:        2026-08-05 20:02:50.161 +0800
+End time:         2026-08-06 18:22:47.994 +0800
+OS Version:       iPhone OS 27.0 (Build 24A5390f)
+Architecture:     arm64e
+Report Version:   73
+Incident Identifier: 6E186A92-F60E-438F-9990-D7C9AD57AA54
+Share With Devs:  Yes
+
+Data Source:      Microstackshots
+Shared Cache:     1C83FDD9-CF90-33E0-99D8-6AFF6156F8A9 slid base address 0x19d944000
+
+Command:          wxkb_plugin
+Path:             /private/var/containers/Bundle/Application/ABBE767A-B0BB-4E91-92DB-D2C14B1D7FDC/wxkb.app/PlugIns/wxkb_plugin.appex/wxkb_plugin
+Identifier:       com.tencent.wetype.keyboard
+Version:          3.5.3 (736)
+Adam ID:          1618175312
+Is First Party:   No
+Beta Identifier:  629C2960-DD16-4E52-8939-93409AC2EB52
+Resource Coalition: 835
+On Behalf Of:     1 sample UNKNOWN [12845] (1 sample originated by UNKNOWN [12845])
+Architecture:     arm64
+PID:              12871
+
+Event:            disk writes
+Action taken:     none
+Writes:           1073.74 MB of file backed memory dirtied over 80398 seconds (13.36 KB per second average), exceeding limit of 12.43 KB per second over 86400 seconds
+Writes limit:     1073.74 MB
+Limit duration:   86400s
+Writes caused:    1073.74 MB
+Writes duration:  80398s
+Duration:         80397.83s
+Duration Sampled: 113.60s (event starts 80282.93s before samples, event ends 1.30s after samples)
+Steps:            7 (10.49 MB/step)
+
+Hardware model:   iPhone17,1
+Active cpus:      6
+Memory size:      7.47 GB
+HW page size:     16384
+VM page size:     16384
+
+Models:           UNKNOWN
+
+OS Cryptex File Extents: 6738
+
+Heaviest stack for the target process:
+  6  ??? (libsystem_pthread.dylib + 2332) [0x19de7e91c]
+  6  ??? (libsystem_pthread.dylib + 16444) [0x19de8203c]
+  3  ??? (wxkb_plugin + 19667040) [0x101d4d860]
+  3  ??? (wxkb_plugin + 19666864) [0x101d4d7b0]
+  3  ??? (wxkb_plugin + 19544428) [0x101d2f96c]
+  3  ??? (wxkb_plugin + 19545452) [0x101d2fd6c]
+  3  ??? (wxkb_plugin + 19546724) [0x101d30264]
+  3  ??? (wxkb_plugin + 19637784) [0x101d46618]
+  3  ??? (wxkb_plugin + 19638064) [0x101d46730]
+  3  ??? (libsystem_kernel.dylib + 20528) [0x25615e030]
+
+
+Powerstats for:   wxkb_plugin [12871]
+UUID:             7322F783-F49D-3ABE-83F8-05B2DEE7C221
+Path:             /private/var/containers/Bundle/Application/ABBE767A-B0BB-4E91-92DB-D2C14B1D7FDC/wxkb.app/PlugIns/wxkb_plugin.appex/wxkb_plugin
+Identifier:       com.tencent.wetype.keyboard
+Version:          3.5.3 (736)
+Adam ID:          1618175312
+Is First Party:   No
+Beta Identifier:  629C2960-DD16-4E52-8939-93409AC2EB52
+Resource Coalition: 7 samples 835
+On Behalf Of:     1 sample UNKNOWN [12845] (1 sample originated by UNKNOWN [12845])
+Architecture:     arm64
+Footprint:        25.86 MB -> 34.58 MB (+8928 KB)
+Pageins:          17423 pages
+Start time:       2026-08-06 18:20:53.096 +0800
+End time:         2026-08-06 18:22:46.691 +0800
+Num samples:      7 (100%)
+Energy:           296.97 uWh
+Num threads:      4
+Primary state:    6 samples Non-Frontmost App, Non-Suppressed, Kernel mode, Effective Thread QoS Default, Requested Thread QoS Default, Override Thread QoS Unspecified, p-core
+User Activity:    0 samples Idle, 7 samples Active
+Power Source:     7 samples on Battery, 0 samples on AC
+  6  ??? (libsystem_pthread.dylib + 2332) [0x19de7e91c]
+    6  ??? (libsystem_pthread.dylib + 16444) [0x19de8203c]
+      3  ??? (wxkb_plugin + 19667040) [0x101d4d860]
+        3  ??? (wxkb_plugin + 19666864) [0x101d4d7b0]
+          3  ??? (wxkb_plugin + 19544428) [0x101d2f96c]
+            3  ??? (wxkb_plugin + 19545452) [0x101d2fd6c]
+              3  ??? (wxkb_plugin + 19546724) [0x101d30264]
+                3  ??? (wxkb_plugin + 19637784) [0x101d46618]
+                  3  ??? (wxkb_plugin + 19638064) [0x101d46730]
+                    3  ??? (libsystem_kernel.dylib + 20528) [0x25615e030]
+      2  ??? (wxkb_plugin + 19678132) [0x101d503b4]
+        2  ??? (wxkb_plugin + 19672280) [0x101d4ecd8]
+          2  ??? (wxkb_plugin + 19676344) [0x101d4fcb8]
+            2  ??? (wxkb_plugin + 10223760) [0x10144c090]
+              2  ??? (wxkb_plugin + 10224120) [0x10144c1f8]
+                2  ??? (wxkb_plugin + 10224440) [0x10144c338]
+                  2  ??? (wxkb_plugin + 10225712) [0x10144c830]
+                    2  ??? (wxkb_plugin + 10226228) [0x10144ca34]
+                      2  ??? (wxkb_plugin + 10226540) [0x10144cb6c]
+                        2  ??? (wxkb_plugin + 10356364) [0x10146c68c]
+                          1  ??? (wxkb_plugin + 10370396) [0x10146fd5c]
+                            1  ??? (wxkb_plugin + 10374816) [0x101470ea0]
+                          1  ??? (wxkb_plugin + 10370080) [0x10146fc20]
+                            1  ??? (libsystem_platform.dylib + 4424) [0x1a9b72148]
+                              1  <e-core>
+      1  ??? (wxkb_plugin + 19123368) [0x101cc8ca8]
+        1  ??? (wxkb_plugin + 19123576) [0x101cc8d78]
+          1  ??? (wxkb_plugin + 4853572) [0x100f2cf44]
+            1  ??? (wxkb_plugin + 4854544) [0x100f2d310]
+              1  ??? (wxkb_plugin + 18835288) [0x101c82758]
+                1  ??? (wxkb_plugin + 18783708) [0x101c75ddc]
+                  1  ??? (wxkb_plugin + 29796744) [0x1026f6988]
+                    1  ??? (wxkb_plugin + 29731168) [0x1026e6960]
+                      1  ??? (wxkb_plugin + 29736672) [0x1026e7ee0]
+                        1  ??? (wxkb_plugin + 29738904) [0x1026e8798]
+                          1  ??? (wxkb_plugin + 28350568) [0x102595868]
+                            1  ??? (wxkb_plugin + 34851608) [0x102bc8b18]
+                              1  ??? (libsystem_platform.dylib + 8788) [0x1a9b73254]
+  1  ??? (libsystem_pthread.dylib + 2320) [0x19de7e910]
+    1  ??? (libsystem_pthread.dylib + 4604) [0x19de7f1fc]
+      1  ??? (libdispatch.dylib + 86256) [0x1ccba00f0]
+        1  ??? (libdispatch.dylib + 84484) [0x1ccb9fa04]
+          1  ??? (libdispatch.dylib + 25680) [0x1ccb91450]
+            1  ??? (libdispatch.dylib + 114644) [0x1ccba6fd4]
+              1  ??? (libdispatch.dylib + 7372) [0x1ccb8cccc]
+                1  ??? (wxkb_plugin + 2859324) [0x100d4613c]
+                  1  ??? (wxkb_plugin + 2860988) [0x100d467bc]
+                    1  ??? (Foundation + 2168076) [0x19e63250c]
+                      1  ??? (Foundation + 4012128) [0x19e7f4860]
+                        1  ??? (Foundation + 881776) [0x19e4f8470]
+                          1  ??? (Foundation + 881980) [0x19e4f853c]
+                            1  ??? (libremovefile.dylib + 2744) [0x2e005cab8]
+                              1  ??? (libremovefile.dylib + 3760) [0x2e005ceb0]
+                                1  ??? (libsystem_kernel.dylib + 25796) [0x25615f4c4]
+                                  1  <on behalf of UNKNOWN [12845] (originated by UNKNOWN [12845]), Effective Thread QoS User Initiated, Requested Thread QoS User Initiated>
+
+  Binary Images:
+           0x100a8c000 -                ???  com.tencent.wetype.keyboard 3.5.3 (736) <7322F783-F49D-3ABE-83F8-05B2DEE7C221>  /private/var/containers/Bundle/Application/ABBE767A-B0BB-4E91-92DB-D2C14B1D7FDC/wxkb.app/PlugIns/wxkb_plugin.appex/wxkb_plugin
+           0x19de7e000 -        0x19de8a247  libsystem_pthread.dylib                 <8674AE84-5A65-39B4-BCFE-A6178AFD3EAE>  /usr/lib/system/libsystem_pthread.dylib
+           0x19e421000 -        0x19f52d45b  Foundation                              <B17A96F3-DC4A-3757-90DF-BE4837ABB5AA>  /System/Library/Frameworks/Foundation.framework/Foundation
+           0x1a9b71000 -        0x1a9b7967f  libsystem_platform.dylib                <9D2E2FF9-3CDB-3465-B9BA-EBA5CF7ACFDB>  /usr/lib/system/libsystem_platform.dylib
+           0x1ccb8b000 -        0x1ccbd1d5f  libdispatch.dylib                       <C9C06C2C-438C-3E88-AA74-DCCE16127DC9>  /usr/lib/system/libdispatch.dylib
+           0x256159000 -        0x2561961fb  libsystem_kernel.dylib                  <66561A3E-67D2-3F28-9E5C-C7BDE524EE9D>  /usr/lib/system/libsystem_kernel.dylib
+           0x2e005c000 -        0x2e005e8df  libremovefile.dylib                     <A6C1F100-0E60-3018-94EB-FECF70CAE9D3>  /usr/lib/system/libremovefile.dylib

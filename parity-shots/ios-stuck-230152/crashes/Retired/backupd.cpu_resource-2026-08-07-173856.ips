@@ -1,0 +1,446 @@
+{"duration_ms":"108429","share_with_app_devs":1,"roots_installed":0,"bug_type":"202","os_version":"iPhone OS 27.0 (24A5390f)","slice_uuid":"6F66D8DB-6087-31FF-A3A5-1662B2EA0930","is_first_party":1,"incident_id":"F4922919-D5B1-43D8-9F35-ED430E014803","timestamp":"2026-08-07 17:38:56.00 +0800","app_name":"backupd","name":"backupd"}
+Date/Time:        2026-08-07 17:37:05.100 +0800
+End time:         2026-08-07 17:38:53.529 +0800
+OS Version:       iPhone OS 27.0 (Build 24A5390f)
+Architecture:     arm64e
+Report Version:   73
+Incident Identifier: F4922919-D5B1-43D8-9F35-ED430E014803
+Share With Devs:  Yes
+
+Data Source:      Microstackshots
+Shared Cache:     1C83FDD9-CF90-33E0-99D8-6AFF6156F8A9 slid base address 0x19d944000
+
+Command:          backupd
+Path:             /System/Library/PrivateFrameworks/MobileBackup.framework/backupd
+Resource Coalition: "com.apple.backupd"(628)
+On Behalf Of:     9 samples backupd [18169] (9 samples originated by backupd [18169])
+Architecture:     arm64e
+Parent:           UNKNOWN [1]
+PID:              18169
+
+Event:            cpu usage
+Action taken:     none
+CPU:              90 seconds cpu time over 108 seconds (83% cpu average), exceeding limit of 50% cpu over 180 seconds
+CPU limit:        90s
+Limit duration:   180s
+CPU used:         90s
+CPU duration:     108s
+Duration:         108.43s
+Duration Sampled: 92.97s (event starts 6.84s before samples, event ends 8.63s after samples)
+Steps:            20 (10 gigacycles/step)
+
+Hardware model:   iPhone17,1
+Active cpus:      6
+Memory size:      7.47 GB
+HW page size:     16384
+VM page size:     16384
+Shared cache residency: 9.27% (632.38 MB / 6819.19 MB)
+
+Time Since Boot:  337629s
+Time Awake Since Boot: 337629s
+Time Since Wake:  n/a (machine hasn't slept)
+
+Total CPU Time:   70.987s
+Advisory levels:  Battery -> 3, User -> 3, ThermalPressure -> 0, Combined -> 3
+Free disk space:  37.61 GB/476.29 GB, low space threshold 150 MB
+Vnodes Available: 56.93% (15941/28000, 14000 allocated, 14000 soft limit)
+Models:           none
+
+Preferred User Language: en-SG, zh-Hans-SG
+Country Code:     SG
+Keyboards:        com.tencent.wetype.keyboard, zh_Hans-Pinyin Pinyin-Simplified
+OS Cryptex File Extents: 6738
+
+Heaviest stack for the target process:
+  9  ??? (libsystem_pthread.dylib + 2320) [0x19de7e910]
+  9  ??? (libsystem_pthread.dylib + 4604) [0x19de7f1fc]
+  9  ??? (libdispatch.dylib + 86256) [0x1ccba00f0]
+  9  ??? (libdispatch.dylib + 84748) [0x1ccb9fb0c]
+  9  ??? (libdispatch.dylib + 114644) [0x1ccba6fd4]
+  9  ??? (libdispatch.dylib + 7372) [0x1ccb8cccc]
+  9  ??? (backupd + 494232) [0x104d70a98]
+  9  ??? (backupd + 265228) [0x104d38c0c]
+  9  ??? (backupd + 188548) [0x104d26084]
+  8  ??? (backupd + 192688) [0x104d270b0]
+  8  ??? (backupd + 192688) [0x104d270b0]
+  8  ??? (backupd + 192688) [0x104d270b0]
+  8  ??? (backupd + 192688) [0x104d270b0]
+  8  ??? (backupd + 192652) [0x104d2708c]
+  8  ??? (backupd + 190700) [0x104d268ec]
+  8  ??? (backupd + 290156) [0x104d3ed6c]
+  8  ??? (backupd + 206300) [0x104d2a5dc]
+  8  ??? (backupd + 1485232) [0x104e629b0]
+  8  ??? (backupd + 1486204) [0x104e62d7c]
+  8  ??? (backupd + 1487120) [0x104e63110]
+  8  ??? (backupd + 1367380) [0x104e45d54]
+  8  ??? (backupd + 1369844) [0x104e466f4]
+  8  ??? (backupd + 1377644) [0x104e4856c]
+  8  ??? (backupd + 1377924) [0x104e48684]
+  8  ??? (backupd + 1379304) [0x104e48be8]
+  6  ??? (backupd + 1381640) [0x104e49508]
+  5  ??? (backupd + 1389100) [0x104e4b22c]
+  5  ??? (backupd + 1489124) [0x104e638e4]
+  2  ??? (backupd + 1496068) [0x104e65404]
+  2  ??? (backupd + 1716824) [0x104e9b258]
+  2  ??? (libprequelite.dylib + 12056) [0x2dfaf7f18]
+  1  ??? (libprequelite.dylib + 10876) [0x2dfaf7a7c]
+  1  ??? (libprequelite.dylib + 12916) [0x2dfaf8274]
+  1  ??? (libprequelite.dylib + 10684) [0x2dfaf79bc]
+  1  ??? (libsqlite3.dylib + 190232) [0x1bc3b2718]
+  1  ??? (libsqlite3.dylib + 235228) [0x1bc3bd6dc]
+  1  ??? (libsqlite3.dylib + 93984) [0x1bc39af20]
+  1  ??? (libsqlite3.dylib + 261840) [0x1bc3c3ed0]
+  1  ??? (libsqlite3.dylib + 263916) [0x1bc3c46ec]
+  1  ??? (libsqlite3.dylib + 265204) [0x1bc3c4bf4]
+  1  ??? (libsystem_malloc.dylib + 63784) [0x19de9a928]
+  1  ??? (libsystem_malloc.dylib + 64592) [0x19de9ac50]
+  1  ??? (libsystem_kernel.dylib + 24652) [0x25615f04c]
+
+
+Powerstats for:   backupd [18169]
+UUID:             6F66D8DB-6087-31FF-A3A5-1662B2EA0930
+Path:             /System/Library/PrivateFrameworks/MobileBackup.framework/backupd
+Resource Coalition: 9 samples "com.apple.backupd"(628)
+On Behalf Of:     9 samples backupd [18169] (9 samples originated by backupd [18169])
+Architecture:     arm64e
+Parent:           UNKNOWN [1]
+UID:              0
+Sudden Term:      Tracked (allows idle exit)
+Footprint:        5424 KB -> 10080 KB (+4656 KB) (max 16.89 MB )
+Pageins:          166 pages
+Start time:       2026-08-07 17:37:11.938 +0800
+End time:         2026-08-07 17:38:29.619 +0800
+Num samples:      9 (45%)
+Energy:           1281.70 uWh
+Num threads:      1
+Primary state:    7 samples Non-Frontmost App, Non-Suppressed, User mode, Effective Thread QoS Background, Requested Thread QoS Utility, Override Thread QoS Unspecified, e-core
+User Activity:    9 samples Idle, 0 samples Active
+Power Source:     0 samples on Battery, 9 samples on AC
+  9  ??? (libsystem_pthread.dylib + 2320) [0x19de7e910]
+    9  ??? (libsystem_pthread.dylib + 4604) [0x19de7f1fc]
+      9  ??? (libdispatch.dylib + 86256) [0x1ccba00f0]
+        9  ??? (libdispatch.dylib + 84748) [0x1ccb9fb0c]
+          9  ??? (libdispatch.dylib + 114644) [0x1ccba6fd4]
+            9  ??? (libdispatch.dylib + 7372) [0x1ccb8cccc]
+              9  ??? (backupd + 494232) [0x104d70a98]
+                9  ??? (backupd + 265228) [0x104d38c0c]
+                  9  ??? (backupd + 188548) [0x104d26084]
+                    8  ??? (backupd + 192688) [0x104d270b0]
+                      8  ??? (backupd + 192688) [0x104d270b0]
+                        8  ??? (backupd + 192688) [0x104d270b0]
+                          8  ??? (backupd + 192688) [0x104d270b0]
+                            8  ??? (backupd + 192652) [0x104d2708c]
+                              8  ??? (backupd + 190700) [0x104d268ec]
+                                8  ??? (backupd + 290156) [0x104d3ed6c]
+                                  8  ??? (backupd + 206300) [0x104d2a5dc]
+                                    8  ??? (backupd + 1485232) [0x104e629b0]
+                                      8  ??? (backupd + 1486204) [0x104e62d7c]
+                                        8  ??? (backupd + 1487120) [0x104e63110]
+                                          8  ??? (backupd + 1367380) [0x104e45d54]
+                                            8  ??? (backupd + 1369844) [0x104e466f4]
+                                              8  ??? (backupd + 1377644) [0x104e4856c]
+                                                8  ??? (backupd + 1377924) [0x104e48684]
+                                                  8  ??? (backupd + 1379304) [0x104e48be8]
+                                                    6  ??? (backupd + 1381640) [0x104e49508]
+                                                      5  ??? (backupd + 1389100) [0x104e4b22c]
+                                                        5  ??? (backupd + 1489124) [0x104e638e4]
+                                                          2  ??? (backupd + 1496068) [0x104e65404]
+                                                            2  ??? (backupd + 1716824) [0x104e9b258]
+                                                              2  ??? (libprequelite.dylib + 12056) [0x2dfaf7f18]
+                                                                1  ??? (libprequelite.dylib + 10876) [0x2dfaf7a7c]
+                                                                  1  ??? (libprequelite.dylib + 12916) [0x2dfaf8274]
+                                                                    1  ??? (libprequelite.dylib + 10684) [0x2dfaf79bc]
+                                                                      1  ??? (libsqlite3.dylib + 190232) [0x1bc3b2718]
+                                                                        1  ??? (libsqlite3.dylib + 235228) [0x1bc3bd6dc]
+                                                                          1  ??? (libsqlite3.dylib + 93984) [0x1bc39af20]
+                                                                            1  ??? (libsqlite3.dylib + 261840) [0x1bc3c3ed0]
+                                                                              1  ??? (libsqlite3.dylib + 263916) [0x1bc3c46ec]
+                                                                                1  ??? (libsqlite3.dylib + 265204) [0x1bc3c4bf4]
+                                                                                  1  ??? (libsystem_malloc.dylib + 63784) [0x19de9a928]
+                                                                                    1  ??? (libsystem_malloc.dylib + 64592) [0x19de9ac50]
+                                                                                      1  ??? (libsystem_kernel.dylib + 24652) [0x25615f04c]
+                                                                                        1  <on behalf of backupd [18169] (originated by backupd [18169]), Kernel mode>
+                                                                1  ??? (libprequelite.dylib + 10852) [0x2dfaf7a64]
+                                                                  1  ??? (libprequelite.dylib + 11140) [0x2dfaf7b84]
+                                                                    1  ??? (libprequelite.dylib + 17840) [0x2dfaf95b0]
+                                                                      1  ??? (libprequelite.dylib + 22480) [0x2dfafa7d0]
+                                                                        1  ??? (libsqlite3.dylib + 34140) [0x1bc38c55c]
+                                                                          1  ??? (libsqlite3.dylib + 35080) [0x1bc38c908]
+                                                                            1  ??? (libsqlite3.dylib + 37372) [0x1bc38d1fc]
+                                                                              1  ??? (libsqlite3.dylib + 41816) [0x1bc38e358]
+                                                                                1  ??? (libsqlite3.dylib + 386008) [0x1bc3e23d8]
+                                                                                  1  ??? (libsqlite3.dylib + 168100) [0x1bc3ad0a4]
+                                                                                    1  ??? (libsqlite3.dylib + 1001820) [0x1bc47895c]
+                                                                                      1  ??? [0x1bda24910]
+                                                                                        1  <on behalf of backupd [18169] (originated by backupd [18169])>
+                                                          2  ??? (backupd + 1495548) [0x104e651fc]
+                                                            2  ??? (backupd + 1713424) [0x104e9a510]
+                                                              2  ??? (backupd + 1612020) [0x104e818f4]
+                                                                1  ??? (libprequelite.dylib + 15800) [0x2dfaf8db8]
+                                                                  1  ??? (libprequelite.dylib + 10852) [0x2dfaf7a64]
+                                                                    1  ??? (libprequelite.dylib + 11140) [0x2dfaf7b84]
+                                                                      1  ??? (libprequelite.dylib + 17840) [0x2dfaf95b0]
+                                                                        1  ??? (libprequelite.dylib + 22480) [0x2dfafa7d0]
+                                                                          1  ??? (libsqlite3.dylib + 34140) [0x1bc38c55c]
+                                                                            1  ??? (libsqlite3.dylib + 35080) [0x1bc38c908]
+                                                                              1  ??? (libsqlite3.dylib + 50976) [0x1bc390720]
+                                                                                1  <on behalf of backupd [18169] (originated by backupd [18169])>
+                                                                1  ??? (libprequelite.dylib + 15320) [0x2dfaf8bd8]
+                                                                  1  ??? (libprequelite.dylib + 10852) [0x2dfaf7a64]
+                                                                    1  ??? (libprequelite.dylib + 11140) [0x2dfaf7b84]
+                                                                      1  ??? (libprequelite.dylib + 17840) [0x2dfaf95b0]
+                                                                        1  ??? (libsystem_kernel.dylib + 3776) [0x256159ec0]
+                                                                          1  <on behalf of backupd [18169] (originated by backupd [18169])>
+                                                          1  ??? (backupd + 1497712) [0x104e65a70]
+                                                            1  ??? (backupd + 1717856) [0x104e9b660]
+                                                              1  ??? (backupd + 1717096) [0x104e9b368]
+                                                                1  ??? (backupd + 1608648) [0x104e80bc8]
+                                                                  1  ??? (libprequelite.dylib + 25356) [0x2dfafb30c]
+                                                                    1  ??? (libprequelite.dylib + 10852) [0x2dfaf7a64]
+                                                                      1  ??? (libprequelite.dylib + 11140) [0x2dfaf7b84]
+                                                                        1  ??? (libprequelite.dylib + 17840) [0x2dfaf95b0]
+                                                                          1  ??? (libprequelite.dylib + 22480) [0x2dfafa7d0]
+                                                                            1  ??? (libsqlite3.dylib + 34140) [0x1bc38c55c]
+                                                                              1  ??? (libsqlite3.dylib + 35080) [0x1bc38c908]
+                                                                                1  ??? (libsqlite3.dylib + 37372) [0x1bc38d1fc]
+                                                                                  1  ??? (libsqlite3.dylib + 43232) [0x1bc38e8e0]
+                                                                                    1  ??? (libsqlite3.dylib + 290180) [0x1bc3cad84]
+                                                                                      1  ??? (libsqlite3.dylib + 293456) [0x1bc3cba50]
+                                                                                        1  ??? (libsqlite3.dylib + 115276) [0x1bc3a024c]
+                                                                                          1  ??? (libsqlite3.dylib + 663732) [0x1bc4260b4]
+                                                                                            1  <on behalf of backupd [18169] (originated by backupd [18169])>
+                                                      1  ??? (backupd + 1386524) [0x104e4a81c]
+                                                        1  ??? (Foundation + 279508) [0x19e4653d4]
+                                                          1  ??? (Foundation + 147980) [0x19e44520c]
+                                                            1  ??? (CoreFoundation + 86308) [0x19df54124]
+                                                              1  <on behalf of backupd [18169] (originated by backupd [18169])>
+                                                    2  ??? (backupd + 1381176) [0x104e49338]
+                                                      2  ??? (backupd + 161216) [0x104d1f5c0]
+                                                        1  ??? (backupd + 1382824) [0x104e499a8]
+                                                          1  ??? (backupd + 1373272) [0x104e47458]
+                                                            1  ??? (CoreFoundation + 332856) [0x19df90438]
+                                                              1  ??? (CoreFoundation + 331960) [0x19df900b8]
+                                                                1  ??? (CoreServicesInternal + 3224) [0x1b5849c98]
+                                                                  1  ??? (CoreServicesInternal + 5032) [0x1b584a3a8]
+                                                                    1  ??? (libsystem_kernel.dylib + 24608) [0x25615f020]
+                                                                      1  <on behalf of backupd [18169] (originated by backupd [18169]), Kernel mode>
+                                                        1  ??? (backupd + 1382780) [0x104e4997c]
+                                                          1  ??? (backupd + 1435232) [0x104e56660]
+                                                            1  ??? (libsystem_malloc.dylib + 4748) [0x19de8c28c]
+                                                              1  <on behalf of backupd [18169] (originated by backupd [18169])>
+                    1  ??? (backupd + 192652) [0x104d2708c]
+                      1  ??? (backupd + 190700) [0x104d268ec]
+                        1  ??? (backupd + 290156) [0x104d3ed6c]
+                          1  ??? (backupd + 197544) [0x104d283a8]
+                            1  ??? (backupd + 2103368) [0x104ef9848]
+                              1  ??? (backupd + 986600) [0x104de8de8]
+                                1  ??? (backupd + 27872) [0x104cfece0]
+                                  1  ??? (CoreServices + 648188) [0x1a47453fc]
+                                    1  ??? (CoreServices + 217132) [0x1a46dc02c]
+                                      1  ??? (CoreServices + 154116) [0x1a46cca04]
+                                        1  ??? (CoreServices + 847556) [0x1a4775ec4]
+                                          1  ??? (CoreServices + 352960) [0x1a46fd2c0]
+                                            1  ??? (CoreServicesStore + 19728) [0x224884d10]
+                                              1  ??? (CoreServicesStore + 18304) [0x224884780]
+                                                1  ??? (CoreServicesStore + 19480) [0x224884c18]
+                                                  1  ??? (CoreServices + 486668) [0x1a471dd0c]
+                                                    1  ??? (CoreServices + 295348) [0x1a46ef1b4]
+                                                      1  ??? (CoreServices + 187760) [0x1a46d4d70]
+                                                        1  ??? (CoreServices + 50852) [0x1a46b36a4]
+                                                          1  ??? (CoreServices + 62664) [0x1a46b64c8]
+                                                            1  ??? (CoreServices + 63608) [0x1a46b6878]
+                                                              1  <on behalf of backupd [18169] (originated by backupd [18169])>
+
+  Binary Images:
+           0x104cf8000 -        0x1050dffff  backupd                 <6F66D8DB-6087-31FF-A3A5-1662B2EA0930>  /System/Library/PrivateFrameworks/MobileBackup.framework/backupd
+           0x19de7e000 -        0x19de8a247  libsystem_pthread.dylib <8674AE84-5A65-39B4-BCFE-A6178AFD3EAE>  /usr/lib/system/libsystem_pthread.dylib
+           0x19de8b000 -        0x19dedc77f  libsystem_malloc.dylib  <CA3526A8-F722-3EA2-A9CD-41DB4F8BF294>  /usr/lib/system/libsystem_malloc.dylib
+           0x19df3f000 -        0x19e420fbf  CoreFoundation          <7CDBA4FD-E90E-3EF2-8AE3-9071648E4673>  /System/Library/Frameworks/CoreFoundation.framework/CoreFoundation
+           0x19e421000 -        0x19f52d45b  Foundation              <B17A96F3-DC4A-3757-90DF-BE4837ABB5AA>  /System/Library/Frameworks/Foundation.framework/Foundation
+           0x1a46a7000 -        0x1a48f3307  CoreServices            <66DDA264-F349-3EC7-A600-FEC6307C5F76>  /System/Library/Frameworks/CoreServices.framework/CoreServices
+           0x1b5849000 -        0x1b587d3c3  CoreServicesInternal    <2739B140-DF25-3B7A-8B1E-1392649A6FA8>  /System/Library/PrivateFrameworks/CoreServicesInternal.framework/CoreServicesInternal
+           0x1bc384000 -        0x1bc53c367  libsqlite3.dylib        <53F034B0-3589-3AF3-A615-A14BD7746696>  /usr/lib/libsqlite3.dylib
+           0x1ccb8b000 -        0x1ccbd1d5f  libdispatch.dylib       <C9C06C2C-438C-3E88-AA74-DCCE16127DC9>  /usr/lib/system/libdispatch.dylib
+           0x224880000 -        0x2248b6267  CoreServicesStore       <426F38F8-6091-35C8-A368-82487EAACF2C>  /System/Library/PrivateFrameworks/CoreServicesStore.framework/CoreServicesStore
+           0x256159000 -        0x2561961fb  libsystem_kernel.dylib  <66561A3E-67D2-3F28-9E5C-C7BDE524EE9D>  /usr/lib/system/libsystem_kernel.dylib
+           0x2dfaf5000 -        0x2dfb05d67  libprequelite.dylib     <00FA5AC8-C45C-343F-85D0-E2BDDD808313>  /usr/lib/libprequelite.dylib
+
+
+Powerstats for:   kernel_task
+UUID:             09C85910-8327-37E3-8AFE-1CF3F99052EF
+Version:          Darwin Kernel Version 27.0.0: Tue Jul 14 21:27:55 PDT 2026; root:xnu-13432.0.94.502.2~2/RELEASE_ARM64_T8140
+Resource Coalition: 4 samples 1
+Architecture:     arm64
+Start time:       2026-08-07 17:37:28.270 +0800
+End time:         2026-08-07 17:38:19.789 +0800
+Num samples:      4 (20%)
+Energy:           524.74 uWh
+Primary state:    4 samples Non-Frontmost App, Non-Suppressed, Kernel mode, Effective Thread QoS Unspecified, Requested Thread QoS Unspecified, Override Thread QoS Unspecified, p-core
+User Activity:    4 samples Idle, 0 samples Active
+Power Source:     0 samples on Battery, 4 samples on AC
+ *3  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 793420) [0xfffffff00abc5b4c]
+   *3  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 792804) [0xfffffff00abc58e4]
+     *3  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 2101848) [0xfffffff00ad05258]
+        1  <e-core>
+ *1  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 8230376) [0xfffffff00b2dd5e8]
+   *1  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 8228104) [0xfffffff00b2dcd08]
+     *1  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 8241432) [0xfffffff00b2e0118]
+       *1  ??? (AppleT8140CLPC + 320940) [0xfffffff009827b5c]
+         *1  ??? (AppleT8140CLPC + 299256) [0xfffffff0098226a8]
+           *1  ??? (AppleT8140CLPC + 301276) [0xfffffff009822e8c]
+             *1  ??? (AppleT8140CLPC + 332592) [0xfffffff00982a8e0]
+               *1  ??? (AppleT8140CLPC + 341148) [0xfffffff00982ca4c]
+                 *1  ??? (AppleT8140CLPC + 373228) [0xfffffff00983479c]
+                    1  <e-core>
+
+  Binary Images:
+   *0xfffffff0097d95b0 - 0xfffffff00983b207  com.apple.driver.AppleT8140CLPC (1) <A106AAFD-A5E7-3984-B3D8-E55E47C3B82C>__TEXT_EXEC  /System/Library/Extensions/AppleT8140CLPC.kext/AppleT8140CLPC
+   *0xfffffff00ab04000 - 0xfffffff00b3effff  ??? (27.0.0)                        <09C85910-8327-37E3-8AFE-1CF3F99052EF>__TEXT_EXEC
+
+
+Powerstats for:   searchd
+UUID:             603B4F18-33FD-3DD2-A9E4-E1A484240C02
+Path:             /System/Library/PrivateFrameworks/Search.framework/searchd
+Resource Coalition: 2 samples "com.apple.searchd"(351)
+On Behalf Of:     2 samples siriactionsd [18100] (2 samples originated by siriactionsd [18100])
+Architecture:     arm64e
+Pageins:          52 pages
+Start time:       2026-08-07 17:38:43.201 +0800
+End time:         2026-08-07 17:38:44.903 +0800
+Num samples:      2 (10%)
+Energy:           7595.58 nWh
+Primary state:    1 samples Non-Frontmost App, Non-Suppressed, User mode, Effective Thread QoS Background, Requested Thread QoS Background, Override Thread QoS Unspecified, e-core
+User Activity:    2 samples Idle, 0 samples Active
+Power Source:     0 samples on Battery, 2 samples on AC
+  2  ??? (libsystem_pthread.dylib + 2320) [0x19de7e910]
+    2  ??? (libsystem_pthread.dylib + 4604) [0x19de7f1fc]
+      2  ??? (libdispatch.dylib + 86256) [0x1ccba00f0]
+        2  ??? (libdispatch.dylib + 84332) [0x1ccb9f96c]
+          2  ??? (libdispatch.dylib + 114644) [0x1ccba6fd4]
+            2  ??? (libdispatch.dylib + 90436) [0x1ccba1144]
+              2  ??? (libdispatch.dylib + 19296) [0x1ccb8fb60]
+                2  ??? (libdispatch.dylib + 114644) [0x1ccba6fd4]
+                  2  ??? (libdispatch.dylib + 93584) [0x1ccba1d90]
+                    2  ??? (libdispatch.dylib + 114668) [0x1ccba6fec]
+                      1  ??? (SpotlightIndex + 1180096) [0x1f4fd31c0]
+                        1  ??? (SpotlightIndex + 119244) [0x1f4ed01cc]
+                          1  ??? (SpotlightIndex + 189476) [0x1f4ee1424]
+                            1  ??? (SpotlightIndex + 648704) [0x1f4f51600]
+                              1  ??? (SpotlightIndex + 653056) [0x1f4f52700]
+                                1  ??? (SpotlightIndex + 624248) [0x1f4f4b678]
+                                  1  ??? (SpotlightIndex + 629240) [0x1f4f4c9f8]
+                                    1  ??? (SpotlightIndex + 632000) [0x1f4f4d4c0]
+                                      1  ??? (SpotlightIndex + 638556) [0x1f4f4ee5c]
+                                        1  ??? (CoreNLP + 13148) [0x1d1db935c]
+                                          1  ??? (CoreNLP + 125228) [0x1d1dd492c]
+                                            1  ??? (libmecab.dylib + 2700) [0x2df1c3a8c]
+                                              1  ??? (libmecab.dylib + 9880) [0x2df1c5698]
+                                                1  ??? (libmecab.dylib + 7420) [0x2df1c4cfc]
+                                                  1  ??? (libmecab.dylib + 3536) [0x2df1c3dd0]
+                                                    1  ??? (libmecab.dylib + 4592) [0x2df1c41f0]
+                                                      1  <on behalf of siriactionsd [18100] (originated by siriactionsd [18100])>
+                      1  ??? (SpotlightIndex + 798408) [0x1f4f75ec8]
+                        1  ??? (SpotlightIndex + 464708) [0x1f4f24744]
+                          1  ??? (SpotlightIndex + 461380) [0x1f4f23a44]
+                            1  ??? (SpotlightIndex + 70648) [0x1f4ec43f8]
+                              1  ??? (SpotlightIndex + 60252) [0x1f4ec1b5c]
+                                1  ??? (SpotlightIndex + 61512) [0x1f4ec2048]
+                                  1  <on behalf of siriactionsd [18100] (originated by siriactionsd [18100]), Effective Thread QoS Utility, Requested Thread QoS Utility>
+
+  Binary Images:
+           0x100a3c000 -                ???  searchd                 <603B4F18-33FD-3DD2-A9E4-E1A484240C02>  /System/Library/PrivateFrameworks/Search.framework/searchd
+           0x19de7e000 -        0x19de8a247  libsystem_pthread.dylib <8674AE84-5A65-39B4-BCFE-A6178AFD3EAE>  /usr/lib/system/libsystem_pthread.dylib
+           0x1ccb8b000 -        0x1ccbd1d5f  libdispatch.dylib       <C9C06C2C-438C-3E88-AA74-DCCE16127DC9>  /usr/lib/system/libdispatch.dylib
+           0x1d1db6000 -        0x1d1ed7d6f  CoreNLP                 <09ABCD5A-C465-33EE-A1D8-E410E6801118>  /System/Library/PrivateFrameworks/CoreNLP.framework/CoreNLP
+           0x1f4eb3000 -        0x1f541ff57  SpotlightIndex          <D1CC4E7A-5CAB-3809-A24F-3A8E586E642E>  /System/Library/PrivateFrameworks/SpotlightIndex.framework/SpotlightIndex
+           0x2df1c3000 -        0x2df222fe7  libmecab.dylib          <26964D79-E8B6-38C0-965F-483D721D64F9>  /usr/lib/libmecab.dylib
+
+
+Powerstats for:   siriactionsd
+UUID:             8F7A7BCB-72E0-3401-A6BD-DE4E7B0E2384
+Path:             /System/Library/PrivateFrameworks/VoiceShortcuts.framework/Support/siriactionsd
+Resource Coalition: 2 samples "com.apple.siriactionsd"(277)
+Architecture:     arm64e
+Pageins:          15 pages
+Start time:       2026-08-07 17:38:22.933 +0800
+End time:         2026-08-07 17:38:43.989 +0800
+Num samples:      2 (10%)
+Energy:           102.72 uWh
+Primary state:    2 samples Non-Frontmost App, Non-Suppressed, User mode, Effective Thread QoS Background, Requested Thread QoS Utility, Override Thread QoS Unspecified, e-core
+User Activity:    2 samples Idle, 0 samples Active
+Power Source:     0 samples on Battery, 2 samples on AC
+  1  ??? (libswift_Concurrency.dylib + 30860) [0x19f53588c]
+    1  ??? (VoiceShortcuts + 45780) [0x25d4d92d4]
+      1  ??? (VoiceShortcuts + 46296) [0x25d4d94d8]
+        1  ??? (VoiceShortcuts + 45780) [0x25d4d92d4]
+          1  ??? (VoiceShortcuts + 534192) [0x25d5506b0]
+            1  ??? (VoiceShortcuts + 45780) [0x25d4d92d4]
+              1  ??? (VoiceShortcuts + 45780) [0x25d4d92d4]
+                1  ??? (VoiceShortcuts + 45780) [0x25d4d92d4]
+                  1  ??? (VoiceShortcuts + 66684) [0x25d4de47c]
+                    1  ??? (VoiceShortcuts + 66036) [0x25d4de1f4]
+                      1  ??? (VoiceShortcuts + 83728) [0x25d4e2710]
+                        1  ??? (VoiceShortcuts + 81184) [0x25d4e1d20]
+                          1  ??? (VoiceShortcutClient + 168508) [0x1d167123c]
+                            1  ??? (VoiceShortcutClient + 171332) [0x1d1671d44]
+                              1  ??? (VoiceShortcutClient + 163152) [0x1d166fd50]
+                                1  ??? (VoiceShortcutClient + 172948) [0x1d1672394]
+                                  1  ??? (CoreServices + 43516) [0x1a46b19fc]
+                                    1  ??? (CoreServices + 6468) [0x1a46a8944]
+                                      1  ??? (CoreServices + 11644) [0x1a46a9d7c]
+                                        1  ??? (CoreServices + 14972) [0x1a46aaa7c]
+                                          1  ??? (CoreServices + 15788) [0x1a46aadac]
+                                            1  ??? (CoreServices + 12156) [0x1a46a9f7c]
+                                              1  ??? (CoreServices + 17960) [0x1a46ab628]
+                                                1  ??? (CoreServices + 19752) [0x1a46abd28]
+                                                  1  ??? (CoreServices + 22288) [0x1a46ac710]
+                                                    1  ??? (CoreServices + 27960) [0x1a46add38]
+                                                      1  ??? (CoreServices + 28820) [0x1a46ae094]
+                                                        1  ??? (CoreServicesStore + 4328) [0x2248810e8]
+                                                          1  ??? (CoreServicesStore + 5060) [0x2248813c4]
+                                                            1  ??? (CoreServicesStore + 6700) [0x224881a2c]
+                                                              1  ??? (CoreServicesStore + 6572) [0x2248819ac]
+  1  ??? (libsystem_pthread.dylib + 2320) [0x19de7e910]
+    1  ??? (libsystem_pthread.dylib + 4664) [0x19de7f238]
+      1  ??? (libdispatch.dylib + 87740) [0x1ccba06bc]
+        1  ??? (libdispatch.dylib + 89240) [0x1ccba0c98]
+          1  ??? (libdispatch.dylib + 46192) [0x1ccb96470]
+            1  ??? (libdispatch.dylib + 43132) [0x1ccb9587c]
+              1  ??? (libdispatch.dylib + 114644) [0x1ccba6fd4]
+                1  ??? (libdispatch.dylib + 7372) [0x1ccb8cccc]
+                  1  ??? (CoreSpotlight + 51448) [0x1acc258f8]
+                    1  ??? (CoreSpotlight + 52720) [0x1acc25df0]
+                      1  ??? (CascadeSets + 16500) [0x1d92d1074]
+                        1  ??? (CascadeSets + 15828) [0x1d92d0dd4]
+                          1  ??? (CascadeSets + 33228) [0x1d92d51cc]
+                            1  ??? (CoreFoundation + 342592) [0x19df92a40]
+                              1  ??? (CoreFoundation + 342056) [0x19df92828]
+                                1  ??? (Foundation + 118388) [0x19e43de74]
+                                  1  ??? (Foundation + 228288) [0x19e458bc0]
+                                    1  ??? (Foundation + 234936) [0x19e45a5b8]
+                                      1  ??? (Foundation + 236280) [0x19e45aaf8]
+                                        1  ??? (CoreFoundation + 616112) [0x19dfd56b0]
+                                          1  ??? (CoreFoundation + 615268) [0x19dfd5364]
+                                            1  ??? (CascadeSets + 8500) [0x1d92cf134]
+                                              1  ??? (CascadeSets + 29876) [0x1d92d44b4]
+                                                1  ??? (CascadeSets + 30096) [0x1d92d4590]
+                                                  1  ??? (CoreFoundation + 324200) [0x19df8e268]
+                                                    1  ??? (CoreFoundation + 260852) [0x19df7eaf4]
+                                                      1  ??? (CoreFoundation + 22532) [0x19df44804]
+                                                        1  ??? (CoreFoundation + 32768) [0x19df47000]
+                                                          1  ??? (CoreFoundation + 49700) [0x19df4b224]
+                                                            1  ??? (CoreFoundation + 26424) [0x19df45738]
+
+  Binary Images:
+           0x100628000 -                ???  siriactionsd               <8F7A7BCB-72E0-3401-A6BD-DE4E7B0E2384>  /System/Library/PrivateFrameworks/VoiceShortcuts.framework/Support/siriactionsd
+           0x19de7e000 -        0x19de8a247  libsystem_pthread.dylib    <8674AE84-5A65-39B4-BCFE-A6178AFD3EAE>  /usr/lib/system/libsystem_pthread.dylib
+           0x19df3f000 -        0x19e420fbf  CoreFoundation             <7CDBA4FD-E90E-3EF2-8AE3-9071648E4673>  /System/Library/Frameworks/CoreFoundation.framework/CoreFoundation
+           0x19e421000 -        0x19f52d45b  Foundation                 <B17A96F3-DC4A-3757-90DF-BE4837ABB5AA>  /System/Library/Frameworks/Foundation.framework/Foundation
+           0x19f52e000 -        0x19f5ba29f  libswift_Concurrency.dylib <2F447120-5662-3D10-94C8-4F94E62893D0>  /usr/lib/swift/libswift_Concurrency.dylib
+           0x1a46a7000 -        0x1a48f3307  CoreServices               <66DDA264-F349-3EC7-A600-FEC6307C5F76>  /System/Library/Frameworks/CoreServices.framework/CoreServices
+           0x1acc19000 -        0x1acdee55f  CoreSpotlight              <57E59BBC-6A89-3E87-939A-31E3081A54A5>  /System/Library/Frameworks/CoreSpotlight.framework/CoreSpotlight
+           0x1ccb8b000 -        0x1ccbd1d5f  libdispatch.dylib          <C9C06C2C-438C-3E88-AA74-DCCE16127DC9>  /usr/lib/system/libdispatch.dylib
+           0x1d1648000 -        0x1d17f6437  VoiceShortcutClient        <700B3B4F-18F5-3FBC-92B7-4B8F07B0388C>  /System/Library/PrivateFrameworks/VoiceShortcutClient.framework/VoiceShortcutClient
+           0x1d92cd000 -        0x1d939aeef  CascadeSets                <E297EED3-788C-3B53-AD84-2B0811611852>  /System/Library/PrivateFrameworks/CascadeSets.framework/CascadeSets
+           0x224880000 -        0x2248b6267  CoreServicesStore          <426F38F8-6091-35C8-A368-82487EAACF2C>  /System/Library/PrivateFrameworks/CoreServicesStore.framework/CoreServicesStore
+           0x25d4ce000 -        0x25d64822f  VoiceShortcuts             <D8A43EED-3F28-3C76-ADD4-D782F50255C2>  /System/Library/PrivateFrameworks/VoiceShortcuts.framework/VoiceShortcuts

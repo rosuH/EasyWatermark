@@ -1,0 +1,122 @@
+{"app_name":"WeChat","timestamp":"2026-08-11 09:03:58.00 +0800","app_version":"8.0.75","slice_uuid":"f62d8503-f7aa-38c6-aa1c-78d717271ad6","adam_id":"414478124","build_version":"8.0.75.33","bundleID":"com.tencent.xin","platform":2,"share_with_app_devs":1,"is_first_party":0,"bug_type":"309","os_version":"iPhone OS 27.0 (24A5408d)","roots_installed":0,"incident_id":"0D1E0D53-6FA9-4465-912F-7C0FCBC7F1DE","name":"WeChat"}
+{
+  "uptime" : 220,
+  "procRole" : "Non UI",
+  "version" : 2,
+  "userID" : 501,
+  "deployVersion" : 210,
+  "modelCode" : "iPhone17,1",
+  "coalitionID" : 774,
+  "osVersion" : {
+    "isEmbedded" : true,
+    "train" : "iPhone OS 27.0",
+    "releaseType" : "Beta",
+    "build" : "24A5408d"
+  },
+  "captureTime" : "2026-08-11 09:03:05.6008 +0800",
+  "codeSigningMonitor" : 2,
+  "incident" : "0D1E0D53-6FA9-4465-912F-7C0FCBC7F1DE",
+  "pid" : 554,
+  "translated" : false,
+  "cpuType" : "ARM-64",
+  "procLaunch" : "2026-08-11 09:02:30.3462 +0800",
+  "procStartAbsTime" : 4574834736,
+  "procExitAbsTime" : 5302228957,
+  "procName" : "WeChat",
+  "procPath" : "\/private\/var\/containers\/Bundle\/Application\/9AECF96E-5D66-4ECF-AE65-CD8A979F0655\/WeChat.app\/WeChat",
+  "bundleInfo" : {"CFBundleShortVersionString":"8.0.75","CFBundleVersion":"8.0.75.33","CFBundleIdentifier":"com.tencent.xin","DTAppStoreToolsBuild":"17F41"},
+  "storeInfo" : {"itemID":"414478124","storeCohortMetadata":"10|date=1726984800000&sf=143465","distributorID":"com.apple.AppStore","deviceIdentifierForVendor":"D23DB2E2-0D26-4FD5-9E53-39D1D671AF99","softwareVersionExternalIdentifier":"886775900","applicationVariant":"1:iPhone17,1:18","thirdParty":true},
+  "parentProc" : "launchd",
+  "parentPid" : 1,
+  "coalitionName" : "com.tencent.xin",
+  "crashReporterKey" : "74d4d1cecd5bba03650c55a10b50da8929cfc86c",
+  "chargingStatus" : {"externalSourceConnected":true},
+  "developerMode" : 1,
+  "bootProgressRegister" : "0x2080000c",
+  "wasUnlockedSinceBoot" : 1,
+  "isLocked" : 0,
+  "codeSigningID" : "com.tencent.xin",
+  "codeSigningTeamID" : "88L2Q4487U",
+  "codeSigningFlags" : 570450689,
+  "codeSigningValidationCategory" : 4,
+  "codeSigningTrustLevel" : 5,
+  "codeSigningAuxiliaryInfo" : 0,
+  "instructionByteStream" : {"beforePC":"\/w9f1uMZAZR\/IwPV\/Xu\/qf0DAJEIYEA5HwUAcaEAAFRi6f6XwAAAtA==","atPC":"AARAuQIAABQAAIBS\/XvBqP8PX9bLGQGUfyMD1f+DAdH2VwOp9E8EqQ=="},
+  "bootSessionUUID" : "5B734942-8B19-4647-9A60-B4E46A1D8F0A",
+  "basebandVersion" : "3.02.02",
+  "exception" : {"codes":"0x0000000000000000, 0x0000000000000000","rawCodes":[0,0],"type":"EXC_CRASH","signal":"SIGKILL"},
+  "termination" : {"code":2343432205,"flags":6,"namespace":"FRONTBOARD","reasons":["<RBSTerminateContext| domain:10 code:0x8BADF00D explanation:process-launch watchdog transgression: app<com.tencent.xin(8E47B4A1-690D-4133-916D-77AFA6F6D748)>:554 exhausted real (wall clock) time allowance of 30.00 seconds","ProcessVisibility: Background","ProcessState: Running","WatchdogEvent: process-launch","WatchdogVisibility: Background","WatchdogCPUStatistics: (","\"Elapsed total CPU time (seconds): 132.150 (user 86.970, system 45.180), 73% CPU\",","\"Elapsed application CPU time (seconds): 0.359, 0% CPU\"",")","ThermalInfo: (","\"Thermal Level:   10\",","\"Thermal State:   critical\"",") reportType:CrashLog maxTerminationResistance:Interactive>"]},
+  "faultingThread" : 0,
+  "threads" : [{"triggered":true,"id":10554,"threadState":{"x":[{"value":4678731728},{"value":6166660896},{"value":6166662232},{"value":6166661023},{"value":4846460180,"symbolLocation":0,"symbol":"invocation function for block in dyld4::optimizeObjCSelectors(dyld4::RuntimeState&, objc::SelectorHashTable const*, dyld3::Map<prebuilt_objc::ObjCStringKey, prebuilt_objc::ObjCSelectorLocation, prebuilt_objc::HashObjCStringKey, prebuilt_objc::EqualObjCStringKey>&, dyld4::PrebuiltObjC::ObjCOptimizerImage&)"},{"value":1414745679},{"value":1},{"value":4744512688},{"value":1},{"value":6166661936},{"value":4846459992,"symbolLocation":0,"symbol":"invocation function for block in dyld4::optimizeObjCSelectors(dyld4::RuntimeState&, objc::SelectorHashTable const*, dyld3::Map<prebuilt_objc::ObjCStringKey, prebuilt_objc::ObjCSelectorLocation, prebuilt_objc::HashObjCStringKey, prebuilt_objc::EqualObjCStringKey>&, dyld4::PrebuiltObjC::ObjCOptimizerImage&)"},{"value":0},{"value":6},{"value":4300177520},{"value":0},{"value":1},{"value":4845942988,"symbolLocation":0,"symbol":"invocation function for block in mach_o::Header::forEachSegment(void (mach_o::Header::SegmentInfo const&, bool&) block_pointer) const"},{"value":7701436843946918600},{"value":0},{"value":6166661023},{"value":6166660896},{"value":6166661920},{"value":6166662232},{"value":0},{"value":181},{"value":6166661024},{"value":6166661320},{"value":6166660960},{"value":43212}],"flavor":"ARM_THREAD_STATE64","lr":{"value":4846273196},"cpsr":{"value":1610612736},"fp":{"value":6166660784},"sp":{"value":6166660784},"esr":{"value":2449473543,"description":"(Data Abort) byte read Translation fault"},"pc":{"value":4846273200,"matchesCrashFrame":1},"far":{"value":4678731732}},"frames":[{"imageOffset":344752,"symbol":"objc_visitor::MethodList::numMethods() const","symbolLocation":32,"imageIndex":1},{"imageOffset":531596,"symbol":"invocation function for block in dyld4::optimizeObjCSelectors(dyld4::RuntimeState&, objc::SelectorHashTable const*, dyld3::Map<prebuilt_objc::ObjCStringKey, prebuilt_objc::ObjCSelectorLocation, prebuilt_objc::HashObjCStringKey, prebuilt_objc::EqualObjCStringKey>&, dyld4::PrebuiltObjC::ObjCOptimizerImage&)","symbolLocation":52,"imageIndex":1},{"imageOffset":531824,"symbol":"invocation function for block in dyld4::optimizeObjCSelectors(dyld4::RuntimeState&, objc::SelectorHashTable const*, dyld3::Map<prebuilt_objc::ObjCStringKey, prebuilt_objc::ObjCSelectorLocation, prebuilt_objc::HashObjCStringKey, prebuilt_objc::EqualObjCStringKey>&, dyld4::PrebuiltObjC::ObjCOptimizerImage&)","symbolLocation":92,"imageIndex":1},{"imageOffset":385816,"symbol":"objc_visitor::Visitor::forEachClass(bool, objc_visitor::Visitor::Section const&, void (objc_visitor::Class&, bool, bool&) block_pointer)","symbolLocation":192,"imageIndex":1},{"imageOffset":386056,"symbol":"objc_visitor::Visitor::forEachClass(bool, void (objc_visitor::Class&, bool, bool&) block_pointer)","symbolLocation":96,"imageIndex":1},{"imageOffset":386308,"symbol":"objc_visitor::Visitor::forEachClassAndMetaClass(void (objc_visitor::Class const&, bool&) block_pointer)","symbolLocation":100,"imageIndex":1},{"imageOffset":523728,"symbol":"dyld4::PrebuiltObjC::make(Diagnostics&, dyld4::RuntimeState&)","symbolLocation":2360,"imageIndex":1},{"imageOffset":510568,"symbol":"dyld4::PrebuiltLoaderSet::makeLaunchSet(Diagnostics&, dyld4::RuntimeState&, dyld4::MissingPaths const&)","symbolLocation":632,"imageIndex":1},{"imageOffset":70268,"symbol":"dyld4::prepare(dyld4::APIs&, mach_o::UnsafeHeader const*)","symbolLocation":5192,"imageIndex":1},{"imageOffset":130364,"symbol":"dyld4::start(dyld4::KernelArgs*, void*, void*, unsigned long long)::$_1::operator()() const","symbolLocation":320,"imageIndex":1},{"imageOffset":21852,"symbol":"start","symbolLocation":6524,"imageIndex":1}]}],
+  "usedImages" : [
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4300177408,
+    "size" : 456359936,
+    "uuid" : "f62d8503-f7aa-38c6-aa1c-78d717271ad6",
+    "path" : "\/var\/containers\/Bundle\/Application\/9AECF96E-5D66-4ECF-AE65-CD8A979F0655\/WeChat.app\/WeChat",
+    "name" : "WeChat"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 4845928448,
+    "size" : 753664,
+    "uuid" : "0ba7325d-53f1-3287-aae6-071c7b48fff7",
+    "path" : "\/usr\/lib\/dyld",
+    "name" : "dyld"
+  },
+  {
+    "size" : 0,
+    "source" : "A",
+    "base" : 0,
+    "uuid" : "00000000-0000-0000-0000-000000000000"
+  }
+],
+  "vmSummary" : "ReadOnly portion of Libraries: Total=452.2M resident=0K(0%) swapped_out_or_unallocated=452.2M(100%)\nWritable regions: Total=26.9M written=289K(1%) resident=289K(1%) swapped_out=0K(0%) unallocated=26.6M(99%)\n\n                                VIRTUAL   REGION \nREGION TYPE                        SIZE    COUNT (non-coalesced) \n===========                     =======  ======= \nDyld Private Memory               4752K       55 \nDyld Private Memory (reserved)     704K       44         reserved VM address space (unallocated)\nGuard                            385.0G        1 \nStack                             1008K        1 \nStack Guard                         16K        1 \nUntagged                            16K        1 \nUntagged (reserved)               4496K        8         reserved VM address space (unallocated)\n__AUTH_CONST                        16K        1 \n__DATA                            48.1M        3 \n__DATA_CONST                      20.7M        2 \n__DATA_DIRTY                        16K        1 \n__LINKEDIT                        16.3M        2 \n__TEXT                           435.9M        2 \n__TPRO_CONST                       144K        1 \nmapped file                        5.7G      161 \npage table in kernel               289K        1 \n===========                     =======  ======= \nTOTAL                            391.2G      285 \nTOTAL, minus reserved VM space   391.2G      285 \n",
+  "legacyInfo" : {
+  "threadTriggered" : {
+
+  }
+},
+  "logWritingSignature" : "158d5058d2c7299451e34c67d6acc63b36d75856",
+  "bug_type" : "309",
+  "roots_installed" : 0,
+  "trmStatus" : 1,
+  "sandboxProfileName" : "container",
+  "spawnFlags" : 17932,
+  "trialInfo" : {
+  "rollouts" : [
+    {
+      "rolloutId" : "5ffde50ce2aacd000d47a95f",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 250000540
+    },
+    {
+      "rolloutId" : "642da32dea3b2418c750f848",
+      "factorPackIds" : [
+        "66d8b2f77cd4b62688efd2cf"
+      ],
+      "deploymentId" : 250000010
+    }
+  ],
+  "experiments" : [
+    {
+      "treatmentId" : "d5c127b8-b13e-42a1-acf5-c483124a1bb5",
+      "experimentId" : "66b1602abe27b2208fd291ba",
+      "deploymentId" : 500000021
+    },
+    {
+      "treatmentId" : "cd952bca-2fb3-4e6e-b40f-b11e364bdb66",
+      "experimentId" : "68fe4accf23ec52b15be139f",
+      "deploymentId" : 500000011
+    }
+  ]
+},
+  "reportNotes" : [
+  "dyld_process_snapshot_get_shared_cache failed"
+]
+}

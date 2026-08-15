@@ -1,0 +1,221 @@
+{"roots_installed":0,"app_name":"discover","timestamp":"2026-08-09 18:40:02.00 +0800","app_version":"9.42","slice_uuid":"CA52C914-3935-3E1A-9F59-9BE0D104A2A0","adam_id":"741292507","build_version":"9420815","bundleID":"com.xingin.discover","duration_ms":"73117340","is_first_party":0,"share_with_app_devs":1,"bug_type":"145","os_version":"iPhone OS 27.0 (24A5390f)","distributor_id":"com.apple.AppStore","name":"discover","incident_id":"FEB7D75D-B406-4BF4-AB11-CA48633C9262"}
+Date/Time:        2026-08-08 22:21:19.064 +0800
+End time:         2026-08-09 18:39:56.404 +0800
+OS Version:       iPhone OS 27.0 (Build 24A5390f)
+Architecture:     arm64e
+Report Version:   73
+Incident Identifier: FEB7D75D-B406-4BF4-AB11-CA48633C9262
+Share With Devs:  Yes
+
+Data Source:      Microstackshots
+Shared Cache:     1C83FDD9-CF90-33E0-99D8-6AFF6156F8A9 slid base address 0x19d944000
+
+Command:          discover
+Path:             /private/var/containers/Bundle/Application/8E12F5AF-49EB-43AC-AC32-BF2A84EDA007/discover.app/discover
+Identifier:       com.xingin.discover
+Version:          9.42 (9420815)
+Adam ID:          741292507
+Is First Party:   No
+Beta Identifier:  A1C44D30-B655-4D6D-BA54-E4C04164BF1C
+Resource Coalition: "com.xingin.discover"(6339)
+On Behalf Of:     5 samples UNKNOWN [37] (5 samples originated by UNKNOWN [37])
+Architecture:     arm64
+Parent:           UNKNOWN [1]
+PID:              26880
+
+Event:            disk writes
+Action taken:     none
+Writes:           1074.01 MB of file backed memory dirtied over 73117 seconds (14.69 KB per second average), exceeding limit of 12.43 KB per second over 86400 seconds
+Writes limit:     1073.74 MB
+Limit duration:   86400s
+Writes caused:    1074.01 MB
+Writes duration:  73117s
+Duration:         73117.34s
+Duration Sampled: 673.08s (event starts 72433.05s before samples, event ends 11.22s after samples)
+Steps:            10 (2 samples lost, 10.49 MB/step)
+
+Hardware model:   iPhone17,1
+Active cpus:      6
+Memory size:      7.47 GB
+HW page size:     16384
+VM page size:     16384
+Shared cache residency: 10.58% (721.73 MB / 6819.19 MB)
+
+Time Since Boot:  513509s
+Time Awake Since Boot: 513509s
+Time Since Wake:  n/a (machine hasn't slept)
+
+Total CPU Time:   22.671s
+Advisory levels:  Battery -> 2, User -> 3, ThermalPressure -> 10, Combined -> 1
+Free disk space:  34.10 GB/476.29 GB, low space threshold 150 MB
+Vnodes Available: 59.78% (16738/28000, 14006 allocated, 14000 soft limit)
+Models:           none
+
+Preferred User Language: en-SG, zh-Hans-SG
+Country Code:     SG
+Keyboards:        com.tencent.wetype.keyboard, en_US QWERTY
+OS Cryptex File Extents: 6738
+
+Heaviest stack for the target process:
+  9  ??? (libsystem_pthread.dylib + 2320) [0x19de7e910]
+  6  ??? (libsystem_pthread.dylib + 4604) [0x19de7f1fc]
+  6  ??? (libdispatch.dylib + 86256) [0x1ccba00f0]
+  5  ??? (libdispatch.dylib + 84332) [0x1ccb9f96c]
+  5  ??? (libdispatch.dylib + 114644) [0x1ccba6fd4]
+  3  ??? (libdispatch.dylib + 205832) [0x1ccbbd408]
+  3  ??? (libsystem_kernel.dylib + 29624) [0x2561603b8]
+
+
+Powerstats for:   discover [26880]
+UUID:             CA52C914-3935-3E1A-9F59-9BE0D104A2A0
+Path:             /private/var/containers/Bundle/Application/8E12F5AF-49EB-43AC-AC32-BF2A84EDA007/discover.app/discover
+Identifier:       com.xingin.discover
+Version:          9.42 (9420815)
+Adam ID:          741292507
+Is First Party:   No
+Beta Identifier:  A1C44D30-B655-4D6D-BA54-E4C04164BF1C
+Resource Coalition: 10 samples "com.xingin.discover"(6339)
+On Behalf Of:     5 samples UNKNOWN [37] (5 samples originated by UNKNOWN [37])
+Architecture:     arm64
+Parent:           UNKNOWN [1]
+UID:              501
+Footprint:        172.81 MB -> 320.47 MB (+147.66 MB) (max 365.45 MB )
+Pageins:          38475 pages
+Start time:       2026-08-09 18:28:32.111 +0800
+End time:         2026-08-09 18:39:45.188 +0800
+Num samples:      10 (100%)
+Energy:           3617.56 uWh
+Num threads:      9
+Primary state:    8 samples Frontmost App, Non-Suppressed, Kernel mode, Effective Thread QoS Default, Requested Thread QoS Default, Override Thread QoS Unspecified, e-core
+User Activity:    0 samples Idle, 10 samples Active
+Power Source:     10 samples on Battery, 0 samples on AC
+  9   ??? (libsystem_pthread.dylib + 2320) [0x19de7e910]
+    6   ??? (libsystem_pthread.dylib + 4604) [0x19de7f1fc]
+      6   ??? (libdispatch.dylib + 86256) [0x1ccba00f0]
+        5   ??? (libdispatch.dylib + 84332) [0x1ccb9f96c]
+          5   ??? (libdispatch.dylib + 114644) [0x1ccba6fd4]
+            3   ??? (libdispatch.dylib + 205832) [0x1ccbbd408]
+              3   ??? (libsystem_kernel.dylib + 29624) [0x2561603b8]
+                3   <on behalf of UNKNOWN [37] (originated by UNKNOWN [37])>
+            2   ??? (libdispatch.dylib + 7372) [0x1ccb8cccc]
+              1   ??? (discover + 259476912) [0x110098db0]
+                1   ??? (discover + 257811024) [0x10ff02250]
+                  1   ??? (discover + 259702756) [0x1100cffe4]
+                    1   ??? (discover + 259685764) [0x1100cbd84]
+                      1   ??? (libsystem_platform.dylib + 4088) [0x1a9b71ff8]
+                        1   <on behalf of UNKNOWN [37] (originated by UNKNOWN [37])>
+              1   ??? (discover + 15477564) [0x1017e6b3c]
+                1   ??? (discover + 1111308) [0x100a3350c]
+                  1   ??? (discover + 259700320) [0x1100cf660]
+                    1   ??? (libswiftCore.dylib + 528856) [0x19f63c1d8]
+                      1   ??? (libswiftCore.dylib + 529412) [0x19f63c404]
+                        1   ??? (discover + 259704044) [0x1100d04ec]
+                          1   ??? (discover + 259701880) [0x1100cfc78]
+                            1   ??? (discover + 259678404) [0x1100ca0c4]
+                              1   ??? (discover + 222114988) [0x10dcf74ac]
+                                1   ??? (discover + 222108688) [0x10dcf5c10]
+                                  1   ??? (discover + 222111776) [0x10dcf6820]
+                                    1   ??? (discover + 222108160) [0x10dcf5a00]
+                                      1   ??? (libsystem_platform.dylib + 4280) [0x1a9b720b8]
+                                        1   <on behalf of UNKNOWN [37] (originated by UNKNOWN [37]), p-core>
+        1   ??? (libdispatch.dylib + 84484) [0x1ccb9fa04]
+          1   ??? (libdispatch.dylib + 24360) [0x1ccb90f28]
+            1   ??? (libdispatch.dylib + 26368) [0x1ccb91700]
+              1   ??? (libdispatch.dylib + 114644) [0x1ccba6fd4]
+                1   ??? (libdispatch.dylib + 72908) [0x1ccb9cccc]
+                  1   ??? (Foundation + 499204) [0x19e49ae04]
+                    1   ??? (Foundation + 499032) [0x19e49ad58]
+                      1   ??? (Foundation + 500464) [0x19e49b2f0]
+                        1   ??? (Foundation + 501176) [0x19e49b5b8]
+                          1   ??? (Foundation + 499544) [0x19e49af58]
+                            1   ??? (Foundation + 244232) [0x19e45ca08]
+                              1   ??? (discover + 244236712) [0x10f2101a8]
+                                1   ??? (discover + 259500812) [0x11009eb0c]
+                                  1   ??? (discover + 259513560) [0x1100a1cd8]
+                                    1   ??? (discover + 259514540) [0x1100a20ac]
+                                      1   ??? (libsqlite3.dylib + 33000) [0x1bc38c0e8]
+                                        1   ??? (libsqlite3.dylib + 190232) [0x1bc3b2718]
+                                          1   ??? (libsqlite3.dylib + 235288) [0x1bc3bd718]
+                                            1   ??? (libsqlite3.dylib + 93984) [0x1bc39af20]
+                                              1   ??? (libsqlite3.dylib + 261752) [0x1bc3c3e78]
+                                                1   ??? (libsqlite3.dylib + 262852) [0x1bc3c42c4]
+                                                  1   ??? (libsqlite3.dylib + 331128) [0x1bc3d4d78]
+                                                    1   ??? (libsqlite3.dylib + 719868) [0x1bc433bfc]
+                                                      1   ??? (libsqlite3.dylib + 332032) [0x1bc3d5100]
+                                                        1   ??? (libsystem_kernel.dylib + 27740) [0x25615fc5c]
+                                                          1   <p-core>
+    3   ??? (libsystem_pthread.dylib + 4664) [0x19de7f238]
+      3   ??? (libdispatch.dylib + 87740) [0x1ccba06bc]
+        3   ??? (libdispatch.dylib + 89240) [0x1ccba0c98]
+          3   ??? (libdispatch.dylib + 46192) [0x1ccb96470]
+            3   ??? (libdispatch.dylib + 43132) [0x1ccb9587c]
+              3   ??? (libdispatch.dylib + 114644) [0x1ccba6fd4]
+                3   ??? (libdispatch.dylib + 7372) [0x1ccb8cccc]
+                  1   ??? (discover + 228608088) [0x10e328858]
+                    1   ??? (discover + 228691872) [0x10e33cfa0]
+                      1   ??? (libsqlite3.dylib + 190232) [0x1bc3b2718]
+                        1   ??? (libsqlite3.dylib + 235228) [0x1bc3bd6dc]
+                          1   ??? (libsqlite3.dylib + 93984) [0x1bc39af20]
+                            1   ??? (libsqlite3.dylib + 261752) [0x1bc3c3e78]
+                              1   ??? (libsqlite3.dylib + 262852) [0x1bc3c42c4]
+                                1   ??? (libsqlite3.dylib + 331128) [0x1bc3d4d78]
+                                  1   ??? (libsqlite3.dylib + 719868) [0x1bc433bfc]
+                                    1   ??? (libsqlite3.dylib + 332032) [0x1bc3d5100]
+                                      1   ??? (libsystem_kernel.dylib + 27740) [0x25615fc5c]
+                                        1   <Effective Thread QoS User Interactive, Requested Thread QoS User Interactive>
+                  1   ??? (discover + 228605720) [0x10e327f18]
+                    1   ??? (discover + 228692828) [0x10e33d35c]
+                      1   ??? (libsqlite3.dylib + 33000) [0x1bc38c0e8]
+                        1   ??? (libsqlite3.dylib + 190232) [0x1bc3b2718]
+                          1   ??? (libsqlite3.dylib + 235228) [0x1bc3bd6dc]
+                            1   ??? (libsqlite3.dylib + 93984) [0x1bc39af20]
+                              1   ??? (libsqlite3.dylib + 261752) [0x1bc3c3e78]
+                                1   ??? (libsqlite3.dylib + 262852) [0x1bc3c42c4]
+                                  1   ??? (libsqlite3.dylib + 331128) [0x1bc3d4d78]
+                                    1   ??? (libsqlite3.dylib + 719868) [0x1bc433bfc]
+                                      1   ??? (libsqlite3.dylib + 332032) [0x1bc3d5100]
+                                        1   ??? (libsystem_kernel.dylib + 27740) [0x25615fc5c]
+                                          1   <Effective Thread QoS User Interactive, Requested Thread QoS User Interactive>
+                  1   ??? (discover + 15477564) [0x1017e6b3c]
+                    1   ??? (discover + 172227120) [0x10ad63a30]
+                      1   ??? (discover + 172229040) [0x10ad641b0]
+                        1   ??? (discover + 2299032) [0x100b55498]
+                          1   ??? (discover + 259678404) [0x1100ca0c4]
+                            1   ??? (discover + 222114988) [0x10dcf74ac]
+                              1   ??? (discover + 222108688) [0x10dcf5c10]
+                                1   ??? (discover + 222111840) [0x10dcf6860]
+                                  1   ??? (discover + 222112584) [0x10dcf6b48]
+                                    1   ??? (libsystem_platform.dylib + 4088) [0x1a9b71ff8]
+                                      1   <p-core>
+  1   ??? (libsystem_pthread.dylib + 2332) [0x19de7e91c]
+    1   ??? (libsystem_pthread.dylib + 16444) [0x19de8203c]
+      1   ??? (discover + 37622504) [0x102d052e8]
+        1   ??? (discover + 37622648) [0x102d05378]
+          1   ??? (discover + 37615888) [0x102d03910]
+            1   ??? (discover + 37702652) [0x102d18bfc]
+              1   ??? (discover + 37776384) [0x102d2ac00]
+                1   ??? (discover + 37763320) [0x102d278f8]
+                  1   ??? (discover + 37175376) [0x102c98050]
+                    1   ??? (discover + 37177580) [0x102c988ec]
+                      1   ??? (discover + 37228756) [0x102ca50d4]
+                        1   ??? (discover + 37196280) [0x102c9d1f8]
+                          1   ??? (discover + 37770704) [0x102d295d0]
+                            1   ??? (discover + 37720392) [0x102d1d148]
+                              1   ??? (discover + 37713968) [0x102d1b830]
+                                1   ??? (discover + 37625600) [0x102d05f00]
+                                  1   ??? (discover + 37685976) [0x102d14ad8]
+                                    1   ??? (libsystem_c.dylib + 55880) [0x1a57cda48]
+                                      1   ??? (libsystem_c.dylib + 18408) [0x1a57c47e8]
+                                        1   ??? (libsystem_c.dylib + 56084) [0x1a57cdb14]
+                                          1   ??? (libsystem_kernel.dylib + 29624) [0x2561603b8]
+
+  Binary Images:
+           0x100924000 -                ???  com.xingin.discover 9.42 (9420815) <CA52C914-3935-3E1A-9F59-9BE0D104A2A0>  /private/var/containers/Bundle/Application/8E12F5AF-49EB-43AC-AC32-BF2A84EDA007/discover.app/discover
+           0x19de7e000 -        0x19de8a247  libsystem_pthread.dylib            <8674AE84-5A65-39B4-BCFE-A6178AFD3EAE>  /usr/lib/system/libsystem_pthread.dylib
+           0x19e421000 -        0x19f52d45b  Foundation                         <B17A96F3-DC4A-3757-90DF-BE4837ABB5AA>  /System/Library/Frameworks/Foundation.framework/Foundation
+           0x19f5bb000 -        0x19fb72cdf  libswiftCore.dylib                 <47AE339D-D2C0-3FFB-9EED-E55BB0051FBE>  /usr/lib/swift/libswiftCore.dylib
+           0x1a57c0000 -        0x1a5840ee3  libsystem_c.dylib                  <18912EF8-9112-3316-9296-3052491AB886>  /usr/lib/system/libsystem_c.dylib
+           0x1a9b71000 -        0x1a9b7967f  libsystem_platform.dylib           <9D2E2FF9-3CDB-3465-B9BA-EBA5CF7ACFDB>  /usr/lib/system/libsystem_platform.dylib
+           0x1bc384000 -        0x1bc53c367  libsqlite3.dylib                   <53F034B0-3589-3AF3-A615-A14BD7746696>  /usr/lib/libsqlite3.dylib
+           0x1ccb8b000 -        0x1ccbd1d5f  libdispatch.dylib                  <C9C06C2C-438C-3E88-AA74-DCCE16127DC9>  /usr/lib/system/libdispatch.dylib
+           0x256159000 -        0x2561961fb  libsystem_kernel.dylib             <66561A3E-67D2-3F28-9E5C-C7BDE524EE9D>  /usr/lib/system/libsystem_kernel.dylib

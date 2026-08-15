@@ -1,0 +1,323 @@
+{"duration_ms":"169084","share_with_app_devs":1,"roots_installed":0,"bug_type":"202","os_version":"iPhone OS 27.0 (24A5390f)","slice_uuid":"000B4BEC-6673-318E-A4C3-E7533C499E4A","is_first_party":1,"incident_id":"DBBEF47E-DCEC-487B-BB28-0CC6DF8BAB3D","timestamp":"2026-08-04 22:04:16.00 +0800","app_name":"logd","name":"logd"}
+Date/Time:        2026-08-04 22:01:24.170 +0800
+End time:         2026-08-04 22:04:13.254 +0800
+OS Version:       iPhone OS 27.0 (Build 24A5390f)
+Architecture:     arm64e
+Report Version:   73
+Incident Identifier: DBBEF47E-DCEC-487B-BB28-0CC6DF8BAB3D
+Share With Devs:  Yes
+
+Data Source:      Microstackshots
+Shared Cache:     1C83FDD9-CF90-33E0-99D8-6AFF6156F8A9 slid base address 0x19d944000
+
+Command:          logd
+Path:             /usr/libexec/logd
+Resource Coalition: "com.apple.logd"(9)
+On Behalf Of:     11 samples deleted [2898] (11 samples originated by UNKNOWN [33])
+Architecture:     arm64e
+Parent:           UNKNOWN [1]
+PID:              35
+
+Event:            cpu usage
+Action taken:     none
+CPU:              90 seconds cpu time over 169 seconds (53% cpu average), exceeding limit of 50% cpu over 180 seconds
+CPU limit:        90s
+Limit duration:   180s
+CPU used:         90s
+CPU duration:     169s
+Duration:         169.08s
+Duration Sampled: 157.42s (event starts 11.05s before samples, event ends 0.62s after samples)
+Steps:            29 (10 gigacycles/step)
+
+Hardware model:   iPhone17,1
+Active cpus:      6
+Memory size:      7.47 GB
+HW page size:     16384
+VM page size:     16384
+Shared cache residency: 11.60% (790.73 MB / 6819.19 MB)
+
+Time Since Boot:  94290s
+Time Awake Since Boot: 94290s
+Time Since Wake:  n/a (machine hasn't slept)
+
+Total CPU Time:   98.240s
+Advisory levels:  Battery -> 3, User -> 3, ThermalPressure -> 0, Combined -> 3
+Free disk space:  40.95 GB/476.29 GB, low space threshold 150 MB
+Vnodes Available: 58.28% (16318/28000, 14000 allocated, 14000 soft limit)
+Models:           none
+
+Preferred User Language: en-SG, zh-Hans-SG
+Country Code:     SG
+Keyboards:        com.tencent.wetype.keyboard, zh_Hans-Pinyin Pinyin-Simplified
+OS Cryptex File Extents: 6738
+
+Heaviest stack for the target process:
+  11  ??? (libsystem_pthread.dylib + 2320) [0x19de7e910]
+  11  ??? (libsystem_pthread.dylib + 4664) [0x19de7f238]
+  11  ??? (libdispatch.dylib + 87740) [0x1ccba06bc]
+  11  ??? (libdispatch.dylib + 89240) [0x1ccba0c98]
+  11  ??? (libdispatch.dylib + 46192) [0x1ccb96470]
+  11  ??? (libdispatch.dylib + 43132) [0x1ccb9587c]
+  11  ??? (libdispatch.dylib + 114644) [0x1ccba6fd4]
+  11  ??? (libdispatch.dylib + 72908) [0x1ccb9cccc]
+  11  ??? (CacheDelete + 167252) [0x2251bdd54]
+  11  ??? (logd + 138044) [0x104219b3c]
+  8   ??? (logd + 143776) [0x10421b1a0]
+  5   ??? (logd + 144720) [0x10421b550]
+  5   ??? (logd + 148576) [0x10421c460]
+  5   ??? (libcompression.dylib + 4116) [0x2de31e014]
+  5   ??? (libcompression.dylib + 16620) [0x2de3210ec]
+  4   ??? (libcompression.dylib + 16496) [0x2de321070]
+  1   ??? (libcompression.dylib + 22888) [0x2de322968]
+
+
+Powerstats for:   logd [35]
+UUID:             000B4BEC-6673-318E-A4C3-E7533C499E4A
+Path:             /usr/libexec/logd
+Resource Coalition: 11 samples "com.apple.logd"(9)
+On Behalf Of:     11 samples deleted [2898] (11 samples originated by UNKNOWN [33])
+Architecture:     arm64e
+Parent:           UNKNOWN [1]
+UID:              272
+Footprint:        8608 KB
+Pageins:          99162 pages
+Start time:       2026-08-04 22:02:28.386 +0800
+End time:         2026-08-04 22:03:59.900 +0800
+Num samples:      11 (38%)
+Energy:           1618.54 uWh
+Num threads:      1
+Primary state:    9 samples Non-Frontmost App, Non-Suppressed, User mode, Effective Thread QoS Background, Requested Thread QoS Background, Override Thread QoS Unspecified, e-core
+User Activity:    0 samples Idle, 11 samples Active
+Power Source:     0 samples on Battery, 11 samples on AC
+  11  ??? (libsystem_pthread.dylib + 2320) [0x19de7e910]
+    11  ??? (libsystem_pthread.dylib + 4664) [0x19de7f238]
+      11  ??? (libdispatch.dylib + 87740) [0x1ccba06bc]
+        11  ??? (libdispatch.dylib + 89240) [0x1ccba0c98]
+          11  ??? (libdispatch.dylib + 46192) [0x1ccb96470]
+            11  ??? (libdispatch.dylib + 43132) [0x1ccb9587c]
+              11  ??? (libdispatch.dylib + 114644) [0x1ccba6fd4]
+                11  ??? (libdispatch.dylib + 72908) [0x1ccb9cccc]
+                  11  ??? (CacheDelete + 167252) [0x2251bdd54]
+                    11  ??? (logd + 138044) [0x104219b3c]
+                      8   ??? (logd + 143776) [0x10421b1a0]
+                        5   ??? (logd + 144720) [0x10421b550]
+                          5   ??? (logd + 148576) [0x10421c460]
+                            5   ??? (libcompression.dylib + 4116) [0x2de31e014]
+                              5   ??? (libcompression.dylib + 16620) [0x2de3210ec]
+                                4   ??? (libcompression.dylib + 16496) [0x2de321070]
+                                  1   ??? (libcompression.dylib + 22888) [0x2de322968]
+                                    1   <on behalf of deleted [2898] (originated by UNKNOWN [33])>
+                                  1   ??? (libcompression.dylib + 22440) [0x2de3227a8]
+                                    1   <on behalf of deleted [2898] (originated by UNKNOWN [33])>
+                                  1   ??? (libcompression.dylib + 21804) [0x2de32252c]
+                                    1   <on behalf of deleted [2898] (originated by UNKNOWN [33])>
+                                  1   ??? (libcompression.dylib + 21560) [0x2de322438]
+                                    1   <on behalf of deleted [2898] (originated by UNKNOWN [33])>
+                                1   ??? (libcompression.dylib + 16416) [0x2de321020]
+                                  1   <on behalf of deleted [2898] (originated by UNKNOWN [33]), Kernel mode>
+                        1   ??? (libsystem_platform.dylib + 2508) [0x1a9b719cc]
+                          1   <on behalf of deleted [2898] (originated by UNKNOWN [33])>
+                        1   ??? (logd + 146080) [0x10421baa0]
+                          1   ??? (libsystem_collections.dylib + 2904) [0x2e0062b58]
+                            1   <on behalf of deleted [2898] (originated by UNKNOWN [33])>
+                        1   ??? (logd + 146060) [0x10421ba8c]
+                          1   ??? (logd + 19424) [0x1041fcbe0]
+                            1   ??? (libsystem_collections.dylib + 4752) [0x2e0063290]
+                              1   <on behalf of deleted [2898] (originated by UNKNOWN [33])>
+                      2   ??? (logd + 143696) [0x10421b150]
+                        2   ??? (libcompression.dylib + 24364) [0x2de322f2c]
+                          2   ??? (libcompression.dylib + 86416) [0x2de332190]
+                            1   ??? (libcompression.dylib + 85888) [0x2de331f80]
+                              1   <on behalf of deleted [2898] (originated by UNKNOWN [33])>
+                            1   ??? (libcompression.dylib + 84820) [0x2de331b54]
+                              1   <on behalf of deleted [2898] (originated by UNKNOWN [33]), Kernel mode>
+                      1   ??? (logd + 143376) [0x10421b010]
+                        1   ??? (logd + 151588) [0x10421d024]
+                          1   ??? (logd + 28520) [0x1041fef68]
+                            1   ??? (libsystem_collections.dylib + 3564) [0x2e0062dec]
+                              1   ??? (libsystem_collections.dylib + 4316) [0x2e00630dc]
+                                1   ??? (libsystem_collections.dylib + 3644) [0x2e0062e3c]
+                                  1   <on behalf of deleted [2898] (originated by UNKNOWN [33])>
+
+  Binary Images:
+           0x1041f8000 -                ???  logd                        <000B4BEC-6673-318E-A4C3-E7533C499E4A>  /usr/libexec/logd
+           0x19de7e000 -        0x19de8a247  libsystem_pthread.dylib     <8674AE84-5A65-39B4-BCFE-A6178AFD3EAE>  /usr/lib/system/libsystem_pthread.dylib
+           0x1a9b71000 -        0x1a9b7967f  libsystem_platform.dylib    <9D2E2FF9-3CDB-3465-B9BA-EBA5CF7ACFDB>  /usr/lib/system/libsystem_platform.dylib
+           0x1ccb8b000 -        0x1ccbd1d5f  libdispatch.dylib           <C9C06C2C-438C-3E88-AA74-DCCE16127DC9>  /usr/lib/system/libdispatch.dylib
+           0x225195000 -        0x2251d86df  CacheDelete                 <B2095A9D-6464-3A26-8AC4-F5D14CB225BB>  /System/Library/PrivateFrameworks/CacheDelete.framework/CacheDelete
+           0x2de31d000 -        0x2de3f9fe7  libcompression.dylib        <9F2C7138-9087-3CD9-A0B6-CF48739A0719>  /usr/lib/libcompression.dylib
+           0x2e0062000 -        0x2e006700f  libsystem_collections.dylib <7A399FCF-B2E1-3242-95B4-526C474C50D5>  /usr/lib/system/libsystem_collections.dylib
+
+
+Powerstats for:   kernel_task
+UUID:             09C85910-8327-37E3-8AFE-1CF3F99052EF
+Version:          Darwin Kernel Version 27.0.0: Tue Jul 14 21:27:55 PDT 2026; root:xnu-13432.0.94.502.2~2/RELEASE_ARM64_T8140
+Resource Coalition: 5 samples 1
+Architecture:     arm64
+Start time:       2026-08-04 22:01:45.455 +0800
+End time:         2026-08-04 22:03:57.009 +0800
+Num samples:      5 (17%)
+Energy:           568.00 uWh
+Primary state:    5 samples Non-Frontmost App, Non-Suppressed, Kernel mode, Effective Thread QoS Unspecified, Requested Thread QoS Unspecified, Override Thread QoS Unspecified, e-core
+User Activity:    0 samples Idle, 5 samples Active
+Power Source:     0 samples on Battery, 5 samples on AC
+ *2  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 793420) [0xfffffff00abc5b4c]
+   *2  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 792804) [0xfffffff00abc58e4]
+     *1  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 2140272) [0xfffffff00ad0e870]
+     *1  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 2101848) [0xfffffff00ad05258]
+        1  <p-core>
+ *1  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 8230376) [0xfffffff00b2dd5e8]
+   *1  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 8228104) [0xfffffff00b2dcd08]
+     *1  ??? (IOSlaveProcessor + 4216) [0xfffffff00a310258]
+       *1  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 8245768) [0xfffffff00b2e1208]
+         *1  ??? (AppleSPU + 141968) [0xfffffff0096f5c50]
+           *1  ??? (AppleSPU + 150400) [0xfffffff0096f7d40]
+             *1  ??? (AppleSPU + 11812) [0xfffffff0096d5fe4]
+               *1  ??? (AppleSPU + 155328) [0xfffffff0096f9080]
+                 *1  ??? (AppleSPU + 150996) [0xfffffff0096f7f94]
+                   *1  ??? (AppleSPU + 138872) [0xfffffff0096f5038]
+ *1  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 979724) [0xfffffff00abf330c]
+   *1  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 3773532) [0xfffffff00ae9d45c]
+     *1  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 3747668) [0xfffffff00ae96f54]
+       *1  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 3754204) [0xfffffff00ae988dc]
+         *1  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 3563656) [0xfffffff00ae6a088]
+           *1  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 3267616) [0xfffffff00ae21c20]
+             *1  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 3241556) [0xfffffff00ae1b654]
+               *1  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 3244204) [0xfffffff00ae1c0ac]
+                 *1  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 3266584) [0xfffffff00ae21818]
+                   *1  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 3228632) [0xfffffff00ae183d8]
+                     *1  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 3227560) [0xfffffff00ae17fa8]
+                        1  <p-core>
+ *1  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 793412) [0xfffffff00abc5b44]
+   *1  ??? (<09C85910-8327-37E3-8AFE-1CF3F99052EF> + 2137124) [0xfffffff00ad0dc24]
+
+  Binary Images:
+   *0xfffffff0096d31c0 - 0xfffffff00971cb97  com.apple.driver.AppleSPU (1)         <18E99B2A-0383-387B-A503-4DEEA285D010>__TEXT_EXEC  /System/Library/Extensions/AppleSPU.kext/AppleSPU
+   *0xfffffff00a30f1e0 - 0xfffffff00a310b9b  com.apple.driver.IOSlaveProcessor (1) <8BAB9804-1DD4-3170-B80A-60F6B810E438>__TEXT_EXEC  /System/Library/Extensions/IOSlaveProcessor.kext/IOSlaveProcessor
+   *0xfffffff00ab04000 - 0xfffffff00b3effff  ??? (27.0.0)                          <09C85910-8327-37E3-8AFE-1CF3F99052EF>__TEXT_EXEC
+
+
+Powerstats for:   backboardd
+UUID:             A264545B-3D37-343B-A62C-8DAB384D1AD3
+Path:             /usr/libexec/backboardd
+Resource Coalition: 2 samples "com.apple.backboardd"(91)
+Architecture:     arm64e
+Start time:       2026-08-04 22:02:26.840 +0800
+End time:         2026-08-04 22:03:56.123 +0800
+Num samples:      2 (7%)
+Energy:           66.19 uWh
+Primary state:    1 samples Non-Frontmost App, Non-Suppressed, User mode, Effective Thread QoS Unspecified, Requested Thread QoS Unspecified, Override Thread QoS Unspecified, e-core
+User Activity:    0 samples Idle, 2 samples Active
+Power Source:     0 samples on Battery, 2 samples on AC
+  1  ??? (libsystem_pthread.dylib + 2312) [0x19de7e908]
+    1  <Kernel mode>
+  1  ??? (libsystem_pthread.dylib + 2320) [0x19de7e910]
+    1  ??? (libsystem_pthread.dylib + 4664) [0x19de7f238]
+      1  ??? (libdispatch.dylib + 87520) [0x1ccba05e0]
+        1  ??? (libsystem_platform.dylib + 4012) [0x1a9b71fac]
+
+  Binary Images:
+           0x100568000 -                ???  backboardd               <A264545B-3D37-343B-A62C-8DAB384D1AD3>  /usr/libexec/backboardd
+           0x19de7e000 -        0x19de8a247  libsystem_pthread.dylib  <8674AE84-5A65-39B4-BCFE-A6178AFD3EAE>  /usr/lib/system/libsystem_pthread.dylib
+           0x1a9b71000 -        0x1a9b7967f  libsystem_platform.dylib <9D2E2FF9-3CDB-3465-B9BA-EBA5CF7ACFDB>  /usr/lib/system/libsystem_platform.dylib
+           0x1ccb8b000 -        0x1ccbd1d5f  libdispatch.dylib        <C9C06C2C-438C-3E88-AA74-DCCE16127DC9>  /usr/lib/system/libdispatch.dylib
+
+
+Powerstats for:   duetexpertd
+UUID:             4305112B-00ED-3B23-9793-DBF8CB42F3A5
+Path:             /usr/libexec/duetexpertd
+Resource Coalition: 2 samples "com.apple.duetexpertd"(287)
+On Behalf Of:     2 samples UNKNOWN [33] (2 samples originated by UNKNOWN [33])
+Architecture:     arm64e
+Pageins:          2324 pages
+Start time:       2026-08-04 22:02:30.445 +0800
+End time:         2026-08-04 22:04:12.633 +0800
+Num samples:      2 (7%)
+Energy:           215.29 uWh
+Primary state:    1 samples Non-Frontmost App, Non-Suppressed, User mode, Effective Thread QoS Background, Requested Thread QoS Background, Override Thread QoS Unspecified, e-core
+User Activity:    0 samples Idle, 2 samples Active
+Power Source:     0 samples on Battery, 2 samples on AC
+  2  ??? (libsystem_pthread.dylib + 2320) [0x19de7e910]
+    1  ??? (libsystem_pthread.dylib + 4664) [0x19de7f238]
+      1  ??? (libdispatch.dylib + 87740) [0x1ccba06bc]
+        1  ??? (libdispatch.dylib + 89240) [0x1ccba0c98]
+          1  ??? (libdispatch.dylib + 46192) [0x1ccb96470]
+            1  ??? (libdispatch.dylib + 42768) [0x1ccb95710]
+              1  ??? (libdispatch.dylib + 132012) [0x1ccbab3ac]
+                1  ??? (libdispatch.dylib + 114692) [0x1ccba7004]
+                  1  ??? (libxpc.dylib + 112108) [0x19def85ec]
+                    1  ??? (libxpc.dylib + 198792) [0x19df0d888]
+                      1  ??? (libxpc.dylib + 322096) [0x19df2ba30]
+                        1  ??? (libxpc.dylib + 322640) [0x19df2bc50]
+                          1  ??? (libxpc.dylib + 321032) [0x19df2b608]
+                            1  ??? (AppPredictionInternal + 3733456) [0x24a3e17d0]
+                              1  ??? (AppPredictionInternal + 3734072) [0x24a3e1a38]
+                                1  ??? (AppPredictionInternal + 2232192) [0x24a272f80]
+                                  1  ??? (AppPredictionInternal + 2249040) [0x24a277150]
+                                    1  ??? (AppPredictionInternal + 2251156) [0x24a277994]
+                                      1  ??? (AppPredictionInternal + 692480) [0x24a0fb100]
+                                        1  ??? (AppPredictionInternal + 3711772) [0x24a3dc31c]
+                                          1  ??? (ProactiveSupport + 34692) [0x1cb9d5784]
+                                            1  ??? (ProactiveSupport + 13152) [0x1cb9d0360]
+                                              1  ??? (AppPredictionInternal + 3711928) [0x24a3dc3b8]
+                                                1  ??? (AppPredictionInternal + 3189028) [0x24a35c924]
+                                                  1  ??? (AppPredictionClient + 1402556) [0x1e35ad6bc]
+                                                    1  ??? (AppPredictionClient + 99216) [0x1e346f390]
+                                                      1  ??? (AppPredictionClient + 18820) [0x1e345b984]
+                                                        1  ??? (AppPredictionClient + 270656) [0x1e3499140]
+                                                          1  ??? (ProactiveSupport + 7408) [0x1cb9cecf0]
+                                                            1  ??? (ProactiveSupport + 7248) [0x1cb9cec50]
+                                                              1  ??? (AppPredictionClient + 105236) [0x1e3470b14]
+                                                                1  ??? (Trial + 19804) [0x2ce847d5c]
+                                                                  1  ??? (Trial + 66668) [0x2ce85346c]
+                                                                    1  ??? (Trial + 73116) [0x2ce854d9c]
+                                                                      1  ??? (Trial + 22428) [0x2ce84879c]
+                                                                        1  ??? (Trial + 80808) [0x2ce856ba8]
+                                                                          1  ??? (Foundation + 159592) [0x19e447f68]
+                                                                            1  ??? (libsystem_kernel.dylib + 26692) [0x25615f844]
+                                                                              1  <on behalf of UNKNOWN [33] (originated by UNKNOWN [33]), Kernel mode>
+    1  ??? (libsystem_pthread.dylib + 4604) [0x19de7f1fc]
+      1  ??? (libdispatch.dylib + 86256) [0x1ccba00f0]
+        1  ??? (libdispatch.dylib + 84332) [0x1ccb9f96c]
+          1  ??? (libdispatch.dylib + 114644) [0x1ccba6fd4]
+            1  ??? (libdispatch.dylib + 7372) [0x1ccb8cccc]
+              1  ??? (AppPredictionInternal + 2694656) [0x24a2e3e00]
+                1  ??? (AppPredictionInternal + 2697256) [0x24a2e4828]
+                  1  ??? (AppPredictionInternal + 2703792) [0x24a2e61b0]
+                    1  ??? (AppPredictionInternal + 2706020) [0x24a2e6a64]
+                      1  ??? (BiomePubSub + 8052) [0x1dffd3f74]
+                        1  ??? (BiomePubSub + 13508) [0x1dffd54c4]
+                          1  ??? (BiomePubSub + 6620) [0x1dffd39dc]
+                            1  ??? (AppPredictionInternal + 2706648) [0x24a2e6cd8]
+                              1  ??? (AppPredictionInternal + 2704532) [0x24a2e6494]
+                                1  ??? (ProactiveSuggestionClientModel + 48656) [0x2247fee10]
+                                  1  ??? (ProactiveSuggestionClientModel + 37536) [0x2247fc2a0]
+                                    1  ??? (Foundation + 1096576) [0x19e52cb80]
+                                      1  ??? (Foundation + 705188) [0x19e4cd2a4]
+                                        1  ??? (Foundation + 245504) [0x19e45cf00]
+                                          1  ??? (Foundation + 245640) [0x19e45cf88]
+                                            1  ??? (Foundation + 614344) [0x19e4b6fc8]
+                                              1  ??? (Foundation + 165408) [0x19e449620]
+                                                1  ??? (Foundation + 162852) [0x19e448c24]
+                                                  1  ??? (Foundation + 185712) [0x19e44e570]
+                                                    1  ??? (Foundation + 188188) [0x19e44ef1c]
+                                                      1  ??? (Foundation + 251996) [0x19e45e85c]
+                                                        1  ??? (CoreFoundation + 301136) [0x19df88850]
+                                                          1  ??? (Foundation + 21056) [0x19e426240]
+                                                            1  ??? (CoreFoundation + 24192) [0x19df44e80]
+                                                              1  <on behalf of UNKNOWN [33] (originated by UNKNOWN [33])>
+
+  Binary Images:
+           0x104ce0000 -                ???  duetexpertd                    <4305112B-00ED-3B23-9793-DBF8CB42F3A5>  /usr/libexec/duetexpertd
+           0x19de7e000 -        0x19de8a247  libsystem_pthread.dylib        <8674AE84-5A65-39B4-BCFE-A6178AFD3EAE>  /usr/lib/system/libsystem_pthread.dylib
+           0x19dedd000 -        0x19df3e3d3  libxpc.dylib                   <98A38038-E2BA-36F4-933D-FC98CDEA2582>  /usr/lib/system/libxpc.dylib
+           0x19df3f000 -        0x19e420fbf  CoreFoundation                 <7CDBA4FD-E90E-3EF2-8AE3-9071648E4673>  /System/Library/Frameworks/CoreFoundation.framework/CoreFoundation
+           0x19e421000 -        0x19f52d45b  Foundation                     <B17A96F3-DC4A-3757-90DF-BE4837ABB5AA>  /System/Library/Frameworks/Foundation.framework/Foundation
+           0x1cb9cd000 -        0x1cba4140f  ProactiveSupport               <E8456631-E3A7-3003-B604-65F41B4A07CC>  /System/Library/PrivateFrameworks/ProactiveSupport.framework/ProactiveSupport
+           0x1ccb8b000 -        0x1ccbd1d5f  libdispatch.dylib              <C9C06C2C-438C-3E88-AA74-DCCE16127DC9>  /usr/lib/system/libdispatch.dylib
+           0x1dffd2000 -        0x1e001ef37  BiomePubSub                    <0DE85C1C-CB24-3A1D-8526-AEE29CCC3A0C>  /System/Library/PrivateFrameworks/BiomePubSub.framework/BiomePubSub
+           0x1e3457000 -        0x1e363bae3  AppPredictionClient            <9C2EBFE4-F1C8-3E45-979A-4557FFA142D3>  /System/Library/PrivateFrameworks/AppPredictionClient.framework/AppPredictionClient
+           0x2247f3000 -        0x22487658f  ProactiveSuggestionClientModel <AE1F0469-C050-3629-A522-5DB1865377E3>  /System/Library/PrivateFrameworks/ProactiveSuggestionClientModel.framework/ProactiveSuggestionClientModel
+           0x24a052000 -        0x24a5dcffb  AppPredictionInternal          <FEC18ABE-6FAF-3F61-9B2F-32F6D375E161>  /System/Library/PrivateFrameworks/AppPredictionInternal.framework/AppPredictionInternal
+           0x256159000 -        0x2561961fb  libsystem_kernel.dylib         <66561A3E-67D2-3F28-9E5C-C7BDE524EE9D>  /usr/lib/system/libsystem_kernel.dylib
+           0x2ce843000 -        0x2ce8c583f  Trial                          <3E4C00BE-9361-3CF0-9CA5-981B6D73F5DB>  /System/Library/PrivateFrameworks/Trial.framework/Trial

@@ -1,0 +1,239 @@
+{"roots_installed":0,"app_name":"Swiftgram","timestamp":"2026-08-10 16:01:03.00 +0800","app_version":"12.9.2","slice_uuid":"768C6E26-A307-3E6F-A902-9BE4CD2BE673","adam_id":"6471879502","build_version":"281","bundleID":"app.swiftgram.ios","duration_ms":"238633","is_first_party":0,"share_with_app_devs":1,"bug_type":"145","os_version":"iPhone OS 27.0 (24A5390f)","distributor_id":"com.apple.AppStore","name":"Swiftgram","incident_id":"E1E0AEB9-FD7E-4CC7-90C2-352AC54406BD"}
+Date/Time:        2026-08-10 15:57:04.341 +0800
+End time:         2026-08-10 16:01:02.974 +0800
+OS Version:       iPhone OS 27.0 (Build 24A5390f)
+Architecture:     arm64e
+Report Version:   73
+Incident Identifier: E1E0AEB9-FD7E-4CC7-90C2-352AC54406BD
+Share With Devs:  Yes
+
+Data Source:      Microstackshots
+Shared Cache:     1C83FDD9-CF90-33E0-99D8-6AFF6156F8A9 slid base address 0x19d944000
+
+Command:          Swiftgram
+Path:             /private/var/containers/Bundle/Application/2E16EDA6-487C-4C78-8505-40C980D39369/Swiftgram.app/Swiftgram
+Identifier:       app.swiftgram.ios
+Version:          12.9.2 (281)
+Adam ID:          6471879502
+Is First Party:   No
+Beta Identifier:  CB88107C-B504-443A-9214-1FE45289304F
+Resource Coalition: 7716
+On Behalf Of:     3 samples UNKNOWN [37] (3 samples originated by Swiftgram [31651])
+Architecture:     arm64
+PID:              31651
+
+Event:            disk writes
+Action taken:     none
+Writes:           1073.83 MB of file backed memory dirtied over 239 seconds (4499.91 KB per second average), exceeding limit of 12.43 KB per second over 86400 seconds
+Writes limit:     1073.74 MB
+Limit duration:   86400s
+Writes caused:    1073.83 MB
+Writes duration:  239s
+Duration:         238.63s
+Duration Sampled: 236.08s (event starts 2.41s before samples)
+Steps:            99 (52 samples lost, 10.49 MB/step)
+
+Hardware model:   iPhone17,1
+Active cpus:      6
+Memory size:      7.47 GB
+HW page size:     16384
+VM page size:     16384
+
+Models:           UNKNOWN
+
+OS Cryptex File Extents: 6738
+
+Heaviest stack for the target process:
+  99  ??? (libsystem_pthread.dylib + 2320) [0x19de7e910]
+  99  ??? (libsystem_pthread.dylib + 4664) [0x19de7f238]
+  99  ??? (libdispatch.dylib + 87740) [0x1ccba06bc]
+  99  ??? (libdispatch.dylib + 89240) [0x1ccba0c98]
+  99  ??? (libdispatch.dylib + 46192) [0x1ccb96470]
+  99  ??? (libdispatch.dylib + 43132) [0x1ccb9587c]
+  99  ??? (libdispatch.dylib + 114644) [0x1ccba6fd4]
+  99  ??? (libdispatch.dylib + 7372) [0x1ccb8cccc]
+  99  ??? (<3B40D968-B6C9-35E9-A4B2-7A016AFE67CF> + 79740) [0x10073b77c]
+  77  ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 640160) [0x1008304a0]
+  76  ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 637972) [0x10082fc14]
+  76  ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 641108) [0x100830854]
+  76  ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 651620) [0x100833164]
+  76  ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 650700) [0x100832dcc]
+  76  ??? (libsystem_kernel.dylib + 20528) [0x25615e030]
+
+
+Powerstats for:   Swiftgram [31651]
+UUID:             768C6E26-A307-3E6F-A902-9BE4CD2BE673
+Path:             /private/var/containers/Bundle/Application/2E16EDA6-487C-4C78-8505-40C980D39369/Swiftgram.app/Swiftgram
+Identifier:       app.swiftgram.ios
+Version:          12.9.2 (281)
+Adam ID:          6471879502
+Is First Party:   No
+Beta Identifier:  CB88107C-B504-443A-9214-1FE45289304F
+Resource Coalition: 99 samples 7716
+On Behalf Of:     3 samples UNKNOWN [37] (3 samples originated by Swiftgram [31651])
+Architecture:     arm64
+Footprint:        130.28 MB -> 322.73 MB (+192.45 MB) (max 439.67 MB )
+Pageins:          4742 pages
+Start time:       2026-08-10 15:57:06.750 +0800
+End time:         2026-08-10 16:01:02.827 +0800
+Num samples:      99 (100%)
+Energy:           14.76 mWh
+Num threads:      32
+Primary state:    98 samples Frontmost App, Non-Suppressed, Kernel mode, Effective Thread QoS Default, Requested Thread QoS Default, Override Thread QoS Unspecified, e-core
+User Activity:    0 samples Idle, 99 samples Active
+Power Source:     99 samples on Battery, 0 samples on AC
+  99  ??? (libsystem_pthread.dylib + 2320) [0x19de7e910]
+    99  ??? (libsystem_pthread.dylib + 4664) [0x19de7f238]
+      99  ??? (libdispatch.dylib + 87740) [0x1ccba06bc]
+        99  ??? (libdispatch.dylib + 89240) [0x1ccba0c98]
+          99  ??? (libdispatch.dylib + 46192) [0x1ccb96470]
+            99  ??? (libdispatch.dylib + 43132) [0x1ccb9587c]
+              99  ??? (libdispatch.dylib + 114644) [0x1ccba6fd4]
+                99  ??? (libdispatch.dylib + 7372) [0x1ccb8cccc]
+                  99  ??? (<3B40D968-B6C9-35E9-A4B2-7A016AFE67CF> + 79740) [0x10073b77c]
+                    77  ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 640160) [0x1008304a0]
+                      76  ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 637972) [0x10082fc14]
+                        76  ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 641108) [0x100830854]
+                          76  ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 651620) [0x100833164]
+                            76  ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 650700) [0x100832dcc]
+                              76  ??? (libsystem_kernel.dylib + 20528) [0x25615e030]
+                                13  <p-core>
+                      1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 639856) [0x100830370]
+                        1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 633700) [0x10082eb64]
+                          1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 640672) [0x1008306a0]
+                            1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 636084) [0x10082f4b4]
+                              1   ??? (<5F5A00B1-EFF2-3877-B038-F547B3E439A8> + 42720296) [0x1049a9c28]
+                                1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 547168) [0x100819960]
+                                  1   ??? (<3B40D968-B6C9-35E9-A4B2-7A016AFE67CF> + 79448) [0x10073b658]
+                                    1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 547276) [0x1008199cc]
+                                      1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 646128) [0x100831bf0]
+                                        1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 642320) [0x100830d10]
+                                          1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 637708) [0x10082fb0c]
+                                            1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 637972) [0x10082fc14]
+                                              1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 641108) [0x100830854]
+                                                1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 651760) [0x1008331f0]
+                                                  1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 650700) [0x100832dcc]
+                                                    1   ??? (libsystem_kernel.dylib + 20528) [0x25615e030]
+                    12  ??? (<3B40D968-B6C9-35E9-A4B2-7A016AFE67CF> + 82656) [0x10073c2e0]
+                      9   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1899604) [0x100963c54]
+                        9   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1874968) [0x10095dc18]
+                          9   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1776896) [0x100945d00]
+                            9   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 398916) [0x1007f5644]
+                              9   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2161976) [0x1009a3d38]
+                                8   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2192264) [0x1009ab388]
+                                  8   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2347232) [0x1009d10e0]
+                                    8   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2304752) [0x1009c6af0]
+                                      8   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2306504) [0x1009c71c8]
+                                        8   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2186144) [0x1009a9ba0]
+                                          8   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2185216) [0x1009a9800]
+                                            8   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2287540) [0x1009c27b4]
+                                              8   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2290364) [0x1009c32bc]
+                                                8   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2235368) [0x1009b5be8]
+                                                  8   ??? (libsystem_kernel.dylib + 28000) [0x25615fd60]
+                                1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2193244) [0x1009ab75c]
+                                  1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2221240) [0x1009b24b8]
+                                    1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2221468) [0x1009b259c]
+                                      1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2222080) [0x1009b2800]
+                                        1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2295356) [0x1009c463c]
+                                          1   ??? (libsystem_kernel.dylib + 33628) [0x25616135c]
+                      3   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1903624) [0x100964c08]
+                        3   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1875224) [0x10095dd18]
+                          2   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1875960) [0x10095dff8]
+                            2   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1826264) [0x100951dd8]
+                              2   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1825244) [0x1009519dc]
+                                2   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1777768) [0x100946068]
+                                  2   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2192264) [0x1009ab388]
+                                    2   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2318412) [0x1009ca04c]
+                                      2   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2354360) [0x1009d2cb8]
+                                        2   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2365988) [0x1009d5a24]
+                                          2   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2258644) [0x1009bb6d4]
+                                            2   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2287008) [0x1009c25a0]
+                                              1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2287688) [0x1009c2848]
+                                                1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2235368) [0x1009b5be8]
+                                                  1   ??? (libsystem_kernel.dylib + 28000) [0x25615fd60]
+                                                    1   <on behalf of UNKNOWN [37] (originated by Swiftgram [31651]), p-core>
+                                              1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2287540) [0x1009c27b4]
+                                                1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2290340) [0x1009c32a4]
+                                                  1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2235368) [0x1009b5be8]
+                                                    1   ??? (libsystem_kernel.dylib + 28000) [0x25615fd60]
+                                                      1   <on behalf of UNKNOWN [37] (originated by Swiftgram [31651]), p-core>
+                          1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1876100) [0x10095e084]
+                            1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1776896) [0x100945d00]
+                              1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 398916) [0x1007f5644]
+                                1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2161976) [0x1009a3d38]
+                                  1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2193244) [0x1009ab75c]
+                                    1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2221240) [0x1009b24b8]
+                                      1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2221468) [0x1009b259c]
+                                        1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2222080) [0x1009b2800]
+                                          1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2295184) [0x1009c4590]
+                                            1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2235368) [0x1009b5be8]
+                                              1   ??? (libsystem_kernel.dylib + 28000) [0x25615fd60]
+                                                1   <on behalf of UNKNOWN [37] (originated by Swiftgram [31651]), p-core>
+                    8   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1594884) [0x100919604]
+                      8   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1576636) [0x100914ebc]
+                        8   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1595660) [0x10091990c]
+                          7   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1580912) [0x100915f70]
+                            7   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1776896) [0x100945d00]
+                              7   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 398916) [0x1007f5644]
+                                7   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2161976) [0x1009a3d38]
+                                  4   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2193244) [0x1009ab75c]
+                                    4   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2221240) [0x1009b24b8]
+                                      4   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2221468) [0x1009b259c]
+                                        4   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2222080) [0x1009b2800]
+                                          4   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2295184) [0x1009c4590]
+                                            4   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2235368) [0x1009b5be8]
+                                              4   ??? (libsystem_kernel.dylib + 28000) [0x25615fd60]
+                                                4   <p-core>
+                                  3   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2192264) [0x1009ab388]
+                                    3   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2347232) [0x1009d10e0]
+                                      3   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2304752) [0x1009c6af0]
+                                        3   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2306504) [0x1009c71c8]
+                                          3   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2186144) [0x1009a9ba0]
+                                            3   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2185216) [0x1009a9800]
+                                              3   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2287540) [0x1009c27b4]
+                                                3   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2290364) [0x1009c32bc]
+                                                  3   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2235368) [0x1009b5be8]
+                                                    3   ??? (libsystem_kernel.dylib + 28000) [0x25615fd60]
+                                                      1   <p-core>
+                          1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1580872) [0x100915f48]
+                            1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1683384) [0x10092efb8]
+                              1   ??? (<D0C692C1-4007-34DE-8928-3427DD7D4894> + 4009404) [0x100f3edbc]
+                                1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1480112) [0x1008fd5b0]
+                                  1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1504496) [0x1009034f0]
+                                    1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1292532) [0x1008cf8f4]
+                                      1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1288512) [0x1008ce940]
+                                        1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1846448) [0x100956cb0]
+                                          1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1840348) [0x1009554dc]
+                                            1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 1777768) [0x100946068]
+                                              1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2192264) [0x1009ab388]
+                                                1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2331744) [0x1009cd460]
+                                                  1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2356432) [0x1009d34d0]
+                                                    1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2298960) [0x1009c5450]
+                                                      1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2300380) [0x1009c59dc]
+                                                        1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2271596) [0x1009be96c]
+                                                          1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2258644) [0x1009bb6d4]
+                                                            1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2287008) [0x1009c25a0]
+                                                              1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2287540) [0x1009c27b4]
+                                                                1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2290364) [0x1009c32bc]
+                                                                  1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 2235368) [0x1009b5be8]
+                                                                    1   ??? (libsystem_kernel.dylib + 28000) [0x25615fd60]
+                                                                      1   <p-core>
+                    1   ??? (<D0C692C1-4007-34DE-8928-3427DD7D4894> + 9257896) [0x1014403a8]
+                      1   ??? (libsystem_kernel.dylib + 20528) [0x25615e030]
+                        1   <Effective Thread QoS Utility, Requested Thread QoS Utility>
+                    1   ??? (<3B40D968-B6C9-35E9-A4B2-7A016AFE67CF> + 164612) [0x100750304]
+                      1   ??? (<3B40D968-B6C9-35E9-A4B2-7A016AFE67CF> + 213384) [0x10075c188]
+                        1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 621292) [0x10082baec]
+                          1   ??? (<1058338D-4B94-30C6-9BE4-DBE5DAA712C5> + 577184) [0x100820ea0]
+                            1   ??? (libsystem_kernel.dylib + 20528) [0x25615e030]
+                              1   <p-core>
+
+  Binary Images:
+           0x1002f0000 -                ???  app.swiftgram.ios 12.9.2 (281) <768C6E26-A307-3E6F-A902-9BE4CD2BE673>  /private/var/containers/Bundle/Application/2E16EDA6-487C-4C78-8505-40C980D39369/Swiftgram.app/Swiftgram
+           0x100728000 -                ???  ???                            <3B40D968-B6C9-35E9-A4B2-7A016AFE67CF>
+           0x100794000 -                ???  ???                            <1058338D-4B94-30C6-9BE4-DBE5DAA712C5>
+           0x100b6c000 -                ???  ???                            <D0C692C1-4007-34DE-8928-3427DD7D4894>
+           0x1020ec000 -                ???  ???                            <5F5A00B1-EFF2-3877-B038-F547B3E439A8>
+           0x19de7e000 -        0x19de8a247  libsystem_pthread.dylib        <8674AE84-5A65-39B4-BCFE-A6178AFD3EAE>  /usr/lib/system/libsystem_pthread.dylib
+           0x1ccb8b000 -        0x1ccbd1d5f  libdispatch.dylib              <C9C06C2C-438C-3E88-AA74-DCCE16127DC9>  /usr/lib/system/libdispatch.dylib
+           0x256159000 -        0x2561961fb  libsystem_kernel.dylib         <66561A3E-67D2-3F28-9E5C-C7BDE524EE9D>  /usr/lib/system/libsystem_kernel.dylib

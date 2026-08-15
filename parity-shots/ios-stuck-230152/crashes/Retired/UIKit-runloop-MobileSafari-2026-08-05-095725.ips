@@ -1,0 +1,473 @@
+{"bug_type":"223","ht_enablement_prefix":"PDSEHangTracer","app_name":"MobileSafari","timestamp":"2026-08-05 09:57:25.00 +0800","app_version":"27.0","slice_uuid":"","adam_id":0,"build_version":"8625.1.24.10.1","bundleID":"com.apple.mobilesafari","duration_ms":"1109","bug_subtype":"light","is_first_party":1,"share_with_app_devs":1,"os_version":"iPhone OS 27.0 (24A5390f)","incident_id":"3C6B2EC9-2C03-402D-A46B-5452B7417EE4","name":"MobileSafari","roots_installed":0}
+Date/Time:        2026-08-05 09:57:10.296 +0800
+End time:         2026-08-05 09:57:11.405 +0800
+OS Version:       iPhone OS 27.0 (Build 24A5390f)
+Architecture:     arm64e
+Report Version:   73
+Incident Identifier: 3C6B2EC9-2C03-402D-A46B-5452B7417EE4
+
+Data Source:      KPerf Lightweight PET
+Shared Cache:     1C83FDD9-CF90-33E0-99D8-6AFF6156F8A9 slid base address 0x19d944000 (System Primary)
+Shared Cache:     1C83FDD9-CF90-33E0-99D8-6AFF6156F8A9 slid base address 0x188d64000
+Shared Cache:     7868A3C4-AFE0-3FD4-95E3-364A94DD01D9 slid base address 0x193b20000 (DriverKit)
+Reason:           UIKit-runloop-MobileSafari: timeout 1109ms
+
+Command:          MobileSafari
+Path:             /private/var/containers/Bundle/Application/A5FFA04C-4B51-4787-9D05-B274B75C1B8E/MobileSafari.app/MobileSafari
+Identifier:       com.apple.mobilesafari
+Version:          27.0 (8625.1.24.10.1)
+Is First Party:   Yes
+Architecture:     arm64e
+Parent:           launchd [1]
+PID:              6194
+Time Since Fork:  1126s
+
+Event:            Completed Runloop Hang
+Duration:         1.11s
+Steps:            22 (50ms sampling interval)
+Report threshold: 0.5s
+
+Hardware model:   iPhone17,1
+Active cpus:      6
+Memory size:      7.47 GB
+HW page size:     16384
+VM page size:     16384
+Shared cache residency: 10.87% (741.11 MB / 6819.19 MB)
+
+Time Since Boot:  137226s
+Time Awake Since Boot: 137226s
+Time Since Wake:  n/a (machine hasn't slept)
+
+Total CPU Time:   1.727s (2.1G cycles, 2.5G instructions, 0.83c/i, 1.21GHz avg)
+Memory pressure:  average 77%, highest 77%
+Available memory: average 2159.23 MB, lowest 2151.55 MB
+Lost Perf:        No lost perf 1.050s (100%)
+I/O statistics:
+  Overall:        26 IOs (25 IOs/s), 320 KB (305.09 KB/s)
+  Tier0:          11 IOs (10 IOs/s), 80.34 KB (76.51 KB/s)
+  Tier1:          1 IOs (1 IOs/s), 16 KB (15.24 KB/s)
+  Tier2:          14 IOs (13 IOs/s), 224 KB (213.33 KB/s)
+Advisory levels:  Battery -> 2, User -> 3, ThermalPressure -> 0, Combined -> 2
+Free disk space:  40.79 GB/476.29 GB, low space threshold 150 MB
+Vnodes Available: 59.50% (16661/28000, 14000 allocated, 14000 soft limit)
+Models:           none
+
+Preferred User Language: en-SG, zh-Hans-SG
+Country Code:     SG
+Keyboards:        com.tencent.wetype.keyboard, en_US QWERTY
+OS Cryptex File Extents: 6738
+
+Heaviest stack for the main thread of the target process:
+  22  ??? (dyld + 22064) [0x19ddcb630]
+  22  ??? (MobileSafariUI + 16336) [0x233ae0fd0]
+  22  ??? (UIKitCore + 755808) [0x1a221c860]
+  22  ??? (GraphicsServices + 3876) [0x2485b7f24]
+  22  ??? (CoreFoundation + 243456) [0x19df7a700]
+  22  ??? (CoreFoundation + 238224) [0x19df79290]
+  22  ??? (CoreFoundation + 242152) [0x19df7a1e8]
+  22  ??? (CoreFoundation + 367140) [0x19df98a24]
+  22  ??? (CoreFoundation + 367280) [0x19df98ab0]
+  22  ??? (UpdateCycle + 3008) [0x2cff84bc0]
+  22  ??? (UIKitCore + 428092) [0x1a21cc83c]
+  22  ??? (UIKitCore + 428700) [0x1a21cca9c]
+  22  ??? (UIKitCore + 433292) [0x1a21cdc8c]
+  22  ??? (UIKitCore + 922572) [0x1a22453cc]
+  22  ??? (UIKitCore + 6200036) [0x1a274dae4]
+  22  ??? (MobileSafariUI + 1756224) [0x233c89c40]
+  22  ??? (UIKitCore + 961112) [0x1a224ea58]
+  22  ??? (UIKitCore + 953308) [0x1a224cbdc]
+  22  ??? (Gestures + 120972) [0x1a7a1788c]
+  22  ??? (Gestures + 46904) [0x1a7a05738]
+  22  ??? (Gestures + 58728) [0x1a7a08568]
+  22  ??? (Gestures + 56808) [0x1a7a07de8]
+  22  ??? (UIKitCore + 930116) [0x1a2247144]
+  22  ??? (UIKitCore + 930544) [0x1a22472f0]
+  22  ??? (UIKitCore + 6207472) [0x1a274f7f0]
+  22  ??? (UIKitCore + 6208108) [0x1a274fa6c]
+  22  ??? (UIKitCore + 6208508) [0x1a274fbfc]
+  22  ??? (UIKitCore + 14070424) [0x1a2ecf298]
+  22  ??? (UIKitCore + 5734484) [0x1a26dc054]
+  22  ??? (UIKitCore + 21831024) [0x1a3635d70]
+  22  ??? (UIKitCore + 21828036) [0x1a36351c4]
+  22  ??? (UIKitCore + 21829476) [0x1a3635764]
+  22  ??? (UIKitCore + 17875152) [0x1a32700d0]
+  22  ??? (UIKitCore + 13169892) [0x1a2df34e4]
+  22  ??? (BrowserEngineKit + 60488) [0x1ccbe0c48]
+  22  ??? (UIKitCore + 11075960) [0x1a2bf4178]
+  22  ??? (UIKitCore + 11075212) [0x1a2bf3e8c]
+  20  ??? (UIKitCore + 17362176) [0x1a31f2d00]
+  20  ??? (UIKitCore + 5933396) [0x1a270c954]
+  12  ??? (UIKitCore + 11226280) [0x1a2c18ca8]
+  12  ??? (UIKitCore + 17360820) [0x1a31f27b4]
+  12  ??? (Foundation + 2891452) [0x19e6e2ebc]
+  12  ??? (Foundation + 2894324) [0x19e6e39f4]
+  12  ??? (libsystem_kernel.dylib + 26104) [0x25615f5f8]
+ *12  ??? (pthread + 20044) [0xfffffff0084187ec]
+
+HID Events:       Digitizer x2, Digitizer* x2, Digitizer x2, Digitizer x2
+
+
+Process:          MobileSafari [6194] Thread 0x161028
+UUID:             CC7B4428-61A8-3850-B649-3BEA13780A00
+Path:             /private/var/containers/Bundle/Application/A5FFA04C-4B51-4787-9D05-B274B75C1B8E/MobileSafari.app/MobileSafari
+Identifier:       com.apple.mobilesafari
+Version:          27.0 (8625.1.24.10.1)
+Is First Party:   Yes
+Shared Cache:     1C83FDD9-CF90-33E0-99D8-6AFF6156F8A9 slid base address 0x19d944000 (System Primary)
+Architecture:     arm64e
+Parent:           launchd [1]
+RunningBoard Mgd: Yes
+UID:              501
+Jetsam Priority:  100
+Footprint:        224.02 MB
+Time Since Fork:  1126s
+Num samples:      22 (1-22)
+CPU Time:         0.095s (122.1M cycles, 221.6M instructions, 0.55c/i, 1.29GHz avg)
+Num threads:      14
+Note:             13 other threads omitted
+
+  Thread 0x161028    DispatchQueue "com.apple.main-thread"(1)    22 samples (1-22)    priority 47 (base 47)    cpu time 0.080s (104.7M cycles, 206.3M instructions, 0.51c/i, 1.31GHz avg)
+  22  ??? (dyld + 22064) [0x19ddcb630]
+    22  ??? (MobileSafariUI + 16336) [0x233ae0fd0]
+      22  ??? (UIKitCore + 755808) [0x1a221c860]
+        22  ??? (GraphicsServices + 3876) [0x2485b7f24]
+          22  ??? (CoreFoundation + 243456) [0x19df7a700]
+            22  ??? (CoreFoundation + 238224) [0x19df79290]
+              22  ??? (CoreFoundation + 242152) [0x19df7a1e8]
+                22  ??? (CoreFoundation + 367140) [0x19df98a24]
+                  22  ??? (CoreFoundation + 367280) [0x19df98ab0]
+                    22  ??? (UpdateCycle + 3008) [0x2cff84bc0]
+                      22  ??? (UIKitCore + 428092) [0x1a21cc83c]
+                        22  ??? (UIKitCore + 428700) [0x1a21cca9c]
+                          22  ??? (UIKitCore + 433292) [0x1a21cdc8c]
+                            22  ??? (UIKitCore + 922572) [0x1a22453cc]
+                              22  ??? (UIKitCore + 6200036) [0x1a274dae4]
+                                22  ??? (MobileSafariUI + 1756224) [0x233c89c40]
+                                  22  ??? (UIKitCore + 961112) [0x1a224ea58]
+                                    22  ??? (UIKitCore + 953308) [0x1a224cbdc]
+                                      22  ??? (Gestures + 120972) [0x1a7a1788c]
+                                        22  ??? (Gestures + 46904) [0x1a7a05738]
+                                          22  ??? (Gestures + 58728) [0x1a7a08568]
+                                            22  ??? (Gestures + 56808) [0x1a7a07de8]
+                                              22  ??? (UIKitCore + 930116) [0x1a2247144]
+                                                22  ??? (UIKitCore + 930544) [0x1a22472f0]
+                                                  22  ??? (UIKitCore + 6207472) [0x1a274f7f0]
+                                                    22  ??? (UIKitCore + 6208108) [0x1a274fa6c]
+                                                      22  ??? (UIKitCore + 6208508) [0x1a274fbfc]
+                                                        22  ??? (UIKitCore + 14070424) [0x1a2ecf298]
+                                                          22  ??? (UIKitCore + 5734484) [0x1a26dc054]
+                                                            22  ??? (UIKitCore + 21831024) [0x1a3635d70]
+                                                              22  ??? (UIKitCore + 21828036) [0x1a36351c4]
+                                                                22  ??? (UIKitCore + 21829476) [0x1a3635764]
+                                                                  22  ??? (UIKitCore + 17875152) [0x1a32700d0]
+                                                                    22  ??? (UIKitCore + 13169892) [0x1a2df34e4]
+                                                                      22  ??? (BrowserEngineKit + 60488) [0x1ccbe0c48]
+                                                                        22  ??? (UIKitCore + 11075960) [0x1a2bf4178]
+                                                                          22  ??? (UIKitCore + 11075212) [0x1a2bf3e8c]
+                                                                            20  ??? (UIKitCore + 17362176) [0x1a31f2d00]
+                                                                              20  ??? (UIKitCore + 5933396) [0x1a270c954]
+                                                                                12  ??? (UIKitCore + 11226280) [0x1a2c18ca8]
+                                                                                  12  ??? (UIKitCore + 17360820) [0x1a31f27b4]
+                                                                                    12  ??? (Foundation + 2891452) [0x19e6e2ebc]
+                                                                                      12  ??? (Foundation + 2894324) [0x19e6e39f4]
+                                                                                        12  ??? (libsystem_kernel.dylib + 26104) [0x25615f5f8]
+                                                                                         *12  ??? (pthread + 20044) [0xfffffff0084187ec]
+                                                                                8   ??? (UIKitCore + 11256208) [0x1a2c20190]
+                                                                                  8   ??? (UIKitCore + 17360820) [0x1a31f27b4]
+                                                                                    8   ??? (Foundation + 2891452) [0x19e6e2ebc]
+                                                                                      8   ??? (Foundation + 2894324) [0x19e6e39f4]
+                                                                                        8   ??? (libsystem_kernel.dylib + 26104) [0x25615f5f8]
+                                                                                         *8   ??? (pthread + 20044) [0xfffffff0084187ec]
+                                                                            2   ??? (UIKitCore + 17362168) [0x1a31f2cf8]
+                                                                              2   ??? (UIKitCore + 5893224) [0x1a2702c68]
+                                                                                2   ??? (UIKitCore + 5988508) [0x1a271a09c]
+                                                                                  1   ??? (UIKitCore + 11226504) [0x1a2c18d88]
+                                                                                    1   ??? (UIKitCore + 11221328) [0x1a2c17950]
+                                                                                      1   ??? (UIKitCore + 14266052) [0x1a2efeec4]
+                                                                                        1   ??? [0x1a59f12c0] (running, e-core)
+                                                                                  1   ??? (UIKitCore + 5967496) [0x1a2714e88]
+                                                                                    1   ??? (TextInputUI + 782204) [0x1ad596f7c]
+                                                                                      1   ??? (CoreFoundation + 342592) [0x19df92a40]
+                                                                                        1   ??? (CoreFoundation + 342452) [0x19df929b4]
+                                                                                          1   ??? (TextInputUI + 61940) [0x1ad4e71f4]
+                                                                                            1   ??? (CoreFoundation + 512812) [0x19dfbc32c]
+                                                                                              1   ??? (CoreFoundation + 616112) [0x19dfd56b0]
+                                                                                                1   ??? (CoreFoundation + 615268) [0x19dfd5364]
+                                                                                                  1   ??? (UIKitCore + 15695576) [0x1a305bed8]
+                                                                                                    1   ??? (UIKitCore + 15701920) [0x1a305d7a0]
+                                                                                                      1   ??? (UIKitCore + 15702008) [0x1a305d7f8]
+                                                                                                        1   ??? (UIKitCore + 8088520) [0x1a291abc8]
+                                                                                                          1   ??? (UIKitCore + 2464168) [0x1a23bd9a8]
+                                                                                                            1   ??? (UIKitCore + 6941888) [0x1a2802cc0]
+                                                                                                              1   ??? (UIKitCore + 2466068) [0x1a23be114]
+                                                                                                                1   ??? (UIKitCore + 761624) [0x1a221df18]
+                                                                                                                  1   ??? (UIKitCore + 592848) [0x1a21f4bd0]
+                                                                                                                    1   ??? (UIKitCore + 593484) [0x1a21f4e4c]
+                                                                                                                      1   ??? (UIKitCore + 761448) [0x1a221de68]
+                                                                                                                        1   ??? (libsystem_platform.dylib + 6420) [0x1a9b72914] (running, e-core)
+
+  Binary Images:
+           0x100118000 -                ???  com.apple.mobilesafari 27.0 (8625.1.24.10.1) <CC7B4428-61A8-3850-B649-3BEA13780A00>             /private/var/containers/Bundle/Application/A5FFA04C-4B51-4787-9D05-B274B75C1B8E/MobileSafari.app/MobileSafari
+           0x19ddc6000 -        0x19de7d16f  dyld                                         <5FD0ED6B-D314-3392-AA82-91C9FC014422>             /usr/lib/dyld
+           0x19df3f000 -        0x19e420fbf  CoreFoundation                               <7CDBA4FD-E90E-3EF2-8AE3-9071648E4673>             /System/Library/Frameworks/CoreFoundation.framework/CoreFoundation
+           0x19e421000 -        0x19f52d45b  Foundation                                   <B17A96F3-DC4A-3757-90DF-BE4837ABB5AA>             /System/Library/Frameworks/Foundation.framework/Foundation
+           0x1a2164000 -        0x1a416acc7  UIKitCore                                    <8AC5E0AF-75BA-3416-AB91-BCD844AB4213>             /System/Library/PrivateFrameworks/UIKitCore.framework/UIKitCore
+           0x1a79fa000 -        0x1a7eda7c7  Gestures                                     <5111D2A4-9C79-3932-A2FC-F99E997E836E>             /System/Library/PrivateFrameworks/Gestures.framework/Gestures
+           0x1a9b71000 -        0x1a9b7967f  libsystem_platform.dylib                     <9D2E2FF9-3CDB-3465-B9BA-EBA5CF7ACFDB>             /usr/lib/system/libsystem_platform.dylib
+           0x1ad4d8000 -        0x1ad63d3c3  TextInputUI                                  <6139920F-BD33-3E77-BAFB-560604481E4E>             /System/Library/PrivateFrameworks/TextInputUI.framework/TextInputUI
+           0x1ccbd2000 -        0x1ccbfd65f  BrowserEngineKit                             <CDE1A5AF-152A-365E-AC29-AE9BFDF42F54>             /System/Library/Frameworks/BrowserEngineKit.framework/BrowserEngineKit
+           0x233add000 -        0x233e3e433  MobileSafariUI                               <0CDEC93C-4478-3B11-A7A8-329D9A44D71F>             /System/Library/PrivateFrameworks/MobileSafariUI.framework/MobileSafariUI
+           0x2485b7000 -        0x2485beea3  GraphicsServices                             <56086422-9E1C-3BD6-99BD-FCC78E31B423>             /System/Library/PrivateFrameworks/GraphicsServices.framework/GraphicsServices
+           0x256159000 -        0x2561961fb  libsystem_kernel.dylib                       <66561A3E-67D2-3F28-9E5C-C7BDE524EE9D>             /usr/lib/system/libsystem_kernel.dylib
+           0x2cff84000 -        0x2cff85e15  UpdateCycle                                  <F0C9D3F7-87C3-340A-9E6F-EDDF5BDBA505>             /System/Library/PrivateFrameworks/UpdateCycle.framework/UpdateCycle
+   *0xfffffff0084139a0 - 0xfffffff00841a13f  com.apple.kec.pthread (1)                    <D762FE12-80D4-37DE-9862-BA2D6EE466B6>__TEXT_EXEC  /System/KernelKit/System/Library/Extensions/pthread.kext/pthread
+
+
+Trial Experiment: 65f31ccb74b6f500a45abda4 (treatment:582596be-1d4a-408d-901b-5b311c006a4a namespaces:CORE_MEDIA_AIRPLAY_STORE_BAG)
+Trial Experiment: 67e32776f470dc0e83d9e147 (treatment:c2e2c4d1-bc93-47ec-b433-5a21317aad4b namespaces:DIAGNOSTIC_PATTERN_MATCHING_CRASH)
+Trial Experiment: 6a29ea81f7c93b3728a0fb39 (treatment:ae32843c-72e8-46c4-a5ea-276a4c7bd7ca namespaces:AD_PLATFORMS_SEARCH_RESULTS_PAGE)
+Trial Experiment: 6a5f07b1796bdc5cb264d8d2 (treatment:96ff9519-effc-4bda-90be-a9c3ee6f7338 namespaces:AD_PLATFORMS_APPSTORE_ALL_PLACEMENTS)
+Trial Experiment: 6a076c59c1f1562f720a96d0 (treatment:d130da31-70ac-4a37-bd90-b58a69604d75 namespaces:PERFPOWER_SERVICES_TESTING)
+Trial Experiment: 66b1602abe27b2208fd291ba (treatment:d5c127b8-b13e-42a1-acf5-c483124a1bb5 namespaces:STEEL_ROSE_CHECK_IN_COHORT)
+Trial Rollout:    645197bf528fbf3c3af54105 (ramp:663e61f1c562464af4d55286 namespaces:SIRI_VALUE_INFERENCE_PERVASIVE_ENTITY_RESOLUTION)
+Trial Rollout:    63f9578e238e7b23a1f3030a (ramp:64af3a8e3789f0013152c6ea namespaces:SMART_REPLY_ACTIONS_EN)
+Trial Rollout:    6246d6a916a70b047e454124 (ramp:6449728db0bf6a06721af761 namespaces:WALLET_APP_ECOM_PAYMENT_SHEET)
+Trial Rollout:    64b1b9b57b7a217c6795f565 (ramp:669588e7b2a9c7417fff547c namespaces:SIRI_VALUE_INFERENCE_ENTITY_MATCHER)
+Trial Rollout:    63fe4dd2238e7b23a1f3067d (ramp:64ba87bb084d03725ee431bf namespaces:SIRI_UNDERSTANDING_CAM_AB_TESTING)
+Trial Rollout:    682ef9612c2ae30e2f38d3a4 (ramp:6a298c294a82ed49fa5ff678 namespaces:)
+Trial Rollout:    5ffde50ce2aacd000d47a95f (ramp:6a208cdeb4e6526b70f710b3 namespaces:)
+Trial Rollout:    61675b89201f677a9a4cbd65 (ramp:6a04c1b9981618403a5fd16d namespaces:HEALTH_FEATURE_AVAILABILITY)
+Trial Rollout:    6578a9480eda2e465f51bcb7 (ramp:69dea520376ec95501e451a8 namespaces:CORE_MEDIA_AIRPLAY_STORE_BAG)
+Trial Rollout:    616061f15c43822edc9b3b70 (ramp:6970eb53ef5b27740d75104f namespaces:COREOS_FPFS_CONFIG)
+Trial Rollout:    695fd05d8ca5554688521e5e (ramp:695fd1318774dc09015a80eb namespaces:AD_PLATFORMS_PRODUCT_PAGE,AD_PLATFORMS_SEARCH_LANDING_PAGE,AD_PLATFORMS_SEARCH_RESULTS_PAGE,AD_PLATFORMS_TODAY_TAB)
+Trial Rollout:    68fbde36f576351f1378c5d5 (ramp:68fbe171f23ec52b15be1384 namespaces:)
+Trial Rollout:    6010753cf9bfc4000c247bdd (ramp:68e56fafda275c67240a6437 namespaces:BIFROST_DEV_2)
+Trial Rollout:    6813dc6e1e50e5344eb573e9 (ramp:684cb1dbf6b1cc7db72ef0c6 namespaces:)
+Trial Rollout:    642da32dea3b2418c750f848 (ramp:68811f386078215f0e1d8b78 namespaces:VISUAL_INTELLIGENCE_VICTORIA)
+Trial Rollout:    66d35d7fe4d6bf7664f40ddf (ramp:689cc9781ae4f64b4890b34d namespaces:BLACKPEARL_SPARROW)
+Trial Rollout:    67fd77fe1f9da9148f70d6ed (ramp:6862ff6371195a78c13be551 namespaces:DIAGNOSTIC_PATTERN_MATCHING_CRASH)
+Trial Rollout:    64c025b28b7f0e739e4fbe58 (ramp:67c25241ca2285745135ffea namespaces:SIRI_UNDERSTANDING_CLASSIC_DEPRECATION)
+Trial Rollout:    6761d0c9df60af01adb250fb (ramp:67f41e60b305bf06bf5423db namespaces:)
+Trial Rollout:    67d07cd6a7affa169ae21f45 (ramp:67d08204a7affa169ae21f47 namespaces:)
+Trial Rollout:    67648e5334a82511f4acf879 (ramp:67c20e1c7e39d9516422110a namespaces:)
+Trial Rollout:    67181b10c68c361a728c7cfa (ramp:67181f75cb48c041e881b8d3 namespaces:)
+Trial Rollout:    64b21a7351cbb02ce3442e4e (ramp:66c04b7c5a9a2f15c9b8ee3f namespaces:REMINDERS_GROCERY)
+Trial Rollout:    60186475825c62000ccf5450 (ramp:66d9fac347b8f10806b82221 namespaces:SIRI_VALUE_INFERENCE_CONTACT_RESOLUTION)
+Trial Rollout:    6297d96be2c9387df974efa4 (ramp:66cf8c7967b66e7ba8c1de5e namespaces:SIRI_VALUE_INFERENCE_APP_RESOLUTION)
+Trial Rollout:    60f8ddccefea4203d95cbeef (ramp:66e10a0e0e677004cee417ab namespaces:)
+Trial Rollout:    661464ecda55e5192b100804 (ramp:66abcf0dc9580b52fefc82b6 namespaces:MYRIAD_BOOSTS)
+Trial Rollout:    654119024fac9d2df9ecb124 (ramp:66436895840a5573eab6e767 namespaces:FINANCE_BOSKOOP)
+Trial Rollout:    644114de41e7236e6177f9bd (ramp:66756393f568690429358285 namespaces:SIRI_PRIVATE_LEARNING_SUGGESTIONS_MEDIA)
+Trial Rollout:    645eb1d0417dab722a215927 (ramp:6668d73c33b97f634421dc3b namespaces:SIRI_VALUE_INFERENCE_SIRI_REMEMBERS)
+Trial Rollout:    6410af69ed1e1e7ab93ed169 (ramp:664b9f65b6a75d3dc32993ff namespaces:)
+Trial Rollout:    64628732bf2f5257dedc8988 (ramp:6572413a9049675e4ff04568 namespaces:)
+Trial Rollout:    654439cdafbf5b61207873a9 (ramp:65443b0cf764584e3e121676 namespaces:SIRI_DATA_SHARING_MTE_OPT_OUT)
+Trial Rollout:    652eff3d1bce5442b8d753c9 (ramp:65446b87afbf5b61207873b2 namespaces:VISUAL_INTELLIGENCE_RICH_LABEL_I18N)
+Trial Rollout:    63508950b3714d3622fc77f7 (ramp:65525f6561e744715525705e namespaces:SIRI_MEMORY_SYNC_CONFIG)
+Trial Rollout:    64c17a9925d75a7281053d4c (ramp:653815c33ae30652571354c4 namespaces:SIRI_AUDIO_DISABLE_MEDIA_ENTITY_SYNC)
+Trial Rollout:    5f72dc58705eff005a46b3a9 (ramp:63dab0058283bf1629655646 namespaces:SIRI_VIDEO_APP_SELECTION)
+Trial Rollout:    5fb4245a1bbfe8005e33a1e1 (ramp:62043646867b8a6e14a895ac namespaces:)
+Trial Rollout:    6081eda9c724863038027c4f (ramp:6a591037b6c41e6e9f3aca10 namespaces:BIFROST_PROD_2)
+Trial Rollout:    6a51666818a3ab339a33e93c (ramp:6a517c50edf220367ba5d701 namespaces:AD_PLATFORMS_APPSTORE_PP_INCREMENTALITYAPPSTORE,AD_PLATFORMS_APPSTORE_SLP_INCREMENTALITYAPPSTORE,AD_PLATFORMS_APPSTORE_SRP_INCREMENTALITYAPPSTORE)
+Trial Rollout:    6785b622614dbd65bffd025a (ramp:6a5569e01dc10533c5e59d52 namespaces:MAPS_SRP_AUTOCOMPLETE)
+Trial Rollout:    69828b780c7cfd00b99b83ab (ramp:6a5e5f8fb6c41e6e9f3aca71 namespaces:)
+Trial Rollout:    601074e4af9bef000c169ea8 (ramp:6a6e1ee14baa7624b9de10a6 namespaces:BIFROST_DEV_1)
+Trial Rollout:    6081ed9716bb6d61d81d5014 (ramp:6a6e1ded5ff9c52bb06f0e83 namespaces:BIFROST_PROD_1)
+
+
+IO Size Histogram:
+     Begin      End            Frequency                     CDF
+       0KB       4KB		       8		       8
+       4KB       8KB		       0		       8
+       8KB      16KB		      17		      25
+      16KB      32KB		       1		      26
+      32KB      64KB		       0		      26
+      64KB     128KB		       0		      26
+     128KB     256KB		       0		      26
+     256KB     512KB		       0		      26
+     512KB    1024KB		       0		      26
+         >    1024KB		       0		      26
+Tier 0 Latency Histogram:
+      Begin        End                Freq                    CDF
+        0us      100us		        4		        4
+      100us      200us		        0		        4
+      200us      300us		        0		        4
+      300us      400us		        1		        5
+      400us      500us		        1		        6
+      500us      600us		        0		        6
+      600us      800us		        0		        6
+      800us     1000us		        0		        6
+     1000us     1500us		        5		       11
+     1500us     2000us		        0		       11
+     2000us     3000us		        0		       11
+     3000us     4000us		        0		       11
+     4000us     6000us		        0		       11
+     6000us     9000us		        0		       11
+     9000us    12000us		        0		       11
+    13000us    14000us		        0		       11
+    14000us    15000us		        0		       11
+    15000us    16000us		        0		       11
+    16000us    17000us		        0		       11
+    17000us    18000us		        0		       11
+    18000us    19000us		        0		       11
+    19000us    20000us		        0		       11
+    20000us    40000us		        0		       11
+    40000us    70000us		        0		       11
+    70000us   100000us		        0		       11
+   100000us   200000us		        0		       11
+   200000us   300000us		        0		       11
+   300000us   500000us		        0		       11
+   500000us  1000000us		        0		       11
+         >  1000000us		        0		       11
+Tier 1 Latency Histogram:
+      Begin        End                Freq                    CDF
+        0us      100us		        0		        0
+      100us      200us		        0		        0
+      200us      300us		        0		        0
+      300us      400us		        0		        0
+      400us      500us		        0		        0
+      500us      600us		        0		        0
+      600us      800us		        0		        0
+      800us     1000us		        0		        0
+     1000us     1500us		        1		        1
+     1500us     2000us		        0		        1
+     2000us     3000us		        0		        1
+     3000us     4000us		        0		        1
+     4000us     6000us		        0		        1
+     6000us     9000us		        0		        1
+     9000us    12000us		        0		        1
+    13000us    14000us		        0		        1
+    14000us    15000us		        0		        1
+    15000us    16000us		        0		        1
+    16000us    17000us		        0		        1
+    17000us    18000us		        0		        1
+    18000us    19000us		        0		        1
+    19000us    20000us		        0		        1
+    20000us    40000us		        0		        1
+    40000us    70000us		        0		        1
+    70000us   100000us		        0		        1
+   100000us   200000us		        0		        1
+   200000us   300000us		        0		        1
+   300000us   500000us		        0		        1
+   500000us  1000000us		        0		        1
+         >  1000000us		        0		        1
+Tier 2 Latency Histogram:
+      Begin        End                Freq                    CDF
+        0us      100us		        0		        0
+      100us      200us		        4		        4
+      200us      300us		        9		       13
+      300us      400us		        0		       13
+      400us      500us		        0		       13
+      500us      600us		        0		       13
+      600us      800us		        0		       13
+      800us     1000us		        0		       13
+     1000us     1500us		        1		       14
+     1500us     2000us		        0		       14
+     2000us     3000us		        0		       14
+     3000us     4000us		        0		       14
+     4000us     6000us		        0		       14
+     6000us     9000us		        0		       14
+     9000us    12000us		        0		       14
+    13000us    14000us		        0		       14
+    14000us    15000us		        0		       14
+    15000us    16000us		        0		       14
+    16000us    17000us		        0		       14
+    17000us    18000us		        0		       14
+    18000us    19000us		        0		       14
+    19000us    20000us		        0		       14
+    20000us    40000us		        0		       14
+    40000us    70000us		        0		       14
+    70000us   100000us		        0		       14
+   100000us   200000us		        0		       14
+   200000us   300000us		        0		       14
+   300000us   500000us		        0		       14
+   500000us  1000000us		        0		       14
+         >  1000000us		        0		       14
+Tier 0 Aggregate Stats:
+	Num IOs 11 Latency Mean 647us Max Latency 1326us Latency SD 576us
+	Reads 7 (80 KB) Writes 4 (0 KB)
+Tier 1 Aggregate Stats:
+	Num IOs 1 Latency Mean 1395us Max Latency 1395us Latency SD 0us
+	Reads 1 (16 KB) Writes 0 (0 KB)
+Tier 2 Aggregate Stats:
+	Num IOs 14 Latency Mean 299us Max Latency 1275us Latency SD 273us
+	Reads 14 (224 KB) Writes 0 (0 KB)
+
+
+{
+  "StateInfo" : {
+    "secondsSinceCPURoleTransitionBeforeHangStart" : 4.2190000000000003,
+    "startCPURole" : 8,
+    "endCPURole" : 8,
+    "cpuRoleBreakdown" : [
+      {
+        "cpuRoleEnum" : 8,
+        "cpuRoleName" : "UserInteractiveFocal",
+        "percentInCPURole" : 1,
+        "intervalsInCPURole" : [
+          0,
+          1108
+        ],
+        "timeInCPURole" : 1108
+      }
+    ]
+  },
+  "processExits" : {
+    "exitedAfterHang" : [
+      {
+        "relativeSpawnTimeToHangStart" : "1.336s",
+        "exitReasonCode" : "none",
+        "exitReasonNamespace" : "running board",
+        "jetsamPriority" : 40,
+        "processID" : 6330,
+        "exitTimestamp" : "2026-08-05-09:57:18.350",
+        "processName" : "com.apple.WebKit.GPU",
+        "spawnTimestamp" : "2026-08-05-09:57:11.631",
+        "relativeExitTimeToHangStart" : "8.055s",
+        "processUptime" : "6.719s"
+      }
+    ],
+    "exitedDuringHang" : [
+
+    ],
+    "exitedBeforeHang" : [
+      {
+        "relativeSpawnTimeToHangStart" : "-114.131s",
+        "exitReasonCode" : "0",
+        "exitReasonNamespace" : "invalid",
+        "jetsamPriority" : 0,
+        "processID" : 6322,
+        "exitTimestamp" : "2026-08-05-09:56:54.104",
+        "processName" : "com.apple.WebKit.WebContent",
+        "spawnTimestamp" : "2026-08-05-09:55:16.164",
+        "relativeExitTimeToHangStart" : "-16.191s",
+        "processUptime" : "97.940s"
+      },
+      {
+        "relativeSpawnTimeToHangStart" : "-114.016s",
+        "exitReasonCode" : "0",
+        "exitReasonNamespace" : "invalid",
+        "jetsamPriority" : 40,
+        "processID" : 6323,
+        "exitTimestamp" : "2026-08-05-09:57:06.414",
+        "processName" : "com.apple.WebKit.WebContent",
+        "spawnTimestamp" : "2026-08-05-09:55:16.279",
+        "relativeExitTimeToHangStart" : "-3.881s",
+        "processUptime" : "110.135s"
+      }
+    ]
+  },
+  "htEnablementPrefix" : "PDSEHangTracer",
+  "blockingThreadStatus" : "Search Found No Thread",
+  "displayData" : {
+    "endState" : 1,
+    "displayOnPercent" : 1,
+    "startState" : 1,
+    "secondsSinceDisplayStateBeforeHangStart" : 1510.6820960951759,
+    "displayOnIntervals" : [
+      0,
+      1109
+    ]
+  },
+  "UserAction" : "{\"TopVC\":{\"SubVCs\":[{\"SubVCs\":[{\"SubVCs\":[],\"ClassName\":\"UIViewController\",\"Description\":\"<UIViewController: 0x7385cb1c00>, state: appeared, view: <SFOrderedContainerView: 0x7385c92bc0>\"}],\"ClassName\":\"UIViewController\",\"Description\":\"<UIViewController: 0x7385cb1800>, state: appeared, view: <ViewWithCustomNextResponder: 0x7385c92a00>\"},{\"SubVCs\":[],\"ClassName\":\"CapsuleNavigationBarViewController\",\"Description\":\"<CapsuleNavigationBarViewController: 0x73857e6800>, state: appeared, view: <SFCapsuleCollectionView: 0x73857e6300>\"}],\"ClassName\":\"BrowserRootViewController\",\"Description\":\"<BrowserRootViewController: 0x7384bbc000>, state: appeared, view: <SFOrderedContainerView: 0x7385c92840>\"},\"TopVCView\":{\"ClassName\":\"SFOrderedContainerView\",\"Subviews\":[{\"ClassName\":\"ViewWithCustomNextResponder\",\"Subviews\":[{\"ClassName\":\"SFOrderedContainerView\",\"Subviews\":[{\"ClassName\":\"ContinuousReadingScrollView\",\"Subviews\":[{\"ClassName\":\"_UITouchPassthroughView\",\"Subviews\":[{\"ClassName\":\"_TtCC5UIKit20ScrollEdgeEffectView12BackdropView\",\"Subviews\":[]}]},{\"ClassName\":\"TabDocumentView\",\"Subviews\":[{\"ClassName\":\"_SFWebView\",\"Subviews\":[{\"ClassName\":\"WKScrollView\"}]}]},{\"ClassName\":\"_UITouchPassthroughView\",\"Subviews\":[{\"ClassName\":\"UIKit.ScrollEdgeEffectView\",\"Subviews\":[{\"ClassName\":\"_TtCC5UIKit20ScrollEdgeEffectViewP33_A8A62288E15893CDC14B9FB558CFED1E12TouchBlocker\",\"Subviews\":[]},{\"ClassName\":\"CALayer\",\"Subviews\":[{\"ClassName\":\"CALayer\",\"Subviews\":[{\"ClassName\":\"CALayer\",\"Subviews\":[]}]},{\"ClassName\":\"CALayer\",\"Subviews\":[{\"ClassName\":\"CALayer\",\"Subviews\":[]}]},{\"ClassName\":\"CALayer\",\"Subviews\":[]}]}]}]},{\"ClassName\":\"_UIScrollViewScrollIndicator\",\"Subviews\":[{\"ClassName\":\"UIView\",\"Subviews\":[]}]}]},{\"ClassName\":\"SFThemeColorEffectView\",\"Subviews\":[{\"ClassName\":\"UIView\",\"Subviews\":[]},{\"ClassName\":\"UIVisualEffectView\",\"Subviews\":[{\"ClassName\":\"_UIVisualEffectContentView\",\"Subviews\":[]}]}]},{\"ClassName\":\"BarContainerView\",\"Subviews\":[]}]}]},{\"ClassName\":\"SFCapsuleCollectionView\",\"Subviews\":[{\"ClassName\":\"SFTouchPassthroughView\",\"Subviews\":[{\"ClassName\":\"SFTouchPassthroughView\",\"Subviews\":[{\"ClassName\":\"SFCapsuleView\",\"Subviews\":[{\"ClassName\":\"UIView\",\"Subviews\":[{\"ClassName\":\"UIView\",\"Subviews\":[{\"ClassName\":\"SFCapsuleCollectionActionView\",\"Subviews\":[{\"ClassName\":\"UIImageView\",\"Subviews\":[]}]}]}]}]},{\"ClassName\":\"MobileSafariUI.SFMinibarButtonBar\",\"Subviews\":[{\"ClassName\":\"UIStackView\",\"Subviews\":[{\"ClassName\":\"UIButton\",\"Subviews\":[{\"ClassName\":\"_UISystemBackgroundView\",\"Subviews\":[{\"ClassName\":\"UIView\",\"Subviews\":[{\"ClassName\":\"UIImageView\",\"Subviews\":[{\"ClassName\":\"UIImageView\",\"Subviews\":[]}]}]}]}]},{\"ClassName\":\"UIButton\",\"Subviews\":[{\"ClassName\":\"_UISystemBackgroundView\",\"Subviews\":[{\"ClassName\":\"UIView\",\"Subviews\":[{\"ClassName\":\"UIImageView\",\"Subviews\":[]}]}]}]}]}]},{\"ClassName\":\"MobileSafariUI.SFMinibarButtonBar\",\"Subviews\":[{\"ClassName\":\"UIStackView\",\"Subviews\":[{\"ClassName\":\"SFMenuPresentingButton\",\"Subviews\":[{\"ClassName\":\"_UISystemBackgroundView\",\"Subviews\":[{\"ClassName\":\"UIView\",\"Subviews\":[{\"ClassName\":\"UIImageView\",\"Subviews\":[{\"ClassName\":\"UIImageView\",\"Subviews\":[]}]}]}]}]}]}]},{\"ClassName\":\"SFCapsuleView\",\"Subviews\":[{\"ClassName\":\"UIView\",\"Subviews\":[{\"ClassName\":\"UIView\",\"Subviews\":[{\"ClassName\":\"SFCapsuleNavigationBar\"}]}]}]},{\"ClassName\":\"SFCapsuleView\",\"Subviews\":[{\"ClassName\":\"UIView\",\"Subviews\":[{\"ClassName\":\"UIView\",\"Subviews\":[{\"ClassName\":\"SFCapsuleNavigationBar\"}]}]}]}]},{\"ClassName\":\"UIKit._GlassGroupView\",\"Subviews\":[{\"ClassName\":\"_TtC5UIKitP33_0A8B4DB961B57EBA158E8356A5AC0B1F19GlassGroupLayerView\",\"Subviews\":[{\"ClassName\":\"UIKit._UIMaterialDefinitionView\",\"Subviews\":[{\"ClassName\":\"UIKit.UISDFBackdropView\",\"Subviews\":[{\"ClassName\":\"UIKit.UISDFView\",\"Subviews\":[{\"ClassName\":\"UIView\",\"Subviews\":[{\"ClassName\":\"_TtC5UIKitP33_ACD4A08F4BE9D00246F2A9C24A80CA8816UISDFElementView\",\"Subviews\":[]}]}]}]},{\"ClassName\":\"UIKit.UISDFView\",\"Subviews\":[{\"ClassName\":\"_UIPortalView\",\"Subviews\":[]}]}]}]}]}]}]}]},\"DisplayName\":\"Safari\",\"BundleID\":\"com.apple.mobilesafari\",\"TraversalTimeuSec\":700.33333333333326}"
+}

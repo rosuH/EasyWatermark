@@ -1,0 +1,485 @@
+{"bug_type":"385","os_version":"Watch OS 26.6 (23U5025e)","build_version":"","timestamp":"2026-08-10 11:13:02.00 +0800","platform":4,"roots_installed":0,"app_name":"healthd","incident_id":"D1096F7C-10A2-47A1-8660-0C55B0741B09","name":"healthd","is_first_party":1,"app_version":"","share_with_app_devs":1,"slice_uuid":"01f630f9-325e-3cac-8241-dcd511eb2aa1"}
+{
+  "captureTime" : "2026-08-10 11:12:56.5175 +0800",
+  "deployVersion" : 210,
+  "procRole" : "Unspecified",
+  "modelCode" : "Watch6,14",
+  "incident" : "D1096F7C-10A2-47A1-8660-0C55B0741B09",
+  "osVersion" : {
+    "train" : "Watch OS 26.6",
+    "isEmbedded" : true,
+    "build" : "23U5025e",
+    "releaseType" : "User"
+  },
+  "version" : 2,
+  "coalitionID" : 89,
+  "cpuType" : "ARM64_32",
+  "codeSigningMonitor" : 1,
+  "userID" : 501,
+  "pid" : 4229,
+  "uptime" : 100000,
+  "procLaunch" : "2026-08-10 08:28:22.0000 +0800",
+  "procStartAbsTime" : 2576019568308,
+  "procExitAbsTime" : 2639251066463,
+  "procName" : "healthd",
+  "procPath" : "\/System\/Library\/Frameworks\/HealthKit.framework\/healthd",
+  "parentProc" : "launchd",
+  "parentPid" : 1,
+  "coalitionName" : "com.apple.healthd",
+  "crashReporterKey" : "50444deb63e8d097439ffd9f48e6de707f18df15",
+  "bootProgressRegister" : "0x20800004",
+  "wasUnlockedSinceBoot" : 1,
+  "isLocked" : 0,
+  "throttleTimeout" : 1,
+  "codeSigningID" : "com.apple.healthd",
+  "codeSigningTeamID" : "",
+  "codeSigningFlags" : 570434305,
+  "codeSigningValidationCategory" : 1,
+  "codeSigningTrustLevel" : 10,
+  "instructionByteStream" : {"atPC":"bhEAOX8BALmtAQpKrUFNC60hTQttMQA5agkAue0DC6oCAAAUDQCA0g==","beforePC":"zz0AE845ABKtJQ4L\/wUAMe3DjZoPAAAUDUhBua0BAEquQU0LziFOCw=="},
+  "bootSessionUUID" : "ACEE0485-A5C3-4868-8F58-9B0A2A188909",
+  "exception" : {"type":"EXC_RESOURCE","subtype":"MEMORY","rawCodes":[7205759403943788559,0],"message":" (Limit 15 MB) Crossed High Water Mark","codes":"0x640000000900000f, 0x0000000000000000"},
+  "termination" : {"flags":2,"code":7,"namespace":"JETSAM"},
+  "ktriageinfo" : "VM - (arg = 0x0) Soft mode disabled because process was ptraced\n",
+  "faultingThread" : 3,
+  "threads" : [{"queue":"com.apple.main-thread","id":1822262,"threadState":{"x":[{"value":268451845},{"value":21592279046},{"value":8589934592},{"value":72580652335104},{"value":0},{"value":72580652335104},{"value":2},{"value":4294967295},{"value":0},{"value":0},{"value":2},{"value":0},{"value":0},{"value":16899},{"value":0},{"value":54384032897046496},{"value":18446744073709551569},{"value":0},{"value":0},{"value":4294967295},{"value":2},{"value":72580652335104},{"value":0},{"value":72580652335104},{"value":21592279046},{"value":35596104},{"value":8589934592},{"value":18446744073709550527},{"value":2073329664}],"lr":{"value":673586244},"fp":{"value":35595952},"sp":{"value":35595872},"cpsr":{"value":0},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":673519844},"flavor":"ARM_THREAD_STATE64","far":{"value":0}},"frames":[{"imageOffset":2276,"imageIndex":37},{"imageOffset":68676,"imageIndex":37},{"imageOffset":69292,"imageIndex":37},{"imageOffset":3964,"imageIndex":37},{"imageOffset":14584,"imageIndex":38},{"imageOffset":5424,"imageIndex":38},{"imageOffset":1099512,"imageIndex":38},{"imageOffset":9156,"imageIndex":39},{"imageOffset":248940,"imageIndex":39},{"imageOffset":2708,"imageIndex":0},{"imageOffset":65868,"imageIndex":40}]},{"id":1857643,"frames":[],"threadState":{"x":[{"value":126906368},{"value":101219},{"value":126369792},{"value":0},{"value":409604},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"lr":{"value":0},"fp":{"value":0},"sp":{"value":126906368},"cpsr":{"value":0},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":681445620},"flavor":"ARM_THREAD_STATE64","far":{"value":0}}},{"id":1857893,"frames":[],"threadState":{"x":[{"value":122712064},{"value":34031},{"value":122175488},{"value":0},{"value":409604},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"lr":{"value":0},"fp":{"value":0},"sp":{"value":122712064},"cpsr":{"value":0},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":681445620},"flavor":"ARM_THREAD_STATE64","far":{"value":0}}},{"threadState":{"x":[{"value":35684864},{"value":35768832},{"value":355599872},{"value":309},{"value":3},{"value":356016128},{"value":1024},{"value":125855308},{"value":30},{"value":35768852},{"value":355950080},{"value":355599872},{"value":158208},{"value":4276759955},{"value":4293531561},{"value":355591680},{"value":355591680},{"value":352354806},{"value":0},{"value":16},{"value":35768832},{"value":355591680},{"value":35684864},{"value":325},{"value":0},{"value":125857968},{"value":45},{"value":0},{"value":0}],"lr":{"value":575980664},"fp":{"value":125856560},"sp":{"value":125856560},"cpsr":{"value":536870912},"esr":{"value":2449473607,"description":"(Data Abort) byte write Translation fault"},"pc":{"value":575993088,"matchesCrashFrame":1},"flavor":"ARM_THREAD_STATE64","far":{"value":355599876}},"id":1857902,"triggered":true,"frames":[{"imageOffset":17664,"imageIndex":42},{"imageOffset":5240,"imageIndex":42},{"imageOffset":14676,"imageIndex":42},{"imageOffset":26776,"imageIndex":42},{"imageOffset":21564,"imageIndex":42},{"imageOffset":90780,"imageIndex":42},{"imageOffset":34180,"imageIndex":43},{"imageOffset":6692,"imageIndex":43},{"imageOffset":8072,"imageIndex":38},{"imageOffset":25520,"imageIndex":39},{"imageOffset":100016,"imageIndex":38},{"imageOffset":7100,"imageIndex":44},{"imageOffset":4436,"imageIndex":44},{"imageOffset":20640,"imageIndex":44},{"imageOffset":2276,"imageIndex":44},{"imageOffset":2300,"imageIndex":44}]}],
+  "usedImages" : [
+  {
+    "size" : 16384,
+    "base" : 34455552,
+    "arch" : "arm64_32",
+    "name" : "healthd",
+    "path" : "\/System\/Library\/Frameworks\/HealthKit.framework\/healthd",
+    "source" : "P",
+    "uuid" : "01f630f9-325e-3cac-8241-dcd511eb2aa1"
+  },
+  {
+    "size" : 32768,
+    "base" : 36569088,
+    "arch" : "arm64_32",
+    "name" : "ActivityAwardsPlugin",
+    "path" : "\/System\/Library\/Health\/Plugins\/ActivityAwardsPlugin.bundle\/ActivityAwardsPlugin",
+    "source" : "P",
+    "uuid" : "1b4f9da7-38f1-3a13-8073-00dd25ce5d99"
+  },
+  {
+    "size" : 491520,
+    "base" : 40894464,
+    "arch" : "arm64_32",
+    "name" : "FitnessIntelligencePlugin",
+    "path" : "\/System\/Library\/Health\/Plugins\/FitnessIntelligencePlugin.bundle\/FitnessIntelligencePlugin",
+    "source" : "P",
+    "uuid" : "f5d384b3-754b-36b5-908c-7c853700215b"
+  },
+  {
+    "size" : 212992,
+    "base" : 51904512,
+    "arch" : "arm64_32",
+    "name" : "HealthActivityCache",
+    "path" : "\/System\/Library\/Health\/Plugins\/HealthActivityCache.bundle\/HealthActivityCache",
+    "source" : "P",
+    "uuid" : "f8f7e510-633a-3d31-83ba-05847ad3f689"
+  },
+  {
+    "size" : 16384,
+    "base" : 37093376,
+    "arch" : "arm64_32",
+    "name" : "HealthBalanceDaemonPlugin",
+    "path" : "\/System\/Library\/Health\/Plugins\/HealthBalanceDaemonPlugin.bundle\/HealthBalanceDaemonPlugin",
+    "source" : "P",
+    "uuid" : "e3c3c586-ab01-307a-ad57-ddd801f12193"
+  },
+  {
+    "size" : 491520,
+    "base" : 41943040,
+    "arch" : "arm64_32",
+    "name" : "HealthBalanceDaemon",
+    "path" : "\/System\/Library\/PrivateFrameworks\/HealthBalanceDaemon.framework\/HealthBalanceDaemon",
+    "source" : "P",
+    "uuid" : "8f235c9f-a22e-30aa-97c3-d4712d975a96"
+  },
+  {
+    "size" : 360448,
+    "base" : 50331648,
+    "arch" : "arm64_32",
+    "name" : "HealthBluetoothPeripheral",
+    "path" : "\/System\/Library\/Health\/Plugins\/HealthBluetoothPeripheral.bundle\/HealthBluetoothPeripheral",
+    "source" : "P",
+    "uuid" : "68a55d9b-9b1c-3147-bb08-efe62507e06b"
+  },
+  {
+    "size" : 16384,
+    "base" : 36962304,
+    "arch" : "arm64_32",
+    "name" : "HealthDaemonControlsPlugin",
+    "path" : "\/System\/Library\/Health\/Plugins\/HealthDaemonControlsPlugin.bundle\/HealthDaemonControlsPlugin",
+    "source" : "P",
+    "uuid" : "a31d7963-7e8b-3e2e-ac03-c837d19080f1"
+  },
+  {
+    "size" : 16384,
+    "base" : 36438016,
+    "arch" : "arm64_32",
+    "name" : "HealthDaemonFeaturesPlugin",
+    "path" : "\/System\/Library\/Health\/Plugins\/HealthDaemonFeaturesPlugin.bundle\/HealthDaemonFeaturesPlugin",
+    "source" : "P",
+    "uuid" : "8aa6347a-ea1b-35ed-b111-21df3b67b274"
+  },
+  {
+    "size" : 65536,
+    "base" : 53739520,
+    "arch" : "arm64_32",
+    "name" : "HealthDaemonFeatures",
+    "path" : "\/System\/Library\/PrivateFrameworks\/HealthDaemonFeatures.framework\/HealthDaemonFeatures",
+    "source" : "P",
+    "uuid" : "a699ec5d-de43-3dea-88d2-7a27db8b0211"
+  },
+  {
+    "size" : 16384,
+    "base" : 36831232,
+    "arch" : "arm64_32",
+    "name" : "HealthMedicationsDaemonPluginBundle",
+    "path" : "\/System\/Library\/Health\/Plugins\/HealthMedicationsDaemonPluginBundle.bundle\/HealthMedicationsDaemonPluginBundle",
+    "source" : "P",
+    "uuid" : "1f86d4ea-9f9b-396d-8c2a-9faeb007742e"
+  },
+  {
+    "size" : 557056,
+    "base" : 55574528,
+    "arch" : "arm64_32",
+    "name" : "HealthMedicationsDaemonPlugin",
+    "path" : "\/System\/Library\/PrivateFrameworks\/HealthMedicationsDaemonPlugin.framework\/HealthMedicationsDaemonPlugin",
+    "source" : "P",
+    "uuid" : "44da6490-c067-3c3a-baf9-32aa33342ca2"
+  },
+  {
+    "size" : 278528,
+    "base" : 45088768,
+    "arch" : "arm64_32",
+    "name" : "HealthOntologyDaemon",
+    "path" : "\/System\/Library\/PrivateFrameworks\/HealthOntologyDaemon.framework\/HealthOntologyDaemon",
+    "source" : "P",
+    "uuid" : "369691a6-e0ea-313f-b2b9-6fdc4305b496"
+  },
+  {
+    "size" : 16384,
+    "base" : 72876032,
+    "arch" : "arm64_32",
+    "name" : "HealthTopicsDaemonPluginBundle",
+    "path" : "\/System\/Library\/Health\/Plugins\/HealthTopicsDaemonPluginBundle.bundle\/HealthTopicsDaemonPluginBundle",
+    "source" : "P",
+    "uuid" : "36a32faa-f51a-3b8f-809c-92b11d8ea5ca"
+  },
+  {
+    "size" : 65536,
+    "base" : 55312384,
+    "arch" : "arm64_32",
+    "name" : "HealthTopicsDaemonPlugin",
+    "path" : "\/System\/Library\/PrivateFrameworks\/HealthTopicsDaemonPlugin.framework\/HealthTopicsDaemonPlugin",
+    "source" : "P",
+    "uuid" : "df594682-6433-3bdd-a04d-5349fcf873a9"
+  },
+  {
+    "size" : 16384,
+    "base" : 73007104,
+    "arch" : "arm64_32",
+    "name" : "HealthTopicsDaemon",
+    "path" : "\/System\/Library\/PrivateFrameworks\/HealthTopicsDaemon.framework\/HealthTopicsDaemon",
+    "source" : "P",
+    "uuid" : "f8477eea-f709-3549-a5d7-cddaba25ac67"
+  },
+  {
+    "size" : 16384,
+    "base" : 72744960,
+    "arch" : "arm64_32",
+    "name" : "HearingDaemonPlugin",
+    "path" : "\/System\/Library\/Health\/Plugins\/HearingDaemonPlugin.bundle\/HearingDaemonPlugin",
+    "source" : "P",
+    "uuid" : "96bbab62-7618-3f75-a481-536ed6253c06"
+  },
+  {
+    "size" : 212992,
+    "base" : 49807360,
+    "arch" : "arm64_32",
+    "name" : "HealthHearingDaemon",
+    "path" : "\/System\/Library\/PrivateFrameworks\/HealthHearingDaemon.framework\/HealthHearingDaemon",
+    "source" : "P",
+    "uuid" : "b11ac312-661a-31cc-ae48-1d948247e8ca"
+  },
+  {
+    "size" : 16384,
+    "base" : 72351744,
+    "arch" : "arm64_32",
+    "name" : "HeartDaemonPlugin",
+    "path" : "\/System\/Library\/Health\/Plugins\/HeartDaemonPlugin.bundle\/HeartDaemonPlugin",
+    "source" : "P",
+    "uuid" : "bd0ff8f1-fd95-39a9-acb9-e64d3252d44a"
+  },
+  {
+    "size" : 16384,
+    "base" : 72613888,
+    "arch" : "arm64_32",
+    "name" : "MentalHealthDaemonPlugin",
+    "path" : "\/System\/Library\/Health\/Plugins\/MentalHealthDaemonPlugin.bundle\/MentalHealthDaemonPlugin",
+    "source" : "P",
+    "uuid" : "d216bb48-1499-3d14-9253-6f48da94d11d"
+  },
+  {
+    "size" : 180224,
+    "base" : 52953088,
+    "arch" : "arm64_32",
+    "name" : "MentalHealthDaemon",
+    "path" : "\/System\/Library\/PrivateFrameworks\/MentalHealthDaemon.framework\/MentalHealthDaemon",
+    "source" : "P",
+    "uuid" : "363fe1af-dcb4-32ff-b89f-8b40db406e34"
+  },
+  {
+    "size" : 16384,
+    "base" : 73793536,
+    "arch" : "arm64_32",
+    "name" : "MobilityDaemonPlugin",
+    "path" : "\/System\/Library\/Health\/Plugins\/MobilityDaemonPlugin.bundle\/MobilityDaemonPlugin",
+    "source" : "P",
+    "uuid" : "36564eed-9574-3510-a56e-d0bea199e7b1"
+  },
+  {
+    "size" : 81920,
+    "base" : 55050240,
+    "arch" : "arm64_32",
+    "name" : "HealthMobilityDaemon",
+    "path" : "\/System\/Library\/PrivateFrameworks\/HealthMobilityDaemon.framework\/HealthMobilityDaemon",
+    "source" : "P",
+    "uuid" : "e44df57b-1c97-300d-8302-9379d09b897b"
+  },
+  {
+    "size" : 32768,
+    "base" : 74317824,
+    "arch" : "arm64_32",
+    "name" : "NanoHealth",
+    "path" : "\/System\/Library\/Health\/Plugins\/NanoHealth.bundle\/NanoHealth",
+    "source" : "P",
+    "uuid" : "64bbfaee-81c3-3769-b557-fbd54b76eb16"
+  },
+  {
+    "size" : 98304,
+    "base" : 51380224,
+    "arch" : "arm64_32",
+    "name" : "FitnessCoachingHealthServices",
+    "path" : "\/System\/Library\/PrivateFrameworks\/FitnessCoachingHealthServices.framework\/FitnessCoachingHealthServices",
+    "source" : "P",
+    "uuid" : "ce0d6fdf-dc0b-3655-b217-b621ad25a9dc"
+  },
+  {
+    "size" : 524288,
+    "base" : 68157440,
+    "arch" : "arm64_32",
+    "name" : "NanoHealthDaemon",
+    "path" : "\/System\/Library\/PrivateFrameworks\/NanoHealthDaemon.framework\/NanoHealthDaemon",
+    "source" : "P",
+    "uuid" : "8496c775-4532-312e-b7a7-021627ac12e3"
+  },
+  {
+    "size" : 16384,
+    "base" : 73662464,
+    "arch" : "arm64_32",
+    "name" : "RespiratoryHealthDaemonPlugin",
+    "path" : "\/System\/Library\/Health\/Plugins\/RespiratoryHealthDaemonPlugin.bundle\/RespiratoryHealthDaemonPlugin",
+    "source" : "P",
+    "uuid" : "1eb1acd3-f037-31ef-8016-37a6ff3e2342"
+  },
+  {
+    "size" : 65536,
+    "base" : 53477376,
+    "arch" : "arm64_32",
+    "name" : "RespiratoryHealthDaemon",
+    "path" : "\/System\/Library\/PrivateFrameworks\/RespiratoryHealthDaemon.framework\/RespiratoryHealthDaemon",
+    "source" : "P",
+    "uuid" : "800963d9-bad4-382e-81e7-990256edf328"
+  },
+  {
+    "size" : 16384,
+    "base" : 73531392,
+    "arch" : "arm64_32",
+    "name" : "SleepHealthDaemonPlugin",
+    "path" : "\/System\/Library\/Health\/Plugins\/SleepHealthDaemonPlugin.bundle\/SleepHealthDaemonPlugin",
+    "source" : "P",
+    "uuid" : "0a5d8bf2-fff4-388d-8498-58cc92517b8a"
+  },
+  {
+    "size" : 98304,
+    "base" : 54263808,
+    "arch" : "arm64_32",
+    "name" : "SleepHealthDaemon",
+    "path" : "\/System\/Library\/PrivateFrameworks\/SleepHealthDaemon.framework\/SleepHealthDaemon",
+    "source" : "P",
+    "uuid" : "6512768f-b1b9-38fa-8aaa-d976eba7a067"
+  },
+  {
+    "size" : 131072,
+    "base" : 74711040,
+    "arch" : "arm64_32",
+    "name" : "WorkoutHealthPlugin",
+    "path" : "\/System\/Library\/Health\/Plugins\/WorkoutHealthPlugin.bundle\/WorkoutHealthPlugin",
+    "source" : "P",
+    "uuid" : "6c6955bc-ef39-34cb-9ff9-1eaa2e34c463"
+  },
+  {
+    "size" : 16384,
+    "base" : 74186752,
+    "arch" : "arm64_32",
+    "name" : "ActivitySharingPlugin",
+    "path" : "\/System\/Library\/Health\/Plugins\/ActivitySharingPlugin.bundle\/ActivitySharingPlugin",
+    "source" : "P",
+    "uuid" : "cf402889-0451-329a-b5bd-8ce78720692e"
+  },
+  {
+    "size" : 65536,
+    "base" : 74448896,
+    "arch" : "arm64_32",
+    "name" : "ActivitySharingHealthDaemon",
+    "path" : "\/System\/Library\/PrivateFrameworks\/ActivitySharingHealthDaemon.framework\/ActivitySharingHealthDaemon",
+    "source" : "P",
+    "uuid" : "c5d1c6a9-64a5-314f-9d19-55caa23ea079"
+  },
+  {
+    "size" : 16384,
+    "base" : 77332480,
+    "arch" : "arm64_32",
+    "name" : "MenstrualCyclesDaemonPlugin",
+    "path" : "\/System\/Library\/Health\/Plugins\/MenstrualCyclesDaemonPlugin.bundle\/MenstrualCyclesDaemonPlugin",
+    "source" : "P",
+    "uuid" : "594181e2-1c57-3c72-9b66-48e457366e46"
+  },
+  {
+    "size" : 720896,
+    "base" : 57671680,
+    "arch" : "arm64_32",
+    "name" : "HealthMenstrualCyclesDaemon",
+    "path" : "\/System\/Library\/PrivateFrameworks\/HealthMenstrualCyclesDaemon.framework\/HealthMenstrualCyclesDaemon",
+    "source" : "P",
+    "uuid" : "6e26e7d7-46dc-3977-b89d-9e51b4202a49"
+  },
+  {
+    "size" : 49152,
+    "base" : 76546048,
+    "arch" : "arm64_32",
+    "name" : "libobjc-trampolines.dylib",
+    "path" : "\/usr\/lib\/libobjc-trampolines.dylib",
+    "source" : "P",
+    "uuid" : "ca5576e9-cbd4-3730-a1bf-fca661859ad4"
+  },
+  {
+    "size" : 344064,
+    "base" : 42991616,
+    "arch" : "arm64_32",
+    "name" : "PBBridgeSupport",
+    "path" : "\/System\/Library\/PrivateFrameworks\/PBBridgeSupport.framework\/PBBridgeSupport",
+    "source" : "P",
+    "uuid" : "f22da4cf-141c-3a2c-82dc-c3f2197a6cb1"
+  },
+  {
+    "size" : 234812,
+    "base" : 673517568,
+    "arch" : "arm64_32",
+    "name" : "libsystem_kernel.dylib",
+    "path" : "\/usr\/lib\/system\/libsystem_kernel.dylib",
+    "source" : "P",
+    "uuid" : "52363f8b-f6c5-35f7-97b3-405ebdeb041a"
+  },
+  {
+    "size" : 4598976,
+    "base" : 522534912,
+    "arch" : "arm64_32",
+    "name" : "CoreFoundation",
+    "path" : "\/System\/Library\/Frameworks\/CoreFoundation.framework\/CoreFoundation",
+    "source" : "P",
+    "uuid" : "2d1945c7-73a3-36dd-a56e-b61ccca5e400"
+  },
+  {
+    "size" : 14306400,
+    "base" : 497463296,
+    "arch" : "arm64_32",
+    "name" : "Foundation",
+    "path" : "\/System\/Library\/Frameworks\/Foundation.framework\/Foundation",
+    "source" : "P",
+    "uuid" : "1cbec9ef-c668-320b-8dc4-3be7b90a022b"
+  },
+  {
+    "size" : 517724,
+    "base" : 491462656,
+    "arch" : "arm64_32",
+    "name" : "dyld",
+    "path" : "\/usr\/lib\/dyld",
+    "source" : "P",
+    "uuid" : "193961bf-ba1f-351c-bfb0-bb801d6b6477"
+  },
+  {
+    "source" : "A",
+    "uuid" : "00000000-0000-0000-0000-000000000000",
+    "size" : 0,
+    "base" : 0
+  },
+  {
+    "size" : 131652,
+    "base" : 575975424,
+    "arch" : "arm64_32",
+    "name" : "libsystem_malloc.dylib",
+    "path" : "\/usr\/lib\/system\/libsystem_malloc.dylib",
+    "source" : "P",
+    "uuid" : "167afe75-d8fc-3fb3-991a-d9d57688d59f"
+  },
+  {
+    "size" : 256933,
+    "base" : 491028480,
+    "arch" : "arm64_32",
+    "name" : "libobjc.A.dylib",
+    "path" : "\/usr\/lib\/libobjc.A.dylib",
+    "source" : "P",
+    "uuid" : "ed8f0590-c7ee-3ebb-85ea-7834e92b0313"
+  },
+  {
+    "size" : 45444,
+    "base" : 681443328,
+    "arch" : "arm64_32",
+    "name" : "libsystem_pthread.dylib",
+    "path" : "\/usr\/lib\/system\/libsystem_pthread.dylib",
+    "source" : "P",
+    "uuid" : "dc621847-48f3-31fd-bffb-8f05295c8e9a"
+  }
+],
+  "sharedCache" : {
+  "size" : 1977597952,
+  "uuid" : "84063525-c3b5-3637-8325-d67a3c9f6e90",
+  "base" : 490782720
+},
+  "vmSummary" : "ReadOnly portion of Libraries: Total=1.1G resident=0K(0%) swapped_out_or_unallocated=1.1G(100%)\nWritable regions: Total=37.7M written=225K(1%) resident=225K(1%) swapped_out=0K(0%) unallocated=37.5M(99%)\n\n                                VIRTUAL   REGION \nREGION TYPE                        SIZE    COUNT (non-coalesced) \n===========                     =======  ======= \nActivity Tracing                   256K        1 \nDispatch continuations            2048K        1 \nFoundation                          16K        1 \nGuard                            288.5M       84 \nKernel Alloc Once                   32K        1 \nMALLOC                            24.3M       38 \nMALLOC guard page                   64K        4 \nSQLite page cache                 8576K       67 \nSTACK GUARD                         64K        4 \nStack                             2640K        4 \n__CTF                               824        1 \n__DATA                            18.7M      762 \n__DATA_CONST                      51.4M      811 \n__DATA_DIRTY                      4000K      724 \n__FONT_DATA                        2352        1 \n__LINKEDIT                       248.1M       38 \n__OBJC_RO                         36.4M        1 \n__OBJC_RW                          851K        1 \n__TEXT                           872.8M      821 \n__TPRO_CONST                          8        2 \nmapped file                       40.2M       15 \npage table in kernel               225K        1 \nshared memory                       64K        3 \n===========                     =======  ======= \nTOTAL                              1.6G     3386 \n",
+  "legacyInfo" : {
+  "threadTriggered" : {
+
+  }
+},
+  "logWritingSignature" : "bf7bb55e5af2dd60a3d79f9f2fcd26ccf957b0e0",
+  "bug_type" : "385",
+  "roots_installed" : 0,
+  "trialInfo" : {
+  "rollouts" : [
+    {
+      "deploymentId" : 250002286,
+      "factorPackIds" : [
+
+      ],
+      "rolloutId" : "6010753cf9bfc4000c247bdd"
+    },
+    {
+      "deploymentId" : 250000003,
+      "factorPackIds" : [
+        "64d29746ad29a465b3bbeace"
+      ],
+      "rolloutId" : "64c17a9925d75a7281053d4c"
+    }
+  ],
+  "experiments" : [
+
+  ]
+}
+}

@@ -1,0 +1,220 @@
+{"roots_installed":0,"app_name":"Aweme","timestamp":"2026-08-09 20:31:30.00 +0800","app_version":"39.9.0","slice_uuid":"DE4B0402-0FC8-32E9-B9A3-0E3B6A00303D","adam_id":"1142110895","build_version":"399017","bundleID":"com.ss.iphone.ugc.Aweme","duration_ms":"80014856","is_first_party":0,"share_with_app_devs":1,"bug_type":"145","os_version":"iPhone OS 27.0 (24A5390f)","distributor_id":"com.apple.AppStore","name":"Aweme","incident_id":"4A4581AE-4641-4DAD-9482-6724B4EB6D77"}
+Date/Time:        2026-08-08 22:17:49.590 +0800
+End time:         2026-08-09 20:31:24.446 +0800
+OS Version:       iPhone OS 27.0 (Build 24A5390f)
+Architecture:     arm64e
+Report Version:   73
+Incident Identifier: 4A4581AE-4641-4DAD-9482-6724B4EB6D77
+Share With Devs:  Yes
+
+Data Source:      Microstackshots
+Shared Cache:     1C83FDD9-CF90-33E0-99D8-6AFF6156F8A9 slid base address 0x19d944000
+
+Command:          Aweme
+Path:             /private/var/containers/Bundle/Application/64698537-1BF1-4DCF-A94B-580A76BDFF41/Aweme.app/Aweme
+Identifier:       com.ss.iphone.ugc.Aweme
+Version:          39.9.0 (399017)
+Adam ID:          1142110895
+Is First Party:   No
+Beta Identifier:  F4CCD63C-144B-4644-B914-22052F0AE01B
+Resource Coalition: 6329
+Architecture:     arm64
+PID:              28545
+
+Event:            disk writes
+Action taken:     none
+Writes:           1073.76 MB of file backed memory dirtied over 80015 seconds (13.42 KB per second average), exceeding limit of 12.43 KB per second over 86400 seconds
+Writes limit:     1073.74 MB
+Limit duration:   86400s
+Writes caused:    1073.76 MB
+Writes duration:  80015s
+Duration:         80014.86s
+Duration Sampled: 53.43s (event starts 79946.70s before samples, event ends 14.73s after samples)
+Steps:            10 (20 samples lost, 10.49 MB/step)
+
+Hardware model:   iPhone17,1
+Active cpus:      6
+Memory size:      7.47 GB
+HW page size:     16384
+VM page size:     16384
+
+Models:           UNKNOWN
+
+OS Cryptex File Extents: 6738
+
+Heaviest stack for the target process:
+  8  ??? (libsystem_pthread.dylib + 2320) [0x19de7e910]
+  6  ??? (libsystem_pthread.dylib + 4664) [0x19de7f238]
+  6  ??? (libdispatch.dylib + 87740) [0x1ccba06bc]
+  6  ??? (libdispatch.dylib + 89240) [0x1ccba0c98]
+  6  ??? (libdispatch.dylib + 46192) [0x1ccb96470]
+  6  ??? (libdispatch.dylib + 43132) [0x1ccb9587c]
+  6  ??? (libdispatch.dylib + 114644) [0x1ccba6fd4]
+  6  ??? (libdispatch.dylib + 7372) [0x1ccb8cccc]
+  5  ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 318926328) [0x118d86df8]
+  5  ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 318929968) [0x118d87c30]
+  5  ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 313550700) [0x11886676c]
+  3  ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299923436) [0x117b677ec]
+  2  ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299941236) [0x117b6bd74]
+  2  ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299843888) [0x117b54130]
+  2  ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299958556) [0x117b7011c]
+  2  ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299959964) [0x117b7069c]
+  2  ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299960756) [0x117b709b4]
+  2  ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299960400) [0x117b70850]
+  2  ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299962524) [0x117b7109c]
+  2  ??? (libsystem_kernel.dylib + 28000) [0x25615fd60]
+
+
+Powerstats for:   Aweme [28545]
+UUID:             DE4B0402-0FC8-32E9-B9A3-0E3B6A00303D
+Path:             /private/var/containers/Bundle/Application/64698537-1BF1-4DCF-A94B-580A76BDFF41/Aweme.app/Aweme
+Identifier:       com.ss.iphone.ugc.Aweme
+Version:          39.9.0 (399017)
+Adam ID:          1142110895
+Is First Party:   No
+Beta Identifier:  F4CCD63C-144B-4644-B914-22052F0AE01B
+Resource Coalition: 10 samples 6329
+Architecture:     arm64
+Footprint:        235.58 MB -> 723.31 MB (+487.73 MB)
+Pageins:          7817 pages
+Start time:       2026-08-09 20:30:16.292 +0800
+End time:         2026-08-09 20:31:09.721 +0800
+Num samples:      10 (100%)
+Energy:           5324.24 uWh
+Num threads:      8
+Primary state:    5 samples Frontmost App, Non-Suppressed, Kernel mode, Effective Thread QoS User Initiated, Requested Thread QoS User Initiated, Override Thread QoS Unspecified, p-core
+User Activity:    0 samples Idle, 10 samples Active
+Power Source:     10 samples on Battery, 0 samples on AC
+  8   ??? (libsystem_pthread.dylib + 2320) [0x19de7e910]
+    6   ??? (libsystem_pthread.dylib + 4664) [0x19de7f238]
+      6   ??? (libdispatch.dylib + 87740) [0x1ccba06bc]
+        6   ??? (libdispatch.dylib + 89240) [0x1ccba0c98]
+          6   ??? (libdispatch.dylib + 46192) [0x1ccb96470]
+            6   ??? (libdispatch.dylib + 43132) [0x1ccb9587c]
+              6   ??? (libdispatch.dylib + 114644) [0x1ccba6fd4]
+                6   ??? (libdispatch.dylib + 7372) [0x1ccb8cccc]
+                  5   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 318926328) [0x118d86df8]
+                    5   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 318929968) [0x118d87c30]
+                      5   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 313550700) [0x11886676c]
+                        3   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299923436) [0x117b677ec]
+                          2   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299941236) [0x117b6bd74]
+                            2   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299843888) [0x117b54130]
+                              2   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299958556) [0x117b7011c]
+                                2   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299959964) [0x117b7069c]
+                                  2   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299960756) [0x117b709b4]
+                                    2   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299960400) [0x117b70850]
+                                      2   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299962524) [0x117b7109c]
+                                        2   ??? (libsystem_kernel.dylib + 28000) [0x25615fd60]
+                          1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299937960) [0x117b6b0a8]
+                            1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 313558272) [0x118868500]
+                              1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 313561632) [0x118869220]
+                                1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 313561984) [0x118869380]
+                                  1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299858792) [0x117b57b68]
+                                    1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299859720) [0x117b57f08]
+                                      1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 148435944) [0x10eaef3e8]
+                                        1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 148429008) [0x10eaed8d0]
+                                          1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299959964) [0x117b7069c]
+                                            1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299960756) [0x117b709b4]
+                                              1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299960400) [0x117b70850]
+                                                1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299962524) [0x117b7109c]
+                                                  1   ??? (libsystem_kernel.dylib + 28000) [0x25615fd60]
+                        2   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299923588) [0x117b67884]
+                          2   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 313563516) [0x11886997c]
+                            2   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 313563676) [0x118869a1c]
+                              2   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 319475908) [0x118e0d0c4]
+                                2   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 319476212) [0x118e0d1f4]
+                                  2   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 319476416) [0x118e0d2c0]
+                                    2   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 319478648) [0x118e0db78]
+                                      2   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299962524) [0x117b7109c]
+                                        2   ??? (libsystem_kernel.dylib + 28000) [0x25615fd60]
+                  1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 623060224) [0x12af92500]
+                    1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 623697096) [0x12b02dcc8]
+                      1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 623697712) [0x12b02df30]
+                        1   ??? (libsystem_kernel.dylib + 20528) [0x25615e030]
+                          1   <Effective Thread QoS Default, Requested Thread QoS Default>
+    2   ??? (libsystem_pthread.dylib + 4604) [0x19de7f1fc]
+      2   ??? (libdispatch.dylib + 86256) [0x1ccba00f0]
+        2   ??? (libdispatch.dylib + 84332) [0x1ccb9f96c]
+          2   ??? (libdispatch.dylib + 114644) [0x1ccba6fd4]
+            2   ??? (libdispatch.dylib + 7372) [0x1ccb8cccc]
+              1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 623096048) [0x12af9b0f0]
+                1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 623305836) [0x12afce46c]
+                  1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 623299256) [0x12afccab8]
+                    1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 623294872) [0x12afcb998]
+                      1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 623367864) [0x12afdd6b8]
+                        1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 623386164) [0x12afe1e34]
+                          1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 623944472) [0x12b06a318]
+                            1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 623947576) [0x12b06af38]
+                              1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 623949644) [0x12b06b74c]
+                                1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 623940916) [0x12b069534]
+                                  1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 623955620) [0x12b06cea4]
+                                    1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 623937120) [0x12b068660]
+                                      1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299806856) [0x117b4b088]
+                                        1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299808120) [0x117b4b578]
+                                          1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299808968) [0x117b4b8c8]
+                                            1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299812280) [0x117b4c5b8]
+                                              1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299863448) [0x117b58d98]
+                                                1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299873668) [0x117b5b584]
+                                                  1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299873820) [0x117b5b61c]
+                                                    1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299875264) [0x117b5bbc0]
+                                                      1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299873968) [0x117b5b6b0]
+                                                        1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299833684) [0x117b51954]
+                                                          1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299832684) [0x117b5156c]
+                                                            1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299833232) [0x117b51790]
+                                                              1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299846472) [0x117b54b48]
+                                                                1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299847580) [0x117b54f9c]
+                                                                  1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299852136) [0x117b56168]
+                                                                    1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299851352) [0x117b55e58]
+                                                                      1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299852824) [0x117b56418]
+                                                                        1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299852420) [0x117b56284]
+                                                                          1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 299855136) [0x117b56d20]
+                                                                            1   ??? (libsystem_kernel.dylib + 28000) [0x25615fd60]
+                                                                              1   <Effective Thread QoS Default, Requested Thread QoS Default, e-core>
+              1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 506125316) [0x12400dc04]
+                1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 506149932) [0x124013c2c]
+                  1   ??? (Foundation + 551716) [0x19e4a7b24]
+                    1   ??? (Foundation + 579064) [0x19e4ae5f8]
+                      1   ??? (Foundation + 566796) [0x19e4ab60c]
+                        1   ??? (libsystem_kernel.dylib + 20528) [0x25615e030]
+                          1   <Effective Thread QoS Default, Requested Thread QoS Default>
+  2   ??? (libsystem_pthread.dylib + 2332) [0x19de7e91c]
+    2   ??? (libsystem_pthread.dylib + 16444) [0x19de8203c]
+      1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 319479540) [0x118e0def4]
+        1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 319488256) [0x118e10100]
+          1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 319645240) [0x118e36638]
+            1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 319645624) [0x118e367b8]
+              1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 319645996) [0x118e3692c]
+                1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 319649616) [0x118e37750]
+                  1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 319649828) [0x118e37824]
+                    1   ??? (Foundation + 139832) [0x19e443238]
+                      1   ??? (CoreFoundation + 243456) [0x19df7a700]
+                        1   ??? (CoreFoundation + 238224) [0x19df79290]
+                          1   ??? (CoreFoundation + 242036) [0x19df7a174]
+                            1   ??? (CoreFoundation + 367140) [0x19df98a24]
+                              1   ??? (CoreFoundation + 367280) [0x19df98ab0]
+                                1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 310743516) [0x1185b91dc]
+                                  1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 310743724) [0x1185b92ac]
+                                    1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 310744968) [0x1185b9788]
+                                      1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 310745804) [0x1185b9acc]
+                                        1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 310758008) [0x1185bca78]
+                                          1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 170803884) [0x1100442ac]
+                                            1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 170792924) [0x1100417dc]
+                                              1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 168786156) [0x10fe578ec]
+                                                1   ??? (libsystem_kernel.dylib + 25796) [0x25615f4c4]
+                                                  1   <Effective Thread QoS Unspecified, Requested Thread QoS Unspecified>
+      1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 318959832) [0x118d8f0d8]
+        1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 318960296) [0x118d8f2a8]
+          1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 318960612) [0x118d8f3e4]
+            1   ??? (<77060912-0370-30B1-BE46-3DC96A297F76> + 300159164) [0x117ba10bc]
+              1   ??? (libsystem_platform.dylib + 2336) [0x1a9b71920]
+                1   <Effective Thread QoS Default, Requested Thread QoS Default, e-core>
+
+  Binary Images:
+           0x102afc000 -                ???  com.ss.iphone.ugc.Aweme 39.9.0 (399017) <DE4B0402-0FC8-32E9-B9A3-0E3B6A00303D>  /private/var/containers/Bundle/Application/64698537-1BF1-4DCF-A94B-580A76BDFF41/Aweme.app/Aweme
+           0x105d60000 -                ???  ???                                     <77060912-0370-30B1-BE46-3DC96A297F76>
+           0x19de7e000 -        0x19de8a247  libsystem_pthread.dylib                 <8674AE84-5A65-39B4-BCFE-A6178AFD3EAE>  /usr/lib/system/libsystem_pthread.dylib
+           0x19df3f000 -        0x19e420fbf  CoreFoundation                          <7CDBA4FD-E90E-3EF2-8AE3-9071648E4673>  /System/Library/Frameworks/CoreFoundation.framework/CoreFoundation
+           0x19e421000 -        0x19f52d45b  Foundation                              <B17A96F3-DC4A-3757-90DF-BE4837ABB5AA>  /System/Library/Frameworks/Foundation.framework/Foundation
+           0x1a9b71000 -        0x1a9b7967f  libsystem_platform.dylib                <9D2E2FF9-3CDB-3465-B9BA-EBA5CF7ACFDB>  /usr/lib/system/libsystem_platform.dylib
+           0x1ccb8b000 -        0x1ccbd1d5f  libdispatch.dylib                       <C9C06C2C-438C-3E88-AA74-DCCE16127DC9>  /usr/lib/system/libdispatch.dylib
+           0x256159000 -        0x2561961fb  libsystem_kernel.dylib                  <66561A3E-67D2-3F28-9E5C-C7BDE524EE9D>  /usr/lib/system/libsystem_kernel.dylib

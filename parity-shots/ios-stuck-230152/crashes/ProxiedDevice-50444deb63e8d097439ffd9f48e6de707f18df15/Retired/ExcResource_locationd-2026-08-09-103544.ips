@@ -1,0 +1,243 @@
+{"bug_type":"385","os_version":"Watch OS 26.6 (23U5025e)","build_version":"3077.0.2","timestamp":"2026-08-09 10:35:44.00 +0800","platform":4,"roots_installed":0,"app_name":"locationd","incident_id":"7C7D7493-D11D-4574-B490-CDB37C410423","name":"locationd","is_first_party":1,"app_version":"3077.0.2","share_with_app_devs":1,"slice_uuid":"c35fab99-44d4-3cfa-ab3a-1c68294eff98"}
+{
+  "captureTime" : "2026-08-09 10:35:37.0895 +0800",
+  "deployVersion" : 210,
+  "procRole" : "Unspecified",
+  "modelCode" : "Watch6,14",
+  "incident" : "7C7D7493-D11D-4574-B490-CDB37C410423",
+  "osVersion" : {
+    "train" : "Watch OS 26.6",
+    "isEmbedded" : true,
+    "build" : "23U5025e",
+    "releaseType" : "User"
+  },
+  "version" : 2,
+  "coalitionID" : 117,
+  "cpuType" : "ARM64_32",
+  "codeSigningMonitor" : 1,
+  "userID" : 0,
+  "pid" : 1650,
+  "uptime" : 97000,
+  "procLaunch" : "2026-08-05 19:25:36.0000 +0800",
+  "procStartAbsTime" : 852958732277,
+  "procExitAbsTime" : 2330787548477,
+  "procName" : "locationd",
+  "procPath" : "\/usr\/libexec\/locationd",
+  "bundleInfo" : {"CFBundleVersion":"3077.0.2","CFBundleShortVersionString":"3077.0.2"},
+  "parentProc" : "launchd",
+  "parentPid" : 1,
+  "coalitionName" : "com.apple.locationd",
+  "crashReporterKey" : "50444deb63e8d097439ffd9f48e6de707f18df15",
+  "bootProgressRegister" : "0x20800004",
+  "wasUnlockedSinceBoot" : 1,
+  "isLocked" : 0,
+  "throttleTimeout" : 3,
+  "codeSigningID" : "com.apple.locationd",
+  "codeSigningTeamID" : "",
+  "codeSigningFlags" : 570434305,
+  "codeSigningValidationCategory" : 1,
+  "codeSigningTrustLevel" : 10,
+  "instructionByteStream" : {"atPC":"og0BraAFAK3ABUKtwhnAPc45QPmuOQD5oYkCraARgD2NAQIRDgECEQ==","beforePC":"YAMAVAvmANBrIQGRayEAEewDCqqLAQC5jSEAEQ4hABHABUCtwg1BrQ=="},
+  "bootSessionUUID" : "ACEE0485-A5C3-4868-8F58-9B0A2A188909",
+  "exception" : {"type":"EXC_RESOURCE","subtype":"MEMORY","rawCodes":[7205759403943788562,0],"message":" (Limit 18 MB) Crossed High Water Mark","codes":"0x6400000009000012, 0x0000000000000000"},
+  "termination" : {"flags":2,"code":7,"namespace":"JETSAM"},
+  "ktriageinfo" : "VM - (arg = 0x0) Soft mode disabled because process was ptraced\n",
+  "faultingThread" : 10,
+  "threads" : [{"queue":"com.apple.main-thread","id":656778,"threadState":{"x":[{"value":268451845},{"value":21592279046},{"value":8589934592},{"value":20903605829632},{"value":0},{"value":20903605829632},{"value":2},{"value":4294967295},{"value":0},{"value":0},{"value":2},{"value":0},{"value":0},{"value":4867},{"value":0},{"value":1777091905950302592},{"value":18446744073709551569},{"value":0},{"value":0},{"value":4294967295},{"value":2},{"value":20903605829632},{"value":0},{"value":20903605829632},{"value":21592279046},{"value":48077176},{"value":8589934592},{"value":18446744073709550527},{"value":2073329664}],"lr":{"value":673586244},"fp":{"value":48077024},"sp":{"value":48076944},"cpsr":{"value":0},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":673519844},"flavor":"ARM_THREAD_STATE64","far":{"value":0}},"frames":[{"imageOffset":2276,"imageIndex":9},{"imageOffset":68676,"imageIndex":9},{"imageOffset":69292,"imageIndex":9},{"imageOffset":3964,"imageIndex":9},{"imageOffset":14584,"imageIndex":10},{"imageOffset":5424,"imageIndex":10},{"imageOffset":1099512,"imageIndex":10},{"imageOffset":751504,"imageIndex":10},{"imageOffset":22679436,"imageIndex":0},{"imageOffset":22683032,"imageIndex":0},{"imageOffset":22695092,"imageIndex":0},{"imageOffset":65868,"imageIndex":11}]},{"name":"com.apple.CoreMotion.MotionThread","id":656816,"threadState":{"x":[{"value":268451845},{"value":21592279046},{"value":8589934592},{"value":45092861640704},{"value":0},{"value":45092861640704},{"value":2},{"value":4294967295},{"value":0},{"value":0},{"value":2},{"value":0},{"value":0},{"value":10499},{"value":0},{"value":4039549221741390000},{"value":18446744073709551569},{"value":0},{"value":0},{"value":4294967295},{"value":2},{"value":45092861640704},{"value":0},{"value":45092861640704},{"value":21592279046},{"value":419749896},{"value":8589934592},{"value":18446744073709550527},{"value":2073329664}],"lr":{"value":673586244},"fp":{"value":419749744},"sp":{"value":419749664},"cpsr":{"value":0},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":673519844},"flavor":"ARM_THREAD_STATE64","far":{"value":0}},"frames":[{"imageOffset":2276,"imageIndex":9},{"imageOffset":68676,"imageIndex":9},{"imageOffset":69292,"imageIndex":9},{"imageOffset":3964,"imageIndex":9},{"imageOffset":14584,"imageIndex":10},{"imageOffset":5424,"imageIndex":10},{"imageOffset":1099512,"imageIndex":10},{"imageOffset":751504,"imageIndex":10},{"imageOffset":7027664,"imageIndex":0},{"imageOffset":5236,"imageIndex":13},{"imageOffset":2312,"imageIndex":13}]},{"name":"CommonUtilities-WiFi-Thread","id":656864,"threadState":{"x":[{"value":268451845},{"value":21592279046},{"value":8589934592},{"value":211119117434880},{"value":0},{"value":211119117434880},{"value":2},{"value":4294967295},{"value":0},{"value":0},{"value":2},{"value":0},{"value":0},{"value":49155},{"value":0},{"value":963634971254644200},{"value":18446744073709551569},{"value":0},{"value":0},{"value":4294967295},{"value":2},{"value":211119117434880},{"value":0},{"value":211119117434880},{"value":21592279046},{"value":383278792},{"value":8589934592},{"value":18446744073709550527},{"value":2073329664}],"lr":{"value":673586244},"fp":{"value":383278640},"sp":{"value":383278560},"cpsr":{"value":0},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":673519844},"flavor":"ARM_THREAD_STATE64","far":{"value":0}},"frames":[{"imageOffset":2276,"imageIndex":9},{"imageOffset":68676,"imageIndex":9},{"imageOffset":69292,"imageIndex":9},{"imageOffset":3964,"imageIndex":9},{"imageOffset":14584,"imageIndex":10},{"imageOffset":5424,"imageIndex":10},{"imageOffset":1099512,"imageIndex":10},{"imageOffset":751504,"imageIndex":10},{"imageOffset":21488,"imageIndex":14},{"imageOffset":350168,"imageIndex":15},{"imageOffset":5236,"imageIndex":13},{"imageOffset":2312,"imageIndex":13}]},{"id":1540006,"frames":[{"imageOffset":2276,"imageIndex":9},{"imageOffset":68676,"imageIndex":9},{"imageOffset":69292,"imageIndex":9},{"imageOffset":3964,"imageIndex":9},{"imageOffset":14584,"imageIndex":10},{"imageOffset":5424,"imageIndex":10},{"imageOffset":1099512,"imageIndex":10},{"imageOffset":9156,"imageIndex":15},{"imageOffset":248940,"imageIndex":15},{"imageOffset":350168,"imageIndex":15},{"imageOffset":5236,"imageIndex":13},{"imageOffset":2312,"imageIndex":13}],"threadState":{"x":[{"value":268451845},{"value":21592279046},{"value":8589934592},{"value":773639574126592},{"value":0},{"value":773639574126592},{"value":2},{"value":4294967295},{"value":0},{"value":0},{"value":2},{"value":0},{"value":0},{"value":180127},{"value":0},{"value":1980611594307067708},{"value":18446744073709551569},{"value":0},{"value":0},{"value":4294967295},{"value":2},{"value":773639574126592},{"value":0},{"value":773639574126592},{"value":21592279046},{"value":379084552},{"value":8589934592},{"value":18446744073709550527},{"value":2073329664}],"lr":{"value":673586244},"fp":{"value":379084400},"sp":{"value":379084320},"cpsr":{"value":0},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":673519844},"flavor":"ARM_THREAD_STATE64","far":{"value":0}}},{"id":1600606,"frames":[],"threadState":{"x":[{"value":381186048},{"value":145751},{"value":380649472},{"value":0},{"value":409603},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"lr":{"value":0},"fp":{"value":0},"sp":{"value":381186048},"cpsr":{"value":0},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":681445620},"flavor":"ARM_THREAD_STATE64","far":{"value":0}}},{"id":1602588,"frames":[],"threadState":{"x":[{"value":2721607680},{"value":141295},{"value":2721071104},{"value":0},{"value":409604},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"lr":{"value":0},"fp":{"value":0},"sp":{"value":2721607680},"cpsr":{"value":0},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":681445620},"flavor":"ARM_THREAD_STATE64","far":{"value":0}}},{"id":1603675,"frames":[],"threadState":{"x":[{"value":2719510528},{"value":149403},{"value":2718973952},{"value":0},{"value":409603},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"lr":{"value":0},"fp":{"value":0},"sp":{"value":2719510528},"cpsr":{"value":0},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":681445620},"flavor":"ARM_THREAD_STATE64","far":{"value":0}}},{"id":1604074,"frames":[],"threadState":{"x":[{"value":2722656256},{"value":237727},{"value":2722119680},{"value":0},{"value":409603},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"lr":{"value":0},"fp":{"value":0},"sp":{"value":2722656256},"cpsr":{"value":0},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":681445620},"flavor":"ARM_THREAD_STATE64","far":{"value":0}}},{"id":1604246,"frames":[],"threadState":{"x":[{"value":2718461952},{"value":232419},{"value":2717925376},{"value":0},{"value":409602},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"lr":{"value":0},"fp":{"value":0},"sp":{"value":2718461952},"cpsr":{"value":0},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":681445620},"flavor":"ARM_THREAD_STATE64","far":{"value":0}}},{"id":1604281,"frames":[],"threadState":{"x":[{"value":2725801984},{"value":258419},{"value":2725265408},{"value":0},{"value":409604},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"lr":{"value":0},"fp":{"value":0},"sp":{"value":2725801984},"cpsr":{"value":0},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":681445620},"flavor":"ARM_THREAD_STATE64","far":{"value":0}}},{"queue":"CLLocationControllerSilo","id":1604762,"threadState":{"x":[{"value":2723687584},{"value":2723687116},{"value":147456},{"value":0},{"value":50331649},{"value":3},{"value":0},{"value":0},{"value":399818704},{"value":399843328},{"value":424673280},{"value":45330512},{"value":424722384},{"value":424722392},{"value":399818712},{"value":350300540},{"value":18446744073709551601},{"value":360743414},{"value":0},{"value":2723687584},{"value":346034976},{"value":73728},{"value":45330512},{"value":2723687584},{"value":0},{"value":2723691640},{"value":349720352},{"value":2723692112},{"value":41304845}],"lr":{"value":16957388},"fp":{"value":2723687168},"sp":{"value":2723687104},"cpsr":{"value":2147483648},"esr":{"value":2449473607,"description":"(Data Abort) byte write Translation fault"},"pc":{"value":15176172,"matchesCrashFrame":1},"flavor":"ARM_THREAD_STATE64","far":{"value":424722432}},"triggered":true,"frames":[{"imageOffset":3887596,"imageIndex":0},{"imageOffset":5668812,"imageIndex":0},{"imageOffset":5660804,"imageIndex":0},{"imageOffset":12637868,"imageIndex":0},{"imageOffset":12635548,"imageIndex":0},{"imageOffset":12634524,"imageIndex":0},{"imageOffset":3599112,"imageIndex":0},{"imageOffset":11470300,"imageIndex":0},{"imageOffset":11454564,"imageIndex":0},{"imageOffset":11410488,"imageIndex":0},{"imageOffset":11526476,"imageIndex":0},{"imageOffset":5800156,"imageIndex":0},{"imageOffset":5667988,"imageIndex":0},{"imageOffset":5666560,"imageIndex":0},{"imageOffset":3549396,"imageIndex":0},{"imageOffset":4784,"imageIndex":16},{"imageOffset":19596,"imageIndex":16},{"imageOffset":4864,"imageIndex":16},{"imageOffset":100340,"imageIndex":17},{"imageOffset":22152,"imageIndex":17},{"imageOffset":87756,"imageIndex":17},{"imageOffset":35964,"imageIndex":17},{"imageOffset":39032,"imageIndex":17},{"imageOffset":35964,"imageIndex":17},{"imageOffset":39032,"imageIndex":17},{"imageOffset":75868,"imageIndex":17},{"imageOffset":74188,"imageIndex":17},{"imageOffset":2140,"imageIndex":13},{"imageOffset":2300,"imageIndex":13}]}],
+  "usedImages" : [
+  {
+    "size" : 33718272,
+    "base" : 11288576,
+    "arch" : "arm64_32",
+    "name" : "locationd",
+    "path" : "\/usr\/libexec\/locationd",
+    "source" : "P",
+    "uuid" : "c35fab99-44d4-3cfa-ab3a-1c68294eff98"
+  },
+  {
+    "size" : 32768,
+    "base" : 49332224,
+    "arch" : "arm64_32",
+    "name" : "CoreGPS.dylib",
+    "path" : "\/System\/Library\/PrivateFrameworks\/CoreGPS.framework\/CoreGPS.dylib",
+    "source" : "P",
+    "uuid" : "e377e45d-813c-32ed-a560-5f2bf6f20a87"
+  },
+  {
+    "size" : 344064,
+    "base" : 50118656,
+    "arch" : "arm64_32",
+    "name" : "AppleMipcRouter",
+    "path" : "\/System\/Library\/PrivateFrameworks\/AppleMipcRouter.framework\/AppleMipcRouter",
+    "source" : "P",
+    "uuid" : "a94721d2-1bda-3ed3-8146-b66599dad50a"
+  },
+  {
+    "size" : 49152,
+    "base" : 51478528,
+    "arch" : "arm64_32",
+    "name" : "AppleBasebandLink",
+    "path" : "\/System\/Library\/PrivateFrameworks\/AppleBasebandLink.framework\/AppleBasebandLink",
+    "source" : "P",
+    "uuid" : "bb97131e-80b6-3048-b19c-c169592ad818"
+  },
+  {
+    "size" : 3457024,
+    "base" : 62914560,
+    "arch" : "arm64_32",
+    "name" : "libMIPCSdk.dylib",
+    "path" : "\/usr\/lib\/libMIPCSdk.dylib",
+    "source" : "P",
+    "uuid" : "a2d5dc62-7132-34de-a9c6-fa0d7bee5e9d"
+  },
+  {
+    "size" : 81920,
+    "base" : 68501504,
+    "arch" : "arm64_32",
+    "name" : "CardioHealth",
+    "path" : "\/System\/Library\/PrivateFrameworks\/CardioHealth.framework\/CardioHealth",
+    "source" : "P",
+    "uuid" : "a6962fc6-6dd1-3ddb-a355-ac7fa08cb3b4"
+  },
+  {
+    "size" : 49152,
+    "base" : 345243648,
+    "arch" : "arm64_32",
+    "name" : "libobjc-trampolines.dylib",
+    "path" : "\/usr\/lib\/libobjc-trampolines.dylib",
+    "source" : "P",
+    "uuid" : "ca5576e9-cbd4-3730-a1bf-fca661859ad4"
+  },
+  {
+    "size" : 98304,
+    "base" : 424411136,
+    "arch" : "arm64_32",
+    "name" : "CoreUtilsShims",
+    "path" : "\/System\/Library\/PrivateFrameworks\/CoreUtilsShims.framework\/CoreUtilsShims",
+    "source" : "P",
+    "uuid" : "96c1b1e6-5e5c-326a-a016-4869fece1d9c"
+  },
+  {
+    "size" : 393216,
+    "base" : 389021696,
+    "arch" : "arm64_32",
+    "name" : "Dyld",
+    "path" : "\/System\/Library\/PrivateFrameworks\/Dyld.framework\/Dyld",
+    "source" : "P",
+    "uuid" : "f6a0a47a-893f-3b73-ba78-4e893abf8106"
+  },
+  {
+    "size" : 234812,
+    "base" : 673517568,
+    "arch" : "arm64_32",
+    "name" : "libsystem_kernel.dylib",
+    "path" : "\/usr\/lib\/system\/libsystem_kernel.dylib",
+    "source" : "P",
+    "uuid" : "52363f8b-f6c5-35f7-97b3-405ebdeb041a"
+  },
+  {
+    "size" : 4598976,
+    "base" : 522534912,
+    "arch" : "arm64_32",
+    "name" : "CoreFoundation",
+    "path" : "\/System\/Library\/Frameworks\/CoreFoundation.framework\/CoreFoundation",
+    "source" : "P",
+    "uuid" : "2d1945c7-73a3-36dd-a56e-b61ccca5e400"
+  },
+  {
+    "size" : 517724,
+    "base" : 491462656,
+    "arch" : "arm64_32",
+    "name" : "dyld",
+    "path" : "\/usr\/lib\/dyld",
+    "source" : "P",
+    "uuid" : "193961bf-ba1f-351c-bfb0-bb801d6b6477"
+  },
+  {
+    "source" : "A",
+    "uuid" : "00000000-0000-0000-0000-000000000000",
+    "size" : 0,
+    "base" : 0
+  },
+  {
+    "size" : 45444,
+    "base" : 681443328,
+    "arch" : "arm64_32",
+    "name" : "libsystem_pthread.dylib",
+    "path" : "\/usr\/lib\/system\/libsystem_pthread.dylib",
+    "source" : "P",
+    "uuid" : "dc621847-48f3-31fd-bffb-8f05295c8e9a"
+  },
+  {
+    "size" : 100864,
+    "base" : 609906688,
+    "arch" : "arm64_32",
+    "name" : "CommonUtilities",
+    "path" : "\/System\/Library\/PrivateFrameworks\/CommonUtilities.framework\/CommonUtilities",
+    "source" : "P",
+    "uuid" : "4688fd4f-cb70-3ef6-b1b9-ef21cc613f95"
+  },
+  {
+    "size" : 14306400,
+    "base" : 497463296,
+    "arch" : "arm64_32",
+    "name" : "Foundation",
+    "path" : "\/System\/Library\/Frameworks\/Foundation.framework\/Foundation",
+    "source" : "P",
+    "uuid" : "1cbec9ef-c668-320b-8dc4-3be7b90a022b"
+  },
+  {
+    "size" : 218304,
+    "base" : 883150848,
+    "arch" : "arm64_32",
+    "name" : "LocationSupport",
+    "path" : "\/System\/Library\/PrivateFrameworks\/LocationSupport.framework\/LocationSupport",
+    "source" : "P",
+    "uuid" : "f431225d-ad76-3854-8654-2bdef8c037e1"
+  },
+  {
+    "size" : 267616,
+    "base" : 575320064,
+    "arch" : "arm64_32",
+    "name" : "libdispatch.dylib",
+    "path" : "\/usr\/lib\/system\/libdispatch.dylib",
+    "source" : "P",
+    "uuid" : "82493cb7-d486-320f-b397-6f01d6f7d958"
+  }
+],
+  "sharedCache" : {
+  "size" : 1977597952,
+  "uuid" : "84063525-c3b5-3637-8325-d67a3c9f6e90",
+  "base" : 490782720
+},
+  "vmSummary" : "ReadOnly portion of Libraries: Total=1.1G resident=0K(0%) swapped_out_or_unallocated=1.1G(100%)\nWritable regions: Total=34.7M written=273K(1%) resident=273K(1%) swapped_out=0K(0%) unallocated=34.4M(99%)\n\n                                VIRTUAL   REGION \nREGION TYPE                        SIZE    COUNT (non-coalesced) \n===========                     =======  ======= \nActivity Tracing                   256K        1 \nDispatch continuations            2048K        1 \nFoundation                          16K        1 \nGuard                            295.2M      100 \nIOKit                              256K        1 \nKernel Alloc Once                   32K        1 \nMALLOC                            24.0M       56 \nMALLOC guard page                  128K        8 \nMALLOC_REALLOC (reserved)           16K        1         reserved VM address space (unallocated)\nSQLite page cache                 1536K       12 \nSTACK GUARD                        176K       11 \nStack                             6448K       11 \nVM_ALLOCATE                        192K        2 \n__CTF                               824        1 \n__DATA                            17.5M      746 \n__DATA_CONST                      51.6M      797 \n__DATA_DIRTY                      3759K      715 \n__FONT_DATA                        2352        1 \n__LINKEDIT                       246.8M       10 \n__OBJC_RO                         36.4M        1 \n__OBJC_RW                          851K        1 \n__TEXT                           910.1M      806 \n__TPRO_CONST                          8        2 \nmapped file                       61.3M       90 \npage table in kernel               273K        1 \nshared memory                       64K        3 \n===========                     =======  ======= \nTOTAL                              1.6G     3380 \nTOTAL, minus reserved VM space     1.6G     3380 \n",
+  "legacyInfo" : {
+  "threadTriggered" : {
+    "queue" : "CLLocationControllerSilo"
+  }
+},
+  "logWritingSignature" : "ade10d6153778bca41b463f0d17873ba5f86778c",
+  "roots_installed" : 0,
+  "bug_type" : "385",
+  "trialInfo" : {
+  "rollouts" : [
+    {
+      "deploymentId" : 250002286,
+      "factorPackIds" : [
+
+      ],
+      "rolloutId" : "6010753cf9bfc4000c247bdd"
+    },
+    {
+      "deploymentId" : 250000003,
+      "factorPackIds" : [
+        "64d29746ad29a465b3bbeace"
+      ],
+      "rolloutId" : "64c17a9925d75a7281053d4c"
+    }
+  ],
+  "experiments" : [
+
+  ]
+}
+}

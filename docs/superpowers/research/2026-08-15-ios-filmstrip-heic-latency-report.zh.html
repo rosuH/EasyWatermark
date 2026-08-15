@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>iOS 胶片条 HEIC 延迟 · 调研结论</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #152029;
+    --ink-soft: #3a4a58;
+    --mute: #6b7c8c;
+    --paper: #eef3f7;
+    --paper-2: #e2eaf1;
+    --line: rgba(21, 32, 41, 0.12);
+    --accent: #0d6e6e;
+    --accent-deep: #085454;
+    --warn: #b45309;
+    --bad: #9f1239;
+    --ok: #047857;
+    --glow: rgba(13, 110, 110, 0.14);
+    --max: 42rem;
+    --wide: 58rem;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    font-family: "Instrument Sans", "Noto Serif SC", system-ui, sans-serif;
+    font-size: 1.05rem;
+    line-height: 1.65;
+    background:
+      radial-gradient(1200px 600px at 10% -10%, var(--glow), transparent 55%),
+      radial-gradient(900px 500px at 100% 20%, rgba(180, 83, 9, 0.08), transparent 50%),
+      linear-gradient(165deg, #f5f8fb 0%, var(--paper) 40%, var(--paper-2) 100%);
+    min-height: 100vh;
+  }
+
+  .wrap {
+    width: min(100% - 2.5rem, var(--wide));
+    margin-inline: auto;
+  }
+  .narrow { width: min(100%, var(--max)); }
+
+  /* —— Hero —— */
+  header.hero {
+    padding: clamp(3.5rem, 10vw, 6.5rem) 0 clamp(2.5rem, 6vw, 4rem);
+  }
+  .eyebrow {
+    display: inline-flex;
+    gap: 0.55rem;
+    align-items: center;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-deep);
+    margin-bottom: 1.25rem;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 1.5rem;
+    height: 2px;
+    background: var(--accent);
+  }
+  h1 {
+    font-family: "Noto Serif SC", "Instrument Sans", serif;
+    font-weight: 700;
+    font-size: clamp(1.85rem, 4.2vw, 2.75rem);
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+    margin: 0 0 1rem;
+    max-width: 16em;
+  }
+  .lede {
+    font-size: clamp(1.05rem, 2.2vw, 1.2rem);
+    color: var(--ink-soft);
+    max-width: 36em;
+    margin: 0 0 2rem;
+  }
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  .verdict {
+    display: grid;
+    gap: 0.35rem;
+    padding: 1.25rem 1.35rem;
+    border-left: 3px solid var(--accent);
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(8px);
+    max-width: 38em;
+  }
+  .verdict .k {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .verdict p {
+    margin: 0;
+    font-family: "Noto Serif SC", serif;
+    font-size: 1.15rem;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+
+  /* —— Sections —— */
+  section {
+    padding: 2.75rem 0;
+    border-top: 1px solid var(--line);
+  }
+  section h2 {
+    font-family: "Noto Serif SC", serif;
+    font-size: clamp(1.35rem, 2.8vw, 1.7rem);
+    font-weight: 700;
+    margin: 0 0 0.75rem;
+    letter-spacing: -0.01em;
+  }
+  section .sub {
+    color: var(--mute);
+    margin: 0 0 1.75rem;
+    max-width: 38em;
+  }
+  h3 {
+    font-family: "Instrument Sans", sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 1.75rem 0 0.6rem;
+    color: var(--ink);
+  }
+  p { margin: 0 0 1rem; color: var(--ink-soft); }
+  p:last-child { margin-bottom: 0; }
+
+  /* —— Device numbers —— */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin: 1.5rem 0 0.5rem;
+  }
+  @media (max-width: 640px) {
+    .metrics { grid-template-columns: 1fr; }
+  }
+  .metric {
+    padding: 1.15rem 1.2rem 1.25rem;
+    background: rgba(255, 255, 255, 0.65);
+    border: 1px solid var(--line);
+  }
+  .metric .label {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    color: var(--mute);
+    margin-bottom: 0.65rem;
+  }
+  .metric .pair {
+    display: flex;
+    align-items: baseline;
+    gap: 0.85rem;
+    flex-wrap: wrap;
+  }
+  .metric .n {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 2rem;
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    color: var(--ink);
+  }
+  .metric .n small {
+    font-size: 0.85rem;
+    color: var(--mute);
+    margin-left: 0.15rem;
+  }
+  .metric .delta {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.78rem;
+    font-weight: 500;
+  }
+  .delta.worse { color: var(--bad); }
+  .delta.better { color: var(--ok); }
+  .metric .hint {
+    margin-top: 0.55rem;
+    font-size: 0.85rem;
+    color: var(--mute);
+  }
+
+  /* —— Mechanism diagram —— */
+  .tiles {
+    margin: 1.5rem 0;
+    padding: 1.25rem;
+    background: var(--ink);
+    color: #d5dee6;
+  }
+  .tiles .cap {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #7a9aa8;
+    margin-bottom: 0.9rem;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    gap: 3px;
+    max-width: 22rem;
+  }
+  .grid i {
+    aspect-ratio: 1;
+    background: linear-gradient(145deg, #1e6f6f, #0a3d3d);
+    opacity: 0.55;
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  .grid i:nth-child(3n) { animation-delay: 0.15s; }
+  .grid i:nth-child(5n) { animation-delay: 0.35s; }
+  .grid i:nth-child(7n) { animation-delay: 0.55s; }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.95; }
+  }
+  .tiles .note {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: #b8c9d4;
+    max-width: 36em;
+  }
+  .tiles em {
+    font-style: normal;
+    color: #7fd4d0;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.85em;
+  }
+
+  /* —— Consensus list —— */
+  .points {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.85rem;
+  }
+  .points li {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.85rem;
+    align-items: start;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .points li:last-child { border-bottom: 0; padding-bottom: 0; }
+  .points .num {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.75rem;
+    color: var(--accent);
+    padding-top: 0.3rem;
+  }
+  .points strong {
+    display: block;
+    color: var(--ink);
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+  }
+  .points span { color: var(--ink-soft); font-size: 0.95rem; }
+
+  /* —— Closed / Ranked —— */
+  .closed {
+    display: grid;
+    gap: 0.55rem;
+    margin-top: 0.5rem;
+  }
+  .closed .row {
+    display: grid;
+    grid-template-columns: 5.5rem 1fr;
+    gap: 0.75rem;
+    align-items: baseline;
+    font-size: 0.95rem;
+  }
+  @media (max-width: 520px) {
+    .closed .row { grid-template-columns: 1fr; gap: 0.15rem; }
+  }
+  .tag {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    padding: 0.2rem 0.45rem;
+    width: fit-content;
+  }
+  .tag.off { background: rgba(159, 18, 57, 0.1); color: var(--bad); }
+  .tag.warn { background: rgba(180, 83, 9, 0.12); color: var(--warn); }
+  .tag.go { background: rgba(4, 120, 87, 0.12); color: var(--ok); }
+
+  .rank {
+    counter-reset: rk;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 1rem;
+  }
+  .rank li {
+    counter-increment: rk;
+    display: grid;
+    grid-template-columns: 2.5rem 1fr;
+    gap: 0.9rem;
+    padding: 1.1rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .rank li::before {
+    content: counter(rk);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 1.35rem;
+    font-weight: 500;
+    color: var(--accent);
+    line-height: 1.2;
+  }
+  .rank h3 { margin: 0 0 0.35rem; font-size: 1.05rem; }
+  .rank p { margin: 0; font-size: 0.92rem; }
+  .rank .meta {
+    margin-top: 0.45rem;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.72rem;
+    color: var(--mute);
+  }
+
+  /* —— Next —— */
+  .next {
+    margin-top: 0.5rem;
+    padding: 1.5rem 1.4rem;
+    background: linear-gradient(135deg, rgba(13, 110, 110, 0.1), rgba(255, 255, 255, 0.7));
+    border: 1px solid rgba(13, 110, 110, 0.22);
+  }
+  .next .k {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent-deep);
+    margin-bottom: 0.5rem;
+  }
+  .next h3 {
+    font-family: "Noto Serif SC", serif;
+    font-size: 1.25rem;
+    margin: 0 0 0.75rem;
+  }
+  .next ul {
+    margin: 0.75rem 0 0;
+    padding-left: 1.15rem;
+    color: var(--ink-soft);
+  }
+  .next li { margin-bottom: 0.35rem; }
+  .pass {
+    margin-top: 1rem;
+    padding-top: 0.85rem;
+    border-top: 1px dashed rgba(13, 110, 110, 0.35);
+    font-size: 0.92rem;
+  }
+  .pass code {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.85em;
+    background: rgba(13, 110, 110, 0.1);
+    padding: 0.1em 0.35em;
+  }
+
+  /* —— Foot —— */
+  footer {
+    padding: 2rem 0 3.5rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.82rem;
+    color: var(--mute);
+  }
+  footer a { color: var(--accent-deep); }
+  footer ul {
+    list-style: none;
+    padding: 0;
+    margin: 0.75rem 0 0;
+    display: grid;
+    gap: 0.3rem;
+  }
+  footer code {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.78em;
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.55s ease, transform 0.55s ease;
+  }
+  .reveal.in {
+    opacity: 1;
+    transform: none;
+  }
+</style>
+</head>
+<body>
+  <header class="hero wrap">
+    <div class="narrow">
+      <div class="eyebrow">EasyWatermark · 2026-08-15</div>
+      <h1>胶片条 HEIC 为什么要近 200 ms，以及我们不该再调什么</h1>
+      <p class="lede">
+        四路并行调研（Apple ImageIO、Skia/Coil、FFmpeg/libheif、系统缩略图缓存）加上
+        <strong>iPhone 16 Pro 真机 S3 复测</strong>后的统一结论。
+      </p>
+      <div class="verdict reveal">
+        <div class="k">一句话</div>
+        <p>没有「128 px 税」可修——相机 HEIC 每次都在解整帧 HEVC tile 网格；要省时间，只能避免、复用或摊销这一次全解，而不是继续拧 ImageIO 旋钮。</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="reveal">
+      <h2>真机已经关上的门</h2>
+      <p class="sub">同进程、顺序平衡、8 张相册 HEIC。数字来自 <code style="font-family:JetBrains Mono,monospace;font-size:0.85em">s3-subsample-verify</code>。</p>
+      <div class="metrics">
+        <div class="metric">
+          <div class="label">io128 · 胶片条尺寸</div>
+          <div class="pair">
+            <span class="n">183<small>→198</small></span>
+            <span class="delta worse">subsample +15 ms</span>
+          </div>
+          <div class="hint">factor 8 没有变便宜，反而略差</div>
+        </div>
+        <div class="metric">
+          <div class="label">io1920 · 预览档</div>
+          <div class="pair">
+            <span class="n">143<small>→124</small></span>
+            <span class="delta better">subsample −19 ms</span>
+          </div>
+          <div class="hint">1920 有小幅收益；128 别再赌 subsample</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="reveal">
+      <h2>机制：钱花在 tile 上，不在「像素少」上</h2>
+      <p class="sub">现代 iPhone 相册 HEIC 通常是约 63 块 512×512 的 HEVC tile 网格，不是「一张小图 + 一张大图」。</p>
+      <div class="tiles">
+        <div class="cap">示意 · 7×9 HEVC tile grid</div>
+        <div class="grid" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+        <p class="note">
+          请求 <em>128</em> 或 <em>1920</em>，ImageIO 都要先解完全部 tile，再缩放。
+          现代文件里往往<strong style="color:#e8f2f6;font-weight:500">没有</strong>可单独解码的嵌入缩略图；
+          <em>IfAbsent</em> 与 <em>Always</em> 成本等价。
+        </p>
+      </div>
+      <p>
+        所以 128 有时比 1920「更慢」，多半是<strong>固定开销的方差</strong>加上 128 侧采样更便宜——
+        不是另有一个「小尺寸惩罚」 bug 等着被修好。
+      </p>
+    </section>
+
+    <section class="reveal">
+      <h2>四路共识</h2>
+      <p class="sub">细节在各研究文档；这里是对齐后的判断。</p>
+      <ol class="points">
+        <li>
+          <span class="num">01</span>
+          <div>
+            <strong>ImageIO 选项字典已经到顶</strong>
+            <span>Subsample / HDR→SDR / ShouldCache 等扫过；HEIF 上 subsample 只保证更小输出，不保证更快。生产路径已是天花板。</span>
+          </div>
+        </li>
+        <li>
+          <span class="num">02</span>
+          <div>
+            <strong>Skia / Metal / 裸 CGImage 显示走不通</strong>
+            <span>Skia 无 HEIF 解码器；skiko 不能把 MTLTexture 包成可读 BackendTexture；Compose 画非 Skia ImageBitmap 会抛。</span>
+          </div>
+        </li>
+        <li>
+          <span class="num">03</span>
+          <div>
+            <strong>FFmpeg / libheif 不要上</strong>
+            <span>FFmpeg 拼不出 tiled iPhone HEIC；libheif 是 LGPLv3，和 MIT + F-Droid 冲突。顺带：也没有可解的小 thmb 轨。</span>
+          </div>
+        </li>
+        <li>
+          <span class="num">04</span>
+          <div>
+            <strong>PhotoKit 最快，却是错的隐私交易</strong>
+            <span>要读相册授权；Limited 下 PHPicker 刚选的图也可能 fetch 为空。应用今天是 add-only——除非产品改姿态，否则拒绝。</span>
+          </div>
+        </li>
+        <li>
+          <span class="num">05</span>
+          <div>
+            <strong>开 Coil 磁盘缓存帮不了 HEIC</strong>
+            <span>它缓存的是<strong>源文件字节</strong>（贵的那份）。有用的是<strong>派生</strong> JPEG sidecar，或系统 QL 缩略图缓存。</span>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <section class="reveal">
+      <h2>明确关掉</h2>
+      <div class="closed">
+        <div class="row"><span class="tag off">关掉</span><span>再赌 <code style="font-family:JetBrains Mono,monospace;font-size:0.85em">SubsampleFactor</code> 救 128</span></div>
+        <div class="row"><span class="tag off">关掉</span><span>VideoToolbox 降分辨率静图解码（设备返回 NotSupported）</span></div>
+        <div class="row"><span class="tag off">关掉</span><span>自研 libheif / FFmpeg / Rust 解码栈</span></div>
+        <div class="row"><span class="tag off">关掉</span><span>为胶片条引入 PhotoKit 读权限（除非单独 ADR）</span></div>
+        <div class="row"><span class="tag warn">别误会</span><span>启用 Coil <code style="font-family:JetBrains Mono,monospace;font-size:0.85em">diskCachePolicy</code> ≠ 派生缩略图缓存</span></div>
+      </div>
+    </section>
+
+    <section class="reveal">
+      <h2>值得做的事 · ROI 排序</h2>
+      <p class="sub">都在「付一次全解，之后别再付」这个方向上。</p>
+      <ol class="rank">
+        <li>
+          <div>
+            <h3>从已驻留的预览帧派生 128</h3>
+            <p>焦点 ±2 的 preview 已经付过 ~180 ms；胶片条今天在对同一路径再解一次。命中时约 1 ms 绘制，未命中仍走原路径。</p>
+            <div class="meta">隐私零成本 · 下一实验 · 无需新框架</div>
+          </div>
+        </li>
+        <li>
+          <div>
+            <h3>应用自有 JPEG sidecar（写一次）</h3>
+            <p>首次解码后落一份 128/256 JPEG；之后重读主机侧 ~0.2–0.3 ms。会把用户像素缩小副本写进沙盒——需要你拍板。</p>
+            <div class="meta">冷启动收益大 · owner 门控</div>
+          </div>
+        </li>
+        <li>
+          <div>
+            <h3>QLThumbnailGenerator</h3>
+            <p>无新权限、文件 URL 即可；系统持久缓存，热路径主机 ~1–2 ms。临时导入文件无扩展名，必须设 <code style="font-family:JetBrains Mono,monospace;font-size:0.85em">contentType</code>。冷路径真机未知，禁止只凭 Mac 上的「快 3 倍」上线。</p>
+            <div class="meta">须真机 A/B</div>
+          </div>
+        </li>
+        <li>
+          <div>
+            <h3>带上 itemIdentifier</h3>
+            <p>picker 已能给；缓存键 / 去重 / 预选不依赖 PhotoKit 读权限。很小、独立。</p>
+            <div class="meta">可随时落地</div>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <section class="reveal">
+      <h2>建议下一步</h2>
+      <div class="next">
+        <div class="k">Experiment E1</div>
+        <h3>胶片条命中预览工作集时，跳过第二次 HEIC 全解</h3>
+        <p>不引入 Apple 新 API、不弹权限、不落盘用户照片副本。成功与否用真机毫秒数和截图目视即可判断，不必迷信主机上的 QL 比值。</p>
+        <ul>
+          <li>同一 owned path 若已有更大档位解码驻留 → 缩到 128 返回（Coil <code style="font-family:JetBrains Mono,monospace;font-size:0.85em">ImageFetchResult</code> 一类）</li>
+          <li>未命中 → 保持现有 ImageIO 路径</li>
+        </ul>
+        <div class="pass">
+          <strong>通过标准：</strong>已在预览工作集中的照片，胶片条 thumb 中位 <code>&lt; 5 ms</code>（跳过解码）；截图与今日 128 格目视一致（ADR-0010）。
+        </div>
+      </div>
+      <h3>若 E1 之后冷导入 / 冷启动仍痛</h3>
+      <p>再做 owner 门控 sidecar，然后才是真机 QL A/B。顺序不要颠倒。</p>
+    </section>
+  </main>
+
+  <footer class="wrap">
+    <p>研究笔记，未改生产代码。完整合成稿与四路原文：</p>
+    <ul>
+      <li><code>2026-08-15-ios-filmstrip-heic-latency-synthesis.md</code></li>
+      <li><code>2026-08-15-ios-heic-thumb-apple-apis.md</code></li>
+      <li><code>2026-08-15-skia-cmp-coil-heic-paths.md</code></li>
+      <li><code>2026-08-15-ffmpeg-libheif-thumb-feasibility.md</code></li>
+      <li><code>2026-08-15-ios-system-thumb-cache-apis.md</code></li>
+    </ul>
+  </footer>
+
+  <script>
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add("in"); });
+    }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
+    document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+  </script>
+</body>
+</html>

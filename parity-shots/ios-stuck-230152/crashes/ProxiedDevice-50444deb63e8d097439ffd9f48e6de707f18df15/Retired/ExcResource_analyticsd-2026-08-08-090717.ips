@@ -1,0 +1,177 @@
+{"bug_type":"385","os_version":"Watch OS 26.6 (23U5025e)","build_version":"","timestamp":"2026-08-08 09:07:17.00 +0800","is_simulated":1,"platform":4,"roots_installed":0,"app_name":"analyticsd","incident_id":"3403674C-D1FC-4C0A-A142-8ED35F7A328B","name":"analyticsd","is_first_party":1,"app_version":"","share_with_app_devs":0,"slice_uuid":"d90e62f8-ad2f-30cc-ab5c-63353fa091c8"}
+{
+  "captureTime" : "2026-08-08 09:07:13.9905 +0800",
+  "deployVersion" : 210,
+  "procRole" : "Unspecified",
+  "modelCode" : "Watch6,14",
+  "incident" : "3403674C-D1FC-4C0A-A142-8ED35F7A328B",
+  "osVersion" : {
+    "train" : "Watch OS 26.6",
+    "isEmbedded" : true,
+    "build" : "23U5025e",
+    "releaseType" : "User"
+  },
+  "version" : 2,
+  "coalitionID" : 215,
+  "cpuType" : "ARM64_32",
+  "codeSigningMonitor" : 1,
+  "userID" : 263,
+  "pid" : 141,
+  "uptime" : 78000,
+  "procLaunch" : "2026-08-03 10:34:58.0000 +0800",
+  "procStartAbsTime" : 552696291,
+  "procName" : "analyticsd",
+  "procPath" : "\/System\/Library\/PrivateFrameworks\/CoreAnalytics.framework\/Support\/analyticsd",
+  "parentProc" : "launchd",
+  "parentPid" : 1,
+  "coalitionName" : "com.apple.analyticsd",
+  "crashReporterKey" : "50444deb63e8d097439ffd9f48e6de707f18df15",
+  "bootProgressRegister" : "0x20800004",
+  "wasUnlockedSinceBoot" : 1,
+  "isLocked" : 0,
+  "throttleTimeout" : 10,
+  "codeSigningID" : "com.apple.analyticsd",
+  "codeSigningTeamID" : "",
+  "codeSigningFlags" : 570434305,
+  "codeSigningValidationCategory" : 1,
+  "codeSigningTrustLevel" : 10,
+  "instructionByteStream" : {"atPC":"YQQAqWEEAalhBAKpYQQDqWMAAZFCAAHxSP\/\/VGMAAothBACpYQQBqQ==","beforePC":"AQQAqQEEAakBBAKpAQQDqQMAAZFj5HqSQgAAi2QAAZFCAATrCQEAVA=="},
+  "bootSessionUUID" : "ACEE0485-A5C3-4868-8F58-9B0A2A188909",
+  "isSimulated" : 1,
+  "exception" : {"type":"EXC_RESOURCE","subtype":"MEMORY","rawCodes":[7205759403792859144,0],"message":" (Limit 8 MB) Crossed High Water Mark","codes":"0x6400000000010008, 0x0000000000000000"},
+  "faultingThread" : 1,
+  "threads" : [{"id":1369942,"frames":[{"imageOffset":2276,"imageIndex":2},{"imageOffset":68676,"imageIndex":2},{"imageOffset":69292,"imageIndex":2},{"imageOffset":3964,"imageIndex":2},{"imageOffset":14584,"imageIndex":3},{"imageOffset":5424,"imageIndex":3},{"imageOffset":1099512,"imageIndex":3},{"imageOffset":751504,"imageIndex":3},{"imageOffset":473040,"imageIndex":0},{"imageOffset":65868,"imageIndex":4}],"threadState":{"x":[{"value":12657656},{"value":21592279046},{"value":8589934592},{"value":25370371817472},{"value":0},{"value":25370371817472},{"value":2},{"value":4294967295},{"value":0},{"value":0},{"value":2},{"value":0},{"value":0},{"value":5907},{"value":0},{"value":7254729243776806824},{"value":18446744073709551569},{"value":0},{"value":0},{"value":4294967295},{"value":2},{"value":25370371817472},{"value":0},{"value":25370371817472},{"value":21592279046},{"value":12657656},{"value":8589934592},{"value":18446744073709550527},{"value":2073329664}],"lr":{"value":673586244},"fp":{"value":12657504},"sp":{"value":12657424},"cpsr":{"value":0},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":673519844},"flavor":"ARM_THREAD_STATE64","far":{"value":0}}},{"threadState":{"x":[{"value":57405848},{"value":0},{"value":344},{"value":57409536},{"value":57405952},{"value":18},{"value":23},{"value":688},{"value":4},{"value":4},{"value":4096},{"value":136},{"value":340793584},{"value":33554432},{"value":44739242},{"value":14114281232179134464},{"value":681294416},{"value":636001084},{"value":0},{"value":10235},{"value":341920800},{"value":2},{"value":341210640},{"value":2043},{"value":4232},{"value":2073874432},{"value":0},{"value":419829404},{"value":419830200}],"lr":{"value":634501432},"fp":{"value":419829504},"sp":{"value":419829392},"cpsr":{"value":536870912},"esr":{"value":2449473607,"description":"(Data Abort) byte write Translation fault"},"pc":{"value":681294700,"matchesCrashFrame":1},"flavor":"ARM_THREAD_STATE64","far":{"value":57409536}},"id":1369943,"triggered":true,"frames":[{"imageOffset":2924,"imageIndex":6},{"imageOffset":108856,"imageIndex":7},{"imageOffset":666668,"imageIndex":7},{"imageOffset":728368,"imageIndex":7},{"imageOffset":309300,"imageIndex":7},{"imageOffset":319992,"imageIndex":7},{"imageOffset":205928,"imageIndex":7},{"imageOffset":186444,"imageIndex":7},{"imageOffset":384656,"imageIndex":0},{"imageOffset":947020,"imageIndex":0},{"imageOffset":946008,"imageIndex":0},{"imageOffset":986108,"imageIndex":0},{"imageOffset":979772,"imageIndex":0},{"imageOffset":100340,"imageIndex":8},{"imageOffset":61768,"imageIndex":8},{"imageOffset":938048,"imageIndex":0},{"imageOffset":887172,"imageIndex":0},{"imageOffset":885656,"imageIndex":0},{"imageOffset":100340,"imageIndex":8},{"imageOffset":61768,"imageIndex":8},{"imageOffset":884748,"imageIndex":0},{"imageOffset":642776,"imageIndex":0},{"imageOffset":661388,"imageIndex":0},{"imageOffset":100340,"imageIndex":8},{"imageOffset":61768,"imageIndex":8},{"imageOffset":625684,"imageIndex":0},{"imageOffset":620660,"imageIndex":0},{"imageOffset":64880,"imageIndex":9},{"imageOffset":71592,"imageIndex":9},{"imageOffset":100400,"imageIndex":8},{"imageOffset":110216,"imageIndex":8},{"imageOffset":35964,"imageIndex":8},{"imageOffset":113240,"imageIndex":8},{"imageOffset":35964,"imageIndex":8},{"imageOffset":39032,"imageIndex":8},{"imageOffset":75868,"imageIndex":8},{"imageOffset":74188,"imageIndex":8},{"imageOffset":2140,"imageIndex":10},{"imageOffset":2300,"imageIndex":10}]},{"id":1369944,"frames":[{"imageOffset":2836,"imageIndex":2},{"imageOffset":2216,"imageIndex":10},{"imageOffset":2300,"imageIndex":10}],"threadState":{"x":[{"value":256},{"value":419261312},{"value":1},{"value":0},{"value":16},{"value":342393248},{"value":1},{"value":11111132},{"value":340855553},{"value":2},{"value":633984},{"value":1548097},{"value":0},{"value":0},{"value":3884384570},{"value":3899617440},{"value":368},{"value":2081820672},{"value":0},{"value":419262464},{"value":1},{"value":419262588},{"value":419262584},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"lr":{"value":681445544},"fp":{"value":419261264},"sp":{"value":419261232},"cpsr":{"value":1073741824},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":673520404},"flavor":"ARM_THREAD_STATE64","far":{"value":0}}},{"id":1369945,"frames":[{"imageOffset":2836,"imageIndex":2},{"imageOffset":2216,"imageIndex":10},{"imageOffset":2300,"imageIndex":10}],"threadState":{"x":[{"value":256},{"value":420981632},{"value":1},{"value":0},{"value":32},{"value":342344928},{"value":133},{"value":0},{"value":341950353},{"value":2},{"value":341950384},{"value":1},{"value":0},{"value":7},{"value":1},{"value":72},{"value":368},{"value":2081820672},{"value":0},{"value":420982784},{"value":1},{"value":420982908},{"value":420982904},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"lr":{"value":681445544},"fp":{"value":420981584},"sp":{"value":420981552},"cpsr":{"value":1073741824},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":673520404},"flavor":"ARM_THREAD_STATE64","far":{"value":0}}},{"id":1369946,"frames":[{"imageOffset":2836,"imageIndex":2},{"imageOffset":2216,"imageIndex":10},{"imageOffset":2300,"imageIndex":10}],"threadState":{"x":[{"value":256},{"value":421555072},{"value":2},{"value":0},{"value":27021735203186832},{"value":340943920},{"value":1},{"value":0},{"value":341940049},{"value":2},{"value":341940080},{"value":10387},{"value":655343},{"value":2},{"value":1},{"value":421555160},{"value":368},{"value":2081820672},{"value":0},{"value":421556224},{"value":1},{"value":421556348},{"value":421556344},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"lr":{"value":681445544},"fp":{"value":421555024},"sp":{"value":421554992},"cpsr":{"value":1073741824},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":673520404},"flavor":"ARM_THREAD_STATE64","far":{"value":0}}}],
+  "usedImages" : [
+  {
+    "size" : 1458176,
+    "base" : 9994240,
+    "arch" : "arm64_32",
+    "name" : "analyticsd",
+    "path" : "\/System\/Library\/PrivateFrameworks\/CoreAnalytics.framework\/Support\/analyticsd",
+    "source" : "P",
+    "uuid" : "d90e62f8-ad2f-30cc-ab5c-63353fa091c8"
+  },
+  {
+    "size" : 49152,
+    "base" : 53772288,
+    "arch" : "arm64_32",
+    "name" : "libobjc-trampolines.dylib",
+    "path" : "\/usr\/lib\/libobjc-trampolines.dylib",
+    "source" : "P",
+    "uuid" : "ca5576e9-cbd4-3730-a1bf-fca661859ad4"
+  },
+  {
+    "size" : 234812,
+    "base" : 673517568,
+    "arch" : "arm64_32",
+    "name" : "libsystem_kernel.dylib",
+    "path" : "\/usr\/lib\/system\/libsystem_kernel.dylib",
+    "source" : "P",
+    "uuid" : "52363f8b-f6c5-35f7-97b3-405ebdeb041a"
+  },
+  {
+    "size" : 4598976,
+    "base" : 522534912,
+    "arch" : "arm64_32",
+    "name" : "CoreFoundation",
+    "path" : "\/System\/Library\/Frameworks\/CoreFoundation.framework\/CoreFoundation",
+    "source" : "P",
+    "uuid" : "2d1945c7-73a3-36dd-a56e-b61ccca5e400"
+  },
+  {
+    "size" : 517724,
+    "base" : 491462656,
+    "arch" : "arm64_32",
+    "name" : "dyld",
+    "path" : "\/usr\/lib\/dyld",
+    "source" : "P",
+    "uuid" : "193961bf-ba1f-351c-bfb0-bb801d6b6477"
+  },
+  {
+    "source" : "A",
+    "uuid" : "00000000-0000-0000-0000-000000000000",
+    "size" : 0,
+    "base" : 0
+  },
+  {
+    "size" : 30456,
+    "base" : 681291776,
+    "arch" : "arm64_32",
+    "name" : "libsystem_platform.dylib",
+    "path" : "\/usr\/lib\/system\/libsystem_platform.dylib",
+    "source" : "P",
+    "uuid" : "78e0d287-81dd-3cd7-b762-9e16b61c4c14"
+  },
+  {
+    "size" : 1696748,
+    "base" : 634392576,
+    "arch" : "arm64_32",
+    "name" : "libsqlite3.dylib",
+    "path" : "\/usr\/lib\/libsqlite3.dylib",
+    "source" : "P",
+    "uuid" : "4bcb3115-f381-31d8-9912-d0036913c06c"
+  },
+  {
+    "size" : 267616,
+    "base" : 575320064,
+    "arch" : "arm64_32",
+    "name" : "libdispatch.dylib",
+    "path" : "\/usr\/lib\/system\/libdispatch.dylib",
+    "source" : "P",
+    "uuid" : "82493cb7-d486-320f-b397-6f01d6f7d958"
+  },
+  {
+    "size" : 305472,
+    "base" : 680947712,
+    "arch" : "arm64_32",
+    "name" : "libxpc.dylib",
+    "path" : "\/usr\/lib\/system\/libxpc.dylib",
+    "source" : "P",
+    "uuid" : "43a6e180-8dc6-342b-91b9-7fedcd61d6ee"
+  },
+  {
+    "size" : 45444,
+    "base" : 681443328,
+    "arch" : "arm64_32",
+    "name" : "libsystem_pthread.dylib",
+    "path" : "\/usr\/lib\/system\/libsystem_pthread.dylib",
+    "source" : "P",
+    "uuid" : "dc621847-48f3-31fd-bffb-8f05295c8e9a"
+  }
+],
+  "sharedCache" : {
+  "size" : 1977597952,
+  "uuid" : "84063525-c3b5-3637-8325-d67a3c9f6e90",
+  "base" : 490782720
+},
+  "vmSummary" : "ReadOnly portion of Libraries: Total=876.3M resident=0K(0%) swapped_out_or_unallocated=876.3M(100%)\nWritable regions: Total=28.1M written=160K(1%) resident=160K(1%) swapped_out=0K(0%) unallocated=27.9M(99%)\n\n                                VIRTUAL   REGION \nREGION TYPE                        SIZE    COUNT (non-coalesced) \n===========                     =======  ======= \nActivity Tracing                   256K        1 \nDispatch continuations            2048K        1 \nFoundation                          16K        1 \nIOKit                               32K        1 \nKernel Alloc Once                   32K        1 \nMALLOC                            19.2M       14 \nMALLOC guard page                   64K        4 \nSQLite page cache                 3712K       29 \nSTACK GUARD                         80K        5 \nStack                             3184K        5 \n__CTF                               824        1 \n__DATA                            8260K      488 \n__DATA_CONST                      38.6M      532 \n__DATA_DIRTY                      2205K      472 \n__FONT_DATA                        2352        1 \n__LINKEDIT                       243.8M        3 \n__OBJC_RO                         36.4M        1 \n__OBJC_RW                          851K        1 \n__TEXT                           632.5M      541 \n__TPRO_CONST                          8        2 \nmapped file                       36.2M       10 \npage table in kernel               160K        1 \nshared memory                       64K        3 \n===========                     =======  ======= \nTOTAL                              1.0G     2118 \n",
+  "legacyInfo" : {
+  "threadTriggered" : {
+
+  }
+},
+  "logWritingSignature" : "d3e2d1e349b321b2b34ae3b46cc2f2ffb782aa9b",
+  "bug_type" : "385",
+  "roots_installed" : 0,
+  "trialInfo" : {
+  "rollouts" : [
+    {
+      "deploymentId" : 250002286,
+      "factorPackIds" : [
+
+      ],
+      "rolloutId" : "6010753cf9bfc4000c247bdd"
+    },
+    {
+      "deploymentId" : 250000003,
+      "factorPackIds" : [
+        "64d29746ad29a465b3bbeace"
+      ],
+      "rolloutId" : "64c17a9925d75a7281053d4c"
+    }
+  ],
+  "experiments" : [
+
+  ]
+}
+}

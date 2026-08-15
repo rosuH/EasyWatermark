@@ -1,0 +1,228 @@
+{"roots_installed":0,"app_name":"WeChat","timestamp":"2026-08-05 11:51:03.00 +0800","app_version":"8.0.75","slice_uuid":"F62D8503-F7AA-38C6-AA1C-78D717271AD6","adam_id":"414478124","build_version":"8.0.75.33","bundleID":"com.tencent.xin","duration_ms":"6161478","is_first_party":0,"share_with_app_devs":1,"bug_type":"145","os_version":"iPhone OS 27.0 (24A5390f)","distributor_id":"com.apple.AppStore","name":"WeChat","incident_id":"65912C66-DF79-4733-899C-58001EC4C1DB"}
+Date/Time:        2026-08-05 10:08:17.627 +0800
+End time:         2026-08-05 11:50:59.106 +0800
+OS Version:       iPhone OS 27.0 (Build 24A5390f)
+Architecture:     arm64e
+Report Version:   73
+Incident Identifier: 65912C66-DF79-4733-899C-58001EC4C1DB
+Share With Devs:  Yes
+
+Data Source:      Microstackshots
+Shared Cache:     1C83FDD9-CF90-33E0-99D8-6AFF6156F8A9 slid base address 0x18802c000
+
+Command:          WeChat
+Path:             /private/var/containers/Bundle/Application/9AECF96E-5D66-4ECF-AE65-CD8A979F0655/WeChat.app/WeChat
+Identifier:       com.tencent.xin
+Version:          8.0.75 (8.0.75.33)
+Adam ID:          414478124
+Is First Party:   No
+Beta Identifier:  D23DB2E2-0D26-4FD5-9E53-39D1D671AF99
+Resource Coalition: 2418
+On Behalf Of:     2 samples UNKNOWN [37] (2 samples originated by WeChat [6959])
+Architecture:     arm64
+PID:              6959
+
+Event:            disk writes
+Action taken:     none
+Writes:           1073.75 MB of file backed memory dirtied over 6161 seconds (174.27 KB per second average), exceeding limit of 12.43 KB per second over 86400 seconds
+Writes limit:     1073.74 MB
+Limit duration:   86400s
+Writes caused:    1073.75 MB
+Writes duration:  6161s
+Duration:         6161.48s
+Duration Sampled: 2.46s (event starts 6159.01s before samples)
+Steps:            32 (1 samples lost, 10.49 MB/step)
+
+Hardware model:   iPhone17,1
+Active cpus:      6
+Memory size:      7.47 GB
+HW page size:     16384
+VM page size:     16384
+
+Models:           UNKNOWN
+
+OS Cryptex File Extents: 6738
+
+Heaviest stack for the target process:
+  23  ??? (dyld + 22064) [0x123a81630]
+  23  ??? (WeChat + 164186876) [0x10cc70afc]
+  23  ??? (UIKitCore + 755808) [0x18c904860]
+  23  ??? (UIKitCore + 521156) [0x18c8cb3c4]
+  23  ??? (UIKitCore + 865336) [0x18c91f438]
+  23  ??? (UIKitCore + 865484) [0x18c91f4cc]
+  23  ??? (UIKitCore + 532800) [0x18c8ce140]
+  23  ??? (UIKitCore + 634548) [0x18c8e6eb4]
+  23  ??? (UIKitCore + 1178008) [0x18c96b998]
+  23  ??? (WeChat + 71227500) [0x1073c986c]
+  23  ??? (WeChat + 71230036) [0x1073ca254]
+  23  ??? (WeChat + 71207152) [0x1073c48f0]
+  23  ??? (WeChat + 155850400) [0x10c47d6a0]
+  23  ??? (WeChat + 155852056) [0x10c47dd18]
+  23  ??? (WeChat + 155852476) [0x10c47debc]
+  23  ??? (WeChat + 155853332) [0x10c47e214]
+  23  ??? (WeChat + 353774164) [0x11813ea54]
+  23  ??? (WeChat + 353785060) [0x1181414e4]
+  23  ??? (WeChat + 353783940) [0x118141084]
+  23  ??? (WeChat + 353788936) [0x118142408]
+  23  ??? (WeChat + 353794736) [0x118143ab0]
+
+
+Powerstats for:   WeChat [6959]
+UUID:             F62D8503-F7AA-38C6-AA1C-78D717271AD6
+Path:             /private/var/containers/Bundle/Application/9AECF96E-5D66-4ECF-AE65-CD8A979F0655/WeChat.app/WeChat
+Identifier:       com.tencent.xin
+Version:          8.0.75 (8.0.75.33)
+Adam ID:          414478124
+Is First Party:   No
+Beta Identifier:  D23DB2E2-0D26-4FD5-9E53-39D1D671AF99
+Resource Coalition: 32 samples 2418
+On Behalf Of:     2 samples UNKNOWN [37] (2 samples originated by WeChat [6959])
+Architecture:     arm64
+Footprint:        49.97 MB -> 472.94 MB (+422.97 MB)
+Pageins:          22989 pages
+Start time:       2026-08-05 11:50:56.635 +0800
+End time:         2026-08-05 11:50:59.093 +0800
+Num samples:      32 (100%)
+Energy:           2400.42 uWh
+Num threads:      4
+Primary state:    23 samples Frontmost App, Non-Suppressed, Kernel mode, Effective Thread QoS User Interactive, Requested Thread QoS User Interactive, Override Thread QoS Unspecified, p-core
+User Activity:    0 samples Idle, 32 samples Active
+Power Source:     32 samples on Battery, 0 samples on AC
+  23  ??? (dyld + 22064) [0x123a81630]
+    23  ??? (WeChat + 164186876) [0x10cc70afc]
+      23  ??? (UIKitCore + 755808) [0x18c904860]
+        23  ??? (UIKitCore + 521156) [0x18c8cb3c4]
+          23  ??? (UIKitCore + 865336) [0x18c91f438]
+            23  ??? (UIKitCore + 865484) [0x18c91f4cc]
+              23  ??? (UIKitCore + 532800) [0x18c8ce140]
+                23  ??? (UIKitCore + 634548) [0x18c8e6eb4]
+                  23  ??? (UIKitCore + 1178008) [0x18c96b998]
+                    23  ??? (WeChat + 71227500) [0x1073c986c]
+                      23  ??? (WeChat + 71230036) [0x1073ca254]
+                        23  ??? (WeChat + 71207152) [0x1073c48f0]
+                          23  ??? (WeChat + 155850400) [0x10c47d6a0]
+                            23  ??? (WeChat + 155852056) [0x10c47dd18]
+                              23  ??? (WeChat + 155852476) [0x10c47debc]
+                                23  ??? (WeChat + 155853332) [0x10c47e214]
+                                  23  ??? (WeChat + 353774164) [0x11813ea54]
+                                    23  ??? (WeChat + 353785060) [0x1181414e4]
+                                      23  ??? (WeChat + 353783940) [0x118141084]
+                                        23  ??? (WeChat + 353788936) [0x118142408]
+                                          23  ??? (WeChat + 353794736) [0x118143ab0]
+  7   ??? (libsystem_pthread.dylib + 2332) [0x18856691c]
+    7   ??? (libsystem_pthread.dylib + 16444) [0x18856a03c]
+      7   ??? (WeChat + 266418300) [0x112def87c]
+        7   ??? (WeChat + 266395888) [0x112dea0f0]
+          7   ??? (WeChat + 266420464) [0x112df00f0]
+            7   ??? (CoreFoundation + 243456) [0x188662700]
+              7   ??? (CoreFoundation + 239732) [0x188661874]
+                7   ??? (CoreFoundation + 523868) [0x1886a6e5c]
+                  7   ??? (CoreFoundation + 524672) [0x1886a7180]
+                    7   ??? (CoreFoundation + 526544) [0x1886a78d0]
+                      7   ??? (WeChat + 266420076) [0x112deff6c]
+                        7   ??? (WeChat + 266396552) [0x112dea388]
+                          7   ??? (WeChat + 273469004) [0x1134a8e4c]
+                            7   ??? (WeChat + 274042480) [0x113534e70]
+                              7   ??? (WeChat + 274575820) [0x1135b71cc]
+                                7   ??? (WeChat + 275683748) [0x1136c59a4]
+                                  7   ??? (libsystem_platform.dylib + 4088) [0x194259ff8]
+                                    7   <Effective Thread QoS Unspecified, Requested Thread QoS Unspecified>
+  2   ??? (libsystem_pthread.dylib + 2320) [0x188566910]
+    2   ??? (libsystem_pthread.dylib + 4604) [0x1885671fc]
+      2   ??? (libdispatch.dylib + 86256) [0x1b72880f0]
+        2   ??? (libdispatch.dylib + 84484) [0x1b7287a04]
+          2   ??? (libdispatch.dylib + 23996) [0x1b7278dbc]
+            2   ??? (libdispatch.dylib + 26368) [0x1b7279700]
+              2   ??? (libdispatch.dylib + 114644) [0x1b728efd4]
+                2   ??? (libdispatch.dylib + 7372) [0x1b7274ccc]
+                  2   ??? (Foundation + 499204) [0x188b82e04]
+                    2   ??? (Foundation + 499032) [0x188b82d58]
+                      2   ??? (WeChat + 361512120) [0x11889fcb8]
+                        2   ??? (Foundation + 500464) [0x188b832f0]
+                          2   ??? (Foundation + 501176) [0x188b835b8]
+                            2   ??? (Foundation + 499544) [0x188b82f58]
+                              2   ??? (Foundation + 244232) [0x188b44a08]
+                                2   ??? (WeChat + 164954032) [0x10cd2bfb0]
+                                  1   ??? (WeChat + 166003516) [0x10ce2c33c]
+                                    1   ??? (WeChat + 362008952) [0x118919178]
+                                      1   ??? (WeChat + 166006284) [0x10ce2ce0c]
+                                        1   ??? (WeChat + 166004512) [0x10ce2c720]
+                                          1   ??? (WeChat + 166743392) [0x10cee0d60]
+                                            1   ??? (WeChat + 361900800) [0x1188feb00]
+                                              1   ??? (WeChat + 166752316) [0x10cee303c]
+                                                1   ??? (WeChat + 166743772) [0x10cee0edc]
+                                                  1   ??? (WeChat + 166747136) [0x10cee1c00]
+                                                    1   ??? (WeChat + 361900800) [0x1188feb00]
+                                                      1   ??? (WeChat + 166751932) [0x10cee2ebc]
+                                                        1   ??? (WeChat + 166749252) [0x10cee2444]
+                                                          1   ??? (WeChat + 361900164) [0x1188fe884]
+                                                            1   ??? (WeChat + 166752056) [0x10cee2f38]
+                                                              1   ??? (WeChat + 166750644) [0x10cee29b4]
+                                                                1   ??? (WeChat + 362106012) [0x118930c9c]
+                                                                  1   ??? (Foundation + 2219432) [0x188d26da8]
+                                                                    1   ??? (Foundation + 1018772) [0x188c01b94]
+                                                                      1   ??? (Foundation + 1018220) [0x188c0196c]
+                                                                        1   ??? (Foundation + 2571648) [0x188d7cd80]
+                                                                          1   ??? (libsystem_kernel.dylib + 20528) [0x240846030]
+                                                                            1   <on behalf of UNKNOWN [37] (originated by WeChat [6959]), Effective Thread QoS Utility, Requested Thread QoS Utility, e-core>
+                                  1   ??? (WeChat + 165812672) [0x10cdfd9c0]
+                                    1   ??? (WeChat + 362008952) [0x118919178]
+                                      1   ??? (WeChat + 165819420) [0x10cdff41c]
+                                        1   ??? (WeChat + 165819368) [0x10cdff3e8]
+                                          1   ??? (WeChat + 165813524) [0x10cdfdd14]
+                                            1   ??? (WeChat + 166743392) [0x10cee0d60]
+                                              1   ??? (WeChat + 361900800) [0x1188feb00]
+                                                1   ??? (WeChat + 166752316) [0x10cee303c]
+                                                  1   ??? (WeChat + 166743772) [0x10cee0edc]
+                                                    1   ??? (WeChat + 166747136) [0x10cee1c00]
+                                                      1   ??? (WeChat + 361900800) [0x1188feb00]
+                                                        1   ??? (WeChat + 166751932) [0x10cee2ebc]
+                                                          1   ??? (WeChat + 166749552) [0x10cee2570]
+                                                            1   ??? (WeChat + 165819624) [0x10cdff4e8]
+                                                              1   ??? (WeChat + 165813828) [0x10cdfde44]
+                                                                1   ??? (WeChat + 361906672) [0x1189001f0]
+                                                                  1   ??? (WeChat + 361907148) [0x1189003cc]
+                                                                    1   ??? (WeChat + 361914512) [0x118902090]
+                                                                      1   ??? (WeChat + 361901540) [0x1188fede4]
+                                                                        1   ??? (WeChat + 361900800) [0x1188feb00]
+                                                                          1   ??? (WeChat + 361906964) [0x118900314]
+                                                                            1   ??? (WeChat + 361906828) [0x11890028c]
+                                                                              1   ??? (WeChat + 165819724) [0x10cdff54c]
+                                                                                1   ??? (WeChat + 165814172) [0x10cdfdf9c]
+                                                                                  1   ??? (WeChat + 361900164) [0x1188fe884]
+                                                                                    1   ??? (WeChat + 165820092) [0x10cdff6bc]
+                                                                                      1   ??? (WeChat + 165820008) [0x10cdff668]
+                                                                                        1   ??? (WeChat + 166202160) [0x10ce5cb30]
+                                                                                          1   ??? (WeChat + 166204060) [0x10ce5d29c]
+                                                                                            1   ??? (WeChat + 166211660) [0x10ce5f04c]
+                                                                                              1   ??? (WeChat + 361900164) [0x1188fe884]
+                                                                                                1   ??? (WeChat + 166219016) [0x10ce60d08]
+                                                                                                  1   ??? (WeChat + 166212336) [0x10ce5f2f0]
+                                                                                                    1   ??? (WeChat + 166218752) [0x10ce60c00]
+                                                                                                      1   ??? (WeChat + 179431612) [0x10dafa8bc]
+                                                                                                        1   ??? (WeChat + 179418296) [0x10daf74b8]
+                                                                                                          1   ??? (WeChat + 181545388) [0x10dcfe9ac]
+                                                                                                            1   ??? (WeChat + 181613104) [0x10dd0f230]
+                                                                                                              1   ??? (WeChat + 181614448) [0x10dd0f770]
+                                                                                                                1   ??? (WeChat + 181614208) [0x10dd0f680]
+                                                                                                                  1   ??? (WeChat + 189240668) [0x10e45555c]
+                                                                                                                    1   ??? (WeChat + 357351228) [0x1184a7f3c]
+                                                                                                                      1   ??? (WeChat + 18256148) [0x104145114]
+                                                                                                                        1   ??? (libsystem_c.dylib + 55880) [0x18feb5a48]
+                                                                                                                          1   ??? (libsystem_c.dylib + 18160) [0x18feac6f0]
+                                                                                                                            1   ??? (libsystem_c.dylib + 34648) [0x18feb0758]
+                                                                                                                              1   ??? (libsystem_c.dylib + 56084) [0x18feb5b14]
+                                                                                                                                1   ??? (libsystem_kernel.dylib + 29624) [0x2408483b8]
+                                                                                                                                  1   <on behalf of UNKNOWN [37] (originated by WeChat [6959]), Effective Thread QoS Utility, Requested Thread QoS Utility, e-core>
+
+  Binary Images:
+           0x102fdc000 -                ???  com.tencent.xin 8.0.75 (8.0.75.33) <F62D8503-F7AA-38C6-AA1C-78D717271AD6>  /private/var/containers/Bundle/Application/9AECF96E-5D66-4ECF-AE65-CD8A979F0655/WeChat.app/WeChat
+           0x123a7c000 -        0x123b3316f  dyld                               <5FD0ED6B-D314-3392-AA82-91C9FC014422>  /usr/lib/dyld
+           0x188566000 -        0x188572247  libsystem_pthread.dylib            <8674AE84-5A65-39B4-BCFE-A6178AFD3EAE>  /usr/lib/system/libsystem_pthread.dylib
+           0x188627000 -        0x188b08fbf  CoreFoundation                     <7CDBA4FD-E90E-3EF2-8AE3-9071648E4673>  /System/Library/Frameworks/CoreFoundation.framework/CoreFoundation
+           0x188b09000 -        0x189c1545b  Foundation                         <B17A96F3-DC4A-3757-90DF-BE4837ABB5AA>  /System/Library/Frameworks/Foundation.framework/Foundation
+           0x18c84c000 -        0x18e852cc7  UIKitCore                          <8AC5E0AF-75BA-3416-AB91-BCD844AB4213>  /System/Library/PrivateFrameworks/UIKitCore.framework/UIKitCore
+           0x18fea8000 -        0x18ff28ee3  libsystem_c.dylib                  <18912EF8-9112-3316-9296-3052491AB886>  /usr/lib/system/libsystem_c.dylib
+           0x194259000 -        0x19426167f  libsystem_platform.dylib           <9D2E2FF9-3CDB-3465-B9BA-EBA5CF7ACFDB>  /usr/lib/system/libsystem_platform.dylib
+           0x1b7273000 -        0x1b72b9d5f  libdispatch.dylib                  <C9C06C2C-438C-3E88-AA74-DCCE16127DC9>  /usr/lib/system/libdispatch.dylib
+           0x240841000 -        0x24087e1fb  libsystem_kernel.dylib             <66561A3E-67D2-3F28-9E5C-C7BDE524EE9D>  /usr/lib/system/libsystem_kernel.dylib

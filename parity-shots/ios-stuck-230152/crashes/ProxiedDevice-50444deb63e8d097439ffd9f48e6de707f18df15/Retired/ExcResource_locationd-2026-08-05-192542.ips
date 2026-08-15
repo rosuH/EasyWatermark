@@ -1,0 +1,271 @@
+{"bug_type":"385","os_version":"Watch OS 26.6 (23U5025e)","build_version":"3077.0.2","timestamp":"2026-08-05 19:25:42.00 +0800","platform":4,"roots_installed":0,"app_name":"locationd","incident_id":"73DC79F8-DAD0-4E18-A9FE-5D90EA1C1F90","name":"locationd","is_first_party":1,"app_version":"3077.0.2","share_with_app_devs":1,"slice_uuid":"c35fab99-44d4-3cfa-ab3a-1c68294eff98"}
+{
+  "captureTime" : "2026-08-05 19:25:36.3168 +0800",
+  "deployVersion" : 210,
+  "procRole" : "Unspecified",
+  "modelCode" : "Watch6,14",
+  "incident" : "73DC79F8-DAD0-4E18-A9FE-5D90EA1C1F90",
+  "osVersion" : {
+    "train" : "Watch OS 26.6",
+    "isEmbedded" : true,
+    "build" : "23U5025e",
+    "releaseType" : "User"
+  },
+  "version" : 2,
+  "coalitionID" : 117,
+  "cpuType" : "ARM64_32",
+  "codeSigningMonitor" : 1,
+  "userID" : 0,
+  "pid" : 962,
+  "uptime" : 35000,
+  "procLaunch" : "2026-08-04 10:02:46.0000 +0800",
+  "procStartAbsTime" : 266527510872,
+  "procExitAbsTime" : 852958066982,
+  "procName" : "locationd",
+  "procPath" : "\/usr\/libexec\/locationd",
+  "bundleInfo" : {"CFBundleVersion":"3077.0.2","CFBundleShortVersionString":"3077.0.2"},
+  "parentProc" : "launchd",
+  "parentPid" : 1,
+  "coalitionName" : "com.apple.locationd",
+  "crashReporterKey" : "50444deb63e8d097439ffd9f48e6de707f18df15",
+  "bootProgressRegister" : "0x20800004",
+  "wasUnlockedSinceBoot" : 1,
+  "isLocked" : 0,
+  "throttleTimeout" : 3,
+  "codeSigningID" : "com.apple.locationd",
+  "codeSigningTeamID" : "",
+  "codeSigningFlags" : 570434305,
+  "codeSigningValidationCategory" : 1,
+  "codeSigningTrustLevel" : 10,
+  "instructionByteStream" : {"atPC":"4wAAVP17v6n9AwCRxPj\/l78DAJH9e8GowANf1sADX9b0T76p\/XsBqQ==","beforePC":"4wAAVP17v6n9AwCRzvj\/l78DAJH9e8GowANf1sADX9YQKoDSARAA1A=="},
+  "bootSessionUUID" : "ACEE0485-A5C3-4868-8F58-9B0A2A188909",
+  "exception" : {"type":"EXC_RESOURCE","subtype":"MEMORY","rawCodes":[7205759403943788562,0],"message":" (Limit 18 MB) Crossed High Water Mark","codes":"0x6400000009000012, 0x0000000000000000"},
+  "termination" : {"flags":2,"code":7,"namespace":"JETSAM"},
+  "ktriageinfo" : "VM - (arg = 0x0) Soft mode disabled because process was ptraced\n",
+  "faultingThread" : 8,
+  "threads" : [{"queue":"com.apple.main-thread","id":237632,"threadState":{"x":[{"value":268451845},{"value":21592279046},{"value":8589934592},{"value":17605070946304},{"value":0},{"value":17605070946304},{"value":2},{"value":4294967295},{"value":0},{"value":0},{"value":2},{"value":0},{"value":0},{"value":4099},{"value":0},{"value":704692796547637992},{"value":18446744073709551569},{"value":0},{"value":0},{"value":4294967295},{"value":2},{"value":17605070946304},{"value":0},{"value":17605070946304},{"value":21592279046},{"value":77896056},{"value":8589934592},{"value":18446744073709550527},{"value":2073329664}],"lr":{"value":673586244},"fp":{"value":77895904},"sp":{"value":77895824},"cpsr":{"value":0},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":673519844},"flavor":"ARM_THREAD_STATE64","far":{"value":0}},"frames":[{"imageOffset":2276,"imageIndex":8},{"imageOffset":68676,"imageIndex":8},{"imageOffset":69292,"imageIndex":8},{"imageOffset":3964,"imageIndex":8},{"imageOffset":14584,"imageIndex":9},{"imageOffset":5424,"imageIndex":9},{"imageOffset":1099512,"imageIndex":9},{"imageOffset":751504,"imageIndex":9},{"imageOffset":22679436,"imageIndex":0},{"imageOffset":22683032,"imageIndex":0},{"imageOffset":22695092,"imageIndex":0},{"imageOffset":65868,"imageIndex":10}]},{"name":"com.apple.CoreMotion.MotionThread","id":237650,"threadState":{"x":[{"value":268451845},{"value":21592279046},{"value":8589934592},{"value":36296768618496},{"value":0},{"value":36296768618496},{"value":2},{"value":4294967295},{"value":0},{"value":0},{"value":2},{"value":0},{"value":0},{"value":8451},{"value":0},{"value":93569506068824036},{"value":18446744073709551569},{"value":0},{"value":0},{"value":4294967295},{"value":2},{"value":36296768618496},{"value":0},{"value":36296768618496},{"value":21592279046},{"value":419913736},{"value":8589934592},{"value":18446744073709550527},{"value":2073329664}],"lr":{"value":673586244},"fp":{"value":419913584},"sp":{"value":419913504},"cpsr":{"value":0},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":673519844},"flavor":"ARM_THREAD_STATE64","far":{"value":0}},"frames":[{"imageOffset":2276,"imageIndex":8},{"imageOffset":68676,"imageIndex":8},{"imageOffset":69292,"imageIndex":8},{"imageOffset":3964,"imageIndex":8},{"imageOffset":14584,"imageIndex":9},{"imageOffset":5424,"imageIndex":9},{"imageOffset":1099512,"imageIndex":9},{"imageOffset":751504,"imageIndex":9},{"imageOffset":7027664,"imageIndex":0},{"imageOffset":5236,"imageIndex":12},{"imageOffset":2312,"imageIndex":12}]},{"name":"CommonUtilities-WiFi-Thread","id":237677,"threadState":{"x":[{"value":268451845},{"value":21592279046},{"value":8589934592},{"value":207820582551552},{"value":0},{"value":207820582551552},{"value":2},{"value":4294967295},{"value":0},{"value":0},{"value":2},{"value":0},{"value":0},{"value":48387},{"value":0},{"value":832504815756225000},{"value":18446744073709551569},{"value":0},{"value":0},{"value":4294967295},{"value":2},{"value":207820582551552},{"value":0},{"value":207820582551552},{"value":21592279046},{"value":116940488},{"value":8589934592},{"value":18446744073709550527},{"value":2073329664}],"lr":{"value":673586244},"fp":{"value":116940336},"sp":{"value":116940256},"cpsr":{"value":0},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":673519844},"flavor":"ARM_THREAD_STATE64","far":{"value":0}},"frames":[{"imageOffset":2276,"imageIndex":8},{"imageOffset":68676,"imageIndex":8},{"imageOffset":69292,"imageIndex":8},{"imageOffset":3964,"imageIndex":8},{"imageOffset":14584,"imageIndex":9},{"imageOffset":5424,"imageIndex":9},{"imageOffset":1099512,"imageIndex":9},{"imageOffset":751504,"imageIndex":9},{"imageOffset":21488,"imageIndex":13},{"imageOffset":350168,"imageIndex":14},{"imageOffset":5236,"imageIndex":12},{"imageOffset":2312,"imageIndex":12}]},{"id":653463,"frames":[],"threadState":{"x":[{"value":114847744},{"value":180531},{"value":114311168},{"value":0},{"value":409604},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"lr":{"value":0},"fp":{"value":0},"sp":{"value":114847744},"cpsr":{"value":0},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":681445620},"flavor":"ARM_THREAD_STATE64","far":{"value":0}}},{"id":655416,"frames":[],"threadState":{"x":[{"value":121139200},{"value":195047},{"value":120602624},{"value":0},{"value":409604},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"lr":{"value":0},"fp":{"value":0},"sp":{"value":121139200},"cpsr":{"value":0},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":681445620},"flavor":"ARM_THREAD_STATE64","far":{"value":0}}},{"queue":"CLClientManagerSilo","id":655417,"threadState":{"x":[{"value":75658868},{"value":73892934},{"value":200894720},{"value":105},{"value":576035788},{"value":4294967295},{"value":112},{"value":201285465},{"value":200894723},{"value":73892934},{"value":125141616},{"value":15},{"value":6},{"value":125141656},{"value":75658828},{"value":75658828},{"value":75658828},{"value":54028468},{"value":0},{"value":74829824},{"value":75658868},{"value":201163856},{"value":346015232},{"value":75657216},{"value":75669504},{"value":76042240},{"value":201163860},{"value":350335020},{"value":0}],"lr":{"value":46155868},"fp":{"value":129525280},"sp":{"value":129523344},"cpsr":{"value":1610612736},"esr":{"value":2181038087,"description":"(Instruction Abort) Translation fault"},"pc":{"value":54028468},"flavor":"ARM_THREAD_STATE64","far":{"value":54028468}},"frames":[{"imageOffset":12921012,"imageIndex":0},{"imageOffset":5048412,"imageIndex":0},{"imageOffset":5023464,"imageIndex":0},{"imageOffset":14875332,"imageIndex":0},{"imageOffset":156816,"imageIndex":9},{"imageOffset":159928,"imageIndex":9},{"imageOffset":330028,"imageIndex":9},{"imageOffset":3940,"imageIndex":15},{"imageOffset":5356,"imageIndex":16},{"imageOffset":100340,"imageIndex":16},{"imageOffset":36380,"imageIndex":16},{"imageOffset":39032,"imageIndex":16},{"imageOffset":35964,"imageIndex":16},{"imageOffset":39032,"imageIndex":16},{"imageOffset":75868,"imageIndex":16},{"imageOffset":74188,"imageIndex":16},{"imageOffset":2140,"imageIndex":12},{"imageOffset":2300,"imageIndex":12}]},{"id":655678,"frames":[],"threadState":{"x":[{"value":133722112},{"value":107699},{"value":133185536},{"value":0},{"value":409604},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"lr":{"value":0},"fp":{"value":0},"sp":{"value":133722112},"cpsr":{"value":0},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":681445620},"flavor":"ARM_THREAD_STATE64","far":{"value":0}}},{"id":656375,"frames":[],"threadState":{"x":[{"value":132673536},{"value":0},{"value":132136960},{"value":0},{"value":278531},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"lr":{"value":0},"fp":{"value":0},"sp":{"value":132673536},"cpsr":{"value":0},"esr":{"value":0},"pc":{"value":681445620},"flavor":"ARM_THREAD_STATE64","far":{"value":0}}},{"queue":"com.apple.launchservices.clientcallbacks","id":656376,"threadState":{"x":[{"value":0},{"value":0},{"value":2},{"value":0},{"value":0},{"value":0},{"value":1},{"value":35},{"value":962},{"value":2073332632},{"value":1},{"value":7},{"value":0},{"value":343003624},{"value":2073486612},{"value":2073486612},{"value":336},{"value":681128948},{"value":0},{"value":78053928},{"value":687865888},{"value":1},{"value":0},{"value":2073476736},{"value":276},{"value":102786560},{"value":0},{"value":355254312},{"value":0}],"lr":{"value":673523764},"fp":{"value":134768544},"sp":{"value":134768544},"cpsr":{"value":0},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":673527552,"matchesCrashFrame":1},"flavor":"ARM_THREAD_STATE64","far":{"value":0}},"triggered":true,"frames":[{"imageOffset":9984,"imageIndex":8},{"imageOffset":6196,"imageIndex":8},{"imageOffset":147892,"imageIndex":18},{"imageOffset":147700,"imageIndex":18},{"imageOffset":181260,"imageIndex":18},{"imageOffset":8448,"imageIndex":19},{"imageOffset":6112,"imageIndex":19},{"imageOffset":4244,"imageIndex":19},{"imageOffset":3424,"imageIndex":19},{"imageOffset":100340,"imageIndex":16},{"imageOffset":36380,"imageIndex":16},{"imageOffset":39032,"imageIndex":16},{"imageOffset":75868,"imageIndex":16},{"imageOffset":74188,"imageIndex":16},{"imageOffset":2140,"imageIndex":12},{"imageOffset":2300,"imageIndex":12}]}],
+  "usedImages" : [
+  {
+    "size" : 33718272,
+    "base" : 41107456,
+    "arch" : "arm64_32",
+    "name" : "locationd",
+    "path" : "\/usr\/libexec\/locationd",
+    "source" : "P",
+    "uuid" : "c35fab99-44d4-3cfa-ab3a-1c68294eff98"
+  },
+  {
+    "size" : 32768,
+    "base" : 85557248,
+    "arch" : "arm64_32",
+    "name" : "CoreGPS.dylib",
+    "path" : "\/System\/Library\/PrivateFrameworks\/CoreGPS.framework\/CoreGPS.dylib",
+    "source" : "P",
+    "uuid" : "e377e45d-813c-32ed-a560-5f2bf6f20a87"
+  },
+  {
+    "size" : 344064,
+    "base" : 86343680,
+    "arch" : "arm64_32",
+    "name" : "AppleMipcRouter",
+    "path" : "\/System\/Library\/PrivateFrameworks\/AppleMipcRouter.framework\/AppleMipcRouter",
+    "source" : "P",
+    "uuid" : "a94721d2-1bda-3ed3-8146-b66599dad50a"
+  },
+  {
+    "size" : 49152,
+    "base" : 87146496,
+    "arch" : "arm64_32",
+    "name" : "AppleBasebandLink",
+    "path" : "\/System\/Library\/PrivateFrameworks\/AppleBasebandLink.framework\/AppleBasebandLink",
+    "source" : "P",
+    "uuid" : "bb97131e-80b6-3048-b19c-c169592ad818"
+  },
+  {
+    "size" : 3457024,
+    "base" : 92749824,
+    "arch" : "arm64_32",
+    "name" : "libMIPCSdk.dylib",
+    "path" : "\/usr\/lib\/libMIPCSdk.dylib",
+    "source" : "P",
+    "uuid" : "a2d5dc62-7132-34de-a9c6-fa0d7bee5e9d"
+  },
+  {
+    "size" : 81920,
+    "base" : 98336768,
+    "arch" : "arm64_32",
+    "name" : "CardioHealth",
+    "path" : "\/System\/Library\/PrivateFrameworks\/CardioHealth.framework\/CardioHealth",
+    "source" : "P",
+    "uuid" : "a6962fc6-6dd1-3ddb-a355-ac7fa08cb3b4"
+  },
+  {
+    "size" : 49152,
+    "base" : 122814464,
+    "arch" : "arm64_32",
+    "name" : "libobjc-trampolines.dylib",
+    "path" : "\/usr\/lib\/libobjc-trampolines.dylib",
+    "source" : "P",
+    "uuid" : "ca5576e9-cbd4-3730-a1bf-fca661859ad4"
+  },
+  {
+    "size" : 98304,
+    "base" : 99614720,
+    "arch" : "arm64_32",
+    "name" : "CoreUtilsShims",
+    "path" : "\/System\/Library\/PrivateFrameworks\/CoreUtilsShims.framework\/CoreUtilsShims",
+    "source" : "P",
+    "uuid" : "96c1b1e6-5e5c-326a-a016-4869fece1d9c"
+  },
+  {
+    "size" : 234812,
+    "base" : 673517568,
+    "arch" : "arm64_32",
+    "name" : "libsystem_kernel.dylib",
+    "path" : "\/usr\/lib\/system\/libsystem_kernel.dylib",
+    "source" : "P",
+    "uuid" : "52363f8b-f6c5-35f7-97b3-405ebdeb041a"
+  },
+  {
+    "size" : 4598976,
+    "base" : 522534912,
+    "arch" : "arm64_32",
+    "name" : "CoreFoundation",
+    "path" : "\/System\/Library\/Frameworks\/CoreFoundation.framework\/CoreFoundation",
+    "source" : "P",
+    "uuid" : "2d1945c7-73a3-36dd-a56e-b61ccca5e400"
+  },
+  {
+    "size" : 517724,
+    "base" : 491462656,
+    "arch" : "arm64_32",
+    "name" : "dyld",
+    "path" : "\/usr\/lib\/dyld",
+    "source" : "P",
+    "uuid" : "193961bf-ba1f-351c-bfb0-bb801d6b6477"
+  },
+  {
+    "source" : "A",
+    "uuid" : "00000000-0000-0000-0000-000000000000",
+    "size" : 0,
+    "base" : 0
+  },
+  {
+    "size" : 45444,
+    "base" : 681443328,
+    "arch" : "arm64_32",
+    "name" : "libsystem_pthread.dylib",
+    "path" : "\/usr\/lib\/system\/libsystem_pthread.dylib",
+    "source" : "P",
+    "uuid" : "dc621847-48f3-31fd-bffb-8f05295c8e9a"
+  },
+  {
+    "size" : 100864,
+    "base" : 609906688,
+    "arch" : "arm64_32",
+    "name" : "CommonUtilities",
+    "path" : "\/System\/Library\/PrivateFrameworks\/CommonUtilities.framework\/CommonUtilities",
+    "source" : "P",
+    "uuid" : "4688fd4f-cb70-3ef6-b1b9-ef21cc613f95"
+  },
+  {
+    "size" : 14306400,
+    "base" : 497463296,
+    "arch" : "arm64_32",
+    "name" : "Foundation",
+    "path" : "\/System\/Library\/Frameworks\/Foundation.framework\/Foundation",
+    "source" : "P",
+    "uuid" : "1cbec9ef-c668-320b-8dc4-3be7b90a022b"
+  },
+  {
+    "size" : 218304,
+    "base" : 883150848,
+    "arch" : "arm64_32",
+    "name" : "LocationSupport",
+    "path" : "\/System\/Library\/PrivateFrameworks\/LocationSupport.framework\/LocationSupport",
+    "source" : "P",
+    "uuid" : "f431225d-ad76-3854-8654-2bdef8c037e1"
+  },
+  {
+    "size" : 267616,
+    "base" : 575320064,
+    "arch" : "arm64_32",
+    "name" : "libdispatch.dylib",
+    "path" : "\/usr\/lib\/system\/libdispatch.dylib",
+    "source" : "P",
+    "uuid" : "82493cb7-d486-320f-b397-6f01d6f7d958"
+  },
+  {
+    "size" : 131652,
+    "base" : 575975424,
+    "arch" : "arm64_32",
+    "name" : "libsystem_malloc.dylib",
+    "path" : "\/usr\/lib\/system\/libsystem_malloc.dylib",
+    "source" : "P",
+    "uuid" : "167afe75-d8fc-3fb3-991a-d9d57688d59f"
+  },
+  {
+    "size" : 305472,
+    "base" : 680947712,
+    "arch" : "arm64_32",
+    "name" : "libxpc.dylib",
+    "path" : "\/usr\/lib\/system\/libxpc.dylib",
+    "source" : "P",
+    "uuid" : "43a6e180-8dc6-342b-91b9-7fedcd61d6ee"
+  },
+  {
+    "size" : 11199,
+    "base" : 681832448,
+    "arch" : "arm64_32",
+    "name" : "libsystem_blocks.dylib",
+    "path" : "\/usr\/lib\/system\/libsystem_blocks.dylib",
+    "source" : "P",
+    "uuid" : "b8ed2428-df52-32f6-98c9-4aaea05d0378"
+  },
+  {
+    "size" : 1485516,
+    "base" : 687050752,
+    "arch" : "arm64_32",
+    "name" : "libSparse.dylib",
+    "path" : "\/System\/Library\/Frameworks\/Accelerate.framework\/Frameworks\/vecLib.framework\/libSparse.dylib",
+    "source" : "P",
+    "uuid" : "98fbb92f-145e-33c2-b7f6-ea5880944b21"
+  }
+],
+  "sharedCache" : {
+  "size" : 1977597952,
+  "uuid" : "84063525-c3b5-3637-8325-d67a3c9f6e90",
+  "base" : 490782720
+},
+  "vmSummary" : "ReadOnly portion of Libraries: Total=1.1G resident=0K(0%) swapped_out_or_unallocated=1.1G(100%)\nWritable regions: Total=34.3M written=273K(1%) resident=273K(1%) swapped_out=0K(0%) unallocated=34.1M(99%)\n\n                                VIRTUAL   REGION \nREGION TYPE                        SIZE    COUNT (non-coalesced) \n===========                     =======  ======= \nActivity Tracing                   256K        1 \nDispatch continuations            2048K        1 \nFoundation                          16K        1 \nGuard                            289.4M       88 \nIOKit                              256K        1 \nKernel Alloc Once                   32K        1 \nMALLOC                            24.7M       51 \nMALLOC guard page                  128K        8 \nMALLOC_REALLOC (reserved)           16K        1         reserved VM address space (unallocated)\nSQLite page cache                 1536K       12 \nSTACK GUARD                        144K        9 \nStack                             5360K        9 \nVM_ALLOCATE                        192K        2 \n__CTF                               824        1 \n__DATA                            17.5M      744 \n__DATA_CONST                      51.5M      795 \n__DATA_DIRTY                      3759K      714 \n__FONT_DATA                        2352        1 \n__LINKEDIT                       246.6M        9 \n__OBJC_RO                         36.4M        1 \n__OBJC_RW                          851K        1 \n__TEXT                           909.6M      804 \n__TPRO_CONST                          8        2 \nmapped file                       60.8M       88 \npage table in kernel               273K        1 \nshared memory                       64K        3 \n===========                     =======  ======= \nTOTAL                              1.6G     3349 \nTOTAL, minus reserved VM space     1.6G     3349 \n",
+  "legacyInfo" : {
+  "threadTriggered" : {
+    "queue" : "com.apple.launchservices.clientcallbacks"
+  }
+},
+  "logWritingSignature" : "df716ee9583123e3f5dafcd3d29396e679731e3c",
+  "bug_type" : "385",
+  "roots_installed" : 0,
+  "voucherInfos" : [{"proximateName":"lsd","thread_id":655417,"originatorName":"identityservicesd"},{"proximateName":"lsd","thread_id":656376,"originatorName":"identityservicesd"}],
+  "trialInfo" : {
+  "rollouts" : [
+    {
+      "deploymentId" : 250002286,
+      "factorPackIds" : [
+
+      ],
+      "rolloutId" : "6010753cf9bfc4000c247bdd"
+    },
+    {
+      "deploymentId" : 250000003,
+      "factorPackIds" : [
+        "64d29746ad29a465b3bbeace"
+      ],
+      "rolloutId" : "64c17a9925d75a7281053d4c"
+    }
+  ],
+  "experiments" : [
+
+  ]
+}
+}
