@@ -232,6 +232,14 @@ class IosPhotosPickerIdentityContractTest {
         assertTrue("sourceFastPathKey" in helper)
         assertTrue("tryPaintLibraryDerivative" in host.substringAfter("onImageSelected ="))
         assertTrue("tryPaintLibraryDerivative" in host.substringAfter("private suspend fun bindProgressiveFocus"))
+        assertFalse(
+            "previewGen != capturedGen" in helper,
+            "same-switch ImageIO previewGen++ must not discard a Library derivative",
+        )
+        assertTrue(
+            "shouldDropLibraryDerivative" in helper,
+            "stale means disposed, focus path changed, or Watermarked already showing",
+        )
         assertFalse("PHImageManager" in helper)
         val plist = resolveRepoFile("iosApp/iosApp/Info.plist").readText()
         assertTrue("NSPhotoLibraryUsageDescription" in plist)

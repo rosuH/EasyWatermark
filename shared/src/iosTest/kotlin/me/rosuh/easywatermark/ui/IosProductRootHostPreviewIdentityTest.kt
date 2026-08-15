@@ -14,12 +14,18 @@ import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.ViewModelStore
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withContext
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
 import me.rosuh.easywatermark.data.datastore.createUserConfigDataStore
 import me.rosuh.easywatermark.data.datastore.createWaterMarkDataStore
 import me.rosuh.easywatermark.data.model.ImageInfo
@@ -138,6 +144,20 @@ class IosProductRootHostPreviewIdentityTest {
             session = session,
         )
         return Graph(services, exportPort, store)
+    }
+
+    /**
+     * hostScope uses [Dispatchers.Main] (Darwin). After a gated inject resumes,
+     * pump real time so that queue can paint; [runTest] virtual delay will not.
+     */
+    private suspend fun pumpUntil(
+        timeout: kotlin.time.Duration = 2.seconds,
+        predicate: () -> Boolean,
+    ) {
+        val deadline = TimeSource.Monotonic.markNow() + timeout
+        while (!predicate() && deadline.hasNotPassedNow()) {
+            withContext(Dispatchers.Default) { delay(15) }
+        }
     }
 
     private fun solidPng(color: Color): ByteArray {
@@ -429,6 +449,151 @@ class IosProductRootHostPreviewIdentityTest {
                 val timing = host.switchImageAndAwaitForTests(path, awaitNeighbors = false)
                 assertTrue(timing.hit == "wm" || timing.hit == "wm_optimistic", timing.hit)
                 assertEquals(0, calls, "WM cache hit must not start PhotoKit")
+            } finally {
+                host.installPhotoKitFastPathForTests(null)
+                host.dispose()
+            }
+        } finally {
+            IosAssetIdentityRegistry.resetForTests()
+            graph.close()
+        }
+    }
+
+    /**
+     * Attempt-1 used `previewGen != capturedGen` as stale. Cold switch launches PhotoKit
+     * then immediately bumps gen for same-path ImageIO, so a producer that returns after
+     * that bump was no-op'd. This gated inject completes only after the bump.
+     */
+    @Test
+    fun p3_same_switch_preview_gen_bump_still_paints_library_derivative() =
+        runTest(mainDispatcher) {
+            val graph = isolatedGraph()
+            try {
+                val host = IosProductRootHost(
+                    onPickPhoto = {},
+                    onPickIcon = {},
+                    onShare = {},
+                    onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
+                    services = graph.services,
+                )
+                try {
+                    me.rosuh.easywatermark.session.IosPickGenerationGate.resetForTests()
+                    IosAssetIdentityRegistry.resetForTests()
+                    val gen = me.rosuh.easywatermark.session.IosPickGenerationGate.nextPhotoGeneration()
+                    host.deliverPickedPhotosBatch(
+                        images = listOf(solidPng(Color(0xFF669933))),
+                        append = false,
+                        renderPreview = false,
+                        pickGeneration = gen,
+                    )
+                    graph.trackSessionPaths()
+                    val path = graph.services.session.launchScreenUiStateFlow.first()
+                        .curImageInfo?.uri?.value
+                    assertNotNull(path)
+                    IosAssetIdentityRegistry.put(path, "p3-gen-bump-id")
+                    // ImageIO of this path must not win the race and trip the
+                    // "Watermarked already showing" drop. Attempt-1 still fails
+                    // because switch joins only after previewGen++.
+                    IosSourceStager.deleteQuietly(path)
+                    val waiting = CompletableDeferred<Unit>()
+                    val release = CompletableDeferred<Unit>()
+                    val produced = CompletableDeferred<Unit>()
+                    val unique = ImageBitmap(33, 31, ImageBitmapConfig.Argb8888)
+                    host.installPhotoKitFastPathForTests { _, _ ->
+                        waiting.complete(Unit)
+                        release.await()
+                        unique.also { produced.complete(Unit) }
+                    }
+                    val switchJob = launch {
+                        host.switchImageAndAwaitForTests(path, awaitNeighbors = false)
+                    }
+                    waiting.await()
+                    switchJob.join()
+                    release.complete(Unit)
+                    pumpUntil { produced.isCompleted }
+                    assertTrue(produced.isCompleted, "PhotoKit inject must resume after gen bump")
+                    pumpUntil { host.previewIdentityForTests().libraryDerivativePath == path }
+                    val identity = host.previewIdentityForTests()
+                    assertEquals(
+                        path,
+                        identity.libraryDerivativePath,
+                        "same-switch ImageIO previewGen++ must not drop this path's Library derivative",
+                    )
+                    assertEquals(33 to 31, identity.libraryDerivativeSize)
+                } finally {
+                    host.installPhotoKitFastPathForTests(null)
+                    host.dispose()
+                }
+            } finally {
+                IosAssetIdentityRegistry.resetForTests()
+                graph.close()
+            }
+        }
+
+    @Test
+    fun p3_late_photokit_for_previous_path_is_dropped() = runTest(mainDispatcher) {
+        val graph = isolatedGraph()
+        try {
+            val host = IosProductRootHost(
+                onPickPhoto = {},
+                onPickIcon = {},
+                onShare = {},
+                onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
+                services = graph.services,
+            )
+            try {
+                me.rosuh.easywatermark.session.IosPickGenerationGate.resetForTests()
+                IosAssetIdentityRegistry.resetForTests()
+                val gen = me.rosuh.easywatermark.session.IosPickGenerationGate.nextPhotoGeneration()
+                host.deliverPickedPhotosBatch(
+                    images = listOf(solidPng(Color(0xFF112211)), solidPng(Color(0xFF334433))),
+                    append = false,
+                    renderPreview = false,
+                    pickGeneration = gen,
+                )
+                graph.trackSessionPaths()
+                val paths = graph.services.session.launchScreenUiStateFlow.first()
+                    .selectedImageList.map { it.uri.value }
+                assertEquals(2, paths.size)
+                val pathA = paths[0]
+                val pathB = paths[1]
+                IosAssetIdentityRegistry.put(pathA, "p3-late-a")
+                IosAssetIdentityRegistry.put(pathB, "p3-late-b")
+                val aWaiting = CompletableDeferred<Unit>()
+                val aRelease = CompletableDeferred<Unit>()
+                val aProduced = CompletableDeferred<Unit>()
+                host.installPhotoKitFastPathForTests { assetId, _ ->
+                    if (assetId == "p3-late-a") {
+                        aWaiting.complete(Unit)
+                        aRelease.await()
+                        aProduced.complete(Unit)
+                        ImageBitmap(33, 31, ImageBitmapConfig.Argb8888)
+                    } else {
+                        ImageBitmap(17, 19, ImageBitmapConfig.Argb8888)
+                    }
+                }
+                val switchA = launch {
+                    host.switchImageAndAwaitForTests(pathA, awaitNeighbors = false)
+                }
+                aWaiting.await()
+                host.switchImageAndAwaitForTests(pathB, awaitNeighbors = false)
+                aRelease.complete(Unit)
+                pumpUntil { aProduced.isCompleted }
+                assertTrue(aProduced.isCompleted, "late A PhotoKit must still resume to prove drop")
+                pumpUntil {
+                    val id = host.previewIdentityForTests()
+                    id.libraryDerivativePath != pathA && aProduced.isCompleted
+                }
+                switchA.join()
+                val identity = host.previewIdentityForTests()
+                assertNotEquals(
+                    pathA,
+                    identity.libraryDerivativePath,
+                    "late PhotoKit for a previous focus path must not paint",
+                )
+                if (identity.libraryDerivativeSize != null) {
+                    assertNotEquals(33 to 31, identity.libraryDerivativeSize)
+                }
             } finally {
                 host.installPhotoKitFastPathForTests(null)
                 host.dispose()

@@ -382,6 +382,8 @@ class IosProductRootHost(
         val previewSourcePath: String?,
         val wmCachePaths: Set<String>,
         val placeholderCachePaths: Set<String>,
+        val libraryDerivativePath: String? = null,
+        val libraryDerivativeSize: Pair<Int, Int>? = null,
     )
 
     internal fun installPhotoKitFastPathForTests(
@@ -401,6 +403,8 @@ class IosProductRootHost(
             placeholderCachePaths = snapshot.cachedKeys
                 .filter { it.purpose == IosPreviewPurpose.SourcePlaceholder }
                 .mapTo(linkedSetOf()) { it.ownedPath },
+            libraryDerivativePath = libraryDerivativePath,
+            libraryDerivativeSize = libraryDerivativeBitmap?.let { it.width to it.height },
         )
     }
 
@@ -522,9 +526,8 @@ class IosProductRootHost(
             previewSourcePath = path
             watermarkedPreviewSourcePath = null
         }
-        val capturedGen = previewGen
         hostScope.launch {
-            tryPaintLibraryDerivative(path, capturedGen)
+            tryPaintLibraryDerivative(path)
         }
         previewGen += 1
         val gen = previewGen
@@ -1383,9 +1386,9 @@ class IosProductRootHost(
                                     switchBench.mark("placeholder")
 
                                     // 2b) Unwatermarked Library derivative in parallel with ImageIO.
-                                    val capturedGen = previewGen
+                                    // Same-switch previewGen++ below is not stale for this path.
                                     hostScope.launch {
-                                        tryPaintLibraryDerivative(path, capturedGen)
+                                        tryPaintLibraryDerivative(path)
                                     }
 
                                     // 3) Full watermarked preview (in-memory, no PNG encode)
@@ -1803,14 +1806,12 @@ class IosProductRootHost(
                 previewImages.peekCached(watermarkedPreviewKey(focusPath, previewBucket)) == null &&
                 previewImages.peekCached(sourcePreviewKey(focusPath, previewBucket)) == null
             ) {
-                val capturedGen = previewGen
                 hostScope.launch {
-                    tryPaintLibraryDerivative(focusPath, capturedGen)
+                    tryPaintLibraryDerivative(focusPath)
                 }
             }
         } else {
-            val capturedGen = previewGen
-            val paintedLibrary = tryPaintLibraryDerivative(focusPath, capturedGen)
+            val paintedLibrary = tryPaintLibraryDerivative(focusPath)
             if (!paintedLibrary) {
                 // 1) Import: watermark region — placeholder first (may decode).
                 val placeholder = runCatching {
@@ -2368,11 +2369,33 @@ class IosProductRootHost(
         IosPreviewKey(path, bucket, IosPreviewPurpose.SourceFastPath)
 
     /**
+     * Session / preview focus for Library-derivative freshness.
+     * Same-switch ImageIO [previewGen] bump is not stale; a different selected path is.
+     */
+    private fun currentFocusPath(): String? {
+        val launch = services.session.launchScreenUiStateFlow.value
+        return launch.curImageInfo?.uri?.value
+            ?: launch.selectedImageList.firstOrNull()?.uri?.value
+    }
+
+    /**
+     * Drop a PhotoKit frame only if the host is gone, focus moved, or Watermarked
+     * is already showing this path. Do not use [previewGen] — cold switch increments
+     * it immediately for the same-path ImageIO raster.
+     */
+    private fun shouldDropLibraryDerivative(path: String): Boolean {
+        if (disposed) return true
+        val focus = currentFocusPath()
+        if (focus != null && focus != path) return true
+        return watermarkedPreviewSourcePath == path && previewBitmap != null
+    }
+
+    /**
      * ADR-0029 Q1=B: paint an unwatermarked Library derivative into [previewBitmap].
      * Does not bump [previewGen]. Does not write SourcePlaceholder or Watermarked caches.
      * Does not call [IosPreviewRaster.renderWatermarked].
      */
-    private suspend fun tryPaintLibraryDerivative(path: String, capturedGen: Int): Boolean {
+    private suspend fun tryPaintLibraryDerivative(path: String): Boolean {
         if (disposed || path.isBlank()) return false
         val assetId = IosAssetIdentityRegistry.get(path) ?: return false
         if (assetId in photoKitResolveFailedIds) return false
@@ -2398,8 +2421,7 @@ class IosProductRootHost(
             ) ?: return false
             frame.bitmap.asComposeImageBitmap()
         } ?: return false
-        if (disposed || previewGen != capturedGen) return false
-        if (watermarkedPreviewSourcePath == path && previewBitmap != null) return false
+        if (shouldDropLibraryDerivative(path)) return false
         libraryDerivativeBitmap = bitmap
         libraryDerivativePath = path
         previewBitmap = bitmap
