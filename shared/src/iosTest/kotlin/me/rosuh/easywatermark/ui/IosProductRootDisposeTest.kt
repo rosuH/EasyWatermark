@@ -79,7 +79,18 @@ class IosProductRootDisposeTest {
             IosAssetIdentityRegistry.put(staged, "asset-dispose")
             assertEquals("asset-dispose", IosAssetIdentityRegistry.get(staged))
 
+            val cache = object : me.rosuh.easywatermark.render.IosPhotoKitNeighborCache {
+                var stopAll = 0
+                override fun start(assetIds: Collection<String>, targetPx: Int) = Unit
+                override fun stop(assetIds: Collection<String>, targetPx: Int) = Unit
+                override fun stopAll() {
+                    stopAll += 1
+                }
+            }
+            host.installNeighborCacheForTests(cache)
+
             host.dispose()
+            assertEquals(1, cache.stopAll, "dispose must stopAll PhotoKit neighbor window")
             assertNull(IosAssetIdentityRegistry.get(staged))
             assertTrue(host.isDisposedForTests())
             val identity = host.previewIdentityForTests()

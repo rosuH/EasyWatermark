@@ -64,6 +64,8 @@ import me.rosuh.easywatermark.render.IosPreviewKey
 import me.rosuh.easywatermark.render.IosPreviewBench
 import me.rosuh.easywatermark.render.IosPreviewPurpose
 import me.rosuh.easywatermark.render.IosPhotoKitImageSource
+import me.rosuh.easywatermark.render.IosPhotoKitNeighborCache
+import me.rosuh.easywatermark.render.PhotosDaemonNeighborCache
 import me.rosuh.easywatermark.render.IosPreviewRaster
 import me.rosuh.easywatermark.render.IosWatermarkIconCache
 import me.rosuh.easywatermark.render.PreviewResolutionPolicy
@@ -295,6 +297,9 @@ class IosProductRootHost(
     private val photoKitResolveFailedIds = linkedSetOf<String>()
     private var photoKitFastPathForTests: (suspend (assetId: String, targetPx: Int) -> ImageBitmap?)? =
         null
+    private var photoKitNeighborCache: IosPhotoKitNeighborCache = PhotosDaemonNeighborCache()
+    private var lastPhotoKitNeighborIds: Set<String> = emptySet()
+    private var lastPhotoKitNeighborTargetPx: Int = 0
     /** Once-per-generation timeline marks for first visible pixels / completed preview. */
     private var markedFirstFilmstripPixels = false
     private var markedFirstWatermarkedPreview = false
@@ -401,6 +406,11 @@ class IosProductRootHost(
         producer: (suspend (assetId: String, targetPx: Int) -> ImageBitmap?)?,
     ) {
         photoKitFastPathForTests = producer
+    }
+
+    internal fun installNeighborCacheForTests(cache: IosPhotoKitNeighborCache?) {
+        stopPhotoKitNeighborWindow()
+        photoKitNeighborCache = cache ?: PhotosDaemonNeighborCache()
     }
 
     internal data class LibraryReadBannerSnapshot(
@@ -726,6 +736,7 @@ class IosProductRootHost(
             }
             ownedStagedPaths.removeAll(toDelete.toSet())
             toDelete.forEach(IosSourceStager::deleteQuietly)
+            stopPhotoKitNeighborWindow()
             IosAssetIdentityRegistry.clear()
         } finally {
             lifecycleLock.unlock()
@@ -757,6 +768,7 @@ class IosProductRootHost(
             // cancelling host children — otherwise a contended close coroutine can be aborted
             // before writing closed=true.
             previewImages.closeFromOwner()
+            stopPhotoKitNeighborWindow()
             hostScope.coroutineContext.cancelChildren()
             // Clear presentation + caches (Main-thread host; lock serializes vs ownership adopt).
             sourceBytes = null
@@ -2590,6 +2602,7 @@ class IosProductRootHost(
     private suspend fun warmNeighborWatermarkedPreviews(focusPath: String, gen: Int) {
         val launch = services.session.launchScreenUiStateFlow.value
         val list = launch.selectedImageList
+        syncPhotoKitNeighborWindow(focusPath, list, committedPreviewBucket)
         val idx = list.indexOfFirst { it.uri.value == focusPath }
         if (idx < 0) return
         val neighbors = buildList {
@@ -2633,6 +2646,68 @@ class IosProductRootHost(
                 }
             }
         }
+    }
+
+    /**
+     * Daemon-side PhotoKit window for the same focus±2 paths as WM prefetch.
+     * Does not [IosPhotoLibraryAccess.requestOnceIfNeeded]. Does not write
+     * [previewImages]. Skips NotDetermined / Denied / Restricted.
+     */
+    private fun syncPhotoKitNeighborWindow(
+        focusPath: String,
+        list: List<ImageInfo>,
+        targetPx: Int,
+    ) {
+        if (disposed || focusPath.isBlank() || targetPx <= 0) {
+            stopPhotoKitNeighborWindow()
+            return
+        }
+        val status = IosPhotoLibraryAccess.status()
+        val allowed = status == IosPhotoLibraryAccess.Status.Authorized ||
+            status == IosPhotoLibraryAccess.Status.Limited
+        val next = if (!allowed) {
+            emptySet()
+        } else {
+            val idx = list.indexOfFirst { it.uri.value == focusPath }
+            if (idx < 0) {
+                emptySet()
+            } else {
+                buildSet {
+                    for (delta in listOf(-2, -1, 1, 2)) {
+                        val i = idx + delta
+                        if (i !in list.indices) continue
+                        val id = IosAssetIdentityRegistry.get(list[i].uri.value)
+                        if (!id.isNullOrBlank()) add(id)
+                    }
+                }
+            }
+        }
+        applyPhotoKitNeighborWindow(next, targetPx)
+    }
+
+    private fun applyPhotoKitNeighborWindow(next: Set<String>, targetPx: Int) {
+        if (next == lastPhotoKitNeighborIds && targetPx == lastPhotoKitNeighborTargetPx) return
+        if (targetPx != lastPhotoKitNeighborTargetPx && lastPhotoKitNeighborIds.isNotEmpty()) {
+            photoKitNeighborCache.stop(lastPhotoKitNeighborIds, lastPhotoKitNeighborTargetPx)
+            lastPhotoKitNeighborIds = emptySet()
+        }
+        val toStop = lastPhotoKitNeighborIds - next
+        val toStart = next - lastPhotoKitNeighborIds
+        if (toStop.isNotEmpty()) {
+            val stopPx = lastPhotoKitNeighborTargetPx.takeIf { it > 0 } ?: targetPx
+            photoKitNeighborCache.stop(toStop, stopPx)
+        }
+        if (toStart.isNotEmpty()) {
+            photoKitNeighborCache.start(toStart, targetPx)
+        }
+        lastPhotoKitNeighborIds = next
+        lastPhotoKitNeighborTargetPx = targetPx
+    }
+
+    private fun stopPhotoKitNeighborWindow() {
+        photoKitNeighborCache.stopAll()
+        lastPhotoKitNeighborIds = emptySet()
+        lastPhotoKitNeighborTargetPx = 0
     }
 
     private suspend fun reexportCurrent() {

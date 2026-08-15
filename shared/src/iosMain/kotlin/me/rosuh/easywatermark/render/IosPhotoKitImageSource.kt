@@ -65,15 +65,8 @@ internal object IosPhotoKitImageSource {
         if (deadlineMs <= 0L) {
             return PhotoKitRequestTiming(timedOut = true)
         }
-        val options = PHImageRequestOptions()
-        options.deliveryMode = PHImageRequestOptionsDeliveryModeOpportunistic
-        options.resizeMode = PHImageRequestOptionsResizeModeFast
-        options.networkAccessAllowed = false
-        options.setSynchronous(false)
-        val targetSize = cValue<CGSize> {
-            width = targetPx.toDouble()
-            height = targetPx.toDouble()
-        }
+        val options = previewRequestOptions()
+        val targetSize = previewTargetSize(targetPx)
         val manager = PHImageManager.defaultManager()
         return awaitImageRequest(deadlineMs) { onFrame, onMiss, onCancelable ->
             val requestId = manager.requestImageForAsset(
@@ -158,6 +151,21 @@ internal object IosPhotoKitImageSource {
                 cancelFn?.invoke(requestId.value)
             }
         }
+    }
+
+    /** Shared with [IosPhotoKitNeighborCache] so daemon prefetch matches P3 first paint. */
+    internal fun previewRequestOptions(): PHImageRequestOptions {
+        val options = PHImageRequestOptions()
+        options.deliveryMode = PHImageRequestOptionsDeliveryModeOpportunistic
+        options.resizeMode = PHImageRequestOptionsResizeModeFast
+        options.networkAccessAllowed = false
+        options.setSynchronous(false)
+        return options
+    }
+
+    internal fun previewTargetSize(targetPx: Int) = cValue<CGSize> {
+        width = targetPx.toDouble()
+        height = targetPx.toDouble()
     }
 
     private fun infoIsDegraded(info: Map<Any?, *>?): Boolean {
