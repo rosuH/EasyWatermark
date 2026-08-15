@@ -18,6 +18,10 @@
 
 胶片条 / subsample / QL / sidecar **不解决 ① 的主体**；对 ② 几乎无关。
 
+**产品解锁（2026-08-15）：** 读相册 + PhotoKit 已由 owner 接受，见 **ADR-0029**。
+硬承诺仍是离线 / 无追踪；add-only-only 不再挡预览加速。PhotoKit 只做 chrome /
+首帧快路径，Session 仍是 owned path；Limited miss → ImageIO 降级。
+
 ---
 
 ## ① 冷切图 → 水印预览

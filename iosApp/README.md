@@ -60,8 +60,16 @@ Once a watermarked PNG exists (`workflow.resultPNG`), `ContentView` shows an exp
   share sheet then offers Share / Save Image / Save to Files / AirDrop.
 - **Save to Photos** — `ImageExport.saveToPhotos(_:)` requests add-only authorization and writes the
   exact PNG bytes via `PHPhotoLibrary` / `PHAssetCreationRequest.addResource(with: .photo, data:)`
-  (no re-encode). Needs `NSPhotoLibraryAddUsageDescription`, set as an `INFOPLIST_KEY_*` build setting
-  (the project uses `GENERATE_INFOPLIST_FILE`, so there is no hand-written Info.plist).
+  (no re-encode). Needs `NSPhotoLibraryAddUsageDescription` (see `Info.plist`).
+
+### Privacy / Photos access (ADR-0029)
+
+- **Hard promise:** fully offline — no network permission, no tracking/analytics/crash SDKs.
+- **Add-only save** remains for export (`NSPhotoLibraryAddUsageDescription`).
+- **Read access** (`NSPhotoLibraryUsageDescription`) is an accepted product path for faster
+  in-editor previews / filmstrip via PhotoKit system derivatives. Session and final export stay
+  path-first (ADR-0021); PhotoKit is a fast path with ImageIO fallback (including Limited-library
+  miss). Implementation tracks ADR-0029; usage string + request must land with the consumer code.
 
 `Photos`/`PhotosUI`/`UIKit`/`SwiftUI` are system frameworks auto-linked from `import` — **no new
 dependency** and no Frameworks-phase edit. S4d-58 proved both buttons at runtime through XCUITest:

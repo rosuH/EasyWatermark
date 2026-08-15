@@ -4,7 +4,7 @@ This file provides guidance to agents when working with code in this repository.
 
 ## What this app is
 
-EasyWatermark (`me.rosuh.easywatermark`) — a privacy-focused watermark app that tiles text/image watermarks over photos so they can't be repurposed. Privacy promises that shape engineering decisions: fully offline, zero tracking/stats/crash SDKs, no permissions needed on API 29+ (pre-29 needs storage permission). One Kotlin Multiplatform / Compose Multiplatform codebase ships Android, Desktop (JVM), and iOS. Android is distributed via GitHub Releases, Google Play (paid, same code), F-Droid, Coolapk.
+EasyWatermark (`me.rosuh.easywatermark`) — a privacy-focused watermark app that tiles text/image watermarks over photos so they can't be repurposed. Privacy promises that shape engineering decisions: fully offline, zero tracking/stats/crash SDKs; Android needs no runtime permission on API 29+ (pre-29 needs storage). **iOS** may request **user-gated photo-library read** for faster in-app previews via PhotoKit (ADR-0029) in addition to add-only save; Session/export remain path-first (ADR-0021) and still strip EXIF on export (ADR-0009). One Kotlin Multiplatform / Compose Multiplatform codebase ships Android, Desktop (JVM), and iOS. Android is distributed via GitHub Releases, Google Play (paid, same code), F-Droid, Coolapk.
 
 ## Architecture
 
