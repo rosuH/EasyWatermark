@@ -14,10 +14,11 @@ import platform.Photos.PHPhotoLibrary
 import kotlin.coroutines.resume
 
 /**
- * Optional Library Read status (ADR-0029 P2).
+ * Optional Library Read (ADR-0029).
  *
- * Production editor must not call [requestOnceIfNeeded]. Only the
- * `-ewmPhotoKitFastPath` bench arm may request.
+ * Production requests once on first real PhotoKit need via [requestOnceIfNeeded].
+ * Allow All is not required to pick, edit, or export. After a non-Allow-All
+ * result the editor may show a Library Read upsell (P5 / Q11=B).
  */
 internal object IosPhotoLibraryAccess {
     enum class Status {
@@ -30,9 +31,15 @@ internal object IosPhotoLibraryAccess {
 
     private val lock = NSLock()
     private var requestedThisProcess = false
+    private var statusOverrideForTests: Status? = null
 
-    fun status(): Status =
-        fromNative(PHPhotoLibrary.authorizationStatusForAccessLevel(PHAccessLevelReadWrite))
+    fun status(): Status {
+        lock.lock()
+        val override = statusOverrideForTests
+        lock.unlock()
+        if (override != null) return override
+        return fromNative(PHPhotoLibrary.authorizationStatusForAccessLevel(PHAccessLevelReadWrite))
+    }
 
     /** Allow All only. Limited is first-class miss, not usable. */
     fun isUsable(): Boolean = status() == Status.Authorized
@@ -58,6 +65,13 @@ internal object IosPhotoLibraryAccess {
     internal fun resetForTests() {
         lock.lock()
         requestedThisProcess = false
+        statusOverrideForTests = null
+        lock.unlock()
+    }
+
+    internal fun installStatusForTests(status: Status?) {
+        lock.lock()
+        statusOverrideForTests = status
         lock.unlock()
     }
 
@@ -67,7 +81,7 @@ internal object IosPhotoLibraryAccess {
         lock.unlock()
     }
 
-    internal fun requestedThisProcessForTests(): Boolean {
+    internal fun hasRequestedThisProcess(): Boolean {
         lock.lock()
         return try {
             requestedThisProcess
@@ -75,6 +89,8 @@ internal object IosPhotoLibraryAccess {
             lock.unlock()
         }
     }
+
+    internal fun requestedThisProcessForTests(): Boolean = hasRequestedThisProcess()
 
     private fun fromNative(raw: Long): Status = when (raw) {
         PHAuthorizationStatusAuthorized -> Status.Authorized

@@ -16,6 +16,8 @@ happy to receive your feedback.
 <h3> I. How we collect information</h3>
 We don't actively collect information at all. Even without your information, we're still running just fine. Of course, if it crashes, you have the option of sending us an email with the device model and system version information so that we can locate the problem.
 
+On iOS, **Library Read** is optional. It is used only on this device to show a faster first preview of photos you already picked. We do not upload your library, do not scan it, and do not track you. You can pick, edit, and export without granting read access. Save remains add-only.
+
 <h3> II. How we use the information we collect</h3>
 We don't collect information voluntarily at all. But if, after a crash, you voluntarily send us information about your device, we will use it to locate and resolve your crash, not for any other purpose.
 

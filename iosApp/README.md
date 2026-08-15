@@ -67,6 +67,23 @@ Once a watermarked PNG exists (`workflow.resultPNG`), `ContentView` shows an exp
 dependency** and no Frameworks-phase edit. S4d-58 proved both buttons at runtime through XCUITest:
 Save reaches "Saved to Photos" and Share presents the system share sheet.
 
+## Privacy / Photos access (ADR-0029)
+
+Library Read is **optional**. PHPicker does not need it; save stays **add-only**
+(`NSPhotoLibraryAddUsageDescription`). Granting Allow All lets an already-picked
+photo show an unwatermarked Library derivative first, then the ImageIO
+Watermarked preview. Declining (Keep Add Only / Limited / Restricted) leaves
+today’s ImageIO editor intact.
+
+If status is not Allow All, the editor shows a Library Read upsell on **every
+Editor visit** until Allow All. Dismiss hides that visit only. Limited’s button
+is “Allow access to all photos” and opens **Settings** — it does not present
+the limited-library picker. Copy stays qualitative; there is no unmeasured
+“N% faster” claim.
+
+PhotoKit pixels never enter `CommonWatermarkPipeline` or the SourcePlaceholder /
+Watermarked caches. `localIdentifier` is not persisted.
+
 ## Watermark fonts (ADR-0025)
 
 Production Text watermarks use the **system default** face (`FontFamily.Default` / platform resolver).

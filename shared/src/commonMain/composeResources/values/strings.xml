@@ -158,6 +158,12 @@
     <!-- Android 14+ partial photo access (READ_MEDIA_VISUAL_USER_SELECTED without full library). -->
     <string name="tips_gallery_partial_access">Only selected photos are shown. Allow full access in Settings to see your whole library.</string>
     <string name="tips_gallery_partial_access_settings">Settings</string>
+    <!-- ADR-0029 P5: iOS Library Read upsell (Q11=B). Qualitative; no unmeasured N%. -->
+    <string name="tips_ios_library_read_upsell_limited">Allow access to all photos for a quicker first preview. You can still pick, edit, and export.</string>
+    <string name="tips_ios_library_read_upsell_denied">Allow Library Read in Settings for a quicker first preview. You can still pick, edit, and export.</string>
+    <string name="tips_ios_library_read_upsell_allow_all_photos">Allow access to all photos</string>
+    <string name="tips_ios_library_read_upsell_settings">Settings</string>
+    <string name="tips_ios_library_read_upsell_dismiss">Not now</string>
     <string name="tips_no_image_selected">No Image Selected</string>
     <string name="cd_navigate_up">Navigate up</string>
     <string name="cd_add_more_images">Add more images</string>

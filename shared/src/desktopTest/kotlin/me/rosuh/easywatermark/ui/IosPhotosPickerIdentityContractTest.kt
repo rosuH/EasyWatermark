@@ -251,6 +251,32 @@ class IosPhotosPickerIdentityContractTest {
     }
 
     @Test
+    fun p5_library_read_upsell_is_settings_cta_never_limited_picker() {
+        val host = resolveRepoFile(
+            "shared/src/iosMain/kotlin/me/rosuh/easywatermark/ui/IosProductRootHost.kt",
+        ).readText()
+        val banner = resolveRepoFile(
+            "shared/src/iosMain/kotlin/me/rosuh/easywatermark/ui/LibraryReadUpsellBanner.kt",
+        ).readText()
+        val sharedStrings = resolveRepoFile(
+            "shared/src/commonMain/composeResources/values/strings.xml",
+        ).readText()
+        val androidStrings = resolveRepoFile(
+            "app/src/main/res/values/strings.xml",
+        ).readText()
+        assertTrue("LibraryReadUpsellBanner" in host)
+        assertTrue("UIApplicationOpenSettingsURLString" in host)
+        assertFalse("presentLimitedLibraryPicker" in host)
+        assertFalse("presentLimitedLibraryPicker" in banner)
+        assertTrue("tips_ios_library_read_upsell_allow_all_photos" in banner)
+        assertTrue("Allow access to all photos" in sharedStrings)
+        assertTrue("Allow access to all photos" in androidStrings)
+        assertFalse(Regex("""\d+\s*%""").containsMatchIn(sharedStrings.substringAfter("tips_ios_library_read_upsell")))
+        assertFalse("30%" in banner)
+        assertFalse("30%" in host)
+    }
+
+    @Test
     fun pbxproj_includes_photos_picker_batch_gate() {
         val pbx = resolveRepoFile("iosApp/iosApp.xcodeproj/project.pbxproj").readText()
         assertTrue(

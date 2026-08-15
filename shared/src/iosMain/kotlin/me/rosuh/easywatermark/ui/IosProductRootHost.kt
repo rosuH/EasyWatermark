@@ -4,10 +4,13 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
@@ -116,6 +119,9 @@ import platform.UIKit.UIDevice
 import platform.UIKit.UIUserInterfaceIdiomPhone
 import platform.UIKit.UIViewController
 import platform.Foundation.NSLock
+import platform.Foundation.NSNotificationCenter
+import platform.UIKit.UIApplicationDidBecomeActiveNotification
+import platform.UIKit.UIApplicationOpenSettingsURLString
 import kotlin.experimental.ExperimentalObjCName
 import kotlin.native.ObjCName
 
@@ -326,6 +332,11 @@ class IosProductRootHost(
      * E0: Session is product-route owner; this flag only bridges shell until EnterEditor lands.
      */
     private var showEditor by mutableStateOf(false)
+    /** Q11=B: one Editor visit; dismiss hides only until [endLibraryReadEditorVisit]. */
+    private var libraryReadEditorVisitActive = false
+    private var libraryReadBannerDismissedThisVisit by mutableStateOf(false)
+    private var libraryReadBannerKind by mutableStateOf<LibraryReadBannerKind?>(null)
+    private var lastLibraryReadCtaUrlForTests: String? = null
     /** C2: shared Android Compose export panel; Photos/Share stay Swift callbacks. */
     private var showSaveSheet by mutableStateOf(false)
     /** Last editor layout class for export sheet ≥840 dialog (export host is outside Editor BoxWithConstraints). */
@@ -391,6 +402,34 @@ class IosProductRootHost(
     ) {
         photoKitFastPathForTests = producer
     }
+
+    internal data class LibraryReadBannerSnapshot(
+        val visible: Boolean,
+        val kind: LibraryReadBannerKind?,
+        val dismissedThisVisit: Boolean,
+        val lastCtaUrl: String?,
+    )
+
+    internal fun libraryReadBannerForTests(): LibraryReadBannerSnapshot =
+        LibraryReadBannerSnapshot(
+            visible = libraryReadBannerKind != null,
+            kind = libraryReadBannerKind,
+            dismissedThisVisit = libraryReadBannerDismissedThisVisit,
+            lastCtaUrl = lastLibraryReadCtaUrlForTests,
+        )
+
+    internal fun dismissLibraryReadBannerForTests() = dismissLibraryReadBanner()
+
+    internal fun openLibraryReadBannerCtaForTests() = openLibraryReadBannerSettings()
+
+    internal fun leaveEditorForTests() {
+        showEditor = false
+        endLibraryReadEditorVisit()
+    }
+
+    internal fun refreshLibraryReadBannerForTests() = refreshLibraryReadBanner()
+
+    internal fun simulateAppBecameActiveForTests() = refreshLibraryReadBanner()
 
     /** Test-only read of host preview identity (wm/placeholder path caches). */
     internal fun previewIdentityForTests(): PreviewIdentitySnapshot {
@@ -731,6 +770,7 @@ class IosProductRootHost(
             isBusy = false
             isSaving = false
             showEditor = false
+            endLibraryReadEditorVisit()
             showSaveSheet = false
             sheetExportFinished = false
             showOpenSource = false
@@ -812,11 +852,14 @@ class IosProductRootHost(
                     ProductShellNav.Route.Editor
                 else -> ProductShellNav.Route.Launch
             }
+            val aboutReturn = ProductShellNav.routeFromLaunchUi(launchUi.aboutReturnUiState)
+            val shellBase = ProductShellNav.overlayBase(productRoute, aboutReturn)
             val scope = rememberCoroutineScope()
 
             var templates by remember { mutableStateOf(emptyList<Template>()) }
-            LaunchedEffect(productRoute) {
-                if (productRoute == ProductShellNav.Route.Editor) {
+            // About overlay keeps Editor composed — collect while the under screen is Editor.
+            LaunchedEffect(shellBase) {
+                if (shellBase == ProductShellNav.Route.Editor) {
                     templateRepo.getAllTemplate().collect { templates = it }
                 } else {
                     templates = emptyList()
@@ -844,8 +887,30 @@ class IosProductRootHost(
                     !disposed
                 ) {
                     showEditor = false
+                    endLibraryReadEditorVisit()
                     releaseEditorMediaResources()
                 }
+            }
+            LaunchedEffect(shellBase) {
+                when (shellBase) {
+                    ProductShellNav.Route.Editor -> beginLibraryReadEditorVisit()
+                    ProductShellNav.Route.Launch -> endLibraryReadEditorVisit()
+                    else -> Unit
+                }
+            }
+            DisposableEffect(shellBase) {
+                if (shellBase != ProductShellNav.Route.Editor) {
+                    return@DisposableEffect onDispose { }
+                }
+                val center = NSNotificationCenter.defaultCenter
+                val token = center.addObserverForName(
+                    UIApplicationDidBecomeActiveNotification,
+                    null,
+                    null,
+                ) { _ ->
+                    refreshLibraryReadBanner()
+                }
+                onDispose { center.removeObserver(token) }
             }
             LaunchedEffect(Unit) {
                 try {
@@ -874,9 +939,10 @@ class IosProductRootHost(
             val avatarToviPainter = SharedProductDrawables.avatarToviPainter()
             val devComment = stringResource(Res.string.dev_comment)
 
-            // Shared product-shell transitions (Launch ↔ Editor ↔ About).
+            // Shared product-shell: Launch ↔ Editor swap; About overlays the live base.
             ProductShellHost(
                 route = productRoute,
+                aboutReturn = aboutReturn,
                 modifier = Modifier.fillMaxSize(),
             ) { route ->
                 when (route) {
@@ -1049,6 +1115,15 @@ class IosProductRootHost(
                         seedBitmap = themeSeedBitmap,
                         seedKey = themeSeedKey,
                     ) {
+                    Column(Modifier.fillMaxSize()) {
+                    val bannerKind = libraryReadBannerKind
+                    if (bannerKind != null) {
+                        LibraryReadUpsellBanner(
+                            kind = bannerKind,
+                            onCta = { openLibraryReadBannerSettings() },
+                            onDismiss = { dismissLibraryReadBanner() },
+                        )
+                    }
                     EditorScreen(
                         imageList = sessionImages.map { it.toUiProjection() },
                         waterMark = waterMark,
@@ -1311,6 +1386,7 @@ class IosProductRootHost(
                             // Session NavigateBack owns Launch; clear optimistic shell flag
                             // and release staged sources + preview bitmaps (leave-editor lifecycle).
                             showEditor = false
+                            endLibraryReadEditorVisit()
                             services.session.onBackPressed()
                             releaseEditorMediaResources()
                         },
@@ -1488,9 +1564,10 @@ class IosProductRootHost(
                                 }
                             }
                         },
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
                         layoutClass = layoutClass,
                     )
+                    }
                     }
                                         } // ContentEditorThemeHost
                     } // BoxWithConstraints Editor
@@ -1918,6 +1995,7 @@ class IosProductRootHost(
     fun showEditorShellImmediately() {
         // Presentation-only optimistic shell; Session EnterEditor lands when stage succeeds.
         showEditor = true
+        beginLibraryReadEditorVisit()
         // Leave preview blank (silent) until stage + placeholder / raster fill it.
         statusLine = ""
     }
@@ -1977,6 +2055,7 @@ class IosProductRootHost(
         // G4 file-first: drop any host full-res source pin; staged paths + Session own identity.
         sourceBytes = null
         showEditor = true
+        beginLibraryReadEditorVisit()
         statusLine = ""
         // Abort host UI bind if generation flipped after Session publish returned.
         if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
@@ -2365,6 +2444,58 @@ class IosProductRootHost(
         libraryDerivativePath = null
     }
 
+    private fun beginLibraryReadEditorVisit() {
+        if (!libraryReadEditorVisitActive) {
+            libraryReadEditorVisitActive = true
+            libraryReadBannerDismissedThisVisit = false
+        }
+        refreshLibraryReadBanner()
+    }
+
+    private fun endLibraryReadEditorVisit() {
+        libraryReadEditorVisitActive = false
+        libraryReadBannerDismissedThisVisit = false
+        libraryReadBannerKind = null
+    }
+
+    private fun dismissLibraryReadBanner() {
+        libraryReadBannerDismissedThisVisit = true
+        libraryReadBannerKind = null
+    }
+
+    private fun openLibraryReadBannerSettings() {
+        val url = UIApplicationOpenSettingsURLString
+        lastLibraryReadCtaUrlForTests = url
+        onOpenUrl(url)
+    }
+
+    /**
+     * Show when Editor is visible, status is Limited/Denied/Restricted, and this
+     * visit is not dismissed. NotDetermined waits for the system prompt.
+     * Authorized never shows. Same-visit ImageIO work does not hide the strip.
+     */
+    private fun refreshLibraryReadBanner() {
+        if (disposed || !isInEditor() || libraryReadBannerDismissedThisVisit) {
+            libraryReadBannerKind = null
+            return
+        }
+        val status = IosPhotoLibraryAccess.status()
+        val requested = IosPhotoLibraryAccess.hasRequestedThisProcess()
+        val decided = status != IosPhotoLibraryAccess.Status.NotDetermined
+        if (!requested && !decided) {
+            libraryReadBannerKind = null
+            return
+        }
+        libraryReadBannerKind = when (status) {
+            IosPhotoLibraryAccess.Status.Limited -> LibraryReadBannerKind.Limited
+            IosPhotoLibraryAccess.Status.Denied -> LibraryReadBannerKind.Denied
+            IosPhotoLibraryAccess.Status.Restricted -> LibraryReadBannerKind.Restricted
+            IosPhotoLibraryAccess.Status.Authorized,
+            IosPhotoLibraryAccess.Status.NotDetermined,
+            -> null
+        }
+    }
+
     private fun sourceFastPathKey(path: String, bucket: Int = committedPreviewBucket) =
         IosPreviewKey(path, bucket, IosPreviewPurpose.SourceFastPath)
 
@@ -2403,6 +2534,7 @@ class IosProductRootHost(
             inject(assetId, committedPreviewBucket)
         } ?: run {
             val status = IosPhotoLibraryAccess.requestOnceIfNeeded()
+            refreshLibraryReadBanner()
             if (
                 status == IosPhotoLibraryAccess.Status.Denied ||
                 status == IosPhotoLibraryAccess.Status.Restricted

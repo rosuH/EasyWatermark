@@ -16,3 +16,10 @@ Allow All → Library derivative **on** by default. Limited still tries fetch; e
 - Require read to use the editor — optional only (Q2=A).  
 - Quote an unmeasured “30% faster” — forbidden until a device gate (Q8).  
 - Persistently hide the upsell after one dismiss — owner wants it every Editor visit until Allow All (Q11=B).
+
+## Consequences
+
+- Device **Keep Add Only** leaves ReadWrite = Denied. The system will not prompt again; P3 still uses ImageIO. P5 lands the missing Editor upsell so that path is not silent.
+- Simulator has witnessed an unwatermarked first frame on a PhotoKit inject; it is **not** a measured device gate. Do not quote an N% speedup.
+- Production `requestOnceIfNeeded` runs on first real PhotoKit need. Allow All remains optional: pick / edit / export stay available.
+- Limited upsell must send the user to Settings for **all photos**. `presentLimitedLibraryPicker` only grows the limited set and is not an Allow All CTA.
