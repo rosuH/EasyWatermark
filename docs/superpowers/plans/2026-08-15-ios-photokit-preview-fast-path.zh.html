@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>PhotoKit 预览快路径 · 计划评审</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --ink: #121a22;
+  --soft: #3c4c5a;
+  --mute: #6a7a8a;
+  --line: rgba(18,26,34,.12);
+  --a: #0e5c4c;
+  --a2: #094036;
+  --warn: #a8570a;
+  --bad: #9f1239;
+  --ok: #047857;
+  --paper: #eef3f1;
+  --card: rgba(255,255,255,.72);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  color: var(--ink);
+  font: 1.02rem/1.6 "Instrument Sans", "Noto Serif SC", system-ui, sans-serif;
+  background:
+    radial-gradient(900px 480px at 0% -5%, rgba(14,92,76,.14), transparent 55%),
+    radial-gradient(700px 400px at 100% 8%, rgba(168,87,10,.08), transparent 50%),
+    linear-gradient(165deg, #f6faf8, var(--paper));
+  padding-bottom: 4rem;
+}
+.wrap { width: min(100% - 1.5rem, 40rem); margin: 0 auto; }
+header { padding: 2.2rem 0 1.4rem; }
+.eyebrow {
+  font: 0.68rem/1 "JetBrains Mono", monospace;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--a);
+  display: flex; align-items: center; gap: .45rem; margin-bottom: .85rem;
+}
+.eyebrow::before { content:""; width:1.2rem; height:2px; background:var(--a); }
+h1 {
+  font-family: "Noto Serif SC", serif;
+  font-size: clamp(1.55rem, 5.5vw, 2.1rem);
+  line-height: 1.28; margin: 0 0 .75rem; letter-spacing: -.02em;
+}
+.lede { color: var(--soft); margin: 0 0 1.1rem; font-size: .98rem; }
+.badge {
+  display: inline-block;
+  font: 0.68rem/1 "JetBrains Mono", monospace;
+  letter-spacing: .06em; text-transform: uppercase;
+  padding: .35rem .55rem; background: rgba(14,92,76,.12); color: var(--a2);
+  margin-bottom: 1rem;
+}
+.goals {
+  display: grid; gap: .65rem; margin-top: .5rem;
+}
+.goal {
+  background: var(--card); border: 1px solid var(--line);
+  border-left: 3px solid var(--a); padding: .9rem 1rem;
+}
+.goal.g2 { border-left-color: var(--warn); }
+.goal .k {
+  font: 0.65rem/1 "JetBrains Mono", monospace;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--a); margin-bottom: .3rem;
+}
+.goal.g2 .k { color: var(--warn); }
+.goal h2 { font-size: 1.02rem; margin: 0 0 .35rem; font-family: "Noto Serif SC", serif; }
+.goal p { margin: 0; color: var(--soft); font-size: .9rem; }
+.goal .metric {
+  font: 500 1.35rem/1.2 "JetBrains Mono", monospace;
+  margin: .55rem 0 .2rem; letter-spacing: -.03em;
+}
+.goal .metric small { font-size: .7rem; color: var(--mute); margin-left: .25rem; }
+
+section { padding: 1.6rem 0; border-top: 1px solid var(--line); }
+section > h2 {
+  font-family: "Noto Serif SC", serif;
+  font-size: 1.2rem; margin: 0 0 .55rem;
+}
+.sub { color: var(--mute); font-size: .88rem; margin: 0 0 1rem; }
+
+/* ladder */
+.ladder { display: grid; gap: .45rem; }
+.step {
+  display: grid; grid-template-columns: 2rem 1fr; gap: .65rem;
+  padding: .7rem .75rem; background: var(--card); border: 1px solid var(--line);
+}
+.step .n {
+  font: 500 1.1rem/1 "JetBrains Mono", monospace; color: var(--a); padding-top: .1rem;
+}
+.step strong { display: block; font-size: .92rem; margin-bottom: .15rem; }
+.step span { color: var(--soft); font-size: .82rem; }
+.step.new { border-color: rgba(14,92,76,.35); background: rgba(14,92,76,.06); }
+.step.floor { opacity: .95; }
+
+/* phases timeline */
+.phases { display: grid; gap: 0; position: relative; padding-left: .15rem; }
+.phase {
+  display: grid; grid-template-columns: 3.2rem 1fr; gap: .7rem;
+  padding: .85rem 0; border-bottom: 1px solid var(--line);
+}
+.phase:last-child { border-bottom: 0; }
+.phase .tag {
+  font: 0.7rem/1 "JetBrains Mono", monospace; color: var(--a); padding-top: .2rem;
+}
+.phase h3 { margin: 0 0 .25rem; font-size: .98rem; }
+.phase p { margin: 0; color: var(--soft); font-size: .85rem; }
+.phase .why {
+  margin-top: .35rem; font-size: .78rem; color: var(--mute);
+  font-family: "JetBrains Mono", monospace;
+}
+
+/* matrix */
+table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+th, td { text-align: left; padding: .5rem .35rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+th {
+  font: 0.65rem/1 "JetBrains Mono", monospace;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--mute); font-weight: 500;
+}
+.pill {
+  display: inline-block; font: 0.65rem/1 "JetBrains Mono", monospace;
+  padding: .2rem .4rem; border-radius: 2px;
+}
+.pill.on { background: rgba(4,120,87,.12); color: var(--ok); }
+.pill.off { background: rgba(159,18,57,.1); color: var(--bad); }
+.pill.try { background: rgba(168,87,10,.12); color: var(--warn); }
+
+/* questions */
+.q {
+  background: var(--card); border: 1px solid var(--line);
+  padding: .95rem 1rem; margin-bottom: .65rem;
+}
+.q .num {
+  font: 0.68rem/1 "JetBrains Mono", monospace; color: var(--a); letter-spacing: .08em;
+  margin-bottom: .35rem;
+}
+.q h3 { margin: 0 0 .4rem; font-size: .95rem; font-weight: 600; }
+.q .opts { color: var(--soft); font-size: .85rem; margin: 0 0 .55rem; }
+.q .rec {
+  display: flex; gap: .5rem; align-items: flex-start;
+  padding: .55rem .65rem; background: rgba(14,92,76,.08); border-left: 2px solid var(--a);
+  font-size: .85rem;
+}
+.q .rec b {
+  font: 0.65rem/1.4 "JetBrains Mono", monospace; color: var(--a2);
+  letter-spacing: .06em; text-transform: uppercase; flex-shrink: 0; padding-top: .1rem;
+}
+
+.rules {
+  display: grid; gap: .45rem;
+}
+.rules li {
+  list-style: none; padding: .55rem .7rem; background: var(--card);
+  border: 1px solid var(--line); font-size: .88rem; color: var(--soft);
+}
+.rules { margin: 0; padding: 0; }
+.rules strong { color: var(--ink); }
+
+.cta {
+  margin-top: 1rem; padding: 1.1rem 1rem;
+  background: linear-gradient(135deg, rgba(14,92,76,.12), rgba(255,255,255,.75));
+  border: 1px solid rgba(14,92,76,.28);
+}
+.cta h3 { font-family: "Noto Serif SC", serif; margin: 0 0 .45rem; font-size: 1.05rem; }
+.cta p { margin: 0; color: var(--soft); font-size: .9rem; }
+.cta code { font-family: "JetBrains Mono", monospace; font-size: .85em; }
+
+footer {
+  margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--line);
+  font-size: .75rem; color: var(--mute);
+}
+footer code { font-family: "JetBrains Mono", monospace; }
+.nogo { color: var(--mute); font-size: .85rem; }
+.nogo span { display: inline-block; margin: .15rem .35rem .15rem 0;
+  padding: .15rem .4rem; background: rgba(18,26,34,.05); font-size: .78rem; }
+</style>
+</head>
+<body>
+<header class="wrap">
+  <div class="eyebrow">ADR-0029 · 计划评审 · 待你拍板</div>
+  <div class="badge">只读计划 · 尚未改生产代码</div>
+  <h1>相册读权限 → 预览先快后精</h1>
+  <p class="lede">目标是剪映那种「点一下就出图」。Session / 导出仍走本地文件；PhotoKit 只加速首帧。拒绝或 Limited 取不到时，行为与今天一样。</p>
+
+  <div class="goals">
+    <div class="goal">
+      <div class="k">① 冷切图</div>
+      <h2>首帧水印预览变快</h2>
+      <div class="metric">~226<small>ms 今</small> → ≤80<small>ms 目标</small></div>
+      <p>Allow All 且能解析到 PHAsset：系统缩略图 + compose 先上屏，再被 ImageIO 全质量替换。Limited / 拒绝：不劣化。</p>
+    </div>
+    <div class="goal g2">
+      <div class="k">② 拖参</div>
+      <h2>不碰 draft，保住 Source</h2>
+      <div class="metric">~7<small>ms compose</small></div>
+      <p>PhotoKit 不进拖动手势。后台仍用 ImageIO 填 Source，所以拖透明度 / 间距 / 偏移时不该变差。</p>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section>
+    <h2>首帧怎么走</h2>
+    <p class="sub">从上到下试；最后一级永远保留。</p>
+    <div class="ladder">
+      <div class="step"><div class="n">0</div><div><strong>已有 Watermarked 缓存</strong><span>今天就有，命中直接画</span></div></div>
+      <div class="step"><div class="n">1</div><div><strong>已有 Source 占位</strong><span>今天就有</span></div></div>
+      <div class="step new"><div class="n">2</div><div><strong>PhotoKit 快路径（新增）</strong><span>系统 derivative → compose → 立刻上屏；不写 Watermarked 缓存</span></div></div>
+      <div class="step floor"><div class="n">3</div><div><strong>ImageIO 全质量（地板）</strong><span>写 Source + Watermarked，覆盖快路径；拖参依赖这一步</span></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>五阶段</h2>
+    <p class="sub">每阶段可单独回退。Usage 文案跟第一个消费者同批上，避免「声明了却不用」。</p>
+    <div class="phases">
+      <div class="phase">
+        <div class="tag">P1</div>
+        <div>
+          <h3>透传 itemIdentifier</h3>
+          <p>NotificationCenter 多一个可选 <code style="font-family:JetBrains Mono,monospace;font-size:.8em">assetId</code>；内存 registry 记 owned path → 身份。不碰像素、不弹权限。</p>
+          <div class="why">免授权 · 后面每一级的前提</div>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="tag">P2</div>
+        <div>
+          <h3>授权 + PhotoKit producer</h3>
+          <p>Info.plist 读权限文案；Kotlin iosMain 里请求图。默认关，只给真机 bench / 调试开关用。</p>
+          <div class="why">先量再开 · 真机门必需</div>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="tag">P3</div>
+        <div>
+          <h3>冷切图接上快路径</h3>
+          <p>切图时先试 PhotoKit，120 ms 超时就放弃。与 ImageIO 并行；ImageIO 永远有最终话语权。</p>
+          <div class="why">本期主目标 · 达标后默认开</div>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="tag">P4</div>
+        <div>
+          <h3>邻居预热 ±2</h3>
+          <p><code style="font-family:JetBrains Mono,monospace;font-size:.8em">PHCachingImageManager</code> 对齐现有 focus±2；胶片条可选复用同一 producer。</p>
+          <div class="why">P3 改善 &lt;30% 则停</div>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="tag">P5</div>
+        <div>
+          <h3>隐私 / 商店文案</h3>
+          <p>README、政策、Nutrition Label：读权限可选、仅本机预览加速、拒绝不影响功能。</p>
+          <div class="why">上架前清单</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>硬规则（不能破）</h2>
+    <ul class="rules">
+      <li><strong>Session 仍只持有文件路径</strong> — 不用 PHAsset 当真相源</li>
+      <li><strong>导出仍全解本地文件 + 剥 EXIF</strong> — PhotoKit 不出最终成品</li>
+      <li><strong>快路径帧不进 Watermarked 缓存</strong> — 避免永远停在软图</li>
+      <li><strong>不新增 Shared.framework 公开 API</strong> — internal + 现有通知通道</li>
+      <li><strong>身份不落盘</strong> — 只活在内存，dispose 清空</li>
+    </ul>
+    <p class="nogo" style="margin-top:.8rem">本期不做：
+      <span>FFmpeg / libheif</span><span>QL 当主路径</span><span>磁盘缩略图同批</span><span>多 scene</span>
+    </p>
+  </section>
+
+  <section>
+    <h2>权限状态会怎样</h2>
+    <table>
+      <thead><tr><th>状态</th><th>快路径</th><th>你看到的</th></tr></thead>
+      <tbody>
+        <tr><td>全部允许</td><td><span class="pill on">开</span></td><td>首帧明显快，再精修</td></tr>
+        <tr><td>Limited</td><td><span class="pill try">常 miss</span></td><td>与今天一样慢；不卡死</td></tr>
+        <tr><td>拒绝 / 受限</td><td><span class="pill off">关</span></td><td>与今天一样</td></tr>
+        <tr><td>未决定</td><td><span class="pill try">要一次</span></td><td>弹窗期间仍走 ImageIO</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>请你拍板 · 8 问</h2>
+    <p class="sub">可回「LGTM」全收推荐，或说「改 Q3 / Q5 …」</p>
+
+    <div class="q">
+      <div class="num">Q1</div>
+      <h3>首帧能不能先软一点？</h3>
+      <p class="opts">A 接受 degraded 再替换　·　B 只等非 degraded（更慢但只画一次）</p>
+      <div class="rec"><b>荐</b><span>A：接受 + 120 ms 截止 + 截图确认替换不刺眼</span></div>
+    </div>
+    <div class="q">
+      <div class="num">Q2</div>
+      <h3>什么时候要读权限？</h3>
+      <p class="opts">A 第一次真正需要时自动要　·　B 只在关于页手动开</p>
+      <div class="rec"><b>荐</b><span>A：非冷启动；关于页仍留开关</span></div>
+    </div>
+    <div class="q">
+      <div class="num">Q3</div>
+      <h3>真机达标后默认开吗？</h3>
+      <p class="opts">A 默认开 + 可关　·　B 默认关观望一版</p>
+      <div class="rec"><b>荐</b><span>A：默认关等于白弹一次权限</span></div>
+    </div>
+    <div class="q">
+      <div class="num">Q4</div>
+      <h3>先做预览还是胶片条？</h3>
+      <p class="opts">A 预览首帧　·　B 胶片条</p>
+      <div class="rec"><b>荐</b><span>A：对准你的 ①②；胶片条放 P4 可选</span></div>
+    </div>
+    <div class="q">
+      <div class="num">Q5</div>
+      <h3>Limited 用户怎么说？</h3>
+      <p class="opts">A 完全静默　·　B 首次 miss 一次性说明　·　C 反复提示</p>
+      <div class="rec"><b>荐</b><span>B：不说像 bug；反复说像逼授权</span></div>
+    </div>
+    <div class="q">
+      <div class="num">Q6</div>
+      <h3>Picker 回显已选照片？</h3>
+      <p class="opts">A 跟 P1 一起做　·　B 以后再说</p>
+      <div class="rec"><b>荐</b><span>A：身份已经有了，几行 Swift，免授权</span></div>
+    </div>
+    <div class="q">
+      <div class="num">Q7</div>
+      <h3>磁盘缩略图缓存同批？</h3>
+      <p class="opts">A 同批　·　B 另开一期</p>
+      <div class="rec"><b>荐</b><span>B：解决的是第二次冷启动，混在一起无法归因</span></div>
+    </div>
+    <div class="q">
+      <div class="num">Q8</div>
+      <h3>性能日志进 Release？</h3>
+      <p class="opts">A 进（脱敏）　·　B 仅 Debug</p>
+      <div class="rec"><b>荐</b><span>A：只记授权状态 / 命中 / 耗时，无路径无 ID</span></div>
+    </div>
+
+    <div class="cta">
+      <h3>你怎么回</h3>
+      <p>直接回 <code>LGTM</code>，或例如 <code>LGTM，但 Q2 改成 B，Q7 改成 A</code>。确认后我再动 Kotlin / Swift。</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>文案草稿（可后改）</h2>
+    <p class="sub">读权限弹窗 · 中文建议</p>
+    <div class="goal" style="border-left-color:var(--a)">
+      <p style="margin:0;color:var(--ink)">用于更快地显示你选择的照片预览。所有处理都在本机完成，不联网、不上传、不统计。</p>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  完整计划：<code>docs/superpowers/plans/2026-08-15-ios-photokit-preview-fast-path.md</code><br />
+  ADR：<code>docs/adr/0029-ios-photokit-read-for-preview-thumbs.md</code>
+</footer>
+</body>
+</html>
