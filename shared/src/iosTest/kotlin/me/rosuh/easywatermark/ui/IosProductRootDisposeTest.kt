@@ -10,6 +10,7 @@ import me.rosuh.easywatermark.data.repo.IosWatermarkConfigBridge
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.session.IosAppServices
+import me.rosuh.easywatermark.session.IosAssetIdentityRegistry
 import me.rosuh.easywatermark.session.IosSourceStager
 import me.rosuh.easywatermark.session.WatermarkSessionViewModel
 import platform.Foundation.NSFileManager
@@ -17,6 +18,7 @@ import platform.Foundation.NSUUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -73,8 +75,12 @@ class IosProductRootDisposeTest {
             assertTrue(NSFileManager.defaultManager.fileExistsAtPath(staged))
             host.trackOwnedStagedPathForTests(staged)
             assertEquals(setOf(staged), host.ownedStagedPathsForTests())
+            IosAssetIdentityRegistry.resetForTests()
+            IosAssetIdentityRegistry.put(staged, "asset-dispose")
+            assertEquals("asset-dispose", IosAssetIdentityRegistry.get(staged))
 
             host.dispose()
+            assertNull(IosAssetIdentityRegistry.get(staged))
             assertTrue(host.isDisposedForTests())
             val identity = host.previewIdentityForTests()
             assertEquals(null, identity.previewSourcePath)

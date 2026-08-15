@@ -31,24 +31,129 @@ enum ProgressiveImportNotifications {
         static let ok = "ok"
         static let reason = "reason"
         static let requestId = "requestId"
+        static let assetId = "assetId"
+        static let assetIds = "assetIds"
+    }
+
+    static let queryPreselectedAssetIds = Notification.Name(
+        "me.rosuh.easywatermark.progressive.queryPreselectedAssetIds"
+    )
+    static let preselectedAssetIds = Notification.Name(
+        "me.rosuh.easywatermark.progressive.preselectedAssetIds"
+    )
+    static let removeResult = Notification.Name(
+        "me.rosuh.easywatermark.progressive.remove.result"
+    )
+
+    /// Snapshot current Session Ready paths' asset ids via the Host NC observer (no public API).
+    static func currentPreselectedAssetIds() -> [String] {
+        var ids: [String] = []
+        let observer = NotificationCenter.default.addObserver(
+            forName: preselectedAssetIds,
+            object: nil,
+            queue: nil
+        ) { note in
+            let raw = note.userInfo?[Key.assetIds]
+            if let list = raw as? [String] {
+                ids = list
+            } else if let list = raw as? [Any] {
+                ids = list.compactMap { $0 as? String }
+            } else if let list = raw as? NSArray {
+                ids = list.compactMap { $0 as? String }
+            }
+        }
+        NotificationCenter.default.post(name: queryPreselectedAssetIds, object: nil)
+        NotificationCenter.default.removeObserver(observer)
+        return ids.filter { !$0.isEmpty }
     }
 
     /// Posts one owned provisional path and returns `true` only after the Host has adopted it and
     /// published the Ready-only Session selection. Timeout/cancellation are explicitly false.
+    /// `assetId` is omitted from the payload when nil or blank (fixture / no-id path).
     @MainActor
     static func postFileReadyAndAwait(
         generation: UInt64,
         importId: String,
         path: String,
+        assetId: String? = nil,
         timeoutSeconds: TimeInterval = 30
     ) async -> Bool {
         let waiter = FileReadyAckWaiter(
             generation: generation,
             importId: importId,
             path: path,
+            assetId: assetId,
             timeoutSeconds: timeoutSeconds
         )
         return await waiter.wait()
+    }
+
+    /// Ask the Host to drop a Ready slot by Photos asset id. ACK is keyed by requestId.
+    @MainActor
+    static func postRemoveByAssetIdAndAwait(
+        assetId: String,
+        timeoutSeconds: TimeInterval = 15
+    ) async -> Bool {
+        guard !assetId.isEmpty else { return false }
+        let requestId = UUID().uuidString
+        return await withCheckedContinuation { continuation in
+            let box = RemoveAckBox(continuation: continuation)
+            box.observer = NotificationCenter.default.addObserver(
+                forName: removeResult,
+                object: nil,
+                queue: .main
+            ) { note in
+                let info = note.userInfo ?? [:]
+                guard let resultId = info[Key.requestId] as? String, resultId == requestId else {
+                    return
+                }
+                let ok: Bool = {
+                    if let value = info[Key.ok] as? Bool { return value }
+                    if let number = info[Key.ok] as? NSNumber { return number.boolValue }
+                    return false
+                }()
+                box.finish(ok)
+            }
+            NotificationCenter.default.post(
+                name: remove,
+                object: nil,
+                userInfo: [
+                    Key.assetId: assetId,
+                    Key.requestId: requestId,
+                ]
+            )
+            let timeout = DispatchWorkItem { box.finish(false) }
+            box.timeoutWork = timeout
+            DispatchQueue.main.asyncAfter(deadline: .now() + timeoutSeconds, execute: timeout)
+        }
+    }
+}
+
+/// Exactly-once ACK for picker-driven remove-by-assetId.
+private final class RemoveAckBox: @unchecked Sendable {
+    private var finished = false
+    private var continuation: CheckedContinuation<Bool, Never>?
+    var observer: NSObjectProtocol?
+    var timeoutWork: DispatchWorkItem?
+
+    init(continuation: CheckedContinuation<Bool, Never>) {
+        self.continuation = continuation
+    }
+
+    func finish(_ value: Bool) {
+        DispatchQueue.main.async {
+            guard !self.finished else { return }
+            self.finished = true
+            self.timeoutWork?.cancel()
+            self.timeoutWork = nil
+            if let observer = self.observer {
+                NotificationCenter.default.removeObserver(observer)
+            }
+            self.observer = nil
+            let continuation = self.continuation
+            self.continuation = nil
+            continuation?.resume(returning: value)
+        }
     }
 }
 
@@ -60,6 +165,7 @@ private final class FileReadyAckWaiter {
     private let generation: UInt64
     private let importId: String
     private let path: String
+    private let assetId: String?
     private let requestId = UUID().uuidString
     private let timeoutSeconds: TimeInterval
 
@@ -72,11 +178,13 @@ private final class FileReadyAckWaiter {
         generation: UInt64,
         importId: String,
         path: String,
+        assetId: String?,
         timeoutSeconds: TimeInterval
     ) {
         self.generation = generation
         self.importId = importId
         self.path = path
+        self.assetId = assetId
         self.timeoutSeconds = timeoutSeconds
     }
 
@@ -97,15 +205,19 @@ private final class FileReadyAckWaiter {
                         self?.receive(note)
                     }
                 }
+                var userInfo: [String: Any] = [
+                    ProgressiveImportNotifications.Key.generation: generation,
+                    ProgressiveImportNotifications.Key.importId: importId,
+                    ProgressiveImportNotifications.Key.path: path,
+                    ProgressiveImportNotifications.Key.requestId: requestId,
+                ]
+                if let assetId, !assetId.isEmpty {
+                    userInfo[ProgressiveImportNotifications.Key.assetId] = assetId
+                }
                 NotificationCenter.default.post(
                     name: ProgressiveImportNotifications.fileReady,
                     object: nil,
-                    userInfo: [
-                        ProgressiveImportNotifications.Key.generation: generation,
-                        ProgressiveImportNotifications.Key.importId: importId,
-                        ProgressiveImportNotifications.Key.path: path,
-                        ProgressiveImportNotifications.Key.requestId: requestId,
-                    ]
+                    userInfo: userInfo
                 )
                 let timeout = DispatchWorkItem { [weak self] in
                     self?.finish(false)

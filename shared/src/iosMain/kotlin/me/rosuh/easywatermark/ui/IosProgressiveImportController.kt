@@ -24,6 +24,7 @@ import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.render.IosImageIODecoder
 import me.rosuh.easywatermark.session.AppIntent
+import me.rosuh.easywatermark.session.IosAssetIdentityRegistry
 import me.rosuh.easywatermark.session.IosPickGenerationGate
 import me.rosuh.easywatermark.session.IosSourceStager
 import me.rosuh.easywatermark.session.WatermarkSessionViewModel
@@ -158,6 +159,11 @@ internal class IosProgressiveImportController(
             prioritizeImportId = id
             postControl(PRIORITIZE_REQUESTED, id)
         }
+        // Synchronous on the poster thread so Swift can snapshot preselected ids
+        // without a public Shared.framework query API.
+        observers += center.addObserverForName(QUERY_PRESELECTED_ASSET_IDS, null, null) { _ ->
+            handleQueryPreselectedAssetIds()
+        }
     }
 
     fun close() {
@@ -286,6 +292,7 @@ internal class IosProgressiveImportController(
                     appendBaseline = emptyList()
                     pendingFreshCleanupPaths += readyPaths.values.filter(IosSourceStager::isOwnedSourcePath)
                     readyPaths.clear()
+                    IosAssetIdentityRegistry.clear()
                     slots = EditorMediaSlotState.start(
                         importIds = ids,
                         appendTo = emptyList(),
@@ -324,6 +331,7 @@ internal class IosProgressiveImportController(
             return
         }
         val requestId = note.userInfoString(KEY_REQUEST_ID)
+        val assetId = note.userInfoString(KEY_ASSET_ID)
         // Always ACK: body finally + invokeOnCompletion cover pre-entry cancellation of hostScope.
         val ackPosted = AtomicInt(0)
         fun postAckOnce(ok: Boolean, reason: String) {
@@ -342,6 +350,7 @@ internal class IosProgressiveImportController(
             importId = importId,
             provisionalPath = path,
             requestId = requestId,
+            assetId = assetId,
             postAckOnce = ::postAckOnce,
         )
     }
@@ -355,6 +364,7 @@ internal class IosProgressiveImportController(
         importId: String,
         provisionalPath: String,
         requestId: String?,
+        assetId: String?,
         postAckOnce: (ok: Boolean, reason: String) -> Unit,
     ): Job {
         val job = hostScope.launch(start = CoroutineStart.DEFAULT) {
@@ -365,6 +375,7 @@ internal class IosProgressiveImportController(
                         generation = generation,
                         importId = importId,
                         provisionalPath = provisionalPath,
+                        assetId = assetId,
                     )
                 }
                 // Watermark-region priority: finish focus preview BEFORE ACKing Swift, so
@@ -429,6 +440,7 @@ internal class IosProgressiveImportController(
             importId = importId,
             provisionalPath = provisionalPath,
             requestId = requestId,
+            assetId = null,
             postAckOnce = ::postAckOnce,
         )
     }
@@ -437,6 +449,7 @@ internal class IosProgressiveImportController(
         generation: Long,
         importId: String,
         provisionalPath: String,
+        assetId: String? = null,
     ): AdoptOutcome {
         if (closed || !hostAlive()) return AdoptOutcome(AdoptionAck.Disposed)
         if (generation != activeGeneration) return AdoptOutcome(AdoptionAck.StaleGeneration)
@@ -545,6 +558,9 @@ internal class IosProgressiveImportController(
             slots = nextSlots
             // A fresh replacement is now durable; old app-owned Session sources are unreachable.
             if (!appendMode) deletePendingFreshCleanupPaths()
+            if (!assetId.isNullOrBlank()) {
+                IosAssetIdentityRegistry.put(stablePath, assetId)
+            }
             onSlotsChanged(slots)
             me.rosuh.easywatermark.session.ImportTimelineProbe.mark(
                 "session_adopted",
@@ -619,11 +635,55 @@ internal class IosProgressiveImportController(
     }
 
     private fun handleRemove(note: NSNotification?) {
-        if (closed || !hostAlive()) return
-        val importId = note?.userInfoString(KEY_IMPORT_ID) ?: return
-        hostScope.launch {
-            mutationMutex.withLock { removeSlotLocked(importId) }
+        val requestId = note?.userInfoString(KEY_REQUEST_ID)
+        if (closed || !hostAlive()) {
+            postRemoveAck(note, ok = false)
+            return
         }
+        hostScope.launch {
+            val ok = mutationMutex.withLock {
+                val importId = resolveImportIdLocked(note) ?: return@withLock false
+                removeSlotLocked(importId)
+            }
+            if (requestId != null) {
+                postRemoveAck(note, ok)
+            }
+        }
+    }
+
+    private fun resolveImportIdLocked(note: NSNotification?): String? {
+        note?.userInfoString(KEY_IMPORT_ID)?.let { return it }
+        val assetId = note?.userInfoString(KEY_ASSET_ID) ?: return null
+        val path = IosAssetIdentityRegistry.pathFor(assetId) ?: return null
+        return readyPaths.entries.firstOrNull { it.value == path }?.key
+    }
+
+    private fun postRemoveAck(note: NSNotification?, ok: Boolean) {
+        val requestId = note?.userInfoString(KEY_REQUEST_ID) ?: return
+        NSNotificationCenter.defaultCenter.postNotificationName(
+            aName = REMOVE_RESULT,
+            `object` = null,
+            userInfo = mapOf(
+                KEY_REQUEST_ID to requestId,
+                KEY_OK to NSNumber.numberWithInt(if (ok) 1 else 0),
+            ),
+        )
+    }
+
+    private fun handleQueryPreselectedAssetIds() {
+        val ids = if (closed) {
+            emptyList()
+        } else {
+            val paths = session.launchScreenUiStateFlow.value.selectedImageList
+                .map { it.uri.value }
+                .filter { it.isNotBlank() }
+            IosAssetIdentityRegistry.idsForOwnedPaths(paths)
+        }
+        NSNotificationCenter.defaultCenter.postNotificationName(
+            aName = PRESELECTED_ASSET_IDS,
+            `object` = null,
+            userInfo = mapOf(KEY_ASSET_IDS to ids),
+        )
     }
 
     /** Atomic remove: update slots → republish Session (or clear) → drop owned path. */
@@ -667,6 +727,7 @@ internal class IosProgressiveImportController(
             val stillHeld = sessionHeldSourcePaths()
             removedPath
                 ?.takeIf { IosSourceStager.isOwnedSourcePath(it) && it !in stillHeld }
+                ?.also { IosAssetIdentityRegistry.remove(it) }
                 ?.let(IosSourceStager::deleteQuietly)
             postControl(REMOVE_REQUESTED, importId)
             return true
@@ -688,6 +749,7 @@ internal class IosProgressiveImportController(
         readyPaths.remove(importId)
         onSlotsChanged(slots)
         removedPath?.takeIf(IosSourceStager::isOwnedSourcePath)
+            ?.also { IosAssetIdentityRegistry.remove(it) }
             ?.let(IosSourceStager::deleteQuietly)
         postControl(REMOVE_REQUESTED, importId)
         // User-driven remove: rebind watermark for the new focus (no transfer ACK to gate).
@@ -705,6 +767,7 @@ internal class IosProgressiveImportController(
         importId: String,
         provisionalPath: String,
         requestId: String? = null,
+        assetId: String? = null,
     ): AdoptionAck {
         // Never reopen a closed controller from the test seam (mirrors production dispose).
         if (closed) {
@@ -715,7 +778,9 @@ internal class IosProgressiveImportController(
         }
         if (activeGeneration < 0L) activeGeneration = generation
         val outcome = try {
-            mutationMutex.withLock { adoptFileReady(generation, importId, provisionalPath) }
+            mutationMutex.withLock {
+                adoptFileReady(generation, importId, provisionalPath, assetId)
+            }
         } catch (t: Throwable) {
             if (requestId != null) {
                 postAck(
@@ -944,7 +1009,10 @@ internal class IosProgressiveImportController(
     private fun deletePendingFreshCleanupPaths(excluding: Set<String> = emptySet()) {
         val stale = pendingFreshCleanupPaths.filter { it !in excluding }
         pendingFreshCleanupPaths.clear()
-        stale.forEach(IosSourceStager::deleteQuietly)
+        stale.forEach { path ->
+            IosAssetIdentityRegistry.remove(path)
+            IosSourceStager.deleteQuietly(path)
+        }
     }
 
     companion object {
@@ -970,6 +1038,14 @@ internal class IosProgressiveImportController(
         const val KEY_OK = "ok"
         const val KEY_REASON = "reason"
         const val KEY_REQUEST_ID = "requestId"
+        const val KEY_ASSET_ID = "assetId"
+        const val KEY_ASSET_IDS = "assetIds"
+
+        const val QUERY_PRESELECTED_ASSET_IDS =
+            "me.rosuh.easywatermark.progressive.queryPreselectedAssetIds"
+        const val PRESELECTED_ASSET_IDS =
+            "me.rosuh.easywatermark.progressive.preselectedAssetIds"
+        const val REMOVE_RESULT = "me.rosuh.easywatermark.progressive.remove.result"
     }
 }
 

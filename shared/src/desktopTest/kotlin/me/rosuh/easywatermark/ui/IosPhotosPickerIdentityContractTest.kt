@@ -36,25 +36,54 @@ class IosPhotosPickerIdentityContractTest {
     @Test
     fun s1_both_picker_edges_request_current_encoding() {
         val contentView = resolveRepoFile("iosApp/iosApp/ContentView.swift").readText()
+        val pickerHost = resolveRepoFile("iosApp/iosApp/PhotoLibraryPHPicker.swift").readText()
         val code = stripSwiftComments(contentView)
+        val pickerCode = stripSwiftComments(pickerHost)
+
+        assertTrue(
+            "PHPickerViewController" in pickerCode &&
+                "PHPickerConfiguration(photoLibrary: .shared())" in pickerCode,
+            "Main-photo picker must be UIKit PHPickerViewController with photoLibrary: .shared()",
+        )
+        assertTrue(
+            Regex("""preferredAssetRepresentationMode\s*=\s*\.current""").containsMatchIn(pickerCode),
+            "Main-photo PHPicker must set preferredAssetRepresentationMode = .current",
+        )
+        assertTrue(
+            "preselectedAssetIdentifiers" in pickerCode,
+            "Main-photo PHPicker must bind PHPickerConfiguration.preselectedAssetIdentifiers",
+        )
+        assertTrue(
+            Regex("""selectionLimit\s*=\s*50""").containsMatchIn(pickerCode),
+            "Main-photo PHPicker selectionLimit must stay 50",
+        )
+        assertFalse(
+            Regex("""\.photosPicker\s*\([\s\S]*maxSelectionCount\s*:\s*50""").containsMatchIn(code),
+            "Main-photo SwiftUI .photosPicker must not remain; owner A replaced it with UIKit PHPicker",
+        )
 
         val currentEncodingHits = Regex("""preferredItemEncoding\s*:\s*\.current""")
             .findAll(code)
             .count()
         assertEquals(
-            2,
+            1,
             currentEncodingHits,
-            "Both source and icon .photosPicker edges must set preferredItemEncoding: .current " +
+            "Icon .photosPicker must set preferredItemEncoding: .current " +
                 "(found $currentEncodingHits). Silent return to automatic encoding is a fail-closed " +
                 "regression for issue 26 H1.",
         )
 
         // Fail if a photosPicker block still uses only the automatic default on the iOS 17 path:
-        // require the iOS 17 branch to exist and carry .current.
+        // require the iOS 17 branch to exist and carry .current (icon picker).
         assertTrue(
             Regex("""#available\s*\(\s*iOS\s+17\.0""").containsMatchIn(code),
-            "ContentView must gate preferredItemEncoding behind iOS 17 availability " +
+            "ContentView must gate icon preferredItemEncoding behind iOS 17 availability " +
                 "(deployment target remains 16).",
+        )
+        assertTrue(
+            Regex("""isIconPickerPresented""").containsMatchIn(code) &&
+                Regex("""\.photosPicker\s*\(""").containsMatchIn(code),
+            "Icon picker must remain SwiftUI .photosPicker",
         )
     }
 
@@ -125,21 +154,26 @@ class IosPhotosPickerIdentityContractTest {
         )
         // F6: generation frozen at selection onChange, not only inside loadPhotos Task.
         assertTrue(
-            Regex("""onChange\s*\(\s*of:\s*pickedItems\s*\)""").containsMatchIn(contentCode),
-            "photo selection onChange must exist",
+            "handleMainPhotoPickerFinish" in contentCode,
+            "main-photo PHPicker finish handler must exist",
         )
-        val onChangeBlock = contentCode.substringAfter("onChange(of: pickedItems)")
-            .substringBefore("onChange(of: pickedIconItem)")
+        val finishBlock = contentCode.substringAfter("private func handleMainPhotoPickerFinish")
+            .substringBefore("private func applyMainPhotoPickerDiff")
         assertTrue(
-            "photoCommitSerial.beginGeneration" in onChangeBlock,
-            "F6: beginGeneration must run synchronously in pickedItems onChange",
+            "photoCommitSerial.beginGeneration" in finishBlock,
+            "F6: beginGeneration must run synchronously when the main PHPicker finishes",
+        )
+        assertTrue(
+            "oldSet == newSet" in finishBlock ||
+                Regex("""oldSet\s*==\s*newSet""").containsMatchIn(finishBlock),
+            "unchanged PHPicker identifier set (cancel / same selection) must be a no-op",
         )
         assertTrue(
             "nextPhotoGeneration" in gateCode || "IosPickGenerationGate" in gateCode,
             "F14: beginGeneration must issue tokens from Kotlin IosPickGenerationGate",
         )
         assertTrue(
-            "generation:" in onChangeBlock || "generation =" in onChangeBlock ||
+            "generation:" in finishBlock || "generation =" in finishBlock ||
                 "generation: generation" in contentCode,
             "F6: frozen generation must be passed into loadPhotos",
         )
@@ -196,8 +230,16 @@ class IosPhotosPickerIdentityContractTest {
             "Xcode target must compile ProgressiveImportNotifications.swift",
         )
         assertTrue(
+            "PhotoLibraryPHPicker.swift in Sources" in pbx,
+            "Xcode target must compile PhotoLibraryPHPicker.swift",
+        )
+        assertTrue(
             "path = PhotosPickerBatchGate.swift" in pbx,
             "pbxproj must reference PhotosPickerBatchGate.swift",
+        )
+        assertTrue(
+            "path = PhotoLibraryPHPicker.swift" in pbx,
+            "pbxproj must reference PhotoLibraryPHPicker.swift",
         )
     }
 

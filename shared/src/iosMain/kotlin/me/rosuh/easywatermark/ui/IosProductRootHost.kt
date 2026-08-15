@@ -62,6 +62,7 @@ import me.rosuh.easywatermark.render.PreviewResolutionPolicy
 import me.rosuh.easywatermark.render.PreviewWorkingSetBudget
 import me.rosuh.easywatermark.session.AppIntent
 import me.rosuh.easywatermark.session.IosAppServices
+import me.rosuh.easywatermark.session.IosAssetIdentityRegistry
 import me.rosuh.easywatermark.session.IosPickGenerationGate
 import me.rosuh.easywatermark.session.defaultIosAppServices
 import me.rosuh.easywatermark.shared.generated.resources.Res
@@ -651,6 +652,7 @@ class IosProductRootHost(
             }
             ownedStagedPaths.removeAll(toDelete.toSet())
             toDelete.forEach(IosSourceStager::deleteQuietly)
+            IosAssetIdentityRegistry.clear()
         } finally {
             lifecycleLock.unlock()
         }
@@ -711,6 +713,7 @@ class IosProductRootHost(
                     IosSourceStager.deleteQuietly(path)
                 }
             }
+            IosAssetIdentityRegistry.clear()
         } finally {
             lifecycleLock.unlock()
         }

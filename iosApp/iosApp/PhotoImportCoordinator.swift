@@ -42,14 +42,41 @@ private enum PhotoTransferResult: Sendable {
 actor PhotoImportCoordinator {
     static let maxConcurrency = 2
 
+    private struct UncheckedItemProvider: @unchecked Sendable {
+        let raw: NSItemProvider
+    }
+
+    /// One new picker asset to transfer. Either a SwiftUI item (legacy/tests) or a PHPicker provider.
+    struct PickerFileSource: Sendable {
+        let assetId: String?
+        let pickerItem: PhotosPickerItem?
+        let itemProvider: NSItemProvider?
+
+        init(assetId: String?, pickerItem: PhotosPickerItem) {
+            self.assetId = assetId
+            self.pickerItem = pickerItem
+            self.itemProvider = nil
+        }
+
+        init(assetId: String?, itemProvider: NSItemProvider) {
+            self.assetId = assetId
+            self.pickerItem = nil
+            self.itemProvider = itemProvider
+        }
+    }
+
     private struct QueuedItem {
         let importId: String
-        let item: PhotosPickerItem
+        let assetId: String?
+        let item: PhotosPickerItem?
+        let itemProvider: UncheckedItemProvider?
     }
 
     private struct RetrySource {
         var pickerItem: PhotosPickerItem?
+        var itemProvider: UncheckedItemProvider?
         var provisionalPath: String?
+        var assetId: String?
     }
 
     struct BatchResult: Sendable {
@@ -142,18 +169,50 @@ actor PhotoImportCoordinator {
         append: Bool,
         prioritizeFirst: Bool
     ) async -> BatchResult {
+        let sources = items.map { item in
+            PickerFileSource(assetId: item.itemIdentifier, pickerItem: item)
+        }
+        return await importBatch(
+            sources: sources,
+            generation: generation,
+            append: append,
+            prioritizeFirst: prioritizeFirst
+        )
+    }
+
+    func importBatch(
+        sources: [PickerFileSource],
+        generation: UInt64,
+        append: Bool,
+        prioritizeFirst: Bool
+    ) async -> BatchResult {
         guard !closed else {
-            return BatchResult(generation: generation, successCount: 0, failureCount: items.count)
+            return BatchResult(generation: generation, successCount: 0, failureCount: sources.count)
         }
         if let activeGeneration, activeGeneration != generation {
             await cancelGeneration(activeGeneration)
         }
         activeGeneration = generation
-        let importIds = items.indices.map { "gen\(generation)-i\($0)" }
-        pendingByGeneration[generation] = zip(importIds, items).map { QueuedItem(importId: $0, item: $1) }
+        let importIds = sources.indices.map { "gen\(generation)-i\($0)" }
+        pendingByGeneration[generation] = zip(importIds, sources).map { id, source in
+            QueuedItem(
+                importId: id,
+                assetId: source.assetId,
+                item: source.pickerItem,
+                itemProvider: source.itemProvider.map(UncheckedItemProvider.init(raw:))
+            )
+        }
         retrySourcesByGeneration[generation] = Dictionary(
-            uniqueKeysWithValues: zip(importIds, items).map {
-                ($0, RetrySource(pickerItem: $1, provisionalPath: nil))
+            uniqueKeysWithValues: zip(importIds, sources).map { id, source in
+                (
+                    id,
+                    RetrySource(
+                        pickerItem: source.pickerItem,
+                        itemProvider: source.itemProvider.map(UncheckedItemProvider.init(raw:)),
+                        provisionalPath: nil,
+                        assetId: source.assetId
+                    )
+                )
             }
         )
         removedIdsByGeneration[generation] = []
@@ -166,7 +225,7 @@ actor PhotoImportCoordinator {
                 ProgressiveImportNotifications.Key.append: append,
             ]
         )
-        PhotoImportMetrics.event("PickerCallback", generation: generation, importId: "batch:\(items.count)")
+        PhotoImportMetrics.event("PickerCallback", generation: generation, importId: "batch:\(sources.count)")
 
         batchRunningGeneration = generation
         let result = await drainInitialQueue(
@@ -202,12 +261,17 @@ actor PhotoImportCoordinator {
                 importId: importId,
                 path: path
             )
-        } else if let item = source.pickerItem {
+        } else if source.pickerItem != nil || source.itemProvider != nil {
             // Register retry transfers so supersede can cancel them (same path as drainInitialQueue).
             let taskId = UUID()
             let task = Task<PhotoTransferResult, Never> {
                 let value = await Self.transfer(
-                    QueuedItem(importId: importId, item: item),
+                    QueuedItem(
+                        importId: importId,
+                        assetId: source.assetId,
+                        item: source.pickerItem,
+                        itemProvider: source.itemProvider
+                    ),
                     generation: generation,
                     limiter: transferLimiter
                 )
@@ -421,7 +485,8 @@ actor PhotoImportCoordinator {
         let accepted = await ProgressiveImportNotifications.postFileReadyAndAwait(
             generation: generation,
             importId: importId,
-            path: path
+            path: path,
+            assetId: retrySourcesByGeneration[generation]?[importId]?.assetId
         )
         guard isLive(generation: generation, importId: importId) else {
             try? FileManager.default.removeItem(atPath: path)
@@ -474,7 +539,21 @@ actor PhotoImportCoordinator {
         let signpost = PhotoImportMetrics.beginTransfer(generation: generation, importId: queued.importId)
         let result: PhotoTransferResult
         do {
-            guard let transfer = try await queued.item.loadTransferable(type: ImageFileTransfer.self) else {
+            let fileURL: URL
+            if let item = queued.item {
+                guard let transfer = try await item.loadTransferable(type: ImageFileTransfer.self) else {
+                    result = .failed(
+                        importId: queued.importId,
+                        message: "Photos did not provide an image file"
+                    )
+                    PhotoImportMetrics.endTransfer(signpost, generation: generation, importId: queued.importId)
+                    await limiter.release()
+                    return result
+                }
+                fileURL = transfer.fileURL
+            } else if let provider = queued.itemProvider?.raw {
+                fileURL = try await Self.copyProviderFile(provider)
+            } else {
                 result = .failed(
                     importId: queued.importId,
                     message: "Photos did not provide an image file"
@@ -484,10 +563,10 @@ actor PhotoImportCoordinator {
                 return result
             }
             if Task.isCancelled {
-                try? FileManager.default.removeItem(at: transfer.fileURL)
+                try? FileManager.default.removeItem(at: fileURL)
                 result = .failed(importId: queued.importId, message: "Photo import was cancelled")
             } else {
-                result = .ready(importId: queued.importId, provisionalPath: transfer.fileURL.path)
+                result = .ready(importId: queued.importId, provisionalPath: fileURL.path)
             }
         } catch is CancellationError {
             result = .failed(importId: queued.importId, message: "Photo import was cancelled")
@@ -497,6 +576,44 @@ actor PhotoImportCoordinator {
         PhotoImportMetrics.endTransfer(signpost, generation: generation, importId: queued.importId)
         await limiter.release()
         return result
+    }
+
+    /// Copy the Photos item provider file to `ewm_import_provisional_*` before the URL is revoked.
+    private static func copyProviderFile(_ provider: NSItemProvider) async throws -> URL {
+        let typeIdentifier = provider.registeredTypeIdentifiers.first { identifier in
+            UTType(identifier)?.conforms(to: .image) == true
+        } ?? UTType.image.identifier
+        return try await withCheckedThrowingContinuation { continuation in
+            provider.loadFileRepresentation(forTypeIdentifier: typeIdentifier) { url, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                guard let url else {
+                    continuation.resume(
+                        throwing: NSError(
+                            domain: "me.rosuh.easywatermark",
+                            code: 1,
+                            userInfo: [NSLocalizedDescriptionKey: "Photos did not provide an image file"]
+                        )
+                    )
+                    return
+                }
+                let destination = FileManager.default.temporaryDirectory.appendingPathComponent(
+                    "ewm_import_provisional_" + UUID().uuidString,
+                    isDirectory: false
+                )
+                do {
+                    if FileManager.default.fileExists(atPath: destination.path) {
+                        try FileManager.default.removeItem(at: destination)
+                    }
+                    try FileManager.default.copyItem(at: url, to: destination)
+                    continuation.resume(returning: destination)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
     }
 }
 

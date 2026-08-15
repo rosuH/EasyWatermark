@@ -14,6 +14,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import me.rosuh.easywatermark.render.IosByteArrayInterop
+import me.rosuh.easywatermark.session.IosAssetIdentityRegistry
 import me.rosuh.easywatermark.session.IosPickGenerationGate
 import me.rosuh.easywatermark.session.IosSourceStager
 import me.rosuh.easywatermark.session.defaultIosAppServices
@@ -30,6 +31,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -48,11 +50,13 @@ class IosProgressiveNotificationBridgeTest {
     fun setUp() {
         kotlinx.coroutines.Dispatchers.setMain(mainDispatcher)
         IosPickGenerationGate.resetForTests()
+        IosAssetIdentityRegistry.resetForTests()
     }
 
     @AfterTest
     fun tearDown() {
         temporaryPaths.forEach(IosSourceStager::deleteQuietly)
+        IosAssetIdentityRegistry.resetForTests()
         kotlinx.coroutines.Dispatchers.resetMain()
     }
 
@@ -122,6 +126,12 @@ class IosProgressiveNotificationBridgeTest {
                 assertTrue(ack.await(), "fileReadyResult must report ok=true after Session publication")
                 assertEquals(1, services.session.launchScreenUiStateFlow.value.selectedImageList.size)
                 assertTrue(controller.slots.slot(importId) is EditorMediaSlot.Ready)
+                val ownedWithoutId = services.session.launchScreenUiStateFlow.value
+                    .selectedImageList.first().uri.value
+                assertNull(
+                    IosAssetIdentityRegistry.get(ownedWithoutId),
+                    "fileReady without assetId must not write the identity registry",
+                )
 
                 controller.close()
                 center.postNotificationName(
@@ -140,6 +150,81 @@ class IosProgressiveNotificationBridgeTest {
             } finally {
                 center.removeObserver(observer)
                 controller.close()
+            }
+        }
+
+    @Test
+    fun fileReadyWithAssetId_writesRegistryAfterSuccessfulAdopt() =
+        runTest(mainDispatcher) {
+            val services = defaultIosAppServices()
+            services.session.dispatchAndAwait(me.rosuh.easywatermark.session.AppIntent.NavigateBack)
+
+            val controller = IosProgressiveImportController(
+                session = services.session,
+                waterMarkProvider = { services.waterMarkRepo.waterMark.first() },
+                hostScope = CoroutineScope(SupervisorJob() + mainDispatcher),
+                hostAlive = { true },
+                notificationDeliveryQueue = null,
+            )
+            val center = NSNotificationCenter.defaultCenter
+            val generation = IosPickGenerationGate.nextPhotoGeneration()
+            val importId = "with-id"
+            val requestId = "request-with-id"
+            val assetId = "PHAsset-test-1"
+            val provisional = writeProvisionalJpeg()
+            val ack = CompletableDeferred<Boolean>()
+            val observer = center.addObserverForName(
+                IosProgressiveImportController.FILE_READY_RESULT,
+                null,
+                null,
+            ) { note ->
+                val info = note?.userInfo ?: return@addObserverForName
+                if (info[IosProgressiveImportController.KEY_REQUEST_ID]?.toString() == requestId) {
+                    val okRaw = info[IosProgressiveImportController.KEY_OK]
+                    val ok = when (okRaw) {
+                        is Boolean -> okRaw
+                        is Number -> okRaw.toInt() != 0
+                        else -> false
+                    }
+                    ack.complete(ok)
+                }
+            }
+            try {
+                controller.installObservers()
+                center.postNotificationName(
+                    IosProgressiveImportController.BEGIN,
+                    `object` = null,
+                    userInfo = mapOf(
+                        IosProgressiveImportController.KEY_GENERATION to
+                            NSNumber.numberWithLong(generation),
+                        IosProgressiveImportController.KEY_IMPORT_IDS to listOf(importId),
+                        IosProgressiveImportController.KEY_APPEND to false,
+                    ),
+                )
+                center.postNotificationName(
+                    IosProgressiveImportController.FILE_READY,
+                    `object` = null,
+                    userInfo = mapOf(
+                        IosProgressiveImportController.KEY_GENERATION to
+                            NSNumber.numberWithLong(generation),
+                        IosProgressiveImportController.KEY_IMPORT_ID to importId,
+                        IosProgressiveImportController.KEY_PATH to provisional,
+                        IosProgressiveImportController.KEY_REQUEST_ID to requestId,
+                        IosProgressiveImportController.KEY_ASSET_ID to assetId,
+                    ),
+                )
+                assertTrue(ack.await())
+                val owned = services.session.launchScreenUiStateFlow.value
+                    .selectedImageList.first().uri.value
+                assertTrue(owned.contains("ewm_src_"))
+                assertEquals(assetId, IosAssetIdentityRegistry.get(owned))
+                assertEquals(owned, IosAssetIdentityRegistry.pathFor(assetId))
+            } finally {
+                center.removeObserver(observer)
+                controller.close()
+                services.session.dispatchAndAwait(
+                    me.rosuh.easywatermark.session.AppIntent.NavigateBack,
+                )
             }
         }
 

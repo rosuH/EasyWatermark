@@ -150,7 +150,6 @@ struct ContentView: View {
     @StateObject private var edge = WatermarkWorkflow()
     @StateObject private var productRoot = IosProductRootBox()
     /// Multi-select source photos (Launch + Editor add-more). Icon watermark stays single.
-    @State private var pickedItems: [PhotosPickerItem] = []
     @State private var isPhotoPickerPresented = false
     @State private var pickedIconItem: PhotosPickerItem?
     @State private var isIconPickerPresented = false
@@ -239,16 +238,21 @@ struct ContentView: View {
             productRoot.trimHostCaches()
         }
 
+        // Main-photo picker is UIKit PHPicker so preselectedAssetIdentifiers can bind (ADR-0029 P1).
+        // Icon watermark stays SwiftUI PhotosPicker (issue 26 H1 encoding contract).
+        let withMainPhotoPicker = withMemoryTrim.sheet(isPresented: $isPhotoPickerPresented) {
+            PhotoLibraryPHPicker(
+                preselectedAssetIdentifiers: ProgressiveImportNotifications.currentPreselectedAssetIds(),
+                onFinish: { results in
+                    isPhotoPickerPresented = false
+                    handleMainPhotoPickerFinish(results)
+                },
+            )
+            .ignoresSafeArea()
+        }
+
         if #available(iOS 17.0, *) {
-            withMemoryTrim
-                .photosPicker(
-                    isPresented: $isPhotoPickerPresented,
-                    selection: $pickedItems,
-                    maxSelectionCount: 50,
-                    matching: .images,
-                    preferredItemEncoding: .current,
-                    photoLibrary: .shared(),
-                )
+            withMainPhotoPicker
                 .photosPicker(
                     isPresented: $isIconPickerPresented,
                     selection: $pickedIconItem,
@@ -257,14 +261,7 @@ struct ContentView: View {
                     photoLibrary: .shared(),
                 )
         } else {
-            withMemoryTrim
-                .photosPicker(
-                    isPresented: $isPhotoPickerPresented,
-                    selection: $pickedItems,
-                    maxSelectionCount: 50,
-                    matching: .images,
-                    photoLibrary: .shared(),
-                )
+            withMainPhotoPicker
                 .photosPicker(
                     isPresented: $isIconPickerPresented,
                     selection: $pickedIconItem,
@@ -286,26 +283,6 @@ struct ContentView: View {
             productionContent
 #endif
         }
-        // iOS 16-compatible onChange (single-parameter); multi PhotosPicker selection batch.
-        // F6: freeze generation + append intent synchronously at the selection event, then load async.
-        .onChange(of: pickedItems) { newItems in
-            guard !newItems.isEmpty else { return }
-            let batch = newItems
-            let generation = photoCommitSerial.beginGeneration(edge: .photo)
-            let frozenAppend = productRoot.host?.isInEditor() ?? false
-            // Clear so re-selecting the same set can fire again.
-            pickedItems = []
-            Task {
-                // Do not let the previous FIFO batch continue to occupy Photos transfers while
-                // this newer picker result waits for the commit lane.
-                await photoImportCoordinator.supersede(with: generation)
-                await loadPhotos(
-                    batch,
-                    generation: generation,
-                    frozenAppend: frozenAppend,
-                )
-            }
-        }
         // F6: icon generation frozen at selection event (not inside a later-scheduled task body start).
         .onChange(of: pickedIconItem) { newItem in
             guard let item = newItem else { return }
@@ -325,7 +302,6 @@ struct ContentView: View {
     /// UI-test fixture seam (S4d-58 / E14): bypass PHPicker cell selection only; real session export.
     private func runUITestFixtureIfRequested() async {
         guard ProcessInfo.processInfo.arguments.contains("-uiTestFixtureImage") else { return }
-        guard pickedItems.isEmpty else { return }
         // Host is created in makeUIViewController; wait briefly if first frame not ready.
         for _ in 0..<50 {
             if productRoot.host != nil { break }
@@ -365,6 +341,82 @@ struct ContentView: View {
     private func runUITestFixtureIfRequested() async {}
 #endif
 
+    /// PHPicker finished. Unchanged identifier set (including cancel) is a no-op.
+    /// Still-selected preselected assets have empty item providers (WWDC21) — reuse owned paths.
+    private func handleMainPhotoPickerFinish(_ results: [PHPickerResult]) {
+        let oldIds = ProgressiveImportNotifications.currentPreselectedAssetIds()
+        let newIds = results.compactMap(\.assetIdentifier)
+        let oldSet = Set(oldIds)
+        let newSet = Set(newIds)
+        if oldSet == newSet {
+            return
+        }
+        let addedIds = newIds.filter { !oldSet.contains($0) }
+        let removedIds = oldIds.filter { !newSet.contains($0) }
+        let keptIds = newIds.filter { oldSet.contains($0) }
+        let addedSources: [PhotoImportCoordinator.PickerFileSource] = results.compactMap { result in
+            let id = result.assetIdentifier
+            let isAdded: Bool = {
+                if let id { return addedIds.contains(id) }
+                return !result.itemProvider.registeredTypeIdentifiers.isEmpty
+            }()
+            guard isAdded else { return nil }
+            guard !result.itemProvider.registeredTypeIdentifiers.isEmpty else { return nil }
+            return PhotoImportCoordinator.PickerFileSource(
+                assetId: id,
+                itemProvider: result.itemProvider
+            )
+        }
+        let generation = photoCommitSerial.beginGeneration(edge: .photo)
+        let inEditor = productRoot.host?.isInEditor() ?? false
+        let frozenAppend = inEditor && !keptIds.isEmpty
+        Task {
+            await photoImportCoordinator.supersede(with: generation)
+            await applyMainPhotoPickerDiff(
+                addedSources: addedSources,
+                removedIds: removedIds,
+                keptIsEmpty: keptIds.isEmpty,
+                generation: generation,
+                frozenAppend: frozenAppend,
+            )
+        }
+    }
+
+    private func applyMainPhotoPickerDiff(
+        addedSources: [PhotoImportCoordinator.PickerFileSource],
+        removedIds: [String],
+        keptIsEmpty: Bool,
+        generation: UInt64,
+        frozenAppend: Bool,
+    ) async {
+        if keptIsEmpty {
+            if addedSources.isEmpty {
+                await removePickedAssetIds(removedIds)
+            } else {
+                await loadPhotos(
+                    addedSources,
+                    generation: generation,
+                    frozenAppend: false,
+                )
+            }
+            return
+        }
+        await removePickedAssetIds(removedIds)
+        if !addedSources.isEmpty {
+            await loadPhotos(
+                addedSources,
+                generation: generation,
+                frozenAppend: true,
+            )
+        }
+    }
+
+    private func removePickedAssetIds(_ assetIds: [String]) async {
+        for assetId in assetIds {
+            _ = await ProgressiveImportNotifications.postRemoveByAssetIdAndAwait(assetId: assetId)
+        }
+    }
+
     /// Load selected photos (path-first progressive import).
     ///
     /// UX sequence:
@@ -375,10 +427,10 @@ struct ContentView: View {
     ///    Session independently (order preserved). Filmstrip grows by Ready cells only.
     /// 4. Generation gate + commit serial still drop superseded batches (F5/F6).
     ///
-    /// - Parameter generation: frozen at selection-change edge (F6), not at Task start.
-    /// - Parameter frozenAppend: in-editor intent frozen with that same selection event.
+    /// - Parameter generation: frozen at picker-finish edge (F6), not at Task start.
+    /// - Parameter frozenAppend: in-editor intent frozen with that same picker-finish event.
     private func loadPhotos(
-        _ items: [PhotosPickerItem],
+        _ sources: [PhotoImportCoordinator.PickerFileSource],
         generation: UInt64,
         frozenAppend: Bool,
     ) async {
@@ -413,7 +465,7 @@ struct ContentView: View {
                     return
                 }
                 let result = await photoImportCoordinator.importBatch(
-                    items: items,
+                    sources: sources,
                     generation: generation,
                     append: frozenAppend,
                     prioritizeFirst: true

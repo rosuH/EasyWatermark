@@ -18,6 +18,7 @@
 		EW000000000000000000004C /* PhotosPickerBatchGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW000000000000000000003C /* PhotosPickerBatchGate.swift */; };
 		EW000000000000000000004D /* PhotoImportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW000000000000000000003D /* PhotoImportCoordinator.swift */; };
 		EW000000000000000000004E /* ProgressiveImportNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW000000000000000000003E /* ProgressiveImportNotifications.swift */; };
+		EW000000000000000000004F /* PhotoLibraryPHPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW000000000000000000003F /* PhotoLibraryPHPicker.swift */; };
 		EW0000000000000000000072 /* PickerFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000071 /* PickerFlowUITests.swift */; };
 		EW0000000000000000000092 /* ewm-db-ch.db in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000090 /* ewm-db-ch.db */; };
 		EW0000000000000000000093 /* ewm-db-eng.db in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000091 /* ewm-db-eng.db */; };
@@ -50,6 +51,7 @@
 		EW000000000000000000003C /* PhotosPickerBatchGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotosPickerBatchGate.swift; sourceTree = "<group>"; };
 		EW000000000000000000003D /* PhotoImportCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoImportCoordinator.swift; sourceTree = "<group>"; };
 		EW000000000000000000003E /* ProgressiveImportNotifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressiveImportNotifications.swift; sourceTree = "<group>"; };
+		EW000000000000000000003F /* PhotoLibraryPHPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLibraryPHPicker.swift; sourceTree = "<group>"; };
 		EW0000000000000000000070 /* iosAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iosAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		EW0000000000000000000071 /* PickerFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickerFlowUITests.swift; sourceTree = "<group>"; };
 		EW0000000000000000000090 /* ewm-db-ch.db */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ewm-db-ch.db"; sourceTree = "<group>"; };
@@ -97,6 +99,7 @@
 				EW00000000000000000000F1 /* PhotoTransferLimiter.swift */,
 				EW00000000000000000000E1 /* TransferTaskHandleRegistry.swift */,
 				EW000000000000000000003E /* ProgressiveImportNotifications.swift */,
+				EW000000000000000000003F /* PhotoLibraryPHPicker.swift */,
 				EW000000000000000000003B /* Info.plist */,
 				EW00000000000000000000B2 /* InfoPlist.strings */,
 				EW00000000000000000000B0 /* Assets.xcassets */,
@@ -282,6 +285,7 @@
 				EW00000000000000000000F2 /* PhotoTransferLimiter.swift in Sources */,
 				EW00000000000000000000E2 /* TransferTaskHandleRegistry.swift in Sources */,
 				EW000000000000000000004E /* ProgressiveImportNotifications.swift in Sources */,
+				EW000000000000000000004F /* PhotoLibraryPHPicker.swift in Sources */,
 				EW0000000000000000000048 /* KotlinInterop.swift in Sources */,
 				EW0000000000000000000049 /* WatermarkWorkflow.swift in Sources */,
 				EW000000000000000000004A /* ImageExport.swift in Sources */,
