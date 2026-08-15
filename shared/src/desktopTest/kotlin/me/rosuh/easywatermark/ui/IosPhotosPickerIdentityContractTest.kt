@@ -215,26 +215,24 @@ class IosPhotosPickerIdentityContractTest {
     }
 
     @Test
-    fun p2_product_host_switch_path_does_not_call_photokit() {
+    fun p3_switch_path_may_paint_library_derivative_but_never_compose_it() {
         val host = resolveRepoFile(
             "shared/src/iosMain/kotlin/me/rosuh/easywatermark/ui/IosProductRootHost.kt",
         ).readText()
-        val onImageStart = host.indexOf("onImageSelected =")
-        val bindStart = host.indexOf("private suspend fun bindProgressiveFocus")
-        assertTrue(onImageStart >= 0 && bindStart >= 0)
-        val onImage = host.substring(onImageStart, (onImageStart + 2500).coerceAtMost(host.length))
-        val bind = host.substring(bindStart, (bindStart + 3500).coerceAtMost(host.length))
-        assertFalse("PHImageManager" in onImage)
-        assertFalse("IosPhotoKitImageSource" in onImage)
-        assertFalse("IosPhotoLibraryAccess" in onImage)
-        assertFalse("requestOnceIfNeeded" in onImage)
-        assertFalse("PHImageManager" in bind)
-        assertFalse("IosPhotoKitImageSource" in bind)
-        assertFalse("IosPhotoLibraryAccess" in bind)
-        assertTrue(
-            "IosDevicePerfBench.photoKitRequested" in host,
-            "PhotoKit bench entry may exist; production switch path must stay PhotoKit-free",
+        val helperStart = host.indexOf("private suspend fun tryPaintLibraryDerivative")
+        assertTrue(helperStart >= 0, "P3 must own tryPaintLibraryDerivative")
+        val helper = host.substring(helperStart, (helperStart + 2200).coerceAtMost(host.length))
+        assertTrue("IosPhotoKitImageSource" in helper || "photoKitFastPathForTests" in helper)
+        assertFalse(
+            "renderWatermarked" in helper,
+            "Q1=B: PhotoKit first paint must not compose a watermark",
         )
+        assertFalse("IosPreviewPurpose.Watermarked" in helper)
+        assertFalse("IosPreviewPurpose.SourcePlaceholder" in helper)
+        assertTrue("sourceFastPathKey" in helper)
+        assertTrue("tryPaintLibraryDerivative" in host.substringAfter("onImageSelected ="))
+        assertTrue("tryPaintLibraryDerivative" in host.substringAfter("private suspend fun bindProgressiveFocus"))
+        assertFalse("PHImageManager" in helper)
         val plist = resolveRepoFile("iosApp/iosApp/Info.plist").readText()
         assertTrue("NSPhotoLibraryUsageDescription" in plist)
         assertTrue("NSPhotoLibraryAddUsageDescription" in plist)

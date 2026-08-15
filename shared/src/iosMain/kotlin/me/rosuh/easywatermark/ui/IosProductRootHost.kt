@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -19,6 +21,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asComposeImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -56,6 +60,7 @@ import me.rosuh.easywatermark.render.IosPreviewImageRepository
 import me.rosuh.easywatermark.render.IosPreviewKey
 import me.rosuh.easywatermark.render.IosPreviewBench
 import me.rosuh.easywatermark.render.IosPreviewPurpose
+import me.rosuh.easywatermark.render.IosPhotoKitImageSource
 import me.rosuh.easywatermark.render.IosPreviewRaster
 import me.rosuh.easywatermark.render.IosWatermarkIconCache
 import me.rosuh.easywatermark.render.PreviewResolutionPolicy
@@ -63,6 +68,7 @@ import me.rosuh.easywatermark.render.PreviewWorkingSetBudget
 import me.rosuh.easywatermark.session.AppIntent
 import me.rosuh.easywatermark.session.IosAppServices
 import me.rosuh.easywatermark.session.IosAssetIdentityRegistry
+import me.rosuh.easywatermark.session.IosPhotoLibraryAccess
 import me.rosuh.easywatermark.session.IosPickGenerationGate
 import me.rosuh.easywatermark.session.defaultIosAppServices
 import me.rosuh.easywatermark.shared.generated.resources.Res
@@ -98,6 +104,8 @@ import me.rosuh.easywatermark.ui.theme.AppTheme
 import me.rosuh.easywatermark.ui.theme.ContentEditorTheme
 import me.rosuh.easywatermark.ui.theme.ContentEditorThemeHost
 import me.rosuh.easywatermark.ui.theme.ProvideMotionPolicy
+import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
+import me.rosuh.easywatermark.ui.theme.motionDurationMs
 import org.jetbrains.compose.resources.stringResource
 import platform.Foundation.NSData
 import platform.Foundation.NSFileManager
@@ -274,7 +282,13 @@ class IosProductRootHost(
     }
     /** Current visible bitmap is not a second cache; identity marks whether it is watermarked. */
     private var watermarkedPreviewSourcePath by mutableStateOf<String?>(null)
+    /** Unwatermarked Library derivative underlay (ADR-0029 Q1=B). Not a cache identity. */
+    private var libraryDerivativeBitmap by mutableStateOf<ImageBitmap?>(null)
+    private var libraryDerivativePath by mutableStateOf<String?>(null)
     private var previewGen: Int = 0
+    private val photoKitResolveFailedIds = linkedSetOf<String>()
+    private var photoKitFastPathForTests: (suspend (assetId: String, targetPx: Int) -> ImageBitmap?)? =
+        null
     /** Once-per-generation timeline marks for first visible pixels / completed preview. */
     private var markedFirstFilmstripPixels = false
     private var markedFirstWatermarkedPreview = false
@@ -370,6 +384,12 @@ class IosProductRootHost(
         val placeholderCachePaths: Set<String>,
     )
 
+    internal fun installPhotoKitFastPathForTests(
+        producer: (suspend (assetId: String, targetPx: Int) -> ImageBitmap?)?,
+    ) {
+        photoKitFastPathForTests = producer
+    }
+
     /** Test-only read of host preview identity (wm/placeholder path caches). */
     internal fun previewIdentityForTests(): PreviewIdentitySnapshot {
         val snapshot = previewImages.snapshotForTestsImmediate()
@@ -382,6 +402,11 @@ class IosProductRootHost(
                 .filter { it.purpose == IosPreviewPurpose.SourcePlaceholder }
                 .mapTo(linkedSetOf()) { it.ownedPath },
         )
+    }
+
+    internal fun watermarkedCachedSizeForTests(path: String): Pair<Int, Int>? {
+        val bmp = previewImages.peekCached(watermarkedPreviewKey(path, committedPreviewBucket))
+        return bmp?.let { it.width to it.height }
     }
 
     /** Test-only: whether [dispose] has completed at least once. */
@@ -496,6 +521,10 @@ class IosProductRootHost(
             previewBitmap = hit
             previewSourcePath = path
             watermarkedPreviewSourcePath = null
+        }
+        val capturedGen = previewGen
+        hostScope.launch {
+            tryPaintLibraryDerivative(path, capturedGen)
         }
         previewGen += 1
         val gen = previewGen
@@ -614,6 +643,7 @@ class IosProductRootHost(
         previewBitmap = null
         previewSourcePath = null
         watermarkedPreviewSourcePath = null
+        clearLibraryDerivative()
         previewGen += 1
         previewImages.clearFromOwner()
         IosWatermarkIconCache.invalidate()
@@ -639,6 +669,8 @@ class IosProductRootHost(
             previewBitmap = null
             previewSourcePath = null
             watermarkedPreviewSourcePath = null
+            clearLibraryDerivative()
+            photoKitResolveFailedIds.clear()
             outputPath = null
             previewGen += 1
             previewImages.clearFromOwner()
@@ -689,6 +721,8 @@ class IosProductRootHost(
             iconBytes = null
             previewBitmap = null
             previewSourcePath = null
+            clearLibraryDerivative()
+            photoKitResolveFailedIds.clear()
             outputPath = null
             statusLine = ""
             isBusy = false
@@ -728,6 +762,9 @@ class IosProductRootHost(
          * G4/H2 host mirrors of [IosPreviewImageRepository] production caps (R1 2026-08-12).
          * Keep in lockstep with repository companion — tests assert host constants.
          */
+        const val PHOTO_KIT_FIRST_PAINT_DEADLINE_MS: Long = 120L
+        const val LIBRARY_DERIVATIVE_CROSSFADE_MS: Int = 200
+
         const val WM_PREVIEW_CACHE_MAX: Int =
             IosPreviewImageRepository.DEFAULT_WATERMARKED_ENTRIES_MAX
         /** G4: source-only placeholder cache entry cap. */
@@ -1053,13 +1090,63 @@ class IosProductRootHost(
                                     .testTag("sharedComposeWatermarkPreview"),
                             ) {
                                 val bmp = displayPreview
+                                val libraryBmp = libraryDerivativeBitmap
+                                val libraryPath = libraryDerivativePath
+                                val fadeMs = motionDurationMs(
+                                    currentMotionPolicy(),
+                                    LIBRARY_DERIVATIVE_CROSSFADE_MS,
+                                )
+                                val overlayAlpha = remember { Animatable(1f) }
+                                LaunchedEffect(
+                                    libraryPath,
+                                    watermarkedPreviewSourcePath,
+                                    fadeMs,
+                                ) {
+                                    val wmPath = watermarkedPreviewSourcePath
+                                    if (
+                                        libraryBmp != null &&
+                                        libraryPath != null &&
+                                        wmPath == libraryPath
+                                    ) {
+                                        if (fadeMs <= 0) {
+                                            overlayAlpha.snapTo(1f)
+                                            clearLibraryDerivative()
+                                        } else {
+                                            overlayAlpha.snapTo(0f)
+                                            overlayAlpha.animateTo(
+                                                1f,
+                                                animationSpec = tween(durationMillis = fadeMs),
+                                            )
+                                            if (watermarkedPreviewSourcePath == libraryPath) {
+                                                clearLibraryDerivative()
+                                            }
+                                        }
+                                    } else {
+                                        overlayAlpha.snapTo(1f)
+                                    }
+                                }
                                 if (bmp != null) {
-                                    Image(
+                                    Box(Modifier.fillMaxSize()) {
+                                        if (
+                                            libraryBmp != null &&
+                                            libraryPath == previewSourcePath
+                                        ) {
+                                            Image(
+                                                bitmap = libraryBmp,
+                                                contentDescription = null,
+                                                contentScale = ContentScale.Fit,
+                                                modifier = Modifier.fillMaxSize(),
+                                            )
+                                        }
+                                        Image(
                                         bitmap = bmp,
                                         contentDescription = "Watermarked preview",
                                         contentScale = ContentScale.Fit,
                                         modifier = Modifier
                                             .fillMaxSize()
+                                            .graphicsLayer {
+                                                alpha = overlayAlpha.value
+                                            }
                                             .clampPreviewOffsetDrag(
                                                 enabled = !isBusy &&
                                                     dragItem != null &&
@@ -1153,6 +1240,7 @@ class IosProductRootHost(
                                                 },
                                             ),
                                     )
+                                    }
                                 }
                                 // Silent empty — never show "Loading…" in the top-left.
                                 // Failures stay out of the chrome (statusLine is diagnostic only).
@@ -1293,6 +1381,12 @@ class IosProductRootHost(
                                         watermarkedPreviewSourcePath = null
                                     }
                                     switchBench.mark("placeholder")
+
+                                    // 2b) Unwatermarked Library derivative in parallel with ImageIO.
+                                    val capturedGen = previewGen
+                                    hostScope.launch {
+                                        tryPaintLibraryDerivative(path, capturedGen)
+                                    }
 
                                     // 3) Full watermarked preview (in-memory, no PNG encode)
                                     previewGen += 1
@@ -1705,29 +1799,42 @@ class IosProductRootHost(
                 previewSourcePath = focusPath
                 watermarkedPreviewSourcePath = null
             }
-        } else {
-            // 1) Import: watermark region — placeholder first (may decode).
-            val placeholder = runCatching {
-                previewImages.load(sourcePreviewKey(focusPath, previewBucket)) {
-                    withContext(Dispatchers.Default) {
-                        IosPreviewRaster.decodeSourcePlaceholder(
-                            focusPath,
-                            maxEdgePx = previewBucket,
-                        )
-                    }
+            if (
+                previewImages.peekCached(watermarkedPreviewKey(focusPath, previewBucket)) == null &&
+                previewImages.peekCached(sourcePreviewKey(focusPath, previewBucket)) == null
+            ) {
+                val capturedGen = previewGen
+                hostScope.launch {
+                    tryPaintLibraryDerivative(focusPath, capturedGen)
                 }
-            }.getOrNull()
-            if (disposed) return
-            showEditor = true
-            if (placeholder != null) {
-                previewBitmap = placeholder
-                previewSourcePath = focusPath
-                watermarkedPreviewSourcePath = null
-                me.rosuh.easywatermark.session.ImportTimelineProbe.mark(
-                    "first_visible_placeholder",
-                    pickGen,
-                    "focus",
-                )
+            }
+        } else {
+            val capturedGen = previewGen
+            val paintedLibrary = tryPaintLibraryDerivative(focusPath, capturedGen)
+            if (!paintedLibrary) {
+                // 1) Import: watermark region — placeholder first (may decode).
+                val placeholder = runCatching {
+                    previewImages.load(sourcePreviewKey(focusPath, previewBucket)) {
+                        withContext(Dispatchers.Default) {
+                            IosPreviewRaster.decodeSourcePlaceholder(
+                                focusPath,
+                                maxEdgePx = previewBucket,
+                            )
+                        }
+                    }
+                }.getOrNull()
+                if (disposed) return
+                showEditor = true
+                if (placeholder != null) {
+                    previewBitmap = placeholder
+                    previewSourcePath = focusPath
+                    watermarkedPreviewSourcePath = null
+                    me.rosuh.easywatermark.session.ImportTimelineProbe.mark(
+                        "first_visible_placeholder",
+                        pickGen,
+                        "focus",
+                    )
+                }
             }
         }
 
@@ -2247,7 +2354,59 @@ class IosProductRootHost(
         previewBitmap = hit
         previewSourcePath = path
         watermarkedPreviewSourcePath = path
+        clearLibraryDerivative()
         showEditor = true
+        return true
+    }
+
+    private fun clearLibraryDerivative() {
+        libraryDerivativeBitmap = null
+        libraryDerivativePath = null
+    }
+
+    private fun sourceFastPathKey(path: String, bucket: Int = committedPreviewBucket) =
+        IosPreviewKey(path, bucket, IosPreviewPurpose.SourceFastPath)
+
+    /**
+     * ADR-0029 Q1=B: paint an unwatermarked Library derivative into [previewBitmap].
+     * Does not bump [previewGen]. Does not write SourcePlaceholder or Watermarked caches.
+     * Does not call [IosPreviewRaster.renderWatermarked].
+     */
+    private suspend fun tryPaintLibraryDerivative(path: String, capturedGen: Int): Boolean {
+        if (disposed || path.isBlank()) return false
+        val assetId = IosAssetIdentityRegistry.get(path) ?: return false
+        if (assetId in photoKitResolveFailedIds) return false
+        val bitmap = photoKitFastPathForTests?.let { inject ->
+            inject(assetId, committedPreviewBucket)
+        } ?: run {
+            val status = IosPhotoLibraryAccess.requestOnceIfNeeded()
+            if (
+                status == IosPhotoLibraryAccess.Status.Denied ||
+                status == IosPhotoLibraryAccess.Status.Restricted
+            ) {
+                return false
+            }
+            val asset = IosPhotoKitImageSource.resolveAsset(assetId)
+            if (asset == null) {
+                photoKitResolveFailedIds.add(assetId)
+                return false
+            }
+            val frame = IosPhotoKitImageSource.requestBitmap(
+                asset = asset,
+                targetPx = committedPreviewBucket,
+                deadlineMs = PHOTO_KIT_FIRST_PAINT_DEADLINE_MS,
+            ) ?: return false
+            frame.bitmap.asComposeImageBitmap()
+        } ?: return false
+        if (disposed || previewGen != capturedGen) return false
+        if (watermarkedPreviewSourcePath == path && previewBitmap != null) return false
+        libraryDerivativeBitmap = bitmap
+        libraryDerivativePath = path
+        previewBitmap = bitmap
+        previewSourcePath = path
+        watermarkedPreviewSourcePath = null
+        showEditor = true
+        previewImages.load(sourceFastPathKey(path)) { bitmap }
         return true
     }
 

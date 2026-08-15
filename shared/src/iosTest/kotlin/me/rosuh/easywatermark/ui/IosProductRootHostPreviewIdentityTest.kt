@@ -36,6 +36,7 @@ import me.rosuh.easywatermark.render.IosWatermarkRenderer
 import me.rosuh.easywatermark.session.ExportOutcome
 import me.rosuh.easywatermark.session.ExportPipelinePort
 import me.rosuh.easywatermark.session.IosAppServices
+import me.rosuh.easywatermark.session.IosAssetIdentityRegistry
 import me.rosuh.easywatermark.session.IosSourceStager
 import me.rosuh.easywatermark.session.WatermarkSessionViewModel
 import platform.Foundation.NSUUID
@@ -294,6 +295,146 @@ class IosProductRootHostPreviewIdentityTest {
                 host.dispose()
             }
         } finally {
+            graph.close()
+        }
+    }
+
+    @Test
+    fun p3_library_derivative_is_not_written_to_wm_cache() = runTest(mainDispatcher) {
+        val graph = isolatedGraph()
+        try {
+            val host = IosProductRootHost(
+                onPickPhoto = {},
+                onPickIcon = {},
+                onShare = {},
+                onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
+                services = graph.services,
+            )
+            try {
+                me.rosuh.easywatermark.session.IosPickGenerationGate.resetForTests()
+                IosAssetIdentityRegistry.resetForTests()
+                val gen = me.rosuh.easywatermark.session.IosPickGenerationGate.nextPhotoGeneration()
+                host.deliverPickedPhotosBatch(
+                    images = listOf(solidPng(Color(0xFF336699))),
+                    append = false,
+                    renderPreview = true,
+                    pickGeneration = gen,
+                )
+                graph.trackSessionPaths()
+                val path = graph.services.session.launchScreenUiStateFlow.first()
+                    .curImageInfo?.uri?.value
+                assertNotNull(path)
+                IosAssetIdentityRegistry.put(path, "p3-fast-id")
+                val unique = ImageBitmap(33, 31, ImageBitmapConfig.Argb8888)
+                host.installPhotoKitFastPathForTests { _, _ -> unique }
+                host.switchImageAndAwaitForTests(path, awaitNeighbors = false)
+                val identity = host.previewIdentityForTests()
+                assertTrue(path in identity.wmCachePaths || identity.previewSourcePath == path)
+                val wmSize = host.watermarkedCachedSizeForTests(path)
+                if (wmSize != null) {
+                    assertFalse(
+                        wmSize == 33 to 31,
+                        "PhotoKit 33x31 frame must not be the Watermarked cache entry",
+                    )
+                }
+                assertFalse(path in identity.placeholderCachePaths && wmSize == 33 to 31)
+            } finally {
+                host.installPhotoKitFastPathForTests(null)
+                host.dispose()
+            }
+        } finally {
+            IosAssetIdentityRegistry.resetForTests()
+            graph.close()
+        }
+    }
+
+    @Test
+    fun p3_miss_and_timeout_keep_today_hit_class() = runTest(mainDispatcher) {
+        suspend fun runSwitch(
+            withId: Boolean,
+            producer: (suspend (String, Int) -> ImageBitmap?)?,
+        ): String {
+            val graph = isolatedGraph()
+            val host = IosProductRootHost(
+                onPickPhoto = {},
+                onPickIcon = {},
+                onShare = {},
+                onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
+                services = graph.services,
+            )
+            return try {
+                me.rosuh.easywatermark.session.IosPickGenerationGate.resetForTests()
+                IosAssetIdentityRegistry.resetForTests()
+                val gen = me.rosuh.easywatermark.session.IosPickGenerationGate.nextPhotoGeneration()
+                host.deliverPickedPhotosBatch(
+                    images = listOf(solidPng(Color(0xFF112233))),
+                    append = false,
+                    renderPreview = false,
+                    pickGeneration = gen,
+                )
+                graph.trackSessionPaths()
+                val path = graph.services.session.launchScreenUiStateFlow.value
+                    .curImageInfo?.uri?.value
+                    ?: error("expected staged path")
+                if (withId) {
+                    IosAssetIdentityRegistry.put(path, "p3-miss-id")
+                    host.installPhotoKitFastPathForTests(producer)
+                }
+                host.switchImageAndAwaitForTests(path, awaitNeighbors = false).hit
+            } finally {
+                host.installPhotoKitFastPathForTests(null)
+                host.dispose()
+                IosAssetIdentityRegistry.resetForTests()
+                graph.close()
+            }
+        }
+        val today = runSwitch(withId = false, producer = null)
+        val miss = runSwitch(withId = true, producer = { _, _ -> null })
+        assertEquals(today, miss, "null PhotoKit producer must not change hit class")
+    }
+
+    @Test
+    fun p3_wm_cache_hit_does_not_call_photokit() = runTest(mainDispatcher) {
+        val graph = isolatedGraph()
+        try {
+            val host = IosProductRootHost(
+                onPickPhoto = {},
+                onPickIcon = {},
+                onShare = {},
+                onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
+                services = graph.services,
+            )
+            try {
+                me.rosuh.easywatermark.session.IosPickGenerationGate.resetForTests()
+                IosAssetIdentityRegistry.resetForTests()
+                val gen = me.rosuh.easywatermark.session.IosPickGenerationGate.nextPhotoGeneration()
+                host.deliverPickedPhotosBatch(
+                    images = listOf(solidPng(Color(0xFF445566))),
+                    append = false,
+                    renderPreview = true,
+                    pickGeneration = gen,
+                )
+                graph.trackSessionPaths()
+                val path = graph.services.session.launchScreenUiStateFlow.first()
+                    .curImageInfo?.uri?.value
+                assertNotNull(path)
+                val cached = ImageBitmap(24, 24, ImageBitmapConfig.Argb8888)
+                host.putWmPreviewForTests(path, cached)
+                IosAssetIdentityRegistry.put(path, "p3-wm-hit")
+                var calls = 0
+                host.installPhotoKitFastPathForTests { _, _ ->
+                    calls += 1
+                    ImageBitmap(8, 8, ImageBitmapConfig.Argb8888)
+                }
+                val timing = host.switchImageAndAwaitForTests(path, awaitNeighbors = false)
+                assertTrue(timing.hit == "wm" || timing.hit == "wm_optimistic", timing.hit)
+                assertEquals(0, calls, "WM cache hit must not start PhotoKit")
+            } finally {
+                host.installPhotoKitFastPathForTests(null)
+                host.dispose()
+            }
+        } finally {
+            IosAssetIdentityRegistry.resetForTests()
             graph.close()
         }
     }

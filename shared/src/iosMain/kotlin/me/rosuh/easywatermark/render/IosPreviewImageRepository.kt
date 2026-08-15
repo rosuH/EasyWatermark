@@ -26,6 +26,8 @@ internal enum class IosPreviewPurpose {
     Watermarked,
     Filmstrip,
     ExportThumbnail,
+    /** Unwatermarked Library derivative chrome (ADR-0029). Never a compose background. */
+    SourceFastPath,
 }
 
 internal data class IosPreviewRepositorySnapshot(
@@ -60,9 +62,11 @@ internal class IosPreviewImageRepository(
     private var sourcePlaceholderEntriesMax: Int = DEFAULT_SOURCE_PLACEHOLDER_ENTRIES_MAX,
     private val filmstripEntriesMax: Int = DEFAULT_FILMSTRIP_ENTRIES_MAX,
     private val exportThumbnailEntriesMax: Int = DEFAULT_EXPORT_THUMBNAIL_ENTRIES_MAX,
+    private val sourceFastPathEntriesMax: Int = DEFAULT_SOURCE_FAST_PATH_ENTRIES_MAX,
     private var watermarkedBytesMax: Long = DEFAULT_WATERMARKED_BYTES_MAX,
     private var sourcePlaceholderBytesMax: Long = DEFAULT_SOURCE_PLACEHOLDER_BYTES_MAX,
     private val exportThumbnailBytesMax: Long = DEFAULT_EXPORT_THUMBNAIL_BYTES_MAX,
+    private val sourceFastPathBytesMax: Long = DEFAULT_SOURCE_FAST_PATH_BYTES_MAX,
 ) {
     private data class InFlight(
         val epoch: Long,
@@ -377,6 +381,7 @@ internal class IosPreviewImageRepository(
         evictToEntryCapLocked(IosPreviewPurpose.SourcePlaceholder, sourcePlaceholderEntriesMax)
         evictToEntryCapLocked(IosPreviewPurpose.Filmstrip, filmstripEntriesMax)
         evictToEntryCapLocked(IosPreviewPurpose.ExportThumbnail, exportThumbnailEntriesMax)
+        evictToEntryCapLocked(IosPreviewPurpose.SourceFastPath, sourceFastPathEntriesMax)
         evictLeastRecentlyUsedMatchingLocked(
             maxBytes = watermarkedBytesMax,
             matches = { it.purpose == IosPreviewPurpose.Watermarked },
@@ -388,6 +393,10 @@ internal class IosPreviewImageRepository(
         evictLeastRecentlyUsedMatchingLocked(
             maxBytes = exportThumbnailBytesMax,
             matches = { it.purpose == IosPreviewPurpose.ExportThumbnail },
+        )
+        evictLeastRecentlyUsedMatchingLocked(
+            maxBytes = sourceFastPathBytesMax,
+            matches = { it.purpose == IosPreviewPurpose.SourceFastPath },
         )
         // Joint non-filmstrip budget: total Source+Watermarked+Export bytes vs one cap.
         evictJointNonFilmstripLocked(sourceAndPreviewBytesMax)
@@ -434,6 +443,8 @@ internal class IosPreviewImageRepository(
         while (bytesForLocked(::isNonFilmstrip) > maxBytes) {
             val leastRecent = cache.keys.firstOrNull {
                 it.purpose == IosPreviewPurpose.ExportThumbnail
+            } ?: cache.keys.firstOrNull {
+                it.purpose == IosPreviewPurpose.SourceFastPath
             } ?: cache.keys.firstOrNull {
                 it.purpose == IosPreviewPurpose.Watermarked
             } ?: cache.keys.firstOrNull {
@@ -488,10 +499,13 @@ internal class IosPreviewImageRepository(
         const val DEFAULT_SOURCE_PLACEHOLDER_ENTRIES_MAX: Int = 12
         const val DEFAULT_FILMSTRIP_ENTRIES_MAX: Int = 48
         const val DEFAULT_EXPORT_THUMBNAIL_ENTRIES_MAX: Int = 48
+        /** Focus ±1 chrome only (ADR-0029). */
+        const val DEFAULT_SOURCE_FAST_PATH_ENTRIES_MAX: Int = 3
         /** Watermarked purpose floor — 720 panes stay at 48 MiB. */
         const val DEFAULT_WATERMARKED_BYTES_MAX: Long = 48L * 1024 * 1024
         const val DEFAULT_SOURCE_PLACEHOLDER_BYTES_MAX: Long = 12L * 1024 * 1024
         const val DEFAULT_EXPORT_THUMBNAIL_BYTES_MAX: Long = 8L * 1024 * 1024
+        const val DEFAULT_SOURCE_FAST_PATH_BYTES_MAX: Long = 12L * 1024 * 1024
 
         fun approxBytes(bitmap: ImageBitmap): Long =
             bitmap.width.toLong().coerceAtLeast(0L) * bitmap.height.toLong().coerceAtLeast(0L) * 4L
