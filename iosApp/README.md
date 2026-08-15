@@ -75,11 +75,14 @@ photo show an unwatermarked Library derivative first, then the ImageIO
 Watermarked preview. Declining (Keep Add Only / Limited / Restricted) leaves
 today’s ImageIO editor intact.
 
-If status is not Allow All, the editor shows a Library Read upsell on **every
-Editor visit** until Allow All. Dismiss hides that visit only. Limited’s button
-is “Allow access to all photos” and opens **Settings** — it does not present
+If status is not Allow All, a Library Read upsell appears as a **dialog
+when the user picks photos** (Launch Choose Images or Editor add-more).
+There is no persistent strip on Launch or Editor. “Choose images anyway”
+skips the dialog for the rest of that Launch visit. Limited’s button is
+“Allow access to all photos” and opens **Settings** — it does not present
 the limited-library picker. Copy stays qualitative; there is no unmeasured
-“N% faster” claim.
+“N% faster” claim. The system Library Read prompt, when still
+NotDetermined, runs on pick.
 
 PhotoKit pixels never enter `CommonWatermarkPipeline` or the SourcePlaceholder /
 Watermarked caches. `localIdentifier` is not persisted.

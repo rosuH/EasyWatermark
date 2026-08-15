@@ -3,6 +3,7 @@
 package me.rosuh.easywatermark.ui
 
 import androidx.lifecycle.ViewModelStore
+import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.datastore.createUserConfigDataStore
 import me.rosuh.easywatermark.data.datastore.createWaterMarkDataStore
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
@@ -26,8 +27,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * ADR-0029 P5 / Q11=B — Host Library Read upsell. Status is injected; this is not
- * a Photos authorization runtime proof.
+ * ADR-0029 P5 — pick-time dialog only. No chrome strip on Launch or Editor.
  */
 class IosLibraryReadUpsellTest {
 
@@ -50,6 +50,7 @@ class IosLibraryReadUpsellTest {
     private lateinit var store: ViewModelStore
     private lateinit var host: IosProductRootHost
     private val openedUrls = mutableListOf<String>()
+    private var pickCalls = 0
 
     @BeforeTest
     fun setUp() {
@@ -79,8 +80,9 @@ class IosLibraryReadUpsellTest {
             session = session,
         )
         openedUrls.clear()
+        pickCalls = 0
         host = IosProductRootHost(
-            onPickPhoto = {},
+            onPickPhoto = { pickCalls += 1 },
             onPickIcon = {},
             onShare = {},
             onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
@@ -97,83 +99,100 @@ class IosLibraryReadUpsellTest {
     }
 
     @Test
-    fun denied_enter_editor_shows_banner() {
+    fun launch_idle_has_no_strip() {
         IosPhotoLibraryAccess.installStatusForTests(IosPhotoLibraryAccess.Status.Denied)
-        host.showEditorShellImmediately()
+        host.refreshLibraryReadBannerForTests()
         val snap = host.libraryReadBannerForTests()
-        assertTrue(snap.visible)
-        assertEquals(LibraryReadBannerKind.Denied, snap.kind)
-        assertFalse(snap.dismissedThisVisit)
+        assertFalse(snap.visible)
+        assertFalse(snap.pickDialogVisible)
     }
 
     @Test
-    fun limited_cta_opens_settings_not_limited_picker() {
-        IosPhotoLibraryAccess.installStatusForTests(IosPhotoLibraryAccess.Status.Limited)
+    fun launch_pick_when_denied_shows_dialog_not_picker() = runBlocking {
+        IosPhotoLibraryAccess.installStatusForTests(IosPhotoLibraryAccess.Status.Denied)
+        host.requestPickPhotosForTests()
+        assertEquals(0, pickCalls)
+        val snap = host.libraryReadBannerForTests()
+        assertTrue(snap.pickDialogVisible)
+        assertEquals(LibraryReadBannerKind.Denied, snap.kind)
+    }
+
+    @Test
+    fun continue_opens_picker_and_skips_until_next_launch_visit() = runBlocking {
+        IosPhotoLibraryAccess.installStatusForTests(IosPhotoLibraryAccess.Status.Denied)
+        host.requestPickPhotosForTests()
+        host.continueLibraryReadPickDialogForTests()
+        assertEquals(1, pickCalls)
+        assertFalse(host.libraryReadBannerForTests().pickDialogVisible)
+        host.requestPickPhotosForTests()
+        assertEquals(2, pickCalls)
+        assertFalse(host.libraryReadBannerForTests().pickDialogVisible)
         host.showEditorShellImmediately()
+        host.leaveEditorForTests()
+        host.requestPickPhotosForTests()
+        assertEquals(2, pickCalls)
+        assertTrue(host.libraryReadBannerForTests().pickDialogVisible)
+    }
+
+    @Test
+    fun limited_dialog_cta_opens_settings_not_limited_picker() = runBlocking {
+        IosPhotoLibraryAccess.installStatusForTests(IosPhotoLibraryAccess.Status.Limited)
+        host.requestPickPhotosForTests()
         assertEquals(LibraryReadBannerKind.Limited, host.libraryReadBannerForTests().kind)
         host.openLibraryReadBannerCtaForTests()
         val url = host.libraryReadBannerForTests().lastCtaUrl
         assertEquals(UIApplicationOpenSettingsURLString, url)
         assertEquals(listOf(UIApplicationOpenSettingsURLString), openedUrls)
         assertFalse(url.orEmpty().contains("presentLimitedLibraryPicker"))
+        assertEquals(0, pickCalls)
+        host.simulateAppBecameActiveForTests()
+        assertEquals(0, pickCalls)
+        assertFalse(host.libraryReadBannerForTests().pickDialogVisible)
     }
 
     @Test
-    fun dismiss_hides_until_leave_and_reenter() {
-        IosPhotoLibraryAccess.installStatusForTests(IosPhotoLibraryAccess.Status.Denied)
-        host.showEditorShellImmediately()
-        assertTrue(host.libraryReadBannerForTests().visible)
-        host.dismissLibraryReadBannerForTests()
-        val afterDismiss = host.libraryReadBannerForTests()
-        assertFalse(afterDismiss.visible)
-        assertTrue(afterDismiss.dismissedThisVisit)
-        host.leaveEditorForTests()
-        assertFalse(host.libraryReadBannerForTests().dismissedThisVisit)
-        host.showEditorShellImmediately()
-        assertTrue(host.libraryReadBannerForTests().visible)
-    }
-
-    @Test
-    fun authorized_never_shows() {
+    fun authorized_pick_opens_picker_immediately() = runBlocking {
         IosPhotoLibraryAccess.installStatusForTests(IosPhotoLibraryAccess.Status.Authorized)
-        host.showEditorShellImmediately()
-        assertFalse(host.libraryReadBannerForTests().visible)
+        host.requestPickPhotosForTests()
+        assertEquals(1, pickCalls)
+        assertFalse(host.libraryReadBannerForTests().pickDialogVisible)
         assertNull(host.libraryReadBannerForTests().kind)
     }
 
     @Test
-    fun not_determined_does_not_show_before_prompt() {
+    fun not_determined_does_not_show_dialog_before_prompt() {
         IosPhotoLibraryAccess.installStatusForTests(IosPhotoLibraryAccess.Status.NotDetermined)
-        host.showEditorShellImmediately()
-        assertFalse(host.libraryReadBannerForTests().visible)
-    }
-
-    @Test
-    fun request_denied_while_in_editor_shows_this_visit() {
-        IosPhotoLibraryAccess.installStatusForTests(IosPhotoLibraryAccess.Status.NotDetermined)
-        host.showEditorShellImmediately()
-        assertFalse(host.libraryReadBannerForTests().visible)
-        IosPhotoLibraryAccess.installStatusForTests(IosPhotoLibraryAccess.Status.Denied)
-        IosPhotoLibraryAccess.markRequestedForTests()
         host.refreshLibraryReadBannerForTests()
-        assertTrue(host.libraryReadBannerForTests().visible)
-        assertEquals(LibraryReadBannerKind.Denied, host.libraryReadBannerForTests().kind)
+        assertFalse(host.libraryReadBannerForTests().pickDialogVisible)
     }
 
     @Test
-    fun allow_all_after_settings_hides_immediately() {
+    fun editor_add_more_uses_same_dialog() = runBlocking {
         IosPhotoLibraryAccess.installStatusForTests(IosPhotoLibraryAccess.Status.Denied)
         host.showEditorShellImmediately()
-        assertTrue(host.libraryReadBannerForTests().visible)
+        assertFalse(host.libraryReadBannerForTests().visible)
+        host.requestPickPhotosForTests()
+        assertEquals(0, pickCalls)
+        assertTrue(host.libraryReadBannerForTests().pickDialogVisible)
+        host.continueLibraryReadPickDialogForTests()
+        assertEquals(1, pickCalls)
+    }
+
+    @Test
+    fun allow_all_after_settings_closes_dialog() = runBlocking {
+        IosPhotoLibraryAccess.installStatusForTests(IosPhotoLibraryAccess.Status.Denied)
+        host.requestPickPhotosForTests()
+        assertTrue(host.libraryReadBannerForTests().pickDialogVisible)
         IosPhotoLibraryAccess.installStatusForTests(IosPhotoLibraryAccess.Status.Authorized)
         host.simulateAppBecameActiveForTests()
-        assertFalse(host.libraryReadBannerForTests().visible)
+        assertFalse(host.libraryReadBannerForTests().pickDialogVisible)
+        assertEquals(1, pickCalls)
     }
 
     @Test
-    fun restricted_uses_settings_kind() {
+    fun restricted_uses_settings_kind() = runBlocking {
         IosPhotoLibraryAccess.installStatusForTests(IosPhotoLibraryAccess.Status.Restricted)
-        host.showEditorShellImmediately()
+        host.requestPickPhotosForTests()
         assertEquals(LibraryReadBannerKind.Restricted, host.libraryReadBannerForTests().kind)
         host.openLibraryReadBannerCtaForTests()
         assertEquals(UIApplicationOpenSettingsURLString, host.libraryReadBannerForTests().lastCtaUrl)

@@ -8,18 +8,18 @@ iOS album HEIC cold switch is ImageIO-decode-dominated (~214 ms). PHPicker nee
 
 **Decision:** Optional **Library Read** accelerates **already-picked** photos only. Session/export stay owned paths. Cold switch **first paints a Library derivative** (unwatermarked) in the primary pane, then **Watermarked preview** from ImageIO + `CommonWatermarkPipeline`, short crossfade. PhotoKit pixels never enter the pipeline and never land in `SourcePlaceholder` / `Watermarked` caches.
 
-Allow All → Library derivative **on** by default. Limited still tries fetch; empty → ImageIO (not a broken editor). First real need: one system prompt; if not Allow All, a **Library Read upsell** every Editor entry until Allow All (Limited → all photos; Denied → Settings). Dismiss hides that visit only. Banner copy qualitative until a measured gate. ① measures time-to-Library-derivative; Watermarked preview must not regress vs today’s ImageIO. Carry `itemIdentifier` including picker preselection; app-owned disk thumbs are a later slice. `DEVICE_PERF_PHOTOKIT` may ship in Release if redacted (no paths / no asset ids). Hard promise remains fully offline / no tracking.
+Allow All → Library derivative **on** by default. Limited still tries fetch; empty → ImageIO (not a broken editor). First real need: one system prompt; if not Allow All, a **pick-time Library Read dialog** (Launch Choose Images / Editor add-more) — never a chrome strip on Launch or Editor. Limited → all photos via Settings; Denied → Settings. “Choose images anyway” skips the dialog for the rest of that Launch visit. Copy qualitative until a measured gate. ① measures time-to-Library-derivative; Watermarked preview must not regress vs today’s ImageIO. Carry `itemIdentifier` including picker preselection; app-owned disk thumbs are a later slice. `DEVICE_PERF_PHOTOKIT` may ship in Release if redacted (no paths / no asset ids). Hard promise remains fully offline / no tracking.
 
 ## Considered and rejected
 
 - Compose watermark onto PhotoKit for “watermark appears faster” — owner chose photo-first (Q1=B).  
 - Require read to use the editor — optional only (Q2=A).  
 - Quote an unmeasured “30% faster” — forbidden until a device gate (Q8).  
-- Persistently hide the upsell after one dismiss — owner wants it every Editor visit until Allow All (Q11=B).
+- Persistently hide the upsell after one dismiss — Q11=B was every Editor visit; owner later moved it to a **pick-time dialog** once per Launch visit (chrome strip covered About).
 
 ## Consequences
 
-- Device **Keep Add Only** leaves ReadWrite = Denied. The system will not prompt again; P3 still uses ImageIO. P5 lands the missing Editor upsell so that path is not silent.
+- Device **Keep Add Only** leaves ReadWrite = Denied. The system will not prompt again; P3 still uses ImageIO. Owner moved the P5 upsell to a **pick-time dialog** (no Launch/Editor chrome strip).
 - Simulator has witnessed an unwatermarked first frame on a PhotoKit inject; it is **not** a measured device gate. Do not quote an N% speedup.
 - Production `requestOnceIfNeeded` runs on first real PhotoKit need. Allow All remains optional: pick / edit / export stay available.
 - Limited upsell must send the user to Settings for **all photos**. `presentLimitedLibraryPicker` only grows the limited set and is not an Allow All CTA.

@@ -4,9 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,7 +38,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.session.IosSourceStager
-import androidx.compose.ui.Alignment
 import me.rosuh.easywatermark.ProductVersion
 import me.rosuh.easywatermark.data.db.buildTemplateDatabase
 import me.rosuh.easywatermark.data.model.ImageFormat
@@ -93,6 +90,12 @@ import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_coun
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_success_where
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_error_generic
 import me.rosuh.easywatermark.shared.generated.resources.share
+import me.rosuh.easywatermark.shared.generated.resources.tips_ios_library_read_upsell_allow_all_photos
+import me.rosuh.easywatermark.shared.generated.resources.tips_ios_library_read_upsell_continue
+import me.rosuh.easywatermark.shared.generated.resources.tips_ios_library_read_upsell_denied
+import me.rosuh.easywatermark.shared.generated.resources.tips_ios_library_read_upsell_limited
+import me.rosuh.easywatermark.shared.generated.resources.tips_ios_library_read_upsell_settings
+import me.rosuh.easywatermark.shared.generated.resources.tips_ios_library_read_upsell_title
 import me.rosuh.easywatermark.ui.about.AboutDevCard
 import me.rosuh.easywatermark.ui.about.AboutScreen
 import me.rosuh.easywatermark.ui.about.AboutScreenIcons
@@ -100,6 +103,7 @@ import me.rosuh.easywatermark.ui.about.OpenSourceScreen
 import me.rosuh.easywatermark.ui.EditorLayoutClass
 import me.rosuh.easywatermark.ui.editorLayoutClass
 import me.rosuh.easywatermark.ui.usesLargeScreenDialog
+import me.rosuh.easywatermark.ui.compose.EwmConfirmDialog
 import me.rosuh.easywatermark.ui.compose.IconWatermarkOption
 import me.rosuh.easywatermark.ui.compose.TextColorOption
 import me.rosuh.easywatermark.ui.compose.formatArgbHexColor
@@ -132,6 +136,12 @@ import kotlin.native.ObjCName
  * plus shared [SaveExportSheetShell] for export panel interactions (C2 / Android Compose parity).
  * Swift only: PHPicker / Share / Save-to-Photos / open URL system edges.
  */
+internal enum class LibraryReadBannerKind {
+    Limited,
+    Denied,
+    Restricted,
+}
+
 @OptIn(ExperimentalObjCName::class)
 @ObjCName(name = "IosProductRootHost", exact = true)
 class IosProductRootHost(
@@ -337,11 +347,16 @@ class IosProductRootHost(
      * E0: Session is product-route owner; this flag only bridges shell until EnterEditor lands.
      */
     private var showEditor by mutableStateOf(false)
-    /** Q11=B: one Editor visit; dismiss hides only until [endLibraryReadEditorVisit]. */
-    private var libraryReadEditorVisitActive = false
+    /**
+     * Owner 2026-08-15: ask at pick time with a dialog. Never a chrome strip
+     * (Launch About icon and Editor top bar stay clear).
+     */
+    private var libraryReadLaunchVisitActive = false
     private var libraryReadBannerDismissedThisVisit by mutableStateOf(false)
-    private var libraryReadBannerKind by mutableStateOf<LibraryReadBannerKind?>(null)
     private var lastLibraryReadCtaUrlForTests: String? = null
+    private var showLibraryReadPickDialog by mutableStateOf(false)
+    private var libraryReadPickDialogKind by mutableStateOf<LibraryReadBannerKind?>(null)
+    private var pendingPickAfterDialog = false
     /** C2: shared Android Compose export panel; Photos/Share stay Swift callbacks. */
     private var showSaveSheet by mutableStateOf(false)
     /** Last editor layout class for export sheet ≥840 dialog (export host is outside Editor BoxWithConstraints). */
@@ -418,28 +433,39 @@ class IosProductRootHost(
         val kind: LibraryReadBannerKind?,
         val dismissedThisVisit: Boolean,
         val lastCtaUrl: String?,
+        val pickDialogVisible: Boolean = false,
     )
 
     internal fun libraryReadBannerForTests(): LibraryReadBannerSnapshot =
         LibraryReadBannerSnapshot(
-            visible = libraryReadBannerKind != null,
-            kind = libraryReadBannerKind,
+            visible = showLibraryReadPickDialog,
+            kind = libraryReadPickDialogKind,
             dismissedThisVisit = libraryReadBannerDismissedThisVisit,
             lastCtaUrl = lastLibraryReadCtaUrlForTests,
+            pickDialogVisible = showLibraryReadPickDialog,
         )
 
     internal fun dismissLibraryReadBannerForTests() = dismissLibraryReadBanner()
 
-    internal fun openLibraryReadBannerCtaForTests() = openLibraryReadBannerSettings()
+    internal fun openLibraryReadBannerCtaForTests() {
+        showLibraryReadPickDialog = false
+        openLibraryReadBannerSettings()
+    }
 
     internal fun leaveEditorForTests() {
         showEditor = false
-        endLibraryReadEditorVisit()
+        showLibraryReadPickDialog = false
+        pendingPickAfterDialog = false
+        beginLibraryReadLaunchVisit()
     }
 
     internal fun refreshLibraryReadBannerForTests() = refreshLibraryReadBanner()
 
     internal fun simulateAppBecameActiveForTests() = refreshLibraryReadBanner()
+
+    internal suspend fun requestPickPhotosForTests() = requestPickPhotosSuspend()
+
+    internal fun continueLibraryReadPickDialogForTests() = continuePickAfterLibraryReadDialog()
 
     /** Test-only read of host preview identity (wm/placeholder path caches). */
     internal fun previewIdentityForTests(): PreviewIdentitySnapshot {
@@ -782,7 +808,7 @@ class IosProductRootHost(
             isBusy = false
             isSaving = false
             showEditor = false
-            endLibraryReadEditorVisit()
+            hideLibraryReadUpsell()
             showSaveSheet = false
             sheetExportFinished = false
             showOpenSource = false
@@ -899,21 +925,18 @@ class IosProductRootHost(
                     !disposed
                 ) {
                     showEditor = false
-                    endLibraryReadEditorVisit()
+                    beginLibraryReadLaunchVisit()
                     releaseEditorMediaResources()
                 }
             }
             LaunchedEffect(shellBase) {
                 when (shellBase) {
-                    ProductShellNav.Route.Editor -> beginLibraryReadEditorVisit()
-                    ProductShellNav.Route.Launch -> endLibraryReadEditorVisit()
+                    ProductShellNav.Route.Launch -> beginLibraryReadLaunchVisit()
+                    ProductShellNav.Route.Editor -> hideLibraryReadUpsell()
                     else -> Unit
                 }
             }
-            DisposableEffect(shellBase) {
-                if (shellBase != ProductShellNav.Route.Editor) {
-                    return@DisposableEffect onDispose { }
-                }
+            DisposableEffect(Unit) {
                 val center = NSNotificationCenter.defaultCenter
                 val token = center.addObserverForName(
                     UIApplicationDidBecomeActiveNotification,
@@ -961,7 +984,7 @@ class IosProductRootHost(
                 ProductShellNav.Route.Launch -> {
                     LaunchScreen(
                         aboutIcon = aboutPainter,
-                        onPickImage = onPickPhoto,
+                        onPickImage = { requestPickPhotos() },
                         onGoAbout = { openAboutFromLaunch() },
                         logo = { modifier, animate ->
                             BrandLogo(modifier = modifier, animate = animate)
@@ -1127,15 +1150,6 @@ class IosProductRootHost(
                         seedBitmap = themeSeedBitmap,
                         seedKey = themeSeedKey,
                     ) {
-                    Column(Modifier.fillMaxSize()) {
-                    val bannerKind = libraryReadBannerKind
-                    if (bannerKind != null) {
-                        LibraryReadUpsellBanner(
-                            kind = bannerKind,
-                            onCta = { openLibraryReadBannerSettings() },
-                            onDismiss = { dismissLibraryReadBanner() },
-                        )
-                    }
                     EditorScreen(
                         imageList = sessionImages.map { it.toUiProjection() },
                         waterMark = waterMark,
@@ -1398,11 +1412,11 @@ class IosProductRootHost(
                             // Session NavigateBack owns Launch; clear optimistic shell flag
                             // and release staged sources + preview bitmaps (leave-editor lifecycle).
                             showEditor = false
-                            endLibraryReadEditorVisit()
+                            beginLibraryReadLaunchVisit()
                             services.session.onBackPressed()
                             releaseEditorMediaResources()
                         },
-                        onAddMoreImages = onPickPhoto,
+                        onAddMoreImages = { requestPickPhotos() },
                         onShowSaveDialog = {
                             // Block export while progressive import still has Pending/in-flight work
                             // (fresh pick no longer clears Session until first Ready publishes).
@@ -1576,16 +1590,46 @@ class IosProductRootHost(
                                 }
                             }
                         },
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
                         layoutClass = layoutClass,
                     )
-                    }
                     }
                                         } // ContentEditorThemeHost
                     } // BoxWithConstraints Editor
                 }
                 } // when (route)
             } // ProductShellHost
+
+            if (showLibraryReadPickDialog) {
+                val dialogKind = libraryReadPickDialogKind
+                    ?: LibraryReadBannerKind.Denied
+                val dialogBody = when (dialogKind) {
+                    LibraryReadBannerKind.Limited ->
+                        stringResource(Res.string.tips_ios_library_read_upsell_limited)
+                    LibraryReadBannerKind.Denied,
+                    LibraryReadBannerKind.Restricted,
+                    -> stringResource(Res.string.tips_ios_library_read_upsell_denied)
+                }
+                val confirmLabel = when (dialogKind) {
+                    LibraryReadBannerKind.Limited ->
+                        stringResource(Res.string.tips_ios_library_read_upsell_allow_all_photos)
+                    LibraryReadBannerKind.Denied,
+                    LibraryReadBannerKind.Restricted,
+                    -> stringResource(Res.string.tips_ios_library_read_upsell_settings)
+                }
+                EwmConfirmDialog(
+                    onDismissRequest = { continuePickAfterLibraryReadDialog() },
+                    title = stringResource(Res.string.tips_ios_library_read_upsell_title),
+                    text = dialogBody,
+                    confirmLabel = confirmLabel,
+                    dismissLabel = stringResource(Res.string.tips_ios_library_read_upsell_continue),
+                    onConfirm = {
+                        showLibraryReadPickDialog = false
+                        openLibraryReadBannerSettings()
+                    },
+                    confirmTestTag = "iosLibraryReadUpsellConfirm",
+                    dismissTestTag = "iosLibraryReadUpsellContinue",
+                )
+            }
 
             if (showOpenSource) {
                 OpenSourceScreen(
@@ -2007,7 +2051,7 @@ class IosProductRootHost(
     fun showEditorShellImmediately() {
         // Presentation-only optimistic shell; Session EnterEditor lands when stage succeeds.
         showEditor = true
-        beginLibraryReadEditorVisit()
+        hideLibraryReadUpsell()
         // Leave preview blank (silent) until stage + placeholder / raster fill it.
         statusLine = ""
     }
@@ -2067,7 +2111,7 @@ class IosProductRootHost(
         // G4 file-first: drop any host full-res source pin; staged paths + Session own identity.
         sourceBytes = null
         showEditor = true
-        beginLibraryReadEditorVisit()
+        hideLibraryReadUpsell()
         statusLine = ""
         // Abort host UI bind if generation flipped after Session publish returned.
         if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
@@ -2456,23 +2500,24 @@ class IosProductRootHost(
         libraryDerivativePath = null
     }
 
-    private fun beginLibraryReadEditorVisit() {
-        if (!libraryReadEditorVisitActive) {
-            libraryReadEditorVisitActive = true
+    private fun beginLibraryReadLaunchVisit() {
+        if (!libraryReadLaunchVisitActive) {
+            libraryReadLaunchVisitActive = true
             libraryReadBannerDismissedThisVisit = false
         }
         refreshLibraryReadBanner()
     }
 
-    private fun endLibraryReadEditorVisit() {
-        libraryReadEditorVisitActive = false
-        libraryReadBannerDismissedThisVisit = false
-        libraryReadBannerKind = null
+    private fun hideLibraryReadUpsell() {
+        libraryReadLaunchVisitActive = false
+        showLibraryReadPickDialog = false
+        pendingPickAfterDialog = false
     }
 
     private fun dismissLibraryReadBanner() {
         libraryReadBannerDismissedThisVisit = true
-        libraryReadBannerKind = null
+        showLibraryReadPickDialog = false
+        pendingPickAfterDialog = false
     }
 
     private fun openLibraryReadBannerSettings() {
@@ -2481,30 +2526,67 @@ class IosProductRootHost(
         onOpenUrl(url)
     }
 
+    private fun requestPickPhotos() {
+        hostScope.launch {
+            requestPickPhotosSuspend()
+        }
+    }
+
+    private suspend fun requestPickPhotosSuspend() {
+        if (disposed) return
+        IosPhotoLibraryAccess.requestOnceIfNeeded()
+        if (disposed) return
+        val kind = libraryReadKindFor(IosPhotoLibraryAccess.status())
+        if (kind != null && !libraryReadBannerDismissedThisVisit) {
+            libraryReadPickDialogKind = kind
+            showLibraryReadPickDialog = true
+            pendingPickAfterDialog = true
+            return
+        }
+        onPickPhoto()
+    }
+
+    private fun continuePickAfterLibraryReadDialog() {
+        showLibraryReadPickDialog = false
+        libraryReadBannerDismissedThisVisit = true
+        val pending = pendingPickAfterDialog
+        pendingPickAfterDialog = false
+        if (pending && !disposed) onPickPhoto()
+    }
+
+    private fun libraryReadKindFor(
+        status: IosPhotoLibraryAccess.Status,
+    ): LibraryReadBannerKind? = when (status) {
+        IosPhotoLibraryAccess.Status.Limited -> LibraryReadBannerKind.Limited
+        IosPhotoLibraryAccess.Status.Denied -> LibraryReadBannerKind.Denied
+        IosPhotoLibraryAccess.Status.Restricted -> LibraryReadBannerKind.Restricted
+        IosPhotoLibraryAccess.Status.Authorized,
+        IosPhotoLibraryAccess.Status.NotDetermined,
+        -> null
+    }
+
     /**
-     * Show when Editor is visible, status is Limited/Denied/Restricted, and this
-     * visit is not dismissed. NotDetermined waits for the system prompt.
-     * Authorized never shows. Same-visit ImageIO work does not hide the strip.
+     * No persistent strip. If Settings flipped to Allow All, drop a showing
+     * dialog and resume the pick the user already started.
      */
     private fun refreshLibraryReadBanner() {
-        if (disposed || !isInEditor() || libraryReadBannerDismissedThisVisit) {
-            libraryReadBannerKind = null
-            return
-        }
+        if (disposed) return
         val status = IosPhotoLibraryAccess.status()
-        val requested = IosPhotoLibraryAccess.hasRequestedThisProcess()
-        val decided = status != IosPhotoLibraryAccess.Status.NotDetermined
-        if (!requested && !decided) {
-            libraryReadBannerKind = null
-            return
-        }
-        libraryReadBannerKind = when (status) {
-            IosPhotoLibraryAccess.Status.Limited -> LibraryReadBannerKind.Limited
-            IosPhotoLibraryAccess.Status.Denied -> LibraryReadBannerKind.Denied
-            IosPhotoLibraryAccess.Status.Restricted -> LibraryReadBannerKind.Restricted
-            IosPhotoLibraryAccess.Status.Authorized,
-            IosPhotoLibraryAccess.Status.NotDetermined,
-            -> null
+        if (libraryReadKindFor(status) == null) {
+            val pending = pendingPickAfterDialog
+            showLibraryReadPickDialog = false
+            pendingPickAfterDialog = false
+            libraryReadPickDialogKind = null
+            if (
+                pending &&
+                status == IosPhotoLibraryAccess.Status.Authorized &&
+                !disposed
+            ) {
+                onPickPhoto()
+            }
+        } else if (!showLibraryReadPickDialog) {
+            // Returned from Settings without Allow All — don't surprise-open later.
+            pendingPickAfterDialog = false
         }
     }
 
