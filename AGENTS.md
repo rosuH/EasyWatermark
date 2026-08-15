@@ -162,3 +162,14 @@ Skills are not optional reference shelves — they are the preferred playbooks f
 - **Triage labels:** `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix` (`docs/agents/triage-labels.md`).
 - **Domain docs:** vocabulary in `docs/CONTEXT.md`, decisions in `docs/adr/` (`docs/agents/domain.md`).
 - **Migration history:** high-level notes in `docs/migration-log.md`; `task_plan.md` / `findings.md` / `progress.md` at repo root are historical evidence only — do not read at session start, do not update.
+
+## Cursor Cloud specific instructions
+
+Environment is a headless Linux VM. iOS targets (`iosApp`, `:shared:iosSimulatorArm64Test`) are macOS-only and out of scope here. The in-scope work is `:app` (Android build + host unit tests), `:desktopApp` (runnable), and `:shared` tests. Standard commands are in the "Commands" section above — this section only adds non-obvious caveats.
+
+- **Toolchain (baked into the snapshot):** JDK 17 is the default `java` (via `update-alternatives`; AGP 9 needs the Gradle JVM at 17, not the VM's JDK 21). Android SDK lives at `~/android-sdk` and `local.properties` (gitignored) points `sdk.dir` there, so Gradle finds it even when `ANDROID_HOME` is unset. `JAVA_HOME`/`ANDROID_HOME` are exported in `~/.bashrc` for interactive shells.
+- **compileSdk 37 minor-version gotcha:** `Apps.compileSdk = 37` resolves to the SDK package `platforms;android-37.0` (note the `.0` minor). Install with `sdkmanager "platforms;android-37.0" "build-tools;37.0.0"` — plain `platforms;android-37` does not exist.
+- **Desktop GUI renders under software fallback:** Skiko logs `RenderException: Cannot create Linux GL context` and falls back to software rendering — this is expected on this VM and the window still works. A display is available at `DISPLAY=:1`.
+- **Running the Desktop app:** headless E2E (no display) is `./gradlew :desktopApp:run --args='--headless'` (decode → watermark → save spine, writes sample PNG/JPEG outputs under `desktopApp/build/`). For an interactive GUI preview without wrangling the native file dialog, use `./gradlew :desktopApp:run -PewmAutoOpen=<abs image path>` (optionally `-PewmW=<dp> -PewmH=<dp>`) to auto-import an image straight into the editor.
+- **`:app:lintDebug` exits non-zero** due to pre-existing findings (e.g. `NewApi`); this is not an environment break. CI runs it fail-open (`continue-on-error`), so treat a non-zero lint exit as informational.
+- **`:shared:commonPureTest`** has one test (`ContentEditorThemeTest`) that calls real `android.graphics.Bitmap.createBitmap` and fails on the plain-JVM android-host source set. It is not a CI gate. The CI gates are `:app:assembleDebug`, `:shared:desktopTest`, and `:app:testDebugUnitTest`.
