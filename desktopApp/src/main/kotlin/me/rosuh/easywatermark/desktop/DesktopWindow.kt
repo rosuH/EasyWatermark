@@ -181,7 +181,7 @@ import java.util.prefs.Preferences
 private val IMAGE_EXTENSIONS: Set<String> =
     me.rosuh.easywatermark.render.DesktopImageFormats.chooserExtensions()
 
-// About link edges (match Android ComposeMainActivity / iOS IosProductRootHost).
+// About link edges (match Android MainActivity / iOS IosProductRootHost).
 private const val ABOUT_URL_RELEASES = "https://github.com/rosuH/EasyWatermark/releases/"
 private const val ABOUT_URL_ISSUES = "https://github.com/rosuH/EasyWatermark/issues/new"
 private const val ABOUT_URL_PRIVACY_ZH =

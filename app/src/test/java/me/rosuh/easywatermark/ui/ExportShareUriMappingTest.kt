@@ -13,7 +13,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Covers production edge helper [uriFromExportResultData] (ComposeMainActivity share/open list
+ * Covers production edge helper [uriFromExportResultData] (MainActivity share/open list
  * maps `image.result?.data` through this function). Does not instrument Activity source text.
  */
 @RunWith(RobolectricTestRunner::class)

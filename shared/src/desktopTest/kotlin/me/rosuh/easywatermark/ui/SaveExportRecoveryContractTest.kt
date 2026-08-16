@@ -26,7 +26,7 @@ class SaveExportRecoveryContractTest {
     /** U1 — three hosts wire Cancel to session.cancelExport (or viewModel cancelExport). */
     @Test
     fun u1_hostsWireCancelToSessionCancelExport() {
-        val android = read("app/src/main/java/me/rosuh/easywatermark/ui/ComposeMainActivity.kt")
+        val android = read("app/src/main/java/me/rosuh/easywatermark/ui/MainActivity.kt")
         val desktop = read("desktopApp/src/main/kotlin/me/rosuh/easywatermark/desktop/DesktopWindow.kt")
         val ios = read("shared/src/iosMain/kotlin/me/rosuh/easywatermark/ui/IosProductRootHost.kt")
         val shell = read(
@@ -78,7 +78,7 @@ class SaveExportRecoveryContractTest {
     /** U2 structural — Retry failed wired on three hosts. */
     @Test
     fun u2_hostsWireRetryFailed() {
-        val android = read("app/src/main/java/me/rosuh/easywatermark/ui/ComposeMainActivity.kt")
+        val android = read("app/src/main/java/me/rosuh/easywatermark/ui/MainActivity.kt")
         val desktop = read("desktopApp/src/main/kotlin/me/rosuh/easywatermark/desktop/DesktopWindow.kt")
         val ios = read("shared/src/iosMain/kotlin/me/rosuh/easywatermark/ui/IosProductRootHost.kt")
         val shell = read(
@@ -109,7 +109,7 @@ class SaveExportRecoveryContractTest {
     /** I0 — three hosts pass destination + filename policy into the shell. */
     @Test
     fun i0_hostsWireDestinationAndFilenamePolicy() {
-        val android = read("app/src/main/java/me/rosuh/easywatermark/ui/ComposeMainActivity.kt")
+        val android = read("app/src/main/java/me/rosuh/easywatermark/ui/MainActivity.kt")
         val desktop = read("desktopApp/src/main/kotlin/me/rosuh/easywatermark/desktop/DesktopWindow.kt")
         val ios = read("shared/src/iosMain/kotlin/me/rosuh/easywatermark/ui/IosProductRootHost.kt")
         assertTrue(android.contains("dialog_save_destination_album"))

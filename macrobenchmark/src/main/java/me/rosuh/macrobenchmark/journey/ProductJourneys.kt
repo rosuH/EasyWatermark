@@ -20,7 +20,7 @@ import java.io.ByteArrayOutputStream
  * Automation constraints:
  * - System PHPicker is not reliably addressable → Editor is entered via **share-in**
  *   ([Intent.ACTION_SEND] + MediaStore image URI), matching production
- *   [me.rosuh.easywatermark.ui.ComposeMainActivity] share bridge.
+ *   [me.rosuh.easywatermark.ui.MainActivity] share bridge.
  * - Does not invent latency SLOs; helpers only drive UI / intents.
  */
 object ProductJourneys {

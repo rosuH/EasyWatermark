@@ -5,7 +5,7 @@
 set -euo pipefail
 
 PKG_DEBUG="${PKG_DEBUG:-me.rosuh.easywatermark.debug}"
-ACTIVITY="${ACTIVITY:-me.rosuh.easywatermark.ui.ComposeMainActivity}"
+ACTIVITY="${ACTIVITY:-me.rosuh.easywatermark.ui.MainActivity}"
 ADB="${ADB:-adb}"
 MAX_WORKERS="${MAX_WORKERS:-8}"
 
@@ -17,7 +17,7 @@ Commands:
   devices              List adb devices
   status               am memory-limiter status (no-op friendly)
   install-debug        ./gradlew :app:assembleDebug + adb install -r
-  launch               Start debug ComposeMainActivity
+  launch               Start debug MainActivity
   meminfo              dumpsys meminfo for debug package
   exits                dumpsys activity exit-info (MemoryLimiter tag)
   manual-limit <mb>    adb shell am memory-limiter manual <pid> <mb>

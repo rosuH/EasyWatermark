@@ -50,7 +50,7 @@ class IconPickerSourceContractTest {
             "src/main/java/me/rosuh/easywatermark/ui/compose/IconOption.kt",
         ).readText()
         val activity = locateSource(
-            "src/main/java/me/rosuh/easywatermark/ui/ComposeMainActivity.kt",
+            "src/main/java/me/rosuh/easywatermark/ui/MainActivity.kt",
         ).readText()
         val viewModel = locateSource(
             "src/main/java/me/rosuh/easywatermark/ui/MainViewModel.kt",

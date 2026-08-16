@@ -111,10 +111,10 @@ import org.koin.androidx.viewmodel.ext.android.viewModel
 
 @BuildCompat.PrereleaseSdkCheck
 
-class ComposeMainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity() {
 
     companion object {
-        const val TAG = "ComposeMainActivity"
+        const val TAG = "MainActivity"
     }
 
     private val viewModel: MainViewModel by viewModel()
@@ -153,8 +153,8 @@ class ComposeMainActivity : ComponentActivity() {
         }
     }
 
-    // A stable launch resets the crash counter. Ported from legacy MainActivity.onResume,
-    // which became dead once ComposeMainActivity took over as launcher (ADR-0016).
+    // A stable launch resets the crash counter. Ported from the View-era onResume,
+    // which became dead once the Compose launcher took over (ADR-0016).
     //
     // Delay is intentionally long: the previous 1s window wiped the crash streak as soon as
     // the launch screen appeared, so mid-session crashes (e.g. pick → editor) never reached
@@ -203,15 +203,15 @@ class ComposeMainActivity : ComponentActivity() {
                             crashInfo = crashStackTrace(),
                             onCopy = { copyCrashInfo(crashStackTrace()) },
                             onSendEmail = {
-                                viewModel.extraCrashInfo(this@ComposeMainActivity, crashStackTrace())
+                                viewModel.extraCrashInfo(this@MainActivity, crashStackTrace())
                             },
-                            onTelegram = { this@ComposeMainActivity.openLink("https://t.me/rosuh") },
+                            onTelegram = { this@MainActivity.openLink("https://t.me/rosuh") },
                             onStore = {
-                                this@ComposeMainActivity.openLink(
+                                this@MainActivity.openLink(
                                     Uri.parse("market://details?id=me.rosuh.easywatermark")
                                 ) {
                                     Toast.makeText(
-                                        this@ComposeMainActivity,
+                                        this@MainActivity,
                                         sharedString(Res.string.store_not_found),
                                         Toast.LENGTH_SHORT
                                     ).show()
@@ -220,7 +220,7 @@ class ComposeMainActivity : ComponentActivity() {
                             onCloseRecovery = {
                                 (application as MyApp).launchSuccess()
                                 Toast.makeText(
-                                    this@ComposeMainActivity,
+                                    this@MainActivity,
                                     sharedString(Res.string.recovery_mode_closed),
                                     Toast.LENGTH_SHORT
                                 ).show()
@@ -416,7 +416,7 @@ class ComposeMainActivity : ComponentActivity() {
                                 rememberLauncherForActivityResult(
                                     ActivityResultContracts.RequestMultiplePermissions(),
                                 ) { results ->
-                                    if (hasReadableMediaAccess(this@ComposeMainActivity, results)) {
+                                    if (hasReadableMediaAccess(this@MainActivity, results)) {
                                         showGalleryDialog = true
                                     } else {
                                         Log.i(TAG, "Media permission denied (full and partial)")
@@ -431,7 +431,7 @@ class ComposeMainActivity : ComponentActivity() {
                                 )
                             }
                             val openInAppGallery: () -> Unit = {
-                                if (hasReadableMediaAccess(this@ComposeMainActivity)) {
+                                if (hasReadableMediaAccess(this@MainActivity)) {
                                     showGalleryDialog = true
                                 } else {
                                     galleryPermissionLauncher.launch(mediaPermissionRequestKeys())
@@ -583,7 +583,7 @@ class ComposeMainActivity : ComponentActivity() {
                                                 useLargeLayout = aboutWidthDp >= 840,
                                                 onBack = { viewModel.onBackPressed() },
                                                 onOpenLink = { url ->
-                                                    this@ComposeMainActivity.openLink(url)
+                                                    this@MainActivity.openLink(url)
                                                 },
                                                 onOpenSource = { showOpenSource = true },
                                                 onToggleBounds = { aboutViewModel.toggleBounds(it) },
@@ -607,7 +607,7 @@ class ComposeMainActivity : ComponentActivity() {
                                     OpenSourceScreen(
                                         onBack = { showOpenSource = false },
                                         onOpenLink = { url ->
-                                            this@ComposeMainActivity.openLink(url)
+                                            this@MainActivity.openLink(url)
                                         },
                                         backIcon = SharedProductDrawables.backPainter(),
                                         modifier = Modifier.fillMaxSize(),

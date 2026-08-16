@@ -36,7 +36,7 @@ class AndroidShareInDirectUriTest {
         }
 
         val vm = read("ui/MainViewModel.kt")
-        val activity = read("ui/ComposeMainActivity.kt")
+        val activity = read("ui/MainActivity.kt")
         val filepaths = mainRes.readText()
 
         assertFalse(File(mainJava, "platform/AndroidShareStaging.kt").exists())

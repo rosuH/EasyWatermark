@@ -131,7 +131,7 @@ class MyApp : Application() {
 
         /**
  * Enter recovery after this many uncaught crashes without a long stable window.
- * [me.rosuh.easywatermark.ui.ComposeMainActivity.onResume] clears the counter only after
+ * [me.rosuh.easywatermark.ui.MainActivity.onResume] clears the counter only after
  * 30s of stable foreground — so a crash-loop on pick→editor still accumulates.
          */
         private const val CRASH_COUNT = 2

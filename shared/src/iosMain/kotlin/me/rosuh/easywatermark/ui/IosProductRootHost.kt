@@ -2815,7 +2815,7 @@ class IosProductRootHost(
 
 }
 
-// About link edges (match Android ComposeMainActivity ABOUT_URL_*).
+// About link edges (match Android MainActivity ABOUT_URL_*).
 private const val ABOUT_URL_RELEASES = "https://github.com/rosuH/EasyWatermark/releases/"
 private const val ABOUT_URL_RATE_IOS = "https://apps.apple.com/search?term=Easy%20Watermark"
 private const val ABOUT_URL_ISSUES = "https://github.com/rosuH/EasyWatermark/issues/new"

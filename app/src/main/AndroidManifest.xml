@@ -32,7 +32,7 @@
         android:theme="@style/Theme.MyApp"
         tools:targetApi="31">
         <activity
-            android:name=".ui.ComposeMainActivity"
+            android:name=".ui.MainActivity"
             android:configChanges="orientation|keyboardHidden"
             android:exported="true"
             android:launchMode="singleTask"

@@ -260,7 +260,7 @@ fun reduceSessionUi(snapshot: SessionUiSnapshot, intent: AppIntent): SessionRedu
 
         is AppIntent.SyncCurrentImage -> {
             // Keep session snapshot self-consistent: hosts export from selectedImageList
-            // (ComposeMainActivity.doExport), not only curImageInfo.
+            // (MainActivity.doExport), not only curImageInfo.
             SessionReduceResult(
                 snapshot.copy(launch = applyCurrentImageToLaunch(snapshot.launch, intent.info)),
             )
