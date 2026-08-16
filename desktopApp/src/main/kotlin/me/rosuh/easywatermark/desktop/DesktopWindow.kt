@@ -175,7 +175,6 @@ import java.awt.datatransfer.DataFlavor
 import java.io.File
 import java.net.URI
 import java.util.prefs.Preferences
-import javax.swing.JFileChooser
 
 /** Best-effort Open-dialog filename filter (honored on macOS; ignored on some platforms — harmless). */
 // J3: capability-true extensions (WebP only if ImageIO can decode — stock JDK usually cannot).
@@ -1691,18 +1690,13 @@ fun launchDesktopWindow() = application {
                 val chooseFolderTitle = stringResource(Res.string.desktop_choose_folder_dialog_title)
                 val exportErrorGeneric = stringResource(Res.string.dialog_save_error_generic)
                 val pickExportFolder: () -> Unit = {
-                    // Swing directory chooser (AWT FileDialog has no reliable folder mode).
-                    val chooser = JFileChooser(outputDir).apply {
-                        fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-                        dialogTitle = chooseFolderTitle
-                        isAcceptAllFileFilterUsed = false
-                    }
-                    val result = chooser.showOpenDialog(window)
-                    if (result == JFileChooser.APPROVE_OPTION) {
-                        chooser.selectedFile?.takeIf { it.isDirectory }?.let { picked ->
-                            outputDir = picked
-                            status = "Export folder: ${picked.path}"
-                        }
+                    DesktopExportFolderChooser.choose(
+                        owner = window,
+                        title = chooseFolderTitle,
+                        current = outputDir,
+                    )?.let { picked ->
+                        outputDir = picked
+                        status = "Export folder: ${picked.path}"
                     }
                 }
                 val runBatchExport: () -> Unit = {
