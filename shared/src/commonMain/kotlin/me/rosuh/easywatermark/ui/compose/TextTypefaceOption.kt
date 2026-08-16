@@ -18,6 +18,7 @@ fun TextTypeface(
     typeface: TextTypeface,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    fillMaxWidth: Boolean = true,
     onValueChange: (TextTypeface) -> Unit,
 ) {
     DesignChoiceChips(
@@ -47,5 +48,6 @@ fun TextTypeface(
         onSelected = onValueChange,
         modifier = modifier,
         enabled = enabled,
+        fillMaxWidth = fillMaxWidth,
     )
 }

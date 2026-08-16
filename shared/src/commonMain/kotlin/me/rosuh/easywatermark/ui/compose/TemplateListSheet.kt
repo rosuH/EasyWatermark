@@ -73,7 +73,7 @@ fun TemplateListSheet(
     deleteIcon: Painter? = null,
     enabled: Boolean = true,
     newTemplateInitialText: String = "",
-    /** ≥840: centered dialog; Compact/Medium keep bottom sheet. */
+    /** ≥800: centered dialog; Compact/Medium keep bottom sheet. */
     useLargeDialog: Boolean = false,
     onDismiss: () -> Unit,
     onUse: (Template) -> Unit,

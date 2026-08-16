@@ -376,7 +376,7 @@ class IosProductRootHost(
     private var pendingPickAfterDialog = false
     /** C2: shared Android Compose export panel; Photos/Share stay Swift callbacks. */
     private var showSaveSheet by mutableStateOf(false)
-    /** Last editor layout class for export sheet ≥840 dialog (export host is outside Editor BoxWithConstraints). */
+    /** Last editor layout class for export sheet ≥800 dialog (export host is outside Editor BoxWithConstraints). */
     private var lastEditorLayoutClass by mutableStateOf(EditorLayoutClass.Compact)
     private var outputFormat by mutableStateOf(ImageFormat.JPEG)
     private var outputQuality by mutableStateOf(80)
@@ -1014,7 +1014,9 @@ class IosProductRootHost(
                     // Live watermark config (enableBounds for Show Bounds switch).
                     val aboutShowBounds = waterMark.enableBounds
                     BoxWithConstraints(Modifier.fillMaxSize()) {
-                    val aboutLarge = maxWidth.value >= 840f
+                    val aboutLarge = usesLargeScreenDialog(
+                        editorLayoutClass(maxWidth.value, maxHeight.value),
+                    )
                     AboutScreen(
                         versionName = ProductVersion.NAME,
                         showBounds = aboutShowBounds,

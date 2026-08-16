@@ -1,7 +1,7 @@
 package me.rosuh.easywatermark.ui
 
 /**
- * Shared presentation helpers for ≥840dp surfaces (export / template / about measure).
+ * Shared presentation helpers for ≥800dp surfaces (export / template / about measure).
  * Breakpoints stay in [editorLayoutClass] — do not re-open ADR-0026 here.
  */
 

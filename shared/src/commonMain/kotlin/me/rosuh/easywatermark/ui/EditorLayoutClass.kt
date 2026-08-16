@@ -5,16 +5,19 @@ package me.rosuh.easywatermark.ui
  *
  * Hosts feed **window size in Dp** (not platform types). Width-primary:
  * - Compact: width &lt; 600 — vertical stack (B density)
- * - Medium: 600 ≤ width &lt; 840 — same stack as Compact (M1)
- * - Expanded: 840 ≤ width &lt; 1440 — supporting-pane A (preview+filmstrip | inspector) (D1)
+ * - Medium: 600 ≤ width &lt; 800 — same stack as Compact (M1)
+ * - Expanded: 800 ≤ width &lt; 1440 — supporting-pane A (preview+filmstrip | inspector) (D1)
  * - Wide: width ≥ 1440 — same dual-pane chrome as Expanded (owner 2026-08-10: no three-zone left rail)
  *
  * Fixtures:
  * | Size | Class |
  * | 360×640 | Compact |
  * | 600×800 | Medium |
- * | 839×800 | Medium |
- * | 840×800 | Expanded |
+ * | 799×800 | Medium |
+ * | 800×800 | Expanded |
+ * | 820×1180 | Expanded (iPad Air 11" portrait) |
+ * | 834×1210 | Expanded (iPad Pro 11" portrait) |
+ * | 1032×1376 | Expanded (iPad Pro 13" portrait) |
  * | 1280×800 | Expanded |
  * | 1440×900 | Wide (layout chrome = Expanded dual-pane) |
  */
@@ -28,8 +31,18 @@ enum class EditorLayoutClass {
 /** Width at which [EditorLayoutClass.Medium] begins (inclusive), in Dp. */
 const val EDITOR_LAYOUT_MEDIUM_MIN_WIDTH_DP: Float = 600f
 
-/** Width at which supporting-pane A ([EditorLayoutClass.Expanded]) begins (inclusive), in Dp. ADR-0026 D1. */
-const val EDITOR_LAYOUT_EXPANDED_MIN_WIDTH_DP: Float = 840f
+/**
+ * Width at which supporting-pane A ([EditorLayoutClass.Expanded]) begins (inclusive), in Dp.
+ * ADR-0026 D1, amended 2026-08-16: 840 → 800.
+ *
+ * Material's Expanded boundary is 840, but every 11" iPad lands just under it in portrait
+ * (Air 11" 820pt, Pro 11" 834pt) and fell back to the phone stack. The inspector is a fixed
+ * [EDITOR_EXPANDED_CONTROLS_PANE_MAX_DP] rail, so the preview pane still gets ~416dp at 800 —
+ * wider than any phone the Compact path already serves. 800 rather than 820 keeps headroom
+ * against safe-area inset consumption; nothing in the iPad lineup sits between 744 and 820,
+ * so the two values are equivalent in practice.
+ */
+const val EDITOR_LAYOUT_EXPANDED_MIN_WIDTH_DP: Float = 800f
 
 /**
  * Width band for [EditorLayoutClass.Wide] (inclusive), in Dp.

@@ -20,7 +20,7 @@ fun EditorTemplateSheetHost(
     deleteIcon: Painter? = null,
     enabled: Boolean = true,
     newTemplateInitialText: String = "",
-    /** ≥840 dual-pane: template list as centered dialog. */
+    /** ≥800 dual-pane: template list as centered dialog. */
     useLargeDialog: Boolean = false,
     onUse: (Template) -> Unit,
     onAdd: (String) -> Unit,

@@ -16,7 +16,7 @@ import androidx.compose.ui.window.DialogProperties
 import me.rosuh.easywatermark.ui.theme.EwmTheme
 
 /**
- * Centered product dialog for ≥840 surfaces (export / template).
+ * Centered product dialog for ≥800 surfaces (export / template).
  * Panel chrome matches [EwmModalBottomSheet] / [EwmConfirmDialog].
  */
 @Composable

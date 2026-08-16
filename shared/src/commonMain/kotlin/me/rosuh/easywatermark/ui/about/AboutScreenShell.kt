@@ -121,7 +121,7 @@ fun AboutScreen(
     preferInAppGallery: Boolean = false,
     onTogglePreferInAppGallery: (Boolean) -> Unit = {},
     /**
-     * ≥840 dual-pane / Desktop: limit content width and show Dev+Designer side-by-side (H5).
+     * ≥800 dual-pane / Desktop: limit content width and show Dev+Designer side-by-side (H5).
      * Compact/Medium keep full-bleed scroll + pager cards.
      */
     useLargeLayout: Boolean = false,

@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PhotoKit 预览快路径 · 实施计划评审</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #121a22;
+    --ink-soft: #3a4a58;
+    --mute: #6a7b8c;
+    --paper: #f2f5f7;
+    --line: rgba(18, 26, 34, 0.12);
+    --a: #0e5c6a;
+    --a2: #094450;
+    --ok: #047857;
+    --warn: #b45309;
+    --bad: #9f1239;
+    --glow: rgba(14, 92, 106, 0.13);
+    --wide: 60rem;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    font-family: "Instrument Sans", "Noto Serif SC", system-ui, sans-serif;
+    font-size: 1.05rem;
+    line-height: 1.65;
+    background:
+      radial-gradient(1100px 560px at 8% -8%, var(--glow), transparent 55%),
+      radial-gradient(900px 480px at 100% 15%, rgba(180, 83, 9, 0.07), transparent 48%),
+      linear-gradient(168deg, #f8fafb, var(--paper) 42%, #e6ecef);
+    min-height: 100vh;
+  }
+  .wrap { width: min(100% - 2.2rem, var(--wide)); margin-inline: auto; }
+  .narrow { max-width: 40rem; }
+
+  header {
+    padding: clamp(2.8rem, 8vw, 5rem) 0 2rem;
+  }
+  .eyebrow {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--a);
+    display: flex; align-items: center; gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .eyebrow::before { content: ""; width: 1.35rem; height: 2px; background: var(--a); }
+  h1 {
+    font-family: "Noto Serif SC", serif;
+    font-size: clamp(1.7rem, 4vw, 2.45rem);
+    line-height: 1.28;
+    margin: 0 0 0.85rem;
+    letter-spacing: -0.02em;
+  }
+  .lede { color: var(--ink-soft); margin: 0 0 1.4rem; max-width: 38em; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1.5rem; }
+  .badge {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    padding: 0.28rem 0.55rem;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,0.65);
+  }
+  .badge.acc { border-color: rgba(14,92,106,0.35); color: var(--a2); background: rgba(14,92,106,0.08); }
+  .badge.wait { border-color: rgba(180,83,9,0.4); color: var(--warn); background: rgba(180,83,9,0.1); }
+
+  .goals {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.85rem;
+  }
+  @media (max-width: 700px) { .goals { grid-template-columns: 1fr; } }
+  .goal {
+    padding: 1.15rem 1.2rem;
+    background: rgba(255,255,255,0.62);
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--a);
+  }
+  .goal.b { border-top-color: var(--warn); }
+  .goal .k {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--a);
+    margin-bottom: 0.35rem;
+  }
+  .goal.b .k { color: var(--warn); }
+  .goal h2 {
+    font-family: "Noto Serif SC", serif;
+    font-size: 1.1rem;
+    margin: 0 0 0.45rem;
+  }
+  .goal p { margin: 0; color: var(--ink-soft); font-size: 0.92rem; }
+  .goal .num {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 1.55rem;
+    font-weight: 500;
+    margin: 0.55rem 0 0.2rem;
+    letter-spacing: -0.03em;
+  }
+  .goal .num small { font-size: 0.72rem; color: var(--mute); margin-left: 0.2rem; }
+
+  section {
+    padding: 2.35rem 0;
+    border-top: 1px solid var(--line);
+  }
+  section > h2 {
+    font-family: "Noto Serif SC", serif;
+    font-size: clamp(1.25rem, 2.5vw, 1.55rem);
+    margin: 0 0 0.5rem;
+  }
+  .sub { color: var(--mute); margin: 0 0 1.35rem; max-width: 40em; font-size: 0.95rem; }
+
+  /* Ladder */
+  .ladder {
+    display: grid;
+    gap: 0.55rem;
+    max-width: 42rem;
+  }
+  .rung {
+    display: grid;
+    grid-template-columns: 2.4rem 1fr auto;
+    gap: 0.75rem;
+    align-items: start;
+    padding: 0.85rem 1rem;
+    background: rgba(255,255,255,0.55);
+    border: 1px solid var(--line);
+  }
+  .rung.new {
+    border-color: rgba(14,92,106,0.35);
+    background: linear-gradient(90deg, rgba(14,92,106,0.1), rgba(255,255,255,0.55));
+  }
+  .rung .ix {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 1.1rem;
+    color: var(--a);
+    font-weight: 500;
+  }
+  .rung h3 { margin: 0 0 0.2rem; font-size: 0.98rem; }
+  .rung p { margin: 0; font-size: 0.88rem; color: var(--ink-soft); }
+  .rung .tag {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.04em;
+    padding: 0.18rem 0.4rem;
+    white-space: nowrap;
+  }
+  .tag.now { background: rgba(106,123,140,0.15); color: var(--mute); }
+  .tag.add { background: rgba(14,92,106,0.14); color: var(--a2); }
+  .tag.floor { background: rgba(4,120,87,0.12); color: var(--ok); }
+
+  /* Phases timeline */
+  .phases {
+    display: grid;
+    gap: 0;
+    position: relative;
+    padding-left: 1.5rem;
+  }
+  .phases::before {
+    content: "";
+    position: absolute;
+    left: 0.35rem;
+    top: 0.4rem;
+    bottom: 0.4rem;
+    width: 2px;
+    background: linear-gradient(var(--a), rgba(14,92,106,0.15));
+  }
+  .phase {
+    position: relative;
+    padding: 0.95rem 0 1.15rem 0.85rem;
+  }
+  .phase::before {
+    content: "";
+    position: absolute;
+    left: -1.28rem;
+    top: 1.25rem;
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: 50%;
+    background: var(--a);
+    box-shadow: 0 0 0 3px rgba(14,92,106,0.18);
+  }
+  .phase .ph {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--a);
+    margin-bottom: 0.25rem;
+  }
+  .phase h3 {
+    font-family: "Noto Serif SC", serif;
+    font-size: 1.08rem;
+    margin: 0 0 0.35rem;
+  }
+  .phase p { margin: 0; color: var(--ink-soft); font-size: 0.92rem; }
+  .phase .meta {
+    margin-top: 0.4rem;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.7rem;
+    color: var(--mute);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    margin: 0.5rem 0 0;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.55rem 0.4rem;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  th {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--mute);
+    font-weight: 500;
+  }
+
+  .matrix .st {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.78rem;
+  }
+
+  /* Q cards */
+  .qs {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .q {
+    display: grid;
+    grid-template-columns: 2.4rem 1fr;
+    gap: 0.75rem;
+    padding: 1rem 1.05rem;
+    background: rgba(255,255,255,0.6);
+    border: 1px solid var(--line);
+  }
+  .q .n {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 1.15rem;
+    color: var(--a);
+    font-weight: 500;
+  }
+  .q h3 { margin: 0 0 0.3rem; font-size: 0.98rem; }
+  .q p { margin: 0; font-size: 0.88rem; color: var(--ink-soft); }
+  .q .rec {
+    margin-top: 0.45rem;
+    font-size: 0.88rem;
+    color: var(--a2);
+  }
+  .q .rec strong { font-weight: 600; }
+
+  .callout {
+    margin-top: 1.25rem;
+    padding: 1.25rem 1.3rem;
+    background: linear-gradient(135deg, rgba(14,92,106,0.1), rgba(255,255,255,0.72));
+    border: 1px solid rgba(14,92,106,0.28);
+  }
+  .callout .k {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--a2);
+    margin-bottom: 0.35rem;
+  }
+  .callout h3 {
+    font-family: "Noto Serif SC", serif;
+    font-size: 1.15rem;
+    margin: 0 0 0.45rem;
+  }
+  .callout p { margin: 0; color: var(--ink-soft); font-size: 0.95rem; }
+
+  .gates {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.65rem;
+    margin-top: 1rem;
+  }
+  @media (max-width: 720px) { .gates { grid-template-columns: 1fr; } }
+  .gate {
+    padding: 0.9rem 1rem;
+    background: rgba(255,255,255,0.55);
+    border: 1px solid var(--line);
+  }
+  .gate .k {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.06em;
+    color: var(--mute);
+    margin-bottom: 0.35rem;
+  }
+  .gate strong { display: block; font-size: 0.95rem; margin-bottom: 0.25rem; }
+  .gate span { font-size: 0.85rem; color: var(--ink-soft); }
+
+  .nongoals {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.4rem;
+  }
+  .nongoals li {
+    padding: 0.45rem 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+  }
+  .nongoals li::before {
+    content: "✗ ";
+    font-family: "JetBrains Mono", monospace;
+    color: var(--bad);
+    font-size: 0.8rem;
+  }
+
+  footer {
+    padding: 2rem 0 3rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.82rem;
+    color: var(--mute);
+  }
+  footer code { font-family: "JetBrains Mono", monospace; font-size: 0.85em; }
+  footer a { color: var(--a2); }
+
+  .toc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    margin: 1.25rem 0 0;
+    font-size: 0.88rem;
+  }
+  .toc a { color: var(--a2); text-decoration: none; border-bottom: 1px solid rgba(14,92,106,0.25); }
+  .toc a:hover { border-bottom-color: var(--a); }
+
+  .reveal { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+  <header class="wrap">
+    <div class="narrow">
+      <div class="eyebrow">EasyWatermark · ADR-0029 Accepted · 2026-08-15</div>
+      <h1>PhotoKit：先出相册图，再淡入水印</h1>
+      <p class="lede">Grill 已锁。可选 <strong>Library Read</strong> 只加速已选进编辑器的照片。主预览先画未叠水印的系统 derivative，再交叉淡入 ImageIO 水印预览。Session / 导出仍走 Documents。离线仍是硬承诺。</p>
+      <div class="badge-row">
+        <span class="badge acc">ADR-0029 Accepted</span>
+        <span class="badge">Grill R1–R3 已锁</span>
+        <span class="badge">① 量底图上屏 · 水印不劣化</span>
+      </div>
+    </div>
+    <div class="goals reveal">
+      <div class="goal">
+        <div class="k">① 冷切图</div>
+        <h2>先出底图</h2>
+        <div class="num">derivative<small>再淡入水印</small></div>
+        <p>授权命中：Library derivative 先上屏。Watermarked preview 仍走 ImageIO（~200 ms 档），中位不得劣化。</p>
+      </div>
+      <div class="goal b">
+        <div class="k">② 拖参</div>
+        <h2>不进 draft 路径</h2>
+        <div class="num">~7 ms<small>Source 命中时</small></div>
+        <p>快路径<strong>不跳过</strong> ImageIO 填 Source；拖动中 decode 仍应 ≈0，背压比值不恶化。</p>
+      </div>
+    </div>
+    <nav class="toc narrow" aria-label="目录">
+      <a href="#ladder">阶梯</a>
+      <a href="#phases">阶段</a>
+      <a href="#matrix">权限矩阵</a>
+      <a href="#gates">真机门</a>
+      <a href="#questions">已锁</a>
+      <a href="#nongoals">非目标</a>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <section id="ladder" class="reveal">
+      <h2>预览首帧阶梯</h2>
+      <p class="sub">每一级可独立回退。第 2 级是新增；第 3 级永远是地板。</p>
+      <div class="ladder">
+        <div class="rung">
+          <span class="ix">0</span>
+          <div>
+            <h3>Watermarked 缓存命中</h3>
+            <p><code style="font-family:JetBrains Mono,monospace;font-size:0.85em">peekCached(watermarkedPreviewKey)</code></p>
+          </div>
+          <span class="tag now">今日已有</span>
+        </div>
+        <div class="rung">
+          <span class="ix">1</span>
+          <div>
+            <h3>Source 占位命中</h3>
+            <p>底图已在，只差 compose</p>
+          </div>
+          <span class="tag now">今日已有</span>
+        </div>
+        <div class="rung new">
+          <span class="ix">2</span>
+          <div>
+            <h3>Library derivative（无水印）</h3>
+            <p>授权 + assetId 可解析 → 主预览先铺系统图。<strong>不 compose、不写任何预览缓存</strong>。</p>
+          </div>
+          <span class="tag add">本期新增</span>
+        </div>
+        <div class="rung">
+          <span class="ix">3</span>
+          <div>
+            <h3>ImageIO 全质量</h3>
+            <p>填 SourcePlaceholder + Watermarked，拥有最终话语权；拖参依赖这一级。</p>
+          </div>
+          <span class="tag floor">永远保留</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="phases" class="reveal">
+      <h2>分阶段 · 每阶段可 revert</h2>
+      <p class="sub">P0（仅 plist）并入 P2——没有消费者的 usage string 是商店风险。</p>
+      <div class="phases">
+        <div class="phase">
+          <div class="ph">P1 · 免</div>
+          <h3>透传 itemIdentifier</h3>
+          <p>NC 增加可选 <code style="font-family:JetBrains Mono,monospace;font-size:0.85em">assetId</code>；内存 registry（owned path → id）。免授权，也可做 picker 预选。</p>
+          <div class="meta">测：iosSimulatorArm64Test · 无真机门</div>
+        </div>
+        <div class="phase">
+          <div class="ph">P2 · 能力</div>
+          <h3>授权 + PhotoKit producer（默认关）</h3>
+          <p>Info.plist 读描述 + <code style="font-family:JetBrains Mono,monospace;font-size:0.85em">IosPhotoKitImageSource</code>；仅 bench / 调试开关触发，默认用户不见弹窗。</p>
+          <div class="meta">真机门：Allow All / Limited / Deny · DEVICE_PERF_PHOTOKIT</div>
+        </div>
+        <div class="phase">
+          <div class="ph">P3 · 主目标</div>
+          <h3>冷切图：先铺 Library derivative</h3>
+          <p>与 ImageIO 并行；derivative 不上 pipeline、不写缓存；Allow All 后默认开。短交叉淡入到水印预览。</p>
+          <div class="meta">真机门：time-to-derivative + 水印中位不劣化 + 截图（ADR-0010）</div>
+        </div>
+        <div class="phase">
+          <div class="ph">P4 · 加分</div>
+          <h3>邻居 PHCachingImageManager</h3>
+          <p>对齐现有 focus±2；可选胶片条复用同一 producer（非成功判据）。</p>
+          <div class="meta">若 P3 改善 &lt;30% → 停 P4 并重评</div>
+        </div>
+        <div class="phase">
+          <div class="ph">P5 · 文案</div>
+          <h3>README / 商店 / 隐私政策</h3>
+          <p>读权限可选、仅本机预览加速、拒绝不影响功能；Android 文案不动。</p>
+          <div class="meta">文档单独可 revert</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="matrix" class="reveal">
+      <h2>权限状态矩阵</h2>
+      <p class="sub">Limited 是一等公民：PHPicker 不会把刚选的图加入可读集合。</p>
+      <div class="matrix" style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr><th>状态</th><th>快路径</th><th>用户看到</th><th>弹窗</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="st">authorized</td>
+              <td>启用</td>
+              <td>先出系统图，再淡入水印</td>
+              <td>不再弹</td>
+            </tr>
+            <tr>
+              <td class="st">limited</td>
+              <td>尝试，常 miss</td>
+              <td>与今天一致（ImageIO）+ 每次进编辑器出「允许全部照片」banner</td>
+              <td>系统框已过；banner 直到 Allow All</td>
+            </tr>
+            <tr>
+              <td class="st">denied</td>
+              <td>禁用</td>
+              <td>与今天一致 + 每次进编辑器 banner「去设置」</td>
+              <td>banner 直到 Allow All</td>
+            </tr>
+            <tr>
+              <td class="st">restricted</td>
+              <td>禁用</td>
+              <td>与今天一致</td>
+              <td>永不弹</td>
+            </tr>
+            <tr>
+              <td class="st">notDetermined</td>
+              <td>首次需要时请求一次</td>
+              <td>请求期间仍走 ImageIO</td>
+              <td>本进程一次</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="gates" class="reveal">
+      <h2>真机通过门（写在测之前）</h2>
+      <div class="gates">
+        <div class="gate">
+          <div class="k">Allow All · 冷切</div>
+          <strong>量 derivative 上屏</strong>
+          <span>水印中位不劣化。编造「快 30%」禁止上 banner。</span>
+        </div>
+        <div class="gate">
+          <div class="k">Limited / Denied</div>
+          <strong>不劣化</strong>
+          <span>相对 before ≤ +10 ms / +5 ms。先修回落再谈收益。</span>
+        </div>
+        <div class="gate">
+          <div class="k">拖参 + 画质</div>
+          <strong>decode≈0 · 看截图</strong>
+          <span>Source 命中率不降；首帧/终帧并排目视（ADR-0010）。</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="questions" class="reveal">
+      <h2>Grill 已锁</h2>
+      <p class="sub">ADR-0029 Accepted。下列不再是开放问题。</p>
+      <div class="qs">
+        <div class="q">
+          <span class="n">①</span>
+          <div>
+            <h3>先出无水印系统图，再淡入水印预览</h3>
+            <p>PhotoKit 永不进 CommonWatermarkPipeline / SourcePlaceholder。</p>
+          </div>
+        </div>
+        <div class="q">
+          <span class="n">②</span>
+          <div>
+            <h3>Library Read 可选</h3>
+            <p>首次需要时系统框一次；非 Allow All 则每次进编辑器出 banner（全部照片 / 去设置）。文案未测前不写百分比。</p>
+          </div>
+        </div>
+        <div class="q">
+          <span class="n">③</span>
+          <div>
+            <h3>度量与切片</h3>
+            <p>量底图上屏；Allow All 后默认开；P1 含 picker 预选；磁盘缓存另期；Release 脱敏日志可进。</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout">
+        <div class="k">下一步（未开工）</div>
+        <h3>从 P1 透传 itemIdentifier 开始</h3>
+        <p>计划 Markdown 仍是实施清单；以 ADR-0029 为准，旧「PhotoKit 先 compose」作废。</p>
+      </div>
+    </section>
+
+    <section id="nongoals" class="reveal">
+      <h2>明确不做</h2>
+      <ul class="nongoals">
+        <li>用 PhotoKit 替换全分辨率导出解码</li>
+        <li>把 PHAsset 变成 Session 真相源</li>
+        <li>声称首帧与 ImageIO 像素一致（接受先快后好）</li>
+        <li>增长 Shared.framework 公开 ABI / commonMain expect PhotoKit</li>
+        <li>持久化 localIdentifier；本期引入 QL / libheif</li>
+        <li>为导出要求读权限（add-only 保存不变）</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="wrap">
+    计划全文：<code>docs/superpowers/plans/2026-08-15-ios-photokit-preview-fast-path.md</code>
+    · ADR：<code>docs/adr/0029-ios-library-read-first-paint.md</code>
+    · 手机 Cursor 通常只显示源码；请用 Safari / Chrome 打开本文件。
+  </footer>
+
+  <script>
+    const io = new IntersectionObserver((es) => {
+      es.forEach((e) => { if (e.isIntersecting) e.target.classList.add("in"); });
+    }, { threshold: 0.1 });
+    document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+  </script>
+</body>
+</html>

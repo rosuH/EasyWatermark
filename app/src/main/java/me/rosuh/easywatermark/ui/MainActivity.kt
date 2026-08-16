@@ -580,7 +580,9 @@ class MainActivity : ComponentActivity() {
                                                 followWallpaperOn = followWallpaper,
                                                 followPhotoOn = userPreferences.followPhoto,
                                                 preferInAppGallery = userPreferences.preferInAppGallery,
-                                                useLargeLayout = aboutWidthDp >= 840,
+                                                useLargeLayout = usesLargeScreenDialog(
+                                                    editorLayoutClass(aboutWidthDp.toFloat()),
+                                                ),
                                                 onBack = { viewModel.onBackPressed() },
                                                 onOpenLink = { url ->
                                                     this@MainActivity.openLink(url)
@@ -765,7 +767,9 @@ class MainActivity : ComponentActivity() {
                                     images = exportImages,
                                     selectedFormatLabel = userPreferences.outputFormat,
                                     quality = userPreferences.compressLevel,
-                                    useLargeDialog = exportWidthDp >= 840,
+                                    useLargeDialog = usesLargeScreenDialog(
+                                        editorLayoutClass(exportWidthDp.toFloat()),
+                                    ),
                                     resultSummaryText = resultSummaryText,
                                     statusContentDescription = statusCd,
                                     destinationLine = destinationLine,

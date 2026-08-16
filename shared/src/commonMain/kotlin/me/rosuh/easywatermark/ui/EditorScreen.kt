@@ -43,7 +43,7 @@ import org.jetbrains.compose.resources.stringResource
  *
  * ADR-0026 layout (owner 2026-08-10: drop three-zone left rail):
  * - Compact / Medium: vertical stack (preview → filmstrip → bottom controls)
- * - Expanded / Wide (≥840, including ≥1440): supporting-pane A — main (preview + filmstrip) | form inspector
+ * - Expanded / Wide (≥800, including ≥1440): supporting-pane A — main (preview + filmstrip) | form inspector
  * Session switching is filmstrip-only; no left session library rail.
  * Filmstrip always under the primary preview (F1), never in the inspector rail.
  */

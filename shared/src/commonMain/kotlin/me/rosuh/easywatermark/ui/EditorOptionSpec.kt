@@ -17,6 +17,9 @@ data class EditorOptionSpec(
 /**
  * Android-parity Content / Style / Layout option catalogs (same order as production
  * `contentFunList` / `styleFunList` / `layoutFunList`).
+ *
+ * Fill/Stroke is not a catalog chip. v2.10.0 opened TextStyleFragment from
+ * [FuncType.TextTypeFace] (label "Style") and showed paint style + typeface together.
  */
 object EditorOptionCatalog {
     val content: List<EditorOptionSpec> = listOf(
@@ -49,4 +52,12 @@ object EditorOptionCatalog {
             valueRange = 0f..WatermarkConfigRules.MAX_VERTICAL_GAP.toFloat(),
         ),
     )
+}
+
+/**
+ * Which Style-tab option body hosts Fill/Stroke and typeface (v2.10.0 TextStyleFragment).
+ */
+object EditorStyleAppearance {
+    fun hostsPaintStyle(type: FuncType): Boolean = type == FuncType.TextTypeFace
+    fun hostsTypeface(type: FuncType): Boolean = type == FuncType.TextTypeFace
 }

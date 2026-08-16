@@ -734,6 +734,11 @@ internal class IosEditorScreenHost(
                                             state = state.copy(typeface = change.typeface)
                                             onTypefaceChange(change.typeface)
                                         }
+                                        is WatermarkConfigChange.TextStyle -> {
+                                            pendingTextStyle = change.style
+                                            state = state.copy(textStyle = change.style)
+                                            onTextStyleChange(change.style)
+                                        }
                                         is WatermarkConfigChange.Icon -> {
                                             // Icon bytes arrive via PhotosPicker + update(); picker is the edge.
                                             onPickIcon()

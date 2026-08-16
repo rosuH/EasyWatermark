@@ -18,7 +18,7 @@ import me.rosuh.easywatermark.shared.generated.resources.title_layout
 import me.rosuh.easywatermark.shared.generated.resources.title_style
 import me.rosuh.easywatermark.ui.compose.SliderOption
 import me.rosuh.easywatermark.ui.compose.TextContentOption
-import me.rosuh.easywatermark.ui.compose.TextTypeface as TextTypefaceOption
+import me.rosuh.easywatermark.ui.compose.TextStyleAppearanceOption
 import me.rosuh.easywatermark.ui.compose.TileMode as TileModeOption
 import org.jetbrains.compose.resources.stringResource
 
@@ -193,10 +193,15 @@ internal fun EditorOptionControl(
             }
 
             FuncType.TextTypeFace -> {
-                TextTypefaceOption(
+                TextStyleAppearanceOption(
+                    paintStyle = waterMark.textStyle,
                     typeface = waterMark.textTypeface,
                     modifier = innerModifier,
-                    onValueChange = { next: TextTypeface ->
+                    formPath = formPath,
+                    onPaintStyleChange = { next ->
+                        onValueChange(WatermarkConfigChange.TextStyle(next))
+                    },
+                    onTypefaceChange = { next: TextTypeface ->
                         onValueChange(WatermarkConfigChange.Typeface(next))
                     },
                 )

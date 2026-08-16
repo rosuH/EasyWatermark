@@ -23,6 +23,8 @@ sealed class WatermarkConfigChange {
     data class Degree(val degree: Float) : WatermarkConfigChange()
     data class TextSize(val size: Float) : WatermarkConfigChange()
     data class Typeface(val typeface: TextTypeface) : WatermarkConfigChange()
+    /** Fill vs Stroke; emitted from the Style (TextTypeFace) option body. */
+    data class TextStyle(val style: TextPaintStyle) : WatermarkConfigChange()
     data class TileMode(val tileMode: WatermarkTileMode) : WatermarkConfigChange()
     /** Horizontal gap, already rounded to the `Int` passed to `updateHorizon`. */
     data class HorizontalGap(val gap: Int) : WatermarkConfigChange()

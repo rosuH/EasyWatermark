@@ -26,6 +26,10 @@ class WatermarkConfigChangeTest {
             WatermarkConfigChange.Typeface(TextTypeface.Bold),
         )
         assertEquals(
+            WatermarkConfigChange.TextStyle(TextPaintStyle.Stroke),
+            WatermarkConfigChange.TextStyle(TextPaintStyle.Stroke),
+        )
+        assertEquals(
             WatermarkConfigChange.TileMode(WatermarkTileMode.REPEAT),
             WatermarkConfigChange.TileMode(WatermarkTileMode.REPEAT),
         )

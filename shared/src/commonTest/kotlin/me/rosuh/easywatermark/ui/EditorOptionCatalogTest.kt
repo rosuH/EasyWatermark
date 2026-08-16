@@ -36,6 +36,16 @@ class EditorOptionCatalogTest {
     }
 
     @Test
+    fun fill_stroke_lives_in_style_typeface_option_not_own_catalog_chip() {
+        // v2.10.0 opened TextStyleFragment (Fill/Stroke + typeface) from TextTypeFace.
+        // CMP keeps that home so Style tab order stays aligned with production.
+        assertTrue(EditorOptionCatalog.style.any { it.type == FuncType.TextTypeFace })
+        assertTrue(EditorOptionCatalog.style.none { it.type.stableKey() == "TextStyle" })
+        assertTrue(EditorStyleAppearance.hostsPaintStyle(FuncType.TextTypeFace))
+        assertTrue(EditorStyleAppearance.hostsTypeface(FuncType.TextTypeFace))
+    }
+
+    @Test
     fun layout_order_is_horizon_then_vertical() {
         assertEquals(
             listOf(FuncType.Horizon, FuncType.Vertical),

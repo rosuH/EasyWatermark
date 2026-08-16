@@ -105,7 +105,7 @@ fun <T> SaveExportSheetShell(
     exportSuccessCount: Int = 0,
     exportFailureCount: Int = 0,
     /**
-     * ≥840 path: centered dialog instead of phone bottom drawer (H4).
+     * ≥800 path: centered dialog instead of phone bottom drawer (H4).
      * Compact/Medium keep the sheet. Desktop uses the sheet (not center dialog) so
      * export chrome stays bottom-anchored like phone (owner 2026-08-10).
      */

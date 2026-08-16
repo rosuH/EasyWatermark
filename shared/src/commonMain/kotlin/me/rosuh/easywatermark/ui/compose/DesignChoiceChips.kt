@@ -49,12 +49,20 @@ fun <T> DesignChoiceChips(
      * Default false keeps content-sized chips for Style typeface / tile rows.
      */
     equalWidth: Boolean = false,
+    /**
+     * When false, the row wraps chip width so Fill/Stroke + typeface can sit in one
+     * compact Style panel without each group claiming the full slot.
+     */
+    fillMaxWidth: Boolean = true,
 ) {
     val accent = editorAccentColor()
     val selectedContainer = editorSelectedContainerColor()
     Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        modifier = if (fillMaxWidth) modifier.fillMaxWidth() else modifier,
+        horizontalArrangement = Arrangement.spacedBy(
+            8.dp,
+            if (fillMaxWidth) Alignment.CenterHorizontally else Alignment.Start,
+        ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         options.forEachIndexed { index, option ->

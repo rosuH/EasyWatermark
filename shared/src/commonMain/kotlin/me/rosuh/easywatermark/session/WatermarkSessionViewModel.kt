@@ -203,6 +203,7 @@ open class WatermarkSessionViewModel(
             is WatermarkConfigChange.Degree -> configEditor.updateDegree(change.degree)
             is WatermarkConfigChange.TextSize -> configEditor.updateTextSize(change.size)
             is WatermarkConfigChange.Typeface -> configEditor.updateTextTypeface(change.typeface)
+            is WatermarkConfigChange.TextStyle -> configEditor.updateTextStyle(change.style)
             is WatermarkConfigChange.TileMode -> configEditor.updateTileMode(change.tileMode)
             is WatermarkConfigChange.HorizontalGap -> configEditor.updateHorizon(change.gap)
             is WatermarkConfigChange.VerticalGap -> configEditor.updateVertical(change.gap)
