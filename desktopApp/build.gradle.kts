@@ -68,7 +68,16 @@ compose.desktop {
             prop("EwmForceMarkMode", "ewmForceMarkMode")?.let { "-Dewm.desktop.forceMarkMode=$it" },
             prop("EwmForceText", "ewmForceText")?.let { "-Dewm.desktop.forceText=$it" },
             prop("EwmOpenSheet", "ewmOpenSheet")?.let { "-Dewm.desktop.openSheet=$it" },
+            prop("EwmPreviewProbe", "ewmPreviewProbe")?.let { "-Dewm.preview.probe=$it" },
+            prop("EwmPreviewProbeLog", "ewmPreviewProbeLog")?.let { "-Dewm.preview.probeLog=$it" },
         ).forEach { jvmArgs += it }
+        // DesktopWindowChrome reflects into CPlatformWindow.setStyleBits so the
+        // macOS title bar actually goes transparent on Homebrew OpenJDK.
+        jvmArgs += listOf(
+            "--add-opens=java.desktop/sun.awt=ALL-UNNAMED",
+            "--add-opens=java.desktop/sun.lwawt=ALL-UNNAMED",
+            "--add-opens=java.desktop/sun.lwawt.macosx=ALL-UNNAMED",
+        )
         nativeDistributions {
             packageName = "EasyWatermark"
             // S4d-175: single-sourced from the Android app version (buildSrc Apps.versionName), shared with :app.

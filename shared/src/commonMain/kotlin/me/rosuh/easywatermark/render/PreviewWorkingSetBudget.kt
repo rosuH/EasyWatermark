@@ -19,7 +19,9 @@ package me.rosuh.easywatermark.render
  * memory only **compresses** the joint when the formula would exceed the ceiling — it never
  * invents a third cache layer.
  */
-internal object PreviewWorkingSetBudget {
+@OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
+@kotlin.native.HiddenFromObjC
+object PreviewWorkingSetBudget {
     const val WORKING_SET_FRAMES: Int = 5
     const val SOURCE_BYTES_FLOOR: Long = 12L * 1024 * 1024
     const val WATERMARKED_BYTES_FLOOR: Long = 48L * 1024 * 1024
@@ -95,7 +97,9 @@ internal object PreviewWorkingSetBudget {
     private val SOURCE_ENTRIES_MAX: Int = WORKING_SET_FRAMES + 1
 }
 
-internal data class PreviewWorkingSetCaps(
+@OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
+@kotlin.native.HiddenFromObjC
+data class PreviewWorkingSetCaps(
     val longEdgePx: Int,
     val sourceBytesMax: Long,
     val watermarkedBytesMax: Long,

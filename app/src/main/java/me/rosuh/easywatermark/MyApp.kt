@@ -54,6 +54,7 @@ class MyApp : Application() {
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         val action = BitmapCache.trimForMemoryLevel(level)
+        me.rosuh.easywatermark.render.AndroidPreviewWorkingSet.onTrimMemory()
         AndroidMemoryDiagnostics.logTrim(level, action)
     }
 

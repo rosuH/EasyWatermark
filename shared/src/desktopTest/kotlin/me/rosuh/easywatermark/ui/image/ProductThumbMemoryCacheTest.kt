@@ -1,6 +1,5 @@
 package me.rosuh.easywatermark.ui.image
 
-import coil3.ImageLoader
 import coil3.decode.DataSource
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest

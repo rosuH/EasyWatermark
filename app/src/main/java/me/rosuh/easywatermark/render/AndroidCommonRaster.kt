@@ -17,15 +17,34 @@ import me.rosuh.easywatermark.data.model.WatermarkMode
  */
 object AndroidCommonRaster {
 
-    fun textRasterEnv(context: Context): TextRasterEnv = TextRasterEnv(
-        fontFamilyResolver = createFontFamilyResolver(context),
-        density = Density(1f),
-        layoutDirection = LayoutDirection.Ltr,
-    )
+    @Volatile
+    private var memoResolver: androidx.compose.ui.text.font.FontFamily.Resolver? = null
+
+    @Volatile
+    private var memoResolverContext: Context? = null
+
+    fun textRasterEnv(context: Context): TextRasterEnv {
+        val app = context.applicationContext
+        val cached = memoResolver
+        val resolver = if (cached != null && memoResolverContext === app) {
+            cached
+        } else {
+            createFontFamilyResolver(app).also {
+                memoResolver = it
+                memoResolverContext = app
+            }
+        }
+        return TextRasterEnv(
+            fontFamilyResolver = resolver,
+            density = Density(1f),
+            layoutDirection = LayoutDirection.Ltr,
+        )
+    }
 
     /**
- * Compose [config] over a copy of [background] (ARGB_8888). Optional [icon] for Image mode.
- * Off-main only — call from IO/Default, never Compose Main.
+     * Compose [config] over [background]. Optional [icon] for Image mode.
+     * [composeOverBackground] only reads the source and allocates its own output — no copy.
+     * Off-main only — call from IO/Default, never Compose Main.
      */
     fun composeToBitmap(
         context: Context,
@@ -34,26 +53,26 @@ object AndroidCommonRaster {
         imageInfo: ImageInfo,
         icon: Bitmap? = null,
     ): Bitmap {
-        val bg = if (background.config == Bitmap.Config.ARGB_8888 && background.isMutable) {
-            background
-        } else {
-            background.copy(Bitmap.Config.ARGB_8888, /* mutable = */ false)
-                ?: error("AndroidCommonRaster: cannot copy background bitmap")
+        PreviewSourceReuseProbe.beginCompose()
+        return try {
+            val env = textRasterEnv(context)
+            val iconIb = icon?.asImageBitmap()
+            if (config.markMode == WatermarkMode.Image) {
+                require(iconIb != null) { "AndroidCommonRaster: Image mode requires icon bitmap" }
+            }
+            PreviewSourceReuseProbe.recordCompose()
+            val composed = CommonWatermarkPipeline.compose(
+                background = background.asImageBitmap(),
+                config = config,
+                env = env,
+                icon = iconIb,
+                offsetX = imageInfo.offsetX,
+                offsetY = imageInfo.offsetY,
+            )
+            composed.asAndroidBitmap()
+        } finally {
+            PreviewSourceReuseProbe.endCompose()
         }
-        val env = textRasterEnv(context)
-        val iconIb = icon?.asImageBitmap()
-        if (config.markMode == WatermarkMode.Image) {
-            require(iconIb != null) { "AndroidCommonRaster: Image mode requires icon bitmap" }
-        }
-        val composed = CommonWatermarkPipeline.compose(
-            background = bg.asImageBitmap(),
-            config = config,
-            env = env,
-            icon = iconIb,
-            offsetX = imageInfo.offsetX,
-            offsetY = imageInfo.offsetY,
-        )
-        return composed.asAndroidBitmap()
     }
 
     /**

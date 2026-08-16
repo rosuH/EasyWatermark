@@ -67,6 +67,7 @@ import me.rosuh.easywatermark.render.IosPreviewRaster
 import me.rosuh.easywatermark.render.IosWatermarkIconCache
 import me.rosuh.easywatermark.render.PreviewResolutionPolicy
 import me.rosuh.easywatermark.render.PreviewWorkingSetBudget
+import me.rosuh.easywatermark.render.neighborIndices
 import me.rosuh.easywatermark.session.AppIntent
 import me.rosuh.easywatermark.session.IosAppServices
 import me.rosuh.easywatermark.session.IosAssetIdentityRegistry
@@ -339,6 +340,22 @@ class IosProductRootHost(
                 draftOffset = request.offsetX to request.offsetY,
                 forcePath = request.path,
             )
+        }
+    }
+
+    private val configChangeRenders = IosDraftRenderConflator<WatermarkConfigChange>(
+        scope = hostScope,
+    ) { change ->
+        if (disposed) return@IosDraftRenderConflator
+        previewImages.clearPurposeFromOwner(IosPreviewPurpose.Watermarked)
+        watermarkedPreviewSourcePath = null
+        previewGen += 1
+        val gen = previewGen
+        runCatching {
+            services.session.dispatchAndAwait(AppIntent.ApplyConfig(change))
+            renderPreviewForCurrentSelection(gen = gen)
+        }.onFailure { t ->
+            statusLine = "Failed: ${t.message}"
         }
     }
     private var isSaving by mutableStateOf(false)
@@ -788,6 +805,7 @@ class IosProductRootHost(
             // a dead host (suite isolation + single-scene rebuild safety).
             progressiveImport.close()
             clampDraftRenders.close()
+            configChangeRenders.close()
             services.session.cancelExport()
             previewGen += 1
             // Synchronously mark the preview repository closed when uncontended *before*
@@ -1519,28 +1537,12 @@ class IosProductRootHost(
                         },
                         onConfigChange = { change ->
                             // F2: typed WatermarkConfigChange from shared controls (no from()).
-                            if (isBusy) return@EditorScreen
                             if (change is WatermarkConfigChange.Icon) {
                                 onPickIcon()
                                 return@EditorScreen
                             }
-                            scope.launch {
-                                // Config change invalidates watermarked cache (not source placeholders).
-                                previewImages.clearPurposeFromOwner(IosPreviewPurpose.Watermarked)
-                                watermarkedPreviewSourcePath = null
-                                previewGen += 1
-                                val gen = previewGen
-                                isBusy = true
-                                try {
-                                    services.session.dispatchAndAwait(
-                                        AppIntent.ApplyConfig(change),
-                                    )
-                                    renderPreviewForCurrentSelection(gen = gen)
-                                } catch (t: Throwable) {
-                                    statusLine = "Failed: ${t.message}"
-                                }
-                                isBusy = false
-                            }
+                            // Do not drop slider ticks on isBusy — one persist+paint in flight + latest.
+                            configChangeRenders.submit(change)
                         },
                         onUseTemplate = { template ->
                             val content = template.content ?: return@EditorScreen
@@ -2687,12 +2689,7 @@ class IosProductRootHost(
         syncPhotoKitNeighborWindow(focusPath, list, committedPreviewBucket)
         val idx = list.indexOfFirst { it.uri.value == focusPath }
         if (idx < 0) return
-        val neighbors = buildList {
-            for (delta in listOf(-2, -1, 1, 2)) {
-                val i = idx + delta
-                if (i in list.indices) add(list[i])
-            }
-        }
+        val neighbors = neighborIndices(idx, list.size).map { list[it] }
         if (neighbors.isEmpty()) return
         val wm = launch.waterMark
         val bucket = committedPreviewBucket
@@ -2755,9 +2752,7 @@ class IosProductRootHost(
                 emptySet()
             } else {
                 buildSet {
-                    for (delta in listOf(-2, -1, 1, 2)) {
-                        val i = idx + delta
-                        if (i !in list.indices) continue
+                    for (i in neighborIndices(idx, list.size)) {
                         val id = IosAssetIdentityRegistry.get(list[i].uri.value)
                         if (!id.isNullOrBlank()) add(id)
                     }

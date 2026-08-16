@@ -184,6 +184,13 @@ class ComposeMainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (intent?.getBooleanExtra("ewm_preview_probe", false) == true ||
+            System.getProperty("ewm.preview.probe") == "true"
+        ) {
+            me.rosuh.easywatermark.render.PreviewSourceReuseProbe.enabled = true
+            me.rosuh.easywatermark.render.PreviewSourceReuseProbe.reset()
+            android.util.Log.i("PreviewSourceReuse", "probe enabled")
+        }
         handleShareIntent(intent)
 
         // Crash-recovery self-heal: MyApp.recoveryMode is computed in MyApp.onCreate.
@@ -511,6 +518,13 @@ class ComposeMainActivity : ComponentActivity() {
                                                 imageList = editorSelection.images,
                                                 waterMark = editorWaterMark,
                                                 selectedImage = editorSelection.selected,
+                                                onUpdateUriFailed = { se ->
+                                                    Toast.makeText(
+                                                        context,
+                                                        se.message ?: "Cannot open image",
+                                                        Toast.LENGTH_SHORT,
+                                                    ).show()
+                                                },
                                                 onBack = {
                                                     showEditorExitConfirm = true
                                                 },

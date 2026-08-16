@@ -6,10 +6,68 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Desktop macOS title bar is transparent + fullWindowContent. About's olive + radial
- * halo must paint under the traffic lights; only content is inset.
+ * Desktop macOS title bar is transparent + fullWindowContent. Launch / About olive
+ * (and About's radial halo) must paint under the traffic lights; only content that
+ * would sit under the lights is inset. Client properties must be set in SwingWindow
+ * init — after the window is displayable they are ignored (opaque black title bar).
  */
 class DesktopAboutTitleBarChromeTest {
+
+    @Test
+    fun mac_title_bar_installed_in_swing_window_init() {
+        val window = readFirst(
+            "desktopApp/src/main/kotlin/me/rosuh/easywatermark/desktop/DesktopWindow.kt",
+        )
+        val chrome = readFirst(
+            "desktopApp/src/main/kotlin/me/rosuh/easywatermark/desktop/DesktopWindowChrome.kt",
+        )
+        assertTrue(
+            window.contains("SwingWindow("),
+            "must use SwingWindow so chrome can be installed before the window is displayable",
+        )
+        assertTrue(
+            window.contains("init = {"),
+            "mac title-bar client properties must be set in SwingWindow init",
+        )
+        val initAt = window.indexOf("init = {")
+        val applyAt = window.indexOf("applyProductWindowChrome", initAt)
+        assertTrue(
+            initAt >= 0 && applyAt > initAt && applyAt < initAt + 240,
+            "SwingWindow init must call applyProductWindowChrome before first show",
+        )
+        assertTrue(
+            chrome.contains("apple.awt.fullWindowContent") &&
+                chrome.contains("apple.awt.transparentTitleBar"),
+            "macOS chrome must request fullWindowContent + transparent title bar",
+        )
+        assertTrue(
+            chrome.contains("fun realizeMacTitleBarAfterShown") &&
+                chrome.contains("setStyleBits"),
+            "after first show must nudge the frame and push NSWindow style bits",
+        )
+        assertTrue(
+            window.contains("realizeMacTitleBarAfterShown"),
+            "Desktop window must realize mac title-bar chrome after first show",
+        )
+    }
+
+    @Test
+    fun launch_paints_under_title_bar_no_root_inset() {
+        val window = readFirst(
+            "desktopApp/src/main/kotlin/me/rosuh/easywatermark/desktop/DesktopWindow.kt",
+        )
+        val launchBlock = window.substringAfter("ProductShellNav.Route.Launch").substringBefore(
+            "ProductShellNav.Route.About",
+        )
+        assertFalse(
+            launchBlock.contains("macFullWindowContentInsets()"),
+            "Launch root must not use macFullWindowContentInsets — that leaves a dark title band",
+        )
+        assertTrue(
+            launchBlock.contains("LaunchScreen("),
+            "Launch route must still host LaunchScreen",
+        )
+    }
 
     @Test
     fun about_paints_under_title_bar_content_only_inset() {

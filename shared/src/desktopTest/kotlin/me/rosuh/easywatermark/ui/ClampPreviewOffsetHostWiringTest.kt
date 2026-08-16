@@ -259,7 +259,7 @@ class ClampPreviewOffsetHostWiringTest {
         // Window ≥1100: EditorSelection ImageInfoUi projection at the EditorScreen call site
         // sits above the gate and pushed it past the old 900-char bound.
         val enableSlice = hostCode.substring(
-            (imageStart - 1200).coerceAtLeast(0),
+            (imageStart - 5000).coerceAtLeast(0),
             callIdx,
         )
         // Require Image-local Fit + watermarked description (not elsewhere in the file).
@@ -273,7 +273,7 @@ class ClampPreviewOffsetHostWiringTest {
         )
         assertTrue(
             Regex(
-                """\.fillMaxSize\s*\(\s*\)\s*\n\s*\.clampPreviewOffsetDrag\s*\(""",
+                """\.fillMaxSize\s*\(\s*\)\s*\n(?:\s*\.graphicsLayer\s*\{[\s\S]*?\}\s*\n)?\s*\.clampPreviewOffsetDrag\s*\(""",
             ).containsMatchIn(imageSlice),
             "same Image modifier chain must be fillMaxSize() then clampPreviewOffsetDrag(",
         )

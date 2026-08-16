@@ -128,6 +128,7 @@ kotlin {
             kotlin.srcDir("src/skikoTest/kotlin")
             dependencies {
                 implementation(compose.desktop.currentOs)
+                implementation(libs.kotlin.coroutine.test)
             }
         }
         // Issue 26 / C4.4R.S1: iosTest needs coroutines-test Main (setMain/resetMain).

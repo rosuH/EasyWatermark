@@ -29,6 +29,8 @@ class FiftyImageFilmstripSwitchDiagnosisTest {
     @Test
     fun watermarkedCache_cannotHoldFiftyPreviews_butNeighborWindowFitsAtCurrentLongEdge() {
         val repoSrc = readFirst(
+            "shared/src/commonMain/kotlin/me/rosuh/easywatermark/render/PreviewImageRepository.kt",
+            "src/commonMain/kotlin/me/rosuh/easywatermark/render/PreviewImageRepository.kt",
             "shared/src/iosMain/kotlin/me/rosuh/easywatermark/render/IosPreviewImageRepository.kt",
             "src/iosMain/kotlin/me/rosuh/easywatermark/render/IosPreviewImageRepository.kt",
         )
@@ -128,7 +130,7 @@ class FiftyImageFilmstripSwitchDiagnosisTest {
         assertTrue(host.contains("renderPreviewForCurrentSelection"))
         assertTrue(host.contains("prefetchNeighborWatermarkedPreviews"))
         assertTrue(
-            host.contains("listOf(-2, -1, 1, 2)"),
+            host.contains("neighborIndices(") || host.contains("listOf(-2, -1, 1, 2)"),
             "neighbor prefetch window must be ±2",
         )
         // Neighbor raster must hop Default — repository completion is host Main.

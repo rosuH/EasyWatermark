@@ -2,7 +2,10 @@ package me.rosuh.easywatermark.ui.image
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.DefaultAlpha
@@ -38,7 +41,8 @@ fun ProductAsyncImage(
         return
     }
     val context = LocalPlatformContext.current
-    val request = remember(thumb.ref.value, thumb.maxEdgePx, thumb.purpose) {
+    var retryTick by remember(thumb.ref.value, thumb.maxEdgePx) { mutableIntStateOf(0) }
+    val request = remember(thumb.ref.value, thumb.maxEdgePx, thumb.purpose, retryTick) {
         val cacheKey = productThumbCacheKey(thumb.ref.value, thumb.maxEdgePx)
         ImageRequest.Builder(context)
             .data(thumb)
@@ -60,7 +64,14 @@ fun ProductAsyncImage(
         contentDescription = contentDescription,
         modifier = modifier,
         contentScale = contentScale,
-        onState = onState,
+        onState = { state ->
+            onState?.invoke(state)
+            if (state is AsyncImagePainter.State.Error &&
+                ProductThumbLoadPolicy.shouldRetry(retryTick)
+            ) {
+                retryTick += 1
+            }
+        },
         alpha = alpha,
         colorFilter = colorFilter,
         filterQuality = filterQuality,

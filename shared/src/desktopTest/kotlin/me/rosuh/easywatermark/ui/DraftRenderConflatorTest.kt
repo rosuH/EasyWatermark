@@ -8,41 +8,21 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
-import platform.Foundation.NSLock
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * S4: a CLAMP drag must not queue one full render per pointer sample.
- *
- * The guarantee is not "fewer renders on average" but a hard bound: at most one render in flight
- * plus one pending, and the offset that finally paints is the newest one the gesture produced.
- */
-class IosDraftRenderConflatorTest {
+class DraftRenderConflatorTest {
 
     private class Recorder {
-        private val lock = NSLock()
+        private val lock = Any()
         private val values = mutableListOf<Int>()
 
-        fun record(value: Int) = withLock { values += value }
-        fun size(): Int = withLock { values.size }
-        fun snapshot(): List<Int> = withLock { values.toList() }
-
-        private inline fun <T> withLock(block: () -> T): T {
-            lock.lock()
-            return try {
-                block()
-            } finally {
-                lock.unlock()
-            }
-        }
+        fun record(value: Int) = synchronized(lock) { values += value }
+        fun size(): Int = synchronized(lock) { values.size }
+        fun snapshot(): List<Int> = synchronized(lock) { values.toList() }
     }
 
-    /**
-     * Conflation is a real-concurrency property, so these tests must not run on `runTest`'s
-     * virtual clock — it would advance past every timeout before the worker thread does any work.
-     */
     private fun runRealTimeTest(block: suspend CoroutineScope.() -> Unit) = runTest {
         withContext(Dispatchers.Default) { block() }
     }
@@ -54,10 +34,9 @@ class IosDraftRenderConflatorTest {
         val firstRenderStarted = CompletableDeferred<Unit>()
         val releaseFirstRender = CompletableDeferred<Unit>()
 
-        val conflator = IosDraftRenderConflator<Int>(scope) { offset ->
+        val conflator = DraftRenderConflator<Int>(scope) { offset ->
             if (!firstRenderStarted.isCompleted) {
                 firstRenderStarted.complete(Unit)
-                // Hold the single worker busy while the whole gesture streams in.
                 releaseFirstRender.await()
             }
             rendered.record(offset)
@@ -67,7 +46,6 @@ class IosDraftRenderConflatorTest {
             conflator.submit(0)
             withTimeout(TIMEOUT_MS) { firstRenderStarted.await() }
 
-            // A 60Hz drag's worth of samples, all arriving while the worker is occupied.
             for (sample in 1..GESTURE_SAMPLES) {
                 conflator.submit(sample)
             }
@@ -102,7 +80,7 @@ class IosDraftRenderConflatorTest {
     fun sequentialDraftSamples_eachRender_whenWorkerIsFree() = runRealTimeTest {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         val rendered = Recorder()
-        val conflator = IosDraftRenderConflator<Int>(scope) { rendered.record(it) }
+        val conflator = DraftRenderConflator<Int>(scope) { rendered.record(it) }
         try {
             for (sample in 1..3) {
                 conflator.submit(sample)
@@ -110,7 +88,6 @@ class IosDraftRenderConflatorTest {
                     while (rendered.size() < sample) yield()
                 }
             }
-            // Conflation drops nothing when it is not actually behind.
             assertEquals(listOf(1, 2, 3), rendered.snapshot())
         } finally {
             conflator.close()

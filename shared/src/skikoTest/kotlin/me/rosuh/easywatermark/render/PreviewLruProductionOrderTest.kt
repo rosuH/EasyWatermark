@@ -11,15 +11,7 @@ import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
-/**
- * S2: the watermarked preview cache must evict by recency, not by insertion.
- *
- * The pre-existing budget test inserts neighbors **then** focus, an order production never uses.
- * Production inserts focus first (`renderPreviewForCurrentSelection`) and then ±2
- * (`warmNeighborWatermarkedPreviews`), which under FIFO evicts a frame the user is still moving
- * around in and re-decodes it one tap later — 219 ms of ImageIO on a 12MP HEIC (S1 device run).
- */
-class IosPreviewLruProductionOrderTest {
+class PreviewLruProductionOrderTest {
 
     @Test
     fun productionOrder_nextTapEvictsFarFrame_notTheFrameJustViewed() = runTest {
@@ -27,18 +19,15 @@ class IosPreviewLruProductionOrderTest {
         val repo = repositoryAtWorkingSetCaps(edge)
         val frame = fourByThree(edge)
 
-        // Tap 12 (cold): focus first, then ±2 — the production insert order.
         repo.putForTests(wm("12", edge), frame)
         for (index in listOf("10", "11", "13", "14")) {
             repo.putForTests(wm(index, edge), frame)
         }
 
-        // Tap 13: focus peek, then the ±2 warm loop peeks each neighbor before deciding to render.
         assertNotNull(repo.cached(wm("13", edge)), "tap 13 must hit the frame warmed by tap 12")
         for (index in listOf("11", "12", "14")) {
             assertNotNull(repo.cached(wm(index, edge)), "neighbor $index must still be resident")
         }
-        // 15 is the one genuine miss of tap 13's warm, and it pushes the cache over the cap.
         repo.putForTests(wm("15", edge), frame)
 
         assertNull(
@@ -51,8 +40,7 @@ class IosPreviewLruProductionOrderTest {
         )
         assertNotNull(
             repo.cached(wm("12", edge)),
-            "the frame just navigated away from must survive — FIFO evicted it here and paid a " +
-                "full re-decode on the way back",
+            "the frame just navigated away from must survive",
         )
     }
 
@@ -63,27 +51,22 @@ class IosPreviewLruProductionOrderTest {
 
     @Test
     fun sourcePlaceholder_readMakesEntryOutliveAnOlderUnreadEntry() = runTest {
-        // Source is the expensive purpose (219 ms cold ImageIO vs 9 ms compose), so recency
-        // matters here even more than for Watermarked.
         assertRecencyDecidesVictim(::source) { it.sourceEntriesMax }
     }
 
     private suspend fun assertRecencyDecidesVictim(
-        key: (String, Int) -> IosPreviewKey,
+        key: (String, Int) -> PreviewKey,
         capacityOf: (PreviewWorkingSetCaps) -> Int,
     ) {
         val edge = PreviewResolutionPolicy.PHONE_PREVIEW_MAX_LONG_EDGE_PX
         val caps = PreviewWorkingSetBudget.caps(edge, physicalMemoryBytes = 8L shl 30)
         val repo = repositoryAtWorkingSetCaps(edge)
         val frame = fourByThree(edge)
-        // Each purpose has its own residency cap (sources carry a CLAMP-draft slot), so fill to
-        // that purpose's capacity rather than assuming both are the working-set size.
         val capacity = capacityOf(caps)
 
         for (index in 0 until capacity) {
             repo.putForTests(key(index.toString(), edge), frame)
         }
-        // Touch the least recently used entry, and only that one.
         assertNotNull(repo.cached(key("0", edge)), "entry 0 must be resident before the touch")
 
         repo.putForTests(key(capacity.toString(), edge), frame)
@@ -92,10 +75,10 @@ class IosPreviewLruProductionOrderTest {
         assertNull(repo.cached(key("1", edge)), "the least recently used entry must be evicted")
     }
 
-    /** Live Host caps for the current preview long edge, where focus + ±2 is the resident set. */
-    private suspend fun repositoryAtWorkingSetCaps(edge: Int): IosPreviewImageRepository {
-        val repo = IosPreviewImageRepository(
+    private suspend fun repositoryAtWorkingSetCaps(edge: Int): PreviewImageRepository<ImageBitmap> {
+        val repo = PreviewImageRepository<ImageBitmap>(
             ownerScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined),
+            approxBytes = { PreviewImageRepository.approxImageBitmapBytes(it) },
         )
         repo.applyWorkingSetCaps(
             PreviewWorkingSetBudget.caps(edge, physicalMemoryBytes = 8L shl 30),
@@ -104,17 +87,13 @@ class IosPreviewLruProductionOrderTest {
     }
 
     private fun wm(index: String, edge: Int) =
-        IosPreviewKey("/tmp/ewm_src_$index", edge, IosPreviewPurpose.Watermarked)
+        PreviewKey("/tmp/ewm_src_$index", edge, PreviewPurpose.Watermarked)
 
     private fun source(index: String, edge: Int) =
-        IosPreviewKey("/tmp/ewm_src_$index", edge, IosPreviewPurpose.SourcePlaceholder)
+        PreviewKey("/tmp/ewm_src_$index", edge, PreviewPurpose.SourcePlaceholder)
 
     private fun fourByThree(longEdge: Int): ImageBitmap {
         val shortEdge = ceil(longEdge * 3.0 / 4.0).toInt()
         return ImageBitmap(longEdge, shortEdge, ImageBitmapConfig.Argb8888)
-    }
-
-    private companion object {
-        const val WORKING_SET = PreviewWorkingSetBudget.WORKING_SET_FRAMES
     }
 }

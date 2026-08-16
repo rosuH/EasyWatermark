@@ -167,6 +167,21 @@ suspend fun decodeSampledBitmapFromResource(
     return@withContext Result.success(data = decoded)
 }
 
+/**
+ * Editor-preview Source decode. Bypasses [BitmapCache] so the preview working set is
+ * the single owner of the focus frame. Never recycle the result.
+ */
+fun decodePreviewSourceBypassingCache(
+    resolver: ContentResolver,
+    uri: Uri,
+    reqWidth: Int,
+    reqHeight: Int,
+): Result<BitmapCache.BitmapValue> {
+    me.rosuh.easywatermark.render.PreviewSourceReuseProbe.recordSourceDecode()
+    me.rosuh.easywatermark.render.PreviewSourceReuseProbe.recordContentResolverOpen()
+    return decodeSampledBitmapFromResourceSync(resolver, uri, reqWidth, reqHeight)
+}
+
 fun decodeSampledBitmapFromResourceSync(
     resolver: ContentResolver,
     uri: Uri,

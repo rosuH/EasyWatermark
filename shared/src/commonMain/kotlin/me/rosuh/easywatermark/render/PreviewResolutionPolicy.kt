@@ -1,6 +1,8 @@
 package me.rosuh.easywatermark.render
 
+import kotlin.experimental.ExperimentalObjCRefinement
 import kotlin.math.ceil
+import kotlin.native.HiddenFromObjC
 
 /**
  * Shared **on-screen editor preview** decode bounds (iOS + Desktop; Android uses its own canvas path).
@@ -36,7 +38,9 @@ import kotlin.math.ceil
  *
  * Final export never uses this policy.
  */
-internal object PreviewResolutionPolicy {
+@OptIn(ExperimentalObjCRefinement::class)
+@HiddenFromObjC
+object PreviewResolutionPolicy {
     const val PLACEHOLDER_MAX_EDGE_PX: Int = 720
     const val DRAFT_MAX_EDGE_PX: Int = PLACEHOLDER_MAX_EDGE_PX
     const val BUCKET_720: Int = 720

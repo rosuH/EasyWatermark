@@ -61,7 +61,8 @@ object DesktopPreviewRaster {
 
     /**
      * Watermarked preview [ImageBitmap] for encoded [imageBytes] at [offsetX]/[offsetY].
-     * [iconBytes] required when [waterMark] is Image mode.
+     * [iconBytes] required when [waterMark] is Image mode unless [icon] is already decoded.
+     * When [background] is the decode at [maxEdgePx], skip ImageIO (Source reuse).
      */
     fun renderWatermarked(
         imageBytes: ByteArray,
@@ -70,25 +71,42 @@ object DesktopPreviewRaster {
         offsetY: Float,
         iconBytes: ByteArray? = null,
         maxEdgePx: Int = PREVIEW_MAX_EDGE_PX,
+        background: ImageBitmap? = null,
+        icon: ImageBitmap? = null,
     ): ImageBitmap {
-        val background = DesktopImageDecoder.decodeThumbnail(imageBytes, maxEdgePx = maxEdgePx)
-        val icon = if (waterMark.markMode == WatermarkMode.Image) {
-            require(iconBytes != null && iconBytes.isNotEmpty()) {
-                "Image-mode DesktopPreviewRaster requires non-empty iconBytes"
-            }
-            DesktopImageDecoder.decodeThumbnail(iconBytes, maxEdgePx = 256)
+        val source = if (background != null) {
+            background
         } else {
-            null
+            PreviewSourceReuseProbe.recordSourceDecode()
+            DesktopImageDecoder.decodeThumbnail(imageBytes, maxEdgePx = maxEdgePx)
         }
+        val resolvedIcon = when {
+            waterMark.markMode != WatermarkMode.Image -> null
+            icon != null -> icon
+            else -> {
+                require(iconBytes != null && iconBytes.isNotEmpty()) {
+                    "Image-mode DesktopPreviewRaster requires non-empty iconBytes"
+                }
+                PreviewSourceReuseProbe.recordIconDecode()
+                DesktopImageDecoder.decodeThumbnail(iconBytes, maxEdgePx = 256)
+            }
+        }
+        PreviewSourceReuseProbe.recordCompose()
         return CommonWatermarkPipeline.compose(
-            background = background,
+            background = source,
             config = waterMark,
             env = DesktopWatermarkTextRenderer.textRasterEnv(),
-            icon = icon,
+            icon = resolvedIcon,
             offsetX = offsetX,
             offsetY = offsetY,
             fontFamily = FontFamily.Default,
         )
+    }
+
+    /** Decode-only Source placeholder (no watermark). */
+    fun decodeSourcePlaceholder(imageBytes: ByteArray, maxEdgePx: Int = PREVIEW_MAX_EDGE_PX): ImageBitmap {
+        PreviewSourceReuseProbe.recordSourceDecode()
+        return DesktopImageDecoder.decodeThumbnail(imageBytes, maxEdgePx = maxEdgePx)
     }
 
     /** Convenience: read [sourcePath] then [renderWatermarked]. */

@@ -45,9 +45,13 @@ internal fun installDesktopProductAppearanceEarly() {
  * when Content editor theme is active so the mac title band matches the body.
  *
  * **macOS (option 2):** fullWindowContent + transparent title bar so Compose fill paints
- * under the traffic lights. Launch/Editor wrap **interactive** chrome with
- * [macFullWindowContentInsets]. About / Open Source paint edge-to-edge (olive + halo
- * under the lights) and inset only their content via [macTitleBarContentPadding].
+ * under the traffic lights. Those JRootPane client properties are ignored after the
+ * window is displayable — call this from [androidx.compose.ui.awt.SwingWindow] `init`
+ * (before first show), then again when [chrome] changes.
+ *
+ * Editor wraps **interactive** chrome with [macFullWindowContentInsets]. Launch / About /
+ * Open Source paint edge-to-edge (olive, About halo under the lights) and inset only
+ * content that would sit under the traffic lights via [macTitleBarContentPadding].
  * Title text is hidden (product surface is the brand).
  * **Windows / Linux:** AWT backgrounds only.
  */
@@ -66,6 +70,9 @@ internal fun applyProductWindowChrome(
                 root.background = awt
                 applyMacFullWindowContent(root)
             }
+            if (window.isDisplayable) {
+                applyMacStyleBitsViaPeer(window)
+            }
         } catch (_: Throwable) {
             // Best-effort only.
         }
@@ -74,6 +81,26 @@ internal fun applyProductWindowChrome(
         apply.run()
     } else {
         SwingUtilities.invokeLater(apply)
+    }
+}
+
+/**
+ * After first show: re-apply chrome and nudge the frame so the Skia layer
+ * picks up fullWindowContent bounds (CMP-235: properties after display + resize).
+ */
+internal fun realizeMacTitleBarAfterShown(
+    window: Window,
+    chrome: ComposeColor = DesignEditorBg,
+) {
+    applyProductWindowChrome(window, chrome)
+    if (!isMacOs()) return
+    val w = window.width
+    val h = window.height
+    if (w > 1 && h > 1) {
+        window.setSize(w, h + 1)
+        applyProductWindowChrome(window, chrome)
+        window.setSize(w, h)
+        applyProductWindowChrome(window, chrome)
     }
 }
 
@@ -102,9 +129,46 @@ internal fun macTitleBarContentPadding(): PaddingValues =
 
 private fun applyMacFullWindowContent(root: JRootPane) {
     if (!isMacOs()) return
-    // Content draws under the title bar → product fill is the visible title-bar color.
+    // SwingWindow init (before displayable) + again after first show.
     root.putClientProperty("apple.awt.fullWindowContent", true)
     root.putClientProperty("apple.awt.transparentTitleBar", true)
     // Hide system title string (would float over product fill with system typography).
     root.putClientProperty("apple.awt.windowTitleVisible", false)
+}
+
+/**
+ * Homebrew OpenJDK can leave client properties on the JRootPane without
+ * pushing TRANSPARENT_TITLE_BAR / FULL_WINDOW_CONTENT into the NSWindow.
+ * Call [sun.lwawt.macosx.CPlatformWindow.setStyleBits] directly when the
+ * peer exists. Bits must match CPlatformWindow (JDK 17).
+ */
+private fun applyMacStyleBitsViaPeer(window: Window) {
+    if (!isMacOs()) return
+    try {
+        val accessor = Class.forName("sun.awt.AWTAccessor")
+            .getMethod("getComponentAccessor")
+            .invoke(null)
+        val peer = accessor.javaClass.methods
+            .first { it.name == "getPeer" && it.parameterCount == 1 }
+            .invoke(accessor, window)
+            ?: return
+        val platformWindow = peer.javaClass.methods
+            .first { it.name == "getPlatformWindow" && it.parameterCount == 0 }
+            .invoke(peer)
+            ?: return
+        val setStyleBits = platformWindow.javaClass.getDeclaredMethod(
+            "setStyleBits",
+            Integer.TYPE,
+            java.lang.Boolean.TYPE,
+        )
+        setStyleBits.isAccessible = true
+        val fullWindowContent = 1 shl 14
+        val transparentTitleBar = 1 shl 18
+        val titleVisible = 1 shl 25
+        setStyleBits.invoke(platformWindow, fullWindowContent, true)
+        setStyleBits.invoke(platformWindow, transparentTitleBar, true)
+        setStyleBits.invoke(platformWindow, titleVisible, false)
+    } catch (_: Throwable) {
+        // Missing --add-opens or non-mac peer: client properties stay the path.
+    }
 }
