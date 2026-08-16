@@ -123,6 +123,7 @@ import me.rosuh.easywatermark.ui.EditorBottomControls
 import me.rosuh.easywatermark.ui.EditorScreen
 import me.rosuh.easywatermark.ui.editorLayoutClass
 import me.rosuh.easywatermark.shared.generated.resources.dev_comment
+import me.rosuh.easywatermark.shared.generated.resources.ic_app_icon_window
 import me.rosuh.easywatermark.ui.about.AboutDevCard
 import me.rosuh.easywatermark.ui.about.AboutScreenIcons
 import me.rosuh.easywatermark.ui.about.AboutScreen
@@ -156,6 +157,7 @@ import me.rosuh.easywatermark.ui.theme.AppTheme
 import me.rosuh.easywatermark.ui.theme.ContentEditorThemeHost
 import me.rosuh.easywatermark.ui.theme.EditorChromeColor
 import me.rosuh.easywatermark.ui.theme.ProvideMotionPolicy
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import java.awt.Desktop
 import java.awt.FileDialog
@@ -823,6 +825,7 @@ fun launchDesktopWindow() = application {
     Window(
         onCloseRequest = ::closeDesktopWindow,
         title = "EasyWatermark — Desktop",
+        icon = painterResource(Res.drawable.ic_app_icon_window),
         state = windowState,
         onPreviewKeyEvent = preview@{ event ->
             if (event.type != KeyEventType.KeyDown) return@preview false

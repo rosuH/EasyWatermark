@@ -79,6 +79,17 @@ compose.desktop {
             modules("jdk.unsupported")
             // J3: declared installer intent; signing/notarization residual (see evidence/j3/matrix.md).
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            macOS {
+                iconFile.set(project.file("icons/macos/EasyWatermark.icns"))
+                bundleID = "me.rosuh.easywatermark"
+                dockName = "EasyWatermark"
+            }
+            windows {
+                iconFile.set(project.file("icons/windows/EasyWatermark.ico"))
+            }
+            linux {
+                iconFile.set(project.file("icons/linux/EasyWatermark-512.png"))
+            }
         }
     }
 }
