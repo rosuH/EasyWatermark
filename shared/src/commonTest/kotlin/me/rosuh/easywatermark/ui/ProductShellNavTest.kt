@@ -31,7 +31,7 @@ class ProductShellNavTest {
 
     @Test
     fun productVersion_isNotPlatformLabel() {
-        assertEquals("2.10.0", ProductVersion.NAME)
+        assertEquals("3.0.0", ProductVersion.NAME)
         assertNotEquals("iOS", ProductVersion.NAME)
     }
 

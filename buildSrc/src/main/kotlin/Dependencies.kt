@@ -9,6 +9,7 @@ object Apps {
     const val targetSdk = 36
     // S4d-175: single source of truth for the product version, consumed by :app (AGP versionCode/versionName)
     // and :desktopApp (Compose Desktop nativeDistributions.packageVersion).
-    const val versionCode = 21000
-    const val versionName = "2.10.0"
+    // Scheme: major * 10000 + minor * 100 + patch (2.10.0 -> 21000).
+    const val versionCode = 30000
+    const val versionName = "3.0.0"
 }

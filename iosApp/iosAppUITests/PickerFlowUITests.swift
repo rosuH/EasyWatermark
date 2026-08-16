@@ -142,10 +142,10 @@ final class PickerFlowUITests: XCTestCase {
         XCTAssertTrue(aboutBtn.waitForExistence(timeout: 10), "Launch About control missing.")
         aboutBtn.tap()
 
-        // Version row trailing should show product version 2.10.0 (not "iOS").
-        let versionLabel = app.staticTexts.matching(NSPredicate(format: "label == %@", "2.10.0")).firstMatch
+        // Version row trailing should show product version 3.0.0 (not "iOS").
+        let versionLabel = app.staticTexts.matching(NSPredicate(format: "label == %@", "3.0.0")).firstMatch
         XCTAssertTrue(versionLabel.waitForExistence(timeout: 15),
-                      "About version 2.10.0 not visible (got wrong/missing version).")
+                      "About version 3.0.0 not visible (got wrong/missing version).")
         attach(app, "about-from-launch")
 
         let back = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@ OR identifier CONTAINS[c] %@", "Back", "back")).firstMatch
