@@ -404,9 +404,13 @@ fun launchDesktopWindow() = application {
     val aboutReturn = ProductShellNav.routeFromLaunchUi(launchUi.aboutReturnUiState)
     val shellBase = ProductShellNav.overlayBase(productRoute, aboutReturn)
     // Leave Editor (or follow-photo off) → brand olive root/AWT immediately.
-    // About overlay keeps Editor live — do not snap chrome while Editor is still under About.
-    LaunchedEffect(shellBase, followPhoto) {
-        if (shellBase != ProductShellNav.Route.Editor || !followPhoto) {
+    // About is full-bleed over a live Editor: snap chrome to brand so the title
+    // band matches About olive, and ignore Editor photo-seed updates while covered.
+    LaunchedEffect(productRoute, shellBase, followPhoto) {
+        if (productRoute == ProductShellNav.Route.About ||
+            shellBase != ProductShellNav.Route.Editor ||
+            !followPhoto
+        ) {
             windowChromeColor = EditorChromeColor.brand
         }
     }
@@ -880,16 +884,11 @@ fun launchDesktopWindow() = application {
         AppTheme(darkTheme = true) {
             // I3: Desktop platformMotionPolicy is Full (no OS reduce-motion API).
             // Window-root olive paints edge-to-edge (including under macOS traffic lights).
-            // Product content is inset so back/export chrome clears the title-bar band.
+            // Launch/Editor inset interactive chrome; About paints under the title band.
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(windowChromeColor),
-            ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .macFullWindowContentInsets(),
             ) {
             ProvideMotionPolicy(platformMotionPolicy()) {
             // E1: Session-only current for filmstrip (no host selectedSessionImage mirror).
@@ -921,6 +920,7 @@ fun launchDesktopWindow() = application {
             ) { route ->
             when (route) {
                 ProductShellNav.Route.Launch -> {
+                    Box(Modifier.fillMaxSize().macFullWindowContentInsets()) {
                     me.rosuh.easywatermark.ui.LaunchScreen(
                         aboutIcon = aboutPainter,
                         onPickImage = { pickOpenImages(window, append = false) },
@@ -935,6 +935,7 @@ fun launchDesktopWindow() = application {
                         },
                         modifier = shellModifier,
                     )
+                    }
                 }
                 ProductShellNav.Route.About -> {
                     // UI is shared AboutScreen; Desktop only wires system edges (browser / prefs).
@@ -1008,6 +1009,7 @@ fun launchDesktopWindow() = application {
                             }
                         },
                         useLargeLayout = true,
+                        contentPadding = macTitleBarContentPadding(),
                         logo = { modifier ->
                             me.rosuh.easywatermark.ui.AboutPageLogo(
                                 modifier = modifier,
@@ -1027,9 +1029,13 @@ fun launchDesktopWindow() = application {
                         // Use ready watermarked preview when available; falls back to brand until paint.
                         seedBitmap = preview,
                         seedKey = previewReadyUri ?: selectedForStrip?.uri?.value,
-                        onChromeColorChange = { windowChromeColor = it },
+                        onChromeColorChange = { color ->
+                            if (productRoute != ProductShellNav.Route.About) {
+                                windowChromeColor = color
+                            }
+                        },
                     ) {
-                    BoxWithConstraints(modifier = shellModifier) {
+                    BoxWithConstraints(modifier = shellModifier.macFullWindowContentInsets()) {
                     val layoutClass = remember(maxWidth, maxHeight) {
                         editorLayoutClass(maxWidth.value, maxHeight.value)
                     }
@@ -1325,6 +1331,7 @@ fun launchDesktopWindow() = application {
                     },
                     backIcon = backPainter,
                     modifier = Modifier.fillMaxSize(),
+                    contentPadding = macTitleBarContentPadding(),
                 )
             }
 
@@ -1582,7 +1589,6 @@ fun launchDesktopWindow() = application {
                 }
             }
             } // ProvideMotionPolicy
-            } // mac full-window content inset
             } // window-root olive Box
         } // AppTheme
     } // Window

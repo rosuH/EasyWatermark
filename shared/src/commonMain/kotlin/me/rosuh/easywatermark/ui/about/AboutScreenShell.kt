@@ -125,6 +125,12 @@ fun AboutScreen(
      * Compact/Medium keep full-bleed scroll + pager cards.
      */
     useLargeLayout: Boolean = false,
+    /**
+     * Extra inset for **content** (back button / scroll) after [safeDrawingPadding].
+     * Desktop macOS uses this for the traffic-light band so the olive + halo stay
+     * full-bleed under a transparent title bar.
+     */
+    contentPadding: PaddingValues = PaddingValues(),
     logo: @Composable (modifier: Modifier) -> Unit,
 ) {
     val infoTitle = stringResource(Res.string.about_title_info)
@@ -172,7 +178,8 @@ fun AboutScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .safeDrawingPadding(),
+                .safeDrawingPadding()
+                .padding(contentPadding),
         ) {
             Column(
                 modifier = Modifier

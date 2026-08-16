@@ -2,6 +2,7 @@ package me.rosuh.easywatermark.ui.about
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -42,6 +43,7 @@ fun OpenSourceScreen(
     onOpenLink: (String) -> Unit,
     backIcon: Painter,
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(),
 ) {
     val title = stringResource(Res.string.about_title_open_source)
     val backCd = stringResource(Res.string.cd_back)
@@ -57,6 +59,7 @@ fun OpenSourceScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .safeDrawingPadding()
+                .padding(contentPadding)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {

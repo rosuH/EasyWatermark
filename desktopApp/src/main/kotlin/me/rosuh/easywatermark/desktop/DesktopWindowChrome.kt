@@ -1,5 +1,6 @@
 package me.rosuh.easywatermark.desktop
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color as ComposeColor
@@ -44,8 +45,10 @@ internal fun installDesktopProductAppearanceEarly() {
  * when Content editor theme is active so the mac title band matches the body.
  *
  * **macOS (option 2):** fullWindowContent + transparent title bar so Compose fill paints
- * under the traffic lights. Pair with [macFullWindowContentInsets] so interactive chrome is
- * not under the lights. Title text is hidden (product surface is the brand).
+ * under the traffic lights. Launch/Editor wrap **interactive** chrome with
+ * [macFullWindowContentInsets]. About / Open Source paint edge-to-edge (olive + halo
+ * under the lights) and inset only their content via [macTitleBarContentPadding].
+ * Title text is hidden (product surface is the brand).
  * **Windows / Linux:** AWT backgrounds only.
  */
 internal fun applyProductWindowChrome(
@@ -89,6 +92,13 @@ internal fun ComposeColor.toAwtColor(): Color {
  */
 internal fun Modifier.macFullWindowContentInsets(): Modifier =
     if (isMacOs()) padding(top = MacFullWindowContentTopInset) else this
+
+/**
+ * Content-only title-bar inset for full-bleed screens (About / Open Source).
+ * Do **not** apply this to the screen root — that clips the About halo into a dark band.
+ */
+internal fun macTitleBarContentPadding(): PaddingValues =
+    if (isMacOs()) PaddingValues(top = MacFullWindowContentTopInset) else PaddingValues()
 
 private fun applyMacFullWindowContent(root: JRootPane) {
     if (!isMacOs()) return
