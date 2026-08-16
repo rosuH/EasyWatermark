@@ -52,12 +52,14 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
+	<!-- iPad landscape stays closed: CMP 1.12 keeps the pre-rotation scene width, so landscape
+	     renders an 834pt-wide scene with the rest of the screen black (see ADR-0026 / iOS
+	     readiness doc). Dual-pane is already reached in iPad portrait at the 800dp floor, so
+	     the large-screen layout does not depend on landscape. -->
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 </dict>
 </plist>
