@@ -818,32 +818,38 @@ private suspend fun prefetchAndroidNeighbors(
                 val source = previewImages.load(
                     PreviewKey(path, bucket, PreviewPurpose.SourcePlaceholder),
                 ) {
-                    try {
-                        decodePreviewSourceBypassingCache(
-                            context.contentResolver,
-                            info.uri.toUri(),
-                            canvasW,
-                            canvasH,
-                        ).data?.bitmap
-                    } catch (_: SecurityException) {
-                        null
+                    // completionScope inherits the owner (Main) dispatcher — decoding here
+                    // without a hop blocks the UI thread and janks filmstrip switches.
+                    withContext(Dispatchers.IO) {
+                        try {
+                            decodePreviewSourceBypassingCache(
+                                context.contentResolver,
+                                info.uri.toUri(),
+                                canvasW,
+                                canvasH,
+                            ).data?.bitmap
+                        } catch (_: SecurityException) {
+                            null
+                        }
                     }
                 } ?: return@runCatching
                 previewImages.load(wmKey) {
-                    val composedInfo = info.toImageInfo().copy(
-                        offsetX = info.offsetX,
-                        offsetY = info.offsetY,
-                    ).also {
-                        it.width = source.width
-                        it.height = source.height
+                    withContext(Dispatchers.Default) {
+                        val composedInfo = info.toImageInfo().copy(
+                            offsetX = info.offsetX,
+                            offsetY = info.offsetY,
+                        ).also {
+                            it.width = source.width
+                            it.height = source.height
+                        }
+                        AndroidCommonRaster.composeToBitmap(
+                            context,
+                            source,
+                            waterMark,
+                            composedInfo,
+                            decodeIcon(waterMark),
+                        )
                     }
-                    AndroidCommonRaster.composeToBitmap(
-                        context,
-                        source,
-                        waterMark,
-                        composedInfo,
-                        decodeIcon(waterMark),
-                    )
                 }
             }
         }

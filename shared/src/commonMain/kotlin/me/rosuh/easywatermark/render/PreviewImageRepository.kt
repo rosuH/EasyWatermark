@@ -71,6 +71,15 @@ open class PreviewImageRepository<T : Any>(
     /** Contended close only — never a child of the Host Job. */
     private val orphanCloseJob = SupervisorJob()
 
+    /**
+     * Return the cached value for [key], joining an in-flight decode or starting one.
+     *
+     * **Dispatcher contract:** [decoder] runs on the completion scope, which inherits
+     * [ownerScope]'s dispatcher — Main on every current Host. A [decoder] that decodes, rasters,
+     * or touches IO **must** hop itself (`withContext(Dispatchers.IO / Default)`). Wrapping the
+     * `load` *call site* is not enough: that only moves the await, not the decode. Every platform
+     * neighbor prefetch has hit this at least once.
+     */
     suspend fun load(
         key: PreviewKey,
         decoder: suspend () -> T?,
