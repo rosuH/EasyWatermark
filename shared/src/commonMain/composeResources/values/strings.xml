@@ -167,6 +167,7 @@
     <string name="tips_ios_library_read_upsell_dismiss">Not now</string>
     <string name="tips_ios_library_read_upsell_continue">Choose images anyway</string>
     <string name="tips_no_image_selected">No Image Selected</string>
+    <string name="tips_low_resolution_source">Low-resolution photo · %1$d × %2$d</string>
     <string name="cd_navigate_up">Navigate up</string>
     <string name="cd_add_more_images">Add more images</string>
     <string name="cd_save">Save</string>

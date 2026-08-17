@@ -22,6 +22,10 @@ import kotlinx.coroutines.withContext
  * Android product UI Fetcher: MediaStore system thumbnail first, subsampled content decode fallback.
  * Never opens bare full content via Coil's default ContentUriFetcher (ADR-0028 / Q4=A).
  *
+ * `loadThumbnail(Size(n, n))` fits the whole image into a square. Extreme aspects
+ * collapse the short edge; those slivers are discarded and re-decoded so Crop cells
+ * keep a usable short edge ([ProductThumbFit]).
+ *
  * Lives in :shared androidMain — does not call :app BitmapUtils (module boundary).
  */
 class ProductThumbFetcher(
@@ -35,9 +39,9 @@ class ProductThumbFetcher(
         val size = data.maxEdgePx.coerceIn(64, 512)
         val bitmap = loadThumbBitmap(context, uri, size) ?: return@withContext null
         // isSampled=false: ProductThumb maxEdge is the product-final UI size, not an
-        // intermediate sample. Coil AsyncImage uses Size.ORIGINAL + Precision.INEXACT;
-        // sampled cache entries fail size validation and never memory-hit → blank
-        // flash on LazyRow recycle (filmstrip scroll away/back).
+        // intermediate sample. Coil request is size(maxEdge)+FILL+INEXACT; sampled
+        // cache entries fail size validation and never memory-hit → blank flash on
+        // LazyRow recycle (filmstrip scroll away/back).
         ImageFetchResult(
             image = bitmap.asImage(),
             isSampled = false,
@@ -58,7 +62,12 @@ private fun loadThumbBitmap(context: Context, uri: Uri, sizePx: Int): Bitmap? {
     if (Build.VERSION.SDK_INT >= 29) {
         try {
             val thumb = context.contentResolver.loadThumbnail(uri, Size(sizePx, sizePx), null)
-            if (thumb != null && !thumb.isRecycled) return thumb
+            if (!thumb.isRecycled) {
+                if (ProductThumbFit.isUsableSquareThumb(thumb.width, thumb.height, sizePx)) {
+                    return thumb
+                }
+                thumb.recycle()
+            }
         } catch (_: Exception) {
             // fall through
         }
@@ -76,7 +85,12 @@ private fun loadThumbBitmap(context: Context, uri: Uri, sizePx: Int): Bitmap? {
                 MediaStore.Images.Thumbnails.MINI_KIND,
                 opts,
             )
-            if (thumb != null && !thumb.isRecycled) return thumb
+            if (thumb != null && !thumb.isRecycled) {
+                if (ProductThumbFit.isUsableSquareThumb(thumb.width, thumb.height, sizePx)) {
+                    return thumb
+                }
+                thumb.recycle()
+            }
         } catch (_: Exception) {
             // fall through
         }
@@ -91,7 +105,7 @@ private fun loadThumbBitmap(context: Context, uri: Uri, sizePx: Int): Bitmap? {
             outW = bounds.outWidth
             outH = bounds.outHeight
         }
-        val sample = calculateInSampleSize(outW, outH, sizePx)
+        val sample = ProductThumbFit.inSampleSizeForCrop(outW, outH, sizePx)
         context.contentResolver.openInputStream(uri)?.use { stream ->
             val opts = BitmapFactory.Options().apply {
                 inSampleSize = sample
@@ -102,16 +116,4 @@ private fun loadThumbBitmap(context: Context, uri: Uri, sizePx: Int): Bitmap? {
     } catch (_: Exception) {
         null
     }
-}
-
-private fun calculateInSampleSize(outWidth: Int, outHeight: Int, maxEdgePx: Int): Int {
-    var inSampleSize = 1
-    val longest = maxOf(outWidth, outHeight)
-    if (longest > maxEdgePx && maxEdgePx > 0) {
-        var half = longest / 2
-        while (half / inSampleSize >= maxEdgePx) {
-            inSampleSize *= 2
-        }
-    }
-    return inSampleSize.coerceAtLeast(1)
 }

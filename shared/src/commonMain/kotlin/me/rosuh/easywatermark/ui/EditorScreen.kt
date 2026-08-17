@@ -35,6 +35,8 @@ import me.rosuh.easywatermark.shared.generated.resources.cd_add_more_images
 import me.rosuh.easywatermark.shared.generated.resources.cd_navigate_up
 import me.rosuh.easywatermark.shared.generated.resources.cd_save
 import me.rosuh.easywatermark.shared.generated.resources.ios_import_preparing
+import me.rosuh.easywatermark.render.PreviewResolutionPolicy
+import me.rosuh.easywatermark.shared.generated.resources.tips_low_resolution_source
 import me.rosuh.easywatermark.shared.generated.resources.tips_no_image_selected
 import org.jetbrains.compose.resources.stringResource
 
@@ -117,6 +119,11 @@ fun EditorScreen(
         stringResource(Res.string.ios_import_preparing)
     } else {
         stringResource(Res.string.tips_no_image_selected)
+    }
+    val lowResolutionHint = selected?.takeIf {
+        PreviewResolutionPolicy.isLowResolutionSource(it.width, it.height)
+    }?.let { info ->
+        stringResource(Res.string.tips_low_resolution_source, info.width, info.height)
     }
     val backCd = stringResource(Res.string.cd_navigate_up)
     val addMoreCd = stringResource(Res.string.cd_add_more_images)
@@ -206,6 +213,7 @@ fun EditorScreen(
                             EditorPreviewFrame(
                                 hasImage = hasPreviewContent,
                                 emptyText = emptyPreview,
+                                lowResolutionHint = lowResolutionHint,
                                 modifier = Modifier
                                     .weight(1f, fill = true)
                                     .fillMaxWidth()
@@ -246,6 +254,7 @@ fun EditorScreen(
                     EditorPreviewFrame(
                         hasImage = hasPreviewContent,
                         emptyText = emptyPreview,
+                        lowResolutionHint = lowResolutionHint,
                         modifier = Modifier
                             .weight(1f, fill = true)
                             .fillMaxWidth()

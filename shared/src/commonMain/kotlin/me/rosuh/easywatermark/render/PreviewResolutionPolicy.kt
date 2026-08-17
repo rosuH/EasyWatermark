@@ -142,6 +142,16 @@ object PreviewResolutionPolicy {
     }
 
     /**
+     * Non-blocking editor hint: source long edge is below [BUCKET_720].
+     * Default/unknown [me.rosuh.easywatermark.data.model.ImageInfo] (1×1) is not low-res.
+     */
+    fun isLowResolutionSource(widthPx: Int, heightPx: Int): Boolean {
+        if (widthPx <= 0 || heightPx <= 0) return false
+        if (widthPx <= 1 && heightPx <= 1) return false
+        return maxOf(widthPx, heightPx) < BUCKET_720
+    }
+
+    /**
      * Snap a positive long-edge need into a decode budget.
      * Above 3840 we still cap at 3840 — export remains the full-res path.
      */

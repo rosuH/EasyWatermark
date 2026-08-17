@@ -116,4 +116,17 @@ class PreviewResolutionPolicyTest {
             PreviewResolutionPolicy.draftMaxEdgePx(PreviewResolutionPolicy.BUCKET_1920),
         )
     }
+
+    @Test
+    fun lowResolutionSource_flagsChatSizedPhotos_notUnknownOrCameraStills() {
+        assertEquals(true, PreviewResolutionPolicy.isLowResolutionSource(480, 320))
+        assertEquals(true, PreviewResolutionPolicy.isLowResolutionSource(480, 319))
+        assertEquals(true, PreviewResolutionPolicy.isLowResolutionSource(719, 400))
+        assertEquals(false, PreviewResolutionPolicy.isLowResolutionSource(720, 720))
+        assertEquals(false, PreviewResolutionPolicy.isLowResolutionSource(1920, 1080))
+        assertEquals(false, PreviewResolutionPolicy.isLowResolutionSource(1080, 8000))
+        assertEquals(false, PreviewResolutionPolicy.isLowResolutionSource(1, 1))
+        assertEquals(false, PreviewResolutionPolicy.isLowResolutionSource(0, 0))
+        assertEquals(false, PreviewResolutionPolicy.isLowResolutionSource(-1, 480))
+    }
 }

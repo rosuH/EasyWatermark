@@ -49,6 +49,7 @@ import me.rosuh.easywatermark.session.MediaLibraryPort
 import me.rosuh.easywatermark.session.WatermarkSessionViewModel
 import me.rosuh.easywatermark.utils.ktx.formatDate
 import me.rosuh.easywatermark.utils.ktx.launch
+import me.rosuh.easywatermark.utils.bitmap.probeEncodedSize
 import me.rosuh.easywatermark.utils.ktx.toMediaRef
 import me.rosuh.easywatermark.utils.ktx.toUri
 import org.koin.java.KoinJavaComponent.inject
@@ -182,7 +183,7 @@ class MainViewModel (
     private suspend fun generateImageInfoList(list: List<Uri>) =
         withContext(Dispatchers.Default) {
             return@withContext list.toSet()
-                .map { ImageInfo(it.toMediaRef()) }
+                .map { imageInfoWithProbedSize(it.toMediaRef()) }
                 .takeIf {
                     it.isNotEmpty()
                 }
@@ -345,15 +346,16 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
     }
 
     fun selectGallery(selectedList: List<Image>) {
-        val imageInfoList = selectedList.map { ImageInfo(it.uri) }
-        if (imageInfoList.isNotEmpty()) {
-            launch {
-                enterEditor(
-                    selected = imageInfoList,
-                    gallerySnapshot = selectedList,
-                    waterMark = persistedWaterMark(),
-                )
+        if (selectedList.isEmpty()) return
+        launch {
+            val imageInfoList = withContext(Dispatchers.Default) {
+                selectedList.map { imageInfoWithProbedSize(it.uri) }
             }
+            enterEditor(
+                selected = imageInfoList,
+                gallerySnapshot = selectedList,
+                waterMark = persistedWaterMark(),
+            )
         }
     }
 
@@ -396,13 +398,22 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
     private suspend fun enterEditorFromSystemUris(uriList: List<Uri>) {
         if (uriList.isEmpty()) return
         val refs = uriList.map { it.toMediaRef() }
-        val imageInfoList = refs.map { ImageInfo(it) }
+        val imageInfoList = refs.map { imageInfoWithProbedSize(it) }
         val library = mediaLibrary ?: AndroidMediaLibraryPort(applicationContext.contentResolver)
         val gallerySnapshot = runCatching { library.enrichPickerRefs(refs) }.getOrDefault(emptyList())
         enterEditor(
             selected = imageInfoList,
             gallerySnapshot = gallerySnapshot,
             waterMark = persistedWaterMark(),
+        )
+    }
+
+    private fun imageInfoWithProbedSize(ref: MediaRef): ImageInfo {
+        val (w, h) = probeEncodedSize(applicationContext.contentResolver, ref.toUri())
+        return ImageInfo(
+            uri = ref,
+            width = w.coerceAtLeast(1),
+            height = h.coerceAtLeast(1),
         )
     }
 

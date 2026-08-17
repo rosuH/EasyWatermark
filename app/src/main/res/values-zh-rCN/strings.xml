@@ -95,4 +95,5 @@
     <string name="inspector_section_tile">平铺</string>
     <string name="inspector_section_look">外观</string>
     <string name="inspector_section_gaps">间距</string>
+    <string name="tips_low_resolution_source">原图像素较低 · %1$d × %2$d</string>
 </resources>

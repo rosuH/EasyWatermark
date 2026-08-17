@@ -171,6 +171,20 @@ suspend fun decodeSampledBitmapFromResource(
  * Editor-preview Source decode. Bypasses [BitmapCache] so the preview working set is
  * the single owner of the focus frame. Never recycle the result.
  */
+/** Bounds-only encoded size. Returns (-1, -1) if the stream cannot be read. */
+fun probeEncodedSize(resolver: ContentResolver, uri: Uri): Pair<Int, Int> {
+    return try {
+        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        resolver.openInputStream(uri).use { stream ->
+            if (stream == null) return -1 to -1
+            BitmapFactory.decodeStream(stream, null, options)
+        }
+        options.outWidth to options.outHeight
+    } catch (_: Exception) {
+        -1 to -1
+    }
+}
+
 fun decodePreviewSourceBypassingCache(
     resolver: ContentResolver,
     uri: Uri,
@@ -239,7 +253,7 @@ fun calculateInSampleSize(
     Log.i(
         "generateImage", "w = $width, h = $height, reqW = $reqWidth, reqH = $reqHeight"
     )
-    var inSampleSize = 2
+    var inSampleSize = 1
 
     if (height > reqHeight || width > reqWidth) {
 

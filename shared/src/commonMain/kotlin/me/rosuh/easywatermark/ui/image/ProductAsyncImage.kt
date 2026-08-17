@@ -19,6 +19,7 @@ import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Precision
+import coil3.size.Scale
 import me.rosuh.easywatermark.data.model.MediaRef
 
 /**
@@ -52,8 +53,11 @@ fun ProductAsyncImage(
             .placeholderMemoryCacheKey(cacheKey)
             .memoryCachePolicy(CachePolicy.ENABLED)
             .diskCachePolicy(CachePolicy.DISABLED)
-            // Match Fetcher max-edge; INEXACT so cache hits accept the decoded thumb.
+            // Match Fetcher max-edge; FILL so downsample covers the square (Crop),
+            // not FIT which collapses 长图/宽图 to a sliver. INEXACT so cache hits
+            // accept the decoded thumb.
             .size(thumb.maxEdgePx)
+            .scale(Scale.FILL)
             .precision(Precision.INEXACT)
             .crossfade(false)
             .build()

@@ -115,11 +115,11 @@ class BitmapUtilsTest {
 
             assertEquals(
                 "orientation $orientation must not swap sampling bounds",
-                2,
+                1,
                 notSwapped.inSample,
             )
-            assertEquals("orientation $orientation width", 200, notSwapped.bitmap.width)
-            assertEquals("orientation $orientation height", 50, notSwapped.bitmap.height)
+            assertEquals("orientation $orientation width", 400, notSwapped.bitmap.width)
+            assertEquals("orientation $orientation height", 100, notSwapped.bitmap.height)
             assertEquals(
                 "orientation $orientation sampled quadrant",
                 expectedQuadrant,
@@ -205,6 +205,36 @@ class BitmapUtilsTest {
                 brightestQuadrant(decoded),
             )
         }
+    }
+
+    @Test
+    fun probeEncodedSize_readsPngBoundsWithoutFullDecode() {
+        val app: Application = RuntimeEnvironment.getApplication()
+        val source = File(app.cacheDir, "probe-bounds.png").apply {
+            outputStream().use { output ->
+                Bitmap.createBitmap(9, 7, Bitmap.Config.ARGB_8888).apply {
+                    eraseColor(Color.BLUE)
+                }.compress(Bitmap.CompressFormat.PNG, 100, output)
+            }
+        }
+
+        val (width, height) = probeEncodedSize(app.contentResolver, Uri.fromFile(source))
+
+        assertEquals(9, width)
+        assertEquals(7, height)
+    }
+
+    @Test
+    fun previewSampleSize_keepsNativeWhenHalfWouldUndershootPane() {
+        // OnePlus 8T editor pane vs a 1080-wide source (device logcat 2026-08-16).
+        assertEquals(1, calculateInSampleSize(1080, 3500, 1012, 1330))
+        // Source already smaller than the pane must not force a subsample.
+        assertEquals(1, calculateInSampleSize(800, 600, 1012, 1330))
+    }
+
+    @Test
+    fun previewSampleSize_stillPowerOfTwoWhenBothHalvesExceedPane() {
+        assertEquals(2, calculateInSampleSize(4000, 3000, 1012, 1330))
     }
 
     @Test

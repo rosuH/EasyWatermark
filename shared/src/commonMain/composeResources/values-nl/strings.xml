@@ -94,4 +94,5 @@
     <string name="inspector_section_tile">Tegel</string>
     <string name="inspector_section_look">Uiterlijk</string>
     <string name="inspector_section_gaps">Afstand</string>
+    <string name="tips_low_resolution_source">Foto met lage resolutie · %1$d × %2$d</string>
 </resources>

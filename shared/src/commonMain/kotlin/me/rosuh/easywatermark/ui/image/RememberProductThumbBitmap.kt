@@ -10,6 +10,8 @@ import coil3.compose.LocalPlatformContext
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
+import coil3.size.Precision
+import coil3.size.Scale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.data.model.MediaRef
@@ -46,6 +48,8 @@ fun rememberProductThumbBitmap(
                     .memoryCachePolicy(CachePolicy.ENABLED)
                     .diskCachePolicy(CachePolicy.DISABLED)
                     .size(maxEdgePx)
+                    .scale(Scale.FILL)
+                    .precision(Precision.INEXACT)
                     .build()
                 val result = loader.execute(request)
                 val image = (result as? SuccessResult)?.image ?: return@runCatching null
