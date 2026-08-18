@@ -91,6 +91,11 @@ jobs:
       - name: Run :shared multiplatform tests (JVM, CMP plan C1.8)
         run: ./gradlew :shared:desktopTest
 
+      # ADR-0031: Desktop packaging left the PR gate; this first-party compile step is
+      # the remaining PR-time desktop net (peers gate PRs on compile/test, not installers).
+      - name: Compile :desktopApp (PR-time desktop net, no packaging)
+        run: ./gradlew :desktopApp:classes
+
       - name: Run :app unit tests incl. watermark golden (Robolectric NATIVE, CMP plan C1.7/C1.8)
         run: ./gradlew :app:testDebugUnitTest
 
