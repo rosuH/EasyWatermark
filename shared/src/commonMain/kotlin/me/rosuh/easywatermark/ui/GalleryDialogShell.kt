@@ -99,6 +99,16 @@ fun GalleryDialogShell(
         LaunchedEffect(Unit) {
             onLoadImagesState.value()
         }
+        // A host may drop rows it discovers are undecodable. Keep the FAB count honest by
+        // releasing selections that are no longer offered.
+        LaunchedEffect(images) {
+            if (selectedIds.isEmpty()) return@LaunchedEffect
+            val offered = images.mapTo(HashSet(images.size)) { it.id }
+            val gone = selectedIds.keys.filterNot { it in offered }
+            if (gone.isEmpty()) return@LaunchedEffect
+            gone.forEach { selectedIds.remove(it) }
+            selectedCount = selectedIds.size
+        }
         Scaffold(
             modifier
                 .fillMaxSize()

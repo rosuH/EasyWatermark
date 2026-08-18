@@ -15,8 +15,6 @@ import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.fetch.ImageFetchResult
 import coil3.request.Options
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 /**
  * Android product UI Fetcher: MediaStore system thumbnail first, subsampled content decode fallback.
@@ -33,16 +31,18 @@ class ProductThumbFetcher(
     private val data: ProductThumb,
 ) : Fetcher {
 
-    override suspend fun fetch(): FetchResult? = withContext(Dispatchers.IO) {
-        if (data.ref.isEmpty()) return@withContext null
+    // Runs on the loader's fetcherCoroutineContext, which is a parallelism-bounded view of
+    // Dispatchers.IO — do not re-dispatch to plain IO here or the bound is bypassed.
+    override suspend fun fetch(): FetchResult? {
+        if (data.ref.isEmpty()) return null
         val uri = Uri.parse(data.ref.value)
         val size = data.maxEdgePx.coerceIn(64, 512)
-        val bitmap = loadThumbBitmap(context, uri, size) ?: return@withContext null
+        val bitmap = loadThumbBitmap(context, uri, size) ?: return null
         // isSampled=false: ProductThumb maxEdge is the product-final UI size, not an
         // intermediate sample. Coil request is size(maxEdge)+FILL+INEXACT; sampled
         // cache entries fail size validation and never memory-hit → blank flash on
         // LazyRow recycle (filmstrip scroll away/back).
-        ImageFetchResult(
+        return ImageFetchResult(
             image = bitmap.asImage(),
             isSampled = false,
             dataSource = DataSource.DISK,

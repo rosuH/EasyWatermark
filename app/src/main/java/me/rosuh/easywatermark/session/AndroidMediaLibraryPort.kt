@@ -44,15 +44,28 @@ class AndroidMediaLibraryPort(
             MediaStore.Images.Media.DATE_TAKEN
         }) + " DESC"
 
+    /**
+     * Rows whose bytes are gone (deleted behind the scanner, interrupted downloads) survive in
+     * MediaStore with SIZE 0 and can never decode — they only ever rendered as permanent
+     * placeholder cells. MIME is allowed to be null: some OEM scanners leave it unset on rows
+     * that are perfectly readable.
+     */
+    private val librarySelection: String =
+        "${MediaStore.Images.Media.SIZE} > 0 AND " +
+            "(${MediaStore.Images.Media.MIME_TYPE} IS NULL OR " +
+            "${MediaStore.Images.Media.MIME_TYPE} LIKE 'image/%')"
+
     override suspend fun listImages(): List<Image> = withContext(Dispatchers.IO) {
-        val list = ArrayList<Image>()
-        contentResolver.query(
+        val cursor = contentResolver.query(
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
             projection,
-            null,
+            librarySelection,
             null,
             sortOrder,
-        )?.use { cursor ->
+        ) ?: return@withContext emptyList()
+        cursor.use {
+            // A full library is tens of thousands of rows; growing from 10 reallocates ~12×.
+            val list = ArrayList<Image>(cursor.count.coerceAtLeast(0))
             val imageIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
             val bucketNameColumn =
                 cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
@@ -84,8 +97,8 @@ class AndroidMediaLibraryPort(
                     date = dateTaken,
                 )
             }
+            list
         }
-        list
     }
 
     override suspend fun enrichPickerRefs(refs: List<MediaRef>): List<Image> =

@@ -19,6 +19,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -47,6 +48,7 @@ import me.rosuh.easywatermark.ui.Image as GalleryImage
 import me.rosuh.easywatermark.ui.SharedProductDrawables
 import me.rosuh.easywatermark.ui.image.ProductAsyncImage
 import me.rosuh.easywatermark.ui.image.ProductThumb
+import me.rosuh.easywatermark.ui.image.ProductThumbLoadPolicy
 import me.rosuh.easywatermark.ui.theme.DesignChipSelected
 import me.rosuh.easywatermark.utils.ktx.hasPartialMediaAccessOnly
 import org.jetbrains.compose.resources.stringResource
@@ -79,14 +81,33 @@ fun GalleryDialog(
     var partialOnly by remember { mutableStateOf(context.hasPartialMediaAccessOnly()) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
+        // Registering against an already-RESUMED owner replays ON_RESUME immediately, which
+        // used to fire a second full-library MediaStore query on top of the shell's first-
+        // composition load. Only re-query on a genuine return (e.g. from Settings).
+        var initialResumeConsumed = false
         val obs = LifecycleEventObserver { _, e ->
             if (e == Lifecycle.Event.ON_RESUME) {
+                if (!initialResumeConsumed) {
+                    initialResumeConsumed = true
+                    return@LifecycleEventObserver
+                }
                 partialOnly = context.hasPartialMediaAccessOnly()
                 loadImages.value()
             }
         }
         lifecycleOwner.lifecycle.addObserver(obs)
         onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+    }
+
+    // MediaStore hands out rows whose bytes are gone or undecodable (interrupted downloads,
+    // files deleted behind the scanner). SIZE/MIME filtering catches most of them at query
+    // time; the rest only surface as a load failure, so drop those cells once we know.
+    val unavailableIds = remember { mutableStateMapOf<Int, Unit>() }
+    val onThumbnailUnavailable: (GalleryImage) -> Unit = remember {
+        { image -> unavailableIds[image.id] = Unit }
+    }
+    val offeredImages = remember(images, unavailableIds.size) {
+        if (unavailableIds.isEmpty()) images else images.filterNot { it.id in unavailableIds }
     }
 
     val thumbnail: @Composable (GalleryImage, String, Modifier) -> Unit =
@@ -98,12 +119,13 @@ fun GalleryDialog(
                     modifier = modifier,
                     thumbPx = thumbPx,
                     placeholderPainter = placeholderPainter,
+                    onUnavailable = onThumbnailUnavailable,
                 )
             }
         }
 
     GalleryDialogShell(
-        images = images,
+        images = offeredImages,
         title = stringResource(Res.string.action_pick),
         closeIcon = SharedProductDrawables.closePainter(),
         searchIcon = SharedProductDrawables.searchPainter(),
@@ -161,10 +183,14 @@ private fun GalleryThumbnail(
     modifier: Modifier,
     thumbPx: Int,
     placeholderPainter: Painter,
+    onUnavailable: (GalleryImage) -> Unit,
 ) {
     // Chip bg only while loading/error; do not stretch the glyph to full-cell (reads as ugly
     // stacked billboards). Center a small muted Phosphor Image instead.
     var showChrome by remember(image.uri.value) { mutableStateOf(true) }
+    // ProductAsyncImage retries transient errors internally; one Error past that budget means
+    // the row cannot be rendered at all.
+    val errorCount = remember(image.uri.value) { intArrayOf(0) }
     Box(
         modifier = modifier.background(DesignChipSelected),
         contentAlignment = Alignment.Center,
@@ -176,6 +202,12 @@ private fun GalleryThumbnail(
             contentScale = ContentScale.Crop,
             onState = { state ->
                 showChrome = state !is AsyncImagePainter.State.Success
+                if (state is AsyncImagePainter.State.Error) {
+                    errorCount[0]++
+                    if (errorCount[0] > ProductThumbLoadPolicy.MAX_RETRIES) {
+                        onUnavailable(image)
+                    }
+                }
             },
         )
         if (showChrome) {

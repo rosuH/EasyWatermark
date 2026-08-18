@@ -1,5 +1,6 @@
 package me.rosuh.easywatermark.ui
 
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
@@ -29,21 +30,24 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.isUnspecified
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -52,6 +56,8 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.cd_checkbox
@@ -63,15 +69,61 @@ import me.rosuh.easywatermark.ui.theme.MotionPolicy
 import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
 import me.rosuh.easywatermark.ui.theme.motionDurationMs
 import org.jetbrains.compose.resources.stringResource
-import kotlin.math.max
-import kotlin.math.min
+import kotlin.time.TimeSource
+import kotlin.time.TimeSource.Monotonic.ValueTimeMark
+
+private const val NANOS_PER_SECOND: Double = 1_000_000_000.0
+
+/**
+ * Gesture-session bookkeeping for long-press drag select.
+ *
+ * Deliberately plain (not Snapshot state): the drag callbacks and the auto-scroll frame loop
+ * write these ~60×/s and nothing reads them during composition, so keeping them off the
+ * snapshot system means a drag never invalidates the grid.
+ */
+private class GalleryDragSession {
+    var anchor: Int = -1
+    var extent: Int = -1
+    var pointer: Offset = Offset.Unspecified
+    var viewportHeight: Float = 0f
+    var edgePx: Float = 0f
+    var maxSpeedPxPerSec: Float = 0f
+    var autoScroll: Job? = null
+    private var lastTick: ValueTimeMark? = null
+
+    /** True at most once per [GalleryDragAutoScroll.MIN_TICK_INTERVAL]. */
+    fun shouldTick(): Boolean {
+        val now = TimeSource.Monotonic.markNow()
+        val previous = lastTick
+        if (previous != null && now - previous < GalleryDragAutoScroll.MIN_TICK_INTERVAL) {
+            return false
+        }
+        lastTick = now
+        return true
+    }
+
+    fun stopAutoScroll() {
+        autoScroll?.cancel()
+        autoScroll = null
+    }
+
+    fun reset() {
+        stopAutoScroll()
+        anchor = -1
+        extent = -1
+        pointer = Offset.Unspecified
+        viewportHeight = 0f
+        lastTick = null
+    }
+}
 
 /**
  * Shared CMP gallery grid/card shell.
  *
  * Selection is driven by [isSelected] / [onSetSelected] (local Snapshot state).
  * **Long-press + drag** (iOS Photos / legacy [MultiSelectRv]): after a long-press, sliding
- * Without lifting the finger paints a contiguous selection range from the anchor cell; reverse * drag shrinks the range. Near top/bottom edges the grid auto-scrolls while selecting.
+ * Without lifting the finger paints a contiguous selection range from the anchor cell; reverse * drag shrinks the range. Holding the finger in the top/bottom band keeps the grid scrolling
+ * and keeps painting the rows that come into view ([GalleryDragAutoScroll]).
  */
 @Composable
 fun GalleryImageGrid(
@@ -90,22 +142,39 @@ fun GalleryImageGrid(
     val selectedShape = remember { RoundedCornerShape(10.dp) }
     val gridState = rememberLazyGridState()
     val scope = rememberCoroutineScope()
-    val density = LocalDensity.current
-    val edgePx = with(density) { 56.dp.toPx() }
-    val autoScrollPx = with(density) { 28.dp.toPx() }
+    val haptic = LocalHapticFeedback.current
 
-    // Gesture session: range paint from [dragAnchor] through [dragExtent].
     var dragActive by remember { mutableStateOf(false) }
-    var dragAnchor by remember { mutableIntStateOf(-1) }
-    var dragExtent by remember { mutableIntStateOf(-1) }
     // P3: freeze the list identity for the drag session so a host rebuild of [images]
-    // mid-paint cannot re-key the grid or restart range arithmetic.
+    // mid-paint (e.g. an undecodable row being pruned) cannot re-key the grid or restart
+    // range arithmetic.
     var dragFrozenImages by remember { mutableStateOf<List<Image>?>(null) }
     val listForGesture = dragFrozenImages ?: images
     val displayImages = if (dragActive) listForGesture else images
 
     val imagesState = rememberUpdatedState(listForGesture)
     val onSetSelectedState = rememberUpdatedState(onSetSelected)
+    val drag = remember { GalleryDragSession() }
+
+    // Card chrome hoisted out of the item scope: these were resolved per visible cell on
+    // every recomposition, which is thousands of lookups across a library-sized grid.
+    val selectedPhrase = stringResource(Res.string.cd_selected)
+    val unselectedPhrase = stringResource(Res.string.cd_unselected)
+    val motionPolicy = currentMotionPolicy()
+    val selectMs = motionDurationMs(motionPolicy, EwmTheme.motion.gallerySelectMs)
+    val selectedScale = EwmTheme.motion.gallerySelectScale
+    val selectSpec: FiniteAnimationSpec<Float> = remember(selectMs, motionPolicy) {
+        when {
+            selectMs <= 0 -> snap()
+            // M1 + M10: 1→0.8 select scale (prod ObjectAnimator 200ms); spring under Full.
+            motionPolicy == MotionPolicy.Full -> spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMediumLow,
+            )
+
+            else -> tween(durationMillis = selectMs)
+        }
+    }
 
     fun hitIndex(pos: Offset): Int? {
         val info = gridState.layoutInfo
@@ -121,43 +190,58 @@ fun GalleryImageGrid(
         return hit?.index
     }
 
-    fun applyRange(from: Int, to: Int, list: List<Image>) {
-        if (list.isEmpty()) return
-        val lo = min(from, to).coerceIn(0, list.lastIndex)
-        val hi = max(from, to).coerceIn(0, list.lastIndex)
-        val prevLo = min(dragAnchor, dragExtent).coerceIn(0, list.lastIndex)
-        val prevHi = max(dragAnchor, dragExtent).coerceIn(0, list.lastIndex)
-        // Deselect cells that left the painted range.
-        for (i in prevLo..prevHi) {
-            if (i < lo || i > hi) {
-                onSetSelectedState.value(list[i], i, false)
-            }
+    fun paintRangeTo(target: Int) {
+        val list = imagesState.value
+        if (list.isEmpty() || drag.anchor !in list.indices) return
+        val next = target.coerceIn(0, list.lastIndex)
+        val previous = drag.extent.coerceIn(0, list.lastIndex)
+        if (next == previous) return
+        drag.extent = next
+        forEachDragRangeDelta(drag.anchor, previous, next) { index, selected ->
+            onSetSelectedState.value(list[index], index, selected)
         }
-        // Select full new range (anchor → finger).
-        for (i in lo..hi) {
-            onSetSelectedState.value(list[i], i, true)
+        if (drag.shouldTick()) {
+            haptic.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
         }
-        dragExtent = to.coerceIn(0, list.lastIndex)
     }
 
-    fun maybeAutoScroll(y: Float, viewportHeight: Float) {
-        val delta = when {
-            y < edgePx -> -autoScrollPx
-            y > viewportHeight - edgePx -> autoScrollPx
-            else -> 0f
-        }
-        if (delta != 0f) {
-            scope.launch {
-                gridState.scrollBy(delta)
+    fun startAutoScroll() {
+        if (drag.autoScroll?.isActive == true) return
+        drag.autoScroll = scope.launch {
+            var lastFrame = withFrameNanos { it }
+            while (isActive) {
+                val now = withFrameNanos { it }
+                val seconds = ((now - lastFrame) / NANOS_PER_SECOND).toFloat()
+                    .coerceIn(0f, GalleryDragAutoScroll.MAX_FRAME_SECONDS)
+                lastFrame = now
+                val pointer = drag.pointer
+                if (pointer.isUnspecified) continue
+                val fraction = GalleryDragAutoScroll.speedFraction(
+                    pointerY = pointer.y,
+                    viewportHeight = drag.viewportHeight,
+                    edgePx = drag.edgePx,
+                )
+                if (fraction == 0f) continue
+                gridState.scrollBy(fraction * drag.maxSpeedPxPerSec * seconds)
+                // The finger may be parked: keep painting the rows scrolling under it.
+                hitIndex(pointer)?.let(::paintRangeTo)
             }
         }
+    }
+
+    fun endDrag() {
+        drag.reset()
+        dragActive = false
+        dragFrozenImages = null
     }
 
     LazyVerticalGrid(
         // I1: adaptive min-cell — phone keeps ~4 cols; tablet/Desktop gain more.
         columns = GridCells.Adaptive(minSize = minCellDp.dp),
         modifier = modifier
-            .pointerInput(displayImages.size) {
+            // Keyed on Unit: the list is read through [imagesState], and re-keying on
+            // size would cancel an in-flight drag whenever the host prunes a row.
+            .pointerInput(Unit) {
                 detectDragGesturesAfterLongPress(
                     onDragStart = { offset ->
                         val list = imagesState.value
@@ -165,37 +249,26 @@ fun GalleryImageGrid(
                         if (idx !in list.indices) return@detectDragGesturesAfterLongPress
                         dragFrozenImages = list
                         dragActive = true
-                        dragAnchor = idx
-                        dragExtent = idx
+                        drag.anchor = idx
+                        drag.extent = idx
+                        drag.pointer = offset
+                        drag.viewportHeight = size.height.toFloat()
+                        drag.edgePx = GalleryDragAutoScroll.EDGE_DP.dp.toPx()
+                        drag.maxSpeedPxPerSec =
+                            GalleryDragAutoScroll.MAX_SPEED_DP_PER_SEC.dp.toPx()
                         onSetSelectedState.value(list[idx], idx, true)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         PlatformHaptics.selectionTick()
+                        startAutoScroll()
                     },
                     onDrag = { change, _ ->
                         change.consume()
                         if (!dragActive) return@detectDragGesturesAfterLongPress
-                        val list = imagesState.value
-                        if (list.isEmpty()) return@detectDragGesturesAfterLongPress
-                        val idx = hitIndex(change.position)
-                        if (idx != null && idx in list.indices && idx != dragExtent) {
-                            applyRange(dragAnchor, idx, list)
-                        }
-                        maybeAutoScroll(
-                            y = change.position.y,
-                            viewportHeight = size.height.toFloat(),
-                        )
+                        drag.pointer = change.position
+                        hitIndex(change.position)?.let(::paintRangeTo)
                     },
-                    onDragEnd = {
-                        dragActive = false
-                        dragAnchor = -1
-                        dragExtent = -1
-                        dragFrozenImages = null
-                    },
-                    onDragCancel = {
-                        dragActive = false
-                        dragAnchor = -1
-                        dragExtent = -1
-                        dragFrozenImages = null
-                    },
+                    onDragEnd = { endDrag() },
+                    onDragCancel = { endDrag() },
                 )
             },
         state = gridState,
@@ -214,6 +287,11 @@ fun GalleryImageGrid(
                 selected = selected,
                 checkIcon = checkIcon,
                 selectedShape = selectedShape,
+                selectedScale = selectedScale,
+                selectSpec = selectSpec,
+                selectedPhrase = selectedPhrase,
+                unselectedPhrase = unselectedPhrase,
+                haptic = haptic,
                 onToggle = {
                     onSetSelected(image, index, !selected)
                 },
@@ -229,34 +307,32 @@ private fun GalleryImageCard(
     selected: Boolean,
     checkIcon: Painter,
     selectedShape: RoundedCornerShape,
+    selectedScale: Float,
+    selectSpec: FiniteAnimationSpec<Float>,
+    selectedPhrase: String,
+    unselectedPhrase: String,
+    haptic: HapticFeedback,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
     thumbnail: @Composable (image: Image, contentDescription: String, modifier: Modifier) -> Unit,
 ) {
-    val selectedPhrase = stringResource(Res.string.cd_selected)
-    val unselectedPhrase = stringResource(Res.string.cd_unselected)
-    val cardCd = AccessibilitySemantics.galleryImageContentDescription(
-        imageName = image.name,
-        selected = selected,
-        selectedPhrase = selectedPhrase,
-        unselectedPhrase = unselectedPhrase,
-    )
-    // M1 + M10: animate 1→0.8 select scale (prod ObjectAnimator 200ms); spring under Full.
-    val motionPolicy = currentMotionPolicy()
-    val selectMs = motionDurationMs(motionPolicy, EwmTheme.motion.gallerySelectMs)
-    val targetScale = if (selected) EwmTheme.motion.gallerySelectScale else 1f
+    val cardCd = remember(image.name, selected, selectedPhrase, unselectedPhrase) {
+        AccessibilitySemantics.galleryImageContentDescription(
+            imageName = image.name,
+            selected = selected,
+            selectedPhrase = selectedPhrase,
+            unselectedPhrase = unselectedPhrase,
+        )
+    }
     val selectScale by animateFloatAsState(
-        targetValue = targetScale,
-        animationSpec = when {
-            selectMs <= 0 -> snap()
-            motionPolicy == MotionPolicy.Full -> spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessMediumLow,
-            )
-            else -> tween(durationMillis = selectMs)
-        },
+        targetValue = if (selected) selectedScale else 1f,
+        animationSpec = selectSpec,
         label = "gallerySelectScale",
     )
+    val toggle = {
+        haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+        onToggle()
+    }
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -270,7 +346,7 @@ private fun GalleryImageCard(
                 role = Role.Checkbox
             }
             .testTag("galleryImageCard")
-            .clickable(onClick = onToggle),
+            .clickable(onClick = toggle),
     ) {
         // Fixed layout bounds for the thumb; selection scale is Draw-phase only (deferring-state-reads).
         Box(
@@ -298,7 +374,7 @@ private fun GalleryImageCard(
         CircleCheckBox(
             selected = selected,
             checkIcon = checkIcon,
-            onClick = onToggle,
+            onClick = toggle,
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(6.dp)

@@ -11,5 +11,5 @@ actual fun buildProductImageLoader(context: PlatformContext): ImageLoader =
             add(ProductThumbKeyer())
             add(ProductThumbFetcher.Factory())
         }
-        .productThumbDefaults()
+        .productThumbDefaults(context)
         .build()

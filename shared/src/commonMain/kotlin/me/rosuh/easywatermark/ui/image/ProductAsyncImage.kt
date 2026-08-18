@@ -3,6 +3,7 @@ package me.rosuh.easywatermark.ui.image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -43,7 +44,7 @@ fun ProductAsyncImage(
     }
     val context = LocalPlatformContext.current
     var retryTick by remember(thumb.ref.value, thumb.maxEdgePx) { mutableIntStateOf(0) }
-    val request = remember(thumb.ref.value, thumb.maxEdgePx, thumb.purpose, retryTick) {
+    val request = remember(thumb.ref.value, thumb.maxEdgePx, thumb.purpose) {
         val cacheKey = productThumbCacheKey(thumb.ref.value, thumb.maxEdgePx)
         ImageRequest.Builder(context)
             .data(thumb)
@@ -62,24 +63,30 @@ fun ProductAsyncImage(
             .crossfade(false)
             .build()
     }
-    // Use onState overload (no placeholder/error Painter params — separate overloads in Coil 3).
-    AsyncImage(
-        model = request,
-        contentDescription = contentDescription,
-        modifier = modifier,
-        contentScale = contentScale,
-        onState = { state ->
-            onState?.invoke(state)
-            if (state is AsyncImagePainter.State.Error &&
-                ProductThumbLoadPolicy.shouldRetry(retryTick)
-            ) {
-                retryTick += 1
-            }
-        },
-        alpha = alpha,
-        colorFilter = colorFilter,
-        filterQuality = filterQuality,
-    )
+    // AsyncImageModelEqualityDelegate.Default compares a subset of ImageRequest properties, and
+    // the retry counter is not one of them — bumping it alone rebuilt an *equal* request, so the
+    // painter never re-executed and the retry budget was never actually spent. Key the painter
+    // itself so a retry is a genuinely new request.
+    key(retryTick) {
+        // Use onState overload (no placeholder/error Painter params — separate overloads in Coil 3).
+        AsyncImage(
+            model = request,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            contentScale = contentScale,
+            onState = { state ->
+                onState?.invoke(state)
+                if (state is AsyncImagePainter.State.Error &&
+                    ProductThumbLoadPolicy.shouldRetry(retryTick)
+                ) {
+                    retryTick += 1
+                }
+            },
+            alpha = alpha,
+            colorFilter = colorFilter,
+            filterQuality = filterQuality,
+        )
+    }
 }
 
 @Composable

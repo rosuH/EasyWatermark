@@ -3,6 +3,7 @@ package me.rosuh.easywatermark.ui.image
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
+import coil3.memory.MemoryCache
 import coil3.request.CachePolicy
 
 /**
@@ -16,6 +17,20 @@ fun installProductImageLoaderFactory() {
     SingletonImageLoader.setSafe { context -> buildProductImageLoader(context) }
 }
 
-internal fun ImageLoader.Builder.productThumbDefaults(): ImageLoader.Builder =
+/**
+ * Disk is off (ADR-0028), so every eviction costs a full re-decode. The in-app gallery is the
+ * worst case: a screen of cells is ~1 MB, and flinging back up through Coil's default budget
+ * re-decoded rows the user had just seen.
+ */
+internal const val PRODUCT_THUMB_MEMORY_CACHE_PERCENT: Double = 0.30
+
+internal fun ImageLoader.Builder.productThumbDefaults(
+    context: PlatformContext,
+): ImageLoader.Builder =
     memoryCachePolicy(CachePolicy.ENABLED)
         .diskCachePolicy(CachePolicy.DISABLED)
+        .memoryCache {
+            MemoryCache.Builder()
+                .maxSizePercent(context, PRODUCT_THUMB_MEMORY_CACHE_PERCENT)
+                .build()
+        }
