@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<!--
+  Store screenshot frame template (3.0.0 materials plan §三).
+
+  Rendered with headless Chrome at the exact store canvas size; all metrics are in
+  vw so one template serves every canvas (6.9" 1320×2868, iPad 13" 2064×2752,
+  Play 1080×1920). See render.sh.
+
+  Query params:
+    shot    - relative path/URL of the raw screenshot (required)
+    title   - headline (supports \n)
+    sub     - subhead
+    accent  - hex accent (no #) for the background glow, e.g. 2fb9c9
+    badge   - optional pill above the title, e.g. "100% offline"
+    lang    - en | zh (font stack + lang attr)
+    device  - phone | tablet (screen corner radius + width)
+    align   - left | center (text block alignment; default center)
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --accent: #2fb9c9;
+    --screen-radius: 5.5vw;
+    --device-width: 88vw;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; }
+
+  body {
+    background: #0a0a0c;
+    font-family: -apple-system, "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Accent glow: two soft radial washes, intensity kept low to avoid banding. */
+  .glow {
+    position: fixed; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(90vw 60vw at 18% -8%,  color-mix(in srgb, var(--accent) 42%, transparent), transparent 70%),
+      radial-gradient(80vw 55vw at 100% 42%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 72%);
+  }
+  /* Fine noise kills gradient banding on OLED-dark backgrounds. */
+  .noise {
+    position: fixed; inset: 0; pointer-events: none; opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .copy {
+    position: relative; z-index: 2;
+    width: 86vw;
+    padding-top: 7.4vw;
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center;
+    gap: 2.2vw;
+  }
+  .copy.left { align-items: flex-start; text-align: left; }
+
+  .badge[hidden] { display: none; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 1vw;
+    padding: 1vw 2.6vw;
+    border: 0.14vw solid color-mix(in srgb, var(--accent) 55%, white 10%);
+    border-radius: 10vw;
+    color: color-mix(in srgb, var(--accent) 70%, white 30%);
+    font-size: 2.6vw; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .badge::before {
+    content: ""; width: 1.1vw; height: 1.1vw; border-radius: 50%;
+    background: var(--accent);
+  }
+
+  h1 {
+    color: #f5f5f7;
+    font-size: 7.6vw; line-height: 1.12; font-weight: 700;
+    letter-spacing: -0.022em;
+    white-space: pre-line;
+  }
+  html[lang="zh"] h1 { font-weight: 600; letter-spacing: 0.01em; }
+
+  .sub {
+    color: rgba(245,245,247,0.56);
+    font-size: 3.4vw; line-height: 1.4; font-weight: 500;
+    letter-spacing: -0.005em;
+    max-width: 74vw;
+    white-space: pre-line;
+  }
+
+  /* Device: thin dark bezel + hairline highlight; always bleeds off the canvas bottom
+     regardless of screenshot aspect (screen crops from the top via object-fit). */
+  .stage {
+    position: relative; z-index: 1;
+    margin-top: 4.6vw;
+    width: var(--device-width);
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .device {
+    width: 100%;
+    height: calc(100% + 8vw);
+    padding: 1.5vw;
+    overflow: hidden;
+    background: linear-gradient(180deg, #232326, #17171a);
+    border-radius: calc(var(--screen-radius) + 1.5vw);
+    box-shadow:
+      inset 0 0 0 0.12vw rgba(255,255,255,0.14),
+      0 -1vw 9vw color-mix(in srgb, var(--accent) 20%, transparent),
+      0 3vw 12vw rgba(0,0,0,0.65);
+  }
+  /* Width-fit, top-aligned; the canvas/device bottom clips the overflow. Never
+     crops horizontally, so UI chrome at the screenshot edges stays intact. */
+  .screen {
+    display: block; width: 100%; height: auto;
+    border-radius: var(--screen-radius);
+    background: #000;
+  }
+
+  html[data-device="tablet"] {
+    --screen-radius: 2.6vw;
+    --device-width: 92vw;
+  }
+</style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="noise"></div>
+
+  <div class="copy" id="copy">
+    <div class="badge" id="badge" hidden></div>
+    <h1 id="title"></h1>
+    <div class="sub" id="sub"></div>
+  </div>
+
+  <div class="stage">
+    <div class="device">
+      <img class="screen" id="shot" alt="">
+    </div>
+  </div>
+
+<script>
+  const q = new URLSearchParams(location.search);
+  const get = (k, d = "") => q.get(k) ?? d;
+
+  document.documentElement.lang = get("lang", "en");
+  document.documentElement.dataset.device = get("device", "phone");
+  if (q.get("accent")) {
+    document.documentElement.style.setProperty("--accent", "#" + get("accent"));
+  }
+  // Optional device width override in vw, to tune bleed for a screenshot's aspect.
+  if (q.get("dw")) {
+    document.documentElement.style.setProperty("--device-width", get("dw") + "vw");
+  }
+  if (get("align") === "left") document.getElementById("copy").classList.add("left");
+
+  const unescapeNl = (s) => s.replaceAll("\\n", "\n");
+  document.getElementById("title").textContent = unescapeNl(get("title"));
+  document.getElementById("sub").textContent = unescapeNl(get("sub"));
+
+  const badge = document.getElementById("badge");
+  if (q.get("badge")) { badge.hidden = false; badge.append(get("badge")); }
+
+  document.getElementById("shot").src = get("shot");
+</script>
+</body>
+</html>
