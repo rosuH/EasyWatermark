@@ -2,9 +2,9 @@
 
 This is a single-context repo.
 
-Before non-trivial engineering work, read:
+Before non-trivial engineering work, follow the Read-when table in `AGENTS.md`:
 
-- `AGENTS.md` for repo guidance before changing code.
+- `AGENTS.md` for durable agent rules and commands.
 - `docs/CONTEXT.md` for EasyWatermark domain vocabulary and invariants.
 - Relevant ADRs under `docs/adr/`.
 

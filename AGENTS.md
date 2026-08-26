@@ -1,176 +1,102 @@
 # AGENTS.md
 
-This file provides guidance to agents when working with code in this repository. `CLAUDE.md` is a symlink to this file for Claude Code compatibility.
+Guidance for agents working in this repository. `CLAUDE.md` is a symlink to this file.
 
-## What this app is
+This file is the always-on contract. Put ticket history, platform essays, and research notes elsewhere — update this file only when a durable agent rule changes.
 
-EasyWatermark (`me.rosuh.easywatermark`) — a privacy-focused watermark app that tiles text/image watermarks over photos so they can't be repurposed. Privacy promises that shape engineering decisions: fully offline, zero tracking/stats/crash SDKs. Android: no runtime permission on API 29+ (pre-29 needs storage). iOS: pick needs no library read; save is add-only; optional **Library Read** for unwatermarked first paint of already-picked photos (**ADR-0029**); Session/export stay path-first (ADR-0021). One Kotlin Multiplatform / Compose Multiplatform codebase ships Android, Desktop (JVM), and iOS. Android is distributed via GitHub Releases, Google Play (paid, same code), F-Droid, Coolapk.
+## Product
 
-## Architecture
+EasyWatermark (`me.rosuh.easywatermark`) tiles text or image watermarks over photos so they cannot be reused. Fully offline; no tracking, stats, or crash SDKs. One Kotlin Multiplatform / Compose Multiplatform codebase ships Android, Desktop (JVM), and iOS.
 
-### Module graph
+Privacy that shapes code: Android needs no runtime permission on API 29+ (pre-29 storage). iOS pick needs no library read; save is add-only; optional Library Read is only for a faster unwatermarked first paint (ADR-0029). Session and export stay path-first (ADR-0021). Export strips all EXIF (ADR-0009). Android ships via GitHub Releases, Google Play (paid, same code), F-Droid, and Coolapk.
 
-- `:shared` — KMP library (`androidTarget()` + `jvm("desktop")` + `iosArm64()` + `iosSimulatorArm64()`). Owns everything cross-platform: domain models, repositories, Room, editor use-cases, the session state machine, the render engine, and the shared Compose Multiplatform UI.
-- `:app` — Android app. Thin platform shell over `:shared`: sole Activity, Android ports, native renderer, MediaStore/decode/save IO, Koin DI.
-- `:desktopApp` — Compose Desktop app. Embeds the shared UI shell; `--headless` CLI path for automation.
-- `iosApp` — Xcode/SwiftUI shell. Links the dynamic `Shared.framework`, hosts the shared Compose UI, owns PHPicker/Photos/share-sheet system edges.
-- `:cmonet` — Wallpaper Material You gate, Android-only, behind `DynamicColorCapability` (ADR-0007; product policy **ADR-0027**: no OEM allowlist, separate **Content editor theme** from photo seed). `:baseBenchmarks` / `:macrobenchmark` — perf. `buildSrc` — build constants.
+## Modules
 
-### Layering inside `:shared`
+| Module | Role |
+|---|---|
+| `:shared` | Cross-platform domain, Room, session, render, Compose UI (`android` + `desktop` + iOS) |
+| `:app` | Android shell: Activity, ports, MediaStore/decode/save, Koin |
+| `:desktopApp` | Compose Desktop window + `--headless` CLI |
+| `iosApp` | SwiftUI shell; `Shared.framework`; PHPicker / Photos / share |
+| `:cmonet` | Android wallpaper Material You only, behind `DynamicColorCapability` |
 
-`commonMain` is pure Kotlin + Compose, no Android types:
+`commonMain` is Kotlin + Compose with no Android types. Platform source sets own DataStore/Room builders, decode/encode, and system I/O.
 
-- `data/model/` — `WaterMark`, `WatermarkMode`, `WatermarkTileMode`, `TextTypeface`, `TextPaintStyle`, `ImageInfo`, `MediaRef`, `UserPreferences`, `FuncType`, `WatermarkConfigRules` (pure config normalization: clamps/conversions/mode transitions).
-- `data/repo/` + `data/datastore/` — `WaterMarkRepository` / `UserConfigRepository` (DataStore Preferences) + store-creation helpers.
-- `data/db/` — Room KMP: `Template` entity, `AppDatabase`, `TemplateDao`, `TemplateRepository`. Locale-seeded template DBs (`ewm-db-ch.db` / `ewm-db-eng.db`).
-- `domain/` — editor use-cases over the repos: `WatermarkConfigEditor`, `OutputPrefsEditor`, `TemplateEditor`.
-- `session/` — product state machine: `WatermarkSessionViewModel` + `SessionReducer` + `AppIntent`, with platform capabilities injected as ports (`ExportPipelinePort`, `MediaLibraryPort`). ADR-0017.
-- `render/` — engine: `WatermarkGeometry` (image-space sizing: `REF_WIDTH` 1000, gap/diagonal/rotated-AABB math), `WatermarkCellComposer` (`composeTextCell` / `composeIconCell` / `composeOverBackground`), and product composition entry `CommonWatermarkPipeline` (optional last `FontFamily? = null` for Text mode; omitted/`null` = default resolver path; Image mode ignores family). Editor main preview working set is `PreviewImageRepository<T>` (Source reuse + Watermarked invalidation; ADR-0030). Decode, font file load, encode, and system I/O stay platform edges — slider ticks must not fully re-decode the focus source, and must not flash an unwatermarked Source over the last Watermarked frame. Text rastering via `TextRasterEnv` (FontFamily.Resolver + Density) and `TextMeasurer`/`MultiParagraph`.
-- `ui/` — shared Compose Multiplatform UI: `Routes` (typed `@Serializable` nav), `ProductShellNav`/`ProductShellHost` (Launch↔Editor swap; About overlays the live Launch/Editor tree), `LaunchScreen`, `EditorScreen` (+ option controls, template sheet, gallery dialog, save/export sheet), `about/`, `theme/`. Strings/drawables via `composeResources`. Style option (`FuncType.TextTypeFace`) hosts Fill/Stroke + typeface (v2.10.0 `TextStyleFragment`); not a separate catalog chip.
+## Read when
 
-Platform source sets supply the edges:
+| When | Open |
+|---|---|
+| Domain words, invariants, retired terms | `docs/CONTEXT.md` |
+| A design fork or “why is it this way” | `docs/adr/` |
+| Issue / handoff / what not to recreate | `docs/agents/issue-tracker.md` |
+| GitHub label names | `docs/agents/triage-labels.md` |
+| Android / KMP API (not training data) | `android docs search '<query>'` then `android docs fetch` |
 
-- `androidMain` — byte-faithful DataStore creation (`createPreferencesDataStore(context, name)` with `SharedPreferencesMigration`), Room builder in compatibility mode (framework SupportSQLite + `createFromAsset` locale seeds, no `sqlite-bundled`).
-- `desktopMain` — DataStore/Room builders under `~/.easywatermark` (`BundledSQLiteDriver`, locale-aware seed unpack), `DesktopImageDecoder` (AWT `ImageIO` + manual EXIF bake), `DesktopWatermarkComposer`/`DesktopWatermarkTextRenderer` (system-default `FontFamily.Default`, ADR-0025), `DesktopExportPipelinePort`, `DesktopIconPersistence`, `DesktopSaveDecision`.
-- `iosMain` — DataStore/Room builders under `NSDocumentDirectory` (seeded), `IosImageDecoder` (Skia decode — already bakes EXIF, never re-rotate), `IosTextRasterEnv` (system-default `FontFamily.Default` for product Text; ADR-0025), `IosWatermarkRenderer`, `IosExportPipelinePort`, Swift-facing bridges (`IosWatermarkRenderBridge`, `IosWatermarkConfigBridge`, `IosUserConfigBridge`, `IosTemplateBridge`), `IosSharedComposeHost`/`IosProductRootHost`.
-
-### Runtime wiring
-
-- **Android:** `MainActivity` (sole `ComponentActivity`) → shared nav/UI (`ui/Routes`, `EditorScreen` …) via Android shells (`ui/AndroidEditorScreen.kt`, `ui/AndroidLaunchScreen.kt`). `MainViewModel` extends the shared session and injects `AndroidExportPipelinePort` + `AndroidMediaLibraryPort`; Koin (`di/AppModule`, `di/RepositoryModule`, `di/DataStoreModule`) wires repos and injected Android edges (default-text provider, SDK-gated tile-id mapper, logger). One-off watermark-icon selection launches `PickVisualMedia` without broad media permission, copies bytes through `AndroidIconPersistence` to internal `filesDir/watermark_icons`, then awaits the shared config commit before deleting the prior app-owned icon. Cold editor entry reads `waterMarkRepo.waterMark.first()`; `MyApp` must not reset the persisted watermark mode during process startup.
-- **Desktop:** `desktopApp/Main.kt` + `DesktopWindow.kt` embed the shared Compose shell with `DesktopExportPipelinePort`; `--args='--headless'` runs the bounded open→render→save spine (`DesktopWatermarkFlow`) without a window. Open/Save As use native AWT `FileDialog`. Export folder uses native directory `FileDialog` on macOS (`apple.awt.fileDialogForDirectories` via `DesktopExportFolderChooser`) — not Swing `JFileChooser`.
-- **iOS:** `iosApp/WatermarkWorkflow.swift` retains one instance of each Kotlin bridge; `ContentView.swift` hosts the shared Compose UI via `IosSharedComposeHost` and keeps PHPicker/save/share in Swift. Progressive photo import is path-first (`PhotoImportCoordinator` + NotificationCenter control plane; ADR-0021). Session holds Ready paths only; Pending/Failed are Host UI slots. Optional **Library Read** (ADR-0029) may paint a Library derivative first; Watermarked preview remains ImageIO + `CommonWatermarkPipeline`. Editor preview working set is common `PreviewImageRepository` (iOS thin subclass); PhotoKit pixels never enter it. P2 `IosPhotoKitImageSource` / `IosPhotoLibraryAccess` are **internal** iosMain producers. After P3, a cold editor switch with Library Read and a resolvable id may first paint an **unwatermarked Library derivative**, then crossfade to ImageIO + `CommonWatermarkPipeline` Watermarked preview. Same-switch ImageIO `previewGen++` is not stale for that path — drop a PhotoKit frame only if disposed, focus path changed, or Watermarked is already showing this path. PhotoKit pixels never enter the pipeline or `SourcePlaceholder` / `Watermarked` caches. After P4, focus±2 neighbors with a registry id may be prefetched in the Photos daemon via `PHCachingImageManager` (not an `IosPreviewImageRepository` budget entry). After P5, if Library Read is not Allow All, pick time shows a **Library Read upsell dialog** (Launch Choose Images / Editor add-more). No chrome strip on Launch or Editor. Limited CTA is allow **all photos** via Settings, never the limited-library picker. `-ewmPhotoKitFastPath` still drives the redacted `DEVICE_PERF_PHOTOKIT` arm. Filmstrip geometry/interaction is owned by shared `EditorFilmstripScaffold` (56/48/40). A `#if DEBUG` UI-test fixture seam (`-uiTestFixtureImage`) drives XCUITest because real PHPicker grid cells are not addressable on the current toolchain. **Current release is single-scene** (`UIApplicationSupportsMultipleScenes=false`, ADR-0020): `IosAppServices` / `defaultIosAppServices()` owns one process-wide Session (route/selection/export/temp); multi-window needs a separately approved scene-scoped Session design.
-
-### Rendering pipeline
-
-Two cell-raster paths share one geometry core (`WatermarkGeometry`) and one tiling semantic (REPEAT grid / CLAMP decal at fractional offset):
-
-- **Native Android** (`:app/render/WatermarkRenderer`): legacy `StaticLayout` text / `BitmapShader` oracle for dual-path measurement and historical goldens — **not** the production path.
-- **CommonMain raster** (`CommonWatermarkPipeline` + `WatermarkCellComposer` primitives): Android via `AndroidCommonRaster`. Desktop via `composeRealImage` + `DesktopRenderRequest` (C2). iOS Preview via `IosPreviewRaster` (max-edge 720, no final encode) and Final Export via `IosFinalRenderSpine` + `IosRenderRequest` (full-res JPEG/PNG, explicit sRGB, frozen offset; C3 / issue 22). Platform edges retain decode/encode/I/O. Never claim byte-parity with legacy native goldens; rebaseline per `docs/adr/0010-c2-golden-policy-delta.md`.
-
-EXIF policy: Android decode uses `ExifInterface(InputStream)` on API 23+ and bakes all eight EXIF orientations (including mirrored 2/4/5/7) into pixels in `utils/bitmap/BitmapUtils.kt`; sampled bounds swap only for orientations 5–8. MediaStore rotation is a best-effort fallback only when EXIF is absent or invalid. Desktop decodes via AWT and bakes orientation manually; iOS bakes orientation once at the decode edge (Skia for JPEG/PNG; ImageIO for HEIF/HEIC) and never re-rotates afterward. Export strips all EXIF metadata — deliberate privacy feature (ADR-0009).
-
-### Storage & model invariants
-
-- Persisted bytes are compatibility-critical: DataStore store names/keys, `WatermarkTileMode.storageId` (mirrors `Shader.TileMode` ordinals; pre-Android-12 stored DECAL id 3 reads back as REPEAT — Android-only mapper in `TileModeExt.kt`), `TextTypeface`/`TextPaintStyle` `serializeKey()` values, Room schema v1 (`exportSchema=true`, committed under `shared/schemas/me.rosuh.easywatermark.data.db.AppDatabase/1.json`).
-- Keep `android.graphics.*`, `android.net.Uri`, repo-nested types out of commonMain models. Android render types live at the edge: `utils/ktx/TileModeExt.kt`, `TextStyleExt.kt`, `MediaRefExt.kt`, `ImageFormatExt.kt`.
-- `MediaRef` (`@JvmInline value class`) is the cross-platform reference type (`WaterMark.iconUri`, `ImageInfo.uri`, `imageInfoMap` keys). Deliberate Android `Uri` edges that stay (do NOT "fix"): gallery `Image.uri`, `Action.SystemPickerImageSelected.uriList`, `SaveExportSheet.imageUris`, picker contracts, `BitmapUtils`/`BitmapCache`/`FileUtils` decode signatures.
-- Newly picked Android watermark icons persist an app-owned `${applicationId}.fileprovider/watermark_icons/...` `MediaRef`; legacy/external icon refs remain readable but are never deleted by the app-owned cleanup path. The picker `Uri` stays inside the Android host until the private copy succeeds.
-
-## Code navigation
-
-- `app/src/main/java/me/rosuh/easywatermark/`
-  - `MainActivity.kt` — sole Activity: launcher, share-in, crash-recovery gate. `MyApp.kt` — app init (Koin, CMonet).
-  - `ui/` — `MainViewModel.kt` (Android session edge), `AndroidEditorScreen.kt` / `AndroidLaunchScreen.kt` (Android shells over shared UI), `compose/` (Android-only controls: gallery dialog, MediaStore thumbnails), `about/AboutViewModel.kt`, `Theme.kt`.
-  - `render/` — `WatermarkRenderer.kt` (native measurement oracle), `AndroidCommonRaster.kt` (production common-raster edge), `TextMeasureEnv.kt`.
-  - `session/` — `AndroidExportPipelinePort.kt`, `AndroidMediaLibraryPort.kt`. `platform/` — `AndroidDynamicColorCapability`, `AndroidIconPersistence`, `AndroidIconSelectionCoordinator`.
-  - `di/` — Koin modules. `utils/bitmap/` — decode (`BitmapUtils`), `BitmapCache`. `utils/ktx/` — Android edge mappers.
-- `shared/src/commonMain/kotlin/me/rosuh/easywatermark/` — `data/model|repo|datastore|db`, `domain/`, `session/`, `render/`, `ui/` (see §Layering).
-- `shared/src/{androidMain,desktopMain,iosMain}/kotlin/...` — platform store/Room builders, decoders, raster envs, export ports, iOS Swift bridges.
-- `shared/src/commonMain/composeResources/` — shared strings (`values(-*)/strings.xml`) and product drawables.
-- `desktopApp/src/main/kotlin/me/rosuh/easywatermark/desktop/` — `Main.kt` (entry + headless), `DesktopWindow.kt` (window UI), `DesktopWatermarkFlow.kt` (save spine).
-- `iosApp/iosApp/` — `iOSApp.swift`, `ContentView.swift`, `WatermarkWorkflow.swift` (bridge retention + state), `KotlinInterop.swift`, `ImageExport.swift`; `iosAppUITests/` — XCUITest fixture-seam tests.
-- `buildSrc/src/main/kotlin/Apps.kt` — compileSdk/targetSdk 36, minSdk 23, JVM toolchain 17.
-- Tests: `app/src/test/` (Robolectric unit/goldens), `app/src/androidTest/` (instrumented goldens), `shared/src/commonTest|desktopTest|iosTest/`.
-
-## Strings / i18n / product drawables
-
-- **Product UI labels:** `stringResource(Res.string.*)` / `FuncType.label()` from `shared/src/commonMain/composeResources/values(-*)/strings.xml`.
-- **Product UI icons/logo:** `painterResource(Res.drawable.*)` / `SharedProductDrawables` / `FuncType.iconPainter()` from `composeResources/drawable/` (not hand-drawn `SharedActionIcons`, not BrandLogo expect/actual).
-- **Weblate (until post-`master` retarget):** still owns `app/src/main/res/values-*/strings.xml`.
-- **Agents adding keys:** dual-write default EN to both string trees. Never hand-edit non-default locales.
-- **Packaging:** `:shared` `android { androidResources { enable = true } }`; do **not** substitute `org.jetbrains.compose.components.*` to AndroidX in `:app`.
-- **Do not** put watermark fonts or Room seed DBs into composeResources (existing platform boundaries). Production Text mode uses system-default fonts (ADR-0025) — no Noto in iOS app Resources or `desktopMain` resources; test-only Noto may live under `desktopTest` / `androidTest` assets.
-- **Non-Compose string reads:** use `sharedString(Res.string.*)` (Toast, Intent chooser, DataStore default text). Prefer `stringResource` inside Composables.
-- **Still Android-local (OK):** Material theme color attrs (`ContextExtension` / `R.color` / `R.attr`); launcher mipmaps; unused legacy XML drawables in `app/res` until cleaned.
+Do not start sessions from `task_plan.md`, `findings.md`, `progress.md`, or `docs/superpowers/research/`.
 
 ## Commands
 
-- Build debug: `./gradlew :app:assembleDebug` → `app/build/outputs/apk/debug/`. Debug applicationId is `me.rosuh.easywatermark.debug`, so it installs alongside the production app — useful for side-by-side parity checks.
-- Unit tests: `./gradlew :app:testDebugUnitTest`; shared: `./gradlew :shared:desktopTest`; iOS: `:shared:iosSimulatorArm64Test`. Instrumented: `./gradlew :app:connectedDebugAndroidTest`.
-- Desktop: `./gradlew :desktopApp:run` (window), `:desktopApp:run --args='--headless'` (automation), `:desktopApp:createDistributable` (unsigned app image; needs Corretto/Zulu, NOT Homebrew OpenJDK, CMP#3107). Packaged Dock/installer icon is `nativeDistributions.iconFile` (`desktopApp/icons/` icns/ico/png — regenerate with `icons/generate_app_icon.py`; macOS drops the iOS App Icon (black field + centered mark) into Apple’s 1024/824 squircle+shadow because jpackage `.icns` is not system-masked — do not full-bleed the mark); `Window(icon)` is the runtime window icon — `gradle run` Dock may still be the Java process. Do not ship an opaque square PNG as the Mac icon. **J3:** app-data is OS-native (`DesktopAppPaths`) with legacy `~/.easywatermark` copy-forward; chooser formats via `DesktopImageFormats` (WebP only if ImageIO can decode). Unsigned `createDistributable` is **not** a signed three-OS release (DMG/MSI/DEB + signing residual).
-- No linter is wired up (spotless/ktlint blocks in root `build.gradle.kts` are commented out). Match existing style by hand.
-- Release builds are minified (R8, `proguard-rules.pro` + `coroutines.pro`); CI (`.github/workflows/pr_pre_check.yml`) on PRs: Ubuntu `build` (`:app:assembleDebug` + `:shared:desktopTest` + non-strict `:app:testDebugUnitTest` + J2 backup-policy structural check; lintDebug fail-open) and permanent macOS `ios` job (J1: `:shared:iosSimulatorArm64Test` + `iosApp` generic iOS Simulator `xcodebuild`, `CODE_SIGNING_ALLOWED=NO`). Desktop packaging (unsigned 3-OS jpackage, `desktop_packaging.yml`) is workflow_dispatch + weekly schedule + master-push only — **not** a PR required check, and CI never `uses:` third-party path-filter Actions (ADR-0031); the PR-time desktop net is `:desktopApp:classes` inside PR Checks. Release: `assembleRelease` + baseline-prof presence check; physical witness residual.
-- **Dependency qualification (J4):** stable-by-default; prerelease only with a named reason; **one upgrade slice at a time** (never bulk CMP+Material+Nav+DataStore). Record rollback HEAD before any catalog promotion.
-- **iOS framework surface (J5):** classic ObjC dynamic `Shared.framework` only — do **not** migrate production to Alpha Swift export. Prefer `internal` for implementation-only iosMain; public growth requires review.
-- Android CLI 1.0 is installed (`android`): `android docs search '<query>'` queries an offline KB mirroring developer.android.com AND the JetBrains KMP docs (then `android docs fetch kb://...`); `android emulator list/start`, `android screenshot`, `android layout` (UI tree as JSON — faster than screenshots), `android run`.
+```bash
+./gradlew :app:assembleDebug
+./gradlew :app:testDebugUnitTest
+./gradlew :shared:desktopTest
+./gradlew :shared:iosSimulatorArm64Test          # macOS only
+./gradlew :app:connectedDebugAndroidTest
+./gradlew :desktopApp:run
+./gradlew :desktopApp:run --args='--headless'
+./gradlew :desktopApp:run -PewmAutoOpen=<abs image>
+```
 
-## Conventions for agents
+Debug `applicationId` is `me.rosuh.easywatermark.debug` (installs beside production). SDK: `Apps.compileSdk` 37, `targetSdk` 36, `minSdk` 23, JVM 17. No Spotless/ktlint — match existing style. PR CI: Ubuntu `assembleDebug` + `desktopTest` + non-strict `testDebugUnitTest`; macOS iOS job. `lintDebug` is fail-open. Do not add `WATERMARK_GOLDEN_STRICT=true` to PR CI (ADR-0010). Unsigned Desktop packaging is not a PR required check (ADR-0031).
 
-- **Docs-with-code gate:** every milestone PR ships its context delta (ADR / CONTEXT.md / AGENTS.md updates) or states "no doc impact" in the PR description.
-- **Parity source of truth:** the Android production release v2.10.0 (built from `master`). Android debug aligns to it first, then Desktop/iOS align to that Android baseline with explicit platform exceptions. Per-layout migrations follow the 10-step skill in `skills/migrate-xml-views-to-jetpack-compose/` (screenshot baseline → migrate → visual diff → delete XML).
-- **CMP-first UI:** new product UI goes in `shared/commonMain/ui/`. Platform-native UI only for app/window entry, picker/share/save/permission system UI, capability glue, and renderer surfaces. No `ViewInfo` / `AndroidView`-bridged renderer.
-- **I3 motion:** `EwmMotionTokens` + `motionDurationMs` (`FastOutSlowInEasing`). Large-screen `EwmContentDialog` and process-first Launch reveal are fade+scale 0.97 @ `shellShortMs`; Android cold Launch fade starts after splash exit (ADR-0032); Open Source is a shared overlay using the Launch↔Editor short H-slide+fade (not About 0.75/0.5); filmstrip switch stays hard-cut (`previewCrossfadeDurationMs` = 0). Cold-start numbers, handshake, and device recipe: `docs/superpowers/research/2026-08-26-cold-launch-knowledge.md`.
-- **Editor adaptive IA (ADR-0026, amended 2026-08-16):** Supporting-pane dual-pane at **≥800 dp** (preview + filmstrip | form inspector) including **≥1440** (no left session library — filmstrip only); Medium 600–799 stacks like Compact; no fold APIs this period; hand-rolled layout class (not SupportingPaneScaffold/Nav3 SceneStrategy yet). The floor is 800 not Material's 840 so every 11" iPad reaches dual-pane in portrait (Air 11" 820 pt, Pro 11" 834 pt); iPad mini (744 pt) stays stacked. Breakpoint decisions live only in `editorLayoutClass` — route large-surface checks through `usesLargeScreenDialog`, never a raw width compare. UX morph demo: `docs/superpowers/research/easywatermark-adaptive-layout-ux-demo.html` (may still show historical three-zone).
-- **No shared-ViewModel/reducer/IO `expect` extraction without a named real off-Android consumer or an explicit owner decision.**
-- **DataStore creation is plain per-platform functions — never a commonMain `expect`/`actual`.** Android creation stays byte-faithful (`PreferenceDataStoreFactory.create(produceFile, migrations)`), and does not route through the common helper.
-- **No direct `CMonet` in migrated Compose consumers** — use `DynamicColorCapability` for **wallpaper** only. Content editor theme is a separate path (ADR-0027). Absorbing `:cmonet` is an owner-gated follow-up (ADR-0007).
-- **UI image loading (ADR-0028):** Coil 3 on KMP for gallery/filmstrip/save thumbs/icon/theme-seed — **not** bare content Uri; **not** watermark compose/export decode. Single platform `ImageLoader`; Android keeps MediaStore thumbnail Fetcher.
-- **Golden gates:** the strict pinned-environment FNV gate (`WATERMARK_GOLDEN_STRICT=true`) is local-only — never re-add it to PR CI (ADR-0010). Verify renders by VIEWING screenshots, not byte sizes.
-- **Decision forks get an ADR** in `docs/adr/` (use the `grill-with-docs` flow); status `Proposed` until the developer signs off.
-- When unsure about an Android/KMP API, prefer `android docs search` over training data.
-- **Clean up heavy processes you start:** automated emulator sessions boot with `-no-window` when interaction isn't needed; stop Gradle with `./gradlew --stop`; cap automated builds with `--max-workers=8`. **Do not shut down already-live Android or iOS simulators** used for ongoing migration work unless the owner explicitly orders it (standing order 2026-07-11). Sustained emulator+build load has frozen this machine's input devices before — warn the developer before kicking off long heavy local automation.
+## Rules
 
-## Agent skills
+Pair every “don’t” with the replacement.
 
-### Use skills proactively (required stance)
+- **UI:** new product UI in `shared/commonMain/ui/`. Native UI only for app/window entry, pickers, share/save/permissions, capability glue, and renderer surfaces. Do not reintroduce `ViewInfo` or an `AndroidView` renderer.
+- **Models:** keep `android.graphics.*` and `android.net.Uri` out of commonMain. Cross-platform identity is `MediaRef`. Android `Uri` stays only at picker/gallery/save/decode edges.
+- **DataStore:** plain per-platform functions. Do not add a commonMain `expect`/`actual` store factory. Android stays on `PreferenceDataStoreFactory.create(produceFile, migrations)`.
+- **Shared VM / IO:** do not extract a shared ViewModel, reducer, or IO `expect` without a named off-Android consumer or an owner decision.
+- **Thumbs vs compose:** Coil 3 for gallery/filmstrip/save thumbs/icon/theme-seed (ADR-0028). Watermark preview and export decode stay on the pipeline, not Coil.
+- **Preview:** `PreviewImageRepository` (ADR-0030). Slider ticks must not fully re-decode the focus source, and must not flash an unwatermarked Source over the last Watermarked frame.
+- **Render:** production path is `CommonWatermarkPipeline`. `:app` `WatermarkRenderer` is the measurement/golden oracle only. Text mode uses system-default fonts (ADR-0025) — no Noto in iOS or `desktopMain` resources.
+- **Theme:** `DynamicColorCapability` for wallpaper only. Content editor theme is a separate path (ADR-0027). Do not call `CMonet` from Compose screens.
+- **Editor layout:** dual-pane at **≥800 dp** via `editorLayoutClass` (ADR-0026). Route large-surface checks through `usesLargeScreenDialog`, never a raw width compare.
+- **Motion:** `EwmMotionTokens` + `motionDurationMs`. Android cold Launch fade starts after splash exit (ADR-0032). Filmstrip switch is a hard cut.
+- **i18n:** product strings/icons live in `shared/.../composeResources/`. Dual-write default EN to Weblate’s `app/src/main/res/values/` as well. Never hand-edit non-default locales. Do not put watermark fonts or Room seed DBs in composeResources.
+- **iOS:** session holds Ready paths only. PhotoKit pixels never enter the pipeline, Session, or preview caches. Production framework is classic ObjC `Shared.framework` — do not migrate to Alpha Swift export. Prefer `internal` on implementation-only iosMain.
+- **Desktop:** app data is OS-native (`DesktopAppPaths`). macOS export folder uses native AWT directory `FileDialog`, not Swing `JFileChooser`.
+- **Deps:** stable-by-default; one catalog slice at a time; record rollback HEAD before a promotion.
+- **Decisions:** new forks get an ADR (`docs/adr/`, Proposed until the owner signs). Milestone PRs update CONTEXT/ADR, or say “no doc impact”. Change this file only for durable agent rules.
+- **Parity:** Android production v2.10.0 on `master` is the visual/behavior baseline. Verify renders by viewing screenshots, not byte sizes.
+- **Machines:** do not shut down already-live Android or iOS simulators (standing order). Cap Gradle with `--max-workers=8`; `./gradlew --stop` when you started the daemon. Warn before long emulator+build load.
 
-Skills are not optional reference shelves — they are the preferred playbooks for matching work. **Load and follow the relevant skill before improvising.**
+## Skills
 
-1. **Match → open → follow.** At task start (or as soon as the task shape is clear), pick the best skill from the catalogs below, **read its `SKILL.md`**, and execute its workflow/checklists. Do not recreate a migration, edge-to-edge, Navigation 3, testing harness, R8, or CameraX plan from training data when a skill already owns that path.
-2. **Read references when the skill points at them.** Many Android skills ship `references/` (recipes, release notes, migration tables). Open those files instead of guessing API surface.
-3. **Prefer skill + offline docs over memory.** For Android/KMP APIs: skill guidance first, then `android docs search` / `android docs fetch` (see `android-cli`). Training data is the fallback, not the primary source.
-4. **Compose perf has a skill path too.** Jank, skip/recompose mysteries, stability, lazy scroll, baseline profiles, HotSwan → load the matching Compose skill before ad-hoc Layout Inspector thrashing.
-5. **Name the skill in your plan.** When a task maps to a skill, say which skill you are following (e.g. “following `migrate-xml-views-to-jetpack-compose` step 4”) so reviews can check skill fidelity.
-6. **Skip only when truly off-catalog.** Pure domain/session/render work with no platform-skill match, or an owner-explicit shortcut, may skip. If unsure, open the closest skill and use what applies.
-7. **Refresh, do not hand-edit upstream skills.** Official Google Android skills are managed by the `android` CLI. Update with `android update` (CLI) and `android skills add --all --project=.` (or a named skill). Do not patch `SKILL.md` / `references/` by hand unless the owner asks for a repo-local fork.
+Skills are the playbook. When a task matches one, open its `SKILL.md` and follow it before improvising. Name the skill in the plan. Official Google Android skills: refresh with `android update` and `android skills add --all --project=.` — do not hand-edit `SKILL.md` / `references/`.
 
-**Install layout:** Google Android skills are mirrored under `skills/`, `.claude/skills/`, and `.agents/skills/` (same content after `android skills add`). Compose performance / HotSwan skills live under `.agents/skills/` (and are symlinked from `.claude/skills/`). Any of these roots is fine to open; prefer the path your agent already resolved.
-
-### Compose skills (`.agents/skills/`)
-
-- **Performance audit & diagnosis:** `auditing-compose-performance` (four-phase audit orchestration), `debugging-recompositions` (Layout Inspector counts), `diagnosing-compose-stability` (compiler reports), `understanding-stability-inference`, `tracing-recompositions-at-runtime`, `visualizing-recomposition-cascades`.
-- **Fixes & idioms:** `stabilizing-compose-types`, `deferring-state-reads`, `ordering-modifier-chains`, `using-efficient-effects`, `using-strong-skipping-correctly`, `migrating-to-modifier-node`, `avoiding-subcomposition-pitfalls`.
-- **Lazy layouts:** `optimizing-lazy-layouts`, `configuring-lazy-prefetch`.
-- **Measurement & CI:** `generating-baseline-profiles`, `testing-compose-in-release-mode`, `enforcing-stability-in-ci`, `using-stability-analyzer-ide-plugin`.
-- **Hot reload (Compose HotSwan):** `setting-up-compose-hotswan`, `iterating-with-ai-and-mcp`, `preserving-state-across-reloads`, `understanding-hot-reload-limits`.
-
-### Android skills (`skills/` · also `.claude/skills/` · `.agents/skills/`)
-
-- **Daily drivers:** `android-cli` (`android` CLI + offline docs KB), `migrate-xml-views-to-jetpack-compose` (10-step parity migration), `edge-to-edge`, `navigation-3`, `testing-setup`, `styles` (experimental Compose Styles API).
-- **Build & perf:** `agp-9-upgrade` (**not** for KMP modules), `r8-analyzer`, `android-profiler` (trace / heap / jank / startup routing), `perfetto-trace-analysis`, `perfetto-sql`.
-- **Wear / TV / media (when relevant):** `wear-compose-m3`, `jetpack-compose-m3` (Wear Material3), `leanback-to-compose-tv-migration`, `media3-cast-integration`.
-- **Platform / Play / security:** `camerax`, `camera1-to-camerax`, `adaptive`, `appfunctions`, `android-intent-security`, `engage-sdk-integration`, `play-billing-library-version-upgrade`, `play-policy-insights`, `verified-email`, `restore-credentials`, `display-glasses-with-jetpack-compose-glimmer`.
-
-**High-value triggers for this repo (open the skill early):**
+Mirrored under `skills/`, `.claude/skills/`, and `.agents/skills/`. Compose / HotSwan skills live under `.agents/skills/`.
 
 | Situation | Skill |
 |---|---|
-| XML → Compose layout / parity migration | `migrate-xml-views-to-jetpack-compose` |
-| System bars, IME, cutout, obscured UI | `edge-to-edge` |
-| Nav graph, back stack, deep links, multi-pane scenes | `navigation-3` |
-| Adaptive / large-screen / foldable layout | `adaptive` |
-| Unit / UI / screenshot / e2e harness setup | `testing-setup` |
-| Emulator, screenshots, layout tree, docs KB | `android-cli` |
-| R8 / keep rules / size | `r8-analyzer` |
-| Trace jank or latency | `android-profiler` first, then `perfetto-trace-analysis` (+ `perfetto-sql`) |
-| Intent export / redirection / PendingIntent | `android-intent-security` |
-| Play policy / Data Safety audit | `play-policy-insights` |
-| Scroll jank / recompose / stability | Compose skills above (`auditing-compose-performance` entry point) |
+| XML → Compose parity | `migrate-xml-views-to-jetpack-compose` |
+| System bars / IME / cutout | `edge-to-edge` |
+| Nav / multi-pane scenes | `navigation-3` |
+| Large-screen / foldable | `adaptive` |
+| Test harness | `testing-setup` |
+| Emulator, screenshot, docs KB | `android-cli` |
+| R8 / keep rules | `r8-analyzer` |
+| Jank / startup / traces | `android-profiler` → `perfetto-trace-analysis` |
+| Play Data Safety | `play-policy-insights` |
+| Recompose / stability | `auditing-compose-performance` |
 
-### Ops pointers
+Skip the catalog for pure domain/session/render work with no platform-skill match.
 
-- **Issue tracking:** there is no repository-local `.scratch` tracker. Use the current user request, Git/PR state, `codex-goal-v2.md`, and bounded ACSP handoffs as described in `docs/agents/issue-tracker.md`. No repository evidence archive.
-- **Triage labels:** `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix` (`docs/agents/triage-labels.md`).
-- **Domain docs:** vocabulary in `docs/CONTEXT.md`, decisions in `docs/adr/` (`docs/agents/domain.md`).
-- **Migration history:** high-level notes in `docs/migration-log.md`; `task_plan.md` / `findings.md` / `progress.md` at repo root are historical evidence only — do not read at session start, do not update.
+## Cursor Cloud
 
-## Cursor Cloud specific instructions
+Headless Linux VM. iOS targets are out of scope. In-scope: `:app`, `:desktopApp`, `:shared` host tests.
 
-Environment is a headless Linux VM. iOS targets (`iosApp`, `:shared:iosSimulatorArm64Test`) are macOS-only and out of scope here. The in-scope work is `:app` (Android build + host unit tests), `:desktopApp` (runnable), and `:shared` tests. Standard commands are in the "Commands" section above — this section only adds non-obvious caveats.
-
-- **Toolchain (baked into the snapshot):** JDK 17 is the default `java` (via `update-alternatives`; AGP 9 needs the Gradle JVM at 17, not the VM's JDK 21). Android SDK lives at `~/android-sdk` and `local.properties` (gitignored) points `sdk.dir` there, so Gradle finds it even when `ANDROID_HOME` is unset. `JAVA_HOME`/`ANDROID_HOME` are exported in `~/.bashrc` for interactive shells.
-- **compileSdk 37 minor-version gotcha:** `Apps.compileSdk = 37` resolves to the SDK package `platforms;android-37.0` (note the `.0` minor). Install with `sdkmanager "platforms;android-37.0" "build-tools;37.0.0"` — plain `platforms;android-37` does not exist.
-- **Desktop GUI renders under software fallback:** Skiko logs `RenderException: Cannot create Linux GL context` and falls back to software rendering — this is expected on this VM and the window still works. A display is available at `DISPLAY=:1`.
-- **Running the Desktop app:** headless E2E (no display) is `./gradlew :desktopApp:run --args='--headless'` (decode → watermark → save spine, writes sample PNG/JPEG outputs under `desktopApp/build/`). For an interactive GUI preview without wrangling the native file dialog, use `./gradlew :desktopApp:run -PewmAutoOpen=<abs image path>` (optionally `-PewmW=<dp> -PewmH=<dp>`) to auto-import an image straight into the editor.
-- **`:app:lintDebug` exits non-zero** due to pre-existing findings (e.g. `NewApi`); this is not an environment break. CI runs it fail-open (`continue-on-error`), so treat a non-zero lint exit as informational.
-- **`:shared:commonPureTest`** has one test (`ContentEditorThemeTest`) that calls real `android.graphics.Bitmap.createBitmap` and fails on the plain-JVM android-host source set. It is not a CI gate. The CI gates are `:app:assembleDebug`, `:shared:desktopTest`, and `:app:testDebugUnitTest`.
+- JDK 17 is the Gradle JVM (AGP 9). SDK is `~/android-sdk`; `local.properties` has `sdk.dir`.
+- `compileSdk` 37 installs as `platforms;android-37.0` — not `platforms;android-37`.
+- Desktop Skiko falls back to software GL; display is `DISPLAY=:1`.
+- `:app:lintDebug` non-zero is informational. `:shared:commonPureTest` is not a CI gate (`ContentEditorThemeTest` needs Android `Bitmap`).
