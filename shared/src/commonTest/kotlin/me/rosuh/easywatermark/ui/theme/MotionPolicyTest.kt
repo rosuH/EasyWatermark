@@ -84,6 +84,15 @@ class MotionPolicyTest {
     }
 
     @Test
+    fun dialogAndColdLaunch_shortFamilyDurations() {
+        assertEquals(240, EwmTheme.motion.shellShortMs)
+        assertEquals(0.97f, EwmTheme.motion.contentEnterScale)
+        assertEquals(240, motionDurationMs(MotionPolicy.Full, EwmTheme.motion.shellShortMs))
+        assertEquals(96, motionDurationMs(MotionPolicy.Reduced, EwmTheme.motion.shellShortMs))
+        assertEquals(0, motionDurationMs(MotionPolicy.Off, EwmTheme.motion.shellShortMs))
+    }
+
+    @Test
     fun previewCrossfade_productHardCut_alwaysZero() {
         // Product 2026-08-12: multi-image switch is hard-cut (no fade settle).
         assertEquals(0, previewCrossfadeDurationMs(MotionPolicy.Off, 0f))

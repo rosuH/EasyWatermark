@@ -26,6 +26,7 @@ class MyApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        me.rosuh.easywatermark.ui.StartupTrace.mark("app_create_start")
         // DEBUG-only recomposition tracing for compose-stability-analyzer / IDE heatmap.
         // Release keeps the gate off so TraceRecomposition residual is map-lookup + early return.
         com.skydoves.compose.stability.runtime.ComposeStabilityAnalyzer.setEnabled(BuildConfig.DEBUG)
@@ -45,6 +46,7 @@ class MyApp : Application() {
         AndroidMemoryDiagnostics.logHistoricalExits(this)
         AndroidMemoryDiagnostics.registerLocalProfilingTriggers(this)
         if (checkRecoveryMode()) return
+        me.rosuh.easywatermark.ui.StartupTrace.mark("app_create_end")
     }
 
     /**

@@ -1,6 +1,8 @@
 package me.rosuh.easywatermark.ui
 
 import me.rosuh.easywatermark.platform.DynamicColorCapability
+import me.rosuh.easywatermark.platform.platformMotionPolicy
+import me.rosuh.easywatermark.ui.theme.MotionPolicy
 import org.koin.android.ext.android.inject
 import android.Manifest
 import android.content.ActivityNotFoundException
@@ -20,6 +22,7 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -97,7 +100,7 @@ import me.rosuh.easywatermark.ui.about.AboutScreenIcons
 import me.rosuh.easywatermark.ui.editorLayoutClass
 import me.rosuh.easywatermark.ui.usesLargeScreenDialog
 import me.rosuh.easywatermark.ui.about.AboutViewModel
-import me.rosuh.easywatermark.ui.about.OpenSourceScreen
+import me.rosuh.easywatermark.ui.about.OpenSourceOverlayHost
 import me.rosuh.easywatermark.utils.ktx.openLink
 import me.rosuh.easywatermark.utils.ktx.toUri
 import me.rosuh.easywatermark.utils.ktx.uriFromExportResultData
@@ -127,6 +130,9 @@ class MainActivity : ComponentActivity() {
 
     // ACTION_SEND share-in bridge (ADR-0016): set from intent, observed in setContent → navigate.
     private var pendingShareUris by mutableStateOf<List<Uri>?>(null)
+
+    /** True while Android system splash should stay up (Launch fade serial hold). */
+    private var keepSplash = false
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -168,6 +174,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onDestroy() {
+        StartupTrace.firstScreenListener = null
+        StartupTrace.fullyDrawnListener = null
+        super.onDestroy()
+    }
+
     private fun crashStackTrace(): String =
         getSharedPreferences(MyApp.SP_NAME, MODE_PRIVATE).getString(MyApp.KEY_STACK_TRACE, "").orEmpty()
 
@@ -183,7 +195,10 @@ class MainActivity : ComponentActivity() {
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        StartupTrace.mark("host_create_start")
+        StartupTrace.fullyDrawnListener = { reportFullyDrawn() }
         if (intent?.getBooleanExtra("ewm_preview_probe", false) == true ||
             System.getProperty("ewm.preview.probe") == "true"
         ) {
@@ -192,6 +207,29 @@ class MainActivity : ComponentActivity() {
             android.util.Log.i("PreviewSourceReuse", "probe enabled")
         }
         handleShareIntent(intent)
+
+        val shareIn = !pendingShareUris.isNullOrEmpty()
+        val firstRoute = ProductShellNav.routeFromLaunchUi(
+            viewModel.launchScreenUiStateFlow.value.uiState,
+        )
+        val expectLaunchFade = !MyApp.recoveryMode &&
+            !shareIn &&
+            firstRoute == ProductShellNav.Route.Launch &&
+            platformMotionPolicy() != MotionPolicy.Off
+        keepSplash = expectLaunchFade
+        splashScreen.setKeepOnScreenCondition { keepSplash }
+        splashScreen.setOnExitAnimationListener { splashView ->
+            splashView.remove()
+            ColdLaunchReveal.releaseHostHold()
+        }
+        if (expectLaunchFade) {
+            ColdLaunchReveal.requestHostHold()
+            StartupTrace.firstScreenListener = { keepSplash = false }
+            lifecycleScope.launch {
+                delay(1_500)
+                if (!isFinishing) keepSplash = false
+            }
+        }
 
         // Crash-recovery self-heal: MyApp.recoveryMode is computed in MyApp.onCreate.
         // Port of the legacy MainActivity activity_recovery branch (ADR-0016).
@@ -232,6 +270,7 @@ class MainActivity : ComponentActivity() {
             return
         }
 
+        StartupTrace.mark("host_set_content")
         setContent {
             val windowSizeClass = calculateWindowSizeClass(this)
             // I3: feed MotionPolicy from OS animator scale / reduce-motion flags.
@@ -605,16 +644,14 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
 
-                                if (showOpenSource) {
-                                    OpenSourceScreen(
-                                        onBack = { showOpenSource = false },
-                                        onOpenLink = { url ->
-                                            this@MainActivity.openLink(url)
-                                        },
-                                        backIcon = SharedProductDrawables.backPainter(),
-                                        modifier = Modifier.fillMaxSize(),
-                                    )
-                                }
+                                OpenSourceOverlayHost(
+                                    visible = showOpenSource,
+                                    onBack = { showOpenSource = false },
+                                    onOpenLink = { url ->
+                                        this@MainActivity.openLink(url)
+                                    },
+                                    backIcon = SharedProductDrawables.backPainter(),
+                                )
                             }
 
                             if (showGalleryDialog) {

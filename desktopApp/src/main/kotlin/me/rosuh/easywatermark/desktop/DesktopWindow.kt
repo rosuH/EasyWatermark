@@ -137,7 +137,7 @@ import me.rosuh.easywatermark.shared.generated.resources.ic_app_icon_window
 import me.rosuh.easywatermark.ui.about.AboutDevCard
 import me.rosuh.easywatermark.ui.about.AboutScreenIcons
 import me.rosuh.easywatermark.ui.about.AboutScreen
-import me.rosuh.easywatermark.ui.about.OpenSourceScreen
+import me.rosuh.easywatermark.ui.about.OpenSourceOverlayHost
 import me.rosuh.easywatermark.ui.EditorOptionItem
 import me.rosuh.easywatermark.ui.EditorTemplateSheetHost
 import me.rosuh.easywatermark.ui.label
@@ -324,6 +324,7 @@ private data class FrozenItemInput(
  */
 @OptIn(ExperimentalComposeUiApi::class)
 fun launchDesktopWindow() = application {
+    me.rosuh.easywatermark.ui.StartupTrace.mark("host_create_start")
     if (System.getProperty("ewm.preview.probe") == "true" ||
         System.getenv("EWM_PREVIEW_PROBE") == "1"
     ) {
@@ -360,6 +361,7 @@ fun launchDesktopWindow() = application {
             ),
         )
     }
+    me.rosuh.easywatermark.ui.StartupTrace.markOnce("app_create_end")
     val exportJobState by session.exportJobState.collectAsState()
     // the shared output-prefs write use-case over the SAME store the save flow reads.
     val outputEditor = remember { OutputPrefsEditor(userConfigRepo) }
@@ -1058,6 +1060,14 @@ fun launchDesktopWindow() = application {
         rememberWindowState()
     }
     var desktopFrame by remember { mutableStateOf<java.awt.Frame?>(null) }
+    me.rosuh.easywatermark.ui.StartupTrace.markOnce("host_set_content")
+    val startupExitMs = System.getenv("EWM_STARTUP_TRACE_EXIT_MS")?.toLongOrNull()
+    if (startupExitMs != null) {
+        LaunchedEffect(startupExitMs) {
+            kotlinx.coroutines.delay(startupExitMs)
+            closeDesktopWindow()
+        }
+    }
     SwingWindow(
         onCloseRequest = ::closeDesktopWindow,
         title = "EasyWatermark — Desktop",
@@ -1579,17 +1589,15 @@ fun launchDesktopWindow() = application {
             }
             } // ProductShellHost
 
-            if (showOpenSource) {
-                OpenSourceScreen(
-                    onBack = { showOpenSource = false },
-                    onOpenLink = { url ->
-                        openUrlInBrowser(url)?.let { status = it }
-                    },
-                    backIcon = backPainter,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = macTitleBarContentPadding(),
-                )
-            }
+            OpenSourceOverlayHost(
+                visible = showOpenSource,
+                onBack = { showOpenSource = false },
+                onOpenLink = { url ->
+                    openUrlInBrowser(url)?.let { status = it }
+                },
+                backIcon = backPainter,
+                contentPadding = macTitleBarContentPadding(),
+            )
 
             // C2: shared Android Compose export panel; Desktop only implements FS write + reveal/share edges.
             if (showSaveSheet) {

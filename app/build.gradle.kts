@@ -214,6 +214,7 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     implementation(libs.core.ktx)
+    implementation(libs.androidx.core.splashscreen)
     ksp(libs.room.compiler)
 
     implementation(libs.datastore.preference)

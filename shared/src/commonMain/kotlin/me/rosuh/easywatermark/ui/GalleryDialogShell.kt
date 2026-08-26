@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.platform.testTag
 
 /**
  * Shared CMP gallery-dialog shell.
@@ -112,7 +113,8 @@ fun GalleryDialogShell(
         Scaffold(
             modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
+                .background(MaterialTheme.colorScheme.background)
+                .testTag("sharedComposeGalleryDialog"),
             contentWindowInsets = contentWindowInsets,
             topBar = {
                 GalleryDialogTopBarShell(

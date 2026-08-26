@@ -122,6 +122,12 @@ object EwmMotionTokens {
     /** Product shell Launch↔Editor short crossfade/slide (ADR-0023 intentional route family). */
     const val shellShortMs: Int = 240
 
+    /**
+     * Dialog / process-first Launch enter scale floor.
+     * Fade+scale only; never below 0.97 (no scale(0), no bounce).
+     */
+    const val contentEnterScale: Float = 0.97f
+
     /** Export progress wipe (Ing / Success). */
     const val exportWipeMs: Int = 400
 

@@ -18,6 +18,8 @@ coroutines = "1.11.0"
 lifecycle = "2.11.0"
 lifecycleViewModel = "2.11.0"
 coreKtx = "1.19.0"
+# J4: core-splashscreen only (Android splash then Launch fade serial). Latest stable, not alpha.
+coreSplashscreen = "1.2.0"
 appcompat = "1.8.0-alpha01"
 material = "1.14.0"
 room = "2.8.4"
@@ -123,6 +125,7 @@ lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-view
 # Official KMP artifact (AndroidX); version aligned with app lifecycle line.
 lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "lifecycle" }
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "coreSplashscreen" }
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }

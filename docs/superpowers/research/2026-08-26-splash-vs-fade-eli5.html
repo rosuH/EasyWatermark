@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>打开 App 时你看见什么</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%23262611' width='32' height='32'/><circle cx='16' cy='16' r='8' fill='%23FFDE32'/></svg>" />
+  <style>
+    :root {
+      --olive: #262611;
+      --olive-deep: #1a1a0c;
+      --paper: #f4f0d8;
+      --ink: #1d1b16;
+      --muted: #6b6748;
+      --gold: #ffde32;
+      --curtain: #3a3820;
+      --blank: #f2f2f2;
+      --ok: #2f6b3a;
+      --warn: #a15c12;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      background: var(--olive-deep);
+      color: var(--paper);
+      font-family: "Avenir Next", "PingFang SC", "Hiragino Sans GB", sans-serif;
+    }
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+    h1 {
+      font-size: clamp(42px, 7vw, 72px);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      margin: 0 0 16px;
+      font-weight: 750;
+    }
+    .lead {
+      font-size: clamp(22px, 3vw, 30px);
+      line-height: 1.35;
+      max-width: 18em;
+      margin: 0 0 56px;
+      color: #ddd6a8;
+    }
+    .pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 64px;
+    }
+    .card {
+      background: var(--olive);
+      border-radius: 28px;
+      padding: 28px 28px 32px;
+      min-height: 280px;
+    }
+    .card h2 {
+      font-size: 18px;
+      margin: 0 0 8px;
+      color: var(--gold);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .card p {
+      font-size: 28px;
+      line-height: 1.25;
+      margin: 0 0 20px;
+      font-weight: 650;
+    }
+    .phones {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .lane {
+      background: #201f0e;
+      border-radius: 28px;
+      padding: 22px 16px 28px;
+      text-align: center;
+    }
+    .lane h3 {
+      font-size: 22px;
+      margin: 0 0 6px;
+    }
+    .lane .result {
+      font-size: 28px;
+      font-weight: 750;
+      margin: 0 0 18px;
+      min-height: 2.4em;
+    }
+    .lane.warn .result { color: #ffb347; }
+    .lane.ok .result { color: #b6e3a8; }
+    .lane.ios .result { color: #c9d4ff; }
+    .stage {
+      width: 160px;
+      height: 280px;
+      margin: 0 auto 16px;
+      border-radius: 28px;
+      border: 8px solid #111;
+      position: relative;
+      overflow: hidden;
+      background: var(--olive);
+      box-shadow: 0 18px 0 #0b0b06;
+    }
+    .home {
+      position: absolute;
+      inset: 36px 18px 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+    }
+    .logo {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: var(--gold);
+      margin-top: 18px;
+    }
+    .btn {
+      width: 86px;
+      height: 22px;
+      background: #fff;
+      border-radius: 4px;
+    }
+    .curtain {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .curtain.icon {
+      background: var(--curtain);
+    }
+    .curtain.blank {
+      background: var(--blank);
+    }
+    .app-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      background: var(--gold);
+    }
+    .ghost { opacity: 0.18; }
+    .gone { display: none; }
+    .caption {
+      font-size: 20px;
+      color: #cfc89a;
+      margin: 0;
+      line-height: 1.35;
+    }
+    footer {
+      margin-top: 64px;
+      font-size: 28px;
+      line-height: 1.35;
+      max-width: 16em;
+      font-weight: 650;
+    }
+    @media (max-width: 800px) {
+      .pair, .phones { grid-template-columns: 1fr; }
+      .stage { width: 200px; height: 340px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>不是启动慢。<br>是一块布挡着。</h1>
+    <p class="lead">打开 App 时，系统先挡一块布。我们在布后面让首页慢慢出现。两件事各干各的。</p>
+
+    <div class="pair">
+      <section class="card">
+        <h2>系统的布</h2>
+        <p>挡住屏幕，等第一张图画好。</p>
+        <div class="stage" aria-hidden="true">
+          <div class="curtain icon"><div class="app-icon"></div></div>
+        </div>
+      </section>
+      <section class="card">
+        <h2>我们的淡入</h2>
+        <p>首页从看不见，变成看见。</p>
+        <div class="stage" aria-hidden="true">
+          <div class="home">
+            <div class="logo"></div>
+            <div class="btn"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="phones">
+      <article class="lane warn">
+        <h3>安卓 · 调试版</h3>
+        <p class="result">布挡很久。<br>动画在布后面播完了。</p>
+        <div class="stage" aria-hidden="true">
+          <div class="home ghost">
+            <div class="logo"></div>
+            <div class="btn"></div>
+          </div>
+          <div class="curtain icon"><div class="app-icon"></div></div>
+        </div>
+        <p class="caption">你看见：图标很久，然后首页已经停着。</p>
+      </article>
+
+      <article class="lane ok">
+        <h3>安卓 · 正式版</h3>
+        <p class="result">布很快拉开。<br>你能看见淡入。</p>
+        <div class="stage" aria-hidden="true">
+          <div class="home" style="opacity:.45">
+            <div class="logo"></div>
+            <div class="btn"></div>
+          </div>
+        </div>
+        <p class="caption">你看见：图标一下没了，首页再慢慢出来。</p>
+      </article>
+
+      <article class="lane ios">
+        <h3>iPhone</h3>
+        <p class="result">布是空白的。<br>没有图标。</p>
+        <div class="stage" aria-hidden="true">
+          <div class="home" style="opacity:.7">
+            <div class="logo"></div>
+            <div class="btn"></div>
+          </div>
+          <div class="curtain blank" style="opacity:.35"></div>
+        </div>
+        <p class="caption">你看见：空白或浅色一下，再淡入。模拟器上并不慢。</p>
+      </article>
+    </div>
+
+    <footer>一句话：布和淡入没有打招呼。谁先结束，你就看见谁。</footer>
+  </main>
+</body>
+</html>

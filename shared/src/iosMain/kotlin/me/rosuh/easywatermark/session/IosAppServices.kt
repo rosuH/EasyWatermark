@@ -277,6 +277,7 @@ private fun installKotlinUnhandledExceptionLogging() {
 
 private object IosAppServicesHolder {
     val instance: IosAppServices by lazy {
+        me.rosuh.easywatermark.ui.StartupTrace.mark("app_create_start")
         installKotlinUnhandledExceptionLogging()
         val waterMarkRepo = WaterMarkRepository(
             dataStore = createWaterMarkDataStore(),
@@ -296,6 +297,8 @@ private object IosAppServicesHolder {
             configBridge = IosWatermarkConfigBridge(waterMarkRepo),
             userConfigBridge = IosUserConfigBridge(userConfigRepo),
             session = session,
-        )
+        ).also {
+            me.rosuh.easywatermark.ui.StartupTrace.mark("app_create_end")
+        }
     }
 }

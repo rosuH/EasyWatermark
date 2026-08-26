@@ -1,18 +1,25 @@
 package me.rosuh.easywatermark.ui
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.testTag
 import me.rosuh.easywatermark.ui.theme.editorChromeColor
+
+/** Instant press alpha — matches Launch About (`LaunchScreen` IconButton). */
+private const val PressedIconAlpha = 0.45f
 
 /**
  * Editor top bar (production layout). Icons supplied by the host (Android resources / platform bag).
@@ -54,39 +61,58 @@ fun EditorTopBar(
         title = {},
         navigationIcon = {
             // Same pattern as About: IconButton + default icon size (24.dp).
-            IconButton(onClick = onBack) {
-                Icon(
-                    painter = backIcon,
-                    contentDescription = backContentDescription,
-                    tint = iconTint,
-                )
-            }
+            PressAlphaIconButton(
+                onClick = onBack,
+                painter = backIcon,
+                contentDescription = backContentDescription,
+                tint = iconTint,
+            )
         },
         actions = {
-            IconButton(onClick = onAddMoreImages) {
-                Icon(
-                    painter = addMoreImagesIcon,
-                    contentDescription = addMoreImagesContentDescription,
-                    tint = iconTint,
-                )
-            }
-            IconButton(
+            PressAlphaIconButton(
+                onClick = onAddMoreImages,
+                painter = addMoreImagesIcon,
+                contentDescription = addMoreImagesContentDescription,
+                tint = iconTint,
+                modifier = Modifier.testTag("sharedComposeAddMoreButton"),
+            )
+            PressAlphaIconButton(
                 onClick = onShowSaveDialog,
+                painter = saveIcon,
+                contentDescription = saveContentDescription,
+                tint = iconTint,
                 modifier = Modifier.testTag("sharedComposeSaveButton"),
-            ) {
-                Icon(
-                    painter = saveIcon,
-                    contentDescription = saveContentDescription,
-                    tint = iconTint,
-                )
-            }
-            IconButton(onClick = onGoAboutScreen) {
-                Icon(
-                    painter = aboutIcon,
-                    contentDescription = aboutContentDescription,
-                    tint = iconTint,
-                )
-            }
+            )
+            PressAlphaIconButton(
+                onClick = onGoAboutScreen,
+                painter = aboutIcon,
+                contentDescription = aboutContentDescription,
+                tint = iconTint,
+            )
         },
     )
+}
+
+@Composable
+private fun PressAlphaIconButton(
+    onClick: () -> Unit,
+    painter: Painter,
+    contentDescription: String,
+    tint: Color,
+    modifier: Modifier = Modifier,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    IconButton(
+        onClick = onClick,
+        modifier = modifier,
+        interactionSource = interaction,
+    ) {
+        Icon(
+            painter = painter,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.alpha(if (pressed) PressedIconAlpha else 1f),
+        )
+    }
 }

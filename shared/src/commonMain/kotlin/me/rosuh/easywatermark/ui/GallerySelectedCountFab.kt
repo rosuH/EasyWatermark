@@ -14,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.ui.theme.EwmTheme
@@ -46,7 +47,9 @@ fun GallerySelectedCountFab(
         modifier = modifier,
     ) {
         ExtendedFloatingActionButton(
-            modifier = Modifier.padding(64.dp),
+            modifier = Modifier
+                .padding(64.dp)
+                .testTag("sharedComposeGalleryConfirm"),
             onClick = onClick,
         ) {
             Icon(

@@ -19,6 +19,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.shared.generated.resources.Res
@@ -56,7 +57,8 @@ fun RecoveryScreen(
         modifier = modifier
             .fillMaxSize()
             .safeDrawingPadding()
-            .padding(16.dp),
+            .padding(16.dp)
+            .testTag("sharedComposeRecoveryScreen"),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
@@ -100,7 +102,10 @@ fun RecoveryScreen(
             TextButton(onClick = onTelegram) { Text(sendTelegram) }
             TextButton(onClick = onStore) { Text(jumpToStore) }
         }
-        TextButton(onClick = onCloseRecovery) {
+        TextButton(
+            onClick = onCloseRecovery,
+            modifier = Modifier.testTag("sharedComposeRecoveryClose"),
+        ) {
             Text(turnOffRecovery)
         }
     }

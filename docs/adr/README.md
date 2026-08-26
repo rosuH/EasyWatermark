@@ -32,3 +32,4 @@ Decisions trace to the CMP migration plan (`docs/superpowers/plans/2026-06-12-cm
 | [0029](0029-ios-library-read-first-paint.md) | iOS Library Read; unwatermarked Library derivative first paint, then Watermarked preview | **Accepted** (owner 2026-08-15) |
 | [0030](0030-cross-platform-preview-working-set.md) | Cross-platform `PreviewImageRepository`; decode stays on the platform edge; PhotoKit not in the repo | **Proposed** |
 | [0031](0031-desktop-packaging-ci-not-pr-required.md) | Desktop packaging CI: dispatch/weekly/master-push only, not a PR required check; no third-party path classifiers | **Proposed** |
+| [0032](0032-android-splash-then-launch-fade-serial.md) | Android splash then Launch fade are serial; iOS launch fill matches first screen (`#262611`, no icon) | **Accepted** (owner 2026-08-26) |

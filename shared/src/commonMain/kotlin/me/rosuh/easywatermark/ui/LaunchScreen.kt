@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.testTag
@@ -47,6 +48,7 @@ fun LaunchScreen(
         BrandLogo(modifier = logoMod, animate = animate)
     },
 ) {
+    StartupTrace.markOnce("launch_composed")
     val pickImageLabel = stringResource(Res.string.tips_pick_image)
     val aboutContentDescription = stringResource(Res.string.about_title_about)
     val aboutInteraction = remember { MutableInteractionSource() }
@@ -65,7 +67,8 @@ fun LaunchScreen(
     Surface(
         modifier = modifier
             .fillMaxSize()
-            .testTag("sharedComposeLaunchScreen"),
+            .testTag("sharedComposeLaunchScreen")
+            .onGloballyPositioned { StartupTrace.onFirstScreen() },
         color = MaterialTheme.colorScheme.background,
     ) {
         BoxWithConstraints(Modifier.fillMaxSize().safeDrawingPadding()) {

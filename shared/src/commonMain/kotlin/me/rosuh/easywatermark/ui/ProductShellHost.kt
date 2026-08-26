@@ -6,6 +6,7 @@ import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
@@ -21,13 +22,22 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.ui.theme.EwmTheme
 import me.rosuh.easywatermark.ui.theme.MotionPolicy
 import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
@@ -67,6 +77,7 @@ fun ProductShellHost(
     aboutReturn: ProductShellNav.Route = ProductShellNav.Route.Launch,
     content: @Composable (route: ProductShellNav.Route) -> Unit,
 ) {
+    StartupTrace.markOnce("shell_composed")
     val motionPolicy = currentMotionPolicy()
     // Outer Box owns the product chrome fill. About enter/exit uses scaleIn/Out; the letterbox
     // around scaled pages must never show Compose/Desktop default white (owner recording
@@ -74,6 +85,53 @@ fun ProductShellHost(
     // via editorChromeColor() — never a hard-coded olive that fights photo theme.
     val chrome = chromeColor ?: editorChromeColor()
     val baseRoute = ProductShellNav.overlayBase(route, aboutReturn)
+    val playColdLaunch = remember { ColdLaunchReveal.observeFirstBase(baseRoute) }
+    val coldMs = motionDurationMs(motionPolicy, EwmTheme.motion.shellShortMs)
+    val animateCold = playColdLaunch && coldMs > 0
+    val coldAlpha = remember { Animatable(if (animateCold) 0f else 1f) }
+    val coldScale = remember {
+        Animatable(if (animateCold) EwmTheme.motion.contentEnterScale else 1f)
+    }
+    var coldLayerActive by remember { mutableStateOf(animateCold) }
+    var released by remember { mutableStateOf(!ColdLaunchReveal.isHostHoldActive()) }
+    DisposableEffect(Unit) {
+        if (!ColdLaunchReveal.isHostHoldActive()) {
+            released = true
+        }
+        ColdLaunchReveal.setHoldListener { released = true }
+        onDispose { ColdLaunchReveal.setHoldListener(null) }
+    }
+    LaunchedEffect(released) {
+        if (animateCold && !released) {
+            return@LaunchedEffect
+        }
+        if (animateCold) {
+            coroutineScope {
+                launch {
+                    coldAlpha.animateTo(
+                        1f,
+                        tween(durationMillis = coldMs, easing = FastOutSlowInEasing),
+                    )
+                }
+                launch {
+                    coldScale.animateTo(
+                        1f,
+                        tween(durationMillis = coldMs, easing = FastOutSlowInEasing),
+                    )
+                }
+            }
+            // Drop the parent layer after the one-shot — a persistent full-screen
+            // graphicsLayer around Launch↔Editor hitchs the short slide (see KDoc).
+            coldLayerActive = false
+        }
+        StartupTrace.onColdRevealDone()
+    }
+    LaunchedEffect(Unit) {
+        withFrameNanos { }
+        StartupTrace.markOnce("first_compose_frame")
+        withFrameNanos { }
+        StartupTrace.markOnce("second_compose_frame")
+    }
     val showAbout = route == ProductShellNav.Route.About
     val aboutCover = updateTransition(showAbout, label = "aboutOverlay")
     val aboutPresent = aboutCover.currentState || aboutCover.targetState
@@ -106,6 +164,15 @@ fun ProductShellHost(
     } else {
         Modifier
     }
+    val coldLayer = if (coldLayerActive) {
+        Modifier.graphicsLayer {
+            alpha = coldAlpha.value
+            scaleX = coldScale.value
+            scaleY = coldScale.value
+        }
+    } else {
+        Modifier
+    }
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -115,7 +182,8 @@ fun ProductShellHost(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .then(underLayer),
+                    .then(underLayer)
+                    .then(coldLayer),
             ) {
                 baseTransition.AnimatedContent(
                     transitionSpec = {
@@ -194,6 +262,18 @@ object ProductShellTransitions {
     fun aboutExit(policy: MotionPolicy = MotionPolicy.Full): ExitTransition =
         slideOutHorizontally(animationSpec = mediumOffset(policy)) { full -> full } +
             scaleOut(targetScale = 0.75f, animationSpec = mediumFloatSpec(policy))
+
+    /**
+     * About→Open Source drill-in: Launch↔Editor short family (ADR-0023), not About 0.75/0.5.
+     * Enter from the trailing edge; exit reverses. About stays live underneath (no under-cover).
+     */
+    fun openSourceEnter(policy: MotionPolicy = MotionPolicy.Full): EnterTransition =
+        fadeIn(animationSpec = shortFloat(policy)) +
+            slideInHorizontally(animationSpec = shortOffset(policy)) { full -> full }
+
+    fun openSourceExit(policy: MotionPolicy = MotionPolicy.Full): ExitTransition =
+        fadeOut(animationSpec = shortFloat(policy)) +
+            slideOutHorizontally(animationSpec = shortOffset(policy)) { full -> full }
 
     fun transform(
         initialState: ProductShellNav.Route,

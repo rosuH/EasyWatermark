@@ -11,7 +11,13 @@ import Shared
 @MainActor
 final class IosProductRootBox: ObservableObject {
     /// Shared with [WatermarkWorkflow] via the same Kotlin singleton factory.
-    let services: IosAppServices = IosAppServicesKt.defaultIosAppServices()
+    let services: IosAppServices
+
+    init() {
+        EwmStartupTrace.mark("swift_services_start")
+        services = IosAppServicesKt.defaultIosAppServices()
+        EwmStartupTrace.mark("swift_services_end")
+    }
     var host: IosProductRootHost?
     weak var viewController: UIViewController?
 
@@ -61,6 +67,7 @@ private struct SharedComposeProductRoot: UIViewControllerRepresentable {
     var onPickIcon: () -> Void
 
     func makeUIViewController(context: Context) -> UIViewController {
+        EwmStartupTrace.mark("swift_compose_vc_start")
         // Kotlin default params are not visible to Swift — pass the process-singleton services.
         let host = IosProductRootHost(
             onPickPhoto: onPickPhoto,
@@ -93,6 +100,7 @@ private struct SharedComposeProductRoot: UIViewControllerRepresentable {
         box.host = host
         let vc = host.viewController()
         box.viewController = vc
+        EwmStartupTrace.mark("swift_compose_vc_ready")
         return vc
     }
 

@@ -431,9 +431,11 @@ fun <T> SaveExportSheetShell(
                     ) {
                         TextButton(
                             onClick = onOpenGalleryClick,
-                            modifier = Modifier.padding(
-                                top = if (showRetry) 4.dp else 8.dp,
-                            ),
+                            modifier = Modifier
+                                .padding(
+                                    top = if (showRetry) 4.dp else 8.dp,
+                                )
+                                .testTag("sharedComposeExportOpenGallery"),
                             shape = RectangleShape,
                         ) {
                             Text(text = openGalleryLabel)

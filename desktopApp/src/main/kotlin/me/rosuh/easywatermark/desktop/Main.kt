@@ -28,6 +28,7 @@ import java.io.File
  * [DesktopWatermarkFlow.runSaveFlow], then exits.
  */
 fun main(args: Array<String>) {
+    me.rosuh.easywatermark.ui.StartupTrace.mark("app_create_start")
     if (args.none { it == "--headless" }) {
         // Before AWT/Compose: macOS dark title-bar appearance (product is forced-dark olive).
         installDesktopProductAppearanceEarly()

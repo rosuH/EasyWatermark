@@ -132,3 +132,7 @@ hs_err_pid*
 
 # Local sample/test image corpus (large binary assets)
 sample-images/
+
+# ADR-0032 local console evidence (machine-local; not repo history)
+docs/testmap/runs/
+docs/testmap/artifacts/

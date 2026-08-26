@@ -100,7 +100,7 @@ import me.rosuh.easywatermark.shared.generated.resources.tips_ios_library_read_u
 import me.rosuh.easywatermark.ui.about.AboutDevCard
 import me.rosuh.easywatermark.ui.about.AboutScreen
 import me.rosuh.easywatermark.ui.about.AboutScreenIcons
-import me.rosuh.easywatermark.ui.about.OpenSourceScreen
+import me.rosuh.easywatermark.ui.about.OpenSourceOverlayHost
 import me.rosuh.easywatermark.ui.EditorLayoutClass
 import me.rosuh.easywatermark.ui.editorLayoutClass
 import me.rosuh.easywatermark.ui.usesLargeScreenDialog
@@ -890,7 +890,10 @@ class IosProductRootHost(
             IosPreviewImageRepository.DEFAULT_EXPORT_THUMBNAIL_BYTES_MAX
     }
 
-    fun viewController(): UIViewController = ComposeUIViewController {
+    fun viewController(): UIViewController {
+        StartupTrace.markOnce("host_create_start")
+        return ComposeUIViewController {
+        StartupTrace.markOnce("host_set_content")
         // ADR-0028: process-wide Coil ImageLoader (path ProductThumb Fetcher).
         me.rosuh.easywatermark.ui.image.installProductImageLoaderFactory()
         AppTheme(darkTheme = true) {
@@ -1635,14 +1638,12 @@ class IosProductRootHost(
                 )
             }
 
-            if (showOpenSource) {
-                OpenSourceScreen(
-                    onBack = { showOpenSource = false },
-                    onOpenLink = onOpenUrl,
-                    backIcon = backPainter,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
+            OpenSourceOverlayHost(
+                visible = showOpenSource,
+                onBack = { showOpenSource = false },
+                onOpenLink = onOpenUrl,
+                backIcon = backPainter,
+            )
 
             // C2: shared export panel (Android Compose parity). Photos write + Share are Swift edges.
             if (showSaveSheet) {
@@ -1886,7 +1887,8 @@ class IosProductRootHost(
             }
             } // ProvideMotionPolicy
         } // AppTheme
-    } // ComposeUIViewController
+        } // ComposeUIViewController
+    }
 
     /**
      * Focus-first bind for progressive import and user filmstrip focus.

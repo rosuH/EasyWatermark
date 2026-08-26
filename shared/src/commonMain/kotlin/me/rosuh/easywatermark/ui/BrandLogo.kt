@@ -102,11 +102,13 @@ fun GradientMaskedLogo(
     LaunchedEffect(animate, motionOk) {
         if (!animate || !motionOk) {
             meshReady = false
+            StartupTrace.markOnce("mesh_skipped")
             return@LaunchedEffect
         }
         withFrameNanos { }
         withFrameNanos { }
         meshReady = true
+        StartupTrace.markOnce("mesh_ready")
     }
     val effectiveAnimate = animate && motionOk && meshReady && !obscured
     if (!effectiveAnimate) {
