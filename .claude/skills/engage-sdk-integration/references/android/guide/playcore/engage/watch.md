@@ -1,9 +1,18 @@
 > [!IMPORTANT]
 > **Important:** Engage SDK has superseded Media Home, which is now deprecated. If you have an existing Media Home integration, follow the instructions in these guides to migrate your content to Engage SDK, which allows your content to be published to more devices and form factors. Please contact [`engage-developers@google.com`](mailto:engage-developers@google.com) if you have any questions.
 
-Boost app engagement by reaching your users where they are. Integrate Engage SDK to deliver Continue Watching content and personalized recommendations directly to users across multiple on-device surfaces **[Collections](https://android-developers.googleblog.com/2024/07/introducing-collections-powered-by-engage-sdk.html)** , **[Entertainment Space](https://blog.google/products/android/entertainment-space/)** , and the Play Store. The integration adds less than 50 KB (compressed) to the average APK and takes most apps about a week of developer time. Learn more at our **[business site](http://play.google.com/console/about/programs/EngageSDK)**.
+Boost app engagement by reaching your users where they are. Integrate Engage
+SDK to deliver Continue Watching content and personalized recommendations
+directly to users across multiple on-device surfaces
+**[Collections](https://android-developers.googleblog.com/2024/07/introducing-collections-powered-by-engage-sdk.html)** ,
+**[Entertainment Space](https://blog.google/products/android/entertainment-space/)** , and the Play Store. The
+integration adds less than 50 KB (compressed) to the average APK and takes
+most apps about a week of developer time. Learn more at our
+**[business site](http://play.google.com/console/about/programs/EngageSDK)**.
 
-This guide contains instructions for developer partners to integrate their video content, using the Engage SDK to populate both this new surface area and existing Google surfaces.
+This guide contains instructions for developer partners to integrate their video
+content, using the Engage SDK to populate both this new surface area and
+existing Google surfaces.
 
 > [!NOTE]
 > **Note:** Check the [TV integration guide](https://developer.android.com/guide/playcore/engage/tv) to learn more about the Continue Watching experience on Google TV.
@@ -12,21 +21,35 @@ This guide contains instructions for developer partners to integrate their video
 
 ### Terminology
 
-This integration includes the following three cluster types: **Recommendation** , **Continuation** , and **Featured**.
+This integration includes the following three cluster types: **Recommendation** ,
+**Continuation** , and **Featured**.
 
-- **Recommendation** clusters show personalized suggestions for content to watch from an individual developer partner.
+- **Recommendation** clusters show personalized suggestions for content to watch
+  from an individual developer partner.
 
   Your recommendations take the following structure:
-  - **Recommendation Cluster:** A UI view that contains a group of recommendations from the same developer partner.
+  - **Recommendation Cluster:** A UI view that contains a group of
+    recommendations from the same developer partner.
 
     ![](https://developer.android.com/static/images/guide/playcore/engage/watch-term-1.png) **Figure 1.** Entertainment Space UI showing a Recommendation Cluster from a single partner.
-  - **Entity:** An object representing a single item in a cluster. An entity can be a movie, a TV show, a TV series, live video, and more. See the [Provide entity data](https://developer.android.com/guide/playcore/engage/watch#provide-entity-data) section for a list of supported entity types.
+  - **Entity:** An object representing a single item in a cluster. An entity
+    can be a movie, a TV show, a TV series, live video, and more. See the
+    [Provide entity data](https://developer.android.com/guide/playcore/engage/watch#provide-entity-data) section for a list of
+    supported entity types.
 
     ![](https://developer.android.com/static/images/guide/playcore/engage/watch-term-2.png) **Figure 2.** Entertainment Space UI showing a single Entity within a single partner's Recommendation Cluster.
-- The **Continuation** cluster shows unfinished videos and relevant newly released episodes from multiple developer partners in one UI grouping. Each developer partner will be allowed to broadcast a maximum of 10 entities in the Continuation cluster. Research has shown that personalized recommendations along with personalized Continuation content creates the best user engagement.
+- The **Continuation** cluster shows unfinished videos and relevant newly
+  released episodes from multiple developer partners in one UI grouping. Each
+  developer partner will be allowed to broadcast a maximum of 10 entities in the
+  Continuation cluster. Research has shown that personalized recommendations
+  along with personalized Continuation content creates the best user engagement.
 
   ![](https://developer.android.com/static/images/guide/playcore/engage/watch-term-3.png) **Figure 3.** Entertainment Space UI showing a Continuation cluster with unfinished recommendations from multiple partners (only one recommendation is currently visible).
-- The **Featured** cluster showcases a selection of entities from multiple developer partners in one UI grouping. There will be a single Featured cluster, which is surfaced near the top of the UI with a priority placement above all Recommendation clusters. Each developer partner will be allowed to broadcast up to 10 entities in the Featured cluster.
+- The **Featured** cluster showcases a selection of entities from multiple
+  developer partners in one UI grouping. There will be a single Featured
+  cluster, which is surfaced near the top of the UI with a priority placement
+  above all Recommendation clusters. Each developer partner will be allowed to
+  broadcast up to 10 entities in the Featured cluster.
 
   ![](https://developer.android.com/static/images/guide/playcore/engage/watch-term-4.png) **Figure 4.** Entertainment Space UI showing a Featured cluster with recommendations from multiple partners (only one recommendation is currently visible).
 
@@ -41,13 +64,16 @@ Add the `com.google.android.engage:engage-core` library to your app:
         implementation 'com.google.android.engage:engage-core:1.6.0'
     }
 
-For more information, see [Package visibility in Android 11](https://developer.android.com/about/versions/11/privacy/package-visibility).
+For more information, see [Package visibility in Android
+11](https://developer.android.com/about/versions/11/privacy/package-visibility).
 
 ### Summary
 
-The design is based on an implementation of a [bound service](https://developer.android.com/guide/components/bound-services).
+The design is based on an implementation of a [bound
+service](https://developer.android.com/guide/components/bound-services).
 
-The data a client can publish is subject to the following limits for different cluster types:
+The data a client can publish is subject to the following limits for different
+cluster types:
 
 | Cluster type | Cluster limits | Maximum entity limits in a cluster |
 |---|---|---|
@@ -56,13 +82,16 @@ The data a client can publish is subject to the following limits for different c
 | Featured Cluster | At most 1 | At most 20 |
 
 > [!IMPORTANT]
-> **Important:** Engage SDK has superseded Media Home, which is now deprecated. If you have an existing Media Home integration, follow the instructions in [Step 0](https://developer.android.com/guide/playcore/engage/watch#migration) to migrate your content to Engage SDK, which allows your content to be published to more devices and form factors. Contact [`engage-developers@google.com`](mailto:engage-developers@google.com). If you don't have an existing Media Home integration, skip to [Step 1](https://developer.android.com/guide/playcore/engage/watch#provide-entity-data).
+> **Important:** Engage SDK has superseded Media Home, which is now deprecated. If you have an existing Media Home integration, follow the instructions in [Step
+> 0](https://developer.android.com/guide/playcore/engage/watch#migration) to migrate your content to Engage SDK, which allows your content to be published to more devices and form factors. Contact [`engage-developers@google.com`](mailto:engage-developers@google.com). If you don't have an existing Media Home integration, skip to [Step
+> 1](https://developer.android.com/guide/playcore/engage/watch#provide-entity-data).
 
 ### Step 0: Migration from existing Media Home SDK integration
 
 #### Map data models from existing integration
 
-If you are migrating from an existing Media Home integration, the following table outlines how to map data models in existing SDKs to the new Engage SDK:
+If you are migrating from an existing Media Home integration, the following
+table outlines how to map data models in existing SDKs to the new Engage SDK:
 
 | MediaHomeVideoContract integration equivalent | Engage SDK integration equivalent |
 |---|---|
@@ -94,7 +123,9 @@ With Media Home SDK, clusters and entities were published through separate APIs:
     // 5. publish new programs in the channel
     PreviewChannelHelper.publishPreviewProgram(builder.build());
 
-With Engage SDK, cluster and entity publishing are combined into a single API call. All entities that belong to a cluster are published together with that cluster:
+With Engage SDK, cluster and entity publishing are combined into a single API
+call. All entities that belong to a cluster are published together with that
+cluster:
 
 ### Kotlin
 
@@ -116,7 +147,8 @@ With Engage SDK, cluster and entity publishing are combined into a single API ca
 
 ### Step 1: Provide entity data
 
-The SDK has defined different entities to represent each item type. We support the following entities for the Watch category:
+The SDK has defined different entities to represent each item type. We support
+the following entities for the Watch category:
 
 1. [`MovieEntity`](https://developer.android.com/guide/playcore/engage/watch#movieentity)
 2. [`TvShowEntity`](https://developer.android.com/guide/playcore/engage/watch#tvshowentity)
@@ -230,7 +262,8 @@ The following chart outlines attributes and requirements for each type.
 
 #### `VideoClipEntity`
 
-The `VideoClipEntity` object represents a video entity coming from social media, such as TikTok or YouTube.
+The `VideoClipEntity` object represents a video entity coming from social media,
+such as TikTok or YouTube.
 
 | Attribute | Requirement | Notes |
 |---|---|---|
@@ -311,9 +344,13 @@ PNG, JPG, static GIF, WebP
 
 ### Step 2: Provide Cluster data
 
-It's recommended to have the content publish job executed in the background (for example, using [WorkManager](https://developer.android.com/topic/libraries/architecture/workmanager)) and scheduled on a regular basis or on an event basis (for example, every time the user opens the app or when the user just added something to their cart).
+It's recommended to have the content publish job executed in the background
+(for example, using [WorkManager](https://developer.android.com/topic/libraries/architecture/workmanager))
+and scheduled on a regular basis or on an event basis (for example, every time
+the user opens the app or when the user just added something to their cart).
 
-`AppEngagePublishClient` is responsible for publishing clusters. Following APIs are available in the client:
+`AppEngagePublishClient` is responsible for publishing clusters. Following
+APIs are available in the client:
 
 - `isServiceAvailable`
 - `publishRecommendationClusters`
@@ -329,11 +366,11 @@ It's recommended to have the content publish job executed in the background (for
 
 #### `isServiceAvailable`
 
-This API is used to check if the service is available for integration and whether the content can be presented on the device.
+This API is used to check if the service is available for integration and
+whether the content can be presented on the device.
 
 ##### For Engage SDK v1.6.0 and higher (Recommended)
 
-<br />
 
 ## Android skills
 
@@ -351,7 +388,11 @@ If your team uses AI coding tools (such as Gemini in Android Studio), you can au
 
 <br />
 
-You can check the service availability for every cluster type that you intend to publish. The `isServiceAvailable` API accepts a request object, `ServiceAvailabilityRequest`, which contains the cluster types for which service availability needs to be checked. You can find the `ClusterType` enum values required for `ServiceAvailabilityRequest` from the following table.
+You can check the service availability for every cluster type that you intend to
+publish. The `isServiceAvailable` API accepts a request object,
+`ServiceAvailabilityRequest`, which contains the cluster types for which service
+availability needs to be checked. You can find the `ClusterType` enum values
+required for `ServiceAvailabilityRequest` from the following table.
 
 | Cluster Type | Cluster Type Constant | Integer Value |
 |---|---|---|
@@ -409,11 +450,25 @@ You can check the service availability for every cluster type that you intend to
 
 ###### Conditional Service Availability Feature
 
-Some integrated apps request a special configuration that enables and disables the Engage service intermittently in order to reduce their serving cost. This intermittent content ingestion strategy, although possible, negatively affects the user and the product -- stale content will not be presented and some surfaces will not be served at all.
+Some integrated apps request a special configuration that enables and disables
+the Engage service intermittently in order to reduce their serving cost. This
+intermittent content ingestion strategy, although possible, negatively affects
+the user and the product -- stale content will not be presented and some surfaces
+will not be served at all.
 
-Starting with v1.6.0, the Engage SDK allows checking availability for specific cluster types. This provides more flexibility so that if the intermittent content strategy was adopted by a given application, some cluster types can follow that intermittent strategy while other cluster types are always enabled (i.e. continuation clusters).
+Starting with v1.6.0, the Engage SDK allows checking availability for specific
+cluster types. This provides more flexibility so that if the intermittent
+content strategy was adopted by a given application, some cluster types can
+follow that intermittent strategy while other cluster types are always enabled
+(i.e. continuation clusters).
 
-If the Engage service should not be 'continuously' enabled on all supported devices for whatever reason, and is configured for intermittent ingestion for any set of devices, all continuation cluster publications (e.g. Continue Watching) will be still enabled by default configuration, and the rest of the cluster types will be enabled and disabled intermittently. If intermittent ingestion applies to you but this default configuration is not suitable for your needs, please contact engage-developers@google.com.
+If the Engage service should not be 'continuously' enabled on all supported
+devices for whatever reason, and is configured for intermittent ingestion for
+any set of devices, all continuation cluster publications (e.g. Continue
+Watching) will be still enabled by default configuration, and the rest of the
+cluster types will be enabled and disabled intermittently. If intermittent
+ingestion applies to you but this default configuration is not suitable for
+your needs, please contact engage-developers@google.com.
 
 ##### For SDK versions prior to v1.6.0 (Deprecated)
 
@@ -487,12 +542,14 @@ This API is used to publish a list of `RecommendationCluster` objects.
                             .build())
                     .build());
 
-When the service receives the request, the following actions take place within one transaction:
+When the service receives the request, the following actions take place within
+one transaction:
 
 - Existing `RecommendationCluster` data from the developer partner is removed.
 - Data from the request is parsed and stored in the updated Recommendation Cluster.
 
-In case of an error, the entire request is rejected and the existing state is maintained.
+In case of an error, the entire request is rejected and the existing state is
+maintained.
 
 #### `publishFeaturedCluster`
 
@@ -523,12 +580,14 @@ This API is used to publish a list of `FeaturedCluster` objects.
                             .build())
                     .build());
 
-When the service receives the request, the following actions take place within one transaction:
+When the service receives the request, the following actions take place within
+one transaction:
 
 - Existing `FeaturedCluster` data from the developer partner is removed.
 - Data from the request is parsed and stored in the updated Featured Cluster.
 
-In case of an error, the entire request is rejected and the existing state is maintained.
+In case of an error, the entire request is rejected and the existing state is
+maintained.
 
 #### `publishContinuationCluster`
 
@@ -559,16 +618,20 @@ This API is used to publish a `ContinuationCluster` object.
                             .build())
                     .build());
 
-When the service receives the request, the following actions take place within one transaction:
+When the service receives the request, the following actions take place within
+one transaction:
 
 - Existing `ContinuationCluster` data from the developer partner is removed.
 - Data from the request is parsed and stored in the updated Continuation Cluster.
 
-In case of an error, the entire request is rejected and the existing state is maintained.
+In case of an error, the entire request is rejected and the existing state is
+maintained.
 
 #### `publishUserAccountManagementRequest`
 
-This API is used to publish a Sign In card . The signin action directs users to the app's sign in page so that the app can publish content (or provide more personalized content)
+This API is used to publish a Sign In card . The signin action directs users to
+the app's sign in page so that the app can publish content (or provide more
+personalized content)
 
 The following metadata is part of the Sign In Card -
 
@@ -621,16 +684,21 @@ The following metadata is part of the Sign In Card -
                     .setSignInCardEntity(SIGN_IN_CARD_ENTITY)
                     .build());
 
-When the service receives the request, the following actions take place within one transaction:
+When the service receives the request, the following actions take place within
+one transaction:
 
 - Existing `UserAccountManagementCluster` data from the developer partner is removed.
 - Data from the request is parsed and stored in the updated UserAccountManagementCluster Cluster.
 
-In case of an error, the entire request is rejected and the existing state is maintained.
+In case of an error, the entire request is rejected and the existing state is
+maintained.
 
 #### `updatePublishStatus`
 
-If for any internal business reason, none of the clusters is published, we **strongly recommend** updating the publish status using the **updatePublishStatus** API. This is important because :
+If for any internal business reason, none of the clusters is published,
+we **strongly recommend** updating the publish status using the
+**updatePublishStatus** API.
+This is important because :
 
 - Providing the status in all scenarios, even when the content is published (STATUS == PUBLISHED), is critical to populate dashboards that use this explicit status to convey the health and other metrics of your integration.
 - If no content is published but the integration status isn't broken (STATUS == NOT_PUBLISHED), Google can avoid triggering alerts in the app health dashboards. It confirms that content is not published due to an **expected** situation from the provider's standpoint.
@@ -670,7 +738,11 @@ The list of eligible publish status codes are :
     // Reach out to engage-developers@ before using this enum.
     AppEngagePublishStatusCode.NOT_PUBLISHED_OTHER
 
-If the content is not published due to a user not logged in, Google would recommend publishing the Sign In Card. If for any reason providers are not able to publish the Sign In Card then we recommend calling the **updatePublishStatus** API with the status code **NOT_PUBLISHED_REQUIRES_SIGN_IN**
+If the content is not published due to a user not logged in,
+Google would recommend publishing the Sign In Card.
+If for any reason providers are not able to publish the Sign In Card
+then we recommend calling the **updatePublishStatus** API
+with the status code **NOT_PUBLISHED_REQUIRES_SIGN_IN**
 
 ### Kotlin
 
@@ -701,7 +773,9 @@ This API is used to delete the content of Recommendation Clusters.
 
     client.deleteRecommendationClusters();
 
-When the service receives the request, it removes the existing data from the Recommendation Clusters. In case of an error, the entire request is rejected and the existing state is maintained.
+When the service receives the request, it removes the existing data from the
+Recommendation Clusters. In case of an error, the entire request is rejected
+and the existing state is maintained.
 
 > [!NOTE]
 > **Note:** This api is available from version 1.1.0 onwards.
@@ -721,7 +795,9 @@ This API is used to delete the content of Featured Cluster.
 
     client.deleteFeaturedCluster();
 
-When the service receives the request, it removes the existing data from the Featured Cluster. In case of an error, the entire request is rejected and the existing state is maintained.
+When the service receives the request, it removes the existing data from the
+Featured Cluster. In case of an error, the entire request is rejected
+and the existing state is maintained.
 
 > [!NOTE]
 > **Note:** This api is available from version 1.1.0 onwards.
@@ -741,7 +817,9 @@ This API is used to delete the content of Continuation Cluster.
 
     client.deleteContinuationCluster();
 
-When the service receives the request, it removes the existing data from the Continuation Cluster. In case of an error, the entire request is rejected and the existing state is maintained.
+When the service receives the request, it removes the existing data from the
+Continuation Cluster. In case of an error, the entire request is rejected
+and the existing state is maintained.
 
 > [!NOTE]
 > **Note:** This api is available from version 1.1.0 onwards.
@@ -761,7 +839,9 @@ This API is used to delete the content of UserAccountManagement Cluster.
 
     client.deleteUserManagementCluster();
 
-When the service receives the request, it removes the existing data from the UserAccountManagement Cluster. In case of an error, the entire request is rejected and the existing state is maintained.
+When the service receives the request, it removes the existing data from the
+UserAccountManagement Cluster. In case of an error, the entire request is
+rejected and the existing state is maintained.
 
 > [!NOTE]
 > **Note:** This api is available from version 1.1.0 onwards.
@@ -791,11 +871,15 @@ This API is used to delete the content of a given cluster type.
                     .addClusterType(ClusterType.TYPE_RECOMMENDATION)
                     .build());
 
-When the service receives the request, it removes the existing data from all clusters matching the specified cluster types. Clients can choose to pass one or many cluster types. In case of an error, the entire request is rejected and the existing state is maintained.
+When the service receives the request, it removes the existing data from all
+clusters matching the specified cluster types. Clients can choose to pass one or
+many cluster types. In case of an error, the entire request is rejected and the
+existing state is maintained.
 
 #### Error handling
 
-It is highly recommended to listen to the task result from the publish APIs such that a follow-up action can be taken to recover and resubmit an successful task.
+It is highly recommended to listen to the task result from the publish APIs such
+that a follow-up action can be taken to recover and resubmit an successful task.
 
 ### Kotlin
 
@@ -839,7 +923,8 @@ It is highly recommended to listen to the task result from the publish APIs such
                     }
                   });
 
-The error is returned as an `AppEngageException` with the cause included as an error code.
+The error is returned as an `AppEngageException` with the cause included as an
+error code.
 
 | Error code | Error name | Note |
 |---|---|---|
@@ -853,13 +938,23 @@ The error is returned as an `AppEngageException` with the cause included as an e
 
 ### Step 3: Handle broadcast intents
 
-In addition to making publish content API calls through a job, it is also required to set up a [`BroadcastReceiver`](https://developer.android.com/reference/android/content/BroadcastReceiver) to receive the request for a content publish.
+In addition to making publish content API calls through a job, it is also
+required to set up a
+[`BroadcastReceiver`](https://developer.android.com/reference/android/content/BroadcastReceiver) to receive
+the request for a content publish.
 
-The goal of broadcast intents is mainly for app reactivation and forcing data sync. Broadcast intents are not designed to be sent very frequently. It is only triggered when the Engage Service determines the content might be stale (for example, a week old). That way, there is more confidence that the user can have a fresh content experience, even if the application has not been executed for a long period of time.
+The goal of broadcast intents is mainly for app reactivation and forcing data
+sync. Broadcast intents are not designed to be sent very frequently. It is only
+triggered when the Engage Service determines the content might be stale (for
+example, a week old). That way, there is more confidence that the user can have
+a fresh content experience, even if the application has not been executed for a
+long period of time.
 
 The `BroadcastReceiver` must be set up in the following two ways:
 
-- Dynamically register an instance of the `BroadcastReceiver` class using `Context.registerReceiver()`. This enables communication from applications that are still live in memory.
+- Dynamically register an instance of the `BroadcastReceiver` class using
+  `Context.registerReceiver()`. This enables communication from applications
+  that are still live in memory.
 
 ### Kotlin
 
@@ -930,7 +1025,10 @@ The `BroadcastReceiver` must be set up in the following two ways:
 
     }
 
-- Statically declare an implementation with the `<receiver>` tag in your `AndroidManifest.xml` file. This allows the application to receive broadcast intents when it is not running, and also allows the application to publish the content.
+- Statically declare an implementation with the `<receiver>` tag in your
+  `AndroidManifest.xml` file. This allows the application to receive broadcast
+  intents when it is not running, and also allows the application to publish
+  the content.
 
     <application>
        <receiver
@@ -950,7 +1048,8 @@ The `BroadcastReceiver` must be set up in the following two ways:
        </receiver>
     </application>
 
-The following [intents](https://developer.android.com/reference/android/content/Intent) is sent by the service:
+The following [intents](https://developer.android.com/reference/android/content/Intent) is sent by the
+service:
 
 - `com.google.android.engage.action.PUBLISH_RECOMMENDATION` It is recommended to start a `publishRecommendationClusters` call when receiving this intent.
 - `com.google.android.engage.action.PUBLISH_FEATURED` It is recommended to start a `publishFeaturedCluster` call when receiving this intent.
@@ -958,15 +1057,19 @@ The following [intents](https://developer.android.com/reference/android/content/
 
 ## Integration workflow
 
-For a step-by-step guide on verifying your integration after it is complete, see [Engage developer integration workflow](https://developer.android.com/guide/playcore/engage/workflow).
+For a step-by-step guide on verifying your integration after it is complete, see
+[Engage developer integration workflow](https://developer.android.com/guide/playcore/engage/workflow).
 
 ## FAQs
 
-See [Engage SDK Frequently Asked Questions](https://developer.android.com/guide/playcore/engage/faq) for FAQs.
+See [Engage SDK Frequently Asked Questions](https://developer.android.com/guide/playcore/engage/faq) for
+FAQs.
 
 ## Contact
 
-Contact [`engage-developers@google.com`](mailto:engage-developers@google.com) if there are any questions during the integration process.
+Contact
+[`engage-developers@google.com`](mailto:engage-developers@google.com) if there are
+any questions during the integration process.
 
 ## Next steps
 

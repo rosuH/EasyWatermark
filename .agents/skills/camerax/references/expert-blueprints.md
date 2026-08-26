@@ -1,4 +1,6 @@
-Complex camera features often fail due to "Agent Stall" or timeouts when attempted in a single turn. Use these blueprints to break tasks into manageable phases.
+Complex camera features often fail due to "Agent Stall" or timeouts when
+attempted in a single turn. Use these blueprints to break tasks into manageable
+phases.
 
 ## Manual controls
 
@@ -52,4 +54,5 @@ Complex camera features often fail due to "Agent Stall" or timeouts when attempt
 
 ## Low-light capture
 
-For guidance on Night Mode Extensions and Low Light Boost, [low-light.md](https://developer.android.com/agents/skills/camera/camerax/references/low-light).
+For guidance on Night Mode Extensions and Low Light Boost,
+[low-light.md](https://developer.android.com/agents/skills/camera/camerax/references/low-light).

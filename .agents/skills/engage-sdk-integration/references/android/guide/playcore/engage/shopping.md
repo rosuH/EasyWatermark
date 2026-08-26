@@ -1,40 +1,78 @@
-Boost app engagement by reaching your users where they are. Integrate Engage SDK to deliver personalized recommendations and continuation content directly to users across multiple on-device surfaces, like **[Collections](https://android-developers.googleblog.com/2024/07/introducing-collections-powered-by-engage-sdk.html)** , **[Entertainment Space](https://blog.google/products/android/entertainment-space/)** , and the Play Store. The integration adds less than 50 KB (compressed) to the average APK and takes most apps about a week of developer time. Learn more at our **[business site](http://play.google.com/console/about/programs/EngageSDK)**.
+Boost app engagement by reaching your users where they are. Integrate Engage SDK
+to deliver personalized recommendations and continuation content directly to
+users across multiple on-device surfaces, like
+**[Collections](https://android-developers.googleblog.com/2024/07/introducing-collections-powered-by-engage-sdk.html)** , **[Entertainment
+Space](https://blog.google/products/android/entertainment-space/)** , and the Play Store. The integration adds
+less than 50 KB (compressed) to the average APK and takes most apps about a
+week of developer time. Learn more at our **[business
+site](http://play.google.com/console/about/programs/EngageSDK)**.
 
-This guide contains instructions for developer partners to deliver shopping content to Engage content surfaces.
+This guide contains instructions for developer partners to deliver shopping
+content to Engage content surfaces.
 
 ## Integration detail
 
 ### Terminology
 
-This integration includes the following five cluster types: **Recommendation** , **Featured** , **Shopping Cart** , **Shopping List** , **Reorder** and **Shopping Order Tracking**.
+This integration includes the following five cluster types: **Recommendation** ,
+**Featured** , **Shopping Cart** , **Shopping List** , **Reorder** and
+**Shopping Order Tracking**.
 
-- **Recommendation** clusters show personalized shopping suggestions from an individual developer partner. These recommendations can be personalized to the user or generalized (for example, trending items). Use these to surface products, events, sales, promos, subscriptions as you see fit.
+- **Recommendation** clusters show personalized shopping suggestions from an
+  individual developer partner. These recommendations can be personalized to the
+  user or generalized (for example, trending items). Use these to surface
+  products, events, sales, promos, subscriptions as you see fit.
 
   Your recommendations take the following structure:
-  - **Recommendation Cluster:** A UI view that contains a group of recommendations from the same developer partner.
+  - **Recommendation Cluster:** A UI view that contains a group of
+    recommendations from the same developer partner.
 
   - **ShoppingEntity:** An object representing a single item in a cluster.
 
-- The **Featured** cluster showcases a selection of entities from multiple developer partners in one UI grouping. There will be a single Featured cluster, which is surfaced near the top of the UI with a priority placement above all Recommendation clusters. Each developer partner will be allowed to broadcast up to 10 entities in the Featured cluster.
+- The **Featured** cluster showcases a selection of entities from multiple
+  developer partners in one UI grouping. There will be a single Featured
+  cluster, which is surfaced near the top of the UI with a priority placement
+  above all Recommendation clusters. Each developer partner will be allowed to
+  broadcast up to 10 entities in the Featured cluster.
 
-- The **Shopping Cart** cluster shows a sneak peek of shopping carts from many developer partners in one UI grouping, nudging users to complete their outstanding carts. There is a single Shopping Cart cluster, which is surfaced near the top of the UI, with a priority placement above all Recommendation clusters. Each developer partner is allowed to broadcast up to 3 `ShoppingCart` instances in the Shopping Cart cluster.
+- The **Shopping Cart** cluster shows a sneak peek of shopping carts from many
+  developer partners in one UI grouping, nudging users to complete their
+  outstanding carts. There is a single Shopping Cart cluster, which is
+  surfaced near the top of the UI, with a priority placement above all
+  Recommendation clusters. Each developer partner is allowed to broadcast up to
+  3 `ShoppingCart` instances in the Shopping Cart cluster.
 
   Your Shopping Cart takes the following structure:
-  - **Shopping Cart Cluster:** A UI view that contains a group of shopping cart previews from many developer partners.
+  - **Shopping Cart Cluster:** A UI view that contains a group of shopping
+    cart previews from many developer partners.
 
-  - **ShoppingCart:** An object representing the shopping cart preview for a single developer partner, to be displayed in the Shopping Cart cluster. The `ShoppingCart` must show the total count of items in the cart and may also include images for some items in the user's cart.
+  - **ShoppingCart:** An object representing the shopping cart preview
+    for a single developer partner, to be displayed in the Shopping Cart
+    cluster. The `ShoppingCart` must show the total count of items in the
+    cart and may also include images for some items in the user's cart.
 
-- The **Shopping List** cluster shows a sneak peek of the shopping lists from multiple developer partners in one UI grouping, prompting users to return to the corresponding app to update and complete their lists. There is a single Shopping List cluster.
+- The **Shopping List** cluster shows a sneak peek of the shopping
+  lists from multiple developer partners in one UI grouping, prompting users to
+  return to the corresponding app to update and complete their lists. There is a
+  single Shopping List cluster.
 
-- The **Reorder** cluster shows a sneak peek of the previous orders from multiple developer partners in one UI grouping, prompting users to reorder. There is a single Reorder cluster.
+- The **Reorder** cluster shows a sneak peek of the previous orders from
+  multiple developer partners in one UI grouping, prompting users to reorder.
+  There is a single Reorder cluster.
 
-  - Reorder cluster must show the total count of items in the user's previous order and must also include one of the following:
+  - Reorder cluster must show the total count of items in the
+    user's previous order and must also include one of the following:
 
     - Images for X items in the user's previous order.
     - Labels for X items in the user's previous order.
-- The **Shopping Order Tracking** cluster shows a sneak peek of pending or recently completed shopping orders from many developer partners in one UI grouping, allowing users to track their orders.
+- The **Shopping Order Tracking** cluster shows a sneak peek of pending
+  or recently completed shopping orders from many developer partners in one UI
+  grouping, allowing users to track their orders.
 
-  There is a single ShoppingOrderTracking cluster that is surfaced near the top of the UI, with a priority placement above all Recommendation clusters. Each developer partner is allowed to broadcast multiple ShoppingOrderTrackingEntity items in the Shopping Order Tracking cluster.
+  There is a single ShoppingOrderTracking cluster that is surfaced
+  near the top of the UI, with a priority placement above all Recommendation
+  clusters. Each developer partner is allowed to broadcast multiple
+  ShoppingOrderTrackingEntity items in the Shopping Order Tracking cluster.
   - Your ShoppingOrderTrackingCluster takes the following structure:
 
     - **ShoppingOrderTracking Cluster**: A UI view that contains a group of order tracking previews from many developer partners
@@ -54,13 +92,16 @@ Add the `com.google.android.engage:engage-core` library to your app:
         implementation 'com.google.android.engage:engage-core:1.6.0'
     }
 
-For more information, see [Package visibility in Android 11](https://developer.android.com/about/versions/11/privacy/package-visibility).
+For more information, see [Package visibility in Android
+11](https://developer.android.com/about/versions/11/privacy/package-visibility).
 
 ### Summary
 
-The design is based on an implementation of a [bound service](https://developer.android.com/guide/components/bound-services).
+The design is based on an implementation of a [bound
+service](https://developer.android.com/guide/components/bound-services).
 
-The data a client can publish is subject to the following limits for different cluster types:
+The data a client can publish is subject to the following limits for different
+cluster types:
 
 | Cluster type | Cluster limits | Maximum entity limits in a cluster |
 |---|---|---|
@@ -73,7 +114,8 @@ The data a client can publish is subject to the following limits for different c
 
 ### Step 1: Provide entity data
 
-The SDK has defined different entities to represent each item type. The following entities are supported for the Shopping category:
+The SDK has defined different entities to represent each item type. The
+following entities are supported for the Shopping category:
 
 1. `ShoppingEntity`
 2. `ShoppingCart`
@@ -85,7 +127,8 @@ The charts below outline available attributes and requirements for each type.
 
 #### `ShoppingEntity`
 
-The `ShoppingEntity` object represents a product, promotion, deal, subscription, or event that developer partners want to publish.
+The `ShoppingEntity` object represents a product, promotion, deal, subscription,
+or event that developer partners want to publish.
 
 ##### `ShoppingEntity`
 
@@ -188,7 +231,10 @@ PNG, JPG, static GIF, WebP
 
 ### Step 2: Provide Cluster data
 
-It is recommended to have the content publish job executed in the background (for example, using [WorkManager](https://developer.android.com/topic/libraries/architecture/workmanager)) and scheduled on a regular basis or on an event basis (for example, every time the user opens the app or when the user just added something to their cart).
+It is recommended to have the content publish job executed in the background
+(for example, using [WorkManager](https://developer.android.com/topic/libraries/architecture/workmanager))
+and scheduled on a regular basis or on an event basis (for example, every time
+the user opens the app or when the user just added something to their cart).
 
 `AppEngageShoppingClient` is responsible for publishing shopping clusters.
 
@@ -214,11 +260,11 @@ Following APIs are exposed to publish clusters in the client:
 
 #### `isServiceAvailable`
 
-This API is used to check if the service is available for integration and whether the content can be presented on the device.
+This API is used to check if the service is available for integration and
+whether the content can be presented on the device.
 
 ##### For Engage SDK v1.6.0 and higher (Recommended)
 
-<br />
 
 ## Android skills
 
@@ -236,7 +282,11 @@ If your team uses AI coding tools (such as Gemini in Android Studio), you can au
 
 <br />
 
-You can check the service availability for every cluster type that you intend to publish. The `isServiceAvailable` API accepts a request object, `ServiceAvailabilityRequest`, which contains the cluster types for which service availability needs to be checked. You can find the `ClusterType` enum values required for `ServiceAvailabilityRequest` from the following table.
+You can check the service availability for every cluster type that you intend to
+publish. The `isServiceAvailable` API accepts a request object,
+`ServiceAvailabilityRequest`, which contains the cluster types for which service
+availability needs to be checked. You can find the `ClusterType` enum values
+required for `ServiceAvailabilityRequest` from the following table.
 
 | Cluster Type | Cluster Type Constant | Integer Value |
 |---|---|---|
@@ -298,11 +348,26 @@ You can check the service availability for every cluster type that you intend to
 
 ###### Conditional Service Availability Feature
 
-Some integrated apps request a special configuration that enables and disables the Engage service intermittently in order to reduce their serving cost. This intermittent content ingestion strategy, although possible, negatively affects the user and the product -- stale content will not be presented and some surfaces will not be served at all.
+Some integrated apps request a special configuration that enables and disables
+the Engage service intermittently in order to reduce their serving cost. This
+intermittent content ingestion strategy, although possible, negatively affects
+the user and the product -- stale content will not be presented and some surfaces
+will not be served at all.
 
-Starting with v1.6.0, the Engage SDK allows checking availability for specific cluster types. This provides more flexibility so that if the intermittent content strategy was adopted by a given application, some cluster types can follow that intermittent strategy while other cluster types are always enabled (i.e. continuation clusters).
+Starting with v1.6.0, the Engage SDK allows checking availability for specific
+cluster types. This provides more flexibility so that if the intermittent
+content strategy was adopted by a given application, some cluster types can
+follow that intermittent strategy while other cluster types are always enabled
+(i.e. continuation clusters).
 
-If the Engage service should not be 'continuously' enabled on all supported devices for whatever reason, and is configured for intermittent ingestion for any set of devices, all continuation cluster publications (e.g. Shopping Cart, Shopping List, Reorder, and Shopping Order Tracking) will be still enabled by default configuration, and the rest of the cluster types will be enabled and disabled intermittently. If intermittent ingestion applies to you but this default configuration is not suitable for your needs, please contact engage-developers@google.com.
+If the Engage service should not be 'continuously' enabled on all supported
+devices for whatever reason, and is configured for intermittent ingestion for
+any set of devices, all continuation cluster publications (e.g. Shopping
+Cart, Shopping List, Reorder, and Shopping Order Tracking) will be still
+enabled by default configuration, and the rest of the cluster types will be
+enabled and disabled intermittently. If intermittent ingestion applies to
+you but this default configuration is not suitable for your needs, please
+contact engage-developers@google.com.
 
 ##### For SDK versions prior to v1.6.0 (Deprecated)
 
@@ -383,12 +448,14 @@ A `RecommendationCluster` object can have the following attributes:
                             .build())
                     .build());
 
-When the service receives the request, the following actions take place within one transaction:
+When the service receives the request, the following actions take place within
+one transaction:
 
 - All existing Recommendation Cluster data is removed.
 - Data from the request is parsed and stored in new Recommendation Clusters.
 
-In case of an error, the entire request is rejected and the existing state is maintained.
+In case of an error, the entire request is rejected and the existing state is
+maintained.
 
 #### `publishFeaturedCluster`
 
@@ -417,16 +484,20 @@ This API is used to publish a `FeaturedCluster` object.
                             .build())
                     .build());
 
-When the service receives the request, the following actions take place within one transaction:
+When the service receives the request, the following actions take place within
+one transaction:
 
 - Existing `FeaturedCluster` data from the developer partner is removed.
 - Data from the request is parsed and stored in the updated Featured Cluster.
 
-In case of an error, the entire request is rejected and the existing state is maintained.
+In case of an error, the entire request is rejected and the existing state is
+maintained.
 
 #### `publishShoppingCarts`
 
-This API is used to publish a list of `ShoppingCart` objects. This is applicable to developer partner publishing separate carts per merchant. Include merchant name in the title when using this API.
+This API is used to publish a list of `ShoppingCart` objects. This is
+applicable to developer partner publishing separate carts per merchant. Include
+merchant name in the title when using this API.
 
 > [!IMPORTANT]
 > **Important:** The publish APIs are upsert APIs; it replaces the existing content. **Don't** call delete and publish APIs subsequently to replace the content as the publish APIs do that inherently.
@@ -451,12 +522,14 @@ This API is used to publish a list of `ShoppingCart` objects. This is applicable
                             .build())
                     .build())
 
-When the service receives the request, the following actions take place within one transaction:
+When the service receives the request, the following actions take place within
+one transaction:
 
 - Existing `ShoppingCart` data from the developer partner is removed.
 - Data from the request is parsed and stored in the updated Shopping Cart Cluster.
 
-In case of an error, the entire request is rejected and the existing state is maintained.
+In case of an error, the entire request is rejected and the existing state is
+maintained.
 
 #### `publishShoppingLists`
 
@@ -485,12 +558,14 @@ This API is used to publish a list of `ShoppingList` objects.
                             .build())
                     .build());
 
-When the service receives the request, the following actions take place within one transaction:
+When the service receives the request, the following actions take place within
+one transaction:
 
 - Existing `ShoppingList` data from the developer partner is removed.
 - Data from the request is parsed and stored in the updated Shopping List Cluster.
 
-In case of an error, the entire request is rejected and the existing state is maintained.
+In case of an error, the entire request is rejected and the existing state is
+maintained.
 
 #### `publishShoppingReorderCluster`
 
@@ -519,12 +594,14 @@ This API is used to publish a `ShoppingReorderCluster` object.
                             .build())
                     .build());
 
-When the service receives the request, the following actions take place within one transaction:
+When the service receives the request, the following actions take place within
+one transaction:
 
 - Existing `ShoppingReorderCluster` data from the developer partner is removed.
 - Data from the request is parsed and stored in the updated Reorder Cluster.
 
-In case of an error, the entire request is rejected and the existing state is maintained.
+In case of an error, the entire request is rejected and the existing state is
+maintained.
 
 #### `publishShoppingOrderTrackingCluster`
 
@@ -553,16 +630,20 @@ This API is used to publish a `ShoppingOrderTrackingCluster` object.
                             .build())
                     .build());
 
-When the service receives the request, the following actions take place within one transaction:
+When the service receives the request, the following actions take place within
+one transaction:
 
 - Existing `ShoppingOrderTrackingCluster` data from the developer partner is removed.
 - Data from the request is parsed and stored in the updated Shopping Order Tracking Cluster.
 
-In case of an error, the entire request is rejected and the existing state is maintained.
+In case of an error, the entire request is rejected and the existing state is
+maintained.
 
 #### `publishUserAccountManagementRequest`
 
-This API is used to publish a Sign In card . The signin action directs users to the app's sign in page so that the app can publish content (or provide more personalized content)
+This API is used to publish a Sign In card . The signin action directs users to
+the app's sign in page so that the app can publish content (or provide more
+personalized content)
 
 The following metadata is part of the Sign In Card -
 
@@ -615,16 +696,21 @@ The following metadata is part of the Sign In Card -
                     .setSignInCardEntity(SIGN_IN_CARD_ENTITY)
                     .build());
 
-When the service receives the request, the following actions take place within one transaction:
+When the service receives the request, the following actions take place within
+one transaction:
 
 - Existing `UserAccountManagementCluster` data from the developer partner is removed.
 - Data from the request is parsed and stored in the updated UserAccountManagementCluster Cluster.
 
-In case of an error, the entire request is rejected and the existing state is maintained.
+In case of an error, the entire request is rejected and the existing state is
+maintained.
 
 #### `updatePublishStatus`
 
-If for any internal business reason, none of the clusters is published, we **strongly recommend** updating the publish status using the **updatePublishStatus** API. This is important because :
+If for any internal business reason, none of the clusters is published,
+we **strongly recommend** updating the publish status using the
+**updatePublishStatus** API.
+This is important because :
 
 - Providing the status in all scenarios, even when the content is published (STATUS == PUBLISHED), is critical to populate dashboards that use this explicit status to convey the health and other metrics of your integration.
 - If no content is published but the integration status isn't broken (STATUS == NOT_PUBLISHED), Google can avoid triggering alerts in the app health dashboards. It confirms that content is not published due to an **expected** situation from the provider's standpoint.
@@ -664,7 +750,11 @@ The list of eligible publish status codes are :
     // Reach out to engage-developers@ before using this enum.
     AppEngagePublishStatusCode.NOT_PUBLISHED_OTHER
 
-If the content is not published due to a user not logged in, Google would recommend publishing the Sign In Card. If for any reason providers are not able to publish the Sign In Card then we recommend calling the **updatePublishStatus** API with the status code **NOT_PUBLISHED_REQUIRES_SIGN_IN**
+If the content is not published due to a user not logged in,
+Google would recommend publishing the Sign In Card.
+If for any reason providers are not able to publish the Sign In Card
+then we recommend calling the **updatePublishStatus** API
+with the status code **NOT_PUBLISHED_REQUIRES_SIGN_IN**
 
 ### Kotlin
 
@@ -695,7 +785,9 @@ This API is used to delete the content of Recommendation Clusters.
 
     client.deleteRecommendationClusters();
 
-When the service receives the request, it removes the existing data from the Recommendation Clusters. In case of an error, the entire request is rejected and the existing state is maintained.
+When the service receives the request, it removes the existing data from the
+Recommendation Clusters. In case of an error, the entire request is rejected
+and the existing state is maintained.
 
 > [!NOTE]
 > **Note:** This api is available from version 1.1.0 onwards.
@@ -715,7 +807,9 @@ This API is used to delete the content of Featured Cluster.
 
     client.deleteFeaturedCluster();
 
-When the service receives the request, it removes the existing data from the Featured Cluster. In case of an error, the entire request is rejected and the existing state is maintained.
+When the service receives the request, it removes the existing data from the
+Featured Cluster. In case of an error, the entire request is rejected
+and the existing state is maintained.
 
 > [!NOTE]
 > **Note:** This api is available from version 1.1.0 onwards.
@@ -735,7 +829,9 @@ This API is used to delete the content of Shopping Cart Cluster.
 
     client.deleteShoppingCartCluster();
 
-When the service receives the request, it removes the existing data from the Shopping Cart Cluster. In case of an error, the entire request is rejected and the existing state is maintained.
+When the service receives the request, it removes the existing data from the
+Shopping Cart Cluster. In case of an error, the entire request is rejected
+and the existing state is maintained.
 
 > [!NOTE]
 > **Note:** This api is available from version 1.1.0 onwards.
@@ -755,7 +851,9 @@ This API is used to delete the content of Shopping List Cluster.
 
     client.deleteShoppingListCluster();
 
-When the service receives the request, it removes the existing data from the Shopping List Cluster. In case of an error, the entire request is rejected and the existing state is maintained.
+When the service receives the request, it removes the existing data from the
+Shopping List Cluster. In case of an error, the entire request is rejected
+and the existing state is maintained.
 
 > [!NOTE]
 > **Note:** This api is available from version 1.1.0 onwards.
@@ -775,7 +873,9 @@ This API is used to delete the content of Shopping Reorder Cluster.
 
     client.deleteShoppingReorderCluster();
 
-When the service receives the request, it removes the existing data from the Shopping Reorder Cluster. In case of an error, the entire request is rejected and the existing state is maintained.
+When the service receives the request, it removes the existing data from the
+Shopping Reorder Cluster. In case of an error, the entire request is rejected
+and the existing state is maintained.
 
 > [!NOTE]
 > **Note:** This api is available from version 1.1.0 onwards.
@@ -795,7 +895,9 @@ This API is used to delete the content of Shopping Order Tracking Cluster.
 
     client.deleteShoppingOrderTrackingCluster();
 
-When the service receives the request, it removes the existing data from the Shopping Order Tracking Cluster. In case of an error, the entire request is rejected and the existing state is maintained.
+When the service receives the request, it removes the existing data from the
+Shopping Order Tracking Cluster. In case of an error, the entire request is
+rejected and the existing state is maintained.
 
 > [!NOTE]
 > **Note:** This API is available in versions 1.4.0 and higher.
@@ -815,7 +917,9 @@ This API is used to delete the content of UserAccountManagement Cluster.
 
     client.deleteUserManagementCluster();
 
-When the service receives the request, it removes the existing data from the UserAccountManagement Cluster. In case of an error, the entire request is rejected and the existing state is maintained.
+When the service receives the request, it removes the existing data from the
+UserAccountManagement Cluster. In case of an error, the entire request is
+rejected and the existing state is maintained.
 
 > [!NOTE]
 > **Note:** This api is available from version 1.1.0 onwards.
@@ -845,11 +949,15 @@ This API is used to delete the content of a given cluster type.
                     ...
                     .build());
 
-When the service receives the request, it removes the existing data from all clusters matching the specified cluster types. Clients can choose to pass one or many cluster types. In case of an error, the entire request is rejected and the existing state is maintained.
+When the service receives the request, it removes the existing data from all
+clusters matching the specified cluster types. Clients can choose to pass one or
+many cluster types. In case of an error, the entire request is rejected and the
+existing state is maintained.
 
 #### Error handling
 
-It is highly recommended to listen to the task result from the publish APIs such that a follow-up action can be taken to recover and resubmit an successful task.
+It is highly recommended to listen to the task result from the publish APIs such
+that a follow-up action can be taken to recover and resubmit an successful task.
 
 ### Kotlin
 
@@ -893,7 +1001,8 @@ It is highly recommended to listen to the task result from the publish APIs such
                     }
                   });
 
-The error is returned as an `AppEngageException` with the cause included as an error code.
+The error is returned as an `AppEngageException` with the cause included as an
+error code.
 
 | Error code | Error name | Note |
 |---|---|---|
@@ -907,13 +1016,23 @@ The error is returned as an `AppEngageException` with the cause included as an e
 
 ### Step 3: Handle broadcast intents
 
-In addition to making publish content API calls through a job, it is also required to set up a [`BroadcastReceiver`](https://developer.android.com/reference/android/content/BroadcastReceiver) to receive the request for a content publish.
+In addition to making publish content API calls through a job, it is also
+required to set up a
+[`BroadcastReceiver`](https://developer.android.com/reference/android/content/BroadcastReceiver) to receive
+the request for a content publish.
 
-The goal of broadcast intents is mainly for app reactivation and forcing data sync. Broadcast intents are not designed to be sent very frequently. It is only triggered when the Engage Service determines the content might be stale (for example, a week old). That way, there is more confidence that the user can have a fresh content experience, even if the application has not been executed for a long period of time.
+The goal of broadcast intents is mainly for app reactivation and forcing data
+sync. Broadcast intents are not designed to be sent very frequently. It is only
+triggered when the Engage Service determines the content might be stale (for
+example, a week old). That way, there is more confidence that the user can have
+a fresh content experience, even if the application has not been executed for a
+long period of time.
 
 The `BroadcastReceiver` must be set up in the following two ways:
 
-- Dynamically register an instance of the `BroadcastReceiver` class using `Context.registerReceiver()`. This enables communication from applications that are still live in memory.
+- Dynamically register an instance of the `BroadcastReceiver` class using
+  `Context.registerReceiver()`. This enables communication from applications
+  that are still live in memory.
 
 ### Kotlin
 
@@ -1036,7 +1155,10 @@ The `BroadcastReceiver` must be set up in the following two ways:
 
     }
 
-- Statically declare an implementation with the `<receiver>` tag in your `AndroidManifest.xml` file. This allows the application to receive broadcast intents when it is not running, and also allows the application to publish the content.
+- Statically declare an implementation with the `<receiver>` tag in your
+  `AndroidManifest.xml` file. This allows the application to receive broadcast
+  intents when it is not running, and also allows the application to publish
+  the content.
 
     <application>
        <receiver
@@ -1065,7 +1187,8 @@ The `BroadcastReceiver` must be set up in the following two ways:
        </receiver>
     </application>
 
-The following [intents](https://developer.android.com/reference/android/content/Intent) are sent by the service:
+The following [intents](https://developer.android.com/reference/android/content/Intent) are sent by the
+service:
 
 - `com.google.android.engage.action.PUBLISH_RECOMMENDATION` It is recommended to start a `publishRecommendationClusters` call when this intent is received.
 - `com.google.android.engage.action.PUBLISH_FEATURED` It is recommended to start a `publishFeaturedCluster` call when this intent is received.
@@ -1076,15 +1199,20 @@ The following [intents](https://developer.android.com/reference/android/content/
 
 ## Integration workflow
 
-For a step-by-step guide on verifying your integration after it is complete, see [Engage developer integration workflow](https://developer.android.com/guide/playcore/engage/workflow).
+For a step-by-step guide on verifying your integration after it is complete, see
+[Engage developer integration workflow](https://developer.android.com/guide/playcore/engage/workflow).
 
 ## FAQs
 
-See [Engage SDK Frequently Asked Questions](https://developer.android.com/guide/playcore/engage/faq) for FAQs.
+See [Engage SDK Frequently Asked Questions](https://developer.android.com/guide/playcore/engage/faq) for
+FAQs.
 
 ## Contact
 
-Contact [`engage-developers@google.com`](mailto:engage-developers@google.com) if there are any questions during the integration process. Our team replies as soon as possible.
+Contact
+[`engage-developers@google.com`](mailto:engage-developers@google.com) if there are
+any questions during the integration process. Our team replies as soon as
+possible.
 
 ## Next steps
 

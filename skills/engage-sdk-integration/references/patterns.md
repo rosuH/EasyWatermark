@@ -1,10 +1,12 @@
 ## EngageBroadcastReceiver
 
-Setting up the `BroadcastReceiver` correctly requires **both** static and dynamic registration. Static registration allows the app to receive broadcasts even when it isn't running, while dynamic registration is required on newer Android versions to safely receive broadcasts when the app is live in memory.
+Setting up the `BroadcastReceiver` correctly requires **both** static and
+dynamic registration. Static registration allows the app to receive broadcasts
+even when it isn't running, while dynamic registration is required on newer
+Android versions to safely receive broadcasts when the app is live in memory.
 
 ### BroadcastReceiver implementation
 
-<br />
 
 ```kotlin
 import android.content.BroadcastReceiver
@@ -63,16 +65,15 @@ class EngageBroadcastReceiver : BroadcastReceiver() {
         }
     }
 }
-   
 ```
 
 <br />
 
 ### Static registration in AndroidManifest.xml
 
-Add the `<receiver>` tag inside the `<application>` block in `AndroidManifest.xml`
+Add the `<receiver>` tag inside the `<application>` block in
+`AndroidManifest.xml`
 
-<br />
 
 ```xml
 <!--    Add the `<receiver>` tag inside the `<application>` block in `AndroidManifest.xml`:-->
@@ -89,14 +90,12 @@ Add the `<receiver>` tag inside the `<application>` block in `AndroidManifest.xm
         <!-- Note: Add vertical-specific intents here if applicable (e.g., FOOD shopping cart, etc.) -->
     </intent-filter>
 </receiver>
-   
 ```
 
 <br />
 
 ## EngageWorker
 
-<br />
 
 ```kotlin
 import android.content.Context
@@ -295,14 +294,12 @@ class EngageWorker(context: Context, workerParams: WorkerParameters) : Coroutine
         }
     }
 }
-   
 ```
 
 <br />
 
 ## ClusterRequestFactory
 
-<br />
 
 ```kotlin
 class ClusterRequestFactory(context: Context) {
@@ -356,14 +353,12 @@ class ClusterRequestFactory(context: Context) {
             .setSignInCardEntity(signInCard)
             .build()
 }
-   
 ```
 
 <br />
 
 ## EngagePublisher
 
-<br />
 
 ```kotlin
 object EngagePublisher {
@@ -383,14 +378,12 @@ object EngagePublisher {
         WorkManager.getInstance(context).enqueueUniqueWork("EngageOneTime", ExistingWorkPolicy.REPLACE, workRequest)
     }
 }
-   
 ```
 
 <br />
 
 ## Constants
 
-<br />
 
 ```kotlin
 object Constants {
@@ -406,14 +399,12 @@ object Constants {
     // const val PUBLISH_TYPE_FOOD_SHOPPING_CARD = "FOOD_SHOPPING_CARD"
     // const val PUBLISH_TYPE_RESERVATION = "RESERVATION"
 }
-   
 ```
 
 <br />
 
 ## ItemToEntityConverter
 
-<br />
 
 ```kotlin
 object ItemToEntityConverter {
@@ -428,16 +419,22 @@ object ItemToEntityConverter {
             .build()
     }
 }
-   
 ```
 
 <br />
 
-> **Strict image aspect ratio requirement** : Play Engage has strict requirements for image aspect ratios depending on the vertical and entity type (e.g., 16:9 for landscape, 1:1 for square, 2:3 for portrait). Ensure your `ItemToEntityConverter` maps images that conform to these strict requirements to avoid cropping or content rejection by Play.
+> **Strict image aspect ratio requirement** : Play Engage has strict
+> requirements for image aspect ratios depending on the vertical and entity type
+> (e.g., 16:9 for landscape, 1:1 for square, 2:3 for portrait). Ensure your
+> `ItemToEntityConverter` maps images that conform to these strict requirements
+> to avoid cropping or content rejection by Play.
 
 ## Dependency specifications (libs.versions.toml)
 
-This skill specifies all dependencies using the `libs.versions.toml` format. Adapt these definitions to other formats (such as standard Groovy `build.gradle` or Kotlin DSL `build.gradle.kts` implementation lines) as required by the project.
+This skill specifies all dependencies using the `libs.versions.toml` format.
+Adapt these definitions to other formats (such as standard Groovy `build.gradle`
+or Kotlin DSL `build.gradle.kts` implementation lines) as required by the
+project.
 
     [versions]
     engage-core = "1.6.0"
@@ -458,9 +455,10 @@ This skill specifies all dependencies using the `libs.versions.toml` format. Ada
 
 ## Dual content rating fields for Watch and TV
 
-For Watch and TV integrations, you must populate both the new `contentRatings` (which uses `RatingSystem`) and the legacy `contentRatingsLegacies` (which uses `String` lists) to ensure compatibility across all Google Play surfaces.
+For Watch and TV integrations, you must populate both the new `contentRatings`
+(which uses `RatingSystem`) and the legacy `contentRatingsLegacies` (which uses
+`String` lists) to ensure compatibility across all Google Play surfaces.
 
-<br />
 
 ```kotlin
 fun convertMovie(movie: MovieData): MovieEntity {
@@ -476,30 +474,27 @@ fun convertMovie(movie: MovieData): MovieEntity {
         .addContentRatingsLegacy(listOf("MPAA:PG-13")) // Legacy API for backward compatibility
         .build()
 }
-   
 ```
 
 <br />
 
 ## TV integrations
 
-The following patterns and configurations are specific to Android TV integrations.
+The following patterns and configurations are specific to Android TV
+integrations.
 
 ### AndroidManifest.xml for TV
 
-<br />
 
 ```xml
 <!-- Mandatory for TV integrations -->
 <uses-permission android:name="com.android.providers.tv.permission.WRITE_EPG_DATA" />
-   
 ```
 
 <br />
 
 ### PlatformSpecificUri example
 
-<br />
 
 ```kotlin
 val platformSpecificPlaybackUris = listOf(
@@ -512,14 +507,12 @@ val platformSpecificPlaybackUris = listOf(
         .setActionUri(Uri.parse("https://www.example.com/mobile/play/123"))
         .build()
 )
-   
 ```
 
 <br />
 
 ### AccountProfile example
 
-<br />
 
 ```kotlin
 val accountProfile: AccountProfile
@@ -529,7 +522,6 @@ val accountProfile: AccountProfile
         // AppCompatDelegate.getApplicationLocales().get(0) for Per-App Language Preferences
         .setLocale(Locale.getDefault().toLanguageTag())
         .build()
-   
 ```
 
 <br />

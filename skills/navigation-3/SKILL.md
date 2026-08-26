@@ -8,7 +8,7 @@ description: Learn how to install and migrate to Jetpack Navigation 3, and how t
 license: Complete terms in LICENSE.txt
 metadata:
   author: Google LLC
-  last-updated: '2026-08-06'
+  last-updated: '2026-08-14'
   keywords:
   - recipe
   - Android

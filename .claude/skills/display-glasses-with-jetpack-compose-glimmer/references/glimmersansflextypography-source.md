@@ -1,6 +1,6 @@
-When creating a `Typography` instance with the Google Sans Flex configuration, refer to the following source code in `GoogleSansFlexTypography.kt`:
+When creating a `Typography` instance with the Google Sans Flex configuration,
+refer to the following source code in `GoogleSansFlexTypography.kt`:
 
-<br />
 
 ```kotlin
 /*
@@ -265,8 +265,6 @@ private val DefaultLineHeightStyle: LineHeightStyle =
 
 private fun FontFamily(font: GoogleFont, variationSettings: FontVariation.Settings): FontFamily =
     FontFamily(Font(googleFont = font, variationSettings = variationSettings))
-
-   
 ```
 
 <br />

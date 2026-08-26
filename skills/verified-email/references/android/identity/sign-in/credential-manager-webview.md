@@ -1,8 +1,11 @@
-This document describes how to integrate the Credential Manager API with an Android app that uses WebView. Credential Manager is supported natively in the `android.webkit.WebView` library in [version 1.12.0](https://developer.android.com/jetpack/androidx/releases/webkit#1.12.0) and later.
+This document describes how to integrate the Credential Manager API with an
+Android app that uses WebView. Credential Manager is supported natively in the
+`android.webkit.WebView` library in [version 1.12.0](https://developer.android.com/jetpack/androidx/releases/webkit#1.12.0) and later.
 
 ## Prerequisites
 
-To use Credential Manager in WebView, add the following dependencies to your app module's build script:
+To use Credential Manager in WebView, add the following dependencies to your app
+module's build script:
 
     dependencies {
       implementation("androidx.credentials:credentials:1.6.0-beta02")   
@@ -10,11 +13,14 @@ To use Credential Manager in WebView, add the following dependencies to your app
       implementation("androidx.webkit:webkit:1.14.0")
     }
 
-You will also need to associate your app with a website that your app owns using digital asset linking. For more information, see [adding digital asset linking](https://developer.android.com/identity/credential-manager/prerequisites).
+You will also need to associate your app with a website that your app owns using
+digital asset linking. For more information, see
+[adding digital asset linking](https://developer.android.com/identity/credential-manager/prerequisites).
 
 ## Use the WebKit library
 
-To use the WebKit library, check for feature support, and then enable support by calling `setWebAuthenticationSupport()`:
+To use the WebKit library, check for feature support, and then enable support by
+calling `setWebAuthenticationSupport()`:
 
     class WebViewActivity : ComponentActivity() {
         override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,12 +66,19 @@ To use the WebKit library, check for feature support, and then enable support by
 
 ## Web integration
 
-To learn how to build Web integration see [Create a passkey for passwordless logins](https://web.dev/passkey-registration/). You can also reference the [demo site source](https://github.com/deephand/webauthn-in-webview).
+To learn how to build Web integration see
+[Create a passkey for passwordless logins](https://web.dev/passkey-registration/).
+You can also reference the [demo site source](https://github.com/deephand/webauthn-in-webview).
 
 ## Testing and deployment
 
-Test the entire flow thoroughly in a controlled environment to verify proper communication between the Android app, the web page, and the backend.
+Test the entire flow thoroughly in a controlled environment to verify proper
+communication between the Android app, the web page, and the backend.
 
-Deploy the integrated solution to production, verifying that the backend can handle incoming registration and authentication requests. The backend code should generate initial JSON for registration (create) and authentication (get) processes. It should also handle validation and verification of the responses received from the web page.
+Deploy the integrated solution to production, verifying that the backend can
+handle incoming registration and authentication requests. The backend code
+should generate initial JSON for registration (create) and authentication (get)
+processes. It should also handle validation and verification of the responses
+received from the web page.
 
 Verify the implementation corresponds to the [UX recommendations](https://developer.android.com/design/ui/mobile/guides/patterns/passkeys).

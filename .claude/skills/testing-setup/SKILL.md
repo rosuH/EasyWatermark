@@ -6,7 +6,7 @@ description: Analyze and create a testing strategy for native Android apps - ins
 license: Complete terms in LICENSE.txt
 metadata:
   author: Google LLC
-  last-updated: '2026-08-06'
+  last-updated: '2026-08-14'
   keywords:
   - android
   - testing
@@ -17,7 +17,8 @@ metadata:
 
 ## Step 1: analyze the current testing setup
 
-To understand the testing setup of an existing project, look for these dependencies in the libs.versions.toml file, or build files:
+To understand the testing setup of an existing project, look for these
+dependencies in the libs.versions.toml file, or build files:
 
 1. Dependency Injection framework used. Examples: Hilt, Koin, Anvil, vanilla Dagger...
 2. Unit (local) testing framework this project uses, Example JUnit4, JUnit5...
@@ -39,26 +40,35 @@ To understand the testing setup of an existing project, look for these dependenc
 
 ## Step 2: Set up Dependency Injection frameworks for testing
 
-If there is no Dependency Injection framework, install one: if it's a multiplatform application, ask the user whether they want to install Koin, or kotlin-inject. If it's not multiplatform, install Hilt.
+If there is no Dependency Injection framework, install one: if it's a
+multiplatform application, ask the user whether they want to install Koin, or
+kotlin-inject. If it's not multiplatform, install Hilt.
 
-Install the testing dependencies (for example `com.google.dagger:hilt-compiler` that should be applied with a `kspAndroidTest` configuration).
+Install the testing dependencies (for example `com.google.dagger:hilt-compiler`
+that should be applied with a `kspAndroidTest` configuration).
 
 > [!IMPORTANT]
 > **Important:** Always consult the documentation of the applicable framework to learn about testing (for example: [Hilt testing guide](references/android/training/dependency-injection/hilt-testing.md), [Koin Instrumented tests](https://insert-koin.io/docs/reference/koin-android/instrumented-testing)).
 
-For instrumented tests, create and configure (by adding `testInstrumentationRunner` to the build gradle files) a new test runner and apply the testing rules required by the framework (for example in Hilt, annotate your test classes with `@HiltAndroidTest` and apply the `HiltAndroidRule`). Other frameworks use other mechanisms, consult their documentation.
+For instrumented tests, create and configure (by adding
+`testInstrumentationRunner` to the build gradle files) a new test runner and
+apply the testing rules required by the framework (for example in Hilt, annotate
+your test classes with `@HiltAndroidTest` and apply the `HiltAndroidRule`).
+Other frameworks use other mechanisms, consult their documentation.
 
 ## Step 3: Install frameworks
 
 Unless otherwise specified, respect the current stack of testing frameworks.
 
-If there are no testing frameworks, and the user didn't specify any preference, install the following:
+If there are no testing frameworks, and the user didn't specify any preference,
+install the following:
 
 - JUnit4 for local and instrumented tests
 - Jacoco for test coverage
 - For UI tests: if the project has views, Espresso. If it's fully Compose, use the Compose Testing APIs.
 - Robolectric to run UI Tests
-- Compose Preview Screenshot Testing tool for screenshot tests - check [setup documentation](references/android/studio/preview/compose-screenshot-testing.md) and follow it strictly.
+- Compose Preview Screenshot Testing tool for screenshot tests - check [setup
+  documentation](references/android/studio/preview/compose-screenshot-testing.md) and follow it strictly.
 - Dropshots for device screenshot tests
 - If a mocking framework is necessary, install Mockk (`io.mockk:mockk`). Do not install it unless it is clearly necessary.
 
@@ -70,30 +80,43 @@ If end-to-end testing is requested, install UI Automator.
 
 ### **Refactor for unit tests**
 
-In the next sections you'll be asked to create tests. If you have dependencies on Android framework classes, or entities that are not part of the codebase:
+In the next sections you'll be asked to create tests. If you have dependencies
+on Android framework classes, or entities that are not part of the codebase:
 
-- First, use a fake. If it doesn't exist, create an interface for the class and a "Default" implementation with the existing code. Add the Fake version to the test sourceset (test or androidTest).
+- First, use a fake. If it doesn't exist, create an interface for the class
+  and a "Default" implementation with the existing code. Add the Fake version
+  to the test sourceset (test or androidTest).
 
-- If not possible to use a fake (example: no access to the class or interface), mock the dependencies.
+- If not possible to use a fake (example: no access to the class or
+  interface), mock the dependencies.
 
 ### **Refactor for UI tests**
 
-If you need to fake components to make testing easier and faster and more reliable, replace slow and problematic dependencies with fakes. Use runtime fakes using the Dependency Injection framework installed to:
+If you need to fake components to make testing easier and faster and more
+reliable, replace slow and problematic dependencies with fakes. Use runtime
+fakes using the Dependency Injection framework installed to:
 
 - **Simulate** different scenarios with the user (wrong credentials, reset password flow...), with a server (no connection, server down, bad JSON from server...) or with a platform component (insufficient permissions, no disk space, no front camera available)
 - **Improve** speed and reliability (replacing a database with an in-memory database, replacing a repository with an in-memory fake to avoid hitting the network)
 
 ## Step 5: Unit testing
 
-Create a task to add or review unit tests in every file that contains business logic (ViewModels, Repositories, database-related classes such as DAOs, etc.). Don't create unit tests for Activities, Compose layouts, or dependency injection configuration files.
+Create a task to add or review unit tests in every file that contains business
+logic (ViewModels, Repositories, database-related classes such as DAOs, etc.).
+Don't create unit tests for Activities, Compose layouts, or dependency injection
+configuration files.
 
 ## Step 6: UI testing
 
-Espresso or Compose UI tests live in the `test` sourceset because they will be run with Robolectric. If instrumented (emulator or device) tests are requested, put them in the `androidTest` sourceset.
+Espresso or Compose UI tests live in the `test` sourceset because they will be
+run with Robolectric. If instrumented (emulator or device) tests are requested,
+put them in the `androidTest` sourceset.
 
 ## Step 7: Test databases
 
-If the database is using SQLite (using Room, SQLDelight, etc.), create instrumented tests using an in-memory database to make sure that they work with the SQLite engine on device.
+If the database is using SQLite (using Room, SQLDelight, etc.), create
+instrumented tests using an in-memory database to make sure that they work with
+the SQLite engine on device.
 
 ## Step 8: Screenshot tests
 
@@ -105,11 +128,14 @@ Irrespective of the framework used, screenshot tests focus on 2 types of tests:
   - Font scale set to 1.5.
 - Component-level screenshot tests, where each component is tested in different themes and font scales.
 
-Behavior isn't tested with screenshots, but do test different common scenarios if their UIs change a lot depending on the state. For example, test loading screens by injecting a loading state to the UI or simulating it with a fake.
+Behavior isn't tested with screenshots, but do test different common scenarios
+if their UIs change a lot depending on the state. For example, test loading
+screens by injecting a loading state to the UI or simulating it with a fake.
 
 ## Step 9: UI Behavior tests
 
-Test the UI logic using behavior tests, which ensures that the UIs react as expected when different states are passed, and when user actions are performed.
+Test the UI logic using behavior tests, which ensures that the UIs react as
+expected when different states are passed, and when user actions are performed.
 
 ### **Compose UI behavior tests**
 
@@ -131,17 +157,25 @@ Create a test suite to verify navigation logic. Include:
 
 ## Step 11: Simulate different window sizes and settings
 
-For Compose layouts, use `DeviceConfigurationOverride` described in "[UI testing common patterns](references/android/develop/ui/compose/testing/common-patterns.md)" to simulate different window sizes, font scales
+For Compose layouts, use `DeviceConfigurationOverride` described in "[UI testing
+common patterns](references/android/develop/ui/compose/testing/common-patterns.md)" to simulate different window sizes, font scales
 
 ## Step 12: End-to-end tests
 
-Create a low number (about 5% of all tests) of end-to-end tests that cover big user journeys. Use Compose Test APIs or Espresso for that. If you have to access platform features (notifications, system UI...), use UI Automator.
+Create a low number (about 5% of all tests) of end-to-end tests that cover big
+user journeys. Use Compose Test APIs or Espresso for that. If you have to access
+platform features (notifications, system UI...), use UI Automator.
 
-If you need to take screenshots of the app running in a device, use [Dropshots](https://raw.githubusercontent.com/dropbox/dropshots/refs/heads/main/README.md). You need a device for screenshot tests when verifying interaction with the system UI (examples: edge-to-edge rendering, notifications, picture-in-picture)
+If you need to take screenshots of the app running in a device, use
+[Dropshots](https://raw.githubusercontent.com/dropbox/dropshots/refs/heads/main/README.md). You need a device for screenshot tests when verifying
+interaction with the system UI (examples: edge-to-edge rendering, notifications,
+picture-in-picture)
 
 ### Step 13: Instrumented Screenshot tests
 
-Install the `com.dropbox.dropshots` plugin in the module and a `Dropshots()` JUnit Rule. Create a new instrumented screenshot test for one of the app's features.
+Install the `com.dropbox.dropshots` plugin in the module and a `Dropshots()`
+JUnit Rule. Create a new instrumented screenshot test for one of the app's
+features.
 
 ### Step 14: Install jacoco
 
@@ -151,8 +185,14 @@ Install jacoco for local testing code coverage.
 
 ## Final touches
 
-- Ask whether to document the findings of the analysis and the changes applied to the testing strategy. If the user agrees:
+- Ask whether to document the findings of the analysis and the changes applied
+  to the testing strategy. If the user agrees:
 
-  - If there is an AGENTS.md file present in the project, update it with any changes you've made to the testing strategy.
+  - If there is an AGENTS.md file present in the project, update it with any
+    changes you've made to the testing strategy.
 
-  - If there is no AGENTS.md file, create a new file (docs/testing.md) with a description of the testing strategy, including the commands needed to run every type of test, where the screenshot reference files live, etc. Also create a new AGENTS.md file in the root and create a link to docs/testing.md.
+  - If there is no AGENTS.md file, create a new file (docs/testing.md) with
+    a description of the testing strategy, including the commands needed to
+    run every type of test, where the screenshot reference files live, etc.
+    Also create a new AGENTS.md file in the root and create a link to
+    docs/testing.md.

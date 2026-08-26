@@ -9,7 +9,7 @@ description: Provides guidelines for developing projected Android XR apps for di
 license: Complete terms in LICENSE.txt
 metadata:
   author: Google LLC
-  last-updated: '2026-08-06'
+  last-updated: '2026-08-19'
   keywords:
   - Jetpack Compose Glimmer
   - audio glasses
@@ -37,7 +37,8 @@ metadata:
 ## Prerequisites
 
 - Mobile project must target `compileSdk` 37 or higher. If the `compileSdk` is lower than 37, increase the `compileSdk` to 37.
-- Ensure you are using the latest library dependencies from [Create your first activity for intelligent eyewear](https://developer.android.com/develop/xr/jetpack-xr-sdk/ai-glasses/first-activity).
+- Ensure you are using the latest library dependencies from [Create your first
+  activity for intelligent eyewear](https://developer.android.com/develop/xr/jetpack-xr-sdk/ai-glasses/first-activity).
 
 ## Core Constraints
 
@@ -54,15 +55,20 @@ metadata:
 
 ## 1. Set up dependencies
 
-- **Setup Projected Activity:** First, you need to create a new projected activity for your app. If the project doesn't already have one, see [Create your first activity for intelligent eyewear](https://developer.android.com/develop/xr/jetpack-xr-sdk/ai-glasses/first-activity). Use [references/projectedcontext-source.md](references/projectedcontext-source.md) to launch the Glasses Projected activity on the Projected Device. Ensure that you specify `xr_projected` for the `android:requiredDisplayCategory` attribute in app manifest to tell the system that this activity will use a projected context to access hardware from a connected device.
-- **Mobile App Integration:** If the project contains an existing mobile app, you must create a new Glasses Activity dedicated to rendering Glimmer UI. For detailed configuration, heavily reference [Create your first activity for intelligent eyewear](https://developer.android.com/develop/xr/jetpack-xr-sdk/ai-glasses/first-activity). If there isn't already a method to launch the Glasses Activity, add a button to the existing mobile app UI labeled "Launch on Glasses" that uses `ProjectedContext` to launch the Glasses Activity on the glasses. Place the 'Launch on Glasses' button as a screen-level FloatingActionButton, in the TopAppBar, or in the top navigation bar to ensure users discover the projection capability. If the glasses aren't connected, disable the button. Don't launch the Glasses Activity on the phone, only on the display glasses. If it makes sense to automatically launch the Glasses Activity without an explicit launch button, then do so.
+- **Setup Projected Activity:** First, you need to create a new projected activity for your app. If the project doesn't already have one, see [Create
+  your first activity for intelligent eyewear](https://developer.android.com/develop/xr/jetpack-xr-sdk/ai-glasses/first-activity). Use [references/projectedcontext-source.md](references/projectedcontext-source.md) to launch the Glasses Projected activity on the Projected Device. Ensure that you specify `xr_projected` for the `android:requiredDisplayCategory` attribute in app manifest to tell the system that this activity will use a projected context to access hardware from a connected device.
+- **Mobile App Integration:** If the project contains an existing mobile app, you must create a new Glasses Activity dedicated to rendering Glimmer UI. For detailed configuration, heavily reference [Create your first activity
+  for intelligent eyewear](https://developer.android.com/develop/xr/jetpack-xr-sdk/ai-glasses/first-activity). If there isn't already a method to launch the Glasses Activity, add a button to the existing mobile app UI labeled "Launch on Glasses" that uses `ProjectedContext` to launch the Glasses Activity on the glasses. Place the 'Launch on Glasses' button as a screen-level FloatingActionButton, in the TopAppBar, or in the top navigation bar to ensure users discover the projection capability. If the glasses aren't connected, disable the button. Don't launch the Glasses Activity on the phone, only on the display glasses. If it makes sense to automatically launch the Glasses Activity without an explicit launch button, then do so.
 - **UI Library:** Identify if the project has the `androidx.xr.glimmer:glimmer` library, if not it must be added to the project. See [Declaring Jetpack Compose Glimmer Dependencies](https://developer.android.com/jetpack/androidx/releases/xr-glimmer#declaring_dependencies) to fetch the latest dependency version.
 - **Theming:** All Glimmer components must be wrapped within the `GlimmerTheme` composable to ensure correct token resolution.
 - **Mandatory black background:** Display glasses use additive displays. Any non-black color in the background blocks the real world. **You must always** set a pure black background (`Modifier.background(Color.Black)`) on the root container of your Projected Activity.
 - **Font:** The default font is Google Sans Flex. Use `androidx.xr.glimmer.googlefonts` library with the default type styles unless otherwise specified. Use `createGoogleSansFlexTypography` to create a `Typography` instance with the Google Sans Flex configuration. Provide this `Typography` instance as normal through `GlimmerTheme`. Use [references/glimmersansflextypography-source.md](references/glimmersansflextypography-source.md) for configuration.
-- **Hardware Capabilities:** Different types of intelligent eyewear devices have different capabilities. To check for these at runtime, see the [Check device capabilities at runtime for intelligent eyewear](https://developer.android.com/develop/xr/jetpack-xr-sdk/ai-glasses/check-capabilities).
-- **Hardware Permissions:** To request hardware permissions like the microphone and camera, see the [Request hardware permissions for intelligent eyewear](references/android/develop/xr/jetpack-xr-sdk/request-hardware-permissions.md).
-- **Hardware Access:** To use the glasses camera, sensors, or access the phone's hardware, see the [Use a projected context to access hardware on intelligent eyewear](references/android/develop/xr/jetpack-xr-sdk/access-hardware-projected-context.md).
+- **Hardware Capabilities:** Different types of intelligent eyewear devices have different capabilities. To check for these at runtime, see the [Check
+  device capabilities at runtime for intelligent eyewear](https://developer.android.com/develop/xr/jetpack-xr-sdk/ai-glasses/check-capabilities).
+- **Hardware Permissions:** To request hardware permissions like the microphone and camera, see the [Request hardware permissions for
+  intelligent eyewear](references/android/develop/xr/jetpack-xr-sdk/request-hardware-permissions.md).
+- **Hardware Access:** To use the glasses camera, sensors, or access the phone's hardware, see the [Use a projected context to access hardware on
+  intelligent eyewear](references/android/develop/xr/jetpack-xr-sdk/access-hardware-projected-context.md).
 
 ## 2. Minimize and translate the UI
 
@@ -79,12 +85,15 @@ metadata:
 - Avoid nesting scrolling controls.
 - Jetpack Compose Glimmer components are designed to work with standard input methods, such as a tap or swipe on the glasses' touchpad.
 - Use System Back to dismiss temporary states or detailed views.
-- To add input, focus, tap, swipe to your Glasses UI, follow [Focus in Jetpack Compose Glimmer](references/android/develop/xr/jetpack-xr-sdk/jetpack-compose-glimmer/focus.md).
-  - For a detailed breakdown of hardware inputs, see [Hardware Controls for display glasses](references/android/design/ui/ai-glasses/guides/interaction/inputs.md)
+- To add input, focus, tap, swipe to your Glasses UI, follow [Focus in Jetpack
+  Compose Glimmer](references/android/develop/xr/jetpack-xr-sdk/jetpack-compose-glimmer/focus.md).
+  - For a detailed breakdown of hardware inputs, see [Hardware Controls for
+    display glasses](references/android/design/ui/ai-glasses/guides/interaction/inputs.md)
 
 ## 4. Build with Jetpack Compose Glimmer
 
-Jetpack Compose Glimmer is the UI toolkit for building augmented experiences on display glasses.
+Jetpack Compose Glimmer is the UI toolkit for building augmented experiences on
+display glasses.
 
 ### Key Features
 
@@ -96,11 +105,13 @@ Jetpack Compose Glimmer is the UI toolkit for building augmented experiences on 
 
 - Jetpack Compose Glimmer uses a one-dimensional focus search.
 - Focus movement is continuous for scrollable containers and discrete for elements like a row of buttons.
-- To enable the system to automatically set initial focus, you must set the `isInitialFocusOnFocusableAvailable` flag to `true` in your activity's `onCreate` method. For more information on how to implement, see [Focus in Jetpack Compose Glimmer](references/android/develop/xr/jetpack-xr-sdk/jetpack-compose-glimmer/focus.md).
+- To enable the system to automatically set initial focus, you must set the `isInitialFocusOnFocusableAvailable` flag to `true` in your activity's `onCreate` method. For more information on how to implement, see [Focus in
+  Jetpack Compose Glimmer](references/android/develop/xr/jetpack-xr-sdk/jetpack-compose-glimmer/focus.md).
 
 ### Implementing Glimmer Styles
 
-Glimmer styles are accessed through the `GlimmerTheme` object. Use [references/glimmertheme-source.md](references/glimmertheme-source.md) for reference.
+Glimmer styles are accessed through the `GlimmerTheme` object. Use
+[references/glimmertheme-source.md](references/glimmertheme-source.md) for reference.
 
 | Category | Token | Value / Role |
 |---|---|---|
@@ -113,7 +124,10 @@ Glimmer styles are accessed through the `GlimmerTheme` object. Use [references/g
 
 #### Typography Scale (Google Sans Flex)
 
-**Strict default:** When creating Glimmer UI you must use Google Sans Flex unless a custom brand typeface is explicitly specified. **Variable Font Settings:** As Google Sans Flex is a variable font, you must configure the following axes:
+**Strict default:** When creating Glimmer UI you must use Google Sans Flex
+unless a custom brand typeface is explicitly specified.
+**Variable Font Settings:** As Google Sans Flex is a variable font, you must
+configure the following axes:
 
 - **Roundness (`ROND`):** Always set to `100f` for the signature rounded appearance.
 - **Width (`wdth`):** Set to `100f`.
@@ -132,7 +146,11 @@ Glimmer styles are accessed through the `GlimmerTheme` object. Use [references/g
 
 #### Depth Levels
 
-Simulate depth on display glasses using shadows to establish a sense of hierarchy through varying levels of emphasis. The Jetpack Compose Glimmer controls use `DepthEffect` with 5 preset `DepthEffectLevels`. Use [references/deptheffect-source.md](references/deptheffect-source.md) and [references/deptheffectlevels-source.md](references/deptheffectlevels-source.md) for reference.
+Simulate depth on display glasses using shadows to establish a sense of
+hierarchy through varying levels of emphasis. The Jetpack Compose Glimmer
+controls use `DepthEffect` with 5 preset `DepthEffectLevels`. Use
+[references/deptheffect-source.md](references/deptheffect-source.md) and
+[references/deptheffectlevels-source.md](references/deptheffectlevels-source.md) for reference.
 
 Some examples:
 
@@ -146,7 +164,11 @@ Some examples:
 
 #### Cards
 
-Cards are a fundamental surface-based container in Glimmer used to group related content, such as text, images, icons and actions into a single focal point. They establish a clear depth plane (Z-axis) in the Glasses environment, providing a stable background for text, images, and icons. Never embed a card within a List Item.
+Cards are a fundamental surface-based container in Glimmer used to group related
+content, such as text, images, icons and actions into a single focal point. They
+establish a clear depth plane (Z-axis) in the Glasses environment, providing a
+stable background for text, images, and icons. Never embed a card within a List
+Item.
 
 ##### Core Implementation Logic
 
@@ -165,7 +187,10 @@ If you are creating a Glimmer Card component, read the:
 
 #### Buttons
 
-Buttons are the primary triggers for discrete actions in Glimmer. They are specifically optimized for the display glasses focus model, where a focus highlight is added when focus is moved to the button using the touchpad or other methods.
+Buttons are the primary triggers for discrete actions in Glimmer. They are
+specifically optimized for the display glasses focus model, where a focus
+highlight is added when focus is moved to the button using the touchpad or other
+methods.
 
 ##### Core Implementation Logic
 
@@ -186,7 +211,9 @@ If you are creating a Glimmer Button component, read the:
 
 #### Title Chips
 
-Chips are a pill-shaped, specialized labeling component designed to sit above a `Card` or a group of content to provide a title. Use title chips to display concise information like a short title, a name, or a status.
+Chips are a pill-shaped, specialized labeling component designed to sit above a
+`Card` or a group of content to provide a title. Use title chips to display
+concise information like a short title, a name, or a status.
 
 ##### Guidelines and usage
 
@@ -204,7 +231,10 @@ If you are creating a Glimmer Title Chip component, read the:
 
 #### Icons
 
-Icons are visual symbols used to represent concepts, actions, or status in a concise way. In Glimmer, icons and icon buttons are optimized for the XR environment, providing clear visibility on additive displays and gaze-responsive feedback for interactive elements.
+Icons are visual symbols used to represent concepts, actions, or status in a
+concise way. In Glimmer, icons and icon buttons are optimized for the XR
+environment, providing clear visibility on additive displays and gaze-responsive
+feedback for interactive elements.
 
 ##### Guidelines and usage
 
@@ -226,14 +256,19 @@ If you are creating a Glimmer Icon component, read the:
 
 #### Lists
 
-Lists are containers that allow you to navigate between and see multiple items on glasses. If your use case works with only seeing one item in the list at a time, use a Glimmer Stack. Use lists with a Title Chip when the list items are similar in type. Also use a Glimmer Stack if the items are of different types.
+Lists are containers that allow you to navigate between and see multiple items
+on glasses. If your use case works with only seeing one item in the list at a
+time, use a Glimmer Stack. Use lists with a Title Chip when the list
+items are similar in type. Also use a Glimmer Stack if the items are of
+different types.
 
 ##### Guidelines and usage
 
 - **ListItem Slots:** Use the `ListItem` composable for rows. It provides predefined slots. Use [references/listitem-source.md](references/listitem-source.md) for reference.
 - **Visual Consistency:** When building lists of similar items, always use a consistent background color (typically `GlimmerTheme.colors.surface`) and corner radius (standard 36.dp) for every item. Don't vary these unless you are visually grouping different *types* of content.
 - **Integrated Title Chips:** Glimmer Lists support integrated title chips. **IF** you need a section header within a list: **THEN** enable the integrated title chip rather than adding a standalone `TitleChip` to maintain spatial consistency.
-- **Vertical Arrangement:** ALWAYS use `verticalArrangement = Arrangement.spacedBy(20.dp)` for `GlimmerLazyColumn` to ensure visual separation between items on the glasses display.
+- **Vertical Arrangement:** ALWAYS use `verticalArrangement =
+  Arrangement.spacedBy(20.dp)` for `GlimmerLazyColumn` to ensure visual separation between items on the glasses display.
 - Be sure to use the default 20 dp spacing between list items unless otherwise specified.
 
 ##### Technical Documentation Links
@@ -246,7 +281,11 @@ If you are creating a Glimmer List component, read the:
 
 #### Stacks
 
-A stack is a collapsed list that only displays one piece of content at a time, in a stacked visual, such as a card. If it is useful to show more than one item at a time, use the Glimmer List control. Don't use a title chip with a stack. If the items are of different types use a stack to show them. If the items are of the same type, use a list.
+A stack is a collapsed list that only displays one piece of content at a time,
+in a stacked visual, such as a card. If it is useful to show more than one item
+at a time, use the Glimmer List control. Don't use a title chip with a stack.
+If the items are of different types use a stack to show them. If the items are
+of the same type, use a list.
 
 ##### Guidelines and usage
 
@@ -268,20 +307,30 @@ If you are creating a Glimmer Stack component, read the:
 
 #### Text
 
-In Jetpack Compose Glimmer, the [`Text`](references/android/develop/xr/jetpack-xr-sdk/jetpack-compose-glimmer/text.md) component builds off the Compose text component, and lets you set various text properties. Be sure to choose a style from the `GlimmerTheme` for your text. Modify the theme for your application if you want custom typography.
+In Jetpack Compose Glimmer, the [`Text`](references/android/develop/xr/jetpack-xr-sdk/jetpack-compose-glimmer/text.md) component builds off the Compose
+text component, and lets you set various text properties. Be sure to choose a
+style from the `GlimmerTheme` for your text. Modify the theme for your
+application if you want custom typography.
 
 ##### Essential Constraint: Glimmer Text versus Material Text
 
-On transparent Display Glasses (additive displays), standard Material `Text` resolves to dark foreground tokens which render as transparent and invisible. Glimmer `Text` intelligently manages theme color matching. When no manual color override is specified, Glimmer `Text` automatically defaults to the content color provided by the nearest Glimmer surface.
+On transparent Display Glasses (additive displays), standard Material `Text`
+resolves to dark foreground tokens which render as transparent and invisible.
+Glimmer `Text` intelligently manages theme color matching. When no manual color
+override is specified, Glimmer `Text` automatically defaults to the content
+color provided by the nearest Glimmer surface.
 
 - **Don't:** Use Material Text
 - **Do:** Use Glimmer Text
 
 #### Surface
 
-`Surface` is a fundamental building block in Glimmer. Use [references/surface-source.md](references/surface-source.md) for reference.
+`Surface` is a fundamental building block in Glimmer. Use
+[references/surface-source.md](references/surface-source.md) for reference.
 
-A surface represents a distinct visual area or 'physical' boundary for components such as buttons and cards. Use it if you need to build a custom component.
+A surface represents a distinct visual area or 'physical' boundary for
+components such as buttons and cards. Use it if you need to build a custom
+component.
 
 ## 5. Integrate with system UI
 

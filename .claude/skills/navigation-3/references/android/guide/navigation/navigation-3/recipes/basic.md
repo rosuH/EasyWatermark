@@ -86,6 +86,4 @@ class BasicActivity : ComponentActivity() {
         }
     }
 }
-
-   
 ```

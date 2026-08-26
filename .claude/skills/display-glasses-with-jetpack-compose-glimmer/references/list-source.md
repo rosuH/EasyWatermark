@@ -1,6 +1,6 @@
-When creating a Glimmer List component, refer to the following source code in `GlimmerLazyColumnSamples.kt`:
+When creating a Glimmer List component, refer to the following source code in
+`GlimmerLazyColumnSamples.kt`:
 
-<br />
 
 ```kotlin
 @Composable
@@ -11,7 +11,6 @@ fun GlimmerLazyColumnSample() {
         item { ListItem { Text("Footer") } }
     }
 }
-   
 ```
 
 ```kotlin
@@ -23,7 +22,6 @@ fun GlimmerLazyColumnWithTitleChipSample() {
         items(ingredientItems) { text -> ListItem { Text(text) } }
     }
 }
-   
 ```
 
 <br />

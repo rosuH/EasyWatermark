@@ -41,7 +41,6 @@ import androidx.lifecycle.ViewModel
 class HomeViewModel : ViewModel() {
     var person by mutableStateOf<Person?>(null)
 }
-   
 ```
 
 ```
@@ -71,7 +70,6 @@ data object Home : NavKey
 
 @Serializable
 class PersonDetailsForm : NavKey
-    
 ```
 
 ```
@@ -97,7 +95,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Person(val name: String, val favoriteColor: String)
-   
 ```
 
 ```
@@ -183,7 +180,6 @@ fun PersonDetailsScreen(
         }
     }
 }
-   
 ```
 
 ```
@@ -267,6 +263,4 @@ class ResultStateActivity : ComponentActivity() {
         }
     }
 }
-
-   
 ```

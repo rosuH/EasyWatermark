@@ -1,8 +1,11 @@
 <br />
 
-[Engage SDK](https://developer.android.com/guide/playcore/engage) lets you deliver personalized recommendations and continuation content directly to users on Google TV.
+[Engage SDK](https://developer.android.com/guide/playcore/engage) lets you deliver personalized recommendations
+and continuation content directly to users on Google TV.
 
-This guide covers how to get started with Engage SDK integrations for TV. After you complete the pre-work on this page, you can integrate one or more of the TV features:
+This guide covers how to get started with Engage SDK integrations for TV. After
+you complete the pre-work on this page, you can integrate one or more
+of the TV features:
 
 - [Publish continue watching data](https://developer.android.com/guide/playcore/engage/tv/continue-watching)
 - [Publish device entitlements](https://developer.android.com/guide/playcore/engage/tv/entitlements)
@@ -12,13 +15,16 @@ This guide covers how to get started with Engage SDK integrations for TV. After 
 
 Before you begin, complete the following steps:
 
-1. [Express interest in developing with Engage SDK](http://g.co/tv/engage) to enroll in the program, if eligible.
+1. [Express interest in developing with Engage SDK](http://g.co/tv/engage) to enroll in
+   the program, if eligible.
 
-2. Verify that your app targets Android 4.4 (API level 19) or higher for this integration.
+2. Verify that your app targets Android 4.4 (API level 19) or higher for this
+   integration.
 
 3. Add the `com.google.android.engage` library to your app:
 
-   There are separate SDKs to use in the integration: one for mobile apps and one for TV apps.
+   There are separate SDKs to use in the integration: one for mobile apps and
+   one for TV apps.
 
    ### Mobile
 
@@ -29,18 +35,23 @@ Before you begin, complete the following steps:
    ### TV
 
        dependencies {
-         implementation 'com.google.android.engage:engage-tv:1.0.6'
+         implementation 'com.google.android.engage:engage-tv:1.1.0'
        }
 
 4. Add permission for `WRITE_EPG_DATA` for TV APK
 
        <uses-permission android:name="com.android.providers.tv.permission.WRITE_EPG_DATA" />
 
-5. Verify reliable content publishing by using a background service, such as `androidx.work`, for scheduling.
+5. Verify reliable content publishing by using a background service, such as
+   `androidx.work`, for scheduling.
 
-6. Test your implementation using the verification app as outlined in the [Testing section](https://developer.android.com/guide/playcore/engage/tv/getting-started#testing).
+6. Test your implementation using the verification app as outlined in the
+   [Testing section](https://developer.android.com/guide/playcore/engage/tv/getting-started#testing).
 
-7. In your production app, set the Engage service environment to production by adding the `<meta-data>` element directly under the `<application>` tag in your `AndroidManifest.xml` file. Don't place this tag inside an `<activity>`.
+7. In your production app, set the Engage service environment to production by
+   adding the `<meta-data>` element directly under the `<application>` tag
+   in your `AndroidManifest.xml` file.
+   Don't place this tag inside an `<activity>`.
 
        <application ...>
            <!-- Other application configurations -->
@@ -57,13 +68,37 @@ Before you begin, complete the following steps:
 
 ### Initialize the client
 
-Use `AppEngagePublishClient` to interact with the service. Always check if the service is available before publishing.
+Use `AppEngagePublishClient` to interact with the service. Always check if the
+service is available before publishing.
+
+You can check the service availability for every cluster type that you intend to
+publish. The `isServiceAvailable` API accepts a request object,
+`ServiceAvailabilityRequest`, which contains the cluster types for which service
+availability needs to be checked. You can find the `ClusterType` enum values
+required for `ServiceAvailabilityRequest` from the following table.
+
+| Cluster Type | Cluster Type Constant | Integer Value |
+|---|---|---|
+| Unknown | `TYPE_UNKNOWN` | 0 |
+| Recommendation Cluster | `TYPE_RECOMMENDATION` | 1 |
+| Continuation Cluster | `TYPE_CONTINUATION` | 3 |
 
     val client = AppEngagePublishClient(context)
 
-    client.isServiceAvailable().addOnCompleteListener { task ->
-      if (task.isSuccessful && task.result) {
-        // Service is available, proceed with publishing
+    val request = ServiceAvailabilityRequest.Builder()
+        .addIntendedClusterType(ClusterType.TYPE_CONTINUATION)
+        .addIntendedClusterType(ClusterType.TYPE_RECOMMENDATION)
+        .build()
+
+    client.isServiceAvailable(request).addOnCompleteListener { task ->
+      if (task.isSuccessful) {
+        val availabilityMap = task.result
+        if (availabilityMap[ClusterType.TYPE_CONTINUATION] == true) {
+          // Proceed with publishing continuation content
+        }
+        if (availabilityMap[ClusterType.TYPE_RECOMMENDATION] == true) {
+          // Proceed with publishing recommendation content
+        }
       } else {
         // Service is not available or call failed
       }
@@ -71,7 +106,8 @@ Use `AppEngagePublishClient` to interact with the service. Always check if the s
 
 ### Create an account profile
 
-`AccountProfile` identifies the user. You can specify an account ID, and optionally a profile ID and locale.
+`AccountProfile` identifies the user. You can specify an account ID, and
+optionally a profile ID and locale.
 
     val accountProfile = AccountProfile.Builder()
         .setAccountId("your_users_account_id")
@@ -79,15 +115,19 @@ Use `AppEngagePublishClient` to interact with the service. Always check if the s
         .setLocale(Locale.US.toLanguageTag())  // Optional, e.g., "en-US"
         .build()
 
-An `AccountProfile` must be provided with an account ID in order for content to be synchronized between devices. See [Cross-device syncing](https://developer.android.com/guide/playcore/engage/tv/continue-watching/client#cross-device_syncing).
+An `AccountProfile` must be provided with an account ID in order for content to
+be synchronized between devices. See [Cross-device syncing](https://developer.android.com/guide/playcore/engage/tv/continue-watching/client#cross-device_syncing).
 
 ## Testing
 
 To test your integration, download the verification app:
 
-[Download verification app](https://developer.android.com/guide/playcore/engage/tv/getting-started#lightbox-trigger)
+[Download verification
+app](https://developer.android.com/guide/playcore/engage/tv/getting-started#lightbox-trigger)
 
-The verification app is an Android app with capabilities to help you test your integration. It let you to check data accuracy and proper functionality by verifying published data and broadcast intents before launch.
+The verification app is an Android app with capabilities to help you test your
+integration. It let you to check data accuracy and proper functionality by
+verifying published data and broadcast intents before launch.
 
 1. Install and open the Engage Verification app.
 2. If the value of `isServiceAvailable` is `false` in the verification app, click the **Toggle** button within the verification app to set it to `true`.

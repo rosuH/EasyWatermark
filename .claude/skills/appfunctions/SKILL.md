@@ -9,7 +9,7 @@ description: Analyzes Android apps to identify key user workflows for AppFunctio
 license: Complete terms in LICENSE.txt
 metadata:
   author: Google LLC
-  last-updated: '2026-08-06'
+  last-updated: '2026-08-14'
   keywords:
   - AppFunctions
   - Kotlin
@@ -20,19 +20,29 @@ metadata:
   - MCP
 ---
 
-Analyzes Android apps to identify key user workflows for AppFunctions such as creating a note, playing media, or sending an automated or AI agent triggered message, voice commands, or system shortcuts, without needing to open the app UI.
+Analyzes Android apps to identify key user workflows for AppFunctions such as
+creating a note, playing media, or sending an automated or AI agent triggered
+message, voice commands, or system shortcuts, without needing to open the app
+UI.
 
-Generates Kotlin code to expose these workflows to the Android system, allowing agents to discover and execute them on-device.
+Generates Kotlin code to expose these workflows to the Android system,
+allowing agents to discover and execute them on-device.
 
-Also refines KDoc documentation to ensure AI agents correctly understand and use the provided functionality.
+Also refines KDoc documentation to ensure AI agents correctly
+understand and use the provided functionality.
 
 ## Prerequisites
 
-The app must **`targetSdk 36`** or newer and use **`compileSdk 37`** or newer as AppFunctions, part of the Android platform API, are available from Android 16 onwards. Always use the Jetpack library because it handles backward compatibility.
+The app must **`targetSdk 36`** or newer and use **`compileSdk 37`** or newer as
+AppFunctions, part of the Android platform API, are available from Android 16
+onwards.
+Always use the Jetpack library because it handles backward compatibility.
 
 ## Workflows
 
-This skill enables the caller to discover features that will be provided to system agents, implement these with AppFunctions, improve function description for agents, and use ADB commands for local evaluation and testing.
+This skill enables the caller to discover features that will be provided to
+system agents, implement these with AppFunctions, improve function description
+for agents, and use ADB commands for local evaluation and testing.
 
 The full AppFunction development flow consists of these four steps:
 

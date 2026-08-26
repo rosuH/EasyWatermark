@@ -8,7 +8,7 @@ description: Use this skill to integrate the Jetpack Compose Styles API into an 
 license: Complete terms in LICENSE.txt
 metadata:
   author: Google LLC
-  last-updated: '2026-08-06'
+  last-updated: '2026-08-14'
   keywords:
   - Jetpack Compose
   - Styles
@@ -30,11 +30,13 @@ metadata:
 - The project must use `compileSdk` version 37 or higher.
 - The project must use `androidx.compose.foundation:foundation` version `1.12.0-alpha01` or higher.
 - Alternatively, the project must use Compose BOM version `2026.04.01` or higher.
-- The API requires this exact package: `import androidx.compose.foundation.style.Style`
+- The API requires this exact package: `import
+  androidx.compose.foundation.style.Style`
 
 ### 2. Configure compiler options to enable experimental API
 
-You must opt-in to the experimental API at the project level. Add the following block to your module's `build.gradle.kts`:
+You must opt-in to the experimental API at the project level. Add the following
+block to your module's `build.gradle.kts`:
 
     kotlin {
         compilerOptions {
@@ -47,9 +49,12 @@ You must opt-in to the experimental API at the project level. Add the following 
 
 Refer to the official documentation to complete specific development tasks:
 
-- Basic Style Usage: To set backgrounds, sizes, and alignments on a component, follow the [Compose Styles Fundamentals Guide](references/android/develop/ui/compose/styles/fundamentals.md).
-- State and Transitions: To configure property changes for state shifts (like pressed or hovered), follow the [Animations and State-Based Styling Guide](references/android/develop/ui/compose/styles/state-animations.md).
-- Architecture Trade offs: To decide when to use a Style versus a standard Modifier, follow the [Styles versus Modifiers Comparison](references/android/develop/ui/compose/styles/styles-vs-modifiers.md).
+- Basic Style Usage: To set backgrounds, sizes, and alignments on a component, follow the [Compose Styles Fundamentals
+  Guide](references/android/develop/ui/compose/styles/fundamentals.md).
+- State and Transitions: To configure property changes for state shifts (like pressed or hovered), follow the [Animations and State-Based Styling
+  Guide](references/android/develop/ui/compose/styles/state-animations.md).
+- Architecture Trade offs: To decide when to use a Style versus a standard Modifier, follow the [Styles versus Modifiers
+  Comparison](references/android/develop/ui/compose/styles/styles-vs-modifiers.md).
 - Theme Level Integration: To connect style definitions with custom themes, follow [Theming with Styles](references/android/develop/ui/compose/styles/theming.md) and [Custom Themes in Compose](references/android/develop/ui/compose/designsystems/custom.md).
 
 ## Step-by-Step Migration Workflow
@@ -66,7 +71,6 @@ Refer to the official documentation to complete specific development tasks:
 1. Create a new file named `ComponentStyles.kt` in your theme directory.
 2. Define a top-level data class to hold your component styles, for example, the Jetsnack one is called `JetsnackStyles`:
 
-   <br />
 
    ```kotlin
    object ExampleComponentStyles {
@@ -77,14 +81,13 @@ Refer to the official documentation to complete specific development tasks:
 
        }
    }
-        
    ```
 
    <br />
 
-3. Expose this class through your custom theme with a static reference, don't use `CompositionLocals` here as it's not required.
+3. Expose this class through your custom theme with a static reference, don't
+   use `CompositionLocals` here as it's not required.
 
-   <br />
 
    ```kotlin
    @Immutable
@@ -101,14 +104,13 @@ Refer to the official documentation to complete specific development tasks:
            val styles: ComponentStyles = ComponentStyles
        }
    }
-        
    ```
 
    <br />
 
-4. Provide extensions on `StyleScope` to reference theme tokens directly if they are exposed using `CompositionLocals`. For example:
+4. Provide extensions on `StyleScope` to reference theme tokens directly if
+   they are exposed using `CompositionLocals`. For example:
 
-   <br />
 
    ```kotlin
    val StyleScope.colors: JetsnackColors
@@ -119,15 +121,14 @@ Refer to the official documentation to complete specific development tasks:
 
    val StyleScope.shapes: Shapes
        get() = LocalJetsnackTheme.currentValue.shapes
-
-        
    ```
 
    <br />
 
 ### Step 3: Migrate a component to Styles API
 
-For each custom component (for example, `CustomButton`), complete the following sequence:
+For each custom component (for example, `CustomButton`), complete the following
+sequence:
 
 1. **Establish a visual baseline (If an emulator is available):**
    - **If you CANNOT run an Android emulator:** Skip this step entirely and proceed to Step 2.
@@ -136,7 +137,8 @@ For each custom component (for example, `CustomButton`), complete the following 
      - **Option B (If no test exists):** Create a test using the project's existing testing framework, then run it.
      - **Option C (If no framework exists):** Create a minimal screenshot test using UI Automator or Espresso, then run it.
 2. **Remove individual styling parameters** : Remove styling parameters such as `backgroundColor`, `shape`, `textStyle`, and `contentPadding` from the signature - anything that `StyleScope` supports.
-3. **Add the style parameter** : Add `style: Style = Style` to the function signature. Always ensure the default value is exactly `Style` (e.g., `style: Style = Style`) and not a specific style default like `ChipStyleDefault` or any other value.
+3. **Add the style parameter** : Add `style: Style = Style` to the function signature. Always ensure the default value is exactly `Style` (e.g., `style:
+   Style = Style`) and not a specific style default like `ChipStyleDefault` or any other value.
 4. **Declare state tracking** : If the component is interactable, create a `MutableStyleState` using the interaction source. Update state fields (such as `isEnabled`) inside the Composable to track the state correctly.
 5. **Apply styleable modifier** : Replace specific layout modifiers on the root element with `Modifier.styleable()`.
 6. **Move defaults to ComponentStyles** : Move hardcoded values from the component definition to a dedicated `Style` instance in `ComponentStyles.kt`.
@@ -146,7 +148,6 @@ For each custom component (for example, `CustomButton`), complete the following 
 
 Before Migration:
 
-<br />
 
 ```kotlin
 @Composable
@@ -171,14 +172,12 @@ fun CustomButton(
         content = content,
     )
 }
-   
 ```
 
 <br />
 
 After Migration:
 
-<br />
 
 ```kotlin
 // Exposed via ComponentStyles.kt
@@ -216,7 +215,6 @@ fun CustomButton(
         content = content,
     )
 }
-   
 ```
 
 <br />

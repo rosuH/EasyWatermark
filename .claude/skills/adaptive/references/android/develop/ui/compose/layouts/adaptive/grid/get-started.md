@@ -2,10 +2,11 @@ This page describes how to implement basic [`Grid`](https://developer.android.co
 
 ## Set up project
 
-1. Add the [`androidx.compose.foundation.layout`](https://developer.android.com/jetpack/androidx/versions) library to your project's `lib.versions.toml`.
+1. Add the [`androidx.compose.foundation.layout`](https://developer.android.com/jetpack/androidx/versions) library to your project's
+   `lib.versions.toml`.
 
        [versions]
-       compose = "1.12.0-rc01"
+       compose = "1.13.0-alpha01"
 
        [libraries]
        androidx-compose-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "compose" }
@@ -18,9 +19,9 @@ This page describes how to implement basic [`Grid`](https://developer.android.co
 
 ## Create a basic grid
 
-The following example creates a basic 2x3 grid, with the columns and rows having a fixed size of `100.dp`.
+The following example creates a basic 2x3 grid,
+with the columns and rows having a fixed size of `100.dp`.
 
-<br />
 
 ```kotlin
 Grid(
@@ -40,11 +41,11 @@ Grid(
     Card5(containerColor = PastelOrange)
     Card6(containerColor = PastelYellow)
 }
-   
 ```
 
 <br />
 
 ![A basic grid consists of rows and columns with fixed size.](https://developer.android.com/static/develop/ui/compose/images/layouts/adaptive/grid/six-cards-in-grid.png) **Figure 1**. A basic grid consists of rows and columns with fixed size.
 
-To learn how to implement more advanced grids, see [Set container properties](https://developer.android.com/develop/ui/compose/layouts/adaptive/grid/container-properties) and [Set item properties](https://developer.android.com/develop/ui/compose/layouts/adaptive/grid/item-properties).
+To learn how to implement more advanced grids,
+see [Set container properties](https://developer.android.com/develop/ui/compose/layouts/adaptive/grid/container-properties) and [Set item properties](https://developer.android.com/develop/ui/compose/layouts/adaptive/grid/item-properties).

@@ -7,7 +7,7 @@ description: Use this skill to migrate your Jetpack Compose app to add adaptive 
 license: Complete terms in LICENSE.txt
 metadata:
   author: Google LLC
-  last-updated: '2026-08-06'
+  last-updated: '2026-08-14'
   keywords:
   - android
   - compose
@@ -35,11 +35,11 @@ metadata:
 
 ## Step 3: apply insets
 
-- The app **MUST** apply system insets, or align content to rulers, so critical UI remains tappable. Choose only one method to avoid double padding:
+- The app **MUST** apply system insets, or align content to rulers, so critical
+  UI remains tappable. Choose only one method to avoid double padding:
 
   1. **PREFERRED:** When available, use `Scaffold`s and pass `PaddingValues` to the content lambda.
 
-  <br />
 
   ```kotlin
   Scaffold { innerPadding ->
@@ -51,7 +51,6 @@ metadata:
           contentPadding = innerPadding
       ) { /* Content */ }
   }
-       
   ```
 
   <br />
@@ -77,7 +76,6 @@ metadata:
        3. `TopAppBar(windowInsets = WindowInsets.systemBars.add(WindowInsets.captionBar))`
   2. For components outside a Scaffold, use padding modifiers, such as `Modifier.safeDrawingPadding()` or `Modifier.windowInsetsPadding(WindowInsets.safeDrawing)`.
 
-     <br />
 
      ```kotlin
      Box(
@@ -92,14 +90,16 @@ metadata:
              Text("Login")
          }
      }
-            
      ```
 
      <br />
 
   3. For deeply nested components with excessive padding, use `WindowInsetsRulers` (e.g. `Modifier.fitInside(WindowInsetsRulers.SafeDrawing.current)`). See the *IME* section for a code sample.
 
-  4. When you need an element (e.g. a custom header or decorative scrim) to equal the dimensions of a system bar, use inset size modifiers (e.g. `Modifier.windowInsetsTopHeight(WindowInsets.systemBars)`). See the *Lists* section for a code sample.
+  4. When you need an element (e.g. a custom header or decorative scrim) to
+     equal the dimensions of a system bar, use inset size modifiers (e.g.
+     `Modifier.windowInsetsTopHeight(WindowInsets.systemBars)`).
+     See the *Lists* section for a code sample.
 
 ## Adaptive Scaffolds
 
@@ -109,13 +109,16 @@ metadata:
 
 - For each Activity with a soft keyboard, check that `android:windowSoftInputMode="adjustResize"` is set in the AndroidManifest.xml. DO NOT use `SOFT_INPUT_ADJUST_RESIZE` because it is deprecated. Then, maintain focus on the input field. Choose one:
   - 1. **PREFERRED:** Add `Modifier.fitInside(WindowInsetsRulers.Ime.current)` to the content container. This is preferred over `imePadding()` because it reduces jank and extra padding caused by forgetting to consume insets upstream in the hierarchy.
-  - 2. Add `imePadding` to the content container. The padding modifier **MUST** be placed before `Modifier.verticalScroll()`. Do NOT use `Modifier.imePadding()` if the parent already accounts for the IME with `contentWindowInsets` (e.g. `contentWindowInsets = WindowInsets.safeDrawing`). Doing so will cause double padding.
+  - 2. Add `imePadding` to the content container. The padding modifier **MUST** be placed before `Modifier.verticalScroll()`. Do NOT use `Modifier.imePadding()` if the parent already accounts for the IME with `contentWindowInsets` (e.g. `contentWindowInsets =
+    WindowInsets.safeDrawing`). Doing so will cause double padding.
 
 ### IMEs with Scaffolds code patterns
 
 #### RIGHT
 
-RIGHT because `contentWindowInsets` contains IME insets, which are passed to the content lambda as `innerPadding`.
+RIGHT because `contentWindowInsets` contains IME insets, which are passed to the
+content lambda as `innerPadding`.
+
 
 ```kotlin
 // RIGHT
@@ -127,14 +130,15 @@ Scaffold(contentWindowInsets = WindowInsets.safeDrawing) { innerPadding ->
             .verticalScroll(rememberScrollState())
     ) { /* Content */ }
 }
-   
 ```
 
 <br />
 
 *** ** * ** ***
 
-RIGHT because `fitInside` fits the content to the IME insets regardless of `contentWindowInsets`.
+RIGHT because `fitInside` fits the content to the IME insets regardless of
+`contentWindowInsets`.
+
 
 ```kotlin
 // RIGHT
@@ -147,14 +151,15 @@ Scaffold() { innerPadding ->
             .verticalScroll(rememberScrollState())
     ) { /* Content */ }
 }
-   
 ```
 
 <br />
 
 *** ** * ** ***
 
-RIGHT because the default `contentWindowInsets` does not contain IME insets, and `imePadding()` applies IME insets:
+RIGHT because the default `contentWindowInsets` does not contain IME insets, and
+`imePadding()` applies IME insets:
+
 
 ```kotlin
 // RIGHT
@@ -167,14 +172,16 @@ Scaffold() { innerPadding ->
             .verticalScroll(rememberScrollState())
     ) { /* Content */ }
 }
-   
 ```
 
 <br />
 
 #### WRONG
 
-WRONG because there will be excess padding when the IME opens. IME insets are applied twice, once with innerPadding, which contains IME insets from the passed `contentWindowInsets` values, and once with `imePadding`:
+WRONG because there will be excess padding when the IME opens. IME insets are
+applied twice, once with innerPadding, which contains IME insets from the passed
+`contentWindowInsets` values, and once with `imePadding`:
+
 
 ```kotlin
 // WRONG
@@ -186,14 +193,15 @@ Scaffold( contentWindowInsets = WindowInsets.safeDrawing ) { innerPadding ->
             .verticalScroll(rememberScrollState())
     ) { /* Content */ }
 }
-   
 ```
 
 <br />
 
 *** ** * ** ***
 
-WRONG because the IME will cover up the content. Scaffold's default `contentWindowInsets` does NOT contain IME insets.
+WRONG because the IME will cover up the content. Scaffold's default
+`contentWindowInsets` does NOT contain IME insets.
+
 
 ```kotlin
 // WRONG
@@ -204,7 +212,6 @@ Scaffold() { innerPadding ->
             .verticalScroll(rememberScrollState())
     ) { /* Content */ }
 }
-   
 ```
 
 <br />
@@ -214,6 +221,7 @@ Scaffold() { innerPadding ->
 #### RIGHT
 
 The following code samples WILL NOT cause excessive padding.
+
 
 ```kotlin
 // RIGHT
@@ -225,14 +233,12 @@ Box(
         modifier = Modifier.imePadding()
     ) { /* Content */ }
 }
-   
 ```
 
 <br />
 
 *** ** * ** ***
 
-<br />
 
 ```kotlin
 // RIGHT
@@ -244,14 +250,12 @@ Box(
         modifier = Modifier.imePadding()
     ) { /* Content */ }
 }
-   
 ```
 
 <br />
 
 *** ** * ** ***
 
-<br />
 
 ```kotlin
 // RIGHT
@@ -265,14 +269,15 @@ Box(
             .fitInside(WindowInsetsRulers.Ime.current)
     ) { /* Content */ }
 }
-   
 ```
 
 <br />
 
 #### WRONG
 
-The following code sample WILL cause excessive padding because IME insets are applied twice:
+The following code sample WILL cause excessive padding because IME insets are
+applied twice:
+
 
 ```kotlin
 // WRONG
@@ -284,16 +289,19 @@ Box(
         modifier = Modifier.imePadding()
     ) { /* Content */ }
 }
-   
 ```
 
 <br />
 
 ## Navigation Bar Contrast \& System Bar Icons
 
-- If the Activity uses `enableEdgeToEdge` from `WindowCompat`, you **MUST** set `isAppearanceLightNavigationBars` and `isAppearanceLightStatusBars` to the inverse of the device theme for apps that support light and dark theme so the system bar icons are legible. It's recommended to do this in your theme file. DO NOT do this if the Activities use `enableEdgeToEdge` from `ComponentActivity` because it handles the icon colors automatically.
+- If the Activity uses `enableEdgeToEdge` from `WindowCompat`, you **MUST** set
+  `isAppearanceLightNavigationBars` and `isAppearanceLightStatusBars` to the
+  inverse of the device theme for apps that support light and dark theme so the
+  system bar icons are legible. It's recommended to do this in your theme file.
+  DO NOT do this if the Activities use `enableEdgeToEdge` from `ComponentActivity`
+  because it handles the icon colors automatically.
 
-  <br />
 
   ```kotlin
   // Only use if calling `enableEdgeToEdge` from `WindowCompat`.
@@ -317,19 +325,22 @@ Box(
 
       MaterialTheme(content = content)
   }
-       
   ```
 
   <br />
 
-- If any screen uses a `Scaffold` or a `NavigationSuiteScaffold` with a bottom bar (e.g., `BottomAppBar`, `NavigationBar`), set `window.isNavigationBarContrastEnforced = false` in the corresponding Activity for SDK 29+. This prevents the system from adding a translucent background to the navigation bar, verifying your bottom bar colors extend to the bottom of the screen.
+- If any screen uses a `Scaffold` or a `NavigationSuiteScaffold` with a bottom
+  bar (e.g., `BottomAppBar`, `NavigationBar`), set
+  `window.isNavigationBarContrastEnforced = false` in the corresponding Activity
+  for SDK 29+. This prevents the system from adding a translucent background to
+  the navigation bar, verifying your bottom bar colors extend to the bottom of the
+  screen.
 
 ## Lists
 
 - Apply inset padding (like `Scaffold`'s `innerPadding`) to the `contentPadding` parameter of scrollable components (e.g. `LazyColumn`, `LazyRow`). DO NOT apply it as a `Modifier.padding()` to the list's parent container, as this clips the content and prevents it from scrolling behind the system bars.
 - Create a translucent composable covering the system bar so that the icons are still legible.
 
-<br />
 
 ```kotlin
 class SystemBarProtectionSnippets : ComponentActivity() {
@@ -376,18 +387,20 @@ private fun StatusBarProtection(
             )
     )
 }
-   
 ```
 
 <br />
 
 ## Dialogs
 
-If both the following conditions are true, then the Dialog is full screen and must be made edge-to-edge: 1. The `DialogProperties` contains `usePlatformDefaultWidth = false`. 2. The Dialog calls `Modifier.fillMaxSize()`.
+If both the following conditions are true, then the Dialog is full screen and
+must be made edge-to-edge:
+1. The `DialogProperties` contains `usePlatformDefaultWidth = false`.
+2. The Dialog calls `Modifier.fillMaxSize()`.
 
-To make a full screen Dialog edge-to-edge, set `decorFitsSystemWindows = false` in the `DialogProperties`.
+To make a full screen Dialog edge-to-edge, set `decorFitsSystemWindows = false`
+in the `DialogProperties`.
 
-<br />
 
 ```kotlin
 Dialog(
@@ -399,7 +412,6 @@ Dialog(
         decorFitsSystemWindows = false
     )
 ) { /* Content */ }
-   
 ```
 
 <br />

@@ -1,4 +1,6 @@
-Automated testing for camera features is notoriously difficult because you can't easily mock physical hardware, lighting, or motion. This guide provides patterns for reliable, hermetic camera tests.
+Automated testing for camera features is notoriously difficult because you
+can't easily mock physical hardware, lighting, or motion. This guide provides
+patterns for reliable, hermetic camera tests.
 
 ## Develop a testing mindset
 
@@ -15,41 +17,42 @@ Automated testing for camera features is notoriously difficult because you can't
 
 ### Fakes over mocks
 
-**Don't use Mockito.** Relying on mocks for complex, rapidly changing interfaces like `ImageProxy` or `CameraInfo` makes tests brittle. Instead, build "Fake" implementations that verify state rather than behavior.
+**Don't use Mockito.** Relying on mocks for complex, rapidly changing interfaces
+like `ImageProxy` or `CameraInfo` makes tests brittle. Instead, build "Fake"
+implementations that verify state rather than behavior.
 
-<br />
 
 ```kotlin
 // Create a Fake ImageProxy for ML Testing (Fakes over Mocks)
 val fakeImage = FakeImageProxy(w = 640, h = 480)
 
 // Feed the fake buffer into your analyzer
-    
 ```
 
 <br />
 
 ### Mock camera capabilities
 
-Use `FakeAppConfig` from `androidx.camera:camera-testing` to simulate specific hardware constraints in tests, such as a device without a flash.
+Use `FakeAppConfig` from `androidx.camera:camera-testing` to simulate specific
+hardware constraints in tests, such as a device without a flash.
 
-<br />
 
 ```kotlin
 // Use awaitInstance() extension function for coroutine-based provider retrieval
 val cameraProvider = ProcessCameraProvider.awaitInstance(context)
-   
 ```
 
 <br />
 
 ### Use Truth assertions
 
-Use Google Truth, `assertThat`, instead of standard JUnit assertions. It provides more readable assertion chains and useful failure messages.
+Use Google Truth, `assertThat`, instead of standard JUnit assertions. It
+provides more readable assertion chains and useful failure messages.
 
 ### Test asynchronous lifecycles
 
-Camera initialization is asynchronous. Use `IdlingResource` to ensure your test waits for the `UseCase` to be bound before asserting.
+Camera initialization is asynchronous. Use `IdlingResource` to ensure
+your test waits for the `UseCase` to be bound before asserting.
 
 To test asynchronous lifecycles, use the following pattern:
 

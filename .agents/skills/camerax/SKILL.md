@@ -7,7 +7,7 @@ description: Provide technical guidance for Android camera development with Came
 license: Complete terms in LICENSE.txt
 metadata:
   author: Google LLC
-  last-updated: '2026-08-06'
+  last-updated: '2026-08-14'
   keywords:
   - recipe
   - Android
@@ -26,17 +26,20 @@ metadata:
   - ImageAnalysis.
 ---
 
-This skill provides procedural guidance and standard patterns for building camera applications on Android, with a focus on CameraX, including its `Camera2Interop` utilities, and Media3 integrations.
+This skill provides procedural guidance and standard patterns for building
+camera applications on Android, with a focus on CameraX, including its
+`Camera2Interop` utilities, and Media3 integrations.
 
 ## Core workflows
 
 ### Handling immutable API patterns
 
-Various Android camera and media APIs, especially CameraX `VideoCapture`, use a **fluent, immutable builder-like pattern** where methods return a new instance. Failing to reassign these results in settings, such as audio, being ignored.
+Various Android camera and media APIs, especially CameraX `VideoCapture`, use a
+**fluent, immutable builder-like pattern** where methods return a new instance.
+Failing to reassign these results in settings, such as audio, being ignored.
 
 **Pattern: Reassignment is required**
 
-<br />
 
 ```kotlin
 // WRONG
@@ -59,7 +62,6 @@ run {
   pending = pending.withAudioEnabled() // Reassignment
   val active = pending.start(exec, listener)
 }
-   
 ```
 
 <br />
@@ -75,7 +77,9 @@ When migrating legacy camera codebases to the CameraX Jetpack library:
 
 ### Comprehensive feature blueprinting
 
-For multi-step features that involve multiple files and hardware-level wiring, follow the [Structural Blueprinting](references/expert-blueprints.md) approach to avoid system timeouts. Such complex features include:
+For multi-step features that involve multiple files and hardware-level wiring,
+follow the [Structural Blueprinting](references/expert-blueprints.md) approach to avoid
+system timeouts. Such complex features include:
 
 - **Manual controls** : Break down into the `ViewModel` state, the controller layer, and the `Camera2Interop` wiring in the session.
 - **RAW capture**: Separate JPEG and RAW output configurations into discrete build steps.
@@ -102,16 +106,20 @@ See [modern-apis](references/modern-apis.md) for current recommendations.
 
 ### Code quality and architectural rules
 
-Adhere to the following Android ecosystem standard patterns when building your camera implementations:
+Adhere to the following Android ecosystem standard patterns when building your
+camera implementations:
 
 - **Testing, fakes over mocks** : Avoid mocking libraries like `Mockito`, especially for multi-step CameraX interfaces like `ImageProxy`. Build "Fakes" to verify state rather than unreliable implementation details.
 - **Google Truth assertions** : Use `assertThat` over standard `JUnit` assertions like `assertEquals` for improved readability.
 - **Explicit test runners** : Always define an explicit `@RunWith` for test classes to ensure the CI environment executes them correctly.
-- **Semantic UI merging** : When building custom camera controls in Compose, such as a button with an `Icon` and `Text`, use `semantics { mergeDescendants = true }` to ensure screen readers announce them as a single, coherent unit.
+- **Semantic UI merging** : When building custom camera controls in Compose, such as a button with an `Icon` and `Text`, use `semantics {
+  mergeDescendants = true }` to ensure screen readers announce them as a single, coherent unit.
 
 ## Hardware and device diversity
 
-Camera apps run on a wide variety of hardware, from mobile phones and foldables to tablets, laptops, and even smart appliances. Have consideration for the specific hardware the app is running on.
+Camera apps run on a wide variety of hardware, from mobile phones and
+foldables to tablets, laptops, and even smart appliances. Have consideration
+for the specific hardware the app is running on.
 
 - **Form factors**: Account for screen size and orientation changes on foldables and tablets.
 - **Multi-camera arrays**: Some devices have a rear-facing camera and a front-facing camera. Other devices have multiple rear-facing cameras, such as wide-angle and telephoto lenses.

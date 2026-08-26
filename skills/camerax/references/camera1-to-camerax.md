@@ -7,9 +7,9 @@
 
 ## Initialize `ProcessCameraProvider`
 
-Request the `ProcessCameraProvider` and bind use cases to the Activity or Fragment lifecycle.
+Request the `ProcessCameraProvider` and bind use cases to the Activity or
+Fragment lifecycle.
 
-<br />
 
 ```kotlin
 val context = LocalContext.current
@@ -36,7 +36,6 @@ LaunchedEffect(context, lifecycleOwner) {
   )
   val cameraControl = camera.cameraControl
 }
-   
 ```
 
 <br />
@@ -51,25 +50,21 @@ Use `androidx.camera.view.PreviewView`.
 
 1. **Set up preview**:
 
-   <br />
 
    ```kotlin
    preview.setSurfaceProvider(previewView.surfaceProvider)
-        
    ```
 
    <br />
 
 2. **Handle tap-to-focus**:
 
-   <br />
 
    ```kotlin
    val factory = previewView.meteringPointFactory
    val point = factory.createPoint(x, y) // x, y from touch event
    val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF).build()
    cameraControl?.startFocusAndMetering(action)
-        
    ```
 
    <br />
@@ -80,7 +75,6 @@ Use `androidx.camera.compose.CameraXViewfinder`.
 
 1. **Set up preview and SurfaceRequest**:
 
-   <br />
 
    ```kotlin
    var surfaceRequest by remember { mutableStateOf<SurfaceRequest?>(null) }
@@ -89,14 +83,12 @@ Use `androidx.camera.compose.CameraXViewfinder`.
        setSurfaceProvider { request -> surfaceRequest = request }
      }
    }
-        
    ```
 
    <br />
 
 2. **Render viewfinder**:
 
-   <br />
 
    ```kotlin
    surfaceRequest?.let { request ->
@@ -106,14 +98,12 @@ Use `androidx.camera.compose.CameraXViewfinder`.
        modifier = Modifier
      )
    }
-        
    ```
 
    <br />
 
 3. **Handle tap-to-focus in Compose**:
 
-   <br />
 
    ```kotlin
    // Inside your tap gesture handler...
@@ -125,14 +115,12 @@ Use `androidx.camera.compose.CameraXViewfinder`.
    val point = factory.createPoint(surfaceCoords.x, surfaceCoords.y)
    val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF).build()
    cameraControl?.startFocusAndMetering(action)
-        
    ```
 
    <br />
 
 4. **Update target rotation for Compose**:
 
-   <br />
 
    ```kotlin
    LaunchedEffect(configuration) {
@@ -142,16 +130,15 @@ Use `androidx.camera.compose.CameraXViewfinder`.
        preview.targetRotation = rotation
      }
    }
-        
    ```
 
    <br />
 
 ## Capture a photo
 
-Use the `ImageCapture` use case to take the picture. The `ImageProxy` handles rotation directly.
+Use the `ImageCapture` use case to take the picture. The `ImageProxy` handles
+rotation directly.
 
-<br />
 
 ```kotlin
 imageCapture.takePicture(
@@ -183,16 +170,15 @@ imageCapture.takePicture(
     }
   }
 )
-   
 ```
 
 <br />
 
 ## Switch cameras
 
-To flip between front and rear cameras, change the `CameraSelector` and retrigger the `ProcessCameraProvider` logic.
+To flip between front and rear cameras, change the `CameraSelector` and
+retrigger the `ProcessCameraProvider` logic.
 
-<br />
 
 ```kotlin
 lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
@@ -200,7 +186,6 @@ lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
 } else {
   CameraSelector.LENS_FACING_BACK
 }
-   
 ```
 
 <br />

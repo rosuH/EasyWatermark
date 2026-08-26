@@ -1,6 +1,6 @@
-When creating a Glimmer Card component, refer to the following implementation samples in `CardSamples.kt`:
+When creating a Glimmer Card component, refer to the following implementation
+samples in `CardSamples.kt`:
 
-<br />
 
 ```kotlin
 /*
@@ -291,8 +291,6 @@ fun placeholderImagePainter(intrinsicSize: Size): Painter =
  * bitmap
  */
 private val MyHeaderImage = placeholderImagePainter(Size(1000f, 1000f))
-
-   
 ```
 
 <br />

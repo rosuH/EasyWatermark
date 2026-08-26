@@ -53,7 +53,7 @@ fun DynamicColorSchemeSample() {
             if (!hasDynamicColors) {
                 item { Text("Dynamic color is not available.") }
             }
-            items(5) { index ->
+            items(5)> { index -
                 // The button's defaults will pick up the dynamic primary color from the
                 // MaterialTheme
                 Button(

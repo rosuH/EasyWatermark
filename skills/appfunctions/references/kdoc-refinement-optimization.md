@@ -5,7 +5,8 @@ Optimizes AppFunction KDoc for AI agents and Model Context Protocol.
 ### Workflow: Agent-centric documentation
 
 1. **Identify the core outcome** : Start the description with a strong imperative verb, for example, "Search", "Create", or "Update". Focus on the *user benefit*, not the code implementation.
-2. **Workflow dependencies** : Explicitly state if another function must be called first using the standard phrase: **Required workflow: Call "Function A" first to "Objective"**.
+2. **Workflow dependencies** : Explicitly state if another function must be called first using the standard phrase: **Required workflow: Call "Function
+   A" first to "Objective"**.
 3. **Parameter documentation** :
    - For **functions** : Use specific `@param` tags. Isolate validation rules and default values here.
    - For **serializables** : Use inline KDoc directly for each property declaration. KSP **won't** extract documentation from class-level tags.
@@ -13,7 +14,8 @@ Optimizes AppFunction KDoc for AI agents and Model Context Protocol.
 
 ### Workflow: Global app description for server instructions
 
-When writing the `appfn:description` for `app_metadata.xml`, follow these instructions:
+When writing the `appfn:description` for `app_metadata.xml`, follow these
+instructions:
 
 1. **Capture cross-function relationships**: Explain dependencies or sequences between tools, for example, "Always call 'authenticate' before fetching data.".
 2. **Document operational patterns**: Guide the LLM on token-conserving usage, for example, "Use 'batch_update' over multiple 'update' calls."
@@ -27,15 +29,19 @@ When writing the `appfn:description` for `app_metadata.xml`, follow these instru
 
 ### Descriptive, not imperative
 
-Describe what the function *does* , not what the LLM *must* do. Avoid phrases like "You must call this..." in favor of "This function provides...".
+Describe what the function *does* , not what the LLM *must* do. Avoid phrases
+like "You must call this..." in favor of "This function provides...".
 
 ### No "fluff"
 
-Remove conversational padding like "This method is used to..." or "Helpful for...". Be concise and technical.
+Remove conversational padding like "This method is used to..." or "Helpful
+for...". Be concise and technical.
 
 ### Inline KDoc for serializables
 
-**Mandatory** : For `@AppFunctionSerializable` classes, documentation must be inline for each property. KSP ignores class-level `@param` or `@property` tags for these classes.
+**Mandatory** : For `@AppFunctionSerializable` classes, documentation must be
+inline for each property. KSP ignores class-level `@param` or `@property` tags
+for these classes.
 
 ## Examples
 

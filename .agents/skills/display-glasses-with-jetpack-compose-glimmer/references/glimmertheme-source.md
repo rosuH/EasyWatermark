@@ -1,6 +1,6 @@
-When implementing Glimmer styles, refer to the following source code in `GlimmerTheme.kt`:
+When implementing Glimmer styles, refer to the following source code in
+`GlimmerTheme.kt`:
 
-<br />
 
 ```kotlin
 /*
@@ -177,8 +177,6 @@ private val _localGlimmerTheme: ProvidableCompositionLocal<GlimmerTheme> =
     staticCompositionLocalOf {
         GlimmerTheme()
     }
-
-   
 ```
 
 <br />

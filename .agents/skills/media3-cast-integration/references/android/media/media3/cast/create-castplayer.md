@@ -1,36 +1,48 @@
-The [`CastPlayer`](https://developer.android.com/reference/androidx/media3/cast/CastPlayer) is a Jetpack Media3 [Player](https://developer.android.com/reference/kotlin/androidx/media3/common/Player) implementation that supports both local playback and casting to a remote Cast-enabled device. [`CastPlayer`](https://developer.android.com/reference/androidx/media3/cast/CastPlayer) simplifies adding cast functionality to your app and provides rich features to seamlessly switch between local and remote playback. This guide shows you how to integrate [`CastPlayer`](https://developer.android.com/reference/androidx/media3/cast/CastPlayer) into your media app.
+The [`CastPlayer`](https://developer.android.com/reference/androidx/media3/cast/CastPlayer) is a Jetpack Media3 [Player](https://developer.android.com/reference/kotlin/androidx/media3/common/Player) implementation that supports
+both local playback and casting to a remote Cast-enabled device. [`CastPlayer`](https://developer.android.com/reference/androidx/media3/cast/CastPlayer)
+simplifies adding cast functionality to your app and provides rich features to
+seamlessly switch between local and remote playback. This guide shows you how to
+integrate [`CastPlayer`](https://developer.android.com/reference/androidx/media3/cast/CastPlayer) into your media app.
 
 To integrate Cast with other platforms, see the [Cast SDK](https://developers.google.com/cast/docs/developers).
 
 ## Get a Cast-enabled device
 
-To test `CastPlayer`, you need a [Cast-enabled device](https://store.google.com/gb/category/connected_home?hl=en-GB). Choices include Android TV, Chromecast, smart speakers, and smart displays. Verify that your device is set up and connected to the same Wi-Fi network as your development mobile for discovery.
+To test `CastPlayer`, you need a [Cast-enabled device](https://store.google.com/gb/category/connected_home?hl=en-GB). Choices include Android
+TV, Chromecast, smart speakers, and smart displays. Verify that your device is
+set up and connected to the same Wi-Fi network as your development mobile for
+discovery.
 
 ## Add build dependencies
 
-To start using `CastPlayer`, add the AndroidX Media3 and `CastPlayer` dependencies to the `build.gradle` file of your app module.
+To start using `CastPlayer`, add the AndroidX Media3 and `CastPlayer`
+dependencies to the `build.gradle` file of your app module.
 
 ### Kotlin
 
-    implementation("androidx.media3:media3-exoplayer:1.10.1")
-    implementation("androidx.media3:media3-ui:1.10.1")
-    implementation("androidx.media3:media3-session:1.10.1")
-    implementation("androidx.media3:media3-cast:1.10.1")
+    implementation("androidx.media3:media3-exoplayer:1.11.0")
+    implementation("androidx.media3:media3-ui:1.11.0")
+    implementation("androidx.media3:media3-session:1.11.0")
+    implementation("androidx.media3:media3-cast:1.11.0")
 
 ### Groovy
 
-    implementation "androidx.media3:media3-exoplayer:1.10.1"
-    implementation "androidx.media3:media3-ui:1.10.1"
-    implementation "androidx.media3:media3-session:1.10.1"
-    implementation "androidx.media3:media3-cast:1.10.1"
+    implementation "androidx.media3:media3-exoplayer:1.11.0"
+    implementation "androidx.media3:media3-ui:1.11.0"
+    implementation "androidx.media3:media3-session:1.11.0"
+    implementation "androidx.media3:media3-cast:1.11.0"
 
 ## Configure your CastPlayer
 
-To configure the [`CastPlayer`](https://developer.android.com/reference/androidx/media3/cast/CastPlayer), update your `AndroidManifest.xml` file with an options provider.
+To configure the [`CastPlayer`](https://developer.android.com/reference/androidx/media3/cast/CastPlayer), update your `AndroidManifest.xml` file with an
+options provider.
 
 ### Options provider
 
-The [`CastPlayer`](https://developer.android.com/reference/androidx/media3/cast/CastPlayer) requires an options provider to configure its behavior. For a basic setup, you can use the [`DefaultCastOptionsProvider`](https://developer.android.com/reference/androidx/media3/cast/DefaultCastOptionsProvider) by adding it to your `AndroidManifest.xml` file. This uses default settings, including the default receiver application.
+The [`CastPlayer`](https://developer.android.com/reference/androidx/media3/cast/CastPlayer) requires an options provider to configure its behavior. For a
+basic setup, you can use the [`DefaultCastOptionsProvider`](https://developer.android.com/reference/androidx/media3/cast/DefaultCastOptionsProvider) by adding it to your
+`AndroidManifest.xml` file. This uses default settings, including the default
+receiver application.
 
     <application>
       ...
@@ -40,11 +52,15 @@ The [`CastPlayer`](https://developer.android.com/reference/androidx/media3/cast/
       ...
     </application>
 
-To customize the configuration, implement your own custom `OptionsProvider`. See the [CastOptions](https://developer.android.com/media/media3/cast/customize-castoptions) guide to learn how.
+To customize the configuration, implement your own custom `OptionsProvider`. See
+the [CastOptions](https://developer.android.com/media/media3/cast/customize-castoptions) guide to learn how.
 
 ### Add a receiver for media transfers
 
-Adding a `MediaTransferReceiver` to your manifest enables the System UI to discover Cast-enabled devices on the network and reroute media without opening the app activity. For example, a user can change the device playing your app's media from the [media notification](https://developer.android.com/media/implement/surfaces/mobile).
+Adding a `MediaTransferReceiver` to your manifest enables the System UI to
+discover Cast-enabled devices on the network and reroute media without opening
+the app activity. For example, a user can change the device playing your app's
+media from the [media notification](https://developer.android.com/media/implement/surfaces/mobile).
 
     <application>
       ...
@@ -54,10 +70,19 @@ Adding a `MediaTransferReceiver` to your manifest enables the System UI to disco
 
 ## Build a CastPlayer
 
-For remote playback with Cast, your app should be able to manage playback even when the user isn't interacting with an Activity from your app, such as through the system media notification. For this reason, you should create your `ExoPlayer` (for local playback) and `CastPlayer` (for remote playback) instances in a service, such as [MediaSessionService](https://developer.android.com/media/media3/session/background-playback#service-lifecycle) or [MediaLibraryService](https://developer.android.com/guide/topics/media/session/medialibraryservice). First, create your `ExoPlayer` instance and then when building your [`CastPlayer`](https://developer.android.com/reference/androidx/media3/cast/CastPlayer) instance, set `ExoPlayer` as the local player instance. You can then switch media playback between your mobile and the Cast-enabled device from the media notification or the lock screen notification. Media3 uses the **Output Switcher** feature to handle player transfers when the output route changes from local to remote or from remote to local.
+For remote playback with Cast, your app should be able to manage playback even
+when the user isn't interacting with an Activity from your app, such as through
+the system media notification. For this reason, you should create your
+`ExoPlayer` (for local playback) and `CastPlayer` (for remote playback)
+instances in a service, such as [MediaSessionService](https://developer.android.com/media/media3/session/background-playback#service-lifecycle) or [MediaLibraryService](https://developer.android.com/guide/topics/media/session/medialibraryservice).
+First, create your `ExoPlayer` instance and then when building your
+[`CastPlayer`](https://developer.android.com/reference/androidx/media3/cast/CastPlayer) instance, set `ExoPlayer` as the local player instance. You can
+then switch media playback between your mobile and the Cast-enabled device from
+the media notification or the lock screen notification. Media3 uses the **Output
+Switcher** feature to handle player transfers when the output route changes from
+local to remote or from remote to local.
 ![Screenshot showing the Output Switcher UI in notifications.](https://developer.android.com/static/media/media3/cast/images/output_switcher.jpeg) Figure 1: (a) Device chip on Media notification (b) Cast-enabled devices shown on tapping the device chip (c) Device chip on Lock screen notification
 
-<br />
 
 ### Kotlin
 
@@ -70,8 +95,6 @@ override fun onCreate() {
 
   mediaSession = MediaSession.Builder(context, castPlayer).build()
 }
-
-      
 ```
 
 ### Java
@@ -87,8 +110,6 @@ public void onCreate() {
   mediaSession =
       new MediaSession.Builder(/* context= */ context, /* player= */ castPlayer).build();
 }
-
-      
 ```
 
 <br />
@@ -98,11 +119,17 @@ public void onCreate() {
 
 ## Add UI elements
 
-Add a [`MediaRouteButton`](https://developer.android.com/reference/androidx/mediarouter/app/MediaRouteButton) to your app's UI. Tapping the [`MediaRouteButton`](https://developer.android.com/reference/androidx/mediarouter/app/MediaRouteButton) opens a dialog displaying a list of available Cast-enabled devices on the network. When the user selects a device, the media playback is transferred from the mobile to the selected receiver device. This section shows you how to add the button and listen for events to update your UI when playback switches between local and remote devices.
+Add a [`MediaRouteButton`](https://developer.android.com/reference/androidx/mediarouter/app/MediaRouteButton) to your app's UI. Tapping the [`MediaRouteButton`](https://developer.android.com/reference/androidx/mediarouter/app/MediaRouteButton)
+opens a dialog displaying a list of available Cast-enabled devices on the
+network. When the user selects a device, the media playback is transferred from
+the mobile to the selected receiver device. This section shows you how to add
+the button and listen for events to update your UI when playback switches
+between local and remote devices.
 
 ### Set the MediaRouteButton
 
-There are four ways to add the [`MediaRouteButton`](https://developer.android.com/reference/androidx/mediarouter/app/MediaRouteButton) to your activity's UI. The best choice depends on your app's design and requirements.
+There are four ways to add the [`MediaRouteButton`](https://developer.android.com/reference/androidx/mediarouter/app/MediaRouteButton) to your activity's UI. The
+best choice depends on your app's design and requirements.
 
 - **Compose UI**: Add a button composable.
 - **Views UI** :
@@ -120,9 +147,9 @@ There are four ways to add the [`MediaRouteButton`](https://developer.android.co
 
 #### Add a Composable `MediaRouteButton` to the Player
 
-You can add the [`MediaRouteButton`](https://developer.android.com/reference/androidx/mediarouter/app/MediaRouteButton) Composable to your player's UI. For more information, see the [Compose](https://developer.android.com/media/media3/ui/compose) guide.
+You can add the [`MediaRouteButton`](https://developer.android.com/reference/androidx/mediarouter/app/MediaRouteButton) Composable to your player's UI. For more
+information, see the [Compose](https://developer.android.com/media/media3/ui/compose) guide.
 
-<br />
 
 ```kotlin
 @Composable
@@ -147,17 +174,17 @@ fun PlayerComposeView(player: Player, modifier: Modifier = Modifier) {
 fun PrimaryControls(player: Player, modifier: Modifier = Modifier) {
   // ...
 }
-
-   
 ```
 
 <br />
 
 #### Add the `MediaRouteButton` to the PlayerView
 
-You can add the [`MediaRouteButton`](https://developer.android.com/reference/androidx/mediarouter/app/MediaRouteButton) directly within the [PlayerView](https://developer.android.com/guide/topics/media/ui/playerview)'s UI controls. After setting the [MediaController](https://developer.android.com/guide/topics/media/session/mediacontroller) as the player for your `PlayerView`, provide a `MediaRouteButtonViewProvider` to display the Cast button on the Player.
+You can add the [`MediaRouteButton`](https://developer.android.com/reference/androidx/mediarouter/app/MediaRouteButton) directly within the [PlayerView](https://developer.android.com/guide/topics/media/ui/playerview)'s UI
+controls. After setting the [MediaController](https://developer.android.com/guide/topics/media/session/mediacontroller) as the player for your
+`PlayerView`, provide a `MediaRouteButtonViewProvider` to display the Cast
+button on the Player.
 
-<br />
 
 ### Kotlin
 
@@ -168,7 +195,6 @@ override fun onStart() {
   playerView.player = mediaController
   playerView.setMediaRouteButtonViewProvider(MediaRouteButtonViewProvider())
 }
-      
 ```
 
 ### Java
@@ -181,14 +207,14 @@ public void onStart() {
   playerView.setPlayer(mediaController);
   playerView.setMediaRouteButtonViewProvider(new MediaRouteButtonViewProvider());
 }
-      
 ```
 
 <br />
 
 #### Add the `MediaRouteButton` to the app bar menu
 
-To set up a [`MediaRouteButton`](https://developer.android.com/reference/androidx/mediarouter/app/MediaRouteButton) in the app bar menu, create an XML menu and override `onCreateOptionsMenu` in your `Activity`.
+To set up a [`MediaRouteButton`](https://developer.android.com/reference/androidx/mediarouter/app/MediaRouteButton) in the app bar menu, create an XML menu and
+override `onCreateOptionsMenu` in your `Activity`.
 
     <menu xmlns:android="http://schemas.android.com/apk/res/android"
              xmlns:app="http://schemas.android.com/apk/res-auto">
@@ -198,7 +224,6 @@ To set up a [`MediaRouteButton`](https://developer.android.com/reference/android
         app:actionProviderClass="androidx.mediarouter.app.MediaRouteActionProvider"/>
     </menu>
 
-<br />
 
 ### Kotlin
 
@@ -224,7 +249,6 @@ override fun onCreateOptionsMenu(menu: Menu): Boolean {
   // ...
   return true
 }
-      
 ```
 
 ### Java
@@ -253,7 +277,6 @@ public boolean onCreateOptionsMenu(Menu menu) {
   // ...
   return true;
 }
-      
 ```
 
 <br />
@@ -268,9 +291,9 @@ You can set up a [`MediaRouteButton`](https://developer.android.com/reference/an
           android:layout_height="wrap_content"
           app:mediaRouteButtonTint="@android:color/white" />
 
-To complete the setup for the [`MediaRouteButton`](https://developer.android.com/reference/androidx/mediarouter/app/MediaRouteButton), use the Media3 Cast `MediaRouteButtonFactory` in your `Activity` code.
+To complete the setup for the [`MediaRouteButton`](https://developer.android.com/reference/androidx/mediarouter/app/MediaRouteButton), use the Media3 Cast
+`MediaRouteButtonFactory` in your `Activity` code.
 
-<br />
 
 ### Kotlin
 
@@ -282,7 +305,6 @@ override fun onCreate(savedInstanceState: Bundle?) {
     val unused = MediaRouteButtonFactory.setUpMediaRouteButton(context, it)
   }
 }
-      
 ```
 
 ### Java
@@ -296,16 +318,18 @@ public void onCreate(Bundle savedInstanceState) {
   ListenableFuture<Void> setUpFuture =
       MediaRouteButtonFactory.setUpMediaRouteButton(context, button);
 }
-      
 ```
 
 <br />
 
 ### Activity Listener
 
-Create a `Player.Listener` in your `Activity` to listen for changes to media playback location. When the `playbackType` changes between `PLAYBACK_TYPE_LOCAL` and `PLAYBACK_TYPE_REMOTE`, you can adjust your UI as needed. To prevent memory leaks and to confine listener activity to only when your app is visible, register the listener in `onStart` and unregister it in `onStop`:
+Create a `Player.Listener` in your `Activity` to listen for changes to media
+playback location. When the `playbackType` changes between `PLAYBACK_TYPE_LOCAL`
+and `PLAYBACK_TYPE_REMOTE`, you can adjust your UI as needed. To prevent memory
+leaks and to confine listener activity to only when your app is visible,
+register the listener in `onStart` and unregister it in `onStop`:
 
-<br />
 
 ### Kotlin
 
@@ -330,7 +354,6 @@ override fun onStop() {
   super.onStop()
   mediaController.removeListener(playerListener)
 }
-      
 ```
 
 ### Java
@@ -359,9 +382,9 @@ protected void onStop() {
   super.onStop();
   mediaController.removeListener(playerListener);
 }
-      
 ```
 
 <br />
 
-For more information about listening and responding to playback events, see the [player events](https://developer.android.com/media/media3/exoplayer/listening-to-player-events) guide.
+For more information about listening and responding to playback events, see the
+[player events](https://developer.android.com/media/media3/exoplayer/listening-to-player-events) guide.

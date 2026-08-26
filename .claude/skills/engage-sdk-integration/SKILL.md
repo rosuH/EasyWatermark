@@ -6,7 +6,7 @@ description: Helps developers integrate, debug, and resolve Play Engage SDK impl
 license: Complete terms in LICENSE.txt
 metadata:
   author: Google LLC
-  last-updated: '2026-08-06'
+  last-updated: '2026-08-19'
   keywords:
   - android
   - engage
@@ -15,7 +15,9 @@ metadata:
   - google play
 ---
 
-This skill guides you through integrating the Play Engage SDK into an Android app. It ensures that the code follows the mandatory structure and uses the required Engage entities for each vertical.
+This skill guides you through integrating the Play Engage SDK into an Android
+app. It ensures that the code follows the mandatory structure and uses the
+required Engage entities for each vertical.
 
 ## Workflow
 
@@ -52,7 +54,8 @@ Follow these steps to assist the developer:
    - Ask the developer to provide the source of actual data you'll publish.
    - Once you identify the data source, use it to fetch the data in the app's local model schema.
    - Use `{ENGAGE_CODE_DIR}/ItemToEntityConverter` to convert this data to an Engage entity.
-   - Use obtained Engage entity model data with `{ENGAGE_CODE_DIR}/ ClusterRequestFactory` to get cluster requests.
+   - Use obtained Engage entity model data with `{ENGAGE_CODE_DIR}/
+     ClusterRequestFactory` to get cluster requests.
    - Call corresponding cluster publishing method obtained from `{VERTICAL}.md` in the **[references/schemas/](references/schemas)** directory with the obtained request in previous step in `{ENGAGE_CODE_DIR}/EngageWorker`.
 5. **Gradle and manifest updates:**
 
@@ -62,14 +65,20 @@ Follow these steps to assist the developer:
    - Provide the necessary `implementation` dependencies for `build.gradle` or `build.gradle.kts` from [patterns.md](references/patterns.md).
    - Provide the `<receiver>` and `<service>` declarations for `AndroidManifest.xml`.
    - Note: Except for TV, there aren't any vertical-specific imports. For all other verticals, `com.google.android.engage:engage-core:1.6.0` is sufficient.
-6. **Debugging:**
+6. **Debugging and verification**:
 
+   - **Self-verification checklist** : Before considering your work complete, you must verify that you've implemented all of the following:
+     - \[ \] Registered `EngageBroadcastReceiver` **statically** in `AndroidManifest.xml` (inside the `<application>` tag).
+     - \[ \] Registered `EngageBroadcastReceiver` **dynamically** by calling `EngageBroadcastReceiver.register(context)` in the `Application` class or main `Activity` class.
+     - \[ \] Implemented the `register` method in `EngageBroadcastReceiver`'s `companion object` to handle dynamic registration.
+     - \[ \] Handled empty data lists in `EngageWorker` (for example, by deleting the cluster instead of publishing empty data).
+     - \[ \] Used `--no-daemon` for all Gradle compilations.
    - Perform a Gradle sync.
-   - If errors occur, follow this resolution order:
-     - Fix import errors. For package `com.google.android.engage` or classes starting with `AppEngage`, verify the package name in the `{VERTICAL}.md` in **[references/schemas/](references/schemas)** directory or [common.md](references/common.md).
-     - Fix any other errors.
-   - Execute a full Gradle build and resolve any remaining compilation issues. Repeat this step until the Gradle build is successful.
-7. **User checklist:** At the end of code generation, notify the user to go through this checklist to verify that the integration is complete and as intended:
+   - If errors occur (such as import failures, namespace conflicts, or compile errors), read **[references/troubleshooting.md](references/troubleshooting.md)** to resolve them.
+   - Execute a Gradle compilation. You must run `./gradlew compileDebugUnitTestSources --no-daemon` or `./gradlew assembleDebug --no-daemon`. See **[references/troubleshooting.md](references/troubleshooting.md)** for compile rules and warnings about fast-compilation shortcuts. Repeat this step until compilation is successful.
+7. **User checklist:** At the end of code generation, notify the user to go
+   through this checklist to verify that the integration is complete and as
+   intended:
 
    - \[ \] Verify that all the Engage-related files are created in `{ENGAGE_CODE_DIR}/`:
      - `Constants`
@@ -87,7 +96,8 @@ Follow these steps to assist the developer:
 
 ## Reference materials
 
-- **FAQ:** [Engage FAQ](references/android/guide/playcore/engage/faq.md) - Refer to this document for answers to frequently asked questions from developers.
+- **FAQ:** [Engage FAQ](references/android/guide/playcore/engage/faq.md) - Refer to this document for answers to frequently
+  asked questions from developers.
 
 - **Vertical-specific guides:**
 

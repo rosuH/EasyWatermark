@@ -1,8 +1,11 @@
-Many Android APIs are designed with immutability in mind to prevent race conditions in async environments. However, this often trips up developers used to mutable builder patterns.
+Many Android APIs are designed with immutability in mind to prevent race
+conditions in async environments. However, this often trips up developers used
+to mutable builder patterns.
 
 ## Common immutable classes
 
-The following classes use fluent APIs that **return a new instance**. You must reassign the variable.
+The following classes use fluent APIs that **return a new instance**. You must
+reassign the variable.
 
 | Class | Methods that return a new instance | Result if not reassigned |
 |---|---|---|
@@ -17,7 +20,6 @@ The following classes use fluent APIs that **return a new instance**. You must r
 
 To set up video recording, use the following code:
 
-<br />
 
 ```kotlin
 // WRONG
@@ -40,7 +42,6 @@ run {
   pending = pending.withAudioEnabled() // Reassignment
   val active = pending.start(exec, listener)
 }
-   
 ```
 
 <br />
@@ -49,13 +50,11 @@ run {
 
 To set up the viewport, use the following code:
 
-<br />
 
 ```kotlin
 val viewport = ViewPort.Builder(Rational(width, height), displayRotation)
     .setScaleType(ViewPort.FILL_CENTER)
     .build()
-   
 ```
 
 <br />

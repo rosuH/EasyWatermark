@@ -1,4 +1,6 @@
-When you use ML Kit for features such as face mesh, object detection, or pose detection, the most common failure point is the coordinate disparity between the analysis image and the viewfinder UI.
+When you use ML Kit for features such as face mesh, object detection, or pose
+detection, the most common failure point is the coordinate disparity between the
+analysis image and the viewfinder UI.
 
 ## The mapping mindset
 
@@ -14,23 +16,25 @@ When you use ML Kit for features such as face mesh, object detection, or pose de
 
 ### Coordinate transformation matrix
 
-Android provides the `Viewport` and `UseCaseGroup` APIs to calculate the transformation matrix automatically. **Don't** calculate aspect ratio scaling manually.
+Android provides the `Viewport` and `UseCaseGroup` APIs to calculate the
+transformation matrix automatically. **Don't** calculate aspect ratio scaling
+manually.
 
-<br />
 
 ```kotlin
 val transform = previewView.viewPort?.let { viewPort ->
     // Use CameraX's built-in coordinate mapper
     viewPort.getTransformationMatrix(imageProxy.imageInfo.rotationDegrees)
 }
-   
 ```
 
 <br />
 
 ### Handling the "double rotation" bug
 
-ML Kit results, bounding boxes, are relative to the **rotated buffer**. If the device is in portrait, the buffer is often 480x640, landscape, but the screen is 1080x1920.
+ML Kit results, bounding boxes, are relative to the **rotated buffer**. If the
+device is in portrait, the buffer is often 480x640, landscape, but the screen
+is 1080x1920.
 
 To map the coordinates, use the following workflow:
 
@@ -40,20 +44,20 @@ To map the coordinates, use the following workflow:
 
 ### Face mesh and pose normalization
 
-For high-precision spatial analysis, for example, "Is the user's hand at a specific screen button?", use **normalized coordinates from 0.0 to 1.0**.
+For high-precision spatial analysis, for example, "Is the user's hand at a
+specific screen button?", use **normalized coordinates from 0.0 to 1.0**.
 
-<br />
 
 ```kotlin
 // Example: Converting a Pose landmark to a Screen Coordinate
 val screenX = landmark.position.x / analysisWidth * screenWidth
 val screenY = landmark.position.y / analysisHeight * screenHeight
-    
 ```
 
 <br />
 
-**Warning** : Always account for **mirrored lenses** . If the `LENS_FACING_FRONT` is used, you must flip the X-coordinate: `actualX = screenWidth - screenX`.
+**Warning** : Always account for **mirrored lenses** . If the `LENS_FACING_FRONT`
+is used, you must flip the X-coordinate: `actualX = screenWidth - screenX`.
 
 ### Overlays and canvas clipping
 

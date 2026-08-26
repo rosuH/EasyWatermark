@@ -80,7 +80,6 @@ internal data class SearchKey(
 ): NavRecipeKey {
     override val name: String = STRING_LITERAL_SEARCH
 }
-   
 ```
 
 ```
@@ -182,7 +181,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-   
 ```
 
 ```
@@ -363,8 +361,6 @@ private val MENU_OPTIONS_SEARCH = mapOf(
 
 private val MENU_LABELS_SEARCH = listOf(SearchKey::ageMin.name, SearchKey::ageMax.name)
 
-
-   
 ```
 
 ```
@@ -391,6 +387,4 @@ internal val URL_SEARCH = "$PATH_BASE/$PATH_SEARCH" +
         "&${SearchKey::ageMax.name}={${SearchKey::ageMax.name}}" +
         "&${SearchKey::firstName.name}={${SearchKey::firstName.name}}" +
         "&${SearchKey::location.name}={${SearchKey::location.name}}"
-
-   
 ```

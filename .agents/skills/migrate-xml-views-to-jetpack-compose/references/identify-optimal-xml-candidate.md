@@ -14,12 +14,18 @@ Prioritize layouts that meet the following criteria:
 
 ### 3. Risk assessment
 
-Evaluate the migration risk based on: \* **Reusability:** Find layouts with **minimum reuse** across the project to limit regression impact. \* **Accessibility:** Ensure the layout has an **easily accessible entry point** (e.g., used in a simple Activity, Fragment, or as a standalone include).
+Evaluate the migration risk based on:
+\* **Reusability:** Find layouts with **minimum reuse** across the project to limit regression impact.
+\* **Accessibility:** Ensure the layout has an **easily accessible entry point** (e.g., used in a simple Activity, Fragment, or as a standalone include).
 
 *** ** * ** ***
 
 ## Output requirements
 
-Provide a ranked list of the top 3-5 candidates. For each candidate, include: 1. **File path:** (e.g., `res/layout/item_user_profile.xml`) 2. **Rationale:** Why this is a good candidate based on the provided criteria. 3. **Complexity score:** A rating from 1-5 (1 being simplest). 4. **Dependency count:** List of custom/external views found within.
+Provide a ranked list of the top 3-5 candidates. For each candidate, include:
+1. **File path:** (e.g., `res/layout/item_user_profile.xml`)
+2. **Rationale:** Why this is a good candidate based on the provided criteria.
+3. **Complexity score:** A rating from 1-5 (1 being simplest).
+4. **Dependency count:** List of custom/external views found within.
 
 **Action:** If you support user interaction, ask the user to choose which XML to proceed with. Else proceed with the best option, based on the previous criteria.

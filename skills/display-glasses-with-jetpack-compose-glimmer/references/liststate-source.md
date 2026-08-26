@@ -1,6 +1,6 @@
-When creating a Glimmer List component, refer to the following source code in `GlimmerLazyListState.kt` for creating a state for the list:
+When creating a Glimmer List component, refer to the following source code in
+`GlimmerLazyListState.kt` for creating a state for the list:
 
-<br />
 
 ```kotlin
 /*
@@ -422,8 +422,6 @@ private val EmptyLazyListMeasureResult =
         density = Density(1f),
         childConstraints = Constraints(),
     )
-
-   
 ```
 
 <br />

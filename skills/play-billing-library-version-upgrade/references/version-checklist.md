@@ -1,6 +1,7 @@
 ## Play Billing Library: Smart Version-Specific Checklist
 
-Use this checklist to verify that every technical requirement between your \[Current Version\] and \[Target Version\] has been met.
+Use this checklist to verify that every technical requirement between your
+\[Current Version\] and \[Target Version\] has been met.
 
 ## PBL v1.x through v3.x
 

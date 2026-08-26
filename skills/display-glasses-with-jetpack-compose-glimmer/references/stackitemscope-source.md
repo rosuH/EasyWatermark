@@ -1,6 +1,6 @@
-When creating a Glimmer Stack component, refer to the following source code in `StackItemScope.kt` for setting the stack item scope:
+When creating a Glimmer Stack component, refer to the following source code in
+`StackItemScope.kt` for setting the stack item scope:
 
-<br />
 
 ```kotlin
 /*
@@ -435,8 +435,6 @@ private val SurfaceLow = Color(0xFF4F4F4F)
 private const val MaxItemScrimAlpha = 0.5f
 private const val MinWidestPointSearchResolution = 20
 private const val MaxWidestPointSearchResolution = 200
-
-   
 ```
 
 <br />

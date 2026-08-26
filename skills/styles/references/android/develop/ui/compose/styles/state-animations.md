@@ -1,8 +1,15 @@
 <br />
 
-The Styles API offers a declarative and streamlined approach to managing UI changes during interaction states like `hovered`, `focused`, and `pressed`. With this API, you can significantly decrease the boilerplate code typically required when using modifiers.
+The Styles API offers a declarative and streamlined approach to managing UI
+changes during interaction states like `hovered`, `focused`, and `pressed`. With
+this API, you can significantly decrease the boilerplate code typically required
+when using modifiers.
 
-To facilitate reactive styling, `StyleState` acts as a stable, read-only interface that tracks the active state of an element (such as its enabled, pressed, or focused status). Within a `StyleScope`, you can access this through the `state` property to implement conditional logic directly in your Style definitions.
+To facilitate reactive styling, `StyleState` acts as a stable, read-only
+interface that tracks the active state of an element (such as its enabled,
+pressed, or focused status). Within a `StyleScope`, you can access this through
+the `state` property to implement conditional logic directly in your Style
+definitions.
 
 ## State-based interaction: Hovered, focused, pressed, selected, enabled, toggled
 
@@ -14,13 +21,15 @@ Styles come with built-in support for common interactions:
 - Enabled
 - Toggled
 
-It's also possible to support custom states. See the [Custom State Styling with StyleState](https://developer.android.com/develop/ui/compose/styles/state-animations#custom-state) section for more information.
+It's also possible to support custom states. See the [Custom State Styling with
+StyleState](https://developer.android.com/develop/ui/compose/styles/state-animations#custom-state) section for more information.
 
 ### Handle interaction states with Style parameters
 
-The following example demonstrates modifying the `background` and `borderColor` in response to interaction states, specifically switching to purple when hovered and blue when focused:
+The following example demonstrates modifying the `background` and `borderColor`
+in response to interaction states, specifically switching to purple when hovered
+and blue when focused:
 
-<br />
 
 ```kotlin
 @Preview
@@ -47,17 +56,16 @@ private fun OpenButton() {
         }
     )
 }
-
-   
 ```
 
 <br />
 
 **Figure 1.** Changing background color based on hovered and focused states.
 
-You can also create nested state definitions. For example, you can define a specific style for when a button is being both pressed and hovered simultaneously:
+You can also create nested state definitions. For example, you can define a
+specific style for when a button is being both pressed and hovered
+simultaneously:
 
-<br />
 
 ```kotlin
 @Composable
@@ -91,7 +99,6 @@ private fun OpenButton_CombinedStates() {
         }
     )
 }
-   
 ```
 
 <br />
@@ -100,15 +107,18 @@ private fun OpenButton_CombinedStates() {
 
 ### Custom composables with Modifier.styleable
 
-When creating your own `styleable` components, you must connect an `interactionSource` to a `styleState`. Then, pass this state into `Modifier.styleable` to utilize it.
+When creating your own `styleable` components, you must connect an
+`interactionSource` to a `styleState`. Then, pass this state into
+`Modifier.styleable` to utilize it.
 
-Consider a scenario where your design system includes a `GradientButton`. You may want to create a `LoginButton` that inherits from `GradientButton`, but alters its colors during interactions, like being pressed.
+Consider a scenario where your design system includes a `GradientButton`. You
+may want to create a `LoginButton` that inherits from `GradientButton`, but
+alters its colors during interactions, like being pressed.
 
 - To enable `interactionSource` style updates, include an `interactionSource` as a parameter within your composable. Use the provided parameter or, if one is not supplied, initialize a new `MutableInteractionSource`.
 - Initialize the `styleState` by providing the `interactionSource`. Make sure the `styleState`'s enabled status reflects the value of the provided enabled parameter.
 - Assign the `interactionSource` to the `focusable` and `clickable` modifiers. Finally, apply the `styleState` to the modifier's `styleable` parameter.
 
-<br />
 
 ```kotlin
 @Composable
@@ -137,14 +147,13 @@ private fun GradientButton(
         content = content,
     )
 }
-   
 ```
 
 <br />
 
-You can now use the `interactionSource` state to drive style modifications with the pressed, focused, and hovered options inside the style block:
+You can now use the `interactionSource` state to drive style modifications with
+the pressed, focused, and hovered options inside the style block:
 
-<br />
 
 ```kotlin
 @Preview
@@ -165,7 +174,6 @@ fun LoginButton() {
         BaseText("Login")
     }
 }
-   
 ```
 
 <br />
@@ -174,9 +182,12 @@ fun LoginButton() {
 
 ## Animate style changes
 
-Styles state changes come with built-in animation support. You can wrap the new property within any state change block with `animate` to automatically add animations between different states. This is similar to the `animate*AsState` APIs. The following example animates the `borderColor` from black to blue when the state changes to focused:
+Styles state changes come with built-in animation support. You can wrap the new
+property within any state change block with `animate` to automatically add
+animations between different states. This is similar to the `animate*AsState`
+APIs. The following example animates the `borderColor` from black to blue when
+the state changes to focused:
 
-<br />
 
 ```kotlin
 val animatingStyle = Style {
@@ -211,16 +222,16 @@ private fun AnimatingStyleChanges() {
 
     }
 }
-   
 ```
 
 <br />
 
 **Figure 4.** Animating color changes on press.
 
-The `animate` API accepts an `animationSpec` to change the duration or shape of the animation curve. The following example animates the size of the box with a `spring` spec:
+The `animate` API accepts an `animationSpec` to change the duration or shape of
+the animation curve. The following example animates the size of the box with a
+`spring` spec:
 
-<br />
 
 ```kotlin
 val animatingStyleSpec = Style {
@@ -256,7 +267,6 @@ fun AnimatingStyleChangesSpec() {
         )
         .styleable(styleState, animatingStyleSpec))
 }
-   
 ```
 
 <br />
@@ -265,7 +275,11 @@ fun AnimatingStyleChangesSpec() {
 
 ## Custom state styling with StyleState
 
-Depending on your composable use case, you may have different styles that are backed by custom states. For example, if you have a media app, you may want to have different styling for the buttons in your `MediaPlayer` composable depending on the playback state of the player. Follow these steps to create and use your own custom state:
+Depending on your composable use case, you may have different styles that are
+backed by custom states. For example, if you have a media app, you may want to
+have different styling for the buttons in your `MediaPlayer` composable
+depending on the playback state of the player. Follow these steps to create and
+use your own custom state:
 
 1. Define custom key
 2. Create `StyleState` extension
@@ -273,9 +287,11 @@ Depending on your composable use case, you may have different styles that are ba
 
 ### Define custom key
 
-To create a custom state-based style, first create a [`StyleStateKey`](https://developer.android.com/reference/kotlin/androidx/compose/foundation/style/StyleStateKey) and pass in the default state value. When the app launches, the media player is in the `Stopped` state, so it's initialized in this way:
+To create a custom state-based style, first create a
+[`StyleStateKey`](https://developer.android.com/reference/kotlin/androidx/compose/foundation/style/StyleStateKey) and pass in the default state value. When the
+app launches, the media player is in the `Stopped` state, so it's initialized in
+this way:
 
-<br />
 
 ```kotlin
 enum class PlayerState {
@@ -285,16 +301,16 @@ enum class PlayerState {
 }
 
 val playerStateKey = StyleStateKey(PlayerState.Stopped)
-   
 ```
 
 <br />
 
 ### Create StyleState extension functions
 
-Define an extension function on `StyleState` to query the current `playState`. Then, create extension functions on `StyleScope` with your custom states passing in the `playStateKey`, a lambda with the specific state, and the style.
+Define an extension function on `StyleState` to query the current `playState`.
+Then, create extension functions on `StyleScope` with your custom states passing
+in the `playStateKey`, a lambda with the specific state, and the style.
 
-<br />
 
 ```kotlin
 // Extension Function on MutableStyleState to query and set the current playState
@@ -308,16 +324,16 @@ fun StyleScope.playerPlaying(block: () -> Unit) {
 fun StyleScope.playerPaused(block: () -> Unit) {
     state(playerStateKey, block, { key, state -> state[key] == PlayerState.Paused })
 }
-   
 ```
 
 <br />
 
 ### Link to custom state
 
-Define the `styleState` in your composable and set the `styleState.playState` equal to incoming state. Pass `styleState` into the `styleable` function on the modifier.
+Define the `styleState` in your composable and set the `styleState.playState`
+equal to incoming state. Pass `styleState` into the `styleable` function on the
+modifier.
 
-<br />
 
 ```kotlin
 @Composable
@@ -336,14 +352,13 @@ fun MediaPlayer(
         ///..
     }
 }
-   
 ```
 
 <br />
 
-Within the `style` lambda, you can apply state-based styling for custom states, using the previously defined extension functions.
+Within the `style` lambda, you can apply state-based styling for custom states,
+using the previously defined extension functions.
 
-<br />
 
 ```kotlin
 @Composable
@@ -370,14 +385,12 @@ fun StyleStateKeySample() {
         style = style,
         state = PlayerState.Stopped)
 }
-   
 ```
 
 <br />
 
 The following code is the full snippet for this example:
 
-<br />
 
 ```kotlin
 enum class PlayerState {
@@ -443,7 +456,6 @@ fun StyleStateKeySample() {
         style = style,
         state = PlayerState.Stopped)
 }
-   
 ```
 
 <br />

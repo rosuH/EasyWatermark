@@ -1,6 +1,6 @@
-When creating a Glimmer Stack component, refer to the following source code in `StackState.kt` for creating a state for the stack:
+When creating a Glimmer Stack component, refer to the following source code in
+`StackState.kt` for creating a state for the stack:
 
-<br />
 
 ```kotlin
 /*
@@ -320,8 +320,6 @@ internal constructor(private val pagerState: PagerState, private val topItemStat
  * the next item.
  */
 private const val FocusMoveThreshold = 0.6f
-
-   
 ```
 
 <br />

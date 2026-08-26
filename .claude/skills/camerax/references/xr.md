@@ -1,4 +1,5 @@
-Developing camera features for XR devices, headsets, and AR glasses requires a shift from 2D pixel-pushing to 3D spatial awareness.
+Developing camera features for XR devices, headsets, and AR glasses requires a
+shift from 2D pixel-pushing to 3D spatial awareness.
 
 ## Understand the XR development mindset
 
@@ -14,7 +15,8 @@ Developing camera features for XR devices, headsets, and AR glasses requires a s
 
 ### API selection
 
-On XR devices, standard `CameraX` implementations are often restricted or insufficient. Always use spatial software development kits (SDKs):
+On XR devices, standard `CameraX` implementations are often restricted or
+insufficient. Always use spatial software development kits (SDKs):
 
 - **ARCore**: Use ARCore for plane detection, depth sensing, and motion tracking.
 - **OpenXR**: Use OpenXR as the cross-platform standard for VR and AR rendering and input.
@@ -24,13 +26,13 @@ On XR devices, standard `CameraX` implementations are often restricted or insuff
 
 Unlike a 2D viewport, XR passthrough is often system-managed.
 
-**\[Key requirement\] Frame synchronization**: Synchronize your application's frame clock with the headset's head-mounted display (HMD) pose.
+**\[Key requirement\] Frame synchronization**: Synchronize your application's
+frame clock with the headset's head-mounted display (HMD) pose.
 
 ```kotlin
 // Example: Querying the spatial pose for the current camera frame
 val headPose = xrSession.getHeadPose(frameTime)
 val projectionMatrix = headPose.getProjectionMatrix(eyeIndex)
-   
 ```
 
 <br />

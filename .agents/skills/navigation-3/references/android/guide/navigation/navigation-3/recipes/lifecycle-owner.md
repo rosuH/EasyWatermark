@@ -182,6 +182,4 @@ private fun LogLifecycleEffect(screenName: String) {
     }
     // Note that ON_DESTROY event is not observable from composables.
 }
-
-   
 ```

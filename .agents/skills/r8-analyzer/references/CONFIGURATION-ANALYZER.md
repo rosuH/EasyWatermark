@@ -6,13 +6,17 @@ On each step, keep the user informed of the progress by displaying the output.
 
 ### 2. Generate proto
 
-The report and files must be generated at `{project_root}/tmp/r8analysis`. If the folder is not present, create it. For example:
+The report and files must be generated at `{project_root}/tmp/r8analysis`. If
+the folder is not present, create it. For example:
 
     mkdir -p "$PWD/tmp/r8analysis"
 
 ### 3. Remove existing files
 
-To make sure that this invocation doesn't source data from previous runs, remove the intermediate files `keepruleradius.json` and `analysis_result.txt` and remove the proto files in the `{project_root}/tmp/r8analysis` folder. Example bash commands:
+To make sure that this invocation doesn't source data from previous runs, remove
+the intermediate files `keepruleradius.json` and `analysis_result.txt` and
+remove the proto files in the `{project_root}/tmp/r8analysis` folder. Example
+bash commands:
 
     # Remove the intermediate JSON and the directory containing protobuf files
     rm tmp/r8analysis/keepruleradius.json
@@ -25,14 +29,19 @@ To make sure that this invocation doesn't source data from previous runs, remove
 
 ### 4. Generate the Configuration Analyzer report
 
-Run the R8 enabled build with the system property "-Dcom.android.tools.r8.dumpkeepradiustodirectory=$PWD/tmp/r8analysis" to generate Configuration Analyzer report
+Run the R8 enabled build with the system property
+"-Dcom.android.tools.r8.dumpkeepradiustodirectory=$PWD/tmp/r8analysis" to
+generate Configuration Analyzer report
 
     ./gradlew assembleRelease \
     -Dcom.android.tools.r8.dumpkeepradiustodirectory=$PWD/tmp/r8analysis
 
 ### 5. Convert to JSON
 
-To convert the generated protobuf files in `{project_root}/tmp/r8analysis` into json, run the following script. The json must be generated in `{project_root}/tmp/r8analysis`. Ensure `keep_radius_pb2.py` (from Step 10) is in the same directory.
+To convert the generated protobuf files in `{project_root}/tmp/r8analysis` into
+json, run the following script. The json must be generated in
+`{project_root}/tmp/r8analysis`. Ensure `keep_radius_pb2.py` (from Step 10) is
+in the same directory.
 
     import sys
     import os
@@ -84,7 +93,8 @@ To convert the generated protobuf files in `{project_root}/tmp/r8analysis` into 
 
 ### 6. Analyze
 
-Run the following analysis script on the generated JSON to get the impact of the keep rules and sort it.
+Run the following analysis script on the generated JSON to get the impact of the
+keep rules and sort it.
 
     import json, sys
 
@@ -140,7 +150,8 @@ Outputs `analysis_result.txt` containing scores and rule impacts.
 
 ### 7. Report impactful rules
 
-Identify the keep rules with the highest impact and the subsumed rules using the following script.
+Identify the keep rules with the highest impact and the subsumed rules using the
+following script.
 
     import json, sys
 
@@ -187,22 +198,27 @@ Identify the keep rules with the highest impact and the subsumed rules using the
     if __name__ == "__main__":
         report("tmp/r8analysis/keepruleradius.json")
 
-Add this data to the `analysis_result.txt` with the top impactful rules and subsumed rules.
+Add this data to the `analysis_result.txt` with the top impactful rules and
+subsumed rules.
 
 ### 8. Compare with previous report
 
-If `{project_root}/tmp/r8analysis/history.txt` exists, use the following script to compare the previous run. Use this to compare with the current values
+If `{project_root}/tmp/r8analysis/history.txt` exists, use the following script
+to compare the previous run. Use this to compare with the current values
 
 ### 9. Remove generated files
 
-After the final report and analysis results are generated, remove the intermediate files `keepruleradius.json` and `analysis_result.txt` and remove the proto files in "{project_root}/tmp/r8analysis" folder
+After the final report and analysis results are generated, remove the
+intermediate files `keepruleradius.json` and `analysis_result.txt` and remove
+the proto files in "{project_root}/tmp/r8analysis" folder
 
     rm tmp/r8analysis/keepruleradius.json
     rm tmp/r8analysis/*.pb
 
 ### 10. Protobuf Python bindings
 
-The following script `keep_radius_pb2.py` is required by the conversion script in Step 5.
+The following script `keep_radius_pb2.py` is required by the conversion script
+in Step 5.
 
     from google.protobuf import descriptor as _descriptor
     from google.protobuf import descriptor_pool as _descriptor_pool

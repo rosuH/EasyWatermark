@@ -1,4 +1,5 @@
-Defines the request structures for publishing various data models in the Engage SDK.
+Defines the request structures for publishing various data models in
+the Engage SDK.
 
     {
       "PublishRecommendationClustersRequest": {
@@ -23,7 +24,8 @@ Defines the request structures for publishing various data models in the Engage 
             "setter": "setSyncAcrossDevices(boolean)",
             "getter": "getSyncAcrossDevices()"
           }
-        }
+        },
+        "associatedClusterType": "ClusterType.TYPE_RECOMMENDATION"
       },
       "PublishFeaturedClusterRequest": {
         "package": "com.google.android.engage.service.PublishFeaturedClusterRequest",
@@ -34,7 +36,8 @@ Defines the request structures for publishing various data models in the Engage 
             "setter": "setFeaturedCluster(FeaturedCluster)",
             "getter": "getFeaturedCluster()"
           }
-        }
+        },
+        "associatedClusterType": "ClusterType.TYPE_FEATURED"
       },
       "DeleteClustersRequest": {
         "package": "com.google.android.engage.service.DeleteClustersRequest",
@@ -42,7 +45,8 @@ Defines the request structures for publishing various data models in the Engage 
           "clusterTypes": {
             "type": "List<@ClusterType int>",
             "requirement": "Optional",
-            "adder": "addClusterType(@ClusterType int)"
+            "adder": "addClusterType(@ClusterType int)",
+            "description": "The ClusterType enum values for the clusters being deleted. Use the 'associatedClusterType' from the respective publish request or cluster definition."
           },
           "deleteReason": {
             "type": "@DeleteReason int",
@@ -73,7 +77,8 @@ Defines the request structures for publishing various data models in the Engage 
             "setter": "setContinuationCluster(ContinuationCluster)",
             "getter": "getContinuationCluster()"
           }
-        }
+        },
+        "associatedClusterType": "ClusterType.TYPE_CONTINUATION"
       },
       "PublishStatusRequest": {
         "package": "com.google.android.engage.service.PublishStatusRequest",
@@ -105,10 +110,12 @@ Defines the request structures for publishing various data models in the Engage 
             "type": "SubscriptionEntity",
             "getter": "getSubscription()"
           }
-        }
+        },
+        "associatedClusterType": "ClusterType.TYPE_SUBSCRIPTION"
       },
       "PublishUserAccountManagementRequest": {
         "package": "com.google.android.engage.service.PublishUserAccountManagementRequest",
+        "associatedClusterType": "ClusterType.TYPE_ENGAGEMENT",
         "fields": {
           "actionUri": {
             "type": "Uri",
@@ -135,7 +142,8 @@ Defines the request structures for publishing various data models in the Engage 
             "type": "ShoppingCart",
             "getter": "getShoppingCart()"
           }
-        }
+        },
+        "associatedClusterType": "ClusterType.TYPE_SHOPPING_CART"
       },
       "PublishShoppingListsRequest": {
         "package": "com.google.android.engage.shopping.service.PublishShoppingListsRequest",
@@ -147,7 +155,8 @@ Defines the request structures for publishing various data models in the Engage 
             "getter": "getShoppingLists()",
             "adderAll": "addShoppingLists(List<ShoppingList>)"
           }
-        }
+        },
+        "associatedClusterType": "ClusterType.TYPE_SHOPPING_LIST"
       },
       "PublishShoppingOrderTrackingClusterRequest": {
         "package": "com.google.android.engage.shopping.service.PublishShoppingOrderTrackingClusterRequest",
@@ -158,7 +167,8 @@ Defines the request structures for publishing various data models in the Engage 
             "setter": "setShoppingOrderTrackingCluster(ShoppingOrderTrackingCluster)",
             "getter": "getShoppingOrderTrackingCluster()"
           }
-        }
+        },
+        "associatedClusterType": "ClusterType.TYPE_SHOPPING_ORDER_TRACKING"
       },
       "PublishShoppingReorderClusterRequest": {
         "package": "com.google.android.engage.shopping.service.PublishShoppingReorderClusterRequest",
@@ -169,7 +179,8 @@ Defines the request structures for publishing various data models in the Engage 
             "setter": "setReorderCluster(ShoppingReorderCluster)",
             "getter": "getReorderCluster()"
           }
-        }
+        },
+        "associatedClusterType": "ClusterType.TYPE_SHOPPING_REORDER"
       },
       "PublishFoodShoppingCartsRequest": {
         "package": "com.google.android.engage.food.service.PublishFoodShoppingCartsRequest",
@@ -181,7 +192,8 @@ Defines the request structures for publishing various data models in the Engage 
             "getter": "getFoodShoppingCarts()",
             "adderAll": "addFoodShoppingCarts(List<FoodShoppingCart>)"
           }
-        }
+        },
+        "associatedClusterType": "ClusterType.TYPE_FOOD_SHOPPING_CART"
       },
       "PublishFoodShoppingListsRequest": {
         "package": "com.google.android.engage.food.service.PublishFoodShoppingListsRequest",
@@ -193,7 +205,8 @@ Defines the request structures for publishing various data models in the Engage 
             "getter": "getFoodShoppingLists()",
             "adderAll": "addFoodShoppingLists(List<FoodShoppingList>)"
           }
-        }
+        },
+        "associatedClusterType": "ClusterType.TYPE_FOOD_SHOPPING_LIST"
       },
       "PublishReorderClusterRequest": {
         "package": "com.google.android.engage.food.service.PublishReorderClusterRequest",
@@ -204,7 +217,8 @@ Defines the request structures for publishing various data models in the Engage 
             "type": "FoodReorderCluster",
             "getter": "getReorderCluster()"
           }
-        }
+        },
+        "associatedClusterType": "ClusterType.TYPE_FOOD_REORDER"
       },
       "PublishContinueSearchClusterRequest": {
         "package": "com.google.android.engage.travel.service.PublishContinueSearchClusterRequest",
@@ -215,7 +229,8 @@ Defines the request structures for publishing various data models in the Engage 
             "setter": "setContinueSearchCluster(ContinueSearchCluster)",
             "getter": "getContinueSearchCluster()"
           }
-        }
+        },
+        "associatedClusterType": "ClusterType.TYPE_CONTINUE_SEARCH"
       },
       "PublishReservationClusterRequest": {
         "package": "com.google.android.engage.travel.service.PublishReservationClusterRequest",
@@ -226,7 +241,8 @@ Defines the request structures for publishing various data models in the Engage 
             "setter": "setReservationCluster(ReservationCluster)",
             "getter": "getReservationCluster()"
           }
-        }
+        },
+        "associatedClusterType": "ClusterType.TYPE_RESERVATION"
       },
       "ServiceAvailabilityRequest": {
         "package": "com.google.android.engage.service.ServiceAvailabilityRequest",
@@ -236,7 +252,8 @@ Defines the request structures for publishing various data models in the Engage 
             "requirement": "Required",
             "adder": "addIntendedClusterType(@ClusterType int)",
             "adderAll": "addAllIntendedClusterTypes(List<Integer>)",
-            "getter": "getIntendedClusterTypes()"
+            "getter": "getIntendedClusterTypes()",
+            "description": "The ClusterType enum values for the clusters being published (e.g. ClusterType.TYPE_ENGAGEMENT). Use the 'associatedClusterType' from the respective publish request or cluster definition."
           }
         }
       }

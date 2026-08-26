@@ -133,8 +133,6 @@ class RouteBViewModel @AssistedInject constructor(
         fun create(navKey: RouteB): RouteBViewModel
     }
 }
-
-   
 ```
 
 # Passing Arguments to ViewModels (Basic)
@@ -259,8 +257,6 @@ class RouteBViewModel(
         }
     }
 }
-
-   
 ```
 
 # Passing Arguments to ViewModels (Koin)
@@ -372,5 +368,4 @@ fun ScreenB(viewModel: RouteBViewModel) {
 }
 
 class RouteBViewModel(val navKey: RouteB) : ViewModel()
-   
 ```

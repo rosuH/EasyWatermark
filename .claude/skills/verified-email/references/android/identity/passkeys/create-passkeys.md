@@ -1,6 +1,11 @@
-Before your users can authenticate with passkeys, your app must first register or create the passkey for their account.
+Before your users can authenticate with passkeys, your app must first register
+or create the passkey for their account.
 
-To create the passkey, obtain details required to create the passkey from your app server, and then call the Credential Manager API, which returns a public and private key pair. The returned private key is stored in a credential provider, such as Google Password Manager, as a passkey. The public key is stored on your app server.
+To create the passkey, obtain details required to create the passkey from your
+app server, and then call the Credential Manager API, which returns a public and
+private key pair. The returned private key is stored in a credential provider,
+such as Google Password Manager, as a passkey. The public key is stored on your
+app server.
 
 > [!TIP]
 > **Tip:** While designing authentication flows with passkeys, make sure that you follow the [UX guidelines for passkeys](https://developer.android.com/design/ui/mobile/guides/patterns/passkeys).
@@ -9,11 +14,15 @@ To create the passkey, obtain details required to create the passkey from your a
 
 ## Prerequisites
 
-Make sure that you have set up [Digital Asset Links](https://developer.android.com/identity/credential-manager/prerequisites) and that you target devices running Android 9 (API level 28) or higher.
+Make sure that you have set up [Digital Asset Links](https://developer.android.com/identity/credential-manager/prerequisites) and that you target
+devices running Android 9 (API level 28) or higher.
 
 ## Overview
 
-This guide focuses on the changes required in your [relying party client app](https://developer.android.com/identity/credential-manager#authentication-terminology) to create a passkey, and gives a brief overview of the [relying party app server](https://developer.android.com/identity/credential-manager#authentication-terminology) implementation. To learn more about the server-side integration, see [Server-side passkey registration](https://developers.google.com/identity/passkeys/developer-guides/server-registration).
+This guide focuses on the changes required in your [relying party client app](https://developer.android.com/identity/credential-manager#authentication-terminology)
+to create a passkey, and gives a brief overview of the [relying party app
+server](https://developer.android.com/identity/credential-manager#authentication-terminology) implementation. To learn more about the server-side integration, see
+[Server-side passkey registration](https://developers.google.com/identity/passkeys/developer-guides/server-registration).
 
 1. [**Add dependencies to your app**](https://developer.android.com/identity/passkeys/create-passkeys#add-dependencies): Add the required Credential Manager libraries.
 2. [**Instantiate Credential Manager**](https://developer.android.com/identity/passkeys/create-passkeys#instantiate): Create a Credential Manager instance.
@@ -24,7 +33,8 @@ This guide focuses on the changes required in your [relying party client app](ht
 7. [**Notify the user**](https://developer.android.com/identity/passkeys/create-passkeys#notify): Notify the user that their passkey has been created.
 
 > [!TIP]
-> **Tip:** To enhance the user experience during sign up, add functionality to [restore credentials](https://developer.android.com/identity/sign-in/restore-credentials) on a new device to let users seamlessly set up their existing accounts on new Android devices, and [suppressing autofill dialogs on credential fields](https://developer.android.com/identity/passkeys/create-passkeys#suppress-autofill).
+> **Tip:** To enhance the user experience during sign up, add functionality to [restore credentials](https://developer.android.com/identity/sign-in/restore-credentials) on a new device to let users seamlessly set up their existing accounts on new Android devices, and [suppressing autofill dialogs on
+> credential fields](https://developer.android.com/identity/passkeys/create-passkeys#suppress-autofill).
 
 ## Add dependencies to your app
 
@@ -61,16 +71,26 @@ Use your app or activity context to create a `CredentialManager` object.
 
 ## Get credential creation options from your app server
 
-When the user clicks a "Create Passkey" button or when a new user signs up, make a request from your app to your app server to obtain the information required to start the passkey registration process.
+When the user clicks a "Create Passkey" button or when a new user signs up, make
+a request from your app to your app server to obtain the information required to
+start the passkey registration process.
 
-Use a FIDO-compliant library in your app server to send your client app the information required to create a passkey, such as information about the user, the app, and additional configuration properties. To learn more, see [Server side passkey registration](https://developers.google.com/identity/passkeys/developer-guides/server-registration).
+Use a FIDO-compliant library in your app server to send your client app the
+information required to create a passkey, such as information about the user,
+the app, and additional configuration properties. To learn more, see [Server
+side passkey registration](https://developers.google.com/identity/passkeys/developer-guides/server-registration).
 
-In the client app, decode the public key creation options sent by the app server. These are usually represented in JSON format. To learn more about how this decoding is done for web clients, see [Encoding and Decoding](https://developers.google.com/identity/passkeys/developer-guides/server-registration#encoding_and_decoding). For Android client apps, you must handle the decoding separately.
+In the client app, decode the public key creation options sent by the app
+server. These are usually represented in JSON format. To learn more about how
+this decoding is done for web clients, see [Encoding and
+Decoding](https://developers.google.com/identity/passkeys/developer-guides/server-registration#encoding_and_decoding). For Android client apps, you must handle the decoding
+separately.
 
 > [!NOTE]
 > **Note:** On your app server, securely store the `challenge` so that you can later verify the origin of the credential.
 
-The following snippet shows the structure the public key creation options sent by the app server:
+The following snippet shows the structure the public key creation options sent
+by the app server:
 
     {
       "challenge": "<base64url-encoded challenge>",
@@ -129,7 +149,9 @@ Key fields in the public key creation options include:
 
 ## Create a passkey
 
-After you have parsed the server-side public key creation options, create a passkey by wrapping these options in a `CreatePublicKeyCredentialRequest` object and calling `createCredential()`.
+After you have parsed the server-side public key creation options, create a
+passkey by wrapping these options in a `CreatePublicKeyCredentialRequest` object
+and calling `createCredential()`.
 
 The `createPublicKeyCredentialRequest` includes the following:
 
@@ -138,14 +160,25 @@ The `createPublicKeyCredentialRequest` includes the following:
   - `false` (default): Use this value if the call to Credential Manager was triggered by an explicit user action.
   - `true`: Use this value if Credential Manager is opportunistically called, such as when first opening the app.   
     If you set the value to `true` and there are no immediately available credentials, Credential Manager won't show any UI and the request will fail immediately, returning NoCredentialException for get requests and [`CreateCredentialNoCreateOptionException`](https://developer.android.com/reference/kotlin/androidx/credentials/exceptions/CreateCredentialNoCreateOptionException) for create requests.
-- `origin`: This field is automatically set for Android apps. For browsers and similarly privileged apps that need to set `origin`, see [Make Credential Manager calls on behalf of other parties for privileged apps](https://developer.android.com/training/sign-in/privileged-apps).
+- `origin`: This field is automatically set for Android apps. For browsers and similarly privileged apps that need to set `origin`, see [Make Credential
+  Manager calls on behalf of other parties for privileged apps](https://developer.android.com/training/sign-in/privileged-apps).
 - `isConditional`: This is an optional field that defaults to `false`. For more information, see [Automatically create a passkey](https://developer.android.com/identity/passkeys/create-passkeys#automatic-upgrade).
 
-Calling the `createCredential()` function launches Credential Manager's built-in bottom sheet UI that prompts the user to use a passkey and to select a credential provider and account for storage. However, if `isConditional` is set to `true`, the bottom sheet UI does not display, and the passkey is automatically created.
+Calling the `createCredential()` function launches Credential Manager's built-in
+bottom sheet UI that prompts the user to use a passkey and to select a
+credential provider and account for storage. However, if `isConditional` is set
+to `true`, the bottom sheet UI does not display, and the passkey is
+automatically created.
 
 ### Automatically create a passkey
 
-You can automatically create a passkey for a user after a successful password login by setting the `isConditional` parameter to `true` in your `CreatePublicKeyCredentialRequest` while creating a passkey. If the user doesn't already have a passkey, your app will automatically attempt to create one in the background and store it in the user's credential provider, such as Google Password Manager. For an example of how this is implemented, see the [public sample](https://github.com/android/identity-samples/blob/main/Shrine/app/src/main/java/com/authentication/shrine/ui/AuthenticationScreen.kt#L98).
+You can automatically create a passkey for a user after a successful password
+login by setting the `isConditional` parameter to `true` in your
+`CreatePublicKeyCredentialRequest` while creating a passkey. If the user doesn't
+already have a passkey, your app will automatically attempt to create one in the
+background and store it in the user's credential provider, such as Google
+Password Manager. For an example of how this is implemented, see the [public
+sample](https://github.com/android/identity-samples/blob/main/Shrine/app/src/main/java/com/authentication/shrine/ui/AuthenticationScreen.kt#L98).
 ![An example of the notification Google Password Manager shows after passkey creation](https://developer.android.com/static/identity/passkeys/images/conditional-create-gpm.svg) **Figure 2:**Google Password Manager notification
 
 > [!NOTE]
@@ -153,9 +186,11 @@ You can automatically create a passkey for a user after a successful password lo
 
 ## Handle the response
 
-After the user is verified using the device's screen lock, a passkey is created and stored in the user's selected credential provider.
+After the user is verified using the device's screen lock, a passkey is created
+and stored in the user's selected credential provider.
 
-The response after you successfully call `createCredential()` is a [PublicKeyCredential](https://developer.android.com/jetpack/androidx/releases/credentials) object.
+The response after you successfully call `createCredential()` is a
+[PublicKeyCredential](https://developer.android.com/jetpack/androidx/releases/credentials) object.
 
 The `PublicKeyCredential` looks as follows:
 
@@ -206,55 +241,79 @@ Add code to handle failures as shown in the following snippet:
 
 ## Verify and save the public key on the app server
 
-On the app server, you must verify the public key credential and then [save the public key](https://web.dev/articles/passkey-registration#save-credential).
+On the app server, you must verify the public key credential and then [save the
+public key](https://web.dev/articles/passkey-registration#save-credential).
 
-To verify the public key credential's origin, compare it against an allow list of approved apps. If a key has an unrecognized origin, reject it.
+To verify the public key credential's origin, compare it against an allow list
+of approved apps. If a key has an unrecognized origin, reject it.
 
 > [!NOTE]
 > **Note:** An app's origin is based on its unique identity, which is the SHA-256 fingerprint of its signing certificate.
 
 To obtain the app's SHA 256 fingerprint:
 
-1. Print your release app's signing certificate by running the following command in a terminal:
+1. Print your release app's signing certificate by running the following
+   command in a terminal:
 
        keytool -list -keystore <path-to-apk-signing-keystore>
 
-   In the response, identify the signing certificate's SHA 256 fingerprint, mentioned as `Certificate fingerprints block` : `SHA256`.
-2. Encode the SHA256 fingerprint with base64url encoding. This Python example demonstrates how to properly encode the fingerprint:
+   In the response, identify the signing certificate's SHA 256 fingerprint,
+   mentioned as `Certificate fingerprints block` : `SHA256`.
+2. Encode the SHA256 fingerprint with base64url encoding. This Python example
+   demonstrates how to properly encode the fingerprint:
 
        import binascii
        import base64
        fingerprint = '<SHA256 finerprint>' # your app's SHA256 fingerprint
        print(base64.urlsafe_b64encode(binascii.a2b_hex(fingerprint.replace(':', ''))).decode('utf8').replace('=', ''))
 
-3. Append `android:apk-key-hash`: to the start of the output from the previous step so that you get something that is similar to the following:
+3. Append `android:apk-key-hash`: to the start of the output from the previous
+   step so that you get something that is similar to the following:
 
        android:apk-key-hash:<encoded SHA 256 fingerprint>
 
-   The result should match with an allowed origin on your app server. If you have multiple signing certificates, such as certificates for debugging and release, or multiple apps, then repeat the process and accept all the origins as valid on the app server.
+   The result should match with an allowed origin on your app server. If you
+   have multiple signing certificates, such as certificates for debugging and
+   release, or multiple apps, then repeat the process and accept all the
+   origins as valid on the app server.
 
 > [!NOTE]
 > **Note:** When you save the passkey on the app server, make sure that you save the Authenticator Attestation Globally Unique Identifier ([AAGUID](https://web.dev/articles/webauthn-aaguid)) from the client data. The AAGUID is a unique number that identifies the model of the authenticator. For more information, see [Manage passkeys](https://developer.android.com/identity/passkeys/manage-passkeys).
 
 ## Notify the user
 
-After the passkey is successfully created, notify your users about the passkey and inform them that they can manage their passkeys from their credential provider app or from [within the app settings](https://developer.android.com/identity/passkeys/manage-passkeys). Notify users by using a custom dialog, notification, or snackbar. Since an unexpected passkey creation by a malicious entity requires an immediate security alert, consider supplementing these in-app methods with external communication, such as an email.
+After the passkey is successfully created, notify your users about the passkey
+and inform them that they can manage their passkeys from their credential
+provider app or from [within the app settings](https://developer.android.com/identity/passkeys/manage-passkeys). Notify users by using a
+custom dialog, notification, or snackbar. Since an unexpected passkey creation
+by a malicious entity requires an immediate security alert, consider
+supplementing these in-app methods with external communication, such as an
+email.
 
 ## Enhance the user experience
 
-To enhance the user experience while implementing sign up with Credential Manager, consider adding functionality for restore credentials and suppress autofill dialogs.
+To enhance the user experience while implementing sign up with Credential
+Manager, consider adding functionality for restore credentials and suppress
+autofill dialogs.
 
 ### Add functionality to restore credentials on a new device
 
-To allow users to seamlessly log into their accounts on a new device, implement the [Restore Credentials](https://developer.android.com/identity/sign-in/restore-credentials) functionality. Adding restore credentials with `BackupAgent` logs users in when they open your restored app on a new device, letting them use your app right away.
+To allow users to seamlessly log into their accounts on a new device, implement
+the [Restore Credentials](https://developer.android.com/identity/sign-in/restore-credentials) functionality. Adding restore credentials with
+`BackupAgent` logs users in when they open your restored app on a new device,
+letting them use your app right away.
 
 ### Suppress autofill on credential fields (optional)
 
-For app screens where users are expected to use Credential Manager's bottom sheet UI for authentication, add the `isCredential` attribute to the username and password fields. This suppresses autofill dialogs (`FillDialog` and `SaveDialog`) from overlapping with Credential Manager's bottom sheet UI.
+For app screens where users are expected to use Credential Manager's bottom
+sheet UI for authentication, add the `isCredential` attribute to the username
+and password fields. This suppresses autofill dialogs (`FillDialog` and
+`SaveDialog`) from overlapping with Credential Manager's bottom sheet UI.
 
 The `isCredential` attribute is supported on Android 14 and higher.
 
-The following example demonstrates how you can add the `isCredential` attribute to the relevant username and password fields in the relevant views for your app:
+The following example demonstrates how you can add the `isCredential` attribute
+to the relevant username and password fields in the relevant views for your app:
 
     <TextView
         android:layout_width="match_parent"

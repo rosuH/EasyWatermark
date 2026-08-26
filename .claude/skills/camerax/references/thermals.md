@@ -1,4 +1,6 @@
-Camera operations are among the most power-intensive tasks on mobile devices. Without proactive management, the system throttle hardware, drop frames, or force-close the camera app.
+Camera operations are among the most power-intensive tasks on mobile devices.
+Without proactive management, the system throttle hardware, drop frames, or
+force-close the camera app.
 
 ## The thermal management strategy
 
@@ -14,9 +16,9 @@ Camera operations are among the most power-intensive tasks on mobile devices. Wi
 
 ### Stream use case optimization
 
-Android 13 (API level 33) introduced `StreamUseCase`. This is the **single most effective** way to tell the hardware how to balance quality versus power.
+Android 13 (API level 33) introduced `StreamUseCase`. This is the **single most
+effective** way to tell the hardware how to balance quality versus power.
 
-<br />
 
 ```kotlin
 // In CameraX: Set the hint on your Use Case
@@ -28,7 +30,6 @@ val preview = Preview.Builder()
         )
     }
     .build()
-   
 ```
 
 <br />
@@ -42,9 +43,9 @@ Review the following key use cases for stream optimization:
 
 ### Monitor thermal status
 
-Don't wait for a crash. Monitor the `PowerManager` status and react before `THERMAL_STATUS_CRITICAL`.
+Don't wait for a crash. Monitor the `PowerManager` status and react before
+`THERMAL_STATUS_CRITICAL`.
 
-<br />
 
 ```kotlin
 val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
@@ -62,7 +63,6 @@ powerManager.addThermalStatusListener { status ->
         }
     }
 }
-   
 ```
 
 <br />

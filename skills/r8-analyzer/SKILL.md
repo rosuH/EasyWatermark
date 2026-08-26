@@ -7,7 +7,7 @@ description: Analyzes Android build files and R8 keep rules to identify redundan
 license: Complete terms in LICENSE.txt
 metadata:
   author: Google LLC
-  last-updated: '2026-08-06'
+  last-updated: '2026-08-15'
   keywords:
   - R8
   - proguard
@@ -25,7 +25,8 @@ metadata:
 
 ## Step 2. Analysis path selection
 
-- Inspect `build.gradle`, `build.gradle.kts`, and `gradle.properties` and `libs.versions.toml` to get the AGP and R8 versions.
+- Inspect `build.gradle`, `build.gradle.kts`, and `gradle.properties` and
+  `libs.versions.toml` to get the AGP and R8 versions.
 
 - **If AGP \>= 9.3.0** : Proceed to **Path A (Standalone Task)**.
 

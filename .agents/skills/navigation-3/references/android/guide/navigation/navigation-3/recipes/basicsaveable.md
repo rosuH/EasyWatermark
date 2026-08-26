@@ -87,6 +87,4 @@ class BasicSaveableActivity : ComponentActivity() {
         }
     }
 }
-
-   
 ```

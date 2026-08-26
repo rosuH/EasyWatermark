@@ -99,6 +99,7 @@ EXIF policy: Android decode uses `ExifInterface(InputStream)` on API 23+ and bak
 - **Docs-with-code gate:** every milestone PR ships its context delta (ADR / CONTEXT.md / AGENTS.md updates) or states "no doc impact" in the PR description.
 - **Parity source of truth:** the Android production release v2.10.0 (built from `master`). Android debug aligns to it first, then Desktop/iOS align to that Android baseline with explicit platform exceptions. Per-layout migrations follow the 10-step skill in `skills/migrate-xml-views-to-jetpack-compose/` (screenshot baseline → migrate → visual diff → delete XML).
 - **CMP-first UI:** new product UI goes in `shared/commonMain/ui/`. Platform-native UI only for app/window entry, picker/share/save/permission system UI, capability glue, and renderer surfaces. No `ViewInfo` / `AndroidView`-bridged renderer.
+- **I3 motion:** `EwmMotionTokens` + `motionDurationMs` (`FastOutSlowInEasing`). Large-screen `EwmContentDialog` and process-first Launch reveal are fade+scale 0.97 @ `shellShortMs`; Open Source is a shared overlay using the Launch↔Editor short H-slide+fade (not About 0.75/0.5); filmstrip switch stays hard-cut (`previewCrossfadeDurationMs` = 0).
 - **Editor adaptive IA (ADR-0026, amended 2026-08-16):** Supporting-pane dual-pane at **≥800 dp** (preview + filmstrip | form inspector) including **≥1440** (no left session library — filmstrip only); Medium 600–799 stacks like Compact; no fold APIs this period; hand-rolled layout class (not SupportingPaneScaffold/Nav3 SceneStrategy yet). The floor is 800 not Material's 840 so every 11" iPad reaches dual-pane in portrait (Air 11" 820 pt, Pro 11" 834 pt); iPad mini (744 pt) stays stacked. Breakpoint decisions live only in `editorLayoutClass` — route large-surface checks through `usesLargeScreenDialog`, never a raw width compare. UX morph demo: `docs/superpowers/research/easywatermark-adaptive-layout-ux-demo.html` (may still show historical three-zone).
 - **No shared-ViewModel/reducer/IO `expect` extraction without a named real off-Android consumer or an explicit owner decision.**
 - **DataStore creation is plain per-platform functions — never a commonMain `expect`/`actual`.** Android creation stays byte-faithful (`PreferenceDataStoreFactory.create(produceFile, migrations)`), and does not route through the common helper.
@@ -136,9 +137,9 @@ Skills are not optional reference shelves — they are the preferred playbooks f
 ### Android skills (`skills/` · also `.claude/skills/` · `.agents/skills/`)
 
 - **Daily drivers:** `android-cli` (`android` CLI + offline docs KB), `migrate-xml-views-to-jetpack-compose` (10-step parity migration), `edge-to-edge`, `navigation-3`, `testing-setup`, `styles` (experimental Compose Styles API).
-- **Build & perf:** `agp-9-upgrade` (**not** for KMP modules), `r8-analyzer`, `perfetto-trace-analysis`, `perfetto-sql`.
+- **Build & perf:** `agp-9-upgrade` (**not** for KMP modules), `r8-analyzer`, `android-profiler` (trace / heap / jank / startup routing), `perfetto-trace-analysis`, `perfetto-sql`.
 - **Wear / TV / media (when relevant):** `wear-compose-m3`, `jetpack-compose-m3` (Wear Material3), `leanback-to-compose-tv-migration`, `media3-cast-integration`.
-- **Platform / Play / security:** `camerax`, `camera1-to-camerax`, `adaptive`, `appfunctions`, `android-intent-security`, `engage-sdk-integration`, `play-billing-library-version-upgrade`, `play-policy-insights`, `verified-email`, `display-glasses-with-jetpack-compose-glimmer`.
+- **Platform / Play / security:** `camerax`, `camera1-to-camerax`, `adaptive`, `appfunctions`, `android-intent-security`, `engage-sdk-integration`, `play-billing-library-version-upgrade`, `play-policy-insights`, `verified-email`, `restore-credentials`, `display-glasses-with-jetpack-compose-glimmer`.
 
 **High-value triggers for this repo (open the skill early):**
 
@@ -151,7 +152,7 @@ Skills are not optional reference shelves — they are the preferred playbooks f
 | Unit / UI / screenshot / e2e harness setup | `testing-setup` |
 | Emulator, screenshots, layout tree, docs KB | `android-cli` |
 | R8 / keep rules / size | `r8-analyzer` |
-| Trace jank or latency | `perfetto-trace-analysis` (+ `perfetto-sql`) |
+| Trace jank or latency | `android-profiler` first, then `perfetto-trace-analysis` (+ `perfetto-sql`) |
 | Intent export / redirection / PendingIntent | `android-intent-security` |
 | Play policy / Data Safety audit | `play-policy-insights` |
 | Scroll jank / recompose / stability | Compose skills above (`auditing-compose-performance` entry point) |

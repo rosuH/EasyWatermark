@@ -1,16 +1,21 @@
 <br />
 
-<br />
 
 Applicable XR devices This guidance helps you build experiences for these types of XR devices. [Learn about XR device types →](https://developer.android.com/develop/xr/devices) ![](https://developer.android.com/static/images/develop/xr/ai-glasses-icon.svg) Display Glasses [](https://developer.android.com/develop/xr/devices#audio-display) [Learn about XR device types →](https://developer.android.com/develop/xr/devices)
 
 <br />
 
-In Jetpack Compose Glimmer, a [`Button`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/Button.composable) is an interactive component that's optimized for display glasses input, offering clear visual feedback through its states to guide user actions.
+In Jetpack Compose Glimmer, a [`Button`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/Button.composable) is an interactive component that's
+optimized for display glasses input, offering clear visual feedback through its
+states to guide user actions.
 
-Buttons are built on the Jetpack Compose Glimmer [surface system](https://developer.android.com/develop/xr/jetpack-xr-sdk/jetpack-compose-glimmer/surface), which automatically handles physical properties like borders and depth.
+Buttons are built on the Jetpack Compose Glimmer [surface system](https://developer.android.com/develop/xr/jetpack-xr-sdk/jetpack-compose-glimmer/surface), which
+automatically handles physical properties like borders and depth.
 
-The standard button contains a text label and optional icons. You can use it for primary or secondary actions. There are also specialized buttons, such as [icon buttons](https://developer.android.com/develop/xr/jetpack-xr-sdk/jetpack-compose-glimmer/icon-buttons) and [toggle buttons](https://developer.android.com/develop/xr/jetpack-xr-sdk/jetpack-compose-glimmer/toggle-buttons), which are defined as separate components in Jetpack Compose Glimmer.
+The standard button contains a text label and optional icons. You can use it for
+primary or secondary actions. There are also specialized buttons, such as [icon
+buttons](https://developer.android.com/develop/xr/jetpack-xr-sdk/jetpack-compose-glimmer/icon-buttons) and [toggle buttons](https://developer.android.com/develop/xr/jetpack-xr-sdk/jetpack-compose-glimmer/toggle-buttons), which are defined as separate components in
+Jetpack Compose Glimmer.
 
 ### Default
 
@@ -22,7 +27,8 @@ The standard button contains a text label and optional icons. You can use it for
 
 ## Anatomy
 
-A button consists of a container and a label, with optional leading and trailing icons.
+A button consists of a container and a label, with optional leading and trailing
+icons.
 
 | Part | Description |
 |---|---|
@@ -32,7 +38,8 @@ A button consists of a container and a label, with optional leading and trailing
 
 ## Sizes
 
-Jetpack Compose Glimmer buttons support two size variants. These affect the minimum height and internal padding.
+Jetpack Compose Glimmer buttons support two size variants. These affect the
+minimum height and internal padding.
 
 | Size | Minimum height | Default usage |
 |---|---|---|
@@ -41,7 +48,8 @@ Jetpack Compose Glimmer buttons support two size variants. These affect the mini
 
 ## States
 
-Buttons in Jetpack Compose Glimmer change their appearance to communicate their state.
+Buttons in Jetpack Compose Glimmer change their appearance to communicate their
+state.
 
 - **Enabled**: The default state for an interactive button.
 - **Focused** : When focused, the button applies a [`GlimmerTheme.depthEffectLevels.level1`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/DepthEffectLevels#level1()) and a focused border highlight.
@@ -58,38 +66,74 @@ The following defaults apply to standard buttons:
 > [!NOTE]
 > **Note:** Any modifier passed to the `Button` composable is applied to the outer layout. While [`ButtonSize`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/ButtonSize) sets the default minimum height, you can also apply custom size modifiers to control the button's final layout, such as [`Modifier.fillMaxWidth`](https://developer.android.com/reference/kotlin/androidx/compose/foundation/layout/fillMaxWidth.modifier).
 
-## Example: Button with text
+## Example: Button with text and icons
 
-The following code creates a standard button with text:
+A basic button includes only a text label, but you can also add icons to the
+start (using `leadingIcon`) or end (using `trailingIcon`) of the text to provide
+additional context.
 
-<br />
+The following code creates a button with both a leading and trailing icon:
+
 
 ```kotlin
-@Composable
-fun ButtonSample() {
-    Button(onClick = {}) { Text("Send") }
+Button(
+    onClick = { /* Handle navigation or action */ },
+    leadingIcon = { Icon(FavoriteIcon, contentDescription = null) },
+    trailingIcon = { Icon(SendIcon, contentDescription = null) }
+) {
+    Text("Text Label", style = GlimmerTheme.typography.titleSmall)
 }
-   
 ```
 
 <br />
 
-## Example: Buttons with leading and trailing icons
+## Button groups
 
-You can also add icons to the start (using `leadingIcon`) or end (using `trailingIcon`) of the text to provide additional context.
+The [`ButtonGroup`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/ButtonGroup.composable) composable lets you group buttons into a scrollable row
+that acts as a focus controller. As the user scrolls, focus automatically moves
+to highlight the button corresponding to the current scroll position.
+![](https://developer.android.com/static/images/xr/button-group-scroll.gif) An example of a button group scrolling and focusing features.
 
-The following code creates a button with a leading icon:
+## Example: Button groups
+
+
+```kotlin
+ButtonGroup(modifier = Modifier.fillMaxWidth()) {
+    Button(onClick = {}) { Text("Button 1") }
+    Button(onClick = {}) { Text("Button 2") }
+    Button(onClick = {}) { Text("Button 3") }
+    Button(onClick = {}) { Text("Button 4") }
+    Button(onClick = {}) { Text("Button 5") }
+}
+```
 
 <br />
 
+## Focus control in button groups
+
+You can move the focus to any button in a group to manually control the
+selection.
+
+Customize and control scrolling behavior using the `ButtonGroup` state:
+
+1. Declare the state with `rememberButtonGroupState`.
+2. Pass it to the `ButtonGroup` composable.
+3. Call [`animateScrollToItem`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/ButtonGroupState#animateScrollToItem(kotlin.Int,androidx.compose.animation.core.FiniteAnimationSpec)) (or [`scrollToItem`](https://developer.android.com/reference/kotlin/androidx/xr/glimmer/ButtonGroupState#scrollToItem(kotlin.Int)) for instant scrolling) to scroll to a specific item and automatically move focus to it.
+
+The following code moves the focus from one button to another upon click:
+
+
 ```kotlin
-@Composable
-fun ButtonWithLeadingIconSample() {
-    Button(onClick = {}, leadingIcon = { Icon(FavoriteIcon, "Localized description") }) {
-        Text("Send")
+val scope = rememberCoroutineScope()
+val state = rememberButtonGroupState()
+ButtonGroup(modifier = Modifier.fillMaxWidth(), state = state) {
+    Button(onClick = { scope.launch { state.animateScrollToItem(1) } }) {
+        Text("Select last item")
+    }
+    Button(onClick = { scope.launch { state.animateScrollToItem(0) } }) {
+        Text("Select first item")
     }
 }
-   
 ```
 
 <br />

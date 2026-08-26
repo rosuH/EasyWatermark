@@ -104,6 +104,4 @@ class DialogActivity : ComponentActivity() {
         }
     }
 }
-
-   
 ```

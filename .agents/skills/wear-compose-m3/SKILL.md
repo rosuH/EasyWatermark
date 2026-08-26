@@ -9,7 +9,7 @@ description: Expert guidance for working with Wear OS Compose Material3. Use thi
 license: Complete terms in LICENSE.txt
 metadata:
   author: Google LLC
-  last-updated: '2026-08-06'
+  last-updated: '2026-08-22'
   keywords:
   - Wear OS
   - Compose
@@ -26,7 +26,8 @@ metadata:
 2. **Wear OS Compose Material3 version:** If an internal tool is available to establish the **latest stable version** `{VERSION}` of `androidx.wear.compose:compose-material3`, use that tool.
    - Otherwise, fetch the [official Maven metadata XML](https://dl.google.com/dl/android/maven2/androidx/wear/compose/compose-material3/maven-metadata.xml) to identify `{VERSION}` (highest number, ignoring `-alpha`, `-beta`, or `-rc`).
 3. **Strict compliance:** If a version is listed as stable, you MUST use it, unless overridden by the user. Do not downgrade based on initial "Unresolved reference" errors in the editor or outdated web search results.
-4. **Kotlin version:** For Wear Compose Material3, use Kotlin **2.0.0 or higher**.
+4. **Kotlin version:** For Wear Compose Material3, use Kotlin **2.0.0 or
+   higher**.
 5. **Compose compiler:**
    - If Kotlin version is **2.0.0+** , the project must use the `org.jetbrains.kotlin.plugin.compose` Gradle plugin.
    - If Kotlin version is **\< 2.0.0** , the project must use `kotlinCompilerExtensionVersion` in `composeOptions`, matching the [Compose to Kotlin Compatibility Map](https://developer.android.com/jetpack/androidx/releases/compose-kotlin).
@@ -42,7 +43,8 @@ metadata:
 
 ### Capability 1: Migration
 
-Use this guidance when migrating from an older version of Wear OS Compose or Horologist.
+Use this guidance when migrating from an older version of Wear OS Compose or
+Horologist.
 
 1. Unless otherwise indicated by the developer, use the latest stable version of Wear Compose Material3 from `{VERSION}`.
 2. Read the [migration guide](references/android/training/wearables/compose/migrate-to-material3.md).
@@ -54,7 +56,9 @@ Use this guidance when migrating from an older version of Wear OS Compose or Hor
 
 ### Capability 2: Adding Wear OS Compose Material3 features or updating the app
 
-Use this guidance when the developer asks to update a project which is using an earlier version of Wear OS Compose Material3, or when they ask to add further features.
+Use this guidance when the developer asks to update a project which is using an
+earlier version of Wear OS Compose Material3, or when they ask to add further
+features.
 
 1. Unless otherwise indicated by the developer, use the latest stable version of Wear Compose Material3 from `{VERSION}`.
 2. Do not use the Horologist Composables, Compose Layout, or Compose Material libraries.
@@ -63,7 +67,10 @@ Use this guidance when the developer asks to update a project which is using an 
 
 ### Capability 3: Component samples
 
-Use this table of reference to find canonical samples for Wear Compose components. When working with a Wear Compose component, you must use the samples linked from the table to ensure you know how to correctly use it.
+Use this table of reference to find canonical samples for Wear Compose
+components.
+When working with a Wear Compose component, you must use the samples linked
+from the table to ensure you know how to correctly use it.
 
 #### Material 3 components in `androidx.wear.compose.material3.*`
 
@@ -174,7 +181,9 @@ Use this table of reference to find canonical samples for Wear Compose component
 
 ### Capability 4: Component guidance
 
-**Mandatory**: Use this capability as a checklist against any component use. It provides more holistic guidance on how to use each component in practice, beyond the component syntax.
+**Mandatory**: Use this capability as a checklist against any component use. It
+provides more holistic guidance on how to use each component in practice, beyond
+the component syntax.
 
 1. `AppScaffold` and `ScreenScaffold`
    - \[ \] Use `AppScaffold` as the outer container, with `ScreenScaffold` children.
@@ -182,7 +191,6 @@ Use this table of reference to find canonical samples for Wear Compose component
 2. `ScalingLazyColumn` - Use `TransformingLazyColumn` instead.
 3. `TransformingLazyColumn` - You will need the following imports:
 
-   <br />
 
    ```kotlin
    import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
@@ -191,14 +199,12 @@ Use this table of reference to find canonical samples for Wear Compose component
    // ...
    import androidx.wear.compose.material3.lazy.rememberTransformationSpec
    import androidx.wear.compose.material3.lazy.transformedHeight
-         
    ```
 
    <br />
 
    **Canonical example**:
 
-   <br />
 
    ```kotlin
    val columnState = rememberTransformingLazyColumnState()
@@ -246,7 +252,6 @@ Use this table of reference to find canonical samples for Wear Compose component
            }
        }
    }
-        
    ```
 
    <br />
@@ -261,7 +266,6 @@ Use this table of reference to find canonical samples for Wear Compose component
    - \[ \] Use `transform = SurfaceTransform(...)`.
    - \[ \] If configuring a list for snapping, use `flingBehavior` and `rotaryScrollableBehavior` **together**:
 
-   <br />
 
    ```kotlin
    val columnState = rememberTransformingLazyColumnState()
@@ -275,7 +279,6 @@ Use this table of reference to find canonical samples for Wear Compose component
            // ...
        }
    }
-        
    ```
 
    <br />
@@ -288,7 +291,6 @@ Use this table of reference to find canonical samples for Wear Compose component
    - \[ \] Do **NOT** use as the final item within a `TransformingLazyColumn`. Instead, use the slot in `ScreenScaffold`.
    - \[ \] When used in a `TransformingLazyColumn`, add the required overscroll behavior:
 
-   <br />
 
    ```kotlin
    val columnState = rememberTransformingLazyColumnState()
@@ -317,7 +319,6 @@ Use this table of reference to find canonical samples for Wear Compose component
            // ...
        }
    }
-        
    ```
 
    <br />

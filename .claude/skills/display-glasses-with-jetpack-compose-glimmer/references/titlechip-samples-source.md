@@ -1,6 +1,6 @@
-When creating a Glimmer Title Chip component, refer to the following implementation samples in `TitleChipSamples.kt`:
+When creating a Glimmer Title Chip component, refer to the following
+implementation samples in `TitleChipSamples.kt`:
 
-<br />
 
 ```kotlin
 /*
@@ -96,8 +96,6 @@ private fun TitleChipWithLeadingIconPreview() {
 private fun TitleChipWithCardPreview() {
     GlimmerTheme { TitleChipWithCardSample() }
 }
-
-   
 ```
 
 <br />

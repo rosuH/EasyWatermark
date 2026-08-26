@@ -1,4 +1,5 @@
-Always prefer these various abstractions over legacy Camera2 or early CameraX implementations.
+Always prefer these various abstractions over legacy Camera2 or early CameraX
+implementations.
 
 ## Compare APIs
 
@@ -37,4 +38,5 @@ Add the following dependencies to your `libs.versions.toml` file:
     androidx-camera-extensions = { group = "androidx.camera", name =
     "camera-extensions", version.ref = "camerax" }
 
-Refer to the official [CameraX Release Notes](https://developer.android.com/jetpack/androidx/releases/camera) for the stable versions.
+Refer to the official [CameraX Release Notes](https://developer.android.com/jetpack/androidx/releases/camera) for the
+stable versions.

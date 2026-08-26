@@ -23,7 +23,8 @@ The Engage SDK defines cluster structures as shown in this reference:
               "adder": "addAllDisplayTimeWindow(DisplayTimeWindow)",
               "adderAll": "addAllDisplayTimeWindow(List<DisplayTimeWindow>)"
             }
-          }
+          },
+          "associatedClusterType": "ClusterType.TYPE_FEATURED"
         },
         "ContinuationCluster": {
           "package": "com.google.android.engage.common.datamodel.ContinuationCluster",
@@ -58,7 +59,8 @@ The Engage SDK defines cluster structures as shown in this reference:
               "adder": "addAllDisplayTimeWindow(DisplayTimeWindow)",
               "adderAll": "addAllDisplayTimeWindow(List<DisplayTimeWindow>)"
             }
-          }
+          },
+          "associatedClusterType": "ClusterType.TYPE_CONTINUATION"
         },
         "RecommendationCluster": {
           "package": "com.google.android.engage.common.datamodel.RecommendationCluster",
@@ -111,7 +113,8 @@ The Engage SDK defines cluster structures as shown in this reference:
               "setter": "setRecommendationClusterType(@RecommendationClusterType int)",
               "getter": "getRecommendationClusterType()"
             }
-          }
+          },
+          "associatedClusterType": "ClusterType.TYPE_RECOMMENDATION"
         },
         "SubscriptionCluster": {
           "package": "com.google.android.engage.common.datamodel.SubscriptionCluster",
@@ -128,10 +131,12 @@ The Engage SDK defines cluster structures as shown in this reference:
               "adder": "addSubscriptionEntity(SubscriptionEntity)",
               "getter": "getSubscriptionEntities()"
             }
-          }
+          },
+          "associatedClusterType": "ClusterType.TYPE_SUBSCRIPTION"
         },
         "EngagementCluster": {
           "package": "com.google.android.engage.common.datamodel.EngagementCluster",
+          "associatedClusterType": "ClusterType.TYPE_ENGAGEMENT",
           "fields": {
             "signInCardEntity": {
               "type": "SignInCardEntity",

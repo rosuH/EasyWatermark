@@ -78,8 +78,6 @@ class Navigator(val state: NavigationState){
         }
     }
 }
-
-   
 ```
 
 ```
@@ -216,8 +214,6 @@ class NavigationState(
             listOf(startRoute, topLevelRoute)
         }
 }
-
-   
 ```
 
 ```
@@ -346,8 +342,6 @@ class MultipleStacksActivity : ComponentActivity() {
         }
     }
 }
-
-   
 ```
 
 ```
@@ -471,6 +465,4 @@ fun EntryProviderScope<NavKey>.featureCSection(
         }
     }
 }
-
-   
 ```
