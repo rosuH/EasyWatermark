@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.ImageBitmapConfig
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.translate
@@ -423,15 +424,8 @@ object WatermarkCellComposer {
         // Narrow, explicit contract: REPEAT/CLAMP only. MIRROR/DECAL are not product-exposed and the
         // origin-stepped draw loop here does NOT reproduce their BitmapShader sampling — reject them up
         // front rather than silently aliasing them to REPEAT (no false parity claim).
-        require(tileMode == WatermarkTileMode.REPEAT || tileMode == WatermarkTileMode.CLAMP) {
-            "composeOverBackground supports only REPEAT and CLAMP; $tileMode needs a separate design/gate " +
-                "(its BitmapShader sampling is not reproduced by this draw loop)"
-        }
         val bgWidth = background.width.coerceAtLeast(1)
         val bgHeight = background.height.coerceAtLeast(1)
-        val cellWidth = cell.width.coerceAtLeast(1)
-        val cellHeight = cell.height.coerceAtLeast(1)
-        val safeAlpha = alpha.coerceIn(0f, 1f)
 
         val out = ImageBitmap(bgWidth, bgHeight, ImageBitmapConfig.Argb8888)
         CanvasDrawScope().draw(
@@ -440,34 +434,67 @@ object WatermarkCellComposer {
             canvas = Canvas(out),
             size = Size(bgWidth.toFloat(), bgHeight.toFloat()),
         ) {
-            // 1) Background first (full opacity).
             drawImage(image = background, topLeft = Offset.Zero)
-
-            // 2) Watermark cell(s).
-            when (tileMode) {
-                WatermarkTileMode.CLAMP -> {
-                    // Single decal at the fractional offset (the product "decal" mode).
-                    drawImage(
-                        image = cell,
-                        topLeft = Offset(offsetX * bgWidth, offsetY * bgHeight),
-                        alpha = safeAlpha,
-                    )
-                }
-                WatermarkTileMode.REPEAT -> {
-                    // Tile from the origin across the whole background, stepping by the cell's own dims
-                    // (the cell already includes its gap padding).
-                    var y = 0
-                    while (y < bgHeight) {
-                        var x = 0
-                        while (x < bgWidth) {
-                            drawImage(image = cell, topLeft = Offset(x.toFloat(), y.toFloat()), alpha = safeAlpha)
-                            x += cellWidth
-                        }
-                        y += cellHeight
-                    }
-                }
-            }
+            drawWatermarkTiles(
+                cell = cell,
+                tileMode = tileMode,
+                destWidth = bgWidth.toFloat(),
+                destHeight = bgHeight.toFloat(),
+                offsetX = offsetX,
+                offsetY = offsetY,
+                alpha = alpha,
+            )
         }
         return out
+    }
+}
+
+/**
+ * Tile [cell] over a destination the size of [destWidth]×[destHeight] (image-pixel space).
+ * Same REPEAT / CLAMP / alpha / reject-MIRROR-DECAL contract as
+ * [WatermarkCellComposer.composeOverBackground].
+ */
+fun DrawScope.drawWatermarkTiles(
+    cell: ImageBitmap,
+    tileMode: WatermarkTileMode,
+    destWidth: Float,
+    destHeight: Float,
+    offsetX: Float = 0f,
+    offsetY: Float = 0f,
+    alpha: Float = 1f,
+) {
+    require(tileMode == WatermarkTileMode.REPEAT || tileMode == WatermarkTileMode.CLAMP) {
+        "drawWatermarkTiles supports only REPEAT and CLAMP; $tileMode needs a separate design/gate " +
+            "(its BitmapShader sampling is not reproduced by this draw loop)"
+    }
+    val cellWidth = cell.width.coerceAtLeast(1)
+    val cellHeight = cell.height.coerceAtLeast(1)
+    val safeAlpha = alpha.coerceIn(0f, 1f)
+    val bgWidth = destWidth.coerceAtLeast(1f)
+    val bgHeight = destHeight.coerceAtLeast(1f)
+    when (tileMode) {
+        WatermarkTileMode.CLAMP -> {
+            drawImage(
+                image = cell,
+                topLeft = Offset(offsetX * bgWidth, offsetY * bgHeight),
+                alpha = safeAlpha,
+            )
+        }
+        WatermarkTileMode.REPEAT -> {
+            var y = 0
+            while (y < bgHeight) {
+                var x = 0
+                while (x < bgWidth) {
+                    drawImage(
+                        image = cell,
+                        topLeft = Offset(x.toFloat(), y.toFloat()),
+                        alpha = safeAlpha,
+                    )
+                    x += cellWidth
+                }
+                y += cellHeight
+            }
+        }
+        else -> error("unreachable: $tileMode rejected above")
     }
 }

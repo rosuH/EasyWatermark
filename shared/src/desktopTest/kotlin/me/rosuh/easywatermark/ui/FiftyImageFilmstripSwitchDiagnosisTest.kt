@@ -139,9 +139,9 @@ class FiftyImageFilmstripSwitchDiagnosisTest {
         val neighborBody = host.substring(neighborFn, (neighborFn + 2800).coerceAtMost(host.length))
         assertTrue(
             neighborBody.contains("withContext(Dispatchers.Default)") &&
-                neighborBody.contains("renderWatermarked") &&
-                neighborBody.contains("background = source"),
-            "neighbor WM raster must withContext(Default) and reuse the cached source bitmap",
+                neighborBody.contains("decodeSourcePlaceholder") &&
+                "renderWatermarked" !in neighborBody,
+            "neighbor prefetch must hop Default for Source decode and must not bake Watermarked",
         )
         assertTrue(
             host.contains("applyPreviewWorkingSetCaps") &&

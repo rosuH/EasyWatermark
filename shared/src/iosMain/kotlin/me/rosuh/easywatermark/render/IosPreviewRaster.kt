@@ -4,7 +4,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.text.font.FontFamily
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkMode
-import me.rosuh.easywatermark.data.repo.IosIconPersistence
 
 /**
  * **On-screen editor preview** raster — Android [WaterMarkCanvas] analogue for iOS (C3).
@@ -15,8 +14,8 @@ import me.rosuh.easywatermark.data.repo.IosIconPersistence
  * - decodes + downscales source in one pass to [maxEdgePx]
  *   (default [PREVIEW_MAX_EDGE_PX] = 720 for placeholder/draft; committed uses
  *   [PreviewResolutionPolicy.committedMaxEdgePx] from the measured preview box)
- * - paints through [CommonWatermarkPipeline.compose] with the current offset
- * - returns an in-memory [ImageBitmap] ready for Compose [Image]
+ * - [renderWatermarked] bakes a flattened frame (not the editor main-preview paint)
+ * - editor main preview uses [composeCell] + display-time overlay (ADR-0033)
  */
 /** J5: preview raster — not called from Swift. */
 internal object IosPreviewRaster {
@@ -104,6 +103,30 @@ internal object IosPreviewRaster {
             ),
         )
         return composed
+    }
+
+    /**
+     * Overlay cell only (ADR-0033). Does not bake [background]. Editor main preview must not
+     * call [renderWatermarked].
+     */
+    fun composeCell(waterMark: WaterMark, imageWidth: Int): ImageBitmap {
+        val icon = if (waterMark.markMode == WatermarkMode.Image) {
+            IosWatermarkIconCache.decoded(waterMark.iconUri, ICON_MAX_EDGE_PX)
+        } else {
+            null
+        }
+        val family = if (waterMark.markMode == WatermarkMode.Text) {
+            FontFamily.Default
+        } else {
+            null
+        }
+        return CommonWatermarkPipeline.composeCell(
+            imageWidth = imageWidth.coerceAtLeast(1),
+            config = waterMark,
+            env = IosTextRasterEnv.textRasterEnv(),
+            icon = icon,
+            fontFamily = family,
+        )
     }
 
     /**

@@ -439,7 +439,7 @@ class IosProductRootHostPreviewIdentityTest {
                     .curImageInfo?.uri?.value
                 assertNotNull(path)
                 val cached = ImageBitmap(24, 24, ImageBitmapConfig.Argb8888)
-                host.putWmPreviewForTests(path, cached)
+                host.putPlaceholderForTests(path, cached)
                 IosAssetIdentityRegistry.put(path, "p3-wm-hit")
                 var calls = 0
                 host.installPhotoKitFastPathForTests { _, _ ->
@@ -447,8 +447,11 @@ class IosProductRootHostPreviewIdentityTest {
                     ImageBitmap(8, 8, ImageBitmapConfig.Argb8888)
                 }
                 val timing = host.switchImageAndAwaitForTests(path, awaitNeighbors = false)
-                assertTrue(timing.hit == "wm" || timing.hit == "wm_optimistic", timing.hit)
-                assertEquals(0, calls, "WM cache hit must not start PhotoKit")
+                assertTrue(
+                    timing.hit == "source" || host.previewIdentityForTests().overlayPresent,
+                    timing.hit,
+                )
+                assertEquals(0, calls, "cached Source + cell compose must not start PhotoKit")
             } finally {
                 host.installPhotoKitFastPathForTests(null)
                 host.dispose()
@@ -520,6 +523,10 @@ class IosProductRootHostPreviewIdentityTest {
                         "same-switch ImageIO previewGen++ must not drop this path's Library derivative",
                     )
                     assertEquals(33 to 31, identity.libraryDerivativeSize)
+                    assertTrue(
+                        identity.overlayPresent,
+                        "Library may paint only as the photo layer under a matching overlay",
+                    )
                 } finally {
                     host.installPhotoKitFastPathForTests(null)
                     host.dispose()

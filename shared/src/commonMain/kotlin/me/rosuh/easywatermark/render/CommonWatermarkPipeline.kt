@@ -130,4 +130,21 @@ object CommonWatermarkPipeline {
             scaleRatio = config.textSize / WatermarkCellComposer.ICON_SCALE_REFERENCE_TEXT_SIZE,
             alpha = 1f, // alpha applied once at composition (iOS rule)
         )
+
+    /** One overlay cell for the live editor preview (not a baked photo). */
+    fun composeCell(
+        imageWidth: Int,
+        config: WaterMark,
+        env: TextRasterEnv,
+        icon: ImageBitmap? = null,
+        fontFamily: FontFamily? = null,
+    ): ImageBitmap = when (config.markMode) {
+        WatermarkMode.Text -> composeTextCell(imageWidth, config, env, fontFamily)
+        WatermarkMode.Image -> {
+            require(icon != null && icon.width > 0 && icon.height > 0) {
+                "CommonWatermarkPipeline: Image mode requires a decoded non-empty icon"
+            }
+            composeIconCell(config, icon)
+        }
+    }
 }

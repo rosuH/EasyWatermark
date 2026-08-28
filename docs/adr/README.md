@@ -29,7 +29,8 @@ Decisions trace to the CMP migration plan (`docs/superpowers/plans/2026-06-12-cm
 | [0026](0026-adaptive-editor-layout-ia.md) | Adaptive editor layout IA (Supporting-pane; three-zone withdrawn) | **Accepted** (amended 2026-08-10) |
 | [0027](0027-wallpaper-and-content-editor-theme.md) | Wallpaper dynamic color (Android, no OEM list) + Content editor theme (photo seed, all platforms) | **Accepted** (2026-08-11) |
 | [0028](0028-coil-kmp-ui-image-loading.md) | Coil KMP for UI image loading; exclude watermark compose/export; MediaStore Fetcher on Android | **Accepted** (2026-08-11) |
-| [0029](0029-ios-library-read-first-paint.md) | iOS Library Read; unwatermarked Library derivative first paint, then Watermarked preview | **Accepted** (owner 2026-08-15) |
+| [0029](0029-ios-library-read-first-paint.md) | iOS Library Read; Library is photo-layer only under a matching overlay (ADR-0033) | **Accepted** (owner 2026-08-15; amended 2026-08-26) |
 | [0030](0030-cross-platform-preview-working-set.md) | Cross-platform `PreviewImageRepository`; decode stays on the platform edge; PhotoKit not in the repo | **Proposed** |
 | [0031](0031-desktop-packaging-ci-not-pr-required.md) | Desktop packaging CI: dispatch/weekly/master-push only, not a PR required check; no third-party path classifiers | **Proposed** |
 | [0032](0032-android-splash-then-launch-fade-serial.md) | Android splash then Launch fade are serial; iOS launch fill matches first screen (`#262611`, no icon) | **Accepted** (owner 2026-08-26) |
+| [0033](0033-live-overlay-preview.md) | Editor preview is a live two-layer overlay; export still bakes | **Proposed** — Implemented, pending device sign-off |

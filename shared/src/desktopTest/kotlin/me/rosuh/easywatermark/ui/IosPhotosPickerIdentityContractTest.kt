@@ -221,15 +221,27 @@ class IosPhotosPickerIdentityContractTest {
         ).readText()
         val helperStart = host.indexOf("private suspend fun tryPaintLibraryDerivative")
         assertTrue(helperStart >= 0, "P3 must own tryPaintLibraryDerivative")
-        val helper = host.substring(helperStart, (helperStart + 2200).coerceAtMost(host.length))
+        val helperEnd = host.indexOf("private fun prefetchNeighborWatermarkedPreviews", helperStart)
+        val helper = host.substring(
+            helperStart,
+            if (helperEnd > helperStart) helperEnd else (helperStart + 4000).coerceAtMost(host.length),
+        )
         assertTrue("IosPhotoKitImageSource" in helper || "photoKitFastPathForTests" in helper)
         assertFalse(
             "renderWatermarked" in helper,
-            "Q1=B: PhotoKit first paint must not compose a watermark",
+            "Library must not bake via renderWatermarked",
         )
         assertFalse("IosPreviewPurpose.Watermarked" in helper)
         assertFalse("IosPreviewPurpose.SourcePlaceholder" in helper)
         assertTrue("sourceFastPathKey" in helper)
+        assertTrue(
+            "canPublishLivePhoto" in helper || "OverlayPreviewPolicy" in helper,
+            "Library may become the photo layer only through OverlayPreviewPolicy",
+        )
+        assertTrue(
+            "composeCell" in helper || "composeIosOverlayCell" in helper,
+            "Library paint must compose an overlay cell for the Library width",
+        )
         assertTrue("tryPaintLibraryDerivative" in host.substringAfter("onImageSelected ="))
         assertTrue("tryPaintLibraryDerivative" in host.substringAfter("private suspend fun bindProgressiveFocus"))
         assertFalse(
@@ -238,7 +250,7 @@ class IosPhotosPickerIdentityContractTest {
         )
         assertTrue(
             "shouldDropLibraryDerivative" in helper,
-            "stale means disposed, focus path changed, or Watermarked already showing",
+            "stale means disposed, focus path changed, or LiveLayers already showing",
         )
         assertFalse("PHImageManager" in helper)
         val plist = resolveRepoFile("iosApp/iosApp/Info.plist").readText()
@@ -248,6 +260,26 @@ class IosPhotosPickerIdentityContractTest {
             "Save your watermarked photo to your library." in plist,
             "Add-only usage string must stay unchanged",
         )
+    }
+
+    @Test
+    fun same_path_style_ticks_keep_last_live_layers() {
+        val host = resolveRepoFile(
+            "shared/src/iosMain/kotlin/me/rosuh/easywatermark/ui/IosProductRootHost.kt",
+        ).readText()
+        val start = host.indexOf("private val configChangeRenders")
+        assertTrue(start >= 0, "missing configChangeRenders")
+        val end = host.indexOf("onConfigChange = { change ->", start)
+        val body = host.substring(start, if (end > start) end else start + 1200)
+        assertFalse(
+            "previewBitmap = null" in body,
+            "same-path style ticks must keep the photo; dropping it paints WaitThumb",
+        )
+        assertFalse(
+            "overlayCell = null" in body,
+            "same-path style ticks must keep last overlay until the new cell publishes",
+        )
+        assertTrue("renderPreviewForCurrentSelection" in body)
     }
 
     @Test

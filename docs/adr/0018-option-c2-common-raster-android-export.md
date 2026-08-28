@@ -21,7 +21,7 @@ C2 was previously blocked by byte-parity failures (rotated non-uniform icons; CJ
 2. **Android native `WatermarkRenderer.build*Shader` / `compose` production path is retired on a gated schedule**, not deleted in one unmeasured PR.  
 3. **Goldens:** strict FNV byte goldens that encode native Android raster **must be rebaselined or replaced** with a signed perceptual/structural policy (ADR-0010 follow-up). CJK visual change is **accepted** as a product consequence of C2.  
 4. **Still permanent platform edges:** system pick/share/save/permissions; decode/encode/EXIF; app entry. **Not** “zero platform code.”  
-5. **ProductApp / UI (Option C shell)** continues in parallel: one commonMain product UI; preview slot calls the **same** common raster path export uses (WYSIWYG under C2).
+5. **ProductApp / UI (Option C shell)** continues in parallel: one commonMain product UI. **ADR-0033:** the editor main-preview slot is a display-time overlay (`composeCell` + `drawWatermarkTiles`); it no longer paints the export `composeOverBackground` bitmap. Export / share / save-sheet thumbs still bake via C2.
 
 ## Non-goals (this ADR)
 
@@ -105,3 +105,7 @@ C2 was previously blocked by byte-parity failures (rotated non-uniform icons; CJ
 
 - **C2** selected explicitly after product discussion of common 光栅 and C1/C2 tradeoff.  
 - Accepts Android export may change vs Play v2.10.0; requires rebaseline, not silent claim of byte parity.
+
+## Amendment (ADR-0033, 2026-08-26)
+
+Editor main preview is a display-time overlay. Export still bakes through C2 `composeOverBackground`. Decision §5 “preview slot calls the same common raster path” is withdrawn for the editor slot only.

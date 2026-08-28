@@ -46,8 +46,20 @@ class DesktopPreviewSourceReuseTest {
         assertTrue("DraftRenderConflator" in window)
         assertTrue("PreviewImageRepository" in window)
         assertTrue(
-            "showSourceWhileComposing" in body,
-            "same-path style ticks must not replace the on-screen frame with Source",
+            "OverlayPreviewPolicy" in body || "canPublishLivePhoto" in body,
+            "paint path must gate LiveLayers through OverlayPreviewPolicy",
+        )
+        assertTrue(
+            "showSourceWhileComposing" !in body,
+            "must not publish Source onto the editor preview via showSourceWhileComposing",
+        )
+        assertTrue(
+            "renderWatermarked" !in body,
+            "editor paint must not bake via renderWatermarked",
+        )
+        assertTrue(
+            "composeDesktopOverlayCell" in window || "composeCell" in body,
+            "editor paint must compose an overlay cell, not a baked frame",
         )
     }
 
@@ -71,8 +83,12 @@ class DesktopPreviewSourceReuseTest {
             "filmstrip switch must not queue behind the slider conflator",
         )
         assertTrue(
-            "Watermarked" in select && "peekCached" in select,
-            "switch must optimistic-paint a cached Watermarked frame before decode",
+            "clearLiveLayers" in select,
+            "switch must drop the previous live preview immediately",
+        )
+        assertTrue(
+            "preview = " !in select && "previewPhoto =" !in select,
+            "switch must not optimistic-paint Source or a baked Watermarked frame",
         )
         val recomputeStart = window.indexOf("fun recomputeCommittedPreviewBucket")
         val recomputeEnd = window.indexOf("fun onPreviewBoxSizeChanged", recomputeStart)
@@ -107,9 +123,8 @@ class DesktopPreviewSourceReuseTest {
             "repository completion is Main; ImageIO in prefetch must hop IO",
         )
         assertTrue(
-            body.contains("withContext(Dispatchers.Default)") &&
-                body.contains("renderWatermarked"),
-            "neighbor compose must hop Default, not freeze the editor",
+            "renderWatermarked" !in body,
+            "neighbor prefetch must not bake Watermarked frames",
         )
         val refreshStart = window.indexOf("suspend fun refreshPreviewLight")
         val refreshEnd = window.indexOf("data class DesktopPreviewPaint", refreshStart)
@@ -117,12 +132,29 @@ class DesktopPreviewSourceReuseTest {
             refreshStart,
             if (refreshEnd > refreshStart) refreshEnd else window.length,
         )
-        val loadIdx = refresh.indexOf("previewImages.load(srcKey)")
-        val composeIdx = refresh.indexOf("renderWatermarked")
-        assertTrue(loadIdx >= 0 && composeIdx > loadIdx)
+        assertTrue("previewImages.load(srcKey)" in refresh)
         assertTrue(
-            refresh.substring(loadIdx, composeIdx).contains("showSourceWhileComposing"),
-            "cache-miss switch must paint Source after decode, before compose",
+            "showSourceWhileComposing" !in refresh,
+            "cache-miss must not paint Source before the overlay is ready",
+        )
+        assertTrue(
+            "renderWatermarked" !in refresh,
+            "refreshPreviewLight must not bake the editor preview",
+        )
+        assertTrue(
+            "canPublishLivePhoto" in refresh && "composeDesktopOverlayCell" in refresh,
+            "Source + cell must publish atomically through OverlayPreviewPolicy",
+        )
+        val persistStart = window.indexOf("persistHandler.value = { change ->")
+        assertTrue(persistStart >= 0, "missing persistHandler config path")
+        val persistEnd = window.indexOf("fun submitPreviewPaint", persistStart)
+        val persist = window.substring(
+            persistStart,
+            if (persistEnd > persistStart) persistEnd else persistStart + 800,
+        )
+        assertTrue(
+            "previewPhoto = null" !in persist && "overlayCell = null" !in persist,
+            "same-path style ticks must keep last LiveLayers; dropping photo paints WaitThumb",
         )
     }
 

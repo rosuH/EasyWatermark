@@ -13,7 +13,7 @@ import me.rosuh.easywatermark.data.model.WatermarkMode
 
 /**
  * Android edge for ADR-0018 common 光栅: [TextRasterEnv] bootstrap + [Bitmap] ↔ [ImageBitmap].
- * Production preview and export always call [composeToBitmap] (rollout flag removed).
+ * Export always calls [composeToBitmap]. Editor main preview uses [composeCell] (ADR-0033).
  */
 object AndroidCommonRaster {
 
@@ -73,6 +73,29 @@ object AndroidCommonRaster {
         } finally {
             PreviewSourceReuseProbe.endCompose()
         }
+    }
+
+    /**
+     * Overlay cell only (ADR-0033). Off-main. Export still uses [composeToBitmap].
+     */
+    fun composeCell(
+        context: Context,
+        config: WaterMark,
+        imageWidth: Int,
+        icon: Bitmap? = null,
+    ): androidx.compose.ui.graphics.ImageBitmap {
+        val env = textRasterEnv(context)
+        val iconIb = icon?.asImageBitmap()
+        if (config.markMode == WatermarkMode.Image) {
+            require(iconIb != null) { "AndroidCommonRaster.composeCell: Image mode requires icon bitmap" }
+        }
+        PreviewSourceReuseProbe.recordCompose()
+        return CommonWatermarkPipeline.composeCell(
+            imageWidth = imageWidth.coerceAtLeast(1),
+            config = config,
+            env = env,
+            icon = iconIb,
+        )
     }
 
     /**
