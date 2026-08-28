@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<!--
+  Trust card: Apple Design Awards lockup — silver 3D laurels + 3D icon + two-line caption.
+  No Winner / #1 / Best claims.
+  Query: lang= title= sub=  n1= h1= n2= h2= n3= h3=
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root { --accent: #FFDE32; --ivory: #FFF9EF; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; }
+  body {
+    font-family: -apple-system, "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background: linear-gradient(180deg, #1c1c0f 0%, #131309 46%, #0d0d07 100%);
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .glow {
+    position: fixed; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(95vw 62vw at 50% -14%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 68%);
+  }
+  .sheet {
+    position: relative; z-index: 2;
+    width: 88vw; height: 100%;
+    padding: 9vw 0 4vw;
+    display: flex; flex-direction: column;
+    min-height: 0;
+  }
+  h1 {
+    color: var(--ivory);
+    font-size: 7.4vw; line-height: 1.16; font-weight: 700;
+    letter-spacing: -0.022em;
+    white-space: pre-line;
+  }
+  html[lang="zh"] h1 { font-weight: 600; letter-spacing: 0.01em; }
+  h1 .hl { color: var(--accent); }
+  .sub {
+    margin-top: 2.2vw;
+    color: rgba(255,249,239,0.58);
+    font-size: 3.3vw; line-height: 1.4; font-weight: 500;
+  }
+  .awards {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex; flex-direction: column;
+    justify-content: space-evenly;
+    margin-top: 3vw;
+  }
+  .award { position: relative; width: 78vw; margin: 0 auto; }
+  .award .wreath {
+    display: block; width: 100%; height: auto;
+    filter: drop-shadow(0 1.2vw 2vw rgba(0,0,0,0.45));
+  }
+  .award .icon {
+    position: absolute;
+    left: 50%; top: 10%;
+    width: 20vw; height: auto;
+    transform: translate(-50%, -42%);
+    filter: drop-shadow(0 0.8vw 1.4vw rgba(0,0,0,0.4));
+  }
+  .caption {
+    position: absolute;
+    left: 50%; top: 56%;
+    transform: translate(-50%, -50%);
+    width: 42vw;
+    text-align: center;
+    color: #fff;
+  }
+  .caption .name {
+    font-size: 5.2vw; font-weight: 600; line-height: 1.15;
+    letter-spacing: 0.01em;
+  }
+  html[lang="en"] .caption .name { font-size: 4.4vw; letter-spacing: -0.02em; }
+  .caption .honor {
+    margin-top: 0.8vw;
+    font-size: 2.8vw; font-weight: 500;
+    color: rgba(255,255,255,0.72);
+  }
+  html[lang="en"] .caption .honor { font-size: 2.5vw; }
+</style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="sheet">
+    <h1 id="title"></h1>
+    <div class="sub" id="sub"></div>
+    <div class="awards">
+      <div class="award">
+        <img class="wreath" src="awards/laurel.png" alt="">
+        <img class="icon" src="awards/icon-app.png" alt="">
+        <div class="caption"><div class="name" id="n1"></div><div class="honor" id="h1"></div></div>
+      </div>
+      <div class="award">
+        <img class="wreath" src="awards/laurel.png" alt="">
+        <img class="icon" src="awards/icon-offline.png" alt="">
+        <div class="caption"><div class="name" id="n2"></div><div class="honor" id="h2"></div></div>
+      </div>
+      <div class="award">
+        <img class="wreath" src="awards/laurel.png" alt="">
+        <img class="icon" src="awards/icon-lock.png" alt="">
+        <div class="caption"><div class="name" id="n3"></div><div class="honor" id="h3"></div></div>
+      </div>
+    </div>
+  </div>
+<script>
+  const q = new URLSearchParams(location.search);
+  const get = (k, d="") => q.get(k) ?? d;
+  document.documentElement.lang = get("lang", "zh");
+  const titleEl = document.getElementById("title");
+  get("title").replaceAll("\\n", "\n").split(/\[\[|\]\]/).forEach((part, i) => {
+    if (!part) return;
+    if (i % 2 === 1) { const s = document.createElement("span"); s.className = "hl"; s.textContent = part; titleEl.append(s); }
+    else titleEl.append(part);
+  });
+  document.getElementById("sub").textContent = get("sub").replaceAll("\\n", "\n");
+  ["n1","h1","n2","h2","n3","h3"].forEach((id) => {
+    document.getElementById(id).textContent = get(id).replaceAll("\\n", "\n");
+  });
+</script>
+</body>
+</html>
