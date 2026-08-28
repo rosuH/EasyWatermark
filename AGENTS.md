@@ -8,7 +8,7 @@ This file is the always-on contract. Put ticket history, platform essays, and re
 
 EasyWatermark (`me.rosuh.easywatermark`) tiles text or image watermarks over photos so they cannot be reused. Fully offline; no tracking, stats, or crash SDKs. One Kotlin Multiplatform / Compose Multiplatform codebase ships Android, Desktop (JVM), and iOS.
 
-Privacy that shapes code: Android needs no runtime permission on API 29+ (pre-29 storage). iOS pick needs no library read; save is add-only; optional Library Read is only for a faster unwatermarked first paint (ADR-0029). Session and export stay path-first (ADR-0021). Export strips all EXIF (ADR-0009). Android ships via GitHub Releases, Google Play (paid, same code), F-Droid, and Coolapk.
+Privacy that shapes code: Android needs no runtime permission on API 29+ (pre-29 storage). iOS pick needs no library read; save is add-only; optional Library Read is a photo-layer latch under a matching overlay (ADR-0029 + ADR-0033). Session and export stay path-first (ADR-0021). Export strips all EXIF (ADR-0009). Android ships via GitHub Releases, Google Play (paid, same code), F-Droid, and Coolapk.
 
 ## Modules
 
@@ -58,7 +58,7 @@ Pair every “don’t” with the replacement.
 - **DataStore:** plain per-platform functions. Do not add a commonMain `expect`/`actual` store factory. Android stays on `PreferenceDataStoreFactory.create(produceFile, migrations)`.
 - **Shared VM / IO:** do not extract a shared ViewModel, reducer, or IO `expect` without a named off-Android consumer or an owner decision.
 - **Thumbs vs compose:** Coil 3 for gallery/filmstrip/save thumbs/icon/theme-seed (ADR-0028). Watermark preview and export decode stay on the pipeline, not Coil.
-- **Preview:** `PreviewImageRepository` (ADR-0030). Slider ticks must not fully re-decode the focus source, and must not flash an unwatermarked Source over the last Watermarked frame.
+- **Preview:** editor main preview is a live two-layer overlay (ADR-0033): Source / iOS Library photo + tiled cell. Export still bakes. `PreviewImageRepository` keeps Source residency (ADR-0030). Slider ticks must not fully re-decode the focus source. Path change drops the previous live layers immediately (thumb / empty wait). Never paint Source or Library without a matching overlay. CLAMP commit persists offset, keeps live layers, and enqueues one non-draft overlay paint.
 - **Render:** production path is `CommonWatermarkPipeline`. `:app` `WatermarkRenderer` is the measurement/golden oracle only. Text mode uses system-default fonts (ADR-0025) — no Noto in iOS or `desktopMain` resources.
 - **Theme:** `DynamicColorCapability` for wallpaper only. Content editor theme is a separate path (ADR-0027). Do not call `CMonet` from Compose screens.
 - **Editor layout:** dual-pane at **≥800 dp** via `editorLayoutClass` (ADR-0026). Route large-surface checks through `usesLargeScreenDialog`, never a raw width compare.

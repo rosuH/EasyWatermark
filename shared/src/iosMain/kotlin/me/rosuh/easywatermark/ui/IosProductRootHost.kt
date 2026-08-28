@@ -1,6 +1,5 @@
 package me.rosuh.easywatermark.ui
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -9,8 +8,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -23,7 +20,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asComposeImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -46,6 +42,7 @@ import me.rosuh.easywatermark.data.model.JobState
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkConfigChange
+import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.data.model.toUiProjection
@@ -65,6 +62,8 @@ import me.rosuh.easywatermark.render.IosPhotoKitNeighborCache
 import me.rosuh.easywatermark.render.PhotosDaemonNeighborCache
 import me.rosuh.easywatermark.render.IosPreviewRaster
 import me.rosuh.easywatermark.render.IosWatermarkIconCache
+import me.rosuh.easywatermark.render.OverlayPreviewChrome
+import me.rosuh.easywatermark.render.OverlayPreviewPolicy
 import me.rosuh.easywatermark.render.PreviewResolutionPolicy
 import me.rosuh.easywatermark.render.PreviewWorkingSetBudget
 import me.rosuh.easywatermark.render.neighborIndices
@@ -114,8 +113,6 @@ import me.rosuh.easywatermark.ui.theme.AppTheme
 import me.rosuh.easywatermark.ui.theme.ContentEditorTheme
 import me.rosuh.easywatermark.ui.theme.ContentEditorThemeHost
 import me.rosuh.easywatermark.ui.theme.ProvideMotionPolicy
-import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
-import me.rosuh.easywatermark.ui.theme.motionDurationMs
 import org.jetbrains.compose.resources.stringResource
 import platform.Foundation.NSData
 import platform.Foundation.NSFileManager
@@ -255,8 +252,8 @@ class IosProductRootHost(
             }
         },
         onOptimisticFocusPaint = { focusPath ->
-            if (!disposed) {
-                paintWatermarkedCacheHitIfPresent(focusPath)
+            if (!disposed && previewSourcePath != focusPath) {
+                clearLiveLayers()
             }
         },
     )
@@ -278,9 +275,11 @@ class IosProductRootHost(
      */
     private var sourceBytes by mutableStateOf<ByteArray?>(null)
     private var iconBytes by mutableStateOf<ByteArray?>(null)
-    /** In-memory watermarked preview (no PNG round-trip). */
+    /** Live photo layer (Source or Library). Never assigned without a matching [overlayCell]. */
     private var previewBitmap by mutableStateOf<ImageBitmap?>(null)
-    /** Source path that [previewBitmap] was rendered for. */
+    /** Overlay cell tiled at display time (ADR-0033). */
+    private var overlayCell by mutableStateOf<OverlayCell?>(null)
+    /** Source path that the current LiveLayers were published for. */
     private var previewSourcePath by mutableStateOf<String?>(null)
     private var outputPath by mutableStateOf<String?>(null)
     private var statusLine by mutableStateOf("")
@@ -332,14 +331,8 @@ class IosProductRootHost(
         scope = hostScope,
     ) { request ->
         if (disposed) return@IosDraftRenderConflator
-        previewGen += 1
-        val gen = previewGen
-        runCatching {
-            renderPreviewForCurrentSelection(
-                gen = gen,
-                draftOffset = request.offsetX to request.offsetY,
-                forcePath = request.path,
-            )
+        if (previewSourcePath == request.path && overlayCell != null) {
+            overlayCell = overlayCell?.withOffset(request.offsetX, request.offsetY)
         }
     }
 
@@ -347,8 +340,8 @@ class IosProductRootHost(
         scope = hostScope,
     ) { change ->
         if (disposed) return@IosDraftRenderConflator
-        previewImages.clearPurposeFromOwner(IosPreviewPurpose.Watermarked)
-        watermarkedPreviewSourcePath = null
+        // Same-path style ticks keep last LiveLayers until the new cell publishes.
+        // Dropping the photo here paints Coil WaitThumb and the background jumps.
         previewGen += 1
         val gen = previewGen
         runCatching {
@@ -432,6 +425,7 @@ class IosProductRootHost(
         val placeholderCachePaths: Set<String>,
         val libraryDerivativePath: String? = null,
         val libraryDerivativeSize: Pair<Int, Int>? = null,
+        val overlayPresent: Boolean = false,
     )
 
     internal fun installPhotoKitFastPathForTests(
@@ -497,6 +491,7 @@ class IosProductRootHost(
                 .mapTo(linkedSetOf()) { it.ownedPath },
             libraryDerivativePath = libraryDerivativePath,
             libraryDerivativeSize = libraryDerivativeBitmap?.let { it.width to it.height },
+            overlayPresent = overlayCell != null && previewBitmap != null,
         )
     }
 
@@ -570,9 +565,8 @@ class IosProductRootHost(
 
     /**
      * Test seam: same critical path as product [onImageSelected] without Compose —
-     * optimistic WM peek → [AppIntent.SelectCurrent] → miss → full
-     * [renderPreviewForCurrentSelection], then neighbor WM prefetch (R1).
-     * Returns wall-clock ms and whether WM was a cache hit.
+     * drop live layers → [AppIntent.SelectCurrent] → Library/Source + cell →
+     * [renderPreviewForCurrentSelection], then neighbor Source prefetch.
      */
     internal suspend fun switchImageAndAwaitForTests(
         path: String,
@@ -580,11 +574,9 @@ class IosProductRootHost(
     ): SwitchImageTiming {
         require(path.isNotBlank()) { "switchImageAndAwaitForTests: blank path" }
         val start = kotlin.time.TimeSource.Monotonic.markNow()
-        // Attribution window covers only the focus paint; ±2 neighbor warming runs after the
-        // switch wall clock and must not be charged to it.
         IosPreviewBench.Attribution.begin()
         val previewBucket = committedPreviewBucket
-        val instantHit = paintWatermarkedCacheHitIfPresent(path)
+        clearLiveLayers()
         val dispatchStart = kotlin.time.TimeSource.Monotonic.markNow()
         services.session.dispatchAndAwait(
             me.rosuh.easywatermark.session.AppIntent.SelectCurrent(
@@ -592,32 +584,7 @@ class IosProductRootHost(
             ),
         )
         val dispatchMs = dispatchStart.elapsedNow().inWholeMilliseconds
-        if (instantHit) {
-            val timing = switchTiming(start, dispatchMs, "wm_optimistic")
-            previewGen += 1
-            // Match product path: warm ±2 after paint so sequential N=50 hits neighbors.
-            if (awaitNeighbors) {
-                prefetchNeighborWatermarkedPreviewsAndAwait(path, previewGen)
-            }
-            return timing
-        }
-        previewImages.cached(watermarkedPreviewKey(path, previewBucket))?.let {
-            previewBitmap = it
-            previewSourcePath = path
-            watermarkedPreviewSourcePath = path
-            val timing = switchTiming(start, dispatchMs, "wm")
-            previewGen += 1
-            if (awaitNeighbors) {
-                prefetchNeighborWatermarkedPreviewsAndAwait(path, previewGen)
-            }
-            return timing
-        }
         val sourceHit = previewImages.peekCached(sourcePreviewKey(path, previewBucket)) != null
-        previewImages.peekCached(sourcePreviewKey(path, previewBucket))?.let { hit ->
-            previewBitmap = hit
-            previewSourcePath = path
-            watermarkedPreviewSourcePath = null
-        }
         hostScope.launch {
             tryPaintLibraryDerivative(path)
         }
@@ -735,9 +702,7 @@ class IosProductRootHost(
         if (disposed) return
         sourceBytes = null
         // Keep iconBytes: single small buffer needed for Image-mode editor chrome; Session still owns icon path.
-        previewBitmap = null
-        previewSourcePath = null
-        watermarkedPreviewSourcePath = null
+        clearLiveLayers()
         clearLibraryDerivative()
         previewGen += 1
         previewImages.clearFromOwner()
@@ -761,9 +726,7 @@ class IosProductRootHost(
         try {
             if (disposed) return
             sourceBytes = null
-            previewBitmap = null
-            previewSourcePath = null
-            watermarkedPreviewSourcePath = null
+            clearLiveLayers()
             clearLibraryDerivative()
             photoKitResolveFailedIds.clear()
             outputPath = null
@@ -817,8 +780,7 @@ class IosProductRootHost(
             // Clear presentation + caches (Main-thread host; lock serializes vs ownership adopt).
             sourceBytes = null
             iconBytes = null
-            previewBitmap = null
-            previewSourcePath = null
+            clearLiveLayers()
             clearLibraryDerivative()
             photoKitResolveFailedIds.clear()
             outputPath = null
@@ -1086,7 +1048,6 @@ class IosProductRootHost(
                 }
 
                 ProductShellNav.Route.Editor -> {
-                    val displayPreview = previewBitmap
                     val iconBitmap = iconBytes?.let { bytes ->
                         remember(bytes) { IosImageDecoder.decode(bytes) }
                     }
@@ -1188,190 +1149,133 @@ class IosProductRootHost(
                             templateList = templateListPainter,
                         ),
                         preview = { previewModifier ->
-                            // C4.4R.3: CLAMP drag on the Fit preview Image → session.applyOffset,
-                            // selected-path cache eviction, one previewGen bump, existing rerender.
-                            // Enable only when (1) path identity matches and (2) the displayed bitmap
-                            // is the watermarked cache entry for that path — not a source placeholder
-                            // (previewSourcePath is also set for unwatermarked placeholders).
                             val dragItem = launchUi.curImageInfo ?: sessionImages.firstOrNull()
                             val dragPath = dragItem?.uri?.value.orEmpty()
                             val draftActiveForSelection =
                                 clampDraftSelectionId == dragPath && clampDraftOffset != null
-                            val watermarkedDisplayMatchesSelection =
-                                dragPath.isNotEmpty() &&
-                                    previewSourcePath == dragPath &&
-                                    displayPreview != null &&
-                                    (
-                                        watermarkedPreviewSourcePath == dragPath ||
-                                            draftActiveForSelection
+                            val isTextMode = waterMark.markMode == WatermarkMode.Text
+                            val chrome = OverlayPreviewPolicy.decide(
+                                selectedPath = dragPath.takeIf { it.isNotBlank() },
+                                photoPath = previewSourcePath,
+                                photoWidth = previewBitmap?.width,
+                                cellReadyForWidth = overlayCell?.builtForWidth,
+                                hasThumb = dragPath.isNotBlank(),
+                                isTextMode = isTextMode,
+                            )
+                            val livePhoto =
+                                if (chrome == OverlayPreviewChrome.LiveLayers) previewBitmap else null
+                            val liveOverlay =
+                                if (chrome == OverlayPreviewChrome.LiveLayers) overlayCell else null
+                            val identityLive = chrome == OverlayPreviewChrome.LiveLayers &&
+                                previewSourcePath == dragPath &&
+                                livePhoto != null &&
+                                liveOverlay != null
+                            val dragModifier = if (
+                                !isBusy &&
+                                dragItem != null &&
+                                identityLive &&
+                                livePhoto != null &&
+                                liveOverlay != null
+                            ) {
+                                Modifier.clampPreviewOffsetDrag(
+                                    enabled = true,
+                                    selectionId = dragPath,
+                                    isClamp = waterMark.tileMode == WatermarkTileMode.CLAMP,
+                                    imageWidth = livePhoto.width.toFloat(),
+                                    imageHeight = livePhoto.height.toFloat(),
+                                    offsetX = dragItem.offsetX,
+                                    offsetY = dragItem.offsetY,
+                                    onOffsetDraft = { x, y ->
+                                        if (dragPath.isEmpty()) {
+                                            return@clampPreviewOffsetDrag
+                                        }
+                                        clampDraftOffset = x to y
+                                        clampDraftSelectionId = dragPath
+                                        overlayCell = overlayCell?.withOffset(x, y)
+                                        clampDraftRenders.submit(
+                                            ClampDraftRequest(dragPath, x, y),
                                         )
-                            // M2/M7: policy-aware first reveal + switch fade (iOS was hard-cut).
-                            // Ready-frame only: path is set with watermarked/source bind; hasContent
-                            // false while displayPreview null so key cannot advance on empty pixels.
-                            AnimatedPreviewSurface(
-                                contentKey = previewSourcePath,
-                                hasContent = displayPreview != null &&
-                                    !previewSourcePath.isNullOrEmpty(),
+                                    },
+                                    onOffsetDraftClear = {
+                                        clampDraftOffset = null
+                                        clampDraftSelectionId = null
+                                    },
+                                    onOffsetCommit = { x, y ->
+                                        if (dragPath.isEmpty()) {
+                                            return@clampPreviewOffsetDrag
+                                        }
+                                        if (previewSourcePath != dragPath) {
+                                            return@clampPreviewOffsetDrag
+                                        }
+                                        if (
+                                            watermarkedPreviewSourcePath != dragPath &&
+                                            !draftActiveForSelection
+                                        ) {
+                                            return@clampPreviewOffsetDrag
+                                        }
+                                        val live = services.session
+                                            .launchScreenUiStateFlow
+                                            .value
+                                            .curImageInfo
+                                            ?.takeIf { it.uri.value == dragPath }
+                                            ?: return@clampPreviewOffsetDrag
+                                        val commitBench = ClampDragBench
+                                            .previewScope("ios_offset_commit")
+                                        services.session.applyOffset(
+                                            live.copy(offsetX = x, offsetY = y),
+                                        )
+                                        commitBench.mark("applyOffset")
+                                        clampDraftOffset = null
+                                        clampDraftSelectionId = null
+                                        overlayCell = overlayCell?.withOffset(x, y)
+                                        previewGen++
+                                        val commitGen = previewGen
+                                        hostScope.launch {
+                                            renderPreviewForCurrentSelection(gen = commitGen)
+                                        }
+                                        commitBench.mark("previewGenBump")
+                                        val draftCounts = clampDraftRenders.countsForTests()
+                                        commitBench.finish(
+                                            mapOf(
+                                                "offsetX" to x,
+                                                "offsetY" to y,
+                                                "path" to dragPath.substringAfterLast('/'),
+                                                "draftSamples" to draftCounts.submitted,
+                                                "draftRenders" to draftCounts.rendered,
+                                            ),
+                                        )
+                                        clampDraftRenders.resetCountsForTests()
+                                    },
+                                )
+                            } else {
+                                Modifier
+                            }
+                            LiveOverlayPreview(
+                                chrome = chrome,
+                                photo = livePhoto,
+                                overlay = liveOverlay,
+                                waitThumb = if (chrome == OverlayPreviewChrome.WaitThumb &&
+                                    dragItem != null
+                                ) {
+                                    { thumbMod ->
+                                        me.rosuh.easywatermark.ui.image.ProductAsyncImage(
+                                            thumb = me.rosuh.easywatermark.ui.image.ProductThumb(
+                                                ref = dragItem.uri,
+                                                maxEdgePx = me.rosuh.easywatermark.ui.image.ProductThumb.UI_THUMB_MAX_EDGE,
+                                            ),
+                                            contentDescription = "Watermark preview",
+                                            contentScale = ContentScale.Fit,
+                                            modifier = thumbMod,
+                                        )
+                                    }
+                                } else {
+                                    null
+                                },
                                 modifier = previewModifier
                                     .fillMaxSize()
-                                    .testTag("sharedComposeWatermarkPreview"),
-                            ) {
-                                val bmp = displayPreview
-                                val libraryBmp = libraryDerivativeBitmap
-                                val libraryPath = libraryDerivativePath
-                                val fadeMs = motionDurationMs(
-                                    currentMotionPolicy(),
-                                    LIBRARY_DERIVATIVE_CROSSFADE_MS,
-                                )
-                                val overlayAlpha = remember { Animatable(1f) }
-                                LaunchedEffect(
-                                    libraryPath,
-                                    watermarkedPreviewSourcePath,
-                                    fadeMs,
-                                ) {
-                                    val wmPath = watermarkedPreviewSourcePath
-                                    if (
-                                        libraryBmp != null &&
-                                        libraryPath != null &&
-                                        wmPath == libraryPath
-                                    ) {
-                                        if (fadeMs <= 0) {
-                                            overlayAlpha.snapTo(1f)
-                                            clearLibraryDerivative()
-                                        } else {
-                                            overlayAlpha.snapTo(0f)
-                                            overlayAlpha.animateTo(
-                                                1f,
-                                                animationSpec = tween(durationMillis = fadeMs),
-                                            )
-                                            if (watermarkedPreviewSourcePath == libraryPath) {
-                                                clearLibraryDerivative()
-                                            }
-                                        }
-                                    } else {
-                                        overlayAlpha.snapTo(1f)
-                                    }
-                                }
-                                if (bmp != null) {
-                                    Box(Modifier.fillMaxSize()) {
-                                        if (
-                                            libraryBmp != null &&
-                                            libraryPath == previewSourcePath
-                                        ) {
-                                            Image(
-                                                bitmap = libraryBmp,
-                                                contentDescription = null,
-                                                contentScale = ContentScale.Fit,
-                                                modifier = Modifier.fillMaxSize(),
-                                            )
-                                        }
-                                        Image(
-                                        bitmap = bmp,
-                                        contentDescription = "Watermarked preview",
-                                        contentScale = ContentScale.Fit,
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .graphicsLayer {
-                                                alpha = overlayAlpha.value
-                                            }
-                                            .clampPreviewOffsetDrag(
-                                                enabled = !isBusy &&
-                                                    dragItem != null &&
-                                                    watermarkedDisplayMatchesSelection,
-                                                selectionId = dragPath,
-                                                isClamp = waterMark.tileMode ==
-                                                    WatermarkTileMode.CLAMP,
-                                                imageWidth = bmp.width.toFloat(),
-                                                imageHeight = bmp.height.toFloat(),
-                                                offsetX = dragItem?.offsetX ?: 0.5f,
-                                                offsetY = dragItem?.offsetY ?: 0.5f,
-                                                onOffsetDraft = { x, y ->
-                                                    if (dragPath.isEmpty()) {
-                                                        return@clampPreviewOffsetDrag
-                                                    }
-                                                    clampDraftOffset = x to y
-                                                    clampDraftSelectionId = dragPath
-                                                    // Conflated: the gesture never queues more
-                                                    // than one pending render, and the newest
-                                                    // offset is the one that paints.
-                                                    clampDraftRenders.submit(
-                                                        ClampDraftRequest(dragPath, x, y),
-                                                    )
-                                                },
-                                                onOffsetDraftClear = {
-                                                    clampDraftOffset = null
-                                                    clampDraftSelectionId = null
-                                                },
-                                                onOffsetCommit = { x, y ->
-                                                    if (dragPath.isEmpty()) {
-                                                        return@clampPreviewOffsetDrag
-                                                    }
-                                                    // Triple identity: frozen drag path, displayed
-                                                    // preview path, and live Session selection.
-                                                    if (previewSourcePath != dragPath) {
-                                                        return@clampPreviewOffsetDrag
-                                                    }
-                                                    if (
-                                                        watermarkedPreviewSourcePath != dragPath &&
-                                                        !draftActiveForSelection
-                                                    ) {
-                                                        return@clampPreviewOffsetDrag
-                                                    }
-                                                    val live = services.session
-                                                        .launchScreenUiStateFlow
-                                                        .value
-                                                        .curImageInfo
-                                                        ?.takeIf { it.uri.value == dragPath }
-                                                        ?: return@clampPreviewOffsetDrag
-                                                    // H0.1-fix: sync Session commit; draft cleared
-                                                    // by adapter after this callback.
-                                                    val commitBench = ClampDragBench
-                                                        .previewScope("ios_offset_commit")
-                                                    services.session.applyOffset(
-                                                        live.copy(offsetX = x, offsetY = y),
-                                                    )
-                                                    commitBench.mark("applyOffset")
-                                                    clampDraftOffset = null
-                                                    clampDraftSelectionId = null
-                                                    previewImages.invalidateOwnedPathFromOwner(
-                                                        ownedPath = dragPath,
-                                                        purpose = IosPreviewPurpose.Watermarked,
-                                                    )
-                                                    watermarkedPreviewSourcePath = null
-                                                    commitBench.mark("cacheEvict")
-                                                    previewGen++
-                                                    val gen = previewGen
-                                                    commitBench.mark("previewGenBump")
-                                                    val draftCounts =
-                                                        clampDraftRenders.countsForTests()
-                                                    commitBench.finish(
-                                                        mapOf(
-                                                            "offsetX" to x,
-                                                            "offsetY" to y,
-                                                            "path" to dragPath.substringAfterLast('/'),
-                                                            "draftSamples" to draftCounts.submitted,
-                                                            "draftRenders" to draftCounts.rendered,
-                                                        ),
-                                                    )
-                                                    clampDraftRenders.resetCountsForTests()
-                                                    hostScope.launch {
-                                                        try {
-                                                            renderPreviewForCurrentSelection(
-                                                                gen = gen,
-                                                            )
-                                                        } catch (t: Throwable) {
-                                                            statusLine =
-                                                                "Preview failed: ${t.message}"
-                                                        }
-                                                    }
-                                                },
-                                            ),
-                                    )
-                                    }
-                                }
-                                // Silent empty — never show "Loading…" in the top-left.
-                                // Failures stay out of the chrome (statusLine is diagnostic only).
-                            }
+                                    .testTag("sharedComposeWatermarkPreview")
+                                    .then(dragModifier),
+                            )
                         },
                         thumbnail = { imageInfo, contentDescription, thumbModifier ->
                             // ADR-0028: Coil ProductThumb. JPEG/PNG = Skia; HEIC = IosHeifImageDecoder.
@@ -1451,72 +1355,20 @@ class IosProductRootHost(
                         },
                         onGoAboutScreen = { openAboutFromEditor() },
                         onImageSelected = { info ->
-                            // Paint cache first (hard-cut), then SelectCurrent; avoid DataStore waits.
                             scope.launch {
                                 val path = info.uri.value
                                 val previewBucket = committedPreviewBucket
                                 val switchBench = IosPreviewBench.scope("switch_image")
                                 try {
-                                    // 0) Optimistic WM cache paint before Session (main-thread peek).
-                                    val instantHit = paintWatermarkedCacheHitIfPresent(path)
-                                    if (instantHit) {
-                                        switchBench.mark("wm_peek")
-                                    }
-
-                                    // SelectCurrent without blocking paint; await for offset identity.
+                                    clearLiveLayers()
                                     services.session.dispatchAndAwait(AppIntent.SelectCurrent(info.uri))
                                     switchBench.mark("select")
-
-                                    // 1) Instant watermarked cache hit (post-select path for mutex race).
-                                    if (!instantHit) {
-                                        previewImages.cached(
-                                            watermarkedPreviewKey(path, previewBucket),
-                                        )?.let { cached ->
-                                            previewBitmap = cached
-                                            previewSourcePath = path
-                                            watermarkedPreviewSourcePath = path
-                                            previewGen += 1
-                                            prefetchNeighborWatermarkedPreviews(path, previewGen)
-                                            switchBench.finish(
-                                                mapOf(
-                                                    "hit" to "wm",
-                                                    "path" to path.substringAfterLast('/'),
-                                                ),
-                                            )
-                                            return@launch
-                                        }
-                                    } else {
-                                        previewGen += 1
-                                        prefetchNeighborWatermarkedPreviews(path, previewGen)
-                                        switchBench.finish(
-                                            mapOf(
-                                                "hit" to "wm_optimistic",
-                                                "path" to path.substringAfterLast('/'),
-                                            ),
-                                        )
-                                        return@launch
-                                    }
-
-                                    // 2) Cached source placeholder only (no forced decode on switch).
                                     val sourceHit = previewImages.peekCached(
                                         sourcePreviewKey(path, previewBucket),
                                     ) != null
-                                    previewImages.peekCached(
-                                        sourcePreviewKey(path, previewBucket),
-                                    )?.let { hit ->
-                                        previewBitmap = hit
-                                        previewSourcePath = path
-                                        watermarkedPreviewSourcePath = null
-                                    }
-                                    switchBench.mark("placeholder")
-
-                                    // 2b) Unwatermarked Library derivative in parallel with ImageIO.
-                                    // Same-switch previewGen++ below is not stale for this path.
                                     hostScope.launch {
                                         tryPaintLibraryDerivative(path)
                                     }
-
-                                    // 3) Full watermarked preview (in-memory, no PNG encode)
                                     previewGen += 1
                                     val gen = previewGen
                                     renderPreviewForCurrentSelection(
@@ -1556,8 +1408,6 @@ class IosProductRootHost(
                             scope.launch {
                                 isBusy = true
                                 try {
-                                    previewImages.clearPurposeFromOwner(IosPreviewPurpose.Watermarked)
-                                    watermarkedPreviewSourcePath = null
                                     previewGen += 1
                                     val gen = previewGen
                                     services.session.dispatchAndAwait(
@@ -1910,41 +1760,22 @@ class IosProductRootHost(
         val previewBucket = committedPreviewBucket
         val pickGen = IosPickGenerationGate.currentPhotoGeneration()
 
-        // User scroll: already showing the correct watermarked preview — neighbor WM only.
+        // User scroll: already showing LiveLayers for this path — neighbor Source only.
         if (
             mode == ProgressiveFocusBindMode.UserScroll &&
-            watermarkedPreviewSourcePath == focusPath &&
-            previewBitmap != null
+            hasLiveLayers() &&
+            previewSourcePath == focusPath
         ) {
             prefetchNeighborWatermarkedPreviews(focusPath, previewGen)
             return
         }
 
-        // User scroll: instant swap from watermarked cache without starting a new raster.
         if (mode == ProgressiveFocusBindMode.UserScroll) {
-            previewImages.peekCached(watermarkedPreviewKey(focusPath, previewBucket))?.let { hit ->
-                showEditor = true
-                previewBitmap = hit
-                previewSourcePath = focusPath
-                watermarkedPreviewSourcePath = focusPath
-                // Still bump gen so any in-flight raster for a prior focus is dropped on publish.
-                previewGen += 1
-                val gen = previewGen
-                prefetchNeighborWatermarkedPreviews(focusPath, gen)
-                return
+            if (previewSourcePath != focusPath) {
+                clearLiveLayers()
             }
-            // Cache-hit placeholder only — never force a placeholder decode on settle (watermark
-            // path will decode source once). Miss leaves prior preview until raster completes.
-            previewImages.peekCached(sourcePreviewKey(focusPath, previewBucket))?.let { hit ->
-                showEditor = true
-                previewBitmap = hit
-                previewSourcePath = focusPath
-                watermarkedPreviewSourcePath = null
-            }
-            if (
-                previewImages.peekCached(watermarkedPreviewKey(focusPath, previewBucket)) == null &&
-                previewImages.peekCached(sourcePreviewKey(focusPath, previewBucket)) == null
-            ) {
+            showEditor = true
+            if (previewImages.peekCached(sourcePreviewKey(focusPath, previewBucket)) == null) {
                 hostScope.launch {
                     tryPaintLibraryDerivative(focusPath)
                 }
@@ -1952,8 +1783,7 @@ class IosProductRootHost(
         } else {
             val paintedLibrary = tryPaintLibraryDerivative(focusPath)
             if (!paintedLibrary) {
-                // 1) Import: watermark region — placeholder first (may decode).
-                val placeholder = runCatching {
+                runCatching {
                     previewImages.load(sourcePreviewKey(focusPath, previewBucket)) {
                         withContext(Dispatchers.Default) {
                             IosPreviewRaster.decodeSourcePlaceholder(
@@ -1962,19 +1792,9 @@ class IosProductRootHost(
                             )
                         }
                     }
-                }.getOrNull()
+                }
                 if (disposed) return
                 showEditor = true
-                if (placeholder != null) {
-                    previewBitmap = placeholder
-                    previewSourcePath = focusPath
-                    watermarkedPreviewSourcePath = null
-                    me.rosuh.easywatermark.session.ImportTimelineProbe.mark(
-                        "first_visible_placeholder",
-                        pickGen,
-                        "focus",
-                    )
-                }
             }
         }
 
@@ -1995,8 +1815,7 @@ class IosProductRootHost(
             if (
                 mode == ProgressiveFocusBindMode.ImportPriority &&
                 !markedFirstWatermarkedPreview &&
-                previewBitmap != null &&
-                watermarkedPreviewSourcePath != null
+                hasLiveLayers()
             ) {
                 markedFirstWatermarkedPreview = true
                 me.rosuh.easywatermark.session.ImportTimelineProbe.mark(
@@ -2128,7 +1947,7 @@ class IosProductRootHost(
         val focusPath = (launch.curImageInfo ?: launch.selectedImageList.firstOrNull())?.uri?.value
         if (renderPreview && focusPath != null) {
             val previewBucket = committedPreviewBucket
-            val placeholder = previewImages.load(sourcePreviewKey(focusPath, previewBucket)) {
+            previewImages.load(sourcePreviewKey(focusPath, previewBucket)) {
                 withContext(Dispatchers.Default) {
                     IosPreviewRaster.decodeSourcePlaceholder(
                         focusPath,
@@ -2141,11 +1960,6 @@ class IosProductRootHost(
                 .awaitBeforeHostPreviewBind(pickGeneration)
             if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
                 return
-            }
-            if (placeholder != null) {
-                previewBitmap = placeholder
-                previewSourcePath = focusPath
-                watermarkedPreviewSourcePath = null
             }
         }
 
@@ -2249,9 +2063,7 @@ class IosProductRootHost(
                 previousOwned.filter { it !in sessionOwned }.forEach { IosSourceStager.deleteQuietly(it) }
                 ownedStagedPaths.clear()
                 previewImages.clearFromOwner()
-                previewBitmap = null
-                previewSourcePath = null
-                watermarkedPreviewSourcePath = null
+                clearLiveLayers()
                 // Track current Session ewm_src paths (replace publishes full selection).
                 sessionOwned.forEach { ownedStagedPaths.add(it) }
             } else {
@@ -2330,8 +2142,6 @@ class IosProductRootHost(
             }
             IosIconPersistence.deleteIfOwned(previousRef.value)
             iconBytes = bytes
-            previewImages.clearPurposeFromOwner(IosPreviewPurpose.Watermarked)
-            watermarkedPreviewSourcePath = null
             previewGen += 1
             renderPreviewForCurrentSelection(gen = previewGen)
         } finally {
@@ -2355,11 +2165,9 @@ class IosProductRootHost(
     }
 
     /**
-     * Fast in-memory preview (Android WaterMarkCanvas analogue):
-     * - [IosPreviewRaster]: decode+scale+compose ImageBitmap, **no PNG encode/disk**
-     * - repository watermarked hit → 0 raster work
-     * - [gen] drops stale async results on rapid filmstrip taps
-     * - [forcePath] paints a specific Ready path before Session SelectCurrent lands (optimistic focus)
+     * Editor main preview (ADR-0033): decode Source, compose overlay cell, publish atomically.
+     * Never paints [IosPreviewRaster.renderWatermarked]. Draft updates overlay offset only.
+     * [gen] drops stale ImageIO results on rapid filmstrip taps.
      */
     private suspend fun renderPreviewForCurrentSelection(
         gen: Int,
@@ -2368,12 +2176,10 @@ class IosProductRootHost(
         forceOffsetX: Float? = null,
         forceOffsetY: Float? = null,
     ) {
-        // H0.1: host-level stages around IosPreviewRaster (read/decode/compose logged there too).
         val isDraft = draftOffset != null
         val hostBench = ClampDragBench.previewScope(
             if (isDraft) "ios_draft_preview" else "ios_preview_refresh",
         )
-        // StateFlow snapshot — never DataStore.first() on the switch hot path.
         val launch = services.session.launchScreenUiStateFlow.value
         val cur = when {
             forcePath != null -> launch.selectedImageList.firstOrNull { it.uri.value == forcePath }
@@ -2383,102 +2189,55 @@ class IosProductRootHost(
         val sourcePath = forcePath ?: cur?.uri?.value.orEmpty()
         if (sourcePath.isBlank()) return
         val wm = launch.waterMark
+        val isText = wm.markMode == WatermarkMode.Text
         val previewBucket = committedPreviewBucket
         val ox = draftOffset?.first ?: forceOffsetX ?: cur?.offsetX ?: 0.5f
         val oy = draftOffset?.second ?: forceOffsetY ?: cur?.offsetY ?: 0.5f
         hostBench.mark("sessionRead")
 
-        // Cache hit only for committed (non-draft) paints at exact Session offset.
-        if (!isDraft) {
-            previewImages.cached(watermarkedPreviewKey(sourcePath, previewBucket))?.let { cached ->
-                if (gen != previewGen) return
-                previewBitmap = cached
-                previewSourcePath = sourcePath
-                watermarkedPreviewSourcePath = sourcePath
-                hostBench.mark("cacheHit")
-                hostBench.finish(
-                    mapOf(
-                        "hit" to true,
-                        "path" to sourcePath.substringAfterLast('/'),
-                        "offsetX" to ox,
-                        "offsetY" to oy,
-                    ),
-                )
-                return
-            }
-        }
-
-        val paintEdge = PreviewResolutionPolicy.maxEdgeForPaint(
-            isDraft = isDraft,
-            committedBucketPx = previewBucket,
-        )
-        val composed = if (isDraft) {
-            // Reuse the Source decode across the whole gesture: that is what turns a drag from
-            // "decode + compose per frame" into "one decode per drag, compose per frame", and
-            // decode is ~94% of a cold 12MP paint.
-            //
-            // Sharing this entry with the committed path is safe because a Source placeholder is
-            // the un-watermarked decode — offset plays no part in it — so when the draft edge
-            // happens to equal the committed bucket (any committed bucket ≤1080) this is simply a
-            // hit on the entry the committed render already stored. The invariant that matters is
-            // that a draft never writes a *Watermarked* entry, enforced at the cachePut below.
-            val draftSource = previewImages.load(sourcePreviewKey(sourcePath, paintEdge)) {
-                withContext(Dispatchers.Default) {
-                    IosPreviewRaster.decodeSourcePlaceholder(sourcePath, maxEdgePx = paintEdge)
-                }
-            }
-            withContext(Dispatchers.Default) {
-                IosPreviewRaster.renderWatermarked(
-                    sourcePath = sourcePath,
-                    waterMark = wm,
-                    offsetX = ox,
-                    offsetY = oy,
-                    maxEdgePx = paintEdge,
-                    background = draftSource,
-                )
-            }
-        } else {
-            val source = previewImages.load(sourcePreviewKey(sourcePath, previewBucket)) {
-                withContext(Dispatchers.Default) {
-                    IosPreviewRaster.decodeSourcePlaceholder(
-                        sourcePath,
-                        maxEdgePx = previewBucket,
-                    )
-                }
-            } ?: return
-            previewImages.load(watermarkedPreviewKey(sourcePath, previewBucket)) {
-                withContext(Dispatchers.Default) {
-                    IosPreviewRaster.renderWatermarked(
-                        sourcePath = sourcePath,
-                        waterMark = wm,
-                        offsetX = ox,
-                        offsetY = oy,
-                        maxEdgePx = paintEdge,
-                        background = source,
-                    )
-                }
-            } ?: return
-        }
-        hostBench.mark("raster")
-        if (gen != previewGen) {
-            hostBench.finish(mapOf("staleGen" to true, "hit" to false, "isDraft" to isDraft))
+        if (isDraft && hasLiveLayers() && previewSourcePath == sourcePath) {
+            overlayCell = overlayCell?.withOffset(ox, oy)
+            hostBench.mark("overlayOffset")
+            hostBench.finish(mapOf("isDraft" to true, "offsetX" to ox, "offsetY" to oy))
             return
         }
 
-        // Never cache draft bitmaps as committed path entries (export must not see draft paint).
-        if (!isDraft) {
-            hostBench.mark("cachePut")
+        val source = previewImages.load(sourcePreviewKey(sourcePath, previewBucket)) {
+            withContext(Dispatchers.Default) {
+                IosPreviewRaster.decodeSourcePlaceholder(
+                    sourcePath,
+                    maxEdgePx = previewBucket,
+                )
+            }
+        } ?: return
+        hostBench.mark("source")
+        val overlay = withContext(Dispatchers.Default) {
+            composeIosOverlayCell(wm, source.width, ox, oy)
         }
-        previewBitmap = composed
-        previewSourcePath = sourcePath
-        watermarkedPreviewSourcePath = sourcePath.takeIf { !isDraft }
+        hostBench.mark("compose")
+        if (gen != previewGen) {
+            hostBench.finish(mapOf("staleGen" to true, "isDraft" to isDraft))
+            return
+        }
+        if (
+            !OverlayPreviewPolicy.canPublishLivePhoto(
+                selectedPath = sourcePath,
+                photoPath = sourcePath,
+                photoWidth = source.width,
+                cellReadyForWidth = overlay.builtForWidth,
+                isTextMode = isText,
+            )
+        ) {
+            hostBench.finish(mapOf("blockedPublish" to true))
+            return
+        }
+        publishLiveLayers(sourcePath, source, overlay)
         hostBench.finish(
             mapOf(
-                "hit" to false,
                 "isDraft" to isDraft,
                 "path" to sourcePath.substringAfterLast('/'),
-                "w" to composed.width,
-                "h" to composed.height,
+                "w" to source.width,
+                "h" to source.height,
                 "offsetX" to ox,
                 "offsetY" to oy,
             ),
@@ -2486,19 +2245,59 @@ class IosProductRootHost(
     }
 
     /**
-     * Main-thread optimistic paint: if a watermarked frame is already cached for [path],
-     * swap the canvas immediately (before Session SelectCurrent). No decode.
+     * Symbol kept for filmstrip-switch diagnosis tests. ADR-0033: never paint a baked
+     * Watermarked frame onto the editor slot.
      */
     private fun paintWatermarkedCacheHitIfPresent(path: String): Boolean {
         if (path.isBlank() || disposed) return false
-        val hit = previewImages.peekCached(watermarkedPreviewKey(path, committedPreviewBucket))
-            ?: return false
-        previewBitmap = hit
+        return false
+    }
+
+    private fun hasLiveLayers(): Boolean =
+        previewBitmap != null && overlayCell != null && !previewSourcePath.isNullOrBlank()
+
+    private fun clearLiveLayers() {
+        previewBitmap = null
+        overlayCell = null
+        previewSourcePath = null
+        watermarkedPreviewSourcePath = null
+    }
+
+    private fun publishLiveLayers(path: String, photo: ImageBitmap, overlay: OverlayCell) {
+        val isText = services.session.launchScreenUiStateFlow.value.waterMark.markMode ==
+            WatermarkMode.Text
+        if (
+            !OverlayPreviewPolicy.canPublishLivePhoto(
+                selectedPath = path,
+                photoPath = path,
+                photoWidth = photo.width,
+                cellReadyForWidth = overlay.builtForWidth,
+                isTextMode = isText,
+            )
+        ) {
+            return
+        }
+        previewBitmap = photo
+        overlayCell = overlay
         previewSourcePath = path
         watermarkedPreviewSourcePath = path
-        clearLibraryDerivative()
-        showEditor = true
-        return true
+    }
+
+    private fun composeIosOverlayCell(
+        wm: WaterMark,
+        imageWidth: Int,
+        ox: Float,
+        oy: Float,
+    ): OverlayCell {
+        val isText = wm.markMode == WatermarkMode.Text
+        val cell = IosPreviewRaster.composeCell(wm, imageWidth)
+        return overlayCellFrom(
+            cell = cell,
+            config = wm,
+            offsetX = ox,
+            offsetY = oy,
+            builtForWidth = if (isText) imageWidth else cell.width,
+        )
     }
 
     private fun clearLibraryDerivative() {
@@ -2610,24 +2409,29 @@ class IosProductRootHost(
     }
 
     /**
-     * Drop a PhotoKit frame only if the host is gone, focus moved, or Watermarked
-     * is already showing this path. Do not use [previewGen] — cold switch increments
+     * Drop a PhotoKit frame only if the host is gone, focus moved, or LiveLayers
+     * are already showing this path. Do not use [previewGen] — cold switch increments
      * it immediately for the same-path ImageIO raster.
      */
     private fun shouldDropLibraryDerivative(path: String): Boolean {
         if (disposed) return true
         val focus = currentFocusPath()
         if (focus != null && focus != path) return true
-        return watermarkedPreviewSourcePath == path && previewBitmap != null
+        return hasLiveLayers() && previewSourcePath == path
     }
 
     /**
-     * ADR-0029 Q1=B: paint an unwatermarked Library derivative into [previewBitmap].
-     * Does not bump [previewGen]. Does not write SourcePlaceholder or Watermarked caches.
+     * ADR-0029 + ADR-0033: Library is the photo layer only. Never paints without a
+     * matching overlay cell for the Library bitmap width. Does not bump [previewGen].
+     * Does not write SourcePlaceholder or Watermarked caches.
      * Does not call [IosPreviewRaster.renderWatermarked].
      */
     private suspend fun tryPaintLibraryDerivative(path: String): Boolean {
         if (disposed || path.isBlank()) return false
+        if (shouldDropLibraryDerivative(path)) return false
+        if (previewImages.peekCached(sourcePreviewKey(path, committedPreviewBucket)) != null) {
+            return false
+        }
         val assetId = IosAssetIdentityRegistry.get(path) ?: return false
         if (assetId in photoKitResolveFailedIds) return false
         val bitmap = photoKitFastPathForTests?.let { inject ->
@@ -2654,11 +2458,32 @@ class IosProductRootHost(
             frame.bitmap.asComposeImageBitmap()
         } ?: return false
         if (shouldDropLibraryDerivative(path)) return false
+        val launch = services.session.launchScreenUiStateFlow.value
+        val wm = launch.waterMark
+        val info = launch.selectedImageList.firstOrNull { it.uri.value == path }
+            ?: launch.curImageInfo?.takeIf { it.uri.value == path }
+        val overlay = composeIosOverlayCell(
+            wm = wm,
+            imageWidth = bitmap.width,
+            ox = info?.offsetX ?: 0.5f,
+            oy = info?.offsetY ?: 0.5f,
+        )
+        val isText = wm.markMode == WatermarkMode.Text
+        if (
+            !OverlayPreviewPolicy.canPublishLivePhoto(
+                selectedPath = path,
+                photoPath = path,
+                photoWidth = bitmap.width,
+                cellReadyForWidth = overlay.builtForWidth,
+                isTextMode = isText,
+            )
+        ) {
+            return false
+        }
+        if (shouldDropLibraryDerivative(path)) return false
         libraryDerivativeBitmap = bitmap
         libraryDerivativePath = path
-        previewBitmap = bitmap
-        previewSourcePath = path
-        watermarkedPreviewSourcePath = null
+        publishLiveLayers(path, bitmap, overlay)
         showEditor = true
         previewImages.load(sourceFastPathKey(path)) { bitmap }
         return true
@@ -2695,36 +2520,17 @@ class IosProductRootHost(
         if (idx < 0) return
         val neighbors = neighborIndices(idx, list.size).map { list[it] }
         if (neighbors.isEmpty()) return
-        val wm = launch.waterMark
         val bucket = committedPreviewBucket
         for (info in neighbors) {
             if (disposed || gen != previewGen) return
             val path = info.uri.value
             if (path.isBlank()) continue
-            val key = watermarkedPreviewKey(path, bucket)
-            if (previewImages.peekCached(key) != null) continue
+            val srcKey = sourcePreviewKey(path, bucket)
+            if (previewImages.peekCached(srcKey) != null) continue
             runCatching {
-                val source = previewImages.load(sourcePreviewKey(path, bucket)) {
+                previewImages.load(srcKey) {
                     withContext(Dispatchers.Default) {
                         IosPreviewRaster.decodeSourcePlaceholder(path, maxEdgePx = bucket)
-                    }
-                } ?: return@runCatching
-                previewImages.load(key) {
-                    // Repository completion inherits hostScope (Main). Raster must hop
-                    // off Main — otherwise filmstrip tap freezes UI while ±2 neighbors
-                    // ImageIO+compose (product 2026-08-13).
-                    withContext(Dispatchers.Default) {
-                        IosPreviewRaster.renderWatermarked(
-                            sourcePath = path,
-                            waterMark = wm,
-                            offsetX = info.offsetX,
-                            offsetY = info.offsetY,
-                            maxEdgePx = PreviewResolutionPolicy.maxEdgeForPaint(
-                                isDraft = false,
-                                committedBucketPx = bucket,
-                            ),
-                            background = source,
-                        )
                     }
                 }
             }
@@ -2801,7 +2607,7 @@ class IosProductRootHost(
      */
     private suspend fun ensureEditorPreviewAfterExport() {
         if (disposed) return
-        val needsRebind = previewBitmap == null || watermarkedPreviewSourcePath == null
+        val needsRebind = !hasLiveLayers()
         if (!needsRebind) return
         previewGen += 1
         val gen = previewGen
@@ -2811,7 +2617,7 @@ class IosProductRootHost(
     /** Fire-and-forget rebind from sheet dismiss (Main scope). */
     private fun rebindEditorPreviewIfBlank(scope: CoroutineScope) {
         if (disposed) return
-        if (previewBitmap != null && watermarkedPreviewSourcePath != null) return
+        if (hasLiveLayers()) return
         scope.launch {
             ensureEditorPreviewAfterExport()
         }

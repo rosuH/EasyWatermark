@@ -163,6 +163,34 @@ class ClampPreviewOffsetHostWiringTest {
             applyInCommit.first().range.first < genMatches.first().range.first,
             "applyOffset must precede offsetPreviewGeneration++ inside onOffsetCommit",
         )
+        val submitMatches = Regex("""paintConflator\.submit\s*\(""")
+            .findAll(commitOnly)
+            .toList()
+        assertEquals(
+            1,
+            submitMatches.size,
+            "onOffsetCommit must enqueue exactly one paintConflator.submit",
+        )
+        assertTrue(
+            genMatches.first().range.first < submitMatches.first().range.first,
+            "offsetPreviewGeneration++ must precede paintConflator.submit inside onOffsetCommit",
+        )
+        assertTrue(
+            "DesktopPreviewPaint" in commitOnly,
+            "commit paint must be a DesktopPreviewPaint",
+        )
+        assertTrue(
+            Regex("""isDraft\s*=\s*false""").containsMatchIn(commitOnly),
+            "commit paint must be non-draft",
+        )
+        assertFalse(
+            "submitPreviewPaint" in commitOnly,
+            "onOffsetCommit must not call submitPreviewPaint (that double-bumps gen)",
+        )
+        assertFalse(
+            "overlayCell = null" in commitOnly || "previewPhoto = null" in commitOnly,
+            "CLAMP commit must not clear live layers",
+        )
         // Offset commit must not bump the debounced config-only generation.
         assertFalse(
             Regex("""(?<!offset)previewGeneration\s*\+\+""").containsMatchIn(commitOnly),
@@ -243,44 +271,26 @@ class ClampPreviewOffsetHostWiringTest {
             "iOS must not use the Desktop JVM bridge",
         )
 
-        // Fail-closed: slice the single Image( invocation that owns the drag modifier.
-        // No whole-file fallback for Fit / contentDescription strings.
+        // ADR-0033: dragModifier is built, then applied on LiveOverlayPreview (drag call is above).
         val callIdx = hostCode.indexOf(".clampPreviewOffsetDrag(")
         assertTrue(callIdx >= 0, "drag call site required")
-        val imageStart = hostCode.lastIndexOf("Image(", callIdx)
-        assertTrue(imageStart >= 0 && imageStart < callIdx, "drag must sit inside an Image(")
-        // End at the matching Image close after the drag call (next top-level sibling is far;
-        // use a bounded window from Image( through the drag callback).
-        val imageSlice = hostCode.substring(
-            imageStart,
-            (callIdx + 4500).coerceAtMost(hostCode.length),
+        val previewStart = hostCode.indexOf("LiveOverlayPreview(", callIdx)
+        assertTrue(
+            previewStart > callIdx,
+            "LiveOverlayPreview must consume the drag modifier after clampPreviewOffsetDrag(",
         )
-        // Enable-gate lives just above the same Image (dragPath / watermarkedDisplayMatchesSelection).
-        // Window ≥1100: EditorSelection ImageInfoUi projection at the EditorScreen call site
-        // sits above the gate and pushed it past the old 900-char bound.
+        val imageSlice = hostCode.substring(
+            callIdx,
+            (previewStart + 1500).coerceAtMost(hostCode.length),
+        )
         val enableSlice = hostCode.substring(
-            (imageStart - 5000).coerceAtLeast(0),
+            (callIdx - 5000).coerceAtLeast(0),
             callIdx,
         )
-        // Require Image-local Fit + watermarked description (not elsewhere in the file).
+        assertTrue("identityLive" in enableSlice, "CLAMP drag must require identityLive")
         assertTrue(
-            Regex("""contentDescription\s*=\s*"Watermarked preview"""").containsMatchIn(imageSlice),
-            "same Image must set contentDescription = \"Watermarked preview\"",
-        )
-        assertTrue(
-            Regex("""contentScale\s*=\s*ContentScale\.Fit""").containsMatchIn(imageSlice),
-            "same Image must use contentScale = ContentScale.Fit",
-        )
-        assertTrue(
-            Regex(
-                """\.fillMaxSize\s*\(\s*\)\s*\n(?:\s*\.graphicsLayer\s*\{[\s\S]*?\}\s*\n)?\s*\.clampPreviewOffsetDrag\s*\(""",
-            ).containsMatchIn(imageSlice),
-            "same Image modifier chain must be fillMaxSize() then clampPreviewOffsetDrag(",
-        )
-        // Drag must not appear on a Crop thumbnail in this Image slice.
-        assertFalse(
-            Regex("""contentScale\s*=\s*ContentScale\.Crop""").containsMatchIn(imageSlice),
-            "drag Image slice must not be a Crop thumbnail",
+            "OverlayPreviewChrome.LiveLayers" in enableSlice,
+            "CLAMP drag only when chrome is LiveLayers",
         )
 
         // H0.1-fix draft callbacks expand the neighborhood past the prior 4500 bound.
@@ -293,61 +303,34 @@ class ClampPreviewOffsetHostWiringTest {
         // Progressive rebuild: Host uses watermarkedPreviewSourcePath + single-flight repository
         // instead of a raw wmPreviewCache map.
         assertTrue(
-            Regex("""watermarkedPreviewSourcePath\s*==\s*dragPath""")
-                .containsMatchIn(enableSlice) ||
-                Regex("""wmPreviewCache\s*\[\s*dragPath\s*\]\s*===\s*displayPreview""")
-                    .containsMatchIn(enableSlice),
-            "enable must require watermarked display identity " +
-                "(watermarkedPreviewSourcePath == dragPath or legacy wmPreviewCache match)",
+            Regex("""previewSourcePath\s*==\s*dragPath""").containsMatchIn(enableSlice),
+            "enable must require previewSourcePath == dragPath",
         )
         assertTrue(
             Regex("""previewSourcePath\s*==\s*dragPath""")
                 .containsMatchIn(enableSlice),
             "enable must still require previewSourcePath == dragPath",
         )
+        assertTrue("LiveOverlayPreview(" in imageSlice, "drag modifier must feed LiveOverlayPreview")
         assertTrue(
-            "watermarkedDisplayMatchesSelection" in enableSlice ||
-                Regex("""watermarkedPreviewSourcePath\s*==\s*dragPath""")
-                    .containsMatchIn(enableSlice),
-            "enable path must name watermarked-display identity gate",
+            "withOffset" in callbackSlice,
+            "CLAMP draft/commit must move overlay offset only",
         )
-        assertTrue(
-            "watermarkedDisplayMatchesSelection" in imageSlice ||
-                Regex("""enabled\s*=[\s\S]{0,200}watermarkedDisplayMatchesSelection""")
-                    .containsMatchIn(imageSlice),
-            "enabled= must use watermarkedDisplayMatchesSelection on this Image",
-        )
-        // Callback triple identity + watermarked identity re-check.
         assertTrue(
             Regex("""previewSourcePath\s*!=\s*dragPath|previewSourcePath\s*==\s*dragPath""")
                 .containsMatchIn(callbackSlice),
             "callback must re-check previewSourcePath vs dragPath",
         )
+        assertTrue("curImageInfo" in callbackSlice, "callback must read live curImageInfo")
         assertTrue(
-            Regex(
-                """watermarkedPreviewSourcePath\s*!=\s*dragPath|""" +
-                    """watermarkedPreviewSourcePath\s*==\s*dragPath|""" +
-                    """wmPreviewCache\s*\[\s*dragPath\s*\]""",
-            ).containsMatchIn(callbackSlice),
-            "callback must re-check watermarkedPreviewSourcePath vs dragPath",
-        )
-        assertTrue(
-            "curImageInfo" in callbackSlice,
-            "callback must read live curImageInfo",
-        )
-        assertTrue(
-            Regex(
-                """\.uri\.value\s*==\s*dragPath|it\.uri\.value\s*==\s*dragPath""",
-            ).containsMatchIn(callbackSlice),
+            Regex("""\.uri\.value\s*==\s*dragPath|it\.uri\.value\s*==\s*dragPath""")
+                .containsMatchIn(callbackSlice),
             "callback must require live uri.value == dragPath",
         )
         assertFalse(
             Regex("""selectedImageList\.firstOrNull\s*\(""").containsMatchIn(callbackSlice),
             "callback must not fall through to selectedImageList.firstOrNull",
         )
-
-        // Order inside onOffsetCommit: applyOffset → selected-key cache invalidate → previewGen bump.
-        // H0.1-fix: onOffsetDraft may also bump previewGen for live paint.
         val commitIdx = callbackSlice.indexOf("onOffsetCommit")
         assertTrue(commitIdx >= 0, "onOffsetCommit required")
         val commitOnly = callbackSlice.substring(commitIdx)
@@ -359,34 +342,38 @@ class ClampPreviewOffsetHostWiringTest {
             applyMatches.size,
             "onOffsetCommit must contain exactly one services.session.applyOffset(",
         )
-        val removeMatches = Regex(
-            """previewImages\.invalidate(?:OwnedPath)?FromOwner\s*\(|wmPreviewCache\.remove\s*\(\s*dragPath\s*\)""",
-        ).findAll(commitOnly).toList()
-        assertEquals(
-            1,
-            removeMatches.size,
-            "onOffsetCommit must invalidate exactly the selected watermarked key once",
-        )
-        val genMatches = Regex("""previewGen\s*(\+\+|=\s*previewGen\s*\+\s*1)""")
+        assertTrue("onOffsetDraft" in callbackSlice, "iOS must wire onOffsetDraft for live UI draft")
+        val iosGenMatches = Regex("""previewGen\s*\+\+""")
             .findAll(commitOnly)
             .toList()
         assertEquals(
             1,
-            genMatches.size,
-            "onOffsetCommit must bump previewGen exactly once",
+            iosGenMatches.size,
+            "onOffsetCommit must contain exactly one previewGen++",
         )
         assertTrue(
-            applyMatches.first().range.first < removeMatches.first().range.first &&
-                removeMatches.first().range.first < genMatches.first().range.first,
-            "order must be applyOffset → watermarked-key invalidate → previewGen bump",
+            applyMatches.first().range.first < iosGenMatches.first().range.first,
+            "applyOffset must precede previewGen++ inside onOffsetCommit",
         )
+        val commitFinishIdx = commitOnly.indexOf("commitBench.finish")
+        assertTrue(commitFinishIdx >= 0, "commit bench finish required to bound the lambda")
+        val renderIdx = commitOnly.indexOf("renderPreviewForCurrentSelection")
         assertTrue(
-            "onOffsetDraft" in callbackSlice,
-            "iOS must wire onOffsetDraft for live UI draft",
+            renderIdx >= 0 && renderIdx < commitFinishIdx,
+            "onOffsetCommit must enqueue renderPreviewForCurrentSelection before the bench finish",
+        )
+        val launchIdx = commitOnly.indexOf("hostScope.launch")
+        assertTrue(
+            launchIdx >= 0 && launchIdx < commitFinishIdx,
+            "onOffsetCommit must launch the owned paint on hostScope",
         )
         assertFalse(
-            "wmPreviewCache.clear()" in callbackSlice || "previewImages.clear()" in callbackSlice,
-            "callback must not clear the whole watermarked preview cache",
+            "overlayCell = null" in commitOnly,
+            "CLAMP commit must not clear the overlay layer",
+        )
+        assertFalse(
+            "previewBitmap = null" in callbackSlice,
+            "CLAMP drag must not drop the photo layer",
         )
         assertFalse(
             "repo.updateOffset" in host || "waterMarkRepo.updateOffset" in host,
@@ -396,22 +383,68 @@ class ClampPreviewOffsetHostWiringTest {
             Regex("""launch\s*\{[\s\S]{0,200}applyOffset""").containsMatchIn(callbackSlice),
             "applyOffset must not be fire-and-forget inside launch{}",
         )
-        // Existing preview rerender path after generation capture (within Image callback slice).
-        assertTrue(
-            "renderPreviewForCurrentSelection" in callbackSlice,
-            "callback neighborhood must invoke existing renderPreviewForCurrentSelection",
-        )
-        assertTrue(
-            Regex(
-                """renderPreviewForCurrentSelection\s*\([\s\S]{0,120}gen\s*=""",
-            ).containsMatchIn(callbackSlice),
-            "rerender must pass captured gen=",
-        )
         // Renderer ownership/budget policy not changed in this host (names must remain).
         assertTrue("IosPreviewRaster" in hostCode, "preview raster owner must remain")
         assertFalse(
             Regex("""IosFinalRenderSpine""").containsMatchIn(callbackSlice),
             "drag callback must not call final export spine",
         )
+    }
+
+    /**
+     * Android CLAMP commit must bump [paintToken], enqueue one non-draft paint, and
+     * drop any stale-token publish — not only drafts.
+     */
+    @Test
+    fun android_clamp_commit_owns_paint_wiring_guard() {
+        val screen = resolveRepoFile(
+            "app/src/main/java/me/rosuh/easywatermark/ui/AndroidEditorScreen.kt",
+        ).readText()
+        val canvasStart = screen.indexOf("private fun WaterMarkCanvas(")
+        assertTrue(canvasStart >= 0, "WaterMarkCanvas must exist")
+        val canvasEnd = screen.indexOf("private data class ContentRect", canvasStart)
+        val canvas = stripKotlinComments(
+            screen.substring(
+                canvasStart,
+                if (canvasEnd > canvasStart) canvasEnd else screen.length,
+            ),
+        )
+
+        assertFalse(
+            Regex("""req\.token\s*!=\s*paintToken\s*&&\s*req\.isDraft""")
+                .containsMatchIn(canvas),
+            "stale-token drop must not be draft-only",
+        )
+        val staleDrops = Regex("""if\s*\(\s*req\.token\s*!=\s*paintToken\s*\)\s*return@paint""")
+            .findAll(canvas)
+            .count()
+        assertTrue(
+            staleDrops >= 2,
+            "paintHandler must drop stale tokens at entry and before publishLiveLayers, found $staleDrops",
+        )
+
+        val helperIdx = canvas.indexOf("fun submitCommittedOverlayPaint")
+        assertTrue(helperIdx >= 0, "WaterMarkCanvas must own submitCommittedOverlayPaint")
+        val helper = canvas.substring(helperIdx, (helperIdx + 900).coerceAtMost(canvas.length))
+        assertTrue("paintToken += 1" in helper || "paintToken +=1" in helper)
+        assertTrue("paintConflator.submit" in helper)
+        assertTrue(Regex("""isDraft\s*=\s*false""").containsMatchIn(helper))
+        assertFalse("livePhoto = null" in helper)
+        assertFalse("overlay = null" in helper)
+
+        val dragEnd = canvas.indexOf("onDragEnd")
+        assertTrue(dragEnd >= 0, "onDragEnd persist path required")
+        val persist = canvas.substring(dragEnd, (dragEnd + 2500).coerceAtMost(canvas.length))
+        val commitSubmitCount = Regex("""submitCommittedOverlayPaint\s*\(""")
+            .findAll(persist)
+            .count()
+        assertEquals(
+            2,
+            commitSubmitCount,
+            "both CLAMP persist paths (rubber-band and in-bounds) must enqueue one committed paint",
+        )
+        assertFalse("composeToBitmap" in persist)
+        assertFalse("livePhoto = null" in persist)
+        assertFalse("overlay = null" in persist)
     }
 }

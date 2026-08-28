@@ -1,6 +1,5 @@
 package me.rosuh.easywatermark.desktop
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
@@ -42,8 +41,8 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.awtTransferable
-import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
@@ -75,24 +74,32 @@ import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkConfigChange
+import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.repo.DesktopIconPersistence
 import me.rosuh.easywatermark.data.repo.TemplateRepository
 import me.rosuh.easywatermark.domain.OutputPrefsEditor
 import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
+import me.rosuh.easywatermark.render.CommonWatermarkPipeline
 import me.rosuh.easywatermark.render.DesktopImageDecoder
 import me.rosuh.easywatermark.render.DesktopPreviewRaster
 import me.rosuh.easywatermark.render.DesktopRenderRequest
+import me.rosuh.easywatermark.render.DesktopWatermarkTextRenderer
+import me.rosuh.easywatermark.render.OverlayPreviewChrome
+import me.rosuh.easywatermark.render.OverlayPreviewPolicy
 import me.rosuh.easywatermark.render.PreviewImageRepository
 import me.rosuh.easywatermark.render.PreviewKey
-import me.rosuh.easywatermark.render.PreviewPaintPolicy
 import me.rosuh.easywatermark.render.PreviewPurpose
 import me.rosuh.easywatermark.render.PreviewSourceReuseProbe
 import me.rosuh.easywatermark.render.PreviewWorkingSetBudget
 import me.rosuh.easywatermark.render.WatermarkIconCache
 import me.rosuh.easywatermark.render.neighborIndices
 import me.rosuh.easywatermark.ui.DraftRenderConflator
+import me.rosuh.easywatermark.ui.LiveOverlayPreview
+import me.rosuh.easywatermark.ui.OverlayCell
+import me.rosuh.easywatermark.ui.overlayCellFrom
+import me.rosuh.easywatermark.ui.withOffset
 import me.rosuh.easywatermark.render.DesktopSaveDecision
 import me.rosuh.easywatermark.render.DesktopWatermarkComposer
 import me.rosuh.easywatermark.session.AppIntent
@@ -127,7 +134,6 @@ import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_coun
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_success_where
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_error_generic
 import me.rosuh.easywatermark.shared.generated.resources.share
-import me.rosuh.easywatermark.ui.AnimatedPreviewSurface
 import me.rosuh.easywatermark.ui.sharedString
 import me.rosuh.easywatermark.ui.EditorBottomControls
 import me.rosuh.easywatermark.ui.EditorScreen
@@ -420,9 +426,10 @@ fun launchDesktopWindow() = application {
     // ADR-0028: filmstrip/export thumbs via ProductAsyncImage (Coil path Fetcher).
     // U2: watermark config is session/repo-owned — collect once; no parallel mutableStateOf mirrors.
     val waterMark by repo.waterMark.collectAsState(WaterMark.default)
-    // the rendered preview image (null until the first successful refresh).
-    var preview by remember { mutableStateOf<ImageBitmap?>(null) }
-    /** URI of the Session image that [preview] currently represents (ready-frame identity). */
+    // Live overlay layers (ADR-0033). Never a baked composeOverBackground bitmap.
+    var previewPhoto by remember { mutableStateOf<ImageBitmap?>(null) }
+    var overlayCell by remember { mutableStateOf<OverlayCell?>(null) }
+    /** URI of the Session image that live layers currently represent. */
     var previewReadyUri by remember { mutableStateOf<String?>(null) }
     // Config / import preview refresh (no 250ms debounce; conflator + Source reuse).
     var previewGeneration by remember { mutableStateOf(0) }
@@ -501,10 +508,17 @@ fun launchDesktopWindow() = application {
         }
     }
 
-    fun publishPreview(
+    fun clearLiveLayers() {
+        previewPhoto = null
+        overlayCell = null
+        previewReadyUri = null
+    }
+
+    fun publishLiveLayers(
         gen: Int,
-        img: ImageBitmap?,
-        frozen: FrozenItemInput,
+        photo: ImageBitmap,
+        overlay: OverlayCell,
+        path: String,
         ox: Float,
         oy: Float,
         isDraft: Boolean,
@@ -516,15 +530,27 @@ fun launchDesktopWindow() = application {
             bench.finish(mapOf("staleGen" to true, "isDraft" to isDraft, "maxEdge" to maxEdge))
             return msg
         }
-        img?.let {
-            preview = it
-            previewReadyUri = frozen.sourcePath
+        val isText = session.launchScreenUiStateFlow.value.waterMark.markMode == WatermarkMode.Text
+        if (
+            !OverlayPreviewPolicy.canPublishLivePhoto(
+                selectedPath = path,
+                photoPath = path,
+                photoWidth = photo.width,
+                cellReadyForWidth = overlay.builtForWidth,
+                isTextMode = isText,
+            )
+        ) {
+            bench.finish(mapOf("blockedPublish" to true, "isDraft" to isDraft, "maxEdge" to maxEdge))
+            return msg
         }
+        previewPhoto = photo
+        overlayCell = overlay
+        previewReadyUri = path
         bench.finish(
             mapOf(
                 "offsetX" to ox,
                 "offsetY" to oy,
-                "hasPreview" to (img != null),
+                "hasPreview" to true,
                 "isDraft" to isDraft,
                 "debounceMs" to 0,
                 "saveFlow" to false,
@@ -534,7 +560,7 @@ fun launchDesktopWindow() = application {
         if (PreviewSourceReuseProbe.enabled) {
             val snap = PreviewSourceReuseProbe.snapshot()
             val line =
-                """{"event":"publish","isDraft":$isDraft,"path":"${frozen.sourcePath.orEmpty()}","sourceDecodes":${snap.sourceDecodes},"composes":${snap.composes},"iconDecodes":${snap.iconDecodes},"maxEdge":$maxEdge}"""
+                """{"event":"publish","isDraft":$isDraft,"path":"$path","sourceDecodes":${snap.sourceDecodes},"composes":${snap.composes},"iconDecodes":${snap.iconDecodes},"maxEdge":$maxEdge}"""
             println("PREVIEW_REUSE_PROBE $line")
             System.getProperty("ewm.preview.probeLog")?.trim()?.takeIf { it.isNotEmpty() }?.let { logPath ->
                 runCatching {
@@ -545,9 +571,22 @@ fun launchDesktopWindow() = application {
         return msg
     }
 
+    fun composeDesktopOverlayCell(wm: WaterMark, imageWidth: Int): ImageBitmap {
+        val icon = decodeDesktopIcon(wm)
+        PreviewSourceReuseProbe.recordCompose()
+        return CommonWatermarkPipeline.composeCell(
+            imageWidth = imageWidth.coerceAtLeast(1),
+            config = wm,
+            env = DesktopWatermarkTextRenderer.textRasterEnv(),
+            icon = icon,
+            fontFamily = if (wm.markMode == WatermarkMode.Text) FontFamily.Default else null,
+        )
+    }
+
     /**
-     * In-memory editor preview: Source reuse + compose. No DataStore first() on this path.
-     * Draft never writes [PreviewPurpose.Watermarked]. [gen] drops stale publish.
+     * In-memory editor preview: Source reuse + overlay cell. No DataStore first() on this path.
+     * Draft updates overlay offset only. Never writes [PreviewPurpose.Watermarked].
+     * Never paints Source without a matching overlay. [gen] drops stale publish.
      */
     suspend fun refreshPreviewLight(
         gen: Int,
@@ -561,125 +600,87 @@ fun launchDesktopWindow() = application {
         val ox = overrideOffset?.first ?: frozen.offsetX
         val oy = overrideOffset?.second ?: frozen.offsetY
         val wm = session.launchScreenUiStateFlow.value.waterMark
+        val isText = wm.markMode == WatermarkMode.Text
         val maxEdge = DesktopPreviewRaster.maxEdgeForPaint(
             isDraft = isDraft,
             committedBucketPx = committedPreviewMaxEdgePx,
         )
-        val (img, msg) = try {
-            val path = frozen.sourcePath
-            val composed = if (path != null) {
-                val file = File(path)
-                require(file.isFile) {
-                    "Current Session image is missing or not a regular file: $path"
-                }
-                val srcKey = PreviewKey(path, maxEdge, PreviewPurpose.SourcePlaceholder)
-                val wmKey = PreviewKey(path, maxEdge, PreviewPurpose.Watermarked)
-                if (!isDraft) {
-                    previewImages.peekCached(wmKey)?.let { hit ->
-                        bench.mark("watermarkedPeek")
-                        return@refreshPreviewLight publishPreview(
-                            gen = gen,
-                            img = hit,
-                            frozen = frozen,
-                            ox = ox,
-                            oy = oy,
-                            isDraft = false,
-                            maxEdge = maxEdge,
-                            bench = bench,
-                            msg = "Preview watermarked hit ${hit.width}x${hit.height} maxEdge=$maxEdge",
-                        )
-                    }
-                    previewImages.cached(wmKey)?.let { hit ->
-                        bench.mark("watermarkedCached")
-                        return@refreshPreviewLight publishPreview(
-                            gen = gen,
-                            img = hit,
-                            frozen = frozen,
-                            ox = ox,
-                            oy = oy,
-                            isDraft = false,
-                            maxEdge = maxEdge,
-                            bench = bench,
-                            msg = "Preview watermarked cached ${hit.width}x${hit.height} maxEdge=$maxEdge",
-                        )
-                    }
-                    previewImages.peekCached(srcKey)?.let { source ->
-                        // Same-path style ticks keep the last Watermarked frame. Replacing it
-                        // with Source makes the watermark vanish until compose finishes.
-                        if (gen == offsetPreviewGeneration &&
-                            PreviewPaintPolicy.showSourceWhileComposing(previewReadyUri, path)
-                        ) {
-                            preview = source
-                            previewReadyUri = path
-                        }
-                    }
-                }
-                val source = previewImages.load(srcKey) {
-                    withContext(Dispatchers.IO) {
-                        DesktopPreviewRaster.decodeSourcePlaceholder(
-                            imageBytes = file.readBytes(),
-                            maxEdgePx = maxEdge,
-                        )
-                    }
-                } ?: error("Source decode returned null")
-                bench.mark("source")
-                // Path change: show the new photo as soon as Source exists. Waiting for
-                // compose keeps the previous image on screen for the whole ImageIO cost.
-                if (!isDraft &&
-                    gen == offsetPreviewGeneration &&
-                    PreviewPaintPolicy.showSourceWhileComposing(previewReadyUri, path)
-                ) {
-                    preview = source
-                    previewReadyUri = path
-                }
-                val icon = decodeDesktopIcon(wm)
-                withContext(Dispatchers.Default) {
-                    DesktopPreviewRaster.renderWatermarked(
-                        imageBytes = ByteArray(0),
-                        waterMark = wm,
-                        offsetX = ox,
-                        offsetY = oy,
+        val path = frozen.sourcePath
+        if (path.isNullOrBlank()) {
+            bench.finish(mapOf("empty" to true, "isDraft" to isDraft, "maxEdge" to maxEdge))
+            return "Preview empty"
+        }
+        if (isDraft && previewReadyUri == path && overlayCell != null && previewPhoto != null) {
+            overlayCell = overlayCell?.withOffset(ox, oy)
+            bench.mark("overlayOffset")
+            bench.finish(
+                mapOf(
+                    "offsetX" to ox,
+                    "offsetY" to oy,
+                    "hasPreview" to true,
+                    "isDraft" to true,
+                    "debounceMs" to 0,
+                    "saveFlow" to false,
+                    "maxEdge" to maxEdge,
+                ),
+            )
+            return "Preview overlay offset"
+        }
+        return try {
+            val file = File(path)
+            require(file.isFile) {
+                "Current Session image is missing or not a regular file: $path"
+            }
+            val srcKey = PreviewKey(path, maxEdge, PreviewPurpose.SourcePlaceholder)
+            val source = previewImages.load(srcKey) {
+                withContext(Dispatchers.IO) {
+                    DesktopPreviewRaster.decodeSourcePlaceholder(
+                        imageBytes = file.readBytes(),
                         maxEdgePx = maxEdge,
-                        background = source,
-                        icon = icon,
-                    )
-                }.also { framed ->
-                    if (!isDraft) {
-                        previewImages.load(wmKey) { framed }
-                    }
-                }
-            } else {
-                val imageBytes = DesktopWatermarkComposer.sampleBackgroundPng(width = 640, height = 480)
-                bench.mark("read")
-                val icon = decodeDesktopIcon(wm)
-                withContext(Dispatchers.Default) {
-                    DesktopPreviewRaster.renderWatermarked(
-                        imageBytes = imageBytes,
-                        waterMark = wm,
-                        offsetX = ox,
-                        offsetY = oy,
-                        maxEdgePx = maxEdge,
-                        icon = icon,
                     )
                 }
+            } ?: error("Source decode returned null")
+            bench.mark("source")
+            val cell = withContext(Dispatchers.Default) {
+                composeDesktopOverlayCell(wm, source.width)
             }
             bench.mark("compose")
-            composed to "Preview light ${composed.width}x${composed.height} maxEdge=$maxEdge"
+            val overlay = overlayCellFrom(
+                cell = cell,
+                config = wm,
+                offsetX = ox,
+                offsetY = oy,
+                builtForWidth = if (isText) source.width else cell.width,
+            )
+            if (
+                !OverlayPreviewPolicy.canPublishLivePhoto(
+                    selectedPath = path,
+                    photoPath = path,
+                    photoWidth = source.width,
+                    cellReadyForWidth = overlay.builtForWidth,
+                    isTextMode = isText,
+                )
+            ) {
+                bench.finish(mapOf("blockedPublish" to true, "isDraft" to isDraft, "maxEdge" to maxEdge))
+                return "Preview wait cell"
+            }
+            publishLiveLayers(
+                gen = gen,
+                photo = source,
+                overlay = overlay,
+                path = path,
+                ox = ox,
+                oy = oy,
+                isDraft = isDraft,
+                maxEdge = maxEdge,
+                bench = bench,
+                msg = "Preview live ${source.width}x${source.height} maxEdge=$maxEdge",
+            )
         } catch (t: Throwable) {
             bench.mark("error")
-            null to "Preview light failed: ${t.message}"
+            bench.finish(mapOf("error" to true, "isDraft" to isDraft, "maxEdge" to maxEdge))
+            "Preview light failed: ${t.message}"
         }
-        return publishPreview(
-            gen = gen,
-            img = img,
-            frozen = frozen,
-            ox = ox,
-            oy = oy,
-            isDraft = isDraft,
-            maxEdge = maxEdge,
-            bench = bench,
-            msg = msg,
-        )
     }
 
     data class DesktopPreviewPaint(
@@ -713,7 +714,7 @@ fun launchDesktopWindow() = application {
     }
     persistHandler.value = { change ->
         session.dispatchAndAwait(AppIntent.ApplyConfig(change))
-        previewImages.clearPurpose(PreviewPurpose.Watermarked)
+        // Same-path style ticks keep last LiveLayers until the new cell publishes.
         offsetPreviewGeneration += 1
         paintConflator.submit(
             DesktopPreviewPaint(
@@ -746,39 +747,22 @@ fun launchDesktopWindow() = application {
             val list = session.launchScreenUiStateFlow.value.selectedImageList
             val idx = list.indexOfFirst { it.uri.value == focusPath }
             if (idx < 0) return@launch
-            val wm = session.launchScreenUiStateFlow.value.waterMark
             val bucket = committedPreviewMaxEdgePx
             for (i in neighborIndices(idx, list.size)) {
                 if (gen != offsetPreviewGeneration) return@launch
                 val info = list[i]
                 val path = info.uri.value
                 if (path.isBlank()) continue
-                val wmKey = PreviewKey(path, bucket, PreviewPurpose.Watermarked)
-                if (previewImages.peekCached(wmKey) != null) continue
+                val srcKey = PreviewKey(path, bucket, PreviewPurpose.SourcePlaceholder)
+                if (previewImages.peekCached(srcKey) != null) continue
                 val file = File(path)
                 if (!file.isFile) continue
                 runCatching {
-                    val source = previewImages.load(
-                        PreviewKey(path, bucket, PreviewPurpose.SourcePlaceholder),
-                    ) {
-                        // completionScope is Main — ImageIO here freezes filmstrip clicks.
+                    previewImages.load(srcKey) {
                         withContext(Dispatchers.IO) {
                             DesktopPreviewRaster.decodeSourcePlaceholder(
                                 imageBytes = file.readBytes(),
                                 maxEdgePx = bucket,
-                            )
-                        }
-                    } ?: return@runCatching
-                    previewImages.load(wmKey) {
-                        withContext(Dispatchers.Default) {
-                            DesktopPreviewRaster.renderWatermarked(
-                                imageBytes = ByteArray(0),
-                                waterMark = wm,
-                                offsetX = info.offsetX,
-                                offsetY = info.offsetY,
-                                maxEdgePx = bucket,
-                                background = source,
-                                icon = decodeDesktopIcon(wm),
                             )
                         }
                     }
@@ -1273,8 +1257,7 @@ fun launchDesktopWindow() = application {
                     // I1: window size in Dp → pure EditorLayoutClass (Expanded on typical Desktop).
                     ContentEditorThemeHost(
                         enabled = followPhoto,
-                        // Use ready watermarked preview when available; falls back to brand until paint.
-                        seedBitmap = preview,
+                        seedBitmap = previewPhoto,
                         seedKey = previewReadyUri ?: selectedForStrip?.uri?.value,
                         onChromeColorChange = { color ->
                             if (productRoute != ProductShellNav.Route.About) {
@@ -1301,105 +1284,111 @@ fun launchDesktopWindow() = application {
                             templateList = templateListPainter,
                         ),
                         preview = { previewModifier ->
-                            // Product editor: no debug "Preview: JPEG, WxH" chrome; fill the
-                            // available frame with ContentScale.Fit (responsive, aspect preserved).
-                            // C4.4R.2 + H0.1-fix: CLAMP drag → UI draft paint + one applyOffset
-                            // at end; offset preview uses light raster (no 250ms/saveFlow).
-                            // M2/M7: policy-aware first reveal + switch fade on Desktop preview.
-                            Box(
-                                modifier = previewModifier
-                                    .fillMaxSize()
-                                    .onSizeChanged { size -> onPreviewBoxSizeChanged(size) },
-                                contentAlignment = Alignment.Center,
+                            val dragItem = selectedForStrip
+                            val selectedPath = dragItem?.uri?.value
+                            val chrome = OverlayPreviewPolicy.decide(
+                                selectedPath = selectedPath,
+                                photoPath = previewReadyUri,
+                                photoWidth = previewPhoto?.width,
+                                cellReadyForWidth = overlayCell?.builtForWidth,
+                                hasThumb = !selectedPath.isNullOrBlank(),
+                                isTextMode = waterMark.markMode == WatermarkMode.Text,
+                            )
+                            val photo = previewPhoto
+                            val liveOverlay = overlayCell
+                            val dragModifier = if (
+                                chrome == OverlayPreviewChrome.LiveLayers &&
+                                photo != null &&
+                                liveOverlay != null &&
+                                !busy &&
+                                dragItem != null
                             ) {
-                                val bmp = preview
-                                if (bmp != null) {
-                                    val dragItem = selectedForStrip
-                                    // Ready-frame key = last composed preview URI (not bare selection).
-                                    AnimatedPreviewSurface(
-                                        contentKey = previewReadyUri,
-                                        hasContent = previewReadyUri != null,
-                                        modifier = Modifier.fillMaxSize(),
-                                    ) {
-                                        Image(
-                                            bitmap = bmp,
+                                Modifier
+                                    .padding(12.dp)
+                                    .desktopClampPreviewOffsetDrag(
+                                        enabled = true,
+                                        selectionId = dragItem.uri.value,
+                                        isClamp = waterMark.tileMode == WatermarkTileMode.CLAMP,
+                                        imageWidth = photo.width.toFloat(),
+                                        imageHeight = photo.height.toFloat(),
+                                        offsetX = clampDraft?.takeIf { it.first == dragItem.uri.value }?.second
+                                            ?: dragItem.offsetX,
+                                        offsetY = clampDraft?.takeIf { it.first == dragItem.uri.value }?.third
+                                            ?: dragItem.offsetY,
+                                        onOffsetDraft = { x, y ->
+                                            val id = dragItem.uri.value
+                                            if (id.isEmpty()) {
+                                                return@desktopClampPreviewOffsetDrag
+                                            }
+                                            clampDraft = Triple(id, x, y)
+                                            overlayCell = overlayCell?.withOffset(x, y)
+                                        },
+                                        onOffsetDraftClear = {
+                                            clampDraft = null
+                                        },
+                                        onOffsetCommit = { x, y ->
+                                            val dragUri = dragItem.uri
+                                            val item = session
+                                                .launchScreenUiStateFlow
+                                                .value
+                                                .curImageInfo
+                                                ?.takeIf { it.uri == dragUri }
+                                                ?: return@desktopClampPreviewOffsetDrag
+                                            val b = me.rosuh.easywatermark.ui
+                                                .ClampDragBench
+                                                .previewScope("desktop_offset_commit")
+                                            session.applyOffset(
+                                                item.copy(offsetX = x, offsetY = y),
+                                            )
+                                            offsetPreviewGeneration++
+                                            b.mark("applyOffset")
+                                            clampDraft = null
+                                            overlayCell = overlayCell?.withOffset(x, y)
+                                            paintConflator.submit(
+                                                DesktopPreviewPaint(
+                                                    gen = offsetPreviewGeneration,
+                                                    isDraft = false,
+                                                    overrideOffset = null,
+                                                ),
+                                            )
+                                            b.mark("offsetPreviewGenerationBump")
+                                            b.finish(
+                                                mapOf(
+                                                    "offsetX" to x,
+                                                    "offsetY" to y,
+                                                    "debounceMs" to 0,
+                                                    "saveFlow" to false,
+                                                ),
+                                            )
+                                        },
+                                    )
+                            } else {
+                                Modifier.padding(12.dp)
+                            }
+                            LiveOverlayPreview(
+                                chrome = chrome,
+                                photo = if (chrome == OverlayPreviewChrome.LiveLayers) photo else null,
+                                overlay = if (chrome == OverlayPreviewChrome.LiveLayers) liveOverlay else null,
+                                waitThumb = if (chrome == OverlayPreviewChrome.WaitThumb && dragItem != null) {
+                                    { thumbMod ->
+                                        me.rosuh.easywatermark.ui.image.ProductAsyncImage(
+                                            thumb = me.rosuh.easywatermark.ui.image.ProductThumb(
+                                                ref = dragItem.uri,
+                                                maxEdgePx = me.rosuh.easywatermark.ui.image.ProductThumb.UI_THUMB_MAX_EDGE,
+                                            ),
                                             contentDescription = "Watermark preview",
                                             contentScale = ContentScale.Fit,
-                                            // Prefer sharp sampling when Fit is near 1:1 or slightly soft.
-                                            filterQuality = FilterQuality.High,
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .padding(12.dp)
-                                                .desktopClampPreviewOffsetDrag(
-                                                    enabled = !busy && dragItem != null,
-                                                    selectionId = dragItem?.uri?.value.orEmpty(),
-                                                    isClamp = waterMark.tileMode ==
-                                                        WatermarkTileMode.CLAMP,
-                                                    imageWidth = bmp.width.toFloat(),
-                                                    imageHeight = bmp.height.toFloat(),
-                                                    offsetX = dragItem?.offsetX ?: 0.5f,
-                                                    offsetY = dragItem?.offsetY ?: 0.5f,
-                                                    onOffsetDraft = { x, y ->
-                                                        val id = dragItem?.uri?.value.orEmpty()
-                                                        if (id.isEmpty()) {
-                                                            return@desktopClampPreviewOffsetDrag
-                                                        }
-                                                        clampDraft = Triple(id, x, y)
-                                                        submitPreviewPaint(isDraft = true, overrideOffset = x to y)
-                                                    },
-                                                    onOffsetDraftClear = {
-                                                        clampDraft = null
-                                                    },
-                                                    onOffsetCommit = { x, y ->
-                                                        val dragUri = dragItem?.uri
-                                                            ?: return@desktopClampPreviewOffsetDrag
-                                                        val item = session
-                                                            .launchScreenUiStateFlow
-                                                            .value
-                                                            .curImageInfo
-                                                            ?.takeIf { it.uri == dragUri }
-                                                            ?: return@desktopClampPreviewOffsetDrag
-                                                        val b = me.rosuh.easywatermark.ui
-                                                            .ClampDragBench
-                                                            .previewScope("desktop_offset_commit")
-                                                        session.applyOffset(
-                                                            item.copy(offsetX = x, offsetY = y),
-                                                        )
-                                                        offsetPreviewGeneration++
-                                                        b.mark("applyOffset")
-                                                        clampDraft = null
-                                                        previewImages.invalidateOwnedPathFromOwner(
-                                                            item.uri.value,
-                                                            PreviewPurpose.Watermarked,
-                                                        )
-                                                        paintConflator.submit(
-                                                            DesktopPreviewPaint(
-                                                                gen = offsetPreviewGeneration,
-                                                                isDraft = false,
-                                                                overrideOffset = x to y,
-                                                            ),
-                                                        )
-                                                        b.mark("offsetPreviewGenerationBump")
-                                                        b.finish(
-                                                            mapOf(
-                                                                "offsetX" to x,
-                                                                "offsetY" to y,
-                                                                "debounceMs" to 0,
-                                                                "saveFlow" to false,
-                                                            ),
-                                                        )
-                                                    },
-                                                ),
+                                            modifier = thumbMod,
                                         )
                                     }
                                 } else {
-                                    Text(
-                                        text = status.ifBlank { "No image" },
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
+                                    null
+                                },
+                                modifier = previewModifier
+                                    .fillMaxSize()
+                                    .onSizeChanged { size -> onPreviewBoxSizeChanged(size) }
+                                    .then(dragModifier),
+                            )
                         },
                         thumbnail = { imageInfo, contentDescription, thumbModifier ->
                             me.rosuh.easywatermark.ui.image.ProductAsyncImage(
@@ -1476,44 +1465,15 @@ fun launchDesktopWindow() = application {
                             session.openAbout(me.rosuh.easywatermark.ui.LaunchScreenUiState.Editor)
                         },
                         onImageSelected = { info ->
-                            // E1: await Session SelectCurrent before light-preview freeze so path+offset
-                            // match the selected item (no host byte mirror; no race on previous focus).
-                            // Await the focus paint on this job. The slider conflator cannot
-                            // cancel an in-flight large compose, and prefetching ±2 at the same
-                            // time starves the photo the user just clicked.
                             filmstripSwitchJob?.cancel()
                             filmstripSwitchJob = scope.launch {
                                 val path = info.uri.value
-                                previewImages.peekCached(
-                                    PreviewKey(path, committedPreviewMaxEdgePx, PreviewPurpose.Watermarked),
-                                )?.let { hit ->
-                                    preview = hit
-                                    previewReadyUri = path
-                                }
+                                clearLiveLayers()
                                 session.dispatchAndAwait(
                                     AppIntent.SelectCurrent(info.uri),
                                 )
-                                // Pane size is unchanged on switch; bucket stays put.
                                 recomputeCommittedPreviewBucket()
                                 previewGeneration++
-                                val bucket = committedPreviewMaxEdgePx
-                                previewImages.peekCached(
-                                    PreviewKey(path, bucket, PreviewPurpose.Watermarked),
-                                )?.let { hit ->
-                                    preview = hit
-                                    previewReadyUri = path
-                                    offsetPreviewGeneration += 1
-                                    prefetchNeighborWatermarked(path, offsetPreviewGeneration)
-                                    return@launch
-                                }
-                                previewImages.peekCached(
-                                    PreviewKey(path, bucket, PreviewPurpose.SourcePlaceholder),
-                                )?.let { source ->
-                                    if (PreviewPaintPolicy.showSourceWhileComposing(previewReadyUri, path)) {
-                                        preview = source
-                                        previewReadyUri = path
-                                    }
-                                }
                                 offsetPreviewGeneration += 1
                                 val gen = offsetPreviewGeneration
                                 refreshPreviewLight(gen = gen, isDraft = false)
