@@ -159,6 +159,10 @@ struct ContentView: View {
     @StateObject private var productRoot = IosProductRootBox()
     /// Multi-select source photos (Launch + Editor add-more). Icon watermark stays single.
     @State private var isPhotoPickerPresented = false
+    /// Held until the PHPicker sheet finishes dismissing. Starting `loadFileRepresentation`
+    /// from `didFinishPicking` races PhotosUI Progress KVO (main addObserver vs callback
+    /// removeObserver) and SIGABRTs on iOS 27 — see `iosApp-2026-08-29-015022.ips`.
+    @State private var pendingMainPickerResults: [PHPickerResult]?
     @State private var pickedIconItem: PhotosPickerItem?
     @State private var isIconPickerPresented = false
     /// Serial photo-batch commit lane (generation + TOCTOU-safe stage). Issue 26 H2 / review F1.
@@ -248,12 +252,19 @@ struct ContentView: View {
 
         // Main-photo picker is UIKit PHPicker so preselectedAssetIdentifiers can bind (ADR-0029 P1).
         // Icon watermark stays SwiftUI PhotosPicker (issue 26 H1 encoding contract).
-        let withMainPhotoPicker = withMemoryTrim.sheet(isPresented: $isPhotoPickerPresented) {
+        let withMainPhotoPicker = withMemoryTrim.sheet(
+            isPresented: $isPhotoPickerPresented,
+            onDismiss: {
+                guard let results = pendingMainPickerResults else { return }
+                pendingMainPickerResults = nil
+                handleMainPhotoPickerFinish(results)
+            },
+        ) {
             PhotoLibraryPHPicker(
                 preselectedAssetIdentifiers: ProgressiveImportNotifications.currentPreselectedAssetIds(),
                 onFinish: { results in
+                    pendingMainPickerResults = results
                     isPhotoPickerPresented = false
-                    handleMainPhotoPickerFinish(results)
                 },
             )
             .ignoresSafeArea()

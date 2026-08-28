@@ -334,6 +334,39 @@ class IosPhotosPickerIdentityContractTest {
     }
 
     @Test
+    fun photos_file_transfer_waits_for_picker_dismiss_and_retains_progress() {
+        val contentView = stripSwiftComments(
+            resolveRepoFile("iosApp/iosApp/ContentView.swift").readText(),
+        )
+        val coordinator = stripSwiftComments(
+            resolveRepoFile("iosApp/iosApp/PhotoImportCoordinator.swift").readText(),
+        )
+        assertTrue(
+            "pendingMainPickerResults" in contentView &&
+                "onDismiss:" in contentView &&
+                "handleMainPhotoPickerFinish(results)" in contentView,
+            "PHPicker sheet must start import from onDismiss, not didFinishPicking",
+        )
+        assertTrue(
+            Regex(
+                """onFinish:\s*\{\s*results in\s*pendingMainPickerResults\s*=\s*results""",
+            ).containsMatchIn(contentView),
+            "didFinishPicking must only stash results and dismiss the sheet",
+        )
+        assertFalse(
+            Regex(
+                """onFinish:\s*\{\s*results in[\s\S]{0,120}handleMainPhotoPickerFinish""",
+            ).containsMatchIn(contentView),
+            "didFinishPicking must not start loadFileRepresentation while PHPicker is up",
+        )
+        assertTrue(
+            "FileRepresentationProgressBox" in coordinator &&
+                "progressBox.progress = provider.loadFileRepresentation" in coordinator,
+            "copyProviderFile must retain loadFileRepresentation Progress until completion",
+        )
+    }
+
+    @Test
     fun k3_staging_writes_uuid_paths_via_ios_source_stager() {
         val stager = resolveRepoFile(
             "shared/src/iosMain/kotlin/me/rosuh/easywatermark/session/IosSourceStager.kt",

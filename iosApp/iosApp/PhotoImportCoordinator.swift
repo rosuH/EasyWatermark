@@ -579,12 +579,18 @@ actor PhotoImportCoordinator {
     }
 
     /// Copy the Photos item provider file to `ewm_import_provisional_*` before the URL is revoked.
+    ///
+    /// Retain the `Progress` that `loadFileRepresentation` returns until the completion runs.
+    /// Dropping it early lets PhotosUI's Progress KVO tear down while a sibling load is still
+    /// `addObserver`-ing on the main thread (`PUPhotosFileProviderItemProvider`).
     private static func copyProviderFile(_ provider: NSItemProvider) async throws -> URL {
         let typeIdentifier = provider.registeredTypeIdentifiers.first { identifier in
             UTType(identifier)?.conforms(to: .image) == true
         } ?? UTType.image.identifier
         return try await withCheckedThrowingContinuation { continuation in
-            provider.loadFileRepresentation(forTypeIdentifier: typeIdentifier) { url, error in
+            let progressBox = FileRepresentationProgressBox()
+            progressBox.progress = provider.loadFileRepresentation(forTypeIdentifier: typeIdentifier) { url, error in
+                defer { progressBox.progress = nil }
                 if let error {
                     continuation.resume(throwing: error)
                     return
@@ -615,6 +621,11 @@ actor PhotoImportCoordinator {
             }
         }
     }
+}
+
+/// Keeps `NSItemProvider.loadFileRepresentation` Progress alive across the GCD callback.
+private final class FileRepresentationProgressBox: @unchecked Sendable {
+    var progress: Progress?
 }
 
 private struct ProgressiveImportControlCommand {

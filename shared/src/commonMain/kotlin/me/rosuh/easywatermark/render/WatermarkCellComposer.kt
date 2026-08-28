@@ -132,7 +132,23 @@ object WatermarkCellComposer {
         backgroundColor: Color = Color.Transparent,
     ): ImageBitmap {
         require(content.text.isNotEmpty()) { "composeTextCell requires non-empty text" }
+        // CMP Skiko ParagraphBuilder.makeSkTextStyle keeps a process-wide WeakKeysCache.
+        // Two Dispatchers.Default workers (iOS progressive import + overlay) race
+        // filterInPlace vs Key.ref and SIGSEGV — iosApp-2026-08-29-015756.ips.
+        // The cell is a function of config; parallel compose is duplicate work.
+        return withComposeTextCellLock {
+            composeTextCellLocked(env, content, degree, hGapPercent, vGapPercent, backgroundColor)
+        }
+    }
 
+    private fun composeTextCellLocked(
+        env: TextRasterEnv,
+        content: WatermarkTextContent,
+        degree: Float,
+        hGapPercent: Int,
+        vGapPercent: Int,
+        backgroundColor: Color,
+    ): ImageBitmap {
         // 1) Measure the text box (same path as the Android WatermarkTextMeasurer, S3b).
         // NB positional args: the commonMain TextMeasurer constructor parameters are the
         // `default*` overridable form (defaultFontFamilyResolver / defaultDensity /
