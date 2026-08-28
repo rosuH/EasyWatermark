@@ -1976,15 +1976,15 @@ class IosProductRootHost(
         }
         previewGen += 1
         val gen = previewGen
-        hostScope.launch {
-            try {
-                if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
-                    return@launch
-                }
-                renderPreviewForCurrentSelection(gen = gen)
-            } catch (t: Throwable) {
-                statusLine = "Preview failed: ${t.message}"
+        // Await first LiveLayers. deliver is already suspend; fire-and-forget
+        // hostScope.launch raced CI's 2s identity poll (k1 A→B bind).
+        try {
+            if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
+                return
             }
+            renderPreviewForCurrentSelection(gen = gen)
+        } catch (t: Throwable) {
+            statusLine = "Preview failed: ${t.message}"
         }
     }
 

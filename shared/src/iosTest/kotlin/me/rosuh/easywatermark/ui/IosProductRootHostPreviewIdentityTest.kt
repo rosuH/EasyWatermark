@@ -198,15 +198,20 @@ class IosProductRootHostPreviewIdentityTest {
                         pickGeneration = g1,
                     )
                     graph.trackSessionPaths()
-                    val afterA = host.previewIdentityForTests()
                     val pathA = graph.services.session.launchScreenUiStateFlow.first()
                         .curImageInfo?.uri?.value
                     assertNotNull(pathA, "Session focus after A")
+                    pumpUntil {
+                        val snap = host.previewIdentityForTests()
+                        snap.previewSourcePath == pathA && snap.overlayPresent
+                    }
+                    val afterA = host.previewIdentityForTests()
                     assertEquals(
                         pathA,
                         afterA.previewSourcePath,
                         "host previewSourcePath must bind to A after fresh deliver A",
                     )
+                    assertTrue(afterA.overlayPresent, "fresh A must publish LiveLayers")
                     assertTrue(
                         pathA in afterA.placeholderCachePaths || afterA.previewSourcePath == pathA,
                         "A placeholder or preview path must be present after deliver A",
@@ -225,6 +230,10 @@ class IosProductRootHostPreviewIdentityTest {
                     assertNotNull(pathB, "Session focus after B")
                     assertNotEquals(pathA, pathB, "fresh B mints a new staged path")
                     assertEquals(listOf(pathB), launchB.selectedImageList.map { it.uri.value })
+                    pumpUntil {
+                        val snap = host.previewIdentityForTests()
+                        snap.previewSourcePath == pathB && snap.overlayPresent
+                    }
 
                     val afterB = host.previewIdentityForTests()
                     assertEquals(
