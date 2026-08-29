@@ -360,9 +360,13 @@ struct ContentView: View {
     private func runUITestFixtureIfRequested() async {}
 #endif
 
-    /// PHPicker finished. Unchanged identifier set (including cancel) is a no-op.
+    /// PHPicker finished. Empty `results` is Cancel (WWDC20 10652) — no-op even when Session
+    /// already has Ready asset ids. Unchanged identifier set is also a no-op.
     /// Still-selected preselected assets have empty item providers (WWDC21) — reuse owned paths.
     private func handleMainPhotoPickerFinish(_ results: [PHPickerResult]) {
+        if results.isEmpty {
+            return
+        }
         let oldIds = ProgressiveImportNotifications.currentPreselectedAssetIds()
         let newIds = results.compactMap(\.assetIdentifier)
         let oldSet = Set(oldIds)

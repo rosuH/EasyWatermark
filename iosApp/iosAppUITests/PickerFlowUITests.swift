@@ -576,6 +576,40 @@ final class PickerFlowUITests: XCTestCase {
         // the render/export path is proven via the fixture seam in testFixtureRenderPreviewAndExport.
     }
 
+    /// Editor add-more → PHPicker Cancel must keep the session (empty results is Cancel, not wipe).
+    func testEditorAddMoreCancelKeepsSession() {
+        let app = launchFixtureApp()
+        let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
+        XCTAssertTrue(preview.waitForExistence(timeout: 30), "Editor never appeared with fixture.")
+        attach(app, "40-editor-before-add-more")
+
+        let addMore = app.descendants(matching: .any)["sharedComposeAddMoreButton"].firstMatch
+        XCTAssertTrue(addMore.waitForExistence(timeout: 10), "Add-more control missing.")
+        tapIfPossible(addMore)
+
+        let continuePick = app.descendants(matching: .any)["iosLibraryReadUpsellContinue"].firstMatch
+        if continuePick.waitForExistence(timeout: 3) {
+            tapIfPossible(continuePick)
+        }
+
+        let pickerScroll = app.scrollViews.firstMatch
+        XCTAssertTrue(pickerScroll.waitForExistence(timeout: 12),
+                      "PHPicker did not open from editor add-more.")
+        attach(app, "41-add-more-picker")
+
+        let cancel = app.buttons.matching(
+            NSPredicate(format: "label == %@ OR label == %@", "Cancel", "取消")
+        ).firstMatch
+        XCTAssertTrue(cancel.waitForExistence(timeout: 8), "PHPicker Cancel control missing.")
+        tapIfPossible(cancel)
+
+        XCTAssertTrue(preview.waitForExistence(timeout: 12),
+                      "Editor preview vanished after add-more Cancel — session was wiped.")
+        XCTAssertFalse(app.descendants(matching: .any)["sharedComposeLaunchScreen"].firstMatch.exists,
+                       "Add-more Cancel navigated back to Launch.")
+        attach(app, "42-editor-after-add-more-cancel")
+    }
+
     /// S4d-339: the visible image-watermark option is shared CMP UI, while SwiftUI still presents
     /// the out-of-process PhotosPicker. Grid-cell selection remains the S4d-57 beta-toolchain block.
     func testSharedComposeIconPickerOpens() {

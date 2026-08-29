@@ -25,6 +25,19 @@ class IosPhotosPickerIdentityContractTest {
             ?: error("$relative not found from user.dir=$cwd")
     }
 
+    /**
+     * Apple Cancel calls `picker(_:didFinishPicking:)` with an empty `results` array.
+     * That is not `oldSet == newSet` when Session already has Ready asset ids.
+     */
+    private fun String.containsEmptyPickerResultsCancelGuard(): Boolean {
+        return Regex(
+            """if\s+results\.isEmpty\s*\{[\s\S]{0,80}?return\s*\}""",
+        ).containsMatchIn(this) ||
+            Regex(
+                """guard\s+!results\.isEmpty\s+else\s*\{[\s\S]{0,80}?return\s*\}""",
+            ).containsMatchIn(this)
+    }
+
     private fun stripSwiftComments(source: String): String {
         val noBlock = source.replace(Regex("""/\*[\s\S]*?\*/"""), " ")
         return noBlock.lineSequence().joinToString("\n") { line ->
@@ -164,9 +177,14 @@ class IosPhotosPickerIdentityContractTest {
             "F6: beginGeneration must run synchronously when the main PHPicker finishes",
         )
         assertTrue(
+            finishBlock.containsEmptyPickerResultsCancelGuard(),
+            "PHPicker Cancel delivers empty results (WWDC20); " +
+                "handleMainPhotoPickerFinish must return before a remove-all diff",
+        )
+        assertTrue(
             "oldSet == newSet" in finishBlock ||
                 Regex("""oldSet\s*==\s*newSet""").containsMatchIn(finishBlock),
-            "unchanged PHPicker identifier set (cancel / same selection) must be a no-op",
+            "unchanged PHPicker identifier set (same selection, not Cancel) must be a no-op",
         )
         assertTrue(
             "nextPhotoGeneration" in gateCode || "IosPickGenerationGate" in gateCode,
@@ -330,6 +348,39 @@ class IosPhotosPickerIdentityContractTest {
         assertTrue(
             "path = PhotoLibraryPHPicker.swift" in pbx,
             "pbxproj must reference PhotoLibraryPHPicker.swift",
+        )
+    }
+
+    @Test
+    fun editor_add_more_cancel_empty_results_must_not_wipe_session() {
+        val contentCode = stripSwiftComments(
+            resolveRepoFile("iosApp/iosApp/ContentView.swift").readText(),
+        )
+        val finishBlock = contentCode.substringAfter("private func handleMainPhotoPickerFinish")
+            .substringBefore("private func applyMainPhotoPickerDiff")
+        assertTrue(
+            finishBlock.containsEmptyPickerResultsCancelGuard(),
+            "empty PHPicker results is Cancel; must return without remove / NavigateBack",
+        )
+        val emptyGuard = Regex(
+            """(?:if\s+results\.isEmpty\s*\{[\s\S]{0,80}?return\s*\}|guard\s+!results\.isEmpty\s+else\s*\{[\s\S]{0,80}?return\s*\})""",
+        ).find(finishBlock) ?: error("empty-results Cancel guard missing")
+        val afterGuard = finishBlock.substring(emptyGuard.range.last + 1)
+        assertTrue(
+            "applyMainPhotoPickerDiff" in afterGuard,
+            "Cancel guard must sit before the add/remove diff so empty results never reach it",
+        )
+        val beforeGuard = finishBlock.substring(0, emptyGuard.range.first)
+        assertFalse(
+            "applyMainPhotoPickerDiff" in beforeGuard || "removePickedAssetIds" in beforeGuard,
+            "empty results must not call remove or apply a wipe diff",
+        )
+        val onDismiss = contentCode.substringAfter("onDismiss:")
+            .substringBefore("PhotoLibraryPHPicker")
+        assertTrue(
+            "pendingMainPickerResults" in onDismiss &&
+                "handleMainPhotoPickerFinish(results)" in onDismiss,
+            "Cancel still arrives via onDismiss after didFinishPicking stashes empty results",
         )
     }
 
