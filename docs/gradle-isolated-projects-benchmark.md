@@ -38,3 +38,4 @@ IDE Sync is not timed here (no Android Studio on the agent). `org.gradle.isolate
 - `compose-stability-analyzer` **0.12.0** failed Isolated Projects (`Project ':app' cannot access the tasks in the task graph that were created by other projects`).
 - **0.13.0** is Isolated Projects compatible and matches Kotlin 2.4.10.
 - Isolated Projects is still incubating in Gradle 9.7.
+- Plugin / CMP / KMP version audit: `docs/gradle-isolated-projects-compat.md`.

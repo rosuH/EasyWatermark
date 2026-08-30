@@ -34,7 +34,7 @@ dependencies {
     // SQLite driver stays the `:shared` desktopMain-only `sqlite-bundled`, S4d-142).
     implementation(libs.room.runtime)
     // S4d-121: Compose Desktop UI + windowing (Skiko backend) for the minimal window. Same version the
-    // `:shared` desktopMain already uses (composeMultiplatform 1.12.0-rc01) — no version bump, no catalog change.
+    // `:shared` desktopMain already uses (composeMultiplatform 1.12.0) — no extra catalog pin.
     implementation(compose.desktop.currentOs)
     // S4d-237/S4d-360: Material3 for DesktopWindow. Explicit JetBrains Material3 1.12.0-alpha03
     // (matches :shared; avoids deprecated compose.material3 → 1.9.0 foundation skew).
