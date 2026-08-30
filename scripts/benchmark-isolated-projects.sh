@@ -106,6 +106,7 @@ log "warmup: assembleDebug --no-isolated-projects"
 "${GRADLEW[@]}" --no-isolated-projects :app:assembleDebug >"$OUT/warmup-assemble.log" 2>&1 || true
 
 for mode in baseline isolated; do
+  ./gradlew --stop >/dev/null 2>&1 || true
   run_one "$mode" assemble-miss 1
   run_one "$mode" assemble-hit 1
 done
