@@ -2,6 +2,7 @@ package me.rosuh.easywatermark
 
 import android.annotation.SuppressLint
 import android.app.Application
+import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.Intent
 import android.util.Log
@@ -9,7 +10,6 @@ import androidx.core.content.edit
 import me.rosuh.cmonet.CMonet
 import me.rosuh.easywatermark.di.appModule
 import me.rosuh.easywatermark.platform.AndroidMemoryDiagnostics
-import me.rosuh.easywatermark.utils.bitmap.BitmapCache
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -50,14 +50,21 @@ class MyApp : Application() {
     }
 
     /**
-     * WP-B: drop cached full-res bitmaps under system memory pressure.
-     * UI_HIDDEN → soft ~25%; BACKGROUND+ → evictAll. Never recycle from cache.
+     * Official [ComponentCallbacks2] guidance (API 34+): only UI_HIDDEN and BACKGROUND
+     * still arrive. Soft-trim UI caches; evict reconstructable caches when backgrounded.
+     * Never recycle from a cache.
      */
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        val action = BitmapCache.trimForMemoryLevel(level)
-        me.rosuh.easywatermark.render.AndroidPreviewWorkingSet.onTrimMemory()
+        val action = me.rosuh.easywatermark.platform.AndroidMemoryPressure.applyTrim(this, level)
         AndroidMemoryDiagnostics.logTrim(level, action)
+    }
+
+    @Deprecated("Deprecated in Java; last-ditch complement to onTrimMemory.")
+    override fun onLowMemory() {
+        super.onLowMemory()
+        val action = me.rosuh.easywatermark.platform.AndroidMemoryPressure.applyLowMemory(this)
+        AndroidMemoryDiagnostics.logTrim(ComponentCallbacks2.TRIM_MEMORY_COMPLETE, action)
     }
 
     private fun checkRecoveryMode(): Boolean {

@@ -202,6 +202,15 @@ object AndroidMemoryDiagnostics {
         Log.i(TAG, "onTrimMemory level=$level action=$action")
     }
 
+    fun logPressureRelease(remainingHeapBytes: Long, systemLowMemory: Boolean) {
+        if (!BuildConfig.DEBUG) return
+        Log.i(
+            TAG,
+            "released reconstructable caches before intensive work " +
+                "remainingHeap=$remainingHeapBytes systemLowMemory=$systemLowMemory",
+        )
+    }
+
     private fun reasonName(reason: Int): String {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return reason.toString()
         return when (reason) {
