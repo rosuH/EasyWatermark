@@ -14,7 +14,9 @@ export PATH="$JAVA_HOME/bin:$PATH"
 mkdir -p "$OUT"
 cd "$ROOT"
 
-GRADLEW=(./gradlew --max-workers=8 --console=plain --no-daemon)
+# Daemon stays up within a mode so config-cache hits are realistic.
+# Stop between modes so Isolated Projects / baseline do not share a tainted daemon.
+GRADLEW=(./gradlew --max-workers=8 --console=plain)
 # Drop noisy progress; keep BUILD SUCCESSFUL / configuration-cache / isolated lines.
 FILTER='BUILD SUCCESSFUL|BUILD FAILED|Configuration cache|Isolated projects|Calculating task graph|Reusing configuration cache|Configuring|FAILURE|problems were found'
 
@@ -91,6 +93,7 @@ log "warmup: help --no-isolated-projects"
 "${GRADLEW[@]}" --no-isolated-projects help >"$OUT/warmup-help.log" 2>&1 || true
 
 for mode in baseline isolated; do
+  ./gradlew --stop >/dev/null 2>&1 || true
   for i in 1 2 3; do
     run_one "$mode" help-miss "$i"
     run_one "$mode" help-hit "$i"
