@@ -1,19 +1,19 @@
-# Publishes only docs/privacy/ to GitHub Pages.
+# Publishes docs/ewm-site/ to GitHub Pages.
 # Do not point Pages at the whole /docs tree — that would ship research HTML.
 #
-# One-time repo setting: Settings → Pages → Source = GitHub Actions.
-# Then run this workflow (or merge to master). Public URLs:
-#   http://ewm.rosuh.me/
+# Public URLs:
+#   http://ewm.rosuh.me/              landing
 #   http://ewm.rosuh.me/zh-CN.html
-# DNS must CNAME ewm → rosuh.github.io (not CowTransfer).
+#   http://ewm.rosuh.me/privacy/      Connect privacy URL
+#   http://ewm.rosuh.me/privacy/zh-CN.html
 
-name: Privacy Pages
+name: EWM site
 
 on:
   push:
     branches: [master]
     paths:
-      - "docs/privacy/**"
+      - "docs/ewm-site/**"
       - ".github/workflows/privacy-pages.yml"
   workflow_dispatch:
 
@@ -37,6 +37,6 @@ jobs:
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/privacy
+          path: docs/ewm-site
       - id: deployment
         uses: actions/deploy-pages@v4

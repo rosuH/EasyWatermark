@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">
+  <defs>
+    <radialGradient id="g" cx="71.25" cy="34.5" r="62.1" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFA51F"/>
+      <stop offset="0.45" stop-color="#FFD703"/>
+      <stop offset="0.77" stop-color="#C0FF39"/>
+      <stop offset="1" stop-color="#00FFE0"/>
+    </radialGradient>
+    <clipPath id="m">
+      <path d="M37.5 70.5v-1.258L70.5 50.189V70.5H37.5Z"/>
+      <path d="M73.18 41.021 33.17 64.121l1.65 2.858 40.01-22.1-1.65-2.858Z"/>
+      <path d="M70.5 37.5v1.258L37.5 57.811V37.5H70.5Z"/>
+    </clipPath>
+  </defs>
+  <rect width="108" height="108" rx="24" fill="#1C1C0F"/>
+  <path d="M37.5 70.5v-1.258L70.5 50.189V70.5H37.5Z" fill="#C4C4C4"/>
+  <path d="M73.18 41.021 33.17 64.121l1.65 2.858 40.01-22.1-1.65-2.858Z" fill="#C4C4C4"/>
+  <path d="M70.5 37.5v1.258L37.5 57.811V37.5H70.5Z" fill="#C4C4C4"/>
+  <g clip-path="url(#m)">
+    <rect x="18" y="18" width="72" height="72" fill="url(#g)"/>
+  </g>
+</svg>
