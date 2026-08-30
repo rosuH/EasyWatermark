@@ -64,7 +64,7 @@ class MyApp : Application() {
     override fun onLowMemory() {
         super.onLowMemory()
         val action = me.rosuh.easywatermark.platform.AndroidMemoryPressure.applyLowMemory(this)
-        AndroidMemoryDiagnostics.logTrim(ComponentCallbacks2.TRIM_MEMORY_COMPLETE, action)
+        AndroidMemoryDiagnostics.logTrim(ComponentCallbacks2.TRIM_MEMORY_BACKGROUND, action)
     }
 
     private fun checkRecoveryMode(): Boolean {
