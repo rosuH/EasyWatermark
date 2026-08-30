@@ -19,7 +19,7 @@ plugins {
     id(libs.plugins.ksp.get().pluginId)
 //    id(libs.plugins.hilt.plugin.get().pluginId)
     alias(libs.plugins.compose.compiler)
-    // skydoves compose-stability-analyzer 0.12.0 (Kotlin 2.4.0): @TraceRecomposition + stabilityDump.
+    // skydoves compose-stability-analyzer 0.13.0 (Kotlin 2.4.10, Isolated Projects): @TraceRecomposition + stabilityDump.
     alias(libs.plugins.stability.analyzer)
 //    id(libs.plugins.spotless.get().pluginId)
 }
