@@ -68,5 +68,39 @@ if [ -n "$repo_root" ] && [ -f "${repo_root}/gradlew" ]; then
   chmod +x "${repo_root}/gradlew"
 fi
 
+# Xcode Cloud often cannot reach dl.google.com during the later xcodebuild Gradle
+# invocation ("No route to host"). Prefetch Kotlin/Native + Compose iOS artifacts
+# here, single-threaded, with retries, into DerivedData so embedAndSign can reuse them.
+export GRADLE_USER_HOME="${CI_DERIVED_DATA_PATH}/.gradle"
+mkdir -p "$GRADLE_USER_HOME"
+export GRADLE_OPTS="${GRADLE_OPTS:-} -Dorg.gradle.internal.http.connectionTimeout=120000 -Dorg.gradle.internal.http.socketTimeout=120000 -Dorg.gradle.internal.repository.max.retries=8"
+
+prefetch_ios_deps() {
+  if [ -z "$repo_root" ] || [ ! -x "${repo_root}/gradlew" ]; then
+    echo "ci_post_clone: skip gradle prefetch (no gradlew)"
+    return 0
+  fi
+  cd "$repo_root"
+  attempt=1
+  max=6
+  while [ "$attempt" -le "$max" ]; do
+    echo "ci_post_clone: gradle prefetch ${attempt}/${max} $(date -u +%H:%M:%SZ)"
+    if ./gradlew :shared:compileKotlinIosArm64 \
+      --no-daemon \
+      --no-configuration-cache \
+      --max-workers=1; then
+      echo "ci_post_clone: gradle prefetch ok"
+      return 0
+    fi
+    echo "ci_post_clone: prefetch failed, sleeping $((attempt * 20))s"
+    sleep $((attempt * 20))
+    attempt=$((attempt + 1))
+  done
+  echo "error: gradle prefetch failed after ${max} attempts" >&2
+  return 1
+}
+
+prefetch_ios_deps
+
 echo "ci_post_clone: done $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 echo "ci_post_clone: set Xcode Cloud workflow JAVA_HOME to ${JAVA_HOME}"
