@@ -87,7 +87,6 @@ prefetch_ios_deps() {
     echo "ci_post_clone: gradle prefetch ${attempt}/${max} $(date -u +%H:%M:%SZ)"
     if ./gradlew :shared:compileKotlinIosArm64 \
       --no-daemon \
-      --no-configuration-cache \
       --max-workers=1; then
       echo "ci_post_clone: gradle prefetch ok"
       return 0
