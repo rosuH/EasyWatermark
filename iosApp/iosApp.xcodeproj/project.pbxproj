@@ -269,7 +269,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# C5.1 (S4d-25): build + stage the :shared Kotlin/Native framework for the current Xcode\n# CONFIGURATION/SDK/ARCH, into shared/build/xcode-frameworks/$CONFIGURATION/$SDK_NAME (the path the\n# FRAMEWORK_SEARCH_PATHS build setting points at). Runs before the Sources phase so `import Shared`\n# resolves. Capped at --max-workers=8 per the repo's automation policy.\nif [ \"$EW_SKIP_KOTLIN_FRAMEWORK\" = \"1\" ]; then\n  echo \"note: EW_SKIP_KOTLIN_FRAMEWORK=1 -> skipping gradle embedAndSign (framework assumed prebuilt)\"\n  exit 0\nfi\ncd \"$SRCROOT/..\"\n./gradlew :shared:embedAndSignAppleFrameworkForXcode --max-workers=8\n";
+			shellScript = "# C5.1: stage :shared Kotlin/Native framework for this Xcode CONFIGURATION/SDK/ARCH.\n# Xcode Cloud: iosApp/ci_scripts/ci_post_clone.sh installs JDK 17 at $CI_DERIVED_DATA_PATH/JDK/Home.\nif [ -z \"$JAVA_HOME\" ] && [ -n \"$CI_DERIVED_DATA_PATH\" ] && [ -x \"$CI_DERIVED_DATA_PATH/JDK/Home/bin/java\" ]; then\n  export JAVA_HOME=\"$CI_DERIVED_DATA_PATH/JDK/Home\"\n  export PATH=\"$JAVA_HOME/bin:$PATH\"\nfi\nif [ -n \"$CI_DERIVED_DATA_PATH\" ]; then\n  export GRADLE_USER_HOME=\"$CI_DERIVED_DATA_PATH/.gradle\"\nfi\nGRADLE_WORKERS=8\nif [ \"$CI_XCODE_CLOUD\" = \"TRUE\" ]; then\n  GRADLE_WORKERS=2\nfi\nif [ \"$EW_SKIP_KOTLIN_FRAMEWORK\" = \"1\" ]; then\n  echo \"note: EW_SKIP_KOTLIN_FRAMEWORK=1 -> skipping gradle embedAndSign (framework assumed prebuilt)\"\n  exit 0\nfi\ncd \"$SRCROOT/..\"\n./gradlew :shared:embedAndSignAppleFrameworkForXcode --max-workers=\"$GRADLE_WORKERS\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
