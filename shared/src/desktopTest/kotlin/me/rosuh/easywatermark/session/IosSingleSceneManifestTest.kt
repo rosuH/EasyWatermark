@@ -44,6 +44,37 @@ class IosSingleSceneManifestTest {
     }
 
     @Test
+    fun sourceManifest_requiresFullScreen_whileIpadStaysPortraitOnly() {
+        val plist = locateIosInfoPlist()
+        val text = plist.readText()
+        val root = extractRootDictBody(text)
+            ?: fail("root dict missing in ${plist.path}")
+        val requiresFullScreen = extractDirectChildBoolean(root, "UIRequiresFullScreen")
+            ?: fail(
+                "UIRequiresFullScreen missing as a top-level Info.plist key in ${plist.path}. " +
+                    "ITMS-90474: portrait-only iPad must opt out of Split View / Slide Over.",
+            )
+        assertEquals(
+            true,
+            requiresFullScreen,
+            "Portrait-only iPad must set UIRequiresFullScreen=true. Do not add landscape " +
+                "orientations — CMP keeps the pre-rotation scene width (ADR-0026).",
+        )
+        val ipadOrientations = extractArrayStringsAfterKey(
+            root,
+            "UISupportedInterfaceOrientations~ipad",
+        ) ?: fail("UISupportedInterfaceOrientations~ipad missing in ${plist.path}")
+        assertEquals(
+            listOf(
+                "UIInterfaceOrientationPortrait",
+                "UIInterfaceOrientationPortraitUpsideDown",
+            ),
+            ipadOrientations,
+            "iPad must stay portrait-only until CMP landscape relayout is fixed",
+        )
+    }
+
+    @Test
     fun nestedImpostorKey_underSceneConfigurations_doesNotSatisfyGuard() {
         // Direct child missing; impostor false nested under UISceneConfigurations.
         val impostorBody = """
@@ -87,6 +118,40 @@ class IosSingleSceneManifestTest {
         )
         return candidates.firstOrNull { it.isFile }
             ?: fail("iosApp/iosApp/Info.plist not found from user.dir=$cwd candidates=$candidates")
+    }
+
+    private fun extractRootDictBody(plistXml: String): String? {
+        val injected = plistXml.replaceFirst("<dict>", "<key>__root__</key>\n<dict>")
+        return extractDictBodyAfterKey(injected, "__root__")
+    }
+
+    /**
+     * Direct-child string array after `<key>$key</key>`. Nested arrays are ignored.
+     */
+    private fun extractArrayStringsAfterKey(dictBody: String, key: String): List<String>? {
+        val keyTag = "<key>$key</key>"
+        var depth = 0
+        var i = 0
+        while (i < dictBody.length) {
+            when {
+                dictBody.startsWith("<dict>", i) -> {
+                    depth++
+                    i += "<dict>".length
+                }
+                dictBody.startsWith("</dict>", i) -> {
+                    depth--
+                    i += "</dict>".length
+                }
+                depth == 0 && dictBody.startsWith(keyTag, i) -> {
+                    val after = dictBody.substring(i + keyTag.length).trimStart()
+                    if (!after.startsWith("<array>")) return null
+                    val inner = after.removePrefix("<array>").substringBefore("</array>")
+                    return Regex("<string>([^<]*)</string>").findAll(inner).map { it.groupValues[1] }.toList()
+                }
+                else -> i++
+            }
+        }
+        return null
     }
 
     /**
