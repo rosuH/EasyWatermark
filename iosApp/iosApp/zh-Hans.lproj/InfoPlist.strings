@@ -2,3 +2,4 @@
 "CFBundleDisplayName" = "简单水印";
 "CFBundleName" = "简单水印";
 "NSPhotoLibraryUsageDescription" = "用于更快地显示你选择的照片预览。所有处理都在本机完成，不联网、不上传、不统计。";
+"NSPhotoLibraryAddUsageDescription" = "把加好水印的照片保存到你的相册。";

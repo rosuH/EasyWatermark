@@ -25,6 +25,7 @@
 		EW00000000000000000000A1 /* ic_log_transparent.dat in Resources */ = {isa = PBXBuildFile; fileRef = EW00000000000000000000A0 /* ic_log_transparent.dat */; };
 		EW00000000000000000000B1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EW00000000000000000000B0 /* Assets.xcassets */; };
 		EW00000000000000000000B3 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = EW00000000000000000000B2 /* InfoPlist.strings */; };
+		EW00000000000000000000C1 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = EW00000000000000000000C0 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -60,6 +61,7 @@
 		EW00000000000000000000B0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		EW00000000000000000000B4 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		EW00000000000000000000B5 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		EW00000000000000000000C0 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -101,6 +103,7 @@
 				EW000000000000000000003E /* ProgressiveImportNotifications.swift */,
 				EW000000000000000000003F /* PhotoLibraryPHPicker.swift */,
 				EW000000000000000000003B /* Info.plist */,
+				EW00000000000000000000C0 /* PrivacyInfo.xcprivacy */,
 				EW00000000000000000000B2 /* InfoPlist.strings */,
 				EW00000000000000000000B0 /* Assets.xcassets */,
 				EW0000000000000000000038 /* KotlinInterop.swift */,
@@ -242,6 +245,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				EW00000000000000000000B1 /* Assets.xcassets in Resources */,
+				EW00000000000000000000C1 /* PrivacyInfo.xcprivacy in Resources */,
 				EW00000000000000000000B3 /* InfoPlist.strings in Resources */,
 				EW00000000000000000000A1 /* ic_log_transparent.dat in Resources */,
 				EW0000000000000000000092 /* ewm-db-ch.db in Resources */,
@@ -269,7 +273,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# C5.1: stage :shared Kotlin/Native framework for this Xcode CONFIGURATION/SDK/ARCH.\n# Xcode Cloud: iosApp/ci_scripts/ci_post_clone.sh installs JDK 17 at $CI_DERIVED_DATA_PATH/JDK/Home.\nif [ -z \"$JAVA_HOME\" ] && [ -n \"$CI_DERIVED_DATA_PATH\" ] && [ -x \"$CI_DERIVED_DATA_PATH/JDK/Home/bin/java\" ]; then\n  export JAVA_HOME=\"$CI_DERIVED_DATA_PATH/JDK/Home\"\n  export PATH=\"$JAVA_HOME/bin:$PATH\"\nfi\nif [ -n \"$CI_DERIVED_DATA_PATH\" ]; then\n  export GRADLE_USER_HOME=\"$CI_DERIVED_DATA_PATH/.gradle\"\nfi\nif [ \"$EW_SKIP_KOTLIN_FRAMEWORK\" = \"1\" ]; then\n  echo \"note: EW_SKIP_KOTLIN_FRAMEWORK=1 -> skipping gradle embedAndSign (framework assumed prebuilt)\"\n  exit 0\nfi\ncd \"$SRCROOT/..\"\nif [ \"$CI_XCODE_CLOUD\" = \"TRUE\" ]; then\n  ./gradlew :shared:embedAndSignAppleFrameworkForXcode --max-workers=1 --no-daemon\nelse\n  ./gradlew :shared:embedAndSignAppleFrameworkForXcode --max-workers=8\nfi\n";
+			shellScript = "# C5.1: stage :shared Kotlin/Native framework for this Xcode CONFIGURATION/SDK/ARCH.\n# Xcode Cloud: iosApp/ci_scripts/ci_post_clone.sh installs JDK 17 at $CI_DERIVED_DATA_PATH/JDK/Home.\nif [ -z \"$JAVA_HOME\" ] && [ -n \"$CI_DERIVED_DATA_PATH\" ] && [ -x \"$CI_DERIVED_DATA_PATH/JDK/Home/bin/java\" ]; then\n  export JAVA_HOME=\"$CI_DERIVED_DATA_PATH/JDK/Home\"\n  export PATH=\"$JAVA_HOME/bin:$PATH\"\nfi\nif [ -n \"$CI_DERIVED_DATA_PATH\" ]; then\n  export GRADLE_USER_HOME=\"$CI_DERIVED_DATA_PATH/.gradle\"\nfi\nif [ \"$EW_SKIP_KOTLIN_FRAMEWORK\" = \"1\" ]; then\n  echo \"note: EW_SKIP_KOTLIN_FRAMEWORK=1 -> skipping gradle embedAndSign (framework assumed prebuilt)\"\nelse\ncd \"$SRCROOT/..\"\nif [ \"$CI_XCODE_CLOUD\" = \"TRUE\" ]; then\n  ./gradlew :shared:embedAndSignAppleFrameworkForXcode --max-workers=1 --no-daemon\nelse\n  ./gradlew :shared:embedAndSignAppleFrameworkForXcode --max-workers=8\nfi\nfi\n\"$SRCROOT/ci_scripts/embed_shared_privacy_info.sh\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -381,6 +385,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = iosApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Easy Watermark";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_UIRequiresFullScreen = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -418,6 +423,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = iosApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Easy Watermark";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_UIRequiresFullScreen = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
