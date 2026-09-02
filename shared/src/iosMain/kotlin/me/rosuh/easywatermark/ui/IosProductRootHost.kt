@@ -369,6 +369,10 @@ class IosProductRootHost(
     private var pendingPickAfterDialog = false
     /** C2: shared Android Compose export panel; Photos/Share stay Swift callbacks. */
     private var showSaveSheet by mutableStateOf(false)
+    /** Store-capture: force phone editor tab / option / template sheet. */
+    private var storeCaptureTab by mutableStateOf(0)
+    private var storeCaptureOption by mutableStateOf(0)
+    private var storeCaptureOpenTemplates by mutableStateOf(0)
     /** Last editor layout class for export sheet ≥800 dialog (export host is outside Editor BoxWithConstraints). */
     private var lastEditorLayoutClass by mutableStateOf(EditorLayoutClass.Compact)
     private var outputFormat by mutableStateOf(ImageFormat.JPEG)
@@ -410,6 +414,56 @@ class IosProductRootHost(
     }
 
     /** Swift edge: whether the product root is currently showing the editor. */
+    /**
+     * Simulator store-capture hook. Named scenes match `-storeSeedScene` / `store-seed-*`.
+     * Production device builds never call this (Swift caller is simulator-only).
+     */
+    fun applyStoreCaptureScene(scene: String) {
+        when (scene) {
+            "photo", "style", "color", "layout" -> {
+                val second = services.session.launchScreenUiStateFlow.value.selectedImageList
+                    .getOrNull(1)
+                if (second != null) {
+                    hostScope.launch {
+                        switchImageAndAwaitForTests(second.uri.value)
+                    }
+                }
+                when (scene) {
+                    "style" -> {
+                        storeCaptureTab = 1
+                        storeCaptureOption = 2
+                    }
+                    "color" -> {
+                        storeCaptureTab = 1
+                        storeCaptureOption = 3
+                    }
+                    "layout" -> {
+                        storeCaptureTab = 2
+                        storeCaptureOption = 0
+                    }
+                }
+            }
+            "idcard" -> {
+                val first = services.session.launchScreenUiStateFlow.value.selectedImageList
+                    .getOrNull(0)
+                if (first != null) {
+                    hostScope.launch {
+                        switchImageAndAwaitForTests(first.uri.value)
+                    }
+                }
+                storeCaptureTab = 1
+                storeCaptureOption = 2
+            }
+            "templates" -> storeCaptureOpenTemplates += 1
+            "export" -> {
+                if (progressiveImport.importInProgress) return
+                services.session.resetJobStatus()
+                sheetExportFinished = false
+                showSaveSheet = true
+            }
+        }
+    }
+
     fun isInEditor(): Boolean {
         val ui = services.session.launchScreenUiStateFlow.value.uiState
         return ui == LaunchScreenUiState.Editor || showEditor
@@ -1135,6 +1189,9 @@ class IosProductRootHost(
                         seedKey = themeSeedKey,
                     ) {
                     EditorScreen(
+                        forcedBottomTab = storeCaptureTab,
+                        forcedOptionIndex = storeCaptureOption,
+                        openTemplateSheetRequest = storeCaptureOpenTemplates,
                         imageList = sessionImages.map { it.toUiProjection() },
                         waterMark = waterMark,
                         selectedImage = (launchUi.curImageInfo ?: sessionImages.firstOrNull())

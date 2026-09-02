@@ -31,6 +31,55 @@ final class IosProductRootBox: ObservableObject {
         host?.onMemoryWarning()
     }
 
+#if targetEnvironment(simulator)
+    /// Store-capture: import host sample photos, then apply a named chrome scene.
+    /// UIKit hooks (`store-seed-*`) call this so argent can drive capture without
+    /// a production URL scheme.
+    func applyStoreSeed(scene: String) {
+        Task { await applyStoreSeedAsync(scene: scene) }
+    }
+
+    func applyStoreSeedAsync(scene: String) async {
+        for _ in 0..<200 {
+            if host != nil { break }
+            try? await Task.sleep(nanoseconds: 20_000_000)
+        }
+        guard let host else { return }
+        if host.isInEditor() {
+            host.applyStoreCaptureScene(scene: scene)
+            return
+        }
+        let seedPaths = [
+            "/Users/rosu/Downloads/简单水印物料/sample-id-card.png",
+            "/Users/rosu/Downloads/简单水印物料/1787384879218.jpg",
+            "/Users/rosu/Downloads/简单水印物料/1000019783.jpeg",
+        ]
+        var loaded: [KotlinByteArray] = []
+        for path in seedPaths {
+            guard FileManager.default.fileExists(atPath: path),
+                  let data = try? Data(contentsOf: URL(fileURLWithPath: path))
+            else { continue }
+            loaded.append(data.toKotlinByteArray())
+        }
+        guard !loaded.isEmpty else { return }
+        let gen = IosPickGenerationGate.shared.nextPhotoGeneration()
+        do {
+            for (index, bytes) in loaded.enumerated() {
+                try await host.deliverPickedPhotoAndAwait(
+                    bytes: bytes,
+                    append: index > 0,
+                    renderPreview: index == 0,
+                    pickGeneration: gen,
+                )
+            }
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            host.applyStoreCaptureScene(scene: scene)
+        } catch {
+            NSLog("store-seed failed: %@", error.localizedDescription)
+        }
+    }
+#endif
+
     func presentShare(path: String) {
         guard let presenter = foregroundPresenter() else { return }
         let url = URL(fileURLWithPath: path)
@@ -59,6 +108,66 @@ final class IosProductRootBox: ObservableObject {
         return presenter
     }
 }
+
+#if targetEnvironment(simulator)
+/// Invisible UIKit buttons so argent `tap: { id: store-seed-* }` resolves.
+private enum StoreCaptureHooks {
+    static let scenes = ["editor", "photo", "style", "color", "layout", "idcard", "templates", "export"]
+    private static let hookTag = 5_599_005
+
+    static func attach(to hostView: UIView, onScene: @escaping (String) -> Void) {
+        if hostView.viewWithTag(hookTag) != nil { return }
+        let bar = StoreCaptureHookBar()
+        bar.tag = hookTag
+        bar.translatesAutoresizingMaskIntoConstraints = false
+        bar.isUserInteractionEnabled = true
+        bar.backgroundColor = .clear
+        let stack = UIStackView()
+        stack.axis = .vertical
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        for name in scenes {
+            let button = UIButton(type: .custom)
+            button.accessibilityIdentifier = "store-seed-\(name)"
+            button.accessibilityLabel = "store-seed-\(name)"
+            button.accessibilityTraits = .button
+            button.isAccessibilityElement = true
+            button.backgroundColor = .clear
+            button.addAction(UIAction { _ in onScene(name) }, for: .touchUpInside)
+            button.widthAnchor.constraint(equalToConstant: 44).isActive = true
+            button.heightAnchor.constraint(equalToConstant: 44).isActive = true
+            stack.addArrangedSubview(button)
+        }
+        bar.addSubview(stack)
+        hostView.addSubview(bar)
+        NSLayoutConstraint.activate([
+            bar.leadingAnchor.constraint(equalTo: hostView.leadingAnchor),
+            bar.topAnchor.constraint(equalTo: hostView.safeAreaLayoutGuide.topAnchor),
+            stack.leadingAnchor.constraint(equalTo: bar.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: bar.trailingAnchor),
+            stack.topAnchor.constraint(equalTo: bar.topAnchor),
+            stack.bottomAnchor.constraint(equalTo: bar.bottomAnchor),
+        ])
+        hostView.bringSubviewToFront(bar)
+        for delay in [0.3, 0.8, 1.5] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                hostView.bringSubviewToFront(bar)
+            }
+        }
+    }
+}
+
+private final class StoreCaptureHookBar: UIView {
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        superview?.bringSubviewToFront(self)
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        superview?.bringSubviewToFront(self)
+    }
+}
+#endif
 
 /// Single production ComposeUIViewController for Launch + Editor + CMP templates.
 private struct SharedComposeProductRoot: UIViewControllerRepresentable {
@@ -100,6 +209,16 @@ private struct SharedComposeProductRoot: UIViewControllerRepresentable {
         box.host = host
         let vc = host.viewController()
         box.viewController = vc
+#if targetEnvironment(simulator)
+        let attachHooks = { [weak box, weak vc] in
+            guard let vc else { return }
+            StoreCaptureHooks.attach(to: vc.view) { scene in
+                box?.applyStoreSeed(scene: scene)
+            }
+        }
+        attachHooks()
+        DispatchQueue.main.async(execute: attachHooks)
+#endif
         EwmStartupTrace.mark("swift_compose_vc_ready")
         return vc
     }
@@ -310,6 +429,9 @@ struct ContentView: View {
             Task { await loadIcon(item, generation: generation) }
         }
         .task { await runUITestFixtureIfRequested() }
+#if targetEnvironment(simulator)
+        .task { await runStoreSeedLaunchArgumentIfRequested() }
+#endif
         .task { await edge.loadUserConfigWitness() }
         .task { await photoImportCoordinator.installControlObservers() }
         .onDisappear {
@@ -358,6 +480,15 @@ struct ContentView: View {
     }
 #else
     private func runUITestFixtureIfRequested() async {}
+#endif
+
+#if targetEnvironment(simulator)
+    private func runStoreSeedLaunchArgumentIfRequested() async {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-storeSeedScene"),
+              arguments.indices.contains(index + 1) else { return }
+        await productRoot.applyStoreSeedAsync(scene: arguments[index + 1])
+    }
 #endif
 
     /// PHPicker finished. Empty `results` is Cancel (WWDC20 10652) — no-op even when Session

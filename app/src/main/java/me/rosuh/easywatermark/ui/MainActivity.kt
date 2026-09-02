@@ -43,6 +43,7 @@ import me.rosuh.easywatermark.utils.FileUtils
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -131,6 +132,9 @@ class MainActivity : ComponentActivity() {
     // ACTION_SEND share-in bridge (ADR-0016): set from intent, observed in setContent → navigate.
     private var pendingShareUris by mutableStateOf<List<Uri>?>(null)
 
+    /** Emulator store-capture: `--es storeSeedScene photo`. Null in production launches. */
+    private var storeSeedScene by mutableStateOf<String?>(null)
+
     /** True while Android system splash should stay up (Launch fade serial hold). */
     private var keepSplash = false
 
@@ -138,6 +142,17 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleShareIntent(intent)
+        handleStoreSeedIntent(intent)
+    }
+
+    private fun handleStoreSeedIntent(intent: Intent?) {
+        if (!BuildConfig.DEBUG) return
+        val scene = intent?.getStringExtra(StoreCaptureSeed.EXTRA_SCENE) ?: return
+        storeSeedScene = scene
+        val uris = StoreCaptureSeed.querySeedUris(this)
+        if (uris.isNotEmpty()) {
+            pendingShareUris = uris
+        }
     }
 
     private fun handleShareIntent(intent: Intent?) {
@@ -207,6 +222,7 @@ class MainActivity : ComponentActivity() {
             android.util.Log.i("PreviewSourceReuse", "probe enabled")
         }
         handleShareIntent(intent)
+        handleStoreSeedIntent(intent)
 
         val shareIn = !pendingShareUris.isNullOrEmpty()
         val firstRoute = ProductShellNav.routeFromLaunchUi(
@@ -323,6 +339,8 @@ class MainActivity : ComponentActivity() {
                             var showGalleryDialog by remember { mutableStateOf(false) }
                             var showOpenSource by remember { mutableStateOf(false) }
                             var showSaveSheet by remember { mutableStateOf(false) }
+                            var storeOpenTemplates by remember { mutableIntStateOf(0) }
+                            val storeChrome = storeSeedScene?.let { StoreCaptureSeed.chromeFor(it) }
 
                             // Same-session share-in: enter Editor with grant URIs directly (no staging).
                             LaunchedEffect(pendingShareUris) {
@@ -330,6 +348,19 @@ class MainActivity : ComponentActivity() {
                                     viewModel.enterEditorFromShareUris(uris)
                                     pendingShareUris = null
                                 }
+                            }
+                            LaunchedEffect(storeSeedScene) {
+                                val scene = storeSeedScene ?: return@LaunchedEffect
+                                if (pendingShareUris != null) return@LaunchedEffect
+                                repeat(20) {
+                                    val uris = StoreCaptureSeed.querySeedUris(this@MainActivity)
+                                    if (uris.isNotEmpty()) {
+                                        pendingShareUris = uris
+                                        return@LaunchedEffect
+                                    }
+                                    delay(300)
+                                }
+                                Log.w(TAG, "store-seed $scene: no ewm_store_* images in MediaStore")
                             }
                             val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
                             // P1: do not drive the whole product shell off a single fat Session collect.
@@ -362,6 +393,21 @@ class MainActivity : ComponentActivity() {
                                     initialValue = viewModel.launchScreenUiStateFlow.value
                                         .let { it.selectedImageList.toEditorSelectionUi(it.curImageInfo) },
                                 )
+                            LaunchedEffect(storeSeedScene, editorSelection.images.size) {
+                                val scene = storeSeedScene ?: return@LaunchedEffect
+                                val images = editorSelection.images
+                                if (images.size < 2) return@LaunchedEffect
+                                val idx = StoreCaptureSeed.imageIndexFor(scene).coerceIn(images.indices)
+                                viewModel.selectImage(images[idx].uri)
+                                if (scene == "export") {
+                                    delay(500)
+                                    showSaveSheet = true
+                                }
+                                if (scene == "templates") {
+                                    delay(400)
+                                    storeOpenTemplates += 1
+                                }
+                            }
                             val context = LocalContext.current
                             // P2: templates collected only while the template sheet is open.
                             var templateSheetOpen by remember { mutableStateOf(false) }
@@ -554,6 +600,9 @@ class MainActivity : ComponentActivity() {
                                         ProductShellNav.Route.Editor -> {
                                             AndroidEditorScreen(
                                                 followPhoto = userPreferences.followPhoto,
+                                                forcedBottomTab = storeChrome?.tab ?: 0,
+                                                forcedOptionIndex = storeChrome?.option ?: 0,
+                                                openTemplateSheetRequest = storeOpenTemplates,
                                                 imageList = editorSelection.images,
                                                 waterMark = editorWaterMark,
                                                 selectedImage = editorSelection.selected,

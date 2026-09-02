@@ -1,0 +1,7 @@
+steps:
+  - launch: me.rosuh.easywatermark.ios
+  - wait: 2000
+  - run: store-pick-photos
+  - wait: 800
+  - await:
+      idle: true

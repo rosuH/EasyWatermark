@@ -106,6 +106,12 @@ fun AndroidEditorScreen(
     /** ADR-0027: full Editor ColorScheme from selected photo (default on). */
     followPhoto: Boolean = true,
     onUpdateUriFailed: (SecurityException) -> Unit = { },
+    /** Store-capture hook. Phone bottom chrome tab (0 Content / 1 Style / 2 Layout). */
+    forcedBottomTab: Int = 0,
+    /** Store-capture hook. Option index inside [forcedBottomTab]. */
+    forcedOptionIndex: Int = 0,
+    /** Store-capture hook. Bump to open the template sheet. */
+    openTemplateSheetRequest: Int = 0,
 ) {
     val colorModel = remember { FuncTitleModel(FuncType.Color) }
     val editorScope = rememberCoroutineScope()
@@ -226,6 +232,9 @@ fun AndroidEditorScreen(
             modifier = Modifier.fillMaxSize(),
             layoutClass = layoutClass,
             onTemplateSheetVisibilityChange = onTemplateSheetVisibilityChange,
+            forcedBottomTab = forcedBottomTab,
+            forcedOptionIndex = forcedOptionIndex,
+            openTemplateSheetRequest = openTemplateSheetRequest,
         )
     }
     } // ContentEditorThemeHost

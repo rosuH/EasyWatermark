@@ -1,6 +1,7 @@
 package me.rosuh.easywatermark.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,9 +32,18 @@ fun EditorTemplateSheetHost(
      * (Editor composition must not recompose solely because Room templates emitted).
      */
     onSheetVisibilityChange: (Boolean) -> Unit = {},
+    /** Bump from 0 to open the sheet without a user tap (store-capture). */
+    openRequest: Int = 0,
     content: @Composable (showTemplateSheet: () -> Unit) -> Unit,
 ) {
     var showTemplateSheet by remember { mutableStateOf(false) }
+
+    LaunchedEffect(openRequest) {
+        if (openRequest > 0 && !showTemplateSheet) {
+            showTemplateSheet = true
+            onSheetVisibilityChange(true)
+        }
+    }
 
     content {
         if (!showTemplateSheet) {

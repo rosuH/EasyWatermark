@@ -67,6 +67,7 @@ Pair every “don’t” with the replacement.
 - **iOS:** session holds Ready paths only. PhotoKit pixels never enter the pipeline, Session, or preview caches. Production framework is classic ObjC `Shared.framework` — do not migrate to Alpha Swift export. Prefer `internal` on implementation-only iosMain.
 - **Desktop:** app data is OS-native (`DesktopAppPaths`). macOS export folder uses native AWT directory `FileDialog`, not Swing `JFileChooser`.
 - **Deps:** stable-by-default; one catalog slice at a time; record rollback HEAD before a promotion.
+- **Store assets:** marketing config stays in this repo (`goldie/`, `goldie-play/`, `.argent/flows`). The engine is the [rosuH/goldie](https://github.com/rosuH/goldie) fork (`scripts/`, `studio/play/`). Do not patch `node_modules/goldie`. Framed/raw outputs stay untracked (`goldie/out/`, `goldie-play/out/`).
 - **Decisions:** new forks get an ADR (`docs/adr/`, Proposed until the owner signs). Milestone PRs update CONTEXT/ADR, or say “no doc impact”. Change this file only for durable agent rules.
 - **Parity:** Android production v2.10.0 on `master` is the visual/behavior baseline. Verify renders by viewing screenshots, not byte sizes.
 - **Machines:** do not shut down already-live Android or iOS simulators (standing order). Cap Gradle with `--max-workers=8`; `./gradlew --stop` when you started the daemon. Warn before long emulator+build load.
@@ -79,6 +80,7 @@ Mirrored under `skills/`, `.claude/skills/`, and `.agents/skills/`. Compose / Ho
 
 | Situation | Skill |
 |---|---|
+| App Store / Play store assets | `goldie` (engine fork: https://github.com/rosuH/goldie) |
 | XML → Compose parity | `migrate-xml-views-to-jetpack-compose` |
 | System bars / IME / cutout | `edge-to-edge` |
 | Nav / multi-pane scenes | `navigation-3` |

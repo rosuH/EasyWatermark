@@ -1,0 +1,10 @@
+steps:
+  - launch: me.rosuh.easywatermark.ios
+  - wait: 2000
+  - echo: Seed photos, then open the export sheet
+  - tap:
+      id: store-seed-export
+  - wait: 7000
+  - await:
+      idle: true
+      timeout: 15000

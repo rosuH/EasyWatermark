@@ -1,0 +1,9 @@
+executionPrerequisite: >-
+  Editor Style tab is open.
+steps:
+  - echo: Switch to Layout
+  - tap:
+      id: store-seed-layout
+  - wait: 2000
+  - await:
+      idle: true

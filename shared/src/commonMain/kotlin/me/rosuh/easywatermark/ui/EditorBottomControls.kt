@@ -47,6 +47,8 @@ fun EditorBottomControls(
     styleOptions: List<EditorOptionSpec> = EditorOptionCatalog.style,
     layoutOptions: List<EditorOptionSpec> = EditorOptionCatalog.layout,
     onIndicatorPosition: (startPx: Int, endPx: Int) -> Unit = { _, _ -> },
+    initialTabIndex: Int = 0,
+    initialOptionIndex: Int = 0,
 ) {
     val contentLabel = stringResource(Res.string.title_content)
     val styleLabel = stringResource(Res.string.title_style)
@@ -80,6 +82,8 @@ fun EditorBottomControls(
         // Only Text opens a modal on select; Icon must not bump the signal or Text flashes on exit.
         shouldSignalActivation = { it.type == FuncType.Text },
         onIndicatorPosition = onIndicatorPosition,
+        initialTabIndex = initialTabIndex,
+        initialOptionIndex = initialOptionIndex,
     )
 }
 

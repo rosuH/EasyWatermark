@@ -1,0 +1,43 @@
+# Live App Store preview. Capture starts recording first, then this
+# fragment drives real chrome (not store-seed jumps) so the clip shows
+# tab motion, a color change, spacing, and the export sheet.
+executionPrerequisite: >-
+  Editor is open on Content with the Skytree sample (store seed photo).
+steps:
+  - echo: Hold Content so the tiled mark reads
+  - wait: 1800
+  - echo: Style tab (bottom center, editorTab-1)
+  - tap:
+      x: 0.50
+      y: 0.939
+  - wait: 1400
+  - echo: Color tool in the Style option row (4th of 6)
+  - tap:
+      x: 0.583
+      y: 0.860
+  - wait: 1000
+  - echo: Cyan swatch so the mark recolors on the photo
+  - tap:
+      x: 0.688
+      y: 0.822
+  - wait: 1800
+  - echo: Layout tab (bottom right, editorTab-2)
+  - tap:
+      x: 0.833
+      y: 0.939
+  - wait: 900
+  - echo: Drag horizontal spacing (slider track under the filmstrip)
+  - tool: gesture-swipe
+    args:
+      fromX: 0.10
+      fromY: 0.822
+      toX: 0.65
+      toY: 0.822
+      durationMs: 1600
+      settle: true
+  - wait: 2000
+  - echo: Save (download icon, second from right in the top bar)
+  - tap:
+      x: 0.82
+      y: 0.085
+  - wait: 4000

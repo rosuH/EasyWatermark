@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -57,6 +58,8 @@ fun <T> EditorBottomControlsShell(
      */
     shouldSignalActivation: (T) -> Boolean = { false },
     onIndicatorPosition: (startPx: Int, endPx: Int) -> Unit = { _, _ -> },
+    initialTabIndex: Int = 0,
+    initialOptionIndex: Int = 0,
 ) {
     if (tabs.isEmpty()) {
         return
@@ -66,11 +69,18 @@ fun <T> EditorBottomControlsShell(
     val slideMs = motionDurationMs(motionPolicy, EwmTheme.motion.optionPanelSlideMs)
     val fadeMs = motionDurationMs(motionPolicy, EwmTheme.motion.optionPanelFadeMs)
 
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    var selectedTabIndex by remember { mutableIntStateOf(initialTabIndex) }
     val safeTabIndex = selectedTabIndex.coerceIn(tabs.indices)
     val selectedTab = tabs[safeTabIndex]
     var selectedOption by remember(safeTabIndex, selectedTab.options) {
-        mutableStateOf(selectedTab.options.firstOrNull())
+        mutableStateOf(
+            selectedTab.options.getOrNull(initialOptionIndex) ?: selectedTab.options.firstOrNull(),
+        )
+    }
+    LaunchedEffect(initialTabIndex, initialOptionIndex) {
+        selectedTabIndex = initialTabIndex.coerceIn(tabs.indices)
+        val tab = tabs[selectedTabIndex.coerceIn(tabs.indices)]
+        selectedOption = tab.options.getOrNull(initialOptionIndex) ?: tab.options.firstOrNull()
     }
     // 0 = no user activation yet (default selection alone must not open the text sheet).
     // Reset on tab change so switching back to Content does not auto-open the text sheet.

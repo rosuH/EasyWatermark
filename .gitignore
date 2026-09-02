@@ -136,3 +136,9 @@ sample-images/
 # ADR-0032 local console evidence (machine-local; not repo history)
 docs/testmap/runs/
 docs/testmap/artifacts/
+
+# goldie framed/raw store assets (config + flows stay tracked)
+goldie/out/
+goldie-play/out/
+goldie-play/__pycache__/
+.argent/recordings/

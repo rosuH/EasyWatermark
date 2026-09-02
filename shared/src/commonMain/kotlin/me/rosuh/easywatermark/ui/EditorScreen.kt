@@ -110,6 +110,12 @@ fun EditorScreen(
      * Desktop E2E uses `-Dewm.desktop.inspectorTab`. Ignored on Compact/Medium.
      */
     initialInspectorTab: Int = 0,
+    /** Phone bottom chrome tab (0 Content / 1 Style / 2 Layout). Store-capture hook. */
+    forcedBottomTab: Int = 0,
+    /** Option index inside [forcedBottomTab]. Store-capture hook. */
+    forcedOptionIndex: Int = 0,
+    /** Bump to open the template sheet. Store-capture hook. */
+    openTemplateSheetRequest: Int = 0,
 ) {
     val progressiveSlots = LocalEditorProgressiveSlotPresentation.current
     val selected = selectedImage ?: imageList.firstOrNull()
@@ -158,6 +164,7 @@ fun EditorScreen(
         onUpdate = onUpdateTemplate,
         onDelete = onDeleteTemplate,
         onSheetVisibilityChange = onTemplateSheetVisibilityChange,
+        openRequest = openTemplateSheetRequest,
     ) { showTemplateSheet ->
         Surface(
             modifier = modifier
@@ -282,6 +289,8 @@ fun EditorScreen(
                         iconOption = iconOption,
                         optionItem = optionItem,
                         modifier = Modifier.fillMaxWidth(),
+                        initialTabIndex = forcedBottomTab,
+                        initialOptionIndex = forcedOptionIndex,
                     )
                 }
             }
