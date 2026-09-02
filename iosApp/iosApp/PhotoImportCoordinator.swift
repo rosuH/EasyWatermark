@@ -50,18 +50,20 @@ actor PhotoImportCoordinator {
     struct PickerFileSource: Sendable {
         let assetId: String?
         let pickerItem: PhotosPickerItem?
-        let itemProvider: NSItemProvider?
+        fileprivate let boxedProvider: UncheckedItemProvider?
+
+        var itemProvider: NSItemProvider? { boxedProvider?.raw }
 
         init(assetId: String?, pickerItem: PhotosPickerItem) {
             self.assetId = assetId
             self.pickerItem = pickerItem
-            self.itemProvider = nil
+            self.boxedProvider = nil
         }
 
         init(assetId: String?, itemProvider: NSItemProvider) {
             self.assetId = assetId
             self.pickerItem = nil
-            self.itemProvider = itemProvider
+            self.boxedProvider = UncheckedItemProvider(raw: itemProvider)
         }
     }
 
@@ -199,7 +201,7 @@ actor PhotoImportCoordinator {
                 importId: id,
                 assetId: source.assetId,
                 item: source.pickerItem,
-                itemProvider: source.itemProvider.map(UncheckedItemProvider.init(raw:))
+                itemProvider: source.boxedProvider
             )
         }
         retrySourcesByGeneration[generation] = Dictionary(
@@ -208,7 +210,7 @@ actor PhotoImportCoordinator {
                     id,
                     RetrySource(
                         pickerItem: source.pickerItem,
-                        itemProvider: source.itemProvider.map(UncheckedItemProvider.init(raw:)),
+                        itemProvider: source.boxedProvider,
                         provisionalPath: nil,
                         assetId: source.assetId
                     )
@@ -270,12 +272,12 @@ actor PhotoImportCoordinator {
                         importId: importId,
                         assetId: source.assetId,
                         item: source.pickerItem,
-                        itemProvider: source.itemProvider
+                        itemProvider: source.boxedProvider
                     ),
                     generation: generation,
                     limiter: transferLimiter
                 )
-                await pruneFinishedTransferTask(id: taskId, generation: generation)
+                pruneFinishedTransferTask(id: taskId, generation: generation)
                 return value
             }
             transferTasksByGeneration[generation, default: []].append(
@@ -389,7 +391,7 @@ actor PhotoImportCoordinator {
                     )
                     // Individual prune: drop this handle after completion so the map does not grow
                     // unbounded; retries stay registered until they finish or supersede cancels them.
-                    await pruneFinishedTransferTask(id: taskId, generation: generation)
+                    pruneFinishedTransferTask(id: taskId, generation: generation)
                     return value
                 }
                 transferTasksByGeneration[generation, default: []].append(

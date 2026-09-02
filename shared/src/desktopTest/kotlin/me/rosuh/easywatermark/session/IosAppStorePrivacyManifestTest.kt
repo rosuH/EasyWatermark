@@ -55,6 +55,10 @@ class IosAppStorePrivacyManifestTest {
             "ITSAppUsesNonExemptEncryption must be false (offline, no custom crypto)",
         )
         assertTrue("<key>UIRequiresFullScreen</key>" in plist)
+        assertFalse(
+            "<key>UIDeviceFamily</key>" in plist,
+            "UIDeviceFamily in Info.plist is overwritten; use TARGETED_DEVICE_FAMILY",
+        )
         assertTrue("easywatermark" !in plist, "do not register a production store-seed URL scheme")
     }
 
@@ -64,6 +68,7 @@ class IosAppStorePrivacyManifestTest {
         assertTrue("PrivacyInfo.xcprivacy in Resources" in pbx)
         assertTrue("INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO" in pbx)
         assertTrue("INFOPLIST_KEY_UIRequiresFullScreen = YES" in pbx)
+        assertTrue("TARGETED_DEVICE_FAMILY = \"1,2\"" in pbx)
         assertTrue("embed_shared_privacy_info.sh" in pbx)
         assertFalse(
             Regex("""EW_SKIP_KOTLIN_FRAMEWORK.*\n\s*exit 0""").containsMatchIn(pbx.replace("\\n", "\n")),
@@ -73,6 +78,10 @@ class IosAppStorePrivacyManifestTest {
         assertTrue("shared/PrivacyInfo.xcprivacy" in embed)
         assertTrue("Shared.framework" in embed)
         assertTrue("copied" in embed && "exit 1" in embed, "must fail if Shared.framework is missing")
+        assertTrue(
+            "Ui_graphicsPathSegmentType" in embed,
+            "must flatten CMP PathSegment.Type swift_name so Xcode drops ClangDeclarationImport",
+        )
     }
 
     @Test

@@ -16,12 +16,35 @@ if [ ! -f "$privacy_src" ]; then
   exit 1
 fi
 
+# CMP exports PathSegment.Type as Swift name `Ui_graphicsPathSegment.Type_`.
+# Swift cannot map a nested `Type` (metatype) and emits ClangDeclarationImport.
+flatten_path_segment_swift_name() {
+  header="${1}/Headers/Shared.h"
+  if [ -f "$header" ] && grep -q 'swift_name("Ui_graphicsPathSegment.Type_")' "$header"; then
+    sed -i '' 's/swift_name("Ui_graphicsPathSegment.Type_")/swift_name("Ui_graphicsPathSegmentType")/' "$header"
+    echo "note: flattened PathSegment Type swift_name in ${header}"
+  fi
+}
+
+resign_framework() {
+  dest_dir="$1"
+  identity="${EXPANDED_CODE_SIGN_IDENTITY:-}"
+  if [ -n "$identity" ] && [ "$identity" != "-" ]; then
+    codesign --force --sign "$identity" --preserve-metadata=identifier,entitlements,flags "$dest_dir" \
+      || codesign --force --sign "$identity" "$dest_dir"
+  else
+    codesign --force --sign - "$dest_dir" >/dev/null 2>&1 || true
+  fi
+}
+
 copied=0
 copy_into() {
   dest_dir="$1"
   if [ -d "$dest_dir" ]; then
     cp -f "$privacy_src" "${dest_dir}/PrivacyInfo.xcprivacy"
     echo "note: copied PrivacyInfo.xcprivacy into ${dest_dir}"
+    flatten_path_segment_swift_name "$dest_dir"
+    resign_framework "$dest_dir"
     copied=1
   fi
 }

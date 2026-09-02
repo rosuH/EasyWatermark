@@ -23,12 +23,12 @@ final class IosProductRootBox: ObservableObject {
 
     /// E2: cancel export, clear host caches, remove owned temps (idempotent).
     func disposeHost() {
-        host?.dispose()
+        _ = host?.dispose()
     }
 
     /// G4: memory-pressure trim — host image caches only; Session selection retained.
     func trimHostCaches() {
-        host?.onMemoryWarning()
+        _ = host?.onMemoryWarning()
     }
 
 #if targetEnvironment(simulator)
@@ -46,7 +46,7 @@ final class IosProductRootBox: ObservableObject {
         }
         guard let host else { return }
         if host.isInEditor() {
-            host.applyStoreCaptureScene(scene: scene)
+            _ = host.applyStoreCaptureScene(scene: scene)
             return
         }
         let seedPaths = [
@@ -73,7 +73,7 @@ final class IosProductRootBox: ObservableObject {
                 )
             }
             try? await Task.sleep(nanoseconds: 400_000_000)
-            host.applyStoreCaptureScene(scene: scene)
+            _ = host.applyStoreCaptureScene(scene: scene)
         } catch {
             NSLog("store-seed failed: %@", error.localizedDescription)
         }
@@ -192,9 +192,9 @@ private struct SharedComposeProductRoot: UIViewControllerRepresentable {
                 Task {
                     do {
                         try await ImageExport.saveToPhotos(bytes.toData())
-                        onComplete(true, nil)
+                        _ = onComplete(true, nil)
                     } catch {
-                        onComplete(false, error.localizedDescription)
+                        _ = onComplete(false, error.localizedDescription)
                     }
                 }
             },
