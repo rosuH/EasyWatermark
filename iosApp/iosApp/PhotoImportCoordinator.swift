@@ -267,24 +267,23 @@ actor PhotoImportCoordinator {
             // Register retry transfers so supersede can cancel them (same path as drainInitialQueue).
             let taskId = UUID()
             let task = Task<PhotoTransferResult, Never> {
-                let value = await Self.transfer(
+                await Self.transfer(
                     QueuedItem(
                         importId: importId,
                         assetId: source.assetId,
                         item: source.pickerItem,
-                        itemProvider: source.boxedProvider
+                        itemProvider: source.itemProvider
                     ),
                     generation: generation,
                     limiter: transferLimiter
                 )
-                pruneFinishedTransferTask(id: taskId, generation: generation)
-                return value
             }
             transferTasksByGeneration[generation, default: []].append(
                 IdentifiedTransferTask(id: taskId, task: task)
             )
             transferHandleRegistry.register(id: taskId, generation: generation)
             let transferResult = await task.value
+            pruneFinishedTransferTask(id: taskId, generation: generation)
             accepted = await handleTransferResult(transferResult, generation: generation)
         } else {
             postFailure(
@@ -377,29 +376,25 @@ actor PhotoImportCoordinator {
     ) async -> BatchResult {
         var successCount = 0
         var failureCount = 0
-        await withTaskGroup(of: PhotoTransferResult.self) { group in
+        await withTaskGroup(of: (UUID, PhotoTransferResult).self) { group in
             var inFlight = 0
 
             func enqueue(_ queued: QueuedItem) {
                 inFlight += 1
                 let taskId = UUID()
                 let task = Task<PhotoTransferResult, Never> {
-                    let value = await Self.transfer(
+                    await Self.transfer(
                         queued,
                         generation: generation,
                         limiter: transferLimiter
                     )
-                    // Individual prune: drop this handle after completion so the map does not grow
-                    // unbounded; retries stay registered until they finish or supersede cancels them.
-                    pruneFinishedTransferTask(id: taskId, generation: generation)
-                    return value
                 }
                 transferTasksByGeneration[generation, default: []].append(
                     IdentifiedTransferTask(id: taskId, task: task)
                 )
                 transferHandleRegistry.register(id: taskId, generation: generation)
                 group.addTask {
-                    await task.value
+                    (taskId, await task.value)
                 }
             }
 
@@ -408,8 +403,9 @@ actor PhotoImportCoordinator {
                 enqueue(queued)
             }
 
-            while let result = await group.next() {
+            while let (taskId, result) = await group.next() {
                 inFlight -= 1
+                pruneFinishedTransferTask(id: taskId, generation: generation)
                 let accepted = await handleTransferResult(result, generation: generation)
                 switch result {
                 case .ready:
