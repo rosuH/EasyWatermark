@@ -42,7 +42,7 @@ private enum PhotoTransferResult: Sendable {
 actor PhotoImportCoordinator {
     static let maxConcurrency = 2
 
-    private struct UncheckedItemProvider: @unchecked Sendable {
+    fileprivate struct UncheckedItemProvider: @unchecked Sendable {
         let raw: NSItemProvider
     }
 
