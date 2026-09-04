@@ -174,9 +174,19 @@ jobs:
           }
           function Export-WixBinDir([string]$dir) {
             $env:PATH = "$dir;$env:PATH"
+            # CMP 1.12.0 configureWix() (Windows-only) reads WIX_PATH at configuration
+            # time and returns before touching rootProject.layout. Isolated Projects
+            # forbids that cross-project layout access (master packaging run
+            # 33823548228). PATH alone is not enough — the plugin does not consult it
+            # during configuration.
+            $env:WIX_PATH = $dir
             if ($env:GITHUB_PATH) {
               Add-Content -Path $env:GITHUB_PATH -Value $dir
               Write-Host "Exported WiX bin to GITHUB_PATH: $dir"
+            }
+            if ($env:GITHUB_ENV) {
+              Add-Content -Path $env:GITHUB_ENV -Value "WIX_PATH=$dir"
+              Write-Host "Exported WIX_PATH to GITHUB_ENV: $dir"
             }
           }
           $bin = Get-WixBinDir
@@ -211,6 +221,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            if [[ -z "${WIX_PATH:-}" || ! -d "$WIX_PATH" ]]; then
+              echo "FAIL: WIX_PATH must be a directory so CMP configureWix() does not touch rootProject.layout under Isolated Projects" >&2
+              echo "WIX_PATH=${WIX_PATH:-<unset>}" >&2
+              exit 1
+            fi
+            echo "WIX_PATH=$WIX_PATH"
+          fi
           ${{ matrix.gradle }} :desktopApp:packageDistributionForCurrentOS --max-workers=4
           ${{ matrix.gradle }} :desktopApp:createDistributable --max-workers=4
 
