@@ -34,6 +34,14 @@ Unused catalog leftovers `toolsGradle=7.4.2` and `ktlintGradle=11.3.1` were remo
 - No Spotless / ktlint plugin (commented out; Spotless Isolated Projects is only a partial fix at 8.3.0).
 - No wasm/js Kotlin targets (the published KMP Isolated Projects hole).
 
+## Known hole: Windows MSI / WiX
+
+CMP 1.12.0 `configureWix()` (Windows-only) writes the downloaded WiX toolset into `rootProject.layout.buildDirectory`. Isolated Projects forbids that cross-project `Project.layout` access, so `:desktopApp:packageDistributionForCurrentOS` fails at configuration on Windows while Linux DEB and macOS DMG stay green (master run [33823548228](https://github.com/rosuH/EasyWatermark/actions/runs/33823548228)).
+
+The plugin returns early when `WIX_PATH` is a real directory. Desktop packaging CI already installs WiX via Chocolatey; it must export that bin dir as `WIX_PATH` (not only `PATH`). Local Windows packaging under Isolated Projects needs the same env var, or `--no-isolated-projects`.
+
+Do not turn Isolated Projects off in `gradle.properties` for this. The hole is CMP's, not a reason to drop parallel configuration.
+
 ## Proof
 
 Green under Isolated Projects on this agent (JDK 17, SDK 37):
