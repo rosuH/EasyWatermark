@@ -262,7 +262,8 @@ jobs:
     needs: [preflight, build-and-sign]
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment: release
+    # No `environment: release` — this job only uses GITHUB_TOKEN. Signing and
+    # Play secrets stay on build-and-sign / publish-play.
     permissions:
       contents: write
     steps:

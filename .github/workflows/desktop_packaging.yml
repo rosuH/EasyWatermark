@@ -62,39 +62,79 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # jobs.<id>.if runs before strategy.matrix is expanded, so matrix.* is
+  # unavailable there. Filter the include list first (push/schedule = all three).
+  select-matrix:
+    name: Select desktop matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      include: ${{ steps.pick.outputs.include }}
+    steps:
+      - id: pick
+        env:
+          EVENT: ${{ github.event_name }}
+          LINUX: ${{ inputs.linux }}
+          WINDOWS: ${{ inputs.windows }}
+          MACOS: ${{ inputs.macos }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os
+          event = os.environ.get("EVENT", "")
+          def flag(name: str) -> bool:
+              return os.environ.get(name, "").lower() == "true"
+          rows = [
+              {
+                  "os": "ubuntu-latest",
+                  "label": "linux-deb",
+                  "format": "deb",
+                  "arch": "",
+                  "artifact": "easywatermark-desktop-linux-deb",
+                  "gradle": "./gradlew",
+              },
+              {
+                  "os": "windows-latest",
+                  "label": "windows-msi",
+                  "format": "msi",
+                  "arch": "",
+                  "artifact": "easywatermark-desktop-windows-msi",
+                  "gradle": "./gradlew.bat",
+              },
+              {
+                  "os": "macos-latest",
+                  "label": "macos-arm64-dmg",
+                  "format": "dmg",
+                  "arch": "arm64",
+                  "artifact": "easywatermark-desktop-macos-arm64-dmg",
+                  "gradle": "./gradlew",
+              },
+          ]
+          if event in ("push", "schedule"):
+              chosen = rows
+          else:
+              want = {
+                  "linux-deb": flag("LINUX"),
+                  "windows-msi": flag("WINDOWS"),
+                  "macos-arm64-dmg": flag("MACOS"),
+              }
+              chosen = [row for row in rows if want[row["label"]]]
+          include = json.dumps(chosen, separators=(",", ":"))
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+              fh.write(f"include={include}\n")
+          print(f"event={event} include={include}")
+          PY
+
   unsigned-installer:
     name: Unsigned ${{ matrix.label }}
-    if: >
-      github.event_name == 'push' ||
-      github.event_name == 'schedule' ||
-      (matrix.label == 'linux-deb' && inputs.linux) ||
-      (matrix.label == 'windows-msi' && inputs.windows) ||
-      (matrix.label == 'macos-arm64-dmg' && inputs.macos)
+    needs: select-matrix
+    if: needs.select-matrix.outputs.include != '[]'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-latest
-            label: linux-deb
-            format: deb
-            arch: ''
-            artifact: easywatermark-desktop-linux-deb
-            gradle: ./gradlew
-          - os: windows-latest
-            label: windows-msi
-            format: msi
-            arch: ''
-            artifact: easywatermark-desktop-windows-msi
-            gradle: ./gradlew.bat
-          - os: macos-latest
-            # macos-latest is ARM64 on GitHub-hosted runners (2026); label + fail-closed arch check.
-            label: macos-arm64-dmg
-            format: dmg
-            arch: arm64
-            artifact: easywatermark-desktop-macos-arm64-dmg
-            gradle: ./gradlew
+        include: ${{ fromJSON(needs.select-matrix.outputs.include) }}
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
