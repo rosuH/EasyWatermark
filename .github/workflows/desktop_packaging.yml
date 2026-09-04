@@ -5,7 +5,8 @@ name: Desktop packaging
 # Layers:
 #   - push master (native on.push.paths): merge-SHA qualification
 #   - schedule (weekly): full 3-OS qualification regardless of paths
-#   - workflow_dispatch: full 3-OS on demand
+#   - workflow_call from Build packages: selected Desktop OS only
+# Manual Run button is Build packages (`build_packages.yml`), not this file.
 # Matrix host-local packages only (official CMP rule — no cross-OS packaging):
 #   ubuntu-latest → DEB, windows-latest → MSI, macos-latest (ARM64) → DMG
 # Honesty:
@@ -19,7 +20,20 @@ env:
   GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx3072m -Dfile.encoding=UTF-8 -XX:+HeapDumpOnOutOfMemoryError -XX:MaxMetaspaceSize=1g" -Dkotlin.daemon.jvm.options="-Xmx2560m" -Dkotlin.incremental=false
 
 on:
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      linux:
+        description: 'Build unsigned Linux DEB'
+        type: boolean
+        default: true
+      windows:
+        description: 'Build unsigned Windows MSI'
+        type: boolean
+        default: true
+      macos:
+        description: 'Build unsigned macOS Apple Silicon DMG'
+        type: boolean
+        default: true
   schedule:
     # Weekly unsigned three-OS qualification (Monday 06:00 UTC).
     - cron: '0 6 * * 1'
@@ -50,6 +64,12 @@ concurrency:
 jobs:
   unsigned-installer:
     name: Unsigned ${{ matrix.label }}
+    if: >
+      github.event_name == 'push' ||
+      github.event_name == 'schedule' ||
+      (matrix.label == 'linux-deb' && inputs.linux) ||
+      (matrix.label == 'windows-msi' && inputs.windows) ||
+      (matrix.label == 'macos-arm64-dmg' && inputs.macos)
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:
@@ -222,12 +242,22 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "${{ runner.os }}" == "Windows" ]]; then
-            if [[ -z "${WIX_PATH:-}" || ! -d "$WIX_PATH" ]]; then
-              echo "FAIL: WIX_PATH must be a directory so CMP configureWix() does not touch rootProject.layout under Isolated Projects" >&2
-              echo "WIX_PATH=${WIX_PATH:-<unset>}" >&2
+            if [[ -z "${WIX_PATH:-}" ]]; then
+              echo "FAIL: WIX_PATH must be set so CMP configureWix() does not touch rootProject.layout under Isolated Projects" >&2
+              exit 1
+            fi
+            # Git-Bash on windows-latest sees a Windows path from GITHUB_ENV
+            # (e.g. C:\Program Files (x86)\...). Convert before `test -d`.
+            wix_dir="$WIX_PATH"
+            if command -v cygpath >/dev/null 2>&1; then
+              wix_dir="$(cygpath -u "$WIX_PATH")"
+            fi
+            if [[ ! -d "$wix_dir" ]]; then
+              echo "FAIL: WIX_PATH is not a directory: $WIX_PATH (checked as $wix_dir)" >&2
               exit 1
             fi
             echo "WIX_PATH=$WIX_PATH"
+            echo "WIX_PATH_unix=$wix_dir"
           fi
           ${{ matrix.gradle }} :desktopApp:packageDistributionForCurrentOS --max-workers=4
           ${{ matrix.gradle }} :desktopApp:createDistributable --max-workers=4

@@ -1,0 +1,170 @@
+name: Build packages
+
+# Artifact-only button: pick platforms, download artifacts. Does NOT create a
+# GitHub Release, tag, or Play upload. Store ship is `release.yml` (CREATE).
+# Desktop installers are unsigned (ADR-0031 / ADR-0013). Android APK/AAB are
+# signed via the `release` environment. iOS IPA is not here (Xcode Cloud).
+
+on:
+  workflow_dispatch:
+    inputs:
+      android:
+        description: 'Android signed APK + AAB (no GitHub Release)'
+        type: boolean
+        default: true
+      linux:
+        description: 'Unsigned Linux DEB'
+        type: boolean
+        default: true
+      windows:
+        description: 'Unsigned Windows MSI'
+        type: boolean
+        default: true
+      macos:
+        description: 'Unsigned macOS Apple Silicon DMG'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-packages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  guard:
+    name: Require at least one platform
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail if nothing selected
+        run: |
+          set -euo pipefail
+          if [[ "${{ inputs.android }}" != 'true' &&
+                "${{ inputs.linux }}" != 'true' &&
+                "${{ inputs.windows }}" != 'true' &&
+                "${{ inputs.macos }}" != 'true' ]]; then
+            echo "FAIL: pick at least one platform" >&2
+            exit 1
+          fi
+          echo "android=${{ inputs.android }} linux=${{ inputs.linux }} windows=${{ inputs.windows }} macos=${{ inputs.macos }}"
+          echo "ref=${{ github.ref }} sha=${{ github.sha }}"
+
+  desktop:
+    name: Desktop installers
+    needs: guard
+    if: inputs.linux || inputs.windows || inputs.macos
+    uses: ./.github/workflows/desktop_packaging.yml
+    with:
+      linux: ${{ inputs.linux }}
+      windows: ${{ inputs.windows }}
+      macos: ${{ inputs.macos }}
+
+  android:
+    name: Android signed APK/AAB
+    needs: guard
+    if: inputs.android
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: release
+    env:
+      main_project_module: app
+      CI_GRADLE_ARG_PROPERTIES: --stacktrace -PpreDexEnable=false --max-workers 2 --no-daemon
+      GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx3072m -Dfile.encoding=UTF-8 -XX:+HeapDumpOnOutOfMemoryError -XX:MaxMetaspaceSize=1g" -Dkotlin.daemon.jvm.options="-Xmx2560m" -Dkotlin.incremental=false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Resolve Apps.versionName
+        id: version
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^[[:space:]]*const val versionName = "\([^"]*\)".*/\1/p' buildSrc/src/main/kotlin/Dependencies.kt | head -n1)
+          if [ -z "$version" ]; then
+            echo "ERROR: failed to extract Apps.versionName from buildSrc/src/main/kotlin/Dependencies.kt" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Artifact version=$version sha=${{ github.sha }} (no GitHub Release)"
+
+      - name: Set up JDK 17 (Zulu; no setup-java Gradle cache)
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: zulu
+          java-version: '17'
+
+      - name: Set up Gradle (sole Gradle User Home cache owner)
+        uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4.3.1
+        with:
+          gradle-version: wrapper
+          gradle-home-cache-cleanup: true
+
+      - name: Build apk release (APK)
+        run: ./gradlew -PappVerName=${{ steps.version.outputs.version }} ${{ env.main_project_module }}:assembleRelease ${{ env.CI_GRADLE_ARG_PROPERTIES }}
+
+      - name: Build app bundle release (AAB)
+        run: ./gradlew ${{ env.main_project_module }}:bundleRelease ${{ env.CI_GRADLE_ARG_PROPERTIES }}
+
+      - name: Sign apk release
+        id: sign_apk
+        uses: r0adkll/sign-android-release@dbeba6b98a60b0fd540c02443c7f428cdedf0e7f # v1.0.4
+        env:
+          BUILD_TOOLS_VERSION: "37.0.0"
+        with:
+          releaseDirectory: app/build/outputs/apk/release/renamed
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Sign bundle release
+        id: sign_bundle
+        uses: r0adkll/sign-android-release@dbeba6b98a60b0fd540c02443c7f428cdedf0e7f # v1.0.4
+        env:
+          BUILD_TOOLS_VERSION: "37.0.0"
+        with:
+          releaseDirectory: app/build/outputs/bundle/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Stage signed artifacts
+        run: |
+          set -euo pipefail
+          out="signed-android-packages"
+          rm -rf "$out"
+          mkdir -p "$out"
+          apk_from_action="${{ steps.sign_apk.outputs.signedReleaseFile }}"
+          aab_from_action="${{ steps.sign_bundle.outputs.signedReleaseFile }}"
+          if [[ -z "$apk_from_action" || ! -f "$apk_from_action" ]]; then
+            echo "ERROR: sign_apk.outputs.signedReleaseFile missing or not a file: '${apk_from_action}'" >&2
+            exit 1
+          fi
+          if [[ -z "$aab_from_action" || ! -f "$aab_from_action" ]]; then
+            echo "ERROR: sign_bundle.outputs.signedReleaseFile missing or not a file: '${aab_from_action}'" >&2
+            echo "Refusing unsigned/unknown AAB fallback" >&2
+            exit 1
+          fi
+          cp -f "$apk_from_action" "$out/"
+          cp -f "$aab_from_action" "$out/app-release.aab"
+          if [[ ! -f app/build/outputs/mapping/release/mapping.txt ]]; then
+            echo "ERROR: mapping.txt missing after release build" >&2
+            exit 1
+          fi
+          cp -f app/build/outputs/mapping/release/mapping.txt "$out/mapping.txt"
+          ls -la "$out"
+          test -f "$out/app-release.aab"
+          test -f "$out/mapping.txt"
+          test -n "$(find "$out" -type f \( -name '*-signed.apk' -o -name '*.apk' \) | head -1)"
+
+      - name: Upload signed Android artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-signed-${{ steps.version.outputs.version }}-${{ github.sha }}
+          path: signed-android-packages/
+          if-no-files-found: error
+          retention-days: 7
