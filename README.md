@@ -38,16 +38,9 @@
 </p>
 
 <p align="center">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.jpg" alt="Ship the work, keep the credit" width="210">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.jpg" alt="Offline-grade reliability" width="210">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.jpg" alt="Your shot, your name on it" width="210">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.jpg" alt="Uploading an ID? Say why" width="210">
-</p>
-<p align="center">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.jpg" alt="Fill, stroke, your style" width="210">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6.jpg" alt="Any color, exactly yours" width="210">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/7.jpg" alt="Density and angle, easy to adjust" width="210">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/8.jpg" alt="Save it once, reuse forever" width="210">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.jpg" alt="Ship the work, keep the credit" width="22%"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.jpg" alt="Offline-grade reliability" width="22%"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.jpg" alt="Your shot, your name on it" width="22%"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.jpg" alt="Uploading an ID? Say why" width="22%">
+  <br>
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.jpg" alt="Fill, stroke, your style" width="22%"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6.jpg" alt="Any color, exactly yours" width="22%"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/7.jpg" alt="Density and angle, easy to adjust" width="22%"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/8.jpg" alt="Save it once, reuse forever" width="22%">
 </p>
 
 ## Features
