@@ -10,7 +10,7 @@ class FileUtils {
         const val outPutFolderName = "EasyWaterMark"
 
         /**
-         * 获取文件类型
+ * 获取文件类型
          */
         @JvmStatic
         @Throws(SecurityException::class)
@@ -47,9 +47,8 @@ class FileUtils {
         }
 
         /**
-         * Fallback method to check if URI is an image by examining the file extension
-         * when MIME type detection fails due to security restrictions
-         */
+ * Fallback method to check if URI is an image by examining the file extension
+ * When MIME type detection fails due to security restrictions         */
         private fun isImageByExtension(uri: Uri?): Boolean {
             if (uri == null) return false
 

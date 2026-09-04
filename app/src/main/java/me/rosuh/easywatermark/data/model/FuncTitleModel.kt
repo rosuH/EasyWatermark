@@ -1,31 +1,14 @@
 package me.rosuh.easywatermark.data.model
 
-import androidx.annotation.DrawableRes
 import androidx.annotation.Keep
 
+/**
+ * Android editor edge token for config change callbacks.
+ * S-i18n continue: no longer carries `@StringRes` / `@DrawableRes` — product chrome uses
+ * Shared [FuncType.label] / [FuncType.iconPainter] from composeResources (ADR-0019). * Identity is [type]; optional [valueRange] for sliders that still construct a model.
+ */
 @Keep
 data class FuncTitleModel(
     var type: FuncType,
-    var title: String,
-    @DrawableRes var iconRes: Int
-) {
-    sealed class FuncType {
-        object Text : FuncType()
-        object Icon : FuncType()
-        object Color : FuncType() {
-            val tag = "Color"
-        }
-        object Alpha : FuncType()
-        object Degree : FuncType()
-        object TextStyle : FuncType()
-        object Vertical : FuncType()
-        object Horizon : FuncType()
-        object TextSize : FuncType() {
-            val tag = "TextSize"
-        }
-
-        object TileMode : FuncType() {
-            val tag = "TileMode"
-        }
-    }
-}
+    val valueRange: ClosedFloatingPointRange<Float> = 0f..100f,
+)

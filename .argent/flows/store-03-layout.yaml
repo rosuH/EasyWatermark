@@ -1,0 +1,10 @@
+steps:
+  - launch: me.rosuh.easywatermark.ios
+  - wait: 2000
+  - echo: Seed photos, then Layout / Horizontal on the Skytree
+  - tap:
+      id: store-seed-layout
+  - wait: 7000
+  - await:
+      idle: true
+      timeout: 15000

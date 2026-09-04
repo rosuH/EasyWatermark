@@ -1,0 +1,275 @@
+name: Desktop packaging
+
+# CI-P3: unsigned / test-only Desktop installers. NOT a PR required check (ADR-0031):
+# PR merge gate is pr_pre_check.yml (compile/test) only, matching peer projects.
+# Layers:
+#   - push master (native on.push.paths): merge-SHA qualification
+#   - schedule (weekly): full 3-OS qualification regardless of paths
+#   - workflow_dispatch: full 3-OS on demand
+# Matrix host-local packages only (official CMP rule — no cross-OS packaging):
+#   ubuntu-latest → DEB, windows-latest → MSI, macos-latest (ARM64) → DMG
+# Honesty:
+# - Artifacts are UNSIGNED and short-lived; not release/notarized/Authenticode outputs.
+# - packageDistributionForCurrentOS is a current-host aggregate, not a cross-builder.
+# - macOS lane proves Apple Silicon only (macos-latest = arm64); no Intel claim.
+# - Cross-OS green is pending real GitHub-hosted runner execution after coordinator push.
+# Zulu 17: project-validated packaging JDK (CMP#3107 / Homebrew OpenJDK regression guard).
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx3072m -Dfile.encoding=UTF-8 -XX:+HeapDumpOnOutOfMemoryError -XX:MaxMetaspaceSize=1g" -Dkotlin.daemon.jvm.options="-Xmx2560m" -Dkotlin.incremental=false
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly unsigned three-OS qualification (Monday 06:00 UTC).
+    - cron: '0 6 * * 1'
+  push:
+    branches:
+      - master
+    # Native path filter is safe here because this workflow is NOT a PR required
+    # check (ADR-0031); a filtered-out push simply doesn't start the workflow.
+    paths:
+      - 'desktopApp/**'
+      - 'shared/**'
+      - 'buildSrc/**'
+      - 'gradle/**'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - 'gradle.properties'
+      - 'gradlew'
+      - 'gradlew.bat'
+      - '.github/workflows/desktop_packaging.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-packaging-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unsigned-installer:
+    name: Unsigned ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux-deb
+            format: deb
+            arch: ''
+            artifact: easywatermark-desktop-linux-deb
+            gradle: ./gradlew
+          - os: windows-latest
+            label: windows-msi
+            format: msi
+            arch: ''
+            artifact: easywatermark-desktop-windows-msi
+            gradle: ./gradlew.bat
+          - os: macos-latest
+            # macos-latest is ARM64 on GitHub-hosted runners (2026); label + fail-closed arch check.
+            label: macos-arm64-dmg
+            format: dmg
+            arch: arm64
+            artifact: easywatermark-desktop-macos-arm64-dmg
+            gradle: ./gradlew
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Assert host architecture (fail-closed when matrix.arch set)
+        if: matrix.arch != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          got="$(uname -m)"
+          want="${{ matrix.arch }}"
+          echo "runner_os=${{ runner.os }} uname_m=$got required_arch=$want"
+          if [[ "$got" != "$want" ]]; then
+            echo "FAIL: expected arch '$want' for matrix label ${{ matrix.label }}, got '$got'" >&2
+            echo "Refusing to upload an arch-mismatched ${{ matrix.format }} artifact" >&2
+            exit 1
+          fi
+
+      - name: Set up JDK 17 (Zulu; no setup-java Gradle cache)
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: zulu
+          java-version: '17'
+
+      - name: Set up Gradle (sole Gradle User Home cache owner)
+        uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4.3.1
+        with:
+          gradle-version: wrapper
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+          gradle-home-cache-cleanup: true
+
+      - name: Record packaging environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          java -version
+          if command -v jpackage >/dev/null 2>&1; then
+            jpackage --version || true
+          else
+            echo "jpackage not on PATH (JDK tools may still resolve via JAVA_HOME)"
+          fi
+          echo "runner_os=${{ runner.os }}"
+          echo "matrix_format=${{ matrix.format }}"
+          echo "commit=${{ github.sha }}"
+          uname -m || true
+
+      - name: Host packaging prerequisites (Linux DEB)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y fakeroot
+          command -v fakeroot
+          fakeroot --version
+
+      - name: Host packaging prerequisites (Windows MSI / WiX)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          function Get-WixBinDir {
+            $dirCandidates = @(
+              "${env:ProgramFiles(x86)}\WiX Toolset v3.14\bin",
+              "${env:ProgramFiles(x86)}\WiX Toolset v3.11\bin",
+              $(if ($env:WIX) { Join-Path $env:WIX 'bin' } else { $null })
+            ) | Where-Object { $_ }
+            foreach ($dir in $dirCandidates) {
+              $candle = Join-Path $dir 'candle.exe'
+              $light = Join-Path $dir 'light.exe'
+              if ((Test-Path $candle) -and (Test-Path $light)) {
+                Write-Host "Found WiX bin dir: $dir"
+                return $dir
+              }
+            }
+            $candleCmd = Get-Command candle.exe -ErrorAction SilentlyContinue
+            $lightCmd = Get-Command light.exe -ErrorAction SilentlyContinue
+            if ($candleCmd -and $lightCmd) {
+              $dir = Split-Path -Parent $candleCmd.Source
+              $lightInDir = Join-Path $dir 'light.exe'
+              if (Test-Path $lightInDir) {
+                Write-Host "Found WiX on PATH under: $dir"
+                return $dir
+              }
+            }
+            return $null
+          }
+          function Assert-WixOnPath {
+            $candle = Get-Command candle.exe -ErrorAction SilentlyContinue
+            $light = Get-Command light.exe -ErrorAction SilentlyContinue
+            if (-not $candle) { throw "candle.exe not discoverable on PATH after WiX preflight" }
+            if (-not $light) { throw "light.exe not discoverable on PATH after WiX preflight" }
+            Write-Host "candle: $($candle.Source)"
+            Write-Host "light: $($light.Source)"
+          }
+          function Export-WixBinDir([string]$dir) {
+            $env:PATH = "$dir;$env:PATH"
+            if ($env:GITHUB_PATH) {
+              Add-Content -Path $env:GITHUB_PATH -Value $dir
+              Write-Host "Exported WiX bin to GITHUB_PATH: $dir"
+            }
+          }
+          $bin = Get-WixBinDir
+          if (-not $bin) {
+            Write-Host "WiX candle+light not found; installing WiX Toolset 3.14 via Chocolatey"
+            choco install wixtoolset --version=3.14.1 -y --no-progress
+            $bin = Get-WixBinDir
+          }
+          if (-not $bin) {
+            throw "WiX Toolset is required for MSI packaging but candle.exe+light.exe were not discoverable after install"
+          }
+          Export-WixBinDir $bin
+          Assert-WixOnPath
+
+      - name: Host packaging prerequisites (macOS DMG)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcode-select -p
+          xcodebuild -version
+          command -v hdiutil
+          command -v pkgbuild || true
+          # Architecture is enforced earlier via matrix.arch fail-closed check.
+          echo "macos_arch=$(uname -m) label=${{ matrix.label }}"
+
+      - name: Make gradlew executable
+        if: runner.os != 'Windows'
+        run: chmod +x ./gradlew
+
+      - name: Package current-OS installer and create smokeable app image
+        shell: bash
+        run: |
+          set -euo pipefail
+          ${{ matrix.gradle }} :desktopApp:packageDistributionForCurrentOS --max-workers=4
+          ${{ matrix.gradle }} :desktopApp:createDistributable --max-workers=4
+
+      # Do not pass Gradle --args to the packaged-run task (unsupported on this plugin).
+      # Launch the generated app-image binary directly with --headless; fail closed if missing.
+      - name: Smoke packaged app-image launcher (--headless)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="desktopApp/build/compose/binaries/main/app"
+          if [[ ! -d "$ROOT" ]]; then
+            echo "FAIL: packaged app-image root missing: $ROOT" >&2
+            find desktopApp/build/compose/binaries -maxdepth 5 -type d 2>/dev/null || true
+            exit 1
+          fi
+          LAUNCHER=""
+          case "${{ runner.os }}" in
+            macOS)
+              for c in \
+                "$ROOT/EasyWatermark.app/Contents/MacOS/EasyWatermark" \
+                "$ROOT"/*.app/Contents/MacOS/EasyWatermark
+              do
+                if [[ -x "$c" ]]; then LAUNCHER="$c"; break; fi
+              done
+              ;;
+            Linux)
+              for c in \
+                "$ROOT/EasyWatermark/bin/EasyWatermark" \
+                "$ROOT"/*/bin/EasyWatermark
+              do
+                if [[ -x "$c" ]]; then LAUNCHER="$c"; break; fi
+              done
+              ;;
+            Windows)
+              for c in \
+                "$ROOT/EasyWatermark/EasyWatermark.exe" \
+                "$ROOT"/*/EasyWatermark.exe
+              do
+                if [[ -f "$c" ]]; then LAUNCHER="$c"; break; fi
+              done
+              ;;
+            *)
+              echo "FAIL: unsupported runner.os=${{ runner.os }}" >&2
+              exit 1
+              ;;
+          esac
+          if [[ -z "${LAUNCHER}" ]]; then
+            echo "FAIL: packaged launcher not found under $ROOT for ${{ runner.os }}" >&2
+            find "$ROOT" -maxdepth 4 \( -type f -o -type l \) 2>/dev/null | head -100 || true
+            exit 1
+          fi
+          echo "Packaged launcher: $LAUNCHER"
+          "$LAUNCHER" --headless
+          echo "Packaged launcher --headless exit=0"
+
+      - name: Upload unsigned ${{ matrix.format }} artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ matrix.artifact }}-${{ github.sha }}-UNSIGNED
+          path: desktopApp/build/compose/binaries/**/${{ matrix.format }}/*.${{ matrix.format }}
+          if-no-files-found: error
+          retention-days: 7

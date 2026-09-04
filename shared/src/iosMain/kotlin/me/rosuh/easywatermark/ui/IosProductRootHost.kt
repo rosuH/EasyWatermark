@@ -1,0 +1,2723 @@
+package me.rosuh.easywatermark.ui
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asComposeImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.ComposeUIViewController
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import me.rosuh.easywatermark.session.IosSourceStager
+import me.rosuh.easywatermark.ProductVersion
+import me.rosuh.easywatermark.data.db.buildTemplateDatabase
+import me.rosuh.easywatermark.data.model.ImageFormat
+import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.JobState
+import me.rosuh.easywatermark.data.model.MediaRef
+import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkConfigChange
+import me.rosuh.easywatermark.data.model.WatermarkMode
+import me.rosuh.easywatermark.data.model.WatermarkTileMode
+import me.rosuh.easywatermark.data.model.entity.Template
+import me.rosuh.easywatermark.data.model.toUiProjection
+import me.rosuh.easywatermark.data.repo.IosIconPersistence
+import me.rosuh.easywatermark.data.repo.TemplateRepository
+import me.rosuh.easywatermark.domain.OutputPrefsEditor
+import me.rosuh.easywatermark.domain.TemplateEditor
+import androidx.compose.ui.graphics.ImageBitmap
+import me.rosuh.easywatermark.render.IosByteArrayInterop
+import me.rosuh.easywatermark.render.IosImageDecoder
+import me.rosuh.easywatermark.render.IosPreviewImageRepository
+import me.rosuh.easywatermark.render.IosPreviewKey
+import me.rosuh.easywatermark.render.IosPreviewBench
+import me.rosuh.easywatermark.render.IosPreviewPurpose
+import me.rosuh.easywatermark.render.IosPhotoKitImageSource
+import me.rosuh.easywatermark.render.IosPhotoKitNeighborCache
+import me.rosuh.easywatermark.render.PhotosDaemonNeighborCache
+import me.rosuh.easywatermark.render.IosPreviewRaster
+import me.rosuh.easywatermark.render.IosWatermarkIconCache
+import me.rosuh.easywatermark.render.OverlayPreviewChrome
+import me.rosuh.easywatermark.render.OverlayPreviewPolicy
+import me.rosuh.easywatermark.render.PreviewResolutionPolicy
+import me.rosuh.easywatermark.render.PreviewWorkingSetBudget
+import me.rosuh.easywatermark.render.neighborIndices
+import me.rosuh.easywatermark.session.AppIntent
+import me.rosuh.easywatermark.session.IosAppServices
+import me.rosuh.easywatermark.session.IosAssetIdentityRegistry
+import me.rosuh.easywatermark.session.IosPhotoLibraryAccess
+import me.rosuh.easywatermark.session.IosPickGenerationGate
+import me.rosuh.easywatermark.session.defaultIosAppServices
+import me.rosuh.easywatermark.shared.generated.resources.Res
+import me.rosuh.easywatermark.shared.generated.resources.action_pick
+import me.rosuh.easywatermark.shared.generated.resources.dev_comment
+import me.rosuh.easywatermark.shared.generated.resources.dialog_export_to_gallery
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_cd_done
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_cd_progress
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_failed
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_partial
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_success
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_progress
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_exporting
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_destination_photos
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_filename_policy_ios
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_counts
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_success_where
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_error_generic
+import me.rosuh.easywatermark.shared.generated.resources.share
+import me.rosuh.easywatermark.shared.generated.resources.tips_ios_library_read_upsell_allow_all_photos
+import me.rosuh.easywatermark.shared.generated.resources.tips_ios_library_read_upsell_continue
+import me.rosuh.easywatermark.shared.generated.resources.tips_ios_library_read_upsell_denied
+import me.rosuh.easywatermark.shared.generated.resources.tips_ios_library_read_upsell_limited
+import me.rosuh.easywatermark.shared.generated.resources.tips_ios_library_read_upsell_settings
+import me.rosuh.easywatermark.shared.generated.resources.tips_ios_library_read_upsell_title
+import me.rosuh.easywatermark.ui.about.AboutDevCard
+import me.rosuh.easywatermark.ui.about.AboutScreen
+import me.rosuh.easywatermark.ui.about.AboutScreenIcons
+import me.rosuh.easywatermark.ui.about.OpenSourceOverlayHost
+import me.rosuh.easywatermark.ui.EditorLayoutClass
+import me.rosuh.easywatermark.ui.editorLayoutClass
+import me.rosuh.easywatermark.ui.usesLargeScreenDialog
+import me.rosuh.easywatermark.ui.compose.EwmConfirmDialog
+import me.rosuh.easywatermark.ui.compose.IconWatermarkOption
+import me.rosuh.easywatermark.ui.compose.TextColorOption
+import me.rosuh.easywatermark.ui.compose.formatArgbHexColor
+import me.rosuh.easywatermark.ui.save.SaveExportSheetShell
+import me.rosuh.easywatermark.platform.platformMotionPolicy
+import me.rosuh.easywatermark.ui.theme.AppTheme
+import me.rosuh.easywatermark.ui.theme.ContentEditorTheme
+import me.rosuh.easywatermark.ui.theme.ContentEditorThemeHost
+import me.rosuh.easywatermark.ui.theme.ProvideMotionPolicy
+import org.jetbrains.compose.resources.stringResource
+import platform.Foundation.NSData
+import platform.Foundation.NSFileManager
+import platform.Foundation.NSProcessInfo
+import platform.Foundation.NSUserDefaults
+import platform.Foundation.dataWithContentsOfFile
+import platform.UIKit.UIDevice
+import platform.UIKit.UIUserInterfaceIdiomPhone
+import platform.UIKit.UIViewController
+import platform.Foundation.NSLock
+import platform.Foundation.NSNotificationCenter
+import platform.UIKit.UIApplicationDidBecomeActiveNotification
+import platform.UIKit.UIApplicationOpenSettingsURLString
+import kotlin.experimental.ExperimentalObjCName
+import kotlin.native.ObjCName
+
+/**
+ * iOS product root — production UI is shared [LaunchScreen] / [EditorScreen] / [AboutScreen]
+ * plus shared [SaveExportSheetShell] for export panel interactions (C2 / Android Compose parity).
+ * Swift only: PHPicker / Share / Save-to-Photos / open URL system edges.
+ */
+internal enum class LibraryReadBannerKind {
+    Limited,
+    Denied,
+    Restricted,
+}
+
+@OptIn(ExperimentalObjCName::class)
+@ObjCName(name = "IosProductRootHost", exact = true)
+class IosProductRootHost(
+    private val onPickPhoto: () -> Unit,
+    private val onPickIcon: () -> Unit,
+    private val onShare: (filePath: String) -> Unit,
+    /**
+     * D4: Photos persistence edge for Swift.
+     * Signature: `(bytes) { success, message -> … }` — must call the completion after
+     * `PHPhotoLibrary.performChanges` finishes (not fire-and-forget).
+     * Kotlin awaits each item before counting a persisted success.
+     */
+    private val onSaveToPhotos: (encodedBytes: ByteArray, onComplete: (Boolean, String?) -> Unit) -> Unit,
+    private val onOpenUrl: (url: String) -> Unit = {},
+    private val services: IosAppServices = defaultIosAppServices(),
+) {
+    private val photosSaveEdge: IosPhotosSaveEdge =
+        IosPhotosSaveEdge { bytes, onComplete -> onSaveToPhotos(bytes, onComplete) }
+    private val templateRepo by lazy {
+        TemplateRepository(
+            buildTemplateDatabase().templateDao(),
+            Dispatchers.Default,
+        )
+    }
+    private val templateEditor by lazy { TemplateEditor(templateRepo) }
+    private val outputEditor by lazy { OutputPrefsEditor(services.userConfigRepo) }
+    /**
+     * Host-owned scope for background stage/preview work (not GlobalScope).
+     * SupervisorJob alone does **not** swallow child failures: without a
+     * [CoroutineExceptionHandler], uncaught throws become K/N process abort
+     * (`terminateWithUnhandledException` / SIGABRT on iOS). Log + surface
+     * instead of killing the app.
+     */
+    private val hostScope = CoroutineScope(
+        SupervisorJob() +
+            Dispatchers.Main +
+            CoroutineExceptionHandler { _, t ->
+                statusLine = "Background work failed: ${t.message ?: t::class.simpleName}"
+                println(
+                    "IosProductRootHost uncaught: ${t.message}\n${t.stackTraceToString()}",
+                )
+            },
+    )
+    /**
+     * App-owned staged source paths (`ewm_src_*`) for this host generation (E2 dispose).
+     * Mutated under [lifecycleLock] together with [disposed] so publish→ownership transfer
+     * is atomic w.r.t. [dispose].
+     */
+    private val ownedStagedPaths = linkedSetOf<String>()
+    private var disposed = false
+    /** Serializes dispose vs post-publish ownership adoption (Main / delivery continuations). */
+    private val lifecycleLock = NSLock()
+
+    /** Progressive path-first import (NotificationCenter control plane; zero public API growth). */
+    private val progressiveImport = IosProgressiveImportController(
+        session = services.session,
+        // Session launch already mirrors repo waterMark (SyncWaterMark). Avoid DataStore
+        // cold-read on every filmstrip focus — that was a major switch latency tax.
+        waterMarkProvider = {
+            services.session.launchScreenUiStateFlow.value.waterMark
+        },
+        hostScope = hostScope,
+        hostAlive = { !disposed },
+        onSlotsChanged = slotsChanged@{ state ->
+            // Keep dispose/leave-editor ownership set aligned with progressive Ready paths.
+            // Never take lifecycleLock here: progressive may still hold mutationMutex and
+            // releaseEditorMediaResources/dispose take lifecycleLock first — avoid deadlock.
+            if (disposed) return@slotsChanged
+            val readyOwned = state.slots
+                .mapNotNull { (it as? EditorMediaSlot.Ready)?.image?.uri?.value }
+                .filter { IosSourceStager.isOwnedSourcePath(it) }
+            hostScope.launch {
+                if (disposed) return@launch
+                lifecycleLock.lock()
+                try {
+                    if (disposed) return@launch
+                    val sessionHeld = services.session.launchScreenUiStateFlow.value
+                        .selectedImageList
+                        .map { it.uri.value }
+                        .toSet()
+                    val progressiveGone = ownedStagedPaths.filter { prior ->
+                        IosSourceStager.isOwnedSourcePath(prior) &&
+                            prior !in readyOwned &&
+                            prior !in sessionHeld
+                    }
+                    ownedStagedPaths.removeAll(progressiveGone.toSet())
+                    readyOwned.forEach { ownedStagedPaths.add(it) }
+                } finally {
+                    lifecycleLock.unlock()
+                }
+            }
+        },
+        onImportChromeChanged = { inProgress ->
+            if (inProgress) {
+                markedFirstFilmstripPixels = false
+                markedFirstWatermarkedPreview = false
+            }
+        },
+        // Import first Ready only — awaited before Swift firstItemAlone ACK so item-0 paints
+        // before item-1 transfer starts. User settle/tap uses [onUserFocusPreview] instead.
+        onFocusReadyForPreview = { focusPath ->
+            if (!disposed) {
+                bindProgressiveFocus(focusPath, ProgressiveFocusBindMode.ImportPriority)
+            }
+        },
+        // User filmstrip settle / tap / remove: Session already selected; light cancelable bind.
+        onUserFocusPreview = { focusPath ->
+            if (!disposed) {
+                bindProgressiveFocus(focusPath, ProgressiveFocusBindMode.UserScroll)
+            }
+        },
+        onOptimisticFocusPaint = { focusPath ->
+            if (!disposed && previewSourcePath != focusPath) {
+                clearLiveLayers()
+            }
+        },
+    )
+
+    /**
+     * How [bindProgressiveFocus] prioritizes work.
+     * - [ImportPriority]: await watermark + focus thumb before return (firstItemAlone ACK gate).
+     * - [UserScroll]: cancel via [previewGen]; cache-first paint; never full-strip prefetch.
+     */
+    private enum class ProgressiveFocusBindMode {
+        ImportPriority,
+        UserScroll,
+    }
+
+
+    /**
+     * G4 file-first: host no longer permanently owns multi-item full-res source bytes.
+     * Preview / export re-read staged `ewm_src_*` paths. Field retained only for dispose clear.
+     */
+    private var sourceBytes by mutableStateOf<ByteArray?>(null)
+    private var iconBytes by mutableStateOf<ByteArray?>(null)
+    /** Live photo layer (Source or Library). Never assigned without a matching [overlayCell]. */
+    private var previewBitmap by mutableStateOf<ImageBitmap?>(null)
+    /** Overlay cell tiled at display time (ADR-0033). */
+    private var overlayCell by mutableStateOf<OverlayCell?>(null)
+    /** Source path that the current LiveLayers were published for. */
+    private var previewSourcePath by mutableStateOf<String?>(null)
+    private var outputPath by mutableStateOf<String?>(null)
+    private var statusLine by mutableStateOf("")
+    private var isBusy by mutableStateOf(false)
+    /**
+     * One lifecycle-owned cache/in-flight state machine for source/watermarked/export thumbs.
+     * Byte caps follow [PreviewWorkingSetBudget] for the current preview long-edge.
+     * Filmstrip UI chrome is Coil-only (R3) — repository Filmstrip purpose is
+     * retained for tests/legacy only, not warmed on the product path.
+     */
+    private val previewImages = IosPreviewImageRepository(hostScope).also { repo ->
+        repo.applyWorkingSetCapsFromOwner(
+            PreviewWorkingSetBudget.caps(
+                longEdgePx = PreviewResolutionPolicy.BUCKET_720,
+                physicalMemoryBytes = iosPhysicalMemoryBytes(),
+            ),
+        )
+    }
+    /** Current visible bitmap is not a second cache; identity marks whether it is watermarked. */
+    private var watermarkedPreviewSourcePath by mutableStateOf<String?>(null)
+    /** Unwatermarked Library derivative underlay (ADR-0029 Q1=B). Not a cache identity. */
+    private var libraryDerivativeBitmap by mutableStateOf<ImageBitmap?>(null)
+    private var libraryDerivativePath by mutableStateOf<String?>(null)
+    private var previewGen: Int = 0
+    private val photoKitResolveFailedIds = linkedSetOf<String>()
+    private var photoKitFastPathForTests: (suspend (assetId: String, targetPx: Int) -> ImageBitmap?)? =
+        null
+    private var photoKitNeighborCache: IosPhotoKitNeighborCache = PhotosDaemonNeighborCache()
+    private var lastPhotoKitNeighborIds: Set<String> = emptySet()
+    private var lastPhotoKitNeighborTargetPx: Int = 0
+    /** Once-per-generation timeline marks for first visible pixels / completed preview. */
+    private var markedFirstFilmstripPixels = false
+    private var markedFirstWatermarkedPreview = false
+    /**
+     * H0.1-fix: UI-only CLAMP draft offset for live preview paint.
+     * Never written to Session / export / DataStore. Cleared on gesture end/cancel.
+     */
+    private var clampDraftOffset by mutableStateOf<Pair<Float, Float>?>(null)
+    private var clampDraftSelectionId by mutableStateOf<String?>(null)
+
+    /** One draft render in flight, newest offset wins. See [IosDraftRenderConflator]. */
+    private data class ClampDraftRequest(
+        val path: String,
+        val offsetX: Float,
+        val offsetY: Float,
+    )
+
+    private val clampDraftRenders = IosDraftRenderConflator<ClampDraftRequest>(
+        scope = hostScope,
+    ) { request ->
+        if (disposed) return@IosDraftRenderConflator
+        if (previewSourcePath == request.path && overlayCell != null) {
+            overlayCell = overlayCell?.withOffset(request.offsetX, request.offsetY)
+        }
+    }
+
+    private val configChangeRenders = IosDraftRenderConflator<WatermarkConfigChange>(
+        scope = hostScope,
+    ) { change ->
+        if (disposed) return@IosDraftRenderConflator
+        // Same-path style ticks keep last LiveLayers until the new cell publishes.
+        // Dropping the photo here paints Coil WaitThumb and the background jumps.
+        previewGen += 1
+        val gen = previewGen
+        runCatching {
+            services.session.dispatchAndAwait(AppIntent.ApplyConfig(change))
+            renderPreviewForCurrentSelection(gen = gen)
+        }.onFailure { t ->
+            statusLine = "Failed: ${t.message}"
+        }
+    }
+    private var isSaving by mutableStateOf(false)
+    /**
+     * Presentation-only optimistic editor shell while picker IO runs (Session still Launch).
+     * E0: Session is product-route owner; this flag only bridges shell until EnterEditor lands.
+     */
+    private var showEditor by mutableStateOf(false)
+    /**
+     * Owner 2026-08-15: ask at pick time with a dialog. Never a chrome strip
+     * (Launch About icon and Editor top bar stay clear).
+     */
+    private var libraryReadLaunchVisitActive = false
+    private var libraryReadBannerDismissedThisVisit by mutableStateOf(false)
+    private var lastLibraryReadCtaUrlForTests: String? = null
+    private var showLibraryReadPickDialog by mutableStateOf(false)
+    private var libraryReadPickDialogKind by mutableStateOf<LibraryReadBannerKind?>(null)
+    private var pendingPickAfterDialog = false
+    /** C2: shared Android Compose export panel; Photos/Share stay Swift callbacks. */
+    private var showSaveSheet by mutableStateOf(false)
+    /** Store-capture: force phone editor tab / option / template sheet. */
+    private var storeCaptureTab by mutableStateOf(0)
+    private var storeCaptureOption by mutableStateOf(0)
+    private var storeCaptureOpenTemplates by mutableStateOf(0)
+    /** Last editor layout class for export sheet ≥800 dialog (export host is outside Editor BoxWithConstraints). */
+    private var lastEditorLayoutClass by mutableStateOf(EditorLayoutClass.Compact)
+    private var outputFormat by mutableStateOf(ImageFormat.JPEG)
+    private var outputQuality by mutableStateOf(80)
+    /** After a successful sheet export, primary CTA flips to Share (Android parity). */
+    private var sheetExportFinished by mutableStateOf(false)
+    /** Open-source licenses overlay (Android showOpenSource parity). */
+    private var showOpenSource by mutableStateOf(false)
+    /**
+ * iOS has no Material You; still persist a force flag (Android CMonet parity) so the About
+ * switch is interactive and sticky across launches.
+     */
+    private var followPhoto by mutableStateOf(IosContentThemePrefs.isFollowPhoto())
+    /** Container-fit committed decode bucket; draft gestures always use the 720px policy bucket. */
+    private var committedPreviewBucket by mutableStateOf(PreviewResolutionPolicy.BUCKET_720)
+    /**
+     * Actual progressive filmstrip cell long-edge pixels from layout measurement.
+     * Starts at 0 until the first onSizeChanged; decode falls back to the 128 policy bucket.
+     */
+    private var measuredFilmstripCellPx by mutableStateOf(0)
+
+    private fun sourcePreviewKey(path: String, bucket: Int = committedPreviewBucket) =
+        IosPreviewKey(path, bucket, IosPreviewPurpose.SourcePlaceholder)
+
+    private fun watermarkedPreviewKey(path: String, bucket: Int = committedPreviewBucket) =
+        IosPreviewKey(path, bucket, IosPreviewPurpose.Watermarked)
+
+    private fun openAboutFromLaunch() {
+        services.session.openAbout(LaunchScreenUiState.Launch)
+    }
+
+    private fun openAboutFromEditor() {
+        services.session.openAbout(LaunchScreenUiState.Editor)
+    }
+
+    private fun closeAbout() {
+        showOpenSource = false
+        services.session.onBackPressed()
+    }
+
+    /** Swift edge: whether the product root is currently showing the editor. */
+    /**
+     * Simulator store-capture hook. Named scenes match `-storeSeedScene` / `store-seed-*`.
+     * Production device builds never call this (Swift caller is simulator-only).
+     */
+    fun applyStoreCaptureScene(scene: String) {
+        when (scene) {
+            "photo", "style", "color", "layout" -> {
+                val second = services.session.launchScreenUiStateFlow.value.selectedImageList
+                    .getOrNull(1)
+                if (second != null) {
+                    hostScope.launch {
+                        switchImageAndAwaitForTests(second.uri.value)
+                    }
+                }
+                when (scene) {
+                    "style" -> {
+                        storeCaptureTab = 1
+                        storeCaptureOption = 2
+                    }
+                    "color" -> {
+                        storeCaptureTab = 1
+                        storeCaptureOption = 3
+                    }
+                    "layout" -> {
+                        storeCaptureTab = 2
+                        storeCaptureOption = 0
+                    }
+                }
+            }
+            "idcard" -> {
+                val first = services.session.launchScreenUiStateFlow.value.selectedImageList
+                    .getOrNull(0)
+                if (first != null) {
+                    hostScope.launch {
+                        switchImageAndAwaitForTests(first.uri.value)
+                    }
+                }
+                storeCaptureTab = 1
+                storeCaptureOption = 2
+            }
+            "templates" -> storeCaptureOpenTemplates += 1
+            "export" -> {
+                if (progressiveImport.importInProgress) return
+                services.session.resetJobStatus()
+                sheetExportFinished = false
+                showSaveSheet = true
+            }
+        }
+    }
+
+    fun isInEditor(): Boolean {
+        val ui = services.session.launchScreenUiStateFlow.value.uiState
+        return ui == LaunchScreenUiState.Editor || showEditor
+    }
+
+    /**
+     * Issue 26 / C4.4R.S1 **test seam only** — observe preview-path identity after
+     * [deliverPickedPhotosBatch]. Not a second product source of truth.
+     */
+    internal data class PreviewIdentitySnapshot(
+        val previewSourcePath: String?,
+        val wmCachePaths: Set<String>,
+        val placeholderCachePaths: Set<String>,
+        val libraryDerivativePath: String? = null,
+        val libraryDerivativeSize: Pair<Int, Int>? = null,
+        val overlayPresent: Boolean = false,
+    )
+
+    internal fun installPhotoKitFastPathForTests(
+        producer: (suspend (assetId: String, targetPx: Int) -> ImageBitmap?)?,
+    ) {
+        photoKitFastPathForTests = producer
+    }
+
+    internal fun installNeighborCacheForTests(cache: IosPhotoKitNeighborCache?) {
+        stopPhotoKitNeighborWindow()
+        photoKitNeighborCache = cache ?: PhotosDaemonNeighborCache()
+    }
+
+    internal data class LibraryReadBannerSnapshot(
+        val visible: Boolean,
+        val kind: LibraryReadBannerKind?,
+        val dismissedThisVisit: Boolean,
+        val lastCtaUrl: String?,
+        val pickDialogVisible: Boolean = false,
+    )
+
+    internal fun libraryReadBannerForTests(): LibraryReadBannerSnapshot =
+        LibraryReadBannerSnapshot(
+            visible = showLibraryReadPickDialog,
+            kind = libraryReadPickDialogKind,
+            dismissedThisVisit = libraryReadBannerDismissedThisVisit,
+            lastCtaUrl = lastLibraryReadCtaUrlForTests,
+            pickDialogVisible = showLibraryReadPickDialog,
+        )
+
+    internal fun dismissLibraryReadBannerForTests() = dismissLibraryReadBanner()
+
+    internal fun openLibraryReadBannerCtaForTests() {
+        showLibraryReadPickDialog = false
+        openLibraryReadBannerSettings()
+    }
+
+    internal fun leaveEditorForTests() {
+        showEditor = false
+        showLibraryReadPickDialog = false
+        pendingPickAfterDialog = false
+        beginLibraryReadLaunchVisit()
+    }
+
+    internal fun refreshLibraryReadBannerForTests() = refreshLibraryReadBanner()
+
+    internal fun simulateAppBecameActiveForTests() = refreshLibraryReadBanner()
+
+    internal suspend fun requestPickPhotosForTests() = requestPickPhotosSuspend()
+
+    internal fun continueLibraryReadPickDialogForTests() = continuePickAfterLibraryReadDialog()
+
+    /** Test-only read of host preview identity (wm/placeholder path caches). */
+    internal fun previewIdentityForTests(): PreviewIdentitySnapshot {
+        val snapshot = previewImages.snapshotForTestsImmediate()
+        return PreviewIdentitySnapshot(
+            previewSourcePath = previewSourcePath,
+            wmCachePaths = snapshot.cachedKeys
+                .filter { it.purpose == IosPreviewPurpose.Watermarked }
+                .mapTo(linkedSetOf()) { it.ownedPath },
+            placeholderCachePaths = snapshot.cachedKeys
+                .filter { it.purpose == IosPreviewPurpose.SourcePlaceholder }
+                .mapTo(linkedSetOf()) { it.ownedPath },
+            libraryDerivativePath = libraryDerivativePath,
+            libraryDerivativeSize = libraryDerivativeBitmap?.let { it.width to it.height },
+            overlayPresent = overlayCell != null && previewBitmap != null,
+        )
+    }
+
+    internal fun watermarkedCachedSizeForTests(path: String): Pair<Int, Int>? {
+        val bmp = previewImages.peekCached(watermarkedPreviewKey(path, committedPreviewBucket))
+        return bmp?.let { it.width to it.height }
+    }
+
+    /** Test-only: whether [dispose] has completed at least once. */
+    internal fun isDisposedForTests(): Boolean = disposed
+
+    /** Test-only: paths still tracked as host-owned staged sources. */
+    internal fun ownedStagedPathsForTests(): Set<String> = ownedStagedPaths.toSet()
+
+    /** Test-only: register an app-owned staged path without a full picker deliver. */
+    internal fun trackOwnedStagedPathForTests(path: String) {
+        if (path.isNotBlank()) ownedStagedPaths.add(path)
+    }
+
+    /** Test-only: entry counts + approximate byte totals for budgeted host image caches. */
+    internal data class CacheBudgetSnapshot(
+        val wmPreview: Int,
+        val placeholder: Int,
+        val filmstrip: Int,
+        val exportThumb: Int,
+        val holdsSourceBytes: Boolean,
+        val wmPreviewBytes: Long = 0,
+        val placeholderBytes: Long = 0,
+        val filmstripBytes: Long = 0,
+        val exportThumbBytes: Long = 0,
+    )
+
+    internal fun cacheBudgetForTests(): CacheBudgetSnapshot {
+        val snapshot = previewImages.snapshotForTestsImmediate()
+        return CacheBudgetSnapshot(
+            wmPreview = snapshot.watermarkedEntries,
+            placeholder = snapshot.sourcePlaceholderEntries,
+            filmstrip = snapshot.filmstripEntries,
+            exportThumb = snapshot.exportThumbnailEntries,
+            holdsSourceBytes = sourceBytes != null,
+            wmPreviewBytes = snapshot.watermarkedBytes,
+            placeholderBytes = snapshot.sourcePlaceholderBytes,
+            filmstripBytes = snapshot.filmstripBytes,
+            exportThumbBytes = snapshot.exportThumbnailBytes,
+        )
+    }
+
+    /** Test-only: insert a placeholder cache entry and enforce budgets (no Session change). */
+    internal fun putPlaceholderForTests(path: String, bitmap: ImageBitmap) {
+        previewImages.putForTestsImmediate(
+            IosPreviewKey(path, 720, IosPreviewPurpose.SourcePlaceholder),
+            bitmap,
+        )
+    }
+
+    /** Test-only: insert a wm preview cache entry and enforce budgets. */
+    internal fun putWmPreviewForTests(path: String, bitmap: ImageBitmap) {
+        previewImages.putForTestsImmediate(
+            IosPreviewKey(path, 720, IosPreviewPurpose.Watermarked),
+            bitmap,
+        )
+    }
+
+    /** Test-only: insert a filmstrip-purpose entry (budget math / dispose tests; not product UI). */
+    internal fun putFilmstripThumbForTests(path: String, bitmap: ImageBitmap) {
+        previewImages.putForTestsImmediate(
+            IosPreviewKey(path, 96, IosPreviewPurpose.Filmstrip),
+            bitmap,
+        )
+    }
+
+    /**
+     * Test seam: same critical path as product [onImageSelected] without Compose —
+     * drop live layers → [AppIntent.SelectCurrent] → Library/Source + cell →
+     * [renderPreviewForCurrentSelection], then neighbor Source prefetch.
+     */
+    internal suspend fun switchImageAndAwaitForTests(
+        path: String,
+        awaitNeighbors: Boolean = true,
+    ): SwitchImageTiming {
+        require(path.isNotBlank()) { "switchImageAndAwaitForTests: blank path" }
+        val start = kotlin.time.TimeSource.Monotonic.markNow()
+        IosPreviewBench.Attribution.begin()
+        val previewBucket = committedPreviewBucket
+        clearLiveLayers()
+        val dispatchStart = kotlin.time.TimeSource.Monotonic.markNow()
+        services.session.dispatchAndAwait(
+            me.rosuh.easywatermark.session.AppIntent.SelectCurrent(
+                me.rosuh.easywatermark.data.model.MediaRef(path),
+            ),
+        )
+        val dispatchMs = dispatchStart.elapsedNow().inWholeMilliseconds
+        val sourceHit = previewImages.peekCached(sourcePreviewKey(path, previewBucket)) != null
+        hostScope.launch {
+            tryPaintLibraryDerivative(path)
+        }
+        previewGen += 1
+        val gen = previewGen
+        val info = services.session.launchScreenUiStateFlow.value.selectedImageList
+            .firstOrNull { it.uri.value == path }
+        renderPreviewForCurrentSelection(
+            gen = gen,
+            forcePath = path,
+            forceOffsetX = info?.offsetX,
+            forceOffsetY = info?.offsetY,
+        )
+        val timing = switchTiming(start, dispatchMs, if (sourceHit) "source" else "miss")
+        if (awaitNeighbors && gen == previewGen) {
+            prefetchNeighborWatermarkedPreviewsAndAwait(path, gen)
+        }
+        return timing
+    }
+
+    /**
+     * Close the [IosPreviewBench.Attribution] window and split the switch wall clock into the
+     * raster stages that ran inside it. `otherMs` is the deliberately-named remainder: Session
+     * state propagation, repository mutex/cache work, Skia→Compose repack, and dispatch hops.
+     */
+    private fun switchTiming(
+        start: kotlin.time.TimeSource.Monotonic.ValueTimeMark,
+        dispatchMs: Long,
+        hit: String,
+    ): SwitchImageTiming {
+        val totalMs = start.elapsedNow().inWholeMilliseconds
+        val stages = IosPreviewBench.Attribution.end()
+        val decodeMs = IosPreviewBench.Attribution.decodeMs(stages)
+        val composeMs = IosPreviewBench.Attribution.composeMs(stages)
+        val iconMs = IosPreviewBench.Attribution.iconMs(stages)
+        return SwitchImageTiming(
+            totalMs = totalMs,
+            hit = hit,
+            dispatchMs = dispatchMs,
+            decodeMs = decodeMs,
+            composeMs = composeMs,
+            iconMs = iconMs,
+            otherMs = (totalMs - dispatchMs - decodeMs - composeMs - iconMs).coerceAtLeast(0L),
+        )
+    }
+
+    /** Timing result for [switchImageAndAwaitForTests]. */
+    internal data class SwitchImageTiming(
+        val totalMs: Long,
+        val hit: String,
+        val dispatchMs: Long = 0L,
+        val decodeMs: Long = 0L,
+        val composeMs: Long = 0L,
+        val iconMs: Long = 0L,
+        val otherMs: Long = 0L,
+    )
+
+    internal fun pinPreviewBucketForBench(edgePx: Int) {
+        committedPreviewBucket = edgePx
+        applyPreviewWorkingSetCaps(edgePx)
+    }
+
+    /**
+     * Clear watermarked frames and recompose the current path from the cached source.
+     * Bench/test seam: source ImageIO count must stay flat when the long-edge matches.
+     */
+    internal suspend fun recomposeWatermarkFromCachedSourceForTests(): String {
+        val path = previewSourcePath
+            ?: services.session.launchScreenUiStateFlow.value.curImageInfo?.uri?.value
+            ?: return "no_path"
+        previewImages.clearPurpose(IosPreviewPurpose.Watermarked)
+        watermarkedPreviewSourcePath = null
+        previewGen += 1
+        val gen = previewGen
+        val sourcesBefore = me.rosuh.easywatermark.render.IosImageIOOwnershipProbe
+            .snapshotForTests().sourcesCreated
+        val placeholderBefore = me.rosuh.easywatermark.render.IosDecodePurposeProbe
+            .snapshotForTests().sourcePlaceholder
+        renderPreviewForCurrentSelection(gen = gen, forcePath = path)
+        val sourcesAfter = me.rosuh.easywatermark.render.IosImageIOOwnershipProbe
+            .snapshotForTests().sourcesCreated
+        val placeholderAfter = me.rosuh.easywatermark.render.IosDecodePurposeProbe
+            .snapshotForTests().sourcePlaceholder
+        return if (sourcesAfter == sourcesBefore && placeholderAfter == placeholderBefore) {
+            "source_reuse"
+        } else {
+            "decoded"
+        }
+    }
+
+    private fun applyPreviewWorkingSetCaps(longEdgePx: Int) {
+        previewImages.applyWorkingSetCapsFromOwner(
+            PreviewWorkingSetBudget.caps(
+                longEdgePx = longEdgePx,
+                physicalMemoryBytes = iosPhysicalMemoryBytes(),
+            ),
+        )
+    }
+
+    internal fun previewBucketForBench(): Int = committedPreviewBucket
+
+    internal fun sessionSourcePathsForBench(): List<String> =
+        services.session.launchScreenUiStateFlow.value.selectedImageList
+            .map { it.uri.value }
+            .filter { it.isNotBlank() }
+
+    /**
+     * G4 memory-pressure seam: clear host image caches and presentation bitmaps without
+     * wiping Session product selection / route / owned staged path tracking.
+     * Swift should call from `UIApplication.didReceiveMemoryWarningNotification`.
+     *
+     * Distinct from [dispose] (full teardown + temp delete + export cancel).
+     */
+    fun trimCaches() {
+        if (disposed) return
+        sourceBytes = null
+        // Keep iconBytes: single small buffer needed for Image-mode editor chrome; Session still owns icon path.
+        clearLiveLayers()
+        clearLibraryDerivative()
+        previewGen += 1
+        previewImages.clearFromOwner()
+        IosWatermarkIconCache.invalidate()
+    }
+
+    /** Alias for Swift / ObjC memory-warning bridge. */
+    fun onMemoryWarning() = trimCaches()
+
+    /**
+     * Leave-editor media lifecycle: drop presentation bitmaps, bounded preview caches, and
+     * app-owned staged source files that Session no longer holds.
+     *
+     * Call after Session [AppIntent.NavigateBack] (or any path that empties selection while the
+     * host stays alive). Idempotent. Does not cancel export (caller owns that) and does not
+     * [dispose] the host.
+     */
+    fun releaseEditorMediaResources() {
+        if (disposed) return
+        lifecycleLock.lock()
+        try {
+            if (disposed) return
+            sourceBytes = null
+            clearLiveLayers()
+            clearLibraryDerivative()
+            photoKitResolveFailedIds.clear()
+            outputPath = null
+            previewGen += 1
+            previewImages.clearFromOwner()
+            progressiveImport.releaseUnheldSourcesAfterLeaveEditor()
+            val sessionHeld = services.session.launchScreenUiStateFlow.value.selectedImageList
+                .map { it.uri.value }
+                .filter { it.isNotBlank() }
+                .toSet()
+            val toDelete = ownedStagedPaths.filter {
+                IosSourceStager.isOwnedSourcePath(it) && it !in sessionHeld
+            }
+            ownedStagedPaths.removeAll(toDelete.toSet())
+            toDelete.forEach(IosSourceStager::deleteQuietly)
+            stopPhotoKitNeighborWindow()
+            IosAssetIdentityRegistry.clear()
+        } finally {
+            lifecycleLock.unlock()
+        }
+    }
+
+    /**
+     * E2 host close/dispose (single-scene B1):
+     * - cancel Session export
+     * - invalidate preview generation
+     * - clear bounded wm/placeholder/filmstrip/export caches
+     * - remove app-owned staged temp paths from this host generation
+     * - cancel host-scoped background work
+     *
+     * Idempotent: a second call is a no-op after the first full teardown.
+     */
+    fun dispose() {
+        lifecycleLock.lock()
+        try {
+            if (disposed) return
+            disposed = true
+            // Tear down NC observers first so process-wide NotificationCenter cannot deliver into
+            // a dead host (suite isolation + single-scene rebuild safety).
+            progressiveImport.close()
+            clampDraftRenders.close()
+            configChangeRenders.close()
+            services.session.cancelExport()
+            previewGen += 1
+            // Synchronously mark the preview repository closed when uncontended *before*
+            // cancelling host children — otherwise a contended close coroutine can be aborted
+            // before writing closed=true.
+            previewImages.closeFromOwner()
+            stopPhotoKitNeighborWindow()
+            hostScope.coroutineContext.cancelChildren()
+            // Clear presentation + caches (Main-thread host; lock serializes vs ownership adopt).
+            sourceBytes = null
+            iconBytes = null
+            clearLiveLayers()
+            clearLibraryDerivative()
+            photoKitResolveFailedIds.clear()
+            outputPath = null
+            statusLine = ""
+            isBusy = false
+            isSaving = false
+            showEditor = false
+            hideLibraryReadUpsell()
+            showSaveSheet = false
+            sheetExportFinished = false
+            showOpenSource = false
+            clampDraftOffset = null
+            clampDraftSelectionId = null
+            watermarkedPreviewSourcePath = null
+            // Process-wide Session may still reference these ewm_src paths after Host rebuild.
+            // Only delete host-tracked temps that Session no longer holds.
+            val sessionHeld = services.session.launchScreenUiStateFlow.value.selectedImageList
+                .map { it.uri.value }
+                .filter { it.isNotBlank() }
+                .toSet()
+            val toDelete = ownedStagedPaths.toList()
+            ownedStagedPaths.clear()
+            toDelete.forEach { path ->
+                if (path.contains("ewm_src_") && path !in sessionHeld) {
+                    IosSourceStager.deleteQuietly(path)
+                }
+            }
+            IosAssetIdentityRegistry.clear()
+        } finally {
+            lifecycleLock.unlock()
+        }
+    }
+
+    init {
+        progressiveImport.installObservers()
+    }
+
+    companion object {
+        /**
+         * G4/H2 host mirrors of [IosPreviewImageRepository] production caps (R1 2026-08-12).
+         * Keep in lockstep with repository companion — tests assert host constants.
+         */
+        const val PHOTO_KIT_FIRST_PAINT_DEADLINE_MS: Long = 120L
+        const val LIBRARY_DERIVATIVE_CROSSFADE_MS: Int = 200
+
+        const val WM_PREVIEW_CACHE_MAX: Int =
+            IosPreviewImageRepository.DEFAULT_WATERMARKED_ENTRIES_MAX
+        /** G4: source-only placeholder cache entry cap. */
+        const val PLACEHOLDER_CACHE_MAX: Int =
+            IosPreviewImageRepository.DEFAULT_SOURCE_PLACEHOLDER_ENTRIES_MAX
+        /** G4: filmstrip-purpose entry cap (repo only; Coil owns product UI thumbs). */
+        const val FILMSTRIP_THUMB_CACHE_MAX: Int =
+            IosPreviewImageRepository.DEFAULT_FILMSTRIP_ENTRIES_MAX
+        /** G4: export-sheet thumb cache entry cap. */
+        const val EXPORT_THUMB_CACHE_MAX: Int =
+            IosPreviewImageRepository.DEFAULT_EXPORT_THUMBNAIL_ENTRIES_MAX
+
+        /**
+         * Constructor-default floors (lockstep with [IosPreviewImageRepository] defaults).
+         * Live Host instance applies [PreviewWorkingSetBudget] at the current preview long-edge.
+         */
+        const val WM_PREVIEW_BYTES_MAX: Long =
+            IosPreviewImageRepository.DEFAULT_WATERMARKED_BYTES_MAX
+        const val PLACEHOLDER_BYTES_MAX: Long =
+            IosPreviewImageRepository.DEFAULT_SOURCE_PLACEHOLDER_BYTES_MAX
+        const val FILMSTRIP_THUMB_BYTES_MAX: Long =
+            IosPreviewImageRepository.FILMSTRIP_BYTES_MAX
+        const val EXPORT_THUMB_BYTES_MAX: Long =
+            IosPreviewImageRepository.DEFAULT_EXPORT_THUMBNAIL_BYTES_MAX
+    }
+
+    fun viewController(): UIViewController {
+        StartupTrace.markOnce("host_create_start")
+        return ComposeUIViewController {
+        StartupTrace.markOnce("host_set_content")
+        // ADR-0028: process-wide Coil ImageLoader (path ProductThumb Fetcher).
+        me.rosuh.easywatermark.ui.image.installProductImageLoaderFactory()
+        AppTheme(darkTheme = true) {
+            // I3: UIAccessibility reduce motion → MotionPolicy.Reduced when enabled.
+            ProvideMotionPolicy(platformMotionPolicy()) {
+            val waterMark by services.waterMarkRepo.waterMark.collectAsState(WaterMark.default)
+            val launchUi by services.session.launchScreenUiStateFlow.collectAsState()
+            // exportJobState is collected only while the save sheet is open (see showSaveSheet
+            // block) so export ticks do not recompose the entire Editor / filmstrip tree.
+            val sessionImages = launchUi.selectedImageList
+            // E0: Session owns route; optimistic showEditor only while Session not yet Editor.
+            val productRoute = when {
+                launchUi.uiState == LaunchScreenUiState.About -> ProductShellNav.Route.About
+                launchUi.uiState == LaunchScreenUiState.Editor || showEditor ->
+                    ProductShellNav.Route.Editor
+                else -> ProductShellNav.Route.Launch
+            }
+            val aboutReturn = ProductShellNav.routeFromLaunchUi(launchUi.aboutReturnUiState)
+            val shellBase = ProductShellNav.overlayBase(productRoute, aboutReturn)
+            val scope = rememberCoroutineScope()
+
+            var templates by remember { mutableStateOf(emptyList<Template>()) }
+            // About overlay keeps Editor composed — collect while the under screen is Editor.
+            LaunchedEffect(shellBase) {
+                if (shellBase == ProductShellNav.Route.Editor) {
+                    templateRepo.getAllTemplate().collect { templates = it }
+                } else {
+                    templates = emptyList()
+                }
+            }
+            LaunchedEffect(Unit) {
+                if (IosDevicePerfBench.requested()) {
+                    IosDevicePerfBench.run(this@IosProductRootHost)
+                }
+                if (IosDevicePerfBench.photoKitRequested()) {
+                    IosDevicePerfBench.runPhotoKit(this@IosProductRootHost)
+                }
+                if (IosCgImageTransferDeviceBench.requested()) {
+                    withContext(Dispatchers.Default) {
+                        IosCgImageTransferDeviceBench.run()
+                    }
+                }
+            }
+            // Leave-editor lifecycle closed loop: Session emptied (back, last-image remove, etc.)
+            // while Host stays alive — free preview caches + app-owned ewm_src temps.
+            LaunchedEffect(launchUi.uiState, sessionImages.size) {
+                if (
+                    launchUi.uiState == LaunchScreenUiState.Launch &&
+                    sessionImages.isEmpty() &&
+                    !disposed
+                ) {
+                    showEditor = false
+                    beginLibraryReadLaunchVisit()
+                    releaseEditorMediaResources()
+                }
+            }
+            LaunchedEffect(shellBase) {
+                when (shellBase) {
+                    ProductShellNav.Route.Launch -> beginLibraryReadLaunchVisit()
+                    ProductShellNav.Route.Editor -> hideLibraryReadUpsell()
+                    else -> Unit
+                }
+            }
+            DisposableEffect(Unit) {
+                val center = NSNotificationCenter.defaultCenter
+                val token = center.addObserverForName(
+                    UIApplicationDidBecomeActiveNotification,
+                    null,
+                    null,
+                ) { _ ->
+                    refreshLibraryReadBanner()
+                }
+                onDispose { center.removeObserver(token) }
+            }
+            LaunchedEffect(Unit) {
+                try {
+                    services.userConfigRepo.userPreferences.first().let {
+                        outputFormat = it.outputFormat
+                        outputQuality = it.compressLevel
+                    }
+                } catch (t: Throwable) {
+                    statusLine = "Prefs load failed: ${t.message}"
+                }
+            }
+
+            val aboutPainter = SharedProductDrawables.aboutPainter()
+            val backPainter = SharedProductDrawables.backPainter()
+            val addPainter = SharedProductDrawables.pickerImagePainter()
+            val savePainter = SharedProductDrawables.savePainter()
+            val versionPainter = SharedProductDrawables.versionPainter()
+            val ratePainter = SharedProductDrawables.ratePainter()
+            val feedbackPainter = SharedProductDrawables.feedbackPainter()
+            val updateLogPainter = SharedProductDrawables.updateLogPainter()
+            val openSourcePainter = SharedProductDrawables.openSourcePainter()
+            val privacyZhPainter = SharedProductDrawables.privacyZhPainter()
+            val privacyEnPainter = SharedProductDrawables.privacyEnPainter()
+            val templateListPainter = SharedProductDrawables.templateListPainter()
+            val avatarDevPainter = SharedProductDrawables.avatarDevPainter()
+            val avatarToviPainter = SharedProductDrawables.avatarToviPainter()
+            val devComment = stringResource(Res.string.dev_comment)
+
+            // Shared product-shell: Launch ↔ Editor swap; About overlays the live base.
+            ProductShellHost(
+                route = productRoute,
+                aboutReturn = aboutReturn,
+                modifier = Modifier.fillMaxSize(),
+            ) { route ->
+                when (route) {
+                ProductShellNav.Route.Launch -> {
+                    LaunchScreen(
+                        aboutIcon = aboutPainter,
+                        onPickImage = { requestPickPhotos() },
+                        onGoAbout = { openAboutFromLaunch() },
+                        logo = { modifier, animate ->
+                            BrandLogo(modifier = modifier, animate = animate)
+                        },
+                    )
+                }
+
+                ProductShellNav.Route.About -> {
+                    // Live watermark config (enableBounds for Show Bounds switch).
+                    val aboutShowBounds = waterMark.enableBounds
+                    BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val aboutLarge = usesLargeScreenDialog(
+                        editorLayoutClass(maxWidth.value, maxHeight.value),
+                    )
+                    AboutScreen(
+                        versionName = ProductVersion.NAME,
+                        showBounds = aboutShowBounds,
+                        showFollowWallpaperSwitch = false,
+                        followPhotoOn = followPhoto,
+                        onToggleFollowPhoto = { enabled ->
+                            IosContentThemePrefs.setFollowPhoto(enabled)
+                            followPhoto = enabled
+                            scope.launch {
+                                runCatching { services.userConfigRepo.updateFollowPhoto(enabled) }
+                            }
+                        },
+                        icons = AboutScreenIcons(
+                            back = backPainter,
+                            version = versionPainter,
+                            rating = ratePainter,
+                            feedback = feedbackPainter,
+                            updateLog = updateLogPainter,
+                            openSource = openSourcePainter,
+                            privacyZh = privacyZhPainter,
+                            privacyEn = privacyEnPainter,
+                        ),
+                        // Match Android AboutScreenAndroid edge copy.
+                        developerCard = AboutDevCard(
+                            title = "Developed with ♥ by rosu",
+                            description = devComment,
+                            avatar = avatarDevPainter,
+                        ),
+                        designerCard = AboutDevCard(
+                            title = "Designed with ♥ by tovi",
+                            description = "A Designer.",
+                            avatar = avatarToviPainter,
+                        ),
+                        onBack = { closeAbout() },
+                        onVersion = { onOpenUrl(ABOUT_URL_RELEASES) },
+                        // App Store / market scheme is Android; use HTTPS product page on iOS.
+                        onRate = { onOpenUrl(ABOUT_URL_RATE_IOS) },
+                        onFeedback = { onOpenUrl(ABOUT_URL_ISSUES) },
+                        onUpdateLog = { onOpenUrl(ABOUT_URL_RELEASES) },
+                        onOpenSource = { showOpenSource = true },
+                        onPrivacyZh = { onOpenUrl(ABOUT_URL_PRIVACY_ZH) },
+                        onPrivacyEn = { onOpenUrl(ABOUT_URL_PRIVACY_EN) },
+                        onDeveloper = { onOpenUrl(ABOUT_URL_DEV) },
+                        onDesigner = { onOpenUrl(ABOUT_URL_DESIGNER) },
+                        onToggleBounds = { enabled ->
+                            scope.launch {
+                                services.waterMarkRepo.toggleBounds(enabled)
+                                // Bounds flag is persisted; clear WM preview cache so editor
+                                // re-rasters on return (Android draws debug rects from config).
+                                previewImages.clearPurposeFromOwner(IosPreviewPurpose.Watermarked)
+                                watermarkedPreviewSourcePath = null
+                            }
+                        },
+                        // Production: large hero About logo + gradient animation.
+                        logo = { logoModifier ->
+                            me.rosuh.easywatermark.ui.AboutPageLogo(
+                                modifier = logoModifier,
+                                animate = true,
+                            )
+                        },
+                        useLargeLayout = aboutLarge,
+                    )
+                    } // BoxWithConstraints About
+                }
+
+                ProductShellNav.Route.Editor -> {
+                    val iconBitmap = iconBytes?.let { bytes ->
+                        remember(bytes) { IosImageDecoder.decode(bytes) }
+                    }
+                    var colorDraft by remember(waterMark.textColor) {
+                        mutableStateOf(formatArgbHexColor(waterMark.textColor))
+                    }
+
+                    // I1: container constraints in Dp → pure EditorLayoutClass (no UIKit types in domain).
+                    BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val layoutClass = remember(maxWidth, maxHeight) {
+                        editorLayoutClass(maxWidth.value, maxHeight.value)
+                    }
+                    lastEditorLayoutClass = layoutClass
+                    val density = LocalDensity.current
+                    val bucketImage = launchUi.curImageInfo ?: sessionImages.firstOrNull()
+                    val requestedPreviewBucket = remember(
+                        maxWidth,
+                        maxHeight,
+                        bucketImage?.uri,
+                        bucketImage?.width,
+                        bucketImage?.height,
+                        density,
+                    ) {
+                        PreviewResolutionPolicy.committedMaxEdgePxForFit(
+                            sourceWidthPx = bucketImage?.width ?: 0,
+                            sourceHeightPx = bucketImage?.height ?: 0,
+                            containerWidthPx = with(density) { maxWidth.toPx().toInt() },
+                            containerHeightPx = with(density) { maxHeight.toPx().toInt() },
+                            maxLongEdgePx = iosPreviewMaxLongEdgePx(),
+                        )
+                    }
+                    LaunchedEffect(requestedPreviewBucket) {
+                        if (committedPreviewBucket != requestedPreviewBucket) {
+                            committedPreviewBucket = requestedPreviewBucket
+                            applyPreviewWorkingSetCaps(requestedPreviewBucket)
+                            val selected = launchUi.curImageInfo ?: sessionImages.firstOrNull()
+                            if (selected != null) {
+                                previewGen += 1
+                                hostScope.launch {
+                                    runCatching { renderPreviewForCurrentSelection(previewGen) }
+                                }
+                            }
+                        }
+                    }
+                    // Pending/Failed are Host-only presentation cells. Supplying them through an
+                    // internal CompositionLocal keeps the public EditorScreen/Shared.framework
+                    // surface unchanged while the shared chrome can render the fixed strip.
+                    val progressiveSlots = progressiveImport.slots
+                    val progressivePresentation = progressiveSlots
+                        .takeIf { it.slots.isNotEmpty() }
+                        ?.let { slotState ->
+                            EditorProgressiveSlotPresentation(
+                                state = slotState,
+                                importInProgress = progressiveImport.importInProgress,
+                                onSelectReady = progressiveImport::requestFocusReady,
+                                onRetry = progressiveImport::requestRetry,
+                                onRemove = progressiveImport::requestRemove,
+                                onPrioritize = progressiveImport::requestPrioritize,
+                                measuredCellPx = measuredFilmstripCellPx,
+                                onCellPxMeasured = { px ->
+                                    if (px > 0 && px != measuredFilmstripCellPx) {
+                                        // Coil ProductAsyncImage uses fixed UI_THUMB_MAX_EDGE —
+                                        // measured cell only feeds progressive chrome layout.
+                                        measuredFilmstripCellPx = px
+                                    }
+                                },
+                                nowMs = { progressiveImport.nowMonoMsForTests() },
+                            )
+                        }
+                    CompositionLocalProvider(
+                        LocalEditorProgressiveSlotPresentation provides progressivePresentation,
+                    ) {
+                    // ADR-0027/0028: MCU seed via product Coil path (shared max-edge with filmstrip).
+                    val themeSeedRef = (launchUi.curImageInfo ?: sessionImages.firstOrNull())?.uri
+                        ?: previewSourcePath?.let { MediaRef(it) }
+                    val themeSeedKey = themeSeedRef?.value
+                    val themeSeedBitmap = me.rosuh.easywatermark.ui.image.rememberProductThumbBitmap(
+                        ref = themeSeedRef,
+                        maxEdgePx = me.rosuh.easywatermark.ui.image.ProductThumb.UI_THUMB_MAX_EDGE,
+                        enabled = followPhoto,
+                    )
+                    ContentEditorThemeHost(
+                        enabled = followPhoto,
+                        seedBitmap = themeSeedBitmap,
+                        seedKey = themeSeedKey,
+                    ) {
+                    EditorScreen(
+                        forcedBottomTab = storeCaptureTab,
+                        forcedOptionIndex = storeCaptureOption,
+                        openTemplateSheetRequest = storeCaptureOpenTemplates,
+                        imageList = sessionImages.map { it.toUiProjection() },
+                        waterMark = waterMark,
+                        selectedImage = (launchUi.curImageInfo ?: sessionImages.firstOrNull())
+                            ?.toUiProjection(),
+                        templates = templates,
+                        icons = EditorUiIcons(
+                            // Production navigate-up is a back chevron (ic_back), not the brand logo.
+                            back = backPainter,
+                            addMoreImages = addPainter,
+                            save = savePainter,
+                            about = aboutPainter,
+                            templateList = templateListPainter,
+                        ),
+                        preview = { previewModifier ->
+                            val dragItem = launchUi.curImageInfo ?: sessionImages.firstOrNull()
+                            val dragPath = dragItem?.uri?.value.orEmpty()
+                            val draftActiveForSelection =
+                                clampDraftSelectionId == dragPath && clampDraftOffset != null
+                            val isTextMode = waterMark.markMode == WatermarkMode.Text
+                            val chrome = OverlayPreviewPolicy.decide(
+                                selectedPath = dragPath.takeIf { it.isNotBlank() },
+                                photoPath = previewSourcePath,
+                                photoWidth = previewBitmap?.width,
+                                cellReadyForWidth = overlayCell?.builtForWidth,
+                                hasThumb = dragPath.isNotBlank(),
+                                isTextMode = isTextMode,
+                            )
+                            val livePhoto =
+                                if (chrome == OverlayPreviewChrome.LiveLayers) previewBitmap else null
+                            val liveOverlay =
+                                if (chrome == OverlayPreviewChrome.LiveLayers) overlayCell else null
+                            val identityLive = chrome == OverlayPreviewChrome.LiveLayers &&
+                                previewSourcePath == dragPath &&
+                                livePhoto != null &&
+                                liveOverlay != null
+                            val dragModifier = if (
+                                !isBusy &&
+                                dragItem != null &&
+                                identityLive &&
+                                livePhoto != null &&
+                                liveOverlay != null
+                            ) {
+                                Modifier.clampPreviewOffsetDrag(
+                                    enabled = true,
+                                    selectionId = dragPath,
+                                    isClamp = waterMark.tileMode == WatermarkTileMode.CLAMP,
+                                    imageWidth = livePhoto.width.toFloat(),
+                                    imageHeight = livePhoto.height.toFloat(),
+                                    offsetX = dragItem.offsetX,
+                                    offsetY = dragItem.offsetY,
+                                    onOffsetDraft = { x, y ->
+                                        if (dragPath.isEmpty()) {
+                                            return@clampPreviewOffsetDrag
+                                        }
+                                        clampDraftOffset = x to y
+                                        clampDraftSelectionId = dragPath
+                                        overlayCell = overlayCell?.withOffset(x, y)
+                                        clampDraftRenders.submit(
+                                            ClampDraftRequest(dragPath, x, y),
+                                        )
+                                    },
+                                    onOffsetDraftClear = {
+                                        clampDraftOffset = null
+                                        clampDraftSelectionId = null
+                                    },
+                                    onOffsetCommit = { x, y ->
+                                        if (dragPath.isEmpty()) {
+                                            return@clampPreviewOffsetDrag
+                                        }
+                                        if (previewSourcePath != dragPath) {
+                                            return@clampPreviewOffsetDrag
+                                        }
+                                        if (
+                                            watermarkedPreviewSourcePath != dragPath &&
+                                            !draftActiveForSelection
+                                        ) {
+                                            return@clampPreviewOffsetDrag
+                                        }
+                                        val live = services.session
+                                            .launchScreenUiStateFlow
+                                            .value
+                                            .curImageInfo
+                                            ?.takeIf { it.uri.value == dragPath }
+                                            ?: return@clampPreviewOffsetDrag
+                                        val commitBench = ClampDragBench
+                                            .previewScope("ios_offset_commit")
+                                        services.session.applyOffset(
+                                            live.copy(offsetX = x, offsetY = y),
+                                        )
+                                        commitBench.mark("applyOffset")
+                                        clampDraftOffset = null
+                                        clampDraftSelectionId = null
+                                        overlayCell = overlayCell?.withOffset(x, y)
+                                        previewGen++
+                                        val commitGen = previewGen
+                                        hostScope.launch {
+                                            renderPreviewForCurrentSelection(gen = commitGen)
+                                        }
+                                        commitBench.mark("previewGenBump")
+                                        val draftCounts = clampDraftRenders.countsForTests()
+                                        commitBench.finish(
+                                            mapOf(
+                                                "offsetX" to x,
+                                                "offsetY" to y,
+                                                "path" to dragPath.substringAfterLast('/'),
+                                                "draftSamples" to draftCounts.submitted,
+                                                "draftRenders" to draftCounts.rendered,
+                                            ),
+                                        )
+                                        clampDraftRenders.resetCountsForTests()
+                                    },
+                                )
+                            } else {
+                                Modifier
+                            }
+                            LiveOverlayPreview(
+                                chrome = chrome,
+                                photo = livePhoto,
+                                overlay = liveOverlay,
+                                waitThumb = if (chrome == OverlayPreviewChrome.WaitThumb &&
+                                    dragItem != null
+                                ) {
+                                    { thumbMod ->
+                                        me.rosuh.easywatermark.ui.image.ProductAsyncImage(
+                                            thumb = me.rosuh.easywatermark.ui.image.ProductThumb(
+                                                ref = dragItem.uri,
+                                                maxEdgePx = me.rosuh.easywatermark.ui.image.ProductThumb.UI_THUMB_MAX_EDGE,
+                                            ),
+                                            contentDescription = "Watermark preview",
+                                            contentScale = ContentScale.Fit,
+                                            modifier = thumbMod,
+                                        )
+                                    }
+                                } else {
+                                    null
+                                },
+                                modifier = previewModifier
+                                    .fillMaxSize()
+                                    .testTag("sharedComposeWatermarkPreview")
+                                    .then(dragModifier),
+                            )
+                        },
+                        thumbnail = { imageInfo, contentDescription, thumbModifier ->
+                            // ADR-0028: Coil ProductThumb. JPEG/PNG = Skia; HEIC = IosHeifImageDecoder.
+                            // Shared max-edge with theme seed for memory-cache hits.
+                            val path = imageInfo.uri.value
+                            if (path.isNotBlank() && path != "preview" && !markedFirstFilmstripPixels) {
+                                SideEffect {
+                                    if (!markedFirstFilmstripPixels) {
+                                        markedFirstFilmstripPixels = true
+                                        me.rosuh.easywatermark.session.ImportTimelineProbe.mark(
+                                            "first_filmstrip_pixels",
+                                            me.rosuh.easywatermark.session.IosPickGenerationGate
+                                                .currentPhotoGeneration(),
+                                            "cell",
+                                        )
+                                    }
+                                }
+                            }
+                            me.rosuh.easywatermark.ui.image.ProductAsyncImage(
+                                thumb = me.rosuh.easywatermark.ui.image.ProductThumb(
+                                    ref = imageInfo.uri,
+                                    maxEdgePx = me.rosuh.easywatermark.ui.image.ProductThumb.UI_THUMB_MAX_EDGE,
+                                ),
+                                contentDescription = contentDescription,
+                                contentScale = ContentScale.Crop,
+                                modifier = thumbModifier.background(
+                                    MaterialTheme.colorScheme.surfaceVariant,
+                                ),
+                            )
+                        },
+                        optionItem = { spec, selected ->
+                            val label = spec.type.label()
+                            EditorOptionItem(
+                                icon = spec.type.iconPainter(),
+                                contentDescription = label,
+                                label = label,
+                                selected = selected,
+                            )
+                        },
+                        colorOption = { optionModifier, mark, onColor ->
+                            TextColorOption(
+                                currentColor = mark.textColor,
+                                customText = colorDraft,
+                                modifier = optionModifier,
+                                showCustomPicker = true,
+                                showCustomInput = false,
+                                onColorSelected = onColor,
+                                onCustomTextChange = { colorDraft = it },
+                            )
+                        },
+                        iconOption = { optionModifier, _, _ ->
+                            IconWatermarkOption(
+                                hasIcon = iconBitmap != null,
+                                pickLabel = stringResource(Res.string.action_pick),
+                                modifier = optionModifier,
+                                enabled = !isBusy,
+                                onPick = onPickIcon,
+                            )
+                        },
+                        onBack = {
+                            // Session NavigateBack owns Launch; clear optimistic shell flag
+                            // and release staged sources + preview bitmaps (leave-editor lifecycle).
+                            showEditor = false
+                            beginLibraryReadLaunchVisit()
+                            services.session.onBackPressed()
+                            releaseEditorMediaResources()
+                        },
+                        onAddMoreImages = { requestPickPhotos() },
+                        onShowSaveDialog = {
+                            // Block export while progressive import still has Pending/in-flight work
+                            // (fresh pick no longer clears Session until first Ready publishes).
+                            if (progressiveImport.importInProgress) return@EditorScreen
+                            // C2: open shared Android Compose export panel (not immediate Photos write).
+                            services.session.resetJobStatus()
+                            sheetExportFinished = false
+                            showSaveSheet = true
+                        },
+                        onGoAboutScreen = { openAboutFromEditor() },
+                        onImageSelected = { info ->
+                            scope.launch {
+                                val path = info.uri.value
+                                val previewBucket = committedPreviewBucket
+                                val switchBench = IosPreviewBench.scope("switch_image")
+                                try {
+                                    clearLiveLayers()
+                                    services.session.dispatchAndAwait(AppIntent.SelectCurrent(info.uri))
+                                    switchBench.mark("select")
+                                    val sourceHit = previewImages.peekCached(
+                                        sourcePreviewKey(path, previewBucket),
+                                    ) != null
+                                    hostScope.launch {
+                                        tryPaintLibraryDerivative(path)
+                                    }
+                                    previewGen += 1
+                                    val gen = previewGen
+                                    renderPreviewForCurrentSelection(
+                                        gen = gen,
+                                        forcePath = path,
+                                        forceOffsetX = info.offsetX,
+                                        forceOffsetY = info.offsetY,
+                                    )
+                                    if (gen == previewGen) {
+                                        prefetchNeighborWatermarkedPreviews(path, gen)
+                                    }
+                                    switchBench.finish(
+                                        mapOf(
+                                            "hit" to if (sourceHit) "source" else "miss",
+                                            "path" to path.substringAfterLast('/'),
+                                        ),
+                                    )
+                                } catch (t: Throwable) {
+                                    switchBench.finish(mapOf("error" to (t.message ?: "fail")))
+                                    statusLine = "Failed: ${t.message}"
+                                }
+                            }
+                        },
+                        onConfigChange = { change ->
+                            // F2: typed WatermarkConfigChange from shared controls (no from()).
+                            if (change is WatermarkConfigChange.Icon) {
+                                onPickIcon()
+                                return@EditorScreen
+                            }
+                            // Do not drop slider ticks on isBusy — one persist+paint in flight + latest.
+                            configChangeRenders.submit(change)
+                        },
+                        onUseTemplate = { template ->
+                            val content = template.content ?: return@EditorScreen
+                            // Same invalidate path as onConfigChange: watermarkedPreviewKey is
+                            // path+bucket only, so a cache hit would keep the old text raster.
+                            scope.launch {
+                                isBusy = true
+                                try {
+                                    previewGen += 1
+                                    val gen = previewGen
+                                    services.session.dispatchAndAwait(
+                                        AppIntent.ApplyConfig(WatermarkConfigChange.Text(content)),
+                                    )
+                                    renderPreviewForCurrentSelection(gen = gen)
+                                } catch (t: Throwable) {
+                                    statusLine = "Failed: ${t.message}"
+                                }
+                                isBusy = false
+                            }
+                        },
+                        onAddTemplate = { text ->
+                            scope.launch {
+                                try {
+                                    templateEditor.add(text)
+                                } catch (t: Throwable) {
+                                    statusLine = "Could not save template: ${t.message}"
+                                }
+                            }
+                        },
+                        onUpdateTemplate = { template ->
+                            scope.launch {
+                                try {
+                                    templateEditor.update(template)
+                                } catch (t: Throwable) {
+                                    statusLine = "Could not update template: ${t.message}"
+                                }
+                            }
+                        },
+                        onDeleteTemplate = { template ->
+                            scope.launch {
+                                try {
+                                    templateEditor.delete(template)
+                                } catch (t: Throwable) {
+                                    statusLine = "Could not delete template: ${t.message}"
+                                }
+                            }
+                        },
+                        layoutClass = layoutClass,
+                    )
+                    }
+                                        } // ContentEditorThemeHost
+                    } // BoxWithConstraints Editor
+                }
+                } // when (route)
+            } // ProductShellHost
+
+            if (showLibraryReadPickDialog) {
+                val dialogKind = libraryReadPickDialogKind
+                    ?: LibraryReadBannerKind.Denied
+                val dialogBody = when (dialogKind) {
+                    LibraryReadBannerKind.Limited ->
+                        stringResource(Res.string.tips_ios_library_read_upsell_limited)
+                    LibraryReadBannerKind.Denied,
+                    LibraryReadBannerKind.Restricted,
+                    -> stringResource(Res.string.tips_ios_library_read_upsell_denied)
+                }
+                val confirmLabel = when (dialogKind) {
+                    LibraryReadBannerKind.Limited ->
+                        stringResource(Res.string.tips_ios_library_read_upsell_allow_all_photos)
+                    LibraryReadBannerKind.Denied,
+                    LibraryReadBannerKind.Restricted,
+                    -> stringResource(Res.string.tips_ios_library_read_upsell_settings)
+                }
+                EwmConfirmDialog(
+                    onDismissRequest = { continuePickAfterLibraryReadDialog() },
+                    title = stringResource(Res.string.tips_ios_library_read_upsell_title),
+                    text = dialogBody,
+                    confirmLabel = confirmLabel,
+                    dismissLabel = stringResource(Res.string.tips_ios_library_read_upsell_continue),
+                    onConfirm = {
+                        showLibraryReadPickDialog = false
+                        openLibraryReadBannerSettings()
+                    },
+                    confirmTestTag = "iosLibraryReadUpsellConfirm",
+                    dismissTestTag = "iosLibraryReadUpsellContinue",
+                )
+            }
+
+            OpenSourceOverlayHost(
+                visible = showOpenSource,
+                onBack = { showOpenSource = false },
+                onOpenLink = onOpenUrl,
+                backIcon = backPainter,
+            )
+
+            // C2: shared export panel (Android Compose parity). Photos write + Share are Swift edges.
+            if (showSaveSheet) {
+                // Collect export job only inside the sheet composition — not at product root —
+                // so isSaving/completedCount ticks do not force Editor filmstrip/preview to recompose.
+                val exportJob by services.session.exportJobState.collectAsState()
+                val exportItems: List<ImageInfo> = sessionImages
+                // Always key progress off the live selection size (not stale exportJob.totalCount=0).
+                val exportTotal = exportItems.size.coerceAtLeast(
+                    if (previewBitmap != null && exportItems.isEmpty()) 1 else 0,
+                )
+                // Re-read job ticks so thumbnails recompose during batch export (jobState is mutated
+                // on ImageInfo; ExportJobState Flow is the recomposition signal).
+                val finished = sheetExportFinished || exportJob.isFinished
+                val exporting = isSaving || exportJob.isSaving
+                val recovery = me.rosuh.easywatermark.ui.save.ExportRecoveryUi.fromJob(
+                    isSaving = exporting,
+                    isFinished = finished,
+                    successCount = exportJob.successCount.coerceAtLeast(exportJob.completedCount),
+                    failureCount = exportJob.failureCount,
+                    processedCount = exportJob.processedCount
+                        .coerceAtLeast(exportJob.successCount + exportJob.failureCount),
+                    totalCount = exportJob.totalCount.takeIf { it > 0 } ?: exportTotal,
+                )
+                val primaryLabel = when {
+                    finished -> stringResource(Res.string.share)
+                    exporting -> stringResource(Res.string.dialog_save_exporting)
+                    else -> stringResource(Res.string.dialog_export_to_gallery)
+                }
+                val resultSummaryText = when {
+                    recovery.isExporting -> stringResource(
+                        Res.string.dialog_save_export_progress,
+                        recovery.processedCount,
+                        recovery.totalCount.coerceAtLeast(1),
+                    )
+                    recovery.isFinished && recovery.failureCount == 0 && recovery.successCount > 0 ->
+                        stringResource(
+                            Res.string.dialog_save_export_done_success,
+                            recovery.successCount,
+                            recovery.totalCount.coerceAtLeast(1),
+                        )
+                    recovery.isFinished && recovery.successCount > 0 && recovery.failureCount > 0 ->
+                        stringResource(
+                            Res.string.dialog_save_export_done_partial,
+                            recovery.successCount,
+                            recovery.totalCount.coerceAtLeast(1),
+                            recovery.failureCount,
+                        )
+                    recovery.isFinished && recovery.successCount == 0 ->
+                        stringResource(
+                            Res.string.dialog_save_export_done_failed,
+                            recovery.totalCount.coerceAtLeast(1),
+                        )
+                    else -> "${recovery.successCount}/${recovery.totalCount.coerceAtLeast(1)}"
+                }
+                val statusCd = if (recovery.isExporting) {
+                    stringResource(
+                        Res.string.dialog_save_export_cd_progress,
+                        recovery.processedCount,
+                        recovery.totalCount.coerceAtLeast(1),
+                        recovery.successCount,
+                        recovery.failureCount,
+                    )
+                } else {
+                    stringResource(
+                        Res.string.dialog_save_export_cd_done,
+                        recovery.processedCount
+                            .coerceAtLeast(recovery.successCount + recovery.failureCount),
+                        recovery.successCount,
+                        recovery.failureCount,
+                        recovery.totalCount.coerceAtLeast(1),
+                    )
+                }
+                val destinationLine = stringResource(Res.string.dialog_save_destination_photos)
+                val filenamePolicyLine = stringResource(Res.string.dialog_save_filename_policy_ios)
+                val exportCountTotal =
+                    if (recovery.isExporting || recovery.isFinished) {
+                        recovery.totalCount.coerceAtLeast(exportTotal.coerceAtLeast(1))
+                    } else {
+                        0
+                    }
+                val exportCountSuccess =
+                    if (recovery.isExporting || recovery.isFinished) recovery.successCount else 0
+                val exportCountFailure =
+                    if (recovery.isExporting || recovery.isFinished) recovery.failureCount else 0
+                val countsLine = if (exportCountTotal > 0) {
+                    stringResource(
+                        Res.string.dialog_save_export_counts,
+                        exportCountTotal,
+                        exportCountSuccess,
+                        exportCountFailure,
+                    )
+                } else {
+                    ""
+                }
+                // No Saved-to-destination paint; keep generic error as a11y residual only.
+                val outcomeDetailLine = when {
+                    recovery.isAllFailed ->
+                        stringResource(Res.string.dialog_save_error_generic)
+                    else -> ""
+                }
+                val listItems = exportItems.ifEmpty {
+                    if (previewBitmap != null) listOf(ImageInfo(MediaRef("preview"))) else emptyList()
+                }
+                val exportErrorGeneric = stringResource(Res.string.dialog_save_error_generic)
+                val exportingLabel = stringResource(Res.string.dialog_save_exporting)
+                val runIosExportBatch: () -> Unit = {
+                    scope.launch {
+                        isSaving = true
+                        sheetExportFinished = false
+                        statusLine = exportingLabel
+                        try {
+                            val images = exportItems.ifEmpty {
+                                error("Nothing to export")
+                            }
+                            // Batch pipeline: per-item JobState.Ing → Success + exportJob ticks.
+                            withContext(Dispatchers.Default) {
+                                services.session.exportAndAwait(images)
+                            }
+                            // D4: await Photos per render success before counting persisted.
+                            val lastPath = images
+                                .asReversed()
+                                .firstOrNull {
+                                    it.jobState is JobState.Success &&
+                                        (it.result?.data as? MediaRef)?.value != null
+                                }
+                                ?.let { (it.result?.data as? MediaRef)?.value }
+                            val photosResult = persistRenderSuccessesToPhotos(
+                                images = images,
+                                loadBytes = { path ->
+                                    NSData.dataWithContentsOfFile(path)
+                                        ?.let { IosByteArrayInterop.fromNSData(it) }
+                                },
+                                photosSave = photosSaveEdge,
+                            )
+                            outputPath = lastPath
+                            sheetExportFinished = true
+                            isSaving = false
+                            statusLine = photosPersistStatusLine(
+                                batchSize = images.size,
+                                result = photosResult,
+                            )
+                            // Restore editor main preview if joint cache pressure blanked it mid-export.
+                            ensureEditorPreviewAfterExport()
+                        } catch (_: Throwable) {
+                            // I0: never surface raw Throwable.message in product chrome.
+                            statusLine = exportErrorGeneric
+                            isSaving = false
+                            sheetExportFinished = true
+                            ensureEditorPreviewAfterExport()
+                        }
+                    }
+                }
+                SaveExportSheetShell(
+                    items = listItems,
+                    useLargeDialog = usesLargeScreenDialog(lastEditorLayoutClass),
+                    selectedFormat = outputFormat,
+                    quality = outputQuality,
+                    primaryActionLabel = primaryLabel,
+                    primaryActionEnabled = when {
+                        finished -> true
+                        else -> !exporting && !isBusy
+                    },
+                    // iOS has no in-app gallery; after save, primary becomes Share (E09/E10).
+                    showOpenGallery = false,
+                    exportListSubtitle = resultSummaryText,
+                    imageCount = exportTotal,
+                    isExporting = recovery.isExporting,
+                    showCancelButton = recovery.showCancel,
+                    onCancelClick = { services.session.cancelExport() },
+                    showRetryFailedButton = recovery.showRetryFailed,
+                    onRetryFailedClick = { runIosExportBatch() },
+                    statusContentDescription = statusCd,
+                    destinationLine = destinationLine,
+                    filenamePolicyLine = filenamePolicyLine,
+                    countsLine = countsLine,
+                    outcomeDetailLine = outcomeDetailLine,
+                    exportTotalCount = exportCountTotal,
+                    exportSuccessCount = exportCountSuccess,
+                    exportFailureCount = exportCountFailure,
+                    itemKey = { it.uri.value },
+                    onDismiss = {
+                        if (!exporting) {
+                            showSaveSheet = false
+                            // If export thumbs evicted the watermarked preview under budget pressure,
+                            // rebind so the editor does not stay blank after sheet close.
+                            rebindEditorPreviewIfBlank(scope)
+                        }
+                    },
+                    onFormatClick = { fmt ->
+                        scope.launch {
+                            outputEditor.save(fmt, outputQuality)
+                            outputFormat = fmt
+                        }
+                    },
+                    onQualityChange = { q ->
+                        scope.launch {
+                            outputEditor.save(outputFormat, q)
+                            outputQuality = q
+                        }
+                    },
+                    onExportClick = {
+                        if (finished) {
+                            val path = outputPath
+                                ?: exportItems.firstNotNullOfOrNull { info ->
+                                    (info.result?.data as? MediaRef)?.value
+                                }
+                            if (path != null) onShare(path)
+                        } else {
+                            runIosExportBatch()
+                        }
+                    },
+                    onOpenGalleryClick = {},
+                ) { info, thumbModifier ->
+                    // ADR-0028: export-sheet chrome thumbs via ProductAsyncImage (not preview compose).
+                    val job = remember(
+                        info.uri,
+                        exportJob.completedCount,
+                        exportJob.isSaving,
+                        exportJob.isFinished,
+                    ) {
+                        info.jobState
+                    }
+                    me.rosuh.easywatermark.ui.save.ExportProgressOverlay(
+                        jobState = job,
+                        modifier = thumbModifier,
+                    ) {
+                        me.rosuh.easywatermark.ui.image.ProductAsyncImage(
+                            thumb = me.rosuh.easywatermark.ui.image.ProductThumb(
+                                ref = info.uri,
+                                maxEdgePx = me.rosuh.easywatermark.ui.image.ProductThumb.UI_THUMB_MAX_EDGE,
+                            ),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize().background(
+                                MaterialTheme.colorScheme.surfaceVariant,
+                            ),
+                        )
+                    }
+                }
+            }
+            } // ProvideMotionPolicy
+        } // AppTheme
+        } // ComposeUIViewController
+    }
+
+    /**
+     * Focus-first bind for progressive import and user filmstrip focus.
+     *
+     * **[ProgressiveFocusBindMode.ImportPriority]** (import first Ready only):
+     * 1. Watermark-region placeholder (fast main-canvas paint)
+     * 2. Watermarked preview (product-critical; awaited — gates Swift firstItemAlone ACK)
+     * Filmstrip UI is Coil-only (R3) — no repository Filmstrip warm here.
+     *
+     * **[ProgressiveFocusBindMode.UserScroll]** (settle / tap / remove):
+     * Session select already completed; this path is cancelable via [previewGen].
+     * Cache-hit paints first; no forced placeholder decode; neighbor WM prefetch only.
+     */
+    private suspend fun bindProgressiveFocus(
+        focusPath: String,
+        mode: ProgressiveFocusBindMode,
+    ) {
+        if (disposed || focusPath.isBlank()) return
+        val previewBucket = committedPreviewBucket
+        val pickGen = IosPickGenerationGate.currentPhotoGeneration()
+
+        // User scroll: already showing LiveLayers for this path — neighbor Source only.
+        if (
+            mode == ProgressiveFocusBindMode.UserScroll &&
+            hasLiveLayers() &&
+            previewSourcePath == focusPath
+        ) {
+            prefetchNeighborWatermarkedPreviews(focusPath, previewGen)
+            return
+        }
+
+        if (mode == ProgressiveFocusBindMode.UserScroll) {
+            if (previewSourcePath != focusPath) {
+                clearLiveLayers()
+            }
+            showEditor = true
+            if (previewImages.peekCached(sourcePreviewKey(focusPath, previewBucket)) == null) {
+                hostScope.launch {
+                    tryPaintLibraryDerivative(focusPath)
+                }
+            }
+        } else {
+            val paintedLibrary = tryPaintLibraryDerivative(focusPath)
+            if (!paintedLibrary) {
+                runCatching {
+                    previewImages.load(sourcePreviewKey(focusPath, previewBucket)) {
+                        withContext(Dispatchers.Default) {
+                            IosPreviewRaster.decodeSourcePlaceholder(
+                                focusPath,
+                                maxEdgePx = previewBucket,
+                            )
+                        }
+                    }
+                }
+                if (disposed) return
+                showEditor = true
+            }
+        }
+
+        // 2) Watermarked main preview — cancelable via previewGen on rapid user focus.
+        // ImportPriority awaits this before ACK; UserScroll still runs it but never full-strips.
+        // forcePath so optimistic focus works even before Session SelectCurrent lands.
+        previewGen += 1
+        val gen = previewGen
+        val focusInfo = services.session.launchScreenUiStateFlow.value.selectedImageList
+            .firstOrNull { it.uri.value == focusPath }
+        try {
+            renderPreviewForCurrentSelection(
+                gen = gen,
+                forcePath = focusPath,
+                forceOffsetX = focusInfo?.offsetX,
+                forceOffsetY = focusInfo?.offsetY,
+            )
+            if (
+                mode == ProgressiveFocusBindMode.ImportPriority &&
+                !markedFirstWatermarkedPreview &&
+                hasLiveLayers()
+            ) {
+                markedFirstWatermarkedPreview = true
+                me.rosuh.easywatermark.session.ImportTimelineProbe.mark(
+                    "first_watermarked_preview",
+                    IosPickGenerationGate.currentPhotoGeneration(),
+                    "preview",
+                )
+            }
+        } catch (_: Throwable) {
+        }
+        if (disposed || gen != previewGen) return
+
+        // Neighbor WM prefetch (R1) — filmstrip UI is Coil-only (R3), no FilmstripRepo warm.
+        if (mode == ProgressiveFocusBindMode.UserScroll) {
+            prefetchNeighborWatermarkedPreviews(focusPath, gen)
+        }
+    }
+
+    /**
+     * Legacy optimistic shell only — does **not** stage or retain multi full-res owners.
+     * Production path is progressive NotificationCenter import; batch byte delivery remains for fixtures.
+     */
+    fun deliverPickedPhoto(bytes: ByteArray) {
+        // G4: do not pin full-res bytes on the host; Session path is the durable owner.
+        sourceBytes = null
+        showEditor = true
+    }
+
+    /**
+ * Deliver one picked source photo into the session.
+ *
+ * **Latency:** always stages + EnterEditor first (filmstrip updates immediately). Watermark
+ * Export for the big preview runs only when [renderPreview] is true (use false for multi-pick * non-final items so N photos do not mean N full exports).
+ *
+ * @param append true to append to the current multi-image selection (add-more / multi-select tail).
+ * @param renderPreview when true, run export pipeline for the focused (first) image after staging.
+     */
+    @Throws(Exception::class)
+    suspend fun deliverPickedPhotoAndAwait(
+        bytes: ByteArray,
+        append: Boolean = false,
+        renderPreview: Boolean = true,
+        pickGeneration: Long,
+    ) {
+        deliverPickedPhotosBatch(
+            images = listOf(bytes),
+            append = append,
+            renderPreview = renderPreview,
+            pickGeneration = pickGeneration,
+        )
+    }
+
+    /**
+ * Navigate to the editor shell **immediately** (before any photo bytes are ready).
+ * Call from Swift as soon as the picker dismisses so the user is not blocked on
+ * `loadTransferable` / decode / stage. No "Loading…" chrome.
+     */
+    fun showEditorShellImmediately() {
+        // Presentation-only optimistic shell; Session EnterEditor lands when stage succeeds.
+        showEditor = true
+        hideLibraryReadUpsell()
+        // Leave preview blank (silent) until stage + placeholder / raster fill it.
+        statusLine = ""
+    }
+
+    /**
+ * Stage all [images] in **one** EnterEditor (filmstrip fills at once), prefetch filmstrip
+ * Thumbs so fling is cold-miss free, then optionally raster the focused preview. *
+ * Prefer [showEditorShellImmediately] first so UI is not gated on photo IO.
+ * Swift should load **all** picker payloads then call this once (not per-item append).
+     */
+    /**
+     * Stage + bind preview for a picker batch.
+     *
+     * @param pickGeneration token from [me.rosuh.easywatermark.session.IosPickGenerationGate.nextPhotoGeneration].
+     * Session publication is generation-guarded (F12) inside [IosAppServices.stagePickedImagesBytes].
+     */
+    @Throws(Exception::class)
+    suspend fun deliverPickedPhotosBatch(
+        images: List<ByteArray>,
+        append: Boolean = false,
+        renderPreview: Boolean = true,
+        pickGeneration: Long,
+    ) {
+        require(images.isNotEmpty()) { "deliverPickedPhotosBatch: empty" }
+        // Disposed host must not stage or publish (lifecycle validity joins generation gate).
+        if (disposed) return
+        // Snapshot prior Session selection + host-owned temps for transactional ownership / revert.
+        val previousLaunch = services.session.launchScreenUiStateFlow.value
+        val previousSelection = previousLaunch.selectedImageList.toList()
+        val previousWaterMark = previousLaunch.waterMark
+        val previousOwned = ownedStagedPaths.toList()
+        // F11/F16: stage+publish on Default; hostAlive re-checked at guarded publish boundary.
+        // Public ObjC API is the 3-arg stagePickedImagesBytes; host uses internal lifecycle gate.
+        val published = withContext(Dispatchers.Default) {
+            services.stagePickedImagesBytesInternal(
+                imageBytesList = images,
+                append = append,
+                pickGeneration = pickGeneration,
+                hostAlive = { !disposed },
+            )
+        }
+        // Test seam: force dispose in the post-publication / pre-ownership-registration window.
+        me.rosuh.easywatermark.session.IosHostOwnershipProbe.awaitBeforeAdopt()
+        // Identity-scoped adopt: cleanup/revert only when Session still holds this delivery.
+        val adopt = adoptPublishedOwnership(
+            previousOwned = previousOwned,
+            previousSelection = previousSelection,
+            previousWaterMark = previousWaterMark,
+            append = append,
+            deliveryStagedPaths = published.stagedPaths.toSet(),
+            pickGeneration = pickGeneration,
+            publishedSelectionUris = published.publishedSelectionUris,
+        )
+        if (!adopt.alive) {
+            return
+        }
+        // G4 file-first: drop any host full-res source pin; staged paths + Session own identity.
+        sourceBytes = null
+        showEditor = true
+        hideLibraryReadUpsell()
+        statusLine = ""
+        // Abort host UI bind if generation flipped after Session publish returned.
+        if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
+            return
+        }
+        val launch = services.session.launchScreenUiStateFlow.value
+        val paths = launch.selectedImageList.map { it.uri.value }.filter { it.isNotBlank() }
+        val focusPath = (launch.curImageInfo ?: launch.selectedImageList.firstOrNull())?.uri?.value
+        if (renderPreview && focusPath != null) {
+            val previewBucket = committedPreviewBucket
+            previewImages.load(sourcePreviewKey(focusPath, previewBucket)) {
+                withContext(Dispatchers.Default) {
+                    IosPreviewRaster.decodeSourcePlaceholder(
+                        focusPath,
+                        maxEdgePx = previewBucket,
+                    )
+                }
+            }
+            // F16: re-validate after decode suspension before any host cache/preview write.
+            me.rosuh.easywatermark.session.IosPickPublishProbe
+                .awaitBeforeHostPreviewBind(pickGeneration)
+            if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
+                return
+            }
+        }
+
+        if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
+            return
+        }
+        // R3: filmstrip UI is Coil ProductAsyncImage — do not warm FilmstripRepo on import.
+
+        if (!renderPreview) {
+            return
+        }
+        if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
+            return
+        }
+        previewGen += 1
+        val gen = previewGen
+        // Await first LiveLayers. deliver is already suspend; fire-and-forget
+        // hostScope.launch raced CI's 2s identity poll (k1 A→B bind).
+        try {
+            if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)) {
+                return
+            }
+            renderPreviewForCurrentSelection(gen = gen)
+        } catch (t: Throwable) {
+            statusLine = "Preview failed: ${t.message}"
+        }
+    }
+
+    private data class OwnershipAdoptResult(val alive: Boolean)
+
+    private enum class LateDisposeSessionAction {
+        /** Host alive — ownership adopted. */
+        Alive,
+
+        /** Host disposed; Session still this delivery; previous paths readable → restore. */
+        RevertPrevious,
+
+        /** Host disposed; Session still this delivery; previous dead/empty → leave editor empty. */
+        NavigateBack,
+
+        /** Host disposed; a newer generation already owns Session — do not touch Session. */
+        LeaveSession,
+    }
+
+    /**
+     * Atomically w.r.t. [dispose]: adopt Session-published `ewm_src_*` into [ownedStagedPaths],
+     * or perform **identity-scoped** late-dispose cleanup for [deliveryStagedPaths] only.
+     *
+     * Late-dispose rules (attempt 5):
+     * - Cleanup deletes only paths staged by **this** delivery (never enumerate process-wide Session
+     *   as ownership, and never delete a newer generation's paths).
+     * - Session is mutated only when generation is still current **and** Session selection still
+     *   equals [publishedSelectionUris] (this delivery still owns Session).
+     * - Never restore [previousSelection] when those paths were already deleted by [dispose].
+     *
+     * Session intents use [dispatchAndAwait] **outside** [lifecycleLock] so dispose cannot
+     * deadlock against a suspended Main intent.
+     */
+    private suspend fun adoptPublishedOwnership(
+        previousOwned: List<String>,
+        previousSelection: List<me.rosuh.easywatermark.data.model.ImageInfo>,
+        previousWaterMark: me.rosuh.easywatermark.data.model.WaterMark,
+        append: Boolean,
+        deliveryStagedPaths: Set<String>,
+        pickGeneration: Long,
+        publishedSelectionUris: List<String>,
+    ): OwnershipAdoptResult {
+        var action = LateDisposeSessionAction.Alive
+        lifecycleLock.lock()
+        try {
+            val launch = services.session.launchScreenUiStateFlow.value
+            val sessionUris = launch.selectedImageList.map { it.uri.value }
+            val sessionSet = sessionUris.toSet()
+            val sessionOwned = sessionUris.filter { it.contains("ewm_src_") }.toSet()
+            val genCurrent =
+                me.rosuh.easywatermark.session.IosPickGenerationGate.isPhotoCurrent(pickGeneration)
+            // Exact selection identity: this delivery still owns the process-wide Session.
+            val sessionStillOurs = genCurrent && sessionUris == publishedSelectionUris
+
+            if (disposed) {
+                // Identity-scoped temp cleanup: only this delivery's staged paths.
+                // If a newer generation already owns Session, keep any of our paths that it still
+                // references (unusual but safe); delete the rest.
+                val toDelete = if (sessionStillOurs) {
+                    deliveryStagedPaths
+                } else {
+                    deliveryStagedPaths.filter { it !in sessionSet }
+                }
+                toDelete.forEach { IosSourceStager.deleteQuietly(it) }
+
+                action = if (!sessionStillOurs) {
+                    LateDisposeSessionAction.LeaveSession
+                } else if (previousSelection.isNotEmpty() && previousSelectionReadable(previousSelection)) {
+                    LateDisposeSessionAction.RevertPrevious
+                } else {
+                    // Dispose may have deleted previous host-owned ewm_src paths — never restore
+                    // Session to dead files.
+                    LateDisposeSessionAction.NavigateBack
+                }
+            } else if (!append) {
+                previousOwned.filter { it !in sessionOwned }.forEach { IosSourceStager.deleteQuietly(it) }
+                ownedStagedPaths.clear()
+                previewImages.clearFromOwner()
+                clearLiveLayers()
+                // Track current Session ewm_src paths (replace publishes full selection).
+                sessionOwned.forEach { ownedStagedPaths.add(it) }
+            } else {
+                // Append: own exactly the paths this delivery staged (not process-wide diff).
+                deliveryStagedPaths.forEach { ownedStagedPaths.add(it) }
+            }
+        } finally {
+            lifecycleLock.unlock()
+        }
+        when (action) {
+            LateDisposeSessionAction.Alive,
+            LateDisposeSessionAction.LeaveSession,
+            -> Unit
+            LateDisposeSessionAction.RevertPrevious -> {
+                services.session.dispatchAndAwait(
+                    me.rosuh.easywatermark.session.AppIntent.EnterEditor(
+                        selected = previousSelection,
+                        waterMark = previousWaterMark,
+                    ),
+                )
+            }
+            LateDisposeSessionAction.NavigateBack -> {
+                services.session.dispatchAndAwait(
+                    me.rosuh.easywatermark.session.AppIntent.NavigateBack,
+                )
+            }
+        }
+        return OwnershipAdoptResult(alive = action == LateDisposeSessionAction.Alive)
+    }
+
+    /** True when every previous selection path still exists (non-ewm paths assumed durable). */
+    private fun previousSelectionReadable(
+        previousSelection: List<me.rosuh.easywatermark.data.model.ImageInfo>,
+    ): Boolean {
+        val fm = NSFileManager.defaultManager
+        return previousSelection.all { info ->
+            val path = info.uri.value
+            if (path.isBlank()) return@all false
+            if (!path.contains("ewm_src_")) return@all true
+            fm.fileExistsAtPath(path)
+        }
+    }
+
+    /**
+     * @param pickGeneration icon generation from [me.rosuh.easywatermark.session.IosPickGenerationGate.nextIconGeneration]
+     * (F15/F16 — Kotlin publication boundary for icon config via [WatermarkSessionViewModel.applyConfigIf]).
+     */
+    @Throws(Exception::class)
+    suspend fun deliverIconBytesAndAwait(bytes: ByteArray, pickGeneration: Long) {
+        isBusy = true
+        try {
+            if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isIconCurrent(pickGeneration)) {
+                throw me.rosuh.easywatermark.session.StalePickGenerationException(pickGeneration)
+            }
+            val previousRef = services.waterMarkRepo.waterMark.first().iconUri
+            val path = IosIconPersistence.writeIconBytes(bytes)
+            // Re-check after IO before config publication (F15/F16).
+            me.rosuh.easywatermark.session.IosPickPublishProbe.awaitBeforeIconConfig(pickGeneration)
+            if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isIconCurrent(pickGeneration)) {
+                me.rosuh.easywatermark.data.repo.IosIconPersistence.deleteIfOwned(path)
+                throw me.rosuh.easywatermark.session.StalePickGenerationException(pickGeneration)
+            }
+            val applied = services.session.applyConfigIf(
+                stillValid = {
+                    me.rosuh.easywatermark.session.IosPickGenerationGate.isIconCurrent(pickGeneration)
+                },
+                change = WatermarkConfigChange.Icon(MediaRef(path)),
+            )
+            if (!applied) {
+                me.rosuh.easywatermark.data.repo.IosIconPersistence.deleteIfOwned(path)
+                throw me.rosuh.easywatermark.session.StalePickGenerationException(pickGeneration)
+            }
+            // Host-side bind only when generation is still current after config write.
+            if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isIconCurrent(pickGeneration)) {
+                return
+            }
+            IosIconPersistence.deleteIfOwned(previousRef.value)
+            iconBytes = bytes
+            previewGen += 1
+            renderPreviewForCurrentSelection(gen = previewGen)
+        } finally {
+            isBusy = false
+        }
+    }
+
+    /**
+     * Legacy secondary status hook (single-item fire-and-forget paths).
+     * Production batch export awaits Photos via [onSaveToPhotos] and does not rely on this
+     * for batch counts (D4).
+     */
+    fun markSavedToPhotos(success: Boolean, message: String? = null) {
+        isSaving = false
+        if (success) {
+            sheetExportFinished = true
+            statusLine = "Saved to Photos"
+        } else {
+            statusLine = message ?: "Save failed"
+        }
+    }
+
+    /**
+     * Editor main preview (ADR-0033): decode Source, compose overlay cell, publish atomically.
+     * Never paints [IosPreviewRaster.renderWatermarked]. Draft updates overlay offset only.
+     * [gen] drops stale ImageIO results on rapid filmstrip taps.
+     */
+    private suspend fun renderPreviewForCurrentSelection(
+        gen: Int,
+        draftOffset: Pair<Float, Float>? = null,
+        forcePath: String? = null,
+        forceOffsetX: Float? = null,
+        forceOffsetY: Float? = null,
+    ) {
+        val isDraft = draftOffset != null
+        val hostBench = ClampDragBench.previewScope(
+            if (isDraft) "ios_draft_preview" else "ios_preview_refresh",
+        )
+        val launch = services.session.launchScreenUiStateFlow.value
+        val cur = when {
+            forcePath != null -> launch.selectedImageList.firstOrNull { it.uri.value == forcePath }
+                ?: launch.curImageInfo?.takeIf { it.uri.value == forcePath }
+            else -> launch.curImageInfo ?: launch.selectedImageList.firstOrNull()
+        }
+        val sourcePath = forcePath ?: cur?.uri?.value.orEmpty()
+        if (sourcePath.isBlank()) return
+        val wm = launch.waterMark
+        val isText = wm.markMode == WatermarkMode.Text
+        val previewBucket = committedPreviewBucket
+        val ox = draftOffset?.first ?: forceOffsetX ?: cur?.offsetX ?: 0.5f
+        val oy = draftOffset?.second ?: forceOffsetY ?: cur?.offsetY ?: 0.5f
+        hostBench.mark("sessionRead")
+
+        if (isDraft && hasLiveLayers() && previewSourcePath == sourcePath) {
+            overlayCell = overlayCell?.withOffset(ox, oy)
+            hostBench.mark("overlayOffset")
+            hostBench.finish(mapOf("isDraft" to true, "offsetX" to ox, "offsetY" to oy))
+            return
+        }
+
+        val source = previewImages.load(sourcePreviewKey(sourcePath, previewBucket)) {
+            withContext(Dispatchers.Default) {
+                IosPreviewRaster.decodeSourcePlaceholder(
+                    sourcePath,
+                    maxEdgePx = previewBucket,
+                )
+            }
+        } ?: return
+        hostBench.mark("source")
+        val overlay = withContext(Dispatchers.Default) {
+            composeIosOverlayCell(wm, source.width, ox, oy)
+        }
+        hostBench.mark("compose")
+        if (gen != previewGen) {
+            hostBench.finish(mapOf("staleGen" to true, "isDraft" to isDraft))
+            return
+        }
+        if (
+            !OverlayPreviewPolicy.canPublishLivePhoto(
+                selectedPath = sourcePath,
+                photoPath = sourcePath,
+                photoWidth = source.width,
+                cellReadyForWidth = overlay.builtForWidth,
+                isTextMode = isText,
+            )
+        ) {
+            hostBench.finish(mapOf("blockedPublish" to true))
+            return
+        }
+        publishLiveLayers(sourcePath, source, overlay)
+        hostBench.finish(
+            mapOf(
+                "isDraft" to isDraft,
+                "path" to sourcePath.substringAfterLast('/'),
+                "w" to source.width,
+                "h" to source.height,
+                "offsetX" to ox,
+                "offsetY" to oy,
+            ),
+        )
+    }
+
+    /**
+     * Symbol kept for filmstrip-switch diagnosis tests. ADR-0033: never paint a baked
+     * Watermarked frame onto the editor slot.
+     */
+    private fun paintWatermarkedCacheHitIfPresent(path: String): Boolean {
+        if (path.isBlank() || disposed) return false
+        return false
+    }
+
+    private fun hasLiveLayers(): Boolean =
+        previewBitmap != null && overlayCell != null && !previewSourcePath.isNullOrBlank()
+
+    private fun clearLiveLayers() {
+        previewBitmap = null
+        overlayCell = null
+        previewSourcePath = null
+        watermarkedPreviewSourcePath = null
+    }
+
+    private fun publishLiveLayers(path: String, photo: ImageBitmap, overlay: OverlayCell) {
+        val isText = services.session.launchScreenUiStateFlow.value.waterMark.markMode ==
+            WatermarkMode.Text
+        if (
+            !OverlayPreviewPolicy.canPublishLivePhoto(
+                selectedPath = path,
+                photoPath = path,
+                photoWidth = photo.width,
+                cellReadyForWidth = overlay.builtForWidth,
+                isTextMode = isText,
+            )
+        ) {
+            return
+        }
+        previewBitmap = photo
+        overlayCell = overlay
+        previewSourcePath = path
+        watermarkedPreviewSourcePath = path
+    }
+
+    private fun composeIosOverlayCell(
+        wm: WaterMark,
+        imageWidth: Int,
+        ox: Float,
+        oy: Float,
+    ): OverlayCell {
+        val isText = wm.markMode == WatermarkMode.Text
+        val cell = IosPreviewRaster.composeCell(wm, imageWidth)
+        return overlayCellFrom(
+            cell = cell,
+            config = wm,
+            offsetX = ox,
+            offsetY = oy,
+            builtForWidth = if (isText) imageWidth else cell.width,
+        )
+    }
+
+    private fun clearLibraryDerivative() {
+        libraryDerivativeBitmap = null
+        libraryDerivativePath = null
+    }
+
+    private fun beginLibraryReadLaunchVisit() {
+        if (!libraryReadLaunchVisitActive) {
+            libraryReadLaunchVisitActive = true
+            libraryReadBannerDismissedThisVisit = false
+        }
+        refreshLibraryReadBanner()
+    }
+
+    private fun hideLibraryReadUpsell() {
+        libraryReadLaunchVisitActive = false
+        showLibraryReadPickDialog = false
+        pendingPickAfterDialog = false
+    }
+
+    private fun dismissLibraryReadBanner() {
+        libraryReadBannerDismissedThisVisit = true
+        showLibraryReadPickDialog = false
+        pendingPickAfterDialog = false
+    }
+
+    private fun openLibraryReadBannerSettings() {
+        val url = UIApplicationOpenSettingsURLString
+        lastLibraryReadCtaUrlForTests = url
+        onOpenUrl(url)
+    }
+
+    private fun requestPickPhotos() {
+        hostScope.launch {
+            requestPickPhotosSuspend()
+        }
+    }
+
+    private suspend fun requestPickPhotosSuspend() {
+        if (disposed) return
+        IosPhotoLibraryAccess.requestOnceIfNeeded()
+        if (disposed) return
+        val kind = libraryReadKindFor(IosPhotoLibraryAccess.status())
+        if (kind != null && !libraryReadBannerDismissedThisVisit) {
+            libraryReadPickDialogKind = kind
+            showLibraryReadPickDialog = true
+            pendingPickAfterDialog = true
+            return
+        }
+        onPickPhoto()
+    }
+
+    private fun continuePickAfterLibraryReadDialog() {
+        showLibraryReadPickDialog = false
+        libraryReadBannerDismissedThisVisit = true
+        val pending = pendingPickAfterDialog
+        pendingPickAfterDialog = false
+        if (pending && !disposed) onPickPhoto()
+    }
+
+    private fun libraryReadKindFor(
+        status: IosPhotoLibraryAccess.Status,
+    ): LibraryReadBannerKind? = when (status) {
+        IosPhotoLibraryAccess.Status.Limited -> LibraryReadBannerKind.Limited
+        IosPhotoLibraryAccess.Status.Denied -> LibraryReadBannerKind.Denied
+        IosPhotoLibraryAccess.Status.Restricted -> LibraryReadBannerKind.Restricted
+        IosPhotoLibraryAccess.Status.Authorized,
+        IosPhotoLibraryAccess.Status.NotDetermined,
+        -> null
+    }
+
+    /**
+     * No persistent strip. If Settings flipped to Allow All, drop a showing
+     * dialog and resume the pick the user already started.
+     */
+    private fun refreshLibraryReadBanner() {
+        if (disposed) return
+        val status = IosPhotoLibraryAccess.status()
+        if (libraryReadKindFor(status) == null) {
+            val pending = pendingPickAfterDialog
+            showLibraryReadPickDialog = false
+            pendingPickAfterDialog = false
+            libraryReadPickDialogKind = null
+            if (
+                pending &&
+                status == IosPhotoLibraryAccess.Status.Authorized &&
+                !disposed
+            ) {
+                onPickPhoto()
+            }
+        } else if (!showLibraryReadPickDialog) {
+            // Returned from Settings without Allow All — don't surprise-open later.
+            pendingPickAfterDialog = false
+        }
+    }
+
+    private fun sourceFastPathKey(path: String, bucket: Int = committedPreviewBucket) =
+        IosPreviewKey(path, bucket, IosPreviewPurpose.SourceFastPath)
+
+    /**
+     * Session / preview focus for Library-derivative freshness.
+     * Same-switch ImageIO [previewGen] bump is not stale; a different selected path is.
+     */
+    private fun currentFocusPath(): String? {
+        val launch = services.session.launchScreenUiStateFlow.value
+        return launch.curImageInfo?.uri?.value
+            ?: launch.selectedImageList.firstOrNull()?.uri?.value
+    }
+
+    /**
+     * Drop a PhotoKit frame only if the host is gone, focus moved, or LiveLayers
+     * are already showing this path. Do not use [previewGen] — cold switch increments
+     * it immediately for the same-path ImageIO raster.
+     */
+    private fun shouldDropLibraryDerivative(path: String): Boolean {
+        if (disposed) return true
+        val focus = currentFocusPath()
+        if (focus != null && focus != path) return true
+        return hasLiveLayers() && previewSourcePath == path
+    }
+
+    /**
+     * ADR-0029 + ADR-0033: Library is the photo layer only. Never paints without a
+     * matching overlay cell for the Library bitmap width. Does not bump [previewGen].
+     * Does not write SourcePlaceholder or Watermarked caches.
+     * Does not call [IosPreviewRaster.renderWatermarked].
+     */
+    private suspend fun tryPaintLibraryDerivative(path: String): Boolean {
+        if (disposed || path.isBlank()) return false
+        if (shouldDropLibraryDerivative(path)) return false
+        if (previewImages.peekCached(sourcePreviewKey(path, committedPreviewBucket)) != null) {
+            return false
+        }
+        val assetId = IosAssetIdentityRegistry.get(path) ?: return false
+        if (assetId in photoKitResolveFailedIds) return false
+        val bitmap = photoKitFastPathForTests?.let { inject ->
+            inject(assetId, committedPreviewBucket)
+        } ?: run {
+            val status = IosPhotoLibraryAccess.requestOnceIfNeeded()
+            refreshLibraryReadBanner()
+            if (
+                status == IosPhotoLibraryAccess.Status.Denied ||
+                status == IosPhotoLibraryAccess.Status.Restricted
+            ) {
+                return false
+            }
+            val asset = IosPhotoKitImageSource.resolveAsset(assetId)
+            if (asset == null) {
+                photoKitResolveFailedIds.add(assetId)
+                return false
+            }
+            val frame = IosPhotoKitImageSource.requestBitmap(
+                asset = asset,
+                targetPx = committedPreviewBucket,
+                deadlineMs = PHOTO_KIT_FIRST_PAINT_DEADLINE_MS,
+            ) ?: return false
+            frame.bitmap.asComposeImageBitmap()
+        } ?: return false
+        if (shouldDropLibraryDerivative(path)) return false
+        val launch = services.session.launchScreenUiStateFlow.value
+        val wm = launch.waterMark
+        val info = launch.selectedImageList.firstOrNull { it.uri.value == path }
+            ?: launch.curImageInfo?.takeIf { it.uri.value == path }
+        val overlay = composeIosOverlayCell(
+            wm = wm,
+            imageWidth = bitmap.width,
+            ox = info?.offsetX ?: 0.5f,
+            oy = info?.offsetY ?: 0.5f,
+        )
+        val isText = wm.markMode == WatermarkMode.Text
+        if (
+            !OverlayPreviewPolicy.canPublishLivePhoto(
+                selectedPath = path,
+                photoPath = path,
+                photoWidth = bitmap.width,
+                cellReadyForWidth = overlay.builtForWidth,
+                isTextMode = isText,
+            )
+        ) {
+            return false
+        }
+        if (shouldDropLibraryDerivative(path)) return false
+        libraryDerivativeBitmap = bitmap
+        libraryDerivativePath = path
+        publishLiveLayers(path, bitmap, overlay)
+        showEditor = true
+        previewImages.load(sourceFastPathKey(path)) { bitmap }
+        return true
+    }
+
+    /**
+     * Warm ±2 neighbor watermarked previews after a focus paint so the next filmstrip
+     * fling hits cache. Bounded, cancelable via [previewGen], never full-strip.
+     * Working-set budgets follow the current preview long-edge so focus+±2 stay resident.
+     */
+    private fun prefetchNeighborWatermarkedPreviews(focusPath: String, gen: Int) {
+        if (disposed || focusPath.isBlank()) return
+        hostScope.launch(Dispatchers.Default) {
+            warmNeighborWatermarkedPreviews(focusPath, gen)
+        }
+    }
+
+    /**
+     * Same as [prefetchNeighborWatermarkedPreviews] but awaits completion — test seam for
+     * sequential N=50 switch so neighbor hits are visible on the next index.
+     */
+    private suspend fun prefetchNeighborWatermarkedPreviewsAndAwait(focusPath: String, gen: Int) {
+        if (disposed || focusPath.isBlank()) return
+        withContext(Dispatchers.Default) {
+            warmNeighborWatermarkedPreviews(focusPath, gen)
+        }
+    }
+
+    private suspend fun warmNeighborWatermarkedPreviews(focusPath: String, gen: Int) {
+        val launch = services.session.launchScreenUiStateFlow.value
+        val list = launch.selectedImageList
+        syncPhotoKitNeighborWindow(focusPath, list, committedPreviewBucket)
+        val idx = list.indexOfFirst { it.uri.value == focusPath }
+        if (idx < 0) return
+        val neighbors = neighborIndices(idx, list.size).map { list[it] }
+        if (neighbors.isEmpty()) return
+        val bucket = committedPreviewBucket
+        for (info in neighbors) {
+            if (disposed || gen != previewGen) return
+            val path = info.uri.value
+            if (path.isBlank()) continue
+            val srcKey = sourcePreviewKey(path, bucket)
+            if (previewImages.peekCached(srcKey) != null) continue
+            runCatching {
+                previewImages.load(srcKey) {
+                    withContext(Dispatchers.Default) {
+                        IosPreviewRaster.decodeSourcePlaceholder(path, maxEdgePx = bucket)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Daemon-side PhotoKit window for the same focus±2 paths as WM prefetch.
+     * Does not [IosPhotoLibraryAccess.requestOnceIfNeeded]. Does not write
+     * [previewImages]. Skips NotDetermined / Denied / Restricted.
+     */
+    private fun syncPhotoKitNeighborWindow(
+        focusPath: String,
+        list: List<ImageInfo>,
+        targetPx: Int,
+    ) {
+        if (disposed || focusPath.isBlank() || targetPx <= 0) {
+            stopPhotoKitNeighborWindow()
+            return
+        }
+        val status = IosPhotoLibraryAccess.status()
+        val allowed = status == IosPhotoLibraryAccess.Status.Authorized ||
+            status == IosPhotoLibraryAccess.Status.Limited
+        val next = if (!allowed) {
+            emptySet()
+        } else {
+            val idx = list.indexOfFirst { it.uri.value == focusPath }
+            if (idx < 0) {
+                emptySet()
+            } else {
+                buildSet {
+                    for (i in neighborIndices(idx, list.size)) {
+                        val id = IosAssetIdentityRegistry.get(list[i].uri.value)
+                        if (!id.isNullOrBlank()) add(id)
+                    }
+                }
+            }
+        }
+        applyPhotoKitNeighborWindow(next, targetPx)
+    }
+
+    private fun applyPhotoKitNeighborWindow(next: Set<String>, targetPx: Int) {
+        if (next == lastPhotoKitNeighborIds && targetPx == lastPhotoKitNeighborTargetPx) return
+        if (targetPx != lastPhotoKitNeighborTargetPx && lastPhotoKitNeighborIds.isNotEmpty()) {
+            photoKitNeighborCache.stop(lastPhotoKitNeighborIds, lastPhotoKitNeighborTargetPx)
+            lastPhotoKitNeighborIds = emptySet()
+        }
+        val toStop = lastPhotoKitNeighborIds - next
+        val toStart = next - lastPhotoKitNeighborIds
+        if (toStop.isNotEmpty()) {
+            val stopPx = lastPhotoKitNeighborTargetPx.takeIf { it > 0 } ?: targetPx
+            photoKitNeighborCache.stop(toStop, stopPx)
+        }
+        if (toStart.isNotEmpty()) {
+            photoKitNeighborCache.start(toStart, targetPx)
+        }
+        lastPhotoKitNeighborIds = next
+        lastPhotoKitNeighborTargetPx = targetPx
+    }
+
+    private fun stopPhotoKitNeighborWindow() {
+        photoKitNeighborCache.stopAll()
+        lastPhotoKitNeighborIds = emptySet()
+        lastPhotoKitNeighborTargetPx = 0
+    }
+
+    private suspend fun reexportCurrent() {
+        renderPreviewForCurrentSelection(gen = previewGen)
+    }
+
+    /**
+     * After export sheet work: if the main canvas lost its watermarked bitmap (joint budget
+     * eviction or gen race), re-raster the current selection so the editor is not blank.
+     */
+    private suspend fun ensureEditorPreviewAfterExport() {
+        if (disposed) return
+        val needsRebind = !hasLiveLayers()
+        if (!needsRebind) return
+        previewGen += 1
+        val gen = previewGen
+        runCatching { renderPreviewForCurrentSelection(gen = gen) }
+    }
+
+    /** Fire-and-forget rebind from sheet dismiss (Main scope). */
+    private fun rebindEditorPreviewIfBlank(scope: CoroutineScope) {
+        if (disposed) return
+        if (hasLiveLayers()) return
+        scope.launch {
+            ensureEditorPreviewAfterExport()
+        }
+    }
+
+}
+
+// About link edges (match Android MainActivity ABOUT_URL_*).
+private const val ABOUT_URL_RELEASES = "https://github.com/rosuH/EasyWatermark/releases/"
+private const val ABOUT_URL_RATE_IOS = "https://apps.apple.com/search?term=Easy%20Watermark"
+private const val ABOUT_URL_ISSUES = "https://github.com/rosuH/EasyWatermark/issues/new"
+private const val ABOUT_URL_PRIVACY_ZH =
+    "https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy_zh-CN.md"
+private const val ABOUT_URL_PRIVACY_EN =
+    "https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy.md"
+private const val ABOUT_URL_DEV = "https://github.com/rosuH"
+private const val ABOUT_URL_DESIGNER = "https://tovi.fun/"
+
+/** Phone idle preview long-edge cap (1920). iPad / export stay uncapped here. */
+private fun iosPreviewMaxLongEdgePx(): Int =
+    if (UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPhone) {
+        PreviewResolutionPolicy.PHONE_PREVIEW_MAX_LONG_EDGE_PX
+    } else {
+        PreviewResolutionPolicy.BUCKET_3840
+    }
+
+private fun iosPhysicalMemoryBytes(): Long =
+    NSProcessInfo.processInfo.physicalMemory.toLong()
+
+/**
+ * ADR-0027: Content editor theme follow-photo (iOS). No wallpaper Material You.
+ * Legacy force_dynamic_color key is ignored.
+ */
+private object IosContentThemePrefs {
+    private const val KEY = "sp_follow_photo_ios"
+
+    fun isFollowPhoto(): Boolean {
+        val defaults = NSUserDefaults.standardUserDefaults
+        if (defaults.objectForKey(KEY) == null) return true
+        return defaults.boolForKey(KEY)
+    }
+
+    fun setFollowPhoto(enabled: Boolean) {
+        NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = KEY)
+    }
+}

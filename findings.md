@@ -1,0 +1,987 @@
+# Compose Migration Findings
+
+## Data-layer pure A4 extraction is exhausted (S4d-357, 2026-07-12)
+
+- commonMain already owns `WaterMarkRepository`, `UserConfigRepository`, `TemplateRepository`, the three editors, and central watermark/user/template models + `WatermarkConfigRules`, with named Android/Desktop/iOS production consumers (exact paths in the audit note).
+- Residual edges (per-platform DataStore/Room factories, icon FS, iOS bridges, Android Bitmap/Uri, DI/resource UI) are platform I/O by design — not §6.12 pure extractions.
+- Do **not** move `TextMeasureEnv` (Android native renderer measurement) into commonMain; that reopens closed Android text raster policy. Empty `MemorySettingRepo` is DI-injected into `MainViewModel` and `AboutViewModel` but has **no members/behavior** — still no extraction candidate. `Action` is a **live** Android event seam with platform types, not A4 material.
+- **Accepted docs audit only** — not Phase A complete, not §9 DoD. Reopen A4 only for a **new** dual production consumer of a not-yet-shared neutral rule. Audit: `docs/superpowers/research/2026-07-12-s4d357-data-layer-commonmain-closure.md`.
+
+## Phone Screen control can vanish mid-recovery; stale launcher frames are non-evidence (S4d-356, 2026-07-12)
+
+- Session `CE8439F0-97F7-4474-889F-1FF0FE289499` on `emulator-5554` initially had MCP control, but frame 38 was launcher (SHA `15efa7d59ea1708d032e1c94ca6a3b2f9c49a2a050bae674ef67bcbcc3ffc273`) and stayed stale after debug app launch despite foreground metadata.
+- After an allowed `session.start` recovery (emulator not stopped), later `sessions.list` hit **MCP control socket connection refused** on `am-mcp.sock`. Do **not** assert causality from `session.start` alone.
+- Absence of AndroMeld tools in a Herdr agent session means **zero UI actions** — tool-surface limit, not product evidence. Do not substitute raw adb or shut down the emulator.
+- **S4d-348 About** and **S4d-350 SaveExport** visual gates remain **NOT VERIFIED** until a fresh frame visibly changes after action and UI/screenshot agree on the debug app. Evidence: `docs/superpowers/research/2026-07-12-s4d356-android-phone-screen-recovery.md`.
+
+## S4d-353 decision pack 简体中文 is presentation-only (S4d-355, 2026-07-12)
+
+- `docs/superpowers/research/2026-07-11-s4d353-compose-skiko-alignment-decision-pack.md` is fully translated to Simplified Chinese for owner readability. Filename, technical identifiers, paths, versions, commands, and **A/B/C/defer** labels are unchanged.
+- This is a **translation / decision-presentation** slice — **not** an owner decision, not option acceptance, not scope/risk/conclusion change. Remaining Phase A iOS text/templates still **awaits owner A/B/C/defer**.
+
+## AndroMeld install can succeed while Phone Screen frames are non-evidence (S4d-354, 2026-07-12)
+
+- MCP `devices.list` + enabled control + Phone Screen session existence do **not** prove a visual gate. After a successful `./gradlew :app:installDebug` of HEAD debug APK, launch may report `foregroundVerified` while hierarchy shows Settings/Launcher and frames are **stale or black**.
+- Treat hierarchy/metadata vs pixel disagreement as **non-evidence**. Do **not** claim About or save/export visual gates passed; do **not** use pre-install or stale screenshots as proof; do **not** substitute raw adb for AndroMeld visual contract.
+- Home/setup/launcher UI is not product proof; leave the emulator running when only returning home.
+- **Next visual attempt only after a fresh/healthy Phone Screen frame** matches the debug app with live non-black pixels. Evidence: `docs/superpowers/research/2026-07-11-s4d354-android-mirror-backfill.md`, log `build/s4d354-install-debug.log`.
+
+## Compose/Skiko Phase A gate needs owner A/B/C/defer (S4d-353, 2026-07-11)
+
+- Decision pack: `docs/superpowers/research/2026-07-11-s4d353-compose-skiko-alignment-decision-pack.md`. Options: **A** align CMP/Skiko (required Kotlin) so sheet/IME APIs run on iOS; **B** permanent SwiftUI exception for text + templates; **C** new sheet/IME-free shared substitute (dual-consumer/waiver). **No option accepted or recommended by Codex.**
+- **Owner decision required** before remaining Phase A iOS watermark text / templates CMP work. Codex must not bump Compose/Skiko/Kotlin, retry S4d-338 hosts, rebaseline goldens, or implement product code until signed choice.
+- Locked catalog context: CMP `1.11.1`, Compose BOM `2026.05.01` (Android UI 1.11.2), Kotlin `2.3.20`. S4d-338 runtime: missing `LocalKeyboardOverlapHeight` / `LocalSafeArea` / `unclippedTextOffsetInRoot`.
+- Docs-only closeout: Kimi factual/spec **PASS**; **no** code/build/dependency change. Not Phase A/B/parity complete; goal not complete. **Next awaits owner A/B/C/defer.**
+
+## iOS non-text shared controls are already covered; Phase A gate is S4d-338 (S4d-352, 2026-07-11)
+
+- Production iOS interactive **non-text** editor axes (sliders, tile/style/typeface, color swatches with custom input off, icon shell, preview, `SavedOutputActions`, launch shell) already consume commonMain via iosMain hosts. **No new safe non-text candidate.**
+- Remaining pure SwiftUI is not a discrete CMP win: system `PhotosPicker`, display captions/status, **S4d-338** watermark `TextField`, **S4d-346** templates list. Do not wire `TextContentOption` or `TemplateListSheet` under current Compose/Skiko until S4d-353 owner choice.
+- **`WatermarkModeActions` is Desktop-shaped** (pick icon + Use text + Preview). iOS already has icon CMP; Use-text/Preview would invent product UX — consumer-first non-GO.
+- Evidence: `docs/superpowers/research/2026-07-11-s4d352-ios-nontext-control-coverage.md`. Kimi PASS; no build; `git diff --check`.
+
+## A1 pure Android wrapper thinning is exhausted (S4d-351, 2026-07-11)
+
+- After S4d-348 (About) and S4d-350 (SaveExport), **no remaining safe pure A1 candidates**: public wrappers that only map resources/slots into shared shells are gone or already private Activity helpers.
+- Residual Android surfaces (`LaunchScreen`, `GalleryDialog`, `EditorScreen`, `IconOption`, `ColorStyleOption`, `Theme`) own **real edges** (permissions, Coil/`Uri`, native renderer, pickers, dynamic color, `FuncTitleModel`). Do not schedule them as pure adapter inlines.
+- OpenSource/Recovery already live in commonMain with Activity string/callback edges — no public pure wrapper left to delete.
+- **A1 closeout ≠ Phase A complete.** Residual Phase A value moved to iOS S4d-338/templates gate (S4d-352), not more pure Android wrapper inlines.
+- Read-only closeout: Kimi residual audit **PASS**; `git diff --check`; no build. Evidence: `docs/superpowers/research/2026-07-11-s4d351-android-wrapper-closeout.md`.
+
+## Save/export sheet wrapper is only strings + Coil; export IO stays on Activity (S4d-350, 2026-07-11)
+
+- A thin `SaveExportSheet` that only builds `SaveExportSheetStrings` and a Coil `AsyncImage` content slot is safe to collapse into a private `ComposeMainActivity` helper; layout remains commonMain `SaveExportSheetShell`.
+- Keep pre-Q storage permission, MediaStore export, share, and open-in-gallery on the Activity boundary — do not pull them into the helper beyond callback parameters.
+- AndroMeld absence (no `andromeld.*` MCP tools) blocks visual proof; do not use raw adb as substitute. Cosmetic import reordering after inlines is non-actionable.
+
+## Desktop editor root is already shared — do not invent Launch/Gallery/About (S4d-349, 2026-07-11)
+
+- Production Desktop UI is only `Main.kt` → `launchDesktopWindow` → `DesktopWindow` with `EditorScreenShell` and shared controls already wired.
+- Absence of Launch/Gallery/About is **not** a migration gap: those product surfaces do not exist on Desktop; multi-file acquisition is FileDialog/drop at the editor edge.
+- `--headless` is automation (`runHeadless`), not a missing product root.
+- Consumer-first: do not schedule A2 implementation that invents Desktop product screens without an owner product decision. Prefer **A1 residual** Android wrapper assessment next. S4d-338 is iOS-only and irrelevant here. Not Phase A/B/parity complete.
+
+## Thin Android About edge: private activity helper, no public wrapper (S4d-348, 2026-07-11)
+
+- Once a screen is fully a shared shell + resource/URL edge, a public app `AboutScreen` type adds no product value. Prefer a **file-private** `@Composable` on `ComposeMainActivity` over a standalone wrapper package file.
+- Preserve hard-coded English labels and URL constants at the Android edge when migrating wrappers; do not “fix” them into `strings.xml` in a thinning slice.
+- AndroMeld visual gates require an available `andromeld.*` MCP tool. If MCP search returns no such tool, record the environment block and **do not** substitute raw adb screenshots as visual proof.
+
+## iOS About is a product-scope NO-GO, not an S4d-338 shell crash (S4d-347, 2026-07-11)
+
+- Production iOS `ContentView` has **no About route** — only DEBUG `aboutScreenShellWitness` under the shared-compose witness launch flag. Witness XCUITest ≠ production consumer.
+- commonMain `AboutScreenShell` does **not** use S4d-338 families (`ModalBottomSheet` / `Dialog` / focused `OutlinedTextField`). Technical host wiring is plausible; the block is **no existing production root** + **owner product-scope** (entry point, which rows, URL edges).
+- Consumer-first: do not invent an iOS About product surface to create a second consumer. Owner must order product About before any code.
+- After this NO-GO, prefer **A1 Android wrapper-thinning readiness** over A2/A3 About. Not Phase A/B/parity complete. Kimi + OpenCode read-only PASS; no build for read-only evidence.
+
+## Existing shared template sheet is fully S4d-338-blocked on iOS (S4d-346, 2026-07-11)
+
+- `EditorTemplateSheetHost` / `TemplateListSheet` is **not** a safe iOS production drop-in under the current Compose/Skiko mix. The sheet uses **all three** S4d-338 crash families: `ModalBottomSheet` (list + edit), Compose `AlertDialog` (use/delete confirms), and focused `OutlinedTextField` (add/edit).
+- Hiding Add/Edit is **not** a narrow escape — list + confirms still require sheet/dialog CMP APIs.
+- **Retain** the proven SwiftUI Templates section + `IosTemplateBridge` until owner Compose/Skiko alignment reopens S4d-338, or a **new** list-only shared API without sheet/dialog/text is explicitly designed.
+- Domain/persist already shared (`TemplateEditor` / Room); the gap is CMP UI packaging, not templates data.
+- Read-only readiness only: Kimi + OpenCode PASS; no build gate applies; no product code change from this decision.
+
+## A0 production-only matrix before parallel lane work (S4d-345, 2026-07-11)
+
+- Classify surfaces from **production** consumers only (Android Nav wrappers, Desktop window, iOS ContentView hosts). DEBUG witnesses, tests, and theoretical callers do not make a shared root “done” on a platform.
+- **A4 is not automatic after A0:** the three editors (`WatermarkConfigEditor`, `OutputPrefsEditor`, `TemplateEditor`) already have multi-platform production consumers; no *new* pure extraction qualifies under §6.12 (≥2 named production platforms, no platform types) until a residual creates a real dual consumer. Do not invent a shared ViewModel.
+- **S4d-338 is broader than “text only” for some shared surfaces:** any host that embeds Material3 `ModalBottomSheet` / default-inset `Dialog` / focused `OutlinedTextField` is blocked on iOS until dependency alignment (templates sheet = full NO-GO; watermark text field = still blocked).
+- Residual dependency order after A0/S4d-346: **A1 → A2 optional → A3 non-text/non-sheet iOS roots (e.g. About readiness) → A4 only if dual consumer appears → A5**. Not Phase A/B/parity complete.
+
+## Independent primary/secondary enables on shared output actions (S4d-344, 2026-07-11)
+
+- A single `hasSavedOutput`/`enabled` gate on commonMain `SavedOutputActions` regresses iOS: `WatermarkWorkflow` stages a temp PNG for Share only; if that write fails, `resultPNG` and Save-to-Photos must still work. Independent `primaryEnabled` / `secondaryEnabled` (defaults still `enabled && hasOutput` for Desktop) preserve Desktop’s combined gate and iOS Share-only failure semantics.
+- Neutral API names (`primary`/`secondary`, `hasOutput`, `onPrimaryAction`/`onSecondaryAction`) keep the shared component platform-agnostic; iOS maps primary=Share, secondary=Save to Photos without Desktop label/behavior change.
+- Nested Compose UIKit buttons often expose labels with a stale non-hittable Y after scroll. For XCUITest only: `scrollUntilHittable(host)`, assert Share/Save labels exist, then host-tap with **label-derived normalized X** and **visible host `dy=0.5`**. Do not move product layout (e.g. early top action row) to paper over coordinate geometry.
+- Do not add temp-file-write fault injection for proof; the workflow contract plus independent enables is the product fix. No Phase A / 1:1 completion claim from this slice.
+
+## Preserve a platform's existing palette while reusing a richer shared color control (S4d-337, 2026-07-11)
+
+- `TextColorOption` can serve both Desktop's custom hexadecimal path and iOS's four-preset path when custom input is an explicit default-on opt-out. Keep the iOS `palette` byte values exactly Amber/White/Black/Red and leave Desktop on the default; this avoids expanding temporary iOS behavior only for migration convenience.
+- Give shared color swatches a stable ARGB content description. Compose UIKit exposes the resulting swatches as real buttons, letting XCUITest exercise product pointer input without a coordinate guess or a test-only setter.
+- Persisted test state is valid state. A test that always taps the same swatch fails when a prior focused test or user state already selected it; attempt a different real swatch when the first selection is idempotent, then assert workflow-backed label change and relaunch persistence.
+- The final 17/0 runner and viewed swatch screenshot prove this shared control/persistence loop only. They do not settle locale, dark mode, typography, Android v2.10.0 pixel parity, or the blocked Android device smoke.
+
+## Complete independent persisted slider axes as distinct iOS consumers (S4d-336, 2026-07-11)
+
+- The second gap slider can use the same direct `Int32` boundary and pending-value guard as the first without moving `WatermarkWorkflow` or turning two scalar configuration writes into shared screen state. Feed both visible labels from workflow values once their native draft states are gone.
+- A real vertical-track XCUITest followed by relaunch proves the separate `setWatermarkVGap` persistence path. The viewed screenshot should show both H and V values simultaneously; it catches stacked-host height, label, and overlap regressions that a scalar assertion cannot.
+- Do not characterize both completed gap controls as final UI parity. They are concrete Phase A CMP consumers inside the temporary SwiftUI bring-up surface; Android v2.10.0 visual comparison remains Phase B.
+
+## Keep integer KMP slider boundaries explicit and slice persisted axes separately (S4d-335, 2026-07-11)
+
+- A Kotlin `Int` parameter is exported to Swift as `Int32`, unlike a Swift `Int`. Keep `Int32` at an iOS `UIViewControllerRepresentable` boundary and convert the callback's `KotlinFloat` only once with `gap.floatValue` before constructing `Int32`; do not rely on implicit Swift numeric conversion.
+- Horizontal and vertical gap writes share the same configuration surface but are independent persisted values. Migrate one physical slider per slice so a stale-update guard, focused interaction, re-launch assertion, and visual screenshot prove one write path without masking the other.
+- With several Compose UIKit hosts stacked, nested Material segmented-control `StaticText` children are not a stable XCUITest contract. Use the labeled `UIViewControllerRepresentable` wrapper's real coordinate input, then assert its workflow-backed label after each action and after relaunch. This repaired the typeface test without adding a state setter or accessibility-only product behavior.
+- On Xcode 27 beta, a 15/0 full XCTest runner can finish while outer `xcodebuild` fails to write the `.xcresult` `Info.plist`. After a bounded wait, stop only that completed parent process, never the simulator, and describe the full run as runner evidence rather than a formal xcresult result.
+
+## Keep alpha percentage as a display adapter over byte persistence (S4d-334, 2026-07-11)
+
+- `SliderOption` emits integral values, so alpha is a real shared consumer only when its iOS host displays `0..100` percent and Swift maps that callback to the existing normalized `0..1` workflow input. Do not change the common `WatermarkConfigEditor.updateAlpha` path or the stored 0..255 byte just to make host values round-trip exactly.
+- The existing storage conversion intentionally quantizes a selected percent: `percent -> (percent / 100 * 255).toInt()` on write, then reloads as `byte / 255`. A relaunch label can therefore differ by one from the pre-relaunch selected percent. Test that established quantization formula against the actual wrapper label instead of adding a new persistence normalizer or claiming the selected display value is byte-exact.
+- A pending alpha is integer percent while the workflow returns normalized floats. Compare a matching callback with a narrow float tolerance, but keep it far below one percentage point so an older completed write cannot overwrite a newer drag. The XCUITest still uses real pointer input and a workflow-backed wrapper label; it does not introduce a test setter.
+- On this Xcode 27 beta, the full iOS runner produced 14/0 twice but its outer `xcodebuild` process failed to finalize an `Info.plist` after the runner exited. Preserve the raw runner counts plus a formally readable focused `.xcresult`, stop only that completed parent after a bounded wait, and never present the full runs as formal result bundles.
+
+## Exercise nested Compose UIKit controls through their platform wrapper (S4d-333, 2026-07-11)
+
+- A normal iOS `UIViewControllerRepresentable` can consume commonMain `SliderOption` for rotation (`0f..360f`) without moving `WatermarkWorkflow`, DataStore, renderer, picker, or export ownership. The Kotlin `Float` callback is imported as `KotlinFloat`, so convert with `degree.floatValue` at the Swift edge.
+- The stale-update guard used for text size applies unchanged to degree: write the pending value on every local `onValueChange`, reject a callback update that does not match it, and clear the marker only after the matching persisted workflow value returns. This prevents an older completed write from replacing a newer in-progress drag.
+- After stacking more Compose UIKit hosts, an inner Material segmented control's `StaticText` children are not a stable XCUITest contract. Test actual pointer input against the labeled `UIViewControllerRepresentable` wrapper coordinates and assert its workflow-backed accessibility label after each action and relaunch. This is real product interaction, not a setter seam; it remains geometry-sensitive, so preserve the wrapper-level label and revalidate coordinates whenever that shared layout changes.
+- The screenshot and 13/0 iOS suite prove this specific Phase A shared-consumer flow only. They do not establish dynamic type, localization, dark mode, final Android v2.10.0 visual parity, or unblock the AndroMeld Android device smoke.
+
+## Guard a newer CMP slider drag from an older async workflow update (S4d-332, 2026-07-11)
+
+- An iosMain `ComposeUIViewController` host can consume commonMain `SliderOption` while Swift retains the existing `WatermarkWorkflow` DataStore/rerender boundary. Kotlin `(Float) -> Unit` is imported by Swift as `(KotlinFloat) -> Void`, so use `size.floatValue` before calling the Swift `Float` workflow API.
+- Set the host's local pending value on **every** `onValueChange`, not only `onValueChangeFinished`. Otherwise, after a first release starts an async write, a second drag can be momentarily reset by the old workflow value when SwiftUI calls `updateUIViewController`. Ignore incoming values that do not match the local pending value and clear the marker only when the matching persisted value returns.
+- In this Compose UIKit dependency mix, the nested Material slider is not exposed as an XCUITest adjustable role. A real `coordinate(withNormalizedOffset:)` tap on the rendered track still delivers Compose pointer input; bind the outer platform wrapper's accessibility label to the workflow value and assert a label change plus process relaunch, rather than adding a test-only setter. Do not assume a physical endpoint maps to an exact numerical minimum because the Material track has internal insets.
+- This is Phase A proof of a real shared UI consumer and persistence loop only. The viewed iPhone screenshot does not settle localization, dynamic type, dark mode, typography, or Android v2.10.0 pixel parity; those remain Phase B.
+
+## Preserve stable keys when shared typeface order is visual (S4d-331, 2026-07-11)
+
+- commonMain `TextTypeface` displays Normal/Bold/Italic/BoldItalic, but persisted `TextTypeface` keys are Normal=0, Italic=1, Bold=2, BoldItalic=3. An iOS host must update from `obtainSealedClass(key:)` and write back `serializeKey()`; never derive the stored key from the segment index.
+- The compose function and the domain model are both named `TextTypeface`. Keep the model's simple name and import the composable with a local alias (`TextTypefaceOption`) at the platform host boundary, rather than adding a duplicate wrapper or renaming shared API.
+- The four-option Material3 control fits on the 393pt iPhone 17 Pro test viewport in the viewed normal-flow screenshots. This verifies Phase A layout viability only; localized strings, dynamic type, dark mode, typography, and Android v2.10.0 pixel parity remain Phase B work.
+
+## Keep the real persisted iOS style state at the Swift accessibility edge (S4d-330, 2026-07-11)
+
+- A normal `UIViewControllerRepresentable` can consume commonMain `TextPaintStyleOption` without moving `WatermarkWorkflow`, DataStore, or re-rendering across the platform boundary: the Kotlin host receives a `TextPaintStyle`, and its one output lambda passes `serializeKey()` to the existing Swift workflow method.
+- On this Compose UIKit version, the segmented items export distinguishable text after caller labels are added as semantics, but not an XCUITest selected trait. Bind the wrapper accessibility label to the workflow's persisted `watermarkTextStyleKey`, which changes only after the existing write succeeds; do not add a test-only selection mirror.
+- `mutableStateOf(TextPaintStyle.Fill)` infers the singleton subtype. State that can later hold `Stroke` must be explicitly typed as `TextPaintStyle`.
+- The viewed normal-flow screenshots prove only the Phase A shared-consumer layout and interaction. Material3 typography, colour, dynamic type, dark mode, localization, and Android v2.10.0 visual parity remain Phase B work.
+
+## Surface actual iOS mode state at the platform accessibility edge (S4d-329, 2026-07-11)
+
+- A normal iOS `UIViewControllerRepresentable` can be a real consumer of commonMain `TileMode` while Swift retains the `WatermarkWorkflow` write/rerender boundary. A Kotlin constructor lambda is sufficient for this one event; retain the host in a coordinator and capture that coordinator weakly from the lambda so the host, Kotlin block, and Swift workflow cannot form a cycle.
+- The current Compose UIKit mapping exposes the segment labels as `StaticText`, not XCUITest buttons, and does not export `SegmentedButton` selection as `isSelected`. Give common `TileMode` its already-provided per-option label rather than one generic description, then expose the actual Swift `watermarkTileMode` as the wrapper's accessibility label. This is product accessibility state, not a test-only diagnostic.
+- The strongest iOS proof is a full loop: choose Repeat, await the workflow-backed label; choose Single, await it; relaunch and await Single again before confirming the real shared preview remains. This proves Compose click -> Swift callback -> existing DataStore writer -> Swift reload -> shared host update without creating a shared ViewModel or test seam.
+
+## Frame only real iOS output, not the picker or empty-state route (S4d-328, 2026-07-11)
+
+- `EditorPreviewFrame` is a valid production iOS consumer only after `IosWatermarkPreviewHost` receives a successful result PNG. Derive `hasImage` from the decoded PNG and pass the existing real `SavePreviewStatus` through its preview slot; do not use this frame to manufacture a shared launch/picker surface.
+- This keeps `PhotosPicker`, ShareLink, Save-to-Photos, and `WatermarkWorkflow` as SwiftUI/system edges while moving a visible normal-render layout region into commonMain. It also avoids inventing cross-platform picker callbacks or shared ViewModel/IO before a real consumer requires them.
+- Focused and full XCUITest screenshots show the frame contains the actual 720x480 tiled image and still leaves Share, Save to Photos, and Saved reachable. Treat that as slice-local production evidence, not Android parity or a replacement for the pending device smoke.
+
+## Make iOS preview a real Compose consumer with a retained host (S4d-327, 2026-07-11)
+
+- A `UIViewControllerRepresentable` coordinator can retain one iosMain `ComposeUIViewController` host and send it changed PNG/status values. Comparing the last `Data` and status first avoids re-copying/re-decoding the same rendered PNG during unrelated SwiftUI state updates.
+- The production host needs only the already-rendered PNG and status. It decodes through the existing `IosImageDecoder` and renders existing commonMain `SavePreviewStatus`; `PhotosPicker`, `ShareLink`, Save-to-Photos, and workflow state remain SwiftUI/system edges.
+- The focused simulator test passed and its viewed `03-after-save` screenshot shows the actual common preview status, watermarked image, Share, Save to Photos, and Saved state together. Do not describe this as a DEBUG witness: it has no launch-argument gate and is only inserted after a normal successful render.
+
+## Reuse the editor shell for Desktop structure without inventing Desktop state (S4d-326, 2026-07-11)
+
+- `EditorScreenShell` can be a real Desktop route owner even when Desktop retains every editor action at its platform edge: title/description use `topBar`, the existing shared preview-status component uses `preview`, and the existing Desktop controls live in `bottomControls`.
+- Keep a Desktop-only long control surface bounded and vertically scrollable inside the shared shell. Do not fabricate a photo strip or move AWT dialogs, drag/drop, persistence, renderer calls, or callback state into commonMain solely to fill every shared slot.
+- A no-arg Desktop launch plus a viewed screenshot is necessary for this layout move; headless render proof alone cannot show whether the shared preview/control regions are framed and reachable.
+
+## Pair hidden iOS witness IDs with positive single-witness proof (S4d-325, 2026-07-03)
+
+- If a normal-launch hidden-default test lists a DEBUG-only CMP witness id, keep a matching positive XCUITest that proves the same id can actually render. Hidden-only coverage proves absence from product UI, not runtime reachability.
+- Prefer rendering one requested witness per positive test (`-sharedComposeWitness launch|gallery|about|editor`) over stacking many placeholder hosts in a long scroll surface. Stacking made the editor host exist but not become hittable; single-witness mode keeps the proof deterministic without exposing test UI to normal launches.
+- Swift test-only `UIViewControllerRepresentable` witness wrappers should be file-private. The public boundary is the Kotlin-owned `IosSharedComposeHost`, not ad hoc Swift wrapper types.
+
+## Remove stale visible link witnesses once stronger runtime proof exists (S4d-324, 2026-07-03)
+
+- An on-screen `:shared linked ... geometry.diagonal(...)` label was useful during early iOS bring-up, but after fixture render/export XCUITests and gated CMP host witnesses it is only product-surface noise. Prefer deleting visible proof text over hiding it behind another UI affordance.
+- Historical proof can stay documented in progress/findings. Current UI should prove linkage through tests and real surfaces, not by showing diagnostics to users in normal DEBUG launches.
+
+## Keep iOS shared witnesses test-only unless they are real replacements (S4d-323, 2026-07-03)
+
+- Placeholder CMP host witnesses are useful runtime/link proof, but showing them in normal DEBUG UI makes the iOS bring-up surface look like a new product screen. Gate them behind an explicit launch argument (`-sharedComposeWitnesses`) and add a default-hidden UI test whenever the witness surface is not the real replacement.
+- Do not add another visible placeholder witness to ordinary debug UI. Future Lane 2 iOS slices should either replace a real SwiftUI product surface with shared CMP plus real state/resources, or keep witness-only proof behind the test flag with XCUITest screenshots.
+
+## Keep iOS shared screen witnesses broad enough to catch real runtime issues (S4d-322, 2026-07-03)
+
+- The iOS DEBUG witness lane now renders shared launch, gallery, editor, and about screen shells through Kotlin-owned `ComposeUIViewController` hosts. This is enough to prove framework export, runtime composition, scrolling reachability, and nested shared-shell rendering without claiming production SwiftUI replacement.
+- Continue requiring XCUITest screenshots for each new visible witness. The S4d-321 `LocalSafeArea` crash proved compile is not enough; S4d-322 shows a non-Scaffold shell can reuse the same host pattern cleanly when the system UI edges stay in SwiftUI.
+
+## Avoid Material3 default iOS insets until Compose versions are aligned (S4d-321, 2026-07-03)
+
+- `GalleryDialogShell` crashed on iOS when embedded through `ComposeUIViewController` because Material3 `ScaffoldDefaults.contentWindowInsets` reached Compose iOS `LocalSafeArea` and hit `IrLinkageError` under the repo's current Compose/Skiko version mismatch. Keep Android/Desktop defaults intact, but let iOS host witnesses pass explicit `WindowInsets()` until dependency alignment is an owner-approved slice.
+- iOS shared-screen witnesses that include `Scaffold` need a real XCUITest launch/run, not compile-only proof; the Kotlin/Native compiler did not catch the `LocalSafeArea` runtime linkage crash.
+
+## Prove iOS shared hosts with a narrow DEBUG surface first (S4d-320, 2026-07-03)
+
+- A new iOS shared CMP screen shell should first land as a Kotlin-owned `ComposeUIViewController` DEBUG witness when replacing the production SwiftUI surface would mix in system-picker/share/save concerns. This keeps the platform edge stable while proving framework export, runtime composition, and UI reachability.
+- Visible iOS host witnesses need XCUITest coverage and screenshots, not just compile. Scroll to the witness by accessibility id and keep an attachment so the proof distinguishes "linked" from "actually rendered."
+
+## Keep transition internals behind the host boundary (S4d-319, 2026-07-03)
+
+- Shared transition hosts should expose the host and dismiss helper, not their timing constants or inner animation functions, unless another platform genuinely needs those pieces as API.
+- A helper can stay public only if it appears in a public signature or has a real external caller. Here `AnimatedTransitionDialogHelper` remains public because `AnimatedTransitionHost` passes it to content, while the timing and slide/dismiss implementation stay private.
+
+## Keep shared shell child components private when file-local (S4d-318, 2026-07-03)
+
+- Parent shell APIs should be the stable shared CMP boundary. Child composables such as gallery cards, checkboxes, and strip items should stay private when all callers are in the same file, so future platform code binds to the shell instead of its implementation pieces.
+- Do not use visibility cleanup to remove visible controls. A no-op callback on a visible button is a product/behavior slice; only private file-local implementation components fit this low-risk cleanup pattern.
+
+## Prefer constructor defaults over duplicate state factories (S4d-317, 2026-07-03)
+
+- Shared UI state data classes should keep their empty/default state in constructor defaults when no alternate construction logic exists. A companion `default()` that only returns the constructor creates a second API surface for future drift.
+- Grep the full repo before deleting even tiny state factories. Once all callers are local or constructor-compatible, compile across Android/Desktop/iOS is enough to prove the API cleanup did not change routing or persistence behavior.
+
+## Keep iOS shared hosts Kotlin-owned until real replacement is ready (S4d-316, 2026-07-03)
+
+- A `ComposeUIViewController` host can exercise nested shared CMP screen shells on iOS without moving SwiftUI system edges. Keep the actual shared shell composition in Kotlin (`iosMain`) and let Swift own only the `UIViewControllerRepresentable` bridge.
+- Treat debug witnesses as runtime/link proof, not product-screen replacement. Promoting SwiftUI controls to shared CMP needs the same XCUITest/accessibility coverage as any visible iOS UI change; otherwise leave PhotosPicker, Share/Save, and current bring-up controls in SwiftUI.
+
+## Let shared shells own their experimental opt-ins (S4d-315, 2026-07-03)
+
+- Once experimental Material3 calls move behind shared CMP shell functions that opt in internally, app wrapper functions should drop stale `@OptIn` annotations. The call site no longer needs to advertise implementation details it does not directly use.
+- Compile is the proof here: if a shared shell exposes an experimental API requirement through its signature, removing the app opt-in fails immediately. If it compiles, the opt-in boundary is correctly localized inside shared UI.
+
+## Separate stale app callbacks from real shared dismiss callbacks (S4d-314, 2026-07-03)
+
+- A callback name can be stale in an app wrapper while live in shared shells. Remove only the app pass-through after proving the function body ignores it and the caller supplies an empty lambda.
+- Preserve shared `onDismissRequest` hooks that are wired into `ModalBottomSheet`, `AlertDialog`, dropdowns, and animated dialogs; those are real behavior, not wrapper residue.
+
+## Keep preview/local wrappers private after shell extraction (S4d-313, 2026-07-03)
+
+- Shared CMP shell extraction leaves some Android wrappers public only by habit. If a wrapper is file-local (`LogoView`) or a tooling-only `@Preview`, make it private after grep proof so future consumers do not bind to Android-only implementation details.
+- Keep route-level product composables public. The useful boundary is `LaunchScreen`/`GalleryDialog`/`IconOption` as platform edges, with local preview/logo wrappers hidden behind them.
+
+## Align wrapper naming with shared shell contracts (S4d-312, 2026-07-03)
+
+- When an Android wrapper delegates directly to a shared CMP shell, keep callback names aligned so future call sites do not preserve stale Android-only typos. This is a small API hygiene slice, but it reduces friction for later shared consumer moves.
+- If a named parameter is part of a production call site, grep all `Composable` callers before renaming and let compile prove previews/positional calls still bind correctly.
+
+## Tighten wrapper visibility after call-graph proof (S4d-311, 2026-07-03)
+
+- After a screen shell is split into shared CMP plus Android edge wrappers, keep only the route-level composable public. File-local wrappers should become private once a whole-repo grep proves every caller is in the same file.
+- Visibility-only cleanup is still worth compile-gating because Kotlin default arguments, previews, and package-private test access can hide accidental API consumers.
+
+## Remove stale wrapper API after shared-shell extraction (S4d-310, 2026-07-03)
+
+- Shared CMP shell moves can leave Android wrapper parameters that no longer feed any UI affordance. Treat them like public state cleanup: prove no external caller first, then delete the parameter and the local pass-through together.
+- A removed affordance hook is safe only when the shared shell truly has no slot for it. Here `EditorPhotoStrip` has no delete action, `EditorOptionControlFrame` has no sheet toggle input, and `EditorPreviewFrame`/`WaterMarkCanvas` do not consume scale-end callbacks.
+
+## Version-catalog cleanup must respect alternate Compose accessors (S4d-309, 2026-07-03)
+
+- An unused AndroidX Compose catalog alias can be removed without removing the underlying capability when live modules consume Compose through the BOM, explicit live aliases, or JetBrains `compose.*` plugin accessors. Prove this at the Gradle-reference level, not by source imports like `androidx.compose.foundation.*`.
+- Keep the small live alias set visible. Here the app still declares BOM/Material3/window-size-class/UI/tooling/activity/lifecycle/navigation/constraintlayout, while shared/Desktop use `compose.runtime`, `compose.ui`, `compose.material3`, and `compose.desktop.currentOs`.
+
+## Compile app androidTest when pruning test dependencies (S4d-308, 2026-07-03)
+
+- Source greps are necessary but not sufficient for Android test dependency cleanup. If an app `androidTestImplementation` line is removed, include `:app:compileDebugAndroidTestKotlin` in the gate so transitive `AndroidJUnit4` / `InstrumentationRegistry` assumptions are proven rather than guessed.
+- Keep catalog aliases used by other modules even when app drops them. Here app no longer declares Espresso/UIAutomator, but cmonet and macrobenchmark still use those aliases; only Mockito, Hamcrest, and AndroidX test core/rules/runner became fully unreferenced.
+
+## Do not conflate core artifacts with KTX add-ons (S4d-307, 2026-07-03)
+
+- `androidx.activity:activity-ktx` can be removed when no KTX helpers are used, even if source still imports `androidx.activity.*`; `activity-compose`/core Activity may still supply those types.
+- Keep sibling KTX dependencies with real call sites. Here `lifecycle-runtime-ktx` stays because `lifecycleScope` is live in `ComposeMainActivity`.
+
+## Keep Open Source credits consistent with packaged dependencies (S4d-306, 2026-07-03)
+
+- Removing a dead library dependency should also remove its Open Source screen card; otherwise the app keeps crediting software it no longer packages.
+- For open-source description strings, check Weblate ownership before deletion. A `translatable="false"` default-only string can be removed with the card; locale files remain untouched.
+
+## Delete orphan menu XML without deleting shared labels (S4d-305, 2026-07-03)
+
+- Toolbar `res/menu` files are dead when there is no `R.menu`, `@menu/`, filename, or menu-id consumer. Deleting those XML files is separate from deleting strings/drawables referenced inside them.
+- Do not hand-edit translated strings as part of resource cleanup. If labels like `action_pick` still feed Compose UI, keep every locale entry unchanged.
+
+## Disable ViewBinding only after layout and binding consumers are both gone (S4d-304, 2026-07-03)
+
+- `viewBinding = true` can survive long after View code is gone; prove deletion with both sides: no `res/layout` inputs and no generated binding / `R.layout` consumers in source/tests.
+- Menu XML and value styles are not ViewBinding consumers. Keep them out of the liveness decision and let debug/release builds prove the generated-binding task removal.
+
+## Group dead View-stack dependency removal by consumer class (S4d-303, 2026-07-03)
+
+- After View/LiveData consumers are gone, remove the direct dependencies and catalog aliases together: `asynclayoutinflater`, Fragment KTX, lifecycle LiveData KTX, Compose runtime-livedata, ViewPager2, and RecyclerView had no source/resource consumers beyond comments.
+- Do not infer all Android UI support libs are dead. AppCompat remains live through `ColoredImageVIew`, and Material Components remains live through XML style parents, so those need separate owner/visual slices rather than bulk removal.
+
+## Nullable cleanup should follow StateFlow type ownership (S4d-302, 2026-07-03)
+
+- Once `waterMarkFlow` is `stateIn(..., WaterMark.default)` and `selectedImageFlow` is a `StateFlow<ImageInfo>`, null-defense branches around `.value` are dead code. Remove them as a follow-up to event-state cleanup, but keep the live export/compression result writes untouched.
+- Snapshot the non-null `WaterMark` once per render path (`tmpConfig`) and use it for both branch selection and renderer calls. That avoids re-reading the flow and prevents old `?.` / `!!` patterns from drifting back into export logic.
+
+## Remove View-era dependencies only after separating sibling Compose artifacts (S4d-301, 2026-07-03)
+
+- `androidx.constraintlayout:constraintlayout` and `androidx.constraintlayout:constraintlayout-compose` are separate cleanup decisions. The View artifact was declaration-only after the View migration; the Compose artifact remains live through the Android-only MotionLayout color option.
+- Do not migrate Android's radial `ColorOption` to shared UI just to delete `constraintlayout-compose`. It is a visible interaction change and still depends on Android resources; keep that as a product/visual slice with screenshot proof, not a blind dependency cleanup.
+
+## Remove aggregate save returns only after event consumers are gone (S4d-300, 2026-07-03)
+
+- `generateList` no longer needs an aggregate `Result<List<ImageInfo>>` once `saveResult` is gone. Keep the function as the export loop and preserve per-image `ImageInfo.result` / `JobState` records; only the ignored aggregate success/empty-list error return should disappear.
+- Error-code cleanup must follow the real reader. `TYPE_ERROR_NOT_IMG` was aggregate-event-only and safe to delete; `TYPE_ERROR_FILE_NOT_FOUND` / `TYPE_ERROR_SAVE_OOM` still populate per-image results and remain.
+
+## Progress event wrappers are removable separately from result records (S4d-299, 2026-07-03)
+
+- `saveProcess` had become an event wrapper with no source consumer; the useful export facts are the per-image `ImageInfo.jobState` and `ImageInfo.result` mutations. Remove the unused stream and snapshot dispatches without erasing those records.
+- Treat progress-event deletion separately from event-result deletion. This kept S4d-298 and S4d-299 reviewable and avoided accidentally touching the still-deferred compression reference flow.
+
+## Retire event state only after the last consumer disappears (S4d-298, 2026-07-03)
+
+- `saveResult` became dead only after S4d-297 removed the temporary `ComposeMainActivity` debug collector. At that point the event stream and the `TYPE_SAVING` / `TYPE_JOB_FINISH` codes had no source consumers, while the real export work remained in `generateList` and per-image `ImageInfo.result` / `jobState`.
+- Do not generalize this to the compression lane. The parity backlog explicitly keeps `compressImg()` / `compressedResult` / `cancelCompressJob()` as the reference implementation for the removed legacy compression dialog, so that flow needs a replacement decision before deletion.
+
+## Trim wrapper API after shared shell migration (S4d-297, 2026-07-03)
+
+- Once a shared shell owns the real UI shape, revisit the Android wrapper and call site for stale pass-through arguments. `isSaving`, `finishedCount`, `totalCount`, and `onShareClick` were no longer consumed after `SaveExportSheetShell` landed, so keeping them only made the API imply behavior that did not exist.
+- Temporary debug observers are not product evidence. Remove one-off `EXPORT` logging and `saveResult` collection once the compile/test gates cover the save/export surface; keep actual export permission and `saveImage` behavior at the Android edge.
+
+## Delete superseded shared shells once they become declaration-only (S4d-296, 2026-07-03)
+
+- `BottomSurface` was an intermediate shared wrapper from S4d-267, but the later bottom-controls host path now owns the relevant structure and no source call sites remain.
+- Keep historical notes, but remove the stale commonMain file rather than preserving a misleading shell that no platform consumes.
+
+## Editor option items can share presentation while Android owns resources (S4d-295, 2026-07-03)
+
+- The bottom option carousel item layout is just an icon at 24dp plus a title label once the caller supplies the `Painter`, content description, and localized text. Move that presentation to commonMain.
+- Keep `FuncTitleModel`, Android drawable/string resource lookup, and option selection behavior in Android. Do not move resource IDs or option model construction into shared UI.
+
+## Mode action controls can share layout while Desktop owns mode effects (S4d-294, 2026-07-03)
+
+- The Open icon / Use text watermark / Preview cluster is pure action layout once the actions are callbacks. Move labels, grouping, and busy-disabled state to commonMain.
+- Keep AWT icon picking, private icon copy, `MediaRef` persistence, Text-mode switching, preview rendering, and status messages in Desktop. This preserves the platform edges while removing another hand-built Desktop control cluster.
+
+## Preview status display can share UI without moving rendering (S4d-293, 2026-07-03)
+
+- The Desktop status text plus optional preview bitmap is a pure display shell once the caller supplies `ImageBitmap` and labels. Move the visual layout to commonMain.
+- Keep `refreshPreview()`, temp-file output, `DesktopImageDecoder`, `preview` state ownership, and status string production in Desktop. The shared shell must not learn about file paths or render flow.
+
+## Save command buttons can share layout while Desktop owns dialogs (S4d-292, 2026-07-03)
+
+- The Render & Save / Save as / Open image cluster is pure button layout once the actions are callbacks. Move labels and busy-disabled state to commonMain.
+- Keep AWT dialogs, batch file loop, output naming, remembered image/output state, and status text in Desktop. That is the smallest useful split; no save-flow abstraction needed.
+
+## Saved-output actions can share UI while Desktop owns IO (S4d-291, 2026-07-03)
+
+- The share-substitute row is a pure two-button shell once the platform actions are callbacks. Move labels/enabled state into commonMain, but keep `Desktop.open`, clipboard writes, `lastSavedFile`, and status messages in Desktop.
+- This is the right boundary for Desktop utility actions: shared layout, platform IO at the edge, no filesystem abstraction in commonMain.
+
+## TemplateListSheet can host Desktop with optional icon edges (S4d-290, 2026-07-03)
+
+- The shared template sheet was already a pure UI surface over `Template` callbacks; Desktop can consume it once edit/delete painters are optional and text-button fallbacks exist.
+- Keep repository writes at the platform edge. Desktop passes `TemplateEditor`/`WatermarkConfigEditor` callbacks and a current-text initial value, while the shared host owns sheet visibility, add/edit/use/delete UI, and confirmations. Android keeps resource-backed icons unchanged.
+
+## Color shell can move without importing Android MotionLayout (S4d-289, 2026-07-03)
+
+- Do not move the existing Android `ColorOption` to commonMain as-is: it depends on `painterResource`, Android drawable ids, `FuncTitleModel`, and `constraintlayout-compose`/MotionLayout. Adding that dependency to `:shared` would violate the current narrow dependency surface.
+- A smaller shared color shell can still serve Desktop: preset ARGB swatches plus a custom hex text field, with parsing/formatting tested in commonTest. Desktop owns persistence and preview refresh; Android's production color UI stays untouched for parity.
+
+## Desktop gaps should match Android's independent sliders (S4d-288, 2026-07-03)
+
+- Android already exposes horizontal and vertical gap as separate `SliderOption` controls, so Desktop should not keep a special two-field atomic Apply flow.
+- Persist each Desktop gap on slider release through the existing shared editor method, then re-read that repository value. This preserves the shared clamp/storage owner while reducing Desktop-only parsing logic.
+
+## TextContentOption can serve Desktop without a template icon (S4d-287, 2026-07-03)
+
+- The text editor shell is reusable off-Android once template-list affordance is optional and busy-state disabling is a defaulted parameter. Android keeps passing the resource-backed template icon and callback unchanged.
+- Desktop should still own the side effects: confirmed text writes through `WatermarkConfigEditor.updateText`, then the UI re-reads repository text and refreshes preview. The shared composable remains UI shell only, not a persistence or template-navigation abstraction.
+
+## Desktop degree can follow the shared slider-release pattern (S4d-286, 2026-07-03)
+
+- Degree is the same control shape as opacity and text size on Desktop: keep drag-local UI state, persist on slider release, then re-read the repository value because `WatermarkConfigEditor.updateDegree` and the repository own clamp/storage semantics.
+- This removes another Desktop-only numeric Apply field without changing Android renderer behavior, the shared degree rule, or output semantics.
+
+## Desktop numeric sliders should re-read persisted values after release (S4d-285, 2026-07-03)
+
+- Reusing `SliderOption` for Desktop text size follows the opacity pattern: keep drag-local UI state, persist on release, then re-read the repository value because the shared editor/repository still owns coercion and storage semantics.
+- This avoids carrying Desktop-only "Apply" text fields for values that already have a product slider shell, while keeping invalid-text parsing out of the shared component.
+
+## Shared sliders need a release callback for Desktop persistence (S4d-284, 2026-07-03)
+
+- The Android editor can keep using `SliderOption` as an immediate value callback, but Desktop persistence should write on slider release to avoid a DataStore/render pass for every drag frame.
+- Defaulted `enabled` and `onValueChangeFinished` parameters let Desktop reuse the shared shell without changing Android call sites. After writing, Desktop should re-read the repository value because alpha is stored as a byte and displayed as percent through `WatermarkConfigRules.alphaByteToPercent`.
+
+## Desktop text-style can consume a shared segmented option (S4d-283, 2026-07-03)
+
+- `TextPaintStyle` is already a commonMain model and Desktop already persists it through `WatermarkConfigEditor`, so the Fill/Stroke control can be a shared CMP shell without changing renderer behavior.
+- Keep UI state as the persisted enum, not just a label string. Labels are an edge concern (`TextPaintStyleLabels`), while the selected value should roundtrip through the repository after each write.
+
+## Compose iOS hosts need a packaged frame-duration plist key (S4d-282, 2026-07-03)
+
+- Embedding shared CMP UI in SwiftUI through `ComposeUIViewController` works as the iOS app-entry bridge, but the app bundle must actually package `CADisableMinimumFrameDurationOnPhone = true`; a target `INFOPLIST_KEY_CADisableMinimumFrameDurationOnPhone = YES` build setting was visible in `xcodebuild -showBuildSettings` yet absent from the built `Info.plist`, and the UI test app crashed on launch.
+- The reliable fix for this project is an explicit iosApp `Info.plist` with the Compose key plus the existing generated plist entries. Keep SwiftUI as the system-UI glue and use Kotlin `UIViewController` hosts for real shared CMP surfaces; this is a host witness, not a final iOS product-screen replacement by itself.
+
+## Desktop icon picker can consume the shared icon option shell (S4d-281, 2026-07-03)
+
+- `IconWatermarkOption` can wrap Desktop's icon-pick entry without moving picker, permission, path-copy, or persistence behavior into commonMain.
+- A defaulted `enabled` parameter preserves Desktop busy-state disabling while leaving the Android picker call site source-compatible.
+
+## Desktop typeface can consume the shared segmented option (S4d-280, 2026-07-03)
+
+- `TextTypeface` is a safe off-Android shared UI consumer because Desktop already persists `TextTypeface` through `WatermarkConfigEditor`.
+- Keep Desktop's truth source as the persisted enum value, not a display label string; labels stay edge-provided through `TextTypefaceLabels`.
+
+## Desktop tile mode can consume the shared segmented option (S4d-279, 2026-07-03)
+
+- `TileMode` is a safe off-Android shared UI consumer because Desktop already persists `WatermarkTileMode` through `WatermarkConfigEditor`.
+- Preserve busy-state behavior with a defaulted `enabled` parameter instead of forking Desktop-only controls or changing Android callers.
+
+## Desktop can consume shared output-options UI without renderer changes (S4d-278, 2026-07-03)
+
+- `SaveExportOptionsSection` is a real off-Android CMP UI consumer when wired to Desktop's existing `OutputPrefsEditor` and user-config store.
+- Add shared UI affordance flags as defaulted parameters when needed by another platform; this keeps Android call sites source-compatible while preserving Desktop busy-state behavior.
+
+## About layout can move with Android logo and URL edges injected (S4d-277, 2026-07-03)
+
+- The About screen's rows, switches, pager footer, glow layer, and layout are shared CMP UI once Android injects localized strings, painters, link callbacks, and the logo slot.
+- Keep `AndroidView`/`ColoredImageVIew`, URL selection, AboutViewModel toggles, and all Android resource lookup in the app wrapper.
+
+## Template-sheet visibility can move below injected resources (S4d-276, 2026-07-03)
+
+- `TemplateListSheet` and `Template` are already commonMain, so the editor can share the sheet host state without moving Android resources or repositories.
+- Keep localized strings, edit/delete painters, template callbacks, and the `TextContentOption` trigger at the Android edge.
+
+## Bottom-control tab state can be generic below resource-backed options (S4d-275, 2026-07-03)
+
+- The editor's selected tab/selected option state is reusable CMP UI once the option model is generic and Android injects labels, item content, and option-control content.
+- Keep `FuncTitleModel`, localized strings, drawable painters, `OptionControl`, template navigation, raw `onChange`, and the existing `Log.i` side effect at the Android edge.
+
+## Gallery dialog state can move once BackHandler and thumbnails are injected (S4d-274, 2026-07-03)
+
+- The gallery dialog's selected-count state and scaffold orchestration are pure shared UI after the animation host, grid, top bar, and FAB live in commonMain.
+- Keep Android-specific edges injected: `BackHandler`, painter/string resources, system picker launch, dismiss callback, Coil thumbnail loading, and `MediaRef.toUri()`.
+
+## Shared hosts need Unit-typed platform callbacks (S4d-273, 2026-07-03)
+
+- `AnimatedTransitionHost` can own the transition state machine while Android injects `BackHandler` as a composable callback.
+- Be explicit when a callback launches coroutines: `scope.launch { ... }` otherwise infers `() -> Job`, which does not satisfy a platform callback shaped as `() -> Unit`.
+
+## Delete unused wrappers instead of migrating them (S4d-272, 2026-07-03)
+
+- `AnimatedTransitionDialog` had no callers; the live gallery path uses `AnimatedTransitionView`.
+- When a wrapper is dead, deletion is cleaner than promoting it to commonMain. Keep the remaining live wrapper scoped to its real Android edge (`BackHandler`) until that edge has a shared-screen design.
+
+## Gallery animation primitives can move below Android BackHandler (S4d-271, 2026-07-03)
+
+- The slide/fade transition, dismiss delay, and dismiss helper are pure Compose/coroutines and can live in commonMain.
+- Keep wrappers with Android edges in app for now: `BackHandler`, platform `Dialog` behavior, system image loading, localized resources, selected-count state, and picker/dismiss callbacks.
+
+## Option-control frame can move while option content stays app-side (S4d-270, 2026-07-03)
+
+- The option-control surface and 16dp inner padding are pure shared UI; the selected option body remains Android-owned until Color/MotionLayout and Icon picker boundaries are handled.
+- Removing dead local sizing is safe when the value has no consumer. The old `showSheet`/`onDismissRequest` parameters are still a separate API-cleanup question, but the unused screen-height-derived `height` variable had zero effect.
+
+## Editor bottom tab row can move with labels and logging injected (S4d-269, 2026-07-03)
+
+- The tab-row shell, divider, animated indicator, and tab text layout are pure CMP UI once Android injects the three localized labels.
+- Preserve Android-only incidental behavior as callbacks instead of importing platform APIs into commonMain. Here the old `Log.i("TabRow", ...)` side effect remains app-side through `onIndicatorPosition`.
+
+## Editor option carousel can be generic below Android resource content (S4d-268, 2026-07-03)
+
+- The option row shell is movable when it is generic over item type: shared owns row sizing, padding, animation, and selection-click plumbing, while Android supplies drawable/string-backed item content.
+- A failed compile exposed stale opt-in cleanup from the earlier photo-strip migration: after moving animation-bearing list code to shared, remove `ExperimentalFoundationApi` opt-ins from Android callers that no longer need them.
+
+## Editor bottom surface can move before bottom controls (S4d-267, 2026-07-03)
+
+- The `BottomSurface` wrapper is pure Material3 surface plumbing and can move independently of `BottomView`.
+- Keep the stateful bottom controls Android-side for now: tab selection, Android resource icons/strings, `FuncTitleModel`, template navigation, and raw option-change dispatch are a larger shared-screen slice.
+
+## Save/export modal shell can move after its child sections are shared (S4d-266, 2026-07-03)
+
+- Once the output-options section and preview-list box live in commonMain, the remaining modal sheet can be a generic shared shell that wires those children together without importing Android `Uri` or Coil.
+- Keep side effects and platform payloads at the Android edge: localized resources, `Uri` items, thumbnail loading, export/open-gallery callbacks, and the currently unused `onShareClick` pass-through. This is a screen-shell migration, not save/share-flow migration.
+
+## Save/export options can move because ImageFormat is already shared (S4d-265, 2026-07-03)
+
+- The output-format dropdown and JPEG-quality slider are pure Compose UI over shared `ImageFormat`, so they can move to commonMain with localized strings injected by Android.
+- Keep modal-sheet ownership, export/open-gallery actions, result state, and thumbnail loading in Android. Moving the options section is not a save-flow or share-flow migration.
+
+## Save/export preview box can be generic while URI loading stays Android-owned (S4d-264, 2026-07-03)
+
+- The reusable surface is the bordered preview container, selected-count fallback, and horizontal thumbnail-row layout. A generic `items: List<T>` plus thumbnail slot lets commonMain own layout without importing `android.net.Uri`.
+- Keep the modal sheet, localized labels, output-format/quality controls, export/open-gallery actions, and Coil `AsyncImage` in Android until Desktop/iOS have real consumers of the same save/export flow.
+
+## Icon option shell can move without moving picker permission edges (S4d-263, 2026-07-03)
+
+- The common UI is just the centered column, optional preview, and pick button label. Android must keep `READ_MEDIA_IMAGES`/`READ_EXTERNAL_STORAGE`, `rememberLauncherForActivityResult`, Photo Picker contracts, `Uri -> MediaRef`, and Coil preview loading.
+- This mirrors the gallery/photo-strip boundary: put layout in shared CMP, keep system UI and media loading at the platform edge.
+
+## Editor top-level shell can move as slots, not state (S4d-262, 2026-07-03)
+
+- The reusable editor-screen shell is the vertical slot layout: top bar, weighted preview, optional photo strip, and bottom controls. Moving that shell does not require moving template-sheet state, editor option state, renderer state, or Android navigation callbacks.
+- Keep `showTemplateSheet`, `TemplateListSheet`, bottom controls, renderer, and thumbnail loading app-owned until Desktop/iOS consume the same screen contract. A slot shell is the conservative step before any shared screen state extraction.
+
+## Editor preview frame can move while native rendering stays Android-owned (S4d-261, 2026-07-03)
+
+- The neutral shell is just the preview area's box, padding, empty-state placement, and renderer slot. That can live in shared CMP without touching image decode, native Android canvas composition, CLAMP drag handling, or export parity.
+- Keep `WaterMarkCanvas`, `buildPreviewShader`, `ContentResolver`, `Bitmap`, and `WatermarkRenderer` app-side. Moving the frame is not a renderer commonization step and does not reopen the Android-native-renderer policy.
+
+## Editor photo strip can move below the thumbnail-loading edge (S4d-260, 2026-07-03)
+
+- The reusable strip behavior is layout/state-local UI: measured centering, item size, selected border/padding animation, click-to-select, and scroll-to-clicked-item. Moving it to shared CMP does not require moving Android bitmap decode, Coil, or `MediaRef.toUri()`.
+- Keep the thumbnail renderer injected. Android still owns `AsyncImage`, `ImageRequest`, crop scaling, and URI conversion; future Desktop/iOS callers can provide their own decoded-image thumbnail surface.
+- The old `onImageDelete` path is still not backed by a visible delete affordance. Do not present S4d-260 as a delete-flow migration.
+
+## Gallery selected-count FAB can move without moving dismissal state (S4d-259, 2026-07-03)
+
+- The reusable part is the visible `selectedCount > 0` animation and extended FAB shape/text/icon layout. It can live in shared CMP if the platform caller injects the icon painter, content description, count, and click callback.
+- Keep selected-count calculation, gallery selection mutation, and `dialogHelper.triggerDismiss()` app-owned. Those are current Android dialog/navigation behavior, not reusable screen layout.
+
+## Gallery top-bar shell can move while dismissal/search stay app-owned (S4d-258, 2026-07-03)
+
+- The GalleryDialog top bar row is neutral layout: close icon, localized title, search icon, and spacing. The behavior behind those icons is still Android-owned because close drives the current dialog animation helper and search launches the Android system picker before dismissing.
+- Keep this as a separate shell from the selected-count FAB and dialog animation. S4d-259 moved only the FAB's visual shell; dialog animation and navigation effects still need their own slice if moved.
+
+## Gallery grid can move only below the image-loading edge (S4d-257, 2026-07-03)
+
+- The reusable part of the gallery is the grid/card/checkmark shell: fixed four-column grid, crop-card aspect ratio, selected-card padding/clip animation, and circular checkmark. The Android-specific part is thumbnail decoding/loading (`AsyncImage`, `ImageRequest`, placeholder resource, `MediaRef.toUri()`), so keep it injected as a thumbnail slot.
+- Be explicit with composable lambda parameters when a shared shell has both an event callback and a content slot. The first S4d-257 compile failed because a trailing lambda was interpreted as the thumbnail slot, leaving `onCheckedChange` unset.
+- The selected-count FAB and dialog dismissal animation still live in app-side `GalleryDialog`; move them only with a separate shell slice because they are tied to current Android dialog/navigation behavior.
+
+## Editor top-bar shell can move without moving picker/save behavior (S4d-256, 2026-07-03)
+
+- The editor top bar is a safe shared CMP shell only if it receives icons, content descriptions, and callbacks from the platform caller. The app-level callback meanings remain Android-owned today: add-more-images launches the system picker, save opens `SaveExportSheet`, and about navigates through the Android NavHost.
+- Keep this extraction narrower than `EditorScreen`: the preview canvas, `WatermarkRenderer`, `ContentResolver` decode edge, `ImageInfo.uri.toUri()`, thumbnail `AsyncImage`, and template/resource wiring are still Android or existing shared-component boundaries and need separate slices.
+
+## Launch screen shell can move by injecting platform edges (S4d-255, 2026-07-03)
+
+- The Launch screen's stable layout is platform-neutral: logo placement, "Choose Images" button placement, about button placement, and sharp-corner button shape. The Android-specific parts are permission request state, resource lookup, and the legacy animated `ColoredImageVIew` logo implementation.
+- The safe extraction shape is a shared shell with injected strings, `Painter`, and a logo slot that receives `startLogoAnimation`. Do not move permission launchers, `Manifest.permission.*`, `Build.VERSION`, `stringResource`, `painterResource`, or `AndroidView` into commonMain.
+- This pattern should guide the next screen-shell slices: extract layout/control composition only after the platform edges are explicit, and keep behavior callbacks at the Android/activity boundary until Desktop/iOS are real consumers of the same screen.
+
+## AndroMeld smoke proof requires MCP control to be enabled (S4d-254, 2026-07-03)
+
+- The Android emulator smoke cannot be accepted from Gradle/Android CLI evidence alone. `:app:assembleDebug` and `android run` can prove current debug build/install/launch, but the requested debt also requires a visible AndroMeld walk with READ_MEDIA_IMAGES confirmation, gallery -> editor navigation, parameter adjustments, export, and screenshots that were actually viewed.
+- Current blocker: AndroMeld.app is installed and launchable, but the MCP policy gate returns `permissionDenied: MCP control is disabled in AndroMeld`. Do not replace this with raw `adb shell input` or Android CLI screenshots and call it equivalent; those may be useful setup checks, but the debt remains open until AndroMeld MCP control is enabled and the full UI path is captured there.
+- Once enabled, restart from `andromeld.devices.list` -> `andromeld.sessions.list` -> `andromeld.session.start` if needed, then act one step at a time and capture/view screenshots at launch, gallery permission/source selection, editor baseline, each control-adjustment cluster, and export result.
+
+## iOS bring-up XCUITests must avoid stale seed-row assumptions (S4d-253, 2026-07-03)
+
+- The S4d-234 Templates test failed on a real booted simulator because it used a pre-existing `templateRow` as a launch-readiness proxy and then tried to drive controls that could be off-screen or covered by the keyboard. That assumption is brittle on a persistent simulator and was never a proof of Save/Apply/Delete.
+- The reliable UI contract for the current SwiftUI bring-up surface is: start from a fresh unique marker, apply it through the text field, scroll to the visible "Save current" control, locate the saved row by its visible marker label, dismiss the keyboard before lower-screen taps, and scroll to the row/delete controls before interacting. This tests the real bridge path without depending on seed data.
+- The iOS bring-up screen is taller than one phone viewport, so it must remain scrollable while it is still a temporary product surface. This is a reachability fix for the current SwiftUI edge, not a final 1:1 UI design decision.
+
+## Dead app-side actions should be deleted before broadening the action boundary (S4d-252, 2026-07-03)
+
+- `Action.ChooseImage` had no producer after gallery navigation moved to typed Navigation Compose (`navController.navigate(GalleryDialogRoute)`). Keeping it around made the app-side `Action` boundary look larger and more platform-coupled than it really is.
+- The safe cleanup is deletion only: remove the data class and its `MainViewModel.process` branch. Do **not** use this as a reason to move `Action`, `ContentResolver`, `Uri`, `FuncTitleModel`, or raw `Any` payloads into commonMain.
+
+## Watermark density thread is CLOSED — no regression (S4d-209→212, authoritative S4d-212, 2026-06-28)
+
+- **Withdrawn:** the S4d-210 headline that the debug build exports a ~2× denser watermark, and the suspected debug preview/export "WYSIWYG density bug." **S4d-212 is the authoritative correction; do not carry the 2× / WYSIWYG-bug claim forward.**
+- **Root cause of the bad number:** S4d-210's `8.64%` debug-export coverage was a **double-watermark / picker-recency artifact** — the recency-sorted picker fed an *already-watermarked* export back in as the source, so it got watermarked twice. (Reproduced in S4d-212: the first prod attempt exported a watermarked 1344×2992 screenshot before the picker order was reset.)
+- **Clean S4d-212 measurements** (same 1200×900 fixture `187355`, JPEG/80, red-quadrant): production export **4.29%** coverage / ~**123px** tile period; debug export **4.53%** / ~**152px**; debug **normalized** preview **4.96%** / ~**152px**. So debug export ≈ production export (**1.06×** coverage, not 2.01×), and debug preview ≈ debug export (**0.91×**, same domain) → **no WYSIWYG bug.**
+- **The only real difference is modest text-size drift:** debug watermark text is ~**1.24×** production's (tile period 152 vs 123px) on this fixture — the expected S3a **device-independent** image-space sizing (`textSize/REF_WIDTH = 14/1000`) vs legacy v2.10.0 **device-dependent** sizing (`textSize·(1/MSCALE_X) ≈ 14/previewViewWidth`). It is device/image-size dependent for legacy, small, and identical in preview and export.
+- **Do NOT** schedule a `REF_WIDTH` change, golden rebaseline, Android renderer rewrite, or a 1:1 UI pass from this finding. It strengthens S4d-211's "no default `REF_WIDTH` fix." Whether to nudge the device-independent size toward v2.10.0's per-device look is a low-value **owner A/B** (recommend **A: accept + short ADR**), not a worker task.
+- **Methodology lessons (so this isn't re-derived wrong):**
+  - **Yellow coverage is ~text-size-invariant when `hGap=vGap=0`** (the cell == the rotated text bounding box, so bigger text → proportionally bigger cell → same ink fraction). Coverage only catches **ink doubling**; use **tile period / text height** to detect a size/scale difference. S4d-209/210/211 leaned on coverage, which is why a double-watermark read as a "2× density regression" and the real (modest size) difference was mis-modeled as 2×.
+  - **Picker-recency double-watermark trap:** after any export, the system/in-app picker re-sorts by recency; selecting a fixed cell position can pick a prior watermarked export. Always delete prior exports and **visually re-locate** the fixture before selecting.
+- **What survives from the thread:** the S4d-209 editor UI deltas (logo vs back-arrow, filmstrip caption, Text/Icon selected state, background tone, picker mechanism) remain the real Android v2.10.0 parity backlog — gated behind release-grade full-platform code migration, not this density finding.
+
+## Do not manufacture shared MainViewModel/IO layers without a consumer (S4d-191, 2026-06-28)
+
+- **No-Go: `MainViewModel` business-IO extraction is not a current implementation lane.** S4d-191 found the useful, consumed business logic has already moved to commonMain (`WatermarkConfigEditor`, `OutputPrefsEditor`, `TemplateEditor`) and is consumed by Desktop/iOS. What remains in `MainViewModel` is either Android UI state (`UiState` navigation/dialog events) or Android platform IO/render (`ContentResolver`, `MediaStore`, `Bitmap`/`Canvas`, `Compressor`, `FileProvider`, native `WatermarkRenderer` dispatch).
+- **A pure-looking method is not shareable if no second platform consumes it.** Moving `goTemplate`/`resetEditDialog`-style methods would only create a shared navigation/reducer layer over Android-only `UiState`; Desktop/iOS have their own flows. That violates the consumer-first extraction rule from S4d-94/S4d-99.
+- **An IO abstraction without a shared caller is dead weight.** Desktop/iOS already own their decode/save paths. The only meaningful shared caller would be a moved `generateImage`, but Android export cannot move while Android text/icon/composition stay native by S4d-8/S4d-17/S4d-190. Therefore a decode/save `expect`/`actual` layer is speculative until an owner explicitly signs up for the larger export abstraction.
+- **The only semi-candidate is not worth the risk by default.** Promoting `DesktopSaveDecision.renderPlan` to commonMain and routing Android through it touches the golden-protected export path for a two-branch decision whose Image-mode guard differs by platform (Android decode-failure vs Desktop empty-icon `require`). Keep it owner-gated, not a default next slice.
+
+## Don't trade a renderer risk for a trivial tiling loop when the raster stays native (S4d-190, 2026-06-28)
+
+- **No-Go: route Android production composition into commonMain.** Android `WatermarkRenderer.compose` tiles via `BitmapShader(REPEAT/CLAMP)` + `drawRect`; commonMain `composeOverBackground` uses a `drawImage` grid/decal loop. The two are *mathematically* equivalent for export-REPEAT + CLAMP, but **byte identity cannot be proven read-only** (shader-fill vs blit-loop on android.graphics, plus byte-`0..255` vs float-`/255f` alpha) — it needs a same-platform pixel measurement.
+- **Low value × real risk.** The cell raster (the hard part) stays native by closed decisions (S4d-8 icon, S4d-17 text), so routing only the ~15-line tiling loop converges little. Preview is a live-canvas sub-region that does **not** map to `composeOverBackground` (and would re-composite per frame), so only export could route — which decouples the currently-shared preview/export composition for marginal gain plus a golden-regression risk. Net: cost ≫ value → keep Android native.
+- **Reopen gate:** an owner decision + a **test-only Robolectric NATIVE FNV measurement** first (compose both ways, compare FNV for REPEAT/CLAMP) — measure parity before any production change; never strict-FNV-in-CI, never rebaseline. Skiko is **not** the blocker (`composeOverBackground` is android.graphics-backed on the android target; `:app` stays skiko-clean).
+
+## Single-source a constant/default only when it is byte-identical and already consumed (S4d-181..187, 2026-06-28)
+
+- **The cheap, safe de-dup is one that is provably byte-identical and has a live consumer.** S4d-181/182 moved image-space text sizing to `WatermarkGeometry.REF_WIDTH`/`fontPx`, S4d-184 moved the icon scale to `WatermarkCellComposer.ICON_SCALE_REFERENCE_TEXT_SIZE`, and S4d-186 moved the config-read default fallbacks to `WaterMark.default`. Each replaced a duplicated literal/`const` with a shared symbol whose value is identical (a `const` inlines; the read literals equal the model default), and each was guarded by the test that already pins the behavior (`WatermarkImageSpaceSizingTest`, the icon-ratio cases, `DesktopWaterMarkStoreRoundtripTest`, `WaterMarkDefaultColorTest`) — so no golden rebaseline was needed. Rule: replace a duplicated literal with a shared symbol only when the values are equal AND a real consumer exists; verify against the existing pinning test.
+- **Do NOT couple renderer *convenience* defaults to model defaults.** The `degree = 315f` default *parameters* on the Desktop/iOS render functions look like the same duplication, but they are standalone/test convenience defaults — production passes the persisted config. Pointing them at `WaterMark.default.degree` would conflate "render-API default" with "persisted-config default"; rejected as the wrong direction (S4d-185).
+- **Single-sourcing a constant is not a draw-swap.** Sharing `REF_WIDTH`/`fontPx`/`ICON_SCALE_REFERENCE_TEXT_SIZE` is sizing *math*; Android text/icon production raster/draw stays native (`StaticLayout`/`buildIconShader`; ADR-0004/S4d-8/S4d-17 stay closed). Sharing a constant does not reopen those decisions.
+- **Leftover dead symbol (deleted S4d-188):** after the text sizing moved off it, the Android renderer's `REF_WIDTH` const had zero code references (only KDoc mentions), so it was deleted in S4d-188 — deliberately kept out of the behavior slices.
+
+## Desktop product flow should prove the spine before widening the window (S4d-119..163, 2026-06-27/28)
+
+- **A headless product spine is less speculative than a first Compose Desktop dependency.** S4d-119 found `:desktopApp` was still a console witness, so the smallest real Desktop product step was not "add a window"; it was to prove the same core path a window will later drive: persistent watermark config -> shared editor update -> persisted readback -> real-image render -> saved output. S4d-120 did exactly that without a build-file change, making the future `Window` slice a thin UI wrapper over a proven flow instead of a UI+storage+render bundle.
+- **Desktop off-Android `WaterMarkRepository` uses the same edge pattern as iOS.** Fresh Desktop stores should inject platform-neutral edges: default text string, pure `WatermarkTileMode.fromStorageId` (Android's SDK-gated legacy DECAL-id-3 -> REPEAT mapper is Android-only legacy-data handling), and a simple logger. `createWaterMarkDataStore(dir, name = WaterMarkRepository.SP_NAME)` mirrors `createUserConfigDataStore`, stays a plain function (not `expect`/`actual`), and leaves Android byte-faithful `Context`+migration store creation untouched.
+- **Persistent build-dir witnesses need a separate empty-store test.** `:desktopApp:run` intentionally uses `build/s4d120-desktop-watermark-config`, so a coordinator rerun can start with the already-edited config from the worker run. That proves persistence, but not the default path. The separate temp-dir `DesktopWaterMarkStoreRoundtripTest` is the right place to assert empty-store default text/tile mode and edit roundtrip.
+- **File input is the first safe window-widening slice.** S4d-124 compared file picker, output-format/compress, and icon watermark. The accepted order was file picker first because `DesktopWatermarkFlow.runSaveFlow(inputBytes, inputLabel)` already existed, so S4d-125 only needed `DesktopWindow.kt`: native JDK/AWT `FileDialog`, cancel-as-no-op, selected bytes read on IO, and the existing save spine. This proves "use my own image" without touching renderer/encode/commonMain/goldens or introducing a dependency.
+- **Output format has three separable risks: encoder capability, visible default wiring, and user control.** S4d-126 found Desktop was PNG-only while shared `UserPreferences.DEFAULT` is `(JPEG, 80)`, but the PNG-magic desktop goldens call composer/encode functions, not `DesktopWatermarkFlow.runSaveFlow`. S4d-127 therefore landed only the golden-safe encoder primitive first: PNG delegates to `encodePng`; JPEG flattens ARGB onto opaque white `TYPE_INT_RGB` and writes with JDK `ImageIO` `ImageWriteParam` quality; `composeOverRealImage` defaults to PNG. S4d-128 then made the visible-flow decision explicitly: `runSaveFlow` reads `UserConfigRepository.userPreferences.first()`, fresh Desktop stores match shared/Android `JPEG/80`, and null output paths become format-aware (`.jpg`/`.png`). S4d-130 added the smallest user control: `JPEG/80` and `PNG/100` preset buttons through the shared `OutputPrefsEditor`. Keep composer defaults PNG so existing desktop goldens and direct composer callers stay stable.
+- **Desktop icon watermark should follow capability -> branch -> picker -> exit control.** S4d-132 proved Desktop had no current `markMode`/`iconUri` path. S4d-133 therefore added only the reusable render primitive (`composeIconOverRealImage`) plus structural Desktop tests. S4d-134 then wired `runSaveFlow` behind persisted `WatermarkMode.Image` and proved Text/Image/missing-icon outcomes headlessly. S4d-135 made that branch user-reachable from the window with the smallest control: native `FileDialog`, cancel-as-no-op, `WatermarkConfigEditor.updateIcon(MediaRef(file.absolutePath))`, and no duplicated render path. S4d-136 closed the one-way trap by reusing `WatermarkConfigEditor.updateText(currentText)` to flip mode back to Text while preserving the existing text value; no standalone `updateMode` API was needed. S4d-137 then made the existing render button reuse the last successfully opened source image with a file-local `LastImage(bytes, label)` state, preserving the fixture default and avoiding new shared API. Persist a Desktop picked file path directly as `MediaRef`; avoid an iOS-style byte-copy store until source-moved/deleted behavior is required. Do not fold drag/drop, preview, templates, or share substitute into the picker/toggle/current-image slices.
+- **Do not overclaim Desktop readiness.** S4d-120 proved open -> edit -> render -> save headlessly; S4d-121 proved a minimal Compose Desktop `Window` can call that same save spine; S4d-122 made Desktop raster-honor text color + typeface and pass `TextPaintStyle` through; S4d-123 made Stroke raster-honored on Desktop/iOS Skiko; S4d-125 added native Open image input; S4d-127 added JPEG encode capability; S4d-128 wired save output to persisted prefs; S4d-130 added two output preset buttons; S4d-133 added the icon-composition primitive; S4d-134 added a headless persisted Image-mode branch; S4d-135 added the user-reachable icon picker; S4d-136 added the return-to-Text control; S4d-137 added current-image reuse; S4d-140 added a destination-only Save-As button; S4d-145..S4d-155 added manual editor controls, preview, and scrolling; S4d-157 added the no-new-dependency share substitute for the last real saved output; S4d-158 added drag/drop input over the same Open-image save spine; S4d-159 chose Templates UI over reactive preview; S4d-160 added minimal Templates Save/List/Use/Delete over the existing Room path; **S4d-198 (commit `1f0019b5`) then added reactive preview** — explicit editor/mode/template-Use actions and Open image/drop source changes auto-refresh the preview via one `refreshPreview()` helper (bounded to explicit clicks/source events, not per-keystroke; temp-file only; never sets `lastSavedFile`; Render & Save / Save as stay real-save-only). This is still not final Desktop parity: **multi-file batch landed for BOTH Desktop input surfaces — drag/drop in S4d-228** (commit `c833aea`) **and Open-image multi-select in S4d-229** (commit `4c895aa`); folder batch, progress/cancel UX, and final Android v2.10.0 1:1 parity remain explicit gaps (template edit-in-place closed by S4d-226). Renderer parity fields should remain separate gates from window enrichment.
+- **Desktop batch output-path allocation must stay sequential (S4d-228).** `DesktopSaveDecision.resolveUniqueOutputFile` performs filesystem existence checks only — it does NOT reserve or create the returned path — and `DesktopWatermarkFlow.runSaveFlow` writes its output synchronously before returning. So the multi-file drop loop must resolve the next output path only AFTER the previous file has been written; a parallel or precomputed-batch allocation would collide on `watermarked.<ext>`. Per-file failures continue the batch and a setup-level failure (e.g. the output-prefs read) must still reset `busy` and surface a status. Pinned by `sequential_resolve_then_create_yields_distinct_names`. Both Desktop multi-image input surfaces — drag/drop (S4d-228) and Open-image multi-select (S4d-229) — now share the SAME sequential resolve-after-write loop and the same pure `supportedImageFiles` filter. Keep Save as single-output (one chosen path can't name N files) and defer folder batch / progress-cancel UX until a real owner decision widens them.
+- **Desktop flow glue now has the no-dependency harness it needed before more logic widening.** S4d-138 found `:desktopApp` has no test source set; the window/flow glue was compile + `--headless` witnessed only, while `shared/src/desktopTest` covers renderer/encode/decode/DataStore primitives structurally. S4d-139 took the lazy route: extract only the pure `runSaveFlow` decisions into `desktopMain` (`DesktopSaveDecision`) and test them from existing `desktopTest`. S4d-140 then correctly stayed a window destination slice: it calls existing `runSaveFlow(outputFile = target)` and does not widen flow/shared logic. Do not add a `:desktopApp` test source set or new test dependency for this lane yet; keep the next Desktop slice read-only templates readiness before changing Room/templates code.
+- **Desktop and iOS templates persistence now both have seeded fresh-install paths; UI consumers stay scoped.** S4d-141 mapped the templates path after Save-As and correctly split it into empty builder -> app witness -> seed decision. S4d-142 added the Desktop Room builder with `BundledSQLiteDriver` and tested `TemplateRepository`/`TemplateEditor` add/list/delete on an empty DB; S4d-143a proved the same path from `:desktopApp --headless` after adding the needed app-level `room.runtime` declaration. S4d-143b proved both Android seed DBs and generated Room share identity hash `72366f557b971b39675d0f26cbc46e0a`, so reuse is technically viable. S4d-160 surfaced the empty-store path in the Desktop window; **S4d-224 then packaged the English seed DB for Desktop** so fresh installs see default templates, and **S4d-225 made that seeding locale-aware** (`ewm-db-ch.db` for `zh` JVM locales, `ewm-db-eng.db` otherwise). **S4d-231 added the iOS empty-store builder** and runtime roundtrip through `TemplateRepository`/`TemplateEditor`; **S4d-232 then added iOS seed packaging** by bundling the same Android seed DBs into `iosApp.app`, loading them through `NSBundle`, and seed-copying before Room opens on first creation. **S4d-233 surfaced that seeded path through a Swift-friendly `IosTemplateBridge` plus minimal Templates UI** (Save current / Apply / Delete) without exposing Room entities or adding another store. Remaining iOS template work is UI automation/polish and final Android-baseline parity, not persistence or bridge wiring.
+- **Shared renderer fixes should land once, below platform windows.** S4d-122 discovered that commonMain `WatermarkCellComposer.composeTextCell` called `multiParagraph.paint(canvas, content.color)`, dropping `TextStyle.drawStyle`, so Desktop and iOS `TextPaintStyle.Stroke` were value-wired but still painted like Fill. S4d-123 fixed that at the commonMain paint call and tightened Desktop/iOS stroke tests. Lesson: when a field is already mapped at both platform edges, fix the shared renderer instead of adding another desktopApp/window workaround.
+- **Desktop packaging is proven locally as an unsigned app image, and now has a first CI packaging workflow.** S4d-162 finished the release hygiene (release-facing window title; blank-template-save guard). S4d-163 then made `:desktopApp` minimally packageable by swapping the plain Gradle `application` plugin for the Compose Desktop `compose.desktop { application { … nativeDistributions { … } } }` DSL (one build file; reuses the already-applied `org.jetbrains.compose` plugin — no new dependency). The chief risk was the `run` task: the Compose DSL re-provides it and forwards `--args`, so `:desktopApp:run --args='--headless'` stays the witness gate. **Toolchain caveat:** `:desktopApp:createDistributable` fails under the jenv/Homebrew OpenJDK (Compose Desktop's `checkRuntime` rejects Homebrew vendors, CMP issue #3107) and succeeds under the already-installed Amazon Corretto 17 — use a supported packaging JDK; do **not** bypass with `compose.desktop.packaging.checkJdkVendor=false`. S4d-166 added `.github/workflows/desktop_packaging.yml`, an isolated `workflow_dispatch` + path-filtered PR job on Ubuntu + Zulu 17 that runs the headless Desktop witness before `createDistributable`; the CI run is the proof that Zulu satisfies the vendor guard. Keep claims narrow: installer formats, signing/notarization, app icon, a real `packageVersion` source, macOS packaging, and Android v2.10.0 1:1 parity are separate later slices.
+
+## First off-Android consumer of the shared watermark editor: iOS watermark editor fields (S4d-101..S4d-113, 2026-06-27)
+
+- **A real platform consumer beats a deferred framework move.** S4d-99 deferred the AboutViewModel lifecycle move (adds a `:shared` dep, no second consumer); S4d-101/102 instead wired the **existing** iOS product flow to consume `WaterMarkRepository` + `WatermarkConfigEditor` for editable+persisted watermark **text**. S4d-103/104/105 then safely extended the same path to **degree**, **tileMode**, and **alpha** because those persisted defaults already matched the Swift renderer's hardcoded defaults (`315°`, `REPEAT`, `255/1.0`). S4d-107 extended it to **textColor** after adding the missing iOS render-edge `colorArgb` argument. S4d-109 extended it to **textSize** because the render-edge `textSize` argument already existed. S4d-110 extended it to **h/v gaps** because the render-edge gap arguments already existed. S4d-112/S4d-113 then covered the two small renderer-capability text fields (`textTypeface`, `textStyle`) by extending the iOS Skiko render edge before adding the usual bridge/UI wire-up. This is a genuine consumer of already-shared editor code, with **no new dependency**.
+- **Off-Android `WaterMarkRepository` wiring pattern.** A non-Android consumer supplies the 3 repo edges with platform-neutral values: a default-text string, the **pure** `WatermarkTileMode.fromStorageId` (the Android `toWatermarkTileMode` SDK gate — pre-Android-12 stored DECAL id 3 → REPEAT — is Android **legacy-data** handling and does **not** apply to a fresh iOS/desktop store; it isn't importable off-Android anyway), and a `println`/NSLog logger. The DataStore is a `createWaterMarkDataStore()` mirror of `createUserConfigDataStore()` (NSDocumentDirectory). Swift-facing bridges expose only value types (`String`), never `Flow`/`DataStore` — mirroring `IosUserConfigBridge`.
+- **Field-by-field default reconciliation is the gate.** Do not blindly expose the rest of `WaterMark` just because the bridge exists. A field is safe only when the stored default, existing Swift render argument, and shared editor rule agree; if they do not agree, the slice must state the visible alignment. Text, degree, tileMode, and alpha were default-preserving. Text color was accepted as **non-default-preserving alignment**: fresh iOS render changes from the prior hardcoded white to shared/Android amber `#FFB800`, and the renderer now consumes `Color(colorArgb)`. Text size was accepted as **non-default-preserving alignment** in S4d-109: hardcoded `24` -> shared default `14`. Gaps were accepted as **non-default-preserving alignment** in S4d-110: hardcoded `40/40` -> shared default `0/0`. `TextTypeface.Normal` and `TextPaintStyle.Fill` preserve prior iOS output; italic/bold and Stroke are Skiko perceptual honoring, not Android byte parity. Icon/image mode and bounds need separate UI and render-boundary decisions.
+- **Size/gaps are simpler than color technically, harder visually.** S4d-108 found `textSize`, `hGap`, and `vGap` already exist as iOS render bridge params, so no render-edge addition is needed; the mismatch was Swift hardcoding `24.0` and `40/40` while shared defaults are `14f` and `0/0`. S4d-109 resolved textSize as a 4-file wire-up; S4d-110 resolved gaps as the same 4-file wire-up with clamp tests (`0..500`). The simple param-exists lane is now done; do not fold larger renderer-capability work into the same pattern.
+- **Renderer-capability text fields are a separate small pattern.** S4d-111 split the remaining fields correctly: `textTypeface` and `textStyle` already had shared model/editor/repo storage, but the iOS render path ignored them. S4d-112 mapped `TextTypeface` to Compose `FontWeight`/`FontStyle`; S4d-113 mapped `TextPaintStyle.Fill/Stroke` to Compose draw styles. S4d-122 proved the mapping alone was not enough for Stroke because commonMain dropped `drawStyle`; S4d-123 fixed the shared paint call, so Stroke is now honored on Desktop/iOS Skiko. The text-field lane is otherwise exhausted; `iconUri`/`markMode` must be a readiness/decision pack first.
+- **Image watermark is an epic, not a field.** S4d-114 proved the `iconUri`/`markMode` gap crosses four separate risks: render foundation, durable icon bytes, workflow branch, and picker UI. S4d-115 completed Kotlin-only iOS render proof. `IosWatermarkRenderer.renderIconCell` wraps the accepted Desktop/iOS `composeIconCell`, and `composeIconOverImage` decodes background+icon bytes via `IosImageDecoder` then composes through `composeOverBackground`. S4d-116 completed durable icon persistence. S4d-117 completed the workflow render branch: iOS Text mode keeps the old path, while Image mode uses persisted icon bytes through a Swift-catchable icon render bridge and fails visibly when the icon is missing/unreadable. S4d-118 completed the minimal picker UI: SwiftUI picks icon bytes, calls `setIconFromBytes`, shows mode/thumbnail, and re-renders an existing source image. The mini-epic is functionally complete; real PHPicker grid-cell automation remains a tooling proof gap, not a product-path gap.
+- **Icon-file cleanup needs a real ownership predicate, not just a prefix.** S4d-116 r1 rejected prefix-only `startsWith("<docs>/watermark_icons/icon_")` because it could accept traversal/nested suffixes. The accepted rule is prefix + non-empty filename suffix with no `/`; generated `icon_<NSUUID>` paths pass, while `icon_/../../foreign`, `icon_x/foreign`, an empty suffix, and empty paths do not. This is the small native-platform guard that makes best-effort replacement cleanup safe.
+- **iOS icon alpha is intentionally single-application.** Android's current icon path bakes alpha into the cell and then reuses the alpha-bearing paint during composition, so it double-applies alpha. S4d-115 chose the cleaner iOS rule: render an opaque icon cell and apply watermark alpha once in `composeOverBackground`, mirroring the iOS text path. This is a perceptual iOS renderer behavior, not byte parity with Android native `Canvas.drawBitmap`; Android icon production stays native per S4d-8.
+- **Build/runtime-proof ≠ parity.** These slices prove the editor *state* flow (edit -> persist -> re-render, plus iOS-sim bridge roundtrips + the `xcodebuild` app build); they are explicitly **not** 1:1 visual parity with Android v2.10.0. Real PHPicker grid-cell selection stays the pre-existing beta-toolchain limit, independent of this work.
+
+## First shared editor use-case: an immediate consumer is what makes extraction non-speculative (S4d-94/95/96, 2026-06-27)
+
+- **Use-case extraction ≠ a Koin module.** S4d-94 deferred the Koin commonMain split because it would have **zero** consumers (Koin is Android-only; desktop/iOS build their one repo by hand). S4d-96's `WatermarkConfigEditor` is the opposite: the Android `MainViewModel` consumes it **immediately**, so it's a behavior-preserving refactor with a caller — not dead abstraction. The criterion for extraction is *does something call it today*, not *will it be reusable someday*.
+- **Smallest safe shape:** `suspend` methods, **no `CoroutineScope`** in the use-case (the Android VM keeps `viewModelScope`/`launch`), **constructed in-VM from the already-injected repo** (`private val configEditor = WatermarkConfigEditor(waterMarkRepo)`) so there is **no Koin/AppModule change**, and **public VM method names/signatures unchanged** so no caller (`ComposeMainActivity`/`EditorScreen`/sheets) moves. Move the inline rules **verbatim** (here: text-size `coerceAtLeast(0f)`, `WatermarkConfigRules.alphaPercentToByte`, non-empty `MediaRef` icon guard).
+- **No direct unit test when a fake is heavy — keep the regression net green instead; a cheap test is possible only when a collaborator is an interface.** `WaterMarkRepository` / `UserConfigRepository` are concrete/DataStore-backed, so a direct test of `WatermarkConfigEditor`/`OutputPrefsEditor` would need a heavy fake → skipped (those slices have no direct unit test; compile/link + unchanged strict goldens 51/0 are a build/regression net, **not** a unit test of the moved writes). S4d-98's `TemplateEditor` was different: `TemplateRepository` accepts a **nullable `TemplateDao`** and `TemplateDao` is an **interface**, so a cheap `TemplateEditorTest` (2/0, in-line `FakeTemplateDao`, no new dependency) pins the one non-trivial moved decision — `isDaoNull()`, which drives the VM's `UiState.DatabaseError` branch. Even there the **suspend** `add`/`update`/`delete` stay un-unit-tested: commonTest has no coroutine runner (`kotlinx-coroutines-test` absent; adding it is a forbidden Gradle change). Lesson: extract behind an interface seam if you want the use-case cheaply testable; otherwise lean on compile/link + goldens and don't overclaim coverage.
+- **Pattern reused (S4d-97 `OutputPrefsEditor`).** The same shape applied cleanly to a second sub-flow: `MainViewModel.saveOutput`'s format+compress-level writes became `OutputPrefsEditor(repo: UserConfigRepository).save(format, level)` — suspend, no scope, in-VM construction from the already-injected repo, public `saveOutput` signature/defaults + `resetJobStatus()` timing unchanged, no DI/Gradle/lifecycle change. The seam then scaled to a third sibling, `TemplateEditor` (S4d-98), which kept its app-side `UiState.DatabaseError` mapping Android-side via the non-suspend `isDaoNull()` signal — and that signal is the **only** part directly unit-tested (the suspend `add`/`update`/`delete` writes are not). The next work is the deliberate multiplatform-`lifecycle`/`AboutViewModel` readiness decision or real Desktop/iOS editor UI consumers, not another tiny use-case.
+- **The VMs themselves stay Android.** `MainViewModel` is too IO/graphics-coupled to move; both VMs extend `androidx.lifecycle.ViewModel` and the catalog has only the Android `lifecycle-viewmodel-ktx`. Moving `AboutViewModel` (already neutral except the base class) waits on a deliberate multiplatform-`lifecycle` decision — a separate slice, not folded into a use-case extraction.
+- **Shared-ViewModel lifecycle decision (S4d-99 readiness, 2026-06-27).** A whole-ViewModel move differs from the use-case extractions: it **adds a `:shared` dependency**, so it's owner-gated and modestly speculative when the only consumer is Android (no Desktop/iOS About screen) — conservative default is to **defer** until a second-platform consumer exists. When taken, the artifact for a shared ViewModel whose **UI retrieval stays platform-specific** is **`androidx.lifecycle:lifecycle-viewmodel`** (multiplatform; reuse catalog `lifecycle = 2.10.0`), **not** the JetBrains `lifecycle-viewmodel-compose` — that Common ViewModel is only for retrieving a VM from common Compose-Multiplatform UI. The `implementation` vs `api`+iOS-framework-`export` scope is a real gate (Swift access across `Shared.framework` needs `api`+`export`; an Android-only proof can use `implementation`) — decide by the consumer/link gate, not by guessing. Source: android-CLI docs `kb://android/kotlin/multiplatform/viewmodel` + `kb://JetBrains/kotlin-multiplatform-dev-docs/topics/compose/compose-viewmodel`.
+
+## Room/templates moved to commonMain; Android stays Room compatibility mode (S4d-90/91/92, 2026-06-27)
+
+- **Android can keep a prepackaged-DB app byte-identical by NOT setting a `SQLiteDriver`.** A Room KMP `RoomDatabase` with no driver runs in **compatibility mode** on the framework `SupportSQLiteOpenHelper` — the same engine the legacy reflection builder used. So the moved `AppDatabase` keeps `createFromAsset("ewm-db-ch.db"/"ewm-db-eng.db")` + the 2022 seed DBs opening exactly as before, and **no SQLite artifact is added** (no `sqlite-bundled`/`libsqliteJni.so`, no extra `sqlite-framework` beyond what `room-runtime` already pulled). Proven by a Robolectric prepopulated-DB smoke (`TemplatePrepopulatedDbSmokeTest`, 2/0) — the decision was made from that smoke, not preference. Rejected `BundledSQLiteDriver` (+~4.9 MB native, different engine vs the seed) and `AndroidSQLiteDriver` (unneeded explicit wiring; same OS SQLite compat mode already gives).
+- **Release R8 retention needs no app proguard rule.** `room-runtime` ships the consumer rule `-keep class * extends androidx.room.RoomDatabase { void <init>(); }` (auto-applied — `mapping/release/configuration.txt`), which keeps `AppDatabase_Impl` + ctor (`seeds.txt`). Android instantiates `_Impl` via reflection, so the KMP `@ConstructedBy` `AppDatabaseConstructor` object (the Native path) is correctly stripped on Android (`usage.txt`) — identical retention to the pre-existing production Room build.
+- **`Dispatchers.IO` is not usable in commonMain on Native** (internal there at coroutines 1.10.2) — `TemplateRepository`'s IO-dispatched writes were preserved by injecting `ioContext: CoroutineContext` (Koin passes `Dispatchers.IO`), the same edge-injection pattern as `WaterMarkRepository`. Same lesson hit in the S4d-91 proof (dropped a `setQueryCoroutineContext(Dispatchers.IO)` call).
+- **To prove a KMP library compiles a dep on a target without shipping its runtime to consumers, use `compileOnly` in commonMain** + runtime `implementation` only in the source sets that link/run it (S4d-91 confinement). `compileOnly` is not exported to consumers, so `:app` shipped no `libsqliteJni.so` from the throwaway proof. (The production move then uses real `implementation(room.runtime)` since Android instantiates the DB.)
+- **Off-Android Room builders need scoped drivers and Native-safe coroutine contexts.** Desktop and iOS builders instantiate `AppDatabase`, so they need `sqlite-bundled` in the actual target source set; Android must remain on compatibility mode with no bundled native payload. In the current Gradle hierarchy, do not assume `iosMain by getting` is eagerly available for this build script shape; S4d-231 attached the driver to `iosArm64Main` and `iosSimulatorArm64Main` explicitly and verified `:app:debugRuntimeClasspath` stayed clean. On Native, `Dispatchers.IO` is internal with the current coroutines version, so Room query contexts should be injected and default to `Dispatchers.Default` unless a platform-specific caller supplies something else. iOS seed-DB packaging/default-template parity is closed by S4d-232, and the Swift bridge/minimal UI consumer is closed by S4d-233; remaining iOS template work is on-screen automation/polish and final parity.
+
+## First common DataStore Preferences consumer landed: UserPreferences + UserConfigRepository in commonMain (S4d-76/S4d-77, 2026-06-27)
+
+- **S4d-76** moved `UserPreferences` to commonMain (same FQN), dropped Android `@Keep` (class is constructed directly so R8 keeps it — proven by `assembleRelease`), and inlined `DEFAULT = UserPreferences(ImageFormat.JPEG, 80)` to break the model→repo circular import.
+- **S4d-77** moved `UserConfigRepository` to commonMain — the **first real common DataStore Preferences consumer**, which is what makes the S4d-74 store-creation `expect/actual` promotion non-speculative.
+- **`okio.IOException` resolves in commonMain with NO dependency change** — confirmed by the compile gate on desktop + both iOS + app (okio is reachable via the transitive `datastore-core-okio`). It is a JVM `typealias` to `java.io.IOException`, so the `.catch{}` swallow-IO behavior is byte-identical on Android. (The S4d-75 classpath inference was correct; the compile is the authoritative proof.)
+- **`BuildConfig.VERSION_CODE` stays at the Android caller edge** via `saveVersionCode(versionCode: Int)` (sole caller `MainViewModel.saveUpgradeInfo()`); the repo carries no Android `BuildConfig`.
+- **Changelog key inlined byte-identical** (`"sp_water_mark_config_key_change_log"`) so Android-side `WaterMarkRepository` is not a commonMain dependency; persisted bytes/keys unchanged (no migration, strict goldens 48/0).
+- Next (now done): iOS/desktop store creation landed in S4d-78 (see below). NO `expect/actual createDataStore` was taken — plain per-platform functions. `WaterMarkRepository` later moved to commonMain (S4d-84..S4d-89, second commonMain prefs consumer); Room/templates then moved to commonMain too (S4d-90..S4d-92 — Android stays Room compatibility mode; see the top finding).
+
+## WaterMarkRepository moved to commonMain via staged edge-injection (S4d-83..S4d-89, 2026-06-27)
+
+- The repository move was staged (one Android edge per slice) rather than one-shot, because two edges carried real semantics: the **localized default text** (`MyApp.getString(R.string…)`) and the **SDK-gated tile mapper** (`toWatermarkTileMode`, pre-Android-12 stored DECAL id 3 → REPEAT). Each was injected as a constructor param supplied at the `RepositoryModule` Koin edge, so commonMain stays Android-free while behavior is byte-identical: `defaultTextProvider: () -> String` (per-emission lambda preserving locale tracking), `tileModeFromStorageId: (Int?) -> WatermarkTileMode` (the SAME SDK-gated mapper, NOT `fromStorageId` — pinned by `WatermarkTileModeMappingTest`), `logError: (String) -> Unit`.
+- Trivial edges first (S4d-84 `Color`/`ArrayMap`, S4d-85 `okio.IOException`) de-risked before the harder decisions; the move (S4d-89) was then a byte-identical git rename because the repo had no `android.*` framework import left.
+- Persisted bytes/keys unchanged throughout (`SP_NAME`/`SP_KEY_*`/`MAX_*`/storage ids; no DataStore migration; strict goldens 48→49/0, no rebaseline). `DataStoreModule` still creates the Android `waterMarkDataStore` from `WaterMarkRepository.SP_NAME`.
+- Lesson reinforced: a repository with localized resources + SDK-gated mappers moves cleanly by injecting those as edge providers (mirroring S4d-77's `okio.IOException`/`saveVersionCode(Int)` pattern), keeping the move a pure relocation. Next (at the time; Room/templates now completed in S4d-90..S4d-92): the Koin split, real editor prefs UIs.
+
+## Desktop + iOS DataStore store creation via public createWithPath, no expect/actual (S4d-78, 2026-06-27)
+
+- `PreferenceDataStoreFactory.createWithPath(produceFile: () -> okio.Path)` is **public and serializer-free** in `datastore-preferences-core` 1.2.1 (verified by `javap`), so desktop/iOS create a preferences `DataStore<Preferences>` without the internal `PreferencesSerializer` and **without any dependency change** (okio comes via the S4d-74 `datastore-core-okio`). commonMain exposes `createPreferencesDataStore(producePath)`; desktop/iOS supply the okio path (desktop a `File` dir; iOS `NSDocumentDirectory`).
+- **No `expect`/`actual createDataStore`** — kept as plain per-platform functions because the platform creators have genuinely different signatures (Android: Context+migration; desktop: dir; iOS: derives a dir). An `expect` would be a forced fit; this is intentional, not a stepping stone.
+- **Android store creation stayed byte-faithful and untouched** (`androidMain` not edited; strict goldens 48/0).
+- Proof: all-target compile + a **Desktop** `UserConfigRepository` roundtrip test (`:shared:desktopTest`, 1/0). **iOS is compile/link-proven only** — no iOS runtime roundtrip was run.
+- Desktop/iOS app DI to `createUserConfigDataStore(...)` is done: Desktop app-entry wiring landed in S4d-80 (`:desktopApp` `Main.kt` smoke), the iOS Swift-facing prefs bridge + iOS runtime roundtrip in S4d-81 (`IosUserConfigBridge`), and the iOS Swift app retention of that bridge in S4d-82 (`WatermarkWorkflow` retains+calls it, build-proven). Note: a JVM/Native consumer must declare coroutines + datastore itself (S4d-80 added them to `:desktopApp`), because `:shared` exposes those public-API types as `implementation`, not `api`.
+
+## iOS Swift-facing prefs bridge avoids exposing Flow to Swift (S4d-81, 2026-06-27)
+
+- `IosUserConfigBridge` (iosMain) wraps the common `UserConfigRepository` for Swift: reads are a one-shot snapshot (`userPreferences.first()`), writes are `suspend` (bridge to Swift `async`; failures → Swift errors). **No `Flow`/`DataStore` in the public signatures** — only `UserPreferences`/`ImageFormat`/`Int` — because Kotlin `Flow` has no clean Swift interop (the reason a bridge was needed rather than direct Swift use of the repo).
+- Made it a `class IosUserConfigBridge(repo)` (testable; caller owns the store) + a `defaultIosUserConfigBridge()` factory (production, default `NSDocumentDirectory` store). Single-instance-per-file: a real app retains ONE.
+- iOS runtime-proven on `iosSimulatorArm64Test` (default `(JPEG,80)` → `(PNG,60)` → `saveVersionCode(123)`); the test uses a unique NSUUID store name so the initial read is the true default and the ephemeral sim sandbox needs no cleanup. Kotlin-only at S4d-81; the Swift app retention landed in S4d-82 (`WatermarkWorkflow` retains one bridge via `IosUserConfigBridgeKt.defaultIosUserConfigBridge()` and calls `try await currentPreferences()` once on launch — build-proven on the generic iOS Simulator SDK; non-visible witness, no prefs UI).
+
+## First DataStore KMP code uses common helper + androidMain function, NOT `commonMain expect` (S4d-73/S4d-74, 2026-06-27)
+
+- DataStore 1.2.1 (already on the repo) is KMP-capable (floor 1.1.0, Preferences-only) — it was the smallest useful next KMP slice over Room (bigger) and the Koin split (premature).
+- **A `commonMain expect` DataStore factory is the wrong shape for this module:** `:shared` targets androidTarget + desktop + iosArm64 + iosSimulatorArm64, so a `commonMain expect` requires `actual` on every target. With no iOS/desktop consumer yet, that forces empty/fake actuals and breaks the `:shared` desktop/iOS compile gates. S4d-74 instead uses a plain `commonMain` helper `createDataStore(storage: Storage<Preferences>)` + a plain `androidMain` function `createPreferencesDataStore(context, name)` (NOT `actual`).
+- **Android keeps byte-identical preferences creation via `PreferenceDataStoreFactory.create(produceFile = preferencesDataStoreFile(name), migrations = SharedPreferencesMigration(context, name))`** — the same path/format/migration the old `by preferencesDataStore(...)` delegate ran. Android does NOT route through the common storage helper because building a byte-identical `Storage<Preferences>` would need the internal preferences serializer; the common helper is the desktop/iOS forward seam.
+- `di/DataStoreModule.kt` preserved the `Context.userDataStore`/`waterMarkDataStore` property names so `RepositoryModule`/`AppModule` were untouched; one store per file in-process is kept via `@Volatile` double-checked locking. Repos stay Android-side. Stored bytes unchanged; strict goldens 48/0, no rebaseline.
+- iOS/desktop store creation landed WITH the real common prefs consumer (S4d-77 repo move → S4d-78 store creation), not speculatively — and as plain per-platform functions, NOT an `expect/actual` promotion (that was deliberately not taken). Room KMP and the Koin common/platform split remain later milestones.
+
+## Full-platform code migration precedes final 1:1 UI parity (2026-06-27)
+
+- The remaining work is not "make current Draft PR visually merge-ready." PR #358 stays a Draft integration checkpoint while KMP/CMP migration continues in small slices.
+- Final screenshot/recording-driven 1:1 UI/UX restoration starts only after the code migration is release-grade across Android, iOS, and Desktop. Until then, UI evidence is used to prevent regressions for a slice, not to declare global product parity.
+- Android production v2.10.0 is the single visual/behavioral truth. Android debug must match it first in the final parity phase; iOS/Desktop then align to that Android baseline with explicitly classified platform differences.
+- ACSP/cowork is retired as of 2026-07-03. Historical worker summaries remain evidence leads only; current implementation is direct Codex work against the real diff/current files with per-slice verification, local commits, and durable doc updates.
+- The StateFlow cleanup lane is now complete through S4d-69, S4d-70 selected the next code-migration slices, S4d-71 moved `ImageInfo` to commonMain, S4d-72 moved the neutral config command vocabulary to commonMain, S4d-73 mapped DataStore/Room/Koin KMP readiness, S4d-74 landed the first DataStore KMP code in `:shared`, S4d-76/S4d-77 moved `UserPreferences` + `UserConfigRepository` to commonMain (the first real common DataStore Preferences consumer), S4d-78 landed desktop+iOS store creation (plain per-platform functions; no `expect/actual`), S4d-80 wired the Desktop app-entry (`:desktopApp` smoke), S4d-81 landed the iOS Swift-facing prefs bridge + iOS runtime roundtrip, and S4d-82 retained that bridge in Swift (`WatermarkWorkflow` retains+calls it once on launch, build-proven; non-visible witness). The next safe step (at the time; Room/templates now completed in S4d-90..S4d-92) is the Koin split, the optional `:shared` `api`-exposure cleanup, or the real Desktop/iOS editor UIs consuming prefs (C4/C5); the `WaterMarkRepository` move to commonMain landed in S4d-84..S4d-89. Not screenshot/recording parity from the current branch state.
+
+## ImageInfo can move to commonMain without bringing AndroidX annotation (S4d-70, 2026-06-27)
+
+- `ImageInfo` is already semantically platform-neutral after S4d-52/S4d-53: `uri` is `MediaRef`, `result` is commonMain `Result`, and `jobState` is commonMain `JobState`.
+- Its only remaining Android coupling is `androidx.annotation.FloatRange` on `offsetX`/`offsetY`. That annotation is a doc/lint hint, not a runtime invariant; do not add `androidx.annotation` to `:shared` just to preserve it.
+- The smallest S4d-71 implementation is a file move from `app/src/main/.../data/model/ImageInfo.kt` to `shared/src/commonMain/.../data/model/ImageInfo.kt`, dropping only `@FloatRange`. Anything larger (`ConfigChange`, DataStore KMP, Room KMP, Koin split) needs its own slice.
+
+## ImageInfo is now commonMain; keep app-side edge models distinct (S4d-71, 2026-06-27)
+
+- `ImageInfo` now lives in `shared/commonMain` with the same package/FQN, so consumers did not need import churn. Its field shape, defaults, `isSameItem`, and `empty()` semantics are unchanged.
+- The old `offsetX`/`offsetY` Android range annotation was only a doc/lint hint. It was removed instead of adding AndroidX annotation to `:shared`; the 0f..1f invariant remains documented in plain words and the retired symbol is grep-clean.
+- Do not overstate the milestone as "every app data model moved." `UserPreferences` (preference boundary), Room `Template`, and UI `FuncTitleModel` remain app-side edge models. The completed part is the image identity / watermark-config platform-neutral model set.
+
+## Config command vocabulary is now commonMain; keep raw UI edge temporary (S4d-72, 2026-06-27)
+
+- `FuncType` moved from the app-only `FuncTitleModel` nested type to `shared/commonMain`; `FuncTitleModel` stays app-side because it carries Android resource ids.
+- `WatermarkConfigChange.from(FuncType, Any)` centralizes the legacy fail-fast casts and h/v gap rounding; `MainViewModel.onWaterMarkChanged` dispatches typed commands to the existing `update*` methods.
+- `Action.WaterMarkChange(item, any)` remains the temporary Android/UI edge. Do not broaden this into a full action-system rewrite until shared editor/use-case extraction needs it.
+
+## MainViewModel has no faithful pure WaterMark reducer yet (S4d-62, 2026-06-27)
+
+- `update*` config methods are thin neutral pass-throughs to `WaterMarkRepository`, but the actual product behavior is still field-by-field DataStore writes followed by repo re-emission. A pure in-memory `WaterMark` reducer would be new behavior, not an extraction.
+- `onWaterMarkChanged` is only a dispatch edge today: it takes Android-annotated `FuncTitleModel`, casts `Any`, and side-effects through repo-backed update methods. Do not move it wholesale to commonMain as a reducer.
+- The smallest useful next step is StateFlow-only cleanup: use existing `waterMarkFlow`/`selectedImageFlow` instead of duplicate `LiveData` wrappers first; leave Android-coupled `galleryPickedImageList` and broader save/compress state conversion for separate slices.
+
+## Duplicate state wrappers can have internal consumers (S4d-63, 2026-06-27)
+
+- `viewModel.waterMark`/`viewModel.selectedImage` had no external Compose consumers, but `MainViewModel` still read the duplicate wrappers internally via bare `waterMark.value`/`selectedImage.value`.
+- The safe retirement was not just deleting the wrapper declarations; it also required renaming those internal reads to existing `waterMarkFlow.value`/`selectedImageFlow.value`.
+- For the next LiveData cleanup, grep both external `viewModel.foo` consumers and bare same-class `foo.value` reads before declaring a holder dead.
+
+## LiveData event holders need equality semantics checked before StateFlow (S4d-64, 2026-06-27)
+
+- `saveResult` was safe to convert to `MutableStateFlow<Result<*>?>(null)` because the old no-value state maps to nullable `null`, and each writer creates a fresh `Result`.
+- `Result` is a normal class, not a data class, so StateFlow conflation will not drop equal-looking repeated save events by structural equality.
+- Repeat this check for every event-like LiveData holder; do not assume StateFlow is behavior-identical if the payload is a data class or reused singleton.
+
+## Unobserved event holders still need future-consumer shape preserved (S4d-65, 2026-06-27)
+
+- `compressedResult` had no current consumer, but the public API still needs the same nullable event shape as `saveResult`: `StateFlow<Result<*>?>` with `null` as the no-event state.
+- A no-consumer holder can be migrated single-file only after proving there are no external reads and no same-class reads; preserve all writer payloads so a future consumer sees the same event codes/messages.
+- For `saveProcess`, preflight both writers and consumer expectations before conversion; it is an observed progress state, not an unobserved event placeholder.
+
+## Mutable data-class progress state needs snapshot-before-dispatch (S4d-66, 2026-06-27)
+
+- `saveProcess` proved that StateFlow migration is not just replacing `.postValue`: `ImageInfo` is a mutable data class and `generateList` mutates the same instance through `jobState`/`result`.
+- Non-null progress emissions must store `copy()` snapshots so StateFlow equality cannot conflate mutated-in-place updates.
+- When a snapshot is emitted from a later dispatcher (`launch(Dispatchers.Main)`), capture the snapshot before dispatch; copying inside the lambda can observe a later mutation and lose the intended progress state.
+
+## Private write-only LiveData should be deleted, not converted (S4d-67, 2026-06-27)
+
+- `saveImageUri` had one private declaration and one write, with zero readers, reflection hits, or tests. Converting it to StateFlow would preserve dead code.
+- The observable save completion already flows through `_saveResult.value = Result.success(code = TYPE_JOB_FINISH, data = result.data)`, so the dead write carried no product behavior.
+- For remaining LiveData cleanup, first prove liveness. Delete write-only private holders; convert only state that has real consumers.
+
+## Watermark config rules can move without moving repositories (S4d-61, 2026-06-27)
+
+- `WatermarkConfigRules` in commonMain can own pure legacy normalization behavior while `WaterMarkRepository` was then the Android DataStore boundary (it later moved to commonMain in S4d-84..S4d-89). This extracts useful shared logic without forcing a repository rewrite.
+- The safe rule surface is small and testable: text-size clamp, alpha percent-to-byte conversion, alpha byte clamp, horizontal/vertical gap clamp, degree clamp, and text/icon mode transitions. These are value transforms, not renderer changes.
+- Keep claims precise: release debug/release gates prove build/R8 health; same APK size is not byte identity unless hashes are compared. S4d-61 artifacts were corrected to avoid that overclaim before acceptance.
+
+## Desktop EXIF orientation is doable with pure JDK — no metadata dependency (S4d-21, 2026-06-19)
+
+- **What:** `DesktopImageDecoder` now bakes JPEG EXIF orientation into the decoded `ImageBitmap` at the Desktop decode edge (matching Android, which bakes EXIF via `androidx.exifinterface`/`BitmapUtils`). A tiny pure-JDK reader (`parseExifOrientation`) scans the JPEG APP1 `Exif\0\0` segment and reads TIFF IFD0 tag 0x0112 (II/MM aware, best-effort → 1); `applyExifOrientation` rotates/flips via AWT `AffineTransformOp` (NEAREST = lossless for 90°-multiples) for all 8 orientations (5–8 swap w/h). commonMain stays decode-free — orientation is a platform decode-edge concern only.
+- **Key finding:** **no metadata dependency is needed.** `ImageIO`'s standard JPEG plugin does not surface EXIF orientation in its metadata tree, but the APP1/TIFF Orientation tag is trivially parseable from the raw bytes (~80 lines, well-tested). This avoids `metadata-extractor`/`commons-imaging` and keeps the slice dependency-free and target-scoped (desktopMain only; `:app` unaffected).
+- **Testing without binary assets:** JPEG EXIF fixtures are generated deterministically — `ImageIO`-encode a base image, then splice a minimal EXIF APP1 (TIFF header + one Orientation entry) right after SOI. Decoding asserts orientation-correct corner + dims (1→TL, 3→BR, 6→TR swapped, 8→BL swapped). Robust to JPEG loss by testing a large bright BLOCK's quadrant, not exact pixels.
+- **Boundary symmetry:** Desktop decode now mirrors the Android decode policy (EXIF baked at the edge) and the iOS decoder (S4d-20B) can adopt the same orientation step later via Skia/`ImageIO`-equivalent metadata.
+- **S4d-22 mirror coverage (2026-06-20):** the S4d-21 test only directly asserted rotation orientations (1/3/6/8); S4d-22 widened `DesktopExifOrientationTest` to the mirror family — 2 (mirror-H → TR), 4 (mirror-V → BL), 5 (transpose → TL, dims swap), 7 (transverse → BR, dims swap) — and `parses_orientation_tag_values` now checks 1..8. All four AffineTransform matrices were re-derived from the documented `(dstX,dstY)` mappings and match the test quadrant/dim expectations; suite 12/0. Pure test-only widening over already-shipped production transforms — no `DesktopImageDecoder` change. Note: 5/7 (like 6/8) translate by full `w`/`h` not `w-1`/`h-1`, so a 1px edge row/col may be clipped by NEAREST — the brightest-quadrant assertion is robust to that.
+- **S4d-23: Skia BAKES EXIF orientation — iOS needs no transform (2026-06-21).** The S4d-20B "iOS can adopt the orientation step later" note above is now SUPERSEDED: skiko's `org.jetbrains.skia.Image.makeFromEncoded(bytes).toComposeImageBitmap()` (the exact `IosImageDecoder` path) **already applies the EXIF Orientation tag at decode**. Proven at runtime on the desktop skiko backend (same skiko/Skia, same API as iOS): orientation-6 JPEG → upright **16×24, block top-right**; orientation-8 → 16×24 bottom-left; no-EXIF → 24×16 top-left (`SkiaExifDecodeProbeTest`, 3/0). So the asymmetry is: **AWT `ImageIO` (Desktop) and `BitmapFactory` (Android) do NOT bake (manual transform needed); Skia (iOS) DOES.** Applying a manual rotation on iOS would double-rotate, so `IosImageDecoder` stays pure-Skia (S4d-20B, unchanged). A speculative commonMain `ExifOrientation.parse`+`apply` (DrawScope transform, all-8 verified on desktop) was built then DELETED once the proxy proved Skia bakes; restore it only if the S4d-20C iOS-runtime run shows skiko does NOT bake on Native. **Process note:** running the candidate on `:shared:desktopTest` (which exercises the identical skiko decode) caught the double-rotation BEFORE any production wiring — evidence-first paid off. Also learned: hand-building a Compose `Matrix` for `Canvas.concat` is convention-fragile (got 2/4/8 wrong); the documented `DrawScope` `scale`/`rotate`/`translate` stack is the reliable way to express orientation affines. iOS gate `IosExifOrientationTest` is compile/link-proven. **Update — S4d-55 (2026-06-26): now RUNTIME-CONFIRMED on Native — `IosExifOrientationTest` passed on the installed iOS 27.0 simulator (orientation-6 decodes upright with swapped dims; no-EXIF stays unrotated), so skiko bakes EXIF on iOS, not just on the desktop proxy. The speculative `ExifOrientation.apply` stays deleted; no `IosImageDecoder` change.**
+
+## iOS renderer boundaries land; runtime run needs an iOS runtime (S4d-20B, 2026-06-19)
+
+- **What:** `shared/src/iosMain` now mirrors the desktop boundaries — `IosImageDecoder` (Skia `Image.makeFromEncoded` → `toComposeImageBitmap()`), `IosTextRasterEnv` (skiko `createFontFamilyResolver()` + `bundledFontFamily(latinBytes, cjkBytes, latinFirst)` via the skiko byte-`Font` factory), `IosWatermarkRenderer` (renderTextCell + `composeOverImage` + Skia PNG encode). The accepted commonMain pipeline (`composeTextCell` + `composeOverBackground`) runs unchanged on iOS.
+- **iOS = Skiko, like desktop:** all the platform APIs the desktop renderer uses have iOS equivalents in the Compose-Multiplatform iOS klibs — `createFontFamilyResolver()`, `androidx.compose.ui.text.platform.Font(String, ByteArray, …)`, `org.jetbrains.skia.Image` (decode/encode), `toComposeImageBitmap()`/`asSkiaBitmap()`. **No new dependency** (Skia ships with compose iOS); commonMain stays decode-free.
+- **Font bytes are a caller responsibility on iOS:** Kotlin/Native has no JVM-classpath `getResourceAsStream`, and compose-resources is forbidden. So `IosTextRasterEnv.bundledFontFamily` takes the font **`ByteArray`s as parameters**; a real iOS app supplies them from `NSBundle`/`NSData` (C5). The render proof uses `FontFamily.Default` (iOS system font) so it does not depend on packaging the 8 MB CJK font yet.
+- **S4d-20C-a: the NSBundle font loader exists (2026-06-21).** `IosFontLoader` (iosMain) now provides the `NSBundle`→`NSData`→`ByteArray` acquisition that S4d-20B left to the caller: `loadFontBytes(name, type, bundle=NSBundle.mainBundle)` (via `pathForResource` + `dataWithContentsOfFile`, copied with `usePinned`/`addressOf`/`convert` + `platform.posix.memcpy` under `@OptIn(ExperimentalForeignApi)`), and `bundledFontFamily(...)` delegating to the **unchanged** byte-core. **No new dependency** — Kotlin/Native bundled interop (`platform.Foundation`/`platform.posix`) links cleanly on both iOS targets. The byte-array API stays the core boundary so tests/non-bundle callers are unaffected. compile/link is proven (`IosFontLoaderTest`). **Update — S4d-55 (2026-06-26): `IosFontLoaderTest` now RUNS on the iOS 27.0 simulator (3/3 pass), and `.app` font packaging is proven — the built `iosApp.app` bundles `NotoSans-Regular.ttf` + `NotoSansSC-Regular.otf` as Copy Bundle Resources.** Loud-failure contract: missing/unreadable/empty resource → `IllegalStateException`.
+- **Proof level + the runtime gap — CLOSED for the test suite (S4d-55, 2026-06-26).** *(Originally: both iOS targets compile + both iOS test executables LINK to native `.kexe`, but `iosSimulatorArm64Test` could not run because `xcrun simctl list runtimes` was empty.)* An **iOS 27.0** simulator runtime is now installed, and `:shared:iosSimulatorArm64Test` **RAN and passed 41/41** (incl. `IosWatermarkRendererTest`'s decode-dims/pixel-change/determinism/reject-bad-bytes intent, `IosFontLoaderTest`, `IosExifOrientationTest`, `IosWatermarkRenderBridgeTest`, `IosByteArrayInteropTest`). The `iosApp` also built for the simulator SDK, launched, and executed shared Kotlin/Native code live (on-screen `geometry.diagonal(100×100)=141` witness; `Shared.framework` + Noto fonts packaged). **Remaining runtime gap — now mostly closed (S4d-56→S4d-58):** S4d-57's `iosAppUITests` XCUITest target **opens** the out-of-process PHPicker but cannot address its grid cells on Xcode-27-beta/iOS-27; S4d-58 added a `#if DEBUG`/`-uiTestFixtureImage` seam feeding a deterministic image through the **real** `WatermarkWorkflow`/`IosWatermarkRenderBridge`, and XCUITest (2/0) proved **fixture → watermarked preview → Save to Photos → Share**. The ONLY step still unproven is real **PHPicker grid-cell selection** (the seam bypasses it) — a beta-toolchain/system-UI automation limitation, not a product failure.
+
+## Desktop real-image decode boundary: `DesktopImageDecoder` (ImageIO) (S4d-20A, 2026-06-19)
+
+- **What:** desktopMain `DesktopImageDecoder.decode(bytes|file)` decodes a real encoded image via AWT `ImageIO.read` → `BufferedImage.toComposeImageBitmap()`, feeding the accepted commonMain composition (`WatermarkCellComposer.composeOverBackground`). `DesktopWatermarkComposer.composeOverRealImage(imageBytes, …)` is the end-to-end Desktop pipeline (decode → render cell → compose → encode); `sampleBackgroundPng(…)` is a Compose-free deterministic PNG fixture so `:desktopApp`/tests exercise a genuine ImageIO round-trip with no binary asset.
+- **Boundary holds (ADR-0004):** commonMain stays **decode-free** — already-decoded `ImageBitmap` in, composed out. Decode + encode are platform-side only. The iOS decoder (`UIImage`/`ImageIO`) is a later slice reusing the same commonMain composition.
+- **No new dependency:** `javax.imageio` is JDK; `toComposeImageBitmap()` is the existing `compose.desktop.currentOs` (desktop-target-only, S4d-18). `:app` + shared-android runtime classpath stay 0 skiko / 0 compose.desktop.
+- **Decoder fails loud:** `ImageIO.read` returns `null` for unrecognised bytes, so `decode` throws `IllegalStateException` rather than NPE-ing later (locked by a test).
+
+## Desktop composition realized: `composeOverBackground` (REPEAT/CLAMP) on Desktop (S4d-19, 2026-06-18)
+
+- **What:** commonMain `WatermarkCellComposer.composeOverBackground(background, cell, tileMode, offsetX, offsetY, alpha)` is the platform-neutral composition step (the analogue of Android `WatermarkRenderer.compose`): REPEAT grid-tiles the cell from origin across the background; CLAMP draws one decal at the fractional offset. **Supports REPEAT and CLAMP only** — it `require()`s those and **throws for MIRROR/DECAL** (review P1): those legacy, non-product-exposed ids are filled in Android through a `BitmapShader` whose own `Shader.TileMode` governs sampling, which an origin-stepped draw loop does not reproduce, so no MIRROR/DECAL parity is claimed (a separate design+gate if ever needed). desktopMain `DesktopWatermarkComposer` supplies a deterministic asset-free generated background, AWT PNG encode, and a Compose-free `ComposedImage` holder for `:desktopApp`.
+- **Decode/encode stays platform-side:** commonMain takes already-decoded `ImageBitmap`s only; background generation + PNG encode live in desktopMain (no image-decode in commonMain — ADR-0004 boundary). No binary sample asset (generated background), no compose-resources.
+- **Tiling model:** a manual grid loop stepping by the cell's own dims from `(0,0)` reproduces an Android `BitmapShader(REPEAT)` filling the region (the cell already carries gap padding). Chosen over a `ShaderBrush`/`ImageShader` for determinism and platform-neutral simplicity.
+- **Verified Desktop-only, Android untouched:** `:app` + shared-android `debugRuntimeClasspath` are skiko-clean; the new commonMain function recompiles into Android with strict goldens still green (no rebaseline). Visual: REPEAT tiles the watermark grid; CLAMP is a single localized decal.
+
+## Desktop text renderer realized: `composeTextCell` + bundled font on Desktop (S4d-18, 2026-06-18)
+
+- **What:** `shared/desktopMain` `DesktopWatermarkTextRenderer` is the first non-test use of the bundled commonMain text path: desktop Skiko `createFontFamilyResolver()` + the bundled Latin+CJK font loaded from `desktopMain/resources/fonts/` (Skiko byte-`Font` factory, **no compose-resources**), rendering through the shared `WatermarkCellComposer.composeTextCell`. `:desktopApp:run` writes Latin/CJK/multiline/rotated PNGs; `DesktopTextRendererGoldenTest` is a perceptual/stability gate (nonblank + deterministic quantized-ink signature + CJK density).
+- **Skiko per-glyph fallback:** on the Skiko desktop host, **latin-first** `FontFamily(latin, cjk)` per-glyph falls back to the CJK face — CJK renders real glyphs (visually confirmed). The S4d-16 desktop test had conservatively used cjk-first; latin-first works on this backend, so the desktop renderer defaults latin-first (keeps Latin metrics, gets CJK coverage).
+- **Module isolation:** `compose.desktop.currentOs` (Skiko) is a `desktopMain` dependency — the desktop (jvm) target only. It does NOT leak to `:app` (which consumes `:shared`'s android variant); `:app:debugRuntimeClasspath` has 0 skiko / 0 compose.desktop. Plain-JVM `:desktopApp` stays Compose-free at compile time via a `RenderedTextCell(width,height,png)` holder (a `Color` value-class param in the cross-module API caused a `$default` `NoSuchMethodError`, so the consumer API avoids value classes).
+- **Android unchanged:** still native `WatermarkRenderer.buildTextShader`; no draw-swap, no golden rebaseline (S4d-17 Option C).
+
+## Android text should stay native; bundled commonMain text is Desktop/iOS-first (S4d-17, 2026-06-18)
+
+- **Decision:** S4d-17 accepted Option C. Android watermark text should continue using native `WatermarkRenderer.buildTextShader` / `StaticLayout` indefinitely; bundled commonMain `composeTextCell` is the Desktop/iOS text renderer first.
+- **Why:** with the same bundled Latin+CJK fonts on both sides, Latin and bold are byte-identical and italic/bold-italic are near, but CJK remains around `IoU 0.716/0.691`. The remaining CJK gap is the text engine (`StaticLayout`/Minikin vs Compose `MultiParagraph`), not missing font coverage.
+- **Implication:** an Android text draw-swap cannot improve Android CJK; it would replace a correct native raster with a different one, require a visible zh-locale tolerance, and force Android golden rebaseline. Keep Android CJK as log-only unless a future owner explicitly signs up for that product change.
+- **Next direction:** spend renderer effort where the bundle creates value: Desktop/iOS surfaces plus cross-platform perceptual goldens. S4d-18 should wire Desktop text rendering through `composeTextCell` without touching Android production text.
+
+## Bundled font closes platform coverage, but CJK remains an engine threshold decision (S4d-16, 2026-06-18)
+
+- **Accepted scope:** Noto Sans Latin regular + Noto Sans CJK SC regular are now present only as test resources (`shared/src/desktopTest/resources/fonts/` and `app/src/androidTest/assets/fonts/`) and are injected through `TextRasterEnv`/style font families. No Android production text draw-swap, production font loader, compose-resources, or golden rebaseline was authorized.
+- **Important correction:** the round-1/round-2 scary conclusions were measurement artifacts. CJK-first ordering caused the apparent ~2x cell-height inflation; latin-first `FontFamily(latin, cjk)` restores near-system dimensions while Android Compose still falls back to CJK per glyph. The round-2 bold/italic divergence was also a comparator bug; after preserving `TextTypeface` on the Android bundled comparator, bold is byte-identical and italic/bold-italic are near.
+- **Final evidence:** with the same bundled fonts on both sides, Latin and bold are byte-identical (`IoU 1.000`), italic and bold-italic are near (`0.921/0.934`), while CJK remains the only large text raster gap (`cjk_0 0.716`, `cjk_multiline 0.691`). This isolates the remaining CJK difference to the `StaticLayout` vs `MultiParagraph` engine, not missing font coverage.
+- **Implication:** a bundled Latin+CJK font is still required for Desktop/iOS coverage and a stable cross-platform baseline, but it is not sufficient to make Android CJK byte-exact. Before Android text draw-swap, the owner needs two explicit decisions: line-metric policy for the small latin-first dimension shift, and a CJK perceptual threshold policy.
+
+## Bundled font is a cross-platform baseline, not an Android CJK byte-exact guarantee (S4d-15, 2026-06-18)
+
+- **Decision:** owner selected Option A for future text parity: bundle a Latin + CJK family (`Noto Sans` + `Noto Sans CJK SC` class, OFL-compatible) and delegate emoji to platform fallback. Exact binaries, sizes, licenses, and platform integration are deferred to S4d-16.
+- **Finding:** on Android, both the native `StaticLayout` path and commonMain `MultiParagraph` path currently use system fonts, yet CJK remains the dominant gap (`IoU 0.39-0.70`, `colorDiff 12.6%-46.3%`). The gap is mostly layout/raster-engine behavior, not simply missing glyph coverage.
+- **Implication:** a bundled CJK font is still the right cross-platform baseline for Desktop/iOS, but it may not make Android `StaticLayout` vs commonMain `MultiParagraph` byte-exact. Android text production must stay native until a bundled-font measurement and owner-approved perceptual CJK threshold are in place.
+- **S4d-16 boundary:** add and verify exact font artifacts behind `TextRasterEnv`, measure APK-size and CJK parity deltas, avoid `compose-resources`/CMP-9547, and do not wire Android production text draw-swap or rebaseline goldens.
+
+## commonMain Compose cannot byte-match android.Canvas.drawBitmap for rotated icons (S4d-6→S4d-8, 2026-06-18)
+
+- **Finding:** commonMain `WatermarkCellComposer.composeIconCell` cannot reproduce Android `WatermarkRenderer.buildIconShader` (`android.graphics.Canvas.drawBitmap`) **byte-for-byte** for **rotated non-uniform** icons. Solid/axis-aligned icons match exactly (shift/scale-invariant), so it was invisible until the non-uniform 315° export golden (`icon_rot_315`, the production default rotation) tested it.
+- **Why (not a bug, a framework limit):** no commonMain `DrawScope.drawImage` overload offers **float placement AND nearest filtering together**. The `(srcOffset,srcSize,dstOffset,dstSize,…,filterQuality)` overload can set `FilterQuality.None` (nearest) but its src→dst **rect mapping** samples with a half-texel offset under rotation (→16/1936 px). The `(image, topLeft, …)` point-draw overload (the true `drawBitmap(bmp,x,y)` analogue) places correctly but exposes **no `filterQuality`**, so the rotation resamples bilinear (→5/1936 px). `alphaMAE = 0` in both cases ⇒ it is interior nearest-vs-bilinear / rect-map sampling, NOT edge anti-aliasing. The only API with both is platform `nativeCanvas.drawBitmap` — not commonMain.
+- **Decision (Option A):** Android icon production/export stays native (`buildIconShader`, strict-golden-protected). `composeIconCell` (with the S4d-7 float-placement improvement, which is strictly more correct) is the **Desktop/iOS** icon renderer. The shared portability win is **geometry** (`WatermarkGeometry`), not a byte-identical Android raster. Reopening requires an owner choice of a tolerance/perceptual golden policy or a commonMain nearest rotated blitter. (ADR-0004 addendum.)
+- **Implication for text:** expect the same wall for `composeTextCell` vs Android `StaticLayout` — the text commonMain raster is Desktop/iOS-first, gated behind bundled-font + on-device parity, not an Android draw-swap.
+
+## Android native text had a multiline vertical-centering bug (S4d-10→S4d-14C, 2026-06-18)
+
+- **Finding:** after S4d-12 fixed commonMain multiline horizontal alignment, the remaining Android-vs-commonMain text gap was Android's own production offset: `WatermarkRenderer.buildTextShader` centred multiline text using only `StaticLayout` line 0 height. That shifted 2-line blocks downward and clipped the bottom row.
+- **Fix accepted:** S4d-14C changed Android native text rendering to centre the full `StaticLayout.height`. This keeps Android on its native `StaticLayout` renderer, but removes the historical multiline clipping and aligns the vertical placement policy with `composeTextCell`.
+- **Evidence:** on-device multiline IoU improved 0.135→0.984, Android nonblank pixels matched commonMain 2167/2167, `androidBottomRowOpaque` dropped 89→0, and unit/device strict goldens passed after multiline-only rebaseline. Single-line/icon rows remained byte-identical.
+- **Implication:** the next text-commonization work should not pretend Android is already ready for a full text draw-swap. Android native multiline placement is now corrected, but `composeTextCell` still needs bundled-font and on-device text parity gates before any production replacement; Desktop/iOS can consume the commonMain text primitive directly.
+
+## Current State Addendum (2026-06-17)
+
+Treat this section as the current state. Older sections below preserve historical research and may describe files or risks that have since been resolved.
+
+- S3 closure checkpoint: branch `feat/migrate_to_compose` was clean and synced with `origin/feat/migrate_to_compose` at `86fa73e` before this planning-doc reconciliation.
+- View-to-Compose is functionally complete: `ComposeMainActivity` is the only Activity, Navigation Compose owns Launch/Gallery/Editor/About/OpenSource/recovery/share-in flows, and the legacy Activity/dialog/panel/adapter/base stack is gone.
+- `EditorScreen` preview no longer uses an `AndroidView` bridge. The preview is a Compose `Canvas` calling `WatermarkRenderer.build*Shader` + `WatermarkRenderer.compose` on the native canvas.
+- `WaterMarkImageView` and `ViewInfo` are deleted. Do not reintroduce either contract.
+- `WatermarkGeometry` lives in `:shared/commonMain` and already drives preview/export cell sizing. `WatermarkRenderer` is still Android-only for actual composition: text drawing via `StaticLayout`, icon drawing, rotation, `BitmapShader`, REPEAT tiling, and CLAMP single-decal composition.
+- The remaining C2 problem is therefore narrower than the original plan: move the composition/drawing model toward commonMain without destabilizing the shipped Android renderer.
+- S3d removed the last orphaned gallery layout (`item_image_gallery.xml`) and `AsyncSquareFrameLayout`; only historical docs mention them now.
+- Current verification expectations for renderer-adjacent work: run Android build/tests/goldens, visually inspect screenshots, grant `READ_MEDIA_IMAGES` on test devices, and prefer picker-based editor entry when validating preview behavior.
+- S4d-1 proved that adding Compose graphics/text to `:shared/commonMain` for iOS requires `org.jetbrains.compose`; raw `androidx.compose.*:1.10.6` lacks iOS klibs. Applying `org.jetbrains.compose` only to `:shared` is not sufficient because `:app` then sees a split Android runtime graph and version skew.
+- C4.3 design + implementation are accepted: `:app` keeps AndroidX Compose BOM at `2026.05.01` / core Compose `1.11.2`; `:shared` uses `org.jetbrains.compose` `1.11.1` with `compose.runtime` + `compose.ui` in `commonMain`; `:app` substitutes residual Android runtime `org.jetbrains.compose.*` requests to `androidx.compose.*:1.11.2`. This yields one Android runtime Compose lineage while still giving `:shared` desktop/iOS Compose klibs.
+- C4.3 verification found no Compose-bump renderer/UI regression: strict renderer tests stayed green, paired production/debug screenshots covered Launch, Editor, Text modal, Save sheet, Template, About, and OpenSource. Remaining visible differences are pre-existing migration deltas (`bg-palette`, ADR-0015 editor chrome, share-in export-list count). Recovery screen was not re-captured for this build-config-only slice and remains a low-risk residual.
+- S4d-2 is accepted: `:shared/commonMain` now has a narrow `WatermarkCellComposer` offscreen `ImageBitmap` cell scaffold that reuses `WatermarkGeometry` for rotated-AABB/gap sizing and is verified by `:shared:desktopTest`. It is intentionally not wired into Android preview/export yet; production still goes through the Android `WatermarkRenderer` seam.
+- S4d-2 adds `compose.desktop.currentOs` only to `desktopTest` so the commonMain cell can render on the JVM host. Coordinator dependency proof found no Skiko/desktop runtime leakage into `:app:debugRuntimeClasspath`; residual `org.jetbrains.compose.*` requests are substituted to AndroidX Compose `1.11.2`.
+- S4d-3 is accepted: commonMain now has text raster bootstrap behind `TextRasterEnv` (`FontFamily.Resolver`, `Density`, `LayoutDirection`) and `WatermarkTextContent`. `WatermarkCellComposer.composeTextCell` measures with `TextMeasurer`, paints with `MultiParagraph.paint`, sizes through `WatermarkGeometry`, and centres the measured text box with `((finalWidth - textWidth)/2, (finalHeight - textHeight)/2)`. `:shared:desktopTest` covers visible text, geometry sizing, gap behavior, and the degree-0/no-gap placement guard that catches the old `finalWidth/2` clipping bug.
+- S4d-3 remains deliberately unwired from Android preview/export. Production still goes through Android `WatermarkRenderer`, so commonMain text raster is a proofed primitive, not a shipped renderer path. Before production wiring, require bundled-font strategy, Android-vs-commonMain pixel gates, strict goldens, and production-first paired screenshots.
+- S4d-4 is accepted: commonMain now has `WatermarkCellComposer.composeIconCell`, which takes an already-decoded Compose `ImageBitmap`, scales from `textSize / 14f`, sizes through `WatermarkGeometry.diagonal` + gaps, rotates around the cell centre, centres the scaled image, uses `FilterQuality.None`, and applies normalized/clamped alpha. Desktop tests cover visible pixels, geometry/scale, gap doubling, rotation, centring, alpha scaling, and alpha clamping.
+- S4d-4 keeps decode as a platform boundary. It deliberately does not pull Android `Bitmap`, `ContentResolver`, EXIF, bytes, downsampling, or recycled-bitmap checks into commonMain, and it is not wired to Android preview/export. Production still goes through Android `WatermarkRenderer.buildIconShader`.
+- S4d-5 is accepted: `app/src/test/.../WatermarkRendererCommonParityTest.kt` is the first Android-vs-commonMain renderer parity gate. It runs under Robolectric NATIVE where the Android renderer and commonMain Compose Android actuals share the Android graphics backend. Icon cell parity is hard-gated: exact dimensions across 18 cases, exact alpha evidence, opaque-footprint IoU measured at 1.0 for tested rotations, and centring structure.
+- S4d-5 text coverage is intentionally narrower: exact cell dimensions for simple ASCII and nonblank ASCII @0. It does not claim text raster parity for `StaticLayout` vs `MultiParagraph`, CJK, emoji, or rotated text. Those remain blocked on a bundled-font decision plus an on-device gate.
+- Next S4d work should not become a broad renderer rewrite. The likely choices are either an icon-first draw-swap candidate behind the new gate plus on-device real-icon proof, or a bundled-font/on-device text raster parity slice before touching text production rendering.
+
+## Repository State
+
+- The launcher entry is already Compose-based in `app/src/main/AndroidManifest.xml`, where `.ui.ComposeMainActivity` is the `MAIN` / `LAUNCHER` activity.
+- Legacy `.ui.MainActivity` still exists and owns the `ACTION_SEND image/*` flow, so app entry is currently split.
+- `app/src/main/java/me/rosuh/easywatermark/ui/ComposeMainActivity.kt` already hosts `LaunchScreen`, `GalleryDialog`, and `EditorScreen` via Navigation Compose.
+- `app/src/main/java/me/rosuh/easywatermark/ui/EditorScreen.kt` is partially migrated but still uses `AndroidView` for `WaterMarkImageView`.
+- `app/src/main/java/me/rosuh/easywatermark/ui/MainViewModel.kt` mixes `LiveData`, `StateFlow`, screen state, business state, and UI event handling.
+- Legacy dialogs and panels remain in `ui/dialog/*` and `ui/panel/*`, especially text editing and save/export flows.
+- In the current Compose path, `EditorTopBar` exposes save/about callbacks, but `ComposeMainActivity` does not wire `onShowSaveDialog` or `onGoAboutScreen` yet.
+- The current Compose `add more images` affordance is functionally a replace flow, not an append flow. This matches the legacy behavior: both Compose `SystemPickerImageSelected` and legacy `MainActivity -> updateImageList()` end up calling `updateImageListInternal(...)`, and `WaterMarkRepository.updateImageList(...)` replaces the entire image list.
+- `SaveImageBSDialogFragment` cannot be directly reused from `ComposeMainActivity`. It expects an AndroidX `FragmentManager`, but more importantly it casts `requireContext()` / `activity` to `MainActivity` to read image list, view info, and permission helpers. This makes save/export migration a real UI decoupling task, not a simple callback hookup.
+
+## Most Important Risks
+
+- Entry-path drift: normal launch and shared-image launch follow different activities.
+- Navigation drift: Compose `NavHost` and `LaunchScreenUiState` both model screen flow.
+- State inconsistency: `LiveData`, `StateFlow`, and mutable fields coexist in `MainViewModel`.
+- Export regressions: save/export/compression remains tightly coupled to legacy activity/dialog APIs.
+- Renderer regressions: `WaterMarkImageView` is stateful and should not be rewritten early.
+
+## Recommended Migration Strategy
+
+- Incremental, state-first migration.
+- Unify entry and navigation ownership before rewriting more UI.
+- Convert screen contracts to `UiState + typed intent` patterns.
+- Migrate editor chrome before considering pure Compose rendering.
+- Leave MediaStore queries, bitmap export, and custom rendering logic alone until the shell is stable.
+
+## Official Guidance Used
+
+- Android Developers migration strategy guidance recommends gradual migration for existing apps.
+- Android Developers state guidance recommends hoisting state and keeping state owners outside leaf composables.
+- Android Developers interoperability guidance supports temporarily embedding existing Views in Compose.
+
+## CMP Readiness — Initial Dependency Triage (2026-06-12)
+
+Project: `app` + `cmonet` (library) + benchmarks + `buildSrc`. Kotlin 2.3.20, AGP 8.13.2, Compose BOM 2026.03.01, 122 .kt files, 23 legacy layout XMLs, viewBinding still enabled.
+
+- Already KMP-capable (version in catalog has KMP support): kotlinx-coroutines 1.10.2, Koin 4.2.1 (koin-core is KMP), Room 2.8.4 (KMP since 2.7), DataStore 1.2.1 (KMP since 1.1), Lifecycle/ViewModel 2.10.0 (KMP), Navigation Compose 2.9.7 (JetBrains multiplatform artifact exists).
+- Needs replacement/upgrade for KMP: Coil 2.7.0 → Coil 3 (KMP); androidx Compose BOM → org.jetbrains.compose; kotlin-parcelize (Parcelable models) → kotlinx.serialization or androidMain-only.
+- Android-only, dies with the View layer: appcompat, material (MDC), fragment-ktx, viewpager2, recyclerview, constraintlayout(View), asynclayoutinflater, viewBinding, runtime-livedata, Glide 5 (+ KSP compiler), colorpickerview (View lib), compressor (id.zelory).
+- Android-only, needs expect/actual or per-platform impl: exifinterface, palette-ktx, accompanist-permissions, activity-compose (host), profileinstaller, MediaStore/ContentResolver flows, `cmonet` (Material You dynamic color — Android 12+ concept).
+
+## Tooling Findings (2026-06-12)
+
+- Official Android CLI 1.0 (stable 2026-05) — developer.android.com/tools/agents/android-cli; `android init` installs base android-cli skill; `android docs search` queries the Android Knowledge Base; `android skills` manages agent skills.
+- Official Android skills repo: github.com/android/skills (Apr 2026) — includes XML→Compose migration, Navigation 3, AGP 9, R8, edge-to-edge skills following Now-in-Android practices.
+- Local `android` on PATH is still the deprecated SDK tool (2 copies: /usr/local/bin, sdk/tools) — new CLI must be installed and PATH precedence checked.
+- Context7 research sources picked: /jetbrains/kotlin-multiplatform-dev-docs (official KMP docs, 2470 snippets), /jetbrains/compose-multiplatform.
+- Working memory (nowledge-mem): no CMP-related prior context; graph idle.
+
+## Official KMP Migration Guidance (fetched 2026-06-12 via android docs / kb://)
+
+- Android official path for EXISTING projects (kb://android/kotlin/multiplatform/migrate): add a "Kotlin Multiplatform Shared Module" (template in AS Meerkat+, AGP >= 8.8), Android app depends on it via `implementation(project(":shared"))`; iOS consumes a generated framework (iosArm64/iosSimulatorArm64/iosX64 binaries.framework, xcfName).
+- iOS integration options (JetBrains): direct/local integration, SwiftPM, or CocoaPods; choose local direct embedding for a small app.
+- Module configuration (kb://JetBrains/.../multiplatform-project-configuration): START WITH A SINGLE SHARED MODULE (officially recommended starting point; low cognitive load); umbrella-module + umbrella-framework only when feature modules emerge later.
+- Android Knowledge Base (android docs) literally mirrors JetBrains kotlin-multiplatform-dev-docs — both vendors' guidance accessible offline via `android docs fetch kb://...`.
+
+## Rendering Engine — First-Hand Read (2026-06-12)
+
+- WaterMarkImageView (777 lines): watermark = offscreen Bitmap "cell" (text: StaticLayout + measureText, manual rotation-aware bounds via cos/sin; image: createScaledBitmap, canvas.rotate) wrapped in BitmapShader(tileMode, tileMode); onDraw fills drawable bounds with shader paint → REPEAT tiling free; CLAMP mode = single cell at offsetX/Y with drag + back-to-center ValueAnimator + pinch scale (ScaleGestureDetector). Palette for bg color. Decode via decodeSampledBitmapFromResource(contentResolver, inSample).
+- EXPORT REUSES THE SAME ENGINE: MainViewModel.kt:329/352 calls WaterMarkImageView.buildTextBitmapShader/buildIconBitmapShader; encodes via Bitmap.compress (MainViewModel.kt:408,439); id.zelory Compressor at MainViewModel.kt:651 (separate compress flow, takes `activity`).
+- CMP mapping is ~1:1: StaticLayout→TextMeasurer, BitmapShader(REPEAT)→ImageShader(TileMode.Repeated), Bitmap+Canvas offscreen→ImageBitmap()+Canvas(ImageBitmap), canvas.rotate→DrawScope.rotate, touch→pointerInput, ObjectAnimator→Animatable. Non-common pieces: sampled decode (per-platform), Bitmap.compress encode (per-platform/Skiko encodeToData), Palette (kmpalette/material-color-utilities or drop).
+
+## Android CLI / Skills Status (2026-06-12)
+
+- Installed android-cli 1.0.15498356 via `brew trust android/tap && brew install --cask android-cli` → /opt/homebrew/bin/android (wins PATH over deprecated tools).
+- CLI skills registry: android-cli, verified-email, camera1-to-camerax, adaptive (Compose adaptive UI — relevant for desktop/foldables), navigation-3, display-glasses-with-jetpack-compose-glimmer, perfetto-trace-analysis, perfetto-sql, testing-setup. `jetpack-compose` NOT in CLI registry ("not found in downloaded DAC skills") — verify GitHub repo directly.
+- Syntax note: `android skills add --agent=claude-code --project=. <skill>` (usage header says `install`, actual subcommand is `add`).
+
+## CMP Plan Review Outcomes (2026-06-12, v1.0 → v1.1)
+
+Gaps found by adversarial review and now fixed in the plan — keep these in mind during execution:
+- About/OpenSource Activities were unscheduled but gate the removal of appcompat/material/palette/cmonet (now C1.4).
+- Crash-recovery UI lives ONLY in legacy MainActivity (`activity_recovery`, `recoveryMode`); retiring MainActivity silently deletes the feature; handler is Android-only (now C1.6 + R16).
+- Room `createFromAsset(ewm-db-ch.db / ewm-db-eng.db)` + locale switch has NO KMP path: KMP builder is path-based, no assets/ concept; needs compose-resources bundle + `createFromFile` + `exportSchema=true` (now D6/C3.4 + R15).
+- Engine rewrite split into C2a (extract, zero behavior change, old View + export both delegate) and C2b (preview swap + image-space sizing) with golden harness built BEFORE C2a against the OLD engine (C1.7).
+- Golden strategy is two-tier: strict same-platform old↔new; perceptual (SSIM-style) cross-platform with per-platform baseline sets — JVM-Skia text ≠ Android-Minikin text even with a bundled font.
+- Compose lineage skew risk: don't keep androidx BOM in :app alongside org.jetbrains.compose in :shared without a dependency-graph spike (R13).
+- `kspAndroid` is the AGP-9-plugin config name; on AGP 8.x the Android KSP config is plain `ksp`. Also need kspIosX64.
+- scaleY is ALSO derived from MSCALE_X (MainViewModel.kt:323-324) — both axes wrong together; renderer must compute independently.
+- SaveExportSheet's recent Bitmap.CompressFormat standardization is a deliberate stepping stone; swapped for app-owned ImageFormat in ONE move in C3.5 (mentor-loop continuity, not reversal).
+- iOS export (C5.4 / S4d-29): share via SwiftUI `ShareLink` over a temp `.png` file URL (the system sheet then covers Share / Save Image / Save to Files); direct save via `PHPhotoLibrary` add-only `PHAssetCreationRequest.addResource(with: .photo, data:)` (preserves the exact encoded PNG, no re-encode). `NSPhotoLibraryAddUsageDescription` is added with `INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription` (GENERATE_INFOPLIST_FILE=YES, no physical Info.plist). `Photos`/`PhotosUI`/`UIKit`/`SwiftUI` are system frameworks auto-linked from `import` — adding picker + share + photo-save needs **no new dependency** and no project Frameworks-phase edit.
+- iOS Swift-catchable error boundary (S4d-31): by default an uncaught Kotlin/Native exception crossing into Swift **terminates the process** — it is NOT a Swift `catch`. To make a render/font/decode/encode failure catchable, annotate the iOS wrapper with Kotlin `@Throws(SomeException::class)`; the generated header then emits an `error:(NSError**)` out-param (→ Swift `throws`) and documents "converts instances of `SomeException` to errors. Other uncaught Kotlin exceptions are fatal." In Swift, the thrown Kotlin exception arrives as `(error as NSError).userInfo["KotlinException"]` — downcast to the custom type to read its fields (e.g. `.stage`/`.message`). Pattern used by `IosWatermarkRenderBridge` (iosMain): wrap `bundledFontFamily → composeOverImage → encodePng`, rethrow every stage failure as one `IosRenderException(stage,…)`, surface via `WatermarkWorkflow.State.failure`. iOS-edge only; no commonMain/Android change, no new dependency.
+
+## Learning-Oriented Sequencing
+
+- Start with Compose shell patterns: navigation, lifecycle-aware state collection, launchers, dialogs, and bottom sheets.
+- Then move to state modeling: immutable UI state, typed events, and screen boundaries.
+- Then work on editor UI composition around the existing rendering view.
+- Only after that evaluate more advanced topics like custom drawing or replacing the rendering engine.
+- iOS byte interop bulk copy (S4d-32): the Kotlin/Native ObjC bridge exposes `KotlinByteArray` to Swift with element accessors only (no bulk entry), so a naive Swift bridge is O(n) per-byte. Move the copy into an iosMain `memcpy` boundary (`IosByteArrayInterop.fromNSData(NSData): ByteArray` / `toNSData(ByteArray): NSData`, same `usePinned`+`memcpy` pattern as `IosFontLoader`; `NSData.create(bytes:length:)` copies and needs `@OptIn(BetaInteropApi)`), bridging through Foundation `NSData`. **Gotcha:** the Kotlin/Native Swift importer bridges an ObjC `NSData *` param/return to Swift **`Data`** (value type), so the Swift call passes/returns `Data` directly — adding `self as NSData` / `as Data` is a compile error ("'NSData' is not implicitly convertible to 'Data'"). `memcpy` is byte-exact, so signed-`Byte` values 0x00/0x7F/0x80/0xFF round-trip with no reinterpretation. iosMain-only; no new dependency.
+- C3 Tier-3 palette/cmonet (S4d-40 audit): the `androidx.palette` bg-color tint is **wired but dormant** in the Compose build — `app/src/main` has no `Palette.from/.generate`, no `updateColorPalette` caller, and no `colorPalette`/`paletteFlow` consumer, so `PaletteKtx.bgColor/titleTextColor` always return their `colorSurfaceVariant`/`colorOnSurfaceVariant` fallback (the View→Compose migration didn't re-wire palette generation). So dropping palette is parity-neutral today, even though ADR-0014 said "keep + kmpalette" — that ADR needs revisiting if dropped. By contrast `:cmonet` is genuinely **live**: it gates the Compose `AppTheme(dynamicColor=)`, the About force/disable toggle (`forceSupportDynamicColor`/`disableSupportDynamicColor`), and ~25 `Context.colorXxx` getters in `ContextExtension.kt`; `ColoredImageVIew` (a getter consumer) is bridged into Compose via `AndroidView` in `LaunchScreen`. So the ADR-0007 `isDynamicColorAvailable()` capability migration is real, parity-sensitive, device-gated work (keep the Android OEM allowlist + the persisted toggle) — not a leaf cleanup.
+- Coil 2 → Coil 3 (S4d-38): coordinates change `io.coil-kt` → `io.coil-kt.coil3`, package `coil.*` → `coil3.*` (so Coil 3 can coexist with Coil 2). `coil-compose` alone provides `AsyncImage` and transitively `coil3.request.ImageRequest` (from `coil-core`) — no separate base/View `coil` artifact needed. Several `ImageRequest.Builder` options are **extension functions** in Coil 3 needing explicit imports: `coil3.request.crossfade`, `coil3.request.allowRgb565`, `coil3.request.placeholder` (the `@DrawableRes Int` overload). **Networking is opt-in** in Coil 3 (`coil-core` no longer loads http by default) — for local-Uri-only apps, omit `coil-network-okhttp`. Coil 3.2.0+ needs **Java 11 bytecode** (satisfied by `jvmToolchain(17)`) and supports minSdk well below 23, so — unlike `java.time` (S4d-36) — Coil 3 needs **no `desugar_jdk_libs`**. Stale Glide R8 `-keep` rules left in `proguard-rules.pro` after removing Glide are harmless (R8 ignores keep rules for absent classes; `assembleRelease` passes). Verify image-loading via a connected device, not just compile/assemble — it is user-visible.
+- Dropping a dormant feature is parity-neutral and skips the device gate (S4d-41): when a removal candidate's preflight grep proves it's wired-but-dead (no generator, no consumer, zero test/androidTest hits — here `androidx.palette`: no `Palette.from/.generate`, no `updateColorPalette` caller, no `colorPalette`/`paletteFlow` consumer), the removal can't change visible behavior, so a connected-device visual gate adds no signal and is correctly skipped per the task gate. The honest move on a superseded ADR decision is an **addendum** (strike through the old bullet, annotate the status line, keep the original text) — not erasing history; record *why* it's superseded (the Compose build never re-wired the feature) so a future reader doesn't "restore" it by accident. When deleting a dead Android-only feature, keep edits to the feature's own surface: empty `MemorySettingRepo` to a bare class but **keep it** (still DI-provided) and **leave** `MainViewModel`'s now-unused `memorySettingRepo` ctor param — removing the DI constructor signature is a separate, out-of-scope change. kmpalette was **not** added: a dormant feature returns as a *new feature ADR* (re-add generator + consumer + KMP source), never a silent restore.
+- Dead-widget audit method (S4d-44/S4d-45): the View→Compose migration left the entire legacy `ui/widget/*` custom-View package orphaned except `ColoredImageVIew` (the logo, bridged into Compose `LaunchScreen` via `AndroidView`). Proving a custom View dead needs MORE than a `\bClassName\b` grep: (1) search **all** source sets + `res/` (custom-view XML tags use the FQN `me.rosuh.easywatermark.ui.widget.X`) + `AndroidManifest.xml` + `baseline-prof.txt` (VM descriptors `Lme/rosuh/.../X;`); (2) **substring** search too — `\bSquareFrameLayout\b` misses `AsyncSquareFrameLayout` (no word boundary between `Async` and `Square`), so a prefixed subclass would be a false-negative; (3) build the inter-candidate reference graph — refs *among* candidates are safe only if the whole set is deleted together (e.g. `GalleryItemView`→`RadioButton`, `DetectedPerformanceSlideTouchListener`→`DetectedPerformanceSeekBarListener`); (4) check the kept file (`ColoredImageVIew`) doesn't depend on any candidate. **`baseline-prof.txt` lines are NOT liveness** — they're stale ahead-of-time hints for classes that *used to* run; remove only the deleted classes' lines (match `ui/widget/<Class>` precisely so `ColoredImageVIew` survives), and beware framework name-collisions (`Toolbar` baseline lines were `androidx.appcompat`/`MaterialToolbar`, not the custom one). A custom View's `declare-styleable`/`attr` block in `res/values/attrs.xml` is dead once its only consumer class is deleted (verify no layout/Kotlin references `R.styleable.X`/the `xxx_*` attrs). **R8 corroboration:** if `assembleRelease` (`packageRelease`) is UP-TO-DATE after deleting a class, that class was already absent from the shrunk release graph — independent proof it was dead. No device gate needed for preflight-proven dead code.
+- Deleting a self-contained dead *cluster* of mutually-referencing files (S4d-46, the View-animation cluster `ViewExtension.kt`↔`ViewAnimation.kt`↔`ViewAnimationListener.kt`): the test isn't "does anything reference these symbols" (they reference each other) but "is the cluster **closed** — does any reference exist *outside* the file set?". `rg -l <all cluster symbols> app/src` returning exactly the cluster files proves closure → the whole set is dead together. For extension-function clusters, search extension-call syntax (`.fn(`), bare/top-level calls (`fn(`), method refs (`::fn`), and imports of the funcs — a `\bClassName\b` search alone misses receiver-style and bare calls. Before deleting an extension *file* wholesale, confirm any helper it consumes lives elsewhere (here `.dp` is in `IntExtension.kt`, so deleting `ViewExtension.kt` doesn't orphan it). After S4d-44/45/46 the entire legacy `ui/widget/*` custom-View + animation surface is gone except the two live files `ColoredImageVIew.kt` (logo, AndroidView-bridged) and `utils/WaterMarkShader.kt` (renderer). Note `baseline-prof.txt` may have NO source-FQN line for a deleted class (only obfuscated `j6/f`-style entries) — when so, make no profile edit and leave obfuscated lines (no mapping proof); `assembleRelease` validates profile syntax regardless.
+- Helper-level pruning inside a *live* `utils/ktx` file (S4d-47): when a file mixes live + dead extensions, prune only the proven-dead helpers and keep the live ones — `ActivityKtx.kt` kept `openLink` (live in `ComposeMainActivity`) while dropping 7 orphaned Activity/Fragment/ViewBinding helpers; `IntExtension.kt` kept `toTileMode` (a retained test oracle) + `.dp` while dropping the View-era `toColor` animator. Liveness proof for an extension/inline fn = no explicit import (`import …utils.ktx.<fn>`), no extension-call (`.fn(`), no bare call, no `::fn`, and no same-package caller (a whole-repo grep excluding the def file catches package-mates, which need no import); confirm **no wildcard `utils.ktx.*` import** exists first, else those greps undercount. For Android `inline`/extension fns this is **build-provable**: `:app:compileDebugKotlin`+`assembleRelease` green after removal positively proves no surviving caller (a leftover reference fails compilation), so no device gate is needed. Beware token collisions — the custom `Int.dp` (px) vs Compose `androidx.compose.ui.unit.dp` (`Dp`): a bare `.dp` grep conflates them, so disambiguate by import path. Keep helpers the task explicitly flags to preserve even when currently unreferenced (the custom `.dp` was retained per the preserve-caution, flagged as a future micro-cleanup). Don't prune `ContextExtension.kt`'s `:cmonet`-gated color getters as an incidental change — S4d-43 (the dynamic-color capability) is now **accepted**, so that dependency is cleared, but the getters feed the live `ColoredImageVIew` logo and remain an owner-gated `:cmonet`-absorption slice with its own proof, not a leaf cleanup.
+- S4d-48 closed the S4d-47 `.dp` deferral: the custom `Int.dp`/`Float.dp` were removed once the coordinator authorized it (re-proved dead: no `utils.ktx.dp` import, no wildcard, no same-package caller; the only non-Compose `.dp` file was the definition itself). Pattern worth repeating: when forced to *keep* a proven-dead helper by a task's preserve-caution, flag it in `next-implementation-task.md` so the coordinator can authorize a clean one-symbol follow-up — and when removing a helper that shares a file with live code, verify the survivor is byte-for-byte unchanged (`cmp` the kept function body vs HEAD), not just "still present".
+- commonMain `value class` requires `import kotlin.jvm.JvmInline` (S4d-50, 2026-06-24): a `value class` in `:shared/commonMain` **must** be written `@JvmInline value class Foo(val x: String)` **and** the file must `import kotlin.jvm.JvmInline`. The `@JvmInline` annotation is NOT auto-imported, and omitting it produces `Unresolved reference 'JvmInline'` on Kotlin/Native (iOS) — which is easy to misdiagnose as "KMP cannot write `@JvmInline` in commonMain" (the rejected S4d-50 v1 mistake). With the import, `@JvmInline value class` compiles unchanged on Android + JVM/desktop + iOS/Native (verified by `:shared:compileKotlin{Desktop,IosSimulatorArm64,IosArm64}`). A bare `value class` (no annotation) is separately rejected by the JVM compiler ("Value classes without '@JvmInline' annotation are not yet supported"). So: there is no single no-import source form that works; always add `import kotlin.jvm.JvmInline`. The S4d-50 `MediaRef` (`@JvmInline value class MediaRef(val value: String)`) is the reference — string-backed image identity, equality is underlying-field, `@JvmInline` gives allocation-free representation on JVM/Android. The `data class` fallback is only for a real cross-module interop footgun, not for the import gap.
+- `ImageInfo.uri` de-Androidization readiness (S4d-51, accepted 2026-06-24): `ImageInfo.uri` is **transient, not persisted** (`KEY_URI`/`SP_KEY_URI` is dead — declared, never read/written; the object lives only in the in-memory `_imageMapFlow`/`_selectedImage` StateFlows and is rebuilt each session), so flipping it to `MediaRef` needs **zero DataStore migration** (unlike `WaterMark.iconUri`). `WaterMarkRepository.imageInfoMap<Uri,Int>` keys on `imageInfo.uri`, so it follows the field type automatically (value equality is string equality) — it is **not** a separate leak. `ImageInfo.shareUri` (`get() = result?.data as? Uri?`) has **no grep consumer** in the Compose build — likely dead; confirm liveness before migrating vs removing. **Readiness-audit caveat (the r2 correction):** a `\bImageInfo(\b` grep over `MainViewModel` made `MainViewModel.kt:1011-1012` *look* like `ImageInfo(Image)` because the surrounding reducer also builds an `imageList` of `Image`s — but the actual `.map` is over `newList = action.uriList` and `Action.SystemPickerImageSelected.uriList: List<Uri>` (`LaunchScreen.kt:170-172`), so `it: Uri` and it invokes `ImageInfo`'s only (`Uri`) primary ctor. **Lesson: don't flag a constructor-arg type from the call token alone — trace the receiver collection's element type (and confirm there's no overloaded ctor) before claiming a compile/type issue in a readiness pack.** S4d-52 has since **implemented this and was accepted** (2026-06-25) — see the dedicated finding below.
+- `ImageInfo.uri` → `MediaRef` implemented (S4d-52, accepted 2026-06-25): the flip touched **5 files** (`ImageInfo`, `WaterMarkRepository`, `MainViewModel`, `EditorScreen`, `ComposeMainActivity`) and was byte-identical at the strict-golden gate (no rebaseline) because `MediaRef(s).toUri() == Uri.parse(s)`, so every decode/Coil edge receives the same `Uri`. Two durable lessons: (1) **`MediaRef`'s `@JvmInline value class` string equality is a free semantics-preserver** — `imageInfoMap` (now `MutableMap<MediaRef,Int>`), `isSameItem` (`uri == other.uri`), and `select(ref)` keep identical behavior with zero extra code, since the underlying string equality matches the old `Uri`-keyed behavior for the same strings. (2) **Keeping `Image.uri` (gallery/MediaStore model) and `Action.SystemPickerImageSelected.uriList` as `Uri` is the narrower boundary** than flipping them: converting once at each `ImageInfo(it.uri.toMediaRef())` / `ImageInfo(it.toMediaRef())` construction point leaves `Image.kt`/`GalleryDialog.kt`/`LaunchScreen.kt`/`SaveExportSheet.kt` untouched while still satisfying "Uri confined to edges". The device gate is genuinely required here (it feeds user-visible selection/preview/filmstrip/save/share-in), unlike a pure decode-edge change — `emulator-5554`'s 5-flow run is the behavior proof. `shareUri` (`Uri?`) and `KEY_URI`/`SP_KEY_URI` deletion stay deferred.
+- DynamicColorCapability accepted + the allowlist visual-gate trap (S4d-43, accepted 2026-06-25): the `:cmonet` → `DynamicColorCapability` migration was a **verbatim indirection** — the Android actual delegates to unchanged `:cmonet` (same OEM allowlist, same `dynamic_color_force` SP key), so the runtime gate's job was to prove *no regression*, not byte parity. Key gate lessons: (1) **dex-verify the candidate APK actually contains the new classes** (`strings` over `classes*.dex` for `AndroidDynamicColorCapability`/`platform.DynamicColorCapability`) before trusting the run — the pre-installed debug build predated the slice. (2) **Koin DI is provable at runtime**: a missing/mismatched binding throws `NoBeanDefFoundException` at first resolve, so a clean launch + the theme rendering is positive proof the capability resolved. (3) **The OEM allowlist masks the force-flag visual**: on a `Google`-allowlisted device `isDynamicColorAvailable()` = `(DynamicColors.isAvailable() && allowlisted) || forced` stays **true regardless of the force flag**, so `dynamicColorOn` recomputes to true, the About switch always re-renders ON, and every tap requests `false` (two consecutive `disableSupportDynamicColor` writes) — the force-OFF static fallback / force-ON write **cannot be filmed on an allowlisted-only emulator**; you need a non-allowlisted manufacturer to see `isAvailable()==false`. The write path is still provable via logcat (`CMonet.disableSupportDynamicColor`) + reading `sp_water_mark_c_monet.xml`. (4) **Don't claim full-page pixel parity** when the baseline is the production View stack (2.10.0) and the candidate is the Compose branch — whole-screen differences are inherent; scope the claim to "the dynamic-color path did not regress." This environmental gap was accepted (verbatim delegation; static Compose branch unchanged); a non-allowlisted run is optional, not a blocker.
+- Dead computed-accessor removal is safe when the backing data stays (S4d-53, 2026-06-25): `ImageInfo.shareUri: Uri?` was a *computed* getter (`get() = result?.data as? Uri?`) over the live `result` field, so the liveness question is only "does anything **read** `.shareUri`?" — not "is `result` used?". Proof that it's dead: across `app/src`+`shared/src` only the property definition (+ a comment) appeared — no `.shareUri` access, no `::shareUri`/`"shareUri"` reflection, no test/androidTest reference — and the Compose share-out entry point is an **unwired empty lambda** (`onShareClick = {}`), so the feature that would have consumed it isn't built. Removing the accessor drops zero data (`result`/`jobState` untouched) and removed the file's last `android.net.Uri` use (so the import went too). This closes the last **model-layer** `Uri` leak named by S4d-49/S4d-51; the remaining `Uri` is all genuine Android edges (gallery `Image.uri`, picker `uriList`/contracts, `SaveExportSheet.imageUris`, `BitmapUtils`/decode/Coil/save) plus the dead persisted `KEY_URI`/`SP_KEY_URI` (its own one-line deletion slice — since **DONE in S4d-54**, see next finding).
+- C3 model-layer `Uri` de-Androidization complete (S4d-54, 2026-06-25): removing the dead `KEY_URI`/`SP_KEY_URI` DataStore key declarations (2 unused lines — declared, never `it[KEY_URI]`-read/written; only `KEY_ICON_URI` is the live persisted-image key) closes the C3 model-`Uri` thread that ran S4d-49 (map) → S4d-50 (`WaterMark.iconUri`→MediaRef) → S4d-52 (`ImageInfo.uri`/`imageInfoMap`→MediaRef) → S4d-53 (dead `shareUri` removed) → S4d-54 (dead keys removed). The platform-neutral **model** layer (`data/model` + the repo's persisted keys) is now `android.net.Uri`-free; every remaining `Uri` is a genuine Android **edge** — gallery `Image.uri`, picker `uriList`/contracts, `SaveExportSheet.imageUris`, `BitmapUtils`/`BitmapCache`/`FileUtils`/decode/Coil/save, MediaStore/FileProvider. Lesson reused across S4d-53/54: an unused DataStore `Preferences.Key` (or a computed accessor) is provably dead when its only source occurrence is the declaration itself — grep the `it[KEY]`/`.key`-access form, not just the name — and deleting it is a zero-migration, zero-behavior change (the stored string under a *different* live key, `KEY_ICON_URI`, is unaffected).
+- Moving Android-shaped model classes to commonMain without changing behavior (S4d-60, 2026-06-27): separate **storage identity** from **platform API shape**. `WaterMark` could move only after each Android coupling had an edge story: `Shader.TileMode` became an extension mapper (`WaterMark.obtainTileMode()` → `WatermarkTileMode.toShaderTileMode()`), `Paint.Style` became `TextPaintStyle.obtainSysStyle()` in `TextStyleExt.kt`, and nested `WaterMarkRepository.MarkMode` became common `WatermarkMode(Text=0, Image=1)` with the exact same `KEY_MODE` ints. The `SerializableSealClass<Int>` base was deletion-safe because the live contract was the stable `serializeKey()` integer, not Java serialization. Useful pattern: for each moved value type, write down (1) persisted key/value compatibility, (2) Android edge mapper, (3) compile proof on Desktop/iOS/iOS-sim, and (4) strict golden proof if the value feeds rendering. Do not let comments about old Android types become actual imports in commonMain; comments are okay, imports are not.
+- Retiring a public state wrapper still needs a consumer proof (S4d-68, 2026-06-27): `MainViewModel.imageList` looked public, but a targeted grep across main/test/androidTest/shared found no `viewModel.imageList`, `.observe`, `.observeAsState`, or `.collectAsState` consumer; its only reads were three internal `imageList.value?.first` sites. In that case, deleting the `LiveData` wrapper is cleaner than converting it: route internal reads to the underlying seeded `StateFlow` snapshot (`waterMarkRepo.imageInfoList = imageInfoMapFlow.value`), then delete the now-readerless folded flag (`autoScroll`) and imports. Review hygiene matters: do not leave retired symbol names in explanatory code comments, or future liveness greps will keep finding false positives; put that rationale in ACSP artifacts/docs instead.
+- A nullable `StateFlow` can preserve a gallery cache's old no-value semantics (S4d-69, 2026-06-27): `galleryPickedImageList` carried Android `Image`/`Uri` payloads but had no external observer, so it did not need a Compose consumer rewrite. `MutableStateFlow<List<Image>?>(null)` kept the old LiveData "not loaded yet" state, while the existing `value ?: return` and `?: emptyList()` reads remained behavior-equivalent. For future source-usage checks, prefer precise greps for imports/types/constructors/writers (`MutableLiveData<`, `MutableLiveData(`, `.postValue(`) over broad historical-comment greps.
+- Separate iOS **wire-up** gaps from **renderer-capability** gaps (S4d-111/S4d-113, corrected by S4d-122 and completed by S4d-123, 2026-06-27): after S4d-107/S4d-109/S4d-110, fields whose renderer parameter already existed (`textColor`, `textSize`, `hGap`, `vGap`) were just bridge/Swift wire-up slices. The next fields were different: `textTypeface` and `textStyle` already had shared model/editor/repo storage, but iOS `renderTextCell` only built `TextStyle(fontSize, fontFamily)`, so they required a render-edge change before the usual bridge/UI wire-up. S4d-112 mapped the shared sealed `TextTypeface` to Compose `FontWeight`/`FontStyle`; S4d-113 mapped `TextPaintStyle.Fill/Stroke` to Compose draw styles. S4d-122 then proved commonMain still dropped `drawStyle`; S4d-123 fixed `composeTextCell` to paint with `drawStyle`, so Stroke is raster-honored on Desktop/iOS Skiko. `iconUri`/`markMode` remains a larger mini-epic (icon pick -> bytes persistence -> decode -> text/image render branch -> UI), not a one-field migration; `enableBounds` is a red debug cell-bounds overlay and should stay deferred.
+- iOS `iconUri`/`markMode` sequencing (S4d-114..S4d-118, 2026-06-27): do not wire Image mode before durable icon bytes exist. `WatermarkConfigEditor.updateIcon` is already shared and flips mode to Image; there is no standalone `updateMode`, which is good because Image mode without an icon is invalid. S4d-115 supplied the Kotlin-only render foundation; S4d-116 supplied app-private icon-byte persistence (`MediaRef(path)`) with safe replacement cleanup; S4d-117 supplied the Text/Image render branch; S4d-118 supplied the SwiftUI icon picker UI. Keep future clear-icon/text-mode toggles explicit and tiny; do not re-open the renderer path for them.
+- iOS renderer perceptual gates should stay coarse and host-font-robust (S4d-192, 2026-06-28): `IosWatermarkRendererGoldenTest` intentionally copies the Desktop 8x8 quantized-ink signature shape but drops Desktop-only font assertions (`CJK differs from Latin`, absolute CJK density). On iOS tests that use `FontFamily.Default`, the useful invariant is blank/collapsed/nondeterministic detection across Latin/CJK/multiline/rotated text and rotated icon cells. Do not turn this into byte-exact PNG goldens or bundled-font packaging proof; those are separate gates.
+- Composition perceptual gates must compare against the background, not opacity (S4d-193, 2026-06-28): once a renderer composes over an opaque image, "non-blank" is worthless because the source is already fully opaque. The cheap invariant is a coarse changed-pixel signature versus the decoded background: nonzero changed buckets catch no-op composition, deterministic signatures catch unstable Skiko output, and REPEAT-vs-CLAMP signature inequality catches a tiled/decal routing collapse. Keep this as a test-only perceptual guard; it is not a byte-exact PNG golden or Android native composition parity claim.
+- Only centralize renderer helpers when there are real current consumers (S4d-195, 2026-06-28): moving `TextTypeface -> FontWeight/FontStyle` and `TextPaintStyle -> DrawStyle` to commonMain was justified because Desktop and iOS both had byte-identical private Compose mappings and immediately consume the shared functions. The Android `TextPaintStyle.obtainSysStyle()` / `Paint.Style` edge stays separate and native. This is the useful line between de-duplication and speculative abstraction; a single-consumer helper like `DesktopSaveDecision` should not be promoted just to make commonMain look fuller.
+
+## iOS CMP text-input linker block (S4d-338, 2026-07-11)
+
+- The currently locked Compose dependency mix can render simple CMP controls on iOS but cannot run a focused CMP text editor. Real iOS 27.0 XCUITest failure logs prove three distinct linkage failures: `ModalBottomSheet` -> missing `LocalKeyboardOverlapHeight`; `navigationBarsPadding()` -> missing `LocalSafeArea`; `OutlinedTextField` focus -> `SkikoPlatformTextInputMethodRequest` lacks `unclippedTextOffsetInRoot`.
+- Bypassing a sheet or insets does not make the editor viable: the final text-input failure occurs only after the dialog and actual Compose `TextView` render, then terminates Kotlin/Native on focus. The safe boundary is to retain the current SwiftUI `TextField` plus the shared workflow/persistence bridge. A Compose dependency-version/alignment change is the only plausible next remedy and is owner-gated; do not add, upgrade, or override dependencies in a UI slice.
+
+## iOS shared controls with system pickers (S4d-339, 2026-07-11)
+
+- A visible iOS control can be a production CMP consumer while its system picker remains a narrow SwiftUI edge. `UIViewControllerRepresentable` hosts the shared `IconWatermarkOption`; SwiftUI's `photosPicker(isPresented:selection:matching:photoLibrary:)` attaches to that host and preserves the platform picker, selection binding, and existing workflow/persistence route. This moves the product control without inventing a shared picker abstraction or moving system UI into commonMain.
+- The proof boundary must remain precise: a real shared-control tap and screenshot-confirmed `PhotosPicker` presentation proves host-to-system handoff, not grid-cell selection, returned icon bytes, or thumbnail refresh. The latter remains subject to the established S4d-57 Xcode-beta accessibility limitation; do not represent the opening test as end-to-end picker selection proof.
+
+## iOS production launch-shell migration (S4d-340, 2026-07-11)
+
+- A shared screen can leave unsupported navigation affordances absent rather than accepting a no-op callback. `LaunchScreenShell` now renders the About icon only when its painter, label, and callback are all supplied. This preserves Android's existing named call unchanged and lets iOS consume the same launch shell while retaining only the real system picker edge.
+- Long bring-up forms make vertical geometry part of the regression surface. The initial S4d-340 editor-side source-picker row shifted Templates and lower sliders enough to fail the established full XCUITest suite. A source replacement affordance that does not belong to the shared launch screen should be a compact overlay when it must remain available during editing; the repaired right-corner `PhotosPicker` icon preserves interaction without moving tested content. Run the full UI suite after adding even a small control above a long scroll form.
+
+## Android smoke environment block (S4d-341, 2026-07-11)
+
+- Tool exposure is not a usable AndroMeld session. `andromeld.devices.list` can fail before device discovery with `AndroMeld MCP control socket was not found. Start AndroMeld first.` In that state there is no eligible Phone Screen session to observe or control, and the required Android visual smoke must remain open. Do not substitute raw `adb` interaction for the contract-mandated AndroMeld proof; resume only after the control service supplies the socket.
+
+## Android smoke mirror freshness is a separate acceptance gate (S4d-254 reattempt, 2026-07-11)
+
+- A usable AndroMeld MCP control socket does not itself validate a visual assertion. The first reattempt proved permission and editor interaction through the Phone Screen, but after launching Photos the session metadata moved to `com.google.android.apps.photos` while the returned image and visible macOS mirror still showed the old debug `SaveExportSheet`. Restarting the mirror session did not refresh the pixels or the UI hierarchy.
+- Treat foreground-package metadata, a fixed export count (`0/1`), and an empty `View in gallery` callback as non-evidence. Rebuilding/reinstalling the debug APK refreshed this mirror; only then did the final gallery witness become valid. The accepted evidence is the actual Photos viewer showing the newly exported watermarked synthetic image. Do not replace a stale frame with raw `adb`/logcat or a source-only assertion.
+
+## Export state belongs at the Android edge while the sheet stays shared (S4d-343, 2026-07-11)
+
+- The v2.10 export flow has platform effects that commonMain must not own: output `Uri` results, `ACTION_VIEW`, and `ACTION_SEND`/`ACTION_SEND_MULTIPLE`. The smallest faithful repair is an Android `StateFlow` for counts/phase in `MainViewModel`, with URI extraction and Intent construction in `ComposeMainActivity`; do not use this as a reason to create a shared ViewModel or IO layer.
+- Shared `SaveExportSheetShell` can still express the state without carrying Android data: an enabled flag controls format/quality/primary action during export, and a gallery visibility flag prevents an empty navigation affordance before output exists. Device evidence must cover initial `0/n`, completed `n/n`, actual output viewer, and system share-sheet opening; compilation alone is insufficient.
+
+## Desktop packaged preview boundary (S4d-342, 2026-07-11)
+
+- `:desktopApp:run` inherits the repository working directory, but a real Compose Desktop `.app` does not. An interactive preview temp path under relative `build/` can therefore pass headless Gradle gates while failing the user-visible Preview action after Finder launch. Interactive-only scratch output belongs under the same existing per-user app-data root as the Desktop DataStores and Room DB; it must remain distinct from real save destinations so preview still cannot drive share/output actions.
+- `EditorPreviewFrame` can wrap an existing real preview child without changing renderer ownership. When preserving an established child inset, account for the shared frame's 12 dp padding at the edge rather than accepting a silent layout expansion; Desktop's child uses 4 dp after the frame to retain the old 16 dp effective horizontal inset.
+
+## 依赖升级收口（S4d-360…S4d-375，2026-07-12）
+
+- **KSP/Kotlin 上限：** 正常仓库最新 KSP 为 2.3.10；与 Kotlin **2.4.0** 配对。**无** 采用 Kotlin 2.4.20-Beta1（无匹配 KSP）。
+- **Compose Android 保真：** 稳定 `compose-bom` 会把 Material3 alpha 压回 1.4.0；必须用 **`compose-bom-alpha`** 才能保留声明的 Material3 最新 alpha。
+- **Android-KMP host 测试拓扑：** `commonTest` 中依赖 Compose `ImageBitmap` 的 cell 测试在 AGP host JVM 上会 `Bitmap not mocked`；应放到 **Desktop/iOS Skiko 路径**（`skikoTest` srcDir），保留 `commonPureTest` 纯逻辑门。
+- **XCUITest（Xcode 27 beta）：** 全量 18/0 与单测 1/0 的用例行可绿，但 **xcodebuild 在 suite 结束后常无法干净退出**（进程挂起、xcresult 不完整）——记 **HANG**，**不得** 标 PASS。属全局 runner finalization，非“仅全量 suite”副作用。
+- **Release 版本源：** `RELEASE_VERSION` / tag 必须读 `buildSrc` `Apps.versionName`，不可再 grep `app/build.gradle.kts`（该处已无引号字面量）。

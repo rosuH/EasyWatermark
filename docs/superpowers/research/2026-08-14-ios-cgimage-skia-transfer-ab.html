@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CGImage → Skia · Phase 1 A/B</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b1210;
+    --bg-2: #121c18;
+    --ink: #e7f2ec;
+    --muted: #8aa396;
+    --line: rgba(231, 242, 236, 0.1);
+    --line-strong: rgba(231, 242, 236, 0.2);
+    --sea: #3ecf9a;
+    --sea-dim: rgba(62, 207, 154, 0.14);
+    --coral: #ff7a59;
+    --coral-dim: rgba(255, 122, 89, 0.14);
+    --foam: #a8e6cf;
+    --warn: #e8c26a;
+    --font: "Instrument Sans", system-ui, sans-serif;
+    --display: "Newsreader", Georgia, serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    background:
+      radial-gradient(1100px 500px at 12% -10%, rgba(62, 207, 154, 0.16), transparent 55%),
+      radial-gradient(900px 420px at 100% 0%, rgba(255, 122, 89, 0.1), transparent 50%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 40%, #0a100e 100%);
+    color: var(--ink);
+    line-height: 1.55;
+    font-size: 16px;
+    min-height: 100vh;
+  }
+  ::selection { background: var(--sea); color: #062018; }
+  .wrap {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 40px 22px 96px;
+  }
+
+  .hero {
+    padding: 8px 0 36px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 40px;
+  }
+  .meta {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    margin-bottom: 22px;
+  }
+  .meta span::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--sea);
+    margin-right: 8px;
+    vertical-align: 1px;
+    opacity: 0.8;
+  }
+  h1 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(2.1rem, 5vw, 3.35rem);
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+    margin: 0 0 18px;
+    max-width: 16ch;
+  }
+  .lede {
+    font-size: 1.12rem;
+    color: var(--muted);
+    max-width: 52ch;
+    margin: 0 0 28px;
+  }
+  .lede strong { color: var(--foam); font-weight: 600; }
+
+  .duel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 8px;
+  }
+  @media (max-width: 720px) {
+    .duel { grid-template-columns: 1fr; }
+  }
+  .arm {
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 18px 18px 16px;
+    background: rgba(18, 28, 24, 0.72);
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+  }
+  .arm.a { border-color: rgba(255, 122, 89, 0.28); }
+  .arm.b { border-color: rgba(62, 207, 154, 0.35); }
+  .arm-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .arm.a .arm-tag { color: var(--coral); }
+  .arm.b .arm-tag { color: var(--sea); }
+  .arm h2 {
+    font-family: var(--display);
+    font-size: 1.45rem;
+    margin: 8px 0 6px;
+    letter-spacing: -0.02em;
+  }
+  .arm p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 16px 0 12px;
+  }
+  .slab {
+    height: 28px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    transform-origin: left center;
+    animation: grow-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .arm.a .slab {
+    background: linear-gradient(90deg, rgba(255,122,89,0.55), rgba(255,122,89,0.18));
+    color: #ffe8e1;
+  }
+  .arm.b .slab {
+    background: linear-gradient(90deg, rgba(62,207,154,0.65), rgba(62,207,154,0.2));
+    color: #e8fff6;
+    width: 33.333%;
+    animation-delay: 0.12s;
+  }
+  .arm.a .slab:nth-child(1) { animation-delay: 0.05s; }
+  .arm.a .slab:nth-child(2) { animation-delay: 0.14s; width: 100%; }
+  .arm.a .slab:nth-child(3) { animation-delay: 0.23s; width: 100%; }
+  .big-num {
+    font-family: var(--mono);
+    font-size: 1.55rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+  }
+  .arm.a .big-num { color: var(--coral); }
+  .arm.b .big-num { color: var(--sea); }
+  .big-num span {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  section {
+    margin: 48px 0;
+  }
+  h3 {
+    font-family: var(--display);
+    font-size: 1.65rem;
+    letter-spacing: -0.02em;
+    margin: 0 0 8px;
+  }
+  .section-note {
+    color: var(--muted);
+    margin: 0 0 20px;
+    max-width: 62ch;
+  }
+
+  .bars {
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 20px;
+    background: rgba(255,255,255,0.02);
+  }
+  .bar-row {
+    display: grid;
+    grid-template-columns: 72px 1fr 88px;
+    gap: 12px;
+    align-items: center;
+    margin: 14px 0;
+  }
+  .bar-label {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .track {
+    height: 18px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.05);
+    overflow: hidden;
+    position: relative;
+  }
+  .fill {
+    height: 100%;
+    border-radius: inherit;
+    width: 0;
+    animation: fill-bar 1.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .fill.a { background: linear-gradient(90deg, #ff8a6a, #ff5a3c); }
+  .fill.b { background: linear-gradient(90deg, #5fe0b0, #2bb87f); }
+  .bar-val {
+    font-family: var(--mono);
+    font-size: 12px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .pair-title {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 18px 0 4px;
+    font-family: var(--mono);
+  }
+  .saved {
+    margin-top: 18px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: var(--sea-dim);
+    border: 1px solid rgba(62, 207, 154, 0.28);
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--foam);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  th, td {
+    text-align: left;
+    padding: 11px 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  th {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  td.mono { font-family: var(--mono); font-size: 12.5px; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .good { color: var(--sea); font-weight: 600; }
+  .bad { color: var(--coral); }
+  .flat { color: var(--muted); }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .chip {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    color: var(--muted);
+    background: rgba(0,0,0,0.2);
+    cursor: pointer;
+  }
+  .chip.active {
+    color: #062018;
+    background: var(--sea);
+    border-color: transparent;
+    font-weight: 600;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 720px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+  .metric {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 16px;
+    background: rgba(255,255,255,0.02);
+  }
+  .metric strong {
+    display: block;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--sea);
+    margin-bottom: 6px;
+  }
+  .metric p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+
+  .verdict {
+    border-radius: 20px;
+    padding: 28px 24px;
+    background:
+      linear-gradient(145deg, rgba(62,207,154,0.12), transparent 55%),
+      rgba(18, 28, 24, 0.9);
+    border: 1px solid rgba(62, 207, 154, 0.28);
+  }
+  .verdict h3 { margin-bottom: 10px; }
+  .verdict ul {
+    margin: 14px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .verdict li {
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: 10px;
+    align-items: start;
+  }
+  .check {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--sea-dim);
+    color: var(--sea);
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+  .cmd {
+    margin-top: 28px;
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: #050807;
+    border: 1px solid var(--line);
+    color: var(--foam);
+    overflow-x: auto;
+    white-space: pre;
+  }
+  footer {
+    margin-top: 56px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 12px;
+    font-family: var(--mono);
+  }
+
+  @keyframes grow-in {
+    from { transform: scaleX(0.15); opacity: 0; }
+    to { transform: scaleX(1); opacity: 1; }
+  }
+  @keyframes fill-bar {
+    from { width: 0; }
+    to { width: var(--w); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .slab, .fill { animation: none !important; }
+    .fill { width: var(--w) !important; }
+    .arm.b .slab { width: 33.333%; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <div class="meta">
+        <span>2026-08-14</span>
+        <span>iosSimulatorArm64</span>
+        <span>IosCgImageTransferAbBenchTest</span>
+      </div>
+      <h1>Phase 1 是内存胜利，不是解码加速</h1>
+      <p class="lede">
+        把 <strong>CGContextDrawImage</strong> 画进 Skia 自有缓冲后，
+        Compose 路径的全帧写入从 <strong>3 → 1</strong>。
+        1920 预览少拷 <strong>18.8 MiB</strong>；HEIC 端到端几乎不动。
+      </p>
+
+      <div class="duel">
+        <article class="arm a">
+          <div class="arm-tag">Arm A · Legacy</div>
+          <h2>ByteArray 中转</h2>
+          <p>Draw → memcpy → Compose 再栅格</p>
+          <div class="stack" aria-hidden="true">
+            <div class="slab">L1 Draw</div>
+            <div class="slab">L2 install / makeRaster</div>
+            <div class="slab">L3 toComposeImageBitmap</div>
+          </div>
+          <div class="big-num">28.1 MiB<span>accounted @ 1920 compose</span></div>
+        </article>
+        <article class="arm b">
+          <div class="arm-tag">Arm B · Production</div>
+          <h2>Skia-owned</h2>
+          <p>Draw 一次，asComposeImageBitmap 零拷</p>
+          <div class="stack" aria-hidden="true">
+            <div class="slab">L1 Draw only</div>
+          </div>
+          <div class="big-num">9.4 MiB<span>accounted @ 1920 compose</span></div>
+        </article>
+      </div>
+    </header>
+
+    <section>
+      <h3>1920 Compose：分配量对照</h3>
+      <p class="section-note">
+        主指标 <code style="font-family:var(--mono);color:var(--foam)">accounted_alloc_bytes</code>
+        = 全帧缓冲之和（w×h×4 × writes），不是 OS RSS。
+        夹具 2400×1600 → 输出 1920×1280。
+      </p>
+      <div class="bars">
+        <div class="pair-title">PNG · compose</div>
+        <div class="bar-row">
+          <div class="bar-label">A legacy</div>
+          <div class="track"><div class="fill a" style="--w:100%"></div></div>
+          <div class="bar-val bad">28.1 MiB</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">B owned</div>
+          <div class="track"><div class="fill b" style="--w:33.3%"></div></div>
+          <div class="bar-val good">9.4 MiB</div>
+        </div>
+
+        <div class="pair-title">HEIC · compose（同尺寸）</div>
+        <div class="bar-row">
+          <div class="bar-label">A legacy</div>
+          <div class="track"><div class="fill a" style="--w:100%"></div></div>
+          <div class="bar-val bad">28.1 MiB</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">B owned</div>
+          <div class="track"><div class="fill b" style="--w:33.3%"></div></div>
+          <div class="bar-val good">9.4 MiB</div>
+        </div>
+
+        <div class="saved">省下 19,660,800 bytes（18.8 MiB）· handoff ≈ 2.0 ms · HEIC e2e 55→54 ms</div>
+        <div class="saved" style="margin-top:10px;background:rgba(255,122,89,0.12);border-color:rgba(255,122,89,0.28);color:#ffd0c4">
+          真机 iPhone 16 Pro 同夹具：PNG 1920 仍省 <strong>18.8 MiB</strong>；handoff 1593→8 µs（~1.6 ms）；e2e 28→26 ms。日志 <code style="font-family:var(--mono)">parity-shots/cg-transfer-ab-device/</code>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h3>按预览桶扫一遍</h3>
+      <p class="section-note">冷解码，1 warmup + 5 samples 取中位。切换下方格式。</p>
+      <div class="chips" role="tablist" aria-label="格式">
+        <button class="chip active" data-fmt="png" type="button">PNG</button>
+        <button class="chip" data-fmt="heic" type="button">HEIC</button>
+      </div>
+      <div class="table-wrap" id="bucket-table"></div>
+    </section>
+
+    <section>
+      <h3>同一 1920：三条出口</h3>
+      <p class="section-note">Coil bitmap / Skia Image / Compose ImageBitmap。生产预览走 compose；filmstrip HEIC 走 bitmap。</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Surface</th>
+            <th>A writes / alloc</th>
+            <th>B writes / alloc</th>
+            <th>Handoff A→B</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>bitmap (Coil)</td>
+            <td class="mono">2 / 18.8 MiB</td>
+            <td class="mono good">1 / 9.4 MiB</td>
+            <td class="mono">636 → 0 µs</td>
+          </tr>
+          <tr>
+            <td>image</td>
+            <td class="mono">2 / 18.8 MiB</td>
+            <td class="mono good">1 / 9.4 MiB</td>
+            <td class="mono">612 → 7 µs</td>
+          </tr>
+          <tr>
+            <td>compose</td>
+            <td class="mono">3 / 28.1 MiB</td>
+            <td class="mono good">1 / 9.4 MiB</td>
+            <td class="mono">1972 → 14 µs</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h3>怎么量的</h3>
+      <div class="grid-2">
+        <div class="metric">
+          <strong>accounted_alloc_bytes · 主</strong>
+          <p>传输路径上每个全帧缓冲的字节求和。对应研究笔记里的 wasted writes。</p>
+        </div>
+        <div class="metric">
+          <strong>handoff_ns · 辅</strong>
+          <p>Draw 之后到对象发布：memcpy / Compose 再画，或 asCompose 包装。</p>
+        </div>
+        <div class="metric">
+          <strong>draw_ns · 对照</strong>
+          <p>仅 CGContextDrawImage。两臂应接近——实测抖动正常。</p>
+        </div>
+        <div class="metric">
+          <strong>e2e_ms · 诚实</strong>
+          <p>含 ImageIO 解码。HEIC draw 11–28 ms，会淹没 handoff。</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="verdict">
+      <h3>结论</h3>
+      <p class="section-note" style="margin-bottom:0;color:var(--ink)">
+        Phase 1 按<strong>内存优化</strong>交付。不要拿它当 filmstrip / HEIC 延迟银弹。
+        Phase 2（跳过 Draw 的格式快路径）仍要先量相册命中率。
+      </p>
+      <ul>
+        <li><span class="check">✓</span><span>Compose 全帧写入 3→1，字节账对齐 <code style="font-family:var(--mono)">frameBytes × writes</code></span></li>
+        <li><span class="check">✓</span><span>1920 预览省 ~18.8 MiB（计划估 ~22 MiB @ 1920×1440，同量级）</span></li>
+        <li><span class="check">✓</span><span>128 filmstrip：e2e 持平，handoff 几十 µs</span></li>
+        <li><span class="check">✓</span><span>像素 A/B 在 720 抽样对齐</span></li>
+      </ul>
+      <div class="cmd">./gradlew :shared:iosSimulatorArm64Test \
+  --tests me.rosuh.easywatermark.render.IosCgImageTransferAbBenchTest
+# 过滤 CG_TRANSFER_AB</div>
+    </section>
+
+    <footer>
+      EasyWatermark · docs/superpowers/research/2026-08-14-ios-cgimage-skia-transfer-ab.html
+      · markdown twin: *-transfer-ab.md
+    </footer>
+  </div>
+
+<script>
+  const DATA = {
+    png: [
+      { edge: 128, out: "128×85", aAlloc: "128 KiB", bAlloc: "43 KiB", saved: "85 KiB", handoff: "48→10 µs", e2e: "12→12 ms", e2eClass: "flat" },
+      { edge: 720, out: "720×480", aAlloc: "3.95 MiB", bAlloc: "1.32 MiB", saved: "2.64 MiB", handoff: "409→11 µs", e2e: "17→17 ms", e2eClass: "flat" },
+      { edge: 1920, out: "1920×1280", aAlloc: "28.1 MiB", bAlloc: "9.4 MiB", saved: "18.8 MiB", handoff: "2047→18 µs", e2e: "28→24 ms", e2eClass: "good" },
+    ],
+    heic: [
+      { edge: 128, out: "128×84", aAlloc: "126 KiB", bAlloc: "42 KiB", saved: "84 KiB", handoff: "54→14 µs", e2e: "24→23 ms", e2eClass: "flat" },
+      { edge: 720, out: "720×480", aAlloc: "3.95 MiB", bAlloc: "1.32 MiB", saved: "2.64 MiB", handoff: "440→15 µs", e2e: "25→25 ms", e2eClass: "flat" },
+      { edge: 1920, out: "1920×1280", aAlloc: "28.1 MiB", bAlloc: "9.4 MiB", saved: "18.8 MiB", handoff: "2045→15 µs", e2e: "55→54 ms", e2eClass: "flat" },
+    ],
+  };
+
+  function render(fmt) {
+    const rows = DATA[fmt].map((r) => `
+      <tr>
+        <td class="mono">${r.edge}</td>
+        <td class="mono">${r.out}</td>
+        <td class="mono bad">${r.aAlloc}</td>
+        <td class="mono good">${r.bAlloc}</td>
+        <td class="mono good">${r.saved}</td>
+        <td class="mono">${r.handoff}</td>
+        <td class="mono ${r.e2eClass}">${r.e2e}</td>
+      </tr>`).join("");
+    document.getElementById("bucket-table").innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>edge</th>
+            <th>out</th>
+            <th>A alloc</th>
+            <th>B alloc</th>
+            <th>saved</th>
+            <th>handoff</th>
+            <th>e2e med</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  document.querySelectorAll(".chip").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".chip").forEach((c) => c.classList.remove("active"));
+      btn.classList.add("active");
+      render(btn.dataset.fmt);
+    });
+  });
+  render("png");
+</script>
+</body>
+</html>

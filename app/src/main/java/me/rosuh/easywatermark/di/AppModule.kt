@@ -1,41 +1,28 @@
 package me.rosuh.easywatermark.di
 
-import android.content.Context
-import androidx.room.Room
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.components.SingletonComponent
 import me.rosuh.easywatermark.data.db.AppDatabase
-import java.util.Locale
-import javax.inject.Singleton
+import me.rosuh.easywatermark.data.db.buildTemplateDatabase
+import me.rosuh.easywatermark.platform.AndroidDynamicColorCapability
+import me.rosuh.easywatermark.platform.DynamicColorCapability
+import me.rosuh.easywatermark.ui.MainViewModel
+import me.rosuh.easywatermark.ui.about.AboutViewModel
+import org.koin.core.module.dsl.viewModel
+import org.koin.dsl.module
 
-@Module
-@InstallIn(SingletonComponent::class)
-object AppModule {
-
-    @Singleton
-    @Provides
-    fun provideYourDatabase(
-        @ApplicationContext app: Context
-    ): AppDatabase? {
-        val builder = Room.databaseBuilder(
-            app,
-            AppDatabase::class.java,
-            "ewm-db"
-        )
-        val isCh = Locale.getDefault().language.contains("zh")
-        builder.createFromAsset(if (isCh) "ewm-db-ch.db" else "ewm-db-eng.db")
-        try {
-            return builder.build()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return null
+val appModule = module {
+    single<AppDatabase> {
+        // Android creation moved to :shared androidMain (locale createFromAsset + in-memory
+        // fallback preserved, byte-identical). See data/db/TemplateDatabaseBuilder.android.kt.
+        buildTemplateDatabase(get())
     }
-
-    @Singleton
-    @Provides
-    fun provideTemplateDao(db: AppDatabase?) = db?.templateDao()
+    includes(repositoryModule)
+    single<DynamicColorCapability> {
+        AndroidDynamicColorCapability()
+    }
+    viewModel {
+        MainViewModel(get(), get(), get())
+    }
+    viewModel {
+        AboutViewModel(get(), get(), get())
+    }
 }

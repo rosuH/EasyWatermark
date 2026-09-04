@@ -1,0 +1,1814 @@
+package me.rosuh.easywatermark.desktop
+
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.awtTransferable
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.awt.SwingWindow
+import androidx.compose.ui.window.MenuBar
+import androidx.compose.ui.window.application
+import androidx.compose.ui.window.rememberWindowState
+import androidx.compose.ui.input.key.KeyShortcut
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import me.rosuh.easywatermark.ProductVersion
+import me.rosuh.easywatermark.data.db.buildTemplateDatabase
+import me.rosuh.easywatermark.data.db.unpackDefaultTemplateSeed
+import me.rosuh.easywatermark.data.model.FuncType
+import me.rosuh.easywatermark.data.model.ImageFormat
+import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.MediaRef
+import me.rosuh.easywatermark.data.model.toUiProjection
+import me.rosuh.easywatermark.data.model.TextPaintStyle
+import me.rosuh.easywatermark.data.model.TextTypeface
+import me.rosuh.easywatermark.data.model.UserPreferences
+import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkConfigChange
+import me.rosuh.easywatermark.data.model.WatermarkMode
+import me.rosuh.easywatermark.data.model.WatermarkTileMode
+import me.rosuh.easywatermark.data.repo.DesktopIconPersistence
+import me.rosuh.easywatermark.data.repo.TemplateRepository
+import me.rosuh.easywatermark.domain.OutputPrefsEditor
+import me.rosuh.easywatermark.domain.TemplateEditor
+import me.rosuh.easywatermark.domain.WatermarkConfigEditor
+import me.rosuh.easywatermark.render.CommonWatermarkPipeline
+import me.rosuh.easywatermark.render.DesktopImageDecoder
+import me.rosuh.easywatermark.render.DesktopPreviewRaster
+import me.rosuh.easywatermark.render.DesktopRenderRequest
+import me.rosuh.easywatermark.render.DesktopWatermarkTextRenderer
+import me.rosuh.easywatermark.render.OverlayPreviewChrome
+import me.rosuh.easywatermark.render.OverlayPreviewPolicy
+import me.rosuh.easywatermark.render.PreviewImageRepository
+import me.rosuh.easywatermark.render.PreviewKey
+import me.rosuh.easywatermark.render.PreviewPurpose
+import me.rosuh.easywatermark.render.PreviewSourceReuseProbe
+import me.rosuh.easywatermark.render.PreviewWorkingSetBudget
+import me.rosuh.easywatermark.render.WatermarkIconCache
+import me.rosuh.easywatermark.render.neighborIndices
+import me.rosuh.easywatermark.ui.DraftRenderConflator
+import me.rosuh.easywatermark.ui.LiveOverlayPreview
+import me.rosuh.easywatermark.ui.OverlayCell
+import me.rosuh.easywatermark.ui.overlayCellFrom
+import me.rosuh.easywatermark.ui.withOffset
+import me.rosuh.easywatermark.render.DesktopSaveDecision
+import me.rosuh.easywatermark.render.DesktopWatermarkComposer
+import me.rosuh.easywatermark.session.AppIntent
+import me.rosuh.easywatermark.session.DesktopExportPipelinePort
+import me.rosuh.easywatermark.session.DesktopSaveAsDestination
+import me.rosuh.easywatermark.session.DesktopSessionImport
+import me.rosuh.easywatermark.session.WatermarkSessionViewModel
+import me.rosuh.easywatermark.shared.generated.resources.Res
+import me.rosuh.easywatermark.shared.generated.resources.desktop_drop_busy
+import me.rosuh.easywatermark.shared.generated.resources.desktop_drop_unsupported
+import me.rosuh.easywatermark.shared.generated.resources.desktop_import_failed
+import me.rosuh.easywatermark.shared.generated.resources.desktop_imported
+import me.rosuh.easywatermark.shared.generated.resources.desktop_importing
+import me.rosuh.easywatermark.shared.generated.resources.desktop_ready_status
+import me.rosuh.easywatermark.shared.generated.resources.desktop_choose_folder
+import me.rosuh.easywatermark.shared.generated.resources.desktop_choose_folder_dialog_title
+import me.rosuh.easywatermark.shared.generated.resources.desktop_export
+import me.rosuh.easywatermark.shared.generated.resources.desktop_save_as
+import me.rosuh.easywatermark.shared.generated.resources.desktop_save_as_dialog_title
+import me.rosuh.easywatermark.shared.generated.resources.desktop_save_as_failed
+import me.rosuh.easywatermark.shared.generated.resources.desktop_saved_as
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_cd_done
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_cd_progress
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_failed
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_partial
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_success
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_progress
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_exporting
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_destination_folder
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_filename_policy_desktop
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_counts
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_success_where
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_error_generic
+import me.rosuh.easywatermark.shared.generated.resources.share
+import me.rosuh.easywatermark.ui.sharedString
+import me.rosuh.easywatermark.ui.EditorBottomControls
+import me.rosuh.easywatermark.ui.EditorScreen
+import me.rosuh.easywatermark.ui.editorLayoutClass
+import me.rosuh.easywatermark.shared.generated.resources.dev_comment
+import me.rosuh.easywatermark.shared.generated.resources.ic_app_icon_window
+import me.rosuh.easywatermark.ui.about.AboutDevCard
+import me.rosuh.easywatermark.ui.about.AboutScreenIcons
+import me.rosuh.easywatermark.ui.about.AboutScreen
+import me.rosuh.easywatermark.ui.about.OpenSourceOverlayHost
+import me.rosuh.easywatermark.ui.EditorOptionItem
+import me.rosuh.easywatermark.ui.EditorTemplateSheetHost
+import me.rosuh.easywatermark.ui.label
+import me.rosuh.easywatermark.ui.iconPainter
+import me.rosuh.easywatermark.ui.ProductShellHost
+import me.rosuh.easywatermark.ui.ProductShellNav
+import me.rosuh.easywatermark.ui.SharedProductDrawables
+import me.rosuh.easywatermark.ui.desktopClampPreviewOffsetDrag
+
+import me.rosuh.easywatermark.ui.compose.IconWatermarkOption
+import me.rosuh.easywatermark.ui.compose.TextColorOption
+import me.rosuh.easywatermark.ui.compose.TextPaintStyleLabels
+import me.rosuh.easywatermark.ui.compose.TextPaintStyleOption
+import me.rosuh.easywatermark.ui.compose.WatermarkModeActions
+import me.rosuh.easywatermark.ui.compose.WatermarkModeActionsLabels
+import me.rosuh.easywatermark.ui.compose.formatArgbHexColor
+import me.rosuh.easywatermark.ui.compose.parseArgbHexColor
+import me.rosuh.easywatermark.ui.save.SavedOutputActions
+import me.rosuh.easywatermark.ui.save.SavedOutputActionsLabels
+import me.rosuh.easywatermark.ui.save.SaveCommandActions
+import me.rosuh.easywatermark.ui.save.SaveCommandActionsLabels
+import me.rosuh.easywatermark.ui.save.SaveExportOptionsSection
+import me.rosuh.easywatermark.ui.save.SaveExportSheetShell
+
+import me.rosuh.easywatermark.platform.platformMotionPolicy
+import me.rosuh.easywatermark.ui.theme.AppTheme
+import me.rosuh.easywatermark.ui.theme.ContentEditorThemeHost
+import me.rosuh.easywatermark.ui.theme.EditorChromeColor
+import me.rosuh.easywatermark.ui.theme.ProvideMotionPolicy
+import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
+import java.awt.Desktop
+import java.awt.FileDialog
+import java.awt.datatransfer.DataFlavor
+import java.io.File
+import java.net.URI
+import java.util.prefs.Preferences
+
+/** Best-effort Open-dialog filename filter (honored on macOS; ignored on some platforms — harmless). */
+// J3: capability-true extensions (WebP only if ImageIO can decode — stock JDK usually cannot).
+private val IMAGE_EXTENSIONS: Set<String> =
+    me.rosuh.easywatermark.render.DesktopImageFormats.chooserExtensions()
+
+// About link edges (match Android MainActivity / iOS IosProductRootHost).
+private const val ABOUT_URL_RELEASES = "https://github.com/rosuH/EasyWatermark/releases/"
+private const val ABOUT_URL_ISSUES = "https://github.com/rosuH/EasyWatermark/issues/new"
+private const val ABOUT_URL_PRIVACY_ZH =
+    "https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy_zh-CN.md"
+private const val ABOUT_URL_PRIVACY_EN =
+    "https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy.md"
+private const val ABOUT_URL_DEV = "https://github.com/rosuH"
+private const val ABOUT_URL_DESIGNER = "https://tovi.fun/"
+private const val ABOUT_URL_RATE =
+    "https://github.com/rosuH/EasyWatermark#readme"
+
+/** Short label for the current output preference, e.g. "JPEG / 80". */
+private fun describePref(p: UserPreferences): String = "${p.outputFormat} / ${p.compressLevel}"
+
+/** Open a URL in the system browser (About rows). Soft-fail → status string. */
+private fun openUrlInBrowser(url: String): String? {
+    return try {
+        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+            Desktop.getDesktop().browse(URI(url))
+            null
+        } else {
+            "Open URL not supported on this Desktop"
+        }
+    } catch (t: Throwable) {
+        "Open URL failed: ${t.message}"
+    }
+}
+
+/**
+ * Desktop Content editor theme pref (ADR-0027).
+ * Wallpaper Material You does not exist on Desktop — only follow-photo.
+ * Legacy force_dynamic_color is ignored (was a no-op).
+ */
+private object DesktopContentThemePrefs {
+    private const val KEY = "follow_photo"
+    private val prefs: Preferences =
+        Preferences.userRoot().node("me/rosuh/easywatermark/desktop")
+
+    fun isFollowPhoto(): Boolean = prefs.getBoolean(KEY, true)
+    fun setFollowPhoto(enabled: Boolean) {
+        prefs.putBoolean(KEY, enabled)
+    }
+}
+
+/**
+ * / : drop-target file extraction. [hasFileList] is the cheap drag-over predicate (flavor
+ * Only); [supportedImageFiles] does the real extraction on drop — reads the dropped file list and returns * ALL files whose extension is in [IMAGE_EXTENSIONS] (order preserved), via the pure, unit-tested
+ * [DesktopSaveDecision.supportedImageFiles]. Both swallow AWT failures → false/empty (soft-fail, never
+ * crash). The AWT file-list flavor is the desktop drag-drop interop; commonMain is untouched.
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+private fun hasFileList(event: DragAndDropEvent): Boolean = try {
+    event.awtTransferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)
+} catch (t: Throwable) {
+    false
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+private fun supportedImageFiles(event: DragAndDropEvent): List<File> = try {
+    val transferable = event.awtTransferable
+    if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+        @Suppress("UNCHECKED_CAST")
+        val files = (transferable.getTransferData(DataFlavor.javaFileListFlavor) as? List<File>).orEmpty()
+        DesktopSaveDecision.supportedImageFiles(files, IMAGE_EXTENSIONS)
+    } else {
+        emptyList()
+    }
+} catch (t: Throwable) {
+    emptyList()
+}
+
+/** Stable UI label for a [TextTypeface] — explicit map (no reflection / object-name dependency). */
+private fun typefaceLabelOf(t: TextTypeface): String = when (t) {
+    TextTypeface.Normal -> "Normal"
+    TextTypeface.Italic -> "Italic"
+    TextTypeface.Bold -> "Bold"
+    TextTypeface.BoldItalic -> "BoldItalic"
+}
+
+/** Stable UI label for a [TextPaintStyle] — explicit map (no reflection / object-name dependency). */
+private fun styleLabelOf(s: TextPaintStyle): String = when (s) {
+    TextPaintStyle.Fill -> "Fill"
+    TextPaintStyle.Stroke -> "Stroke"
+}
+
+/**
+ * Stable per-user app-data dir for the interactive Desktop window.
+ * J3: [me.rosuh.easywatermark.platform.DesktopAppPaths.resolveAppDataDir] (OS-native + legacy
+ * `~/.easywatermark` copy-forward). Headless/demo witnesses (`Main.kt`) stay under repo-local `build/`.
+ */
+private fun resolveDesktopAppDataDir(): File {
+    val home = System.getProperty("user.home")?.takeIf { it.isNotBlank() }
+    if (home == null) {
+        System.err.println(
+            "S4d-215/J3: user.home unavailable; persisting window state under repo-local build/desktop-app-data",
+        )
+    }
+    return me.rosuh.easywatermark.platform.DesktopAppPaths.resolveAppDataDir(
+        home = home,
+        fallbackWhenNoHome = File("build/desktop-app-data"),
+    )
+}
+
+/**
+ * User-facing output dir for Save/Export batches — `~/Pictures` when it exists, else
+ * `<app-data>/output`. Must not use repo-local `build/`. Headless defaults stay build-local.
+ */
+private fun resolveDesktopOutputDir(): File {
+    val pictures = System.getProperty("user.home")?.takeIf { it.isNotBlank() }?.let { File(it, "Pictures") }
+    return (pictures?.takeIf { it.isDirectory } ?: File(resolveDesktopAppDataDir(), "output"))
+        .apply { mkdirs() }
+}
+
+
+// Product routes + transitions: shared [ProductShellNav] / [ProductShellHost].
+
+@Composable
+private fun desktopOptionLabel(type: FuncType): String = type.label()
+
+@Composable
+private fun desktopOptionIcon(type: FuncType): Painter = type.iconPainter()
+
+/**
+ * Immutable same-item Preview/Save As input (C2 review-fix): one Session item owns path + offset.
+ * File-level type so it is not a local class inside [launchDesktopWindow].
+ */
+private data class FrozenItemInput(
+    val sourcePath: String?,
+    val offsetX: Float,
+    val offsetY: Float,
+    val label: String,
+)
+
+/**
+ * Compose Desktop product window.
+ *
+ * **Import-only:** Open / Add more / Drop enter or append Session selection — no output files, no export job.
+ * **Write:** Save / Export (unique names under [resolveDesktopOutputDir]) and Save As (exact path).
+ * **Preview:** app-private temp only; never becomes [lastSavedFile].
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+fun launchDesktopWindow() = application {
+    me.rosuh.easywatermark.ui.StartupTrace.mark("host_create_start")
+    if (System.getProperty("ewm.preview.probe") == "true" ||
+        System.getenv("EWM_PREVIEW_PROBE") == "1"
+    ) {
+        // application{} is a Composable — do not reset on every recomposition.
+        if (!PreviewSourceReuseProbe.enabled) {
+            PreviewSourceReuseProbe.enabled = true
+            PreviewSourceReuseProbe.reset()
+            println("PREVIEW_REUSE_PROBE enabled")
+        }
+    }
+    // ADR-0028: process-wide Coil ImageLoader (path ProductThumb Fetcher).
+    me.rosuh.easywatermark.ui.image.installProductImageLoaderFactory()
+    // Persist window state under OS-native app-data (J3 DesktopAppPaths; legacy ~/.easywatermark
+    // copy-forward when empty). Headless/demo witnesses stay under build/ (Main.kt).
+    val appDataDir = remember { resolveDesktopAppDataDir() }
+    // Real Save/Export batch destination (unique names). User can change via export-sheet
+    // folder chooser. Save As uses the user-chosen file path exactly.
+    val outputDirState = remember { mutableStateOf(resolveDesktopOutputDir()) }
+    var outputDir by outputDirState
+    // ONE repository + editor for the window's lifetime (DataStore forbids a second active store per file).
+    val repo = remember { DesktopWatermarkFlow.buildRepository(dir = appDataDir) }
+    val editor = remember { WatermarkConfigEditor(repo) }
+    // the output-prefs repo the save flow reads (empty store → the shared (JPEG, 80) default).
+    val userConfigRepo = remember { DesktopWatermarkFlow.buildUserConfigRepository(dir = appDataDir) }
+    // Shared session + Desktop export port (unique destination). Preview uses runSaveFlow temp;
+    // Save As uses DesktopSaveAsDestination.renderAndSaveExact.
+    // outputDirProvider always reads the latest folder (chooser can change mid-session).
+    val session = remember {
+        WatermarkSessionViewModel(
+            waterMarkRepo = repo,
+            userConfigRepo = userConfigRepo,
+            exportPipeline = DesktopExportPipelinePort(
+                outputDirProvider = { outputDirState.value },
+            ),
+        )
+    }
+    me.rosuh.easywatermark.ui.StartupTrace.markOnce("app_create_end")
+    val exportJobState by session.exportJobState.collectAsState()
+    // the shared output-prefs write use-case over the SAME store the save flow reads.
+    val outputEditor = remember { OutputPrefsEditor(userConfigRepo) }
+    // ///: the Desktop templates Room DB (commonMain Room via the desktopMain
+    // BundledSQLiteDriver builder), now under the stable app-data dir and seeded from the shared desktopMain
+    // seed resource on first creation (Chinese for `zh` locales, English otherwise). Room is
+    // single-instance-per-file; the process exits on window close, releasing the DB.
+    val templateDb = remember {
+        val seedFile = File(appDataDir, "seed-ewm-db-default.db").also { unpackDefaultTemplateSeed(it) }
+        buildTemplateDatabase(appDataDir, seedFile)
+    }
+    val templateRepo = remember { TemplateRepository(templateDb.templateDao(), Dispatchers.IO) }
+    val templateEditor = remember { TemplateEditor(templateRepo) }
+    // Collect the saved templates into state (remember the Flow so collection is stable across recompositions).
+    val templates by remember { templateRepo.getAllTemplate() }.collectAsState(emptyList())
+    val scope = rememberCoroutineScope()
+    var filmstripSwitchJob by remember { mutableStateOf<Job?>(null) }
+    val previewImages = remember {
+        PreviewImageRepository<ImageBitmap>(
+            ownerScope = scope,
+            approxBytes = { PreviewImageRepository.approxImageBitmapBytes(it) },
+        )
+    }
+    val iconCache = remember { WatermarkIconCache<ImageBitmap>() }
+    DisposableEffect(previewImages) {
+        onDispose {
+            previewImages.closeFromOwner()
+            iconCache.invalidate()
+        }
+    }
+    var status by remember {
+        mutableStateOf(sharedString(Res.string.desktop_ready_status))
+    }
+    // Surface shared export progress when an explicit Save/Export batch is running.
+    LaunchedEffect(exportJobState.isSaving, exportJobState.completedCount, exportJobState.totalCount) {
+        if (exportJobState.isSaving && exportJobState.totalCount > 0) {
+            status = "Session export ${exportJobState.completedCount}/${exportJobState.totalCount}…"
+        }
+    }
+    var busy by remember { mutableStateOf(false) }
+    // Last REAL save only (explicit Export / Save As). Never Preview temp, never Open/Drop import.
+    var lastSavedFile by remember { mutableStateOf<File?>(null) }
+    // packaged Desktop launches do not have the repository as their working directory. Keep the
+    // interactive preview temp beside the existing per-user config/DB state instead of under `build/`.
+    val previewFile = remember { File(appDataDir, "preview/preview.img").apply { parentFile?.mkdirs() } }
+    // / C2: output prefs drive the shared SaveExportSheetShell (Android Compose export panel).
+    var outputFormat by remember { mutableStateOf(ImageFormat.JPEG) }
+    var outputQuality by remember { mutableStateOf(80) }
+    // C2: product export chrome = shared SaveExportSheetShell; FS write/share stay platform edges.
+    var showSaveSheet by remember { mutableStateOf(false) }
+    // About open-source overlay (shared OpenSourceScreen; same as Android/iOS).
+    var showOpenSource by remember { mutableStateOf(false) }
+    var followPhoto by remember { mutableStateOf(DesktopContentThemePrefs.isFollowPhoto()) }
+    // ADR-0027 option B: root/AWT chrome tracks content scheme in Editor; brand olive elsewhere.
+    var windowChromeColor by remember { mutableStateOf(EditorChromeColor.brand) }
+    // ADR-0028: filmstrip/export thumbs via ProductAsyncImage (Coil path Fetcher).
+    // U2: watermark config is session/repo-owned — collect once; no parallel mutableStateOf mirrors.
+    val waterMark by repo.waterMark.collectAsState(WaterMark.default)
+    // Live overlay layers (ADR-0033). Never a baked composeOverBackground bitmap.
+    var previewPhoto by remember { mutableStateOf<ImageBitmap?>(null) }
+    var overlayCell by remember { mutableStateOf<OverlayCell?>(null) }
+    /** URI of the Session image that live layers currently represent. */
+    var previewReadyUri by remember { mutableStateOf<String?>(null) }
+    // Config / import preview refresh (no 250ms debounce; conflator + Source reuse).
+    var previewGeneration by remember { mutableStateOf(0) }
+    // H0.1-fix: offset-only / draft preview gen — **no** 250ms debounce, light in-memory raster.
+    var offsetPreviewGeneration by remember { mutableStateOf(0) }
+    // Committed long-edge bucket from Fit+source+container (px). Draft paints stay at 720.
+    var committedPreviewMaxEdgePx by remember {
+        mutableStateOf(DesktopPreviewRaster.PREVIEW_MAX_EDGE_PX)
+    }
+    // Last measured preview pane size in layout px (density-applied via onSizeChanged).
+    var previewBoxSizePx by remember { mutableStateOf(IntSize.Zero) }
+    // UI-only CLAMP drag draft (never Session/export). selectionId + offsets.
+    var clampDraft by remember { mutableStateOf<Triple<String, Float, Float>?>(null) }
+    // E0: Session owns product route; FileDialog stays Desktop edge.
+    val launchUi by session.launchScreenUiStateFlow.collectAsState()
+    val productRoute = ProductShellNav.routeFromLaunchUi(launchUi.uiState)
+    val aboutReturn = ProductShellNav.routeFromLaunchUi(launchUi.aboutReturnUiState)
+    val shellBase = ProductShellNav.overlayBase(productRoute, aboutReturn)
+    // Leave Editor (or follow-photo off) → brand olive root/AWT immediately.
+    // About is full-bleed over a live Editor: snap chrome to brand so the title
+    // band matches About olive, and ignore Editor photo-seed updates while covered.
+    LaunchedEffect(productRoute, shellBase, followPhoto) {
+        if (productRoute == ProductShellNav.Route.About ||
+            shellBase != ProductShellNav.Route.Editor ||
+            !followPhoto
+        ) {
+            windowChromeColor = EditorChromeColor.brand
+        }
+    }
+    val sessionImages = launchUi.selectedImageList
+    LaunchedEffect(Unit) {
+        userConfigRepo.userPreferences.first().let {
+            outputFormat = it.outputFormat
+            outputQuality = it.compressLevel
+        }
+    }
+
+    /**
+     * Resolve one Session [ImageInfo] that owns **both** source path and offset.
+     * E1: Session only — curImageInfo → first selected → fixture center (no host byte mirror).
+     */
+    fun freezeCurrentItemInput(): FrozenItemInput {
+        val launch = session.launchScreenUiStateFlow.value
+        val selected = launch.selectedImageList
+        val item = launch.curImageInfo ?: selected.firstOrNull()
+        if (item != null) {
+            val path = item.uri.value
+            return FrozenItemInput(
+                sourcePath = path,
+                offsetX = item.offsetX,
+                offsetY = item.offsetY,
+                label = path,
+            )
+        }
+        return FrozenItemInput(
+            sourcePath = null,
+            offsetX = 0.5f,
+            offsetY = 0.5f,
+            label = "<generated 640x480 fixture>",
+        )
+    }
+
+    fun decodeDesktopIcon(wm: WaterMark): ImageBitmap? {
+        if (wm.markMode != me.rosuh.easywatermark.data.model.WatermarkMode.Image) return null
+        if (wm.iconUri.value.isBlank()) {
+            error("Image-mode preview requires an icon file")
+        }
+        val iconFile = File(wm.iconUri.value)
+        require(iconFile.isFile) { "Image-mode preview icon is missing: ${wm.iconUri.value}" }
+        return iconCache.decoded(wm.iconUri, WatermarkIconCache.ICON_MAX_EDGE_PX) {
+            PreviewSourceReuseProbe.recordIconDecode()
+            DesktopImageDecoder.decodeThumbnail(
+                iconFile.readBytes(),
+                maxEdgePx = WatermarkIconCache.ICON_MAX_EDGE_PX,
+            )
+        }
+    }
+
+    fun clearLiveLayers() {
+        previewPhoto = null
+        overlayCell = null
+        previewReadyUri = null
+    }
+
+    fun publishLiveLayers(
+        gen: Int,
+        photo: ImageBitmap,
+        overlay: OverlayCell,
+        path: String,
+        ox: Float,
+        oy: Float,
+        isDraft: Boolean,
+        maxEdge: Int,
+        bench: me.rosuh.easywatermark.ui.ClampDragBench.PreviewScope,
+        msg: String,
+    ): String {
+        if (gen != offsetPreviewGeneration) {
+            bench.finish(mapOf("staleGen" to true, "isDraft" to isDraft, "maxEdge" to maxEdge))
+            return msg
+        }
+        val isText = session.launchScreenUiStateFlow.value.waterMark.markMode == WatermarkMode.Text
+        if (
+            !OverlayPreviewPolicy.canPublishLivePhoto(
+                selectedPath = path,
+                photoPath = path,
+                photoWidth = photo.width,
+                cellReadyForWidth = overlay.builtForWidth,
+                isTextMode = isText,
+            )
+        ) {
+            bench.finish(mapOf("blockedPublish" to true, "isDraft" to isDraft, "maxEdge" to maxEdge))
+            return msg
+        }
+        previewPhoto = photo
+        overlayCell = overlay
+        previewReadyUri = path
+        bench.finish(
+            mapOf(
+                "offsetX" to ox,
+                "offsetY" to oy,
+                "hasPreview" to true,
+                "isDraft" to isDraft,
+                "debounceMs" to 0,
+                "saveFlow" to false,
+                "maxEdge" to maxEdge,
+            ),
+        )
+        if (PreviewSourceReuseProbe.enabled) {
+            val snap = PreviewSourceReuseProbe.snapshot()
+            val line =
+                """{"event":"publish","isDraft":$isDraft,"path":"$path","sourceDecodes":${snap.sourceDecodes},"composes":${snap.composes},"iconDecodes":${snap.iconDecodes},"maxEdge":$maxEdge}"""
+            println("PREVIEW_REUSE_PROBE $line")
+            System.getProperty("ewm.preview.probeLog")?.trim()?.takeIf { it.isNotEmpty() }?.let { logPath ->
+                runCatching {
+                    File(logPath).apply { parentFile?.mkdirs() }.appendText(line + "\n")
+                }
+            }
+        }
+        return msg
+    }
+
+    fun composeDesktopOverlayCell(wm: WaterMark, imageWidth: Int): ImageBitmap {
+        val icon = decodeDesktopIcon(wm)
+        PreviewSourceReuseProbe.recordCompose()
+        return CommonWatermarkPipeline.composeCell(
+            imageWidth = imageWidth.coerceAtLeast(1),
+            config = wm,
+            env = DesktopWatermarkTextRenderer.textRasterEnv(),
+            icon = icon,
+            fontFamily = if (wm.markMode == WatermarkMode.Text) FontFamily.Default else null,
+        )
+    }
+
+    /**
+     * In-memory editor preview: Source reuse + overlay cell. No DataStore first() on this path.
+     * Draft updates overlay offset only. Never writes [PreviewPurpose.Watermarked].
+     * Never paints Source without a matching overlay. [gen] drops stale publish.
+     */
+    suspend fun refreshPreviewLight(
+        gen: Int,
+        overrideOffset: Pair<Float, Float>? = null,
+        isDraft: Boolean = false,
+    ): String {
+        val bench = me.rosuh.easywatermark.ui.ClampDragBench.previewScope(
+            if (isDraft) "desktop_draft_preview" else "desktop_offset_preview",
+        )
+        val frozen = freezeCurrentItemInput()
+        val ox = overrideOffset?.first ?: frozen.offsetX
+        val oy = overrideOffset?.second ?: frozen.offsetY
+        val wm = session.launchScreenUiStateFlow.value.waterMark
+        val isText = wm.markMode == WatermarkMode.Text
+        val maxEdge = DesktopPreviewRaster.maxEdgeForPaint(
+            isDraft = isDraft,
+            committedBucketPx = committedPreviewMaxEdgePx,
+        )
+        val path = frozen.sourcePath
+        if (path.isNullOrBlank()) {
+            bench.finish(mapOf("empty" to true, "isDraft" to isDraft, "maxEdge" to maxEdge))
+            return "Preview empty"
+        }
+        if (isDraft && previewReadyUri == path && overlayCell != null && previewPhoto != null) {
+            overlayCell = overlayCell?.withOffset(ox, oy)
+            bench.mark("overlayOffset")
+            bench.finish(
+                mapOf(
+                    "offsetX" to ox,
+                    "offsetY" to oy,
+                    "hasPreview" to true,
+                    "isDraft" to true,
+                    "debounceMs" to 0,
+                    "saveFlow" to false,
+                    "maxEdge" to maxEdge,
+                ),
+            )
+            return "Preview overlay offset"
+        }
+        return try {
+            val file = File(path)
+            require(file.isFile) {
+                "Current Session image is missing or not a regular file: $path"
+            }
+            val srcKey = PreviewKey(path, maxEdge, PreviewPurpose.SourcePlaceholder)
+            val source = previewImages.load(srcKey) {
+                withContext(Dispatchers.IO) {
+                    DesktopPreviewRaster.decodeSourcePlaceholder(
+                        imageBytes = file.readBytes(),
+                        maxEdgePx = maxEdge,
+                    )
+                }
+            } ?: error("Source decode returned null")
+            bench.mark("source")
+            val cell = withContext(Dispatchers.Default) {
+                composeDesktopOverlayCell(wm, source.width)
+            }
+            bench.mark("compose")
+            val overlay = overlayCellFrom(
+                cell = cell,
+                config = wm,
+                offsetX = ox,
+                offsetY = oy,
+                builtForWidth = if (isText) source.width else cell.width,
+            )
+            if (
+                !OverlayPreviewPolicy.canPublishLivePhoto(
+                    selectedPath = path,
+                    photoPath = path,
+                    photoWidth = source.width,
+                    cellReadyForWidth = overlay.builtForWidth,
+                    isTextMode = isText,
+                )
+            ) {
+                bench.finish(mapOf("blockedPublish" to true, "isDraft" to isDraft, "maxEdge" to maxEdge))
+                return "Preview wait cell"
+            }
+            publishLiveLayers(
+                gen = gen,
+                photo = source,
+                overlay = overlay,
+                path = path,
+                ox = ox,
+                oy = oy,
+                isDraft = isDraft,
+                maxEdge = maxEdge,
+                bench = bench,
+                msg = "Preview live ${source.width}x${source.height} maxEdge=$maxEdge",
+            )
+        } catch (t: Throwable) {
+            bench.mark("error")
+            bench.finish(mapOf("error" to true, "isDraft" to isDraft, "maxEdge" to maxEdge))
+            "Preview light failed: ${t.message}"
+        }
+    }
+
+    data class DesktopPreviewPaint(
+        val gen: Int,
+        val isDraft: Boolean,
+        val overrideOffset: Pair<Float, Float>?,
+    )
+
+    val paintHandler = remember {
+        mutableStateOf<suspend (DesktopPreviewPaint) -> Unit>({ _ -> })
+    }
+    val paintConflator = remember {
+        DraftRenderConflator<DesktopPreviewPaint>(scope) { req ->
+            paintHandler.value(req)
+        }
+    }
+    paintHandler.value = { req ->
+        status = refreshPreviewLight(
+            gen = req.gen,
+            overrideOffset = req.overrideOffset,
+            isDraft = req.isDraft,
+        )
+    }
+    val persistHandler = remember {
+        mutableStateOf<suspend (WatermarkConfigChange) -> Unit>({ _ -> })
+    }
+    val persistConflator = remember {
+        DraftRenderConflator<WatermarkConfigChange>(scope) { change ->
+            persistHandler.value(change)
+        }
+    }
+    persistHandler.value = { change ->
+        session.dispatchAndAwait(AppIntent.ApplyConfig(change))
+        // Same-path style ticks keep last LiveLayers until the new cell publishes.
+        offsetPreviewGeneration += 1
+        paintConflator.submit(
+            DesktopPreviewPaint(
+                gen = offsetPreviewGeneration,
+                isDraft = false,
+                overrideOffset = null,
+            ),
+        )
+    }
+    DisposableEffect(paintConflator) {
+        onDispose {
+            paintConflator.close()
+            persistConflator.close()
+        }
+    }
+
+    fun submitPreviewPaint(isDraft: Boolean, overrideOffset: Pair<Float, Float>? = null) {
+        offsetPreviewGeneration += 1
+        paintConflator.submit(
+            DesktopPreviewPaint(
+                gen = offsetPreviewGeneration,
+                isDraft = isDraft,
+                overrideOffset = overrideOffset,
+            ),
+        )
+    }
+
+    fun prefetchNeighborWatermarked(focusPath: String, gen: Int) {
+        scope.launch(Dispatchers.Default) {
+            val list = session.launchScreenUiStateFlow.value.selectedImageList
+            val idx = list.indexOfFirst { it.uri.value == focusPath }
+            if (idx < 0) return@launch
+            val bucket = committedPreviewMaxEdgePx
+            for (i in neighborIndices(idx, list.size)) {
+                if (gen != offsetPreviewGeneration) return@launch
+                val info = list[i]
+                val path = info.uri.value
+                if (path.isBlank()) continue
+                val srcKey = PreviewKey(path, bucket, PreviewPurpose.SourcePlaceholder)
+                if (previewImages.peekCached(srcKey) != null) continue
+                val file = File(path)
+                if (!file.isFile) continue
+                runCatching {
+                    previewImages.load(srcKey) {
+                        withContext(Dispatchers.IO) {
+                            DesktopPreviewRaster.decodeSourcePlaceholder(
+                                imageBytes = file.readBytes(),
+                                maxEdgePx = bucket,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Recompute committed preview long-edge from the measured pane (density px).
+     * Pane-stable: do not fold current source aspect into the bucket (that misses on switch).
+     * Same-bucket changes are a no-op (no extra paint).
+     */
+    fun recomputeCommittedPreviewBucket(box: IntSize = previewBoxSizePx) {
+        if (box.width <= 0 || box.height <= 0) return
+        // Pane-stable bucket: per-image Fit flips 2560↔1440 on aspect change and misses
+        // every filmstrip click (Desktop ImageIO then re-reads the whole file).
+        val next = DesktopPreviewRaster.committedMaxEdgePx(box.width, box.height)
+        if (next == committedPreviewMaxEdgePx) return
+        committedPreviewMaxEdgePx = next
+        previewImages.applyWorkingSetCapsFromOwner(
+            PreviewWorkingSetBudget.caps(
+                longEdgePx = next,
+                physicalMemoryBytes = 8L shl 30,
+            ),
+        )
+    }
+
+    /** Measured preview-box size (layout px) → store + recompute pane-stable bucket. */
+    fun onPreviewBoxSizeChanged(size: IntSize) {
+        if (size.width <= 0 || size.height <= 0) return
+        if (size == previewBoxSizePx) return
+        previewBoxSizePx = size
+        val previous = committedPreviewMaxEdgePx
+        recomputeCommittedPreviewBucket(size)
+        if (committedPreviewMaxEdgePx != previous && filmstripSwitchJob?.isActive != true) {
+            submitPreviewPaint(isDraft = false)
+        }
+    }
+
+    // Config / import / offset: conflator (one in flight + latest). No 250ms debounce.
+
+    /**
+     * Import-only batch (Launch Open, editor Add more, Drop).
+     * Updates Session selection and preview via [DesktopSessionImport.commitImport];
+     * **never** writes output files or starts export.
+     *
+     * @param append false = replace selection (Launch Open); true = append unique paths (Add more / Drop).
+     */
+    fun openImageFilesBatch(files: List<File>, append: Boolean = false) {
+        if (files.isEmpty()) return
+        scope.launch {
+            busy = true
+            status = sharedString(Res.string.desktop_importing, files.size)
+            try {
+                val prior = session.launchScreenUiStateFlow.value.selectedImageList
+                val (msg, ok) = withContext(Dispatchers.IO) {
+                    try {
+                        val selected = DesktopSessionImport.commitImport(
+                            session = session,
+                            files = files,
+                            existingSelection = prior,
+                            append = append,
+                            waterMark = repo.waterMark.first(),
+                        )
+                        // Session paths own source identity — no host full-resolution byte mirror.
+                        sharedString(Res.string.desktop_imported, selected.size) to true
+                    } catch (t: Throwable) {
+                        sharedString(Res.string.desktop_import_failed, t.message ?: "") to false
+                    }
+                }
+                // openImageFilesBatch → Session EnterEditor (productRoute / selection from Session).
+                // Preview only — never touch lastSavedFile (import is not an explicit save).
+                // H0.1-fix: light in-memory preview (no saveFlow); clear any CLAMP draft.
+                if (ok) {
+                    clampDraft = null
+                    // Import now probes source W×H — recompute pane-stable bucket before first paint.
+                    recomputeCommittedPreviewBucket()
+                    offsetPreviewGeneration += 1
+                    val gen = offsetPreviewGeneration
+                    status = "$msg · ${refreshPreviewLight(gen = gen, isDraft = false)}"
+                    freezeCurrentItemInput().sourcePath?.let { prefetchNeighborWatermarked(it, gen) }
+                } else {
+                    status = msg
+                }
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    fun pickOpenImages(owner: java.awt.Frame, append: Boolean = false) {
+        val dialog = FileDialog(owner, if (append) "Add images" else "Open image", FileDialog.LOAD).apply {
+            isMultipleMode = true
+            setFilenameFilter { _, fileName ->
+                fileName.substringAfterLast('.', "").lowercase() in IMAGE_EXTENSIONS
+            }
+            // D3: remember last open directory when available.
+            runCatching {
+                val prefs = Preferences.userRoot().node("me.rosuh.easywatermark.desktop")
+                prefs.get("lastOpenDir", null)?.let { directory = it }
+            }
+            isVisible = true
+            runCatching {
+                directory?.let {
+                    Preferences.userRoot().node("me.rosuh.easywatermark.desktop").put("lastOpenDir", it)
+                }
+            }
+        }
+        val files = DesktopSaveDecision.supportedImageFiles(dialog.files.toList(), IMAGE_EXTENSIONS)
+        if (files.isNotEmpty()) openImageFilesBatch(files, append = append)
+    }
+
+    fun openExportSheet() {
+        if (busy) return
+        session.resetJobStatus()
+        showSaveSheet = true
+    }
+
+    
+
+    // ADR-0026 E2E: optional auto-import without FileDialog.
+    // -Dewm.desktop.autoOpen=/path/a.png[,/path/b.png] — colon-separated list also accepted.
+    // -Dewm.desktop.forceMarkMode=text|image — pin Content segment for hard-door screenshots.
+    // Production launches omit these properties.
+    LaunchedEffect(Unit) {
+        when (System.getProperty("ewm.desktop.forceMarkMode")?.trim()?.lowercase()) {
+            "text", "0" -> session.applyConfig(
+                me.rosuh.easywatermark.data.model.WatermarkConfigChange.MarkMode(
+                    me.rosuh.easywatermark.data.model.WatermarkMode.Text,
+                ),
+            )
+            "image", "icon", "1" -> session.applyConfig(
+                me.rosuh.easywatermark.data.model.WatermarkConfigChange.MarkMode(
+                    me.rosuh.easywatermark.data.model.WatermarkMode.Image,
+                ),
+            )
+        }
+        // E2E: multiline watermark text for H1/H2 shots (literal \n in property → real newlines).
+        System.getProperty("ewm.desktop.forceText")?.trim()?.takeIf { it.isNotEmpty() }?.let { rawText ->
+            val text = rawText.replace("\\n", "\n")
+            session.applyConfig(
+                me.rosuh.easywatermark.data.model.WatermarkConfigChange.Text(text),
+            )
+        }
+        val raw = System.getProperty("ewm.desktop.autoOpen")?.trim().orEmpty()
+        if (raw.isNotEmpty()) {
+            val files = raw.split(',', ';')
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .map { File(it) }
+                .filter { it.isFile }
+            if (files.isNotEmpty()) {
+                openImageFilesBatch(files, append = false)
+            }
+        }
+        // Agent-only presentation flags (never set in production launches).
+        when (System.getProperty("ewm.desktop.openSheet")?.trim()?.lowercase()) {
+            "export", "save" -> {
+                // Wait one frame so import can enter Editor before export chrome.
+                kotlinx.coroutines.delay(700)
+                openExportSheet()
+            }
+            "about" -> {
+                kotlinx.coroutines.delay(400)
+                session.openAbout(
+                    if (productRoute == ProductShellNav.Route.Editor) {
+                        me.rosuh.easywatermark.ui.LaunchScreenUiState.Editor
+                    } else {
+                        me.rosuh.easywatermark.ui.LaunchScreenUiState.Launch
+                    },
+                )
+            }
+        }
+    }
+
+    // Drop → same import-only batch as Open / Add more (append when editor already has images).
+    val importBatchLatest = rememberUpdatedState(
+        newValue = { files: List<File>, append: Boolean -> openImageFilesBatch(files, append) },
+    )
+    val busyLatest = rememberUpdatedState(busy)
+    val dropTarget = remember {
+        object : DragAndDropTarget {
+            override fun onDrop(event: DragAndDropEvent): Boolean {
+                if (busyLatest.value) {
+                    status = sharedString(Res.string.desktop_drop_busy)
+                    return false
+                }
+                val files = supportedImageFiles(event)
+                if (files.isEmpty()) {
+                    status = sharedString(
+                        Res.string.desktop_drop_unsupported,
+                        IMAGE_EXTENSIONS.joinToString(", "),
+                    )
+                    return false
+                }
+                // Drop is import-only: same openImageFilesBatch as Open / Add more.
+                val append = session.launchScreenUiStateFlow.value.selectedImageList.isNotEmpty()
+                importBatchLatest.value(files, append)
+                return true
+            }
+        }
+    }
+
+    /**
+     * Save As: production exact-write via [DesktopSaveAsDestination.renderAndSaveExact]
+     * (not [DesktopSaveDecision.resolveUniqueOutputFile], not preview temp).
+     */
+    fun saveAsExactPath(window: java.awt.Frame, dialogTitle: String) {
+        if (busy) return
+        val dialog = FileDialog(window, dialogTitle, FileDialog.SAVE).apply {
+            val fmt = outputFormat
+            file = "watermarked.${fmt.fileExtension}"
+            isVisible = true
+        }
+        val dir = dialog.directory ?: return
+        val name = dialog.file ?: return
+        val userChosen = File(dir, name)
+        scope.launch {
+            busy = true
+            try {
+                // Immutable job snapshot before filesystem IO (C2 attempt 2):
+                // same-item path+offset + config + prefs → DesktopRenderRequest, then IO only reads
+                // bytes / render / exact write with that frozen request.
+                val frozen = freezeCurrentItemInput()
+                val config = repo.waterMark.first()
+                val prefs = userConfigRepo.userPreferences.first()
+                val request = DesktopRenderRequest(
+                    config = config,
+                    prefs = prefs,
+                    offsetX = frozen.offsetX,
+                    offsetY = frozen.offsetY,
+                )
+                val out = withContext(Dispatchers.IO) {
+                    val imageBytes: ByteArray = when {
+                        frozen.sourcePath != null -> {
+                            val file = File(frozen.sourcePath)
+                            require(file.isFile) {
+                                "Current Session image is missing or not a regular file: ${frozen.sourcePath}"
+                            }
+                            file.readBytes()
+                        }
+                        else -> DesktopWatermarkComposer.sampleBackgroundPng(width = 640, height = 480)
+                    }
+                    val saved = DesktopSaveAsDestination.renderAndSaveExact(
+                        imageBytes = imageBytes,
+                        request = request,
+                        userChosen = userChosen,
+                    )
+                    File(saved.output.value)
+                }
+                // Explicit Save As branch — track as last real save for Reveal/Open folder.
+                lastSavedFile = out
+                status = sharedString(Res.string.desktop_saved_as, out.path)
+            } catch (t: Throwable) {
+                status = sharedString(Res.string.desktop_save_as_failed, t.message ?: "")
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    // E2 close policy: cancel in-flight export, then exit. Durable WaterMark DataStore is not wiped.
+    // Presentation-only state (preview bitmap, sheets) dies with the process; Session product route
+    // is not mirrored as a host owner. Editor back uses session.onBackPressed() → Launch + discard batch.
+    fun closeDesktopWindow() {
+        session.cancelExport()
+        exitApplication()
+    }
+
+    // ADR-0026 E2E: optional initial size via -Dewm.desktop.widthDp / -Dewm.desktop.heightDp.
+    val e2eW = System.getProperty("ewm.desktop.widthDp")?.toFloatOrNull()
+    val e2eH = System.getProperty("ewm.desktop.heightDp")?.toFloatOrNull()
+    // Form-inspector E2E: 0=Content 1=Style 2=Layout (default Content).
+    val e2eInspectorTab = System.getProperty("ewm.desktop.inspectorTab")?.toIntOrNull() ?: 0
+    val windowState = if (e2eW != null && e2eH != null && e2eW > 0f && e2eH > 0f) {
+        rememberWindowState(width = e2eW.dp, height = e2eH.dp)
+    } else {
+        rememberWindowState()
+    }
+    var desktopFrame by remember { mutableStateOf<java.awt.Frame?>(null) }
+    me.rosuh.easywatermark.ui.StartupTrace.markOnce("host_set_content")
+    val startupExitMs = System.getenv("EWM_STARTUP_TRACE_EXIT_MS")?.toLongOrNull()
+    if (startupExitMs != null) {
+        LaunchedEffect(startupExitMs) {
+            kotlinx.coroutines.delay(startupExitMs)
+            closeDesktopWindow()
+        }
+    }
+    SwingWindow(
+        onCloseRequest = ::closeDesktopWindow,
+        title = "EasyWatermark — Desktop",
+        icon = painterResource(Res.drawable.ic_app_icon_window),
+        state = windowState,
+        init = { composeWindow ->
+            // Client properties are ignored after the window is displayable.
+            applyProductWindowChrome(composeWindow, EditorChromeColor.brand)
+        },
+        onPreviewKeyEvent = preview@{ event ->
+            if (event.type != KeyEventType.KeyDown) return@preview false
+            val chord = event.isMetaPressed || event.isCtrlPressed
+            if (!chord) return@preview false
+            when (event.key) {
+                Key.O -> {
+                    // Open / add images (Launch or Editor). Frame from content SideEffect.
+                    val frame = desktopFrame
+                    if (frame != null) {
+                        pickOpenImages(frame, append = productRoute == ProductShellNav.Route.Editor)
+                    }
+                    true
+                }
+                Key.S -> {
+                    // Save / export entry (H6).
+                    if (productRoute == ProductShellNav.Route.Editor) {
+                        openExportSheet()
+                        true
+                    } else {
+                        false
+                    }
+                }
+                else -> false
+            }
+        },
+    ) {
+        // H6: MenuBar + KeyShortcut (Cmd/Ctrl). Window onKeyEvent also handles O/S.
+        val isMac = System.getProperty("os.name").orEmpty().lowercase().contains("mac")
+        fun accel(key: Key, shift: Boolean = false) =
+            if (isMac) KeyShortcut(key, meta = true, shift = shift)
+            else KeyShortcut(key, ctrl = true, shift = shift)
+        MenuBar {
+            Menu("File", mnemonic = 'F') {
+                Item("Open…", shortcut = accel(Key.O), onClick = { pickOpenImages(window, append = false) })
+                Item("Add images…", shortcut = accel(Key.O, shift = true), onClick = { pickOpenImages(window, append = true) })
+                Item("Export…", shortcut = accel(Key.S), onClick = { openExportSheet() })
+                Item("Save As…", shortcut = accel(Key.S, shift = true), onClick = {
+                    saveAsExactPath(window, dialogTitle = "Save As")
+                })
+            }
+        }
+        SideEffect {
+            desktopFrame = window
+        }
+        LaunchedEffect(window) {
+            realizeMacTitleBarAfterShown(window, windowChromeColor)
+        }
+        LaunchedEffect(windowChromeColor) {
+            applyProductWindowChrome(window, windowChromeColor)
+        }
+        AppTheme(darkTheme = true) {
+            // I3: Desktop platformMotionPolicy is Full (no OS reduce-motion API).
+            // Window-root olive paints edge-to-edge (including under macOS traffic lights).
+            // Launch/About are full-bleed; Editor insets interactive chrome below the lights.
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(windowChromeColor),
+            ) {
+            ProvideMotionPolicy(platformMotionPolicy()) {
+            // E1: Session-only current for filmstrip (no host selectedSessionImage mirror).
+            val selectedForStrip = launchUi.curImageInfo
+                ?: sessionImages.firstOrNull()
+            val aboutPainter = SharedProductDrawables.aboutPainter()
+            val backPainter = SharedProductDrawables.backPainter()
+            val addPainter = SharedProductDrawables.pickerImagePainter()
+            val savePainter = SharedProductDrawables.savePainter()
+            val versionPainter = SharedProductDrawables.versionPainter()
+            val ratePainter = SharedProductDrawables.ratePainter()
+            val feedbackPainter = SharedProductDrawables.feedbackPainter()
+            val updateLogPainter = SharedProductDrawables.updateLogPainter()
+            val openSourcePainter = SharedProductDrawables.openSourcePainter()
+            val privacyZhPainter = SharedProductDrawables.privacyZhPainter()
+            val privacyEnPainter = SharedProductDrawables.privacyEnPainter()
+            val logoToolbarPainter = SharedProductDrawables.logoToolbarPainter()
+            val templateListPainter = SharedProductDrawables.templateListPainter()
+            val avatarDevPainter = SharedProductDrawables.avatarDevPainter()
+            val avatarToviPainter = SharedProductDrawables.avatarToviPainter()
+
+            // Drop is import-only on Launch and Editor (never writes output).
+            val shellModifier = Modifier.fillMaxSize()
+                .dragAndDropTarget(shouldStartDragAndDrop = { hasFileList(it) }, target = dropTarget)
+            ProductShellHost(
+                route = productRoute,
+                aboutReturn = aboutReturn,
+                chromeColor = windowChromeColor,
+            ) { route ->
+            when (route) {
+                ProductShellNav.Route.Launch -> {
+                    // Full-bleed like About: Launch has no top chrome. Insetting the
+                    // Surface left a dark title band (parent fill does not show through
+                    // AnimatedContent). Logo / pick / About sit well below the lights.
+                    me.rosuh.easywatermark.ui.LaunchScreen(
+                        aboutIcon = aboutPainter,
+                        onPickImage = { pickOpenImages(window, append = false) },
+                        onGoAbout = {
+                            session.openAbout(me.rosuh.easywatermark.ui.LaunchScreenUiState.Launch)
+                        },
+                        logo = { modifier, shouldAnimate ->
+                            me.rosuh.easywatermark.ui.BrandLogo(
+                                modifier = modifier,
+                                animate = shouldAnimate,
+                            )
+                        },
+                        modifier = shellModifier,
+                    )
+                }
+                ProductShellNav.Route.About -> {
+                    // UI is shared AboutScreen; Desktop only wires system edges (browser / prefs).
+                    val aboutShowBounds = waterMark.enableBounds
+                    val devComment = stringResource(Res.string.dev_comment)
+                    AboutScreen(
+                        versionName = ProductVersion.NAME,
+                        showBounds = aboutShowBounds,
+                        showFollowWallpaperSwitch = false,
+                        followPhotoOn = followPhoto,
+                        onToggleFollowPhoto = { enabled ->
+                            DesktopContentThemePrefs.setFollowPhoto(enabled)
+                            followPhoto = enabled
+                            // Also persist to shared UserConfig when available.
+                            scope.launch {
+                                runCatching { userConfigRepo.updateFollowPhoto(enabled) }
+                            }
+                        },
+                        icons = AboutScreenIcons(
+                            back = backPainter,
+                            version = versionPainter,
+                            rating = ratePainter,
+                            feedback = feedbackPainter,
+                            updateLog = updateLogPainter,
+                            openSource = openSourcePainter,
+                            privacyZh = privacyZhPainter,
+                            privacyEn = privacyEnPainter,
+                        ),
+                        developerCard = AboutDevCard(
+                            title = "Developed with ♥ by rosu",
+                            description = devComment,
+                            avatar = avatarDevPainter,
+                        ),
+                        designerCard = AboutDevCard(
+                            title = "Designed with ♥ by tovi",
+                            description = "A Designer.",
+                            avatar = avatarToviPainter,
+                        ),
+                        onBack = {
+                            showOpenSource = false
+                            session.onBackPressed()
+                        },
+                        onVersion = {
+                            openUrlInBrowser(ABOUT_URL_RELEASES)?.let { status = it }
+                        },
+                        onRate = {
+                            openUrlInBrowser(ABOUT_URL_RATE)?.let { status = it }
+                        },
+                        onFeedback = {
+                            openUrlInBrowser(ABOUT_URL_ISSUES)?.let { status = it }
+                        },
+                        onUpdateLog = {
+                            openUrlInBrowser(ABOUT_URL_RELEASES)?.let { status = it }
+                        },
+                        onOpenSource = { showOpenSource = true },
+                        onPrivacyZh = {
+                            openUrlInBrowser(ABOUT_URL_PRIVACY_ZH)?.let { status = it }
+                        },
+                        onPrivacyEn = {
+                            openUrlInBrowser(ABOUT_URL_PRIVACY_EN)?.let { status = it }
+                        },
+                        onDeveloper = {
+                            openUrlInBrowser(ABOUT_URL_DEV)?.let { status = it }
+                        },
+                        onDesigner = {
+                            openUrlInBrowser(ABOUT_URL_DESIGNER)?.let { status = it }
+                        },
+                        onToggleBounds = { enabled ->
+                            scope.launch {
+                                repo.toggleBounds(enabled)
+                            }
+                        },
+                        useLargeLayout = true,
+                        contentPadding = macTitleBarContentPadding(),
+                        logo = { modifier ->
+                            me.rosuh.easywatermark.ui.AboutPageLogo(
+                                modifier = modifier,
+                                animate = true,
+                            )
+                        },
+                        modifier = shellModifier,
+                    )
+                }
+                ProductShellNav.Route.Editor -> {
+                    var colorDraft by remember(waterMark.textColor) {
+                        mutableStateOf(formatArgbHexColor(waterMark.textColor))
+                    }
+                    // I1: window size in Dp → pure EditorLayoutClass (Expanded on typical Desktop).
+                    ContentEditorThemeHost(
+                        enabled = followPhoto,
+                        seedBitmap = previewPhoto,
+                        seedKey = previewReadyUri ?: selectedForStrip?.uri?.value,
+                        onChromeColorChange = { color ->
+                            if (productRoute != ProductShellNav.Route.About) {
+                                windowChromeColor = color
+                            }
+                        },
+                    ) {
+                    BoxWithConstraints(modifier = shellModifier.macFullWindowContentInsets()) {
+                    val layoutClass = remember(maxWidth, maxHeight) {
+                        editorLayoutClass(maxWidth.value, maxHeight.value)
+                    }
+                    me.rosuh.easywatermark.ui.EditorScreen(
+                        imageList = sessionImages.map {
+                            it.toUiProjection()
+                        },
+                        waterMark = waterMark,
+                        selectedImage = selectedForStrip?.toUiProjection(),
+                        templates = templates,
+                        icons = me.rosuh.easywatermark.ui.EditorUiIcons(
+                            back = backPainter,
+                            addMoreImages = addPainter,
+                            save = savePainter,
+                            about = aboutPainter,
+                            templateList = templateListPainter,
+                        ),
+                        preview = { previewModifier ->
+                            val dragItem = selectedForStrip
+                            val selectedPath = dragItem?.uri?.value
+                            val chrome = OverlayPreviewPolicy.decide(
+                                selectedPath = selectedPath,
+                                photoPath = previewReadyUri,
+                                photoWidth = previewPhoto?.width,
+                                cellReadyForWidth = overlayCell?.builtForWidth,
+                                hasThumb = !selectedPath.isNullOrBlank(),
+                                isTextMode = waterMark.markMode == WatermarkMode.Text,
+                            )
+                            val photo = previewPhoto
+                            val liveOverlay = overlayCell
+                            val dragModifier = if (
+                                chrome == OverlayPreviewChrome.LiveLayers &&
+                                photo != null &&
+                                liveOverlay != null &&
+                                !busy &&
+                                dragItem != null
+                            ) {
+                                Modifier
+                                    .padding(12.dp)
+                                    .desktopClampPreviewOffsetDrag(
+                                        enabled = true,
+                                        selectionId = dragItem.uri.value,
+                                        isClamp = waterMark.tileMode == WatermarkTileMode.CLAMP,
+                                        imageWidth = photo.width.toFloat(),
+                                        imageHeight = photo.height.toFloat(),
+                                        offsetX = clampDraft?.takeIf { it.first == dragItem.uri.value }?.second
+                                            ?: dragItem.offsetX,
+                                        offsetY = clampDraft?.takeIf { it.first == dragItem.uri.value }?.third
+                                            ?: dragItem.offsetY,
+                                        onOffsetDraft = { x, y ->
+                                            val id = dragItem.uri.value
+                                            if (id.isEmpty()) {
+                                                return@desktopClampPreviewOffsetDrag
+                                            }
+                                            clampDraft = Triple(id, x, y)
+                                            overlayCell = overlayCell?.withOffset(x, y)
+                                        },
+                                        onOffsetDraftClear = {
+                                            clampDraft = null
+                                        },
+                                        onOffsetCommit = { x, y ->
+                                            val dragUri = dragItem.uri
+                                            val item = session
+                                                .launchScreenUiStateFlow
+                                                .value
+                                                .curImageInfo
+                                                ?.takeIf { it.uri == dragUri }
+                                                ?: return@desktopClampPreviewOffsetDrag
+                                            val b = me.rosuh.easywatermark.ui
+                                                .ClampDragBench
+                                                .previewScope("desktop_offset_commit")
+                                            session.applyOffset(
+                                                item.copy(offsetX = x, offsetY = y),
+                                            )
+                                            offsetPreviewGeneration++
+                                            b.mark("applyOffset")
+                                            clampDraft = null
+                                            overlayCell = overlayCell?.withOffset(x, y)
+                                            paintConflator.submit(
+                                                DesktopPreviewPaint(
+                                                    gen = offsetPreviewGeneration,
+                                                    isDraft = false,
+                                                    overrideOffset = null,
+                                                ),
+                                            )
+                                            b.mark("offsetPreviewGenerationBump")
+                                            b.finish(
+                                                mapOf(
+                                                    "offsetX" to x,
+                                                    "offsetY" to y,
+                                                    "debounceMs" to 0,
+                                                    "saveFlow" to false,
+                                                ),
+                                            )
+                                        },
+                                    )
+                            } else {
+                                Modifier.padding(12.dp)
+                            }
+                            LiveOverlayPreview(
+                                chrome = chrome,
+                                photo = if (chrome == OverlayPreviewChrome.LiveLayers) photo else null,
+                                overlay = if (chrome == OverlayPreviewChrome.LiveLayers) liveOverlay else null,
+                                waitThumb = if (chrome == OverlayPreviewChrome.WaitThumb && dragItem != null) {
+                                    { thumbMod ->
+                                        me.rosuh.easywatermark.ui.image.ProductAsyncImage(
+                                            thumb = me.rosuh.easywatermark.ui.image.ProductThumb(
+                                                ref = dragItem.uri,
+                                                maxEdgePx = me.rosuh.easywatermark.ui.image.ProductThumb.UI_THUMB_MAX_EDGE,
+                                            ),
+                                            contentDescription = "Watermark preview",
+                                            contentScale = ContentScale.Fit,
+                                            modifier = thumbMod,
+                                        )
+                                    }
+                                } else {
+                                    null
+                                },
+                                modifier = previewModifier
+                                    .fillMaxSize()
+                                    .onSizeChanged { size -> onPreviewBoxSizeChanged(size) }
+                                    .then(dragModifier),
+                            )
+                        },
+                        thumbnail = { imageInfo, contentDescription, thumbModifier ->
+                            me.rosuh.easywatermark.ui.image.ProductAsyncImage(
+                                thumb = me.rosuh.easywatermark.ui.image.ProductThumb(
+                                    ref = imageInfo.uri,
+                                    maxEdgePx = me.rosuh.easywatermark.ui.image.ProductThumb.UI_THUMB_MAX_EDGE,
+                                ),
+                                contentDescription = contentDescription,
+                                contentScale = ContentScale.Crop,
+                                modifier = thumbModifier.background(
+                                    MaterialTheme.colorScheme.surfaceVariant,
+                                ),
+                            )
+                        },
+                        optionItem = { spec, selected ->
+                            val label = desktopOptionLabel(spec.type)
+                            EditorOptionItem(
+                                icon = desktopOptionIcon(spec.type),
+                                contentDescription = label,
+                                label = label,
+                                selected = selected,
+                            )
+                        },
+                        colorOption = { optionModifier, mark, onColor ->
+                            TextColorOption(
+                                currentColor = mark.textColor,
+                                customText = colorDraft,
+                                enabled = !busy,
+                                modifier = optionModifier,
+                                showCustomPicker = true,
+                                showCustomInput = false,
+                                onColorSelected = onColor,
+                                onCustomTextChange = { colorDraft = it },
+                            )
+                        },
+                        iconOption = { optionModifier, mark, onIcon ->
+                            IconWatermarkOption(
+                                hasIcon = mark.iconUri.isEmpty().not(),
+                                pickLabel = "Open icon…",
+                                modifier = optionModifier,
+                                enabled = !busy,
+                                onPick = {
+                                    val dialog = FileDialog(window, "Open icon", FileDialog.LOAD).apply {
+                                        setFilenameFilter { _, fileName ->
+                                            fileName.substringAfterLast('.', "").lowercase() in IMAGE_EXTENSIONS
+                                        }
+                                        isVisible = true
+                                    }
+                                    val dir = dialog.directory
+                                    val name = dialog.file
+                                    if (dir != null && name != null) {
+                                        val selected = File(dir, name)
+                                        scope.launch {
+                                            try {
+                                                val copied = withContext(Dispatchers.IO) {
+                                                    DesktopIconPersistence.persistIcon(
+                                                        selected, File(appDataDir, "watermark_icons"),
+                                                    )
+                                                }
+                                                onIcon(MediaRef(copied.absolutePath))
+                                            } catch (t: Throwable) {
+                                                status = "Failed: ${t.message}"
+                                            }
+                                        }
+                                    }
+                                },
+                                preview = {},
+                            )
+                        },
+                        onBack = { session.onBackPressed() },
+                        onAddMoreImages = { pickOpenImages(window, append = true) },
+                        onShowSaveDialog = { openExportSheet() },
+                        onGoAboutScreen = {
+                            session.openAbout(me.rosuh.easywatermark.ui.LaunchScreenUiState.Editor)
+                        },
+                        onImageSelected = { info ->
+                            filmstripSwitchJob?.cancel()
+                            filmstripSwitchJob = scope.launch {
+                                val path = info.uri.value
+                                clearLiveLayers()
+                                session.dispatchAndAwait(
+                                    AppIntent.SelectCurrent(info.uri),
+                                )
+                                recomputeCommittedPreviewBucket()
+                                previewGeneration++
+                                offsetPreviewGeneration += 1
+                                val gen = offsetPreviewGeneration
+                                refreshPreviewLight(gen = gen, isDraft = false)
+                                if (gen == offsetPreviewGeneration) {
+                                    prefetchNeighborWatermarked(path, gen)
+                                }
+                            }
+                        },
+                        onConfigChange = { change ->
+                            // F2: typed WatermarkConfigChange from shared controls (no from()).
+                            // Do not use busy to drop slider ticks — persist+paint conflator keeps
+                            // one in flight + latest.
+                            persistConflator.submit(change)
+                            status = "Applied ${change::class.simpleName}"
+                        },
+                        onUseTemplate = { template ->
+                            val content = template.content
+                            if (content != null) {
+                                persistConflator.submit(WatermarkConfigChange.Text(content))
+                                previewGeneration++
+                                status = "Template applied"
+                            }
+                        },
+                        onAddTemplate = { text ->
+                            scope.launch {
+                                busy = true
+                                status = withContext(Dispatchers.IO) {
+                                    try {
+                                        templateEditor.add(text)
+                                        "Saved template"
+                                    } catch (t: Throwable) {
+                                        "Failed: ${t.message}"
+                                    }
+                                }
+                                busy = false
+                            }
+                        },
+                        onUpdateTemplate = { template ->
+                            scope.launch {
+                                busy = true
+                                status = withContext(Dispatchers.IO) {
+                                    try {
+                                        templateEditor.update(template)
+                                        "Updated template"
+                                    } catch (t: Throwable) {
+                                        "Failed: ${t.message}"
+                                    }
+                                }
+                                busy = false
+                            }
+                        },
+                        onDeleteTemplate = { template ->
+                            scope.launch {
+                                busy = true
+                                status = withContext(Dispatchers.IO) {
+                                    try {
+                                        templateEditor.delete(template)
+                                        "Template deleted"
+                                    } catch (t: Throwable) {
+                                        "Failed: ${t.message}"
+                                    }
+                                }
+                                busy = false
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                        layoutClass = layoutClass,
+                        initialInspectorTab = e2eInspectorTab,
+                    )
+                    }
+                    } // ContentEditorThemeHost // BoxWithConstraints Editor
+                }
+            }
+            } // ProductShellHost
+
+            OpenSourceOverlayHost(
+                visible = showOpenSource,
+                onBack = { showOpenSource = false },
+                onOpenLink = { url ->
+                    openUrlInBrowser(url)?.let { status = it }
+                },
+                backIcon = backPainter,
+                contentPadding = macTitleBarContentPadding(),
+            )
+
+            // C2: shared Android Compose export panel; Desktop only implements FS write + reveal/share edges.
+            if (showSaveSheet) {
+                val exportItems = sessionImages
+                // ADR-0028: export thumbs load via ProductAsyncImage; Coil memory cache handles hits.
+                val exportTotalFixed = exportItems.size
+                val recovery = me.rosuh.easywatermark.ui.save.ExportRecoveryUi.fromJob(
+                    isSaving = exportJobState.isSaving,
+                    isFinished = exportJobState.isFinished,
+                    successCount = exportJobState.successCount.coerceAtLeast(exportJobState.completedCount),
+                    failureCount = exportJobState.failureCount,
+                    processedCount = exportJobState.processedCount
+                        .coerceAtLeast(exportJobState.successCount + exportJobState.failureCount),
+                    totalCount = exportJobState.totalCount.takeIf { it > 0 } ?: exportTotalFixed,
+                )
+                val primaryLabel = when {
+                    recovery.isExporting -> stringResource(Res.string.dialog_save_exporting)
+                    recovery.isFinished -> stringResource(Res.string.share)
+                    // Desktop is folder export, not phone album.
+                    else -> stringResource(Res.string.desktop_export)
+                }
+                val resultSummaryText = when {
+                    recovery.isExporting -> stringResource(
+                        Res.string.dialog_save_export_progress,
+                        recovery.processedCount,
+                        recovery.totalCount.coerceAtLeast(1),
+                    )
+                    recovery.isFinished && recovery.failureCount == 0 && recovery.successCount > 0 ->
+                        stringResource(
+                            Res.string.dialog_save_export_done_success,
+                            recovery.successCount,
+                            recovery.totalCount.coerceAtLeast(1),
+                        )
+                    recovery.isFinished && recovery.successCount > 0 && recovery.failureCount > 0 ->
+                        stringResource(
+                            Res.string.dialog_save_export_done_partial,
+                            recovery.successCount,
+                            recovery.totalCount.coerceAtLeast(1),
+                            recovery.failureCount,
+                        )
+                    recovery.isFinished && recovery.successCount == 0 ->
+                        stringResource(
+                            Res.string.dialog_save_export_done_failed,
+                            recovery.totalCount.coerceAtLeast(1),
+                        )
+                    else -> "${recovery.successCount}/${recovery.totalCount.coerceAtLeast(1)}"
+                }
+                val statusCd = if (recovery.isExporting) {
+                    stringResource(
+                        Res.string.dialog_save_export_cd_progress,
+                        recovery.processedCount,
+                        recovery.totalCount.coerceAtLeast(1),
+                        recovery.successCount,
+                        recovery.failureCount,
+                    )
+                } else {
+                    stringResource(
+                        Res.string.dialog_save_export_cd_done,
+                        recovery.processedCount
+                            .coerceAtLeast(recovery.successCount + recovery.failureCount),
+                        recovery.successCount,
+                        recovery.failureCount,
+                        recovery.totalCount.coerceAtLeast(1),
+                    )
+                }
+                val destinationLine = stringResource(
+                    Res.string.dialog_save_destination_folder,
+                    outputDir.path,
+                )
+                val filenamePolicyLine = stringResource(Res.string.dialog_save_filename_policy_desktop)
+                val exportCountTotal =
+                    if (recovery.isExporting || recovery.isFinished) {
+                        recovery.totalCount.coerceAtLeast(exportTotalFixed.coerceAtLeast(1))
+                    } else {
+                        0
+                    }
+                val exportCountSuccess =
+                    if (recovery.isExporting || recovery.isFinished) recovery.successCount else 0
+                val exportCountFailure =
+                    if (recovery.isExporting || recovery.isFinished) recovery.failureCount else 0
+                val countsLine = if (exportCountTotal > 0) {
+                    stringResource(
+                        Res.string.dialog_save_export_counts,
+                        exportCountTotal,
+                        exportCountSuccess,
+                        exportCountFailure,
+                    )
+                } else {
+                    ""
+                }
+                // No Saved-to-destination paint; keep generic error as a11y residual only.
+                val outcomeDetailLine = when {
+                    recovery.isAllFailed ->
+                        stringResource(Res.string.dialog_save_error_generic)
+                    else -> ""
+                }
+                val chooseFolderLabel = stringResource(Res.string.desktop_choose_folder)
+                val chooseFolderTitle = stringResource(Res.string.desktop_choose_folder_dialog_title)
+                val exportErrorGeneric = stringResource(Res.string.dialog_save_error_generic)
+                val pickExportFolder: () -> Unit = {
+                    DesktopExportFolderChooser.choose(
+                        owner = window,
+                        title = chooseFolderTitle,
+                        current = outputDir,
+                    )?.let { picked ->
+                        outputDir = picked
+                        status = "Export folder: ${picked.path}"
+                    }
+                }
+                val runBatchExport: () -> Unit = {
+                    scope.launch {
+                        busy = true
+                        try {
+                            if (exportItems.isNotEmpty()) {
+                                withContext(Dispatchers.IO) {
+                                    session.exportAndAwait(exportItems)
+                                }
+                                var last: File? = null
+                                for (info in exportItems) {
+                                    val outPath = (info.result?.data as? MediaRef)?.value
+                                    if (outPath != null) last = File(outPath)
+                                }
+                                // Explicit batch Export branch — track last real save for Reveal.
+                                last?.let { lastSavedFile = it }
+                                val exp = session.exportJobState.value
+                                // I0: counts + destination path; no raw exception text.
+                                status = "Exported ${exp.successCount}/${exp.totalCount} " +
+                                    "(${exp.failureCount} failed) → ${outputDir.path}"
+                            } else {
+                                // Fixture-only path (no session selection). Not a Session batch —
+                                // markExportFinished is allowed here only (D5 U4).
+                                val out = withContext(Dispatchers.IO) {
+                                    val fmt = userConfigRepo.userPreferences.first().outputFormat
+                                    val target = DesktopSaveDecision.resolveUniqueOutputFile(outputDir, fmt)
+                                    val o = DesktopWatermarkFlow.runSaveFlow(
+                                        repo, userConfigRepo, outputFile = target,
+                                        offsetX = 0.5f, offsetY = 0.5f,
+                                    )
+                                    File(o.outputPath)
+                                }
+                                lastSavedFile = out
+                                session.markExportFinished(completedCount = 1, totalCount = 1)
+                                status = "Saved: ${out.path}"
+                            }
+                        } catch (_: Throwable) {
+                            // I0: never surface raw Throwable.message in product chrome.
+                            status = exportErrorGeneric
+                        } finally {
+                            busy = false
+                        }
+                    }
+                }
+                // Bottom sheet (not center dialog): matches phone export chrome; avoids
+                // floating mid-window panel on Desktop (owner 2026-08-10).
+                SaveExportSheetShell(
+                    items = exportItems,
+                    useLargeDialog = false,
+                    selectedFormat = outputFormat,
+                    quality = outputQuality,
+                    primaryActionLabel = primaryLabel,
+                    primaryActionEnabled = !exportJobState.isSaving && !busy,
+                    // Open folder depends on last explicit save (Export or Save As), not batch finished.
+                    showOpenGallery = lastSavedFile != null && !exportJobState.isSaving,
+                    exportListSubtitle = resultSummaryText,
+                    imageCount = exportTotalFixed,
+                    isExporting = recovery.isExporting,
+                    showCancelButton = recovery.showCancel,
+                    onCancelClick = { session.cancelExport() },
+                    showRetryFailedButton = recovery.showRetryFailed,
+                    onRetryFailedClick = { runBatchExport() },
+                    statusContentDescription = statusCd,
+                    destinationLine = destinationLine,
+                    filenamePolicyLine = filenamePolicyLine,
+                    countsLine = countsLine,
+                    outcomeDetailLine = outcomeDetailLine,
+                    exportTotalCount = exportCountTotal,
+                    exportSuccessCount = exportCountSuccess,
+                    exportFailureCount = exportCountFailure,
+                    onChooseDestination = pickExportFolder,
+                    chooseDestinationLabel = chooseFolderLabel,
+                    itemKey = { it.uri.value },
+                    onDismiss = {
+                        if (!exportJobState.isSaving) showSaveSheet = false
+                    },
+                    onFormatClick = { fmt ->
+                        scope.launch {
+                            outputEditor.save(fmt, outputQuality)
+                            outputFormat = fmt
+                        }
+                    },
+                    onQualityChange = { q ->
+                        scope.launch {
+                            outputEditor.save(outputFormat, q)
+                            outputQuality = q
+                        }
+                    },
+                    onExportClick = {
+                        if (exportJobState.isFinished) {
+                            // E09 share substitute: reveal folder of last real save (never preview).
+                            val file = lastSavedFile
+                            if (file != null && Desktop.isDesktopSupported()) {
+                                try {
+                                    Desktop.getDesktop().open(file.parentFile ?: file)
+                                } catch (_: Throwable) {
+                                    status = exportErrorGeneric
+                                }
+                            }
+                        } else {
+                            runBatchExport()
+                        }
+                    },
+                    onOpenGalleryClick = {
+                        // E10 "open gallery" substitute: reveal output directory.
+                        val file = lastSavedFile
+                        if (file != null && Desktop.isDesktopSupported()) {
+                            try {
+                                Desktop.getDesktop().open(file.parentFile ?: file)
+                            } catch (t: Throwable) {
+                                status = "Open folder failed: ${t.message}"
+                            }
+                        }
+                    },
+                ) { info, thumbModifier ->
+                    val job = remember(
+                        info.uri,
+                        exportJobState.processedCount,
+                        exportJobState.successCount,
+                        exportJobState.failureCount,
+                        exportJobState.isSaving,
+                        exportJobState.isFinished,
+                    ) { info.jobState }
+                    me.rosuh.easywatermark.ui.save.ExportProgressOverlay(
+                        jobState = job,
+                        modifier = thumbModifier,
+                    ) {
+                        me.rosuh.easywatermark.ui.image.ProductAsyncImage(
+                            thumb = me.rosuh.easywatermark.ui.image.ProductThumb(
+                                ref = info.uri,
+                                maxEdgePx = me.rosuh.easywatermark.ui.image.ProductThumb.UI_THUMB_MAX_EDGE,
+                            ),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize().background(
+                                MaterialTheme.colorScheme.surfaceVariant,
+                            ),
+                        )
+                    }
+                }
+            }
+            } // ProvideMotionPolicy
+            } // window-root olive Box
+        } // AppTheme
+    } // Window
+}

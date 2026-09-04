@@ -1,0 +1,5 @@
+steps:
+  - launch: me.rosuh.easywatermark.ios
+  - wait: 2000
+  - await:
+      idle: true

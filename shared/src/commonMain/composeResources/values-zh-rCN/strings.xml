@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- S-i18n-1: product UI catalog for Compose Multiplatform (Weblate path). -->
+<!-- Agents: edit default values/strings.xml only; other locales via Weblate. -->
+<resources>
+    <string name="app_name">简单水印</string>
+    <string name="action_pick">选择图片</string>
+    <string name="action_save">保存</string>
+    <string name="action_settings">关于</string>
+    <string name="title_layout">布局</string>
+    <string name="title_style">样式</string>
+    <string name="title_content">内容</string>
+    <string name="tips_do_not_choose_image">没有选择图片</string>
+    <string name="tips_choose_other_file_type">貌似你选择的不是图片</string>
+    <string name="tips_choose_color_dialog">选择颜色</string>
+    <string name="tips_confirm_dialog">确认</string>
+    <string name="tips_cancel_dialog">取消</string>
+    <string name="tips_error">错误</string>
+    <string name="title_text_style">字体样式</string>
+    <string name="title_text_size">大小</string>
+    <string name="title_horizon_layout">水平</string>
+    <string name="title_vertical_layout">垂直</string>
+    <string name="title_text_color">颜色</string>
+    <string name="title_text_rotate">角度</string>
+    <string name="request_permission_failed">获取权限失败</string>
+    <!--about page-->
+    <string name="about_title_about">关于</string>
+    <string name="about_title_info">信息</string>
+    <string name="about_title_version">版本</string>
+    <string name="about_title_rating">为这个应用评分</string>
+    <string name="about_title_feed_back">反馈</string>
+    <string name="about_title_update_log">更新日志</string>
+    <string name="about_title_open_source">开源许可</string>
+    <!--UI-->
+    <string name="error_not_img">请选择图片</string>
+    <string name="error_file_not_found">未选择图片或图片不存在</string>
+    <string name="tips_pick_image">选择图片</string>
+    <string name="dialog_export_to_gallery">导出到相册</string>
+    <string name="share">分享</string>
+    <string name="water_mark_mode_text">文字</string>
+    <string name="water_mark_mode_image">贴纸</string>
+    <string name="tips_ok">确定</string>
+    <string name="tips_cancel_output">取消</string>
+    <string name="tips_need_compress_img">图片过大或内存不足</string>
+    <string name="tips_compressing">正在压缩中…</string>
+    <string name="tips_compress_images">压缩图片</string>
+    <string name="tips_compress_ok">压缩完成，单击确定继续导出。</string>
+    <string name="tips_compress_create_uri_failed">压缩完成，但是创建 Uri 失败，请重启 APP 重试。%1$s</string>
+    <string name="tips_tip_title">检测到崩溃</string>
+    <string name="msg_crash">你愿意帮忙反馈错误信息吗？这样可以帮我们做得更好！这不会收集你的个人信息。</string>
+    <string name="crash_mail">发送邮件</string>
+    <string name="tip_not_mail_found">未检测到邮件客户端，你可以粘贴错误信息到应用市场或 GitHub。</string>
+    <string name="config_default_water_mark_text">👋图片仅供测试，请勿作其他用途</string>
+    <string name="style_alpha">不透明度</string>
+    <string name="tips_not_app_can_open_images">未检测到文件管理器。</string>
+    <string name="error_save_oom">内存不足，请清理后台后重试</string>
+    <string name="dev_comment">任何足够先进的科技皆与魔法无异。</string>
+    <!--exit confirm dialog-->
+    <string name="dialog_title_exist_confirm">提示</string>
+    <string name="dialog_content_exist_confirm">丢弃修改？</string>
+    <string name="dialog_cancel_exist_confirm">取消</string>
+    <string name="about_title_output">输出格式</string>
+    <string name="text_paint_fill">填充</string>
+    <string name="text_paint_stroke">描边</string>
+    <string name="text_typeface_normal">正常</string>
+    <string name="text_typeface_bold">粗体</string>
+    <string name="text_typeface_italic">斜体</string>
+    <string name="text_typeface_bold_italic">斜体加粗</string>
+    <string name="dialog_save_exporting">正在导出</string>
+    <string name="dialog_save_export_list_title">导出列表（%1$s）</string>
+    <string name="dialog_open_in_gallery">在相册中查看</string>
+    <string name="dialog_save_config_format">格式</string>
+    <string name="dialog_save_config_quality">质量</string>
+    <string name="pick_via_system">Choose more…</string>
+    <string name="recovery_title">恢复模式</string>
+    <string name="copy_success">复制成功</string>
+    <string name="copy_failed">复制失败</string>
+    <string name="store_not_found">好像没有安装商店？</string>
+    <string name="recovery_mode_closed">重启生效</string>
+    <string name="copy">复制错误信息</string>
+    <string name="recovery_mode_tips">糟糕，您似乎遇到了多次崩溃。现在已经自动进入恢复模式。以下是您的设备信息以及崩溃信息，辛苦您将其复制以后通过下列方式联系我们，将对解决问题非常有帮助。谢谢。</string>
+    <string name="turn_off_recovery_mode">关闭恢复模式</string>
+    <string name="tips_input_text_can_not_be_empty">内容不能为空</string>
+    <string name="dialog_title_template_edit">编辑模板</string>
+    <string name="dialog_title_edit_watermark">编辑水印</string>
+    <string name="dialog_title_template_title">模板列表</string>
+    <string name="tips_list_empty">空空如也</string>
+    <string name="dialog_button_add_template">添加</string>
+    <string name="back">返回</string>
+    <string name="tips_use_this_template">确定使用该模板吗？</string>
+    <string name="tips_delete_template">确定删除该条目吗？</string>
+    <string name="tips_database_init_error">数据库初始化失败了。</string>
+    <string name="title_tile_mode">平铺格式</string>
+    <string name="tile_mode_title_repeat">重复</string>
+    <string name="tile_mode_title_decal">单个</string>
+
+    <!-- S-i18n-0 packaging spike (retained after Phase 1). -->
+    <string name="cmp_spike_hello">CMP 探针你好</string>
+    <!-- Form inspector section headers (Expanded/Wide DEMO rhythm) -->
+    <string name="inspector_section_mode">模式</string>
+    <string name="inspector_section_tile">平铺</string>
+    <string name="inspector_section_look">外观</string>
+    <string name="inspector_section_gaps">间距</string>
+    <string name="tips_low_resolution_source">原图像素较低 · %1$d × %2$d</string>
+</resources>

@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EasyWatermark parity — en/dark · prod vs debug</title>
+  <style>
+    :root {
+      --bg: #0f0f10;
+      --panel: #1a1a1d;
+      --border: #2e2e33;
+      --text: #e8e6e3;
+      --muted: #9a9690;
+      --accent: #c9a227;
+      --ok: #3d9a6a;
+      --warn: #c9892a;
+      --bad: #c94c4c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    header {
+      padding: 1.25rem 1.5rem 1rem;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #16161a 0%, var(--bg) 100%);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    h1 {
+      margin: 0 0 0.35rem;
+      font-size: 1.25rem;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+    }
+    header p {
+      margin: 0.2rem 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1rem;
+      margin-top: 0.75rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .meta code {
+      background: var(--panel);
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      color: #d4d0c8;
+    }
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.85rem;
+    }
+    nav a {
+      color: var(--text);
+      text-decoration: none;
+      font-size: 0.8rem;
+      padding: 0.3rem 0.65rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--panel);
+    }
+    nav a:hover { border-color: var(--accent); color: var(--accent); }
+    main { padding: 1rem 1.25rem 3rem; max-width: 1400px; margin: 0 auto; }
+    section {
+      margin: 1.75rem 0;
+      scroll-margin-top: 7rem;
+    }
+    section h2 {
+      margin: 0 0 0.4rem;
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+    .tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.12rem 0.45rem;
+      border-radius: 4px;
+      margin-right: 0.35rem;
+      vertical-align: middle;
+    }
+    .tag-ok { background: #1a3d2c; color: #7dcea0; }
+    .tag-warn { background: #3d3018; color: #e0b25a; }
+    .tag-bad { background: #3d1c1c; color: #e08a8a; }
+    .note {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin: 0 0 0.85rem;
+    }
+    table.compare {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    table.compare th,
+    table.compare td {
+      border: 1px solid var(--border);
+      padding: 0.65rem;
+      vertical-align: top;
+      width: 50%;
+    }
+    table.compare th {
+      background: #222228;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-align: center;
+    }
+    table.compare th .sub {
+      display: block;
+      font-weight: 400;
+      color: var(--muted);
+      font-size: 0.75rem;
+      margin-top: 0.15rem;
+    }
+    figure {
+      margin: 0;
+    }
+    figure img {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 72vh;
+      object-fit: contain;
+      background: #000;
+      border-radius: 6px;
+      cursor: zoom-in;
+    }
+    figcaption {
+      margin-top: 0.45rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      word-break: break-all;
+    }
+    .missing {
+      min-height: 12rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      border: 1px dashed var(--border);
+      border-radius: 6px;
+      background: #121214;
+      font-size: 0.9rem;
+      text-align: center;
+      padding: 1rem;
+    }
+    footer {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    /* lightbox */
+    #lb {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.92);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      cursor: zoom-out;
+    }
+    #lb.open { display: flex; }
+    #lb img {
+      max-width: 96vw;
+      max-height: 94vh;
+      object-fit: contain;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Production v2.10.0 vs Debug · en / dark</h1>
+    <p>EasyWatermark Phase B parity board · Grok capture 2026-07-12 · 打开本地文件即可（相对路径）</p>
+    <div class="meta">
+      <span>设备 <code>emulator-5554</code></span>
+      <span>Prod <code>me.rosuh.easywatermark</code></span>
+      <span>Debug <code>me.rosuh.easywatermark.debug</code></span>
+      <span>策略：Android 应用内 Gallery 优先；右上角系统 Photo Picker</span>
+    </div>
+    <nav>
+      <a href="#launch">Launch</a>
+      <a href="#gallery-primary">Gallery 主路径</a>
+      <a href="#gallery-secondary">Gallery 右上角</a>
+      <a href="#editor">Editor</a>
+      <a href="#export">Export</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="launch">
+      <h2><span class="tag tag-warn">P1</span> Launch idle</h2>
+      <p class="note">结构接近；logo 色调可能略有差异。Debug 使用 <code>pm clear</code> 后的 clean 截图。</p>
+      <table class="compare">
+        <thead>
+          <tr>
+            <th>Production v2.10.0<span class="sub">production/en/dark/launch-idle.png</span></th>
+            <th>Debug (clean)<span class="sub">debug/en/dark/launch-idle-clean.png</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <figure>
+                <img src="production/en/dark/launch-idle.png" alt="prod launch" loading="lazy" />
+                <figcaption>Choose Images + 底部 About</figcaption>
+              </figure>
+            </td>
+            <td>
+              <figure>
+                <img src="debug/en/dark/launch-idle-clean.png" alt="debug launch clean" loading="lazy" />
+                <figcaption>同结构 · 清数据后</figcaption>
+              </figure>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="gallery-primary">
+      <h2><span class="tag tag-bad">P0 策略</span> Gallery 主路径（Choose Images）</h2>
+      <p class="note">
+        <strong>产品策略：</strong>Android 应先打开<strong>应用内 Gallery</strong>。
+        Debug 符合策略；Production 在本模拟器上 Choose Images 直接进了<strong>系统 Photo Picker</strong>（prod 残差）。
+      </p>
+      <table class="compare">
+        <thead>
+          <tr>
+            <th>Production（实际捕获）<span class="sub">system Photo Picker · gallery-or-picker.png</span></th>
+            <th>Debug（策略主路径）<span class="sub">in-app · gallery-inapp-primary.png</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <figure>
+                <img src="production/en/dark/gallery-or-picker.png" alt="prod gallery path" loading="lazy" />
+                <figcaption>系统 Picker · Photos/Albums · 隐私条</figcaption>
+              </figure>
+            </td>
+            <td>
+              <figure>
+                <img src="debug/en/dark/gallery-inapp-primary.png" alt="debug in-app gallery" loading="lazy" />
+                <figcaption>Choose picture · 网格多选 · 右上角 search</figcaption>
+              </figure>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="gallery-secondary">
+      <h2><span class="tag tag-ok">策略次路径</span> Gallery 右上角 → 系统 Photo Picker</h2>
+      <p class="note">
+        产品策略：应用内 Gallery 的<strong>右上角</strong>入口拉起系统 Picker。
+        Debug 已验证。Production 若无应用内 Gallery 主宿主，则无对等次路径截图。
+      </p>
+      <table class="compare">
+        <thead>
+          <tr>
+            <th>Production<span class="sub">无对等 in-app 次路径（本会话）</span></th>
+            <th>Debug top-right<span class="sub">gallery-topright-system-picker.png</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div class="missing">
+                Production Choose Images 已是系统 Picker，<br />
+                未单独再采「Gallery 内右上角」对。
+              </div>
+            </td>
+            <td>
+              <figure>
+                <img src="debug/en/dark/gallery-topright-system-picker.png" alt="debug system picker secondary" loading="lazy" />
+                <figcaption>search → photopicker · EasyWaterMark-Debug</figcaption>
+              </figure>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p class="note" style="margin-top:1rem">补充：选中态对照（pass 1）</p>
+      <table class="compare">
+        <thead>
+          <tr>
+            <th>Production selected<span class="sub">picker-selected.png</span></th>
+            <th>Debug selected (pass1 in-app)<span class="sub">gallery-selected.png</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <figure>
+                <img src="production/en/dark/picker-selected.png" alt="prod selected" loading="lazy" />
+                <figcaption>系统 Picker · Selected / Done</figcaption>
+              </figure>
+            </td>
+            <td>
+              <figure>
+                <img src="debug/en/dark/gallery-selected.png" alt="debug selected" loading="lazy" />
+                <figcaption>应用内 · ✓ 1 FAB</figcaption>
+              </figure>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="editor">
+      <h2><span class="tag tag-ok">P0 已修</span> Editor text mode</h2>
+      <p class="note">
+        Pass 3（editor-after-p0-fix）：顶栏改 toolbar logo（Navigate up）；Content 行内
+        <code>TextField</code>；Text 选中灰底；胶卷略放大。仍可能有 logo 配色/细间距差异。
+      </p>
+      <table class="compare">
+        <thead>
+          <tr>
+            <th>Production<span class="sub">editor-text-mode.png</span></th>
+            <th>Debug after P0 fix<span class="sub">editor-after-p0-fix.png</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <figure>
+                <img src="production/en/dark/editor-text-mode.png" alt="prod editor" loading="lazy" />
+                <figcaption>logo · 行内文本 · Text 选中 · 密铺预览</figcaption>
+              </figure>
+            </td>
+            <td>
+              <figure>
+                <img src="debug/en/dark/editor-after-p0-fix.png" alt="debug editor after fix" loading="lazy" />
+                <figcaption>logo · 行内 TextField · Text 选中 · 模板入口</figcaption>
+              </figure>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="note" style="margin-top:0.75rem">修复前（对照）：</p>
+      <table class="compare">
+        <thead>
+          <tr>
+            <th>Debug before (clean)<span class="sub">editor-text-mode-clean.png</span></th>
+            <th>Debug after P0<span class="sub">editor-after-p0-fix.png</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <figure>
+                <img src="debug/en/dark/editor-text-mode-clean.png" alt="debug before" loading="lazy" />
+                <figcaption>返回箭头 · 文本几乎不可见</figcaption>
+              </figure>
+            </td>
+            <td>
+              <figure>
+                <img src="debug/en/dark/editor-after-p0-fix.png" alt="debug after" loading="lazy" />
+                <figcaption>logo · 可见文本行 · Text 选中</figcaption>
+              </figure>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="export">
+      <h2><span class="tag tag-ok">P1 已修</span> Export / Save sheet</h2>
+      <p class="note">
+        修后：wrap-height sheet 露出上方 dimmed 预览；连续 Quality 滑条（松手 snap 20 档 ADR-0014）；
+        CTA 可见。拇指形态仍可能与 prod 圆形略有 M3 差异。
+      </p>
+      <table class="compare">
+        <thead>
+          <tr>
+            <th>Production<span class="sub">export-sheet-open.png</span></th>
+            <th>Debug after P1 fix<span class="sub">export-after-p1-fix.png</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <figure>
+                <img src="production/en/dark/export-sheet-open.png" alt="prod export" loading="lazy" />
+                <figcaption>半透明压在预览上 · 连续 Quality · CTA</figcaption>
+              </figure>
+            </td>
+            <td>
+              <figure>
+                <img src="debug/en/dark/export-after-p1-fix.png" alt="debug export after fix" loading="lazy" />
+                <figcaption>预览 peek · 连续滑条 · Export to the album</figcaption>
+              </figure>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="note" style="margin-top:0.75rem">修复前：</p>
+      <table class="compare">
+        <thead>
+          <tr>
+            <th>Debug before<span class="sub">export-sheet-open-clean.png</span></th>
+            <th>Debug after<span class="sub">export-after-p1-fix.png</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <figure>
+                <img src="debug/en/dark/export-sheet-open-clean.png" alt="debug export before" loading="lazy" />
+                <figcaption>近全屏 · 离散刻度</figcaption>
+              </figure>
+            </td>
+            <td>
+              <figure>
+                <img src="debug/en/dark/export-after-p1-fix.png" alt="debug export after" loading="lazy" />
+                <figcaption>peek 预览 · 连续轨 · CTA 可见</figcaption>
+              </figure>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer>
+      路径相对本文件：<code>docs/parity/v2.10.0/captures/compare-en-dark.html</code> ·
+      详细文字：<code>COMPARISON-2026-07-12-en-dark.md</code> ·
+      <code>CONTINUATION-2026-07-12-pass2.md</code> ·
+      策略：<code>../protocol/image-pick-policy.md</code>
+      <br />点击任意图片可放大；再点关闭。未宣称 owner 签收。
+    </footer>
+  </main>
+
+  <div id="lb" role="dialog" aria-modal="true"><img alt="enlarged" /></div>
+  <script>
+    const lb = document.getElementById('lb');
+    const lbImg = lb.querySelector('img');
+    document.querySelectorAll('table.compare img').forEach((img) => {
+      img.addEventListener('click', () => {
+        lbImg.src = img.src;
+        lbImg.alt = img.alt || '';
+        lb.classList.add('open');
+      });
+    });
+    lb.addEventListener('click', () => {
+      lb.classList.remove('open');
+      lbImg.removeAttribute('src');
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        lb.classList.remove('open');
+        lbImg.removeAttribute('src');
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,118 +1,352 @@
-name: Generated APK AAB (Upload - Create Artifact To Github Action)
+name: Android signed draft release
+
+# CI-P2 attempt 3: formal Android draft release is **manual only**.
+# - Trigger: workflow_dispatch + confirm=CREATE (not master push / PR / schedule).
+# - Preflight fails closed unless tag/release lookups return explicit HTTP 404.
+# - Build/sign runs with contents:read; draft release creation is the only contents:write job.
+# - AAB for the release is taken only from sign_bundle.outputs.signedReleaseFile (no unsigned fallback).
+# - New tags bind to target_commitish=${{ github.sha }} (selected dispatch ref).
+# - Repository-wide concurrency serializes all draft-release dispatches (any ref/version).
+# - `release` GitHub Environment is referenced; owner configures approval (not claimed present).
 
 env:
-  # The name of the main module repository
   main_project_module: app
-  RELEASE_VERSION: ""
   GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx3072m -Dfile.encoding=UTF-8 -XX:+HeapDumpOnOutOfMemoryError -XX:MaxMetaspaceSize=1g" -Dkotlin.daemon.jvm.options="-Xmx2560m" -Dkotlin.incremental=false
   CI_GRADLE_ARG_PROPERTIES: --stacktrace -PpreDexEnable=false --max-workers 2 --no-daemon
 
 on:
-  # on merge to master
-  push:
-      branches:
-      - master
-      paths-ignore:
-        - '.idea/**'
-        - '.gitattributes'
-        - '.github/**.json'
-        - '.gitignore'
-        - '.gitmodules'
-        - '**.md'
-        - 'LICENSE'
-        - 'NOTICE'
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type CREATE to build signed APK/AAB and open a draft GitHub Release from Apps.versionName at this ref'
+        required: true
+        type: string
+
+# Default least privilege; write is granted only on create-draft-release.
+permissions:
+  contents: read
+
+# Serialize every draft-release dispatch in this repository (not per-ref), so two
+# different refs that share Apps.versionName cannot both pass preflight.
+concurrency:
+  group: android-signed-draft-release
+  cancel-in-progress: false
 
 jobs:
-  check:
-    name: Check
+  preflight:
+    name: New-version preflight (tag/release must not exist)
+    if: github.event.inputs.confirm == 'CREATE'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      build_sha: ${{ steps.version.outputs.build_sha }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Skip duplicate actions
-        uses: fkirc/skip-duplicate-actions@v5
-        with:
-          cancel_others: true
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: 17
-          cache: 'gradle'
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: wrapper
-          gradle-home-cache-cleanup: true
-#      - run: ./gradlew spotlessCheck
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Skip duplicate actions
-        uses: fkirc/skip-duplicate-actions@v5
-        with:
-          cancel_others: true
-      - uses: actions/checkout@v4
+      - name: Checkout selected ref
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
-      - uses: actions/setup-java@v4
+          persist-credentials: false
+
+      - name: Resolve Apps.versionName and bind build SHA
+        id: version
+        run: |
+          set -euo pipefail
+          # S4d-374: single source is buildSrc Apps.versionName (object Apps in Dependencies.kt).
+          version=$(sed -n 's/^[[:space:]]*const val versionName = "\([^"]*\)".*/\1/p' buildSrc/src/main/kotlin/Dependencies.kt | head -n1)
+          if [ -z "$version" ]; then
+            echo "ERROR: failed to extract Apps.versionName from buildSrc/src/main/kotlin/Dependencies.kt" >&2
+            exit 1
+          fi
+          build_sha="${{ github.sha }}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "build_sha=$build_sha" >> "$GITHUB_OUTPUT"
+          echo "Candidate draft tag=$version at build_sha=$build_sha (ref=${{ github.ref }})"
+
+      - name: Fail unless tag and release are explicitly absent (HTTP 404 only)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          repo="${{ github.repository }}"
+          echo "Preflight: ensuring ${VERSION} is a new tag and has no GitHub Release"
+
+          # Only explicit HTTP 404 means "absent". Transport errors and non-404 statuses fail closed.
+          # Do not use curl --fail: we need the status code for 404 vs other 4xx/5xx.
+          github_http_status() {
+            local api_path="$1"
+            local out http_code curl_rc
+            out="$(mktemp)"
+            set +e
+            http_code=$(curl -sS -o "$out" -w "%{http_code}" \
+              --max-time 30 \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${repo}${api_path}")
+            curl_rc=$?
+            set -e
+            if [[ "$curl_rc" -ne 0 ]]; then
+              echo "ERROR: transport failure querying ${api_path} (curl_rc=${curl_rc})" >&2
+              cat "$out" >&2 || true
+              rm -f "$out"
+              exit 1
+            fi
+            if [[ ! "$http_code" =~ ^[0-9]{3}$ ]]; then
+              echo "ERROR: invalid HTTP status '${http_code}' for ${api_path}" >&2
+              cat "$out" >&2 || true
+              rm -f "$out"
+              exit 1
+            fi
+            rm -f "$out"
+            printf '%s' "$http_code"
+          }
+
+          require_absent() {
+            local api_path="$1"
+            local label="$2"
+            local code
+            code="$(github_http_status "$api_path")"
+            case "$code" in
+              404)
+                echo "OK: ${label} absent (HTTP 404)"
+                ;;
+              200)
+                echo "ERROR: ${label} already exists (HTTP 200) — refusing to rebuild/overwrite" >&2
+                exit 1
+                ;;
+              *)
+                echo "ERROR: ${label} lookup failed (HTTP ${code}); not treating as absent" >&2
+                exit 1
+                ;;
+            esac
+          }
+
+          # Tag ref: 200 = exists, 404 = free.
+          require_absent "/git/ref/tags/${VERSION}" "git tag '${VERSION}'"
+          # Release (draft or published): 200 = exists, 404 = free.
+          require_absent "/releases/tags/${VERSION}" "GitHub Release '${VERSION}'"
+
+          echo "Preflight OK: explicit 404 for tag and release ${VERSION}"
+
+  build-and-sign:
+    name: Build + sign APK/AAB (read-only token)
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: release
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout selected ref
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          distribution: 'zulu'
-          java-version: 17
-          cache: 'gradle'
-      - uses: gradle/actions/setup-gradle@v4
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ needs.preflight.outputs.build_sha }}
+
+      - name: Verify checked-out commit matches dispatch SHA
+        run: |
+          set -euo pipefail
+          got="$(git rev-parse HEAD)"
+          want="${{ needs.preflight.outputs.build_sha }}"
+          if [[ "$got" != "$want" ]]; then
+            echo "ERROR: checkout HEAD=$got != dispatch sha=$want" >&2
+            exit 1
+          fi
+          echo "Building exact SHA $got for version ${{ needs.preflight.outputs.version }}"
+
+      - name: Set up JDK 17 (Zulu; no setup-java Gradle cache)
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: zulu
+          java-version: '17'
+
+      - name: Set up Gradle (sole Gradle User Home cache owner)
+        uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4.3.1
         with:
           gradle-version: wrapper
           gradle-home-cache-cleanup: true
-      - name: Retrieve version
+
+      - name: Baseline profile presence (J2)
         run: |
-          echo VERSION=$(echo ${{ github.event.head_commit.id }} | head -c 10) >> $GITHUB_ENV
-      # Set Repository Name As Env Variable
-      - name: Set repository name as env variable
-        run: echo "repository_name=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_ENV
-      # Create APK Release
-      - name: Build apk release project (APK) - ${{ env.main_project_module }} module
-        run: ./gradlew -PappVerName=${{ env.VERSION }} ${{ env.main_project_module }}:assembleRelease
-      # Create Bundle AAB Release
-      # Noted for main module build [main_project_module]:bundleRelease
-      - name: Build app bundle release (AAB) - ${{ env.main_project_module }} module
-        run: ./gradlew ${{ env.main_project_module }}:bundleRelease
+          set -euo pipefail
+          test -f app/src/main/baseline-prof.txt
+          wc -l app/src/main/baseline-prof.txt
+          echo "Physical-device output witness: residual (owner device; not this GHA job)"
+
+      - name: Build apk release (APK)
+        run: ./gradlew -PappVerName=${{ needs.preflight.outputs.version }} ${{ env.main_project_module }}:assembleRelease ${{ env.CI_GRADLE_ARG_PROPERTIES }}
+
+      - name: Build app bundle release (AAB)
+        run: ./gradlew ${{ env.main_project_module }}:bundleRelease ${{ env.CI_GRADLE_ARG_PROPERTIES }}
 
       - name: Sign apk release
-        if: success()
         id: sign_apk
-        uses: r0adkll/sign-android-release@v1.0.4
+        uses: r0adkll/sign-android-release@dbeba6b98a60b0fd540c02443c7f428cdedf0e7f # v1.0.4
         env:
-          BUILD_TOOLS_VERSION: "34.0.0"
+          BUILD_TOOLS_VERSION: "37.0.0"
         with:
-          releaseDirectory: app/build/outputs/apk/release
+          # S4d-362: CopyRenamedApkTask output (assembleRelease finalizedBy copyRenamedReleaseApk)
+          releaseDirectory: app/build/outputs/apk/release/renamed
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
           alias: ${{ secrets.ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
+
       - name: Sign bundle release
-        if: success()
         id: sign_bundle
-        uses: r0adkll/sign-android-release@v1.0.4
+        uses: r0adkll/sign-android-release@dbeba6b98a60b0fd540c02443c7f428cdedf0e7f # v1.0.4
         env:
-          BUILD_TOOLS_VERSION: "34.0.0"
+          BUILD_TOOLS_VERSION: "37.0.0"
         with:
           releaseDirectory: app/build/outputs/bundle/release
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
           alias: ${{ secrets.ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
-      - name: Set version from properties
+
+      - name: Stage explicit signed release assets
+        id: stage
         run: |
-          version=$(grep 'versionName = ' app/build.gradle.kts | awk -F'"' '{print $2}')
-          echo "RELEASE_VERSION=$version" >> "$GITHUB_ENV"
-      - name: Publish release.
-        if: success()
-        uses: softprops/action-gh-release@v2
+          set -euo pipefail
+          out="signed-release-assets"
+          rm -rf "$out"
+          mkdir -p "$out"
+
+          apk_from_action="${{ steps.sign_apk.outputs.signedReleaseFile }}"
+          aab_from_action="${{ steps.sign_bundle.outputs.signedReleaseFile }}"
+
+          # APK: require signer-reported path (already-signed file).
+          if [[ -z "$apk_from_action" || ! -f "$apk_from_action" ]]; then
+            echo "ERROR: sign_apk.outputs.signedReleaseFile missing or not a file: '${apk_from_action}'" >&2
+            exit 1
+          fi
+          cp -f "$apk_from_action" "$out/"
+
+          # AAB: signer-output ONLY — never fall back to an arbitrary Gradle *.aab (may be unsigned).
+          if [[ -z "$aab_from_action" || ! -f "$aab_from_action" ]]; then
+            echo "ERROR: sign_bundle.outputs.signedReleaseFile missing or not a file: '${aab_from_action}'" >&2
+            echo "Refusing unsigned/unknown AAB fallback" >&2
+            exit 1
+          fi
+          cp -f "$aab_from_action" "$out/app-release.aab"
+
+          if [[ ! -f app/build/outputs/mapping/release/mapping.txt ]]; then
+            echo "ERROR: mapping.txt missing after release build" >&2
+            exit 1
+          fi
+          cp -f app/build/outputs/mapping/release/mapping.txt "$out/mapping.txt"
+
+          echo "Staged assets (signer outputs only for APK/AAB):"
+          ls -la "$out"
+          echo "APK_SRC=$apk_from_action"
+          echo "AAB_SRC=$aab_from_action"
+          test -f "$out/app-release.aab"
+          test -f "$out/mapping.txt"
+          test -n "$(find "$out" -type f \( -name '*-signed.apk' -o -name '*.apk' \) | head -1)"
+
+      - name: Upload signed assets for release job
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          name: android-signed-release-assets-${{ needs.preflight.outputs.version }}-${{ needs.preflight.outputs.build_sha }}
+          path: signed-release-assets/
+          if-no-files-found: error
+          retention-days: 3
+
+  create-draft-release:
+    name: Create draft GitHub Release (write boundary)
+    needs: [preflight, build-and-sign]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - name: Download signed assets
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          name: android-signed-release-assets-${{ needs.preflight.outputs.version }}-${{ needs.preflight.outputs.build_sha }}
+          path: signed-release-assets
+
+      - name: Re-check tag/release still explicitly absent (TOCTOU, HTTP 404 only)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.preflight.outputs.version }}
+        run: |
+          set -euo pipefail
+          repo="${{ github.repository }}"
+
+          github_http_status() {
+            local api_path="$1"
+            local out http_code curl_rc
+            out="$(mktemp)"
+            set +e
+            http_code=$(curl -sS -o "$out" -w "%{http_code}" \
+              --max-time 30 \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${repo}${api_path}")
+            curl_rc=$?
+            set -e
+            if [[ "$curl_rc" -ne 0 ]]; then
+              echo "ERROR: transport failure querying ${api_path} (curl_rc=${curl_rc})" >&2
+              cat "$out" >&2 || true
+              rm -f "$out"
+              exit 1
+            fi
+            if [[ ! "$http_code" =~ ^[0-9]{3}$ ]]; then
+              echo "ERROR: invalid HTTP status '${http_code}' for ${api_path}" >&2
+              cat "$out" >&2 || true
+              rm -f "$out"
+              exit 1
+            fi
+            rm -f "$out"
+            printf '%s' "$http_code"
+          }
+
+          require_absent() {
+            local api_path="$1"
+            local label="$2"
+            local code
+            code="$(github_http_status "$api_path")"
+            case "$code" in
+              404)
+                echo "OK: ${label} still absent (HTTP 404)"
+                ;;
+              200)
+                echo "ERROR: ${label} appeared before draft creation (HTTP 200)" >&2
+                exit 1
+                ;;
+              *)
+                echo "ERROR: ${label} TOCTOU lookup failed (HTTP ${code}); not treating as absent" >&2
+                exit 1
+                ;;
+            esac
+          }
+
+          require_absent "/git/ref/tags/${VERSION}" "git tag '${VERSION}'"
+          require_absent "/releases/tags/${VERSION}" "GitHub Release '${VERSION}'"
+
+          ls -la signed-release-assets
+          test -f signed-release-assets/app-release.aab
+          test -f signed-release-assets/mapping.txt
+
+      - name: Create draft GitHub Release bound to build SHA
+        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.2.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           prerelease: false
           draft: true
-          tag_name: ${{ env.RELEASE_VERSION }}
+          tag_name: ${{ needs.preflight.outputs.version }}
+          name: ${{ needs.preflight.outputs.version }}
+          target_commitish: ${{ needs.preflight.outputs.build_sha }}
           generate_release_notes: true
+          fail_on_unmatched_files: true
           files: |
-            app/build/outputs/apk/release/*-signed.apk
-            app/build/outputs/bundle/release/*.aab
-            app/build/outputs/mapping/release/mapping.txt
+            signed-release-assets/*-signed.apk
+            signed-release-assets/*.apk
+            signed-release-assets/app-release.aab
+            signed-release-assets/mapping.txt

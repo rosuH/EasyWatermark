@@ -1,0 +1,7 @@
+executionPrerequisite: >-
+  Editor is open; this segment starts already on Style.
+steps:
+  - echo: Hold the Style panel
+  - wait: 1500
+  - await:
+      idle: true

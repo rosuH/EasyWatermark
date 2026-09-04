@@ -1,0 +1,22 @@
+{
+  "background": "linear-gradient(180deg, #1c1c0f 0%, #131309 46%, #0d0d07 100%)",
+  "frame": "17-pro-silver",
+  "fontFamily": "\"PingFang SC\", \"SF Pro Display\", -apple-system, system-ui, sans-serif",
+  "order": [
+    "work",
+    "award",
+    "style",
+    "idcard",
+    "color",
+    "layout",
+    "template",
+    "export"
+  ],
+  "template": "magazine",
+  "layout": "classic",
+  "screenOnly": true,
+  "sceneLayouts": {
+    "award": "poster",
+    "color": "offset"
+  }
+}

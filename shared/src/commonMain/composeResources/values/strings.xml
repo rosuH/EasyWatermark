@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- S-i18n-1: product UI catalog for Compose Multiplatform (Weblate path). -->
+<!-- Agents: edit default values/strings.xml only; other locales via Weblate. -->
+<resources>
+    <string name="app_name">Easy Watermark</string>
+    <string name="action_pick">Choose picture</string>
+    <string name="action_save">Save</string>
+    <string name="action_settings">About</string>
+    <string name="title_layout">Layout</string>
+    <string name="title_style">Style</string>
+    <string name="title_content">Content</string>
+    <!-- Form inspector section headers (Expanded/Wide DEMO rhythm). -->
+    <string name="inspector_section_mode">Mode</string>
+    <string name="inspector_section_tile">Tile</string>
+    <string name="inspector_section_look">Appearance</string>
+    <string name="inspector_section_gaps">Spacing</string>
+    <string name="tips_do_not_choose_image">No picture selected</string>
+    <string name="tips_choose_color_dialog">Choose color</string>
+    <string name="tips_confirm_dialog">Confirm</string>
+    <string name="tips_cancel_dialog">Cancel</string>
+    <string name="tips_error">Error</string>
+    <!-- ADR-0022: pre-compress dialog removed; EN stubs keep resource default rows for Weblate locales. -->
+    <string name="tips_need_compress_img">Insufficient storage or the image is too large</string>
+    <string name="tips_compressing">Compressing…</string>
+    <string name="tips_compress_images">Compress picture</string>
+    <string name="tips_compress_ok">Finished compressing. Click OK to continue the export.</string>
+    <string name="tips_compress_create_uri_failed">Finished compressing, but failed to create the Uri. Please restart the app and try again. %1$s</string>
+    <string name="title_text_style">Style</string>
+    <string name="title_text_size">Size</string>
+    <string name="title_tile_mode">TileMode</string>
+    <string name="title_horizon_layout">Horizontal</string>
+    <string name="title_vertical_layout">Vertical</string>
+    <string name="title_text_color">Color</string>
+    <string name="title_text_rotate">Angle</string>
+    <string name="request_permission_failed">Failed to get permission</string>
+    <string name="about_title_about">About</string>
+    <string name="about_title_info">Information</string>
+    <string name="about_title_output">Output format</string>
+    <string name="about_title_version">Version</string>
+    <string name="about_title_rating">Rate our app</string>
+    <string name="about_title_feed_back">Feedback</string>
+    <string name="about_title_update_log">Changelog</string>
+    <string name="about_title_open_source">Open source licenses</string>
+    <string name="error_not_img">Please select an image</string>
+    <string name="error_file_not_found">The image couldn\'t be opened or was not selected</string>
+    <string name="dialog_export_to_gallery">Export to the album</string>
+    <string name="share">Share</string>
+    <string name="desktop_save_as">Save As…</string>
+    <string name="desktop_save_as_dialog_title">Save As</string>
+    <string name="desktop_export">Export</string>
+    <string name="desktop_choose_folder">Choose folder…</string>
+    <string name="desktop_choose_folder_dialog_title">Choose export folder</string>
+    <string name="desktop_importing">Importing %1$d image(s)…</string>
+    <string name="desktop_imported">Imported %1$d image(s) (no export)</string>
+    <string name="desktop_import_failed">Import failed: %1$s</string>
+    <string name="desktop_saved_as">Saved as: %1$s</string>
+    <string name="desktop_save_as_failed">Save As failed: %1$s</string>
+    <string name="desktop_ready_status">Ready. Open/drop import images; Save/Export writes output; Preview is temp-only.</string>
+    <string name="desktop_drop_busy">Busy — wait for the current operation before dropping another image.</string>
+    <string name="desktop_drop_unsupported">Unsupported drop — no supported image files in drop (%1$s).</string>
+    <string name="water_mark_mode_text">Text</string>
+    <string name="water_mark_mode_image">Icon</string>
+    <string name="tips_ok">Confirm</string>
+    <string name="tips_cancel_output">Cancel</string>
+    <string name="tips_tip_title">Crash detected</string>
+    <string name="msg_crash">Would you like to report this crash? This can help us improve the app! This will not collect any personal information.</string>
+    <string name="crash_mail">Send email</string>
+    <string name="tip_not_mail_found">No email client detected. Alternatively, you can paste the error message to the app store or GitHub.</string>
+    <string name="config_default_water_mark_text">👋 DO NOT REDISTRIBUTE</string>
+    <string name="style_alpha">Alpha</string>
+    <string name="tips_not_app_can_open_images">No file manager detected.</string>
+    <string name="tips_choose_other_file_type">Invalid image</string>
+    <string name="error_save_oom">Insufficient memory, please clean up the background and try again</string>
+    <string name="dev_comment">Any sufficiently advanced technology is indistinguishable from magic.</string>
+    <string name="dialog_title_exist_confirm">Warning</string>
+    <string name="dialog_cancel_exist_confirm">Cancel</string>
+    <string name="dialog_content_exist_confirm">Discard changes?</string>
+    <string name="about_title_privacy_statement" translatable="false">Privacy Statement</string>
+    <string name="about_title_privacy_statement_zh" translatable="false">隐私政策</string>
+    <string name="open_source_desc_about_lib" translatable="false">Coil is a fast, lightweight, and modern image loading library for Android and Compose Multiplatform, built with Kotlin Coroutines and Okio.</string>
+    <string name="open_source_desc_material_components" translatable="false">Material Components for Android (MDC-Android) help developers execute Material Design. Developed by a core team of engineers and UX designers at Google, these components enable a reliable development workflow to build beautiful and functional Android apps.Material Components for Android is a drop-in replacement for Android\'s Design Support Library.</string>
+    <string name="email_subject" translatable="false">[EasyWaterMark] Crash info</string>
+    <string name="open_source_desc_phosphor_icons" translatable="false">Phosphor Icons is a flexible icon family for interfaces, diagrams, and presentations. EasyWatermark vendors selected Regular-weight glyphs (MIT License, Copyright (c) 2023 Phosphor Icons) as Compose Multiplatform vector resources. Full notice: THIRD_PARTY_NOTICES.md.</string>
+    <!--    -->
+    <string name="text_paint_fill">Fill</string>
+    <string name="text_paint_stroke">Stroke</string>
+    <string name="text_typeface_normal">Normal</string>
+    <string name="text_typeface_bold">Bold</string>
+    <string name="text_typeface_italic">Italic</string>
+    <string name="text_typeface_bold_italic">Bold Italic</string>
+    <string name="dialog_save_export_list_title">Export list(%1$s)</string>
+    <string name="dialog_open_in_gallery">View in gallery</string>
+    <string name="dialog_save_config_format">Format</string>
+    <string name="dialog_save_config_quality">Quality</string>
+    <string name="dialog_save_exporting">Exporting</string>
+    <!-- D5 save-sheet recovery -->
+    <string name="dialog_save_export_progress">Exporting %1$d of %2$d</string>
+    <string name="dialog_save_export_done_success">Exported %1$d of %2$d</string>
+    <string name="dialog_save_export_done_partial">Exported %1$d of %2$d (%3$d failed)</string>
+    <string name="dialog_save_export_done_failed">Export failed (0 of %1$d)</string>
+    <string name="dialog_save_export_cancelled">Export cancelled (%1$d of %2$d saved)</string>
+    <string name="dialog_save_retry_failed">Retry failed</string>
+    <string name="dialog_save_cancel_export">Cancel export</string>
+    <string name="dialog_save_export_cd_progress">Export progress: %1$d of %2$d processed, %3$d succeeded, %4$d failed</string>
+    <string name="dialog_save_export_cd_done">Export finished: %1$d processed, %2$d succeeded, %3$d failed, of %4$d</string>
+    <!-- I0 export / recovery user contract -->
+    <string name="dialog_save_destination_album">Destination: device album (Pictures)</string>
+    <string name="dialog_save_destination_photos">Destination: Photos library</string>
+    <string name="dialog_save_destination_folder">Destination: %1$s</string>
+    <string name="dialog_save_filename_policy_android">Filenames: unique ewm_* via MediaStore</string>
+    <string name="dialog_save_filename_policy_desktop">Filenames: unique names in the output folder</string>
+    <string name="dialog_save_filename_policy_ios">Filenames: temporary export, then Photos/Share</string>
+    <string name="dialog_save_export_counts">Processed %1$d · Succeeded %2$d · Failed %3$d</string>
+    <string name="dialog_save_success_where">Saved %1$d item(s) to %2$s</string>
+    <string name="dialog_save_error_source">Could not read the image. Try another photo.</string>
+    <string name="dialog_save_error_render">Could not apply the watermark.</string>
+    <string name="dialog_save_error_encode">Could not encode the image.</string>
+    <string name="dialog_save_error_permission">Permission needed to save. Check system settings.</string>
+    <string name="dialog_save_error_oom">Not enough memory to export. Try fewer or smaller images.</string>
+    <string name="dialog_save_error_io">Storage problem while saving. Free space and try again.</string>
+    <string name="dialog_save_error_persistence">Could not write to storage. Try again.</string>
+    <string name="dialog_save_error_cancelled">Export cancelled.</string>
+    <string name="dialog_save_error_generic">Save failed. Try again.</string>
+    <string name="tips_pick_image">Choose Images</string>
+    <string name="pick_via_system">more…</string>
+    <string name="recovery_title">Recovery Mode</string>
+    <string name="copy_success">Copy success</string>
+    <string name="copy_failed">Copy failed</string>
+    <string name="store_not_found">No store is installed\?</string>
+    <string name="recovery_mode_closed">It\'s closed, please try again</string>
+    <string name="copy">Copy error message</string>
+    <string name="recovery_mode_tips">Entered recovery mode due to multiple crashes. Sending the device and crash info below via the following methods may resolve the issue. Thank you.</string>
+    <string name="turn_off_recovery_mode">Turn off recovery mode</string>
+    <string name="tips_input_text_can_not_be_empty">Content cannot be empty</string>
+    <string name="back">Back</string>
+    <string name="dialog_title_template_edit">Edit Template</string>
+    <string name="dialog_title_edit_watermark">Edit watermark</string>
+    <string name="dialog_title_template_title">Template List</string>
+    <string name="tips_list_empty">Look pretty empty</string>
+    <string name="dialog_button_add_template">Add</string>
+    <string name="tips_use_this_template">Use this template?</string>
+    <string name="tips_delete_template">Delete the entry?</string>
+    <string name="tips_database_init_error">Database init failed.</string>
+    <string name="tile_mode_title_repeat">Repeat</string>
+    <string name="tile_mode_title_decal">Single</string>
+
+    <!-- S-i18n-2: labels previously hard-coded EN on edges (default EN only until Weblate retarget). -->
+    <string name="recovery_send_email">Send email</string>
+    <string name="recovery_send_telegram">Send Telegram</string>
+    <string name="recovery_jump_to_store">Jump to Store</string>
+    <!-- ADR-0027: honest About labels (wallpaper Android-only; photo all platforms). -->
+    <string name="about_follow_wallpaper">Follow wallpaper colors</string>
+    <string name="about_follow_photo">Theme editor from photo</string>
+    <!-- Legacy key kept for Weblate until retarget; product UI uses about_follow_*. -->
+    <string name="about_force_dynamic_color">Follow wallpaper colors</string>
+    <string name="about_show_bounds">Show Bounds</string>
+    <string name="about_prefer_in_app_gallery">Use in-app gallery</string>
+    <!-- Android 14+ partial photo access (READ_MEDIA_VISUAL_USER_SELECTED without full library). -->
+    <string name="tips_gallery_partial_access">Only selected photos are shown. Allow full access in Settings to see your whole library.</string>
+    <string name="tips_gallery_partial_access_settings">Settings</string>
+    <!-- ADR-0029 P5: iOS Library Read upsell. Qualitative; no unmeasured N%. -->
+    <string name="tips_ios_library_read_upsell_title">Faster previews</string>
+    <string name="tips_ios_library_read_upsell_limited">Allow access to all photos for a quicker first preview. You can still pick, edit, and export.</string>
+    <string name="tips_ios_library_read_upsell_denied">Allow access to all photos in Settings for a quicker first preview. You can still pick, edit, and export.</string>
+    <string name="tips_ios_library_read_upsell_allow_all_photos">Allow access to all photos</string>
+    <string name="tips_ios_library_read_upsell_settings">Settings</string>
+    <string name="tips_ios_library_read_upsell_dismiss">Not now</string>
+    <string name="tips_ios_library_read_upsell_continue">Choose images anyway</string>
+    <string name="tips_no_image_selected">No Image Selected</string>
+    <string name="tips_low_resolution_source">Low-resolution photo · %1$d × %2$d</string>
+    <string name="cd_navigate_up">Navigate up</string>
+    <string name="cd_add_more_images">Add more images</string>
+    <string name="cd_save">Save</string>
+    <string name="cd_back">Back</string>
+    <!-- I2 accessibility: selection / checkbox state phrases -->
+    <string name="cd_selected">Selected</string>
+    <string name="cd_unselected">Not selected</string>
+    <string name="cd_checkbox">Checkbox</string>
+    <string name="template_edit">Edit</string>
+    <string name="template_delete">Delete</string>
+    <string name="tips_images_selected">%1$d image(s) selected</string>
+    <string name="color_custom">Custom</string>
+    <string name="color_apply_custom">Apply</string>
+
+    <!-- S-i18n-0 packaging spike (retained after Phase 1). -->
+    <string name="cmp_spike_hello">CMP spike hello</string>
+    <string name="ios_import_preparing">Preparing photos…</string>
+    <string name="ios_import_failed_retry">Could not import. Tap to retry.</string>
+    <string name="ios_import_pending">Preparing</string>
+    <string name="ios_import_ready">Photo</string>
+    <string name="ios_import_failed">Import failed</string>
+    <string name="ios_import_retry">Retry</string>
+    <string name="ios_import_remove">Remove</string>
+</resources>

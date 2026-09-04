@@ -87,4 +87,10 @@
     <string name="tile_mode_title_repeat">Répéter</string>
     <string name="tile_mode_title_decal">Simple</string>
     <string name="tips_compress_create_uri_failed">La compression est terminée, mais la création de l\'URI a échoué. Veuillez redémarrer l\'application et réessayer. %1$s</string>
+    <!-- Form inspector section headers (Expanded/Wide DEMO rhythm) -->
+    <string name="inspector_section_mode">Mode</string>
+    <string name="inspector_section_tile">Tuiles</string>
+    <string name="inspector_section_look">Apparence</string>
+    <string name="inspector_section_gaps">Espacement</string>
+    <string name="tips_low_resolution_source">Photo basse résolution · %1$d × %2$d</string>
 </resources>

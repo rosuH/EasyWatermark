@@ -2,51 +2,34 @@ package me.rosuh.easywatermark.di
 
 import android.content.Context
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.preferencesDataStore
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.components.SingletonComponent
+import me.rosuh.easywatermark.data.datastore.createPreferencesDataStore
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
-import javax.inject.Named
-import javax.inject.Singleton
 
-@Module
-@InstallIn(SingletonComponent::class)
-object DataStoreModule {
+/**
+ * Store creation now lives in `:shared/androidMain` ([createPreferencesDataStore]), preserving * the exact legacy file path (`filesDir/datastore/<name>.preferences_pb`) + `SharedPreferencesMigration`.
+ * These extension properties keep the same names/types so consumers (`RepositoryModule`) are unchanged,
+ * and back them with a process-wide single instance per file — the old `by preferencesDataStore(...)`
+ * delegate's guarantee (DataStore forbids a second active store for the same file). Keyed on the
+ * application context.
+ */
+private val storeLock = Any()
 
-    @Named("UserPreferences")
-    @Singleton
-    @Provides
-    fun userDataStore(@ApplicationContext context: Context): DataStore<Preferences> {
-        return context.userDataStore
+@Volatile
+private var userStore: DataStore<Preferences>? = null
+
+@Volatile
+private var waterMarkStore: DataStore<Preferences>? = null
+
+val Context.userDataStore: DataStore<Preferences>
+    get() = userStore ?: synchronized(storeLock) {
+        userStore ?: createPreferencesDataStore(applicationContext, UserConfigRepository.SP_NAME)
+            .also { userStore = it }
     }
 
-    @Named("WaterMarkPreferences")
-    @Singleton
-    @Provides
-    fun provideWaterMarkDataStore(@ApplicationContext context: Context): DataStore<Preferences> {
-        return context.waterMarkDataStore
+val Context.waterMarkDataStore: DataStore<Preferences>
+    get() = waterMarkStore ?: synchronized(storeLock) {
+        waterMarkStore ?: createPreferencesDataStore(applicationContext, WaterMarkRepository.SP_NAME)
+            .also { waterMarkStore = it }
     }
-}
-
-val Context.userDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = UserConfigRepository.SP_NAME,
-    produceMigrations = { ctx -> listOf(SharedPreferencesMigration(ctx, UserConfigRepository.SP_NAME)) }
-)
-
-val Context.waterMarkDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = WaterMarkRepository.SP_NAME,
-    produceMigrations = { ctx ->
-        listOf(
-            SharedPreferencesMigration(
-                ctx,
-                WaterMarkRepository.SP_NAME
-            )
-        )
-    }
-)

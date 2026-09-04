@@ -1,0 +1,111 @@
+# ADR-0018: Option C2 — commonMain raster for Android production export (and unified preview)
+
+**Status:** Accepted (owner verbal sign-off **「c2！」** 2026-07-12)  
+**Supersedes / reopens (in part):** ADR-0004 addenda that kept **Android production** text/icon/**composition** on native `WatermarkRenderer` indefinitely (S4d-8 Option A, S4d-17 Option C, S4d-190 No-Go). Geometry-sharing and Desktop/iOS commonMain paths remain in force.  
+**Related:** U0 / product UI strategy Option **C** in `docs/parity/v2.10.0/alignment/u0-cmp-product-ui-decisions.md`; golden policy ADR-0010 (will need rebaseline / perceptual tier).
+
+## Context
+
+Option **C** unifies product UI in commonMain and aims for one watermark **look**. Sub-path:
+
+| | Preview | Android **export** |
+|--|---------|---------------------|
+| C1 | common raster | stays native |
+| **C2** | common raster | **also common raster** |
+
+C2 was previously blocked by byte-parity failures (rotated non-uniform icons; CJK StaticLayout vs MultiParagraph) and composition API mismatch. Owner now accepts moving Android **production export** onto the commonMain Compose/Skiko-style pipeline used by Desktop/iOS (`WatermarkCellComposer` + `composeOverBackground`), knowing this is **not** byte-identical to v2.10.0 native export.
+
+## Decision
+
+1. **Target renderer for all three platforms (preview + export):** commonMain cell raster + `composeOverBackground` (platform only supplies decode, `TextRasterEnv`/fonts, encode, and system I/O).  
+2. **Android native `WatermarkRenderer.build*Shader` / `compose` production path is retired on a gated schedule**, not deleted in one unmeasured PR.  
+3. **Goldens:** strict FNV byte goldens that encode native Android raster **must be rebaselined or replaced** with a signed perceptual/structural policy (ADR-0010 follow-up). CJK visual change is **accepted** as a product consequence of C2.  
+4. **Still permanent platform edges:** system pick/share/save/permissions; decode/encode/EXIF; app entry. **Not** “zero platform code.”  
+5. **ProductApp / UI (Option C shell)** continues in parallel: one commonMain product UI. **ADR-0033:** the editor main-preview slot is a display-time overlay (`composeCell` + `drawWatermarkTiles`); it no longer paints the export `composeOverBackground` bitmap. Export / share / save-sheet thumbs still bake via C2.
+
+## Non-goals (this ADR)
+
+- Byte-exact match to historical Android `StaticLayout` / `drawBitmap` goldens  
+- Restoring S4d-8 “try again until 0 delta” without perceptual policy  
+- In-app gallery on iOS/Desktop (U0 E02 unchanged)
+
+## Consequences
+
+- **Positive:** one paint path to maintain; preview ≡ export algorithm; iOS/Desktop/Android align for Option C.  
+- **Negative / work:** multi-slice migration; Android export visual change (esp. CJK); golden rebaseline; ship risk if rolled without device + locale QA.  
+- **Process:** every production routing slice needs measurement (perceptual/dims + critical locale smoke) before merge; no silent swap.
+
+## Execution outline (implementers)
+
+1. **Gate 0 — policy:** this ADR + golden rebaseline plan (ADR-0010 delta).  
+2. **Gate 1 — test-only:** Android instrumented/Robolectric dual-path (native vs common) measurement pack; no production flip.  
+3. **Gate 2 — preview:** Android editor preview uses common raster (feature flag OK).  
+4. **Gate 3 — export:** `generateImage` / export port routes through common compose; delete or quarantine native builders.  
+5. **Gate 4 — cleanup:** goldens, docs, AGENTS “do not route Android through composeIconCell” rules inverted under this ADR.
+
+### Status update (2026-07-13 P3.5)
+
+- Preview + export production path uses common raster for **debug and release**.
+- Smoke pack: `docs/parity/v2.10.0/captures/c2-p35-smoke-2026-07-13/`.
+- Export **panel** is shared `SaveExportSheetShell` on Android/Desktop/iOS; Photos/MediaStore/FS/share remain platform edges.
+- Gate 4 full native-builder delete still owner-gated; **rollout flag removed** (2026-07-17): `CommonRasterFlags` deleted — production always uses `AndroidCommonRaster` / commonMain pipeline. Native `WatermarkRenderer` kept for dual-path measurement and historical goldens.
+
+### Status update (2026-07-19 — Stage C1 pipeline API depth)
+
+- `CommonWatermarkPipeline.compose` / `composeTextCell` accept an optional prepared
+  `FontFamily? = null` as the last parameter (issue 20).
+- Omitted/`null` preserves the pre-C1 default resolver path (Android production unchanged).
+- Image mode ignores the family. No production caller passes a non-null family in C1.
+
+### Status update (2026-07-19 — Stage C2 Desktop cutover)
+
+- Desktop production real-image paint uses `DesktopWatermarkComposer.composeRealImage` →
+  `CommonWatermarkPipeline.compose` with bundled Latin+CJK `FontFamily` and immutable
+  `DesktopRenderRequest` (config + prefs + required offsetX/Y; no offset defaults).
+- Desktop retains decode/EXIF bake, icon file bytes, encode, destination policy, and direct
+  `target.writeBytes` (atomic rename remains G1).
+- iOS production still orchestrates `WatermarkCellComposer` directly until **Stage C3**.
+
+### Status update (2026-07-20 — Stage C3 iOS Preview + Final Export)
+
+- iOS product paint uses `CommonWatermarkPipeline` on both surfaces:
+  - **Preview:** `IosPreviewRaster` — max-edge 720 thumbnail decode, in-memory `ImageBitmap`,
+    no final encode/write; offset forwarded.
+  - **Final Export:** `IosExportPipelinePort` freezes `IosRenderRequest` (config/prefs/offsetX/Y,
+    no offset defaults) before IO → `IosFinalRenderSpine.renderAndEncode` → full-resolution
+    `IosImageDecoder.decode` → one `CommonWatermarkPipeline.compose` → explicit-sRGB encode
+    (JPEG white-flatten + selected quality; PNG alpha preserve). Temp extension from actual format.
+- Compatibility `IosWatermarkRenderBridge` PNG APIs route through the spine with PNG prefs;
+  Swift ABI unchanged. Cell/golden helpers remain in `IosWatermarkRenderer` as test/witness only.
+- Decode bakes orientation once at the iOS edge: JPEG/PNG via Skia `makeFromEncoded`; HEIF/HEIC
+  via Apple ImageIO (direct pixel bridge, no encoded intermediate). Final encoder does not
+  re-rotate; newly encoded output has no source EXIF. Physical camera-size runtime witness remains
+  **RUNTIME_PENDING** (issue 22).
+- C4 / Stage D / Stage H unauthorized by this status block.
+
+### Status update (2026-07-26 — iOS HEIF/HEIC ImageIO decode edge)
+
+- Current path: `IosImageDecoder` keeps JPEG/PNG on Skia; known HEIF/HEIC uses `IosImageIODecoder`
+  (primary image index, orientation-aware native thumbnails with fail-closed bounds, full decode
+  without a 4096 UI-loader cap). Does not change Option C2 composition ownership.
+
+### Status update (2026-07-21 — Stage C3 attempt-2 review repairs)
+
+- Orientation-7 spine test uses a real EXIF tag **7** fixture and asserts BR upright quadrant +
+  swapped dims + APP1 strip (no orientation-6 stand-in).
+- Explicit-sRGB contract narrowed to the encode **working surface**
+  (`IosFinalRenderSpine.explicitSrgbImageInfo` / `ImageInfo.makeS32`); tests reject `null` as sRGB
+  and do not claim decoded JPEG/PNG containers re-report a profile.
+- Preview no-export-file check enumerates the real temp directory via `NSFileManager` (sentinel-
+  mutation-resistant).
+- Bridge RENDER/ENCODE stages are structural (separate compose vs encode catches); forced ENCODE
+  regression uses a test-only encode override — no message-string stage guessing.
+
+## Owner acceptance (recorded)
+
+- **C2** selected explicitly after product discussion of common 光栅 and C1/C2 tradeoff.  
+- Accepts Android export may change vs Play v2.10.0; requires rebaseline, not silent claim of byte parity.
+
+## Amendment (ADR-0033, 2026-08-26)
+
+Editor main preview is a display-time overlay. Export still bakes through C2 `composeOverBackground`. Decision §5 “preview slot calls the same common raster path” is withdrawn for the editor slot only.

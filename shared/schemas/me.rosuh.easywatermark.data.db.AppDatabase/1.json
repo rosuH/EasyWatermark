@@ -1,0 +1,46 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "72366f557b971b39675d0f26cbc46e0a",
+    "entities": [
+      {
+        "tableName": "Template",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `content` TEXT, `creation_date` INTEGER, `last_modified_date` INTEGER)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "creationDate",
+            "columnName": "creation_date",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastModifiedDate",
+            "columnName": "last_modified_date",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '72366f557b971b39675d0f26cbc46e0a')"
+    ]
+  }
+}

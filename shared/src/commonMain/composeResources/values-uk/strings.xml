@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- S-i18n-1: product UI catalog for Compose Multiplatform (Weblate path). -->
+<!-- Agents: edit default values/strings.xml only; other locales via Weblate. -->
+<resources>
+    <!-- Form inspector section headers (Expanded/Wide DEMO rhythm) -->
+    <string name="inspector_section_mode">Режим</string>
+    <string name="inspector_section_tile">Плитка</string>
+    <string name="inspector_section_look">Вигляд</string>
+    <string name="inspector_section_gaps">Відступи</string>
+    <string name="tips_low_resolution_source">Фото низької роздільності · %1$d × %2$d</string>
+</resources>

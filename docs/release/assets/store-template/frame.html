@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<!--
+  Store screenshot frame template (3.0.0 materials plan §三).
+
+  Rendered with headless Chrome at the exact store canvas size; all metrics are in
+  vw so one template serves every canvas (6.9" 1320×2868, iPad 13" 2064×2752,
+  Play 1080×1920). See render.sh.
+
+  Brand system (shared/ui/theme/Color.kt):
+    DesignBrand    #FFDE32  (brand yellow — accent, badge, highlights)
+    DesignEditorBg #262611  (dark olive — background family)
+    App icon: black field + yellow mark. The whole canvas reads warm black + yellow,
+    NOT generic blue-tech dark. Do not reintroduce cool grays.
+
+  Query params:
+    shot    - relative path/URL of the raw screenshot (required)
+    title   - headline (supports \n; wrap a segment in [[...]] to tint it brand yellow)
+    sub     - subhead
+    accent  - hex accent (no #), defaults to brand yellow FFDE32
+    badge   - optional pill above the title, e.g. "100% offline"
+    lang    - en | zh (font stack + lang attr)
+    device  - phone | tablet (screen corner radius + width)
+    align   - left | center (text block alignment; default center)
+    scene   - flat | tilt | zoom | float | poster (default flat)
+              flat:   straight-on device, for info-dense screens (aesthetic rule Q6)
+              tilt:   cinematic 3D side camera, device leaning right, copy left
+              zoom:   close-up — oversized device, slight in-plane rotation, edges
+                      cropped by the canvas; energetic but no keystone distortion
+              float:  full device visible, hovering over an elliptical floor shadow;
+                      the only scene where the bottom edge does NOT bleed
+              poster: NO device — the watermarked artifact itself is the hero,
+                      floating as a physical print over a soft photo-derived wash
+                      (MD Vinyl store-shot language). shot = the cropped artifact.
+              (cinematic scenes share: ambience photo; Q4/Q5/Q7)
+    amb     - (tilt/zoom/float/poster) background ambience image
+    ink     - (poster) light | dark. dark = bright wash + near-black type +
+              yellow marker-highlight for [[...]]; light (default) = dark wash + ivory type
+    aw      - (poster) artifact width in vw (default 104)
+    rot     - (poster) artifact rotation in deg (default -3)
+    vpin    - top (default) | bottom. When the screenshot is taller than the
+              device hole, pin which edge stays visible. Play 1080×1920 is
+              shorter than iPhone 6.9" — use vpin=bottom so the editor chrome
+              (style/layout/export panels) is not cropped off.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --accent: #FFDE32;
+    --olive: #262611;
+    --screen-radius: 5.5vw;
+    --device-width: 88vw;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; }
+
+  body {
+    /* Warm near-black with the editor's olive undertone. */
+    background:
+      linear-gradient(180deg, #1c1c0f 0%, #131309 46%, #0d0d07 100%);
+    font-family: -apple-system, "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Brand-yellow glow: one warm wash behind the copy, very restrained. */
+  .glow {
+    position: fixed; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(95vw 62vw at 50% -14%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 68%),
+      radial-gradient(70vw 48vw at -10% 34%, color-mix(in srgb, var(--olive) 85%, var(--accent) 15%), transparent 70%);
+    opacity: 0.9;
+  }
+  /* Fine noise kills gradient banding on OLED-dark backgrounds. */
+  .noise {
+    position: fixed; inset: 0; pointer-events: none; opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .copy {
+    position: relative; z-index: 2;
+    width: 86vw;
+    padding-top: 7.4vw;
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center;
+    gap: 2.2vw;
+  }
+  .copy.left { align-items: flex-start; text-align: left; }
+
+  /* Solid brand chip, like the app's primaryContainer (yellow field, near-black text). */
+  .badge[hidden] { display: none; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 1vw;
+    padding: 1.1vw 2.8vw;
+    background: var(--accent);
+    border-radius: 10vw;
+    color: #211B00;
+    font-size: 2.6vw; font-weight: 700; letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .badge::before {
+    content: ""; width: 1.1vw; height: 1.1vw; border-radius: 50%;
+    background: #211B00;
+  }
+
+  h1 {
+    color: #FFF9EF;
+    font-size: 7.6vw; line-height: 1.12; font-weight: 700;
+    letter-spacing: -0.022em;
+    white-space: pre-line;
+  }
+  h1 .hl { color: var(--accent); }
+  html[lang="zh"] h1 { font-weight: 600; letter-spacing: 0.01em; }
+
+  .sub {
+    color: rgba(255,249,239,0.55);
+    font-size: 3.4vw; line-height: 1.4; font-weight: 500;
+    letter-spacing: -0.005em;
+    max-width: 74vw;
+    white-space: pre-line;
+  }
+
+  /* Device: thin dark bezel + hairline highlight; always bleeds off the canvas bottom
+     regardless of screenshot aspect (screen crops from the top via object-fit). */
+  .stage {
+    position: relative; z-index: 1;
+    margin-top: 4.6vw;
+    width: var(--device-width);
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  /* Bezel matches the app icon: warm black field, hairline yellow-tinted edge. */
+  .device {
+    width: 100%;
+    height: calc(100% + 8vw);
+    padding: 1.3vw;
+    overflow: hidden;
+    background: linear-gradient(180deg, #1a1a10, #0c0c07);
+    border-radius: calc(var(--screen-radius) + 1.3vw);
+    box-shadow:
+      inset 0 0 0 0.12vw color-mix(in srgb, var(--accent) 30%, rgba(255,255,255,0.10)),
+      0 -1vw 10vw color-mix(in srgb, var(--accent) 12%, transparent),
+      0 3vw 12vw rgba(0,0,0,0.70);
+  }
+  /* Width-fit, top-aligned; the canvas/device bottom clips the overflow. Never
+     crops horizontally, so UI chrome at the screenshot edges stays intact. */
+  .screen {
+    display: block; width: 100%; height: auto;
+    border-radius: var(--screen-radius);
+    background: #000;
+  }
+  /* Short canvases (Play 1080×1920): keep the editor chrome, crop the photo. */
+  html[data-vpin="bottom"] .device { display: flex; flex-direction: column; }
+  html[data-vpin="bottom"] .screen {
+    flex: 1 1 auto;
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    object-position: center bottom;
+  }
+
+  html[data-device="tablet"] {
+    --screen-radius: 2.6vw;
+    --device-width: 92vw;
+  }
+  /* Dual-pane captures are near-square; portrait tablet hole is taller.
+     Cover the screen (crop sides) so the inspector is not letterboxed. */
+  html[data-device="tablet"] .device { display: flex; flex-direction: column; }
+  html[data-device="tablet"] .screen {
+    flex: 1 1 auto;
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    object-position: top center;
+  }
+
+  /* ---------- cinematic scenes: tilt / tiltr / low ---------- */
+
+  /* Ambience: the photo world bleeds out of the phone into the canvas —
+     heavily blurred + darkened so copy stays readable (Q6/Q11). */
+  .amb { display: none; }
+  html[data-scene="tilt"] .amb,
+  html[data-scene="zoom"] .amb,
+  html[data-scene="float"] .amb {
+    display: block;
+    position: fixed; inset: -6vw; z-index: 0; pointer-events: none;
+    background-size: cover; background-position: center;
+    filter: blur(7vw) brightness(0.55) saturate(1.15);
+    opacity: 0.8;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 34%, black 80%, transparent 100%);
+  }
+  html[data-scene="tilt"] body,
+  html[data-scene="zoom"] body,
+  html[data-scene="float"] body {
+    background: linear-gradient(180deg, #17170d 0%, #10100a 50%, #0b0b06 100%);
+  }
+
+  html[data-scene="tilt"] .device,
+  html[data-scene="zoom"] .device,
+  html[data-scene="float"] .device { position: relative; }
+
+  /* One diagonal sheen on the hero screen, clipped by the screen radius (Q4). */
+  html[data-scene="tilt"] .device::after,
+  html[data-scene="zoom"] .device::after,
+  html[data-scene="float"] .device::after {
+    content: "";
+    position: absolute; inset: 1.3vw;
+    border-radius: var(--screen-radius);
+    pointer-events: none;
+    background: linear-gradient(115deg,
+      transparent 42%,
+      rgba(255,249,239,0.10) 50%,
+      rgba(255,222,50,0.05) 56%,
+      transparent 64%);
+  }
+
+  /* --- tilt: side camera, device leaning right, copy on the left --- */
+  html[data-scene="tilt"] .glow {
+    background:
+      radial-gradient(80vw 55vw at 72% -10%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 66%);
+  }
+  html[data-scene="tilt"] .copy { align-items: flex-start; text-align: left; }
+  /* 3D stage: single hero device (Q5), side camera (Q6), perceptible depth (Q7). */
+  html[data-scene="tilt"] .stage {
+    perspective: 160vw;
+    perspective-origin: 38% 30%;
+    margin-top: 2.4vw;
+  }
+  html[data-scene="tilt"] .device {
+    transform: rotateY(-16deg) rotateX(4deg) rotateZ(1.4deg) translateX(6vw);
+    transform-style: preserve-3d;
+    box-shadow:
+      inset 0 0 0 0.12vw color-mix(in srgb, var(--accent) 26%, rgba(255,255,255,0.10)),
+      -5vw 4vw 14vw rgba(0,0,0,0.78),
+      0 -1vw 12vw color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+
+  /* --- zoom: close-up — oversized device, slight in-plane rotation, no keystone --- */
+  html[data-scene="zoom"] .glow {
+    background:
+      radial-gradient(95vw 58vw at 50% -12%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 68%);
+  }
+  html[data-scene="zoom"] .stage {
+    margin-top: 3.6vw;
+  }
+  html[data-scene="zoom"] .device {
+    transform: rotate(-3.5deg) scale(1.16);
+    transform-origin: 50% 12%;
+    box-shadow:
+      inset 0 0 0 0.12vw color-mix(in srgb, var(--accent) 26%, rgba(255,255,255,0.10)),
+      -3vw 3vw 14vw rgba(0,0,0,0.75),
+      0 -1vw 12vw color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+
+  /* --- float: full device hovering above an elliptical floor shadow --- */
+  html[data-scene="float"] .glow {
+    background:
+      radial-gradient(90vw 56vw at 50% -10%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 66%),
+      radial-gradient(70vw 30vw at 50% 108%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%);
+  }
+  html[data-scene="float"] .stage {
+    margin-top: 3vw;
+    width: auto;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  /* The whole device fits: no bottom bleed, bottom bezel corners visible.
+     Screen height is explicit so the device shrink-wraps deterministically. */
+  html[data-scene="float"] .device {
+    width: auto;
+    height: auto;
+    box-shadow:
+      inset 0 0 0 0.12vw color-mix(in srgb, var(--accent) 28%, rgba(255,255,255,0.10)),
+      0 4vw 12vw rgba(0,0,0,0.70),
+      0 -1vw 12vw color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+  html[data-scene="float"] .screen {
+    height: 148vw; width: auto;
+  }
+  /* Elliptical contact shadow under the hovering device. */
+  html[data-scene="float"] .stage::after {
+    content: "";
+    display: block;
+    margin-top: 4.2vw;
+    width: 52vw; height: 5vw;
+    border-radius: 50%;
+    background: radial-gradient(50% 50% at 50% 50%, rgba(0,0,0,0.85), transparent 70%);
+    filter: blur(1vw);
+  }
+
+  /* --- poster: no device — the watermarked artifact IS the hero --- */
+  html[data-scene="poster"] .amb {
+    display: block;
+    position: fixed; inset: -8vw; z-index: 0; pointer-events: none;
+    background-size: cover; background-position: center;
+    filter: blur(10vw) brightness(0.55) saturate(1.2);
+    opacity: 0.9;
+  }
+  /* Bright pastel wash + near-black type, like a printed poster. */
+  html[data-scene="poster"][data-ink="dark"] .amb {
+    filter: blur(10vw) brightness(1.12) saturate(1.15);
+    opacity: 1;
+  }
+  html[data-scene="poster"][data-ink="dark"] body { background: #cfcaba; }
+  html[data-scene="poster"][data-ink="dark"] .glow { display: none; }
+  html[data-scene="poster"][data-ink="dark"] .noise { opacity: 0.035; }
+  html[data-scene="poster"][data-ink="dark"] h1 { color: #211B00; }
+  /* On a light wash, the highlight becomes a yellow marker stamp behind dark text. */
+  html[data-scene="poster"][data-ink="dark"] h1 .hl {
+    color: #211B00;
+    background: var(--accent);
+    padding: 0 1.4vw;
+    border-radius: 1.6vw;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+  html[data-scene="poster"][data-ink="dark"] .sub { color: rgba(33,27,0,0.66); }
+  html[data-scene="poster"] .glow {
+    background:
+      radial-gradient(90vw 56vw at 50% -10%, color-mix(in srgb, var(--accent) 24%, transparent), transparent 66%);
+  }
+  html[data-scene="poster"] .stage {
+    width: 100vw;
+    display: flex; align-items: center; justify-content: center;
+    margin-top: 0;
+    flex: 1 1 auto; min-height: 0;
+  }
+  html[data-scene="poster"] .device {
+    width: var(--art-width, 104vw);
+    height: auto; padding: 0;
+    background: none; border-radius: 0; box-shadow: none; overflow: visible;
+    transform: rotate(var(--art-rot, -3deg));
+    flex: 0 0 auto;
+  }
+  html[data-scene="poster"] .device::after { display: none; }
+  html[data-scene="poster"] .screen {
+    width: 100%; height: auto;
+    border-radius: 2.4vw;
+    box-shadow:
+      0 5vw 16vw rgba(0,0,0,0.45),
+      0 1vw 4vw rgba(0,0,0,0.30);
+  }
+</style>
+</head>
+<body>
+  <div class="amb" id="amb"></div>
+  <div class="glow"></div>
+  <div class="noise"></div>
+
+  <div class="copy" id="copy">
+    <div class="badge" id="badge" hidden></div>
+    <h1 id="title"></h1>
+    <div class="sub" id="sub"></div>
+  </div>
+
+  <div class="stage">
+    <div class="device">
+      <img class="screen" id="shot" alt="">
+    </div>
+  </div>
+
+<script>
+  const q = new URLSearchParams(location.search);
+  const get = (k, d = "") => q.get(k) ?? d;
+
+  document.documentElement.lang = get("lang", "en");
+  document.documentElement.dataset.device = get("device", "phone");
+  document.documentElement.dataset.scene = get("scene", "flat");
+  document.documentElement.dataset.ink = get("ink", "light");
+  document.documentElement.dataset.vpin = get("vpin", "top");
+  if (q.get("aw")) {
+    document.documentElement.style.setProperty("--art-width", get("aw") + "vw");
+  }
+  if (q.get("rot")) {
+    document.documentElement.style.setProperty("--art-rot", get("rot") + "deg");
+  }
+  if (q.get("amb")) {
+    document.getElementById("amb").style.backgroundImage = `url("${get("amb")}")`;
+  }
+  if (q.get("accent")) {
+    document.documentElement.style.setProperty("--accent", "#" + get("accent"));
+  }
+  // Optional device width override in vw, to tune bleed for a screenshot's aspect.
+  if (q.get("dw")) {
+    document.documentElement.style.setProperty("--device-width", get("dw") + "vw");
+  }
+  if (get("align") === "left") document.getElementById("copy").classList.add("left");
+
+  const unescapeNl = (s) => s.replaceAll("\\n", "\n");
+  // Title supports [[segment]] -> brand-yellow highlight span.
+  const titleEl = document.getElementById("title");
+  unescapeNl(get("title")).split(/\[\[|\]\]/).forEach((part, i) => {
+    if (!part) return;
+    if (i % 2 === 1) {
+      const span = document.createElement("span");
+      span.className = "hl";
+      span.textContent = part;
+      titleEl.append(span);
+    } else {
+      titleEl.append(part);
+    }
+  });
+  document.getElementById("sub").textContent = unescapeNl(get("sub"));
+
+  const badge = document.getElementById("badge");
+  if (q.get("badge")) { badge.hidden = false; badge.append(get("badge")); }
+
+  document.getElementById("shot").src = get("shot");
+</script>
+</body>
+</html>

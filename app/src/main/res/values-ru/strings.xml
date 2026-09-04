@@ -6,4 +6,10 @@
     <string name="about_title_version">Версия</string>
     <string name="back">Назад</string>
     <string name="dialog_save_config_quality">Качество</string>
+    <!-- Form inspector section headers (Expanded/Wide DEMO rhythm) -->
+    <string name="inspector_section_mode">Режим</string>
+    <string name="inspector_section_tile">Плитка</string>
+    <string name="inspector_section_look">Внешний вид</string>
+    <string name="inspector_section_gaps">Отступы</string>
+    <string name="tips_low_resolution_source">Фото низкого разрешения · %1$d × %2$d</string>
 </resources>

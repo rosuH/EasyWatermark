@@ -1,146 +1,161 @@
 [versions]
-agp = "8.7.0"
-kotlin = "1.9.10"
-ksp = "1.9.10-1.0.13"
-hilt = "2.48.1"
-toolsGradle = "7.4.2"
-ktlintGradle = "11.3.1"
-androidxActivity = "1.8.0"
-androidxConstraintLayoutCompose = "1.1.0-alpha13"
-androidxNavigation = "2.7.4"
-coroutines = "1.6.4"
-fragmentKtx = "1.6.1"
-activityKtx = "1.7.2"
-lifecycle = "2.6.1"
-lifecycleLiveData = "2.5.1"
-lifecycleViewModel = "2.5.1"
-coreKtx = "1.10.1"
-appcompat = "1.6.0"
-material = "1.8.0-rc01"
-room = "2.5.2"
-datastorePreference = "1.0.0"
-asyncLayoutInflater = "1.0.0"
-viewpager2 = "1.0.0"
-recyclerview = "1.2.1"
-constraintLayout = "2.1.4"
-exifInterface = "1.3.5"
-paletteKtx = "1.0.0"
-glide = "4.14.2"
+# AGP 9.3.1 (owner-authorized H). Requires Gradle ≥ 9.5 (wrapper 9.7.0).
+# Studio IDE sync may lag CLI; CLI assemble is the gate for this slice.
+agp = "9.3.1"
+# Kotlin 2.4.10 + KSP 2.3.11 (slices D+A). Standalone KSP 2.3.x line.
+# Hard rule: do NOT adopt Kotlin 2.4.20-Beta* (no supported KSP pair). See build/s4d360-compatibility.md.
+kotlin = "2.4.10"
+ksp = "2.3.11"
+koin-bom = "4.2.2"
+androidxActivity = "1.13.0"
+androidxConstraintLayoutCompose = "1.1.2"
+# Keep Navigation on 2.10.0-beta01: 2.10.0-rc01 declares minSdk 24; product minSdk stays 23.
+androidxNavigationCompose = "2.10.0-beta01"
+kotlinxSerialization = "1.11.0"
+coroutines = "1.11.0"
+lifecycle = "2.11.0"
+lifecycleViewModel = "2.11.0"
+coreKtx = "1.19.0"
+# J4: core-splashscreen only (Android splash then Launch fade serial). Latest stable, not alpha.
+coreSplashscreen = "1.2.0"
+appcompat = "1.8.0-alpha01"
+material = "1.14.0"
+room = "2.8.4"
+# S4d-142/S4d-231: androidx.sqlite — off-Android BundledSQLiteDriver only (desktop/iOS).
+# Absolute latest published: 2.7.0. Android stays framework SupportSQLite compatibility mode.
+sqlite = "2.7.0"
+datastorePreference = "1.3.0-alpha10"
+exifInterface = "1.4.2"
 compressor = "3.0.1"
-colorpicker = "2.2.3"
-benchmark = "1.1.1"
-profileinstaller = "1.3.1"
-test = "1.4.0"
+# Android-only custom color dialog (production parity; Compose ColorOption edge).
+colorpicker = "2.4.0"
+benchmark = "1.5.0-alpha07"
+profileinstaller = "1.4.1"
 junit = "4.13.2"
-espressoCore = "3.4.0"
-uiautomator = "2.2.0"
-extJunit = "1.1.4"
-mockito = "4.0.0"
-robolectric = "4.4"
-hamcrest = "2.2"
-androidxComposeBom = "2023.10.01"
-androidxComposeCompiler = "1.5.3"
-androidxComposeRuntimeTracing = "1.0.0-alpha04"
-accompanist = "0.33.2-alpha"
-coil = "2.4.0"
-material3 = "1.2.0-alpha09"
-spotless = "7.0.0.BETA1"
+espressoCore = "3.7.0"
+uiautomator = "2.4.0"
+extJunit = "1.3.0"
+# Align with androidx.test:core resolved by ext:junit (1.7.0 line).
+androidxTestRunner = "1.7.0"
+robolectric = "4.16.1"
+# Compose Aug '26 stable BOM → UI/foundation/runtime 1.12.0.
+# Keep artifact as compose-bom (not bom-alpha): alpha 2026.08.00 jumps UI to 1.13.0-alpha01.
+# Material3 MUST stay an explicit 1.5.x-alpha pin matching CMP (JetBrains material3
+# 1.12.0-alpha03 → androidx 1.5.0-alpha22). Use platform() not enforcedPlatform so the
+# stable BOM cannot force material3 back to 1.4.0 (EditorTopBar NoSuchMethodError).
+# Rollback HEAD before this Compose slice: cf847acc.
+androidxComposeBom = "2026.08.00"
+# CMP 1.12.0 stable (Aug 2026). Matches Compose UI/foundation/runtime 1.12.0 + BOM 2026.08.00.
+# Material3 stays 1.12.0-alpha03 (= androidx 1.5.0-alpha22). Isolated Projects / CC compatible
+# for Android/Desktop/iOS (no wasm/js targets here).
+composeMultiplatform = "1.12.0"
+accompanist = "0.37.3"
+# C3 Tier-2a (S4d-38): Coil 3 (io.coil-kt.coil3, package coil3). Compose-only; no network artifact
+# (all image models are local Uris); coil-svg dropped (SvgDecoder was never registered).
+# 3.6.0 tracks CMP 1.12.0 / Kotlin 2.4.10 / Skiko 0.150.1 (3.5.0 still pulled Skiko 0.144.6).
+coil = "3.6.0"
+# Align with CMP JetBrains material3:1.12.0-alpha03 (= androidx 1.5.0-alpha22). Do not
+# float ahead of CMP — :app BOM must not win with stable 1.4.0 either.
+material3 = "1.5.0-alpha22"
+# ADR-0027: content editor theme (MCU KMP). Single dep slice; wallpaper stays system APIs.
+materialKolor = "5.0.0"
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 android-test = { id = "com.android.test", version.ref = "agp" }
+# S4d-360: official Android-KMP library plugin (replaces com.android.library on :shared).
+android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
-hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
-hilt-plugin = { id = "dagger.hilt.android.plugin", version.ref = "hilt" }
-spotless = "com.diffplug.spotless:6.25.0"
+#hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+#hilt-plugin = { id = "dagger.hilt.android.plugin", version.ref = "hilt" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+# C4.3: Compose Multiplatform plugin — applied to :shared only (delivers multiplatform Compose incl. iOS).
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+# S4d-91: Room Gradle plugin (KMP schema/codegen) — applied to :shared only for the Room KMP
+# toolchain proof. Reuses the existing room version. :app keeps classic KSP Android Room.
+androidx-room = { id = "androidx.room", version.ref = "room" }
+# skydoves compose-stability-analyzer — Kotlin 2.4.10 matches plugin 0.13.0
+# (TraceRecomposition / DEBUG heatmap; apply on :app only).
+# 0.13.0 is Isolated Projects compatible (0.12.0 failed ROS-100 configuration).
+stability-analyzer = { id = "com.github.skydoves.compose.stability.analyzer", version = "0.13.0" }
+
+
 
 [libraries]
 agp = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
 ksp = { module = "com.google.devtools.ksp:symbol-processing", version.ref = "ksp" }
-
-
+# Compose Aug '26: stable compose-bom (1.12.0). Material3 pre-release stays an explicit catalog pin.
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "androidxComposeBom" }
-androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
-androidx-compose-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout" }
-androidx-compose-material-iconsExtended = { group = "androidx.compose.material", name = "material-icons-extended" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 androidx-compose-material3-windowSizeClass = { group = "androidx.compose.material3", name = "material3-window-size-class" }
-androidx-compose-runtime = { group = "androidx.compose.runtime", name = "runtime" }
-androidx-compose-runtime-livedata = { group = "androidx.compose.runtime", name = "runtime-livedata" }
-androidx-compose-runtime-tracing = { group = "androidx.compose.runtime", name = "runtime-tracing", version.ref = "androidxComposeRuntimeTracing" }
-androidx-compose-ui-test = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-ui-ui = { group = "androidx.compose.ui", name = "ui" }
-androidx-compose-ui-testManifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
-androidx-compose-ui-util = { group = "androidx.compose.ui", name = "ui-util" }
 androidx-compose-lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanist" }
-accompanist-navigation-animation = { group = "com.google.accompanist", name = "accompanist-navigation-animation", version.ref = "accompanist" }
-androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "androidxNavigation" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "androidxNavigationCompose" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "androidxActivity" }
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
 androidx-constraintlayout-compose = { group = "androidx.constraintlayout", name = "constraintlayout-compose", version.ref = "androidxConstraintLayoutCompose" }
-androidx-motionlayoout-compose = { group = "androidx.constraintlayout", name = "constraintlayout-compose", version.ref = "androidxConstraintLayoutCompose" }
+#androidx-motionlayoout-compose = { group = "androidx.constraintlayout", name = "constraintlayout-compose", version.ref = "androidxConstraintLayoutCompose" }
 
 
 
+coil-kt-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+material-kolor = { group = "com.materialkolor", name = "material-kolor", version.ref = "materialKolor" }
 
-coil-kt = { group = "io.coil-kt", name = "coil", version.ref = "coil" }
-coil-kt-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
-coil-kt-svg = { group = "io.coil-kt", name = "coil-svg", version.ref = "coil" }
-
-dagger-hilt-plugin = { group = "com.google.dagger", name = "hilt-android-gradle-plugin", version.ref = "hilt" }
-tools-gradle = { group = "com.android.tools.build", name = "gradle", version.ref = "toolsGradle" }
-kotlin-plugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlin" }
 kotlin-coroutine-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlin-coroutine-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
-fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", version.ref = "fragmentKtx" }
-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activityKtx" }
+# ADR-0017: Desktop ViewModel.viewModelScope Main dispatcher
+kotlin-coroutine-swing = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-swing", version.ref = "coroutines" }
+# Issue 26 / C4.4R.S1: iosTest Main harness (setMain/runTest). Requires owner confirmation (F17).
+kotlin-coroutine-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
-lifecycle-livedata-ktx = { group = "androidx.lifecycle", name = "lifecycle-livedata-ktx", version.ref = "lifecycleLiveData" }
 lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycleViewModel" }
+# ADR-0017 / Phase 0: multiplatform ViewModel for :shared commonMain session host.
+# Official KMP artifact (AndroidX); version aligned with app lifecycle line.
+lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "lifecycle" }
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "coreSplashscreen" }
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+# S4d-142/S4d-231: bundled SQLite driver for Room off-Android (BundledSQLiteDriver). Ships host/native
+# SQLite bits; declared only in `:shared` desktop/iOS target source sets so it never reaches `:app`
+# (Android stays in Room compatibility mode with the framework SupportSQLite open-helper).
+sqlite-bundled = { group = "androidx.sqlite", name = "sqlite-bundled", version.ref = "sqlite" }
+datastore = { group = "androidx.datastore", name = "datastore", version.ref = "datastorePreference" }
 datastore-preference = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreference" }
-asynclayout-inflater = { group = "androidx.asynclayoutinflater", name = "asynclayoutinflater", version.ref = "asyncLayoutInflater" }
-viewpager2 = { group = "androidx.viewpager2", name = "viewpager2", version.ref = "viewpager2" }
-recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintLayout" }
 exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifInterface" }
-palette-ktx = { group = "androidx.palette", name = "palette-ktx", version.ref = "paletteKtx" }
 
-hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
-hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
-hilt-testing = { module = "com.google.dagger:hilt-android-testing", version.ref = "hilt" }
-hilt-plugin = { module = "com.google.dagger:hilt-android-gradle-plugin", version.ref = "hilt" }
+#hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
+#hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
+#hilt-testing = { module = "com.google.dagger:hilt-android-testing", version.ref = "hilt" }
+#hilt-plugin = { module = "com.google.dagger:hilt-android-gradle-plugin", version.ref = "hilt" }
 
-glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
-glide-compiler = { group = "com.github.bumptech.glide", name = "compiler", version.ref = "glide" }
+koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin-bom" }
+koin-core = { module = "io.insert-koin:koin-core" }
+koin-android = { module = "io.insert-koin:koin-android" }
 compressor = { group = "id.zelory", name = "compressor", version.ref = "compressor" }
 colorpicker = { group = "com.github.skydoves", name = "colorpickerview", version.ref = "colorpicker" }
 benchmark = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmark" }
 profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
-test-core = { group = "androidx.test", name = "core", version.ref = "test" }
-test-rules = { group = "androidx.test", name = "rules", version.ref = "test" }
-test-runner = { group = "androidx.test", name = "runner", version.ref = "test" }
 test-junit = { group = "junit", name = "junit", version.ref = "junit" }
 test-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 test-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
 test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "extJunit" }
-mockito-core = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }
-mockito-android = { group = "org.mockito", name = "mockito-android", version.ref = "mockito" }
+test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
-hamcrest-library = { group = "org.hamcrest", name = "hamcrest-library", version.ref = "hamcrest" }
-ktlint = "com.pinterest.ktlint:ktlint-cli:1.3.1"

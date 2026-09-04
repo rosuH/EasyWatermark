@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  J2 / issue 13 §J2 — data extraction rules (API 31+ cloud backup + device transfer).
+
+  Aligns with product privacy: offline processing, no tracking SDKs, EXIF strip on export
+  (ADR-0009). INCLUDE-only for settings/templates/icons; caches and staged photo bytes are
+  omitted (not extracted). Same set for cloud-backup and device-transfer.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="sharedpref" path="." />
+        <include domain="database" path="." />
+        <include domain="file" path="datastore/" />
+        <include domain="file" path="watermark_icons/" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="sharedpref" path="." />
+        <include domain="database" path="." />
+        <include domain="file" path="datastore/" />
+        <include domain="file" path="watermark_icons/" />
+    </device-transfer>
+</data-extraction-rules>

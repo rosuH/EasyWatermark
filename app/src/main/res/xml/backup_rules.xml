@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  J2 / issue 13 §J2 — Auto Backup rules (API < 31 fullBackupContent).
+
+  Product privacy (offline, no analytics):
+  - INCLUDE-only strategy: only listed paths are backed up for these domains.
+  - App-owned settings/templates/icons restore after reinstall.
+  - Omitted (not backed up): caches, compressor temp,
+    external Pictures/gallery paths, and any other filesDir trees.
+
+  Do not expand include domains without an explicit privacy review.
+-->
+<full-backup-content>
+    <!-- SharedPreferences (crash recovery gate, legacy migrations) -->
+    <include domain="sharedpref" path="." />
+    <!-- Room template DB (app-owned seeds + user templates) -->
+    <include domain="database" path="." />
+    <!-- DataStore Preferences under filesDir/datastore/ -->
+    <include domain="file" path="datastore/" />
+    <!-- App-owned watermark icon copies (not gallery originals) -->
+    <include domain="file" path="watermark_icons/" />
+</full-backup-content>

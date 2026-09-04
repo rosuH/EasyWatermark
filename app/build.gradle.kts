@@ -1,12 +1,68 @@
-import com.android.build.gradle.internal.api.ApkVariantOutputImpl
+import com.android.build.api.artifact.SingleArtifact
+import com.android.build.api.variant.ApplicationAndroidComponentsExtension
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
+import java.io.File
 
 plugins {
     id(libs.plugins.android.application.get().pluginId)
-    id(libs.plugins.kotlin.android.get().pluginId)
-    id(libs.plugins.kotlin.parcelize.get().pluginId)
+    // S4d-360: AGP 9 built-in Kotlin — do not apply org.jetbrains.kotlin.android.
+    // Keep serialization + compose-compiler + ksp (still separate compiler plugins).
+    id(libs.plugins.kotlin.serialization.get().pluginId)
     id(libs.plugins.ksp.get().pluginId)
-    id(libs.plugins.hilt.plugin.get().pluginId)
-    id(libs.plugins.spotless.get().pluginId)
+//    id(libs.plugins.hilt.plugin.get().pluginId)
+    alias(libs.plugins.compose.compiler)
+    // skydoves compose-stability-analyzer 0.13.0 (Kotlin 2.4.10, Isolated Projects): @TraceRecomposition + stabilityDump.
+    alias(libs.plugins.stability.analyzer)
+//    id(libs.plugins.spotless.get().pluginId)
+}
+
+// C4.3 Compose lineage unification: :shared (Compose Multiplatform) transitively brings
+// `org.jetbrains.compose.*` coordinates onto :app's Android classpath. On Android these are the same
+// classes as `androidx.compose.*` (CMP delegates to Jetpack Compose), so we substitute them to the
+// AndroidX coordinates. S4d-236: use the original dependency's version (not a hard-coded one) so
+// artifacts on different version lines (material3 at 1.4.0, annotation-internal, etc.) resolve
+// correctly; the Compose BOM (2026.05.01 -> 1.11.2) aligns the core compose.* artifacts.
+// S-i18n-0: do NOT substitute org.jetbrains.compose.components.* (compose multiplatform resources) —
+// there is no androidx.compose.components:components-resources artifact; keep JetBrains coordinates.
+// Build-config only; no source/renderer/UI behavior change.
+configurations.all {
+    resolutionStrategy.dependencySubstitution {
+        all {
+            val selector = requested
+            if (selector is ModuleComponentSelector &&
+                selector.group.startsWith("org.jetbrains.compose.") &&
+                !selector.group.startsWith("org.jetbrains.compose.components")
+            ) {
+                val androidxGroup = selector.group.replaceFirst("org.jetbrains.compose", "androidx.compose")
+                // JetBrains Material3 version line (1.12.0-alpha03) ≠ androidx (1.5.0-alpha22).
+                val version = if (selector.group == "org.jetbrains.compose.material3") {
+                    libs.versions.material3.get()
+                } else {
+                    selector.version
+                }
+                useTarget(
+                    "$androidxGroup:${selector.module}:$version",
+                    "C4.3: unify Compose lineage to AndroidX on Android",
+                )
+            }
+        }
+    }
+    // Stable compose-bom lists material3 1.4.0; keep the whole material3 atomic group on the
+    // catalog pin so EditorTopBar's TopAppBar matches the CMP-compiled signature.
+    resolutionStrategy.eachDependency {
+        if (requested.group == "androidx.compose.material3") {
+            useVersion(libs.versions.material3.get())
+            because("Pin androidx Material3 to catalog (CMP-aligned); ignore stable BOM 1.4.0")
+        }
+    }
 }
 
 android {
@@ -16,8 +72,8 @@ android {
         applicationId = "me.rosuh.easywatermark"
         minSdk = (Apps.minSdk)
         targetSdk = (Apps.targetSdk)
-        versionCode = 21000
-        versionName = "2.10.0"
+        versionCode = (Apps.versionCode)
+        versionName = (Apps.versionName)
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -35,45 +91,121 @@ android {
             )
         }
 
+        // H1: near-release measurement / Baseline Profile generation target.
+        // - minify + shrink inherited from release (official: non-debuggable optimized app)
+        // - debug signing so local install works without release keystore
+        // - package stays me.rosuh.easywatermark (no .debug suffix) for TARGET_PACKAGE
+        // - proguard: release rules + app/benchmark-rules.pro (must exist)
         create("benchmark") {
             initWith(release)
             signingConfig = signingConfigs.getByName("debug")
+            isDebuggable = false
             // [START_EXCLUDE silent]
             // Selects release buildType if the benchmark buildType not available in other modules.
             matchingFallbacks.add("release")
             // [END_EXCLUDE]
-            proguardFiles("benchmark-rules.pro")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "coroutines.pro",
+                "proguard-rules.pro",
+                "benchmark-rules.pro",
+            )
         }
     }
 
-    packagingOptions {
+    packaging {
         resources.excludes.add("DebugProbesKt.bin")
     }
 
-    android.buildFeatures.viewBinding = true
-    
     namespace = "me.rosuh.easywatermark"
 
     buildFeatures {
+        buildConfig = true
         compose = true
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion = libs.versions.androidxComposeCompiler.get()
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
     }
 
+    // AGP 9 built-in Kotlin: jvmToolchain stays on android.kotlin.
     kotlin {
         jvmToolchain(17)
     }
+}
 
-    applicationVariants.configureEach {
-        outputs.configureEach {
-            (this as? ApkVariantOutputImpl)?.outputFileName =
-                "EasyWatermark-$versionName-$versionCode.apk"
-        }
+// Opt-in Compose Compiler stability reports (diagnose Editor/Gallery recompose).
+// Release only when -PcomposeCompilerReports=true (debug Live Literals skew reports).
+// ./gradlew :app:compileReleaseKotlin -PcomposeCompilerReports=true
+// → app/build/compose_compiler/
+composeCompiler {
+    if (providers.gradleProperty("composeCompilerReports").orNull == "true") {
+        reportsDestination = layout.buildDirectory.dir("compose_compiler")
+        metricsDestination = layout.buildDirectory.dir("compose_compiler")
     }
 }
 
+/**
+ * S4d-360/S4d-362: public Android Components artifacts API for custom APK naming.
+ * Replaces removed `applicationVariants` + internal `ApkVariantOutputImpl` (no reflection).
+ * Listens to [SingleArtifact.APK] (directory) and copies the packaged APK under the release name.
+ *
+ * Deterministic output (C4.0):
+ * - release: `app/build/outputs/apk/release/renamed/` (release.yml contract, unchanged)
+ * - other variants: `app/build/outputs/renamed-apk/<variant>/` (outside AGP standard APK tree
+ *   so `connectedDebugAndroidTest` no longer collides with `copyRenamedDebugApk`)
+ * assemble<Variant> is finalizedBy the matching copy task so the rename always runs with assemble.
+ */
+abstract class CopyRenamedApkTask : DefaultTask() {
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val apkFolder: DirectoryProperty
+
+    @get:OutputDirectory
+    abstract val outputFolder: DirectoryProperty
+
+    @get:Input
+    abstract val apkFileName: Property<String>
+
+    @TaskAction
+    fun copy() {
+        val apk = apkFolder.get().asFile
+            .listFiles()
+            ?.firstOrNull { it.isFile && it.extension.equals("apk", ignoreCase = true) }
+            ?: error("No APK found in ${apkFolder.get().asFile}")
+        val outDir = outputFolder.get().asFile.apply { mkdirs() }
+        apk.copyTo(File(outDir, apkFileName.get()), overwrite = true)
+    }
+}
+
+val apkBaseName = "EasyWatermark-${Apps.versionName}-${Apps.versionCode}.apk"
+extensions.configure<ApplicationAndroidComponentsExtension>("androidComponents") {
+    onVariants { variant ->
+        val capitalized = variant.name.replaceFirstChar { it.uppercase() }
+        val copyTask = tasks.register<CopyRenamedApkTask>("copyRenamed${capitalized}Apk") {
+            // Release keeps release.yml path; non-release moves outside outputs/apk/<variant>.
+            val renamedDir = if (variant.name == "release") {
+                "outputs/apk/release/renamed"
+            } else {
+                "outputs/renamed-apk/${variant.name}"
+            }
+            outputFolder.set(layout.buildDirectory.dir(renamedDir))
+            apkFileName.set(apkBaseName)
+        }
+        // Public API: wire task input to packaged APK directory (SingleArtifact.APK is a Directory).
+        variant.artifacts.use(copyTask)
+            .wiredWith(CopyRenamedApkTask::apkFolder)
+            .toListenTo(SingleArtifact.APK)
+
+        // S4d-362: toListenTo alone does not schedule the listener; attach to assemble so the
+        // renamed APK is always produced for assembleRelease / assembleDebug / etc.
+        tasks.matching { it.name == "assemble$capitalized" }.configureEach {
+            finalizedBy(copyTask)
+        }
+    }
+}
 
 dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
@@ -82,22 +214,19 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     implementation(libs.core.ktx)
+    implementation(libs.androidx.core.splashscreen)
     ksp(libs.room.compiler)
 
     implementation(libs.datastore.preference)
 
     // di
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
-    androidTestImplementation(libs.hilt.testing)
-    kspAndroidTest(libs.hilt.compiler)
+//    implementation(libs.hilt.android)
+//    ksp(libs.hilt.compiler)
+//    androidTestImplementation(libs.hilt.testing)
+//    kspAndroidTest(libs.hilt.compiler)
 
-    implementation(libs.asynclayout.inflater)
-
-    implementation(libs.glide)
-    ksp(libs.glide.compiler)
-
-    implementation(libs.compressor)
+    // Production-parity custom color dialog (ColorOption → ColorPickerDialog).
+    implementation(libs.colorpicker)
 
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlin.coroutine.android)
@@ -105,31 +234,16 @@ dependencies {
 
     implementation(libs.appcompat)
     implementation(libs.material)
-    implementation(libs.fragment.ktx)
-    implementation(libs.activity.ktx)
     implementation(libs.lifecycle.runtime.ktx)
-    implementation(libs.lifecycle.livedata.ktx)
     implementation(libs.lifecycle.viewmodel.ktx)
-    implementation(libs.viewpager2)
-    implementation(libs.recyclerview)
-    implementation(libs.constraintlayout)
     implementation(libs.exifinterface)
-    implementation(libs.palette.ktx)
     implementation(libs.profileinstaller)
 
-    implementation(libs.colorpicker)
-
-
     testImplementation(libs.test.junit)
-    testImplementation(libs.test.rules)
-    testImplementation(libs.test.runner)
-    androidTestImplementation(libs.mockito.core)
-    androidTestImplementation(libs.mockito.android)
-    androidTestImplementation(libs.robolectric)
-    androidTestImplementation(libs.hamcrest.library)
-    androidTestImplementation(libs.test.espresso.core)
-    androidTestImplementation(libs.test.uiautomator)
+    testImplementation(libs.robolectric)
     androidTestImplementation(libs.test.ext.junit)
+    // Explicit runner for AndroidJUnitRunner (C4.0); not production implementation.
+    androidTestImplementation(libs.test.runner)
 
     // or only import the main APIs for the underlying toolkit systems,
     // such as input and measurement/layout
@@ -138,9 +252,9 @@ dependencies {
 //    androidTestImplementation(composeBom)
     implementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(platform(libs.androidx.compose.bom))
-    //    implementation("androidx.compose.material3:material3:1.2.0-alpha09")
-//    implementation("androidx.compose.material3:material3-window-size-class:1.1.2")
-//    implementation(libs.material)
+    // Material3 stays an explicit catalog pin (1.5.0-alpha22 ↔ CMP). Do not use
+    // enforcedPlatform(compose-bom): stable BOM lists material3 1.4.0 and would win,
+    // causing EditorTopBar TopAppBar NoSuchMethodError at runtime.
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material3.windowSizeClass)
 //    implementation("androidx.compose.ui:ui")
@@ -163,25 +277,23 @@ dependencies {
 
 //    implementation("com.google.accompanist:accompanist-permissions:0.33.2-alpha")
     implementation(libs.accompanist.permissions)
-//    implementation("io.coil-kt:coil-compose:2.3.0")
-    implementation(libs.coil.kt)
+    // ADR-0028: Coil 3 lives on :shared (api). Keep optional direct dep for app-only AsyncImage call sites
+    // until fully migrated; no coil-network.
     implementation(libs.coil.kt.compose)
-    implementation(libs.coil.kt.svg)
-
-//    implementation("androidx.compose.runtime:runtime-livedata:1.5.3")
-    implementation(libs.androidx.compose.runtime.livedata)
 
 //    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
     implementation(libs.androidx.lifecycle.runtime.compose)
 
 //    implementation("androidx.navigation:navigation-compose:2.7.4")
     implementation(libs.androidx.navigation.compose)
-
-//    implementation("com.google.accompanist:accompanist-navigation-animation:0.31.1-alpha")
-    implementation(libs.accompanist.navigation.animation)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(project(":shared"))
 
 //    implementation("androidx.constraintlayout:constraintlayout-compose:1.0.1")
     implementation(libs.androidx.constraintlayout.compose)
-    implementation(libs.androidx.motionlayoout.compose)
+//    implementation(libs.androidx.motionlayoout.compose)
 
+    implementation(project.dependencies.platform(libs.koin.bom))
+    implementation(libs.koin.core)
+    implementation(libs.koin.android)
 }

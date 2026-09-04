@@ -1,0 +1,10 @@
+executionPrerequisite: >-
+  Launch screen is showing after a fresh start (Choose Images visible).
+steps:
+  - echo: Import samples and open the tiled editor
+  - tap:
+      id: store-seed-editor
+  - wait: 5000
+  - await:
+      idle: true
+      timeout: 15000

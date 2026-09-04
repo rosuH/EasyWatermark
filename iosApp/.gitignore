@@ -1,0 +1,7 @@
+# Xcode per-user state and build output for the iosApp skeleton (C5.1 / S4d-25).
+# The committed project is the .xcodeproj + sources; everything below is generated.
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcworkspace/xcuserdata/

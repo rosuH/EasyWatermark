@@ -1,0 +1,9 @@
+executionPrerequisite: >-
+  Editor Style tab is open on the color option.
+steps:
+  - echo: Open the export sheet
+  - tap:
+      id: store-seed-export
+  - wait: 1500
+  - await:
+      idle: true

@@ -1,0 +1,34 @@
+unstable class me.rosuh.easywatermark.data.model.ImageInfo {
+  stable val uri: MediaRef
+  stable var width: Int
+  stable var height: Int
+  stable var inSample: Int
+  stable var scaleX: Float
+  stable var scaleY: Float
+  unstable var result: Result<*>?
+  runtime var jobState: JobState
+  stable var isInDelModel: Boolean
+  stable val offsetX: Float
+  stable val offsetY: Float
+  <runtime stability> = Unstable
+}
+stable class me.rosuh.easywatermark.data.model.JobState.Ready {
+  <runtime stability> = Stable
+}
+stable class me.rosuh.easywatermark.data.model.JobState.Ing {
+  <runtime stability> = Stable
+}
+unstable class me.rosuh.easywatermark.data.model.JobState.Success {
+unstable class me.rosuh.easywatermark.data.model.entity.Template {
+  stable var id: Int
+  stable val content: String?
+  unstable var creationDate: Instant?
+  unstable var lastModifiedDate: Instant?
+  <runtime stability> = Unstable
+}
+stable class me.rosuh.easywatermark.data.repo.TemplateRepository {
+  runtime val templateDao: TemplateDao?
+  runtime val ioContext: CoroutineContext
+  <runtime stability> = 
+}
+stable class me.rosuh.easywatermark.data.repo.UserConfigRepository {

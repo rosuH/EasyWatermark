@@ -1,0 +1,167 @@
+app/build/compose_compiler/app-composables.txt:restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun me.rosuh.easywatermark.ui.AndroidEditorScreen(
+app/build/compose_compiler/app-composables.txt-  imageList: List<ImageInfo>
+app/build/compose_compiler/app-composables.txt-  waterMark: WaterMark
+app/build/compose_compiler/app-composables.txt-  stable onBack: Function0<Unit>
+app/build/compose_compiler/app-composables.txt-  stable onOffsetChanged: Function1<ImageInfo, Unit>
+app/build/compose_compiler/app-composables.txt-  stable modifier: Modifier? = @static <expression>
+app/build/compose_compiler/app-composables.txt-  selectedImage: ImageInfo? = @static null
+app/build/compose_compiler/app-composables.txt-  stable onImageSelected: Function1<ImageInfo, Unit>? = @static <expression>
+app/build/compose_compiler/app-composables.txt-  stable onWaterMrkChange: Function1<WatermarkConfigChange, Unit>? = @static <expression>
+app/build/compose_compiler/app-composables.txt-  stable onIconPicked: Function1<Uri, Unit>? = @static <expression>
+app/build/compose_compiler/app-composables.txt-  stable onAddMoreImages: Function0<Unit>? = @static <expression>
+app/build/compose_compiler/app-composables.txt-  stable onShowSaveDialog: Function0<Unit>? = @static <expression>
+app/build/compose_compiler/app-composables.txt-  stable onGoAboutScreen: Function0<Unit>? = @static <expression>
+app/build/compose_compiler/app-composables.txt-  templates: List<Template>? = @static <expression>
+app/build/compose_compiler/app-composables.txt-  stable onUseTemplate: Function1<Template, Unit>? = @static <expression>
+app/build/compose_compiler/app-composables.txt-  stable onAddTemplate: Function1<String, Unit>? = @static <expression>
+app/build/compose_compiler/app-composables.txt-  stable onUpdateTemplate: Function1<Template, Unit>? = @static <expression>
+app/build/compose_compiler/app-composables.txt-  stable onDeleteTemplate: Function1<Template, Unit>? = @static <expression>
+app/build/compose_compiler/app-composables.txt-)
+app/build/compose_compiler/app-composables.txt-restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun me.rosuh.easywatermark.ui.EditorFilmstripThumb(
+app/build/compose_compiler/app-composables.txt-  imageInfo: ImageInfo
+app/build/compose_compiler/app-composables.txt-  stable contentDescription: String
+app/build/compose_compiler/app-composables.txt-  stable modifier: Modifier? = @static <expression>
+app/build/compose_compiler/app-composables.txt-)
+app/build/compose_compiler/app-composables.txt:restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun me.rosuh.easywatermark.ui.WaterMarkCanvas(
+app/build/compose_compiler/app-composables.txt-  stable modifier: Modifier? = @static <expression>
+app/build/compose_compiler/app-composables.txt-  waterMark: WaterMark
+app/build/compose_compiler/app-composables.txt-  selectedImage: ImageInfo
+app/build/compose_compiler/app-composables.txt-  stable onOffsetChanged: Function1<@[ParameterName(name = 'info')] ImageInfo, Unit>
+app/build/compose_compiler/app-composables.txt-  stable onUpdateUriFailed: Function1<SecurityException, Unit>? = @static <expression>
+app/build/compose_compiler/app-composables.txt-)
+app/build/compose_compiler/app-composables.txt-restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun me.rosuh.easywatermark.ui.AboutScreenAndroid(
+app/build/compose_compiler/app-composables.txt-  stable versionName: String
+app/build/compose_compiler/app-composables.txt-  stable showBounds: Boolean
+app/build/compose_compiler/app-composables.txt-  stable dynamicColorOn: Boolean
+app/build/compose_compiler/app-composables.txt-  stable preferInAppGallery: Boolean
+app/build/compose_compiler/app-composables.txt-  stable onBack: Function0<Unit>
+app/build/compose_compiler/app-composables.txt-  stable onOpenLink: Function1<String, Unit>
+app/build/compose_compiler/app-composables.txt-  stable onOpenSource: Function0<Unit>
+app/build/compose_compiler/app-composables.txt-  stable onToggleBounds: Function1<Boolean, Unit>
+app/build/compose_compiler/app-composables.txt-  stable onToggleDynamicColor: Function1<Boolean, Unit>
+app/build/compose_compiler/app-composables.txt-  stable onTogglePreferInAppGallery: Function1<Boolean, Unit>
+app/build/compose_compiler/app-composables.txt-  stable modifier: Modifier? = @static <expression>
+app/build/compose_compiler/app-composables.txt-)
+app/build/compose_compiler/app-composables.txt-restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun me.rosuh.easywatermark.ui.SaveExportSheetAndroid(
+app/build/compose_compiler/app-composables.txt-  stable imageCount: Int
+app/build/compose_compiler/app-composables.txt-  images: List<ImageInfo>? = @static <expression>
+app/build/compose_compiler/app-composables.txt-  stable selectedFormatLabel: ImageFormat
+app/build/compose_compiler/app-composables.txt-  stable quality: Int
+app/build/compose_compiler/app-composables.txt-  stable resultSummaryText: String
+--
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt:restartable skippable scheme("[0, [0]]") fun me.rosuh.easywatermark.ui.EditorPhotoStrip(
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  images: List<ImageInfo>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  selectedImage: ImageInfo?
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable modifier: Modifier? = @static <expression>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable onImageSelected: Function1<ImageInfo, Unit>? = @static <expression>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable thumbnail: Function5<@[ParameterName(name = 'imageInfo')] ImageInfo, @[ParameterName(name = 'contentDescription')] String, @[ParameterName(name = 'modifier')] Modifier, Composer, Int, Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-)
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-restartable skippable scheme("[androidx.compose.ui.UiComposable, [androidx.compose.ui.UiComposable]]") fun me.rosuh.easywatermark.ui.EditorFilmstripScaffold(
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  items: List<T>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable keyOf: Function1<T, String>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable selectedKey: String?
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable canSelect: Function1<T, Boolean>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable onItemSelected: Function1<T, Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable modifier: Modifier? = @static <expression>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable testTag: String? = @static "editorFilmstripScaffold"
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable itemContent: Function4<@[ParameterName(name = 'item')] T, @[ParameterName(name = 'contentModifier')] Modifier, Composer, Int, Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-)
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-restartable skippable scheme("[androidx.compose.ui.UiComposable, [androidx.compose.ui.UiComposable]]") fun me.rosuh.easywatermark.ui.EditorPreviewFrame(
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable hasImage: Boolean
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable emptyText: String
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable modifier: Modifier? = @static <expression>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable preview: Function3<@[ParameterName(name = 'modifier')] Modifier, Composer, Int, Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-)
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-restartable skippable scheme("[androidx.compose.ui.UiComposable, [androidx.compose.ui.UiComposable]]") fun me.rosuh.easywatermark.ui.EditorProgressivePhotoStrip(
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  presentation: EditorProgressiveSlotPresentation
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable thumbnail: Function5<ImageInfo, String, Modifier, Composer, Int, Unit>
+--
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt:restartable skippable scheme("[androidx.compose.ui.UiComposable, [androidx.compose.ui.UiComposable], [androidx.compose.ui.UiComposable], [androidx.compose.ui.UiComposable], [androidx.compose.ui.UiComposable], [androidx.compose.ui.UiComposable]]") fun me.rosuh.easywatermark.ui.EditorScreen(
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  imageList: List<ImageInfo>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  waterMark: WaterMark
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  selectedImage: ImageInfo?
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  templates: List<Template>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  icons: EditorUiIcons
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable preview: Function3<Modifier, Composer, Int, Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable thumbnail: Function5<@[ParameterName(name = 'image')] ImageInfo, @[ParameterName(name = 'contentDescription')] String, @[ParameterName(name = 'modifier')] Modifier, Composer, Int, Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable optionItem: Function4<@[ParameterName(name = 'spec')] EditorOptionSpec, @[ParameterName(name = 'selected')] Boolean, Composer, Int, Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable colorOption: Function5<@[ParameterName(name = 'modifier')] Modifier, @[ParameterName(name = 'waterMark')] WaterMark, @[ParameterName(name = 'onColor')] Function1<Int, Unit>, Composer, Int, Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable iconOption: Function5<@[ParameterName(name = 'modifier')] Modifier, @[ParameterName(name = 'waterMark')] WaterMark, @[ParameterName(name = 'onIcon')] Function1<MediaRef, Unit>, Composer, Int, Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable onBack: Function0<Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable onAddMoreImages: Function0<Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable onShowSaveDialog: Function0<Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable onGoAboutScreen: Function0<Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable onImageSelected: Function1<ImageInfo, Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable onConfigChange: Function1<WatermarkConfigChange, Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable onUseTemplate: Function1<Template, Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable onAddTemplate: Function1<String, Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable onUpdateTemplate: Function1<Template, Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable onDeleteTemplate: Function1<Template, Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable modifier: Modifier? = @static <expression>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable layoutClass: EditorLayoutClass? = @static <expression>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-)
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-restartable skippable scheme("[androidx.compose.ui.UiComposable, [androidx.compose.ui.UiComposable], [androidx.compose.ui.UiComposable], [androidx.compose.ui.UiComposable], [androidx.compose.ui.UiComposable]]") fun me.rosuh.easywatermark.ui.EditorScreenShell(
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable showPhotoStrip: Boolean
+--
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt:restartable skippable scheme("[androidx.compose.ui.UiComposable, [androidx.compose.ui.UiComposable], [androidx.compose.ui.UiComposable]]") fun me.rosuh.easywatermark.ui.GalleryDialogShell(
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  images: List<Image>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable title: String
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  closeIcon: Painter
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  searchIcon: Painter
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  checkIcon: Painter
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  selectedCountIcon: Painter
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable closeContentDescription: String
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable searchContentDescription: String
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable selectedCountContentDescription: String
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable modifier: Modifier? = @static <expression>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable contentWindowInsets: WindowInsets? = @dynamic <expression>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable backHandler: Function3<@[ParameterName(name = 'onBack')] Function0<Unit>, Composer, Int, Unit>? = @static <expression>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable onLoadImages: Function0<Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable onDismiss: Function1<@[ParameterName(name = 'selectedImages')] List<Image>, Unit>? = @static <expression>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable onImageSelected: Function3<@[ParameterName(name = 'image')] Image, @[ParameterName(name = 'index')] Int, @[ParameterName(name = 'isSelected')] Boolean, Unit>? = @static <expression>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable onPickImageViaSystem: Function0<Unit>? = @static <expression>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable thumbnail: Function5<@[ParameterName(name = 'image')] Image, @[ParameterName(name = 'contentDescription')] String, @[ParameterName(name = 'modifier')] Modifier, Composer, Int, Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-)
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun me.rosuh.easywatermark.ui.GalleryDialogTopBarShell(
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable title: String
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  closeIcon: Painter
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  searchIcon: Painter
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable closeContentDescription: String
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable searchContentDescription: String
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable modifier: Modifier? = @static <expression>
+--
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt:restartable skippable scheme("[androidx.compose.ui.UiComposable, [androidx.compose.ui.UiComposable]]") fun me.rosuh.easywatermark.ui.GalleryImageGrid(
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  images: List<Image>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  checkIcon: Painter
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable isSelected: Function1<Image, Boolean>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable onSetSelected: Function3<Image, Int, Boolean, Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable modifier: Modifier? = @static <expression>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable minCellDp: Float = @static 80.0f
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable thumbnail: Function5<@[ParameterName(name = 'image')] Image, @[ParameterName(name = 'contentDescription')] String, @[ParameterName(name = 'modifier')] Modifier, Composer, Int, Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-)
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt:restartable skippable scheme("[androidx.compose.ui.UiComposable, [androidx.compose.ui.UiComposable]]") fun me.rosuh.easywatermark.ui.GalleryImageCard(
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  image: Image
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable selected: Boolean
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  checkIcon: Painter
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable selectedShape: RoundedCornerShape
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable onToggle: Function0<Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable modifier: Modifier? = @static <expression>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable thumbnail: Function5<@[ParameterName(name = 'image')] Image, @[ParameterName(name = 'contentDescription')] String, @[ParameterName(name = 'modifier')] Modifier, Composer, Int, Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-)
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun me.rosuh.easywatermark.ui.CircleCheckBox(
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable selected: Boolean
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  checkIcon: Painter
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable modifier: Modifier? = @static <expression>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable onClick: Function0<Unit>? = @static <expression>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-)
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun me.rosuh.easywatermark.ui.GallerySelectedCountFab(
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable selectedCount: Int
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  icon: Painter
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable contentDescription: String
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable modifier: Modifier? = @static <expression>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable onClick: Function0<Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-)
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-restartable skippable scheme("[androidx.compose.ui.UiComposable, [androidx.compose.ui.UiComposable]]") fun me.rosuh.easywatermark.ui.LaunchScreen(
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  aboutIcon: Painter
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable onPickImage: Function0<Unit>
+shared/build/compose_compiler/EasyWatermark:shared-composables.txt-  stable onGoAbout: Function0<Unit>

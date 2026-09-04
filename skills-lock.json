@@ -1,0 +1,143 @@
+{
+  "version": 1,
+  "skills": {
+    "auditing-compose-performance": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "audit/auditing-compose-performance/SKILL.md",
+      "computedHash": "4167ac935c297ce6ad75b4051589fea23ef21b24e81eb76ed3a60d9a99514d0a"
+    },
+    "avoiding-subcomposition-pitfalls": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "recomposition/avoiding-subcomposition-pitfalls/SKILL.md",
+      "computedHash": "aec572d18d340541b5905267ec6b5f33971e832029a18fc0f1dfc5714d17ccda"
+    },
+    "configuring-lazy-prefetch": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "lists/configuring-lazy-prefetch/SKILL.md",
+      "computedHash": "42d0d2de7dc686392190ec3e24a0deec24374f51be3b40a79d042a0a2b190630"
+    },
+    "debugging-recompositions": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "recomposition/debugging-recompositions/SKILL.md",
+      "computedHash": "c8312628a608bd62e38e1db15da30914128adb619c1ac2068425b83c68de41d8"
+    },
+    "deferring-state-reads": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "recomposition/deferring-state-reads/SKILL.md",
+      "computedHash": "ad9512c9219dfdcc31f5b397264ca663225b603b3dfcfd042ba869bdb7e35bd1"
+    },
+    "diagnosing-compose-stability": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "stability/diagnosing-compose-stability/SKILL.md",
+      "computedHash": "e46baca620d0a234cefb774f34c5d089326796e0d956d5f8d6c6493f68a9a714"
+    },
+    "enforcing-stability-in-ci": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "stability/enforcing-stability-in-ci/SKILL.md",
+      "computedHash": "d1310fcc7785675a9ca2f5b7aff35ef2a0bf8f105ab50d40d7815a5a06fc2860"
+    },
+    "generating-baseline-profiles": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "measurement/generating-baseline-profiles/SKILL.md",
+      "computedHash": "e551ab35f71c0cac52fda11ea4631ac6ea9ba5d69c53c9d00166652e9fab4c72"
+    },
+    "iterating-with-ai-and-mcp": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "hot-reload/iterating-with-ai-and-mcp/SKILL.md",
+      "computedHash": "e221af47bed85ee98146b130c89cf413db47720c5778f4258c29b2ba2c036ed9"
+    },
+    "migrating-to-modifier-node": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "modifiers/migrating-to-modifier-node/SKILL.md",
+      "computedHash": "fcd15a64f25f24aff17bf81b54e71030afb82472823ab37cbd114c80f3ffc71f"
+    },
+    "optimizing-lazy-layouts": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "lists/optimizing-lazy-layouts/SKILL.md",
+      "computedHash": "684714cece7b0b8ca1e326f38a18b2689883185bcc754ced68d465b62aa5cbc5"
+    },
+    "ordering-modifier-chains": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "modifiers/ordering-modifier-chains/SKILL.md",
+      "computedHash": "962358a48cabb3897a56ecd46997fbd8094bf2b0722086e26f17e7c7dbaf70bf"
+    },
+    "preserving-state-across-reloads": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "hot-reload/preserving-state-across-reloads/SKILL.md",
+      "computedHash": "0fcafc02330e8bf598607cef5a774de11eb83fcc9d03139d941a3ce9666e0b71"
+    },
+    "setting-up-compose-hotswan": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "hot-reload/setting-up-compose-hotswan/SKILL.md",
+      "computedHash": "3653e186781f339ba7ff59df9b8c8988a1828f6010cd5fc46feeba1518e8c76d"
+    },
+    "stabilizing-compose-types": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "stability/stabilizing-compose-types/SKILL.md",
+      "computedHash": "4c4217b602be891b1eafa7bf0a6b960b6dedc488c74140ed31ac6dbdfb671467"
+    },
+    "testing-compose-in-release-mode": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "measurement/testing-compose-in-release-mode/SKILL.md",
+      "computedHash": "1c25f11180feab88ecc907d60003a15f7c16bd4bc10cccc8b3ab63f577e5e643"
+    },
+    "tracing-recompositions-at-runtime": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "measurement/tracing-recompositions-at-runtime/SKILL.md",
+      "computedHash": "d85a6928d19ad32a54096707d7f66c28dfb37e59975361acf21d5ec91c8709be"
+    },
+    "understanding-hot-reload-limits": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "hot-reload/understanding-hot-reload-limits/SKILL.md",
+      "computedHash": "e9f685db88c2322aae571c67e2a554c0984fe2b342c42b7af22c45b97a88df2a"
+    },
+    "understanding-stability-inference": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "stability/understanding-stability-inference/SKILL.md",
+      "computedHash": "a48b31d84d23810af6fc0e42447a775f32b8390e16a2fcd31a990cd011172e36"
+    },
+    "using-efficient-effects": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "side-effects/using-efficient-effects/SKILL.md",
+      "computedHash": "30de443599bceda2de9c7c6de5e8cf7ac6e94c7d3bc8ceecb55698b34f020f68"
+    },
+    "using-stability-analyzer-ide-plugin": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "stability/using-stability-analyzer-ide-plugin/SKILL.md",
+      "computedHash": "4c5a682c9378e44f48a1e56fa65efbdff28f0f67e69031fce3932bd7cce51894"
+    },
+    "using-strong-skipping-correctly": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "recomposition/using-strong-skipping-correctly/SKILL.md",
+      "computedHash": "5ea3905ec25dcff40ed869587b3b236f87791ed13f71baf3f7b4d0d14e5d1329"
+    },
+    "visualizing-recomposition-cascades": {
+      "source": "skydoves/compose-performance-skills",
+      "sourceType": "github",
+      "skillPath": "stability/visualizing-recomposition-cascades/SKILL.md",
+      "computedHash": "26485b1d21d12a044363378e48f379f8ecb9dc749413b5715444b63845ac3bce"
+    }
+  }
+}

@@ -93,7 +93,7 @@ class ColoredImageVIew : AppCompatImageView {
         innerBitmap = drawable.toBitmap(measuredWidth, measuredHeight)
         sizeHasChanged = false
         innerBitmap?.let {
-            val sc = canvas?.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), null) ?: return
+            val sc = canvas.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), null)
             canvas.drawBitmap(it, 0f, 0f, paint)
             paint.xfermode = xfermode
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)

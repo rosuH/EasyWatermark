@@ -19,10 +19,22 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import me.rosuh.cmonet.CMonet
 import me.rosuh.easywatermark.R
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 
 fun Activity.isStoragePermissionGrated(permission: String): Boolean {
     return ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
 }
+
+/** Android 14+: user-selected photos only (no full READ_MEDIA_IMAGES). */
+fun Context.hasPartialMediaAccessOnly(): Boolean =
+    Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+        ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) !=
+            PackageManager.PERMISSION_GRANTED &&
+        ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED,
+        ) == PackageManager.PERMISSION_GRANTED
 
 fun Activity.checkReadingPermission(
     activityResultLauncher: ActivityResultLauncher<String>,
@@ -78,6 +90,12 @@ inline fun ViewModel.launch(crossinline action: suspend CoroutineScope.() -> Uni
         action()
     }
 }
+inline fun ViewModel.launch(context: CoroutineContext = EmptyCoroutineContext, crossinline action: suspend CoroutineScope.() -> Unit): Job {
+    return viewModelScope.launch(context) {
+        action()
+    }
+}
+
 
 /**
  * 主要角色用于整个UI的关键组件，如FAB、突出按钮、活动状态以及高阴影表面的色调。

@@ -1,0 +1,80 @@
+package me.rosuh.easywatermark.ui
+
+/**
+ * Hand-rolled editor layout class (ADR-0026 / S1).
+ *
+ * Hosts feed **window size in Dp** (not platform types). Width-primary:
+ * - Compact: width &lt; 600 — vertical stack (B density)
+ * - Medium: 600 ≤ width &lt; 800 — same stack as Compact (M1)
+ * - Expanded: 800 ≤ width &lt; 1440 — supporting-pane A (preview+filmstrip | inspector) (D1)
+ * - Wide: width ≥ 1440 — same dual-pane chrome as Expanded (owner 2026-08-10: no three-zone left rail)
+ *
+ * Fixtures:
+ * | Size | Class |
+ * | 360×640 | Compact |
+ * | 600×800 | Medium |
+ * | 799×800 | Medium |
+ * | 800×800 | Expanded |
+ * | 820×1180 | Expanded (iPad Air 11" portrait) |
+ * | 834×1210 | Expanded (iPad Pro 11" portrait) |
+ * | 1032×1376 | Expanded (iPad Pro 13" portrait) |
+ * | 1280×800 | Expanded |
+ * | 1440×900 | Wide (layout chrome = Expanded dual-pane) |
+ */
+enum class EditorLayoutClass {
+    Compact,
+    Medium,
+    Expanded,
+    Wide,
+}
+
+/** Width at which [EditorLayoutClass.Medium] begins (inclusive), in Dp. */
+const val EDITOR_LAYOUT_MEDIUM_MIN_WIDTH_DP: Float = 600f
+
+/**
+ * Width at which supporting-pane A ([EditorLayoutClass.Expanded]) begins (inclusive), in Dp.
+ * ADR-0026 D1, amended 2026-08-16: 840 → 800.
+ *
+ * Material's Expanded boundary is 840, but every 11" iPad lands just under it in portrait
+ * (Air 11" 820pt, Pro 11" 834pt) and fell back to the phone stack. The inspector is a fixed
+ * [EDITOR_EXPANDED_CONTROLS_PANE_MAX_DP] rail, so the preview pane still gets ~416dp at 800 —
+ * wider than any phone the Compact path already serves. 800 rather than 820 keeps headroom
+ * against safe-area inset consumption; nothing in the iPad lineup sits between 744 and 820,
+ * so the two values are equivalent in practice.
+ */
+const val EDITOR_LAYOUT_EXPANDED_MIN_WIDTH_DP: Float = 800f
+
+/**
+ * Width band for [EditorLayoutClass.Wide] (inclusive), in Dp.
+ * Historically ADR-0026 C-W1 three-zone; chrome is dual-pane same as Expanded (owner 2026-08-10).
+ */
+const val EDITOR_LAYOUT_WIDE_MIN_WIDTH_DP: Float = 1440f
+
+/**
+ * Classify a host window from size in **Dp** (logical pixels, not raw px).
+ * Non-finite or non-positive widths map to [EditorLayoutClass.Compact].
+ */
+fun editorLayoutClass(widthDp: Float, heightDp: Float = 0f): EditorLayoutClass {
+    // heightDp reserved; classification is width-primary (K1: no FoldingFeature).
+    @Suppress("UNUSED_PARAMETER")
+    val ignoredHeight = heightDp
+    if (!widthDp.isFinite() || widthDp <= 0f) return EditorLayoutClass.Compact
+    return when {
+        widthDp >= EDITOR_LAYOUT_WIDE_MIN_WIDTH_DP -> EditorLayoutClass.Wide
+        widthDp >= EDITOR_LAYOUT_EXPANDED_MIN_WIDTH_DP -> EditorLayoutClass.Expanded
+        widthDp >= EDITOR_LAYOUT_MEDIUM_MIN_WIDTH_DP -> EditorLayoutClass.Medium
+        else -> EditorLayoutClass.Compact
+    }
+}
+
+/**
+ * Gallery adaptive min cell size (Dp). At ~360dp width with ~1.5dp gutters yields ~4 columns;
+ * wider windows gain more columns (not fixed-4-only).
+ */
+const val GALLERY_ADAPTIVE_MIN_CELL_DP: Float = 80f
+
+/** Supporting-pane inspector max width (Dp). Fixed rail — A polish P1. */
+const val EDITOR_EXPANDED_CONTROLS_PANE_MAX_DP: Float = 360f
+
+/** Horizontal padding inside supporting panes (Dp) — A polish letterbox/clip fix. */
+const val EDITOR_SUPPORTING_PANE_PADDING_DP: Float = 12f

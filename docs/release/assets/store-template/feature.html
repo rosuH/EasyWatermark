@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<!--
+  Google Play feature graphic 1024×500.
+  Layout borrowed from static/preview.png (README): left copy + two phones
+  on a warm field. Frames current 3.0 UI, not the legacy View shots.
+  Query: shot1, shot2, title, sub, lang
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; }
+  body {
+    background:
+      radial-gradient(80vw 70vw at 88% 110%, rgba(255, 222, 50, 0.22), transparent 60%),
+      radial-gradient(70vw 60vw at -8% -20%, rgba(38, 38, 17, 0.10), transparent 55%),
+      linear-gradient(165deg, #d8d0b4 0%, #c8bf9a 48%, #b8ae86 100%);
+    font-family: -apple-system, "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    align-items: center;
+    padding: 0 4.6vw;
+    gap: 2vw;
+  }
+  .copy {
+    flex: 0 0 36vw;
+    display: flex;
+    flex-direction: column;
+    gap: 1.6vw;
+    z-index: 2;
+  }
+  .mark {
+    width: 3.4vw; height: 3.4vw;
+    background: #FFDE32;
+    border-radius: 0.6vw;
+    box-shadow: 0 0.4vw 1.2vw rgba(33, 27, 0, 0.18);
+  }
+  h1 {
+    color: #211B00;
+    font-size: 6.4vw;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+  html[lang="zh"] h1 { font-weight: 700; letter-spacing: 0.02em; font-size: 6.8vw; }
+  .sub {
+    color: rgba(33, 27, 0, 0.62);
+    font-size: 2.15vw;
+    font-weight: 600;
+    line-height: 1.35;
+    max-width: 34vw;
+  }
+  .phones {
+    flex: 1 1 auto;
+    height: 100%;
+    position: relative;
+  }
+  .phone {
+    position: absolute;
+    width: 20.2vw;
+    padding: 0.55vw;
+    background: linear-gradient(180deg, #1a1a10, #0c0c07);
+    border-radius: 2.1vw;
+    box-shadow:
+      inset 0 0 0 0.07vw rgba(255, 222, 50, 0.28),
+      0 1.2vw 2.8vw rgba(0, 0, 0, 0.38);
+  }
+  .phone img {
+    display: block; width: 100%; height: auto;
+    border-radius: 1.6vw;
+    background: #000;
+  }
+  .phone.a {
+    left: 8vw; top: 50%;
+    transform: translateY(-50%) rotate(-6.5deg);
+    z-index: 1;
+  }
+  .phone.b {
+    left: 27.2vw; top: 50%;
+    transform: translateY(-52%) rotate(5deg);
+    z-index: 2;
+  }
+</style>
+</head>
+<body>
+  <div class="copy">
+    <div class="mark"></div>
+    <h1 id="title"></h1>
+    <div class="sub" id="sub"></div>
+  </div>
+  <div class="phones">
+    <div class="phone a"><img id="shot1" alt=""></div>
+    <div class="phone b"><img id="shot2" alt=""></div>
+  </div>
+<script>
+  const q = new URLSearchParams(location.search);
+  const get = (k, d = "") => q.get(k) ?? d;
+  document.documentElement.lang = get("lang", "zh");
+  document.getElementById("title").textContent = get("title").replaceAll("\\n", "\n");
+  document.getElementById("sub").textContent = get("sub").replaceAll("\\n", "\n");
+  document.getElementById("shot1").src = get("shot1");
+  document.getElementById("shot2").src = get("shot2");
+</script>
+</body>
+</html>

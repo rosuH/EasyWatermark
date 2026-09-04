@@ -1,0 +1,519 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		EW00000000000000000000F2 /* PhotoTransferLimiter.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW00000000000000000000F1 /* PhotoTransferLimiter.swift */; };
+		EW00000000000000000000E2 /* TransferTaskHandleRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW00000000000000000000E1 /* TransferTaskHandleRegistry.swift */; };
+
+		EW0000000000000000000041 /* iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000031 /* iOSApp.swift */; };
+		EW0000000000000000000042 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000032 /* ContentView.swift */; };
+		EW0000000000000000000048 /* KotlinInterop.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000038 /* KotlinInterop.swift */; };
+		EW0000000000000000000049 /* WatermarkWorkflow.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000039 /* WatermarkWorkflow.swift */; };
+		EW000000000000000000004A /* ImageExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW000000000000000000003A /* ImageExport.swift */; };
+		EW000000000000000000004C /* PhotosPickerBatchGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW000000000000000000003C /* PhotosPickerBatchGate.swift */; };
+		EW000000000000000000004D /* PhotoImportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW000000000000000000003D /* PhotoImportCoordinator.swift */; };
+		EW000000000000000000004E /* ProgressiveImportNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW000000000000000000003E /* ProgressiveImportNotifications.swift */; };
+		EW000000000000000000004F /* PhotoLibraryPHPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW000000000000000000003F /* PhotoLibraryPHPicker.swift */; };
+		EW0000000000000000000072 /* PickerFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000071 /* PickerFlowUITests.swift */; };
+		EW0000000000000000000092 /* ewm-db-ch.db in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000090 /* ewm-db-ch.db */; };
+		EW0000000000000000000093 /* ewm-db-eng.db in Resources */ = {isa = PBXBuildFile; fileRef = EW0000000000000000000091 /* ewm-db-eng.db */; };
+		EW00000000000000000000A1 /* ic_log_transparent.dat in Resources */ = {isa = PBXBuildFile; fileRef = EW00000000000000000000A0 /* ic_log_transparent.dat */; };
+		EW00000000000000000000B1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EW00000000000000000000B0 /* Assets.xcassets */; };
+		EW00000000000000000000B3 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = EW00000000000000000000B2 /* InfoPlist.strings */; };
+		EW00000000000000000000C1 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = EW00000000000000000000C0 /* PrivacyInfo.xcprivacy */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		EW0000000000000000000081 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EW0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EW0000000000000000000020;
+			remoteInfo = iosApp;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		EW00000000000000000000F1 /* PhotoTransferLimiter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoTransferLimiter.swift; sourceTree = "<group>"; };
+		EW00000000000000000000E1 /* TransferTaskHandleRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransferTaskHandleRegistry.swift; sourceTree = "<group>"; };
+
+		EW0000000000000000000030 /* iosApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iosApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EW0000000000000000000031 /* iOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSApp.swift; sourceTree = "<group>"; };
+		EW0000000000000000000032 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		EW0000000000000000000038 /* KotlinInterop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KotlinInterop.swift; sourceTree = "<group>"; };
+		EW0000000000000000000039 /* WatermarkWorkflow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatermarkWorkflow.swift; sourceTree = "<group>"; };
+		EW000000000000000000003A /* ImageExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageExport.swift; sourceTree = "<group>"; };
+		EW000000000000000000003B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		EW000000000000000000003C /* PhotosPickerBatchGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotosPickerBatchGate.swift; sourceTree = "<group>"; };
+		EW000000000000000000003D /* PhotoImportCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoImportCoordinator.swift; sourceTree = "<group>"; };
+		EW000000000000000000003E /* ProgressiveImportNotifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressiveImportNotifications.swift; sourceTree = "<group>"; };
+		EW000000000000000000003F /* PhotoLibraryPHPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLibraryPHPicker.swift; sourceTree = "<group>"; };
+		EW0000000000000000000070 /* iosAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iosAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		EW0000000000000000000071 /* PickerFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickerFlowUITests.swift; sourceTree = "<group>"; };
+		EW0000000000000000000090 /* ewm-db-ch.db */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ewm-db-ch.db"; sourceTree = "<group>"; };
+		EW0000000000000000000091 /* ewm-db-eng.db */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ewm-db-eng.db"; sourceTree = "<group>"; };
+		EW00000000000000000000A0 /* ic_log_transparent.dat */ = {isa = PBXFileReference; lastKnownFileType = file; path = ic_log_transparent.dat; sourceTree = "<group>"; };
+		EW00000000000000000000B0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		EW00000000000000000000B4 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		EW00000000000000000000B5 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		EW00000000000000000000C0 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		EW0000000000000000000051 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EW0000000000000000000055 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		EW0000000000000000000010 = {
+			isa = PBXGroup;
+			children = (
+				EW0000000000000000000011 /* iosApp */,
+				EW0000000000000000000015 /* iosAppUITests */,
+				EW0000000000000000000012 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		EW0000000000000000000011 /* iosApp */ = {
+			isa = PBXGroup;
+			children = (
+				EW0000000000000000000031 /* iOSApp.swift */,
+				EW0000000000000000000032 /* ContentView.swift */,
+				EW000000000000000000003C /* PhotosPickerBatchGate.swift */,
+				EW000000000000000000003D /* PhotoImportCoordinator.swift */,
+				EW00000000000000000000F1 /* PhotoTransferLimiter.swift */,
+				EW00000000000000000000E1 /* TransferTaskHandleRegistry.swift */,
+				EW000000000000000000003E /* ProgressiveImportNotifications.swift */,
+				EW000000000000000000003F /* PhotoLibraryPHPicker.swift */,
+				EW000000000000000000003B /* Info.plist */,
+				EW00000000000000000000C0 /* PrivacyInfo.xcprivacy */,
+				EW00000000000000000000B2 /* InfoPlist.strings */,
+				EW00000000000000000000B0 /* Assets.xcassets */,
+				EW0000000000000000000038 /* KotlinInterop.swift */,
+				EW0000000000000000000039 /* WatermarkWorkflow.swift */,
+				EW000000000000000000003A /* ImageExport.swift */,
+				EW0000000000000000000013 /* Resources */,
+			);
+			path = iosApp;
+			sourceTree = "<group>";
+		};
+		EW0000000000000000000012 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				EW0000000000000000000030 /* iosApp.app */,
+				EW0000000000000000000070 /* iosAppUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		EW0000000000000000000013 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				EW00000000000000000000A0 /* ic_log_transparent.dat */,
+				EW0000000000000000000094 /* Seed */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		EW0000000000000000000015 /* iosAppUITests */ = {
+			isa = PBXGroup;
+			children = (
+				EW0000000000000000000071 /* PickerFlowUITests.swift */,
+			);
+			path = iosAppUITests;
+			sourceTree = "<group>";
+		};
+		EW0000000000000000000094 /* Seed */ = {
+			isa = PBXGroup;
+			children = (
+				EW0000000000000000000090 /* ewm-db-ch.db */,
+				EW0000000000000000000091 /* ewm-db-eng.db */,
+			);
+			path = Seed;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXVariantGroup section */
+		EW00000000000000000000B2 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				EW00000000000000000000B4 /* zh-Hans */,
+				EW00000000000000000000B5 /* zh-Hant */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin PBXNativeTarget section */
+		EW0000000000000000000020 /* iosApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EW0000000000000000000063 /* Build configuration list for PBXNativeTarget "iosApp" */;
+			buildPhases = (
+				EW0000000000000000000053 /* Build Shared.framework (Kotlin/Native) */,
+				EW0000000000000000000050 /* Sources */,
+				EW0000000000000000000051 /* Frameworks */,
+				EW0000000000000000000052 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = iosApp;
+			productName = iosApp;
+			productReference = EW0000000000000000000030 /* iosApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+		EW0000000000000000000021 /* iosAppUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EW0000000000000000000066 /* Build configuration list for PBXNativeTarget "iosAppUITests" */;
+			buildPhases = (
+				EW0000000000000000000054 /* Sources */,
+				EW0000000000000000000055 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				EW0000000000000000000080 /* PBXTargetDependency */,
+			);
+			name = iosAppUITests;
+			productName = iosAppUITests;
+			productReference = EW0000000000000000000070 /* iosAppUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		EW0000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					EW0000000000000000000020 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+					EW0000000000000000000021 = {
+						CreatedOnToolsVersion = 15.0;
+						TestTargetID = EW0000000000000000000020;
+					};
+				};
+			};
+			buildConfigurationList = EW0000000000000000000060 /* Build configuration list for PBXProject "iosApp" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+				"zh-Hans",
+				"zh-Hant",
+			);
+			mainGroup = EW0000000000000000000010;
+			productRefGroup = EW0000000000000000000012 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				EW0000000000000000000020 /* iosApp */,
+				EW0000000000000000000021 /* iosAppUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		EW0000000000000000000052 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EW00000000000000000000B1 /* Assets.xcassets in Resources */,
+				EW00000000000000000000C1 /* PrivacyInfo.xcprivacy in Resources */,
+				EW00000000000000000000B3 /* InfoPlist.strings in Resources */,
+				EW00000000000000000000A1 /* ic_log_transparent.dat in Resources */,
+				EW0000000000000000000092 /* ewm-db-ch.db in Resources */,
+				EW0000000000000000000093 /* ewm-db-eng.db in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		EW0000000000000000000053 /* Build Shared.framework (Kotlin/Native) */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Build Shared.framework (Kotlin/Native)";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# C5.1: stage :shared Kotlin/Native framework for this Xcode CONFIGURATION/SDK/ARCH.\n# Xcode Cloud: iosApp/ci_scripts/ci_post_clone.sh installs JDK 17 at $CI_DERIVED_DATA_PATH/JDK/Home.\nif [ -z \"$JAVA_HOME\" ] && [ -n \"$CI_DERIVED_DATA_PATH\" ] && [ -x \"$CI_DERIVED_DATA_PATH/JDK/Home/bin/java\" ]; then\n  export JAVA_HOME=\"$CI_DERIVED_DATA_PATH/JDK/Home\"\n  export PATH=\"$JAVA_HOME/bin:$PATH\"\nfi\nif [ -n \"$CI_DERIVED_DATA_PATH\" ]; then\n  export GRADLE_USER_HOME=\"$CI_DERIVED_DATA_PATH/.gradle\"\nfi\nif [ \"$EW_SKIP_KOTLIN_FRAMEWORK\" = \"1\" ]; then\n  echo \"note: EW_SKIP_KOTLIN_FRAMEWORK=1 -> skipping gradle embedAndSign (framework assumed prebuilt)\"\nelse\ncd \"$SRCROOT/..\"\nif [ \"$CI_XCODE_CLOUD\" = \"TRUE\" ]; then\n  ./gradlew :shared:embedAndSignAppleFrameworkForXcode --max-workers=1 --no-daemon\nelse\n  ./gradlew :shared:embedAndSignAppleFrameworkForXcode --max-workers=8\nfi\nfi\n\"$SRCROOT/ci_scripts/embed_shared_privacy_info.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		EW0000000000000000000050 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EW0000000000000000000041 /* iOSApp.swift in Sources */,
+				EW0000000000000000000042 /* ContentView.swift in Sources */,
+				EW000000000000000000004C /* PhotosPickerBatchGate.swift in Sources */,
+				EW000000000000000000004D /* PhotoImportCoordinator.swift in Sources */,
+				EW00000000000000000000F2 /* PhotoTransferLimiter.swift in Sources */,
+				EW00000000000000000000E2 /* TransferTaskHandleRegistry.swift in Sources */,
+				EW000000000000000000004E /* ProgressiveImportNotifications.swift in Sources */,
+				EW000000000000000000004F /* PhotoLibraryPHPicker.swift in Sources */,
+				EW0000000000000000000048 /* KotlinInterop.swift in Sources */,
+				EW0000000000000000000049 /* WatermarkWorkflow.swift in Sources */,
+				EW000000000000000000004A /* ImageExport.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EW0000000000000000000054 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EW0000000000000000000072 /* PickerFlowUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		EW0000000000000000000080 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EW0000000000000000000020 /* iosApp */;
+			targetProxy = EW0000000000000000000081 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		EW0000000000000000000061 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		EW0000000000000000000062 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		EW0000000000000000000064 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS = NO;
+				CODE_SIGN_STYLE = Automatic;
+				COMPRESS_PNG_FILES = NO;
+				CURRENT_PROJECT_VERSION = 30000;
+				DEVELOPMENT_TEAM = 85MZB3GP6S;
+				ENABLE_PREVIEWS = YES;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
+				);
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = iosApp/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Easy Watermark";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 3.0.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					Shared,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = me.rosuh.easywatermark.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		EW0000000000000000000065 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS = NO;
+				CODE_SIGN_STYLE = Automatic;
+				COMPRESS_PNG_FILES = NO;
+				CURRENT_PROJECT_VERSION = 30000;
+				DEVELOPMENT_TEAM = 85MZB3GP6S;
+				ENABLE_PREVIEWS = YES;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
+				);
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = iosApp/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Easy Watermark";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 3.0.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					Shared,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = me.rosuh.easywatermark.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		EW0000000000000000000067 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 30000;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 3.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = me.rosuh.easywatermark.iosUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = iosApp;
+			};
+			name = Debug;
+		};
+		EW0000000000000000000068 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 30000;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 3.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = me.rosuh.easywatermark.iosUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = iosApp;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		EW0000000000000000000060 /* Build configuration list for PBXProject "iosApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EW0000000000000000000061 /* Debug */,
+				EW0000000000000000000062 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		EW0000000000000000000063 /* Build configuration list for PBXNativeTarget "iosApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EW0000000000000000000064 /* Debug */,
+				EW0000000000000000000065 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		EW0000000000000000000066 /* Build configuration list for PBXNativeTarget "iosAppUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EW0000000000000000000067 /* Debug */,
+				EW0000000000000000000068 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = EW0000000000000000000001 /* Project object */;
+}

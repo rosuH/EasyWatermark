@@ -1,0 +1,4 @@
+# Live editor on the sample ID, Style tab. Driven by -storeSeedScene idcard.
+steps:
+  - echo: ID + Style is a store-seed capture, not a Compose tap flow
+  - wait: 100

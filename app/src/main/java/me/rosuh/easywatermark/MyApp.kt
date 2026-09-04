@@ -6,19 +6,16 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.core.content.edit
-import dagger.hilt.android.HiltAndroidApp
-import kotlinx.coroutines.*
 import me.rosuh.cmonet.CMonet
-import me.rosuh.easywatermark.data.repo.WaterMarkRepository
-import javax.inject.Inject
+import me.rosuh.easywatermark.di.appModule
+import me.rosuh.easywatermark.platform.AndroidMemoryDiagnostics
+import me.rosuh.easywatermark.utils.bitmap.BitmapCache
+import org.koin.android.ext.koin.androidContext
+import org.koin.android.ext.koin.androidLogger
+import org.koin.core.context.startKoin
 import kotlin.system.exitProcess
 
-@HiltAndroidApp
 class MyApp : Application() {
-
-    @Inject
-    lateinit var waterMarkRepo: WaterMarkRepository
-
     private val sp by lazy { getSharedPreferences(SP_NAME, Context.MODE_PRIVATE) }
 
     override fun attachBaseContext(base: Context?) {
@@ -29,14 +26,38 @@ class MyApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        if (checkRecoveryMode()) {
-            return
-        } else {
-            applicationScope.launch {
-                waterMarkRepo.resetModeToText()
-            }
-            CMonet.init(this, true)
+        me.rosuh.easywatermark.ui.StartupTrace.mark("app_create_start")
+        // DEBUG-only recomposition tracing for compose-stability-analyzer / IDE heatmap.
+        // Release keeps the gate off so TraceRecomposition residual is map-lookup + early return.
+        com.skydoves.compose.stability.runtime.ComposeStabilityAnalyzer.setEnabled(BuildConfig.DEBUG)
+        startKoin {
+            // 将 Koin 日志记录到 Android logger
+            androidLogger()
+            // 引用 Android 上下文
+            androidContext(this@MyApp)
+            modules(appModule)
         }
+        CMonet.init(this, true)
+        // ADR-0028: process-wide Coil ImageLoader (MediaStore ProductThumb Fetcher).
+        me.rosuh.easywatermark.ui.image.installProductImageLoaderFactory()
+        // I3: ContentResolver for platformMotionPolicy (animator scale / reduce motion).
+        me.rosuh.easywatermark.platform.AndroidMotionContentResolver.install(contentResolver)
+        // WP-C/D: Android 17 memory-limiter observability (debug-only, local, no upload).
+        AndroidMemoryDiagnostics.logHistoricalExits(this)
+        AndroidMemoryDiagnostics.registerLocalProfilingTriggers(this)
+        if (checkRecoveryMode()) return
+        me.rosuh.easywatermark.ui.StartupTrace.mark("app_create_end")
+    }
+
+    /**
+     * WP-B: drop cached full-res bitmaps under system memory pressure.
+     * UI_HIDDEN → soft ~25%; BACKGROUND+ → evictAll. Never recycle from cache.
+     */
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        val action = BitmapCache.trimForMemoryLevel(level)
+        me.rosuh.easywatermark.render.AndroidPreviewWorkingSet.onTrimMemory()
+        AndroidMemoryDiagnostics.logTrim(level, action)
     }
 
     private fun checkRecoveryMode(): Boolean {
@@ -103,8 +124,6 @@ class MyApp : Application() {
 
     companion object {
 
-        val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-
         @SuppressLint("StaticFieldLeak")
         lateinit var instance: Context
             private set
@@ -112,6 +131,11 @@ class MyApp : Application() {
         var recoveryMode = false
             private set
 
+        /**
+ * Enter recovery after this many uncaught crashes without a long stable window.
+ * [me.rosuh.easywatermark.ui.MainActivity.onResume] clears the counter only after
+ * 30s of stable foreground — so a crash-loop on pick→editor still accumulates.
+         */
         private const val CRASH_COUNT = 2
 
         const val SP_NAME = "sp_water_mark_crash_info"

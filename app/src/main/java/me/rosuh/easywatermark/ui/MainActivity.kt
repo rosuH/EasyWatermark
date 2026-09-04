@@ -1,867 +1,1132 @@
 package me.rosuh.easywatermark.ui
 
-import android.animation.ObjectAnimator
-import android.annotation.SuppressLint
+import me.rosuh.easywatermark.platform.DynamicColorCapability
+import me.rosuh.easywatermark.platform.platformMotionPolicy
+import me.rosuh.easywatermark.ui.theme.MotionPolicy
+import org.koin.android.ext.android.inject
+import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
-import android.content.Intent.ACTION_SEND
 import android.content.pm.PackageManager
-import android.content.res.ColorStateList
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import android.view.*
-import android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-import android.widget.Button
-import android.widget.TextView
-import android.widget.Toast
-import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.SystemBarStyle
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.core.content.edit
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowCompat
-import androidx.core.view.forEach
-import androidx.fragment.app.commit
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.flowWithLifecycle
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
+import android.content.Intent
+import android.net.Uri
+import androidx.core.content.IntentCompat
+import me.rosuh.easywatermark.utils.FileUtils
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import me.rosuh.easywatermark.shared.generated.resources.Res
+import me.rosuh.easywatermark.shared.generated.resources.copy_failed
+import me.rosuh.easywatermark.shared.generated.resources.copy_success
+import me.rosuh.easywatermark.shared.generated.resources.dev_comment
+import me.rosuh.easywatermark.shared.generated.resources.dialog_cancel_exist_confirm
+import me.rosuh.easywatermark.shared.generated.resources.dialog_content_exist_confirm
+import me.rosuh.easywatermark.ui.compose.EwmConfirmDialog
+import me.rosuh.easywatermark.shared.generated.resources.dialog_export_to_gallery
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_cd_done
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_cd_progress
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_failed
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_partial
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_success
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_progress
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_exporting
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_destination_album
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_filename_policy_android
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_counts
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_success_where
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_error_generic
+import me.rosuh.easywatermark.shared.generated.resources.dialog_title_exist_confirm
+import me.rosuh.easywatermark.shared.generated.resources.recovery_mode_closed
+import me.rosuh.easywatermark.shared.generated.resources.share
+import me.rosuh.easywatermark.shared.generated.resources.store_not_found
+import me.rosuh.easywatermark.shared.generated.resources.tips_confirm_dialog
+import org.jetbrains.compose.resources.stringResource as cmpStringResource
+import androidx.core.os.BuildCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.tabs.TabLayout
-import dagger.hilt.android.AndroidEntryPoint
+import androidx.compose.runtime.produceState
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.MyApp
-import me.rosuh.easywatermark.R
-import me.rosuh.easywatermark.data.model.FuncTitleModel
-import me.rosuh.easywatermark.data.model.ImageInfo
-import me.rosuh.easywatermark.data.model.ViewInfo
-import me.rosuh.easywatermark.data.repo.WaterMarkRepository
-import me.rosuh.easywatermark.ui.about.AboutActivity
-import me.rosuh.easywatermark.ui.adapter.FuncPanelAdapter
-import me.rosuh.easywatermark.ui.adapter.PhotoListPreviewAdapter
-import me.rosuh.easywatermark.ui.dialog.*
-import me.rosuh.easywatermark.ui.panel.*
-import me.rosuh.easywatermark.ui.widget.CenterLayoutManager
-import me.rosuh.easywatermark.ui.widget.LaunchView
-import me.rosuh.easywatermark.utils.FileUtils
-import me.rosuh.easywatermark.utils.VibrateHelper
-import me.rosuh.easywatermark.utils.ktx.*
-import me.rosuh.easywatermark.utils.onItemClick
+import android.widget.Toast
+import androidx.compose.runtime.Composable
+import me.rosuh.easywatermark.BuildConfig
+import me.rosuh.easywatermark.data.model.toEditorSelectionUi
+import me.rosuh.easywatermark.ui.about.AboutDevCard
+import me.rosuh.easywatermark.ui.about.AboutScreen
+import me.rosuh.easywatermark.ui.about.AboutScreenIcons
+import me.rosuh.easywatermark.ui.editorLayoutClass
+import me.rosuh.easywatermark.ui.usesLargeScreenDialog
+import me.rosuh.easywatermark.ui.about.AboutViewModel
+import me.rosuh.easywatermark.ui.about.OpenSourceOverlayHost
+import me.rosuh.easywatermark.utils.ktx.openLink
+import me.rosuh.easywatermark.utils.ktx.toUri
+import me.rosuh.easywatermark.utils.ktx.uriFromExportResultData
+import androidx.compose.ui.layout.ContentScale
+import me.rosuh.easywatermark.data.model.ImageFormat
+import me.rosuh.easywatermark.ui.compose.GalleryDialog
+import me.rosuh.easywatermark.ui.image.ProductAsyncImage
+import me.rosuh.easywatermark.ui.image.ProductThumb
+import me.rosuh.easywatermark.ui.save.SaveExportSheetShell
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
+@BuildCompat.PrereleaseSdkCheck
 
-@AndroidEntryPoint
-class MainActivity : AppCompatActivity() {
+class MainActivity : ComponentActivity() {
 
-    private lateinit var pickIconPhotoPickerLauncher: ActivityResultLauncher<PickVisualMediaRequest>
-    private lateinit var pickMultiplePhotoPickerLauncher: ActivityResultLauncher<PickVisualMediaRequest>
-    private lateinit var pickIconLegacyLauncher: ActivityResultLauncher<String>
-    private val viewModel: MainViewModel by viewModels()
-
-    private val currentBgColor: Int
-        get() = ((launchView.parent as? View?)?.background as? ColorDrawable)?.color ?: colorSurface
-
-    private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
-
-    private var pendingPermissionAction: (() -> Unit)? = null
-
-    private val isSystemPhotoPickerAvailable by lazy {
-        ActivityResultContracts.PickVisualMedia.isPhotoPickerAvailable(this)
+    companion object {
+        const val TAG = "MainActivity"
     }
 
-    private val contentFunList: List<FuncTitleModel> by lazy {
-        listOf(
-            FuncTitleModel(
-                FuncTitleModel.FuncType.Text,
-                getString(R.string.water_mark_mode_text),
-                R.drawable.ic_func_text
-            ),
-            FuncTitleModel(
-                FuncTitleModel.FuncType.Icon,
-                getString(R.string.water_mark_mode_image),
-                R.drawable.ic_func_sticker
-            )
-        )
-    }
+    private val viewModel: MainViewModel by viewModel()
 
-    private val styleFunList: List<FuncTitleModel> by lazy {
-        listOf(
-            FuncTitleModel(
-                FuncTitleModel.FuncType.TileMode,
-                getString(R.string.title_tile_mode),
-                R.drawable.ic_tile_mode
-            ),
-            FuncTitleModel(
-                FuncTitleModel.FuncType.TextSize,
-                getString(R.string.title_text_size),
-                R.drawable.ic_func_size
-            ),
-            FuncTitleModel(
-                FuncTitleModel.FuncType.TextStyle,
-                getString(R.string.title_text_style),
-                R.drawable.ic_func_typeface
-            ),
-            FuncTitleModel(
-                FuncTitleModel.FuncType.Color,
-                getString(R.string.title_text_color),
-                R.drawable.ic_func_color
-            ),
-            FuncTitleModel(
-                FuncTitleModel.FuncType.Alpha,
-                getString(R.string.style_alpha),
-                R.drawable.ic_func_opacity
-            ),
-            FuncTitleModel(
-                FuncTitleModel.FuncType.Degree,
-                getString(R.string.title_text_rotate),
-                R.drawable.ic_func_angle
-            )
-        )
-    }
+    private val aboutViewModel: AboutViewModel by viewModel()
 
-    private val layoutFunList: List<FuncTitleModel> by lazy {
-        listOf(
-            FuncTitleModel(
-                FuncTitleModel.FuncType.Horizon,
-                getString(R.string.title_horizon_layout),
-                R.drawable.ic_func_layour_horizontal
-            ),
-            FuncTitleModel(
-                FuncTitleModel.FuncType.Vertical,
-                getString(R.string.title_vertical_layout),
-                R.drawable.ic_func_layout_vertical
-            )
-        )
-    }
+    // (ADR-0007): live dynamic-color reads route through the platform capability (Android
+    // delegates to the :cmonet module). Replaces the prior direct isDynamicColorAvailable() calls.
+    private val dynamicColorCapability: DynamicColorCapability by inject()
 
-    private val funcAdapter by lazy {
-        FuncPanelAdapter(ArrayList(contentFunList)).apply {
-            setHasStableIds(true)
-        }
-    }
+    // ACTION_SEND share-in bridge (ADR-0016): set from intent, observed in setContent → navigate.
+    private var pendingShareUris by mutableStateOf<List<Uri>?>(null)
 
-    private val photoListPreviewAdapter by lazy { PhotoListPreviewAdapter(this) }
+    /** Emulator store-capture: `--es storeSeedScene photo`. Null in production launches. */
+    private var storeSeedScene by mutableStateOf<String?>(null)
 
-    private val vibrateHelper: VibrateHelper by lazy { VibrateHelper.get() }
+    /** True while Android system splash should stay up (Launch fade serial hold). */
+    private var keepSplash = false
 
-    private lateinit var launchView: LaunchView
-
-    private var bgTransformAnimator: ObjectAnimator? = null
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        if (MyApp.recoveryMode) {
-            setContentView(R.layout.activity_recovery)
-            initRecoveryView()
-            return
-        }
-        launchView = LaunchView(this)
-        setContentView(launchView)
-        if (savedInstanceState == null) {
-            supportFragmentManager.commit {
-                setReorderingAllowed(true)
-            }
-        }
-        initView()
-        initObserver()
-        registerResultCallback()
-        checkHadCrash()
-        // Activity was recycled but dialog still showing in some case?
-        SaveImageBSDialogFragment.safetyHide(this@MainActivity.supportFragmentManager)
-    }
-
-    private fun initRecoveryView() {
-        val tvCrashInfo = findViewById<TextView>(R.id.tv_crash_info).apply {
-            with(getSharedPreferences(MyApp.SP_NAME, MODE_PRIVATE)) {
-                val crashInfo = getString(MyApp.KEY_STACK_TRACE, "")
-                text = crashInfo
-            }
-        }
-        val btnCopy = findViewById<Button>(R.id.btn_copy).apply {
-            setOnClickListener {
-                try {
-                    val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    val clip = ClipData.newPlainText(tvCrashInfo.text, tvCrashInfo.text)
-                    clipboard.setPrimaryClip(clip)
-                    Toast.makeText(this@MainActivity, R.string.copy_success, Toast.LENGTH_SHORT)
-                        .show()
-                } catch (e: Exception) {
-                    Toast.makeText(this@MainActivity, R.string.copy_failed, Toast.LENGTH_SHORT)
-                        .show()
-                }
-            }
-        }
-        val btnSendEmail = findViewById<Button>(R.id.btn_email).apply {
-            setOnClickListener {
-                viewModel.extraCrashInfo(this@MainActivity, tvCrashInfo.text.toString())
-            }
-        }
-        val btnTelegram = findViewById<Button>(R.id.btn_telegram).apply {
-            setOnClickListener {
-                openLink("https://t.me/rosuh")
-            }
-        }
-        val btnStore = findViewById<Button>(R.id.btn_store).apply {
-            setOnClickListener {
-                openLink(Uri.parse("market://details?id=me.rosuh.easywatermark")) {
-                    Toast.makeText(this@MainActivity, R.string.store_not_found, Toast.LENGTH_SHORT)
-                        .show()
-                }
-            }
-        }
-
-        findViewById<Button>(R.id.btn_close_recovery_mode).apply {
-            setOnClickListener {
-                (MyApp.instance as MyApp).launchSuccess()
-                Toast.makeText(this@MainActivity, R.string.recovery_mode_closed, Toast.LENGTH_SHORT)
-                    .show()
-            }
-        }
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (MyApp.recoveryMode) {
-            return
-        }
-    }
-
-    private fun registerResultCallback() {
-        pickMultiplePhotoPickerLauncher =
-            registerForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
-                handlePickedMedia(REQ_CODE_PICK_IMAGE, uris)
-            }
-        pickIconPhotoPickerLauncher =
-            registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-                val result = uri?.let(::listOf) ?: emptyList()
-                handlePickedMedia(REQ_PICK_ICON, result)
-            }
-        pickIconLegacyLauncher =
-            registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-                val result = uri?.let(::listOf) ?: emptyList()
-                handlePickedMedia(REQ_PICK_ICON, result)
-            }
-        requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            if (isGranted) {
-                pendingPermissionAction?.invoke()
-                pendingPermissionAction = null
-                return@registerForActivityResult
-            }
-            Toast.makeText(
-                this,
-                getString(R.string.request_permission_failed),
-                Toast.LENGTH_SHORT
-            ).show()
-            pendingPermissionAction = null
-        }
-    }
-
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        this.intent = intent
+        setIntent(intent)
+        handleShareIntent(intent)
+        handleStoreSeedIntent(intent)
     }
 
-    override fun onStart() {
-        super.onStart()
-        // Accepting shared images from other apps
-        if (intent?.action == ACTION_SEND && intent?.data != null) {
-            dealWithImage(listOf(intent?.data!!))
+    private fun handleStoreSeedIntent(intent: Intent?) {
+        if (!BuildConfig.DEBUG) return
+        val scene = intent?.getStringExtra(StoreCaptureSeed.EXTRA_SCENE) ?: return
+        storeSeedScene = scene
+        val uris = StoreCaptureSeed.querySeedUris(this)
+        if (uris.isNotEmpty()) {
+            pendingShareUris = uris
         }
     }
 
+    private fun handleShareIntent(intent: Intent?) {
+        if (intent == null) return
+        val uris: List<Uri> = when (intent.action) {
+            Intent.ACTION_SEND -> {
+                val stream = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
+                listOfNotNull(stream ?: intent.data)
+            }
+            Intent.ACTION_SEND_MULTIPLE ->
+                IntentCompat.getParcelableArrayListExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
+                    ?: emptyList()
+            else -> emptyList()
+        }
+        // Validate every shared uri, not just the first — a multi-share may mix in non-images.
+        val images = uris.filter { FileUtils.isImage(contentResolver, it) }
+        if (images.isNotEmpty()) {
+            pendingShareUris = images
+        }
+    }
+
+    // A stable launch resets the crash counter. Ported from the View-era onResume,
+    // which became dead once the Compose launcher took over (ADR-0016).
+    //
+    // Delay is intentionally long: the previous 1s window wiped the crash streak as soon as
+    // the launch screen appeared, so mid-session crashes (e.g. pick → editor) never reached
+    // recoveryMode (needs CRASH_COUNT=2 without a successful stable window in between).
     override fun onResume() {
         super.onResume()
-        if (MyApp.recoveryMode) {
-            return
-        }
+        if (MyApp.recoveryMode) return
         lifecycleScope.launch {
-            delay(1000)
-            if (this@MainActivity.isFinishing) {
-                return@launch
-            }
-            (MyApp.instance as? MyApp?)?.launchSuccess()
+            delay(30_000)
+            if (!isFinishing) (application as? MyApp)?.launchSuccess()
         }
     }
 
     override fun onDestroy() {
-        bgTransformAnimator?.cancel()
+        StartupTrace.firstScreenListener = null
+        StartupTrace.fullyDrawnListener = null
         super.onDestroy()
     }
 
-    private fun checkHadCrash() {
-        with(getSharedPreferences(MyApp.SP_NAME, MODE_PRIVATE)) {
-            val isCrash = getBoolean(MyApp.KEY_IS_CRASH, false)
-            if (!isCrash) {
-                return@with
-            }
-            val crashInfo = getString(MyApp.KEY_STACK_TRACE, "")
-            edit {
-                putBoolean(MyApp.KEY_IS_CRASH, false)
-                putString(MyApp.KEY_STACK_TRACE, "")
-            }
-            showCrashDialog(crashInfo)
+    private fun crashStackTrace(): String =
+        getSharedPreferences(MyApp.SP_NAME, MODE_PRIVATE).getString(MyApp.KEY_STACK_TRACE, "").orEmpty()
+
+    private fun copyCrashInfo(text: String) {
+        try {
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText(text, text))
+            Toast.makeText(this, sharedString(Res.string.copy_success), Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, sharedString(Res.string.copy_failed), Toast.LENGTH_SHORT).show()
         }
     }
 
-    private fun showCrashDialog(crashInfo: String?) {
-        MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.tips_tip_title)
-            .setMessage(R.string.msg_crash)
-            .setNegativeButton(
-                R.string.tips_cancel_dialog
-            ) { dialog, _ -> dialog?.dismiss() }
-            .setPositiveButton(
-                R.string.crash_mail
-            ) { dialog, _ ->
-                viewModel.extraCrashInfo(this, crashInfo)
-                dialog.dismiss()
-            }
-            .setCancelable(false)
-            .show()
-    }
-
-    private fun initObserver() {
-        lifecycleScope.launch {
-            viewModel.uiStateFlow.flowWithLifecycle(
-                this@MainActivity.lifecycle,
-                Lifecycle.State.STARTED
-            ).collect {
-                if (it == UiState.GoEditDialog) {
-                    TextWatermarkBSDFragment.safetyShow(supportFragmentManager)
-                }
-            }
+    @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
+        super.onCreate(savedInstanceState)
+        StartupTrace.mark("host_create_start")
+        StartupTrace.fullyDrawnListener = { reportFullyDrawn() }
+        if (intent?.getBooleanExtra("ewm_preview_probe", false) == true ||
+            System.getProperty("ewm.preview.probe") == "true"
+        ) {
+            me.rosuh.easywatermark.render.PreviewSourceReuseProbe.enabled = true
+            me.rosuh.easywatermark.render.PreviewSourceReuseProbe.reset()
+            android.util.Log.i("PreviewSourceReuse", "probe enabled")
         }
-        viewModel.waterMark.observe(this) {
-            if (it == null) {
-                return@observe
-            }
-            Log.i("initObserver", "$it")
-            launchView.post {
-                launchView.ivPhoto.config = it
-            }
-            if (it.markMode == WaterMarkRepository.MarkMode.Image && launchView.tabLayout.selectedTabPosition == 0) {
-                hideDetailPanel()
-            }
-            viewModel.resetJobStatus()
-        }
-        viewModel.selectedImage.observe(this) {
-            if (it == null || it.uri.toString().isBlank()) {
-                return@observe
-            }
-            try {
-                val isAnimating = launchView.toEditorMode()
-                if (isAnimating) {
-                    launchView.ivPhoto.updateUri(true, it)
-                    selectTab(0)
-                } else {
-                    launchView.ivPhoto.updateUri(false, it)
-                }
-            } catch (se: SecurityException) {
-                se.printStackTrace()
-                // reset the uri because we don't have permission -_-
-                viewModel.selectImage(Uri.EMPTY)
-            }
-        }
-        viewModel.imageList.observe(this) {
-            photoListPreviewAdapter.selectedPos = viewModel.nextSelectedPos
-            photoListPreviewAdapter.submitList(it.first.toList()) {
-                if (it.second.not()) {
-                    return@submitList
-                }
-                launchView.rvPhotoList.apply {
-                    post { smoothScrollToPosition(0) }
-                }
-            }
-        }
+        handleShareIntent(intent)
+        handleStoreSeedIntent(intent)
 
-        viewModel.saveResult.observe(this) {
-            if (it.isFailure()) {
-                when (it.code) {
-                    MainViewModel.TYPE_ERROR_SAVE_OOM -> {
-                        toast(getString(R.string.error_save_oom))
-                        CompressImageDialogFragment.safetyShow(supportFragmentManager)
-                        viewModel.resetJobStatus()
-                    }
-                    MainViewModel.TYPE_ERROR_FILE_NOT_FOUND -> toast(getString(R.string.error_file_not_found))
-                    MainViewModel.TYPE_ERROR_NOT_IMG -> toast(getString(R.string.error_not_img))
-                    else -> toast("${getString(R.string.tips_error)}: ${it.message}")
-                }
-                viewModel.resetJobStatus()
-            } else {
-                toast(it.message)
-            }
-        }
-
-        viewModel.colorPalette.observe(this) { palette ->
-            val bgColor = palette.bgColor(this)
-            val titleTextColor = palette.titleTextColor(this)
-
-            bgTransformAnimator = currentBgColor.toColor(bgColor) {
-                val c = it.animatedValue as Int
-                if (launchView.isEdit()) {
-                    doApplyBgChanged(c)
-                } else {
-                    doApplyBgChanged()
-                }
-            }
-            funcAdapter.textColor.toColor(titleTextColor) {
-                val c = it.animatedValue as Int
-                funcAdapter.applyTextColor(c)
-                launchView.tabLayout.setTabTextColors(c, this.colorPrimary)
-                launchView.toolbar.menu.forEach { menuItem ->
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        menuItem.iconTintList = ColorStateList.valueOf(c)
-                    } else {
-                        menuItem.icon?.setTint(c)
-                    }
-                }
-            }
-        }
-    }
-
-    private fun Context.toast(msg: String?) {
-        if (msg.isNullOrBlank()) return
-        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-    }
-
-    @SuppressLint("ClickableViewAccessibility")
-    private fun initView() {
-        doApplyBgChanged()
-        // prepare MotionLayout
-        launchView.setListener {
-            onModeChange { _, newMode ->
-                when (newMode) {
-                    LaunchView.ViewMode.Editor -> {
-                        launchView.logoView.stop()
-                    }
-                    LaunchView.ViewMode.LaunchMode -> {
-                        launchView.logoView.start()
-                    }
-                }
-            }
-        }
-        // setting tool bar
-        launchView.toolbar.apply {
-            navigationIcon =
-                ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_logo_tool_bar)
-            title = null
-            setSupportActionBar(this)
-            supportActionBar?.title = null
-        }
-        // go about page
-        launchView.ivGoAboutPage.setOnClickListener {
-            startActivity(Intent(this, AboutActivity::class.java))
-        }
-        // pick image button
-        launchView.ivSelectedPhotoTips.setOnClickListener {
-            performFileSearch(REQ_CODE_PICK_IMAGE)
-        }
-        // setting bg
-        launchView.ivPhoto.apply {
-            onBgReady { palette ->
-                viewModel.updateColorPalette(palette)
-            }
-            onOffsetChanged {
-                viewModel.updateOffset(it)
-            }
-            onScaleEnd {
-                viewModel.updateTextSize(it)
-            }
-        }
-        // functional panel in recyclerView
-        launchView.rvPanel.apply {
-            adapter = funcAdapter
-            setHasFixedSize(true)
-            layoutManager = CenterLayoutManager(this@MainActivity, RecyclerView.HORIZONTAL, false)
-            onItemClick { _, pos, v ->
-                val snapView = snapHelper.findSnapView(launchView.rvPanel.layoutManager)
-                if (snapView == v) {
-                    val item = (this.adapter as FuncPanelAdapter).dataSet[pos]
-                    handleFuncItem(item)
-                    funcAdapter.selectedPos = pos
-                } else {
-                    smoothScrollToPosition(pos)
-                }
-            }
-
-            onSnapViewPreview { snapView, _ ->
-                vibrateHelper.doVibrate(snapView)
-            }
-
-            onSnapViewSelected { snapView, pos ->
-                funcAdapter.selectedPos = pos
-                handleFuncItem(funcAdapter.dataSet[pos])
-                vibrateHelper.doVibrate(snapView)
-            }
-
-            post {
-                canAutoSelected = false
-                scrollToPosition(0)
-                canAutoSelected = true
-            }
-        }
-        // image list
-        launchView.rvPhotoList.apply {
-            enableBorder = true
-            adapter = photoListPreviewAdapter
-            setHasFixedSize(true)
-            layoutManager =
-                CenterLayoutManager(this@MainActivity, RecyclerView.HORIZONTAL, false).apply {
-                    onStartSmoothScroll {
-                        canTouch = false
-                    }
-                    onStopSmoothScroll {
-                        canTouch = true
-                    }
-                }
-
-            photoListPreviewAdapter.onRemove { imageInfo ->
-                viewModel.removeImage(imageInfo, photoListPreviewAdapter.selectedPos)
-            }
-
-            onItemClick { _, pos, v ->
-                val snapView = snapHelper.findSnapView(launchView.rvPanel.layoutManager)
-                if (snapView != v) {
-                    smoothScrollToPosition(pos)
-                }
-            }
-
-            onSnapViewPreview { snapView, _ ->
-                vibrateHelper.doVibrate(snapView)
-            }
-
-            onSnapViewSelected { snapView, pos ->
-                photoListPreviewAdapter.selectedPos = pos
-                val uri = photoListPreviewAdapter.getItem(pos)?.uri ?: return@onSnapViewSelected
-                viewModel.selectImage(uri)
-                vibrateHelper.doVibrate(snapView)
-            }
-        }
-
-        launchView.tabLayout.apply {
-            addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-                override fun onTabSelected(tab: TabLayout.Tab?) {
-                    if (tab == null) {
-                        return
-                    }
-                    hideDetailPanel()
-                    vibrateHelper.doVibrate(this@apply)
-                    val adapter = (launchView.rvPanel.adapter as? FuncPanelAdapter)
-                    when (tab.position) {
-                        0 -> {
-                            val curPos =
-                                if (launchView.ivPhoto.config?.markMode == WaterMarkRepository.MarkMode.Image) 1 else 0
-                            if (curPos == 0) {
-                                launchView.rvPanel.smoothScrollToPosition(0)
-                                adapter?.also {
-                                    it.seNewData(contentFunList, 0)
-                                    post { handleFuncItem(it.dataSet[0]) }
-                                }
-                            } else {
-                                hideDetailPanel()
-                                adapter?.seNewData(contentFunList, curPos)
-                                manuallySelectedItem(curPos)
-                            }
-                        }
-                        2 -> {
-                            launchView.rvPanel.smoothScrollToPosition(0)
-                            adapter?.also {
-                                it.seNewData(layoutFunList, 0)
-                                post { handleFuncItem(it.dataSet[0]) }
-                            }
-                        }
-                        else -> {
-                            launchView.rvPanel.smoothScrollToPosition(0)
-                            adapter?.also {
-                                it.seNewData(styleFunList, 0)
-                                post { handleFuncItem(it.dataSet[0]) }
-                            }
-                        }
-                    }
-                }
-
-                override fun onTabUnselected(tab: TabLayout.Tab?) {}
-
-                override fun onTabReselected(tab: TabLayout.Tab?) {
-                    if (tab?.position == 0) {
-                        handleFuncItem(contentFunList[0])
-                    }
-                }
-            })
-        }
-    }
-
-    private fun hideDetailPanel() {
-        commitWithAnimation {
-            supportFragmentManager.fragments.forEach {
-                remove(it)
-            }
-        }
-    }
-
-    private fun handleFuncItem(item: FuncTitleModel) {
-        Log.i("handleFuncItem", "item = $item")
-        when (item.type) {
-            FuncTitleModel.FuncType.Text -> {
-                TextContentDisplayFragment.replaceShow(this, launchView.fcFunctionDetail.id)
-            }
-            FuncTitleModel.FuncType.Icon -> {
-                performFileSearch(REQ_PICK_ICON)
-            }
-            FuncTitleModel.FuncType.Color -> {
-                ColorFragment.replaceShow(this, launchView.fcFunctionDetail.id)
-            }
-            FuncTitleModel.FuncType.Alpha -> {
-                AlphaPbFragment.replaceShow(this, launchView.fcFunctionDetail.id)
-            }
-            FuncTitleModel.FuncType.Degree -> {
-                DegreePbFragment.replaceShow(this, launchView.fcFunctionDetail.id)
-            }
-            FuncTitleModel.FuncType.TextStyle -> {
-                TextStyleFragment.replaceShow(this, launchView.fcFunctionDetail.id)
-            }
-            FuncTitleModel.FuncType.Vertical -> {
-                VerticalPbFragment.replaceShow(this, launchView.fcFunctionDetail.id)
-            }
-            FuncTitleModel.FuncType.Horizon -> {
-                HorizonPbFragment.replaceShow(this, launchView.fcFunctionDetail.id)
-            }
-            FuncTitleModel.FuncType.TextSize -> {
-                TextSizePbFragment.replaceShow(this, launchView.fcFunctionDetail.id)
-            }
-            FuncTitleModel.FuncType.TileMode -> {
-                TileModeFragment.replaceShow(this, launchView.fcFunctionDetail.id)
-            }
-        }
-    }
-
-    private fun setStatusBarColor(color: Int, isInEditMode: Boolean) {
-        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
-        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val systemUiAppearance = if (isInEditMode && this.isNight()) {
-                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-            } else {
-                0
-            }
-            window.insetsController?.setSystemBarsAppearance(
-                systemUiAppearance,
-                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-            )
-        } else {
-            val systemUiVisibilityFlags = if (!isInEditMode && !this.isNight()) {
-                window.decorView.systemUiVisibility or SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-            } else {
-                window.decorView.systemUiVisibility and SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
-            }
-            window.decorView.systemUiVisibility = systemUiVisibilityFlags
-        }
-        window.statusBarColor = color
-        window.findViewById<View>(android.R.id.content)?.foreground = null
-    }
-
-
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.menu, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
-        R.id.action_settings -> {
-            startActivity(Intent(this, AboutActivity::class.java))
-            true
-        }
-
-        R.id.action_pick -> {
-            performFileSearch(REQ_CODE_PICK_IMAGE)
-            true
-        }
-
-        R.id.action_save -> {
-            SaveImageBSDialogFragment.safetyShow(supportFragmentManager)
-            true
-        }
-        else -> {
-            super.onOptionsItemSelected(item)
-        }
-    }
-
-    /**
-     * Fires an intent to spin up the "file chooser" UI and select an image.
-     */
-    private fun performFileSearch(requestCode: Int) {
-        val request = PickVisualMediaRequest.Builder()
-            .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly)
-            .build()
-
-        if (isSystemPhotoPickerAvailable) {
-            launchView.logoView.stop()
-            when (requestCode) {
-                REQ_PICK_ICON -> pickIconPhotoPickerLauncher.launch(request)
-                else -> pickMultiplePhotoPickerLauncher.launch(request)
-            }
-            return
-        }
-
-        val launchLegacyPicker = {
-            if (requestCode == REQ_PICK_ICON) {
-                launchView.logoView.stop()
-                pickIconLegacyLauncher.launch("image/*")
-            } else {
-                openLegacyGallery()
-            }
-        }
-
-        pendingPermissionAction = launchLegacyPicker
-        checkReadingPermission(requestPermissionLauncher, grant = {
-            val action = pendingPermissionAction
-            pendingPermissionAction = null
-            action?.invoke()
-        })
-    }
-
-    private fun openLegacyGallery() {
-        GalleryFragment().apply {
-            launchView.logoView.stop()
-            doOnDismiss {
-                launchView.logoView.start()
-            }
-            show(supportFragmentManager, "GalleryFragment")
-        }
-    }
-
-    private fun dealWithImage(uri: List<Uri>) {
-        if (FileUtils.isImage(this.contentResolver, uri.first())) {
-            viewModel.updateImageList(uri)
-        } else {
-            Toast.makeText(
-                this,
-                getString(R.string.tips_choose_other_file_type),
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-    }
-
-    private fun handlePickedMedia(requestCode: Int, list: List<Uri>) {
-        launchView.logoView.start()
-        val finalList = list.filter {
-            FileUtils.isImage(this.contentResolver, it)
-        }
-        if (finalList.isEmpty()) {
-            Toast.makeText(
-                this,
-                getString(R.string.tips_do_not_choose_image),
-                Toast.LENGTH_SHORT
-            ).show()
-            if (requestCode == REQ_PICK_ICON && viewModel.waterMark.value?.markMode == WaterMarkRepository.MarkMode.Text) {
-                manuallySelectedItem(0)
-            }
-            return
-        }
-        when (requestCode) {
-            REQ_CODE_PICK_IMAGE -> {
-                Log.i(MainActivity::class.simpleName, finalList.toTypedArray().contentToString())
-                dealWithImage(finalList)
-            }
-            REQ_PICK_ICON -> {
-                viewModel.updateIcon(finalList.first())
-            }
-        }
-    }
-
-    private fun manuallySelectedItem(pos: Int) {
-        launchView.rvPanel.canAutoSelected = false
-        funcAdapter.selectedPos = pos
-        launchView.rvPanel.scrollToPosition(pos)
-        launchView.rvPanel.canAutoSelected = true
-    }
-
-    override fun onBackPressed() {
-        if (MyApp.recoveryMode) {
-            super.onBackPressed()
-            return
-        }
-        if (launchView.mode == LaunchView.ViewMode.LaunchMode) {
-            super.onBackPressed()
-            return
-        }
-        MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.dialog_title_exist_confirm)
-            .setMessage(R.string.dialog_content_exist_confirm)
-            .setNegativeButton(
-                R.string.tips_confirm_dialog
-            ) { _, _ ->
-                resetView()
-            }
-            .setPositiveButton(
-                R.string.dialog_cancel_exist_confirm
-            ) { dialog, _ ->
-                dialog.dismiss()
-            }
-            .setCancelable(false)
-            .show()
-    }
-
-    private fun resetView() {
-        launchView.toLaunchMode()
-        viewModel.resetJobStatus()
-        viewModel.clearData()
-        launchView.ivPhoto.reset()
-        bgTransformAnimator?.cancel()
-        TextContentDisplayFragment.remove(this)
-        doApplyBgChanged()
-        hideDetailPanel()
-    }
-
-    private fun doApplyBgChanged(
-        color: Int = ContextCompat.getColor(
-            this,
-            R.color.md_theme_dark_background
+        val shareIn = !pendingShareUris.isNullOrEmpty()
+        val firstRoute = ProductShellNav.routeFromLaunchUi(
+            viewModel.launchScreenUiStateFlow.value.uiState,
         )
-    ) {
-        (launchView.parent as? View?)?.setBackgroundColor(color)
-        window?.navigationBarColor = Color.TRANSPARENT
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            window?.navigationBarDividerColor = Color.TRANSPARENT
+        val expectLaunchFade = !MyApp.recoveryMode &&
+            !shareIn &&
+            firstRoute == ProductShellNav.Route.Launch &&
+            platformMotionPolicy() != MotionPolicy.Off
+        keepSplash = expectLaunchFade
+        splashScreen.setKeepOnScreenCondition { keepSplash }
+        splashScreen.setOnExitAnimationListener { splashView ->
+            splashView.remove()
+            ColdLaunchReveal.releaseHostHold()
         }
-        setStatusBarColor(color, true)
-    }
-
-    private fun selectTab(index: Int) {
-        launchView.tabLayout.getTabAt(index).let {
-            launchView.tabLayout.selectTab(it)
+        if (expectLaunchFade) {
+            ColdLaunchReveal.requestHostHold()
+            StartupTrace.firstScreenListener = { keepSplash = false }
+            lifecycleScope.launch {
+                delay(1_500)
+                if (!isFinishing) keepSplash = false
+            }
         }
-    }
 
-    fun getImageList(): List<ImageInfo> {
-        return photoListPreviewAdapter.data
-    }
+        // Crash-recovery self-heal: MyApp.recoveryMode is computed in MyApp.onCreate.
+        // Port of the legacy MainActivity activity_recovery branch (ADR-0016).
+        if (MyApp.recoveryMode) {
+            setContent {
+                AppTheme {
+                    Surface(modifier = Modifier.fillMaxSize()) {
+                        RecoveryScreen(
+                            crashInfo = crashStackTrace(),
+                            onCopy = { copyCrashInfo(crashStackTrace()) },
+                            onSendEmail = {
+                                viewModel.extraCrashInfo(this@MainActivity, crashStackTrace())
+                            },
+                            onTelegram = { this@MainActivity.openLink("https://t.me/rosuh") },
+                            onStore = {
+                                this@MainActivity.openLink(
+                                    Uri.parse("market://details?id=me.rosuh.easywatermark")
+                                ) {
+                                    Toast.makeText(
+                                        this@MainActivity,
+                                        sharedString(Res.string.store_not_found),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            },
+                            onCloseRecovery = {
+                                (application as MyApp).launchSuccess()
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    sharedString(Res.string.recovery_mode_closed),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        )
+                    }
+                }
+            }
+            return
+        }
 
-    fun getImageViewInfo(): ViewInfo {
-        return ViewInfo.from(launchView.ivPhoto)
-    }
+        StartupTrace.mark("host_set_content")
+        setContent {
+            val windowSizeClass = calculateWindowSizeClass(this)
+            // I3: feed MotionPolicy from OS animator scale / reduce-motion flags.
+            val motionPolicy = remember {
+                me.rosuh.easywatermark.platform.platformMotionPolicy()
+            }
 
-    fun requestPermission(block: () -> Unit) {
-        pendingPermissionAction = block
-        checkWritingPermission(requestPermissionLauncher, grant = {
-            val action = pendingPermissionAction
-            pendingPermissionAction = null
-            action?.invoke()
-        })
-    }
+            CompositionLocalProvider(
+                compositionLocalOf<WindowSizeClass> { error("SizeClass not present") } provides calculateWindowSizeClass(
+                    this
+                )
+            ) {
+                // ADR-0027: wallpaper MY = system available ∧ follow-wallpaper pref (reactive).
+                var wallpaperDynamicOn by remember {
+                    mutableStateOf(dynamicColorCapability.isAvailable())
+                }
+                AppTheme(dynamicColor = wallpaperDynamicOn) {
+                    me.rosuh.easywatermark.ui.theme.ProvideMotionPolicy(motionPolicy) {
+                    val surfaceColor = MaterialTheme.colorScheme.surface
+                    val isDark = surfaceColor.luminance() < 0.5f
 
-    companion object {
-        private const val REQ_CODE_PICK_IMAGE: Int = 42
-        const val REQ_CODE_REQ_WRITE_PERMISSION: Int = 43
-        const val REQ_PICK_ICON: Int = 44
+                    // 设置系统UI为透明系统栏
+                    SideEffect {
+                        val transparent = Color.Transparent.toArgb()
+                        enableEdgeToEdge(
+                            statusBarStyle = if (isDark) {
+                                SystemBarStyle.dark(transparent)
+                            } else {
+                                SystemBarStyle.light(transparent, Color.Black.toArgb())
+                            },
+                            navigationBarStyle = if (isDark) {
+                                SystemBarStyle.dark(transparent)
+                            } else {
+                                SystemBarStyle.light(transparent, Color.Black.toArgb())
+                            }
+                        )
+                    }
+
+                    // Shared Launch/Editor/About apply [Modifier.safeDrawingPadding] themselves
+                    // (CMP-safe immersive). Scaffold must not double-apply safeDrawing insets.
+                    Scaffold(
+                        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                    ) { _ ->
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxSize()
+                        ) {
+                            // E0: Session owns product route (Launch/Editor/About). Activity only
+                            // owns presentation/system edges (picker, gallery dialog, export, links).
+                            var showGalleryDialog by remember { mutableStateOf(false) }
+                            var showOpenSource by remember { mutableStateOf(false) }
+                            var showSaveSheet by remember { mutableStateOf(false) }
+                            var storeOpenTemplates by remember { mutableIntStateOf(0) }
+                            val storeChrome = storeSeedScene?.let { StoreCaptureSeed.chromeFor(it) }
+
+                            // Same-session share-in: enter Editor with grant URIs directly (no staging).
+                            LaunchedEffect(pendingShareUris) {
+                                pendingShareUris?.let { uris ->
+                                    viewModel.enterEditorFromShareUris(uris)
+                                    pendingShareUris = null
+                                }
+                            }
+                            LaunchedEffect(storeSeedScene) {
+                                val scene = storeSeedScene ?: return@LaunchedEffect
+                                if (pendingShareUris != null) return@LaunchedEffect
+                                repeat(20) {
+                                    val uris = StoreCaptureSeed.querySeedUris(this@MainActivity)
+                                    if (uris.isNotEmpty()) {
+                                        pendingShareUris = uris
+                                        return@LaunchedEffect
+                                    }
+                                    delay(300)
+                                }
+                                Log.w(TAG, "store-seed $scene: no ewm_store_* images in MediaStore")
+                            }
+                            val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
+                            // P1: do not drive the whole product shell off a single fat Session collect.
+                            // Route / editor display / gallery list / export progress are separate collectors.
+                            val productRoute by viewModel.launchScreenUiStateFlow
+                                .map { ProductShellNav.routeFromLaunchUi(it.uiState) }
+                                .collectAsStateWithLifecycle(
+                                    initialValue = ProductShellNav.routeFromLaunchUi(
+                                        viewModel.launchScreenUiStateFlow.value.uiState,
+                                    ),
+                                )
+                            val aboutReturn by viewModel.launchScreenUiStateFlow
+                                .map { ProductShellNav.routeFromLaunchUi(it.aboutReturnUiState) }
+                                .collectAsStateWithLifecycle(
+                                    initialValue = ProductShellNav.routeFromLaunchUi(
+                                        viewModel.launchScreenUiStateFlow.value.aboutReturnUiState,
+                                    ),
+                                )
+                            val editorWaterMark by viewModel.launchScreenUiStateFlow
+                                .map { it.waterMark }
+                                .collectAsStateWithLifecycle(
+                                    initialValue = viewModel.launchScreenUiStateFlow.value.waterMark,
+                                )
+                            // P0: immutable projection for filmstrip/preview (drops jobState/result vars).
+                            val editorSelection by viewModel.launchScreenUiStateFlow
+                                .map { st ->
+                                    st.selectedImageList.toEditorSelectionUi(st.curImageInfo)
+                                }
+                                .collectAsStateWithLifecycle(
+                                    initialValue = viewModel.launchScreenUiStateFlow.value
+                                        .let { it.selectedImageList.toEditorSelectionUi(it.curImageInfo) },
+                                )
+                            LaunchedEffect(storeSeedScene, editorSelection.images.size) {
+                                val scene = storeSeedScene ?: return@LaunchedEffect
+                                val images = editorSelection.images
+                                if (images.size < 2) return@LaunchedEffect
+                                val idx = StoreCaptureSeed.imageIndexFor(scene).coerceIn(images.indices)
+                                viewModel.selectImage(images[idx].uri)
+                                if (scene == "export") {
+                                    delay(500)
+                                    showSaveSheet = true
+                                }
+                                if (scene == "templates") {
+                                    delay(400)
+                                    storeOpenTemplates += 1
+                                }
+                            }
+                            val context = LocalContext.current
+                            // P2: templates collected only while the template sheet is open.
+                            var templateSheetOpen by remember { mutableStateOf(false) }
+                            val templates by produceState(
+                                initialValue = emptyList(),
+                                templateSheetOpen,
+                                viewModel,
+                            ) {
+                                if (!templateSheetOpen) {
+                                    value = emptyList()
+                                } else {
+                                    viewModel.templateListFlow.collect { value = it }
+                                }
+                            }
+
+                            val doExport: () -> Unit = {
+                                // Export always reads live Session list (mutable jobState/result).
+                                viewModel.saveImage(
+                                    context.contentResolver,
+                                    viewModel.launchScreenUiStateFlow.value.selectedImageList,
+                                )
+                            }
+
+                            // Export port returns MediaRef; convert at the Android Intent edge.
+                            fun currentOutputUris(): List<Uri> =
+                                viewModel.launchScreenUiStateFlow.value.selectedImageList.mapNotNull { image ->
+                                    uriFromExportResultData(image.result?.data)
+                                }
+                            val shareExports: () -> Unit = {
+                                val outputUris = currentOutputUris()
+                                if (outputUris.isNotEmpty()) {
+                                    val intent = Intent().apply {
+                                        type = "image/*"
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        if (outputUris.size == 1) {
+                                            action = Intent.ACTION_SEND
+                                            putExtra(Intent.EXTRA_STREAM, outputUris.single())
+                                        } else {
+                                            action = Intent.ACTION_SEND_MULTIPLE
+                                            putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(outputUris))
+                                        }
+                                    }
+                                    try {
+                                        context.startActivity(intent)
+                                    } catch (e: SecurityException) {
+                                        Toast.makeText(context, "Share error with ${e.message}", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                            val openFirstExport: () -> Unit = {
+                                currentOutputUris().firstOrNull()?.let { outputUri ->
+                                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                                        setDataAndType(outputUri, "image/*")
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    try {
+                                        context.startActivity(intent)
+                                    } catch (e: ActivityNotFoundException) {
+                                        Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+
+                            val currentDoExport by rememberUpdatedState(doExport)
+                            val permissionLauncher = rememberLauncherForActivityResult(
+                                ActivityResultContracts.RequestPermission()
+                            ) { permissions ->
+                                if (permissions) {
+                                    currentDoExport()
+                                }
+                            }
+                            val pickMultipleMedia =
+                                rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
+                                    if (uris.isNotEmpty()) {
+                                        Log.i(
+                                            TAG,
+                                            "PhotoPicker Number of items selected: ${uris.size}"
+                                        )
+                                        // System picker → Session EnterEditor (productRoute from Session).
+                                        viewModel.process(Action.SystemPickerImageSelected(uris))
+                                        showGalleryDialog = false
+                                    } else {
+                                        Log.i(TAG, "PhotoPicker No media selected")
+                                    }
+                                }
+
+                            // Gallery-mode path only: open dialog when full or partial media access.
+                            val galleryPermissionLauncher =
+                                rememberLauncherForActivityResult(
+                                    ActivityResultContracts.RequestMultiplePermissions(),
+                                ) { results ->
+                                    if (hasReadableMediaAccess(this@MainActivity, results)) {
+                                        showGalleryDialog = true
+                                    } else {
+                                        Log.i(TAG, "Media permission denied (full and partial)")
+                                    }
+                                }
+
+                            val openSystemPhotoPicker: () -> Unit = {
+                                pickMultipleMedia.launch(
+                                    PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly,
+                                    ),
+                                )
+                            }
+                            val openInAppGallery: () -> Unit = {
+                                if (hasReadableMediaAccess(this@MainActivity)) {
+                                    showGalleryDialog = true
+                                } else {
+                                    galleryPermissionLauncher.launch(mediaPermissionRequestKeys())
+                                }
+                            }
+                            val onPickImages: () -> Unit = {
+                                if (userPreferences.preferInAppGallery) {
+                                    openInAppGallery()
+                                } else {
+                                    openSystemPhotoPicker()
+                                }
+                            }
+
+                            // v2.10.0 parity: leaving the editor asks to discard changes first
+                            // (non-cancelable; Confirm = reset session + back to Launch).
+                            var showEditorExitConfirm by remember { mutableStateOf(false) }
+
+                            // System back: OpenSource → About → prior route; Editor → discard confirm.
+                            BackHandler(enabled = showOpenSource) { showOpenSource = false }
+                            BackHandler(enabled = !showOpenSource && productRoute == ProductShellNav.Route.About) {
+                                viewModel.onBackPressed()
+                            }
+                            BackHandler(enabled = !showOpenSource && productRoute == ProductShellNav.Route.Editor) {
+                                showEditorExitConfirm = true
+                            }
+                            BackHandler(enabled = showGalleryDialog) {
+                                showGalleryDialog = false
+                                viewModel.process(Action.DialogDismiss(false))
+                            }
+
+                            if (showEditorExitConfirm) {
+                                // Product olive confirm (same tokens as template use/delete).
+                                EwmConfirmDialog(
+                                    onDismissRequest = { showEditorExitConfirm = false },
+                                    title = cmpStringResource(Res.string.dialog_title_exist_confirm),
+                                    text = cmpStringResource(Res.string.dialog_content_exist_confirm),
+                                    confirmLabel = cmpStringResource(Res.string.tips_confirm_dialog),
+                                    dismissLabel = cmpStringResource(
+                                        Res.string.dialog_cancel_exist_confirm,
+                                    ),
+                                    properties = DialogProperties(
+                                        dismissOnBackPress = false,
+                                        dismissOnClickOutside = false,
+                                    ),
+                                    onConfirm = {
+                                        showEditorExitConfirm = false
+                                        viewModel.resetJobStatus()
+                                        viewModel.onBackPressed()
+                                    },
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .imePadding(),
+                            ) {
+                                ProductShellHost(
+                                    route = productRoute,
+                                    aboutReturn = aboutReturn,
+                                ) { route ->
+                                    when (route) {
+                                        ProductShellNav.Route.Launch -> {
+                                            // Shared Common LaunchScreen owns product layout/logo.
+                                            // Keep animation flag local: stop logo before opening picker.
+                                            var startLogoAnimation by remember { mutableStateOf(true) }
+                                            LaunchScreen(
+                                                aboutIcon = SharedProductDrawables.aboutPainter(),
+                                                startLogoAnimation = startLogoAnimation,
+                                                onPickImage = {
+                                                    startLogoAnimation = false
+                                                    onPickImages()
+                                                },
+                                                onGoAbout = {
+                                                    viewModel.openAbout(
+                                                        me.rosuh.easywatermark.ui.LaunchScreenUiState.Launch,
+                                                    )
+                                                },
+                                            )
+                                        }
+                                        ProductShellNav.Route.Editor -> {
+                                            AndroidEditorScreen(
+                                                followPhoto = userPreferences.followPhoto,
+                                                forcedBottomTab = storeChrome?.tab ?: 0,
+                                                forcedOptionIndex = storeChrome?.option ?: 0,
+                                                openTemplateSheetRequest = storeOpenTemplates,
+                                                imageList = editorSelection.images,
+                                                waterMark = editorWaterMark,
+                                                selectedImage = editorSelection.selected,
+                                                onUpdateUriFailed = { se ->
+                                                    Toast.makeText(
+                                                        context,
+                                                        se.message ?: "Cannot open image",
+                                                        Toast.LENGTH_SHORT,
+                                                    ).show()
+                                                },
+                                                onBack = {
+                                                    showEditorExitConfirm = true
+                                                },
+                                                onOffsetChanged = { info ->
+                                                    viewModel.updateOffset(info)
+                                                },
+                                                onWaterMrkChange = { change ->
+                                                    viewModel.applyConfig(change)
+                                                },
+                                                onIconPicked = viewModel::importWatermarkIcon,
+                                                onImageSelected = { ui ->
+                                                    viewModel.process(
+                                                        Action.EditorImageSelected(ui.toImageInfo()),
+                                                    )
+                                                },
+                                                onGoAboutScreen = {
+                                                    viewModel.openAbout(
+                                                        me.rosuh.easywatermark.ui.LaunchScreenUiState.Editor,
+                                                    )
+                                                },
+                                                onAddMoreImages = onPickImages,
+                                                onShowSaveDialog = {
+                                                    showSaveSheet = true
+                                                },
+                                                templates = templates,
+                                                onUseTemplate = { template ->
+                                                    template.content?.let { viewModel.updateText(it) }
+                                                },
+                                                onAddTemplate = { content ->
+                                                    viewModel.addTemplate(content)
+                                                },
+                                                onUpdateTemplate = { template ->
+                                                    viewModel.updateTemplate(template)
+                                                },
+                                                onDeleteTemplate = { template ->
+                                                    viewModel.deleteTemplate(template)
+                                                },
+                                                onTemplateSheetVisibilityChange = { open ->
+                                                    templateSheetOpen = open
+                                                },
+                                            )
+                                        }
+                                        ProductShellNav.Route.About -> {
+                                            val wm by aboutViewModel.waterMark.collectAsStateWithLifecycle()
+                                            // Follow wallpaper is the preference bit (not isAvailable).
+                                            var followWallpaper by remember {
+                                                mutableStateOf(dynamicColorCapability.isFollowWallpaper())
+                                            }
+                                            val aboutWidthDp = LocalConfiguration.current.screenWidthDp
+                                            AboutScreenAndroid(
+                                                versionName = BuildConfig.VERSION_NAME,
+                                                showBounds = wm?.enableBounds ?: false,
+                                                followWallpaperOn = followWallpaper,
+                                                followPhotoOn = userPreferences.followPhoto,
+                                                preferInAppGallery = userPreferences.preferInAppGallery,
+                                                useLargeLayout = usesLargeScreenDialog(
+                                                    editorLayoutClass(aboutWidthDp.toFloat()),
+                                                ),
+                                                onBack = { viewModel.onBackPressed() },
+                                                onOpenLink = { url ->
+                                                    this@MainActivity.openLink(url)
+                                                },
+                                                onOpenSource = { showOpenSource = true },
+                                                onToggleBounds = { aboutViewModel.toggleBounds(it) },
+                                                onToggleFollowWallpaper = { enabled ->
+                                                    aboutViewModel.toggleFollowWallpaper(enabled)
+                                                    followWallpaper = enabled
+                                                    wallpaperDynamicOn = dynamicColorCapability.isAvailable()
+                                                },
+                                                onToggleFollowPhoto = { enabled ->
+                                                    viewModel.setFollowPhoto(enabled)
+                                                },
+                                                onTogglePreferInAppGallery = { enabled ->
+                                                    viewModel.setPreferInAppGallery(enabled)
+                                                },
+                                            )
+                                        }
+                                    }
+                                }
+
+                                OpenSourceOverlayHost(
+                                    visible = showOpenSource,
+                                    onBack = { showOpenSource = false },
+                                    onOpenLink = { url ->
+                                        this@MainActivity.openLink(url)
+                                    },
+                                    backIcon = SharedProductDrawables.backPainter(),
+                                )
+                            }
+
+                            if (showGalleryDialog) {
+                                // P1/P3: gallery images collected only while dialog is open.
+                                val galleryImages by viewModel.launchScreenUiStateFlow
+                                    .map { it.imageList }
+                                    .collectAsStateWithLifecycle(
+                                        initialValue = viewModel.launchScreenUiStateFlow.value.imageList,
+                                    )
+                                Dialog(
+                                    onDismissRequest = {
+                                        showGalleryDialog = false
+                                        viewModel.process(Action.DialogDismiss(false))
+                                    },
+                                    properties = DialogProperties(usePlatformDefaultWidth = false),
+                                ) {
+                                    // Selection is local in the dialog (no per-tap list rebuild).
+                                    // Commit once on FAB dismiss via selectGallery.
+                                    GalleryDialog(
+                                        images = galleryImages,
+                                        onLoadImages = {
+                                            viewModel.process(
+                                                Action.LoadImages(context.contentResolver)
+                                            )
+                                        },
+                                        onDismiss = { selectedImages ->
+                                            showGalleryDialog = false
+                                            if (selectedImages.isNotEmpty()) {
+                                                // selectGallery → EnterEditor (Session uiState=Editor).
+                                                viewModel.selectGallery(selectedImages)
+                                            } else {
+                                                viewModel.process(Action.DialogDismiss(false))
+                                            }
+                                        },
+                                        onPickImageViaSystem = openSystemPhotoPicker,
+                                    )
+                                }
+                            }
+
+                            if (showSaveSheet) {
+                                // P1: export job ticks only recompose the save sheet, not Editor.
+                                val saveExportState by viewModel.saveExportUiState
+                                    .collectAsStateWithLifecycle()
+                                val exportImages =
+                                    viewModel.launchScreenUiStateFlow.value.selectedImageList
+                                val exportTotalCount = exportImages.size.coerceAtLeast(1)
+                                // D5: Session counts are source of truth (not host invent).
+                                val successCount = saveExportState.successCount
+                                    .coerceAtLeast(saveExportState.completedCount)
+                                val failureCount = saveExportState.failureCount
+                                val processedCount = saveExportState.processedCount
+                                    .coerceAtLeast(successCount + failureCount)
+                                val totalCount = saveExportState.totalCount
+                                    .takeIf { it > 0 } ?: exportImages.size
+                                val recovery = me.rosuh.easywatermark.ui.save.ExportRecoveryUi.fromJob(
+                                    isSaving = saveExportState.isSaving,
+                                    isFinished = saveExportState.isFinished,
+                                    successCount = successCount,
+                                    failureCount = failureCount,
+                                    processedCount = processedCount,
+                                    totalCount = totalCount.coerceAtLeast(exportTotalCount),
+                                )
+                                val resultSummaryText = when {
+                                    recovery.isExporting -> cmpStringResource(
+                                        Res.string.dialog_save_export_progress,
+                                        recovery.processedCount,
+                                        recovery.totalCount.coerceAtLeast(1),
+                                    )
+                                    recovery.isFinished && recovery.failureCount == 0 && recovery.successCount > 0 ->
+                                        cmpStringResource(
+                                            Res.string.dialog_save_export_done_success,
+                                            recovery.successCount,
+                                            recovery.totalCount.coerceAtLeast(1),
+                                        )
+                                    recovery.isFinished && recovery.successCount > 0 && recovery.failureCount > 0 ->
+                                        cmpStringResource(
+                                            Res.string.dialog_save_export_done_partial,
+                                            recovery.successCount,
+                                            recovery.totalCount.coerceAtLeast(1),
+                                            recovery.failureCount,
+                                        )
+                                    recovery.isFinished && recovery.successCount == 0 ->
+                                        cmpStringResource(
+                                            Res.string.dialog_save_export_done_failed,
+                                            recovery.totalCount.coerceAtLeast(1),
+                                        )
+                                    else -> "${recovery.successCount}/${recovery.totalCount.coerceAtLeast(1)}"
+                                }
+                                val statusCd = if (recovery.isExporting) {
+                                    cmpStringResource(
+                                        Res.string.dialog_save_export_cd_progress,
+                                        recovery.processedCount,
+                                        recovery.totalCount.coerceAtLeast(1),
+                                        recovery.successCount,
+                                        recovery.failureCount,
+                                    )
+                                } else {
+                                    cmpStringResource(
+                                        Res.string.dialog_save_export_cd_done,
+                                        recovery.processedCount
+                                            .coerceAtLeast(recovery.successCount + recovery.failureCount),
+                                        recovery.successCount,
+                                        recovery.failureCount,
+                                        recovery.totalCount.coerceAtLeast(1),
+                                    )
+                                }
+                                val destinationLine = cmpStringResource(
+                                    Res.string.dialog_save_destination_album,
+                                )
+                                val filenamePolicyLine = cmpStringResource(
+                                    Res.string.dialog_save_filename_policy_android,
+                                )
+                                // Icon counts: structured ints (total/success/fail). No Processed prose.
+                                // outcomeDetailLine: a11y-only residual for all-failed; never Saved-to-destination.
+                                val exportCountTotal =
+                                    if (recovery.isExporting || recovery.isFinished) {
+                                        recovery.totalCount.coerceAtLeast(exportImages.size.coerceAtLeast(1))
+                                    } else {
+                                        0
+                                    }
+                                val exportCountSuccess =
+                                    if (recovery.isExporting || recovery.isFinished) recovery.successCount else 0
+                                val exportCountFailure =
+                                    if (recovery.isExporting || recovery.isFinished) recovery.failureCount else 0
+                                val countsLine = if (exportCountTotal > 0) {
+                                    cmpStringResource(
+                                        Res.string.dialog_save_export_counts,
+                                        exportCountTotal,
+                                        exportCountSuccess,
+                                        exportCountFailure,
+                                    )
+                                } else {
+                                    ""
+                                }
+                                val outcomeDetailLine = when {
+                                    recovery.isAllFailed ->
+                                        cmpStringResource(Res.string.dialog_save_error_generic)
+                                    else -> ""
+                                }
+                                // Pack ticks into one int so thumbnails recompose on each export step.
+                                val exportTick =
+                                    saveExportState.processedCount * 10 +
+                                        successCount * 100 +
+                                        failureCount * 1000 +
+                                        (if (saveExportState.isSaving) 1 else 0) +
+                                        (if (saveExportState.isFinished) 2 else 0)
+                                val exportWidthDp = LocalConfiguration.current.screenWidthDp
+                                SaveExportSheetAndroid(
+                                    imageCount = exportImages.size,
+                                    images = exportImages,
+                                    selectedFormatLabel = userPreferences.outputFormat,
+                                    quality = userPreferences.compressLevel,
+                                    useLargeDialog = usesLargeScreenDialog(
+                                        editorLayoutClass(exportWidthDp.toFloat()),
+                                    ),
+                                    resultSummaryText = resultSummaryText,
+                                    statusContentDescription = statusCd,
+                                    destinationLine = destinationLine,
+                                    filenamePolicyLine = filenamePolicyLine,
+                                    countsLine = countsLine,
+                                    outcomeDetailLine = outcomeDetailLine,
+                                    exportTotalCount = exportCountTotal,
+                                    exportSuccessCount = exportCountSuccess,
+                                    exportFailureCount = exportCountFailure,
+                                    primaryActionLabel = when {
+                                        saveExportState.isSaving -> cmpStringResource(Res.string.dialog_save_exporting)
+                                        saveExportState.isFinished -> cmpStringResource(Res.string.share)
+                                        else -> cmpStringResource(Res.string.dialog_export_to_gallery)
+                                    },
+                                    primaryActionEnabled = !saveExportState.isSaving,
+                                    showOpenGallery = saveExportState.isFinished &&
+                                        currentOutputUris().isNotEmpty(),
+                                    isExporting = recovery.isExporting,
+                                    showCancelButton = recovery.showCancel,
+                                    showRetryFailedButton = recovery.showRetryFailed,
+                                    exportTick = exportTick,
+                                    onDismiss = {
+                                        if (!saveExportState.isSaving) showSaveSheet = false
+                                    },
+                                    onFormatClick = { newFormat ->
+                                        viewModel.saveOutput(newFormat)
+                                    },
+                                    onQualityChange = { q ->
+                                        viewModel.saveOutput(level = q)
+                                    },
+                                    onCancelClick = { viewModel.cancelExport() },
+                                    onRetryFailedClick = {
+                                        if (exportImages.isEmpty()) return@SaveExportSheetAndroid
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                            doExport()
+                                        } else {
+                                            permissionLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                                        }
+                                    },
+                                    onExportClick = {
+                                        if (saveExportState.isFinished) {
+                                            shareExports()
+                                        } else {
+                                            if (exportImages.isEmpty()) {
+                                                return@SaveExportSheetAndroid
+                                            }
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                                doExport()
+                                            } else {
+                                                permissionLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                                            }
+                                        }
+                                    },
+                                    onOpenGalleryClick = openFirstExport,
+                                )
+                            }
+                        }
+                    }
+                    } // ProvideMotionPolicy
+                } // AppTheme
+            } // CompositionLocalProvider WindowSizeClass
+        } // setContent
+    }
+}
+
+/**
+ * Android edge for the shared About shell: resources, URL routing, and legacy animated logo.
+ * Kept private in this file so there is no standalone app About wrapper type.
+ */
+@Composable
+private fun AboutScreenAndroid(
+    versionName: String,
+    showBounds: Boolean,
+    followWallpaperOn: Boolean,
+    followPhotoOn: Boolean,
+    preferInAppGallery: Boolean,
+    onBack: () -> Unit,
+    onOpenLink: (String) -> Unit,
+    onOpenSource: () -> Unit,
+    onToggleBounds: (Boolean) -> Unit,
+    onToggleFollowWallpaper: (Boolean) -> Unit,
+    onToggleFollowPhoto: (Boolean) -> Unit,
+    onTogglePreferInAppGallery: (Boolean) -> Unit,
+    useLargeLayout: Boolean = false,
+    modifier: Modifier = Modifier,
+) {
+    AboutScreen(
+        versionName = versionName,
+        showBounds = showBounds,
+        showFollowWallpaperSwitch = true,
+        followWallpaperOn = followWallpaperOn,
+        onToggleFollowWallpaper = onToggleFollowWallpaper,
+        followPhotoOn = followPhotoOn,
+        onToggleFollowPhoto = onToggleFollowPhoto,
+        icons = AboutScreenIcons(
+            back = SharedProductDrawables.backPainter(),
+            version = SharedProductDrawables.versionPainter(),
+            rating = SharedProductDrawables.ratePainter(),
+            feedback = SharedProductDrawables.feedbackPainter(),
+            updateLog = SharedProductDrawables.updateLogPainter(),
+            openSource = SharedProductDrawables.openSourcePainter(),
+            privacyZh = SharedProductDrawables.privacyZhPainter(),
+            privacyEn = SharedProductDrawables.privacyEnPainter(),
+        ),
+        developerCard = AboutDevCard(
+            title = "Developed with ♥ by rosu",
+            description = cmpStringResource(Res.string.dev_comment),
+            avatar = SharedProductDrawables.avatarDevPainter(),
+        ),
+        designerCard = AboutDevCard(
+            title = "Designed with ♥ by tovi",
+            description = "A Designer.",
+            avatar = SharedProductDrawables.avatarToviPainter(),
+        ),
+        onBack = onBack,
+        onVersion = { onOpenLink(ABOUT_URL_RELEASES) },
+        onRate = { onOpenLink(ABOUT_URL_MARKET) },
+        onFeedback = { onOpenLink(ABOUT_URL_ISSUES) },
+        onUpdateLog = { onOpenLink(ABOUT_URL_RELEASES) },
+        onOpenSource = onOpenSource,
+        onPrivacyZh = { onOpenLink(ABOUT_URL_PRIVACY_ZH) },
+        onPrivacyEn = { onOpenLink(ABOUT_URL_PRIVACY_EN) },
+        onDeveloper = { onOpenLink(ABOUT_URL_DEV) },
+        onDesigner = { onOpenLink(ABOUT_URL_DESIGNER) },
+        onToggleBounds = onToggleBounds,
+        showPreferInAppGallerySwitch = true,
+        preferInAppGallery = preferInAppGallery,
+        onTogglePreferInAppGallery = onTogglePreferInAppGallery,
+        useLargeLayout = useLargeLayout,
+        modifier = modifier,
+        logo = { logoModifier ->
+            me.rosuh.easywatermark.ui.AboutPageLogo(
+                modifier = logoModifier,
+                animate = true,
+            )
+        },
+    )
+}
+
+/** Permissions to request when opening the in-app gallery (not Photo Picker). */
+private fun mediaPermissionRequestKeys(): Array<String> = when {
+    Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> arrayOf(
+        Manifest.permission.READ_MEDIA_IMAGES,
+        Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED,
+    )
+    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> arrayOf(
+        Manifest.permission.READ_MEDIA_IMAGES,
+    )
+    else -> arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+}
+
+/**
+ * True when the app can list MediaStore images: full library grant, Android 14+ partial
+ * (user-selected), or legacy external storage.
+ */
+private fun hasReadableMediaAccess(
+    context: Context,
+    grantResults: Map<String, Boolean>? = null,
+): Boolean {
+    fun granted(permission: String): Boolean {
+        grantResults?.get(permission)?.let { return it }
+        return ContextCompat.checkSelfPermission(context, permission) ==
+            PackageManager.PERMISSION_GRANTED
+    }
+    return when {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            granted(Manifest.permission.READ_MEDIA_IMAGES) -> true
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+            granted(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) -> true
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU &&
+            granted(Manifest.permission.READ_EXTERNAL_STORAGE) -> true
+        else -> false
+    }
+}
+
+// About URL edges (byte-identical to former AboutScreen.kt constants).
+private const val ABOUT_URL_RELEASES = "https://github.com/rosuH/EasyWatermark/releases/"
+private const val ABOUT_URL_MARKET = "market://details?id=me.rosuh.easywatermark"
+private const val ABOUT_URL_ISSUES = "https://github.com/rosuH/EasyWatermark/issues/new"
+private const val ABOUT_URL_PRIVACY_ZH = "https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy_zh-CN.md"
+private const val ABOUT_URL_PRIVACY_EN = "https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy.md"
+private const val ABOUT_URL_DEV = "https://github.com/rosuH"
+private const val ABOUT_URL_DESIGNER = "https://tovi.fun/"
+
+/**
+ * Android edge for the shared save/export sheet: Coil URI thumbs + per-item jobState
+ * Progress overlay. Export/share/MediaStore/permission stay on the Activity call site. */
+@Composable
+private fun SaveExportSheetAndroid(
+    imageCount: Int,
+    images: List<me.rosuh.easywatermark.data.model.ImageInfo> = emptyList(),
+    selectedFormatLabel: ImageFormat,
+    quality: Int,
+    resultSummaryText: String,
+    primaryActionLabel: String,
+    primaryActionEnabled: Boolean = true,
+    showOpenGallery: Boolean = true,
+    isExporting: Boolean = false,
+    showCancelButton: Boolean = false,
+    showRetryFailedButton: Boolean = false,
+    statusContentDescription: String = resultSummaryText,
+    destinationLine: String = "",
+    filenamePolicyLine: String = "",
+    countsLine: String = "",
+    outcomeDetailLine: String = "",
+    exportTotalCount: Int = 0,
+    exportSuccessCount: Int = 0,
+    exportFailureCount: Int = 0,
+    useLargeDialog: Boolean = false,
+    /** Recomposition tick while exporting (processedCount / isSaving / isFinished). */
+    exportTick: Int = 0,
+    onDismiss: () -> Unit,
+    onFormatClick: (newFormat: ImageFormat) -> Unit,
+    onQualityChange: (Int) -> Unit,
+    onExportClick: () -> Unit,
+    onCancelClick: (() -> Unit)? = null,
+    onRetryFailedClick: (() -> Unit)? = null,
+    onOpenGalleryClick: () -> Unit,
+) {
+    // Prefer migrate SaveExportSheetShell (fixed-height thumbs). Branch-era
+    // itemAspectRatio waterfall API was not taken in conflict resolution.
+    SaveExportSheetShell(
+        items = images,
+        selectedFormat = selectedFormatLabel,
+        quality = quality,
+        useLargeDialog = useLargeDialog,
+        exportListSubtitle = resultSummaryText,
+        imageCount = imageCount,
+        primaryActionLabel = primaryActionLabel,
+        primaryActionEnabled = primaryActionEnabled,
+        showOpenGallery = showOpenGallery,
+        isExporting = isExporting,
+        showCancelButton = showCancelButton,
+        onCancelClick = onCancelClick,
+        showRetryFailedButton = showRetryFailedButton,
+        onRetryFailedClick = onRetryFailedClick,
+        statusContentDescription = statusContentDescription,
+        destinationLine = destinationLine,
+        filenamePolicyLine = filenamePolicyLine,
+        countsLine = countsLine,
+        outcomeDetailLine = outcomeDetailLine,
+        exportTotalCount = exportTotalCount,
+        exportSuccessCount = exportSuccessCount,
+        exportFailureCount = exportFailureCount,
+        itemKey = { it.uri.value },
+        onDismiss = onDismiss,
+        onFormatClick = onFormatClick,
+        onQualityChange = onQualityChange,
+        onExportClick = onExportClick,
+        onOpenGalleryClick = onOpenGalleryClick,
+    ) { info, thumbnailModifier ->
+        // exportTick invalidates this leaf so mutated [ImageInfo.jobState] is re-read. Do not
+        // remember a stale JobState across ticks — but also avoid extra work for stable Success.
+        @Suppress("UNUSED_VARIABLE")
+        val tick = exportTick
+        me.rosuh.easywatermark.ui.save.ExportProgressOverlay(
+            jobState = info.jobState,
+            modifier = thumbnailModifier,
+        ) {
+            // ADR-0028: ProductThumb → MediaStore Fetcher (never bare full-URI Coil decode).
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val thumbPx = with(density) { 72.dp.roundToPx() }.coerceIn(
+                ProductThumb.UI_THUMB_MAX_EDGE,
+                256,
+            )
+            ProductAsyncImage(
+                thumb = ProductThumb(ref = info.uri, maxEdgePx = thumbPx),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
     }
 }

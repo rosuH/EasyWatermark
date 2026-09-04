@@ -88,4 +88,10 @@
     <string name="title_tile_mode">Modalità piastrella</string>
     <string name="tile_mode_title_repeat">Ripeti</string>
     <string name="tile_mode_title_decal">Singolo</string>
+    <!-- Form inspector section headers (Expanded/Wide DEMO rhythm) -->
+    <string name="inspector_section_mode">Modalità</string>
+    <string name="inspector_section_tile">Piastrelle</string>
+    <string name="inspector_section_look">Aspetto</string>
+    <string name="inspector_section_gaps">Spaziatura</string>
+    <string name="tips_low_resolution_source">Foto a bassa risoluzione · %1$d × %2$d</string>
 </resources>

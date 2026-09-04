@@ -1,0 +1,11 @@
+# Shared store-seed. Compose chrome is not in the argent runner tree, and
+# PHPicker sits in another process. Invisible UIKit buttons (store-seed-*)
+# import local sample photos and apply the named scene.
+steps:
+  - echo: Tap UIKit store-seed-editor (imports ID / Skytree / Fuji)
+  - tap:
+      id: store-seed-editor
+  - wait: 7000
+  - await:
+      idle: true
+      timeout: 15000

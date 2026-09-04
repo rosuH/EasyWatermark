@@ -8,8 +8,6 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.graphics.Matrix.ScaleToFit
-import android.graphics.Rect
-import android.graphics.RectF
 import android.net.Uri
 import android.provider.MediaStore
 import android.util.Log
@@ -18,9 +16,7 @@ import android.widget.ImageView.ScaleType
 import androidx.exifinterface.media.ExifInterface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import me.rosuh.easywatermark.MyApp
 import me.rosuh.easywatermark.data.model.Result
-import me.rosuh.easywatermark.data.model.ViewInfo
 import java.io.FileNotFoundException
 import java.io.InputStream
 import java.lang.ref.SoftReference
@@ -28,110 +24,104 @@ import kotlin.math.roundToInt
 
 private const val TAG = "BitmapUtils"
 
-suspend fun decodeBitmapWithExif(
-    uri: Uri,
-    inputStream: InputStream,
-    options: BitmapFactory.Options? = null,
-): Result<BitmapCache.BitmapValue> =
-    withContext(Dispatchers.IO) {
-        return@withContext decodeBitmapWithExifSync(uri, inputStream, options)
-    }
+private data class ExifTransform(val orientation: Int) {
+    val swapsDimensions: Boolean get() = orientation in 5..8
 
-fun decodeBitmapWithExifSync(
-    uri: Uri,
+    fun matrixOrNull(): Matrix? {
+        return Matrix().apply {
+            when (orientation) {
+                ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> setScale(-1f, 1f)
+                ExifInterface.ORIENTATION_ROTATE_180 -> setRotate(180f)
+                ExifInterface.ORIENTATION_FLIP_VERTICAL -> {
+                    setRotate(180f)
+                    postScale(-1f, 1f)
+                }
+                ExifInterface.ORIENTATION_TRANSPOSE -> {
+                    setRotate(90f)
+                    postScale(-1f, 1f)
+                }
+                ExifInterface.ORIENTATION_ROTATE_90 -> setRotate(90f)
+                ExifInterface.ORIENTATION_TRANSVERSE -> {
+                    setRotate(-90f)
+                    postScale(-1f, 1f)
+                }
+                ExifInterface.ORIENTATION_ROTATE_270 -> setRotate(-90f)
+                else -> return null
+            }
+        }
+    }
+}
+
+private fun decodeBitmapWithExifSync(
     inputStream: InputStream,
+    transform: ExifTransform,
     options: BitmapFactory.Options? = null
 ): Result<BitmapCache.BitmapValue> {
     val bitmap = BitmapFactory.decodeStream(inputStream, null, options)
         ?: return Result.failure(null, "-1", "Generate Bitmap failed.")
     val inSampleSize = options?.inSampleSize ?: 1
-    val bitmapValue = BitmapCache.BitmapValue(bitmap, inSampleSize)
+    val matrix = transform.matrixOrNull()
+        ?: return Result.success(BitmapCache.BitmapValue(bitmap, inSampleSize))
 
-    val rotation = getOrientation(MyApp.instance, uri)
-    if (rotation == 0f) {
-        return Result.success(bitmapValue)
+    val uprightBitmap = try {
+        Bitmap.createBitmap(
+            bitmap,
+            0,
+            0,
+            bitmap.width,
+            bitmap.height,
+            matrix,
+            false
+        )
+    } catch (failure: Throwable) {
+        if (!bitmap.isRecycled) {
+            bitmap.recycle()
+        }
+        throw failure
     }
-
-    val matrix = Matrix()
-    matrix.postRotate(rotation)
-
-    val rotatedBitmap = Bitmap.createBitmap(
-        bitmap,
-        0,
-        0,
-        bitmap.width,
-        bitmap.height,
-        matrix,
-        false
-    )
-    if (rotatedBitmap != bitmap && !bitmap.isRecycled) {
+    if (uprightBitmap != bitmap && !bitmap.isRecycled) {
         bitmap.recycle()
     }
-    val rotateBitmapValue = BitmapCache.BitmapValue(rotatedBitmap, inSampleSize)
-    return Result.success(rotateBitmapValue)
+    return Result.success(BitmapCache.BitmapValue(uprightBitmap, inSampleSize))
 }
 
-/**
- * Get orientation from ExifInterface and System sql.
- */
-private fun getOrientation(
-    context: Context,
+/** Read EXIF once per decode operation; MediaStore degrees are only a missing-EXIF fallback. */
+private fun readExifTransform(
+    resolver: ContentResolver,
     uri: Uri
-): Float {
-    context.contentResolver.openInputStream(uri).use {
-        if (it == null) {
-            return 0f
+): ExifTransform {
+    val tagOrientation = runCatching {
+        resolver.openInputStream(uri)?.use { input ->
+            ExifInterface(input).getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_UNDEFINED,
+            )
         }
-        val exif = if (android.os.Build.VERSION.SDK_INT > android.os.Build.VERSION_CODES.N) {
-            try {
-                ExifInterface(it)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                null
-            }
-        } else {
-            // do not support api lower 24
-            null
-        }
-        val tagOrientation: Int = exif?.getAttributeInt(
-            ExifInterface.TAG_ORIENTATION,
-            ExifInterface.ORIENTATION_UNDEFINED
-        ) ?: ExifInterface.ORIENTATION_UNDEFINED
-
-        when (tagOrientation) {
-            ExifInterface.ORIENTATION_ROTATE_90 -> {
-                return 90f
-            }
-            ExifInterface.ORIENTATION_ROTATE_180 -> {
-                return 180f
-            }
-            ExifInterface.ORIENTATION_ROTATE_270 -> {
-                return 270f
-            }
-            else -> {
-                // do not need to rotate bitmap
-                try {
-                    val cursor: Cursor? = context.contentResolver.query(
-                        uri,
-                        arrayOf(MediaStore.Images.ImageColumns.ORIENTATION),
-                        null,
-                        null,
-                        null
-                    )
-                    if (cursor?.count != 1) {
-                        cursor?.close()
-                        return 0f
-                    }
-                    cursor.moveToFirst()
-                    val orientation: Int = cursor.getInt(0)
-                    cursor.close()
-                    return orientation.toFloat()
-                } catch (e: Exception) {
-                    return 0f
-                }
-            }
-        }
+    }.getOrNull()
+    if (tagOrientation != null && tagOrientation in 1..8) {
+        return ExifTransform(tagOrientation)
     }
+
+    val mediaStoreDegrees = try {
+        resolver.query(
+            uri,
+            arrayOf(MediaStore.Images.ImageColumns.ORIENTATION),
+            null,
+            null,
+            null,
+        )?.use { cursor: Cursor ->
+            if (cursor.count == 1 && cursor.moveToFirst()) cursor.getInt(0) else null
+        }
+    } catch (_: Exception) {
+        null
+    }
+    val fallbackOrientation = when (mediaStoreDegrees) {
+        90 -> ExifInterface.ORIENTATION_ROTATE_90
+        180 -> ExifInterface.ORIENTATION_ROTATE_180
+        270 -> ExifInterface.ORIENTATION_ROTATE_270
+        else -> ExifInterface.ORIENTATION_NORMAL
+    }
+    return ExifTransform(fallbackOrientation)
 }
 
 
@@ -140,11 +130,12 @@ suspend fun decodeBitmapFromUri(
     uri: Uri
 ): Result<BitmapCache.BitmapValue> =
     withContext(Dispatchers.IO) {
+        val transform = readExifTransform(resolver, uri)
         resolver.openInputStream(uri).use { inputStream ->
             if (inputStream == null) {
                 return@withContext Result.failure(null, "-1", "Open input stream failed.")
             }
-            return@withContext decodeBitmapWithExif(uri, inputStream)
+            return@withContext decodeBitmapWithExifSync(inputStream, transform)
         }
     }
 
@@ -155,19 +146,54 @@ suspend fun decodeSampledBitmapFromResource(
     reqHeight: Int
 ): Result<BitmapCache.BitmapValue> = withContext(Dispatchers.IO) {
     val info = BitmapCache.BitmapInfo(uri, reqWidth, reqHeight)
-    var cacheValue = BitmapCache.getFromCache(info)
-    if (cacheValue?.bitmap == null) {
-        cacheValue = decodeSampledBitmapFromResourceSync(
-            resolver,
-            uri,
-            reqWidth,
-            reqHeight
-        ).data
-        BitmapCache.addToCache(info, cacheValue)
-    } else {
+    val cacheValue = BitmapCache.getFromCache(info)
+    if (cacheValue?.bitmap != null) {
         Log.i("BitmapUtils", "Hit the cache bitmap!")
+        return@withContext Result.success(data = cacheValue)
     }
-    return@withContext Result.success(data = cacheValue)
+
+    val decodeResult = decodeSampledBitmapFromResourceSync(
+        resolver,
+        uri,
+        reqWidth,
+        reqHeight
+    )
+    val decoded = decodeResult.data
+    if (decoded?.bitmap == null) {
+        return@withContext Result.failure(null, decodeResult.code, decodeResult.message)
+    }
+
+    BitmapCache.addToCache(info, decoded)
+    return@withContext Result.success(data = decoded)
+}
+
+/**
+ * Editor-preview Source decode. Bypasses [BitmapCache] so the preview working set is
+ * the single owner of the focus frame. Never recycle the result.
+ */
+/** Bounds-only encoded size. Returns (-1, -1) if the stream cannot be read. */
+fun probeEncodedSize(resolver: ContentResolver, uri: Uri): Pair<Int, Int> {
+    return try {
+        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        resolver.openInputStream(uri).use { stream ->
+            if (stream == null) return -1 to -1
+            BitmapFactory.decodeStream(stream, null, options)
+        }
+        options.outWidth to options.outHeight
+    } catch (_: Exception) {
+        -1 to -1
+    }
+}
+
+fun decodePreviewSourceBypassingCache(
+    resolver: ContentResolver,
+    uri: Uri,
+    reqWidth: Int,
+    reqHeight: Int,
+): Result<BitmapCache.BitmapValue> {
+    me.rosuh.easywatermark.render.PreviewSourceReuseProbe.recordSourceDecode()
+    me.rosuh.easywatermark.render.PreviewSourceReuseProbe.recordContentResolverOpen()
+    return decodeSampledBitmapFromResourceSync(resolver, uri, reqWidth, reqHeight)
 }
 
 fun decodeSampledBitmapFromResourceSync(
@@ -177,6 +203,7 @@ fun decodeSampledBitmapFromResourceSync(
     reqHeight: Int
 ): Result<BitmapCache.BitmapValue> {
     try {
+        val transform = readExifTransform(resolver, uri)
         val options = BitmapFactory.Options()
         options.inJustDecodeBounds = true
         // 1. decode bounds only
@@ -184,7 +211,7 @@ fun decodeSampledBitmapFromResourceSync(
             BitmapFactory.decodeStream(`is`, null, options)
         }
         // 2. Calculate inSampleSize
-        val (oHeight: Int, oWidth: Int) = if (interChangeSize(MyApp.instance, uri)) {
+        val (oHeight: Int, oWidth: Int) = if (transform.swapsDimensions) {
             options.run { outWidth to outHeight }
         } else {
             options.run { outHeight to outWidth }
@@ -197,10 +224,15 @@ fun decodeSampledBitmapFromResourceSync(
             if (inputStream == null) {
                 return Result.failure(null, "-1", "Open input stream failed.")
             }
-            return decodeBitmapWithExifSync(uri, inputStream, options)
+            return decodeBitmapWithExifSync(inputStream, transform, options)
         }
     } catch (fne: FileNotFoundException) {
         return Result.failure(null, "-1", fne.message)
+    } catch (se: SecurityException) {
+        throw se
+    } catch (e: Exception) {
+        Log.i("BitmapUtils", "Decoding sampled bitmap from resource failed", e)
+        return Result.failure(null, "-1", e.message)
     } catch (oom: OutOfMemoryError) {
         Log.i("BitmapUtils", "Decoding sampled bitmap from resource throw oom")
         return Result.failure(
@@ -209,14 +241,6 @@ fun decodeSampledBitmapFromResourceSync(
             "Decoding sampled bitmap from resource throw oom"
         )
     }
-}
-
-fun interChangeSize(context: Context, uri: Uri): Boolean {
-    val rotation = getOrientation(context, uri)
-    if (rotation == 90f || rotation == 180f) {
-        return true
-    }
-    return false
 }
 
 fun calculateInSampleSize(
@@ -229,7 +253,7 @@ fun calculateInSampleSize(
     Log.i(
         "generateImage", "w = $width, h = $height, reqW = $reqWidth, reqH = $reqHeight"
     )
-    var inSampleSize = 2
+    var inSampleSize = 1
 
     if (height > reqHeight || width > reqWidth) {
 
@@ -242,13 +266,13 @@ fun calculateInSampleSize(
             inSampleSize *= 2
         }
 
-//        var totalPixels = (width / inSampleSize) * (height / inSampleSize)
-//        val totalReqPixels = reqWidth * reqHeight * 2
-//        while (totalPixels > totalReqPixels) {
-//            inSampleSize *= 2;
-//            Log.i(TAG, "totalPixels = $totalPixels, totalReqPixels = $totalReqPixels, inSample -> $inSampleSize")
-//            totalPixels = (width / inSampleSize) * (height / inSampleSize)
-//        }
+// var totalPixels = (width / inSampleSize) * (height / inSampleSize)
+// val totalReqPixels = reqWidth * reqHeight * 2
+// while (totalPixels > totalReqPixels) {
+// inSampleSize *= 2;
+// Log.i(TAG, "totalPixels = $totalPixels, totalReqPixels = $totalReqPixels, inSample -> $inSampleSize")
+// totalPixels = (width / inSampleSize) * (height / inSampleSize)
+// }
     }
 
     return inSampleSize
@@ -319,90 +343,6 @@ private fun getBytesInPixel(config: Bitmap.Config): Int {
     }
 }
 
-/**
- * @author hi@rosuh.me
- * @date 2021/10/16
- * Copy from [ImageView]
- */
-fun generateMatrix(
-    viewInfo: ViewInfo,
-    drawableWidth: Int,
-    drawableHeight: Int,
-    bounds: Rect,
-    tempSrc: RectF,
-    tempDst: RectF,
-): Matrix {
-    val dwidth: Int = drawableWidth
-    val dheight: Int = drawableHeight
-    val vwidth: Int = viewInfo.width - viewInfo.paddingLeft - viewInfo.paddingRight
-    val vheight: Int = viewInfo.height - viewInfo.paddingTop - viewInfo.paddingBottom
-    val fits = ((dwidth < 0 || vwidth == dwidth)
-            && (dheight < 0 || vheight == dheight))
-    var mDrawMatrix = Matrix()
-    if (dwidth <= 0 || dheight <= 0 || ScaleType.FIT_XY == viewInfo.scaleType) {
-        /* If the drawable has no intrinsic size, or we're told to
-                scaletofit, then we just fill our entire view.
-            */
-        bounds.set(0, 0, vwidth, vheight)
-    } else {
-        // We need to do the scaling ourself, so have the drawable
-        // use its native size.
-        bounds.set(0, 0, dwidth, dheight)
-        if (ScaleType.MATRIX == viewInfo.scaleType) {
-            // Use the specified matrix as-is.
-            if (!viewInfo.matrix.isIdentity) {
-                mDrawMatrix = viewInfo.matrix
-            }
-        } else if (fits) {
-            // The bitmap fits exactly, no transform needed.
-        } else if (ScaleType.CENTER == viewInfo.scaleType) {
-            // Center bitmap in view, no scaling.
-            mDrawMatrix = viewInfo.matrix
-            mDrawMatrix.setTranslate(
-                ((vwidth - dwidth) * 0.5f).roundToInt().toFloat(),
-                ((vheight - dheight) * 0.5f).roundToInt().toFloat()
-            )
-        } else if (ScaleType.CENTER_CROP == viewInfo.scaleType) {
-            mDrawMatrix = viewInfo.matrix
-            val scale: Float
-            var dx = 0f
-            var dy = 0f
-            if (dwidth * vheight > vwidth * dheight) {
-                scale = vheight.toFloat() / dheight.toFloat()
-                dx = (vwidth - dwidth * scale) * 0.5f
-            } else {
-                scale = vwidth.toFloat() / dwidth.toFloat()
-                dy = (vheight - dheight * scale) * 0.5f
-            }
-            mDrawMatrix.setScale(scale, scale)
-            mDrawMatrix.postTranslate(Math.round(dx).toFloat(), Math.round(dy).toFloat())
-        } else if (ScaleType.CENTER_INSIDE == viewInfo.scaleType) {
-            mDrawMatrix = viewInfo.matrix
-            val dx: Float
-            val dy: Float
-            val scale: Float = if (dwidth <= vwidth && dheight <= vheight) {
-                1.0f
-            } else {
-                (vwidth.toFloat() / dwidth.toFloat()).coerceAtMost(vheight.toFloat() / dheight.toFloat())
-            }
-            dx = ((vwidth - dwidth * scale) * 0.5f).roundToInt().toFloat()
-            dy = ((vheight - dheight * scale) * 0.5f).roundToInt().toFloat()
-            mDrawMatrix.setScale(scale, scale)
-            mDrawMatrix.postTranslate(dx, dy)
-        } else {
-            // Generate the required transform.
-            tempSrc.set(0f, 0f, dwidth.toFloat(), dheight.toFloat())
-            tempDst.set(0f, 0f, vwidth.toFloat(), vheight.toFloat())
-            mDrawMatrix = viewInfo.matrix
-            mDrawMatrix.setRectToRect(
-                tempSrc,
-                tempDst,
-                scaleTypeToScaleToFit(viewInfo.scaleType)
-            )
-        }
-    }
-    return mDrawMatrix
-}
 
 
 fun scaleTypeToScaleToFit(st: ScaleType): ScaleToFit {

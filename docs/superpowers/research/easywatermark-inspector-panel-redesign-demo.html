@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EasyWatermark · Inspector Panel Redesign DEMO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0c0f12;
+    --bg-elev: #13181f;
+    --surface: #1a212b;
+    --surface-2: #222b38;
+    --surface-3: #2a3545;
+    --border: #2f3b4d;
+    --border-soft: #243041;
+    --text: #eef2f7;
+    --text-dim: #8b9bb0;
+    --text-mute: #5c6b7f;
+    --amber: #e8c547;
+    --amber-soft: rgba(232, 197, 71, 0.14);
+    --amber-border: rgba(232, 197, 71, 0.45);
+    --danger: #e07a7a;
+    --ok: #5cb88a;
+    --ok-soft: rgba(92, 184, 138, 0.12);
+    --canvas: #12160f;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --font: "Plus Jakarta Sans", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+    --shadow: 0 16px 48px rgba(0,0,0,.4);
+    --inspector-w: 320px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100dvh;
+  }
+  .page { max-width: 1280px; margin: 0 auto; padding: 28px 22px 72px; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 8px;
+  }
+  h1 {
+    margin: 0 0 10px;
+    font-size: clamp(1.45rem, 2.4vw, 1.9rem);
+    font-weight: 700;
+    letter-spacing: -.02em;
+  }
+  .lede {
+    margin: 0 0 20px;
+    max-width: 72ch;
+    color: var(--text-dim);
+    font-size: 15px;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+  .chip {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+  }
+  .chip strong { color: var(--text); font-weight: 600; }
+
+  h2 {
+    margin: 36px 0 10px;
+    font-size: 1.15rem;
+    letter-spacing: -.01em;
+  }
+  .sec-lede {
+    margin: 0 0 16px;
+    color: var(--text-dim);
+    font-size: 14px;
+    max-width: 70ch;
+  }
+
+  /* Problem diagnosis */
+  .diag-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+  }
+  .diag-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .diag-card .tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--danger);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 6px;
+  }
+  .diag-card h3 { margin: 0 0 6px; font-size: 14px; font-weight: 600; }
+  .diag-card p { margin: 0; font-size: 13px; color: var(--text-dim); }
+
+  /* Competitor matrix */
+  table.comp {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  table.comp th, table.comp td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-soft);
+    vertical-align: top;
+  }
+  table.comp th {
+    background: var(--surface-2);
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--text-mute);
+    font-weight: 500;
+  }
+  table.comp tr:last-child td { border-bottom: none; }
+  table.comp .take { color: var(--amber); font-weight: 500; }
+
+  /* Compare stage */
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 900px) {
+    .compare { grid-template-columns: 1fr; }
+  }
+  .panel-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .panel-card .pc-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .panel-card .pc-head .badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 999px;
+  }
+  .badge.bad {
+    background: rgba(224,122,122,.15);
+    color: #f0a8a8;
+    border: 1px solid rgba(224,122,122,.35);
+  }
+  .badge.good {
+    background: var(--ok-soft);
+    color: #7fd4a8;
+    border: 1px solid rgba(92,184,138,.4);
+  }
+  .panel-card .pc-body {
+    display: grid;
+    grid-template-columns: 1fr var(--inspector-w);
+    min-height: 420px;
+  }
+  .fake-canvas {
+    background:
+      radial-gradient(ellipse 70% 50% at 40% 45%, #2a3220 0%, transparent 60%),
+      var(--canvas);
+    position: relative;
+    min-height: 420px;
+  }
+  .fake-photo {
+    position: absolute;
+    left: 50%;
+    top: 46%;
+    transform: translate(-50%, -50%);
+    width: min(72%, 280px);
+    aspect-ratio: 4/3;
+    border-radius: 3px;
+    background: linear-gradient(145deg, #c46a3a, #8a3a22);
+    box-shadow: 0 12px 32px rgba(0,0,0,.45);
+  }
+  .fake-photo::after {
+    content: "PREVIEW";
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .2em;
+    color: rgba(255,255,255,.2);
+  }
+  .film-mini {
+    position: absolute;
+    left: 50%;
+    bottom: 14px;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+  }
+  .film-mini span {
+    width: 28px;
+    height: 28px;
+    border-radius: 2px;
+    background: #c46a3a;
+    border: 1.5px solid transparent;
+    opacity: .7;
+  }
+  .film-mini span:first-child {
+    border-color: var(--amber);
+    opacity: 1;
+    box-shadow: 0 0 0 2px var(--amber-soft);
+  }
+  .film-mini span:last-child { background: #2a6db0; }
+
+  /* === CURRENT (broken) inspector === */
+  .insp-now {
+    border-left: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    min-height: 420px;
+  }
+  .insp-now .now-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 16px 14px;
+    min-height: 280px;
+  }
+  .insp-now .field-mock {
+    width: 100%;
+    height: 36px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-elev);
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .insp-now .mode-row {
+    display: flex;
+    gap: 8px;
+  }
+  .insp-now .mode-chip {
+    width: 64px;
+    height: 56px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-elev);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--text-mute);
+  }
+  .insp-now .mode-chip.on {
+    border-color: var(--amber-border);
+    background: var(--amber-soft);
+    color: var(--amber);
+    font-weight: 600;
+  }
+  .insp-now .mode-chip .ic { font-size: 16px; font-weight: 700; }
+  .insp-now .tabs {
+    display: flex;
+    border-top: 1px solid var(--border-soft);
+    padding: 0 4px;
+  }
+  .insp-now .tabs .t {
+    flex: 1;
+    text-align: center;
+    padding: 12px 4px 10px;
+    font-size: 13px;
+    color: var(--text-mute);
+    border-bottom: 2px solid transparent;
+  }
+  .insp-now .tabs .t.on {
+    color: var(--amber);
+    border-bottom-color: var(--amber);
+    font-weight: 600;
+  }
+  .void-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--danger);
+    letter-spacing: .06em;
+    opacity: .7;
+  }
+
+  /* === PROPOSED inspector === */
+  .insp-new {
+    border-left: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    min-height: 420px;
+    max-height: 520px;
+  }
+  .insp-new .seg {
+    display: flex;
+    gap: 2px;
+    padding: 10px 10px 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .insp-new .seg button {
+    flex: 1;
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--text-mute);
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 10px 6px 12px;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    margin-bottom: -1px;
+  }
+  .insp-new .seg button:hover { color: var(--text-dim); }
+  .insp-new .seg button[aria-selected="true"] {
+    color: var(--amber);
+    border-bottom-color: var(--amber);
+  }
+  .insp-new .scroll {
+    flex: 1;
+    overflow: auto;
+    padding: 12px 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-height: 0;
+  }
+  .insp-new .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--text-mute);
+    margin: 2px 0 0;
+  }
+  .insp-new .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .insp-new .field > label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-dim);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .insp-new .field > label .val {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-mute);
+  }
+  .insp-new .input {
+    height: 36px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg-elev);
+    color: var(--text);
+    padding: 0 12px;
+    font-family: var(--font);
+    font-size: 13px;
+    width: 100%;
+  }
+  .insp-new .input:focus {
+    outline: none;
+    border-color: var(--amber-border);
+    box-shadow: 0 0 0 3px var(--amber-soft);
+  }
+  .insp-new .seg-ctrl {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 3px;
+    background: var(--bg-elev);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .insp-new .seg-ctrl button {
+    appearance: none;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-mute);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .insp-new .seg-ctrl button[aria-pressed="true"] {
+    background: var(--surface-2);
+    color: var(--amber);
+    box-shadow: 0 1px 0 rgba(0,0,0,.25);
+  }
+  .insp-new .chips-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .insp-new .chip-btn {
+    appearance: none;
+    border: 1px solid var(--border);
+    background: var(--bg-elev);
+    color: var(--text-dim);
+    font-family: var(--font);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 6px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .insp-new .chip-btn[aria-pressed="true"] {
+    border-color: var(--amber-border);
+    background: var(--amber-soft);
+    color: var(--amber);
+  }
+  .insp-new .slider {
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--amber) var(--p, 45%), var(--border) var(--p, 45%));
+    position: relative;
+  }
+  .insp-new .slider::after {
+    content: "";
+    position: absolute;
+    left: var(--p, 45%);
+    top: 50%;
+    width: 12px;
+    height: 12px;
+    margin: -6px 0 0 -6px;
+    border-radius: 50%;
+    background: var(--text);
+    box-shadow: 0 1px 3px rgba(0,0,0,.4);
+  }
+  .insp-new .linkish {
+    appearance: none;
+    border: 1px dashed var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    font-family: var(--font);
+    font-size: 12px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    text-align: left;
+  }
+  .insp-new .linkish:hover {
+    border-color: var(--amber-border);
+    color: var(--amber);
+  }
+  .insp-new .color-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .insp-new .swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: #e8c547;
+    border: 1px solid rgba(255,255,255,.2);
+  }
+  .insp-new .foot {
+    padding: 10px 14px;
+    border-top: 1px solid var(--border-soft);
+    font-size: 11px;
+    color: var(--text-mute);
+    font-family: var(--mono);
+  }
+
+  /* Principles */
+  .principles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+  }
+  .prin {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .prin .n {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--amber);
+    margin-bottom: 4px;
+  }
+  .prin h3 { margin: 0 0 6px; font-size: 14px; }
+  .prin p { margin: 0; font-size: 13px; color: var(--text-dim); }
+
+  /* Spec tokens */
+  .tokens {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+  }
+  .tok {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 12px;
+  }
+  .tok .k {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  .tok .v { margin-top: 4px; font-weight: 600; color: var(--text); }
+
+  .callout {
+    margin-top: 20px;
+    padding: 14px 16px;
+    border-left: 3px solid var(--amber);
+    background: var(--amber-soft);
+    border-radius: 0 8px 8px 0;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .callout strong { color: var(--text); }
+
+  footer.foot {
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-mute);
+  }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="eyebrow">EasyWatermark · Supporting-pane inspector redesign</div>
+    <h1>右侧属性面板重新设计 DEMO</h1>
+    <p class="lede">
+      现状把<strong>手机底栏 carousel</strong>竖着塞进侧栏：控件垂直居中、中间大片死区、
+      文字框与 Text/Icon 切换失序。本 DEMO 对标 Lightroom Develop / Canva Properties / Figma 右侧属性栏，
+      给出<strong>表单式、顶对齐、可滚动</strong>的 inspector 编排（仅设计；未改产品代码）。
+    </p>
+    <div class="chips">
+      <span class="chip"><strong>问题</strong> phone chrome → tall side pane</span>
+      <span class="chip"><strong>参照</strong> LR / Canva / Figma / Photos tablet</span>
+      <span class="chip"><strong>目标</strong> 320–360dp form inspector</span>
+      <span class="chip"><strong>不变</strong> Content · Style · Layout 信息架构</span>
+    </div>
+
+    <!-- Diagnosis -->
+    <h2>问题诊断（对照你截的右侧）</h2>
+    <p class="sec-lede">根因不只是「丑」，而是<strong>布局合同错了</strong>：侧栏用了 <code>fillMaxSize + Center</code> 的手机控件框。</p>
+    <div class="diag-grid">
+      <div class="diag-card">
+        <div class="tag">P1 · 垂直居中</div>
+        <h3>控件漂在中间</h3>
+        <p><code>EditorOptionControlFrame</code> 用 <code>Alignment.Center</code>，侧栏变高后上下空、中间挤一团。</p>
+      </div>
+      <div class="diag-card">
+        <div class="tag">P2 · 死区</div>
+        <h3>Tab 贴底、内容贴中</h3>
+        <p>内容区与底 Tab 之间大块空白无信息、无滚动锚点，像「坏了的手机底栏」。</p>
+      </div>
+      <div class="diag-card">
+        <div class="tag">P3 · 层级</div>
+        <h3>字段无标签行</h3>
+        <p>「请勿转载」像裸输入框；Text/Icon 大卡片与底 Tab 重复表达「内容」语义。</p>
+      </div>
+      <div class="diag-card">
+        <div class="tag">P4 · 节奏</div>
+        <h3>手机 carousel 不适配侧栏</h3>
+        <p>生产是「选 option → 中间出控件」；侧栏应改为「分区表单一次扫完」。</p>
+      </div>
+    </div>
+
+    <!-- Competitors -->
+    <h2>成熟产品怎么排右侧</h2>
+    <p class="sec-lede">共性：属性区<strong>顶对齐、可滚动、分区标题 + 标签/值同行</strong>；画布优先，面板固定宽。</p>
+    <table class="comp">
+      <thead>
+        <tr>
+          <th>产品</th>
+          <th>右侧 / 工具区模式</th>
+          <th>可借鉴</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Lightroom Classic</strong></td>
+          <td>Develop 右栏：Basic / Tone 等<strong>可折叠分区</strong>，滑块 label 左、数值右</td>
+          <td class="take">分区标题 + 紧凑滑块行；永不垂直居中</td>
+        </tr>
+        <tr>
+          <td><strong>Canva</strong></td>
+          <td>选中后 <strong>properties / edit panel</strong>：顶到底表单；左栏是内容库</td>
+          <td class="take">「库在左、属性在右」；表单密度</td>
+        </tr>
+        <tr>
+          <td><strong>Figma</strong></td>
+          <td>右栏 Design：Fill / Stroke / Effects 堆叠；section header 极窄</td>
+          <td class="take">12px 字号标签、8–12 间距节奏</td>
+        </tr>
+        <tr>
+          <td><strong>Google Photos（平板）</strong></td>
+          <td>编辑工具进<strong>侧栏</strong>，非手机底栏原样放大</td>
+          <td class="take">同功能、换 chrome；侧栏是另一套编排</td>
+        </tr>
+        <tr>
+          <td><strong>Snapseed</strong></td>
+          <td>单工具模态底栏（手机）</td>
+          <td class="take"><em>不</em>适合 EW 多参数实时平铺；仅作手机参考</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Side by side -->
+    <h2>现在 vs 提案（同宽 inspector）</h2>
+    <p class="sec-lede">左侧模拟当前；右侧为提案。点提案顶上的 Content / Style / Layout 切换。</p>
+
+    <div class="compare">
+      <!-- CURRENT -->
+      <article class="panel-card">
+        <div class="pc-head">
+          <span>Current · 侧栏</span>
+          <span class="badge bad">Broken rhythm</span>
+        </div>
+        <div class="pc-body">
+          <div class="fake-canvas">
+            <div class="fake-photo"></div>
+            <div class="film-mini"><span></span><span></span></div>
+          </div>
+          <aside class="insp-now" aria-label="Current inspector mock">
+            <div class="now-body">
+              <div class="field-mock">请勿转载</div>
+              <div class="void-label">···· empty / center ····</div>
+              <div class="mode-row">
+                <div class="mode-chip on"><span class="ic">T</span>文字</div>
+                <div class="mode-chip"><span class="ic">◇</span>贴纸</div>
+              </div>
+              <div class="void-label">···· dead zone ····</div>
+            </div>
+            <div class="tabs">
+              <div class="t on">内容</div>
+              <div class="t">样式</div>
+              <div class="t">布局</div>
+            </div>
+          </aside>
+        </div>
+      </article>
+
+      <!-- PROPOSED -->
+      <article class="panel-card">
+        <div class="pc-head">
+          <span>Proposed · Form inspector</span>
+          <span class="badge good">Top-aligned</span>
+        </div>
+        <div class="pc-body">
+          <div class="fake-canvas">
+            <div class="fake-photo"></div>
+            <div class="film-mini"><span></span><span></span></div>
+          </div>
+          <aside class="insp-new" aria-label="Proposed inspector">
+            <div class="seg" role="tablist" aria-label="Inspector sections">
+              <button type="button" role="tab" id="tab-content" aria-selected="true" aria-controls="panel-content">内容</button>
+              <button type="button" role="tab" id="tab-style" aria-selected="false" aria-controls="panel-style">样式</button>
+              <button type="button" role="tab" id="tab-layout" aria-selected="false" aria-controls="panel-layout">布局</button>
+            </div>
+
+            <div class="scroll">
+              <!-- CONTENT -->
+              <div id="panel-content" role="tabpanel" aria-labelledby="tab-content">
+                <div class="section-label">水印类型</div>
+                <div class="seg-ctrl" role="group" aria-label="Text or icon">
+                  <button type="button" aria-pressed="true" data-mode="text">T · 文字</button>
+                  <button type="button" aria-pressed="false" data-mode="icon">◇ · 贴纸</button>
+                </div>
+
+                <div class="field" data-for-mode="text">
+                  <label>文字内容</label>
+                  <input class="input" type="text" value="请勿转载" aria-label="水印文字" />
+                </div>
+                <button type="button" class="linkish" data-for-mode="text">从模板选择…</button>
+
+                <div class="field hidden" data-for-mode="icon">
+                  <label>贴纸图片</label>
+                  <button type="button" class="linkish">选择图标 / 图片…</button>
+                </div>
+              </div>
+
+              <!-- STYLE -->
+              <div id="panel-style" role="tabpanel" aria-labelledby="tab-style" class="hidden">
+                <div class="section-label">平铺</div>
+                <div class="chips-row">
+                  <button type="button" class="chip-btn" aria-pressed="true">重复</button>
+                  <button type="button" class="chip-btn" aria-pressed="false">贴花</button>
+                </div>
+
+                <div class="field">
+                  <label>大小 <span class="val">14</span></label>
+                  <div class="slider" style="--p: 28%"></div>
+                </div>
+                <div class="field">
+                  <label>不透明度 <span class="val">45%</span></label>
+                  <div class="slider" style="--p: 45%"></div>
+                </div>
+                <div class="field">
+                  <label>旋转 <span class="val">−28°</span></label>
+                  <div class="slider" style="--p: 38%"></div>
+                </div>
+
+                <div class="section-label">外观</div>
+                <div class="field">
+                  <label>颜色</label>
+                  <div class="color-row">
+                    <span class="swatch" aria-hidden="true"></span>
+                    <span style="font-family:var(--mono);font-size:12px;color:var(--text-dim)">#E8C547</span>
+                  </div>
+                </div>
+                <div class="chips-row">
+                  <button type="button" class="chip-btn" aria-pressed="true">常规</button>
+                  <button type="button" class="chip-btn" aria-pressed="false">粗体</button>
+                  <button type="button" class="chip-btn" aria-pressed="false">斜体</button>
+                </div>
+              </div>
+
+              <!-- LAYOUT -->
+              <div id="panel-layout" role="tabpanel" aria-labelledby="tab-layout" class="hidden">
+                <div class="section-label">间距</div>
+                <div class="field">
+                  <label>水平间隙 <span class="val">12</span></label>
+                  <div class="slider" style="--p: 32%"></div>
+                </div>
+                <div class="field">
+                  <label>垂直间隙 <span class="val">8</span></label>
+                  <div class="slider" style="--p: 22%"></div>
+                </div>
+                <p style="margin:0;font-size:12px;color:var(--text-mute)">
+                  间隙为 cell 百分比语义（现有 <code>WatermarkConfigRules</code>），仅换 chrome。
+                </p>
+              </div>
+            </div>
+            <div class="foot">320–360dp · top-aligned · scroll body · no center void</div>
+          </aside>
+        </div>
+      </article>
+    </div>
+
+    <!-- Principles -->
+    <h2>编排原则（落地时写进实现）</h2>
+    <div class="principles">
+      <div class="prin">
+        <div class="n">01</div>
+        <h3>侧栏 ≠ 竖着的底栏</h3>
+        <p>Phone 保留 bottom sheet/carousel；Expanded/Wide 换 Form Inspector 组件，不复用 <code>Center</code> 框。</p>
+      </div>
+      <div class="prin">
+        <div class="n">02</div>
+        <h3>顶对齐 + 可滚动</h3>
+        <p>内容从顶开始；控件多时 scroll，禁止为了「好看」垂直居中。</p>
+      </div>
+      <div class="prin">
+        <div class="n">03</div>
+        <h3>标签 / 值同行</h3>
+        <p>滑块：左 label、右 mono 数值；输入框上方固定 field label。</p>
+      </div>
+      <div class="prin">
+        <div class="n">04</div>
+        <h3>Segment 替代大卡片</h3>
+        <p>Text/Icon 用等宽 segment；模式切换后下方字段替换，不并排占两格大气泡。</p>
+      </div>
+      <div class="prin">
+        <div class="n">05</div>
+        <h3>Tab 吸顶，不吸底</h3>
+        <p>Content/Style/Layout 放 inspector <strong>顶部</strong>（或 sticky header），底部留给安全区/次要动作。</p>
+      </div>
+      <div class="prin">
+        <div class="n">06</div>
+        <h3>IA 可不变</h3>
+        <p>仍三 Tab + 现有 <code>FuncType</code> 能力；改的是信息架构的<strong>呈现节奏</strong>，不是砍功能。</p>
+      </div>
+    </div>
+
+    <h2>建议尺寸 token</h2>
+    <div class="tokens">
+      <div class="tok"><div class="k">Inspector width</div><div class="v">320–360 dp</div></div>
+      <div class="tok"><div class="k">Pane padding</div><div class="v">12–14 dp</div></div>
+      <div class="tok"><div class="k">Field gap</div><div class="v">12–14 dp</div></div>
+      <div class="tok"><div class="k">Section gap</div><div class="v">16–18 dp</div></div>
+      <div class="tok"><div class="k">Label</div><div class="v">12 sp / dim</div></div>
+      <div class="tok"><div class="k">Value</div><div class="v">11 mono mute</div></div>
+      <div class="tok"><div class="k">Control height</div><div class="v">36 dp</div></div>
+      <div class="tok"><div class="k">Tab height</div><div class="v">40–44 dp</div></div>
+    </div>
+
+    <div class="callout">
+      <strong>实现暗示（尚未开工）：</strong>
+      抽出 <code>EditorInspectorPanel</code>（Expanded/Wide 用），
+      <code>EditorBottomControls</code> 仅 Compact/Medium。
+      侧栏禁用 <code>EditorOptionControlFrame</code> 的 <code>fillMaxSize + Center</code>。
+      与 ADR-0026 兼容：仍是 Supporting-pane editor，只修 supporting 内部编排。
+    </div>
+
+    <footer class="foot">
+      DEMO only · 2026-08-10 · mirror: docs/superpowers/research/ · refs: LR workspace, Canva side panel, Photos tablet side tools
+    </footer>
+  </div>
+
+<script>
+(function () {
+  var tabs = document.querySelectorAll(".insp-new .seg button");
+  var panels = {
+    content: document.getElementById("panel-content"),
+    style: document.getElementById("panel-style"),
+    layout: document.getElementById("panel-layout")
+  };
+  function showTab(name) {
+    Object.keys(panels).forEach(function (k) {
+      panels[k].classList.toggle("hidden", k !== name);
+    });
+    tabs.forEach(function (btn) {
+      var on = btn.id === "tab-" + name;
+      btn.setAttribute("aria-selected", on ? "true" : "false");
+    });
+  }
+  tabs.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      showTab(btn.id.replace("tab-", ""));
+    });
+  });
+
+  var modeBtns = document.querySelectorAll(".seg-ctrl button");
+  modeBtns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      modeBtns.forEach(function (b) { b.setAttribute("aria-pressed", "false"); });
+      btn.setAttribute("aria-pressed", "true");
+      var mode = btn.getAttribute("data-mode");
+      document.querySelectorAll("[data-for-mode]").forEach(function (el) {
+        el.classList.toggle("hidden", el.getAttribute("data-for-mode") !== mode);
+      });
+    });
+  });
+
+  document.querySelectorAll(".chip-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var row = btn.parentElement;
+      if (!row) return;
+      // exclusive within row for tile mode pair
+      if (row.querySelectorAll(".chip-btn").length <= 3) {
+        row.querySelectorAll(".chip-btn").forEach(function (b) {
+          if (b.textContent === "重复" || b.textContent === "贴花") {
+            b.setAttribute("aria-pressed", "false");
+          }
+        });
+        if (btn.textContent === "重复" || btn.textContent === "贴花") {
+          btn.setAttribute("aria-pressed", "true");
+          return;
+        }
+      }
+      var pressed = btn.getAttribute("aria-pressed") === "true";
+      btn.setAttribute("aria-pressed", pressed ? "false" : "true");
+    });
+  });
+})();
+</script>
+</body>
+</html>

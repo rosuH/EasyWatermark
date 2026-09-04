@@ -1,0 +1,4 @@
+# Poster tile — pixels come from v5-en/zh-awards via capture-store.sh.
+steps:
+  - echo: Award / trust card is a finished graphic, not a simulator flow
+  - wait: 100

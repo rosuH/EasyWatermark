@@ -26,6 +26,9 @@ out/
 .gradle/
 build/
 
+# Agent/local investigation artifacts must never enter repository history.
+.scratch/
+
 # Local configuration file (sdk path, etc)
 local.properties
 
@@ -38,8 +41,18 @@ proguard/
 # Android Studio Navigation editor temp files
 .navigation/
 
-# Android Studio captures folder
-captures/
+# Android Studio captures folder (repo root only).
+# Phase B evidence under docs/parity must stay tracked — never ignore those trees.
+/captures/
+!docs/parity/
+!docs/parity/**/
+!docs/parity/**/captures/
+!docs/parity/**/captures/**
+!docs/parity/**/*.png
+!docs/parity/**/*.md
+
+# Xcode result bundles are generated test output, including under parity captures.
+*.xcresult/
 
 # IntelliJ
 *.iml
@@ -111,5 +124,21 @@ hs_err_pid*
 
 # End of https://www.toptal.com/developers/gitignore/api/android,kotlin
 .idea/libraries-with-intellij-classes.xml
+.alma-snapshots
+.DS_Store
+.kotlin
 .weblate
 .weblate.ini
+
+# Local sample/test image corpus (large binary assets)
+sample-images/
+
+# ADR-0032 local console evidence (machine-local; not repo history)
+docs/testmap/runs/
+docs/testmap/artifacts/
+
+# goldie framed/raw store assets (config + flows stay tracked)
+goldie/out/
+goldie-play/out/
+goldie-play/__pycache__/
+.argent/recordings/

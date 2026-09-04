@@ -87,4 +87,10 @@
     <string name="tips_database_init_error">தரவுத்தள துவக்கம் தோல்வியடைந்தது.</string>
     <string name="tile_mode_title_repeat">மீண்டும் செய்யவும்</string>
     <string name="tile_mode_title_decal">ஒற்றை</string>
+    <!-- Form inspector section headers (Expanded/Wide DEMO rhythm) -->
+    <string name="inspector_section_mode">பயன்முறை</string>
+    <string name="inspector_section_tile">டைல்</string>
+    <string name="inspector_section_look">தோற்றம்</string>
+    <string name="inspector_section_gaps">இடைவெளி</string>
+    <string name="tips_low_resolution_source">குறைந்த தெளிவுத்திறன் புகைப்படம் · %1$d × %2$d</string>
 </resources>

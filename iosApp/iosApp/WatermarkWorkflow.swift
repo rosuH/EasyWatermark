@@ -1,0 +1,618 @@
+import Foundation
+import Shared
+import UIKit
+
+// C5.4 (S4d-27/31/58): the iOS watermark workflow — picked-photo bytes to a watermarked PNG through
+// the `:shared` iOS render bridge.
+//
+// Pipeline (all in `:shared`, decode-free commonMain + Skiko iOS backend):
+//   encoded image bytes
+//     -> FontFamily.Default (ADR-0025 system-default Text face; no bundled Noto)
+//     -> IosFinalRenderSpine / CommonWatermarkPipeline   (decode -> cell -> compose; Skia bakes EXIF)
+//     -> encode PNG
+//     -> Swift Data -> UIImage(data:)                    (display, done in the View)
+//
+// S4d-31: the render call goes through `IosWatermarkRenderBridge.renderWatermarkedPng` (an
+// iOS-only `@Throws` boundary), so a decode/render/encode failure becomes a Swift `catch` →
+// `.failure(...)` instead of a fatal Kotlin/Native crash.
+// S4d-58: XCUITest executes this path via the DEBUG fixture seam and proves preview + Save + Share.
+@MainActor
+final class WatermarkWorkflow: ObservableObject {
+
+    enum State: Equatable {
+        case idle
+        case rendering
+        case success(pngByteCount: Int, width: Int, height: Int)
+        case failure(String)
+    }
+
+    /// Save-to-Photos progress for the current result (C5.4 / S4d-29).
+    enum SaveState: Equatable {
+        case idle
+        case saving
+        case saved
+        case failed(String)
+    }
+
+    @Published private(set) var state: State = .idle
+    /// Encoded PNG of the watermarked image; non-nil after a successful render.
+    @Published private(set) var resultPNG: Data?
+    /// Temp `.png` file URL of the current result, for `ShareLink`; nil until a successful render.
+    @Published private(set) var resultFileURL: URL?
+    /// Save-to-Photos state for the current result.
+    @Published private(set) var saveState: SaveState = .idle
+
+    /// Watermark text composed over the photo. S4d-102: now sourced from the shared
+    /// `WaterMarkRepository` via `watermarkConfigBridge` (loaded on launch, edited through the shared
+    /// `WatermarkConfigEditor`) instead of a Swift-only constant. Default matches the prior constant.
+    /// Seed only until first bridge load; empty-store default comes from shared
+    /// `config_default_water_mark_text` (master-aligned EN / locale variants).
+    @Published private(set) var watermarkText: String = "👋 DO NOT REDISTRIBUTE"
+
+    /// S4d-103: watermark rotation degree, also sourced from the shared `WaterMarkRepository` via
+    /// `watermarkConfigBridge` (loaded on launch, edited through `WatermarkConfigEditor.updateDegree`).
+    /// Default 315° matches `WaterMark.default.degree` and the prior hardcoded render arg.
+    @Published private(set) var watermarkDegree: Float = 315.0
+
+    /// S4d-104: watermark tile mode, also sourced from the shared `WaterMarkRepository` via
+    /// `watermarkConfigBridge` (loaded on launch, edited through `WatermarkConfigEditor.updateTileMode`).
+    /// Default REPEAT matches `WaterMark.default.tileMode` and the prior hardcoded render arg. The UI
+    /// offers only REPEAT and CLAMP (single decal).
+    @Published private(set) var watermarkTileMode: WatermarkTileMode = .repeat
+
+    /// S4d-105: watermark opacity as the **normalized render alpha** (0…1) the render bridge expects.
+    /// Sourced from the shared `WaterMarkRepository` (stored as a 0…255 byte) via `watermarkConfigBridge`
+    /// and edited through `WatermarkConfigEditor.updateAlpha` (percent). Default 1.0 (opaque) matches
+    /// `WaterMark.default.alpha == 255` and the prior hardcoded render arg.
+    @Published private(set) var watermarkAlpha: Float = 1.0
+
+    /// S4d-107: watermark text color as a packed ARGB `Int32` (matching the Kotlin 32-bit `Int`), sourced
+    /// from the shared `WaterMarkRepository` via `watermarkConfigBridge` and edited through
+    /// `WatermarkConfigEditor.updateTextColor`. Default `0xFFFFB800` (amber) is `WaterMark.default
+    /// .textColor` — an ALIGNMENT: the fresh-install iOS render changes from the prior hardcoded white to
+    /// this shared/Android product default.
+    @Published private(set) var watermarkColorArgb: Int32 = Int32(bitPattern: 0xFFFFB800)
+
+    /// S4d-109: watermark text size, sourced from the shared `WaterMarkRepository` via
+    /// `watermarkConfigBridge` and edited through `WatermarkConfigEditor.updateTextSize`. Default `14.0`
+    /// is `WaterMark.default.textSize` — an ALIGNMENT: the fresh-install iOS render changes from the
+    /// prior hardcoded `24` to this shared/Android product default (smaller text).
+    @Published private(set) var watermarkTextSize: Float = 14.0
+
+    /// S4d-110: watermark horizontal/vertical gap percents (`Int32` matching the Kotlin `Int`), sourced
+    /// from the shared `WaterMarkRepository` via `watermarkConfigBridge` and edited through
+    /// `WatermarkConfigEditor.updateHorizon`/`updateVertical`. Default `0`/`0` is `WaterMark.default` —
+    /// an ALIGNMENT: the fresh-install iOS render changes from the prior hardcoded `40`/`40` to these
+    /// shared/Android product defaults (denser tiling). Clamped 0..500 by the shared rules.
+    @Published private(set) var watermarkHGap: Int32 = 0
+    @Published private(set) var watermarkVGap: Int32 = 0
+
+    /// S4d-112: watermark text typeface as the storage-id key (0=Normal, 1=Italic, 2=Bold,
+    /// 3=BoldItalic), matching `TextTypeface.obtainSysTypeface()` / the persisted int. Sourced from the
+    /// shared `WaterMarkRepository` via `watermarkConfigBridge` and edited through
+    /// `WatermarkConfigEditor.updateTextTypeface`. Default `0` (Normal) is `WaterMark.default.textTypeface`
+    /// — an ADDITION, not an alignment: the fresh-install iOS render is unchanged (regular text); bold/
+    /// italic are Compose **synthetic** (perceptual, not byte-parity with Android's StaticLayout). The
+    /// Kotlin `TextTypeface` sealed object is constructed only at the bridge/render edge via
+    /// `TextTypeface.companion.obtainSealedClass(key:)`, so the SwiftUI Picker state stays a plain `Int32`.
+    @Published private(set) var watermarkTypefaceKey: Int32 = 0
+
+    /// S4d-113: watermark text paint style as the storage-id key (0=Fill, 1=Stroke), matching
+    /// `TextPaintStyle.serializeKey()` / the persisted int. Sourced from the shared `WaterMarkRepository`
+    /// via `watermarkConfigBridge` and edited through `WatermarkConfigEditor.updateTextStyle`. Default `0`
+    /// (Fill) is `WaterMark.default.textStyle` — an ADDITION, not an alignment: the fresh-install iOS
+    /// render is unchanged (filled text); Stroke is Compose hairline (perceptual, not byte-parity with
+    /// Android's `Paint.Style.STROKE`). The Kotlin `TextPaintStyle` sealed object is constructed only at
+    /// the bridge/render edge via `TextPaintStyle.companion.obtainSealedClass(key:)`, so the SwiftUI Picker
+    /// state stays a plain `Int32`.
+    @Published private(set) var watermarkTextStyleKey: Int32 = 0
+
+    /// S4d-117: the persisted watermark mode (Text vs Image/icon), loaded from the shared
+    /// `WaterMarkRepository` via `watermarkConfigBridge.currentMarkMode()` (at launch via
+    /// `loadWatermarkMarkMode()` and at render time) and retained here. Image mode is reached by selecting
+    /// an icon (`setWatermarkIcon` → `setIconFromBytes`, S4d-118/S4d-116). Default `.text`.
+    @Published private(set) var watermarkMarkMode: WatermarkMode = .text
+
+    /// S4d-118: a **transient, in-memory** thumbnail of the most recently selected icon's bytes — a UI
+    /// indication only, NOT a durable Swift-side icon store (the durable bytes live in the app-private file
+    /// via `IosIconPersistence`). Nil until an icon is selected this session; not reconstructed on launch.
+    @Published private(set) var iconThumbnail: Data?
+
+    /// ADR-0017 Phase 4: single iOS service graph — shared [WatermarkSessionViewModel] +
+    /// config/user bridges over **one** DataStore each (no dual-store).
+    private let services = IosAppServicesKt.defaultIosAppServices()
+
+    /// S4d-102: watermark-config bridge from [services] (same WaterMarkRepository as the session).
+    private var watermarkConfigBridge: IosWatermarkConfigBridge { services.configBridge }
+
+    /// S4d-102: the last picked photo's encoded bytes, kept so a watermark-text edit can re-render the
+    /// same image without re-picking. Nil until the first render.
+    private var lastImageData: Data?
+
+    /// S4d-82: user-config bridge from [services] (same UserConfigRepository as the session).
+    private var userConfigBridge: IosUserConfigBridge { services.userConfigBridge }
+    /// Non-visible link/async-interop witness: the launch-time `currentPreferences()` result (or an
+    /// error string). Published only for testability — there is intentionally NO prefs/settings UI.
+    @Published private(set) var userConfigWitness: String?
+
+    /// S4d-82: exercise the Swift↔Kotlin bridge once on launch — a read-only `currentPreferences()`
+    /// snapshot (writes no prefs). Stores the result/error in `userConfigWitness` for future use.
+    func loadUserConfigWitness() async {
+        do {
+            let prefs = try await userConfigBridge.currentPreferences()
+            userConfigWitness = "\(prefs.outputFormat)/\(prefs.compressLevel)"
+        } catch {
+            userConfigWitness = "userConfig error: \(error.localizedDescription)"
+        }
+    }
+
+    /// S4d-102: load the persisted watermark text from the shared `WaterMarkRepository` (one-shot
+    /// snapshot). On an empty store this returns the repository's default
+    /// (`config_default_water_mark_text` / master), so the
+    /// visible default is preserved. A read error keeps the current value.
+    func loadWatermarkText() async {
+        do {
+            watermarkText = try await watermarkConfigBridge.currentText()
+        } catch {
+            // keep the current default; a read failure must not break the editor
+        }
+    }
+
+    /// S4d-102: persist a new watermark `text` through the shared `WatermarkConfigEditor` use-case, then
+    /// re-render the last image (if any) so the preview reflects the edit. A write failure surfaces as a
+    /// `.failure` state without changing the persisted value.
+    func setWatermarkText(_ text: String) async {
+        do {
+            try await watermarkConfigBridge.setText(text: text)
+            watermarkText = text
+            if let data = lastImageData {
+                await render(imageData: data)
+            }
+        } catch {
+            state = .failure("Could not save watermark text: \(error.localizedDescription)")
+        }
+    }
+
+    /// S4d-103: load the persisted rotation degree from the shared `WaterMarkRepository` (one-shot). On
+    /// an empty store this returns `WaterMark.default.degree` (315°), preserving the visible default. A
+    /// read error keeps the current value.
+    func loadWatermarkDegree() async {
+        do {
+            // A Kotlin `suspend fun` returning a primitive bridges to Swift as a boxed `KotlinFloat`.
+            watermarkDegree = try await watermarkConfigBridge.currentDegree().floatValue
+        } catch {
+            // keep the current default; a read failure must not break the editor
+        }
+    }
+
+    /// S4d-103: persist a new rotation `degree` through the shared `WatermarkConfigEditor` (clamped
+    /// 0..360 by the shared rules), then re-render the last image (if any). A write failure surfaces as
+    /// a `.failure` without changing the persisted value.
+    func setWatermarkDegree(_ degree: Float) async {
+        do {
+            try await watermarkConfigBridge.setDegree(degree: degree)
+            watermarkDegree = degree
+            if let data = lastImageData {
+                await render(imageData: data)
+            }
+        } catch {
+            state = .failure("Could not save watermark rotation: \(error.localizedDescription)")
+        }
+    }
+
+    /// S4d-104: load the persisted tile mode from the shared `WaterMarkRepository` (one-shot). On an
+    /// empty store this returns `WaterMark.default.tileMode` (REPEAT), preserving the visible default. A
+    /// read error keeps the current value.
+    func loadWatermarkTileMode() async {
+        do {
+            watermarkTileMode = try await watermarkConfigBridge.currentTileMode()
+        } catch {
+            // keep the current default; a read failure must not break the editor
+        }
+    }
+
+    /// S4d-104: persist a new tile `mode` through the shared `WatermarkConfigEditor`, then re-render the
+    /// last image (if any). A write failure surfaces as a `.failure` without changing the persisted value.
+    func setWatermarkTileMode(_ mode: WatermarkTileMode) async {
+        do {
+            try await watermarkConfigBridge.setTileMode(tileMode: mode)
+            watermarkTileMode = mode
+            if let data = lastImageData {
+                await render(imageData: data)
+            }
+        } catch {
+            state = .failure("Could not save watermark tile mode: \(error.localizedDescription)")
+        }
+    }
+
+    /// S4d-105: load the persisted alpha **byte** (0…255) from the shared repo (one-shot) and normalize
+    /// to 0…1 for rendering. On an empty store this yields 1.0 (`WaterMark.default.alpha == 255`),
+    /// preserving the visible default. A read error keeps the current value.
+    func loadWatermarkAlpha() async {
+        do {
+            // A Kotlin `suspend fun` returning a primitive bridges to Swift as a boxed `KotlinInt`.
+            let byte = try await watermarkConfigBridge.currentAlphaByte()
+            watermarkAlpha = byte.floatValue / 255.0
+        } catch {
+            // keep the current default; a read failure must not break the editor
+        }
+    }
+
+    /// S4d-105: persist a new normalized opacity (`normalized` 0…1) by converting to a 0…100 percent and
+    /// writing through the shared `WatermarkConfigEditor` (which truncates to a 0…255 byte), then
+    /// re-render the last image (if any). A write failure surfaces as `.failure` without persisting.
+    func setWatermarkAlpha(_ normalized: Float) async {
+        do {
+            try await watermarkConfigBridge.setAlphaPercent(percent: normalized * 100.0)
+            watermarkAlpha = normalized
+            if let data = lastImageData {
+                await render(imageData: data)
+            }
+        } catch {
+            state = .failure("Could not save watermark opacity: \(error.localizedDescription)")
+        }
+    }
+
+    /// S4d-107: load the persisted ARGB text color from the shared repo (one-shot). On an empty store
+    /// this yields `0xFFFFB800` (amber, `WaterMark.default.textColor`). A read error keeps the current value.
+    func loadWatermarkTextColor() async {
+        do {
+            // A Kotlin `suspend fun` returning a primitive bridges to Swift as a boxed `KotlinInt`.
+            watermarkColorArgb = try await watermarkConfigBridge.currentTextColor().int32Value
+        } catch {
+            // keep the current default; a read failure must not break the editor
+        }
+    }
+
+    /// S4d-107: persist a new ARGB text `color` through the shared `WatermarkConfigEditor`, then re-render
+    /// the last image (if any). A write failure surfaces as `.failure` without changing the persisted value.
+    func setWatermarkTextColor(_ color: Int32) async {
+        do {
+            try await watermarkConfigBridge.setTextColor(color: color)
+            watermarkColorArgb = color
+            if let data = lastImageData {
+                await render(imageData: data)
+            }
+        } catch {
+            state = .failure("Could not save watermark color: \(error.localizedDescription)")
+        }
+    }
+
+    /// S4d-109: load the persisted text size from the shared repo (one-shot). On an empty store this
+    /// yields `14` (`WaterMark.default.textSize`). A read error keeps the current value.
+    func loadWatermarkTextSize() async {
+        do {
+            // A Kotlin `suspend fun` returning a primitive bridges to Swift as a boxed `KotlinFloat`.
+            watermarkTextSize = try await watermarkConfigBridge.currentTextSize().floatValue
+        } catch {
+            // keep the current default; a read failure must not break the editor
+        }
+    }
+
+    /// S4d-109: persist a new text `size` through the shared `WatermarkConfigEditor`, then re-render the
+    /// last image (if any). A write failure surfaces as `.failure` without changing the persisted value.
+    func setWatermarkTextSize(_ size: Float) async {
+        do {
+            try await watermarkConfigBridge.setTextSize(size: size)
+            watermarkTextSize = size
+            if let data = lastImageData {
+                await render(imageData: data)
+            }
+        } catch {
+            state = .failure("Could not save watermark text size: \(error.localizedDescription)")
+        }
+    }
+
+    /// S4d-110: load the persisted horizontal/vertical gaps from the shared repo (one-shot). On an empty
+    /// store both are `0` (`WaterMark.default`). A read error keeps the current values.
+    func loadWatermarkGaps() async {
+        do {
+            // A Kotlin `suspend fun` returning a primitive bridges to Swift as a boxed `KotlinInt`.
+            watermarkHGap = try await watermarkConfigBridge.currentHGap().int32Value
+            watermarkVGap = try await watermarkConfigBridge.currentVGap().int32Value
+        } catch {
+            // keep the current defaults; a read failure must not break the editor
+        }
+    }
+
+    /// S4d-110: persist a new horizontal gap through the shared `WatermarkConfigEditor` (clamped 0..500),
+    /// then re-render the last image (if any). Failures surface as `.failure` without persisting.
+    func setWatermarkHGap(_ gap: Int32) async {
+        do {
+            try await watermarkConfigBridge.setHGap(gap: gap)
+            watermarkHGap = gap
+            if let data = lastImageData {
+                await render(imageData: data)
+            }
+        } catch {
+            state = .failure("Could not save watermark horizontal gap: \(error.localizedDescription)")
+        }
+    }
+
+    /// S4d-110: persist a new vertical gap through the shared `WatermarkConfigEditor` (clamped 0..500),
+    /// then re-render the last image (if any). Failures surface as `.failure` without persisting.
+    func setWatermarkVGap(_ gap: Int32) async {
+        do {
+            try await watermarkConfigBridge.setVGap(gap: gap)
+            watermarkVGap = gap
+            if let data = lastImageData {
+                await render(imageData: data)
+            }
+        } catch {
+            state = .failure("Could not save watermark vertical gap: \(error.localizedDescription)")
+        }
+    }
+
+    /// S4d-112: load the persisted text typeface from the shared repo (one-shot) as its storage-id key.
+    /// On an empty store this yields `0` (Normal, `WaterMark.default.textTypeface`). `obtainSysTypeface()`
+    /// is a plain (non-suspend) Int accessor on the returned object, so it bridges directly to `Int32`.
+    /// A read error keeps the current value.
+    func loadWatermarkTypeface() async {
+        do {
+            watermarkTypefaceKey = try await watermarkConfigBridge.currentTextTypeface().obtainSysTypeface()
+        } catch {
+            // keep the current default; a read failure must not break the editor
+        }
+    }
+
+    /// S4d-112: persist a new typeface `key` (0..3) through the shared `WatermarkConfigEditor` — the
+    /// Kotlin `TextTypeface` sealed object is reconstructed from the key via the companion — then re-render
+    /// the last image (if any). A write failure surfaces as `.failure` without changing the persisted value.
+    func setWatermarkTypeface(_ key: Int32) async {
+        do {
+            let typeface = TextTypeface.companion.obtainSealedClass(key: key)
+            try await watermarkConfigBridge.setTextTypeface(typeface: typeface)
+            watermarkTypefaceKey = key
+            if let data = lastImageData {
+                await render(imageData: data)
+            }
+        } catch {
+            state = .failure("Could not save watermark typeface: \(error.localizedDescription)")
+        }
+    }
+
+    /// S4d-113: load the persisted text paint style from the shared repo (one-shot) as its storage-id key.
+    /// On an empty store this yields `0` (Fill, `WaterMark.default.textStyle`). `serializeKey()` is a plain
+    /// (non-suspend) Int accessor on the returned object, so it bridges directly to `Int32`. A read error
+    /// keeps the current value.
+    func loadWatermarkTextStyle() async {
+        do {
+            watermarkTextStyleKey = try await watermarkConfigBridge.currentTextStyle().serializeKey()
+        } catch {
+            // keep the current default; a read failure must not break the editor
+        }
+    }
+
+    /// S4d-113: persist a new paint-style `key` (0=Fill, 1=Stroke) through the shared `WatermarkConfigEditor`
+    /// — the Kotlin `TextPaintStyle` sealed object is reconstructed from the key via the companion — then
+    /// re-render the last image (if any). A write failure surfaces as `.failure` without persisting.
+    func setWatermarkTextStyle(_ key: Int32) async {
+        do {
+            let style = TextPaintStyle.companion.obtainSealedClass(key: key)
+            try await watermarkConfigBridge.setTextStyle(style: style)
+            watermarkTextStyleKey = key
+            if let data = lastImageData {
+                await render(imageData: data)
+            }
+        } catch {
+            state = .failure("Could not save watermark text style: \(error.localizedDescription)")
+        }
+    }
+
+    /// S4d-118: load the persisted watermark mode on launch (one-shot) so the UI can show Text/Image
+    /// accurately. A read error keeps the current value. (`render` also refreshes this at render time.)
+    func loadWatermarkMarkMode() async {
+        do {
+            watermarkMarkMode = try await watermarkConfigBridge.currentMarkMode()
+        } catch {
+            // keep the current default; a read failure must not break the editor
+        }
+    }
+
+    /// S4d-118: select an image-watermark icon from picked [data]. Persists the **bytes** through the shared
+    /// editor (`setIconFromBytes` → app-private file + `markMode` = Image; Swift passes bytes only and never
+    /// sees the persisted file path), updates the visible mode + transient thumbnail, then re-renders the
+    /// last source photo (if any) through the S4d-117 Image branch. A write failure surfaces as `.failure`.
+    func setWatermarkIcon(_ data: Data) async {
+        do {
+            try await watermarkConfigBridge.setIconFromBytes(bytes: data.toKotlinByteArray())
+            watermarkMarkMode = .image
+            iconThumbnail = data
+            if let image = lastImageData {
+                await render(imageData: image)
+            }
+        } catch {
+            state = .failure("Could not set the watermark icon: \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: - S4d-233 templates
+
+    /// S4d-233: the single retained iOS templates bridge over the **seeded** common templates Room DB —
+    /// the no-arg `buildTemplateDatabase()` (S4d-232: `NSDocumentDirectory` store + the bundled Android seed
+    /// on first creation). One instance per process (single DB file), mirroring `watermarkConfigBridge` /
+    /// `userConfigBridge`. The bridge owns only template-DB ops; applying a template reuses `setWatermarkText`.
+    private let templateBridge = IosTemplateBridgeKt.defaultIosTemplateBridge()
+
+    /// S4d-233: the persisted templates as flat `IosTemplate` values (id + content), loaded on launch and
+    /// refreshed after save/delete. On a fresh install these are the bundled default templates (S4d-232 seed).
+    @Published private(set) var templates: [IosTemplate] = []
+
+    /// S4d-233: one-shot snapshot of the persisted templates through the bridge. A read error keeps the
+    /// current list (must not break the editor).
+    func loadTemplates() async {
+        do {
+            templates = try await templateBridge.currentTemplates()
+        } catch {
+            // keep the current list; a read failure must not break the editor
+        }
+    }
+
+    /// S4d-233: save the current watermark text as a new template, then refresh the list. No-op on empty
+    /// text. A write failure surfaces as `.failure` without changing the list.
+    func saveCurrentTextAsTemplate() async {
+        let text = watermarkText
+        guard !text.isEmpty else { return }
+        do {
+            try await templateBridge.addTemplate(content: text)
+            await loadTemplates()
+        } catch {
+            state = .failure("Could not save template: \(error.localizedDescription)")
+        }
+    }
+
+    /// S4d-233: apply a template by REUSING the existing watermark-text setter (`setWatermarkText` persists
+    /// through the shared `WatermarkConfigEditor` and re-renders) — the template bridge never touches the
+    /// watermark config store.
+    func applyTemplate(_ template: IosTemplate) async {
+        await setWatermarkText(template.content)
+    }
+
+    /// S4d-233: delete a template by id, then refresh the list. A write failure surfaces as `.failure`.
+    func deleteTemplate(_ template: IosTemplate) async {
+        do {
+            try await templateBridge.deleteTemplate(id: template.id)
+            await loadTemplates()
+        } catch {
+            state = .failure("Could not delete template: \(error.localizedDescription)")
+        }
+    }
+
+    /// Render `imageData` (the encoded bytes of a picked photo) into a watermarked PNG.
+    /// ADR-0017 Phase 4: goes through shared [WatermarkSessionViewModel] + [IosExportPipelinePort]
+    /// (Skiko bridge wrap). Preview UI still shows the resulting PNG bytes.
+    func render(imageData: Data) async {
+        state = .rendering
+        resultPNG = nil
+        resultFileURL = nil
+        saveState = .idle
+        lastImageData = imageData
+
+        // Keep mode badge in sync for UI (same as pre-Phase-4).
+        do {
+            watermarkMarkMode = try await watermarkConfigBridge.currentMarkMode()
+        } catch {
+            watermarkMarkMode = .text
+        }
+
+        do {
+            let outPath = try await services.exportPickedImageBytes(imageBytes: imageData.toKotlinByteArray())
+            let url = URL(fileURLWithPath: outPath)
+            let png = try Data(contentsOf: url)
+            // Prefer file URL from session export for ShareLink; fall back to re-stage if needed.
+            resultPNG = png
+            resultFileURL = url
+            // Width/height: decode via UIImage when available for status line; 0/0 if unknown.
+            var width = 0
+            var height = 0
+            if let ui = UIImage(data: png) {
+                width = Int(ui.size.width * ui.scale)
+                height = Int(ui.size.height * ui.scale)
+            }
+            state = .success(pngByteCount: png.count, width: width, height: height)
+        } catch {
+            resultPNG = nil
+            resultFileURL = nil
+            state = .failure(error.localizedDescription)
+        }
+    }
+
+    /// Save the current result to the photo library (add-only). No-op if there is no result.
+    func saveResultToPhotos() async {
+        guard let png = resultPNG else { return }
+        saveState = .saving
+        do {
+            try await ImageExport.saveToPhotos(png)
+            saveState = .saved
+        } catch {
+            saveState = .failed(error.localizedDescription)
+        }
+    }
+
+    /// Surface a pre-render failure (e.g. PhotosPicker returned no transferable data).
+    func reportFailure(_ message: String) {
+        resultPNG = nil
+        resultFileURL = nil
+        saveState = .idle
+        state = .failure(message)
+    }
+
+    private enum Outcome: Sendable {
+        case success(Data, Int, Int)
+        case failure(String)
+    }
+
+    // `nonisolated` so the detached task can run it off the main actor (it touches no actor state).
+    //
+    // S4d-31 / ADR-0025: `IosWatermarkRenderBridge.renderWatermarkedPng` — system-default
+    // FontFamily.Default → compose → encodePng. Decode/render/encode failures arrive as
+    // Swift-catchable `IosRenderException` → `.failure(...)`.
+    private nonisolated static func renderBlocking(imageData: Data, text: String, degree: Float, tileMode: WatermarkTileMode, alpha: Float, colorArgb: Int32, textSize: Float, hGap: Int32, vGap: Int32, typefaceKey: Int32, textStyleKey: Int32) -> Outcome {
+        do {
+            // `composeOverImage` (inside the bridge) renders the text in the passed `colorArgb` ARGB
+            // color (S4d-107), the passed `typeface` (S4d-112, mapped to Compose fontWeight/fontStyle), and
+            // the passed `textStyle` (S4d-113, mapped to a Compose text drawStyle); `tileMode` must be
+            // REPEAT or CLAMP (REPEAT is the product tiling). Kotlin default params don't generate Swift
+            // overloads, so every argument is passed explicitly. The `TextTypeface`/`TextPaintStyle` sealed
+            // objects are reconstructed from their storage-id keys via the companion.
+            let rendered = try IosWatermarkRenderBridge.shared.renderWatermarkedPng(
+                imageBytes: imageData.toKotlinByteArray(),
+                text: text,
+                tileMode: tileMode,
+                textSize: textSize,
+                degree: degree,
+                hGapPercent: hGap,
+                vGapPercent: vGap,
+                offsetX: 0.5,
+                offsetY: 0.5,
+                alpha: alpha,
+                colorArgb: colorArgb,
+                typeface: TextTypeface.companion.obtainSealedClass(key: typefaceKey),
+                textStyle: TextPaintStyle.companion.obtainSealedClass(key: textStyleKey)
+            )
+            return .success(rendered.png.toData(), Int(rendered.width), Int(rendered.height))
+        } catch {
+            return .failure(describe(error))
+        }
+    }
+
+    /// S4d-117: the Image-mode analogue of `renderBlocking` — watermarks the photo with the persisted icon
+    /// bytes via `IosWatermarkRenderBridge.renderIconWatermarkedPng`. `nonisolated` so it runs in the
+    /// detached task off the main actor; only `Data`/`Int`/`Float` and the `tileMode` enum cross in (same
+    /// boundary as `renderBlocking`). The bridge wraps any decode/render/encode failure as an
+    /// `IosRenderException` (RENDER/ENCODE), surfaced here as `.failure`.
+    private nonisolated static func renderIconBlocking(imageData: Data, iconData: Data, tileMode: WatermarkTileMode, textSize: Float, degree: Float, hGap: Int32, vGap: Int32, alpha: Float) -> Outcome {
+        do {
+            // `composeIconOverImage` (inside the bridge) decodes the background + icon, renders the icon
+            // cell at `scaleRatio = textSize / 14f` (computed in Kotlin), and tiles it. Image watermarks
+            // carry no text/color/typeface/style. Kotlin default params don't generate Swift overloads, so
+            // every argument is passed explicitly.
+            let rendered = try IosWatermarkRenderBridge.shared.renderIconWatermarkedPng(
+                imageBytes: imageData.toKotlinByteArray(),
+                iconBytes: iconData.toKotlinByteArray(),
+                tileMode: tileMode,
+                textSize: textSize,
+                degree: degree,
+                hGapPercent: hGap,
+                vGapPercent: vGap,
+                offsetX: 0.5,
+                offsetY: 0.5,
+                alpha: alpha
+            )
+            return .success(rendered.png.toData(), Int(rendered.width), Int(rendered.height))
+        } catch {
+            return .failure(describe(error))
+        }
+    }
+
+    /// Concise message for a bridged render failure. A thrown `IosRenderException` bridges to an
+    /// `NSError` whose `userInfo["KotlinException"]` holds the original exception (with `.stage` +
+    /// `.message`); fall back to `localizedDescription` for anything else.
+    private nonisolated static func describe(_ error: Error) -> String {
+        let nsError = error as NSError
+        if let render = nsError.userInfo["KotlinException"] as? IosRenderException {
+            return "[\(render.stage.name)] \(render.message ?? "render failed")"
+        }
+        return error.localizedDescription
+    }
+}

@@ -88,4 +88,10 @@
     <string name="title_tile_mode">タイルモード</string>
     <string name="tile_mode_title_repeat">繰り返し</string>
     <string name="tile_mode_title_decal">Singolo</string>
+    <!-- Form inspector section headers (Expanded/Wide DEMO rhythm) -->
+    <string name="inspector_section_mode">モード</string>
+    <string name="inspector_section_tile">タイル</string>
+    <string name="inspector_section_look">外観</string>
+    <string name="inspector_section_gaps">間隔</string>
+    <string name="tips_low_resolution_source">低解像度の写真 · %1$d × %2$d</string>
 </resources>

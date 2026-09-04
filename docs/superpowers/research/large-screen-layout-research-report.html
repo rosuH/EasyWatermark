@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大屏 / 平板 / 折叠屏布局研究 · EasyWatermark</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --bg: #f3f5f4;
+  --surface: #ffffff;
+  --surface2: #e8eeec;
+  --border: rgba(15, 40, 35, 0.08);
+  --text: #0f241f;
+  --text-dim: #5c6f69;
+  --teal: #0f766e;
+  --teal-dim: rgba(15,118,110,0.1);
+  --amber: #b45309;
+  --amber-dim: rgba(180,83,9,0.1);
+  --blue: #1d4ed8;
+  --blue-dim: rgba(29,78,216,0.08);
+  --plum: #9f1239;
+  --plum-dim: rgba(159,18,57,0.08);
+  --green: #15803d;
+  --green-dim: rgba(21,128,61,0.1);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c1412; --surface: #14201c; --surface2: #1c2b26;
+    --border: rgba(255,255,255,0.08); --text: #e6f2ee; --text-dim: #8aa399;
+    --teal: #2dd4bf; --teal-dim: rgba(45,212,191,0.12);
+    --amber: #fbbf24; --amber-dim: rgba(251,191,36,0.12);
+    --blue: #60a5fa; --blue-dim: rgba(96,165,250,0.12);
+    --plum: #fb7185; --plum-dim: rgba(251,113,133,0.12);
+    --green: #4ade80; --green-dim: rgba(74,222,128,0.12);
+  }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.55;
+  background-image:
+    radial-gradient(ellipse 70% 45% at 0% 0%, var(--teal-dim), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 100% 10%, var(--amber-dim), transparent 50%);
+  min-height: 100vh;
+}
+.wrap {
+  max-width: 1280px; margin: 0 auto;
+  display: grid; grid-template-columns: 180px 1fr; gap: 0 36px;
+  padding: 28px 28px 80px;
+}
+.main { min-width: 0; }
+.toc {
+  position: sticky; top: 20px; align-self: start;
+  max-height: calc(100dvh - 40px); overflow-y: auto; padding: 12px 0;
+}
+.toc-title {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+  letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-dim);
+  margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+.toc a {
+  display: block; font-size: 12px; color: var(--text-dim); text-decoration: none;
+  padding: 5px 8px; border-radius: 6px; border-left: 2px solid transparent; margin-bottom: 2px;
+}
+.toc a:hover { color: var(--text); background: var(--surface2); }
+.toc a.active { color: var(--text); border-left-color: var(--teal); background: var(--teal-dim); }
+h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 8px; }
+.subtitle { color: var(--text-dim); font-size: 15px; margin-bottom: 16px; max-width: 68ch; }
+.meta-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+.pill {
+  font-family: var(--font-mono); font-size: 11px; padding: 4px 10px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--border); color: var(--text-dim);
+}
+.pill strong { color: var(--text); }
+.sec-head {
+  font-size: 12px; font-family: var(--font-mono); font-weight: 600;
+  letter-spacing: 1.2px; text-transform: uppercase; color: var(--teal);
+  margin: 40px 0 14px; padding-top: 8px; scroll-margin-top: 24px;
+}
+.sec-head span { color: var(--text-dim); font-weight: 500; text-transform: none; letter-spacing: 0; margin-left: 8px; }
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.kpi {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;
+}
+.kpi .label { font-size: 10px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-dim); }
+.kpi .value { font-size: 20px; font-weight: 700; margin: 6px 0 4px; letter-spacing: -0.02em; }
+.kpi .hint { font-size: 12px; color: var(--text-dim); line-height: 1.35; }
+.kpi.teal .value { color: var(--teal); }
+.kpi.amber .value { color: var(--amber); }
+.kpi.blue .value { color: var(--blue); }
+.kpi.plum .value { color: var(--plum); }
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 18px 20px; margin-bottom: 12px;
+}
+.card h3 { font-size: 16px; margin-bottom: 8px; }
+.card p, .prose p { font-size: 14px; margin-bottom: 8px; }
+.prose ul { margin: 6px 0 8px 1.2em; font-size: 14px; }
+.prose li { margin-bottom: 4px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.scheme {
+  border-top: 3px solid var(--teal);
+  min-height: 100%;
+}
+.scheme.b { border-top-color: var(--amber); }
+.scheme.c { border-top-color: var(--blue); }
+.scheme .tag {
+  font-family: var(--font-mono); font-size: 10px; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--text-dim); margin-bottom: 6px;
+}
+.wire {
+  font-family: var(--font-mono); font-size: 11px; line-height: 1.35;
+  background: var(--surface2); border-radius: 8px; padding: 12px; margin: 10px 0;
+  white-space: pre; overflow-x: auto; color: var(--text-dim);
+}
+.badge {
+  display: inline-block; font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+  padding: 2px 7px; border-radius: 999px; margin-right: 4px;
+}
+.badge.rec { background: var(--green-dim); color: var(--green); }
+.badge.warn { background: var(--amber-dim); color: var(--amber); }
+.badge.info { background: var(--blue-dim); color: var(--blue); }
+.badge.muted { background: var(--surface2); color: var(--text-dim); }
+.table-wrap {
+  overflow-x: auto; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--surface); margin-bottom: 14px;
+}
+table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th {
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  letter-spacing: 0.5px; color: var(--text-dim); background: var(--surface2); font-weight: 600;
+}
+tr:last-child td { border-bottom: none; }
+code, .mono {
+  font-family: var(--font-mono); font-size: 12px;
+  background: var(--surface2); padding: 1px 5px; border-radius: 4px;
+}
+.callout {
+  border-left: 3px solid var(--amber); background: var(--amber-dim);
+  border-radius: 0 10px 10px 0; padding: 12px 14px; margin: 14px 0; font-size: 13px;
+}
+.callout.teal { border-left-color: var(--teal); background: var(--teal-dim); }
+.diagram-shell {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px; margin-bottom: 14px; position: relative;
+}
+.mermaid-wrap { position: relative; }
+.zoom-controls {
+  position: absolute; top: 8px; right: 8px; z-index: 5; display: flex; gap: 4px;
+}
+.zoom-controls button {
+  font-family: var(--font-mono); font-size: 12px; background: var(--surface2);
+  border: 1px solid var(--border); color: var(--text); width: 28px; height: 28px;
+  border-radius: 6px; cursor: pointer;
+}
+.mermaid-viewport { overflow: hidden; cursor: grab; min-height: 260px; border-radius: 8px; }
+.mermaid-canvas { transform-origin: 0 0; }
+.form-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 12px 0;
+}
+.form-card {
+  background: var(--surface2); border-radius: 10px; padding: 12px; min-height: 90px;
+}
+.form-card .f { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-dim); }
+.form-card .t { font-size: 13px; font-weight: 600; margin: 6px 0 4px; }
+.form-card .d { font-size: 11px; color: var(--text-dim); line-height: 1.35; }
+.device-mock {
+  border: 2px solid var(--border); border-radius: 10px; background: var(--surface2);
+  height: 110px; position: relative; overflow: hidden; margin-top: 8px;
+}
+.device-mock .canvas { background: var(--teal-dim); position: absolute; }
+.device-mock .tools { background: var(--amber-dim); position: absolute; border-left: 1px solid var(--border); }
+.device-mock .strip { background: var(--blue-dim); position: absolute; }
+.device-mock .rail { background: var(--plum-dim); position: absolute; }
+.footer {
+  margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border);
+  font-size: 12px; color: var(--text-dim);
+}
+.footer a { color: var(--teal); }
+details {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 14px; margin-bottom: 10px;
+}
+details summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+details .body { margin-top: 10px; font-size: 13px; color: var(--text-dim); }
+@media (max-width: 1000px) {
+  .wrap { grid-template-columns: 1fr; padding: 16px 16px 60px; }
+  .toc {
+    position: sticky; top: 0; z-index: 50; display: flex; gap: 4px; overflow-x: auto;
+    background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border); max-height: none; margin: 0 -16px 12px;
+    padding: 10px 16px; grid-row: auto;
+  }
+  .toc-title { display: none; }
+  .toc a { white-space: nowrap; flex-shrink: 0; border-left: none; border-bottom: 2px solid transparent; }
+  .toc a.active { border-left: none; border-bottom-color: var(--teal); }
+  .kpis, .grid-3, .grid-2, .form-grid { grid-template-columns: 1fr; }
+  h1 { font-size: 26px; }
+  .sec-head { scroll-margin-top: 52px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="toc" id="toc">
+  <div class="toc-title">Contents</div>
+  <a href="#s1">1 结论</a>
+  <a href="#s2">2 现状缺口</a>
+  <a href="#s3">3 官方最佳实践</a>
+  <a href="#s4">4 竞品信号</a>
+  <a href="#s5">5 三方案</a>
+  <a href="#s6">6 形态矩阵</a>
+  <a href="#s7">7 代码路径</a>
+  <a href="#s8">8 推荐路线</a>
+  <a href="#s9">9 来源</a>
+</nav>
+
+<div class="main">
+  <h1>大屏 · 平板 · 折叠屏布局研究</h1>
+  <p class="subtitle">
+    针对 EasyWatermark（预览 + 瓦片水印控件 + 胶卷 + 导出）在
+    <strong>phone / tablet / foldable / desktop</strong> 上的布局与交互方案。
+    综合 Compose 官方 Adaptive 实践、竞品形态与三套可落地 IA。
+  </p>
+  <div class="meta-row">
+    <span class="pill"><strong>Date</strong> 2026-08-09</span>
+    <span class="pill"><strong>Method</strong> research agents · adaptive skill · AndroidDev · X</span>
+    <span class="pill"><strong>Scope</strong> Editor 为主 · Gallery 次之</span>
+  </div>
+
+  <div id="s1" class="sec-head">01 — 核心结论</div>
+  <div class="kpis">
+    <div class="kpi teal">
+      <div class="label">官方 canonical</div>
+      <div class="value">Supporting pane</div>
+      <div class="hint">预览主区 + 工具副区 — 非 list-detail</div>
+    </div>
+    <div class="kpi amber">
+      <div class="label">WSC 宽度</div>
+      <div class="value">600 / 840</div>
+      <div class="hint">Medium / Expanded 官方断点（dp）</div>
+    </div>
+    <div class="kpi blue">
+      <div class="label">方案数</div>
+      <div class="value">3</div>
+      <div class="hint">Studio · Immersive · Batch 三区</div>
+    </div>
+    <div class="kpi plum">
+      <div class="label">本仓 Expanded</div>
+      <div class="value">1024dp</div>
+      <div class="hint">严于官方 840 — 平板横屏易仍是竖栈</div>
+    </div>
+  </div>
+
+  <div class="callout teal">
+    <strong>一句话：</strong> 水印编辑器在官方分类里是 <em>Supporting Pane</em>（主内容 + 工具副窗），不是邮件式 List-Detail。
+    建议 Compact 走沉浸预览（B），Medium+ 走侧栏工作室（A），宽桌面再考虑三区批处理（C）。
+    当前 I1 只有 ≥1024 才双栏，且右栏 max 360 + 双 padding Fit，大屏体验空、挤、切边。
+  </div>
+
+  <div id="s2" class="sec-head">02 — EasyWatermark 现状缺口</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>项</th><th>现状</th><th>官方 / 竞品对照</th><th>风险</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>宽度断点</td>
+          <td><code>EditorLayoutClass</code> 600 / <strong>1024</strong></td>
+          <td>WSC Medium 600–840 · Expanded ≥840</td>
+          <td>多数平板横屏 840–1023 仍走 Compact/Medium 竖栈</td>
+        </tr>
+        <tr>
+          <td>Expanded 布局</td>
+          <td>preview | controls（max 360 · 38% 宽）</td>
+          <td>Supporting pane ~70/30</td>
+          <td>接近 A，但 padding/裁切未打磨</td>
+        </tr>
+        <tr>
+          <td>Medium</td>
+          <td>与 Compact 同竖栈</td>
+          <td>半屏副区或 sheet</td>
+          <td>折叠内屏竖持浪费宽度</td>
+        </tr>
+        <tr>
+          <td>折叠姿势</td>
+          <td>未使用 FoldingFeature</td>
+          <td>tabletop / book / isSeparating</td>
+          <td>铰链上放控件风险</td>
+        </tr>
+        <tr>
+          <td>依赖</td>
+          <td>手写 layoutClass · 无 material3-adaptive scaffold</td>
+          <td>SupportingPaneScaffold / Nav3 SceneStrategy</td>
+          <td>要双栏导航态需自研</td>
+        </tr>
+        <tr>
+          <td>Desktop 全屏</td>
+          <td>裸 Window · Fit + 双 12dp</td>
+          <td>主区吃满 · 侧栏固定内边距</td>
+          <td>空边 + 右栏裁切（已复现）</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="s3" class="sec-head">03 — Compose 官方最佳实践 <span>developer.android.com</span></div>
+  <div class="grid-2">
+    <div class="card prose">
+      <h3>Window Size Classes（宽度）</h3>
+      <ul>
+        <li><strong>Compact</strong> &lt; 600dp — 绝大多数手机竖屏</li>
+        <li><strong>Medium</strong> 600–840 — 平板竖屏、部分折叠内屏竖持</li>
+        <li><strong>Expanded</strong> 840–1200 — 平板横屏、大折叠内屏横持</li>
+        <li><strong>Large</strong> 1200–1600 · <strong>XLarge</strong> ≥1600 — 桌面/外接屏</li>
+      </ul>
+      <p>用 <code>currentWindowAdaptiveInfo()</code>，按 <strong>app 窗口</strong> 而非 isTablet 分类。高度 Compact 时（手机横屏）勿硬双栏。</p>
+    </div>
+    <div class="card prose">
+      <h3>三大 Canonical Layout</h3>
+      <ul>
+        <li><strong>List-detail</strong> — 列表 + 详情（邮件/笔记）</li>
+        <li><strong>Supporting pane</strong> — 主内容 + 支持工具（<strong>媒体编辑</strong>）</li>
+        <li><strong>Feed</strong> — 自适应网格（相册/社交）</li>
+      </ul>
+      <p>官方明确：媒体编辑工具窗口属于 Supporting pane 用例。</p>
+    </div>
+  </div>
+
+  <div class="diagram-shell">
+    <div class="mermaid-wrap">
+      <div class="zoom-controls">
+        <button type="button" data-zoom="in">+</button>
+        <button type="button" data-zoom="out">−</button>
+        <button type="button" data-zoom="reset">⟲</button>
+        <button type="button" data-zoom="expand">⛶</button>
+      </div>
+      <div class="mermaid-viewport" id="vp1">
+        <div class="mermaid-canvas" id="c1">
+          <pre class="mermaid">
+flowchart TD
+  WSC["WindowSizeClass<br/>currentWindowAdaptiveInfo"]
+  WSC --> C["Compact &lt;600"]
+  WSC --> M["Medium 600–840"]
+  WSC --> E["Expanded ≥840"]
+  WSC --> L["Large / XLarge ≥1200"]
+  C --> ONE["单栏：预览 + 底栏控件"]
+  M --> HALF["半双栏或主区+sheet"]
+  E --> SUP["SupportingPaneScaffold<br/>main ~70% · support ~30%"]
+  L --> WIDE["可三区 / 可拖分栏"]
+  SUP --> FOLD["FoldingFeature<br/>tabletop · book · hinge"]
+  classDef a fill:#ccfbf1,stroke:#0f766e,color:#0f241f
+  classDef b fill:#fef3c7,stroke:#b45309,color:#0f241f
+  class WSC,SUP,FOLD a
+  class C,M,E,L,ONE,HALF,WIDE b
+          </pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card prose">
+    <h3>关键 API（Android）</h3>
+    <ul>
+      <li><code>SupportingPaneScaffold</code> / <code>rememberSupportingPaneScaffoldNavigator</code></li>
+      <li><code>ListDetailPaneScaffold</code>（胶卷→单图若做 gallery 双栏）</li>
+      <li><code>NavigationSuiteScaffold</code>（底栏 ↔ 导航轨）</li>
+      <li>Nav3：<code>ListDetailSceneStrategy</code> / <code>SupportingPaneSceneStrategy</code>（adaptive skill 在 Nav3 路径上优先 SceneStrategy）</li>
+      <li>折叠：WindowManager <code>FoldingFeature</code>（HALF_OPENED + orientation）</li>
+    </ul>
+  </div>
+
+  <div class="callout">
+    <strong>@AndroidDev（X）：</strong> 用 Material 3 Adaptive，勿锁方向；可调整窗口与多窗口；适配折叠/展开。
+  </div>
+
+  <div id="s4" class="sec-head">04 — 竞品布局信号</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>产品</th><th>Phone</th><th>Tablet / 大屏</th><th>对水印编辑的启发</th></tr></thead>
+      <tbody>
+        <tr><td>Google Photos 编辑</td><td>全屏画布 + 底工具</td><td>画布 + 侧边/底工具扩展</td><td>主区优先，工具常驻可见</td></tr>
+        <tr><td>Snapseed</td><td>沉浸画布 + 手势</td><td>同构、少永久 chrome</td><td>检视瓦片/边缘时隐藏 chrome</td></tr>
+        <tr><td>Lightroom Mobile/Classic</td><td>底条工具</td><td>Classic 三区：库|画布|检视器</td><td>批处理/模板适合三区</td></tr>
+        <tr><td>Canva</td><td>底工具</td><td>左素材 · 中画布 · 右属性</td><td>模板/资源一等公民</td></tr>
+        <tr><td>Apple Markup / Photos iPad</td><td>—</td><td>大画布 + 工具栏/面板</td><td>侧栏 inspector 成熟</td></tr>
+        <tr><td>水印类 App</td><td>多为底栏</td><td>少见真正双栏</td><td>差异化机会：大屏工作室</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="s5" class="sec-head">05 — 三套方案 <span>A / B / C</span></div>
+  <div class="grid-3">
+    <div class="card scheme">
+      <div class="tag">Scheme A · Recommended default</div>
+      <h3>Supporting Pane Studio</h3>
+      <div class="device-mock" title="Expanded">
+        <div class="canvas" style="left:0;top:0;bottom:0;right:32%;"></div>
+        <div class="tools" style="right:0;top:0;bottom:0;width:32%;"></div>
+        <div class="strip" style="right:4%;top:6%;width:24%;height:14%;"></div>
+      </div>
+      <div class="wire">┌ TopBar ─────────────┐
+│ Preview │ Film+Tabs │
+│  (70%)  │ Inspector │
+│         │ (≤360dp)  │
+└─────────────────────┘</div>
+      <p style="font-size:13px;color:var(--text-dim)">
+        对齐官方 Supporting pane 与 Photos/iPad 编辑。
+        对现有 I1 Expanded 改动最小。
+      </p>
+      <p><span class="badge rec">推荐 Medium+</span></p>
+    </div>
+    <div class="card scheme b">
+      <div class="tag">Scheme B · Canvas first</div>
+      <h3>Immersive Canvas + Rail</h3>
+      <div class="device-mock">
+        <div class="canvas" style="left:0;top:0;right:48px;bottom:0;"></div>
+        <div class="rail" style="right:0;top:0;bottom:0;width:48px;"></div>
+        <div class="strip" style="left:8%;bottom:8%;width:60%;height:12%;"></div>
+      </div>
+      <div class="wire">┌ Full-bleed Preview ─ R ┐
+│  tiles visible        a │
+│  filmstrip peek    i  │
+│  tools → temporary  l │
+└─────────────────────┘</div>
+      <p style="font-size:13px;color:var(--text-dim)">
+        Snapseed/Markup 取向：瓦片检视优先；
+        Medium+ 用竖向 FuncType rail + 临时 sheet。
+      </p>
+      <p><span class="badge rec">推荐 Compact</span><span class="badge warn">多一步点开</span></p>
+    </div>
+    <div class="card scheme c">
+      <div class="tag">Scheme C · Batch power</div>
+      <h3>Three-Zone Batch Studio</h3>
+      <div class="device-mock">
+        <div class="rail" style="left:0;top:0;bottom:0;width:18%;"></div>
+        <div class="canvas" style="left:18%;top:0;right:28%;bottom:0;"></div>
+        <div class="tools" style="right:0;top:0;bottom:0;width:28%;"></div>
+      </div>
+      <div class="wire">┌ Lib │ Canvas │ Insp. ┐
+│ img │  big   │ tabs  │
+│ tpl │        │       │
+└─────────────────────┘</div>
+      <p style="font-size:13px;color:var(--text-dim)">
+        Lightroom Classic / Canva 桌面：库+画布+检视器。
+        批处理/模板最强，手机需折叠为 A/B。
+      </p>
+      <p><span class="badge info">桌面 ≥1440</span><span class="badge muted">重工程</span></p>
+    </div>
+  </div>
+
+  <div class="card prose">
+    <h3>交互形态对照</h3>
+    <ul>
+      <li><strong>A</strong> — 参数常驻可见（透明度/间距/旋转边调边看瓦片）；胶卷在侧栏顶部。</li>
+      <li><strong>B</strong> — 渐进披露：默认只看画布；点 rail 弹出 Content/Style/Layout 面板；可双击隐藏 chrome。</li>
+      <li><strong>C</strong> — 左栏选图/模板即换中心预览；右栏为当前选中图的 inspector；适合多图批次导出。</li>
+    </ul>
+  </div>
+
+  <div id="s6" class="sec-head">06 — 形态矩阵</div>
+  <div class="form-grid">
+    <div class="form-card">
+      <div class="f">Phone Compact</div>
+      <div class="t">Scheme B 优先</div>
+      <div class="d">竖栈或底栏；预览吃高；控件 peek / sheet</div>
+    </div>
+    <div class="form-card">
+      <div class="f">Tablet / Medium</div>
+      <div class="t">Scheme A</div>
+      <div class="d">≥840 起双栏；竖持 600–840 可用半宽副区或 sheet</div>
+    </div>
+    <div class="form-card">
+      <div class="f">Foldable</div>
+      <div class="t">A + 姿势</div>
+      <div class="d">展开内屏 A；tabletop 上预览下控件；避开铰链</div>
+    </div>
+    <div class="form-card">
+      <div class="f">Desktop / XLarge</div>
+      <div class="t">A → C</div>
+      <div class="d">默认 A 打磨全屏；≥1440 可选 C 三区</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>形态</th><th>A Studio</th><th>B Immersive</th><th>C Batch</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Phone 360</td>
+          <td>退化为竖栈</td>
+          <td><strong>最佳</strong></td>
+          <td>折叠为 B</td>
+        </tr>
+        <tr>
+          <td>Tablet 800 竖</td>
+          <td>副区/sheet</td>
+          <td>rail 可选</td>
+          <td>隐藏左栏</td>
+        </tr>
+        <tr>
+          <td>Tablet 1024 横</td>
+          <td><strong>最佳</strong></td>
+          <td>可切换</td>
+          <td>2 区</td>
+        </tr>
+        <tr>
+          <td>Fold 内屏</td>
+          <td><strong>最佳</strong> + hinge</td>
+          <td>cover 用 B</td>
+          <td>book 可左列表</td>
+        </tr>
+        <tr>
+          <td>Desktop 全屏</td>
+          <td>默认（修 padding/裁切）</td>
+          <td>检视模式</td>
+          <td><strong>可选增强</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="s7" class="sec-head">07 — 推荐代码路径</div>
+  <div class="grid-2">
+    <div class="card prose">
+      <h3>短期（打磨 A，对齐 WSC）</h3>
+      <ul>
+        <li>断点：Expanded 降至 <strong>840dp</strong>（或保留 1024 但 Medium 半双栏）</li>
+        <li>右栏：固定宽 + 水平 padding；去掉贴边裁切</li>
+        <li>预览：取消双重 12dp；大窗 Fit 更贴边</li>
+        <li>Gallery：继续 <code>GridCells.Adaptive</code></li>
+      </ul>
+    </div>
+    <div class="card prose">
+      <h3>中期（官方组件）</h3>
+      <ul>
+        <li>Android：评估 <code>SupportingPaneScaffold</code></li>
+        <li>已在 Nav3 上：考虑 <code>SupportingPaneSceneStrategy</code></li>
+        <li>CMP commonMain：继续手写 Row 策略（与官方 70/30 对齐）</li>
+        <li>折叠：Android 侧注入 FoldingFeature → layout flags</li>
+      </ul>
+    </div>
+  </div>
+
+  <details>
+    <summary>官方 SupportingPane 最小形态（示意）</summary>
+    <div class="body mono" style="white-space:pre-wrap">@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+@Composable
+fun EditorAdaptive() {
+  val navigator = rememberSupportingPaneScaffoldNavigator()
+  SupportingPaneScaffold(
+    directive = navigator.scaffoldDirective,
+    value = navigator.scaffoldValue,
+    mainPane = { /* Preview canvas */ },
+    supportingPane = { /* Filmstrip + EditorBottomControls */ },
+  )
+}</div>
+  </details>
+
+  <div id="s8" class="sec-head">08 — 建议决策</div>
+  <div class="card prose">
+    <ol style="margin-left:1.2em;font-size:14px;">
+      <li><strong>产品默认 IA = A</strong>（Supporting Pane Studio），与官方媒体编辑用例一致。</li>
+      <li><strong>Phone Compact 采用 B 的交互密度</strong>（预览优先、控件可收起），视觉可仍是竖栈。</li>
+      <li><strong>Desktop 先修 A 全屏缺陷</strong>（已报空边/裁切），再评估 C 是否值得做批处理三区。</li>
+      <li><strong>断点与官方对齐</strong>：至少 Medium 行为有别于 Compact；Expanded 不晚于 840–900dp。</li>
+      <li>折叠与鼠标/键盘作为增强，不阻塞 A 修复。</li>
+    </ol>
+  </div>
+
+  <div class="callout teal">
+    <strong>相对当前 I1：</strong> 不是推倒重来，而是「A 打磨 + Compact 注入 B 的沉浸感 + 桌面可选 C」。
+  </div>
+
+  <div id="s9" class="sec-head">09 — 来源与产物</div>
+  <div class="grid-2">
+    <div class="card prose">
+      <h3>Primary</h3>
+      <ul>
+        <li>developer.android.com — Window size classes</li>
+        <li>Canonical layouts (list-detail / feed / supporting pane)</li>
+        <li>Material 3 Adaptive / adaptive-navigation3</li>
+        <li>adaptive skill (Navigation 3 Scenes)</li>
+        <li>@AndroidDev adaptive posts (X)</li>
+        <li>android/adaptive-apps-samples (GitHub)</li>
+      </ul>
+    </div>
+    <div class="card prose">
+      <h3>Repo notes</h3>
+      <ul>
+        <li><code>docs/superpowers/research/2026-08-09-compose-large-screen-official-bp.md</code></li>
+        <li><code>docs/superpowers/research/2026-08-09-competitor-large-screen-layouts.md</code></li>
+        <li><code>docs/superpowers/research/2026-08-09-large-screen-layout-synthesis.md</code></li>
+        <li>本报告 HTML（visual-explainer）</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer">
+    EasyWatermark large-screen layout research · 2026-08-09 ·
+    research subagents + adaptive skill + Android Developers docs/X ·
+    open in browser for Mermaid zoom.
+  </div>
+</div>
+</div>
+
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+import elkLayouts from 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.9/dist/mermaid-layout-elk.esm.min.mjs';
+mermaid.registerLayoutLoaders(elkLayouts);
+const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  look: 'classic',
+  layout: 'elk',
+  themeVariables: dark ? {
+    primaryColor: '#134e4a', primaryTextColor: '#e6f2ee', primaryBorderColor: '#2dd4bf',
+    lineColor: '#8aa399', secondaryColor: '#1c2b26', tertiaryColor: '#0c1412',
+    background: '#14201c', mainBkg: '#1c2b26', nodeBorder: '#2dd4bf',
+    clusterBkg: '#14201c', titleColor: '#e6f2ee', edgeLabelBackground: '#14201c',
+    fontFamily: 'DM Sans, system-ui, sans-serif', fontSize: '16px'
+  } : {
+    primaryColor: '#ccfbf1', primaryTextColor: '#0f241f', primaryBorderColor: '#0f766e',
+    lineColor: '#5c6f69', secondaryColor: '#e8eeec', tertiaryColor: '#f3f5f4',
+    background: '#ffffff', mainBkg: '#ffffff', nodeBorder: '#0f766e',
+    clusterBkg: '#f3f5f4', titleColor: '#0f241f', edgeLabelBackground: '#ffffff',
+    fontFamily: 'DM Sans, system-ui, sans-serif', fontSize: '16px'
+  },
+  flowchart: { htmlLabels: true, curve: 'basis' }
+});
+await mermaid.run({ querySelector: '.mermaid' });
+
+function wireZoom(viewportId, canvasId) {
+  const vp = document.getElementById(viewportId);
+  const canvas = document.getElementById(canvasId);
+  if (!vp || !canvas) return;
+  let scale = 1, x = 0, y = 0, dragging = false, lx = 0, ly = 0;
+  const apply = () => { canvas.style.transform = `translate(${x}px,${y}px) scale(${scale})`; };
+  const shell = vp.closest('.mermaid-wrap');
+  shell.querySelectorAll('[data-zoom]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const a = btn.getAttribute('data-zoom');
+      if (a === 'in') scale = Math.min(2.5, scale + 0.15);
+      if (a === 'out') scale = Math.max(0.4, scale - 0.15);
+      if (a === 'reset') { scale = 1; x = 0; y = 0; }
+      if (a === 'expand') {
+        if (!document.fullscreenElement) shell.requestFullscreen?.();
+        else document.exitFullscreen?.();
+      }
+      apply();
+    });
+  });
+  vp.addEventListener('wheel', e => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
+    scale = Math.min(2.5, Math.max(0.4, scale + (e.deltaY < 0 ? 0.1 : -0.1)));
+    apply();
+  }, { passive: false });
+  vp.addEventListener('pointerdown', e => { dragging = true; lx = e.clientX; ly = e.clientY; vp.setPointerCapture(e.pointerId); });
+  vp.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    x += e.clientX - lx; y += e.clientY - ly; lx = e.clientX; ly = e.clientY; apply();
+  });
+  vp.addEventListener('pointerup', () => { dragging = false; });
+}
+wireZoom('vp1', 'c1');
+
+(function() {
+  const toc = document.getElementById('toc');
+  const links = toc.querySelectorAll('a');
+  const sections = [];
+  links.forEach(link => {
+    const id = link.getAttribute('href').slice(1);
+    const el = document.getElementById(id);
+    if (el) sections.push({ id, el, link });
+  });
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const match = sections.find(s => s.el === entry.target);
+        if (match) {
+          match.link.classList.add('active');
+          if (window.innerWidth <= 1000) {
+            match.link.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          }
+        }
+      }
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  sections.forEach(s => observer.observe(s.el));
+  links.forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      const id = link.getAttribute('href').slice(1);
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        history.replaceState(null, '', '#' + id);
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -6,21 +6,28 @@ import android.graphics.Typeface
 import android.text.TextPaint
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.render.WatermarkGeometry
 
 /**
- * 因为预览和实际图像之间存在缩放，所以在预览时要除去缩放比。而在保存时，就不需要了
- * Because there is a zoom between the preview and the actual image, the zoom ratio should be removed when previewing
- * When saving, it’s not needed
+ * S3a image-space sizing: the text paint size is `textSize * imageInfo.width / REF_WIDTH`, i.e.
+ * `textSize` is a fraction (`textSize / REF_WIDTH`) of the target image's width, resolved against the
+ * Bitmap the cell tiles over (`ImageInfo.width` = the displayed drawable in preview, the full source * image at export). Preview and export now use the SAME formula, so the watermark is the same fraction
+ * of the image regardless of device/preview-view size.
+ *
+ * Replaces the old, device-dependent behavior (`textSize` raw in preview; `textSize * scaleX`, where
+ * `scaleX = 1/MSCALE_X` from the preview matrix, at export). [isScale] is retained for call-site/source
+ * compatibility but **no longer affects sizing** — both modes are image-space. Persisted `textSize`
+ * values are unchanged (D3 Option A, no DataStore migration).
  * @author hi@rosuh.me
- * @date 2020/9/8
+ * @date 2020/9/8 · S3a image-space re-spec 2026-06-14
  */
 fun Paint.applyConfig(
     imageInfo: ImageInfo,
     config: WaterMark?,
-    isScale: Boolean = true
+    @Suppress("UNUSED_PARAMETER") isScale: Boolean = true
 ): Paint {
     val size = config?.textSize ?: 14f
-    textSize = if (isScale) size else size * imageInfo.scaleX
+    textSize = WatermarkGeometry.fontPx(size, imageInfo.width)
     color = config?.textColor ?: Color.RED
     alpha = config?.alpha ?: 128
     style = config?.textStyle?.obtainSysStyle() ?: Paint.Style.FILL

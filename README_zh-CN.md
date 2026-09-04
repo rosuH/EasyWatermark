@@ -1,112 +1,109 @@
+<p align="center">
+  <img src="static/app-icon.png" alt="简单水印" width="96" height="96">
+</p>
+
 <h1 align="center">简单水印</h1>
 
 <p align="center">
-  <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/rosuh/easywatermark">
-  &nbsp;
-  &nbsp;
-  <a href="https://hosted.weblate.org/engage/easywatermark/zh_Hans/">
-    <img src="https://hosted.weblate.org/widgets/easywatermark/zh_Hans/svg-badge.svg" alt="翻译状态" />
-  </a>
-  &nbsp;
-  &nbsp;
-  <a href="https://app.fossa.com/projects/git%2Bgithub.com%2FrosuH%2FEasyWatermark?ref=badge_small" alt="FOSSA Status">
-    <img src="https://app.fossa.com/api/projects/git%2Bgithub.com%2FrosuH%2FEasyWatermark.svg?type=small"/>
-  </a>
+  <strong>不联网，很安全。</strong>
 </p>
-<p align="center">  
-安全、简单、快速地为你的敏感照片添加水印，防止被小人泄露、利用。
-  </br>
-尤其适合因不可抗力而需上传的：（手持）身份证照、隐私证件照、早期小样图片、带版权图片等照片。
-</p>
-</br>
 
 <p align="center">
-<img src="/static/preview.png"/>
+  <a href="./README.md">English</a> · <a href="./README_zh-CN.md">简体中文</a>
 </p>
 
-> 当然，也适用于制作表情包，毕竟支持图片水印，效果十分鬼畜。
-<a href="#" align="right"><img src="https://i.loli.net/2020/08/26/A53u6UbKZPYCv7t.jpg" width="5%"></a>
-
-<p align="left">
-<a href="https://play.google.com/store/apps/details?id=me.rosuh.easywatermark"><img src="/static/google-play-badge_cn.png" width="auto" height="64px"/></a>
-  <a href="https://www.coolapk.com/apk/272743"><img src="/static/logo_coolapk.png" width="auto" height="64px"/></a>
-    <a href="https://f-droid.org/packages/me.rosuh.easywatermark/"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" width="auto" height="64px"/></a>
+<p align="center">
+  <img alt="最新版本" src="https://img.shields.io/github/v/release/rosuh/easywatermark">
+  &nbsp;
+  <img alt="许可证" src="https://img.shields.io/github/license/rosuH/EasyWatermark">
+  &nbsp;
+  <a href="https://hosted.weblate.org/engage/easywatermark/zh_Hans/">
+    <img src="https://hosted.weblate.org/widgets/easywatermark/zh_Hans/svg-badge.svg" alt="翻译状态">
+  </a>
 </p>
 
+<p align="center">
+  安全、简单地为敏感照片加水印。<br>
+  尤其适合必须上传的证件照、手持证件、早期小样和带版权的图片。
+</p>
 
-## 特性
+<p align="center">
+  <img src="fastlane/metadata/android/zh-CN/images/featureGraphic.png" alt="简单水印 — 不联网，很安全" width="880">
+</p>
 
-> 当时我就念了一首诗 👓
+<p align="center">
+  <a href="https://play.google.com/store/apps/details?id=me.rosuh.easywatermark"><img src="static/google-play-badge_cn.png" alt="Google Play 下载" height="64"></a>
+  <a href="https://f-droid.org/packages/me.rosuh.easywatermark/"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="F-Droid 下载" height="64"></a>
+  <a href="https://www.coolapk.com/apk/272743"><img src="static/logo_coolapk.png" alt="酷安下载" height="64"></a>
+</p>
 
-- 单纯离线本地应用，代码开源想看就看
-- 横竖间距均可调节，颜色明暗随心转换
-- 大小角度自由旋转，文字图片皆可打上
-- 水印重复全图铺满，坏蛋除水印有点难
+<p align="center">
+  <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/1.jpg" alt="作品发出去，署名跟着走" width="210">
+  <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/2.jpg" alt="断网级别的安全可靠" width="210">
+  <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/3.jpg" alt="旅行大片，盖上你的名字" width="210">
+  <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/4.jpg" alt="办证上传？写明用途" width="210">
+</p>
+<p align="center">
+  <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/5.jpg" alt="笔画级的样式控制" width="210">
+  <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/6.jpg" alt="七种预设色，随手取色" width="210">
+  <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/7.jpg" alt="密度角度，随手可调" width="210">
+  <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/8.jpg" alt="常用水印，存成模板" width="210">
+</p>
 
-> 正经地说（推了推眼镜）
+## 功能
 
-- **安全性**：
-  - 代码完全开源，使用宽松的 MIT 协议，您可以随意 Fork 自己修改并删除您认为有问题的代码 ;)
-  - 不涉及网络请求，不申请网络请求权限，不用担心自己的照片被泄露。API >= 29 的用户甚至不需要申请任何权限。(28 及其以下用户需要申请存储权限以访问和存储照片)
-  - 当然也没有统计、埋点和 Device ID，甚至没有崩溃上报（所以如果遇到崩溃，麻烦和我们分享一下崩溃信息吧 >_<）。
-  - 我们放弃方便的第三方采集 SDK 以及各种统计信息，就是为了让你能放心地使用。**你的就是你的。**
-- **布局**：支持水印间的横竖间隔，自动重复铺满整张图片。
-- **样式**：字体颜色、文本样式、不透明度、大小和旋转角度都可以调节。
-- **内容**：支持文字水印和图片水印。
+- **文字与图片水印** — 署名、标志，或一句用途说明。
+- **样式** — 颜色、填充或描边、字重、大小、不透明度、角度，都在照片上即时可见。
+- **布局** — 横竖间距可调，支持平铺或单枚放置。
+- **模板** — 常用文案存一次，下一批直接套用。
+- **批量** — 一次选多张，同一套水印，一起导出。
+- **干净导出** — JPEG 或 PNG。包括定位信息在内的 EXIF 全部剥离。
+
+## 如何使用
+
+适合需要提交证件照、手持证件或敏感照片的场合。例如实名认证、项目小样、带版权的预览图。
+
+参考文案：*本照片仅供 xx 作 xx 之用，他用无效。* 不透明度调低一些，不要挡住关键信息。
+
+## 隐私
+
+简单水印不采集统计、设备标识，也没有崩溃上报，更没有第三方追踪 SDK。
+
+Android 10 及以上只需选图，不必再要其他运行时权限。Android 9 及以下仍需存储权限，才能读取和保存照片。
+
+详见 [隐私政策](PrivacyPolicy_zh-CN.md)。
 
 ## 下载
 
-开发者所主导的下载渠道：
-- [GitHub Release](https://github.com/rosuH/EasyWatermark/releases)：永远保持最新
-- [Google Play](https://play.google.com/store/apps/details?id=me.rosuh.easywatermark)
-    - 🍺 注意：收费版，但代码一致，如果您愿意请作者喝一杯茶（或者您比较任性），那么请去此下载，否则请选择其他渠道:)
-- [F-Droid](https://f-droid.org/packages/me.rosuh.easywatermark/)
-- [酷安](https://www.coolapk.com/apk/272743)
+请使用开发者维护的渠道：
 
-其他渠道均非开发者所主导，请仔细甄别后下载使用。
+| 渠道 | 说明 |
+|---|---|
+| [GitHub Releases](https://github.com/rosuH/EasyWatermark/releases) | 最新 APK |
+| [Google Play](https://play.google.com/store/apps/details?id=me.rosuh.easywatermark) | 付费版，代码一致，用于支持后续开发 |
+| [F-Droid](https://f-droid.org/packages/me.rosuh.easywatermark/) | 免费，可复现构建 |
+| [酷安](https://www.coolapk.com/apk/272743) | 国内列表 |
 
-## 如何使用？
-你想怎么用就怎么用。比较适合于需要提交证件照、手持证件照或敏感照片等情况。例如：
-- 国内各种实名制，动不动就上传身份证正反照片，甚至是手持证件照。
-- 项目前期预览图、小样、版权或单纯的恶搞图片
+其他渠道均非开发者维护。安装前请核对包名 `me.rosuh.easywatermark`。
 
-参考文案：
-> 本照片仅供 xx 作 xx 之用，他用无效。
+## 开源
 
-可以把不透明度调低，不要挡住关键信息即可，一般审核都没问题。
+本应用使用 [MIT](LICENSE) 协议。欢迎提交 Issue 与 Pull Request。翻译请走 [Weblate](https://hosted.weblate.org/engage/easywatermark/zh_Hans/)。
 
-> （目前）我们（暂时）无法阻止信息被上传，甚至（暂时）无法阻止信息被小人泄漏，但我们可以降低被泄漏信息的价值。
->
-> 即便最后（可能）没什么用，起码可以恶心泄漏者一把。
+应用内没有崩溃上报。如需联系，请发邮件至 [hi@rosuh.me](mailto:hi@rosuh.me)。
 
-## UI
-- 由驰名海内外（👏🤪）的 UI 大佬 [@tovi](https://www.figma.com/@tovi) 操刀设计
-  - 凡是你觉得不好用的，都是我 UI 还原不行，和 UI 稿无关。XD
-  
-> 此APP由[@tovi](https://www.figma.com/@tovi)设计，因此UI和相关设计资源的所有权利均归他所有，未经任何人或组织的允许，不得使用。
+## 致谢
 
-## 开源许可
-使用到的第三方库：
+**设计**
 
-- [daniel-stoneuk/material-about-library](https://github.com/daniel-stoneuk/material-about-library)
-- [skydoves/ColorPickerView](https://github.com/skydoves/ColorPickerView)
-- [material-components/material-components-android](https://github.com/material-components/material-components-android)
-- [Compressor](https://github.com/zetbaitsu/Compressor/)
-- 示例图片来自 Jeremy Bishop
-  on [Unsplash](https://unsplash.com/s/photos/animals?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText)
+- 界面由 [@tovi](https://www.figma.com/@tovi) 设计。UI 及相关设计资源的权利归他所有，未经许可请勿使用。
 
-## 反馈与贡献
+**图标**
 
-我们非常欢迎您在 issues 区发表您任何意见与建议，或者直接提交 PR 以贡献您的代码。 当然您也可以直接联系开发者的 Telegram 或邮件，我们将择期回复。
+- [Phosphor Icons](https://phosphoricons.com/) — 选用 Regular 字重，作为 Compose 矢量资源内置。完整声明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
-## 本地化
+**第三方库**
 
-我们非常欢迎您提供任何方式的本地化帮助，包括但不限于直接参与代码编写、创建 issue、邮件等，或者我们也推荐您使用 [WebLate](https://hosted.weblate.org/engage/easywatermark/) 平台提供翻译帮助，谢谢！
-
-<a href="https://hosted.weblate.org/engage/easywatermark/zh_Hans/">
-<img src="https://hosted.weblate.org/widgets/easywatermark/zh_Hans/88x31-grey.png" alt="翻译状态" />
-</a>
-
-## [隐私政策](https://github.com/rosuH/EasyWatermark/blob/master/PrivacyPolicy_zh-CN.md)
-
-如果你需要的话。
+- [Coil](https://github.com/coil-kt/coil) — 图库、胶片条等界面缩略图
+- [Material Components for Android](https://github.com/material-components/material-components-android)
+- [ColorPickerView](https://github.com/skydoves/ColorPickerView) — Android 自定义取色对话框
