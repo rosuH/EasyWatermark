@@ -1,7 +1,9 @@
 name: Publish Release to Play Store
 
-# CI-P2 attempt 2: Play production upload binds to the **exact** published release.
-# - Trigger: release published only (not latest-release polling).
+# Play production upload binds to the **exact** published release.
+# - Trigger: release published only (human Publish in the GitHub UI).
+# - The Ship Android release button uploads Play in `release.yml` itself.
+#   GITHUB_TOKEN-created releases do not start this workflow (Actions recursion guard).
 # - Assets: download only github.event.release.tag_name via `gh release download`.
 # - Normalization is idempotent: copies into a distinct upload/ dir (never cp self).
 # - Job uses the `release` GitHub Environment; upload action pinned to full commit SHA.
