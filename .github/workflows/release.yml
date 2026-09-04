@@ -1,14 +1,20 @@
 name: Ship Android release
 
 # One-button Android ship (ADR-0034). Not master push / PR / schedule.
-# - Trigger: workflow_dispatch + confirm=CREATE.
-# - Preflight fails closed unless tag/release lookups return explicit HTTP 404.
-# - Build/sign, then a **published** GitHub Release (not draft), then Play production.
+# - Trigger: workflow_dispatch + confirm=CREATE or confirm=PLAY.
+# - CREATE: preflight fails closed unless tag/release lookups return explicit
+#   HTTP 404. Build/sign, then a **published** GitHub Release (not draft),
+#   then Play production. One-way: the Release is public before Play returns.
+# - PLAY: no new tag/release. Requires an already-published GitHub Release
+#   for Apps.versionName (HTTP 200, not draft). Downloads that AAB + mapping
+#   and uploads Play production. Use this when CREATE published GitHub but
+#   Play did not run.
 # - Play upload is in this workflow. GITHUB_TOKEN-created releases do not fire
 #   `publish.yml` (Actions will not chain workflow-created `release` events).
 # - `publish.yml` still covers a human Publish in the GitHub UI.
-# - AAB is taken only from sign_bundle.outputs.signedReleaseFile (no unsigned fallback).
-# - New tags bind to target_commitish=${{ github.sha }} (selected dispatch ref).
+# - CREATE AAB is taken only from sign_bundle.outputs.signedReleaseFile
+#   (no unsigned fallback). PLAY AAB is the existing Release asset only.
+# - New CREATE tags bind to target_commitish=${{ github.sha }} (selected ref).
 # - `release` GitHub Environment may require approval (owner-configured).
 
 env:
@@ -20,7 +26,7 @@ on:
   workflow_dispatch:
     inputs:
       confirm:
-        description: 'Type CREATE to build, publish GitHub Release Apps.versionName, and upload the AAB to Play production'
+        description: 'CREATE = new GitHub Release Apps.versionName + Play. PLAY = upload that existing Release AAB to Play (no new tag).'
         required: true
         type: string
 
@@ -35,6 +41,22 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  guard:
+    name: Require CREATE or PLAY
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail closed on unknown confirm
+        if: github.event.inputs.confirm != 'CREATE' && github.event.inputs.confirm != 'PLAY'
+        run: |
+          echo "ERROR: confirm must be CREATE or PLAY, got '${{ github.event.inputs.confirm }}'" >&2
+          exit 1
+
+      - name: Confirm accepted
+        if: github.event.inputs.confirm == 'CREATE' || github.event.inputs.confirm == 'PLAY'
+        run: |
+          echo "OK confirm=${{ github.event.inputs.confirm }}"
+
   preflight:
     name: New-version preflight (tag/release must not exist)
     if: github.event.inputs.confirm == 'CREATE'
@@ -348,9 +370,10 @@ jobs:
           target_commitish: ${{ needs.preflight.outputs.build_sha }}
           generate_release_notes: true
           fail_on_unmatched_files: true
+          # One path per asset. Overlapping globs upload the same APK twice;
+          # the second hit PATCHes the asset and fails (update-a-release-asset 404).
           files: |
             signed-release-assets/*-signed.apk
-            signed-release-assets/*.apk
             signed-release-assets/app-release.aab
             signed-release-assets/mapping.txt
 
@@ -381,6 +404,162 @@ jobs:
           test -s play-upload/app-release.aab
           test -s play-upload/mapping.txt
           echo "Play upload for ${{ needs.preflight.outputs.version }} at ${{ needs.preflight.outputs.build_sha }}"
+
+      - name: Upload Android Release to Play Store (production)
+        uses: r0adkll/upload-google-play@935ef9c68bb393a8e6116b1575626a7f5be3a7fb # v1.1.3
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.SERVICE_ACCOUNT_JSON }}
+          packageName: me.rosuh.easywatermark
+          releaseFiles: play-upload/app-release.aab
+          track: production
+          mappingFile: play-upload/mapping.txt
+
+  publish-play-existing:
+    name: Upload existing Release AAB to Play
+    if: github.event.inputs.confirm == 'PLAY'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: release
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout selected ref
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Require published GitHub Release for Apps.versionName
+        id: version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          repo="${{ github.repository }}"
+          version=$(sed -n 's/^[[:space:]]*const val versionName = "\([^"]*\)".*/\1/p' buildSrc/src/main/kotlin/Dependencies.kt | head -n1)
+          if [[ -z "$version" ]]; then
+            echo "ERROR: failed to extract Apps.versionName from buildSrc/src/main/kotlin/Dependencies.kt" >&2
+            exit 1
+          fi
+          echo "PLAY resume for Apps.versionName=${version} (ref=${{ github.ref }} sha=${{ github.sha }})"
+          echo "PLAY does not create a tag or GitHub Release"
+
+          github_http_status() {
+            local api_path="$1"
+            local out http_code curl_rc
+            out="$(mktemp)"
+            set +e
+            http_code=$(curl -sS -o "$out" -w "%{http_code}" \
+              --max-time 30 \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${repo}${api_path}")
+            curl_rc=$?
+            set -e
+            if [[ "$curl_rc" -ne 0 ]]; then
+              echo "ERROR: transport failure querying ${api_path} (curl_rc=${curl_rc})" >&2
+              cat "$out" >&2 || true
+              rm -f "$out"
+              exit 1
+            fi
+            if [[ ! "$http_code" =~ ^[0-9]{3}$ ]]; then
+              echo "ERROR: invalid HTTP status '${http_code}' for ${api_path}" >&2
+              cat "$out" >&2 || true
+              rm -f "$out"
+              exit 1
+            fi
+            rm -f "$out"
+            printf '%s' "$http_code"
+          }
+
+          require_present() {
+            local api_path="$1"
+            local label="$2"
+            local code
+            code="$(github_http_status "$api_path")"
+            case "$code" in
+              200)
+                echo "OK: ${label} exists (HTTP 200)"
+                ;;
+              404)
+                echo "ERROR: ${label} missing (HTTP 404) — PLAY does not create a release" >&2
+                exit 1
+                ;;
+              *)
+                echo "ERROR: ${label} lookup failed (HTTP ${code}); not treating as present" >&2
+                exit 1
+                ;;
+            esac
+          }
+
+          require_present "/git/ref/tags/${version}" "git tag '${version}'"
+          require_present "/releases/tags/${version}" "GitHub Release '${version}'"
+
+          draft="$(gh release view "${version}" --repo "${repo}" --json isDraft --jq .isDraft)"
+          if [[ "${draft}" != "false" ]]; then
+            echo "ERROR: GitHub Release ${version} is a draft; PLAY uploads published releases only" >&2
+            exit 1
+          fi
+          echo "OK: GitHub Release ${version} is published"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Download and normalize assets from the existing release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${RELEASE_TAG}" ]]; then
+            echo "ERROR: resolved release tag is empty" >&2
+            exit 1
+          fi
+          echo "Downloading assets for exact release tag: ${RELEASE_TAG}"
+          rm -rf release-download play-upload
+          mkdir -p release-download play-upload
+
+          # Exact tag only — never "latest".
+          gh release download "${RELEASE_TAG}" \
+            --repo "${{ github.repository }}" \
+            --dir release-download \
+            --pattern '*.aab' \
+            --pattern 'mapping.txt' \
+            --clobber
+          echo "Downloaded assets:"
+          ls -la release-download
+
+          mapfile -t aabs < <(find release-download -type f -name '*.aab' | sort)
+          if [[ ${#aabs[@]} -eq 0 ]]; then
+            echo "ERROR: no .aab asset on release ${RELEASE_TAG}" >&2
+            exit 1
+          fi
+          if [[ ${#aabs[@]} -gt 1 ]]; then
+            echo "ERROR: expected exactly one .aab on release ${RELEASE_TAG}, found:" >&2
+            printf '  %s\n' "${aabs[@]}" >&2
+            exit 1
+          fi
+          aab="${aabs[0]}"
+          echo "AAB_SRC=$aab"
+
+          mapping=""
+          mapfile -t maps < <(find release-download -type f -name 'mapping.txt' | sort)
+          if [[ ${#maps[@]} -eq 1 ]]; then
+            mapping="${maps[0]}"
+          elif [[ ${#maps[@]} -gt 1 ]]; then
+            echo "ERROR: multiple mapping.txt assets on release ${RELEASE_TAG}" >&2
+            printf '  %s\n' "${maps[@]}" >&2
+            exit 1
+          fi
+          if [[ -z "$mapping" || ! -f "$mapping" ]]; then
+            echo "ERROR: mapping.txt not found on release ${RELEASE_TAG}" >&2
+            exit 1
+          fi
+          echo "MAPPING_SRC=$mapping"
+
+          cp -f "$aab" play-upload/app-release.aab
+          cp -f "$mapping" play-upload/mapping.txt
+          ls -la play-upload/app-release.aab play-upload/mapping.txt
+          test -s play-upload/app-release.aab
+          test -s play-upload/mapping.txt
 
       - name: Upload Android Release to Play Store (production)
         uses: r0adkll/upload-google-play@935ef9c68bb393a8e6116b1575626a7f5be3a7fb # v1.1.3
