@@ -38,16 +38,9 @@
 </p>
 
 <p align="center">
-  <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/1.jpg" alt="作品发出去，署名跟着走" width="210">
-  <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/2.jpg" alt="断网级别的安全可靠" width="210">
-  <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/3.jpg" alt="旅行大片，盖上你的名字" width="210">
-  <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/4.jpg" alt="办证上传？写明用途" width="210">
-</p>
-<p align="center">
-  <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/5.jpg" alt="笔画级的样式控制" width="210">
-  <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/6.jpg" alt="七种预设色，随手取色" width="210">
-  <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/7.jpg" alt="密度角度，随手可调" width="210">
-  <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/8.jpg" alt="常用水印，存成模板" width="210">
+  <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/1.jpg" alt="作品发出去，署名跟着走" width="22%"><img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/2.jpg" alt="断网级别的安全可靠" width="22%"><img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/3.jpg" alt="旅行大片，盖上你的名字" width="22%"><img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/4.jpg" alt="办证上传？写明用途" width="22%">
+  <br>
+  <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/5.jpg" alt="笔画级的样式控制" width="22%"><img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/6.jpg" alt="七种预设色，随手取色" width="22%"><img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/7.jpg" alt="密度角度，随手可调" width="22%"><img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/8.jpg" alt="常用水印，存成模板" width="22%">
 </p>
 
 ## 功能
