@@ -6,6 +6,7 @@ import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class WatermarkFontStoreTest {
@@ -52,14 +53,39 @@ class WatermarkFontStoreTest {
             val result = WatermarkFontImporter.importCandidates(
                 store = store,
                 candidates = listOf(
-                    FontImportCandidate("skip.txt", 4) { byteArrayOf(1, 2, 3, 4) },
-                    FontImportCandidate("ok.ttf", 3) { byteArrayOf(1, 2, 3) },
+                    FontImportCandidate("skip.txt", 4) { okio.Buffer().write(byteArrayOf(1, 2, 3, 4)) },
+                    FontImportCandidate("ok.ttf", 3) { okio.Buffer().write(byteArrayOf(1, 2, 3)) },
                 ),
                 validate = { _, _ -> ValidatedImportedFont("Ok", FontStyleCapability.NormalOnly) },
             )
             assertEquals(1, result.added)
             assertEquals(1, result.failed.size)
             assertEquals("skip.txt", result.failed.first().fileName)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun damaged_published_directory_is_not_deleted_on_reimport() {
+        val dir = File("build/tmp-font-damaged-${System.nanoTime()}").apply { mkdirs() }
+        try {
+            val store = WatermarkFontStore(FileSystem.SYSTEM, dir.toOkioPath())
+            val bytes = byteArrayOf(1, 2, 3, 4, 5)
+            val added = store.publishBytes("Keep.ttf", bytes, accept)
+            assertIs<FontPublishOutcome.Added>(added)
+            val sha = (added.entry.ref as me.rosuh.easywatermark.data.model.WatermarkFontRef.Imported).sha256
+            val published = File(dir, sha)
+            File(published, "metadata.json").delete()
+            val listed = store.listImported()
+            assertEquals(1, listed.size)
+            assertFalse(listed.first().available)
+
+            val again = store.publishBytes("Keep.ttf", bytes, accept)
+            assertIs<FontPublishOutcome.Failed>(again)
+            assertTrue(published.exists())
+            assertTrue(File(published, "font.ttf").isFile)
+            assertEquals(1, store.listImported().size)
         } finally {
             dir.deleteRecursively()
         }

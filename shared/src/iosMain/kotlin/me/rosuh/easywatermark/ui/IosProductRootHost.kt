@@ -198,10 +198,16 @@ class IosProductRootHost(
         access = fontAccess,
         scope = hostScope,
         applySelection = { _, ref, styles ->
-            services.session.applyConfigIf(
-                stillValid = { true },
+            previewGen += 1
+            val gen = previewGen
+            val applied = services.session.applyConfigIf(
+                stillValid = { !disposed },
                 change = WatermarkConfigChange.FontSelection(ref, styles),
             )
+            if (applied) {
+                renderPreviewForCurrentSelection(gen = gen)
+            }
+            applied
         },
     )
 
@@ -1929,8 +1935,7 @@ class IosProductRootHost(
      * until [onComplete] runs.
      */
     fun importFontsFromDirectory(path: String, onComplete: () -> Unit) {
-        val generation = fontSession.nextImportGeneration()
-        fontSession.beginImport()
+        val generation = fontSession.beginImport()
         hostScope.launch {
             try {
                 val result = fontAccess.importDirectory(path) {
@@ -2384,7 +2389,7 @@ class IosProductRootHost(
         watermarkedPreviewSourcePath = path
     }
 
-    private fun composeIosOverlayCell(
+    private suspend fun composeIosOverlayCell(
         wm: WaterMark,
         imageWidth: Int,
         ox: Float,
@@ -2392,7 +2397,14 @@ class IosProductRootHost(
     ): OverlayCell {
         val isText = wm.markMode == WatermarkMode.Text
         val family = if (isText) {
-            fontSession.resolvedFamily ?: androidx.compose.ui.text.font.FontFamily.Default
+            when (val resolution = fontAccess.resolve(wm.fontRef)) {
+                is me.rosuh.easywatermark.font.FontResolution.Success -> {
+                    fontSession.bindResolved(wm.fontRef, resolution.family)
+                    resolution.family
+                }
+                is me.rosuh.easywatermark.font.FontResolution.Failure ->
+                    error(resolution.reason)
+            }
         } else {
             null
         }

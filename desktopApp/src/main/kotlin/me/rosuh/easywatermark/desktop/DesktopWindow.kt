@@ -1531,8 +1531,7 @@ fun launchDesktopWindow() = application {
                                                 File(System.getProperty("user.home")),
                                             )
                                         } ?: return@launch
-                                        val generation = fontSession.nextImportGeneration()
-                                        fontSession.beginImport()
+                                        val generation = fontSession.beginImport()
                                         val result = withContext(Dispatchers.IO) {
                                             fontAccess.importDirectory(chosen) {
                                                 !fontSession.importStillCurrent(generation)

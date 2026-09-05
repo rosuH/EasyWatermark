@@ -1,5 +1,6 @@
 package me.rosuh.easywatermark.ui
 
+import androidx.compose.ui.text.font.FontFamily
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WatermarkFontRef
 import me.rosuh.easywatermark.font.FontEntry
@@ -25,6 +26,7 @@ data class FontPanelUiState(
     val styleHint: String? = null,
     val supportedStyles: FontStyleCapability = FontStyleCapability.All,
     val showImportFailures: Boolean = false,
+    val sampleFamilies: Map<String, FontFamily> = emptyMap(),
 )
 
 sealed class FontPanelEvent {

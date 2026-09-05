@@ -158,27 +158,35 @@ class DesktopWatermarkFontAccess(
 
     private fun collectFontFiles(root: File): List<FontImportCandidate> {
         val out = mutableListOf<FontImportCandidate>()
+        val visited = HashSet<String>()
+        val rootCanon = runCatching { root.canonicalFile }.getOrNull() ?: return emptyList()
         fun walk(dir: File) {
             if (out.size >= limits.maxCandidates) return
+            val dirCanon = runCatching { dir.canonicalFile }.getOrNull() ?: return
+            if (!FontDirectorySafety.isCanonicalInside(rootCanon.absolutePath, dirCanon.absolutePath)) {
+                return
+            }
+            if (!visited.add(dirCanon.absolutePath)) return
             val children = dir.listFiles() ?: return
             for (child in children) {
                 if (out.size >= limits.maxCandidates) return
-                if (Files.isSymbolicLink(child.toPath())) {
-                    val target = runCatching { child.canonicalFile }.getOrNull() ?: continue
-                    if (!target.path.startsWith(root.path)) continue
-                }
+                if (Files.isSymbolicLink(child.toPath())) continue
                 if (child.isDirectory) {
                     walk(child)
                 } else if (child.isFile && WatermarkFontStore.isFontFileName(child.name)) {
+                    val childCanon = runCatching { child.canonicalFile }.getOrNull() ?: continue
+                    if (!FontDirectorySafety.isCanonicalInside(rootCanon.absolutePath, childCanon.absolutePath)) {
+                        continue
+                    }
                     out += FontImportCandidate(
                         fileName = child.name,
                         sizeBytes = child.length(),
-                        readBytes = { child.readBytes() },
+                        openSource = { FileSystem.SYSTEM.source(childCanon.toOkioPath()) },
                     )
                 }
             }
         }
-        walk(root)
+        walk(rootCanon)
         return out
     }
 

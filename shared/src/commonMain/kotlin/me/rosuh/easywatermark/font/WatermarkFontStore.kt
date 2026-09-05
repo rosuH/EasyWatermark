@@ -116,16 +116,29 @@ class WatermarkFontStore(
             }
             val sha256 = bytes.toByteString().sha256().hex()
             val published = root / sha256
-            if (fileSystem.exists(published) && fontFile(published) != null && readMetadata(sha256) != null) {
+            if (fileSystem.exists(published)) {
                 runCatching { fileSystem.deleteRecursively(tempDir, mustExist = false) }
+                val complete = fontFile(published) != null && readMetadata(sha256) != null
                 val existing = listImported().firstOrNull {
                     it.ref == WatermarkFontRef.Imported(sha256)
-                } ?: FontEntry(WatermarkFontRef.Imported(sha256), originalFileName)
-                return FontPublishOutcome.Duplicate(existing)
+                } ?: FontEntry(
+                    ref = WatermarkFontRef.Imported(sha256),
+                    displayName = originalFileName,
+                    available = complete,
+                )
+                return if (complete) {
+                    FontPublishOutcome.Duplicate(existing)
+                } else {
+                    FontPublishOutcome.Failed(
+                        originalFileName,
+                        "Existing published font is damaged",
+                    )
+                }
             }
             val validated = try {
                 validate(bytes, extension)
             } catch (t: Throwable) {
+                runCatching { fileSystem.deleteRecursively(tempDir, mustExist = false) }
                 return FontPublishOutcome.Failed(
                     originalFileName,
                     t.message?.takeIf { it.isNotBlank() } ?: "Font could not be loaded",
@@ -138,9 +151,6 @@ class WatermarkFontStore(
             )
             fileSystem.write(tempDir / METADATA_FILE) {
                 writeUtf8(metadataJson.encodeToString(metadata))
-            }
-            if (fileSystem.exists(published)) {
-                runCatching { fileSystem.deleteRecursively(published, mustExist = false) }
             }
             fileSystem.atomicMove(tempDir, published)
             return FontPublishOutcome.Added(
