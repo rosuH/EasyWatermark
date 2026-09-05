@@ -3,17 +3,17 @@ package me.rosuh.easywatermark.ui
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.CancellationException
+import androidx.compose.ui.text.font.FontFamily
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.data.model.WatermarkConfigChange
 import me.rosuh.easywatermark.data.model.WatermarkFontRef
+import me.rosuh.easywatermark.font.FontEntry
 import me.rosuh.easywatermark.font.FontImportProgress
 import me.rosuh.easywatermark.font.FontImportResult
 import me.rosuh.easywatermark.font.FontResolution
 import me.rosuh.easywatermark.font.FontSourceTab
-import me.rosuh.easywatermark.font.FontStyleCapability
 import me.rosuh.easywatermark.font.WatermarkFontAccess
 
 /**
@@ -34,14 +34,18 @@ class FontPanelSession(
     )
         private set
 
-    var resolvedFamily by mutableStateOf<androidx.compose.ui.text.font.FontFamily?>(null)
+    var resolvedFamily by mutableStateOf<FontFamily?>(null)
+        private set
+    var resolvedRef by mutableStateOf<WatermarkFontRef?>(null)
         private set
 
     private var loadJob: Job? = null
     private var selectJob: Job? = null
+    private var sampleJob: Job? = null
     private var importJob: Job? = null
     private var importGeneration = 0
     private var selectGeneration = 0
+    private val sampleCache = LinkedHashMap<String, FontFamily>()
 
     fun syncFromConfig(
         ref: WatermarkFontRef,
@@ -69,14 +73,17 @@ class FontPanelSession(
             state = state.copy(systemLoading = true, importedLoading = true)
             val system = runCatching { access.listSystemFonts() }
             val imported = runCatching { access.listImportedFonts() }
+            val systemFonts = system.getOrDefault(state.systemFonts)
+            val importedFonts = imported.getOrDefault(state.importedFonts)
             state = state.copy(
-                systemFonts = system.getOrDefault(state.systemFonts),
-                importedFonts = imported.getOrDefault(state.importedFonts),
+                systemFonts = systemFonts,
+                importedFonts = importedFonts,
                 systemLoading = false,
                 importedLoading = false,
                 systemError = system.exceptionOrNull()?.message,
                 importedError = imported.exceptionOrNull()?.message,
             )
+            ensureSamples(visibleEntries())
         }
         scope.launch { refreshCurrent(state.selectedRef) }
     }
@@ -93,6 +100,7 @@ class FontPanelSession(
             is FontPanelEvent.Select -> select(event.ref)
             is FontPanelEvent.SourceTab -> {
                 state = state.copy(sourceTab = event.tab)
+                ensureSamples(visibleEntries(event.tab))
             }
         }
     }
@@ -117,6 +125,7 @@ class FontPanelSession(
                     if (generation != selectGeneration) return@launch
                     if (applied) {
                         resolvedFamily = resolution.family
+                        resolvedRef = ref
                         val normalized = resolution.supportedStyles.normalize(
                             // UI hint only; actual normalize happens in DataStore.
                             me.rosuh.easywatermark.data.model.TextTypeface.Normal,
@@ -148,21 +157,22 @@ class FontPanelSession(
         }
     }
 
-    fun beginImport() {
-        importGeneration += 1
+    /** Allocates one generation and marks the panel Running. */
+    fun beginImport(): Int {
+        val generation = ++importGeneration
         state = state.copy(importProgress = FontImportProgress.Running)
+        return generation
     }
 
-    fun completeImport(result: FontImportResult) {
-        scope.launch {
-            val imported = runCatching { access.listImportedFonts() }.getOrDefault(state.importedFonts)
-            state = state.copy(
-                importedFonts = imported,
-                importProgress = FontImportProgress.Done(result),
-                sourceTab = FontSourceTab.Imported,
-                importedLoading = false,
-            )
-        }
+    suspend fun completeImport(result: FontImportResult) {
+        val imported = runCatching { access.listImportedFonts() }.getOrDefault(state.importedFonts)
+        state = state.copy(
+            importedFonts = imported,
+            importProgress = FontImportProgress.Done(result),
+            sourceTab = FontSourceTab.Imported,
+            importedLoading = false,
+        )
+        ensureSamples(imported)
     }
 
     fun cancelImport() {
@@ -173,9 +183,33 @@ class FontPanelSession(
 
     fun importStillCurrent(generation: Int): Boolean = generation == importGeneration
 
-    fun nextImportGeneration(): Int {
-        importGeneration += 1
-        return importGeneration
+    fun visibleEntries(tab: FontSourceTab = state.sourceTab): List<FontEntry> = when (tab) {
+        FontSourceTab.System -> state.systemFonts
+        FontSourceTab.Imported -> state.importedFonts
+    }
+
+    fun ensureSamples(entries: List<FontEntry>) {
+        sampleJob?.cancel()
+        sampleJob = scope.launch {
+            val next = LinkedHashMap(sampleCache)
+            for (entry in entries.filter { it.available }.take(SAMPLE_CACHE_MAX)) {
+                val key = entry.ref.fingerprint()
+                if (key in next) continue
+                when (val resolution = access.resolve(entry.ref)) {
+                    is FontResolution.Success -> {
+                        if (next.size >= SAMPLE_CACHE_MAX) {
+                            val oldest = next.keys.first()
+                            next.remove(oldest)
+                        }
+                        next[key] = resolution.family
+                    }
+                    is FontResolution.Failure -> Unit
+                }
+            }
+            sampleCache.clear()
+            sampleCache.putAll(next)
+            state = state.copy(sampleFamilies = next.toMap())
+        }
     }
 
     suspend fun refreshCurrent(ref: WatermarkFontRef) {
@@ -183,6 +217,7 @@ class FontPanelSession(
         when (resolution) {
             is FontResolution.Success -> {
                 resolvedFamily = resolution.family
+                resolvedRef = ref
                 state = state.copy(
                     currentDisplayName = resolution.displayName,
                     supportedStyles = resolution.supportedStyles,
@@ -197,9 +232,18 @@ class FontPanelSession(
         }
     }
 
+    fun bindResolved(ref: WatermarkFontRef, family: FontFamily) {
+        resolvedFamily = family
+        resolvedRef = ref
+    }
+
     fun applyConfigChange(change: WatermarkConfigChange) {
         if (change is WatermarkConfigChange.FontSelection) {
             state = state.copy(selectedRef = change.ref)
         }
+    }
+
+    companion object {
+        const val SAMPLE_CACHE_MAX: Int = 24
     }
 }

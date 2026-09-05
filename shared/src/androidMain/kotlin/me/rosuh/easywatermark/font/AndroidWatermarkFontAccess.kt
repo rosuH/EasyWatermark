@@ -16,6 +16,7 @@ import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.data.model.WatermarkFontRef
 import okio.FileSystem
 import okio.Path.Companion.toOkioPath
+import okio.source
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
@@ -275,9 +276,10 @@ class AndroidWatermarkFontAccess(
                         out += FontImportCandidate(
                             fileName = name,
                             sizeBytes = size,
-                            readBytes = {
-                                resolver.openInputStream(uri)?.use { it.readBytes() }
+                            openSource = {
+                                val stream = resolver.openInputStream(uri)
                                     ?: error("Could not read $name")
+                                stream.source()
                             },
                         )
                     }

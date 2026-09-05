@@ -154,8 +154,7 @@ fun AndroidEditorScreen(
         contract = ActivityResultContracts.OpenDocumentTree(),
     ) { treeUri: Uri? ->
         if (treeUri == null) return@rememberLauncherForActivityResult
-        val generation = fontSession.nextImportGeneration()
-        fontSession.beginImport()
+        val generation = fontSession.beginImport()
         editorScope.launch {
             val result = fontAccess.importTree(treeUri) {
                 !fontSession.importStillCurrent(generation)

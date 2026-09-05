@@ -9,17 +9,16 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.data.model.WatermarkFontRef
-import me.rosuh.easywatermark.render.IosByteArrayInterop
 import okio.FileSystem
 import okio.Path.Companion.toPath
 import org.jetbrains.skia.Data
 import org.jetbrains.skia.FontMgr
 import org.jetbrains.skia.FontStyle
-import platform.Foundation.NSData
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSFileType
 import platform.Foundation.NSFileTypeDirectory
+import platform.Foundation.NSFileTypeSymbolicLink
 import platform.Foundation.NSURL
 import platform.Foundation.NSUserDomainMask
 import platform.Foundation.dataWithContentsOfFile
@@ -159,10 +158,14 @@ class IosWatermarkFontAccess(
 
     private fun collectFontFiles(rootPath: String): List<FontImportCandidate> {
         val fm = NSFileManager.defaultManager
-        val root = rootPath.trimEnd('/')
+        val rootCanon = (NSURL.fileURLWithPath(rootPath).URLByStandardizingPath?.path ?: rootPath).trimEnd('/')
         val out = mutableListOf<FontImportCandidate>()
+        val visited = HashSet<String>()
         fun walk(dir: String) {
             if (out.size >= limits.maxCandidates) return
+            val dirCanon = (NSURL.fileURLWithPath(dir).URLByStandardizingPath?.path ?: dir).trimEnd('/')
+            if (!FontDirectorySafety.isCanonicalInside(rootCanon, dirCanon)) return
+            if (!visited.add(dirCanon)) return
             val children = fm.contentsOfDirectoryAtPath(dir, error = null) ?: return
             for (child in children) {
                 if (out.size >= limits.maxCandidates) return
@@ -170,23 +173,22 @@ class IosWatermarkFontAccess(
                 val path = "$dir/$name"
                 val attrs = fm.attributesOfItemAtPath(path, error = null)
                 val type = attrs?.get(NSFileType) as? String
+                if (type == NSFileTypeSymbolicLink) continue
                 if (type == NSFileTypeDirectory) {
                     walk(path)
                 } else if (WatermarkFontStore.isFontFileName(name)) {
+                    val fileCanon = (NSURL.fileURLWithPath(path).URLByStandardizingPath?.path ?: path)
+                    if (!FontDirectorySafety.isCanonicalInside(rootCanon, fileCanon)) continue
                     val size = (attrs?.get(platform.Foundation.NSFileSize) as? Number)?.toLong()
                     out += FontImportCandidate(
                         fileName = name,
                         sizeBytes = size,
-                        readBytes = {
-                            val data = NSData.dataWithContentsOfFile(path)
-                                ?: error("Could not read $name")
-                            IosByteArrayInterop.fromNSData(data)
-                        },
+                        openSource = { FileSystem.SYSTEM.source(fileCanon.toPath()) },
                     )
                 }
             }
         }
-        walk(root)
+        walk(rootCanon)
         return out
     }
 

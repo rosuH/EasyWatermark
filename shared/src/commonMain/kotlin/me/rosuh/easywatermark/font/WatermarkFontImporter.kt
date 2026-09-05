@@ -1,8 +1,12 @@
 package me.rosuh.easywatermark.font
 
+import okio.Buffer
+import okio.Source
+import okio.buffer
+
 /**
  * Shared import loop: one-shot directory contents, serial per file, partial success.
- * Callers supply already-authorized local bytes; native pickers stay on the platform edge.
+ * Reads are bounded; an oversized stream is rejected without retaining the extra payload.
  */
 object WatermarkFontImporter {
 
@@ -37,38 +41,66 @@ object WatermarkFontImporter {
                 failed += FontImportFailure(name, "Unsupported file type")
                 continue
             }
-            val size = candidate.sizeBytes
-            if (size != null && size > limits.maxFileBytes) {
-                failed += FontImportFailure(name, "File exceeds size limit")
-                continue
-            }
-            if (size != null && totalBytes + size > limits.maxTotalBytes) {
+            val remaining = limits.maxTotalBytes - totalBytes
+            if (remaining <= 0L) {
                 truncated = true
                 truncateReason = "Import exceeded total size limit"
                 failed += FontImportFailure(name, "Total import size limit")
                 break
             }
-            val bytes = try {
-                candidate.readBytes()
+            val declared = candidate.sizeBytes
+            if (declared != null && declared > limits.maxFileBytes) {
+                failed += FontImportFailure(name, "File exceeds size limit")
+                continue
+            }
+            if (declared != null && declared > remaining) {
+                truncated = true
+                truncateReason = "Import exceeded total size limit"
+                failed += FontImportFailure(name, "Total import size limit")
+                break
+            }
+            val cap = minOf(limits.maxFileBytes, remaining)
+            val read = try {
+                val source = candidate.openSource()
+                try {
+                    readBounded(source, cap)
+                } finally {
+                    source.close()
+                }
             } catch (t: Throwable) {
-                failed += FontImportFailure(name, t.message?.takeIf { it.isNotBlank() } ?: "Could not read file")
+                failed += FontImportFailure(
+                    name,
+                    t.message?.takeIf { it.isNotBlank() } ?: "Could not read file",
+                )
                 continue
             }
-            if (bytes.size.toLong() > limits.maxFileBytes) {
-                failed += FontImportFailure(name, "File exceeds size limit")
-                continue
-            }
-            if (totalBytes + bytes.size > limits.maxTotalBytes) {
-                truncated = true
-                truncateReason = "Import exceeded total size limit"
-                failed += FontImportFailure(name, "Total import size limit")
-                break
-            }
-            totalBytes += bytes.size
-            when (val outcome = store.publishBytes(name, bytes, validate)) {
-                is FontPublishOutcome.Added -> added++
-                is FontPublishOutcome.Duplicate -> duplicates++
-                is FontPublishOutcome.Failed -> failed += FontImportFailure(outcome.fileName, outcome.reason)
+            when (read) {
+                is BoundedRead.TooLarge -> {
+                    if (declared != null && declared <= cap) {
+                        truncated = true
+                        truncateReason = "Import exceeded total size limit"
+                    }
+                    failed += FontImportFailure(name, "File exceeds size limit")
+                    if (read.stoppedAt >= remaining) {
+                        truncated = true
+                        truncateReason = "Import exceeded total size limit"
+                        break
+                    }
+                    continue
+                }
+                is BoundedRead.Bytes -> {
+                    if (read.bytes.isEmpty()) {
+                        failed += FontImportFailure(name, "Empty file")
+                        continue
+                    }
+                    totalBytes += read.bytes.size
+                    when (val outcome = store.publishBytes(name, read.bytes, validate)) {
+                        is FontPublishOutcome.Added -> added++
+                        is FontPublishOutcome.Duplicate -> duplicates++
+                        is FontPublishOutcome.Failed ->
+                            failed += FontImportFailure(outcome.fileName, outcome.reason)
+                    }
+                }
             }
         }
         return FontImportResult(
@@ -80,10 +112,37 @@ object WatermarkFontImporter {
             cancelled = cancelledOut,
         )
     }
+
+    fun readBounded(source: Source, maxBytes: Long): BoundedRead {
+        val buffer = Buffer()
+        val input = source.buffer()
+        try {
+            while (!input.exhausted()) {
+                val before = buffer.size
+                val n = input.read(buffer, CHUNK_BYTES)
+                if (n == -1L) break
+                if (buffer.size > maxBytes) {
+                    val stoppedAt = before + n
+                    buffer.clear()
+                    return BoundedRead.TooLarge(stoppedAt)
+                }
+            }
+        } finally {
+            input.close()
+        }
+        return BoundedRead.Bytes(buffer.readByteArray())
+    }
+
+    private const val CHUNK_BYTES: Long = 8 * 1024L
 }
 
 class FontImportCandidate(
     val fileName: String,
     val sizeBytes: Long? = null,
-    val readBytes: () -> ByteArray,
+    val openSource: () -> Source,
 )
+
+sealed class BoundedRead {
+    data class Bytes(val bytes: ByteArray) : BoundedRead()
+    data class TooLarge(val stoppedAt: Long) : BoundedRead()
+}

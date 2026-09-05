@@ -1,9 +1,13 @@
 # ADR-0035：三端自定义水印字体
 
-**Status:** Accepted — owner-approved 2026-09-05; implementation in progress on `codex/custom-watermark-fonts`  
-**Date:** 2026-09-05  
-**Owner scope:** Android、iOS、Desktop 首版同时支持字体面板、系统字体、文件夹导入和导入列表持久化  
-**Amends if accepted:** ADR-0025 的“生产只使用系统默认字体”；保留不打包 Noto、不在线下载字体、同设备预览与导出字体来源一致的约束  
+**Status:** Accepted — owner-approved 2026-09-05; implementation in progress on `codex/custom-watermark-fonts`
+
+**Date:** 2026-09-05
+
+**Owner scope:** Android、iOS、Desktop 首版同时支持字体面板、系统字体、文件夹导入和导入列表持久化
+
+**Amends if accepted:** ADR-0025 的“生产只使用系统默认字体”；保留不打包 Noto、不在线下载字体、同设备预览与导出字体来源一致的约束
+
 **Related:** ADR-0017 / ADR-0018（Session 与共享渲染）、ADR-0019（资源）、ADR-0024（模板数据库）、ADR-0026（面板适配）、ADR-0033（实时水印层）
 
 ## 1. 设计结论

@@ -118,7 +118,6 @@ fun EditorScreen(
     openTemplateSheetRequest: Int = 0,
     fontPanelState: FontPanelUiState = FontPanelUiState(),
     onFontPanelEvent: (FontPanelEvent) -> Unit = {},
-    fontSampleFamilies: Map<String, androidx.compose.ui.text.font.FontFamily> = emptyMap(),
     openFontSheetRequest: Int = 0,
 ) {
     val progressiveSlots = LocalEditorProgressiveSlotPresentation.current
@@ -174,7 +173,7 @@ fun EditorScreen(
         state = fontPanelState,
         onEvent = onFontPanelEvent,
         useLargeDialog = usesLargeScreenDialog(layoutClass),
-        sampleFamilies = fontSampleFamilies,
+        sampleFamilies = fontPanelState.sampleFamilies,
         onVisibilityChange = { visible ->
             if (visible) onFontPanelEvent(FontPanelEvent.Open)
         },
