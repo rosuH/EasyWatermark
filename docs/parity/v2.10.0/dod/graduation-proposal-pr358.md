@@ -31,7 +31,7 @@ An **integration checkpoint** for multi-year Compose → KMP/CMP work: shared da
 | ~~Strict FNV goldens not re-run~~ | **Closed (r2)** — local/pinned host **53/0** |
 | ~~Full `iosSimulatorArm64Test` RUN~~ | **Closed (r2)** — **101/0** |
 | Parity archive not exhaustive (locale/theme/recording matrix) | Medium — core screens signed |
-| ~~`codex-goal-v2.md` §11 stale~~ | **Closed** — refreshed post audit + r2 |
+| ~~[codex-goal-v2.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal-v2.md) §11 stale~~ | **Closed** — refreshed post audit + r2 |
 | Unsigned Desktop only; no notarization | Expected — ADR-0013 |
 | Android native vs Skiko text/icon raster split | Expected — ADR-0004 closed |
 | PHPicker cell automation | Toolchain exception |
@@ -43,7 +43,7 @@ An **integration checkpoint** for multi-year Compose → KMP/CMP work: shared da
 
 1. ~~Optional: re-run strict goldens + `iosSimulatorArm64Test`~~ — **done (r2)**.  
 2. Optional: expand parity archive (zh / theme / recordings) for residual inventory rows.  
-3. ~~Refresh `codex-goal-v2.md` §11~~ — **done**.  
+3. ~~Refresh [codex-goal-v2.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal-v2.md) §11~~ — **done**.\
 4. Push branch when owner authorizes; keep #358 Draft until owner accepts remaining residual debt or closes archive.  
 5. **Do not merge** until owner re-opens graduation.
 

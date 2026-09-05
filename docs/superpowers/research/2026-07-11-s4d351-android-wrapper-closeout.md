@@ -69,7 +69,7 @@ Production consumers of shared UI (not exhaustive; A0 matrix is authoritative):
 ## 5. A1 closeout meaning (durable)
 
 - **A1 done** = pure public Android wrappers that only adapt into shared shells are gone or already inlined; residual surfaces are **edge owners**.
-- **A1 done ≠ Phase A complete.** Phase A still has consumer-first residual work (e.g. iOS non-text CMP assessment, optional non-A1 edge hygiene) under codex-goal residual order after A0.
+- **A1 done ≠ Phase A complete.** Phase A still has consumer-first residual work (e.g. iOS non-text CMP assessment, optional non-A1 edge hygiene) under [codex-goal](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal.md) residual order after A0.
 - Residual order reminder (A0): A1 (closed) → A2 optional Desktop roots (**NO-GO invent**, S4d-349) → A3 iOS non-text/non-sheet → A4 only if dual consumer → A5.
 
 ---

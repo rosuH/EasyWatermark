@@ -3,7 +3,7 @@
 **Date:** 2026-07-11
 **Type:** read-only mapping (no code change)
 **Branch:** `feat/migrate_to_compose`
-**Process contract:** `codex-goal-v2.md` §7.3 (S4d-344 finish → **A0 matrix** → parallel A1/A2/A3 → A4 → A5 → Phase B)
+**Process contract:** [codex-goal-v2.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal-v2.md) §7.3 (S4d-344 finish → **A0 matrix** → parallel A1/A2/A3 → A4 → A5 → Phase B)
 **Rule:** production consumers only — DEBUG witnesses, tests, and theoretical callers do **not** count.
 **Consumer-first extraction (§6.12):** pure state/use-case → commonMain only with **≥2 named production platform consumers** and no platform types in I/O.
 

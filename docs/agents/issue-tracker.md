@@ -7,7 +7,7 @@ EasyWatermark does not keep a repository-local migration tracker or `.scratch` t
 | Source | Role |
 |---|---|
 | Current user request and `AGENTS.md` | Active scope, authorization, and agent workflow |
-| `codex-goal.md`, `codex-goal-v2.md` | Historical migration missions; resume only when explicitly requested |
+| [codex-goal.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal.md), [codex-goal-v2.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal-v2.md) | Historical migration missions retained in Git; not current instructions |
 | `AGENTS.md`, `docs/CONTEXT.md`, `docs/adr/` | Current technical and architecture rules |
 | Current Git history and relevant PR | Landed implementation and review state |
 | Available subagent tools; ACSP when explicitly selected | Temporary delegated-task handoff, result, verification, and review records |

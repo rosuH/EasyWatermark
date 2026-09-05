@@ -4,7 +4,7 @@
 **Type:** source-cited inventory / A4 readiness — **no product code**
 **Status:** accepted docs audit (evidence revised for path precision). **Not** Phase A complete; **not** §9 DoD.
 
-**Question:** Is the Phase A **data layer** (repos, editors, central models/rules) closed in `commonMain`, and does any residual qualify for further pure extraction under `codex-goal-v2.md` §6.12?
+**Question:** Is the Phase A **data layer** (repos, editors, central models/rules) closed in `commonMain`, and does any residual qualify for further pure extraction under [codex-goal-v2.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal-v2.md) §6.12?
 
 **Verdict: data-layer consumer surface is closed for pure extraction.** Repos + three editors + central models/rules already live in `shared/commonMain` with named multi-platform production consumers. **A4 extraction is NO-GO now** — no residual candidate meets §6.12 (two named production platforms + platform-neutral I/O). **Does not** prove end-to-end persisted-byte identity, final all-platform product integration, Phase A complete, or §9 DoD.
 
@@ -103,7 +103,7 @@ Geometry constants used with config (not a repo): `shared/src/commonMain/kotlin/
 
 ---
 
-## 4. A4 verdict (codex-goal-v2 §6.12)
+## 4. A4 verdict ([codex-goal-v2](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal-v2.md) §6.12)
 
 **NO-GO for new pure A4 extraction now.**
 

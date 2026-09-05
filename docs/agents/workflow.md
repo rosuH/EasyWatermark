@@ -9,9 +9,9 @@ Reviewed the [official latest-model guide](https://developers.openai.com/api/doc
 | Surface | Decision |
 |---|---|
 | `AGENTS.md` / `CLAUDE.md` | Update the canonical contract; preserve the `CLAUDE.md` symlink. |
-| Historical `codex-goal*.md` | Label as history so old single-agent, Herdr, or ACSP mandates do not silently override current work. Preserve the mission records. |
+| Historical mission files | Remove the obsolete root files; preserve their records in Git and point historical citations to a fixed revision. Current work follows `AGENTS.md`. |
 | Project skill directories | Audited available skills; no project-owned model/agent orchestration skill needs migration. Preserve upstream Google skills and mirrors; apply current instruction precedence through `AGENTS.md`. |
-| Agent configuration | No tracked Codex model configuration found. The ignored `.claude/settings.local.json` contains local permissions, not model selection; leave local permissions and global settings intact. |
+| Agent configuration | No tracked Codex model configuration found. Preserve local and global settings; they are outside this repository guidance update. |
 | Application/API | No API migration is part of this documentation change. Preserve the offline application contract and the user's configured model. |
 
 For a future explicit API migration, re-read the current official guide and check model availability and request compatibility in the actual consumer. API features such as async tool calls and mid-turn steering require host implementation; documenting them does not enable them in an agent runtime. Avoid creating configuration or an orchestration framework solely to mirror the guide.
