@@ -1,7 +1,7 @@
 # EasyWatermark — 项目 / 分支 / 目标 / 进度研究纪要
 
 **Date:** 2026-07-11  
-**Scope:** 仅基于仓库主源（`AGENTS.md` / `codex-goal.md` / `task_plan.md` / `progress.md` / `findings.md` / `docs/CONTEXT.md` / ADRs / CMP plan / git refs / PR #358）  
+**Scope:** 仅基于仓库主源（`AGENTS.md` / [codex-goal.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal.md) / `task_plan.md` / `progress.md` / `findings.md` / `docs/CONTEXT.md` / ADRs / CMP plan / git refs / PR #358）\
 **Branch of record:** `feat/migrate_to_compose`  
 **Audience:** 后续 agent / 协调者恢复上下文用；**不是** merge-ready 声明，也**不是** UI 1:1 验收报告。
 
@@ -23,8 +23,8 @@
 | Android 1:1 像素还原 | **尚未开始（Phase B）**；生产 v2.10.0 仍是唯一视觉/行为真相源 |
 | PR #358 | **Draft 集成检查点**，明确 **not merge-ready** |
 
-**执行契约：** 自 2026-07-03 起由 `codex-goal.md` 主导流程（ACSP/cowork 退役）；切片号继续 `S4d-NNN`。  
-来源：`codex-goal.md` §0–§2；`AGENTS.md` §Current execution order (updated 2026-07-03)；`task_plan.md` §Current Phase。
+**执行契约：** 自 2026-07-03 起由 [codex-goal.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal.md) 主导流程（ACSP/cowork 退役）；切片号继续 `S4d-NNN`。\
+来源：[codex-goal.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal.md) §0–§2；`AGENTS.md` §Current execution order (updated 2026-07-03)；`task_plan.md` §Current Phase。
 
 **HEAD 语义（本地）：** 最近已接受切片为 **S4d-343**（恢复 Android 导出状态机）与 **S4d-342**（Desktop 消费 shared `EditorPreviewFrame` + 打包预览路径修复）；**S4d-254** Android 设备冒烟已于 2026-07-11 接受；**S4d-338**（iOS shared 文本输入）因 CMP 依赖/Skiko 对齐问题 **owner-blocked**。  
 来源：`progress.md` §2026-07-11 S4d-338…S4d-343；`task_plan.md` §Current Phase；`.git/logs/HEAD` 末尾 commit messages。
@@ -40,7 +40,7 @@
 | 当前分支 | `feat/migrate_to_compose` | `.git/HEAD` → `refs/heads/feat/migrate_to_compose` |
 | 上游跟踪 | `origin/feat/migrate_to_compose` | `.git/config` `[branch "feat/migrate_to_compose"]` |
 | merge-base 提示 | `vscode-merge-base = origin/dev` | 同上 |
-| 记录分支 | 与 `codex-goal.md` Owner 声明一致 | `codex-goal.md` 标题区 “Branch of record” |
+| 记录分支 | 与 [codex-goal.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal.md) Owner 声明一致 | [codex-goal.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal.md) 标题区 “Branch of record” |
 
 ### 2.2 HEAD 对比（研究时点）
 
@@ -50,7 +50,7 @@
 | `origin/feat/migrate_to_compose` | `e54f7c4f` | 最新为 **Document iOS template bridge UI**（S4d-233 docs 一带） |
 | `origin/HEAD` | → `origin/master` | 生产基线所在远程默认分支 |
 
-**含义：** 本地相对 `origin/feat/migrate_to_compose` **明显领先**（大量 S4d-234…S4d-343 本地提交尚未推到该远程 tip；与 `codex-goal.md` §6 “Never push … without explicit owner approval” 一致）。  
+**含义：** 本地相对 `origin/feat/migrate_to_compose` **明显领先**（大量 S4d-234…S4d-343 本地提交尚未推到该远程 tip；与 [codex-goal.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal.md) §6 “Never push … without explicit owner approval” 一致）。\
 证据：`.git/refs/heads/feat/migrate_to_compose` vs `.git/refs/remotes/origin/feat/migrate_to_compose`；`.git/logs/HEAD` 末段。
 
 ### 2.3 最近本地提交主题（约末 30 条，`.git/logs/HEAD`）
@@ -79,13 +79,13 @@
 - **自述限制：** 非 merge candidate；iOS 仍用 DEBUG fixture 绕过 PHPicker 单元格选择；PR 创建时未重跑 Android/真机 iOS 设备门禁；parity 仍有已知缺口  
 - **与本地 tip 关系：** GitHub 页面上可见的较新 push 停在约 iOS template bridge docs（与 `origin` tip `e54f7c4` 一致）；**本地 S4d-234+ 工作大多尚未体现在该 PR tip**
 
-来源：https://github.com/rosuH/EasyWatermark/pull/358 ；`AGENTS.md` / `codex-goal.md` / `task_plan.md` 均写 “PR #358 remains Draft”。
+来源：https://github.com/rosuH/EasyWatermark/pull/358 ；`AGENTS.md` / [codex-goal.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal.md) / `task_plan.md` 均写 “PR #358 remains Draft”。
 
 ---
 
 ## 3. Project goals / migration target
 
-### 3.1 双目标（`codex-goal.md` §1）
+### 3.1 双目标（[codex-goal.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal.md) §1）
 
 1. **最大化 KMP + CMP 共享**  
    数据层（models / repos / DataStore / Room / use-cases）与 UI 层（screens / components / theme / state）尽量进入 `:shared` `commonMain`；仅在严格需要平台边时保留 native。
@@ -99,7 +99,7 @@
 | **A** | 完成 release-grade KMP/CMP **代码**迁移；小切片、行为保持、字节级持久化不变 | **当前阶段** |
 | **B** | 截图/录屏驱动 1:1 还原；**仅在 A 完成后**；勿把 parity polish 混进 A | **未开始** |
 
-来源：`codex-goal.md` §2；`task_plan.md` §Execution Order Update (2026-06-27)；`AGENTS.md` §Current execution order。
+来源：[codex-goal.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal.md) §2；`task_plan.md` §Execution Order Update (2026-06-27)；`AGENTS.md` §Current execution order。
 
 ### 3.3 UI 路由原则（2026-06-30）
 
@@ -124,7 +124,7 @@
 
 ### 3.5 Definition of Done（摘录，均未勾选）
 
-`codex-goal.md` §8 全部 checkbox 仍为未完成，包括：三平台 shared CMP 为路线真相、数据层 commonMain 化完成、Android 1:1 证据档案 owner 签收、PR #358 graduation 提案等。
+[codex-goal.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal.md) §8 全部 checkbox 仍为未完成，包括：三平台 shared CMP 为路线真相、数据层 commonMain 化完成、Android 1:1 证据档案 owner 签收、PR #358 graduation 提案等。
 
 ---
 
@@ -167,7 +167,7 @@ Store 创建是 **按平台 plain functions**（**无** `commonMain expect/actua
 | 解码 | Android `BitmapUtils`；Desktop `DesktopImageDecoder`(+EXIF)；iOS Skia 已 bake EXIF | commonMain **无** decode API |
 
 闭决策：S4d-8 图标、S4d-17 文字、S4d-190 合成 **均 No-Go Android draw-swap**。  
-来源：`ADR-0004`（含 addenda）；`AGENTS.md` §Rendering engine；`codex-goal.md` §5.1。
+来源：`ADR-0004`（含 addenda）；`AGENTS.md` §Rendering engine；[codex-goal.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal.md) §5.1。
 
 ### 4.4 shared CMP UI 现状（文件系统）
 
@@ -269,7 +269,7 @@ Android app 侧仍保留薄包装：`LaunchScreen.kt`、`EditorScreen.kt`、`Gal
 - [x] Desktop 端到端 open→edit→render→save + 用户目录持久化 + 打包证明  
 - [x] iOS 端到端 fixture 渲染/导出/分享 + templates UI 测试 + 多 shared 控件  
 - [x] Android 模拟器 AndroMeld 冒烟（S4d-254）+ 导出状态机恢复（S4d-343）  
-- [x] 过程切换到 Codex 直做 + 本地按切片提交（`codex-goal.md`）
+- [x] 过程切换到 Codex 直做 + 本地按切片提交（[codex-goal.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal.md)）
 
 ### 6.2 未完成 / 勿过度宣称
 
@@ -282,7 +282,7 @@ Android app 侧仍保留薄包装：`LaunchScreen.kt`、`EditorScreen.kt`、`Gal
 - [ ] Android 生产渲染改走 commonMain raster（禁止默认重开）  
 - [ ] Desktop 是否公开分发（ADR-0013 Proposed）  
 - [ ] PR #358 merge-ready / graduation  
-- [ ] `codex-goal.md` §8 DoD 全绿
+- [ ] [codex-goal.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal.md) §8 DoD 全绿
 
 ### 6.3 测试门禁（近期 progress 复现数字）
 
@@ -294,7 +294,7 @@ Android app 侧仍保留薄包装：`LaunchScreen.kt`、`EditorScreen.kt`、`Gal
 - iOS `iosAppUITests` 在 2026-07-11 多轮达 **17–18/0**（含新 shared 控件测试）
 
 Strict FNV watermark goldens：**本地/钉扎环境**；**故意不进** GitHub PR CI（S4d-171/172）。  
-来源：`progress.md` 各 proof 行；`codex-goal.md` §4.1 / §5.10。
+来源：`progress.md` 各 proof 行；[codex-goal.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal.md) §4.1 / §5.10。
 
 ---
 
@@ -324,12 +324,12 @@ Strict FNV watermark goldens：**本地/钉扎环境**；**故意不进** GitHub
 | **S4d-338** | iOS 上 `TextContentOption` / `ModalBottomSheet` / focused `OutlinedTextField` 在现有 Compose 依赖混合下 `IrLinkageError`；**禁止**无 owner 决策就升依赖或重试 | `progress.md`、`task_plan.md`、`findings.md` |
 | **Compose/Skiko 版本错位** | `LocalSafeArea`、`LocalKeyboardOverlapHeight` 等（S4d-321 已见） | `findings.md` S4d-321…S4d-338 |
 | **PHPicker 网格自动化** | Xcode 27 / iOS 27 上 XCUITest 无法点选系统 picker 单元格 | S4d-57；`AGENTS.md` |
-| **Push / merge** | 无 owner 明确批准不得 push/merge/rebase | `codex-goal.md` §6 |
+| **Push / merge** | 无 owner 明确批准不得 push/merge/rebase | [codex-goal.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal.md) §6 |
 | **ADR-0013 Desktop 是否上架** | Proposed，未决 | `docs/adr/0013-desktop-positioning.md` |
 
 ### 8.2 闭决策清单（默认勿重开）
 
-摘自 `codex-goal.md` §5 与 `AGENTS.md` conventions：
+摘自 [codex-goal.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal.md) §5 与 `AGENTS.md` conventions：
 
 1. Android **text / icon / composition** 生产路径保持 native（S4d-17 / S4d-8 / S4d-190）  
 2. 禁止恢复 `ViewInfo` / `AndroidView` 桥接预览（S3c-3）  
@@ -348,7 +348,7 @@ Strict FNV watermark goldens：**本地/钉扎环境**；**故意不进** GitHub
 
 ## 9. Recommended next slices
 
-按 `task_plan.md` §Current Phase “Next” 与 `progress.md` 末段、`codex-goal.md` §7 综合（**Phase A only**）：
+按 `task_plan.md` §Current Phase “Next” 与 `progress.md` 末段、[codex-goal.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal.md) §7 综合（**Phase A only**）：
 
 1. **继续 Phase A 真实 shared 消费者**  
    - iOS：优先**不**需要 CMP 文本聚焦的剩余表面（模板列表若可在无 `OutlinedTextField` 依赖下推进则评估；否则等 S4d-338 owner 决策）  
@@ -359,7 +359,7 @@ Strict FNV watermark goldens：**本地/钉扎环境**；**故意不进** GitHub
    - 需 owner 明确 CMP/Skiko 版本对齐目标；在此之前不要重试 focused text field  
 
 3. **不要启动 Phase B**  
-   - 除非 Phase A 的 “shared CMP 为三平台路线真相 + 数据层完成” 更接近 `codex-goal.md` DoD  
+   - 除非 Phase A 的 “shared CMP 为三平台路线真相 + 数据层完成” 更接近 [codex-goal.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal.md) DoD\
 
 4. **Parked Phase B 债务（记录，勿现在做）**  
    - RecoveryScreen 精细 parity（曾标 S4d-207）  
@@ -404,7 +404,7 @@ Strict FNV watermark goldens：**本地/钉扎环境**；**故意不进** GitHub
 | 源 | 用途 |
 |---|---|
 | `AGENTS.md` | 产品定义、当前状态地图、架构、禁令 |
-| `codex-goal.md` | 任务/流程/DoD/门禁/闭决策 |
+| [codex-goal.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal.md) | 任务/流程/DoD/门禁/闭决策 |
 | `task_plan.md` | Current Phase、执行顺序、下一步 |
 | `progress.md` | 切片级已验证证据（尤其 2026-07-03…07-11） |
 | `findings.md` | 工程教训（iOS CMP 陷阱、slider 边界等） |

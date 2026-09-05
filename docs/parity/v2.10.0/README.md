@@ -2,7 +2,7 @@
 
 **Baseline app:** production `me.rosuh.easywatermark` **v2.10.0** (ADR-0011)  
 **Compare app:** debug `me.rosuh.easywatermark.debug` (same device/emulator)  
-**Process:** `codex-goal-v2.md` Phase B · local tickets 06–08  
+**Process:** [codex-goal-v2.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal-v2.md) Phase B · local tickets 06–08  
 **A5 prerequisite:** PASS (ticket 05, 2026-07-12)
 
 This tree holds **inventory + capture protocol + screenshot/recording evidence**.  

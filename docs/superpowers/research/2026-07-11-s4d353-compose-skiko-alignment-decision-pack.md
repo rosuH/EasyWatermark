@@ -4,7 +4,7 @@
 **类型：** 仅决策包 — **未接受、未推荐任何选项**
 **并非** Phase A/B/parity 完成。不是实现简报。
 
-**具有约束力的硬性规则：** `codex-goal-v2.md` §6（Android 原生 text/icon/composition 保持不变；持久化字节神圣不可擅自改；禁止静默 golden 重基线；新增依赖须负责人批准；consumer-first 且 ≥2 个生产消费者；**未经负责人批准不得重试 S4d-338 / 不得变更 Compose–Skiko**）；§7.3–7.4（阻塞 = iOS text/full-root 关键边；其他车道可切换，但 non-text 已耗尽）。未经负责人禁止：变更 Compose/Skiko 版本。
+**具有约束力的硬性规则：** [codex-goal-v2.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal-v2.md) §6（Android 原生 text/icon/composition 保持不变；持久化字节神圣不可擅自改；禁止静默 golden 重基线；新增依赖须负责人批准；consumer-first 且 ≥2 个生产消费者；**未经负责人批准不得重试 S4d-338 / 不得变更 Compose–Skiko**）；§7.3–7.4（阻塞 = iOS text/full-root 关键边；其他车道可切换，但 non-text 已耗尽）。未经负责人禁止：变更 Compose/Skiko 版本。
 
 在负责人签署某一选项之前，Codex **不得**实现、 bump 版本、发明替代方案或重排计划。
 
@@ -108,4 +108,4 @@ iOS 水印 **text** + **templates UI** 继续用 SwiftUI + bridges；共享 text
 
 **未接受任何选项。** 证据已可决策；残余 iOS Phase A 控件进展仅等待负责人选择。
 
-**参考：** `codex-goal-v2.md` §6–7；`findings.md` / `progress.md` S4d-338；S4d-346/352 research；`libs.versions.toml`；`ContentView.swift`；`TextContentOption.kt`；`TemplateListSheet.kt`。
+**参考：** [codex-goal-v2.md](https://github.com/rosuH/EasyWatermark/blob/aab7f6e5258f5b9137b136f07a68c190d2d05780/codex-goal-v2.md) §6–7；`findings.md` / `progress.md` S4d-338；S4d-346/352 research；`libs.versions.toml`；`ContentView.swift`；`TextContentOption.kt`；`TemplateListSheet.kt`。

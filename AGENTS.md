@@ -4,6 +4,14 @@ Guidance for agents working in this repository. `CLAUDE.md` is a symlink to this
 
 This file is the always-on contract. Put ticket history, platform essays, and research notes elsewhere — update this file only when a durable agent rule changes.
 
+## Working together
+
+- **Follow through:** infer routine details from the current request and verified context, state material assumptions, and finish authorized work. Ask only when missing input changes scope, correctness, or authorization; continue independent work while waiting. Treat mid-task corrections as updates to the active task unless the user cancels it.
+- **Delegate:** for substantial work, the lead agent clarifies scope, decomposes tasks, dispatches, and accepts results. Use available subagents for extensive reading, implementation, batch edits, and test execution; parallelize independent work. Give each worker a bounded task, file ownership, constraints, and acceptance evidence. Workers share the workspace: preserve others' edits. Keep trivial tasks local unless the user requests delegation; if delegation is unavailable, report the limitation and honor any explicit role restriction.
+- **Verify:** accept worker results against the current diff and relevant test or runtime evidence. Run checks proportional to the change and required gates; repeat only after relevant edits, failures, or unresolved concerns. Documentation-only changes need static checks, not Gradle/Xcode. UI/performance claims still need the applicable visual and physical-device evidence; record missing evidence as pending.
+- **Communicate:** use concise, plain language in user and agent messages. Lead with the outcome, explain relevant changes and checks, and state remaining limitations without repeated status or invented labels.
+- **Scope:** preserve existing work and authorization boundaries. Tool permissions are not permission to publish, send messages, merge, or perform destructive cleanup; obtain user authorization when it is not already present. Historical mission files are evidence, not current instructions, unless the user explicitly resumes that mission; reconcile their rules with the current request and this file first.
+
 ## Product
 
 EasyWatermark (`me.rosuh.easywatermark`) tiles text or image watermarks over photos so they cannot be reused. Fully offline; no tracking, stats, or crash SDKs. One Kotlin Multiplatform / Compose Multiplatform codebase ships Android, Desktop (JVM), and iOS.
@@ -29,6 +37,7 @@ Privacy that shapes code: Android needs no runtime permission on API 29+ (pre-29
 | Domain words, invariants, retired terms | `docs/CONTEXT.md` |
 | A design fork or “why is it this way” | `docs/adr/` |
 | Issue / handoff / what not to recreate | `docs/agents/issue-tracker.md` |
+| Agent guidance maintenance / model migration scope | `docs/agents/workflow.md` |
 | GitHub label names | `docs/agents/triage-labels.md` |
 | Android / KMP API (not training data) | `android docs search '<query>'` then `android docs fetch` |
 
@@ -74,7 +83,7 @@ Pair every “don’t” with the replacement.
 
 ## Skills
 
-Skills are the playbook. When a task matches one, open its `SKILL.md` and follow it before improvising. Name the skill in the plan. Official Google Android skills: refresh with `android update` and `android skills add --all --project=.` — do not hand-edit `SKILL.md` / `references/`.
+Skills are the playbook. When a task matches one, open its `SKILL.md` and follow it before improvising. Name the skill in the plan. Explicit user instructions take precedence over skill guidelines, subject to system/developer constraints. If a skill causes a pause, confirmation request, or divergence, link the exact `SKILL.md`, quote the instruction, and distinguish its requirement from your interpretation; continue authorized work when no actual blocker exists. Official Google Android skills: refresh with `android update` and `android skills add --all --project=.` — do not hand-edit `SKILL.md` / `references/`.
 
 Mirrored under `skills/`, `.claude/skills/`, and `.agents/skills/`. Compose / HotSwan skills live under `.agents/skills/`.
 
