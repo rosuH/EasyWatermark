@@ -358,12 +358,14 @@ fun launchDesktopWindow() = application {
     // Shared session + Desktop export port (unique destination). Preview uses runSaveFlow temp;
     // Save As uses DesktopSaveAsDestination.renderAndSaveExact.
     // outputDirProvider always reads the latest folder (chooser can change mid-session).
+    val fontAccess = remember { me.rosuh.easywatermark.font.DesktopWatermarkFontAccess() }
     val session = remember {
         WatermarkSessionViewModel(
             waterMarkRepo = repo,
             userConfigRepo = userConfigRepo,
             exportPipeline = DesktopExportPipelinePort(
                 outputDirProvider = { outputDirState.value },
+                fontAccess = fontAccess,
             ),
         )
     }
@@ -384,6 +386,16 @@ fun launchDesktopWindow() = application {
     // Collect the saved templates into state (remember the Flow so collection is stable across recompositions).
     val templates by remember { templateRepo.getAllTemplate() }.collectAsState(emptyList())
     val scope = rememberCoroutineScope()
+    val fontSession = remember(fontAccess, scope) {
+        me.rosuh.easywatermark.ui.FontPanelSession(
+            access = fontAccess,
+            scope = scope,
+            applySelection = { _, ref, styles ->
+                session.applyConfig(WatermarkConfigChange.FontSelection(ref, styles))
+                true
+            },
+        )
+    }
     var filmstripSwitchJob by remember { mutableStateOf<Job?>(null) }
     val previewImages = remember {
         PreviewImageRepository<ImageBitmap>(
@@ -426,6 +438,10 @@ fun launchDesktopWindow() = application {
     // ADR-0028: filmstrip/export thumbs via ProductAsyncImage (Coil path Fetcher).
     // U2: watermark config is session/repo-owned — collect once; no parallel mutableStateOf mirrors.
     val waterMark by repo.waterMark.collectAsState(WaterMark.default)
+    LaunchedEffect(waterMark.fontRef, waterMark.text) {
+        fontSession.syncFromConfig(waterMark.fontRef, waterMark.text)
+        fontSession.refreshCurrent(waterMark.fontRef)
+    }
     // Live overlay layers (ADR-0033). Never a baked composeOverBackground bitmap.
     var previewPhoto by remember { mutableStateOf<ImageBitmap?>(null) }
     var overlayCell by remember { mutableStateOf<OverlayCell?>(null) }
@@ -571,15 +587,23 @@ fun launchDesktopWindow() = application {
         return msg
     }
 
-    fun composeDesktopOverlayCell(wm: WaterMark, imageWidth: Int): ImageBitmap {
+    suspend fun composeDesktopOverlayCell(wm: WaterMark, imageWidth: Int): ImageBitmap {
         val icon = decodeDesktopIcon(wm)
         PreviewSourceReuseProbe.recordCompose()
+        val family = if (wm.markMode == WatermarkMode.Text) {
+            when (val resolution = fontAccess.resolve(wm.fontRef)) {
+                is me.rosuh.easywatermark.font.FontResolution.Success -> resolution.family
+                is me.rosuh.easywatermark.font.FontResolution.Failure -> error(resolution.reason)
+            }
+        } else {
+            null
+        }
         return CommonWatermarkPipeline.composeCell(
             imageWidth = imageWidth.coerceAtLeast(1),
             config = wm,
             env = DesktopWatermarkTextRenderer.textRasterEnv(),
             icon = icon,
-            fontFamily = if (wm.markMode == WatermarkMode.Text) FontFamily.Default else null,
+            fontFamily = family,
         )
     }
 
@@ -1486,8 +1510,42 @@ fun launchDesktopWindow() = application {
                             // F2: typed WatermarkConfigChange from shared controls (no from()).
                             // Do not use busy to drop slider ticks — persist+paint conflator keeps
                             // one in flight + latest.
-                            persistConflator.submit(change)
+                            if (change is WatermarkConfigChange.FontSelection) {
+                                session.applyConfig(change)
+                            } else {
+                                persistConflator.submit(change)
+                            }
                             status = "Applied ${change::class.simpleName}"
+                        },
+                        fontPanelState = fontSession.state,
+                        onFontPanelEvent = { event ->
+                            when (event) {
+                                me.rosuh.easywatermark.ui.FontPanelEvent.ImportFolder -> {
+                                    val frame = desktopFrame
+                                    if (frame != null) {
+                                    scope.launch {
+                                        val chosen = withContext(Dispatchers.IO) {
+                                            DesktopExportFolderChooser.choose(
+                                                frame,
+                                                "Import fonts",
+                                                File(System.getProperty("user.home")),
+                                            )
+                                        } ?: return@launch
+                                        val generation = fontSession.nextImportGeneration()
+                                        fontSession.beginImport()
+                                        val result = withContext(Dispatchers.IO) {
+                                            fontAccess.importDirectory(chosen) {
+                                                !fontSession.importStillCurrent(generation)
+                                            }
+                                        }
+                                        if (fontSession.importStillCurrent(generation)) {
+                                            fontSession.completeImport(result)
+                                        }
+                                    }
+                                    }
+                                }
+                                else -> fontSession.onEvent(event)
+                            }
                         },
                         onUseTemplate = { template ->
                             val content = template.content

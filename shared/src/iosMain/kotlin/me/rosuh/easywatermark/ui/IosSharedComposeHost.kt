@@ -746,6 +746,9 @@ internal class IosEditorScreenHost(
                                         is WatermarkConfigChange.MarkMode -> {
                                             // Form-only mode switch; product shell applies via bridges when wired.
                                         }
+                                        is WatermarkConfigChange.FontSelection -> {
+                                            // Font panel is owned by IosProductRootHost; this host is a test shell.
+                                        }
                                     }
                                 },
                                 onGoTemplateList = { /* Swift Templates strip remains until full ProductApp */ },

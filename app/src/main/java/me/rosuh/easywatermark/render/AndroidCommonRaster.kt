@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.createFontFamilyResolver
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
@@ -52,6 +53,7 @@ object AndroidCommonRaster {
         config: WaterMark,
         imageInfo: ImageInfo,
         icon: Bitmap? = null,
+        fontFamily: FontFamily? = null,
     ): Bitmap {
         PreviewSourceReuseProbe.beginCompose()
         return try {
@@ -68,6 +70,7 @@ object AndroidCommonRaster {
                 icon = iconIb,
                 offsetX = imageInfo.offsetX,
                 offsetY = imageInfo.offsetY,
+                fontFamily = fontFamily,
             )
             composed.asAndroidBitmap()
         } finally {
@@ -83,6 +86,7 @@ object AndroidCommonRaster {
         config: WaterMark,
         imageWidth: Int,
         icon: Bitmap? = null,
+        fontFamily: FontFamily? = null,
     ): androidx.compose.ui.graphics.ImageBitmap {
         val env = textRasterEnv(context)
         val iconIb = icon?.asImageBitmap()
@@ -95,6 +99,7 @@ object AndroidCommonRaster {
             config = config,
             env = env,
             icon = iconIb,
+            fontFamily = fontFamily,
         )
     }
 

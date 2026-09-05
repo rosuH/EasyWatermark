@@ -23,6 +23,14 @@ sealed class WatermarkConfigChange {
     data class Degree(val degree: Float) : WatermarkConfigChange()
     data class TextSize(val size: Float) : WatermarkConfigChange()
     data class Typeface(val typeface: TextTypeface) : WatermarkConfigChange()
+    /**
+     * Atomic font identity + style capability (ADR-0035). Repository writes font key and
+     * normalizes [TextTypeface] in one DataStore edit.
+     */
+    data class FontSelection(
+        val ref: WatermarkFontRef,
+        val supportedStyles: Set<TextTypeface>,
+    ) : WatermarkConfigChange()
     /** Fill vs Stroke; emitted from the Style (TextTypeFace) option body. */
     data class TextStyle(val style: TextPaintStyle) : WatermarkConfigChange()
     data class TileMode(val tileMode: WatermarkTileMode) : WatermarkConfigChange()

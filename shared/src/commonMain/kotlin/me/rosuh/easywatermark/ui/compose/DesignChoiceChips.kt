@@ -67,9 +67,10 @@ fun <T> DesignChoiceChips(
     ) {
         options.forEachIndexed { index, option ->
             val isSelected = option.value == selected
+            val optionEnabled = enabled && option.enabled
             val bg = if (isSelected) selectedContainer else Color.Transparent
             val fg = when {
-                !enabled -> DesignNeutralMuted.copy(alpha = 0.4f)
+                !optionEnabled -> DesignNeutralMuted.copy(alpha = 0.4f)
                 isSelected -> accent
                 else -> DesignNeutralMuted
             }
@@ -81,13 +82,13 @@ fun <T> DesignChoiceChips(
                     .clip(RoundedCornerShape(2.dp))
                     .background(bg)
                     .testTag("choice-$index")
-                    .clickable(enabled = enabled) { onSelected(option.value) }
+                    .clickable(enabled = optionEnabled) { onSelected(option.value) }
                     // I2: name + Radio role + selected/disabled (exclusive choice set).
                     .semantics {
                         contentDescription = option.label
                         this.selected = isSelected
                         role = Role.RadioButton
-                        if (!enabled) disabled()
+                        if (!optionEnabled) disabled()
                     }
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.Center,
@@ -115,4 +116,5 @@ data class DesignChoiceOption<T>(
     val value: T,
     val fontStyle: FontStyle = FontStyle.Normal,
     val fontWeight: FontWeight = FontWeight.Normal,
+    val enabled: Boolean = true,
 )

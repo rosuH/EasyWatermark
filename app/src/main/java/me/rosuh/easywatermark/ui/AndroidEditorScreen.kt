@@ -3,6 +3,8 @@ package me.rosuh.easywatermark.ui
 import android.graphics.Bitmap
 import android.graphics.Shader
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -42,6 +44,8 @@ import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkConfigChange
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.entity.Template
+import me.rosuh.easywatermark.font.AndroidWatermarkFontAccess
+import me.rosuh.easywatermark.font.FontResolution
 import me.rosuh.easywatermark.render.AndroidCommonRaster
 import me.rosuh.easywatermark.render.AndroidPreviewWorkingSet
 import me.rosuh.easywatermark.render.PreviewImageRepository
@@ -129,6 +133,38 @@ fun AndroidEditorScreen(
         DraftRenderConflator<WatermarkConfigChange>(editorScope) { persistHandler.value(it) }
     }
     persistHandler.value = { change -> onWaterMrkChange(change) }
+    val context = LocalContext.current
+    val fontAccess = remember(context) { AndroidWatermarkFontAccess(context.applicationContext) }
+    val fontSession = remember(fontAccess, editorScope) {
+        FontPanelSession(
+            access = fontAccess,
+            scope = editorScope,
+            applySelection = { _, ref, styles ->
+                onWaterMrkChange(WatermarkConfigChange.FontSelection(ref, styles))
+                true
+            },
+            systemListRestricted = fontAccess.systemListRestricted,
+        )
+    }
+    LaunchedEffect(waterMark.fontRef, waterMark.text) {
+        fontSession.syncFromConfig(waterMark.fontRef, waterMark.text)
+        fontSession.refreshCurrent(waterMark.fontRef)
+    }
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree(),
+    ) { treeUri: Uri? ->
+        if (treeUri == null) return@rememberLauncherForActivityResult
+        val generation = fontSession.nextImportGeneration()
+        fontSession.beginImport()
+        editorScope.launch {
+            val result = fontAccess.importTree(treeUri) {
+                !fontSession.importStillCurrent(generation)
+            }
+            if (fontSession.importStillCurrent(generation)) {
+                fontSession.completeImport(result)
+            }
+        }
+    }
     DisposableEffect(previewImages) {
         AndroidPreviewWorkingSet.attach(previewImages)
         onDispose {
@@ -184,6 +220,7 @@ fun AndroidEditorScreen(
                         iconCache = iconCache,
                         onOffsetChanged = onOffsetChanged,
                         onUpdateUriFailed = onUpdateUriFailed,
+                        fontAccess = fontAccess,
                     )
                 }
             },
@@ -224,7 +261,20 @@ fun AndroidEditorScreen(
             onGoAboutScreen = onGoAboutScreen,
             onImageSelected = onImageSelected,
             // F2: typed WatermarkConfigChange from shared controls; no FuncType+Any / from().
-            onConfigChange = { change -> persistConflator.submit(change) },
+            onConfigChange = { change ->
+                if (change is WatermarkConfigChange.FontSelection) {
+                    onWaterMrkChange(change)
+                } else {
+                    persistConflator.submit(change)
+                }
+            },
+            fontPanelState = fontSession.state,
+            onFontPanelEvent = { event ->
+                when (event) {
+                    FontPanelEvent.ImportFolder -> importLauncher.launch(null)
+                    else -> fontSession.onEvent(event)
+                }
+            },
             onUseTemplate = onUseTemplate,
             onAddTemplate = onAddTemplate,
             onUpdateTemplate = onUpdateTemplate,
@@ -276,6 +326,7 @@ private fun WaterMark.previewFingerprint(): String = buildString {
     append('|').append(textTypeface)
     append('|').append(tileMode)
     append('|').append(iconUri.value)
+    append('|').append(fontRef.fingerprint())
 }
 
 /**
@@ -295,6 +346,7 @@ private fun WaterMarkCanvas(
     iconCache: WatermarkIconCache<Bitmap>,
     onOffsetChanged: (info: ImageInfo) -> Unit,
     onUpdateUriFailed: (SecurityException) -> Unit = { },
+    fontAccess: AndroidWatermarkFontAccess,
 ) {
     val context = LocalContext.current
     BoxWithConstraints(modifier) {
@@ -460,9 +512,18 @@ private fun WaterMarkCanvas(
             val cell = try {
                 withContext(Dispatchers.Default) {
                     val icon = decodeAndroidIcon(req.wm)
-                    AndroidCommonRaster.composeCell(context, req.wm, base.width, icon)
+                    val family = if (req.wm.markMode == WatermarkMode.Text) {
+                        when (val resolution = fontAccess.resolve(req.wm.fontRef)) {
+                            is FontResolution.Success -> resolution.family
+                            is FontResolution.Failure -> error(resolution.reason)
+                        }
+                    } else {
+                        null
+                    }
+                    AndroidCommonRaster.composeCell(context, req.wm, base.width, icon, family)
                 }
             } catch (_: Throwable) {
+                overlay = null
                 null
             } ?: return@paint
             val liveOverlay = overlayCellFrom(

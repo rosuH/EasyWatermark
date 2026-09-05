@@ -2,6 +2,9 @@ package me.rosuh.easywatermark.session
 
 import androidx.compose.ui.text.font.FontFamily
 import me.rosuh.easywatermark.data.model.ExportedMedia
+import me.rosuh.easywatermark.data.model.WatermarkFontRef
+import me.rosuh.easywatermark.font.FontResolution
+import me.rosuh.easywatermark.font.IosWatermarkFontAccess
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.UserPreferences
@@ -32,11 +35,21 @@ import platform.Foundation.writeToFile
  */
 /** J5: Session export port — not called from Swift. */
 internal class IosExportPipelinePort internal constructor(
-    private val textFontFamilyProvider: () -> FontFamily?,
+    private val textFontFamilyProvider: (WatermarkFontRef) -> FontFamily?,
+    private val fontAccess: IosWatermarkFontAccess? = null,
 ) : ExportPipelinePort {
 
-    /** Production entry: Text mode uses the system default face (ADR-0025). */
-    constructor() : this({ FontFamily.Default })
+    /** Production entry: resolve the request config's font identity. */
+    constructor() : this(
+        textFontFamilyProvider = { _ -> FontFamily.Default },
+        fontAccess = IosWatermarkFontAccess(),
+    )
+
+    /** Test seam: ignore stored identity and return an injected family. */
+    internal constructor(textFontFamilyProvider: () -> FontFamily?) : this(
+        textFontFamilyProvider = { _ -> textFontFamilyProvider() },
+        fontAccess = null,
+    )
 
     /**
      * Test-only atomic-write override so a failed write can be forced without message parsing
@@ -78,7 +91,19 @@ internal class IosExportPipelinePort internal constructor(
                 }
                 // Text only: never call the provider in Image mode (C4.3 seam).
                 val fontFamily = if (config.markMode == WatermarkMode.Text) {
-                    textFontFamilyProvider()
+                    val access = fontAccess
+                    if (access != null) {
+                        when (val resolution = access.resolve(config.fontRef)) {
+                            is FontResolution.Success -> resolution.family
+                            is FontResolution.Failure -> {
+                                return ExportOutcome.failure(
+                                    ExportFailure.Render(message = resolution.reason),
+                                )
+                            }
+                        }
+                    } else {
+                        textFontFamilyProvider(config.fontRef)
+                    }
                 } else {
                     null
                 }

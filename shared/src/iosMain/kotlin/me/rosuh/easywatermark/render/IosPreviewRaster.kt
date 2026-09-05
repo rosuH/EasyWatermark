@@ -109,14 +109,18 @@ internal object IosPreviewRaster {
      * Overlay cell only (ADR-0033). Does not bake [background]. Editor main preview must not
      * call [renderWatermarked].
      */
-    fun composeCell(waterMark: WaterMark, imageWidth: Int): ImageBitmap {
+    fun composeCell(
+        waterMark: WaterMark,
+        imageWidth: Int,
+        fontFamily: FontFamily? = FontFamily.Default,
+    ): ImageBitmap {
         val icon = if (waterMark.markMode == WatermarkMode.Image) {
             IosWatermarkIconCache.decoded(waterMark.iconUri, ICON_MAX_EDGE_PX)
         } else {
             null
         }
         val family = if (waterMark.markMode == WatermarkMode.Text) {
-            FontFamily.Default
+            fontFamily
         } else {
             null
         }

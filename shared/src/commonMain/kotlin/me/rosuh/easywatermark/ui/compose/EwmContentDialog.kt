@@ -52,6 +52,8 @@ fun EwmContentDialog(
     maxHeight: Dp = 720.dp,
     properties: DialogProperties = DialogProperties(usePlatformDefaultWidth = false),
     testTag: String = "ewmContentDialog",
+    /** When false, callers own internal scrolling (fixed header/footer panels). */
+    scrollContent: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val motionPolicy = currentMotionPolicy()
@@ -108,11 +110,16 @@ fun EwmContentDialog(
                     color = EwmTheme.panel.containerColor,
                     tonalElevation = EwmTheme.panel.tonalElevation,
                 ) {
-                    // Scroll when content exceeds max height — avoids clipped CTAs on short windows.
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .verticalScroll(rememberScrollState()),
+                            .then(
+                                if (scrollContent) {
+                                    Modifier.verticalScroll(rememberScrollState())
+                                } else {
+                                    Modifier
+                                },
+                            ),
                     ) {
                         content()
                     }

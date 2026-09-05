@@ -16,8 +16,10 @@ import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkConfigRules
+import me.rosuh.easywatermark.data.model.WatermarkFontRef
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
+import me.rosuh.easywatermark.font.WatermarkFontCodec
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_ALPHA
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_DEGREE
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_ENABLE_BOUNDS
@@ -31,6 +33,7 @@ import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_T
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TEXT_TYPEFACE
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_TILE_MODE
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_VERTICAL_GAP
+import me.rosuh.easywatermark.data.repo.WaterMarkRepository.PreferenceKeys.KEY_FONT_REF
 import okio.IOException
 
 /**
@@ -75,6 +78,7 @@ class WaterMarkRepository(
         val KEY_TILE_MODE = intPreferencesKey(SP_KEY_TILE_MODEL)
         val KEY_OFFSET_X = floatPreferencesKey(SP_KEY_OFFSET_X)
         val KEY_OFFSET_Y = floatPreferencesKey(SP_KEY_OFFSET_Y)
+        val KEY_FONT_REF = stringPreferencesKey(SP_KEY_FONT_REF)
     }
 
     private val _selectedImage = MutableStateFlow(ImageInfo.empty())
@@ -107,7 +111,8 @@ class WaterMarkRepository(
                 iconUri = MediaRef.parse(it[KEY_ICON_URI] ?: ""),
                 markMode = WatermarkMode.fromValue(it[KEY_MODE] ?: WatermarkMode.Text.value),
                 tileMode = tileModeFromStorageId(it[KEY_TILE_MODE]),
-                enableBounds = it[KEY_ENABLE_BOUNDS] ?: false
+                enableBounds = it[KEY_ENABLE_BOUNDS] ?: false,
+                fontRef = WatermarkFontCodec.decode(it[KEY_FONT_REF]),
             )
         }
 
@@ -153,6 +158,30 @@ class WaterMarkRepository(
 
     suspend fun updateTypeFace(typeface: TextTypeface) {
         dataStore.edit { it[KEY_TEXT_TYPEFACE] = typeface.serializeKey() }
+    }
+
+    /**
+     * One DataStore edit: persist [fontRef] and keep or normalize the current typeface
+     * against [supportedStyles] (ADR-0035). [supportedStyles] must include at least Normal
+     * or the actual loaded face style.
+     */
+    suspend fun updateFontSelection(fontRef: WatermarkFontRef, supportedStyles: Set<TextTypeface>) {
+        require(fontRef.isSelectable()) { "Unavailable cannot be written as a selection" }
+        val allowed = if (supportedStyles.isEmpty()) {
+            setOf(TextTypeface.Normal)
+        } else {
+            supportedStyles
+        }
+        dataStore.edit { prefs ->
+            prefs[KEY_FONT_REF] = WatermarkFontCodec.encode(fontRef)
+            val current = TextTypeface.obtainSealedClass(prefs[KEY_TEXT_TYPEFACE] ?: 0)
+            val next = when {
+                current in allowed -> current
+                TextTypeface.Normal in allowed -> TextTypeface.Normal
+                else -> allowed.first()
+            }
+            prefs[KEY_TEXT_TYPEFACE] = next.serializeKey()
+        }
     }
 
     suspend fun updateAlpha(alpha: Int) {
@@ -270,6 +299,7 @@ class WaterMarkRepository(
         const val SP_KEY_TILE_MODEL = "${SP_NAME}_key_tile_model"
         const val SP_KEY_OFFSET_X = "${SP_NAME}_key_offset_x"
         const val SP_KEY_OFFSET_Y = "${SP_NAME}_key_offset_y"
+        const val SP_KEY_FONT_REF = "${SP_NAME}_key_font_ref"
         // Single source of truth = commonMain WatermarkConfigRules; these aliases stay so the
         // editor sliders (EditorScreen reads WaterMarkRepository.MAX_*) keep their public references.
         const val MAX_TEXT_SIZE = WatermarkConfigRules.MAX_TEXT_SIZE

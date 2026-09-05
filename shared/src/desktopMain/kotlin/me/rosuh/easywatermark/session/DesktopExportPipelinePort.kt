@@ -4,9 +4,13 @@ import me.rosuh.easywatermark.data.model.ExportedMedia
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkMode
+import me.rosuh.easywatermark.font.DesktopWatermarkFontAccess
+import me.rosuh.easywatermark.font.FontResolution
 import me.rosuh.easywatermark.render.DesktopRenderRequest
 import me.rosuh.easywatermark.render.DesktopRenderSaveSpine
 import me.rosuh.easywatermark.render.DesktopSaveDecision
+import me.rosuh.easywatermark.render.DesktopWatermarkComposer
 import java.io.File
 
 /**
@@ -20,6 +24,7 @@ import java.io.File
  */
 class DesktopExportPipelinePort(
     private val outputDirProvider: () -> File,
+    private val fontAccess: DesktopWatermarkFontAccess = DesktopWatermarkFontAccess(),
 ) : ExportPipelinePort {
 
     override suspend fun exportOne(
@@ -51,10 +56,23 @@ class DesktopExportPipelinePort(
             val outDir = outputDirProvider()
             outDir.mkdirs()
             val target = DesktopSaveDecision.resolveUniqueOutputFile(outDir, prefs.outputFormat)
+            val fontFamily = if (config.markMode == WatermarkMode.Text) {
+                when (val resolution = fontAccess.resolve(config.fontRef)) {
+                    is FontResolution.Success -> resolution.family
+                    is FontResolution.Failure -> {
+                        return ExportOutcome.failure(
+                            ExportFailure.Render(message = resolution.reason),
+                        )
+                    }
+                }
+            } else {
+                null
+            }
             val saved = DesktopRenderSaveSpine.renderAndSave(
                 imageBytes = bytes,
                 request = request,
                 target = target,
+                fontFamily = fontFamily,
             )
             // Legacy UI dims; success identity is ExportedMedia.
             imageInfo.width = saved.width

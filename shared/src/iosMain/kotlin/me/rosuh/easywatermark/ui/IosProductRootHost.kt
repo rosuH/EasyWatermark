@@ -145,6 +145,7 @@ internal enum class LibraryReadBannerKind {
 class IosProductRootHost(
     private val onPickPhoto: () -> Unit,
     private val onPickIcon: () -> Unit,
+    private val onPickFontFolder: () -> Unit = {},
     private val onShare: (filePath: String) -> Unit,
     /**
      * D4: Photos persistence edge for Swift.
@@ -192,6 +193,17 @@ class IosProductRootHost(
     private var disposed = false
     /** Serializes dispose vs post-publish ownership adoption (Main / delivery continuations). */
     private val lifecycleLock = NSLock()
+    private val fontAccess = me.rosuh.easywatermark.font.IosWatermarkFontAccess()
+    private val fontSession = FontPanelSession(
+        access = fontAccess,
+        scope = hostScope,
+        applySelection = { _, ref, styles ->
+            services.session.applyConfigIf(
+                stillValid = { true },
+                change = WatermarkConfigChange.FontSelection(ref, styles),
+            )
+        },
+    )
 
     /** Progressive path-first import (NotificationCenter control plane; zero public API growth). */
     private val progressiveImport = IosProgressiveImportController(
@@ -1188,10 +1200,21 @@ class IosProductRootHost(
                         seedBitmap = themeSeedBitmap,
                         seedKey = themeSeedKey,
                     ) {
+                    LaunchedEffect(waterMark.fontRef, waterMark.text) {
+                        fontSession.syncFromConfig(waterMark.fontRef, waterMark.text)
+                        fontSession.refreshCurrent(waterMark.fontRef)
+                    }
                     EditorScreen(
                         forcedBottomTab = storeCaptureTab,
                         forcedOptionIndex = storeCaptureOption,
                         openTemplateSheetRequest = storeCaptureOpenTemplates,
+                        fontPanelState = fontSession.state,
+                        onFontPanelEvent = { event ->
+                            when (event) {
+                                FontPanelEvent.ImportFolder -> onPickFontFolder()
+                                else -> fontSession.onEvent(event)
+                            }
+                        },
                         imageList = sessionImages.map { it.toUiProjection() },
                         waterMark = waterMark,
                         selectedImage = (launchUi.curImageInfo ?: sessionImages.firstOrNull())
@@ -1902,6 +1925,27 @@ class IosProductRootHost(
     }
 
     /**
+     * Import fonts from a security-scoped directory path. Caller must keep the scope alive
+     * until [onComplete] runs.
+     */
+    fun importFontsFromDirectory(path: String, onComplete: () -> Unit) {
+        val generation = fontSession.nextImportGeneration()
+        fontSession.beginImport()
+        hostScope.launch {
+            try {
+                val result = fontAccess.importDirectory(path) {
+                    !fontSession.importStillCurrent(generation)
+                }
+                if (fontSession.importStillCurrent(generation)) {
+                    fontSession.completeImport(result)
+                }
+            } finally {
+                onComplete()
+            }
+        }
+    }
+
+    /**
  * Deliver one picked source photo into the session.
  *
  * **Latency:** always stages + EnterEditor first (filmstrip updates immediately). Watermark
@@ -2347,7 +2391,12 @@ class IosProductRootHost(
         oy: Float,
     ): OverlayCell {
         val isText = wm.markMode == WatermarkMode.Text
-        val cell = IosPreviewRaster.composeCell(wm, imageWidth)
+        val family = if (isText) {
+            fontSession.resolvedFamily ?: androidx.compose.ui.text.font.FontFamily.Default
+        } else {
+            null
+        }
+        val cell = IosPreviewRaster.composeCell(wm, imageWidth, family)
         return overlayCellFrom(
             cell = cell,
             config = wm,

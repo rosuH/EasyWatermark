@@ -42,6 +42,18 @@ class DesktopWaterMarkStoreRoundtripTest {
             assertEquals("请勿转载", updated.text)
             assertEquals(330f, updated.degree)
             assertEquals(20f, updated.textSize)
+            assertEquals(me.rosuh.easywatermark.data.model.WatermarkFontRef.Default, initial.fontRef)
+
+            editor.updateFontSelection(
+                me.rosuh.easywatermark.data.model.WatermarkFontRef.System("desktop", "Menlo"),
+                setOf(me.rosuh.easywatermark.data.model.TextTypeface.Normal),
+            )
+            val withFont = repo.waterMark.first()
+            assertEquals(
+                me.rosuh.easywatermark.data.model.WatermarkFontRef.System("desktop", "Menlo"),
+                withFont.fontRef,
+            )
+            assertEquals(me.rosuh.easywatermark.data.model.TextTypeface.Normal, withFont.textTypeface)
         } finally {
             dir.deleteRecursively()
         }

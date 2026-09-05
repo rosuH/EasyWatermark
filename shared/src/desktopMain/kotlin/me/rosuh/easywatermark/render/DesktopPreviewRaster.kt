@@ -73,6 +73,7 @@ object DesktopPreviewRaster {
         maxEdgePx: Int = PREVIEW_MAX_EDGE_PX,
         background: ImageBitmap? = null,
         icon: ImageBitmap? = null,
+        fontFamily: FontFamily? = FontFamily.Default,
     ): ImageBitmap {
         val source = if (background != null) {
             background
@@ -99,7 +100,7 @@ object DesktopPreviewRaster {
             icon = resolvedIcon,
             offsetX = offsetX,
             offsetY = offsetY,
-            fontFamily = FontFamily.Default,
+            fontFamily = if (waterMark.markMode == WatermarkMode.Text) fontFamily else null,
         )
     }
 

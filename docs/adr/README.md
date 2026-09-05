@@ -35,3 +35,4 @@ Decisions trace to the CMP migration plan (`docs/superpowers/plans/2026-06-12-cm
 | [0032](0032-android-splash-then-launch-fade-serial.md) | Android splash then Launch fade are serial; iOS launch fill matches first screen (`#262611`, no icon) | **Accepted** (owner 2026-08-26) |
 | [0033](0033-live-overlay-preview.md) | Editor preview is a live two-layer overlay; export still bakes | **Proposed** — Implemented, pending device sign-off |
 | [0034](0034-one-click-android-play-ship.md) | Ship Android release: CREATE = GitHub + Play; PLAY = resume Play from that Release | **Proposed** |
+| [0035](0035-custom-watermark-fonts.md) | 三端自定义水印字体：系统字体、目录导入与共享渲染 | **Accepted** (owner 2026-09-05) |

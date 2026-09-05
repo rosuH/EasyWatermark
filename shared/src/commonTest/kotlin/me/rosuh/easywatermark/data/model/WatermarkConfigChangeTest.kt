@@ -1,5 +1,6 @@
 package me.rosuh.easywatermark.data.model
 
+
 import kotlin.math.roundToInt
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -24,6 +25,16 @@ class WatermarkConfigChangeTest {
         assertEquals(
             WatermarkConfigChange.Typeface(TextTypeface.Bold),
             WatermarkConfigChange.Typeface(TextTypeface.Bold),
+        )
+        assertEquals(
+            WatermarkConfigChange.FontSelection(
+                WatermarkFontRef.Default,
+                setOf(TextTypeface.Normal),
+            ),
+            WatermarkConfigChange.FontSelection(
+                WatermarkFontRef.Default,
+                setOf(TextTypeface.Normal),
+            ),
         )
         assertEquals(
             WatermarkConfigChange.TextStyle(TextPaintStyle.Stroke),

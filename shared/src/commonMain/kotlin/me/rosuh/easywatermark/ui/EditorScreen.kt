@@ -116,6 +116,10 @@ fun EditorScreen(
     forcedOptionIndex: Int = 0,
     /** Bump to open the template sheet. Store-capture hook. */
     openTemplateSheetRequest: Int = 0,
+    fontPanelState: FontPanelUiState = FontPanelUiState(),
+    onFontPanelEvent: (FontPanelEvent) -> Unit = {},
+    fontSampleFamilies: Map<String, androidx.compose.ui.text.font.FontFamily> = emptyMap(),
+    openFontSheetRequest: Int = 0,
 ) {
     val progressiveSlots = LocalEditorProgressiveSlotPresentation.current
     val selected = selectedImage ?: imageList.firstOrNull()
@@ -166,6 +170,16 @@ fun EditorScreen(
         onSheetVisibilityChange = onTemplateSheetVisibilityChange,
         openRequest = openTemplateSheetRequest,
     ) { showTemplateSheet ->
+    EditorFontSheetHost(
+        state = fontPanelState,
+        onEvent = onFontPanelEvent,
+        useLargeDialog = usesLargeScreenDialog(layoutClass),
+        sampleFamilies = fontSampleFamilies,
+        onVisibilityChange = { visible ->
+            if (visible) onFontPanelEvent(FontPanelEvent.Open)
+        },
+        openRequest = openFontSheetRequest,
+    ) { showFontSheet ->
         Surface(
             modifier = modifier
                 .fillMaxSize()
@@ -248,6 +262,9 @@ fun EditorScreen(
                             colorOption = colorOption,
                             iconOption = iconOption,
                             initialTabIndex = initialInspectorTab,
+                            currentFontName = fontPanelState.currentDisplayName,
+                            supportedStyles = fontPanelState.supportedStyles.styles,
+                            onOpenFontPanel = showFontSheet,
                             modifier = Modifier
                                 .width(EDITOR_EXPANDED_CONTROLS_PANE_MAX_DP.dp)
                                 .widthIn(max = EDITOR_EXPANDED_CONTROLS_PANE_MAX_DP.dp)
@@ -291,10 +308,14 @@ fun EditorScreen(
                         modifier = Modifier.fillMaxWidth(),
                         initialTabIndex = forcedBottomTab,
                         initialOptionIndex = forcedOptionIndex,
+                        currentFontName = fontPanelState.currentDisplayName,
+                        supportedStyles = fontPanelState.supportedStyles.styles,
+                        onOpenFontPanel = showFontSheet,
                     )
                 }
             }
         }
+    }
     }
 }
 
