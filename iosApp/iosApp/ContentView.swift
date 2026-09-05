@@ -1,6 +1,7 @@
 import SwiftUI
 import PhotosUI
 import UIKit
+import UniformTypeIdentifiers
 import Shared
 
 // U3: production UI is a **single** Compose product root (`IosProductRootHost`).
@@ -20,6 +21,7 @@ final class IosProductRootBox: ObservableObject {
     }
     var host: IosProductRootHost?
     weak var viewController: UIViewController?
+    fileprivate var fontFolderPickerDelegate: FontFolderPickerDelegate?
 
     /// E2: cancel export, clear host caches, remove owned temps (idempotent).
     func disposeHost() {
@@ -123,6 +125,24 @@ final class IosProductRootBox: ObservableObject {
     }
 #endif
 #endif
+
+    func presentFontFolderPicker() {
+        guard let presenter = foregroundPresenter(), let host else { return }
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.folder], asCopy: false)
+        picker.allowsMultipleSelection = false
+        let delegate = FontFolderPickerDelegate { [weak self, weak host] url in
+            let scoped = url.startAccessingSecurityScopedResource()
+            host?.importFontsFromDirectory(path: url.path) {
+                if scoped {
+                    url.stopAccessingSecurityScopedResource()
+                }
+                self?.fontFolderPickerDelegate = nil
+            }
+        }
+        fontFolderPickerDelegate = delegate
+        picker.delegate = delegate
+        presenter.present(picker, animated: true)
+    }
 
     func presentShare(path: String) {
         guard let presenter = foregroundPresenter() else { return }
@@ -234,6 +254,11 @@ private struct SharedComposeProductRoot: UIViewControllerRepresentable {
         let host = IosProductRootHost(
             onPickPhoto: onPickPhoto,
             onPickIcon: onPickIcon,
+            onPickFontFolder: { [weak box] in
+                Task { @MainActor in
+                    box?.presentFontFolderPicker()
+                }
+            },
             onShare: { [weak box] path in
                 Task { @MainActor in
                     box?.presentShare(path: path as String)
@@ -324,6 +349,21 @@ private struct SharedComposeEditorShellWitness: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
 }
 #endif
+
+fileprivate final class FontFolderPickerDelegate: NSObject, UIDocumentPickerDelegate {
+    private let onPicked: (URL) -> Void
+
+    init(onPicked: @escaping (URL) -> Void) {
+        self.onPicked = onPicked
+    }
+
+    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        guard let url = urls.first else { return }
+        onPicked(url)
+    }
+
+    func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {}
+}
 
 struct ContentView: View {
     /// System-edge failure surface only — watermark config is session-owned in Kotlin.

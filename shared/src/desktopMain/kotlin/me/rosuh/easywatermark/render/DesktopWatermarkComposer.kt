@@ -145,6 +145,7 @@ object DesktopWatermarkComposer {
         imageBytes: ByteArray,
         request: DesktopRenderRequest,
         iconBytes: ByteArray? = null,
+        fontFamily: FontFamily? = FontFamily.Default,
     ): ComposedImage {
         // H2: nested scope so decode/compose ImageBitmap refs become unreachable as soon as
         // encoded bytes + dims are captured. Skiko ImageBitmap has no recycle(); GC is the
@@ -169,7 +170,7 @@ object DesktopWatermarkComposer {
                 icon = icon,
                 offsetX = request.offsetX,
                 offsetY = request.offsetY,
-                fontFamily = FontFamily.Default,
+                fontFamily = if (request.config.markMode == WatermarkMode.Text) fontFamily else null,
             )
             width = composed.width
             height = composed.height

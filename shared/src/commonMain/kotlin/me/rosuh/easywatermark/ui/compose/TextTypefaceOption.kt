@@ -19,6 +19,12 @@ fun TextTypeface(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     fillMaxWidth: Boolean = true,
+    supportedStyles: Set<TextTypeface> = setOf(
+        TextTypeface.Normal,
+        TextTypeface.Bold,
+        TextTypeface.Italic,
+        TextTypeface.BoldItalic,
+    ),
     onValueChange: (TextTypeface) -> Unit,
 ) {
     DesignChoiceChips(
@@ -26,22 +32,26 @@ fun TextTypeface(
             DesignChoiceOption(
                 label = stringResource(Res.string.text_typeface_normal),
                 value = TextTypeface.Normal,
+                enabled = TextTypeface.Normal in supportedStyles,
             ),
             DesignChoiceOption(
                 label = stringResource(Res.string.text_typeface_bold),
                 value = TextTypeface.Bold,
                 fontWeight = FontWeight.Bold,
+                enabled = TextTypeface.Bold in supportedStyles,
             ),
             DesignChoiceOption(
                 label = stringResource(Res.string.text_typeface_italic),
                 value = TextTypeface.Italic,
                 fontStyle = FontStyle.Italic,
+                enabled = TextTypeface.Italic in supportedStyles,
             ),
             DesignChoiceOption(
                 label = stringResource(Res.string.text_typeface_bold_italic),
                 value = TextTypeface.BoldItalic,
                 fontStyle = FontStyle.Italic,
                 fontWeight = FontWeight.Bold,
+                enabled = TextTypeface.BoldItalic in supportedStyles,
             ),
         ),
         selected = typeface,

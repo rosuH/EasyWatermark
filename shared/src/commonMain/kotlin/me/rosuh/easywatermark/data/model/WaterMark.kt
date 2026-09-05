@@ -20,6 +20,7 @@ data class WaterMark(
     val markMode: WatermarkMode,
     val enableBounds: Boolean,
     val tileMode: WatermarkTileMode,
+    val fontRef: WatermarkFontRef = WatermarkFontRef.Default,
 ) {
     companion object {
         val default = WaterMark(
@@ -37,6 +38,7 @@ data class WaterMark(
             markMode = WatermarkMode.Text,
             enableBounds = false,
             tileMode = WatermarkTileMode.REPEAT,
+            fontRef = WatermarkFontRef.Default,
         )
     }
 }

@@ -22,7 +22,10 @@ import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkMode
+import me.rosuh.easywatermark.font.AndroidWatermarkFontAccess
+import me.rosuh.easywatermark.font.FontResolution
 import me.rosuh.easywatermark.render.AndroidCommonRaster
+import androidx.compose.ui.text.font.FontFamily
 import me.rosuh.easywatermark.utils.FileUtils.Companion.outPutFolderName
 import me.rosuh.easywatermark.utils.bitmap.decodeBitmapFromUri
 import me.rosuh.easywatermark.utils.bitmap.decodeSampledBitmapFromResource
@@ -50,6 +53,7 @@ class AndroidExportPipelinePort(
      * Injectable encode / FD open for unit tests (A1/A2). Production uses [PersistenceHooks.Default].
      */
     private val hooks: PersistenceHooks = PersistenceHooks.Default,
+    private val fontAccess: AndroidWatermarkFontAccess = AndroidWatermarkFontAccess(appContext),
 ) : ExportPipelinePort {
 
     /**
@@ -125,6 +129,18 @@ class AndroidExportPipelinePort(
             }
             WatermarkMode.Text -> null
         }
+        val fontFamily: FontFamily? = if (config.markMode == WatermarkMode.Text) {
+            when (val resolution = fontAccess.resolve(config.fontRef)) {
+                is FontResolution.Success -> resolution.family
+                is FontResolution.Failure -> {
+                    return ExportOutcome.failure(
+                        ExportFailure.Render(message = resolution.reason),
+                    )
+                }
+            }
+        } else {
+            null
+        }
         val mutableBitmap = try {
             AndroidCommonRaster.composeToBitmap(
                 context = appContext,
@@ -132,6 +148,7 @@ class AndroidExportPipelinePort(
                 config = config,
                 imageInfo = imageInfo,
                 icon = iconBitmap,
+                fontFamily = fontFamily,
             )
         } catch (e: Exception) {
             // Failure path: still release owned source (not from BitmapCache).
