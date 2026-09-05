@@ -1,5 +1,7 @@
 # Codex Goal — EasyWatermark Full KMP/CMP Migration
 
+> **Historical mission record.** The instructions below describe the migration workflow at the recorded date. They are not current session instructions unless the user explicitly resumes that mission. Start from the current request, [AGENTS.md](AGENTS.md), and [task handoff guidance](docs/agents/issue-tracker.md); reconcile any resumed mission with those current instructions before acting.
+
 Standing mission file for Codex. Read this file completely before doing any work, every session.
 Owner: rosuH. Created: 2026-07-03. Branch of record: `feat/migrate_to_compose`.
 
