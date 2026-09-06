@@ -77,20 +77,28 @@ open class WatermarkSessionViewModel(
     private var exportJob: Job? = null
     /** Bumps on each [startExport] so a cancelled job's finally cannot clobber a newer run. */
     private var exportGeneration: Int = 0
+    private var hasSyncedInitialWatermark = false
+
+    /**
+     * Test hook: runs after a DataStore emission is observed and **before** [sessionMutex]
+     * is acquired. Production leaves this null.
+     */
+    internal var beforeWaterMarkSyncLock: (suspend () -> Unit)? = null
 
     init {
         viewModelScope.launch(Dispatchers.Default) {
-            var hasSyncedInitialWatermark = false
             waterMarkRepo.waterMark.collect {
-                // The first DataStore emission initializes Session config; it is not a user edit.
-                // It may arrive after an immediate export and must not erase that export's result.
-                if (hasSyncedInitialWatermark) {
-                    resetJobStatus()
+                beforeWaterMarkSyncLock?.invoke()
+                sessionMutex.withLock {
+                    val latest = waterMarkRepo.currentConfig()
+                    // First emission initializes Session config; it is not a user edit and
+                    // must not erase an in-flight export result.
+                    if (hasSyncedInitialWatermark) {
+                        resetJobStatus()
+                    }
+                    hasSyncedInitialWatermark = true
+                    publishLaunchWaterMark(latest)
                 }
-                hasSyncedInitialWatermark = true
-                // Re-read after waiting so a lagged collector cannot publish an older emission
-                // over a newer applyConfigIf snapshot.
-                applyIntent(AppIntent.SyncWaterMark(waterMarkRepo.currentConfig()))
             }
         }
         viewModelScope.launch(Dispatchers.Default) {
@@ -398,10 +406,14 @@ open class WatermarkSessionViewModel(
             if (!stillValid()) return@withLock null
             applyConfigChange(change)
             val committed = waterMarkRepo.currentConfig()
-            withContext(Dispatchers.Main.immediate) {
-                _launchScreenUiStateFlow.update { it.copy(waterMark = committed) }
-            }
+            publishLaunchWaterMark(committed)
             committed
+        }
+    }
+
+    private suspend fun publishLaunchWaterMark(wm: WaterMark) {
+        withContext(Dispatchers.Main.immediate) {
+            _launchScreenUiStateFlow.update { it.copy(waterMark = wm) }
         }
     }
 

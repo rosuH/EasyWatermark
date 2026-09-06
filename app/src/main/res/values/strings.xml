@@ -106,6 +106,7 @@
     <string name="font_tab_system">System</string>
     <string name="font_tab_imported">Imported</string>
     <string name="font_import_from_folder">Import from folder</string>
+    <string name="font_import_generic_source">Import</string>
     <string name="font_panel_done">Done</string>
     <string name="font_sample_fallback">Watermark</string>
     <string name="font_imported_empty">No imported fonts yet. Use Import from folder.</string>

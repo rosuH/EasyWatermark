@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.distinctUntilChanged
 import me.rosuh.easywatermark.data.model.WatermarkFontRef
 import me.rosuh.easywatermark.font.FontEntry
+import me.rosuh.easywatermark.font.FontImportFailureText
 import me.rosuh.easywatermark.font.FontImportProgress
 import me.rosuh.easywatermark.font.FontSourceTab
 import me.rosuh.easywatermark.shared.generated.resources.Res
@@ -50,6 +51,7 @@ import me.rosuh.easywatermark.shared.generated.resources.font_android_legacy_sys
 import me.rosuh.easywatermark.shared.generated.resources.font_candidate_loading
 import me.rosuh.easywatermark.shared.generated.resources.font_import_cancel
 import me.rosuh.easywatermark.shared.generated.resources.font_import_from_folder
+import me.rosuh.easywatermark.shared.generated.resources.font_import_generic_source
 import me.rosuh.easywatermark.shared.generated.resources.font_import_hide_failures
 import me.rosuh.easywatermark.shared.generated.resources.font_import_show_failures
 import me.rosuh.easywatermark.shared.generated.resources.font_import_summary
@@ -445,9 +447,14 @@ private fun ImportFooter(
                         )
                     }
                     if (state.showImportFailures) {
+                        val genericSource = stringResource(Res.string.font_import_generic_source)
                         result.failed.take(8).forEach { failure ->
                             Text(
-                                text = "${failure.fileName}: ${failure.reason}",
+                                text = FontImportFailureText.visibleLine(
+                                    failure.fileName,
+                                    failure.reason,
+                                    genericSource,
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error,
                             )

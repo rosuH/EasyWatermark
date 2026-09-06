@@ -109,12 +109,7 @@ class AndroidWatermarkFontAccess(
                     FontImportResult(
                         added = 0,
                         duplicates = 0,
-                        failed = listOf(
-                            FontImportFailure(
-                                treeUri.toString(),
-                                e.message?.takeIf { it.isNotBlank() } ?: "Import failed",
-                            ),
-                        ),
+                        failed = listOf(FontImportFailureText.fromProviderException(e.message)),
                     )
                 }
             }

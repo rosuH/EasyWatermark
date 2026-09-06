@@ -223,6 +223,35 @@ class FontPanelSessionImportTest {
         Unit
     }
 
+    @Test
+    fun injected_saf_uri_failure_is_not_visible_and_can_retry() = runBlocking {
+        val session = FontPanelSession(
+            access = FakeFontAccess(),
+            scope = this,
+            applySelection = { _, _, _ -> true },
+        )
+        val generation = session.beginImport()
+        val uri = "content://com.android.externalstorage.documents/tree/primary%3AFonts"
+        session.runImport(generation) {
+            throw IllegalStateException("Could not query $uri")
+        }
+        val done = session.state.importProgress
+        assertIs<FontImportProgress.Done>(done)
+        val failure = done.result.failed.single()
+        val line = me.rosuh.easywatermark.font.FontImportFailureText.visibleLine(
+            failure.fileName,
+            failure.reason,
+            localizedSource = "Import",
+        )
+        assertFalse("content://" in line.lowercase(), line)
+        assertFalse(uri in line, line)
+        val second = session.beginImport()
+        assertIs<FontImportProgress.Running>(session.state.importProgress)
+        session.completeImport(second, FontImportResult(added = 0, duplicates = 0, failed = emptyList()))
+        assertIs<FontImportProgress.Done>(session.state.importProgress)
+        Unit
+    }
+
     private class FakeFontAccess(
         private val systemCount: Int = 2,
     ) : WatermarkFontAccess {
