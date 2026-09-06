@@ -159,9 +159,7 @@ fun AndroidEditorScreen(
             val result = fontAccess.importTree(treeUri) {
                 !fontSession.importStillCurrent(generation)
             }
-            if (fontSession.importStillCurrent(generation)) {
-                fontSession.completeImport(result)
-            }
+            fontSession.completeImport(generation, result)
         }
     }
     DisposableEffect(previewImages) {

@@ -42,6 +42,7 @@ import me.rosuh.easywatermark.data.model.JobState
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkConfigChange
+import me.rosuh.easywatermark.font.FontSelectionCommit
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.model.entity.Template
@@ -204,8 +205,16 @@ class IosProductRootHost(
                 stillValid = { !disposed },
                 change = WatermarkConfigChange.FontSelection(ref, styles),
             )
-            if (applied) {
-                renderPreviewForCurrentSelection(gen = gen)
+            val committed = FontSelectionCommit.waterMarkForRender(
+                persistSucceeded = applied,
+                requestGeneration = gen,
+                currentGeneration = previewGen,
+                published = services.session.launchScreenUiStateFlow.value.waterMark,
+                committedRef = ref,
+                supportedStyles = styles,
+            )
+            if (committed != null) {
+                renderPreviewForCurrentSelection(gen = gen, forceWaterMark = committed)
             }
             applied
         },
@@ -1941,9 +1950,7 @@ class IosProductRootHost(
                 val result = fontAccess.importDirectory(path) {
                     !fontSession.importStillCurrent(generation)
                 }
-                if (fontSession.importStillCurrent(generation)) {
-                    fontSession.completeImport(result)
-                }
+                fontSession.completeImport(generation, result)
             } finally {
                 onComplete()
             }
@@ -2281,6 +2288,7 @@ class IosProductRootHost(
         forcePath: String? = null,
         forceOffsetX: Float? = null,
         forceOffsetY: Float? = null,
+        forceWaterMark: WaterMark? = null,
     ) {
         val isDraft = draftOffset != null
         val hostBench = ClampDragBench.previewScope(
@@ -2294,7 +2302,7 @@ class IosProductRootHost(
         }
         val sourcePath = forcePath ?: cur?.uri?.value.orEmpty()
         if (sourcePath.isBlank()) return
-        val wm = launch.waterMark
+        val wm = forceWaterMark ?: launch.waterMark
         val isText = wm.markMode == WatermarkMode.Text
         val previewBucket = committedPreviewBucket
         val ox = draftOffset?.first ?: forceOffsetX ?: cur?.offsetX ?: 0.5f

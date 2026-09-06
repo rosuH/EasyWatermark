@@ -20,6 +20,12 @@ class IosFontSelectionPreviewContractTest {
         )
         assertTrue("fontAccess.resolve(wm.fontRef)" in text, "overlay must resolve wm.fontRef")
         assertTrue("resolvedFamily ?:" !in text, "must not silently fall back to cached Default family")
+        assertTrue(
+            "FontSelectionCommit.waterMarkForRender" in text,
+            "font commit must render the committed watermark, not a lagged LaunchScreenState",
+        )
+        assertTrue("forceWaterMark" in text, "renderPreviewForCurrentSelection must accept committed watermark")
+        // Source-text only: runtime ordering is FontSelectionCommitRenderTest.
     }
 
     private fun resolveRepoFile(relative: String): File {

@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.CircularProgressIndicator
@@ -35,6 +38,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.distinctUntilChanged
 import me.rosuh.easywatermark.data.model.WatermarkFontRef
 import me.rosuh.easywatermark.font.FontEntry
 import me.rosuh.easywatermark.font.FontImportProgress
@@ -173,6 +177,7 @@ fun FontPanel(
                 state = state,
                 sampleFamilies = sampleFamilies,
                 onSelect = { onEvent(FontPanelEvent.Select(it)) },
+                onVisible = { onEvent(FontPanelEvent.VisibleEntries(it)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = listMax.coerceAtLeast(120.dp)),
@@ -231,6 +236,7 @@ private fun FontListBody(
     state: FontPanelUiState,
     sampleFamilies: Map<String, FontFamily>,
     onSelect: (WatermarkFontRef) -> Unit,
+    onVisible: (List<FontEntry>) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val sampleFallback = stringResource(Res.string.font_sample_fallback)
@@ -266,6 +272,7 @@ private fun FontListBody(
                         sample = sample,
                         sampleFamilies = sampleFamilies,
                         onSelect = onSelect,
+                        onVisible = onVisible,
                         modifier = modifier.testTag("editorFontSystemList"),
                     )
                 }
@@ -290,6 +297,7 @@ private fun FontListBody(
                         sample = sample,
                         sampleFamilies = sampleFamilies,
                         onSelect = onSelect,
+                        onVisible = onVisible,
                         modifier = modifier.testTag("editorFontImportedList"),
                     )
                 }
@@ -306,11 +314,27 @@ private fun FontEntryList(
     sample: String,
     sampleFamilies: Map<String, FontFamily>,
     onSelect: (WatermarkFontRef) -> Unit,
+    onVisible: (List<FontEntry>) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val selectedCd = stringResource(Res.string.cd_font_selected)
     val loadingCd = stringResource(Res.string.font_candidate_loading)
-    LazyColumn(modifier = modifier.fillMaxWidth()) {
+    val listState = rememberLazyListState()
+    LaunchedEffect(listState, entries) {
+        snapshotFlow {
+            listState.layoutInfo.visibleItemsInfo.mapNotNull { info ->
+                entries.getOrNull(info.index)
+            }
+        }
+            .distinctUntilChanged()
+            .collect { visible ->
+                if (visible.isNotEmpty()) onVisible(visible)
+            }
+    }
+    LazyColumn(
+        modifier = modifier.fillMaxWidth(),
+        state = listState,
+    ) {
         items(entries, key = { it.ref.fingerprint() }) { entry ->
             val selected = pendingRef == null && entry.ref == selectedRef
             val pending = entry.ref == pendingRef

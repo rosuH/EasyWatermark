@@ -83,7 +83,7 @@ class FontPanelSession(
                 systemError = system.exceptionOrNull()?.message,
                 importedError = imported.exceptionOrNull()?.message,
             )
-            ensureSamples(visibleEntries())
+            ensureSamples(visibleEntries().take(SAMPLE_CACHE_MAX))
         }
         scope.launch { refreshCurrent(state.selectedRef) }
     }
@@ -100,7 +100,10 @@ class FontPanelSession(
             is FontPanelEvent.Select -> select(event.ref)
             is FontPanelEvent.SourceTab -> {
                 state = state.copy(sourceTab = event.tab)
-                ensureSamples(visibleEntries(event.tab))
+                ensureSamples(visibleEntries(event.tab).take(SAMPLE_CACHE_MAX))
+            }
+            is FontPanelEvent.VisibleEntries -> {
+                if (event.entries.isNotEmpty()) ensureSamples(event.entries)
             }
         }
     }
@@ -164,21 +167,55 @@ class FontPanelSession(
         return generation
     }
 
-    suspend fun completeImport(result: FontImportResult) {
+    suspend fun completeImport(generation: Int, result: FontImportResult) {
         val imported = runCatching { access.listImportedFonts() }.getOrDefault(state.importedFonts)
+        if (importStillCurrent(generation)) {
+            state = state.copy(
+                importedFonts = imported,
+                importProgress = FontImportProgress.Done(result),
+                sourceTab = FontSourceTab.Imported,
+                importedLoading = false,
+            )
+            ensureSamples(imported.take(SAMPLE_CACHE_MAX))
+            return
+        }
+        // Stale job after cancel: refresh the catalog unless a newer import is running.
+        if (state.importProgress is FontImportProgress.Running) return
         state = state.copy(
             importedFonts = imported,
-            importProgress = FontImportProgress.Done(result),
-            sourceTab = FontSourceTab.Imported,
             importedLoading = false,
+            sourceTab = if (imported.isNotEmpty()) FontSourceTab.Imported else state.sourceTab,
         )
-        ensureSamples(imported)
+        ensureSamples(
+            if (state.sourceTab == FontSourceTab.Imported) {
+                imported.take(SAMPLE_CACHE_MAX)
+            } else {
+                visibleEntries().take(SAMPLE_CACHE_MAX)
+            },
+        )
     }
 
     fun cancelImport() {
-        importGeneration += 1
+        val generation = ++importGeneration
         importJob?.cancel()
         state = state.copy(importProgress = FontImportProgress.Idle)
+        scope.launch {
+            val imported = runCatching { access.listImportedFonts() }.getOrDefault(state.importedFonts)
+            if (generation != importGeneration) return@launch
+            if (state.importProgress is FontImportProgress.Running) return@launch
+            state = state.copy(
+                importedFonts = imported,
+                importedLoading = false,
+                sourceTab = if (imported.isNotEmpty()) FontSourceTab.Imported else state.sourceTab,
+            )
+            ensureSamples(
+                if (state.sourceTab == FontSourceTab.Imported) {
+                    imported.take(SAMPLE_CACHE_MAX)
+                } else {
+                    visibleEntries().take(SAMPLE_CACHE_MAX)
+                },
+            )
+        }
     }
 
     fun importStillCurrent(generation: Int): Boolean = generation == importGeneration
@@ -192,12 +229,16 @@ class FontPanelSession(
         sampleJob?.cancel()
         sampleJob = scope.launch {
             val next = LinkedHashMap(sampleCache)
-            for (entry in entries.filter { it.available }.take(SAMPLE_CACHE_MAX)) {
+            for (entry in entries.filter { it.available }) {
                 val key = entry.ref.fingerprint()
-                if (key in next) continue
+                val cached = next.remove(key)
+                if (cached != null) {
+                    next[key] = cached
+                    continue
+                }
                 when (val resolution = access.resolve(entry.ref)) {
                     is FontResolution.Success -> {
-                        if (next.size >= SAMPLE_CACHE_MAX) {
+                        while (next.size >= SAMPLE_CACHE_MAX) {
                             val oldest = next.keys.first()
                             next.remove(oldest)
                         }

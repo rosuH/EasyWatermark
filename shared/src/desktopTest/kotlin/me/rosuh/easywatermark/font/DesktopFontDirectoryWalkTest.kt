@@ -36,4 +36,73 @@ class DesktopFontDirectoryWalkTest {
             base.deleteRecursively()
         }
     }
+
+    @Test
+    fun large_no_font_tree_reports_visit_truncation() = runBlocking {
+        val base = File("build/tmp-font-visits-${System.nanoTime()}").apply { mkdirs() }
+        try {
+            val root = File(base, "tree").apply { mkdirs() }
+            repeat(30) { index ->
+                val dir = File(root, "d$index").apply { mkdirs() }
+                File(dir, "readme.txt").writeText("x")
+            }
+            val access = DesktopWatermarkFontAccess(
+                root = File(base, "store").apply { mkdirs() },
+                limits = FontImportLimits(maxVisits = 12, maxCandidates = 50),
+            )
+            val result = access.importDirectory(root)
+            assertTrue(result.truncated, result.toString())
+            assertTrue(result.truncateReason.orEmpty().contains("directory entries"), result.toString())
+            assertEquals(0, result.added)
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun cancel_during_enumeration_is_reported() = runBlocking {
+        val base = File("build/tmp-font-cancel-${System.nanoTime()}").apply { mkdirs() }
+        try {
+            val root = File(base, "tree").apply { mkdirs() }
+            repeat(40) { index ->
+                File(root, "d$index").mkdirs()
+                File(File(root, "d$index"), "n.txt").writeText("n")
+            }
+            val access = DesktopWatermarkFontAccess(
+                root = File(base, "store").apply { mkdirs() },
+                limits = FontImportLimits(maxVisits = 10_000, maxCandidates = 50),
+            )
+            var seen = 0
+            val result = access.importDirectory(root) {
+                seen += 1
+                seen > 6
+            }
+            assertTrue(result.cancelled, result.toString())
+            assertEquals(0, result.added)
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun candidate_cap_is_not_silent() = runBlocking {
+        val base = File("build/tmp-font-capwalk-${System.nanoTime()}").apply { mkdirs() }
+        try {
+            val root = File(base, "fonts").apply { mkdirs() }
+            val real = File("/System/Library/Fonts/Supplemental/Courier New.ttf")
+            require(real.isFile)
+            real.copyTo(File(root, "one.ttf"), overwrite = true)
+            real.copyTo(File(root, "two.ttf"), overwrite = true)
+            val access = DesktopWatermarkFontAccess(
+                root = File(base, "store").apply { mkdirs() },
+                limits = FontImportLimits(maxVisits = 1000, maxCandidates = 1),
+            )
+            val result = access.importDirectory(root)
+            assertTrue(result.truncated, result.toString())
+            assertTrue(result.truncateReason.orEmpty().contains("candidate files"), result.toString())
+            assertEquals(1, result.added)
+        } finally {
+            base.deleteRecursively()
+        }
+    }
 }
