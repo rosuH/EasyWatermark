@@ -4,6 +4,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.platform.Font
 import androidx.compose.ui.text.platform.Typeface
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -92,14 +93,29 @@ class IosWatermarkFontAccess(
     suspend fun importDirectory(path: String, cancelled: () -> Boolean = { false }): FontImportResult {
         return importMutex.withLock {
             withContext(Dispatchers.Default) {
-                val enumeration = collectFontFiles(path, cancelled)
-                WatermarkFontImporter.importEnumerated(
-                    store = store,
-                    enumeration = enumeration,
-                    limits = limits,
-                    validate = ::validateImported,
-                    cancelled = cancelled,
-                )
+                try {
+                    val enumeration = collectFontFiles(path, cancelled)
+                    WatermarkFontImporter.importEnumerated(
+                        store = store,
+                        enumeration = enumeration,
+                        limits = limits,
+                        validate = ::validateImported,
+                        cancelled = cancelled,
+                    )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    FontImportResult(
+                        added = 0,
+                        duplicates = 0,
+                        failed = listOf(
+                            FontImportFailure(
+                                path.substringAfterLast('/').ifBlank { path },
+                                e.message?.takeIf { it.isNotBlank() } ?: "Import failed",
+                            ),
+                        ),
+                    )
+                }
             }
         }
     }

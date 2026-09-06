@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.DocumentsContract
 import androidx.compose.ui.text.font.FontFamily
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -89,18 +90,33 @@ class AndroidWatermarkFontAccess(
     suspend fun importTree(treeUri: Uri, cancelled: () -> Boolean = { false }): FontImportResult {
         return importMutex.withLock {
             withContext(Dispatchers.IO) {
-                val enumeration = collectFontCandidates(
-                    context.contentResolver,
-                    treeUri,
-                    cancelled,
-                )
-                WatermarkFontImporter.importEnumerated(
-                    store = store,
-                    enumeration = enumeration,
-                    limits = limits,
-                    validate = ::validateImported,
-                    cancelled = cancelled,
-                )
+                try {
+                    val enumeration = collectFontCandidates(
+                        context.contentResolver,
+                        treeUri,
+                        cancelled,
+                    )
+                    WatermarkFontImporter.importEnumerated(
+                        store = store,
+                        enumeration = enumeration,
+                        limits = limits,
+                        validate = ::validateImported,
+                        cancelled = cancelled,
+                    )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    FontImportResult(
+                        added = 0,
+                        duplicates = 0,
+                        failed = listOf(
+                            FontImportFailure(
+                                treeUri.toString(),
+                                e.message?.takeIf { it.isNotBlank() } ?: "Import failed",
+                            ),
+                        ),
+                    )
+                }
             }
         }
     }

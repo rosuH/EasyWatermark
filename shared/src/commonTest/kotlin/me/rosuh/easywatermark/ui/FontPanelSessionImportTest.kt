@@ -203,6 +203,26 @@ class FontPanelSessionImportTest {
         Unit
     }
 
+    @Test
+    fun enumeration_exception_clears_running_and_next_import_works() = runBlocking {
+        val session = FontPanelSession(
+            access = FakeFontAccess(),
+            scope = this,
+            applySelection = { _, _, _ -> true },
+        )
+        val generation = session.beginImport()
+        assertIs<FontImportProgress.Running>(session.state.importProgress)
+        session.runImport(generation) { error("provider exploded") }
+        val done = session.state.importProgress
+        assertIs<FontImportProgress.Done>(done)
+        assertTrue(done.result.failed.any { it.reason.contains("exploded") }, done.toString())
+        val second = session.beginImport()
+        assertIs<FontImportProgress.Running>(session.state.importProgress)
+        session.completeImport(second, FontImportResult(added = 0, duplicates = 0, failed = emptyList()))
+        assertIs<FontImportProgress.Done>(session.state.importProgress)
+        Unit
+    }
+
     private class FakeFontAccess(
         private val systemCount: Int = 2,
     ) : WatermarkFontAccess {

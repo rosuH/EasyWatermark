@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.TextPaintStyle
@@ -99,6 +100,10 @@ class WaterMarkRepository(
                 fontRef = WatermarkFontCodec.decode(it[KEY_FONT_REF]),
             )
         }
+
+    /** Current DataStore-backed config. Call after an edit to read the committed snapshot. */
+    suspend fun currentConfig(): WaterMark = waterMark.first()
+
 
     suspend fun updateText(text: String) {
         dataStore.edit {

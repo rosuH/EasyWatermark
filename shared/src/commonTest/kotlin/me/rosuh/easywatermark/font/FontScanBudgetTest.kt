@@ -88,6 +88,52 @@ class FontScanBudgetTest {
         }
     }
 
+    @Test
+    fun cancelled_enumeration_does_not_read_or_publish_collected_candidates() {
+        val dir = okio.FileSystem.SYSTEM_TEMPORARY_DIRECTORY / "font-cancel-enum-${kotlin.random.Random.nextLong()}"
+        val fs = okio.FileSystem.SYSTEM
+        fs.createDirectories(dir)
+        try {
+            val store = WatermarkFontStore(fs, dir)
+            val prior = store.publishBytes(
+                "Keep.ttf",
+                byteArrayOf(1, 2, 3, 4),
+            ) { _, _ -> ValidatedImportedFont("Keep", FontStyleCapability.NormalOnly) }
+            assertTrue(prior is FontPublishOutcome.Added)
+            var reads = 0
+            var publishes = 0
+            val enumeration = FontEnumerationResult(
+                candidates = listOf(
+                    FontImportCandidate("one.ttf", 3) {
+                        reads += 1
+                        Buffer().write(byteArrayOf(9, 9, 9))
+                    },
+                    FontImportCandidate("two.ttf", 3) {
+                        reads += 1
+                        Buffer().write(byteArrayOf(8, 8, 8))
+                    },
+                ),
+                cancelled = true,
+            )
+            val result = WatermarkFontImporter.importEnumerated(
+                store = store,
+                enumeration = enumeration,
+                validate = { bytes, _ ->
+                    publishes += 1
+                    ValidatedImportedFont("New", FontStyleCapability.NormalOnly)
+                },
+            )
+            assertTrue(result.cancelled)
+            assertEquals(0, result.added)
+            assertEquals(0, reads)
+            assertEquals(0, publishes)
+            assertEquals(1, store.listImported().size)
+            assertEquals("Keep", store.listImported().first().displayName)
+        } finally {
+            fs.deleteRecursively(dir, mustExist = false)
+        }
+    }
+
     private fun dummy(name: String): FontImportCandidate =
         FontImportCandidate(name, 1) { Buffer().write(byteArrayOf(1)) }
 }
