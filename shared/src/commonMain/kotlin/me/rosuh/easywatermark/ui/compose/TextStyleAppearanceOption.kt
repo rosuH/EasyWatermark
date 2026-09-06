@@ -172,7 +172,7 @@ private fun FontEntryRow(
             painter = SharedProductDrawables.chevronRightPainter(),
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(18.dp),
         )
     }
 }

@@ -26,6 +26,7 @@ import me.rosuh.easywatermark.shared.generated.resources.ic_gallery_item_placeho
 import me.rosuh.easywatermark.shared.generated.resources.ic_gallery_radio_button
 import me.rosuh.easywatermark.shared.generated.resources.ic_go_template_list
 import me.rosuh.easywatermark.shared.generated.resources.ic_log_transparent
+import me.rosuh.easywatermark.shared.generated.resources.ic_magnifying_glass
 import me.rosuh.easywatermark.shared.generated.resources.ic_logo_about_page
 import me.rosuh.easywatermark.shared.generated.resources.ic_logo_tool_bar
 import me.rosuh.easywatermark.shared.generated.resources.ic_open_source
@@ -87,6 +88,7 @@ object SharedProductDrawables {
     val avatarTovi: DrawableResource get() = Res.drawable.ic_avatar_tovi
     val close: DrawableResource get() = Res.drawable.ic_close_24dp
     val chevronRight: DrawableResource get() = Res.drawable.ic_chevron_right
+    val magnifyingGlass: DrawableResource get() = Res.drawable.ic_magnifying_glass
     val search: DrawableResource get() = Res.drawable.ic_baseline_image_search_24
     val galleryCheck: DrawableResource get() = Res.drawable.ic_gallery_radio_button
     val saveDone: DrawableResource get() = Res.drawable.ic_save_done
@@ -116,6 +118,7 @@ object SharedProductDrawables {
     @Composable fun avatarToviPainter(): Painter = painterResource(avatarTovi)
     @Composable fun closePainter(): Painter = painterResource(close)
     @Composable fun chevronRightPainter(): Painter = painterResource(chevronRight)
+    @Composable fun magnifyingGlassPainter(): Painter = painterResource(magnifyingGlass)
 
     /**
      * Touch About-only drawables so first About open does not pay cold decode on the
