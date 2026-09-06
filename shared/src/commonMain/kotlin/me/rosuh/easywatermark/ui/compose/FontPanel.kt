@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -98,8 +100,8 @@ internal const val FONT_SEARCH_TAG = "editorFontSearch"
 internal const val FONT_SEARCH_CLEAR_TAG = "editorFontSearchClear"
 internal const val FONT_SEARCH_NO_MATCHES_TAG = "editorFontSearchNoMatches"
 private val FontPanelActionMinHeight = 48.dp
-private val FontPanelListMaxHeight = 360.dp
 private val FontPanelMinHeight = 280.dp
+private val FontPanelSearchIconSize = 20.dp
 private val FontPanelSheetHandleAllowance = 56.dp
 private val FontPanelEditorPeek = 24.dp
 private val FontPanelStackBelow = 280.dp
@@ -127,7 +129,7 @@ fun FontPanel(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(max = budget)
+            .height(budget)
             .imePadding()
             .then(if (useLargeDialog) Modifier else Modifier.navigationBarsPadding())
             .padding(horizontal = 20.dp)
@@ -219,9 +221,8 @@ fun FontPanel(
             onSelect = { onEvent(FontPanelEvent.Select(it)) },
             onVisible = { onEvent(FontPanelEvent.VisibleEntries(it)) },
             modifier = Modifier
-                .weight(1f, fill = false)
-                .fillMaxWidth()
-                .heightIn(max = FontPanelListMaxHeight),
+                .weight(1f)
+                .fillMaxWidth(),
         )
 
         ImportFooter(
@@ -293,9 +294,10 @@ private fun FontSearchField(
         },
         leadingIcon = {
             Icon(
-                painter = SharedProductDrawables.searchPainter(),
+                painter = SharedProductDrawables.magnifyingGlassPainter(),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(FontPanelSearchIconSize),
             )
         },
         trailingIcon = if (query.isNotEmpty()) {
@@ -329,7 +331,7 @@ private fun FontListBody(
     val sampleFallback = stringResource(Res.string.font_sample_fallback)
     val sample = state.sampleText.ifBlank { sampleFallback }.replace('\n', ' ')
     val noMatches = stringResource(Res.string.font_search_no_matches)
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(modifier = modifier.fillMaxSize()) {
         when (state.sourceTab) {
             FontSourceTab.System -> {
                 if (state.systemListRestricted) {
@@ -344,63 +346,67 @@ private fun FontListBody(
                     )
                 }
                 val filtered = FontNameQuery.filter(state.systemFonts, state.searchQuery)
-                when {
-                    state.systemLoading && state.systemFonts.isEmpty() -> {
-                        StatusLine(stringResource(Res.string.font_system_loading), "editorFontSystemLoading")
-                    }
-                    state.systemError != null && state.systemFonts.isEmpty() -> {
-                        StatusLine(state.systemError, "editorFontSystemError", error = true)
-                    }
-                    state.systemFonts.isEmpty() -> {
-                        StatusLine(stringResource(Res.string.font_no_system_fonts), "editorFontSystemEmpty")
-                    }
-                    filtered.isEmpty() -> {
-                        StatusLine(noMatches, FONT_SEARCH_NO_MATCHES_TAG)
-                    }
-                    else -> {
-                        FontEntryList(
-                            entries = filtered,
-                            selectedRef = state.selectedRef,
-                            pendingRef = state.pendingRef,
-                            sample = sample,
-                            sampleFamilies = sampleFamilies,
-                            onSelect = onSelect,
-                            onVisible = onVisible,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("editorFontSystemList"),
-                        )
+                Box(Modifier.weight(1f).fillMaxWidth()) {
+                    when {
+                        state.systemLoading && state.systemFonts.isEmpty() -> {
+                            StatusLine(stringResource(Res.string.font_system_loading), "editorFontSystemLoading")
+                        }
+                        state.systemError != null && state.systemFonts.isEmpty() -> {
+                            StatusLine(state.systemError, "editorFontSystemError", error = true)
+                        }
+                        state.systemFonts.isEmpty() -> {
+                            StatusLine(stringResource(Res.string.font_no_system_fonts), "editorFontSystemEmpty")
+                        }
+                        filtered.isEmpty() -> {
+                            StatusLine(noMatches, FONT_SEARCH_NO_MATCHES_TAG)
+                        }
+                        else -> {
+                            FontEntryList(
+                                entries = filtered,
+                                selectedRef = state.selectedRef,
+                                pendingRef = state.pendingRef,
+                                sample = sample,
+                                sampleFamilies = sampleFamilies,
+                                onSelect = onSelect,
+                                onVisible = onVisible,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .testTag("editorFontSystemList"),
+                            )
+                        }
                     }
                 }
             }
             FontSourceTab.Imported -> {
                 val filtered = FontNameQuery.filter(state.importedFonts, state.searchQuery)
-                when {
-                    state.importedLoading && state.importedFonts.isEmpty() -> {
-                        StatusLine(stringResource(Res.string.font_imported_loading), "editorFontImportedLoading")
-                    }
-                    state.importedError != null && state.importedFonts.isEmpty() -> {
-                        StatusLine(state.importedError, "editorFontImportedError", error = true)
-                    }
-                    state.importedFonts.isEmpty() -> {
-                        StatusLine(stringResource(Res.string.font_imported_empty), "editorFontImportedEmpty")
-                    }
-                    filtered.isEmpty() -> {
-                        StatusLine(noMatches, FONT_SEARCH_NO_MATCHES_TAG)
-                    }
-                    else -> {
-                        FontEntryList(
-                            entries = filtered,
-                            selectedRef = state.selectedRef,
-                            pendingRef = state.pendingRef,
-                            sample = sample,
-                            sampleFamilies = sampleFamilies,
-                            onSelect = onSelect,
-                            onVisible = onVisible,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("editorFontImportedList"),
-                        )
+                Box(Modifier.weight(1f).fillMaxWidth()) {
+                    when {
+                        state.importedLoading && state.importedFonts.isEmpty() -> {
+                            StatusLine(stringResource(Res.string.font_imported_loading), "editorFontImportedLoading")
+                        }
+                        state.importedError != null && state.importedFonts.isEmpty() -> {
+                            StatusLine(state.importedError, "editorFontImportedError", error = true)
+                        }
+                        state.importedFonts.isEmpty() -> {
+                            StatusLine(stringResource(Res.string.font_imported_empty), "editorFontImportedEmpty")
+                        }
+                        filtered.isEmpty() -> {
+                            StatusLine(noMatches, FONT_SEARCH_NO_MATCHES_TAG)
+                        }
+                        else -> {
+                            FontEntryList(
+                                entries = filtered,
+                                selectedRef = state.selectedRef,
+                                pendingRef = state.pendingRef,
+                                sample = sample,
+                                sampleFamilies = sampleFamilies,
+                                onSelect = onSelect,
+                                onVisible = onVisible,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .testTag("editorFontImportedList"),
+                            )
+                        }
                     }
                 }
             }
@@ -434,7 +440,7 @@ private fun FontEntryList(
             }
     }
     LazyColumn(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxSize(),
         state = listState,
     ) {
         items(entries, key = { it.ref.fingerprint() }) { entry ->
@@ -655,7 +661,7 @@ private fun FontPanelSecondaryAction(
 private fun StatusLine(text: String, tag: String, error: Boolean = false) {
     Box(
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxSize()
             .padding(vertical = 16.dp)
             .testTag(tag),
         contentAlignment = Alignment.CenterStart,
