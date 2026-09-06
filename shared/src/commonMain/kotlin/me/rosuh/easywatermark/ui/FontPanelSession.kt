@@ -71,8 +71,12 @@ class FontPanelSession(
     fun onOpen() {
         access.recoverOrphans()
         loadJob?.cancel()
+        state = state.copy(searchQuery = "")
         loadJob = scope.launch {
-            state = state.copy(systemLoading = true, importedLoading = true)
+            state = state.copy(
+                systemLoading = true,
+                importedLoading = true,
+            )
             val system = runCatching { access.listSystemFonts() }
             val imported = runCatching { access.listImportedFonts() }
             val systemFonts = system.getOrDefault(state.systemFonts)
@@ -106,6 +110,16 @@ class FontPanelSession(
             }
             is FontPanelEvent.VisibleEntries -> {
                 if (event.entries.isNotEmpty()) ensureSamples(event.entries)
+            }
+            is FontPanelEvent.SearchQuery -> {
+                state = state.copy(searchQuery = event.query)
+                val visible = visibleEntries()
+                if (visible.isNotEmpty()) ensureSamples(visible.take(SAMPLE_CACHE_MAX))
+            }
+            FontPanelEvent.ClearSearch -> {
+                state = state.copy(searchQuery = "")
+                val visible = visibleEntries()
+                if (visible.isNotEmpty()) ensureSamples(visible.take(SAMPLE_CACHE_MAX))
             }
         }
     }
@@ -178,7 +192,7 @@ class FontPanelSession(
                 sourceTab = FontSourceTab.Imported,
                 importedLoading = false,
             )
-            ensureSamples(imported.take(SAMPLE_CACHE_MAX))
+            ensureSamples(visibleEntries(FontSourceTab.Imported).take(SAMPLE_CACHE_MAX))
             return
         }
         // Stale job after cancel: refresh the catalog unless a newer import is running.
@@ -253,9 +267,12 @@ class FontPanelSession(
         }
     }
 
-    fun visibleEntries(tab: FontSourceTab = state.sourceTab): List<FontEntry> = when (tab) {
-        FontSourceTab.System -> state.systemFonts
-        FontSourceTab.Imported -> state.importedFonts
+    fun visibleEntries(tab: FontSourceTab = state.sourceTab): List<FontEntry> {
+        val source = when (tab) {
+            FontSourceTab.System -> state.systemFonts
+            FontSourceTab.Imported -> state.importedFonts
+        }
+        return FontNameQuery.filter(source, state.searchQuery)
     }
 
     fun ensureSamples(entries: List<FontEntry>) {

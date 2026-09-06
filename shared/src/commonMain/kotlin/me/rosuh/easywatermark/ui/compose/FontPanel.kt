@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -20,6 +21,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -27,8 +29,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,15 +70,19 @@ import me.rosuh.easywatermark.shared.generated.resources.font_import_truncated
 import me.rosuh.easywatermark.shared.generated.resources.font_imported_empty
 import me.rosuh.easywatermark.shared.generated.resources.font_imported_loading
 import me.rosuh.easywatermark.shared.generated.resources.font_importing
+import me.rosuh.easywatermark.shared.generated.resources.cd_font_search_clear
 import me.rosuh.easywatermark.shared.generated.resources.font_no_system_fonts
 import me.rosuh.easywatermark.shared.generated.resources.font_panel_done
 import me.rosuh.easywatermark.shared.generated.resources.font_panel_title
+import me.rosuh.easywatermark.shared.generated.resources.font_search_no_matches
+import me.rosuh.easywatermark.shared.generated.resources.font_search_placeholder
 import me.rosuh.easywatermark.shared.generated.resources.font_sample_fallback
 import me.rosuh.easywatermark.shared.generated.resources.font_system_default
 import me.rosuh.easywatermark.shared.generated.resources.font_system_loading
 import me.rosuh.easywatermark.shared.generated.resources.font_tab_imported
 import me.rosuh.easywatermark.shared.generated.resources.font_tab_system
 import me.rosuh.easywatermark.shared.generated.resources.font_unavailable
+import me.rosuh.easywatermark.ui.FontNameQuery
 import me.rosuh.easywatermark.ui.FontPanelEvent
 import me.rosuh.easywatermark.ui.FontPanelUiState
 import me.rosuh.easywatermark.ui.SharedProductDrawables
@@ -86,6 +94,9 @@ internal const val FONT_PANEL_TAG = "editorFontPanel"
 internal const val FONT_DEFAULT_ROW_TAG = "editorFontDefault"
 internal const val FONT_IMPORT_BUTTON_TAG = "editorFontImport"
 internal const val FONT_DONE_BUTTON_TAG = "editorFontDone"
+internal const val FONT_SEARCH_TAG = "editorFontSearch"
+internal const val FONT_SEARCH_CLEAR_TAG = "editorFontSearchClear"
+internal const val FONT_SEARCH_NO_MATCHES_TAG = "editorFontSearchNoMatches"
 private val FontPanelActionMinHeight = 48.dp
 private val FontPanelListMaxHeight = 360.dp
 private val FontPanelMinHeight = 280.dp
@@ -117,6 +128,7 @@ fun FontPanel(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(max = budget)
+            .imePadding()
             .then(if (useLargeDialog) Modifier else Modifier.navigationBarsPadding())
             .padding(horizontal = 20.dp)
             .padding(bottom = 16.dp)
@@ -196,6 +208,11 @@ fun FontPanel(
             equalWidth = true,
         )
 
+        FontSearchField(
+            query = state.searchQuery,
+            onEvent = onEvent,
+        )
+
         FontListBody(
             state = state,
             sampleFamilies = sampleFamilies,
@@ -256,6 +273,52 @@ private fun DefaultFontRow(
 }
 
 @Composable
+private fun FontSearchField(
+    query: String,
+    onEvent: (FontPanelEvent) -> Unit,
+) {
+    val clearCd = stringResource(Res.string.cd_font_search_clear)
+    OutlinedTextField(
+        value = query,
+        onValueChange = { onEvent(FontPanelEvent.SearchQuery(it)) },
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
+            .testTag(FONT_SEARCH_TAG),
+        singleLine = true,
+        shape = RectangleShape,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        placeholder = {
+            Text(text = stringResource(Res.string.font_search_placeholder))
+        },
+        leadingIcon = {
+            Icon(
+                painter = SharedProductDrawables.searchPainter(),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        trailingIcon = if (query.isNotEmpty()) {
+            {
+                IconButton(
+                    onClick = { onEvent(FontPanelEvent.ClearSearch) },
+                    modifier = Modifier
+                        .testTag(FONT_SEARCH_CLEAR_TAG)
+                        .semantics { contentDescription = clearCd },
+                ) {
+                    Icon(
+                        painter = SharedProductDrawables.closePainter(),
+                        contentDescription = clearCd,
+                    )
+                }
+            }
+        } else {
+            null
+        },
+    )
+}
+
+@Composable
 private fun FontListBody(
     state: FontPanelUiState,
     sampleFamilies: Map<String, FontFamily>,
@@ -265,6 +328,7 @@ private fun FontListBody(
 ) {
     val sampleFallback = stringResource(Res.string.font_sample_fallback)
     val sample = state.sampleText.ifBlank { sampleFallback }.replace('\n', ' ')
+    val noMatches = stringResource(Res.string.font_search_no_matches)
     Column(modifier = modifier.fillMaxWidth()) {
         when (state.sourceTab) {
             FontSourceTab.System -> {
@@ -279,6 +343,7 @@ private fun FontListBody(
                             .testTag("editorFontLegacyNote"),
                     )
                 }
+                val filtered = FontNameQuery.filter(state.systemFonts, state.searchQuery)
                 when {
                     state.systemLoading && state.systemFonts.isEmpty() -> {
                         StatusLine(stringResource(Res.string.font_system_loading), "editorFontSystemLoading")
@@ -289,9 +354,12 @@ private fun FontListBody(
                     state.systemFonts.isEmpty() -> {
                         StatusLine(stringResource(Res.string.font_no_system_fonts), "editorFontSystemEmpty")
                     }
+                    filtered.isEmpty() -> {
+                        StatusLine(noMatches, FONT_SEARCH_NO_MATCHES_TAG)
+                    }
                     else -> {
                         FontEntryList(
-                            entries = state.systemFonts,
+                            entries = filtered,
                             selectedRef = state.selectedRef,
                             pendingRef = state.pendingRef,
                             sample = sample,
@@ -306,6 +374,7 @@ private fun FontListBody(
                 }
             }
             FontSourceTab.Imported -> {
+                val filtered = FontNameQuery.filter(state.importedFonts, state.searchQuery)
                 when {
                     state.importedLoading && state.importedFonts.isEmpty() -> {
                         StatusLine(stringResource(Res.string.font_imported_loading), "editorFontImportedLoading")
@@ -316,9 +385,12 @@ private fun FontListBody(
                     state.importedFonts.isEmpty() -> {
                         StatusLine(stringResource(Res.string.font_imported_empty), "editorFontImportedEmpty")
                     }
+                    filtered.isEmpty() -> {
+                        StatusLine(noMatches, FONT_SEARCH_NO_MATCHES_TAG)
+                    }
                     else -> {
                         FontEntryList(
-                            entries = state.importedFonts,
+                            entries = filtered,
                             selectedRef = state.selectedRef,
                             pendingRef = state.pendingRef,
                             sample = sample,

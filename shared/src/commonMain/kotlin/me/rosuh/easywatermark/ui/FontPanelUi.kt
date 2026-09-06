@@ -27,6 +27,7 @@ data class FontPanelUiState(
     val supportedStyles: FontStyleCapability = FontStyleCapability.All,
     val showImportFailures: Boolean = false,
     val sampleFamilies: Map<String, FontFamily> = emptyMap(),
+    val searchQuery: String = "",
 )
 
 sealed class FontPanelEvent {
@@ -38,6 +39,8 @@ sealed class FontPanelEvent {
     data class Select(val ref: WatermarkFontRef) : FontPanelEvent()
     data class SourceTab(val tab: FontSourceTab) : FontPanelEvent()
     data class VisibleEntries(val entries: List<FontEntry>) : FontPanelEvent()
+    data class SearchQuery(val query: String) : FontPanelEvent()
+    data object ClearSearch : FontPanelEvent()
 }
 
 fun FontStyleCapability.toTypefaceSet(): Set<TextTypeface> = styles
