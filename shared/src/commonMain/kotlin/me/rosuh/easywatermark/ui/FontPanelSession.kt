@@ -4,12 +4,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.font.FontFamily
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.data.model.WatermarkConfigChange
 import me.rosuh.easywatermark.data.model.WatermarkFontRef
 import me.rosuh.easywatermark.font.FontEntry
+import me.rosuh.easywatermark.font.FontImportFailure
 import me.rosuh.easywatermark.font.FontImportProgress
 import me.rosuh.easywatermark.font.FontImportResult
 import me.rosuh.easywatermark.font.FontResolution
@@ -219,6 +221,37 @@ class FontPanelSession(
     }
 
     fun importStillCurrent(generation: Int): Boolean = generation == importGeneration
+
+    suspend fun failImport(generation: Int, reason: String) {
+        completeImport(
+            generation,
+            FontImportResult(
+                added = 0,
+                duplicates = 0,
+                failed = listOf(FontImportFailure("import", reason)),
+            ),
+        )
+    }
+
+    /**
+     * Host import boundary: convert operational failures into a terminal panel result
+     * so progress cannot stay Running. Coroutine cancellation is not swallowed.
+     */
+    suspend fun runImport(
+        generation: Int,
+        block: suspend () -> FontImportResult,
+    ) {
+        try {
+            completeImport(generation, block())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            failImport(
+                generation,
+                e.message?.takeIf { it.isNotBlank() } ?: "Import failed",
+            )
+        }
+    }
 
     fun visibleEntries(tab: FontSourceTab = state.sourceTab): List<FontEntry> = when (tab) {
         FontSourceTab.System -> state.systemFonts

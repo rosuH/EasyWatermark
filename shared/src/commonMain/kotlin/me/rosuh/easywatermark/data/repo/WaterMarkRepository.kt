@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
@@ -115,6 +116,9 @@ class WaterMarkRepository(
                 fontRef = WatermarkFontCodec.decode(it[KEY_FONT_REF]),
             )
         }
+
+    /** Current DataStore-backed config. Call after an edit to read the committed snapshot. */
+    suspend fun currentConfig(): WaterMark = waterMark.first()
 
     private val _imageMapFlow: MutableStateFlow<List<ImageInfo>> = MutableStateFlow(emptyList())
 

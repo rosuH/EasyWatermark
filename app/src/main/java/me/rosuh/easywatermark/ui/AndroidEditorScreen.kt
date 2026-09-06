@@ -156,10 +156,11 @@ fun AndroidEditorScreen(
         if (treeUri == null) return@rememberLauncherForActivityResult
         val generation = fontSession.beginImport()
         editorScope.launch {
-            val result = fontAccess.importTree(treeUri) {
-                !fontSession.importStillCurrent(generation)
+            fontSession.runImport(generation) {
+                fontAccess.importTree(treeUri) {
+                    !fontSession.importStillCurrent(generation)
+                }
             }
-            fontSession.completeImport(generation, result)
         }
     }
     DisposableEffect(previewImages) {

@@ -81,14 +81,16 @@ open class WatermarkSessionViewModel(
     init {
         viewModelScope.launch(Dispatchers.Default) {
             var hasSyncedInitialWatermark = false
-            waterMarkRepo.waterMark.collect { wm ->
+            waterMarkRepo.waterMark.collect {
                 // The first DataStore emission initializes Session config; it is not a user edit.
                 // It may arrive after an immediate export and must not erase that export's result.
                 if (hasSyncedInitialWatermark) {
                     resetJobStatus()
                 }
                 hasSyncedInitialWatermark = true
-                applyIntent(AppIntent.SyncWaterMark(wm))
+                // Re-read after waiting so a lagged collector cannot publish an older emission
+                // over a newer applyConfigIf snapshot.
+                applyIntent(AppIntent.SyncWaterMark(waterMarkRepo.currentConfig()))
             }
         }
         viewModelScope.launch(Dispatchers.Default) {
@@ -381,18 +383,25 @@ open class WatermarkSessionViewModel(
 
     /**
      * Apply a config change only if [stillValid] is true immediately before the write (F16 icon).
-     * Does not roll back a completed DataStore write; callers must not treat a false return as
+     * Does not roll back a completed DataStore write; callers must not treat a null return as
      * "config was never attempted" when [stillValid] flipped during a suspending store edit —
      * icon host code re-checks generation after return and skips host-side bind when stale.
+     *
+     * On success, publishes the **DataStore snapshot** into LaunchScreenState so preview does
+     * not patch a lagged Session object, and returns that committed [WaterMark].
      */
     suspend fun applyConfigIf(
         stillValid: () -> Boolean,
         change: WatermarkConfigChange,
-    ): Boolean {
+    ): WaterMark? {
         return sessionMutex.withLock {
-            if (!stillValid()) return@withLock false
+            if (!stillValid()) return@withLock null
             applyConfigChange(change)
-            true
+            val committed = waterMarkRepo.currentConfig()
+            withContext(Dispatchers.Main.immediate) {
+                _launchScreenUiStateFlow.update { it.copy(waterMark = committed) }
+            }
+            committed
         }
     }
 

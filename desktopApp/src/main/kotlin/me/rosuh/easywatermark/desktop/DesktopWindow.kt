@@ -1532,12 +1532,13 @@ fun launchDesktopWindow() = application {
                                             )
                                         } ?: return@launch
                                         val generation = fontSession.beginImport()
-                                        val result = withContext(Dispatchers.IO) {
-                                            fontAccess.importDirectory(chosen) {
-                                                !fontSession.importStillCurrent(generation)
+                                        fontSession.runImport(generation) {
+                                            withContext(Dispatchers.IO) {
+                                                fontAccess.importDirectory(chosen) {
+                                                    !fontSession.importStillCurrent(generation)
+                                                }
                                             }
                                         }
-                                        fontSession.completeImport(generation, result)
                                     }
                                     }
                                 }

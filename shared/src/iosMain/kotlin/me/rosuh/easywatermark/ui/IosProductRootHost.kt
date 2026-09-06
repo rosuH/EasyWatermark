@@ -42,7 +42,7 @@ import me.rosuh.easywatermark.data.model.JobState
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkConfigChange
-import me.rosuh.easywatermark.font.FontSelectionCommit
+
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.model.entity.Template
@@ -201,22 +201,14 @@ class IosProductRootHost(
         applySelection = { _, ref, styles ->
             previewGen += 1
             val gen = previewGen
-            val applied = services.session.applyConfigIf(
+            val committed = services.session.applyConfigIf(
                 stillValid = { !disposed },
                 change = WatermarkConfigChange.FontSelection(ref, styles),
             )
-            val committed = FontSelectionCommit.waterMarkForRender(
-                persistSucceeded = applied,
-                requestGeneration = gen,
-                currentGeneration = previewGen,
-                published = services.session.launchScreenUiStateFlow.value.waterMark,
-                committedRef = ref,
-                supportedStyles = styles,
-            )
-            if (committed != null) {
+            if (committed != null && gen == previewGen) {
                 renderPreviewForCurrentSelection(gen = gen, forceWaterMark = committed)
             }
-            applied
+            committed != null
         },
     )
 
@@ -1947,10 +1939,11 @@ class IosProductRootHost(
         val generation = fontSession.beginImport()
         hostScope.launch {
             try {
-                val result = fontAccess.importDirectory(path) {
-                    !fontSession.importStillCurrent(generation)
+                fontSession.runImport(generation) {
+                    fontAccess.importDirectory(path) {
+                        !fontSession.importStillCurrent(generation)
+                    }
                 }
-                fontSession.completeImport(generation, result)
             } finally {
                 onComplete()
             }
@@ -2245,7 +2238,7 @@ class IosProductRootHost(
                 },
                 change = WatermarkConfigChange.Icon(MediaRef(path)),
             )
-            if (!applied) {
+            if (applied == null) {
                 me.rosuh.easywatermark.data.repo.IosIconPersistence.deleteIfOwned(path)
                 throw me.rosuh.easywatermark.session.StalePickGenerationException(pickGeneration)
             }

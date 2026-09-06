@@ -105,4 +105,26 @@ class DesktopFontDirectoryWalkTest {
             base.deleteRecursively()
         }
     }
+
+    @Test
+    fun injected_enumeration_failure_returns_failed_result_not_throw() = runBlocking {
+        val base = File("build/tmp-font-enum-fail-${System.nanoTime()}").apply { mkdirs() }
+        try {
+            val root = File(base, "fonts").apply { mkdirs() }
+            File(root, "ok.ttf").writeBytes(byteArrayOf(1, 2, 3, 4))
+            val access = DesktopWatermarkFontAccess(
+                root = File(base, "store").apply { mkdirs() },
+                onEnumerate = { _, _ -> error("provider exploded") },
+            )
+            val result = access.importDirectory(root)
+            assertEquals(0, result.added)
+            assertTrue(result.failed.any { it.reason.contains("exploded") }, result.toString())
+            val retry = DesktopWatermarkFontAccess(root = File(base, "store2").apply { mkdirs() })
+            val empty = retry.importDirectory(File(base, "empty").apply { mkdirs() })
+            assertEquals(0, empty.added)
+            assertTrue(!empty.cancelled)
+        } finally {
+            base.deleteRecursively()
+        }
+    }
 }

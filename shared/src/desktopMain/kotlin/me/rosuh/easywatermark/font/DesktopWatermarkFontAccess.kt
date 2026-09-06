@@ -3,6 +3,7 @@ package me.rosuh.easywatermark.font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.platform.Font
 import androidx.compose.ui.text.platform.Typeface
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -21,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap
 class DesktopWatermarkFontAccess(
     root: File = File(DesktopAppPaths.resolveAppDataDir(), WatermarkFontStore.DIR_NAME),
     private val limits: FontImportLimits = FontImportLimits.Default,
+    private val onEnumerate: ((File, () -> Boolean) -> Unit)? = null,
 ) : WatermarkFontAccess {
 
     private val store = WatermarkFontStore(
@@ -89,15 +91,31 @@ class DesktopWatermarkFontAccess(
     suspend fun importDirectory(directory: File, cancelled: () -> Boolean = { false }): FontImportResult {
         return importMutex.withLock {
             withContext(Dispatchers.IO) {
-                val root = directory.canonicalFile
-                val enumeration = collectFontFiles(root, cancelled)
-                WatermarkFontImporter.importEnumerated(
-                    store = store,
-                    enumeration = enumeration,
-                    limits = limits,
-                    validate = ::validateImported,
-                    cancelled = cancelled,
-                )
+                try {
+                    val root = directory.canonicalFile
+                    onEnumerate?.invoke(root, cancelled)
+                    val enumeration = collectFontFiles(root, cancelled)
+                    WatermarkFontImporter.importEnumerated(
+                        store = store,
+                        enumeration = enumeration,
+                        limits = limits,
+                        validate = ::validateImported,
+                        cancelled = cancelled,
+                    )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    FontImportResult(
+                        added = 0,
+                        duplicates = 0,
+                        failed = listOf(
+                            FontImportFailure(
+                                directory.name,
+                                e.message?.takeIf { it.isNotBlank() } ?: "Import failed",
+                            ),
+                        ),
+                    )
+                }
             }
         }
     }
