@@ -104,6 +104,26 @@ class WatermarkFontStore(
         if (bytes.size.toLong() > limits.maxFileBytes) {
             return FontPublishOutcome.Failed(originalFileName, "File exceeds ${limits.maxFileBytes} bytes")
         }
+        val sha256 = bytes.toByteString().sha256().hex()
+        val published = root / sha256
+        if (fileSystem.exists(published)) {
+            val complete = fontFile(published) != null && readMetadata(sha256) != null
+            val existing = listImported().firstOrNull {
+                it.ref == WatermarkFontRef.Imported(sha256)
+            } ?: FontEntry(
+                ref = WatermarkFontRef.Imported(sha256),
+                displayName = originalFileName,
+                available = complete,
+            )
+            return if (complete) {
+                FontPublishOutcome.Duplicate(existing)
+            } else {
+                FontPublishOutcome.Failed(
+                    originalFileName,
+                    "Existing published font is damaged",
+                )
+            }
+        }
         if (storedCount() >= limits.maxStored) {
             return FontPublishOutcome.Failed(originalFileName, "Imported font limit reached")
         }
@@ -113,27 +133,6 @@ class WatermarkFontStore(
             val tempFont = tempDir / "font.$extension"
             fileSystem.write(tempFont) {
                 write(bytes)
-            }
-            val sha256 = bytes.toByteString().sha256().hex()
-            val published = root / sha256
-            if (fileSystem.exists(published)) {
-                runCatching { fileSystem.deleteRecursively(tempDir, mustExist = false) }
-                val complete = fontFile(published) != null && readMetadata(sha256) != null
-                val existing = listImported().firstOrNull {
-                    it.ref == WatermarkFontRef.Imported(sha256)
-                } ?: FontEntry(
-                    ref = WatermarkFontRef.Imported(sha256),
-                    displayName = originalFileName,
-                    available = complete,
-                )
-                return if (complete) {
-                    FontPublishOutcome.Duplicate(existing)
-                } else {
-                    FontPublishOutcome.Failed(
-                        originalFileName,
-                        "Existing published font is damaged",
-                    )
-                }
             }
             val validated = try {
                 validate(bytes, extension)

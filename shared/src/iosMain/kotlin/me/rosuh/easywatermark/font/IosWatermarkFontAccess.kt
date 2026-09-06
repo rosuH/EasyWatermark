@@ -92,10 +92,10 @@ class IosWatermarkFontAccess(
     suspend fun importDirectory(path: String, cancelled: () -> Boolean = { false }): FontImportResult {
         return importMutex.withLock {
             withContext(Dispatchers.Default) {
-                val candidates = collectFontFiles(path)
-                WatermarkFontImporter.importCandidates(
+                val enumeration = collectFontFiles(path, cancelled)
+                WatermarkFontImporter.importEnumerated(
                     store = store,
-                    candidates = candidates,
+                    enumeration = enumeration,
                     limits = limits,
                     validate = ::validateImported,
                     cancelled = cancelled,
@@ -156,19 +156,22 @@ class IosWatermarkFontAccess(
         return FontStyleCapability.ofFace(bold, italic)
     }
 
-    private fun collectFontFiles(rootPath: String): List<FontImportCandidate> {
+    private fun collectFontFiles(
+        rootPath: String,
+        cancelled: () -> Boolean,
+    ): FontEnumerationResult {
+        val budget = FontScanBudget(limits, cancelled)
         val fm = NSFileManager.defaultManager
         val rootCanon = (NSURL.fileURLWithPath(rootPath).URLByStandardizingPath?.path ?: rootPath).trimEnd('/')
-        val out = mutableListOf<FontImportCandidate>()
         val visited = HashSet<String>()
         fun walk(dir: String) {
-            if (out.size >= limits.maxCandidates) return
+            if (!budget.canContinue()) return
             val dirCanon = (NSURL.fileURLWithPath(dir).URLByStandardizingPath?.path ?: dir).trimEnd('/')
             if (!FontDirectorySafety.isCanonicalInside(rootCanon, dirCanon)) return
             if (!visited.add(dirCanon)) return
             val children = fm.contentsOfDirectoryAtPath(dir, error = null) ?: return
             for (child in children) {
-                if (out.size >= limits.maxCandidates) return
+                if (!budget.onVisit()) return
                 val name = child.toString()
                 val path = "$dir/$name"
                 val attrs = fm.attributesOfItemAtPath(path, error = null)
@@ -180,16 +183,18 @@ class IosWatermarkFontAccess(
                     val fileCanon = (NSURL.fileURLWithPath(path).URLByStandardizingPath?.path ?: path)
                     if (!FontDirectorySafety.isCanonicalInside(rootCanon, fileCanon)) continue
                     val size = (attrs?.get(platform.Foundation.NSFileSize) as? Number)?.toLong()
-                    out += FontImportCandidate(
-                        fileName = name,
-                        sizeBytes = size,
-                        openSource = { FileSystem.SYSTEM.source(fileCanon.toPath()) },
+                    budget.offerCandidate(
+                        FontImportCandidate(
+                            fileName = name,
+                            sizeBytes = size,
+                            openSource = { FileSystem.SYSTEM.source(fileCanon.toPath()) },
+                        ),
                     )
                 }
             }
         }
         walk(rootCanon)
-        return out
+        return budget.snapshot()
     }
 
     companion object {

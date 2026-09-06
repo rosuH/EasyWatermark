@@ -90,10 +90,10 @@ class DesktopWatermarkFontAccess(
         return importMutex.withLock {
             withContext(Dispatchers.IO) {
                 val root = directory.canonicalFile
-                val candidates = collectFontFiles(root)
-                WatermarkFontImporter.importCandidates(
+                val enumeration = collectFontFiles(root, cancelled)
+                WatermarkFontImporter.importEnumerated(
                     store = store,
-                    candidates = candidates,
+                    enumeration = enumeration,
                     limits = limits,
                     validate = ::validateImported,
                     cancelled = cancelled,
@@ -156,12 +156,16 @@ class DesktopWatermarkFontAccess(
         return FontStyleCapability.ofFace(bold, italic)
     }
 
-    private fun collectFontFiles(root: File): List<FontImportCandidate> {
-        val out = mutableListOf<FontImportCandidate>()
+    private fun collectFontFiles(
+        root: File,
+        cancelled: () -> Boolean,
+    ): FontEnumerationResult {
+        val budget = FontScanBudget(limits, cancelled)
         val visited = HashSet<String>()
-        val rootCanon = runCatching { root.canonicalFile }.getOrNull() ?: return emptyList()
+        val rootCanon = runCatching { root.canonicalFile }.getOrNull()
+            ?: return budget.snapshot()
         fun walk(dir: File) {
-            if (out.size >= limits.maxCandidates) return
+            if (!budget.canContinue()) return
             val dirCanon = runCatching { dir.canonicalFile }.getOrNull() ?: return
             if (!FontDirectorySafety.isCanonicalInside(rootCanon.absolutePath, dirCanon.absolutePath)) {
                 return
@@ -169,7 +173,7 @@ class DesktopWatermarkFontAccess(
             if (!visited.add(dirCanon.absolutePath)) return
             val children = dir.listFiles() ?: return
             for (child in children) {
-                if (out.size >= limits.maxCandidates) return
+                if (!budget.onVisit()) return
                 if (Files.isSymbolicLink(child.toPath())) continue
                 if (child.isDirectory) {
                     walk(child)
@@ -178,16 +182,18 @@ class DesktopWatermarkFontAccess(
                     if (!FontDirectorySafety.isCanonicalInside(rootCanon.absolutePath, childCanon.absolutePath)) {
                         continue
                     }
-                    out += FontImportCandidate(
-                        fileName = child.name,
-                        sizeBytes = child.length(),
-                        openSource = { FileSystem.SYSTEM.source(childCanon.toOkioPath()) },
+                    budget.offerCandidate(
+                        FontImportCandidate(
+                            fileName = child.name,
+                            sizeBytes = child.length(),
+                            openSource = { FileSystem.SYSTEM.source(childCanon.toOkioPath()) },
+                        ),
                     )
                 }
             }
         }
         walk(rootCanon)
-        return out
+        return budget.snapshot()
     }
 
     companion object {

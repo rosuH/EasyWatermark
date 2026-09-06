@@ -91,6 +91,30 @@ class WatermarkFontStoreTest {
         }
     }
 
+    @Test
+    fun at_capacity_identical_bytes_are_duplicate_not_rejected() {
+        val dir = File("build/tmp-font-cap-${System.nanoTime()}").apply { mkdirs() }
+        try {
+            val store = WatermarkFontStore(
+                FileSystem.SYSTEM,
+                dir.toOkioPath(),
+                FontImportLimits(maxStored = 1),
+            )
+            val same = byteArrayOf(1, 2, 3, 4, 5)
+            val other = byteArrayOf(9, 8, 7, 6, 5)
+            assertIs<FontPublishOutcome.Added>(store.publishBytes("Keep.ttf", same, accept))
+            val dup = store.publishBytes("KeepCopy.ttf", same, accept)
+            assertIs<FontPublishOutcome.Duplicate>(dup)
+            assertEquals(1, store.listImported().size)
+            val rejected = store.publishBytes("Other.ttf", other, accept)
+            assertIs<FontPublishOutcome.Failed>(rejected)
+            assertTrue(rejected.reason.contains("limit"))
+            assertEquals(1, store.listImported().size)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
     private val accept: (ByteArray, String) -> ValidatedImportedFont = { _, _ ->
         ValidatedImportedFont("Test", FontStyleCapability.NormalOnly)
     }

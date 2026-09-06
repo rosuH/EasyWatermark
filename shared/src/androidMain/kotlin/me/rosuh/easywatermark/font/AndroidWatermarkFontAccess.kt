@@ -89,10 +89,14 @@ class AndroidWatermarkFontAccess(
     suspend fun importTree(treeUri: Uri, cancelled: () -> Boolean = { false }): FontImportResult {
         return importMutex.withLock {
             withContext(Dispatchers.IO) {
-                val candidates = collectFontCandidates(context.contentResolver, treeUri)
-                WatermarkFontImporter.importCandidates(
+                val enumeration = collectFontCandidates(
+                    context.contentResolver,
+                    treeUri,
+                    cancelled,
+                )
+                WatermarkFontImporter.importEnumerated(
                     store = store,
-                    candidates = candidates,
+                    enumeration = enumeration,
                     limits = limits,
                     validate = ::validateImported,
                     cancelled = cancelled,
@@ -244,10 +248,11 @@ class AndroidWatermarkFontAccess(
     private fun collectFontCandidates(
         resolver: ContentResolver,
         treeUri: Uri,
-    ): List<FontImportCandidate> {
-        val out = mutableListOf<FontImportCandidate>()
+        cancelled: () -> Boolean,
+    ): FontEnumerationResult {
+        val budget = FontScanBudget(limits, cancelled)
         fun walk(documentId: String) {
-            if (out.size >= limits.maxCandidates) return
+            if (!budget.canContinue()) return
             val children = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId)
             val projection = arrayOf(
                 DocumentsContract.Document.COLUMN_DOCUMENT_ID,
@@ -265,6 +270,7 @@ class AndroidWatermarkFontAccess(
                 val sizeIdx = rows.getColumnIndex(DocumentsContract.Document.COLUMN_SIZE)
                 if (idIdx < 0 || nameIdx < 0 || mimeIdx < 0) return
                 while (rows.moveToNext()) {
+                    if (!budget.onVisit()) return
                     val id = rows.getString(idIdx) ?: continue
                     val name = rows.getString(nameIdx) ?: "font"
                     val mime = rows.getString(mimeIdx).orEmpty()
@@ -273,22 +279,23 @@ class AndroidWatermarkFontAccess(
                     } else if (WatermarkFontStore.isFontFileName(name)) {
                         val uri = DocumentsContract.buildDocumentUriUsingTree(treeUri, id)
                         val size = if (sizeIdx >= 0 && !rows.isNull(sizeIdx)) rows.getLong(sizeIdx) else null
-                        out += FontImportCandidate(
-                            fileName = name,
-                            sizeBytes = size,
-                            openSource = {
-                                val stream = resolver.openInputStream(uri)
-                                    ?: error("Could not read $name")
-                                stream.source()
-                            },
+                        budget.offerCandidate(
+                            FontImportCandidate(
+                                fileName = name,
+                                sizeBytes = size,
+                                openSource = {
+                                    val stream = resolver.openInputStream(uri)
+                                        ?: error("Could not read $name")
+                                    stream.source()
+                                },
+                            ),
                         )
                     }
-                    if (out.size >= limits.maxCandidates) return
                 }
             }
         }
         walk(DocumentsContract.getTreeDocumentId(treeUri))
-        return out
+        return budget.snapshot()
     }
 
     companion object {

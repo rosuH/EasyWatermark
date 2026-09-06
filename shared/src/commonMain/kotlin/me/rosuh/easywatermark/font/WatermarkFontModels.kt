@@ -66,6 +66,7 @@ data class FontImportLimits(
     val maxFileBytes: Long = 16L * 1024L * 1024L,
     val maxTotalBytes: Long = 64L * 1024L * 1024L,
     val maxCandidates: Int = 200,
+    val maxVisits: Int = 2000,
     val maxStored: Int = 200,
 ) {
     companion object {

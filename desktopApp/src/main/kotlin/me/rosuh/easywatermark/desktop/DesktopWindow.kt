@@ -1536,9 +1536,7 @@ fun launchDesktopWindow() = application {
                                                 !fontSession.importStillCurrent(generation)
                                             }
                                         }
-                                        if (fontSession.importStillCurrent(generation)) {
-                                            fontSession.completeImport(result)
-                                        }
+                                        fontSession.completeImport(generation, result)
                                     }
                                     }
                                 }

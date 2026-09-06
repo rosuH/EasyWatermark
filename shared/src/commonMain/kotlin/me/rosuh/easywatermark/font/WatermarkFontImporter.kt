@@ -113,6 +113,32 @@ object WatermarkFontImporter {
         )
     }
 
+    /**
+     * Import already-enumerated candidates. Scan truncation/cancel is merged into
+     * the result so a visit cap is never silent. Candidates found before cancel
+     * are still published (partial success).
+     */
+    fun importEnumerated(
+        store: WatermarkFontStore,
+        enumeration: FontEnumerationResult,
+        limits: FontImportLimits = FontImportLimits.Default,
+        validate: (bytes: ByteArray, extension: String) -> ValidatedImportedFont,
+        cancelled: () -> Boolean = { false },
+    ): FontImportResult {
+        val imported = importCandidates(
+            store = store,
+            candidates = enumeration.candidates,
+            limits = limits,
+            validate = validate,
+            cancelled = if (enumeration.cancelled) ({ false }) else cancelled,
+        )
+        return imported.copy(
+            truncated = imported.truncated || enumeration.truncated,
+            truncateReason = imported.truncateReason ?: enumeration.truncateReason,
+            cancelled = imported.cancelled || enumeration.cancelled,
+        )
+    }
+
     fun readBounded(source: Source, maxBytes: Long): BoundedRead {
         val buffer = Buffer()
         val input = source.buffer()

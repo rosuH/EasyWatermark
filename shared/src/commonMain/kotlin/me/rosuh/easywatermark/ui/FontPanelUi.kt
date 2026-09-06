@@ -37,6 +37,7 @@ sealed class FontPanelEvent {
     data object ToggleImportFailures : FontPanelEvent()
     data class Select(val ref: WatermarkFontRef) : FontPanelEvent()
     data class SourceTab(val tab: FontSourceTab) : FontPanelEvent()
+    data class VisibleEntries(val entries: List<FontEntry>) : FontPanelEvent()
 }
 
 fun FontStyleCapability.toTypefaceSet(): Set<TextTypeface> = styles
