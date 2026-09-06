@@ -1,7 +1,12 @@
 package me.rosuh.easywatermark.font
 
 import androidx.compose.ui.graphics.asSkiaBitmap
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.yield
 import me.rosuh.easywatermark.data.datastore.createUserConfigDataStore
 import me.rosuh.easywatermark.data.datastore.createWaterMarkDataStore
 import me.rosuh.easywatermark.data.model.TextTypeface
@@ -14,6 +19,8 @@ import me.rosuh.easywatermark.render.CommonWatermarkPipeline
 import me.rosuh.easywatermark.render.DesktopWatermarkTextRenderer
 import me.rosuh.easywatermark.session.WatermarkSessionViewModel
 import java.io.File
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -128,6 +135,82 @@ class FontCommitSnapshotTest {
             requireNotNull(committed)
             val toPaint = if (request == gen) committed else null
             assertNull(toPaint)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun collector_waiting_outside_lock_cannot_publish_stale_snapshot_after_font_commit() = runBlocking {
+        val dir = File("build/tmp-font-sync-race-${System.nanoTime()}").apply { mkdirs() }
+        try {
+            val waterRepo = WaterMarkRepository(
+                dataStore = createWaterMarkDataStore(dir),
+                defaultTextProvider = { "EasyWatermark" },
+                tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
+                logError = {},
+            )
+            val session = WatermarkSessionViewModel(
+                waterMarkRepo = waterRepo,
+                userConfigRepo = UserConfigRepository(createUserConfigDataStore(dir)),
+            )
+            withTimeout(5_000) {
+                while (session.launchScreenUiStateFlow.value.waterMark.text.isBlank()) {
+                    yield()
+                }
+            }
+            val access = DesktopWatermarkFontAccess(root = File(dir, "fonts").apply { mkdirs() })
+            val candidate = access.listSystemFonts().firstOrNull {
+                val name = it.displayName.lowercase()
+                name.contains("times") || name.contains("courier") || name.contains("menlo") ||
+                    name.contains("monaco") || name.contains("serif")
+            } ?: access.listSystemFonts().first()
+
+            val hold = CompletableDeferred<Unit>()
+            val entered = CompletableDeferred<Unit>()
+            val captured = AtomicReference<me.rosuh.easywatermark.data.model.WaterMark?>(null)
+            session.beforeWaterMarkSyncLock = {
+                captured.set(waterRepo.currentConfig())
+                entered.complete(Unit)
+                hold.await()
+            }
+            waterRepo.updateText("StaleA")
+            withTimeout(5_000) { entered.await() }
+            val stale = requireNotNull(captured.get())
+            assertEquals("StaleA", stale.text)
+            assertEquals(WatermarkFontRef.Default, stale.fontRef)
+
+            val seenFonts = CopyOnWriteArrayList<WatermarkFontRef>()
+            val seenJob = launch {
+                session.launchScreenUiStateFlow.collect { seenFonts.add(it.waterMark.fontRef) }
+            }
+
+            val committed = session.applyConfigIf(
+                stillValid = { true },
+                change = WatermarkConfigChange.FontSelection(
+                    candidate.ref,
+                    FontStyleCapability.All.styles,
+                ),
+            )
+            requireNotNull(committed)
+            assertEquals(candidate.ref, committed.fontRef)
+            assertEquals("StaleA", committed.text)
+            assertEquals(candidate.ref, session.launchScreenUiStateFlow.value.waterMark.fontRef)
+
+            hold.complete(Unit)
+            repeat(40) { yield() }
+            delay(80)
+            val finalLaunch = session.launchScreenUiStateFlow.value.waterMark
+            assertEquals(candidate.ref, finalLaunch.fontRef)
+            assertEquals("StaleA", finalLaunch.text)
+            assertEquals(finalLaunch, waterRepo.currentConfig())
+            val firstB = seenFonts.indexOfFirst { it == candidate.ref }
+            assertTrue(firstB >= 0, seenFonts.toString())
+            assertTrue(
+                seenFonts.drop(firstB).all { it == candidate.ref },
+                "collector must not republish A after B: $seenFonts",
+            )
+            seenJob.cancel()
         } finally {
             dir.deleteRecursively()
         }
