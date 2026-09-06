@@ -4,6 +4,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -74,7 +75,10 @@ fun EditorFontSheetHost(
                 )
             }
         } else {
-            EwmModalBottomSheet(onDismissRequest = dismiss) {
+            EwmModalBottomSheet(
+                onDismissRequest = dismiss,
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            ) {
                 FontPanel(
                     state = state,
                     onEvent = { event ->
