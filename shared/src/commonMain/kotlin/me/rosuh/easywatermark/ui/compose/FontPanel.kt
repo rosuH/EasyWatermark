@@ -4,20 +4,23 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -29,6 +32,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -36,6 +42,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -79,6 +86,13 @@ internal const val FONT_PANEL_TAG = "editorFontPanel"
 internal const val FONT_DEFAULT_ROW_TAG = "editorFontDefault"
 internal const val FONT_IMPORT_BUTTON_TAG = "editorFontImport"
 internal const val FONT_DONE_BUTTON_TAG = "editorFontDone"
+private val FontPanelActionMinHeight = 48.dp
+private val FontPanelListMaxHeight = 360.dp
+private val FontPanelMinHeight = 280.dp
+private val FontPanelSheetHandleAllowance = 56.dp
+private val FontPanelEditorPeek = 24.dp
+private val FontPanelStackBelow = 280.dp
+private val FontPanelActionPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
 
 @Composable
 fun FontPanel(
@@ -89,9 +103,20 @@ fun FontPanel(
     sampleFamilies: Map<String, FontFamily> = emptyMap(),
 ) {
     val closeCd = stringResource(Res.string.cd_font_close)
+    val density = LocalDensity.current
+    val windowSize = LocalWindowInfo.current.containerSize
+    val windowHeight = with(density) { windowSize.height.toDp() }
+    val windowWidth = with(density) { windowSize.width.toDp() }
+    val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val handleAllowance = if (useLargeDialog) 0.dp else FontPanelSheetHandleAllowance
+    val budget = (windowHeight - statusTop - handleAllowance - FontPanelEditorPeek)
+        .coerceAtLeast(FontPanelMinHeight)
+        .let { if (useLargeDialog) minOf(it, 720.dp) else it }
+    val stackActions = windowWidth - 40.dp < FontPanelStackBelow
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .heightIn(max = budget)
             .then(if (useLargeDialog) Modifier else Modifier.navigationBarsPadding())
             .padding(horizontal = 20.dp)
             .padding(bottom = 16.dp)
@@ -171,24 +196,21 @@ fun FontPanel(
             equalWidth = true,
         )
 
-        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            val listMax = maxHeight.takeIf { it != androidx.compose.ui.unit.Dp.Infinity }
-                ?.coerceAtMost(360.dp)
-                ?: 360.dp
-            FontListBody(
-                state = state,
-                sampleFamilies = sampleFamilies,
-                onSelect = { onEvent(FontPanelEvent.Select(it)) },
-                onVisible = { onEvent(FontPanelEvent.VisibleEntries(it)) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = listMax.coerceAtLeast(120.dp)),
-            )
-        }
+        FontListBody(
+            state = state,
+            sampleFamilies = sampleFamilies,
+            onSelect = { onEvent(FontPanelEvent.Select(it)) },
+            onVisible = { onEvent(FontPanelEvent.VisibleEntries(it)) },
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .fillMaxWidth()
+                .heightIn(max = FontPanelListMaxHeight),
+        )
 
         ImportFooter(
             state = state,
             onEvent = onEvent,
+            stackActions = stackActions,
         )
     }
 }
@@ -243,65 +265,71 @@ private fun FontListBody(
 ) {
     val sampleFallback = stringResource(Res.string.font_sample_fallback)
     val sample = state.sampleText.ifBlank { sampleFallback }.replace('\n', ' ')
-    when (state.sourceTab) {
-        FontSourceTab.System -> {
-            if (state.systemListRestricted) {
-                Text(
-                    text = stringResource(Res.string.font_android_legacy_system),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp)
-                        .testTag("editorFontLegacyNote"),
-                )
-            }
-            when {
-                state.systemLoading && state.systemFonts.isEmpty() -> {
-                    StatusLine(stringResource(Res.string.font_system_loading), "editorFontSystemLoading")
-                }
-                state.systemError != null && state.systemFonts.isEmpty() -> {
-                    StatusLine(state.systemError, "editorFontSystemError", error = true)
-                }
-                state.systemFonts.isEmpty() -> {
-                    StatusLine(stringResource(Res.string.font_no_system_fonts), "editorFontSystemEmpty")
-                }
-                else -> {
-                    FontEntryList(
-                        entries = state.systemFonts,
-                        selectedRef = state.selectedRef,
-                        pendingRef = state.pendingRef,
-                        sample = sample,
-                        sampleFamilies = sampleFamilies,
-                        onSelect = onSelect,
-                        onVisible = onVisible,
-                        modifier = modifier.testTag("editorFontSystemList"),
+    Column(modifier = modifier.fillMaxWidth()) {
+        when (state.sourceTab) {
+            FontSourceTab.System -> {
+                if (state.systemListRestricted) {
+                    Text(
+                        text = stringResource(Res.string.font_android_legacy_system),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                            .testTag("editorFontLegacyNote"),
                     )
                 }
+                when {
+                    state.systemLoading && state.systemFonts.isEmpty() -> {
+                        StatusLine(stringResource(Res.string.font_system_loading), "editorFontSystemLoading")
+                    }
+                    state.systemError != null && state.systemFonts.isEmpty() -> {
+                        StatusLine(state.systemError, "editorFontSystemError", error = true)
+                    }
+                    state.systemFonts.isEmpty() -> {
+                        StatusLine(stringResource(Res.string.font_no_system_fonts), "editorFontSystemEmpty")
+                    }
+                    else -> {
+                        FontEntryList(
+                            entries = state.systemFonts,
+                            selectedRef = state.selectedRef,
+                            pendingRef = state.pendingRef,
+                            sample = sample,
+                            sampleFamilies = sampleFamilies,
+                            onSelect = onSelect,
+                            onVisible = onVisible,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("editorFontSystemList"),
+                        )
+                    }
+                }
             }
-        }
-        FontSourceTab.Imported -> {
-            when {
-                state.importedLoading && state.importedFonts.isEmpty() -> {
-                    StatusLine(stringResource(Res.string.font_imported_loading), "editorFontImportedLoading")
-                }
-                state.importedError != null && state.importedFonts.isEmpty() -> {
-                    StatusLine(state.importedError, "editorFontImportedError", error = true)
-                }
-                state.importedFonts.isEmpty() -> {
-                    StatusLine(stringResource(Res.string.font_imported_empty), "editorFontImportedEmpty")
-                }
-                else -> {
-                    FontEntryList(
-                        entries = state.importedFonts,
-                        selectedRef = state.selectedRef,
-                        pendingRef = state.pendingRef,
-                        sample = sample,
-                        sampleFamilies = sampleFamilies,
-                        onSelect = onSelect,
-                        onVisible = onVisible,
-                        modifier = modifier.testTag("editorFontImportedList"),
-                    )
+            FontSourceTab.Imported -> {
+                when {
+                    state.importedLoading && state.importedFonts.isEmpty() -> {
+                        StatusLine(stringResource(Res.string.font_imported_loading), "editorFontImportedLoading")
+                    }
+                    state.importedError != null && state.importedFonts.isEmpty() -> {
+                        StatusLine(state.importedError, "editorFontImportedError", error = true)
+                    }
+                    state.importedFonts.isEmpty() -> {
+                        StatusLine(stringResource(Res.string.font_imported_empty), "editorFontImportedEmpty")
+                    }
+                    else -> {
+                        FontEntryList(
+                            entries = state.importedFonts,
+                            selectedRef = state.selectedRef,
+                            pendingRef = state.pendingRef,
+                            sample = sample,
+                            sampleFamilies = sampleFamilies,
+                            onSelect = onSelect,
+                            onVisible = onVisible,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("editorFontImportedList"),
+                        )
+                    }
                 }
             }
         }
@@ -393,6 +421,7 @@ private fun FontEntryList(
 private fun ImportFooter(
     state: FontPanelUiState,
     onEvent: (FontPanelEvent) -> Unit,
+    stackActions: Boolean,
 ) {
     val importing = state.importProgress is FontImportProgress.Running
     val done = state.importProgress as? FontImportProgress.Done
@@ -463,37 +492,90 @@ private fun ImportFooter(
                 }
             }
         }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (importing) {
-                OutlinedButton(
-                    onClick = { onEvent(FontPanelEvent.CancelImport) },
+        val actionText: @Composable (String) -> Unit = { label ->
+            Text(
+                text = label,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+            )
+        }
+        val secondaryLabel = stringResource(
+            if (importing) Res.string.font_import_cancel else Res.string.font_import_from_folder,
+        )
+        val doneLabel = stringResource(Res.string.font_panel_done)
+        val doneModifier = Modifier
+            .defaultMinSize(minHeight = FontPanelActionMinHeight)
+            .heightIn(min = FontPanelActionMinHeight)
+            .testTag(FONT_DONE_BUTTON_TAG)
+        if (stackActions) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FontPanelSecondaryAction(
+                    importing = importing,
+                    onEvent = onEvent,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    actionText(secondaryLabel)
+                }
+                Button(
+                    onClick = { onEvent(FontPanelEvent.Dismiss) },
+                    modifier = Modifier.fillMaxWidth().then(doneModifier),
+                    shape = RectangleShape,
+                    contentPadding = FontPanelActionPadding,
+                ) {
+                    actionText(doneLabel)
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                FontPanelSecondaryAction(
+                    importing = importing,
+                    onEvent = onEvent,
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text(stringResource(Res.string.font_import_cancel))
+                    actionText(secondaryLabel)
                 }
-            } else {
-                OutlinedButton(
-                    onClick = { onEvent(FontPanelEvent.ImportFolder) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag(FONT_IMPORT_BUTTON_TAG),
+                Button(
+                    onClick = { onEvent(FontPanelEvent.Dismiss) },
+                    modifier = Modifier.weight(1f).then(doneModifier),
+                    shape = RectangleShape,
+                    contentPadding = FontPanelActionPadding,
                 ) {
-                    Text(stringResource(Res.string.font_import_from_folder))
+                    actionText(doneLabel)
                 }
-            }
-            Button(
-                onClick = { onEvent(FontPanelEvent.Dismiss) },
-                modifier = Modifier
-                    .weight(1f)
-                    .testTag(FONT_DONE_BUTTON_TAG),
-            ) {
-                Text(stringResource(Res.string.font_panel_done))
             }
         }
+    }
+}
+
+@Composable
+private fun FontPanelSecondaryAction(
+    importing: Boolean,
+    onEvent: (FontPanelEvent) -> Unit,
+    modifier: Modifier = Modifier,
+    label: @Composable () -> Unit,
+) {
+    OutlinedButton(
+        onClick = {
+            onEvent(
+                if (importing) FontPanelEvent.CancelImport else FontPanelEvent.ImportFolder,
+            )
+        },
+        modifier = modifier
+            .defaultMinSize(minHeight = FontPanelActionMinHeight)
+            .heightIn(min = FontPanelActionMinHeight)
+            .then(if (importing) Modifier else Modifier.testTag(FONT_IMPORT_BUTTON_TAG)),
+        shape = RectangleShape,
+        contentPadding = FontPanelActionPadding,
+    ) {
+        label()
     }
 }
 
