@@ -252,6 +252,102 @@ class FontPanelSessionImportTest {
         Unit
     }
 
+    @Test
+    fun search_query_is_kept_across_tabs_and_cleared_on_reopen() = runBlocking {
+        val access = FakeFontAccess(systemCount = 3)
+        val session = FontPanelSession(
+            access = access,
+            scope = this,
+            applySelection = { _, _, _ -> true },
+        )
+        session.onOpen()
+        var spins = 0
+        while (session.state.systemFonts.size < 3 && spins++ < 200) {
+            kotlinx.coroutines.yield()
+        }
+        session.onEvent(FontPanelEvent.SearchQuery("Font 2"))
+        assertEquals("Font 2", session.state.searchQuery)
+        assertEquals(listOf("Font 2"), session.visibleEntries().map { it.displayName })
+        session.onEvent(FontPanelEvent.SourceTab(me.rosuh.easywatermark.font.FontSourceTab.Imported))
+        assertEquals("Font 2", session.state.searchQuery)
+        session.onEvent(FontPanelEvent.SourceTab(me.rosuh.easywatermark.font.FontSourceTab.System))
+        assertEquals(listOf("Font 2"), session.visibleEntries().map { it.displayName })
+        session.onOpen()
+        assertEquals("", session.state.searchQuery)
+        spins = 0
+        while (session.state.systemFonts.size < 3 && spins++ < 200) {
+            kotlinx.coroutines.yield()
+        }
+        assertEquals(3, session.visibleEntries().size)
+        Unit
+    }
+
+    @Test
+    fun search_does_not_change_selection_and_import_refresh_keeps_query() = runBlocking {
+        val access = FakeFontAccess(systemCount = 3)
+        val session = FontPanelSession(
+            access = access,
+            scope = this,
+            applySelection = { _, _, _ -> true },
+        )
+        session.onOpen()
+        var spins = 0
+        while (session.state.systemFonts.size < 3 && spins++ < 200) {
+            kotlinx.coroutines.yield()
+        }
+        val selected = session.state.systemFonts.first { it.displayName == "Font 1" }
+        session.select(selected.ref)
+        spins = 0
+        while (session.state.selectedRef != selected.ref && spins++ < 200) {
+            kotlinx.coroutines.yield()
+        }
+        session.onEvent(FontPanelEvent.SearchQuery("zzz"))
+        assertTrue(session.visibleEntries().isEmpty())
+        assertEquals(selected.ref, session.state.selectedRef)
+
+        session.onEvent(FontPanelEvent.SearchQuery("Imported"))
+        val generation = session.beginImport()
+        access.imported += FontEntry(
+            ref = WatermarkFontRef.Imported("c".repeat(64)),
+            displayName = "Imported Match",
+        )
+        access.imported += FontEntry(
+            ref = WatermarkFontRef.Imported("d".repeat(64)),
+            displayName = "Other Face",
+        )
+        session.completeImport(generation, FontImportResult(added = 2, duplicates = 0, failed = emptyList()))
+        assertEquals("Imported", session.state.searchQuery)
+        assertEquals(selected.ref, session.state.selectedRef)
+        assertEquals(listOf("Imported Match"), session.visibleEntries().map { it.displayName })
+        Unit
+    }
+
+    @Test
+    fun filtered_visible_rows_load_samples() = runBlocking {
+        val access = FakeFontAccess(systemCount = 25)
+        val session = FontPanelSession(
+            access = access,
+            scope = this,
+            applySelection = { _, _, _ -> true },
+        )
+        session.onOpen()
+        var spins = 0
+        while (session.state.systemFonts.size < 25 && spins++ < 200) {
+            kotlinx.coroutines.yield()
+        }
+        session.onEvent(FontPanelEvent.SearchQuery("Font 25"))
+        val visible = session.visibleEntries()
+        assertEquals(listOf("Font 25"), visible.map { it.displayName })
+        session.onEvent(FontPanelEvent.VisibleEntries(visible))
+        val key25 = visible.single().ref.fingerprint()
+        spins = 0
+        while (!session.state.sampleFamilies.containsKey(key25) && spins++ < 200) {
+            kotlinx.coroutines.yield()
+        }
+        assertTrue(session.state.sampleFamilies.containsKey(key25), session.state.sampleFamilies.keys.toString())
+        Unit
+    }
+
     private class FakeFontAccess(
         private val systemCount: Int = 2,
     ) : WatermarkFontAccess {

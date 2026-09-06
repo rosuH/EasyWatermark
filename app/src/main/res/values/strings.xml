@@ -110,6 +110,9 @@
     <string name="font_panel_done">Done</string>
     <string name="font_sample_fallback">Watermark</string>
     <string name="font_imported_empty">No imported fonts yet. Use Import from folder.</string>
+    <string name="font_search_placeholder">Search fonts</string>
+    <string name="font_search_no_matches">No fonts match this search.</string>
+    <string name="cd_font_search_clear">Clear font search</string>
     <string name="font_system_loading">Loading system fonts…</string>
     <string name="font_imported_loading">Loading imported fonts…</string>
     <string name="font_candidate_loading">Loading font…</string>
