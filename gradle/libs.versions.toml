@@ -56,7 +56,7 @@ ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 hilt-plugin = { id = "dagger.hilt.android.plugin", version.ref = "hilt" }
-spotless = "com.diffplug.spotless:6.25.0"
+spotless = "com.diffplug.spotless:8.10.2"
 
 [libraries]
 agp = { module = "com.android.tools.build:gradle", version.ref = "agp" }
