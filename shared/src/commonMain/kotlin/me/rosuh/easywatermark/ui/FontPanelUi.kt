@@ -23,7 +23,6 @@ data class FontPanelUiState(
     val sampleText: String = "",
     val systemListRestricted: Boolean = false,
     val unavailableMessage: String? = null,
-    val styleHint: String? = null,
     val supportedStyles: FontStyleCapability = FontStyleCapability.All,
     val showImportFailures: Boolean = false,
     val sampleFamilies: Map<String, FontFamily> = emptyMap(),

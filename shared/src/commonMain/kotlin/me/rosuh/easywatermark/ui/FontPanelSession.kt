@@ -145,28 +145,12 @@ class FontPanelSession(
                     if (applied) {
                         resolvedFamily = resolution.family
                         resolvedRef = ref
-                        val normalized = resolution.supportedStyles.normalize(
-                            // UI hint only; actual normalize happens in DataStore.
-                            me.rosuh.easywatermark.data.model.TextTypeface.Normal,
-                        )
-                        val hint = if (!resolution.supportedStyles.supports(
-                                me.rosuh.easywatermark.data.model.TextTypeface.Bold,
-                            ) ||
-                            !resolution.supportedStyles.supports(
-                                me.rosuh.easywatermark.data.model.TextTypeface.Italic,
-                            )
-                        ) {
-                            "This font does not support every bold/italic style."
-                        } else {
-                            null
-                        }
                         state = state.copy(
                             pendingRef = null,
                             selectedRef = ref,
                             currentDisplayName = resolution.displayName,
                             supportedStyles = resolution.supportedStyles,
                             unavailableMessage = null,
-                            styleHint = hint,
                         )
                     } else {
                         state = state.copy(pendingRef = null)
