@@ -113,7 +113,6 @@
     <string name="font_android_legacy_system">This Android version only lists basic system families. Import still works.</string>
     <string name="font_unavailable">Current font is unavailable. Choose System default or another font.</string>
     <string name="font_style_normalized">This font does not support the previous style. Style was set to Normal.</string>
-    <string name="font_style_unsupported">This font does not support every bold/italic style.</string>
     <string name="font_no_system_fonts">No system fonts were found.</string>
     <string name="cd_font_selected">Selected</string>
     <string name="cd_font_close">Close font panel</string>

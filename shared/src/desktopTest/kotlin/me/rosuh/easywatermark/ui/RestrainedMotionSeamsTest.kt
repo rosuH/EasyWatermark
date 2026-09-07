@@ -24,6 +24,7 @@ class RestrainedMotionSeamsTest {
         assertTrue(src.contains("motionDurationMs"), "dialog honors MotionPolicy")
         assertTrue(src.contains("FastOutSlowInEasing"), "existing easing, not a new curve")
         assertTrue(src.contains("delay("), "dismiss must wait exit before dispose")
+        assertTrue(src.contains("closeRequest"), "in-content Done must share the exit path")
     }
 
     @Test

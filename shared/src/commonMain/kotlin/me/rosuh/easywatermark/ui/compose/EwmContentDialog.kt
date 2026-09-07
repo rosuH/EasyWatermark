@@ -43,6 +43,9 @@ import me.rosuh.easywatermark.ui.theme.motionDurationMs
  * Enter/exit is fade+scale [EwmTheme.motion.contentEnterScale] at
  * [EwmTheme.motion.shellShortMs], scaled by [motionDurationMs]. Dismiss waits
  * for the exit (same pattern as [me.rosuh.easywatermark.ui.AnimatedTransitionHost]).
+ *
+ * Bump [closeRequest] from in-content actions (Done / Close) so they take the same
+ * exit path as a scrim/back dismiss instead of unmounting immediately.
  */
 @Composable
 fun EwmContentDialog(
@@ -54,6 +57,7 @@ fun EwmContentDialog(
     testTag: String = "ewmContentDialog",
     /** When false, callers own internal scrolling (fixed header/footer panels). */
     scrollContent: Boolean = true,
+    closeRequest: Int = 0,
     content: @Composable () -> Unit,
 ) {
     val motionPolicy = currentMotionPolicy()
@@ -84,6 +88,12 @@ fun EwmContentDialog(
                     latestOnDismiss()
                 }
             }
+        }
+    }
+
+    LaunchedEffect(closeRequest) {
+        if (closeRequest > 0) {
+            dismiss()
         }
     }
 

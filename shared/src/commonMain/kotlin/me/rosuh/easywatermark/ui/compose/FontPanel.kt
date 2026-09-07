@@ -1,5 +1,15 @@
 package me.rosuh.easywatermark.ui.compose
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -50,6 +60,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.distinctUntilChanged
 import me.rosuh.easywatermark.data.model.WatermarkFontRef
@@ -90,6 +102,9 @@ import me.rosuh.easywatermark.ui.FontPanelUiState
 import me.rosuh.easywatermark.ui.SharedProductDrawables
 import me.rosuh.easywatermark.ui.compose.DesignChoiceChips
 import me.rosuh.easywatermark.ui.compose.DesignChoiceOption
+import me.rosuh.easywatermark.ui.theme.EwmTheme
+import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
+import me.rosuh.easywatermark.ui.theme.motionDurationMs
 import org.jetbrains.compose.resources.stringResource
 
 internal const val FONT_PANEL_TAG = "editorFontPanel"
@@ -106,6 +121,13 @@ private val FontPanelSheetHandleAllowance = 56.dp
 private val FontPanelEditorPeek = 24.dp
 private val FontPanelStackBelow = 280.dp
 private val FontPanelActionPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
+
+private enum class FontViewportMode { Loading, Error, Empty, NoMatch, List }
+
+private data class FontViewport(
+    val tab: FontSourceTab,
+    val mode: FontViewportMode,
+)
 
 @Composable
 fun FontPanel(
@@ -161,7 +183,17 @@ fun FontPanel(
             }
         }
 
-        state.unavailableMessage?.let { message ->
+        val motionPolicy = currentMotionPolicy()
+        val fadeMs = motionDurationMs(motionPolicy, EwmTheme.motion.optionPanelFadeMs)
+        val sizeMs = motionDurationMs(motionPolicy, EwmTheme.motion.contentSizeMs)
+        val fadeSpec = tween<Float>(durationMillis = fadeMs, easing = FastOutSlowInEasing)
+        val sizeSpec = tween<IntSize>(durationMillis = sizeMs, easing = FastOutSlowInEasing)
+        AnimatedVisibility(
+            visible = state.unavailableMessage != null,
+            enter = fadeIn(fadeSpec) + expandVertically(animationSpec = sizeSpec),
+            exit = fadeOut(fadeSpec) + shrinkVertically(animationSpec = sizeSpec),
+        ) {
+            val message = state.unavailableMessage.orEmpty()
             Text(
                 text = message.ifBlank { stringResource(Res.string.font_unavailable) },
                 style = MaterialTheme.typography.bodySmall,
@@ -170,17 +202,6 @@ fun FontPanel(
                     .fillMaxWidth()
                     .padding(bottom = 8.dp)
                     .testTag("editorFontUnavailable"),
-            )
-        }
-        state.styleHint?.let { hint ->
-            Text(
-                text = hint,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp)
-                    .testTag("editorFontStyleHint"),
             )
         }
 
@@ -331,86 +352,133 @@ private fun FontListBody(
     val sampleFallback = stringResource(Res.string.font_sample_fallback)
     val sample = state.sampleText.ifBlank { sampleFallback }.replace('\n', ' ')
     val noMatches = stringResource(Res.string.font_search_no_matches)
+    val motionPolicy = currentMotionPolicy()
+    val fadeMs = motionDurationMs(motionPolicy, EwmTheme.motion.optionPanelFadeMs)
+    val sizeMs = motionDurationMs(motionPolicy, EwmTheme.motion.contentSizeMs)
+    val fadeSpec = tween<Float>(durationMillis = fadeMs, easing = FastOutSlowInEasing)
+    val sizeSpec = tween<IntSize>(durationMillis = sizeMs, easing = FastOutSlowInEasing)
+    val viewport = FontViewport(
+        tab = state.sourceTab,
+        mode = fontViewportMode(state),
+    )
     Column(modifier = modifier.fillMaxSize()) {
-        when (state.sourceTab) {
-            FontSourceTab.System -> {
-                if (state.systemListRestricted) {
-                    Text(
-                        text = stringResource(Res.string.font_android_legacy_system),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp)
-                            .testTag("editorFontLegacyNote"),
-                    )
-                }
-                val filtered = FontNameQuery.filter(state.systemFonts, state.searchQuery)
-                Box(Modifier.weight(1f).fillMaxWidth()) {
-                    when {
-                        state.systemLoading && state.systemFonts.isEmpty() -> {
-                            StatusLine(stringResource(Res.string.font_system_loading), "editorFontSystemLoading")
-                        }
-                        state.systemError != null && state.systemFonts.isEmpty() -> {
-                            StatusLine(state.systemError, "editorFontSystemError", error = true)
-                        }
-                        state.systemFonts.isEmpty() -> {
-                            StatusLine(stringResource(Res.string.font_no_system_fonts), "editorFontSystemEmpty")
-                        }
-                        filtered.isEmpty() -> {
-                            StatusLine(noMatches, FONT_SEARCH_NO_MATCHES_TAG)
-                        }
-                        else -> {
-                            FontEntryList(
-                                entries = filtered,
-                                selectedRef = state.selectedRef,
-                                pendingRef = state.pendingRef,
-                                sample = sample,
-                                sampleFamilies = sampleFamilies,
-                                onSelect = onSelect,
-                                onVisible = onVisible,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .testTag("editorFontSystemList"),
-                            )
-                        }
+        AnimatedVisibility(
+            visible = state.sourceTab == FontSourceTab.System && state.systemListRestricted,
+            enter = fadeIn(fadeSpec) + expandVertically(animationSpec = sizeSpec),
+            exit = fadeOut(fadeSpec) + shrinkVertically(animationSpec = sizeSpec),
+        ) {
+            Text(
+                text = stringResource(Res.string.font_android_legacy_system),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+                    .testTag("editorFontLegacyNote"),
+            )
+        }
+        AnimatedContent(
+            targetState = viewport,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            transitionSpec = {
+                fadeIn(animationSpec = fadeSpec) togetherWith fadeOut(animationSpec = fadeSpec) using
+                    SizeTransform(clip = false) { _, _ ->
+                        tween<IntSize>(durationMillis = 0)
                     }
-                }
+            },
+            label = "fontPanelViewport",
+        ) { current ->
+            val source = when (current.tab) {
+                FontSourceTab.System -> state.systemFonts
+                FontSourceTab.Imported -> state.importedFonts
             }
-            FontSourceTab.Imported -> {
-                val filtered = FontNameQuery.filter(state.importedFonts, state.searchQuery)
-                Box(Modifier.weight(1f).fillMaxWidth()) {
-                    when {
-                        state.importedLoading && state.importedFonts.isEmpty() -> {
-                            StatusLine(stringResource(Res.string.font_imported_loading), "editorFontImportedLoading")
-                        }
-                        state.importedError != null && state.importedFonts.isEmpty() -> {
-                            StatusLine(state.importedError, "editorFontImportedError", error = true)
-                        }
-                        state.importedFonts.isEmpty() -> {
-                            StatusLine(stringResource(Res.string.font_imported_empty), "editorFontImportedEmpty")
-                        }
-                        filtered.isEmpty() -> {
-                            StatusLine(noMatches, FONT_SEARCH_NO_MATCHES_TAG)
-                        }
-                        else -> {
-                            FontEntryList(
-                                entries = filtered,
-                                selectedRef = state.selectedRef,
-                                pendingRef = state.pendingRef,
-                                sample = sample,
-                                sampleFamilies = sampleFamilies,
-                                onSelect = onSelect,
-                                onVisible = onVisible,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .testTag("editorFontImportedList"),
-                            )
-                        }
-                    }
-                }
+            when (current.mode) {
+                FontViewportMode.Loading -> StatusLine(
+                    text = stringResource(
+                        if (current.tab == FontSourceTab.System) {
+                            Res.string.font_system_loading
+                        } else {
+                            Res.string.font_imported_loading
+                        },
+                    ),
+                    tag = if (current.tab == FontSourceTab.System) {
+                        "editorFontSystemLoading"
+                    } else {
+                        "editorFontImportedLoading"
+                    },
+                )
+                FontViewportMode.Error -> StatusLine(
+                    text = when (current.tab) {
+                        FontSourceTab.System -> state.systemError.orEmpty()
+                        FontSourceTab.Imported -> state.importedError.orEmpty()
+                    },
+                    tag = if (current.tab == FontSourceTab.System) {
+                        "editorFontSystemError"
+                    } else {
+                        "editorFontImportedError"
+                    },
+                    error = true,
+                )
+                FontViewportMode.Empty -> StatusLine(
+                    text = stringResource(
+                        if (current.tab == FontSourceTab.System) {
+                            Res.string.font_no_system_fonts
+                        } else {
+                            Res.string.font_imported_empty
+                        },
+                    ),
+                    tag = if (current.tab == FontSourceTab.System) {
+                        "editorFontSystemEmpty"
+                    } else {
+                        "editorFontImportedEmpty"
+                    },
+                )
+                FontViewportMode.NoMatch -> StatusLine(noMatches, FONT_SEARCH_NO_MATCHES_TAG)
+                FontViewportMode.List -> FontEntryList(
+                    entries = FontNameQuery.filter(source, state.searchQuery),
+                    selectedRef = state.selectedRef,
+                    pendingRef = state.pendingRef,
+                    sample = sample,
+                    sampleFamilies = sampleFamilies,
+                    fadeMs = fadeMs,
+                    onSelect = onSelect,
+                    onVisible = onVisible,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag(
+                            if (current.tab == FontSourceTab.System) {
+                                "editorFontSystemList"
+                            } else {
+                                "editorFontImportedList"
+                            },
+                        ),
+                )
             }
         }
+    }
+}
+
+private fun fontViewportMode(state: FontPanelUiState): FontViewportMode {
+    val loading = when (state.sourceTab) {
+        FontSourceTab.System -> state.systemLoading && state.systemFonts.isEmpty()
+        FontSourceTab.Imported -> state.importedLoading && state.importedFonts.isEmpty()
+    }
+    val error = when (state.sourceTab) {
+        FontSourceTab.System -> state.systemError
+        FontSourceTab.Imported -> state.importedError
+    }
+    val source = when (state.sourceTab) {
+        FontSourceTab.System -> state.systemFonts
+        FontSourceTab.Imported -> state.importedFonts
+    }
+    return when {
+        loading -> FontViewportMode.Loading
+        error != null && source.isEmpty() -> FontViewportMode.Error
+        source.isEmpty() -> FontViewportMode.Empty
+        FontNameQuery.filter(source, state.searchQuery).isEmpty() -> FontViewportMode.NoMatch
+        else -> FontViewportMode.List
     }
 }
 
@@ -421,6 +489,7 @@ private fun FontEntryList(
     pendingRef: WatermarkFontRef?,
     sample: String,
     sampleFamilies: Map<String, FontFamily>,
+    fadeMs: Int,
     onSelect: (WatermarkFontRef) -> Unit,
     onVisible: (List<FontEntry>) -> Unit,
     modifier: Modifier = Modifier,
@@ -448,6 +517,11 @@ private fun FontEntryList(
             val pending = entry.ref == pendingRef
             Row(
                 modifier = Modifier
+                    .animateItem(
+                        fadeInSpec = tween<Float>(fadeMs, easing = FastOutSlowInEasing),
+                        fadeOutSpec = tween<Float>(fadeMs, easing = FastOutSlowInEasing),
+                        placementSpec = tween<IntOffset>(fadeMs, easing = FastOutSlowInEasing),
+                    )
                     .fillMaxWidth()
                     .heightIn(min = 56.dp)
                     .clickable(enabled = entry.available) { onSelect(entry.ref) }
@@ -503,68 +577,84 @@ private fun ImportFooter(
 ) {
     val importing = state.importProgress is FontImportProgress.Running
     val done = state.importProgress as? FontImportProgress.Done
+    val motionPolicy = currentMotionPolicy()
+    val fadeMs = motionDurationMs(motionPolicy, EwmTheme.motion.optionPanelFadeMs)
+    val sizeMs = motionDurationMs(motionPolicy, EwmTheme.motion.contentSizeMs)
+    val fadeSpec = tween<Float>(durationMillis = fadeMs, easing = FastOutSlowInEasing)
+    val sizeSpec = tween<IntSize>(durationMillis = sizeMs, easing = FastOutSlowInEasing)
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        when {
-            importing -> {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                    Text(
-                        text = stringResource(Res.string.font_importing),
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier
-                            .padding(start = 8.dp)
-                            .testTag("editorFontImporting"),
-                    )
-                }
-            }
-            done != null -> {
-                val result = done.result
-                Text(
-                    text = stringResource(
-                        Res.string.font_import_summary,
-                        result.added,
-                        result.duplicates,
-                        result.failed.size,
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.testTag("editorFontImportSummary"),
-                )
-                result.truncateReason?.let { reason ->
-                    Text(
-                        text = stringResource(Res.string.font_import_truncated, reason),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-                if (result.failed.isNotEmpty()) {
-                    TextButton(onClick = { onEvent(FontPanelEvent.ToggleImportFailures) }) {
+        AnimatedVisibility(
+            visible = importing || done != null,
+            enter = fadeIn(fadeSpec) + expandVertically(animationSpec = sizeSpec),
+            exit = fadeOut(fadeSpec) + shrinkVertically(animationSpec = sizeSpec),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (importing) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                         Text(
-                            text = stringResource(
-                                if (state.showImportFailures) {
-                                    Res.string.font_import_hide_failures
-                                } else {
-                                    Res.string.font_import_show_failures
-                                },
-                            ),
+                            text = stringResource(Res.string.font_importing),
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier
+                                .padding(start = 8.dp)
+                                .testTag("editorFontImporting"),
                         )
                     }
-                    if (state.showImportFailures) {
-                        val genericSource = stringResource(Res.string.font_import_generic_source)
-                        result.failed.take(8).forEach { failure ->
+                } else if (done != null) {
+                    val result = done.result
+                    Text(
+                        text = stringResource(
+                            Res.string.font_import_summary,
+                            result.added,
+                            result.duplicates,
+                            result.failed.size,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.testTag("editorFontImportSummary"),
+                    )
+                    result.truncateReason?.let { reason ->
+                        Text(
+                            text = stringResource(Res.string.font_import_truncated, reason),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    if (result.failed.isNotEmpty()) {
+                        TextButton(onClick = { onEvent(FontPanelEvent.ToggleImportFailures) }) {
                             Text(
-                                text = FontImportFailureText.visibleLine(
-                                    failure.fileName,
-                                    failure.reason,
-                                    genericSource,
+                                text = stringResource(
+                                    if (state.showImportFailures) {
+                                        Res.string.font_import_hide_failures
+                                    } else {
+                                        Res.string.font_import_show_failures
+                                    },
                                 ),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
                             )
+                        }
+                        AnimatedVisibility(
+                            visible = state.showImportFailures,
+                            enter = fadeIn(fadeSpec) + expandVertically(animationSpec = sizeSpec),
+                            exit = fadeOut(fadeSpec) + shrinkVertically(animationSpec = sizeSpec),
+                        ) {
+                            val genericSource = stringResource(Res.string.font_import_generic_source)
+                            Column {
+                                result.failed.take(8).forEach { failure ->
+                                    Text(
+                                        text = FontImportFailureText.visibleLine(
+                                            failure.fileName,
+                                            failure.reason,
+                                            genericSource,
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                }
+                            }
                         }
                     }
                 }
