@@ -110,15 +110,18 @@ jobs:
 
       - name: Sign apk release
         id: sign_apk
-        uses: r0adkll/sign-android-release@dbeba6b98a60b0fd540c02443c7f428cdedf0e7f # v1.0.4
         env:
           BUILD_TOOLS_VERSION: "37.0.0"
-        with:
-          releaseDirectory: app/build/outputs/apk/release/renamed
-          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-          alias: ${{ secrets.ALIAS }}
-          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          ALIAS: ${{ secrets.ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          # S4d-362: CopyRenamedApkTask output (assembleRelease finalizedBy copyRenamedReleaseApk)
+          # ADR-0036: pin R8 pg-map-id on the unsigned APK, then sign with alignment preserved.
+          bash .github/scripts/pin-release-pg-map-id.sh app/build/outputs/apk/release/renamed
+          bash .github/scripts/sign-release-apk.sh app/build/outputs/apk/release/renamed
 
       - name: Sign bundle release
         id: sign_bundle
