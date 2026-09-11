@@ -206,6 +206,13 @@ jobs:
       - name: Build app bundle release (AAB)
         run: ./gradlew ${{ env.main_project_module }}:bundleRelease ${{ env.CI_GRADLE_ARG_PROPERTIES }}
 
+      - name: Pin apk pg-map-id
+        run: |
+          set -euo pipefail
+          # S4d-362: CopyRenamedApkTask output (assembleRelease finalizedBy copyRenamedReleaseApk)
+          # ADR-0036: pin R8 pg-map-id on the unsigned APK (no signing secrets).
+          bash .github/scripts/pin-release-pg-map-id.sh app/build/outputs/apk/release/renamed
+
       - name: Sign apk release
         id: sign_apk
         env:
@@ -216,9 +223,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          # S4d-362: CopyRenamedApkTask output (assembleRelease finalizedBy copyRenamedReleaseApk)
-          # ADR-0036: pin R8 pg-map-id on the unsigned APK, then sign with alignment preserved.
-          bash .github/scripts/pin-release-pg-map-id.sh app/build/outputs/apk/release/renamed
+          # ADR-0036: sign the already-pinned APK with alignment preserved.
           bash .github/scripts/sign-release-apk.sh app/build/outputs/apk/release/renamed
 
       - name: Sign bundle release

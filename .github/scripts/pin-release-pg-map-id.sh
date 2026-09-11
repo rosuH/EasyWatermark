@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Pin R8 pg-map-id on the unsigned GitHub/Build-packages APK (ADR-0036).
-# Clones fdroid/reproducible-apk-tools v0.3.2 at runtime; do not vendor it.
+# Fetches fdroid/reproducible-apk-tools at a pinned commit; do not vendor it.
 set -euo pipefail
 
 PINNED_PG_MAP_ID=0000000000000000000000000000000000000000000000000000000000000000
 TOOLS_REPO=https://gitlab.com/fdroid/reproducible-apk-tools.git
 TOOLS_REF=v0.3.2
+TOOLS_COMMIT=ca728486d42a79f1c9ec0c6ec755c39f251911a8
 
 if [[ $# -ne 1 ]]; then
   echo "Usage: $0 <unsigned-apk-directory>" >&2
@@ -49,9 +50,18 @@ trap cleanup EXIT
 
 tools_dir="$(mktemp -d)"
 tools="${tools_dir}/reproducible-apk-tools"
-GIT_TERMINAL_PROMPT=0 git -c advice.detachedHead=false clone --depth 1 --branch "${TOOLS_REF}" "${TOOLS_REPO}" "${tools}"
+mkdir -p "${tools}"
+git -C "${tools}" init -q
+git -C "${tools}" remote add origin "${TOOLS_REPO}"
+GIT_TERMINAL_PROMPT=0 git -C "${tools}" fetch --depth 1 origin "${TOOLS_COMMIT}"
+git -C "${tools}" -c advice.detachedHead=false checkout --detach FETCH_HEAD
+got="$(git -C "${tools}" rev-parse HEAD)"
+if [[ "${got}" != "${TOOLS_COMMIT}" ]]; then
+  echo "ERROR: expected ${TOOLS_REF} commit ${TOOLS_COMMIT}, got ${got}" >&2
+  exit 1
+fi
 if [[ ! -f "${tools}/inplace-fix.py" || ! -f "${tools}/zipalign.py" ]]; then
-  echo "ERROR: ${TOOLS_REF} clone missing inplace-fix.py or zipalign.py" >&2
+  echo "ERROR: ${TOOLS_COMMIT} checkout missing inplace-fix.py or zipalign.py" >&2
   exit 1
 fi
 

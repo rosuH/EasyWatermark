@@ -15,7 +15,7 @@ The next GitHub Release APK (and Build-packages signed APK) pins the id to 64 ze
 
 Order is fixed:
 
-1. `inplace-fix.py fix-pg-map-id` on the unsigned APK (clone `reproducible-apk-tools` v0.3.2 at CI runtime; do not vendor the AGPL tools).
+1. `inplace-fix.py fix-pg-map-id` on the unsigned APK (fetch `reproducible-apk-tools` v0.3.2 / `ca728486d42a79f1c9ec0c6ec755c39f251911a8` at CI runtime; do not vendor the AGPL tools). The pin step must not see signing secrets.
 2. `zipalign.py --page-size 16 --pad-like-apksigner --replace`
 3. `apksigner sign --alignment-preserved true`, then `apksigner verify` and `zipalign -c -P 16 -v 4`
 
