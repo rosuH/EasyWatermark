@@ -40,7 +40,11 @@ mismatch. See the hub.
 - **Positive:** serial Android splash → Launch; iOS first paint matches the product fill.
   Owner confirmed the iOS path feels much faster on device (olive from the first pixel).
 - **Trade-off:** Android TTFD (`reportFullyDrawn`) stays at fade end; splash no longer
-  dismisses on first Compose frame. API 23–30 still uses the default splash theme
-  parent (not `Theme.SplashScreen`).
+  dismisses on first Compose frame.
+- **Amendment (2026-09-11, #424):** API 23–30 must use a `Theme.SplashScreen` starting
+  theme. `setOnExitAnimationListener` inflates `splash_screen_view`, which resolves
+  `?attr/splashScreenIconSize`. `Theme.MyApp` alone crashes that inflation (Android 11
+  launch). `MainActivity` now uses `Theme.MyApp.Splash` (`postSplashScreenTheme` =
+  `Theme.MyApp`). Olive fill and default launcher icon are unchanged.
 - **Revert path:** drop hold + splash keep condition; iOS plist can revert to an empty
   `UILaunchScreen` dict (that regresses to `systemBackground` — do not do this casually).
