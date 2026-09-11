@@ -68,7 +68,7 @@
     <string name="dialog_open_in_gallery">在相册中查看</string>
     <string name="dialog_save_config_format">格式</string>
     <string name="dialog_save_config_quality">质量</string>
-    <string name="pick_via_system">Choose more…</string>
+    <string name="pick_via_system">更多…</string>
     <string name="recovery_title">恢复模式</string>
     <string name="copy_success">复制成功</string>
     <string name="copy_failed">复制失败</string>
@@ -96,4 +96,13 @@
     <string name="inspector_section_look">外观</string>
     <string name="inspector_section_gaps">间距</string>
     <string name="tips_low_resolution_source">原图像素较低 · %1$d × %2$d</string>
+    <string name="desktop_save_as">另存为…</string>
+    <string name="desktop_save_as_dialog_title">另存为</string>
+    <string name="desktop_export">导出</string>
+    <string name="desktop_choose_folder">选择文件夹…</string>
+    <string name="dialog_save_cancel_export">取消导出</string>
+    <string name="dialog_save_error_cancelled">导出已取消。</string>
+    <string name="dialog_save_error_generic">保存失败，请重试。</string>
+    <string name="cd_selected">已选</string>
+    <string name="cd_unselected">未选</string>
 </resources>
