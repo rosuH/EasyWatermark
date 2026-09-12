@@ -13,6 +13,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -120,6 +121,7 @@ private val FontPanelSearchIconSize = 20.dp
 private val FontPanelSheetHandleAllowance = 56.dp
 private val FontPanelEditorPeek = 24.dp
 private val FontPanelStackBelow = 280.dp
+private val FontPanelCompactHeaderMaxHeight = 400.dp
 private val FontPanelActionPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
 
 private enum class FontViewportMode { Loading, Error, Empty, NoMatch, List }
@@ -148,7 +150,7 @@ fun FontPanel(
         .coerceAtLeast(FontPanelMinHeight)
         .let { if (useLargeDialog) minOf(it, 720.dp) else it }
     val stackActions = windowWidth - 40.dp < FontPanelStackBelow
-    Column(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
             .height(budget)
@@ -158,99 +160,115 @@ fun FontPanel(
             .padding(bottom = 16.dp)
             .testTag(FONT_PANEL_TAG),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp, bottom = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(Res.string.font_panel_title),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            IconButton(
-                onClick = { onEvent(FontPanelEvent.Dismiss) },
-                modifier = Modifier
-                    .testTag("editorFontClose")
-                    .semantics { contentDescription = closeCd },
-            ) {
-                Icon(
-                    painter = SharedProductDrawables.closePainter(),
-                    contentDescription = closeCd,
-                )
-            }
-        }
-
-        val motionPolicy = currentMotionPolicy()
-        val fadeMs = motionDurationMs(motionPolicy, EwmTheme.motion.optionPanelFadeMs)
-        val sizeMs = motionDurationMs(motionPolicy, EwmTheme.motion.contentSizeMs)
-        val fadeSpec = tween<Float>(durationMillis = fadeMs, easing = FastOutSlowInEasing)
-        val sizeSpec = tween<IntSize>(durationMillis = sizeMs, easing = FastOutSlowInEasing)
-        AnimatedVisibility(
-            visible = state.unavailableMessage != null,
-            enter = fadeIn(fadeSpec) + expandVertically(animationSpec = sizeSpec),
-            exit = fadeOut(fadeSpec) + shrinkVertically(animationSpec = sizeSpec),
-        ) {
-            val message = state.unavailableMessage.orEmpty()
-            Text(
-                text = message.ifBlank { stringResource(Res.string.font_unavailable) },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
+        // Use the space left after window/IME insets, never the filtered result count.
+        val compactHeader = maxHeight < FontPanelCompactHeaderMaxHeight
+        Column(Modifier.fillMaxSize()) {
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 8.dp)
-                    .testTag("editorFontUnavailable"),
+                    .padding(top = if (compactHeader) 0.dp else 12.dp, bottom = if (compactHeader) 0.dp else 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (compactHeader) {
+                    DefaultFontRow(
+                        selected = state.selectedRef is WatermarkFontRef.Default && state.pendingRef == null,
+                        pending = state.pendingRef is WatermarkFontRef.Default,
+                        onClick = { onEvent(FontPanelEvent.Select(WatermarkFontRef.Default)) },
+                        modifier = Modifier.weight(1f),
+                    )
+                } else {
+                    Text(
+                        text = stringResource(Res.string.font_panel_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                IconButton(
+                    onClick = { onEvent(FontPanelEvent.Dismiss) },
+                    modifier = Modifier
+                        .testTag("editorFontClose")
+                        .semantics { contentDescription = closeCd },
+                ) {
+                    Icon(
+                        painter = SharedProductDrawables.closePainter(),
+                        contentDescription = closeCd,
+                    )
+                }
+            }
+
+            val motionPolicy = currentMotionPolicy()
+            val fadeMs = motionDurationMs(motionPolicy, EwmTheme.motion.optionPanelFadeMs)
+            val sizeMs = motionDurationMs(motionPolicy, EwmTheme.motion.contentSizeMs)
+            val fadeSpec = tween<Float>(durationMillis = fadeMs, easing = FastOutSlowInEasing)
+            val sizeSpec = tween<IntSize>(durationMillis = sizeMs, easing = FastOutSlowInEasing)
+            AnimatedVisibility(
+                visible = state.unavailableMessage != null,
+                enter = fadeIn(fadeSpec) + expandVertically(animationSpec = sizeSpec),
+                exit = fadeOut(fadeSpec) + shrinkVertically(animationSpec = sizeSpec),
+            ) {
+                val message = state.unavailableMessage.orEmpty()
+                Text(
+                    text = message.ifBlank { stringResource(Res.string.font_unavailable) },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                        .testTag("editorFontUnavailable"),
+                )
+            }
+
+            if (!compactHeader) {
+                DefaultFontRow(
+                    selected = state.selectedRef is WatermarkFontRef.Default && state.pendingRef == null,
+                    pending = state.pendingRef is WatermarkFontRef.Default,
+                    onClick = { onEvent(FontPanelEvent.Select(WatermarkFontRef.Default)) },
+                )
+            }
+            HorizontalDivider()
+
+            DesignChoiceChips(
+                options = listOf(
+                    DesignChoiceOption(
+                        label = stringResource(Res.string.font_tab_system),
+                        value = FontSourceTab.System,
+                    ),
+                    DesignChoiceOption(
+                        label = stringResource(Res.string.font_tab_imported),
+                        value = FontSourceTab.Imported,
+                    ),
+                ),
+                selected = state.sourceTab,
+                onSelected = { onEvent(FontPanelEvent.SourceTab(it)) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+                    .testTag("editorFontSourceTabs"),
+                equalWidth = true,
+            )
+
+            FontSearchField(
+                query = state.searchQuery,
+                onEvent = onEvent,
+            )
+
+            FontListBody(
+                state = state,
+                sampleFamilies = sampleFamilies,
+                onSelect = { onEvent(FontPanelEvent.Select(it)) },
+                onVisible = { onEvent(FontPanelEvent.VisibleEntries(it)) },
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+            )
+
+            ImportFooter(
+                state = state,
+                onEvent = onEvent,
+                stackActions = stackActions,
             )
         }
-
-        DefaultFontRow(
-            selected = state.selectedRef is WatermarkFontRef.Default && state.pendingRef == null,
-            pending = state.pendingRef is WatermarkFontRef.Default,
-            onClick = { onEvent(FontPanelEvent.Select(WatermarkFontRef.Default)) },
-        )
-
-        DesignChoiceChips(
-            options = listOf(
-                DesignChoiceOption(
-                    label = stringResource(Res.string.font_tab_system),
-                    value = FontSourceTab.System,
-                ),
-                DesignChoiceOption(
-                    label = stringResource(Res.string.font_tab_imported),
-                    value = FontSourceTab.Imported,
-                ),
-            ),
-            selected = state.sourceTab,
-            onSelected = { onEvent(FontPanelEvent.SourceTab(it)) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp)
-                .testTag("editorFontSourceTabs"),
-            equalWidth = true,
-        )
-
-        FontSearchField(
-            query = state.searchQuery,
-            onEvent = onEvent,
-        )
-
-        FontListBody(
-            state = state,
-            sampleFamilies = sampleFamilies,
-            onSelect = { onEvent(FontPanelEvent.Select(it)) },
-            onVisible = { onEvent(FontPanelEvent.VisibleEntries(it)) },
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-        )
-
-        ImportFooter(
-            state = state,
-            onEvent = onEvent,
-            stackActions = stackActions,
-        )
     }
 }
 
@@ -259,10 +277,11 @@ private fun DefaultFontRow(
     selected: Boolean,
     pending: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val selectedCd = stringResource(Res.string.cd_font_selected)
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
             .clickable(onClick = onClick)
@@ -291,7 +310,6 @@ private fun DefaultFontRow(
             )
         }
     }
-    HorizontalDivider()
 }
 
 @Composable

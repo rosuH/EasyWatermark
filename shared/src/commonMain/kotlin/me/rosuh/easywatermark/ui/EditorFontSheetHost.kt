@@ -107,8 +107,12 @@ fun EditorFontSheetHost(
                 } else {
                     hiding = true
                     scope.launch {
-                        sheetState.hide()
-                        finishDismiss()
+                        try {
+                            sheetState.hide()
+                            if (!sheetState.isVisible) finishDismiss()
+                        } finally {
+                            hiding = false
+                        }
                     }
                 }
             }
