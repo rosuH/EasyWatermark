@@ -2,15 +2,15 @@
 
 Guidance for agents working in this repository. `CLAUDE.md` is a symlink to this file.
 
-This file is the always-on contract. Put ticket history, platform essays, and research notes elsewhere — update this file only when a durable agent rule changes.
+Keep this always-on contract limited to durable project constraints. Put task history, detailed workflows, and research in linked docs; keep guidance useful across models.
 
 ## Working together
 
-- **Follow through:** infer routine details from the current request and verified context, state material assumptions, and finish authorized work. Ask only when missing input changes scope, correctness, or authorization; continue independent work while waiting. Treat mid-task corrections as updates to the active task unless the user cancels it.
-- **Delegate:** for substantial work, the lead agent clarifies scope, decomposes tasks, dispatches, and accepts results. Use available subagents for extensive reading, implementation, batch edits, and test execution; parallelize independent work. Give each worker a bounded task, file ownership, constraints, and acceptance evidence. Workers share the workspace: preserve others' edits. Keep trivial tasks local unless the user requests delegation; if delegation is unavailable, report the limitation and honor any explicit role restriction.
-- **Verify:** accept worker results against the current diff and relevant test or runtime evidence. Run checks proportional to the change and required gates; repeat only after relevant edits, failures, or unresolved concerns. Documentation-only changes need static checks, not Gradle/Xcode. UI/performance claims still need the applicable visual and physical-device evidence; record missing evidence as pending.
-- **Communicate:** use concise, plain language in user and agent messages. Lead with the outcome, explain relevant changes and checks, and state remaining limitations without repeated status or invented labels.
-- **Scope:** preserve existing work and authorization boundaries. Tool permissions are not permission to publish, send messages, merge, or perform destructive cleanup; obtain user authorization when it is not already present. Historical mission files are evidence, not current instructions, unless the user explicitly resumes that mission; reconcile their rules with the current request and this file first.
+- **Complete the task:** derive completion from the requested outcome, including applicable checks and runtime inspection. Continue through failures caused by the change; a first implementation is not completion. Infer routine details, state material assumptions, and ask only when missing input changes scope, correctness, or authorization. Incorporate mid-task corrections without dropping unfinished work.
+- **Delegate:** for substantial work, the lead owns scope and acceptance; subagents handle bounded reading, implementation, batch edits, and tests. Assign file ownership, constraints, and acceptance evidence; parallelize independent work and preserve others' edits. Keep trivial tasks local. If delegation is unavailable, report it and honor explicit role restrictions.
+- **Verify:** inspect the current diff and relevant evidence, not worker status alone. Run affected checks and required gates; repeat only after relevant edits, failures, or unresolved concerns. Docs-only changes need static checks. UI/performance claims need applicable visual and physical-device evidence; mark missing evidence pending.
+- **Communicate:** lead with the outcome, relevant changes, checks, and remaining limitations in concise, plain language.
+- **Authorization:** requested local edits, checks, and fixes may proceed without repeated approval. Preserve unrelated work. Publishing, messaging, merging, and destructive cleanup require user authorization, which may already be present in the session. While awaiting missing input, continue independent authorized work.
 
 ## Product
 
@@ -32,6 +32,8 @@ Privacy that shapes code: Android needs no runtime permission on API 29+ (pre-29
 
 ## Read when
 
+Load only the context needed for the task. Use these routes when relevant; a small edit does not require a full repository or documentation review.
+
 | When | Open |
 |---|---|
 | Domain words, invariants, retired terms | `docs/CONTEXT.md` |
@@ -41,26 +43,26 @@ Privacy that shapes code: Android needs no runtime permission on API 29+ (pre-29
 | GitHub label names | `docs/agents/triage-labels.md` |
 | Android / KMP API (not training data) | `android docs search '<query>'` then `android docs fetch` |
 
-Do not start sessions from `task_plan.md`, `findings.md`, `progress.md`, or `docs/superpowers/research/`.
+Start from the current request and relevant sources above. Historical mission files such as `task_plan.md`, `findings.md`, and `progress.md`, plus notes in `docs/superpowers/research/`, are evidence, not active instructions, unless the user resumes that work; reconcile it with the current request and this contract.
 
 ## Commands
 
+Run from the repository root; choose commands for the task rather than running the list. Replace `/absolute/path/to/image.jpg` with an existing image.
+
 ```bash
-./gradlew :app:assembleDebug
-./gradlew :app:testDebugUnitTest
-./gradlew :shared:desktopTest
-./gradlew :shared:iosSimulatorArm64Test          # macOS only
-./gradlew :app:connectedDebugAndroidTest
-./gradlew :desktopApp:run
-./gradlew :desktopApp:run --args='--headless'
-./gradlew :desktopApp:run -PewmAutoOpen=<abs image>
+./gradlew --max-workers=8 :app:assembleDebug
+./gradlew --max-workers=8 :app:testDebugUnitTest
+./gradlew --max-workers=8 :shared:desktopTest
+./gradlew --max-workers=8 :shared:iosSimulatorArm64Test # macOS only
+./gradlew --max-workers=8 :app:connectedDebugAndroidTest
+./gradlew --max-workers=8 :desktopApp:run
+./gradlew --max-workers=8 :desktopApp:run --args='--headless'
+./gradlew --max-workers=8 :desktopApp:run '-PewmAutoOpen=/absolute/path/to/image.jpg'
 ```
 
 Debug `applicationId` is `me.rosuh.easywatermark.debug` (installs beside production). SDK: `Apps.compileSdk` 37, `targetSdk` 36, `minSdk` 23, JVM 17. No Spotless/ktlint — match existing style. PR CI: Ubuntu `assembleDebug` + `desktopTest` + non-strict `testDebugUnitTest`; macOS iOS job. Docs/assets-only PRs still start `PR Checks` so the two required job names report success; Gradle/Xcode run only when a product path changes. `lintDebug` is fail-open. Do not add `WATERMARK_GOLDEN_STRICT=true` to PR CI (ADR-0010). Unsigned Desktop packaging is not a PR required check (ADR-0031).
 
 ## Rules
-
-Pair every “don’t” with the replacement.
 
 - **UI:** new product UI in `shared/commonMain/ui/`. Native UI only for app/window entry, pickers, share/save/permissions, capability glue, and renderer surfaces. Do not reintroduce `ViewInfo` or an `AndroidView` renderer.
 - **Models:** keep `android.graphics.*` and `android.net.Uri` out of commonMain. Cross-platform identity is `MediaRef`. Android `Uri` stays only at picker/gallery/save/decode edges.
@@ -83,9 +85,9 @@ Pair every “don’t” with the replacement.
 
 ## Skills
 
-Skills are the playbook. When a task matches one, open its `SKILL.md` and follow it before improvising. Name the skill in the plan. Explicit user instructions take precedence over skill guidelines, subject to system/developer constraints. If a skill causes a pause, confirmation request, or divergence, link the exact `SKILL.md`, quote the instruction, and distinguish its requirement from your interpretation; continue authorized work when no actual blocker exists. Official Google Android skills: refresh with `android update` and `android skills add --all --project=.` — do not hand-edit `SKILL.md` / `references/`.
+Use explicitly requested skills or skills whose workflow matches the task, not merely a related keyword. Read the selected `SKILL.md`, then only supporting files needed for that workflow; name the skill when first used. Explicit user instructions take precedence over skill guidelines, subject to system/developer constraints. If a skill blocks authorized work, link and quote the exact rule and distinguish it from your interpretation; otherwise continue.
 
-Mirrored under `skills/`, `.claude/skills/`, and `.agents/skills/`. Compose / HotSwan skills live under `.agents/skills/`.
+Skills are mirrored under `skills/`, `.claude/skills/`, and `.agents/skills/`; read one copy. Compose / HotSwan skills live under `.agents/skills/`. For skill maintenance, see `docs/agents/workflow.md`.
 
 | Situation | Skill |
 |---|---|
@@ -94,14 +96,12 @@ Mirrored under `skills/`, `.claude/skills/`, and `.agents/skills/`. Compose / Ho
 | System bars / IME / cutout | `edge-to-edge` |
 | Nav / multi-pane scenes | `navigation-3` |
 | Large-screen / foldable | `adaptive` |
-| Test harness | `testing-setup` |
+| Create or change a test harness | `testing-setup` |
 | Emulator, screenshot, docs KB | `android-cli` |
 | R8 / keep rules | `r8-analyzer` |
 | Jank / startup / traces | `android-profiler` → `perfetto-trace-analysis` |
 | Play Data Safety | `play-policy-insights` |
 | Recompose / stability | `auditing-compose-performance` |
-
-Skip the catalog for pure domain/session/render work with no platform-skill match.
 
 ## Cursor Cloud
 
