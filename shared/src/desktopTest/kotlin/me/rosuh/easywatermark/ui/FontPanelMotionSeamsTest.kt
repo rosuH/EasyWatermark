@@ -39,6 +39,9 @@ class FontPanelMotionSeamsTest {
             "shared/src/commonMain/kotlin/me/rosuh/easywatermark/ui/EditorFontSheetHost.kt",
         )
         assertTrue(host.contains("sheetState.hide()"), "sheet Done must hide before dispose")
+        assertTrue(host.contains("if (!sheetState.isVisible) finishDismiss()"), "only a hidden sheet finishes dismiss")
+        assertTrue(host.contains("hiding = false"), "cancelled hide must release the close guard")
+        assertTrue(host.contains("finally"), "hide guard resets even if hide is cancelled")
         assertTrue(host.contains("closeRequest"), "dialog Done must bump closeRequest")
         assertTrue(host.contains("optionPanelSlideMs"), "sheet Off path honors MotionPolicy")
         assertTrue(host.contains("motionDurationMs"), "host scales durations")
@@ -46,6 +49,21 @@ class FontPanelMotionSeamsTest {
             Regex("""if\s*\(\s*event\s+is\s+FontPanelEvent\.Dismiss\s*\)\s*\{\s*dismiss\(\)""").containsMatchIn(host),
             "Dismiss must not unmount the host immediately",
         )
+    }
+
+    @Test
+    fun compact_header_uses_remaining_height_not_query() {
+        val panel = read(
+            "shared/src/commonMain/kotlin/me/rosuh/easywatermark/ui/compose/FontPanel.kt",
+        )
+        assertTrue(panel.contains("BoxWithConstraints"), "IME remaining height is measured")
+        assertTrue(panel.contains("FontPanelCompactHeaderMaxHeight"), "compact threshold is window/IME height")
+        val compactLine = panel.lineSequence().first { line ->
+            line.contains("compactHeader") && line.contains("maxHeight")
+        }
+        assertFalse(compactLine.contains("searchQuery"), "query must not drive outer height")
+        assertFalse(compactLine.contains("filter"), "result count must not drive outer height")
+        assertTrue(panel.contains(".height(budget)"), "outer panel height stays window-based")
     }
 
     @Test
@@ -61,6 +79,7 @@ class FontPanelMotionSeamsTest {
         assertTrue(panel.contains("expandVertically"), "footer/unavailable occupy inner space")
         assertTrue(panel.contains("contentSizeMs"), "inner space uses contentSizeMs")
         assertTrue(panel.contains(".height(budget)"), "outer panel height stays window-based")
+        assertTrue(panel.contains("FontPanelCompactHeaderMaxHeight"), "compact IME header uses remaining height")
         assertFalse(panel.contains("animateContentSize"), "do not animate the sheet height")
         assertTrue(panel.contains("FastOutSlowInEasing"), "existing easing, not a new curve")
         assertTrue(panel.contains("motionDurationMs"), "inner motion honors MotionPolicy")

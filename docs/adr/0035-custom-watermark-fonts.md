@@ -1,6 +1,8 @@
 # ADR-0035：三端自定义水印字体
 
-**Status:** Accepted — owner-approved 2026-09-05; implementation in progress on `codex/custom-watermark-fonts`
+**Status:** Accepted — owner-approved 2026-09-05; implementation on `codex/custom-watermark-fonts` (attempt 9 runtime evidence)
+
+**Amended:** 2026-09-12 — local name search, window-based panel height, and compact IME header are in-scope product requirements. The original UI plan’s “no search” item is superseded.
 
 **Date:** 2026-09-05
 
@@ -185,7 +187,7 @@ Android `previewFingerprint()` 必须纳入 `fontRef`；三端 cell 请求与发
 
 新增共享 `EditorFontSheetHost`，沿用 `EditorTemplateSheetHost` 的数据与回调注入方式；平台 Host 持有面板开关、来源加载状态、导入进度和选择序号，不抽取新的共享 ViewModel。当前字体的样式能力随成功解析结果更新；不支持的样式控件禁用并提供说明。
 
-面板含系统默认、系统字体和已导入字体，提供“从文件夹导入”。窄屏用现有 `EwmModalBottomSheet`，大界面经 `usesLargeScreenDialog` 路由到 `EwmContentDialog`。字体控制与原粗体/斜体控制独立；样例采用当前水印文字或默认样例，行名称需保持可读，不能因样例字体缺字而让名称也消失。
+面板含系统默认、系统字体和已导入字体，提供“从文件夹导入”。窄屏用现有 `EwmModalBottomSheet`，大界面经 `usesLargeScreenDialog` 路由到 `EwmContentDialog`。字体控制与原粗体/斜体控制独立；样例采用当前水印文字或默认样例，行名称需保持可读，不能因样例字体缺字而让名称也消失。后续产品要求增加本地名称搜索；外框按窗口预算固定，查询与结果数量不参与高度计算。IME/insets 后剩余高度不足 400dp 时，将默认项与关闭按钮合并一行，保证列表与底部操作仍可用。
 
 选中、忙碌、错误和禁用状态要有无障碍语义及可测试标识。文案放 shared composeResources，并同步默认英文到 Weblate 路径；不改非默认翻译，不把字体文件放进 composeResources。
 
@@ -212,7 +214,7 @@ Android `previewFingerprint()` 必须纳入 `fontRef`；三端 cell 请求与发
 - 测试中英文缺字、粗体/斜体、同名不同内容、相同内容不同文件名、失败导入和当前字体不可用。
 - Android/iOS 设备验证、Desktop 实际运行与 headless 验证。跨平台不要求字节相等；同一设备预览和导出必须使用相同字体来源及样式策略。
 
-本次为文档设计，不运行 Gradle/Xcode；以上均为未来实施验收，不能标记为已通过。
+上述验收由 `codex/custom-watermark-fonts` 的实现与运行证据覆盖；文档本身不再是“尚未实施”的占位。
 
 ## 9. 现有文件接入图
 
