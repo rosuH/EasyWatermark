@@ -73,7 +73,7 @@ Debug `applicationId` is `me.rosuh.easywatermark.debug` (installs beside product
 - **Render:** production path is `CommonWatermarkPipeline`. `:app` `WatermarkRenderer` is the measurement/golden oracle only. Text mode uses system-default fonts (ADR-0025) — no Noto in iOS or `desktopMain` resources.
 - **Theme:** `DynamicColorCapability` for wallpaper only. Content editor theme is a separate path (ADR-0027). Do not call `CMonet` from Compose screens.
 - **Editor layout:** dual-pane at **≥800 dp** via `editorLayoutClass` (ADR-0026). Route large-surface checks through `usesLargeScreenDialog`, never a raw width compare.
-- **Motion:** `EwmMotionTokens` + `motionDurationMs`. Android cold Launch fade starts after splash exit (ADR-0032). Filmstrip switch is a hard cut.
+- **Motion:** `EwmMotionTokens` + `motionDurationMs`. Android first Launch frame is opaque; iOS/Desktop keep the process-first fade (ADR-0032). Filmstrip switch is a hard cut.
 - **i18n:** product strings/icons live in `shared/.../composeResources/`. Dual-write default EN to Weblate’s `app/src/main/res/values/` as well. Never hand-edit non-default locales. Do not put watermark fonts or Room seed DBs in composeResources.
 - **iOS:** session holds Ready paths only. PhotoKit pixels never enter the pipeline, Session, or preview caches. Production framework is classic ObjC `Shared.framework` — do not migrate to Alpha Swift export. Prefer `internal` on implementation-only iosMain.
 - **Desktop:** app data is OS-native (`DesktopAppPaths`). macOS export folder uses native AWT directory `FileDialog`, not Swing `JFileChooser`.

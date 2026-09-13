@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -68,6 +67,8 @@ val LocalShellObscured = staticCompositionLocalOf { false }
  * [LaunchScreenState.aboutReturnUiState] mapped with [ProductShellNav.routeFromLaunchUi].
  * @param chromeColor Optional letterbox fill. Desktop passes window chrome so title band and body
  * share one source under content editor theme (ADR-0027 option B). Null → [editorChromeColor].
+ * @param playProcessFirstReveal When true (iOS / Desktop), the first Launch in this process
+ * fades in. Android passes false so the first frame is opaque (2.x; no splash handshake).
  */
 @Composable
 fun ProductShellHost(
@@ -75,6 +76,7 @@ fun ProductShellHost(
     modifier: Modifier = Modifier,
     chromeColor: Color? = null,
     aboutReturn: ProductShellNav.Route = ProductShellNav.Route.Launch,
+    playProcessFirstReveal: Boolean = true,
     content: @Composable (route: ProductShellNav.Route) -> Unit,
 ) {
     StartupTrace.markOnce("shell_composed")
@@ -87,24 +89,13 @@ fun ProductShellHost(
     val baseRoute = ProductShellNav.overlayBase(route, aboutReturn)
     val playColdLaunch = remember { ColdLaunchReveal.observeFirstBase(baseRoute) }
     val coldMs = motionDurationMs(motionPolicy, EwmTheme.motion.shellShortMs)
-    val animateCold = playColdLaunch && coldMs > 0
+    val animateCold = playProcessFirstReveal && playColdLaunch && coldMs > 0
     val coldAlpha = remember { Animatable(if (animateCold) 0f else 1f) }
     val coldScale = remember {
         Animatable(if (animateCold) EwmTheme.motion.contentEnterScale else 1f)
     }
     var coldLayerActive by remember { mutableStateOf(animateCold) }
-    var released by remember { mutableStateOf(!ColdLaunchReveal.isHostHoldActive()) }
-    DisposableEffect(Unit) {
-        if (!ColdLaunchReveal.isHostHoldActive()) {
-            released = true
-        }
-        ColdLaunchReveal.setHoldListener { released = true }
-        onDispose { ColdLaunchReveal.setHoldListener(null) }
-    }
-    LaunchedEffect(released) {
-        if (animateCold && !released) {
-            return@LaunchedEffect
-        }
+    LaunchedEffect(Unit) {
         if (animateCold) {
             coroutineScope {
                 launch {

@@ -95,15 +95,20 @@ class RestrainedMotionSeamsTest {
         val launch = read(
             "shared/src/commonMain/kotlin/me/rosuh/easywatermark/ui/LaunchScreen.kt",
         )
+        val androidHost = read(
+            "app/src/main/java/me/rosuh/easywatermark/ui/MainActivity.kt",
+        )
         assertTrue(gate.contains("shouldPlay"))
         assertTrue(gate.contains("observeFirstBase"))
-        assertTrue(gate.contains("requestHostHold"))
-        assertTrue(gate.contains("releaseHostHold"))
-        assertTrue(gate.contains("isHostHoldActive"))
+        assertFalse(gate.contains("requestHostHold"))
+        assertFalse(gate.contains("releaseHostHold"))
+        assertFalse(gate.contains("isHostHoldActive"))
         assertTrue(host.contains("ColdLaunchReveal.observeFirstBase"))
-        assertTrue(host.contains("isHostHoldActive"))
+        assertTrue(host.contains("playProcessFirstReveal"))
         assertTrue(host.contains("contentEnterScale"))
         assertTrue(host.contains("coldLayerActive"))
+        assertTrue(androidHost.contains("playProcessFirstReveal = false"))
+        assertFalse(androidHost.contains("installSplashScreen"))
         assertFalse(
             launch.contains("ColdLaunchReveal") || launch.contains("contentEnterScale"),
             "do not one-shot cold reveal on LaunchScreen first composition",

@@ -120,25 +120,6 @@ class ProductShellNavTest {
     }
 
     @Test
-    fun coldLaunchReveal_holdActive_untilRelease() {
-        ColdLaunchReveal.resetForTests()
-        ColdLaunchReveal.requestHostHold()
-        assertEquals(true, ColdLaunchReveal.isHostHoldActive())
-        assertEquals(
-            true,
-            ColdLaunchReveal.shouldPlay(
-                consumed = false,
-                firstBaseRoute = ProductShellNav.Route.Launch,
-            ),
-        )
-        ColdLaunchReveal.releaseHostHold()
-        assertEquals(false, ColdLaunchReveal.isHostHoldActive())
-        ColdLaunchReveal.requestHostHold()
-        ColdLaunchReveal.resetForTests()
-        assertEquals(false, ColdLaunchReveal.isHostHoldActive())
-    }
-
-    @Test
     fun coldLaunchReveal_onlyFirstUnconsumedLaunch() {
         assertEquals(
             true,
