@@ -31,9 +31,6 @@ object StartupTrace {
     /** Android host sets this to [android.app.Activity.reportFullyDrawn]. */
     var fullyDrawnListener: (() -> Unit)? = null
 
-    /** Android host sets this to drop the system splash after Launch layout. */
-    var firstScreenListener: (() -> Unit)? = null
-
     fun isEnabled(): Boolean = startupTraceEnabled()
 
     fun elapsedMs(): Long = epoch.elapsedNow().inWholeMilliseconds
@@ -53,7 +50,6 @@ object StartupTrace {
         markOnce("first_screen")
         if (firstScreen) return
         firstScreen = true
-        firstScreenListener?.invoke()
         maybeFullyDrawn()
     }
 
@@ -68,7 +64,6 @@ object StartupTrace {
         firstScreen = false
         revealDone = false
         fullyDrawnListener = null
-        firstScreenListener = null
     }
 
     private fun maybeFullyDrawn() {

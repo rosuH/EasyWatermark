@@ -2,8 +2,8 @@
 
 **日期：** 2026-08-26  
 **分支：** `feat/migrate_to_compose`  
-**状态：** 已落地。Owner 在 iPhone 16 Pro（`rosu的iPhone`，iOS 27）上确认启动观感明显变快。  
-**决策：** [ADR-0032](../../adr/0032-android-splash-then-launch-fade-serial.md)（Accepted）
+**状态：** 历史证据。2026-09-13 已撤掉 Android `installSplashScreen` / host hold；第一帧实底 Launch（2.x）。iOS / Desktop 淡入仍在。  
+**决策：** [ADR-0032](../../adr/0032-android-splash-then-launch-fade-serial.md)（Accepted；2026-09-13 修订）
 
 本文是这次冷启动工作的**入口**。数字、时序、计划原文仍在下面的专题稿里，不要把它们再抄一遍。
 

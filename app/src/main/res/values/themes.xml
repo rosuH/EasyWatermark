@@ -2,19 +2,10 @@
 
     <style name="Theme.MyApp" parent="Theme.BaseTheme"/>
 
-    <!--
-      Starting theme for MainActivity. core-splashscreen inflates splash_screen_view
-      on API 23–30 and resolves ?attr/splashScreenIconSize from Theme.SplashScreen.
-      Theme.MyApp alone crashes that inflation on Android 11 (#424).
-    -->
-    <style name="Theme.MyApp.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/splash_screen_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
-        <item name="postSplashScreenTheme">@style/Theme.MyApp</item>
-    </style>
-
     <style name="Theme.BaseTheme" parent="Theme.Material3.Dark.NoActionBar">
         <item name="android:windowAnimationStyle">@style/WindowAnimationTransition</item>
+        <!-- Starting-window fill (API 23–30). API 31+ uses windowSplashScreenBackground. Not XML md_theme_dark_background. -->
+        <item name="android:windowBackground">@color/splash_screen_background</item>
         <item name="colorPrimary">@color/md_theme_dark_primary</item>
         <item name="colorOnPrimary">@color/md_theme_dark_onPrimary</item>
         <item name="colorPrimaryContainer">@color/md_theme_dark_primaryContainer</item>
