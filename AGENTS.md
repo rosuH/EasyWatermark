@@ -95,6 +95,7 @@ Skills are mirrored under `skills/`, `.claude/skills/`, and `.agents/skills/`; r
 | XML → Compose parity | `migrate-xml-views-to-jetpack-compose` |
 | System bars / IME / cutout | `edge-to-edge` |
 | Nav / multi-pane scenes | `navigation-3` |
+| Predictive Back / `BackHandler` | `navigation-event` |
 | Large-screen / foldable | `adaptive` |
 | Create or change a test harness | `testing-setup` |
 | Emulator, screenshot, docs KB | `android-cli` |

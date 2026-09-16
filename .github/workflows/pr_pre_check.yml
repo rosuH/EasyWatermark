@@ -55,6 +55,11 @@ jobs:
             if [[ "$f" == *.md || "$f" == fastlane/* || "$f" == static/* || "$f" == captures/* ]]; then
               continue
             fi
+            # Official / project skill mirrors: not product code. Wear samples
+            # ship as *.kt.md.txt, which would otherwise trip this gate.
+            if [[ "$f" == skills/* || "$f" == .agents/skills/* || "$f" == .claude/skills/* ]]; then
+              continue
+            fi
             product=true
             break
           done < <(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
@@ -105,6 +110,13 @@ jobs:
       - name: Set up Android SDK
         if: env.RUN_PRODUCT == 'true'
         uses: android-actions/setup-android@v3
+        with:
+          # Default packages are `tools platform-tools`. Google stopped serving
+          # the legacy `tools` package on 2026-09-15, so sdkmanager fails with
+          # "Failed to find package 'tools'". cmdline-tools already come from
+          # this action; only platform-tools is still needed.
+          # https://github.com/android-actions/setup-android/issues/537
+          packages: platform-tools
 
       - name: Set up Gradle
         if: env.RUN_PRODUCT == 'true'
