@@ -1,0 +1,6 @@
+context platform=android
+open me.rosuh.easywatermark.debug --relaunch
+wait label="恢复模式"
+press label="关闭恢复模式"
+wait label="选择图片"
+close

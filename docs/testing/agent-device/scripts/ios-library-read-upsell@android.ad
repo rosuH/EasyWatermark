@@ -1,0 +1,4 @@
+context platform=android
+open me.rosuh.easywatermark.debug --relaunch
+wait label="选择图片"
+close

@@ -1,0 +1,691 @@
+{
+  "source_path": "docs/testmap/map.yaml",
+  "cli_pin": "0.21.2",
+  "ingest_layers": [
+    "execution",
+    "script_checks",
+    "agent_observation",
+    "independent_review",
+    "human_confirmation",
+    "business"
+  ],
+  "notes": {
+    "replay_pass_is_not_product_pass": true,
+    "do_not_mint_human_confirmation": true,
+    "drive_never_upgrades_because_system_picker_was_walked": true,
+    "add_more_historical_business_failed": "20260912T140000-000c3f44",
+    "add_more_new_run_not_auto_failed": true,
+    "desktop_not_migrated": true,
+    "ignore_store_seed_nodes": true,
+    "ad_press_omits_settle": "agent-device 0.21.2 native .ad press/fill parser joins leftover --settle into the selector; --settle is CLI-only. Replay still waits for the next wait landmark."
+  },
+  "cases": [
+    {
+      "id": "pick-to-editor",
+      "title": "系统选图进入编辑器",
+      "edges": [
+        "pick-to-editor"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "home",
+      "verify": "export-one",
+      "supported": {
+        "android": true,
+        "ios": true
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/pick-to-editor@android.json",
+        "ios": "docs/testing/agent-device/scripts/pick-to-editor@ios.ad"
+      },
+      "honesty": "Android uses batch JSON, not .ad: Photo Picker cells have no filename and native .ad turns find --first into a positional, so replay hits AMBIGUOUS_MATCH. Batch find first:true clicks the first 照片拍摄于 recent (home setup just pushed fixtures), then 完成, then editor Save. Drive stays seam. zh-CN picker labels. Replay/batch pass is not a product pass."
+    },
+    {
+      "id": "share-in-to-editor",
+      "title": "系统分享输入进入编辑器",
+      "edges": [
+        "share-in-to-editor"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "editor",
+      "verify": "export-one",
+      "supported": {
+        "android": true,
+        "ios": false
+      },
+      "reason": {
+        "ios": "map.yaml ios.drive is none; ACTION_SEND share-in is Android-only."
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/share-in-to-editor@android.ad",
+        "ios": "docs/testing/agent-device/scripts/share-in-to-editor@ios.ad"
+      },
+      "honesty": "Android harness share-in (ACTION_SEND) is the entry; the script does not relaunch and does not walk a picker. That does not rewrite drive."
+    },
+    {
+      "id": "launch-to-about",
+      "title": "启动页往返关于",
+      "edges": [
+        "launch-to-about"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "home",
+      "verify": "ui-only",
+      "supported": {
+        "android": true,
+        "ios": true
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/launch-to-about@android.ad",
+        "ios": "docs/testing/agent-device/scripts/launch-to-about@ios.ad"
+      },
+      "honesty": "Launch-class open uses --relaunch. iOS scripts ignore store-seed-* nodes and wait for visible Choose Images / About / Version / Back. A leftover editor session after About Back is product state, reported as REPLAY_DIVERGENCE, not minted as human confirmation."
+    },
+    {
+      "id": "editor-to-about",
+      "title": "编辑器往返关于并保留内容",
+      "edges": [
+        "editor-to-about"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "editor",
+      "verify": "ui-only",
+      "supported": {
+        "android": true,
+        "ios": true
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/editor-to-about@android.ad",
+        "ios": "docs/testing/agent-device/scripts/editor-to-about@ios.ad"
+      },
+      "honesty": "Requires harness editor setup (Android ACTION_SEND / iOS editor session). Script must not --relaunch. About must be opened from the editor, not Launch."
+    },
+    {
+      "id": "launch-to-gallery",
+      "title": "内置图库选图",
+      "edges": [
+        "launch-to-gallery"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "home",
+      "verify": "ui-only",
+      "supported": {
+        "android": true,
+        "ios": false
+      },
+      "reason": {
+        "ios": "map.yaml ios.drive is none; in-app gallery is Android-only."
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/launch-to-gallery@android.ad",
+        "ios": "docs/testing/agent-device/scripts/launch-to-gallery@ios.ad"
+      },
+      "honesty": "Android script toggles Use in-app gallery from About; the toggle is not restored. A system permission dialog remains seam and does not upgrade drive."
+    },
+    {
+      "id": "editor-to-template-sheet",
+      "title": "模板新增、应用和删除",
+      "edges": [
+        "editor-to-template-sheet"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "editor",
+      "verify": "ui-only",
+      "supported": {
+        "android": true,
+        "ios": true
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/editor-to-template-sheet@android.ad",
+        "ios": "docs/testing/agent-device/scripts/editor-to-template-sheet@ios.ad"
+      },
+      "honesty": "Create/apply use a unique env TEMPLATE string. Multiple Delete buttons share a label, so the script does not press Delete; only this-run content is asserted. Do not assume an empty template list."
+    },
+    {
+      "id": "editor-to-text-edit-sheet",
+      "title": "文字编辑与真实导出",
+      "edges": [
+        "editor-to-text-edit-sheet"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "editor",
+      "verify": "export-one",
+      "supported": {
+        "android": true,
+        "ios": true
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/editor-to-text-edit-sheet@android.ad",
+        "ios": "docs/testing/agent-device/scripts/editor-to-text-edit-sheet@ios.ad"
+      },
+      "honesty": "Exact watermark text is env WATERMARK. Export file checks stay in the runner ingest layer. Replay pass is not product pass."
+    },
+    {
+      "id": "editor-to-custom-color-sheet",
+      "title": "自定义颜色确认与回读",
+      "edges": [
+        "editor-to-custom-color-sheet"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "editor",
+      "verify": "export-one",
+      "supported": {
+        "android": false,
+        "ios": true
+      },
+      "reason": {
+        "android": "Android native color wheel has no durable label/id/role; coordinates are forbidden."
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/editor-to-custom-color-sheet@android.ad",
+        "ios": "docs/testing/agent-device/scripts/editor-to-custom-color-sheet@ios.ad"
+      },
+      "honesty": "Android script only opens the custom swatch and waits. iOS fills the hex field. Do not claim RGB 00AABB from an unlabeled wheel. Historical round-2 result.json stays failed; file-recheck is a separate audit."
+    },
+    {
+      "id": "editor-to-save-export-sheet",
+      "title": "导出面板格式切换与取消",
+      "edges": [
+        "editor-to-save-export-sheet"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "editor",
+      "verify": "ui-only",
+      "supported": {
+        "android": true,
+        "ios": true
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/editor-to-save-export-sheet@android.ad",
+        "ios": "docs/testing/agent-device/scripts/editor-to-save-export-sheet@ios.ad"
+      },
+      "honesty": "UI round-trip only: JPEG then PNG, no export. close ends the session; it is not a product cancel proof by itself."
+    },
+    {
+      "id": "editor-to-icon-picker",
+      "title": "图片水印系统选择器",
+      "edges": [
+        "editor-to-icon-picker"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "editor",
+      "verify": "ui-only",
+      "supported": {
+        "android": false,
+        "ios": false
+      },
+      "reason": {
+        "android": "Icon picker destination is system UI; picker cells have no durable selector.",
+        "ios": "PhotosPicker grid cells are not addressable; PUPicker cells are not durable selectors."
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/editor-to-icon-picker@android.ad",
+        "ios": "docs/testing/agent-device/scripts/editor-to-icon-picker@ios.ad"
+      },
+      "honesty": "Scripts only open the in-app Icon / Choose picture control and wait. System picker cells are not tapped. Drive stays none/seam."
+    },
+    {
+      "id": "editor-to-add-more-picker",
+      "title": "继续加图与两张批量导出",
+      "edges": [
+        "editor-to-add-more-picker"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "editor",
+      "verify": "export-two",
+      "supported": {
+        "android": true,
+        "ios": true
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/editor-to-add-more-picker@android.ad",
+        "ios": "docs/testing/agent-device/scripts/editor-to-add-more-picker@ios.ad"
+      },
+      "honesty": "supported true for execution. Business remains failed for historical run 20260912T140000-000c3f44 until independent review of a new run. Do not auto-fail new runs. Append via system picker stays seam/none and does not upgrade drive. Replay pass is not product pass; do not mint human confirmation."
+    },
+    {
+      "id": "export-save-success",
+      "title": "PNG 保存完成与文件验收",
+      "edges": [
+        "export-save-success"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "editor",
+      "verify": "export-one",
+      "supported": {
+        "android": true,
+        "ios": true
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/export-save-success@android.ad",
+        "ios": "docs/testing/agent-device/scripts/export-save-success@ios.ad"
+      },
+      "honesty": "In-app Save / PNG / Export only. Photos permission and album write are seam. File checks belong to script_checks, not agent_observation. Replay pass is not product pass."
+    },
+    {
+      "id": "export-system-share",
+      "title": "导出后打开系统面板",
+      "edges": [
+        "export-system-share"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "editor",
+      "verify": "export-one",
+      "supported": {
+        "android": true,
+        "ios": true
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/export-system-share@android.ad",
+        "ios": "docs/testing/agent-device/scripts/export-system-share@ios.ad"
+      },
+      "honesty": "If Share is visible the script opens it and stops; it does not pick a recipient. View in gallery is not a share sheet. System chooser stays seam/none."
+    },
+    {
+      "id": "export-failure-recovery",
+      "title": "导出失败后重试恢复",
+      "edges": [
+        "export-failure-recovery"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "failure",
+      "verify": "export-one",
+      "supported": {
+        "android": true,
+        "ios": true
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/export-failure-recovery@android.ad",
+        "ios": "docs/testing/agent-device/scripts/export-failure-recovery@ios.ad"
+      },
+      "honesty": "Fault injection and source restore are harness (setup=failure). The script only waits for Retry failed and taps it. A replay pass is not a product pass."
+    },
+    {
+      "id": "android-crash-recovery",
+      "title": "Android 崩溃恢复入口",
+      "edges": [
+        "android-crash-recovery"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "crash",
+      "verify": "ui-only",
+      "supported": {
+        "android": true,
+        "ios": false
+      },
+      "reason": {
+        "ios": "map.yaml ios.drive is none; crash-count recovery gate is Android-only."
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/android-crash-recovery@android.ad",
+        "ios": "docs/testing/agent-device/scripts/android-crash-recovery@ios.ad"
+      },
+      "honesty": "Harness injects the crash-count gate. Script taps Turn off recovery mode / 关闭恢复模式 only. Never clear app data."
+    },
+    {
+      "id": "ios-library-read-upsell",
+      "title": "iOS 相册读取引导",
+      "edges": [
+        "ios-library-read-upsell"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "ios",
+      "verify": "ui-only",
+      "supported": {
+        "android": false,
+        "ios": true
+      },
+      "reason": {
+        "android": "Library Read upsell is iOS-only (map.yaml android.drive is none)."
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/ios-library-read-upsell@android.ad",
+        "ios": "docs/testing/agent-device/scripts/ios-library-read-upsell@ios.ad"
+      },
+      "honesty": "supported true on iOS for the in-app Faster previews overlay. PHPicker cells and the system Photos permission dialog remain seam. Do not claim those as real. setup=ios revokes Library Read; it does not clear app state."
+    },
+    {
+      "id": "editor-dual-pane-morph",
+      "title": "宽屏双栏与编辑状态",
+      "edges": [
+        "editor-dual-pane-morph"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "wide",
+      "verify": "ui-only",
+      "supported": {
+        "android": false,
+        "ios": false
+      },
+      "reason": {
+        "android": "editorLayoutExpanded is a testTag; Android snapshots do not expose it as id/label/role, and width change is harness-only.",
+        "ios": "Default agent target is iPhone; dual-pane needs iPad width >= 800pt. Phone sim cannot morph."
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/editor-dual-pane-morph@android.ad",
+        "ios": "docs/testing/agent-device/scripts/editor-dual-pane-morph@ios.ad"
+      },
+      "honesty": "Scripts wait editor landmarks only. Size/density changes are harness, not agent. A phone screenshot is not dual-pane evidence."
+    },
+    {
+      "id": "editor-tile-mode-clamp",
+      "title": "把平铺改成单个（CLAMP）",
+      "edges": [
+        "editor-tile-mode-clamp"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "editor",
+      "verify": "ui-only",
+      "supported": {
+        "android": true,
+        "ios": true
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/editor-tile-mode-clamp@android.ad",
+        "ios": "docs/testing/agent-device/scripts/editor-tile-mode-clamp@ios.ad"
+      },
+      "honesty": "In-app Style tile chips. Locale: Repeat/Single or 重复/单个. Replay pass is not a product pass."
+    },
+    {
+      "id": "editor-typeface-style",
+      "title": "在样式里改字体或描边",
+      "edges": [
+        "editor-typeface-style"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "editor",
+      "verify": "ui-only",
+      "supported": {
+        "android": true,
+        "ios": true
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/editor-typeface-style@android.ad",
+        "ios": "docs/testing/agent-device/scripts/editor-typeface-style@ios.ad"
+      },
+      "honesty": "In-app Style typeface chips. Locale: Bold or 粗体. Replay pass is not a product pass."
+    },
+    {
+      "id": "editor-filmstrip-switch",
+      "title": "在胶片条上切换当前照片",
+      "edges": [
+        "editor-filmstrip-switch"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "editor",
+      "verify": "ui-only",
+      "supported": {
+        "android": true,
+        "ios": true
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/editor-filmstrip-switch@android.ad",
+        "ios": "docs/testing/agent-device/scripts/editor-filmstrip-switch@ios.ad"
+      },
+      "honesty": "Needs two photos from editor setup. Hard-cut filmstrip; no export. Replay pass is not a product pass."
+    },
+    {
+      "id": "about-follow-photo",
+      "title": "开关从照片取编辑器主题",
+      "edges": [
+        "about-follow-photo"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "home",
+      "verify": "ui-only",
+      "supported": {
+        "android": true,
+        "ios": true
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/about-follow-photo@android.ad",
+        "ios": "docs/testing/agent-device/scripts/about-follow-photo@ios.ad"
+      },
+      "honesty": "About switch Theme editor from photo. Untranslated zh may still be English. Replay pass is not a product pass."
+    },
+    {
+      "id": "about-in-app-gallery",
+      "title": "开关使用应用内图库",
+      "edges": [
+        "about-in-app-gallery"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "home",
+      "verify": "ui-only",
+      "supported": {
+        "android": true,
+        "ios": false
+      },
+      "reason": {
+        "ios": "map.yaml ios.drive is none; in-app gallery preference is Android-only."
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/about-in-app-gallery@android.ad",
+        "ios": "docs/testing/agent-device/scripts/about-in-app-gallery@ios.ad"
+      },
+      "honesty": "Android-only About switch. iOS drive none. Replay pass is not a product pass."
+    },
+    {
+      "id": "export-format-jpeg-png",
+      "title": "导出格式 JPEG/PNG 切换",
+      "edges": [
+        "export-format-jpeg-png"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "editor",
+      "verify": "ui-only",
+      "supported": {
+        "android": true,
+        "ios": true
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/export-format-jpeg-png@android.ad",
+        "ios": "docs/testing/agent-device/scripts/export-format-jpeg-png@ios.ad"
+      },
+      "honesty": "Export sheet JPEG/PNG chips. Quality row stays composed when PNG. Replay pass is not a product pass."
+    },
+    {
+      "id": "about-to-open-source",
+      "title": "从关于打开开源许可",
+      "edges": [
+        "about-to-open-source"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "home",
+      "verify": "ui-only",
+      "supported": {
+        "android": true,
+        "ios": true
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/about-to-open-source@android.ad",
+        "ios": "docs/testing/agent-device/scripts/about-to-open-source@ios.ad"
+      },
+      "honesty": "About row Open source licenses / 开源许可. Overlay Back returns to About. Replay pass is not a product pass."
+    },
+    {
+      "id": "about-wallpaper",
+      "title": "开关跟随壁纸取色",
+      "edges": [
+        "about-wallpaper"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "home",
+      "verify": "ui-only",
+      "supported": {
+        "android": true,
+        "ios": false
+      },
+      "reason": {
+        "ios": "map.yaml ios.drive is none; wallpaper Material You is Android-only."
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/about-wallpaper@android.ad",
+        "ios": "docs/testing/agent-device/scripts/about-wallpaper@ios.ad"
+      },
+      "honesty": "Android-only About switch Follow wallpaper colors. Untranslated zh may still be English. Replay pass is not a product pass."
+    },
+    {
+      "id": "about-bounds",
+      "title": "开关显示边界",
+      "edges": [
+        "about-bounds"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "home",
+      "verify": "ui-only",
+      "supported": {
+        "android": true,
+        "ios": true
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/about-bounds@android.ad",
+        "ios": "docs/testing/agent-device/scripts/about-bounds@ios.ad"
+      },
+      "honesty": "About switch Show Bounds. Untranslated zh may still be English. Replay pass is not a product pass."
+    },
+    {
+      "id": "editor-clamp-drag",
+      "title": "拖动单个水印",
+      "edges": [
+        "editor-clamp-drag"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "editor",
+      "verify": "ui-only",
+      "supported": {
+        "android": true,
+        "ios": true
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/editor-clamp-drag@android.ad",
+        "ios": "docs/testing/agent-device/scripts/editor-clamp-drag@ios.ad"
+      },
+      "honesty": "Switches Style tile to Single then taps the preview. Offset delta is L1-proven; a tap without pan is not a product fail. Replay pass is not a product pass."
+    },
+    {
+      "id": "export-cancel",
+      "title": "取消正在导出",
+      "edges": [
+        "export-cancel"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "editor",
+      "verify": "ui-only",
+      "supported": {
+        "android": true,
+        "ios": true
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/export-cancel@android.ad",
+        "ios": "docs/testing/agent-device/scripts/export-cancel@ios.ad"
+      },
+      "honesty": "Cancel export is composed only while exporting. A fast export that skips the control is REPLAY_DIVERGENCE, not a UI-quality fail. Replay pass is not a product pass."
+    },
+    {
+      "id": "editor-style-then-export",
+      "title": "改文字大小颜色透明度后导出",
+      "edges": [
+        "editor-style-then-export"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "editor",
+      "verify": "export-one",
+      "supported": {
+        "android": true,
+        "ios": true
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/editor-style-then-export@android.ad",
+        "ios": "docs/testing/agent-device/scripts/editor-style-then-export@ios.ad"
+      },
+      "honesty": "One editor session: text fill, Style size/color/alpha, then PNG export. Slider taps hit sliderTrack center. Queuing separate map edges is not this journey — each edge re-applies setup. Replay pass is not a product pass."
+    }
+  ]
+}

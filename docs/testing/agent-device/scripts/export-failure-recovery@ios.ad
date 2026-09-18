@@ -1,0 +1,10 @@
+context platform=ios
+open me.rosuh.easywatermark.ios
+wait id="sharedComposeSaveButton"
+press id="sharedComposeSaveButton"
+wait id="sharedComposeExportPrimary"
+press id="sharedComposeExportPrimary"
+wait id="sharedComposeExportRetryFailed"
+press id="sharedComposeExportRetryFailed"
+wait id="sharedComposeExportCounts"
+close

@@ -68,6 +68,12 @@ Domain vocabulary and invariants. Agents and humans: use these words with these 
 - Output controls update only the edited field through `UserConfigRepository.updateFormat` or `updateCompressLevel`. Callers do not read and resubmit the other field; the former `OutputPrefsEditor` pair-write wrapper is removed. Android retains export-result invalidation on either edit.
 - Editor preview publication uses `OverlayPreviewPolicy` (ADR-0033). The unused `PreviewPaintPolicy` and iOS baked-preview cache-hit stub are removed; tests must not require their names to remain in production source.
 
+## Verification
+
+After a product change: [`eval/README.md`](../eval/README.md) (select → scripts → heuristic → optional L3 → local report). Expected effect = the change’s description plus [`docs/testmap/copy.yaml`](testmap/copy.yaml) edge titles — not method names, and not an `expected:` field on `map.yaml`.
+
+Pre-merge / pre-ship: skill `e2e-testmap` Mode B. Fill `docs/testmap/runs/<ts>-<sha>-verify.md` (gitignored) covering **stability** (script red/green + Agent Device N-repeat), **UI** (frames vs expected + human Confirm), and **performance** only when select suggested L3 (numbers do not own pass/fail). This is not a GitHub required check. Agents must not mint Confirm and must not recommend merge without that report.
+
 ## User flows
 
 pick image(s) (photo picker / share-in via ACTION_SEND) → edit in Editor (panels: content text/templates, style color+alpha+size, layout gap+rotation+tile mode, icon watermark) → save (format+quality) → share/open.

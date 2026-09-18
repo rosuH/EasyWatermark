@@ -1,0 +1,7 @@
+context platform=android
+open me.rosuh.easywatermark.debug
+wait label="Save"
+wait "label=\"Watermark preview\""
+press id="editorPhotoStrip"
+wait id="editorPhotoStrip"
+close

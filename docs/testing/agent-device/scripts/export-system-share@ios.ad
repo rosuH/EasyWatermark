@@ -1,0 +1,10 @@
+context platform=ios
+open me.rosuh.easywatermark.ios
+wait id="sharedComposeSaveButton"
+press id="sharedComposeSaveButton"
+wait text "Output format"
+press "label=\"PNG, PNG\""
+press id="sharedComposeExportPrimary"
+wait id="sharedComposeExportCounts"
+wait label="Share"
+close

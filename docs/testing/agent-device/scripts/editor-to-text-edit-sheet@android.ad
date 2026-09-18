@@ -1,0 +1,12 @@
+context platform=android
+env WATERMARK="EWM AGENT DEVICE"
+open me.rosuh.easywatermark.debug
+wait label="Save"
+press label="内容"
+wait label="文字"
+press label="👋图片仅供测试，请勿作其他用途"
+wait label="编辑水印"
+fill editable=true "${WATERMARK}"
+press label="确认"
+wait label="Save"
+close
