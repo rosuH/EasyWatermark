@@ -822,7 +822,7 @@ def render_coverage_md(nodes: list[dict], edges: list[dict], copy: dict | None =
         "",
         "# E2E map coverage",
         "",
-        "Source of truth: [`map.yaml`](map.yaml). Spec: [ADR-0032](../adr/0032-e2e-test-map-and-harness.md).",
+        "Source of truth: [`map.yaml`](map.yaml). Spec: [historical ADR-0032 test-map contract](historical-adr-0032-e2e-test-map-and-harness.md) (current `docs/adr/0032` is splash fade).",
         "Regenerate: `python3 scripts/generate_testmap.py`.",
         "",
         "## Graph",
@@ -1315,6 +1315,7 @@ def compute_graph_layout(nodes: list[dict], edges: list[dict]) -> dict:
 
     for nid, p in pos.items():
         p["kind"] = _node_kind_id(nid)
+        p["layer"] = int(layer.get(nid, 0))
         p["label"] = _label_lines(nid)
         p["x"] = round(p["x"], 1)
         p["y"] = round(p["y"], 1)
@@ -1716,6 +1717,22 @@ button { letter-spacing: inherit; }
 #graph .node.sel .node-card { stroke: var(--accent); stroke-width: 2; filter: url(#sel-glow); }
 #graph .node.hi .node-card { stroke: var(--accent); }
 #graph .node.dim { opacity: 0.12; }
+#graph .node.nst-running .node-card { stroke: var(--accent); stroke-width: 2; filter: url(#sel-glow); }
+#graph .node.nst-passed .node-card { stroke: var(--success); stroke-width: 1.8; }
+#graph .node.nst-failed .node-card { stroke: var(--error); stroke-width: 1.8; }
+#graph .nst-dot { stroke: var(--bg-0); stroke-width: 1.5; }
+#graph .node.nst-running .nst-dot { fill: var(--accent); opacity: 1; }
+#graph .node.nst-passed .nst-dot { fill: var(--success); opacity: 1; }
+#graph .node.nst-failed .nst-dot { fill: var(--error); opacity: 1; }
+#graph .edge.path-current .edge-vis {
+  stroke: var(--accent);
+  stroke-width: 2.6;
+  filter: url(#sel-glow);
+}
+#graph .edge.path-current,
+#graph .node.nst-running { animation: pulse 1.4s ease-in-out infinite; }
+.graph-well.is-paused #graph .edge.path-current,
+.graph-well.is-paused #graph .node.nst-running { animation: none; }
 #graph g.edge { display: inline; width: auto; padding: 0; border: 0; background: none; }
 #graph .edge-vis { fill: none; stroke-width: 1.7; stroke-linecap: round; }
 #graph .edge-hit { fill: none; stroke: transparent; stroke-width: 16; cursor: pointer; }
@@ -1745,6 +1762,8 @@ button { letter-spacing: inherit; }
   flex-direction: column;
   gap: 4px;
 }
+.graph-tools[hidden],
+.legend-chip[hidden] { display: none !important; }
 .graph-tools button {
   width: 28px;
   height: 28px;
@@ -2698,7 +2717,61 @@ html[data-mode="file"] .live-only { display: none !important; }
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  .pill.running { animation: none; }
+  .pill.running,
+  #graph .edge.path-current,
+  #graph .node.nst-running { animation: none; }
+}
+.view-switch { flex: 0 0 auto; }
+.tree-view {
+  position: absolute;
+  inset: 56px 10px 12px 10px;
+  z-index: 3;
+  overflow: auto;
+  padding: 8px 8px 12px;
+  background: rgba(22, 22, 12, 0.94);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+}
+.tree-view[hidden] { display: none; }
+.tree-band { margin: 0 0 14px; }
+.tree-band-h {
+  margin: 0 0 6px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.trow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  margin: 0;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font: 600 13px/1.3 var(--sans);
+}
+.trow.edge {
+  padding-left: 28px;
+  font: 500 12px/1.3 var(--sans);
+  color: var(--text-2);
+}
+.trow:hover { background: var(--accent-dim); }
+.trow.sel { background: var(--accent-dim); box-shadow: inset 2px 0 0 var(--accent); }
+.trow.dim { opacity: 0.12; }
+.trow .t-id {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>
 </head>
@@ -2731,6 +2804,10 @@ html[data-mode="file"] .live-only { display: none !important; }
         <svg id="graph" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="E2E path graph"></svg>
         <div class="canvas-toolbar canvas-ui">
           <div class="filters">
+            <div class="view-switch lang-switch" role="group" data-i18n-title="view.switch" aria-label="Map or tree">
+              <button type="button" data-view="graph" class="on" data-i18n="view.graph">Graph</button>
+              <button type="button" data-view="tree" data-i18n="view.tree">Tree</button>
+            </div>
             <div class="fg" data-k="layers"><b data-i18n="filter.lyr" data-i18n-title="filter.lyrTitle">LYR</b></div>
             <div class="fg" data-k="plats"><b data-i18n="filter.os" data-i18n-title="filter.osTitle">OS</b></div>
             <div class="fg" data-k="drives"><b data-i18n="filter.drv" data-i18n-title="filter.drvTitle">How we test</b></div>
@@ -2747,6 +2824,7 @@ html[data-mode="file"] .live-only { display: none !important; }
           <div class="lg-row"><i class="lg-line real"></i> <span data-i18n="legend.real">Green: the script taps the app’s own controls</span></div>
           <div class="lg-row"><i class="lg-line seam"></i> <span data-i18n="legend.seam">Amber: skips the system picker / share / file dialog</span></div>
           <div class="lg-row"><i class="lg-line none"></i> <span data-i18n="legend.none">Gray dashed: no script reaches this system edge</span></div>
+          <div class="lg-row"><span class="st-chip running" data-i18n="node.running">Running</span> / <span class="st-chip passed" data-i18n="node.passed">Done</span> / <span class="st-chip failed" data-i18n="node.failed">Failed</span> <span data-i18n="legend.nodes">node state</span></div>
           <div class="lg-row"><span class="st-chip passed">PASSED</span>/<span class="st-chip failed">FAILED</span> <span data-i18n="legend.run">latest run</span></div>
           <div class="lg-row"><span class="st-chip confirmed">✓</span> <span data-i18n="legend.confirmed">visuals confirmed</span> · <span class="st-chip confirmed-stale">re-confirm</span> <span data-i18n="legend.stale">stale</span></div>
           <div class="lg-row" data-i18n="legend.loop">self-loop = returns to the same screen</div>
@@ -2756,6 +2834,7 @@ html[data-mode="file"] .live-only { display: none !important; }
           <button type="button" id="zoom-out" title="Zoom out">−</button>
           <button type="button" id="zoom-fit" data-i18n="zoom.fit" data-i18n-title="zoom.fitTitle">fit</button>
         </div>
+        <div id="tree-view" class="tree-view canvas-ui" hidden></div>
       </div>
     </section>
     <aside class="inspector">
@@ -2939,6 +3018,9 @@ const I18N = {
     "legend.stale": "stale",
     "legend.loop": "self-loop = returns to the same screen",
     "zoom.fit": "fit", "zoom.fitTitle": "Fit graph",
+    "view.graph": "Graph", "view.tree": "Tree", "view.switch": "Map or tree",
+    "node.running": "Running", "node.passed": "Done", "node.failed": "Failed",
+    "legend.nodes": "node state this run",
     "watch.title": "Device",
     "watch.empty": "No live frame. Start scripts/e2e-console.sh on a ready emulator, then tell the agent to run a path.",
     "watch.confirm": "Confirm view",
@@ -3105,6 +3187,9 @@ const I18N = {
     "legend.stale": "待重确认",
     "legend.loop": "自环 = 回到同一页面",
     "zoom.fit": "适应", "zoom.fitTitle": "适应画布",
+    "view.graph": "图", "view.tree": "树", "view.switch": "图或树",
+    "node.running": "进行中", "node.passed": "完成", "node.failed": "失败",
+    "legend.nodes": "本轮节点状态",
     "watch.title": "真机画面",
     "watch.empty": "还没有画面。先开控制台和已启动的模拟器，再用自然语言让 Agent 跑链路。",
     "watch.confirm": "确认画面",
@@ -3287,9 +3372,11 @@ function applyStaticI18n() {
   document.querySelectorAll("[data-i18n-title]").forEach(function (el) {
     el.setAttribute("title", t(el.getAttribute("data-i18n-title")));
   });
-  document.querySelectorAll(".lang-switch button").forEach(function (b) {
+  document.querySelectorAll(".lang-switch [data-lang]").forEach(function (b) {
     b.classList.toggle("on", b.getAttribute("data-lang") === lang);
   });
+  var vs = document.querySelector(".view-switch");
+  if (vs) vs.setAttribute("aria-label", t("view.switch"));
 }
 const ICON_PATHS = {
   launch: "M3 7.2L8 3l5 4.2V13a1 1 0 01-1 1H4a1 1 0 01-1-1V7.2z",
@@ -3312,6 +3399,7 @@ const state = {
   q: "",
   selected: null,
   node: null,
+  view: "graph",
   autostart: "",
   openRun: ""
 };
@@ -3381,6 +3469,7 @@ var runDevice = (function () {
 var logPinned = true;
 var graphBuilt = false;
 var listBuilt = false;
+var treeBuilt = false;
 var cam = { x: 0, y: 0, k: 1 };
 var camDirty = false;
 var camFitted = false;
@@ -3591,6 +3680,7 @@ function buildGraph() {
       t.textContent = line;
       g.appendChild(t);
     });
+    g.appendChild(svgEl("circle", {cx:String(n.w - 8), cy:"8", r:"4", "class":"nst-dot", opacity:"0"}));
     ng.appendChild(g);
   });
   world.appendChild(ng);
@@ -3690,8 +3780,7 @@ function handleCanvasClick(ev) {
   if (hit.edge) { selectEdge(hit.edge.getAttribute("data-edge")); return; }
   if (hit.node) {
     state.node = hit.node.getAttribute("data-node");
-    syncGraph();
-    syncEdgeList();
+    syncAll();
     return;
   }
   clearSelection();
@@ -3834,6 +3923,101 @@ function onGraphHover(ev) {
 }
 function hideTip() { $("tooltip").hidden = true; }
 
+function taskEdgeId(taskId) {
+  var raw = String(taskId || "");
+  if (raw.indexOf("edge:") === 0) {
+    return raw.slice(5).split("@")[0].split("#")[0];
+  }
+  return raw;
+}
+function rankRunState(s) {
+  if (s === "failed") return 4;
+  if (s === "running" || s === "paused") return 3;
+  if (s === "passed" || s === "review_required") return 2;
+  if (s === "stopped") return 1;
+  return 0;
+}
+function runPathModel() {
+  if (isFileOpen() || !consoleOnline) return null;
+  var st = lastStatusSnap;
+  if (!st || !(st.queue || []).length) return null;
+  var rs = st.state || "";
+  if (!rs || rs === "idle") return null;
+  var current = {};
+  (st.queue || []).forEach(function (item) {
+    if (item.state === "running" || item.state === "paused") {
+      var eid = item.edge_id || taskEdgeId(item.id);
+      if (eid) current[eid] = true;
+    }
+  });
+  if (st.current && (rs === "running" || rs === "paused")) {
+    var cid = st.current.edge_id || taskEdgeId(st.current.id);
+    if (cid) current[cid] = true;
+  }
+  var edges = {};
+  (st.queue || []).forEach(function (item) {
+    var eid = item.edge_id || taskEdgeId(item.id);
+    if (!eid) return;
+    var prev = edges[eid];
+    if (!prev || rankRunState(item.state) > rankRunState(prev)) edges[eid] = item.state;
+  });
+  var stopped = rs === "stopped";
+  var nodes = {};
+  DATA.edges.forEach(function (e) {
+    var stt = edges[e.id];
+    if ((stt === "passed" || stt === "review_required") && !stopped) {
+      if (!nodes[e.from]) nodes[e.from] = "passed";
+      if (!nodes[e.to]) nodes[e.to] = "passed";
+    }
+  });
+  DATA.edges.forEach(function (e) {
+    if (edges[e.id] === "failed") nodes[e.to] = "failed";
+  });
+  if (!stopped) {
+    Object.keys(current).forEach(function (eid) {
+      var e = DATA.edges.find(function (x) { return x.id === eid; });
+      if (e) nodes[e.to] = "running";
+    });
+  }
+  return {
+    current: current,
+    edges: edges,
+    nodes: nodes,
+    paused: rs === "paused",
+    stopped: stopped,
+    active: rs === "running" || rs === "paused" || rs === "failed" || rs === "stopped" || rs === "review_required" || rs === "passed"
+  };
+}
+function nodeChipHtml(kind) {
+  if (kind === "running") return '<span class="st-chip running">'+esc(t("node.running"))+"</span>";
+  if (kind === "passed") return '<span class="st-chip passed">'+esc(t("node.passed"))+"</span>";
+  if (kind === "failed") return '<span class="st-chip failed">'+esc(t("node.failed"))+"</span>";
+  return "";
+}
+function applyView() {
+  var isTree = state.view === "tree";
+  var graph = $("graph");
+  var tree = $("tree-view");
+  var tools = document.querySelector(".graph-tools");
+  if (graph) graph.style.display = isTree ? "none" : "";
+  if (tree) tree.hidden = !isTree;
+  if (tools) tools.hidden = isTree;
+  var legend = $("legend-chip");
+  if (legend) legend.hidden = isTree;
+  var gleg = $("graph-legend");
+  if (gleg && isTree) gleg.hidden = true;
+  document.querySelectorAll(".view-switch [data-view]").forEach(function (b) {
+    b.classList.toggle("on", b.getAttribute("data-view") === state.view);
+  });
+  var well = document.querySelector(".graph-well");
+  if (well) well.classList.toggle("is-tree", isTree);
+}
+function setView(name) {
+  state.view = name === "tree" ? "tree" : "graph";
+  applyView();
+  if (state.view === "tree") syncTree();
+}
+
 function selectEdge(id) {
   state.selected = id;
   state.node = null;
@@ -3848,20 +4032,29 @@ function clearSelection() {
 function syncGraph() {
   if (!graphBuilt) buildGraph();
   var svg = $("graph");
+  var path = runPathModel();
+  var well = document.querySelector(".graph-well");
+  if (well) well.classList.toggle("is-paused", !!(path && path.paused));
   svg.querySelectorAll("[data-edge]").forEach(function (g) {
     var id = g.getAttribute("data-edge");
     var e = DATA.edges.find(function (x) { return x.id === id; });
     var vis = e && edgeVisible(e);
     var hi = state.node && e && (e.from === state.node || e.to === state.node);
-    g.classList.toggle("dim", !vis);
+    var runSt = path && path.edges[id];
+    var isCurrent = !!(path && path.current[id] && !path.stopped);
+    var pathDim = !!(path && path.active && vis && !isCurrent && runSt !== "passed" && runSt !== "failed" && runSt !== "review_required");
+    g.classList.toggle("dim", !vis || pathDim);
     g.classList.toggle("sel", id === state.selected);
     g.classList.toggle("sel-out", id === state.selected && !vis);
     g.classList.toggle("hi", !!hi && id !== state.selected);
+    g.classList.toggle("path-current", isCurrent);
     var visP = g.querySelector(".edge-vis");
     var drive = (DATA.layout.edges.find(function (x) { return x.id === id; }) || {}).drive || "none";
-    visP.setAttribute("marker-end", "url(#arr-"+(id === state.selected ? "accent" : drive)+")");
+    visP.setAttribute("marker-end", "url(#arr-"+(id === state.selected || isCurrent ? "accent" : drive)+")");
     var dot = g.querySelector(".edot");
     var badge = edgeBadges[id];
+    if (runSt === "failed") badge = "failed";
+    else if (runSt === "passed" || runSt === "review_required") badge = badge || "passed";
     var conf = confirmations[id];
     var cls = "edot";
     if (badge) cls += " " + badge;
@@ -3878,12 +4071,19 @@ function syncGraph() {
   });
   svg.querySelectorAll("[data-node]").forEach(function (g) {
     var nid = g.getAttribute("data-node");
-    g.classList.toggle("dim", !nodeActive(nid));
+    var nst = path && path.nodes[nid];
+    var pathDim = !!(path && path.active && nodeActive(nid) && !nst);
+    g.classList.toggle("dim", !nodeActive(nid) || pathDim);
     g.classList.toggle("sel", nid === state.node);
     var hi = DATA.edges.some(function (e) {
       return e.id === state.selected && (e.from === nid || e.to === nid);
     });
     g.classList.toggle("hi", hi);
+    g.classList.toggle("nst-running", nst === "running");
+    g.classList.toggle("nst-passed", nst === "passed");
+    g.classList.toggle("nst-failed", nst === "failed");
+    var ndot = g.querySelector(".nst-dot");
+    if (ndot) ndot.setAttribute("opacity", nst ? "1" : "0");
   });
 }
 
@@ -3938,6 +4138,82 @@ function syncEdgeList() {
         mark.title = "";
       }
     }
+  });
+}
+
+function nodeLayer(nid) {
+  var n = DATA.layout.nodes[nid] || {};
+  return n.layer == null ? 0 : n.layer;
+}
+function buildTree() {
+  var box = $("tree-view");
+  if (!box) return;
+  var bands = [0, 1, 2, 3];
+  var nodes = Object.keys(DATA.layout.nodes || {}).sort(function (a, b) {
+    var d = nodeLayer(a) - nodeLayer(b);
+    if (d) return d;
+    return a < b ? -1 : a > b ? 1 : 0;
+  });
+  box.innerHTML = bands.map(function (band) {
+    var group = nodes.filter(function (nid) { return nodeLayer(nid) === band; });
+    if (!group.length) return "";
+    var body = group.map(function (nid) {
+      var outs = DATA.edges.filter(function (e) { return e.from === nid; });
+      var kids = outs.map(function (e) {
+        return '<button type="button" class="trow edge" data-id="'+esc(e.id)+'">'
+          +'<span class="t-id">'+esc(edgeTitle(e.id))+"</span>"
+          +'<span class="t-chip"></span></button>';
+      }).join("");
+      return '<button type="button" class="trow node" data-node="'+esc(nid)+'">'
+        +'<span class="t-id">'+esc(nodeTitle(nid))+"</span>"
+        +'<span class="t-chip"></span></button>' + kids;
+    }).join("");
+    return '<div class="tree-band" data-band="'+band+'"><div class="tree-band-h">'+esc(t("band."+band))+"</div>"+body+"</div>";
+  }).join("");
+  box.onclick = function (ev) {
+    var edge = ev.target.closest(".trow.edge");
+    if (edge) { selectEdge(edge.getAttribute("data-id")); return; }
+    var node = ev.target.closest(".trow.node");
+    if (node) {
+      state.node = node.getAttribute("data-node");
+      syncAll();
+    }
+  };
+  treeBuilt = true;
+}
+function syncTree() {
+  var box = $("tree-view");
+  if (!box) return;
+  if (!treeBuilt) buildTree();
+  var path = runPathModel();
+  box.querySelectorAll(".trow.node").forEach(function (row) {
+    var nid = row.getAttribute("data-node");
+    var nst = path && path.nodes[nid];
+    var vis = nodeActive(nid);
+    var pathDim = !!(path && path.active && vis && !nst);
+    row.classList.toggle("dim", !vis || pathDim);
+    row.classList.toggle("sel", nid === state.node);
+    row.classList.toggle("nst-running", nst === "running");
+    row.classList.toggle("nst-passed", nst === "passed");
+    row.classList.toggle("nst-failed", nst === "failed");
+    var chip = row.querySelector(".t-chip");
+    if (chip) chip.innerHTML = nodeChipHtml(nst);
+  });
+  box.querySelectorAll(".trow.edge").forEach(function (row) {
+    var id = row.getAttribute("data-id");
+    var e = DATA.edges.find(function (x) { return x.id === id; });
+    var vis = !!(e && edgeVisible(e));
+    var runSt = path && path.edges[id];
+    var isCurrent = !!(path && path.current[id] && !path.stopped);
+    var pathDim = !!(path && path.active && vis && !isCurrent && runSt !== "passed" && runSt !== "failed" && runSt !== "review_required");
+    row.classList.toggle("dim", !vis || pathDim);
+    row.classList.toggle("sel", id === state.selected);
+    var chip = row.querySelector(".t-chip");
+    if (!chip) return;
+    if (isCurrent) chip.innerHTML = nodeChipHtml("running");
+    else if (runSt === "failed") chip.innerHTML = nodeChipHtml("failed");
+    else if (runSt === "passed" || runSt === "review_required") chip.innerHTML = '<span class="st-chip passed">'+esc(statusLabel("passed"))+"</span>";
+    else chip.innerHTML = "";
   });
 }
 
@@ -4292,6 +4568,8 @@ function syncAll() {
   syncChipCounts();
   syncGraph();
   syncEdgeList();
+  syncTree();
+  applyView();
   renderDetail();
 }
 
@@ -4854,6 +5132,8 @@ function renderRunStatus(st) {
     if (logPinned) log.scrollTop = log.scrollHeight;
   }
   renderLive(st.live);
+  syncGraph();
+  syncTree();
   var edgeBtn = $("btn-run-edge");
   if (edgeBtn && state.selected) {
     var plan = planFor(state.selected);
@@ -5271,6 +5551,7 @@ function poll() {
     if (changed) {
       syncGraph();
       syncEdgeList();
+      syncTree();
       if (state.selected) renderDetail();
     }
     if (m.latest_run) fetchLatestCases(m.latest_run);
@@ -5390,6 +5671,7 @@ function setLang(next) {
   refreshChipChrome();
   relabelGraph();
   listBuilt = false;
+  treeBuilt = false;
   syncAll();
   updateStatusPill();
   syncRunChip();
@@ -5401,8 +5683,11 @@ function setLang(next) {
 }
 document.documentElement.dataset.mode = isFileOpen() ? "file" : "live";
 applyStaticI18n();
-document.querySelectorAll(".lang-switch button").forEach(function (b) {
+document.querySelectorAll(".lang-switch [data-lang]").forEach(function (b) {
   b.onclick = function () { setLang(b.getAttribute("data-lang")); };
+});
+document.querySelectorAll(".view-switch [data-view]").forEach(function (b) {
+  b.onclick = function () { setView(b.getAttribute("data-view")); };
 });
 document.querySelectorAll("#run-target [data-run-plat]").forEach(function (b) {
   b.onclick = function () { setRunPlat(b.getAttribute("data-run-plat")); };

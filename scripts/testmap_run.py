@@ -667,6 +667,14 @@ def expand_task(tid: str, device_request: str | None) -> list[tuple[str, dict]]:
     return out
 
 
+def task_edge_id(task_id: str) -> str:
+    """Parse `edge:<id>@os#lane` into the map edge id. Empty if not an edge task."""
+    raw = str(task_id or "")
+    if not raw.startswith("edge:"):
+        return ""
+    return raw[5:].split("@", 1)[0].split("#", 1)[0]
+
+
 def expand_mobile_parallel(task_ids: list[str]) -> list[str]:
     """If a mobile #agent edge is queued, also queue the other OS when supported."""
     out = list(task_ids)
@@ -1832,7 +1840,11 @@ class RunManager:
                 if task["state"] == "running":
                     started = task.get("_started_mono") or time.monotonic()
                     elapsed = time.monotonic() - started
-                    current = {"id": task["id"], "elapsed_s": round(elapsed, 1)}
+                    current = {
+                        "id": task["id"],
+                        "edge_id": task_edge_id(task["id"]),
+                        "elapsed_s": round(elapsed, 1),
+                    }
                     break
             log_path = Path(rec["log"]) if rec.get("log") else None
             if log_path and not log_path.is_absolute():
@@ -1844,6 +1856,7 @@ class RunManager:
                 "queue": [
                     {
                         "id": t["id"],
+                        "edge_id": task_edge_id(t["id"]),
                         "label": t["label"],
                         "state": t["state"],
                         "exit_code": t.get("exit_code"),

@@ -6,7 +6,7 @@ Human titles (English / Chinese) live in [`copy.yaml`](copy.yaml), keyed by node
 
 Spec: [`historical-adr-0032-e2e-test-map-and-harness.md`](historical-adr-0032-e2e-test-map-and-harness.md).
 
-The default agent adapter is **Agent Device** (ADR-0037): `edge:<id>@android#agent`, and `edge:<id>@ios#agent` when that edge’s iOS `drive` is not `none`. Compose Desktop stays L1/`desktopTest` — not Agent Device. Payloads stay 1:1 with the 17 `map.yaml` edges; that is not a second topology. Drive labels stay `real|seam|none` even when an agent walks a system picker.
+The default agent adapter is **Agent Device** (ADR-0037): `edge:<id>@android#agent`, and `edge:<id>@ios#agent` when that edge’s iOS `drive` is not `none`. Compose Desktop stays L1/`desktopTest` — not Agent Device. Payloads stay 1:1 with the **29** `map.yaml` edges (15 nodes); that is not a second topology. Drive labels stay `real|seam|none` even when an agent walks a system picker.
 
 Artemis is historical and **deprecated** (P4). [`artemis-cases.json`](../testing/artemis-cases.json) is read-only provenance; CLI still accepts `#artemis`. Replay or SDK completed is not a product pass. Ingest layers stay `execution` / `script_checks` / `agent_observation` / `independent_review` / `human_confirmation` / `business`. Do not mint human confirmation. Add More stays business-failed on `20260912T140000-000c3f44`. See [`artemis-binding.md`](artemis-binding.md).
 

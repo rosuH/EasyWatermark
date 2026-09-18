@@ -2,7 +2,7 @@
 
 # E2E map coverage
 
-Source of truth: [`map.yaml`](map.yaml). Spec: [ADR-0032](../adr/0032-e2e-test-map-and-harness.md).
+Source of truth: [`map.yaml`](map.yaml). Spec: [historical ADR-0032 test-map contract](historical-adr-0032-e2e-test-map-and-harness.md) (current `docs/adr/0032` is splash fade).
 Regenerate: `python3 scripts/generate_testmap.py`.
 
 ## Graph

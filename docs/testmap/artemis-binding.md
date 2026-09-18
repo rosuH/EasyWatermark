@@ -1,12 +1,12 @@
 # Agent binding (not a second map)
 
-`map.yaml` is the only topology (29 edges: original 17 navigation + in-editor / About / export self-loops + one composite edit-then-export). The **default** agent adapter is Agent Device
+`map.yaml` is the only topology (**15 nodes / 29 edges**). The **default** agent adapter is Agent Device
 (`edge:<id>@android#agent`, and `@ios#agent` when that edge’s iOS drive is not `none`).
 Optional `docs/testing/agent-device-cases.json` is execution material keyed 1:1 by those
 same ids — not a second map. Compose Desktop is not an Agent Device target.
 
 Artemis is **historical and deprecated** (ADR-0037 P4). `docs/testing/artemis-cases.json`
-stays read-only, still 1:1 with the original 17 edge ids. CLI still accepts `#artemis`
+stays read-only, still 1:1 with the same 29 map edge ids. CLI still accepts `#artemis`
 so old run records parse. Do not treat it as the console/select default.
 
 - Generator and `TestMapGuardTest` fail if `artemis-cases.json` grows extra edge ids or drops a map edge. If `agent-device-cases.json` exists, the generator applies the same 1:1 check.
