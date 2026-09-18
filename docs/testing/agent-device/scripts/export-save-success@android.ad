@@ -1,0 +1,10 @@
+context platform=android
+open me.rosuh.easywatermark.debug
+wait label="Save"
+press label="Save"
+wait label="输出格式"
+wait text "PNG"
+press text="PNG"
+press label="导出到相册"
+wait text "succeeded"
+close

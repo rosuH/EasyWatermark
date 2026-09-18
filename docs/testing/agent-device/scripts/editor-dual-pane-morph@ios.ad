@@ -1,0 +1,6 @@
+context platform=ios
+open me.rosuh.easywatermark.ios
+wait id="sharedComposeSaveButton"
+wait "label=\"Watermark preview\""
+wait id="editorLayoutExpanded"
+close

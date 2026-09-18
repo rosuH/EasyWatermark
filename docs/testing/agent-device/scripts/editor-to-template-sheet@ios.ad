@@ -1,0 +1,14 @@
+context platform=ios
+env TEMPLATE="EWM TEMPLATE AGENT DEVICE"
+open me.rosuh.easywatermark.ios
+wait id="sharedComposeSaveButton"
+press id="watermarkTextContent"
+wait id="watermarkTextTemplateIcon"
+press id="watermarkTextTemplateIcon"
+wait text "Template List"
+press label="Add"
+wait id="templateEditField"
+fill id="templateEditField" "${TEMPLATE}"
+press id="templateEditConfirm"
+wait text "EWM TEMPLATE AGENT DEVICE"
+close

@@ -1,0 +1,7 @@
+context platform=ios
+open me.rosuh.easywatermark.ios
+wait id="sharedComposeSaveButton"
+wait id="editorPhotoStrip"
+press id="editorPhotoStrip"
+wait id="editorPhotoStrip"
+close

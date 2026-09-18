@@ -25,6 +25,8 @@ out/
 # Gradle files
 .gradle/
 build/
+# Agent Device replay evidence (also matched by build/ above)
+build/agent-device/
 
 # Agent/local investigation artifacts must never enter repository history.
 .scratch/
@@ -136,6 +138,7 @@ sample-images/
 # ADR-0032 local console evidence (machine-local; not repo history)
 docs/testmap/runs/
 docs/testmap/artifacts/
+scripts/__pycache__/
 
 # goldie framed/raw store assets (config + flows stay tracked)
 goldie/out/

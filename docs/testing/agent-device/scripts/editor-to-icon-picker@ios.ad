@@ -1,0 +1,10 @@
+context platform=ios
+open me.rosuh.easywatermark.ios
+wait id="sharedComposeSaveButton"
+press id="editorTab-0"
+wait id="editorOption-Icon"
+press id="editorOption-Icon"
+wait "label=\"Choose picture\""
+press "label=\"Choose picture\""
+wait "label=\"Choose picture\""
+close

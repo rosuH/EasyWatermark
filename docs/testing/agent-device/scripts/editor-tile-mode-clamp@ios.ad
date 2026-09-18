@@ -1,0 +1,8 @@
+context platform=ios
+open me.rosuh.easywatermark.ios
+wait id="sharedComposeSaveButton"
+press id="editorTab-1"
+wait id="editorControl-TileMode"
+press label="Single"
+wait label="Single"
+close

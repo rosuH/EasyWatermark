@@ -8,7 +8,7 @@ Keep this always-on contract limited to durable project constraints. Put task hi
 
 - **Complete the task:** derive completion from the requested outcome, including applicable checks and runtime inspection. Continue through failures caused by the change; a first implementation is not completion. Infer routine details, state material assumptions, and ask only when missing input changes scope, correctness, or authorization. Incorporate mid-task corrections without dropping unfinished work.
 - **Delegate:** for substantial work, the lead owns scope and acceptance; subagents handle bounded reading, implementation, batch edits, and tests. Assign file ownership, constraints, and acceptance evidence; parallelize independent work and preserve others' edits. Keep trivial tasks local. If delegation is unavailable, report it and honor explicit role restrictions.
-- **Verify:** inspect the current diff and relevant evidence, not worker status alone. Run affected checks and required gates; repeat only after relevant edits, failures, or unresolved concerns. Docs-only changes need static checks. UI/performance claims need applicable visual and physical-device evidence; mark missing evidence pending.
+- **Verify:** inspect the current diff and relevant evidence, not worker status alone. Run affected checks and required gates; repeat only after relevant edits, failures, or unresolved concerns. Docs-only changes need static checks. UI/performance claims need applicable visual and physical-device evidence; mark missing evidence pending. Product code before merge or ship: `e2e-testmap` pre-merge mode in [`eval/README.md`](eval/README.md) and a local verify report — not a GitHub required check; do not mint human Confirm.
 - **Communicate:** lead with the outcome, relevant changes, checks, and remaining limitations in concise, plain language.
 - **Authorization:** requested local edits, checks, and fixes may proceed without repeated approval. Preserve unrelated work. Publishing, messaging, merging, and destructive cleanup require user authorization, which may already be present in the session. While awaiting missing input, continue independent authorized work.
 
@@ -98,6 +98,7 @@ Skills are mirrored under `skills/`, `.claude/skills/`, and `.agents/skills/`; r
 | Predictive Back / `BackHandler` | `navigation-event` |
 | Large-screen / foldable | `adaptive` |
 | Create or change a test harness | `testing-setup` |
+| Run product-path e2e (testmap / Agent Device) | `e2e-testmap` |
 | Emulator, screenshot, docs KB | `android-cli` |
 | R8 / keep rules | `r8-analyzer` |
 | Jank / startup / traces | `android-profiler` → `perfetto-trace-analysis` |

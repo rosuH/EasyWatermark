@@ -223,7 +223,12 @@ fun AboutScreen(
 
                     SectionHeader(aboutTitle)
                     AboutRow(icons.updateLog, updateLogTitle, onClick = onUpdateLog)
-                    AboutRow(icons.openSource, openSourceTitle, onClick = onOpenSource)
+                    AboutRow(
+                        icons.openSource,
+                        openSourceTitle,
+                        onClick = onOpenSource,
+                        rowTestTag = "aboutOpenSourceRow",
+                    )
                     AboutRow(icons.privacyZh, privacyZhTitle, onClick = onPrivacyZh)
                     AboutRow(icons.privacyEn, privacyEnTitle, onClick = onPrivacyEn)
 
@@ -286,10 +291,12 @@ private fun AboutRow(
     title: String,
     trailing: String? = null,
     onClick: () -> Unit,
+    rowTestTag: String? = null,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .then(if (rowTestTag != null) Modifier.testTag(rowTestTag) else Modifier)
             .clickable(onClick = onClick)
             .padding(horizontal = 24.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
