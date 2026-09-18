@@ -1,0 +1,10 @@
+context platform=ios
+open me.rosuh.easywatermark.ios --relaunch
+wait label="Choose Images"
+press label="About"
+wait label="Version"
+press label="Theme editor from photo"
+wait label="Theme editor from photo"
+press label="Back"
+wait label="Choose Images"
+close

@@ -1,0 +1,7 @@
+context platform=ios
+open me.rosuh.easywatermark.ios
+wait id="sharedComposeSaveButton"
+wait id="sharedComposeAddMoreButton"
+press id="sharedComposeAddMoreButton"
+wait id="sharedComposeAddMoreButton"
+close

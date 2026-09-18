@@ -73,7 +73,10 @@ fun OpenSourceScreen(
                 modifier = Modifier.fillMaxWidth().padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = onBack) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.testTag("openSourceBack"),
+                ) {
                     Icon(
                         painter = backIcon,
                         contentDescription = backCd,

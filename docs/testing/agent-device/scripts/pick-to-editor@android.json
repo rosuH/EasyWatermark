@@ -1,0 +1,11 @@
+[
+  {"command": "open", "input": {"app": "me.rosuh.easywatermark.debug", "relaunch": true}},
+  {"command": "wait", "input": {"selector": "label=\"选择图片\""}},
+  {"command": "press", "input": {"target": {"kind": "selector", "selector": "label=\"选择图片\""}, "settle": true}},
+  {"command": "wait", "input": {"selector": "label=\"相册\""}},
+  {"command": "find", "input": {"query": "照片拍摄于", "action": "click", "first": true}},
+  {"command": "wait", "input": {"selector": "label=\"完成\""}},
+  {"command": "press", "input": {"target": {"kind": "selector", "selector": "label=\"完成\""}, "settle": true}},
+  {"command": "wait", "input": {"selector": "label=\"Save\""}},
+  {"command": "close", "input": {}}
+]

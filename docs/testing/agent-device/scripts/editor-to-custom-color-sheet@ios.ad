@@ -1,0 +1,13 @@
+context platform=ios
+open me.rosuh.easywatermark.ios
+wait id="sharedComposeSaveButton"
+press id="editorTab-1"
+wait id="editorOption-Color"
+press id="editorOption-Color"
+wait id="colorSwatch-custom"
+press id="colorSwatch-custom"
+wait text "Choose color"
+fill label="#RRGGBB" "00D1FF"
+press label="Confirm"
+wait id="sharedComposeSaveButton"
+close

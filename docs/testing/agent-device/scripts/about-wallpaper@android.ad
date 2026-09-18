@@ -1,0 +1,10 @@
+context platform=android
+open me.rosuh.easywatermark.debug --relaunch
+wait label="选择图片"
+press label="关于"
+wait label="版本"
+press label="Follow wallpaper colors"
+wait label="Follow wallpaper colors"
+press label="Back"
+wait label="选择图片"
+close
