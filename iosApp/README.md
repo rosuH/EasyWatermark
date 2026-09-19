@@ -25,8 +25,6 @@ The first iOS application target for EasyWatermark. It is no longer just a build
   and saves the exact PNG bytes to Photos with add-only authorization.
 - `iosApp/KotlinInterop.swift` (C5.4 / S4d-32) — `Data` <-> `KotlinByteArray` bridging through the
   iosMain `IosByteArrayInterop` memcpy bridge; no Swift per-byte copy loop.
-- `iosApp/Resources/Fonts/` (C5.2) — the two Noto faces + OFL licenses, added to **Copy Bundle
-  Resources** (they flatten to the `.app` root so `NSBundle.pathForResource(name, type)` finds them).
 - `iosAppUITests/PickerFlowUITests.swift` (S4d-57/S4d-58) — XCUITest coverage for opening PHPicker and
   proving the fixture render/export path.
 - `iosApp.xcodeproj` — a minimal single-target Xcode project with a shared `iosApp` scheme.
@@ -37,11 +35,11 @@ Normal app flow:
 
 `ContentView` -> `PhotosPicker(selection:matching:.images)` -> `loadTransferable(type: Data.self)` ->
 `WatermarkWorkflow.render(imageData:)`. The workflow calls
-`IosWatermarkRenderBridge.renderWatermarkedPng(...)`, which wraps bundled-font loading,
-`IosWatermarkRenderer.composeOverImage(...)` (decode via `IosImageDecoder`, Skia bakes EXIF per S4d-23),
-and PNG encode behind a Swift-catchable `@Throws` boundary. The returned Kotlin `ByteArray` is converted
-to Swift `Data` for `UIImage(data:)`. `PhotosUI`/`UIKit` are system frameworks (no new dependency). The
-render runs on a detached task.
+`IosWatermarkRenderBridge.renderWatermarkedPng(...)`, which uses `FontFamily.Default` (ADR-0025;
+no bundled Noto), `IosWatermarkRenderer.composeOverImage(...)` (decode via `IosImageDecoder`, Skia
+bakes EXIF per S4d-23), and PNG encode behind a Swift-catchable `@Throws` boundary. The returned
+Kotlin `ByteArray` is converted to Swift `Data` for `UIImage(data:)`. `PhotosUI`/`UIKit` are system
+frameworks (no new dependency). The render runs on a detached task.
 
 Runtime proof:
 
@@ -91,7 +89,10 @@ Watermarked caches. `localIdentifier` is not persisted.
 
 Production Text watermarks use the **system default** face (`FontFamily.Default` / platform resolver).
 Multi-MB Noto Latin+CJK files are **not** packaged in the iOS app bundle (removed with ADR-0025).
-Test-only Noto may still exist under `shared`/`app` **test** source sets for goldens — not in release.
+`iosApp/iosApp/Resources/Fonts/` is absent, and the Xcode **Copy Bundle Resources** phase does not
+copy any `.ttf` / `.otf`. Test-only Noto remains under `shared`/`app` **test** source sets for
+goldens (`shared/src/desktopTest/resources/fonts/`, `app/src/androidTest/assets/fonts/`) — not in
+the iOS release payload, and not a reason to re-add fonts to this target.
 
 ## How `:shared` is wired in
 
