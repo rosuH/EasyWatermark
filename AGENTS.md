@@ -42,12 +42,15 @@ Load only the context needed for the task. Use these routes when relevant; a sma
 | Agent guidance maintenance / model migration scope | `docs/agents/workflow.md` |
 | GitHub label names | `docs/agents/triage-labels.md` |
 | Android / KMP API (not training data) | `android docs search '<query>'` then `android docs fetch` |
+| Android incremental compile / Jugg | `docs/agents/jugg-compile-scheme.md` then workspace skill `jugg-android-dev-loop` |
 
 Start from the current request and relevant sources above. Historical mission files such as `task_plan.md`, `findings.md`, and `progress.md`, plus notes in `docs/superpowers/research/`, are evidence, not active instructions, unless the user resumes that work; reconcile it with the current request and this contract.
 
 ## Commands
 
 Run from the repository root; choose commands for the task rather than running the list. Replace `/absolute/path/to/image.jpg` with an existing image.
+
+Android product compile follows `docs/agents/jugg-compile-scheme.md`. Until that scheme's host smoke test is marked passed on the current AGP/Gradle/Kotlin stack, **do not** treat Jugg as the default compiler — use the Gradle commands below. After the smoke test passes, eligible Android source/resource edits use `jugg --console=json compile` (or `deploy` when device/UI evidence is required); Gradle remains the source of truth for unit tests, Desktop, iOS, CI, Room/KSP generation, Gradle-script changes, deletions, and any Jugg miss. Jugg talks to an Android Studio plugin daemon on this checkout (ports `12320..12329`). If `jugg status` cannot see the project, fall back to Gradle immediately. Do not add Jugg as a Gradle plugin.
 
 ```bash
 ./gradlew --max-workers=8 :app:assembleDebug
@@ -91,6 +94,7 @@ Skills are mirrored under `skills/`, `.claude/skills/`, and `.agents/skills/`; r
 
 | Situation | Skill |
 |---|---|
+| Android edit → compile → deploy (after Jugg smoke test) | `jugg-android-dev-loop` (workspace skill; overlay `docs/agents/jugg-compile-scheme.md`) |
 | App Store / Play store assets | `goldie` (engine fork: https://github.com/rosuH/goldie) |
 | XML → Compose parity | `migrate-xml-views-to-jetpack-compose` |
 | System bars / IME / cutout | `edge-to-edge` |
@@ -109,6 +113,7 @@ Skills are mirrored under `skills/`, `.claude/skills/`, and `.agents/skills/`; r
 Headless Linux VM. iOS targets are out of scope. In-scope: `:app`, `:desktopApp`, `:shared` host tests.
 
 - JDK 17 is the Gradle JVM (AGP 9). SDK is `~/android-sdk`; `local.properties` has `sdk.dir`.
+- Jugg is unavailable here (no Android Studio daemon). Stay on Gradle.
 - `compileSdk` 37 installs as `platforms;android-37.0` — not `platforms;android-37`.
 - Desktop Skiko falls back to software GL; display is `DISPLAY=:1`.
 - `:app:lintDebug` non-zero is informational. `:shared:commonPureTest` is not a CI gate (`ContentEditorThemeTest` needs Android `Bitmap`).
