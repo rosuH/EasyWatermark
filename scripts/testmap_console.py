@@ -70,10 +70,16 @@ MANAGER = RunManager()
 
 
 class Handler(BaseHTTPRequestHandler):
-    protocol_version = "HTTP/1.1"
+    # HTTP/1.0: one request per connection. HTTP/1.1 keep-alive plus a full
+    # stderr pipe (agent wrapper) produced empty replies after the process sat.
+    protocol_version = "HTTP/1.0"
 
     def log_message(self, fmt: str, *args) -> None:
-        sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
+        try:
+            sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
+            sys.stderr.flush()
+        except OSError:
+            pass
 
     def _headers(self, code: int, body: bytes, content_type: str) -> None:
         self.send_response(code)
