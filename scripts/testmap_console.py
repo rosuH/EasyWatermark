@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import signal
+import socket
 import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -79,7 +80,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        self.send_header("Connection", "close")
         self.end_headers()
+        self.close_connection = True
 
     def _send(self, code: int, body: bytes, content_type: str) -> None:
         self._headers(code, body, content_type)
@@ -393,6 +396,30 @@ class Handler(BaseHTTPRequestHandler):
         self._json(404, {"error": "not found"})
 
 
+def _reachable_urls(bind_host: str, port: int) -> list[str]:
+    urls = [f"http://127.0.0.1:{port}"]
+    if bind_host not in {"0.0.0.0", "::", ""}:
+        extra = f"http://{bind_host}:{port}"
+        if extra not in urls:
+            urls.append(extra)
+        return urls
+    try:
+        probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        probe.connect(("8.8.8.8", 80))
+        ip = probe.getsockname()[0]
+        probe.close()
+    except OSError:
+        ip = ""
+    if ip and not ip.startswith("127."):
+        urls.append(f"http://{ip}:{port}")
+    return urls
+
+
+class ConsoleServer(ThreadingHTTPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Local testmap console (informational; not a CI gate)."
@@ -400,14 +427,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--host", default=HOST)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     args = parser.parse_args(argv)
-    if args.host not in {"127.0.0.1", "localhost"}:
-        print("error: bind localhost only", file=sys.stderr)
+    host = "127.0.0.1" if args.host in {"localhost", "127.0.0.1"} else args.host
+    if host not in {"127.0.0.1", "0.0.0.0"}:
+        print("error: --host must be 127.0.0.1 or 0.0.0.0", file=sys.stderr)
         return 2
     write_historical_projection()
-    host = "127.0.0.1"
-    httpd = ThreadingHTTPServer((host, args.port), Handler)
+    httpd = ConsoleServer((host, args.port), Handler)
+    urls = _reachable_urls(host, args.port)
     print(
-        f"testmap console http://{host}:{args.port}  (stdlib; not a CI gate)",
+        "testmap console " + "  ".join(urls) + "  (stdlib; not a CI gate)",
         flush=True,
     )
     print("Ctrl-C stops the server and any running child. Gradle daemon is left up.", flush=True)
