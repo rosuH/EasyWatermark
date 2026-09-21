@@ -1972,6 +1972,53 @@ button { letter-spacing: inherit; }
   overflow: auto;
   padding: 10px 10px 8px;
 }
+.watch-steps { display: none; }
+.watch-pane.has-steps {
+  display: grid;
+  grid-template-columns: minmax(148px, 34%) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto auto;
+}
+.watch-pane.has-steps .watch-steps {
+  display: block;
+  grid-row: 1 / span 3;
+  overflow: auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0 8px 0 0;
+  border-right: 1px solid var(--border-strong);
+  list-style: none;
+}
+.wstep {
+  display: grid;
+  grid-template-columns: 1.4em minmax(0, 1fr);
+  gap: 0 6px;
+  padding: 3px 4px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+.wstep .mk { color: var(--text-3); }
+.wstep .cmd { font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wstep .arg { grid-column: 2; color: var(--text-3); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wstep.current { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.wstep.done .mk { color: var(--ok, #2f6); }
+.wstep.failed { background: color-mix(in srgb, #e55 16%, transparent); }
+.wstep.failed .mk { color: #e55; }
+.watch-pane.has-steps .watch-grid { grid-column: 2; }
+.watch-pane.has-steps .watch-status,
+.watch-pane.has-steps .watch-actions { grid-column: 2; }
+.watch-slot.is-main .watch-phone { max-width: 280px; }
+.watch-touch {
+  position: absolute;
+  width: 36px;
+  height: 22px;
+  margin: -11px 0 0 -18px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 90, 40, 0.95);
+  background: rgba(255, 90, 40, 0.35);
+  pointer-events: none;
+  z-index: 2;
+}
+.watch-touch[hidden] { display: none; }
 .watch-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2839,6 +2886,7 @@ html[data-mode="file"] .live-only { display: none !important; }
     </section>
     <aside class="inspector">
       <div class="watch-pane live-only" id="watch-pane">
+        <ol class="watch-steps" id="watch-steps"></ol>
         <div class="watch-grid">
           <div class="watch-slot" data-plat="android">
             <p class="watch-label">Android</p>
@@ -2846,6 +2894,7 @@ html[data-mode="file"] .live-only { display: none !important; }
               <canvas id="watch-canvas-android" hidden></canvas>
               <img id="watch-img-android" alt="" hidden>
               <p class="watch-empty" id="watch-empty-android">No Android frame</p>
+              <i class="watch-touch" id="watch-touch-android" hidden></i>
             </div>
             <p class="watch-cap" id="watch-cap-android"></p>
           </div>
@@ -2855,6 +2904,7 @@ html[data-mode="file"] .live-only { display: none !important; }
               <canvas id="watch-canvas-ios" hidden></canvas>
               <img id="watch-img-ios" alt="" hidden>
               <p class="watch-empty" id="watch-empty-ios">No iOS frame</p>
+              <i class="watch-touch" id="watch-touch-ios" hidden></i>
             </div>
             <p class="watch-cap" id="watch-cap-ios"></p>
           </div>
@@ -2864,6 +2914,7 @@ html[data-mode="file"] .live-only { display: none !important; }
               <canvas id="watch-canvas-desktop" hidden></canvas>
               <img id="watch-img-desktop" alt="" hidden>
               <p class="watch-empty" id="watch-empty-desktop">No Desktop frame</p>
+              <i class="watch-touch" id="watch-touch-desktop" hidden></i>
             </div>
             <p class="watch-cap" id="watch-cap-desktop"></p>
           </div>
@@ -3411,6 +3462,7 @@ var lastLatestRunId = "";
 var consoleOnline = false;
 var pollTimer = null;
 var lastStatusJson = "";
+var statusFail = 0;
 var lastBadgesJson = "";
 var lastConfirmJson = "";
 var lastWitnessJson = "";
@@ -5059,6 +5111,7 @@ function copyLogBundle() {
 }
 function renderRunStatus(st) {
   lastStatusSnap = st;
+  renderWatchSteps(st);
   var prev = lastRunState;
   lastRunState = st.state || "idle";
   if ((prev === "running" || prev === "paused") &&
@@ -5192,7 +5245,7 @@ function fetchLatestCases(id) {
 }
 var WATCH_PLATS = ["android", "ios", "desktop"];
 function watchNewCtl() {
-  return {abort:null, blobUrl:"", streamKey:"", pending:null, painting:false, frameN:0, fpsN:0, fpsAt:0, natW:0, natH:0};
+  return {abort:null, blobUrl:"", streamKey:"", pending:null, painting:false, frameN:0, natW:0, natH:0};
 }
 var watchCtl = {android: watchNewCtl(), ios: watchNewCtl(), desktop: watchNewCtl()};
 function wEl(plat, suffix) { return $(suffix + "-" + plat); }
@@ -5203,8 +5256,8 @@ function syncWatchChrome(st) {
   var running = st.state === "running" || st.state === "paused";
   if (stop) stop.disabled = !consoleOnline || !running;
   if (confirm) {
-    var can = consoleOnline && !!state.selected && !!(st.id || displayedRunId) &&
-      (st.state === "review_required" || st.state === "failed" || !!displayedRunId);
+    var can = consoleOnline && !!state.selected &&
+      (st.state === "review_required" || st.state === "failed");
     confirm.disabled = !can;
   }
   var status = $("watch-status");
@@ -5232,15 +5285,46 @@ function fitWatchPhone(plat) {
   phone.style.height = Math.round(h) + "px";
   phone.style.aspectRatio = "unset";
 }
-function watchQuery(plat) {
+function watchSlot(plat) {
   var watches = (lastStatusSnap && lastStatusSnap.watches) || {};
-  var w = watches[plat] || {};
-  if (!w.platform && lastStatusSnap && lastStatusSnap.watch && lastStatusSnap.watch.platform === plat) {
+  var w = watches[plat] || null;
+  if (w && w.platform && w.platform !== plat) w = null;
+  if ((!w || !w.device) && lastStatusSnap && lastStatusSnap.watch && lastStatusSnap.watch.platform === plat) {
     w = lastStatusSnap.watch;
   }
+  if (w && w.platform && w.platform !== plat) return null;
+  if (plat === "ios") {
+    var id = String((w && w.device) || "");
+    if (!w || w.kind === "simulator" || id.indexOf("emulator-") === 0) return null;
+    var cur = lastStatusSnap && lastStatusSnap.current;
+    var iosRun = cur && String(cur.id || "").indexOf("@ios") >= 0;
+    if (!iosRun) return null;
+    if (w.kind !== "physical" && id.indexOf("0000") !== 0) return null;
+  }
+  return w;
+}
+function watchQuery(plat) {
+  var w = watchSlot(plat) || {};
   var q = ["platform="+encodeURIComponent(plat)];
-  if (w.device) q.push("device="+encodeURIComponent(w.device));
+  if (w.device && (w.platform === plat || plat === "desktop")) q.push("device="+encodeURIComponent(w.device));
   return q.join("&");
+}
+function stopWatch(plat) {
+  var ctl = watchCtl[plat];
+  if (!ctl) return;
+  if (ctl.abort) ctl.abort.abort();
+  ctl.abort = null;
+  ctl.streamKey = "";
+  var img = wEl(plat, "watch-img");
+  var canvas = wEl(plat, "watch-canvas");
+  var empty = wEl(plat, "watch-empty");
+  if (img) img.hidden = true;
+  if (canvas) canvas.hidden = true;
+  if (empty) empty.hidden = false;
+  var mark = wEl(plat, "watch-touch");
+  if (mark) mark.hidden = true;
+  var cap = wEl(plat, "watch-cap");
+  if (cap) cap.textContent = "";
 }
 function findPair(buf, a, b, from) {
   for (var i = from || 0; i < buf.length - 1; i++) {
@@ -5283,16 +5367,8 @@ function paintWatchJpeg(plat) {
       fitWatchPhone(plat);
     }
     ctl.frameN += 1;
-    ctl.fpsN += 1;
-    var now = Date.now();
-    if (!ctl.fpsAt) ctl.fpsAt = now;
-    if (now - ctl.fpsAt >= 1000) {
-      var cap = wEl(plat, "watch-cap");
-      var w = ((lastStatusSnap && lastStatusSnap.watches) || {})[plat] || {};
-      if (cap) cap.textContent = (w.device || plat) + " · " + ctl.fpsN + " fps";
-      ctl.fpsN = 0;
-      ctl.fpsAt = now;
-    }
+    watchCaption(plat);
+    paintTouch(lastStatusSnap);
     ctl.painting = false;
     if (ctl.pending) paintWatchJpeg(plat);
   }
@@ -5337,7 +5413,7 @@ function startWatchPump(plat, q) {
     return pump();
   }).catch(function (err) {
     if (err && err.name === "AbortError") return;
-    ctl.streamKey = "";
+    stopWatch(plat);
   });
 }
 function naluType(u8) {
@@ -5367,9 +5443,6 @@ function startWatchH264(plat, q) {
   var codec = "avc1.42E01E";
   var url = "/api/device-video" + (q ? "?" + q + "&" : "?") + "n=" + Date.now();
   var sawVideo = false;
-  var fallbackTimer = setTimeout(function () {
-    if (!sawVideo && !ac.signal.aborted) startWatchPoster(plat, q);
-  }, 10000);
   fetch(url, {signal: ac.signal}).then(function (r) {
     if (!r.ok || r.status === 204 || !r.body) throw new Error("empty");
     var reader = r.body.getReader();
@@ -5388,7 +5461,6 @@ function startWatchH264(plat, q) {
       if (t === 6 || t === 9) return;
       var isKey = t === 5;
       sawVideo = true;
-      clearTimeout(fallbackTimer);
       if (!decoder || decoder.state === "closed") {
         if (typeof VideoDecoder === "undefined") throw new Error("no VideoDecoder");
         decoder = new VideoDecoder({
@@ -5409,16 +5481,8 @@ function startWatchH264(plat, q) {
             if (img) img.hidden = true;
             if (empty) empty.hidden = true;
             ctl.frameN += 1;
-            ctl.fpsN += 1;
-            var now = Date.now();
-            if (!ctl.fpsAt) ctl.fpsAt = now;
-            if (now - ctl.fpsAt >= 1000) {
-              var cap = wEl(plat, "watch-cap");
-              var w = ((lastStatusSnap && lastStatusSnap.watches) || {})[plat] || {};
-              if (cap) cap.textContent = (w.device || plat) + " · h264 · " + ctl.fpsN + " fps";
-              ctl.fpsN = 0;
-              ctl.fpsAt = now;
-            }
+            watchCaption(plat);
+            paintTouch(lastStatusSnap);
             frame.close();
           },
           error: function () {
@@ -5454,9 +5518,104 @@ function startWatchH264(plat, q) {
     }
     return pump();
   }).catch(function (err) {
-    clearTimeout(fallbackTimer);
     if (err && err.name === "AbortError") return;
-    if (!sawVideo) startWatchPoster(plat, q);
+    if (!sawVideo) startWatchPump(plat, q);
+    else stopWatch(plat);
+  });
+}
+var stepFollow = true;
+var stepScrolling = false;
+function watchCaption(plat) {
+  var cap = wEl(plat, "watch-cap");
+  if (!cap) return;
+  var w = ((lastStatusSnap && lastStatusSnap.watches) || {})[plat] || {};
+  cap.textContent = w.device || "";
+}
+function renderWatchSteps(st) {
+  var list = $("watch-steps");
+  var pane = $("watch-pane");
+  if (!list || !pane) return;
+  var rows = (st && st.steps) || [];
+  pane.classList.toggle("has-steps", rows.length > 0);
+  var running = st && (st.state === "running" || st.state === "paused");
+  if (!running) {
+    stepFollow = true;
+    WATCH_PLATS.forEach(stopWatch);
+  }
+  var html = rows.map(function (row) {
+    var stt = row.state === "done" || row.state === "current" || row.state === "failed" ? row.state : "pending";
+    var mark = stt === "done" ? "✓" : stt === "failed" ? "✕" : stt === "current" ? "●" : String(row.n);
+    var arg = row.args || "";
+    return '<li class="wstep ' + stt + '" data-n="' + row.n + '"><span class="mk">' + mark + '</span><span class="cmd">' + esc(row.command || "") + '</span>' +
+      (arg ? '<span class="arg">' + esc(arg) + '</span>' : "") + "</li>";
+  }).join("");
+  if (list.dataset.html !== html) {
+    list.dataset.html = html;
+    list.innerHTML = html;
+  }
+  if (!list.dataset.bound) {
+    list.dataset.bound = "1";
+    list.addEventListener("scroll", function () {
+      if (stepScrolling) return;
+      var cur = list.querySelector(".wstep.current");
+      if (!cur) return;
+      var top = cur.offsetTop;
+      var bot = top + cur.offsetHeight;
+      stepFollow = bot > list.scrollTop + 4 && top < list.scrollTop + list.clientHeight - 4;
+    });
+  }
+  var cur = list.querySelector(".wstep.current");
+  if (cur && stepFollow) {
+    stepScrolling = true;
+    cur.scrollIntoView({block: "nearest"});
+    stepScrolling = false;
+  }
+  var curPlat = "";
+  rows.forEach(function (row) { if (row.state === "current") curPlat = row.platform || ""; });
+  document.querySelectorAll(".watch-slot").forEach(function (el) {
+    el.classList.toggle("is-main", !!curPlat && el.getAttribute("data-plat") === curPlat);
+  });
+  paintTouch(st);
+}
+function frameBox(plat) {
+  var phone = wEl(plat, "watch-phone");
+  var img = wEl(plat, "watch-img");
+  var canvas = wEl(plat, "watch-canvas");
+  if (!phone) return null;
+  var media = canvas && !canvas.hidden ? canvas : img && !img.hidden ? img : null;
+  if (!media) return null;
+  var nw = media.naturalWidth || media.width || 0;
+  var nh = media.naturalHeight || media.height || 0;
+  var pw = phone.clientWidth;
+  var ph = phone.clientHeight;
+  if (!nw || !nh || !pw || !ph) return null;
+  var scale = Math.min(pw / nw, ph / nh);
+  var w = nw * scale;
+  var h = nh * scale;
+  return {x: (pw - w) / 2, y: (ph - h) / 2, w: w, h: h, nw: nw, nh: nh};
+}
+function paintTouch(st) {
+  var rows = (st && st.steps) || [];
+  var cur = null;
+  for (var i = 0; i < rows.length; i++) if (rows[i].state === "current") cur = rows[i];
+  WATCH_PLATS.forEach(function (plat) {
+    var mark = wEl(plat, "watch-touch");
+    if (!mark) return;
+    var point = cur && cur.platform === plat ? cur.point : null;
+    var box = point ? frameBox(plat) : null;
+    if (!point || point.x == null || point.y == null || !box) {
+      mark.hidden = true;
+      return;
+    }
+    var x = box.x + (point.x / box.nw) * box.w;
+    var y = box.y + (point.y / box.nh) * box.h;
+    if (x < box.x || y < box.y || x > box.x + box.w || y > box.y + box.h) {
+      mark.hidden = true;
+      return;
+    }
+    mark.hidden = false;
+    mark.style.left = Math.round(x) + "px";
+    mark.style.top = Math.round(y) + "px";
   });
 }
 function bindWatchStream() {
@@ -5466,9 +5625,18 @@ function bindWatchStream() {
     setTimeout(bindWatchStream, 2000);
     return;
   }
+  var st = lastStatusSnap || {};
+  var running = st.state === "running" || st.state === "paused";
   WATCH_PLATS.forEach(function (plat) {
+    var slot = watchSlot(plat);
+    var live = running && plat !== "desktop" && slot && slot.device && (!slot.platform || slot.platform === plat);
+    if (!live) {
+      stopWatch(plat);
+      fitWatchPhone(plat);
+      return;
+    }
     var q = watchQuery(plat);
-    var key = q || plat;
+    var key = "live:" + q;
     var ctl = watchCtl[plat];
     if (key === ctl.streamKey) {
       fitWatchPhone(plat);
@@ -5476,65 +5644,39 @@ function bindWatchStream() {
     }
     ctl.streamKey = key;
     ctl.frameN = 0;
-    ctl.fpsN = 0;
-    ctl.fpsAt = 0;
+    ctl.natW = 0;
+    ctl.natH = 0;
     ctl.pending = null;
-    if (plat === "desktop") startWatchPoster(plat, q);
-    else if (typeof VideoDecoder === "function") startWatchH264(plat, q);
+    if (typeof VideoDecoder === "function") startWatchH264(plat, q);
     else startWatchPump(plat, q);
   });
   setTimeout(bindWatchStream, 1000);
-}
-function startWatchPoster(plat, q) {
-  var ctl = watchCtl[plat];
-  if (!ctl) return;
-  if (ctl.abort) ctl.abort.abort();
-  ctl.abort = new AbortController();
-  var ac = ctl.abort;
-  function tick() {
-    if (ac.signal.aborted) return;
-    var url = "/api/device-frame" + (q ? "?" + q + "&" : "?") + "n=" + Date.now();
-    fetch(url, {signal: ac.signal}).then(function (r) {
-      if (!r.ok || r.status === 204) throw new Error("empty");
-      return r.blob();
-    }).then(function (blob) {
-      if (ac.signal.aborted) return;
-      if (ctl.blobUrl) URL.revokeObjectURL(ctl.blobUrl);
-      ctl.blobUrl = URL.createObjectURL(blob);
-      var img = wEl(plat, "watch-img");
-      var empty = wEl(plat, "watch-empty");
-      if (img) {
-        img.onload = function () { fitWatchPhone(plat); };
-        img.src = ctl.blobUrl;
-        img.hidden = false;
-      }
-      var canvas = wEl(plat, "watch-canvas");
-      if (canvas) canvas.hidden = true;
-      if (empty) empty.hidden = true;
-    }).catch(function (err) {
-      if (err && err.name === "AbortError") return;
-    }).then(function () {
-      if (!ac.signal.aborted) setTimeout(tick, 2000);
-    });
-  }
-  tick();
 }
 function poll() {
   fetch("/api/status").then(function (r) {
     if (!r.ok) throw new Error("status");
     return r.json();
   }).then(function (st) {
+    statusFail = 0;
     setConsoleOnline(true);
     var payload = JSON.stringify({
       id: st.id, state: st.state, queue: st.queue, current: st.current,
-      pause_queue: st.pause_queue, log_tail: st.log_tail, live: st.live, watch: st.watch
+      pause_queue: st.pause_queue, log_tail: st.log_tail, live: st.live, watch: st.watch,
+      watches: st.watches, steps: st.steps
     });
-    if (payload === lastStatusJson) return;
+    if (payload === lastStatusJson) {
+      syncGraph();
+      syncTree();
+      return;
+    }
     lastStatusJson = payload;
     renderRunStatus(st);
   }).catch(function () {
-    setConsoleOnline(false);
-    setQueueMessage(t("run.offline"));
+    statusFail += 1;
+    if (statusFail >= 3) {
+      setConsoleOnline(false);
+      setQueueMessage(t("run.offline"));
+    }
   });
   fetch("/api/map").then(function (r) { return r.json(); }).then(function (m) {
     var next = JSON.stringify(m.badges || {});

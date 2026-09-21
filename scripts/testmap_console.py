@@ -69,6 +69,21 @@ from testmap_run import (  # noqa: E402
 MANAGER = RunManager()
 
 
+def _watch_preferred(snap: object, plat: str | None) -> dict | None:
+    """Slot-scoped watch only. Never reuse an Android watch for the iOS pane."""
+    if not isinstance(snap, dict) or not plat:
+        return None
+    watches = snap.get("watches") if isinstance(snap.get("watches"), dict) else {}
+    preferred = watches.get(plat)
+    if isinstance(preferred, dict) and preferred.get("platform") in {None, plat}:
+        if preferred.get("device") or plat == "desktop":
+            return preferred
+    w = snap.get("watch")
+    if isinstance(w, dict) and w.get("platform") == plat:
+        return w
+    return None
+
+
 class Handler(BaseHTTPRequestHandler):
     # HTTP/1.0: one request per connection. HTTP/1.1 keep-alive plus a full
     # stderr pipe (agent wrapper) produced empty replies after the process sat.
@@ -139,7 +154,10 @@ class Handler(BaseHTTPRequestHandler):
             )
             return
         if path == "/api/status":
-            self._json(200, MANAGER.snapshot())
+            try:
+                self._json(200, MANAGER.snapshot())
+            except Exception as exc:  # noqa: BLE001
+                self._json(500, {"error": str(exc), "state": "idle", "active": False})
             return
         if path == "/api/tasks":
             self._json(
@@ -205,10 +223,7 @@ class Handler(BaseHTTPRequestHandler):
             plat = (qs.get("platform") or [None])[0]
             did = (qs.get("device") or [None])[0]
             snap = MANAGER.snapshot()
-            watches = snap.get("watches") if isinstance(snap, dict) else None
-            preferred = (watches or {}).get(plat) if plat else None
-            if not preferred:
-                preferred = snap.get("watch") if isinstance(snap, dict) else None
+            preferred = _watch_preferred(snap, plat)
             target = resolve_watch_target(plat, did, preferred)
             if not target:
                 self.send_response(204)
@@ -227,10 +242,7 @@ class Handler(BaseHTTPRequestHandler):
             plat = (qs.get("platform") or [None])[0]
             did = (qs.get("device") or [None])[0]
             snap = MANAGER.snapshot()
-            watches = snap.get("watches") if isinstance(snap, dict) else None
-            preferred = (watches or {}).get(plat) if plat else None
-            if not preferred:
-                preferred = snap.get("watch") if isinstance(snap, dict) else None
+            preferred = _watch_preferred(snap, plat)
             if not resolve_watch_target(plat, did, preferred):
                 self.send_response(204)
                 self.send_header("Cache-Control", "no-store")
@@ -260,10 +272,7 @@ class Handler(BaseHTTPRequestHandler):
             plat = (qs.get("platform") or [None])[0]
             did = (qs.get("device") or [None])[0]
             snap = MANAGER.snapshot()
-            watches = snap.get("watches") if isinstance(snap, dict) else None
-            preferred = (watches or {}).get(plat) if plat else None
-            if not preferred:
-                preferred = snap.get("watch") if isinstance(snap, dict) else None
+            preferred = _watch_preferred(snap, plat)
             target = resolve_watch_target(plat, did, preferred)
             if not target or target.get("platform") == "desktop" or (
                 target.get("platform") == "ios" and target.get("kind") == "physical"
@@ -288,7 +297,7 @@ class Handler(BaseHTTPRequestHandler):
             plat = (qs.get("platform") or [None])[0]
             did = (qs.get("device") or [None])[0]
             snap = MANAGER.snapshot()
-            preferred = snap.get("watch") if isinstance(snap, dict) else None
+            preferred = _watch_preferred(snap, plat)
             target = resolve_watch_target(plat, did, preferred)
             if not target or target.get("platform") != "android":
                 self._json(409, {"ok": False, "error": "scrcpy is Android-only"})

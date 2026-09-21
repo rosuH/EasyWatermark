@@ -254,7 +254,10 @@ def list_ios_devices() -> list[dict]:
     except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError):
         sims = []
     physical: list[dict] = []
-    tmp = tempfile.NamedTemporaryFile(prefix="ewm-devicectl-", suffix=".json", delete=False)
+    try:
+        tmp = tempfile.NamedTemporaryFile(prefix="ewm-devicectl-", suffix=".json", delete=False)
+    except OSError:
+        return physical + sims
     tmp_path = Path(tmp.name)
     tmp.close()
     try:
@@ -283,12 +286,23 @@ DESKTOP_WATCH = {
 }
 
 
+_DEVICES_CACHE: dict = {"at": 0.0, "value": None}
+_DEVICES_TTL_S = 5.0
+
+
 def list_devices() -> dict[str, list[dict]]:
-    return {
+    now = time.monotonic()
+    cached = _DEVICES_CACHE.get("value")
+    if cached is not None and now - float(_DEVICES_CACHE["at"] or 0) < _DEVICES_TTL_S:
+        return cached
+    value = {
         "android": list_android_devices(),
         "ios": list_ios_devices(),
         "desktop": [dict(DESKTOP_WATCH)],
     }
+    _DEVICES_CACHE["at"] = now
+    _DEVICES_CACHE["value"] = value
+    return value
 
 
 PNG_MAGIC = b"\x89PNG"
@@ -328,20 +342,28 @@ def resolve_watch_target(
     device_id: str | None,
     preferred: dict | None = None,
 ) -> dict | None:
-    """Pick a ready device to screenshot. Never boots or shuts down."""
+    """Pick a ready device to screenshot. Never boots or shuts down.
+
+    A requested platform never falls back to another OS (iOS slot must not
+    show the Android emulator).
+    """
     plat = (platform or "").strip()
     did = (device_id or "").strip()
     if plat == "desktop":
         return dict(DESKTOP_WATCH)
-    if plat in {"android", "ios"} and did:
-        return ready_listed_device(plat, did)
-    pref_plat = str((preferred or {}).get("platform") or "")
-    pref_id = str((preferred or {}).get("device") or "")
-    if pref_plat in {"android", "ios"} and pref_id:
-        found = ready_listed_device(pref_plat, pref_id)
+    if plat not in {"android", "ios"}:
+        return None
+    if did:
+        found = ready_listed_device(plat, did)
         if found:
             return found
-    return default_watch_target()
+    pref_plat = str((preferred or {}).get("platform") or "")
+    pref_id = str((preferred or {}).get("device") or "")
+    if pref_plat == plat and pref_id:
+        found = ready_listed_device(plat, pref_id)
+        if found:
+            return found
+    return None
 
 
 def capture_android_frame(serial: str) -> bytes | None:
@@ -487,12 +509,9 @@ def default_watch_slots() -> dict[str, dict | None]:
         if item.get("state") == "ready" and item.get("kind") == "emulator":
             android = item
             break
-    ios = None
-    for item in catalog.get("ios") or []:
-        if item.get("state") == "ready" and item.get("kind") == "simulator":
-            ios = item
-            break
-    return {"android": android, "ios": ios, "desktop": dict(DESKTOP_WATCH)}
+    # Idle iOS slot stays empty unless a running agent task binds a physical.
+    # Never default to a simulator (and never to emulator-5554).
+    return {"android": android, "ios": None, "desktop": dict(DESKTOP_WATCH)}
 
 
 def _prefer_ready(items: list[dict]) -> dict | None:
