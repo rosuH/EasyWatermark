@@ -11,6 +11,7 @@ Importable by the local console, and runnable as a foreground CLI:
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import os
 import re
@@ -71,6 +72,12 @@ from testmap_agent_device import (  # noqa: E402
 )
 from testmap_setup import ANDROID_SETUPS, IOS_SETUPS, apply_setup, restore_setup  # noqa: E402
 from testmap_devices import default_watch_slots, ensure_device_ready  # noqa: E402
+from testmap_steps import (  # noqa: E402
+    apply_timing_line,
+    apply_event,
+    parse_script,
+    public_steps,
+)
 from testmap_stop import (  # noqa: E402
     RUNNER_KILL_S,
     RUNNER_TERM_S,
@@ -1626,6 +1633,149 @@ def watch_from_task(task: dict | None) -> dict | None:
     }
 
 
+def _cmd_flag(cmd: list[str], name: str) -> str:
+    if name not in cmd:
+        return ""
+    i = cmd.index(name)
+    return cmd[i + 1] if i + 1 < len(cmd) else ""
+
+
+def _script_from_cmd(cmd: list[str]) -> Path | None:
+    if "replay" in cmd:
+        i = cmd.index("replay")
+        if i + 1 < len(cmd) and not str(cmd[i + 1]).startswith("-"):
+            return Path(cmd[i + 1])
+    if "--steps-file" in cmd:
+        return Path(_cmd_flag(cmd, "--steps-file"))
+    return None
+
+
+def _replay_as_test(cmd: list[str], output: Path) -> list[str]:
+    """Same replay, plus agent-device's timing file. Not Maestro."""
+    if "replay" not in cmd:
+        return list(cmd)
+    out = list(cmd)
+    out[out.index("replay")] = "test"
+    out.extend(["--retries", "0", "--artifacts-dir", str(output)])
+    return out
+
+
+def _batch_one(cmd: list[str], step: dict) -> list[str]:
+    flags: list[str] = []
+    i = 0
+    keep = {"--platform", "--session", "--serial", "--udid", "--on-error"}
+    while i < len(cmd):
+        tok = cmd[i]
+        if tok in keep and i + 1 < len(cmd):
+            flags.extend([tok, cmd[i + 1]])
+            i += 2
+            continue
+        if tok == "--json":
+            flags.append(tok)
+        i += 1
+    payload = json.dumps([{"command": step["command"], "input": step.get("input") or {}}])
+    return [cmd[0], "batch", "--steps", payload, *flags]
+
+
+def _batch_ok(text: str, code: int) -> bool:
+    raw = text.strip()
+    if raw.startswith("{"):
+        try:
+            obj = json.loads(raw)
+        except json.JSONDecodeError:
+            return code == 0
+        if isinstance(obj, dict) and "success" in obj:
+            return obj.get("success") is True and code == 0
+    return code == 0
+
+
+def _tail_timing(root: Path, on_line, stop: threading.Event) -> None:
+    offset = 0
+    pending = ""
+    path: Path | None = None
+    while not stop.is_set():
+        if path is None or not path.is_file():
+            found = sorted(root.glob("**/replay-timing.ndjson"))
+            path = found[-1] if found else None
+            offset = 0
+            pending = ""
+        if path is not None and path.is_file():
+            size = path.stat().st_size
+            if size < offset:
+                offset = 0
+                pending = ""
+            if size > offset:
+                with path.open("r", encoding="utf-8", errors="replace") as fh:
+                    fh.seek(offset)
+                    pending += fh.read()
+                    offset = fh.tell()
+                if on_line:
+                    while "\n" in pending:
+                        line, pending = pending.split("\n", 1)
+                        on_line(line)
+        stop.wait(0.2)
+
+
+def _run_batched_steps(
+    cmd: list[str],
+    rows: list[dict],
+    logf,
+    tee_stdout: bool,
+    on_proc,
+    on_step_event,
+    should_stop,
+    platform: str,
+    env: dict,
+) -> int:
+    """One agent-device batch per step so the runner sees start and stop."""
+    for row in rows:
+        if should_stop and should_stop():
+            return 130
+        if on_step_event:
+            on_step_event(
+                platform,
+                {"type": "replay_action_start", "step": row["n"], "command": row["command"]},
+            )
+        step_cmd = _batch_one(cmd, row)
+        logf.write(f"\n## step {row['n']}: {' '.join(step_cmd)}\n")
+        logf.flush()
+        try:
+            proc = subprocess.Popen(
+                step_cmd,
+                cwd=REPO_ROOT,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                start_new_session=True,
+                env=env,
+            )
+        except OSError as exc:
+            logf.write(f"spawn failed: {exc}\n")
+            logf.flush()
+            if on_step_event:
+                on_step_event(platform, {"type": "replay_action_stop", "step": row["n"], "ok": False})
+            return 127
+        if on_proc:
+            on_proc(proc)
+        buf = io.StringIO()
+        try:
+            code = _tee_child(proc, _DupWrite(logf, buf), tee_stdout)
+        finally:
+            if on_proc:
+                on_proc(None)
+        ok = _batch_ok(buf.getvalue(), code)
+        if on_step_event:
+            event = {"type": "replay_action_stop", "step": row["n"], "ok": ok}
+            if row.get("point"):
+                event["x"] = row["point"]["x"]
+                event["y"] = row["point"]["y"]
+            on_step_event(platform, event)
+        if not ok:
+            return code or 1
+    return 0
+
+
 def run_task(
     spec: dict,
     logf,
@@ -1633,6 +1783,9 @@ def run_task(
     tee_stdout: bool = False,
     on_proc=None,
     on_spec=None,
+    on_steps=None,
+    on_step_event=None,
+    should_stop=None,
 ) -> tuple[int, list[dict], dict]:
     """Run one TASK_SPECS entry. Returns (exit_code, parsed cases, extra)."""
     spec = dict(spec)
@@ -1675,8 +1828,30 @@ def run_task(
         logf.flush()
         _restore_agent_setup(setup_state, logf)
         return 127, [], {}
+    watch_plat = _cmd_flag(cmd, "--platform") or str(spec.get("needs_device") or "")
+    script = _script_from_cmd(cmd) if spec.get("builder") == "agent-device" else None
+    rows: list[dict] = []
+    if script and script.is_file():
+        try:
+            rows = parse_script(script, watch_plat)
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            logf.write(f"step list skipped: {exc}\n")
+        if rows and on_steps:
+            on_steps(watch_plat, rows)
     env = os.environ.copy()
     env.update(spec.get("env") or {})
+    if spec.get("builder") == "agent-device" and rows and script and script.suffix == ".json":
+        code = _run_batched_steps(
+            cmd, rows, logf, tee_stdout, on_proc, on_step_event, should_stop, watch_plat, env
+        )
+        _restore_agent_setup(setup_state, logf)
+        extra = ingest_agent_device_result(spec, code)
+        _publish_agent_device_live(spec)
+        return code, extra.get("cases") or [], extra
+    output = Path(spec.get("agent_device_output") or "")
+    if spec.get("builder") == "agent-device" and "replay" in cmd and output.parts:
+        output.mkdir(parents=True, exist_ok=True)
+        cmd = _replay_as_test(cmd, output)
     logf.write(f"\n## spawn: {' '.join(cmd)}\n")
     logf.flush()
     replay_log = None
@@ -1717,9 +1892,22 @@ def run_task(
         return 127, extra.get("cases") or [], extra
     if on_proc:
         on_proc(proc)
+    stop_tail = threading.Event()
+    tail = None
+    if spec.get("builder") == "agent-device" and rows and output.parts:
+        tail = threading.Thread(
+            target=_tail_timing,
+            args=(output, (lambda line: on_step_event(watch_plat, line)) if on_step_event else None, stop_tail),
+            daemon=True,
+            name="testmap-steps",
+        )
+        tail.start()
     try:
         code = _tee_child(proc, sink, tee_stdout)
     finally:
+        stop_tail.set()
+        if tail is not None:
+            tail.join(timeout=1)
         if replay_log is not None:
             replay_log.close()
         if on_proc:
@@ -1759,6 +1947,7 @@ class RunManager:
         self.worker: threading.Thread | None = None
         self.pause_queue = False
         self.stop_requested = False
+        self.step_rows: dict[str, list[dict]] = {}
         self.last_watch: dict | None = None
         self.last_watches: dict[str, dict | None] = {
             "android": None,
@@ -1792,28 +1981,64 @@ class RunManager:
         out: dict[str, dict | None] = {}
         for plat, item in slots.items():
             overlay = self.last_watches.get(plat)
+            if plat == "ios" and overlay and str(overlay.get("device") or "").startswith("emulator-"):
+                overlay = None
             if rec:
                 for task in rec.get("tasks") or []:
                     w = watch_from_task(task)
                     if w and w.get("platform") == plat:
+                        dev = str(w.get("device") or "")
+                        if plat == "ios" and (dev.startswith("emulator-") or w.get("kind") == "emulator"):
+                            continue
                         overlay = w
                         if task.get("state") == "running":
                             break
             if overlay and overlay.get("device"):
+                dev = str(overlay.get("device") or "")
+                if plat == "ios" and dev.startswith("emulator-"):
+                    out[plat] = None
+                    continue
                 out[plat] = {
                     "platform": plat,
                     "device": overlay.get("device"),
                     "name": (item or {}).get("name") if item else overlay.get("device"),
+                    "kind": overlay.get("kind") or (item or {}).get("kind"),
                 }
             elif item:
                 out[plat] = {
                     "platform": plat,
                     "device": item.get("id"),
                     "name": item.get("name"),
+                    "kind": item.get("kind"),
                 }
             else:
                 out[plat] = None
         return out
+
+    def _public_steps(self) -> list[dict]:
+        out: list[dict] = []
+        for plat in ("android", "ios", "desktop"):
+            out.extend(public_steps(self.step_rows.get(plat) or []))
+        for plat, rows in self.step_rows.items():
+            if plat not in {"android", "ios", "desktop"}:
+                out.extend(public_steps(rows))
+        return out
+
+    def _set_steps(self, platform: str, rows: list[dict]) -> None:
+        with self.lock:
+            self.step_rows[platform or ""] = rows
+
+    def _on_step_signal(self, platform: str, payload: object) -> None:
+        with self.lock:
+            rows = self.step_rows.get(platform or "") or []
+            if isinstance(payload, str):
+                apply_timing_line(rows, payload)
+            elif isinstance(payload, dict):
+                apply_event(rows, payload)
+
+    def _should_stop(self) -> bool:
+        with self.lock:
+            return self.stop_requested
 
     def snapshot(self) -> dict:
         with self.lock:
@@ -1833,6 +2058,7 @@ class RunManager:
                     "live": live_snapshot(),
                     "watch": watch,
                     "watches": self._watch_slots(None),
+                    "steps": self._public_steps(),
                 }
             current = None
             elapsed = 0.0
@@ -1872,6 +2098,7 @@ class RunManager:
                 "live": live_snapshot(),
                 "watch": watch,
                 "watches": self._watch_slots(rec),
+                "steps": self._public_steps(),
             }
 
     def start(self, task_ids: list[str], device: str | None = None) -> dict:
@@ -1882,6 +2109,7 @@ class RunManager:
             self.active = rec
             self.pause_queue = False
             self.stop_requested = False
+            self.step_rows = {}
             self.proc = None
             self.procs = {}
             log_path = REPO_ROOT / rec["log"]
@@ -1968,7 +2196,14 @@ class RunManager:
                 self._remember_watch(rec)
 
         code, cases, extra = run_task(
-            spec, logf, tee_stdout=False, on_proc=_bind, on_spec=_on_spec
+            spec,
+            logf,
+            tee_stdout=False,
+            on_proc=_bind,
+            on_spec=_on_spec,
+            on_steps=self._set_steps,
+            on_step_event=self._on_step_signal,
+            should_stop=self._should_stop,
         )
         with self.lock:
             self.procs.pop(lane, None)
