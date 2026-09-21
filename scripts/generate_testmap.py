@@ -5565,7 +5565,7 @@ function renderWatchSteps(st) {
     });
   }
   var cur = list.querySelector(".wstep.current");
-  if (cur && stepFollow) {
+  if (cur && stepFollow && !(st && st.state === "paused")) {
     stepScrolling = true;
     cur.scrollIntoView({block: "nearest"});
     stepScrolling = false;
