@@ -71,7 +71,12 @@ from testmap_agent_device import (  # noqa: E402
     validate_agent_device_binding,
 )
 from testmap_setup import ANDROID_SETUPS, IOS_SETUPS, apply_setup, restore_setup  # noqa: E402
-from testmap_devices import default_watch_slots, ensure_device_ready  # noqa: E402
+from testmap_devices import (  # noqa: E402
+    capture_device_frame,
+    default_watch_slots,
+    ensure_device_ready,
+    resolve_watch_target,
+)
 from testmap_steps import (  # noqa: E402
     apply_timing_line,
     apply_event,
@@ -94,6 +99,7 @@ WITNESS_DIR = REPO_ROOT / "shared" / "build" / "l1-witness"
 ARTIFACTS_DIR = REPO_ROOT / "docs" / "testmap" / "artifacts"
 WITNESS_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.png$")
 RUN_ID_RE = re.compile(r"^[0-9T]{15}-[0-9a-f]+(-[0-9]+)?$")
+STEP_SHOT_RE = re.compile(r"^(android|ios|desktop)-[0-9]+\.png$")
 EDGE_TASK_RE = re.compile(
     r"^edge:([^@#]+)(?:@(desktop|ios|android))?(?:#(l2|artemis|agent))?$"
 )
@@ -877,6 +883,16 @@ def new_record(task_ids: list[str], device: str | None = None) -> dict:
         "pass_count": 0,
         "fail_count": 0,
     }
+
+
+def step_shot_path(run_id: str, name: str) -> Path | None:
+    if not RUN_ID_RE.match(run_id or "") or not STEP_SHOT_RE.match(name or ""):
+        return None
+    path = (RUNS_DIR / run_id / "steps" / name).resolve()
+    root = (RUNS_DIR / run_id / "steps").resolve()
+    if path.parent != root or not path.is_file():
+        return None
+    return path
 
 
 def write_record(rec: dict) -> Path:
@@ -1689,31 +1705,66 @@ def _batch_ok(text: str, code: int) -> bool:
     return code == 0
 
 
-def _tail_timing(root: Path, on_line, stop: threading.Event) -> None:
+def _read_timing(path: Path | None, offset: int, pending: str, on_line) -> tuple[int, str]:
+    if path is None or not path.is_file():
+        return offset, pending
+    size = path.stat().st_size
+    if size < offset:
+        offset = 0
+        pending = ""
+    if size > offset:
+        with path.open("r", encoding="utf-8", errors="replace") as fh:
+            fh.seek(offset)
+            pending += fh.read()
+            offset = fh.tell()
+        if on_line:
+            while "\n" in pending:
+                line, pending = pending.split("\n", 1)
+                on_line(line)
+    return offset, pending
+
+
+def _timing_file(root: Path, platform: str) -> Path | None:
+    found = [p for p in root.glob("**/replay-timing.ndjson") if p.is_file()]
+    if platform:
+        matched = []
+        for path in found:
+            try:
+                head = path.open(encoding="utf-8", errors="replace").readline()
+            except OSError:
+                continue
+            if f"@{platform}." in head or f"-{platform}." in head:
+                matched.append(path)
+        if matched:
+            return sorted(matched)[-1]
+    return sorted(found)[-1] if found else None
+
+
+def _tail_timing(root: Path, on_line, stop: threading.Event, platform: str = "") -> None:
     offset = 0
     pending = ""
     path: Path | None = None
-    while not stop.is_set():
-        if path is None or not path.is_file():
-            found = sorted(root.glob("**/replay-timing.ndjson"))
-            path = found[-1] if found else None
+    while True:
+        nxt = _timing_file(root, platform)
+        if nxt is not None and nxt != path:
+            path = nxt
             offset = 0
             pending = ""
-        if path is not None and path.is_file():
-            size = path.stat().st_size
-            if size < offset:
-                offset = 0
-                pending = ""
-            if size > offset:
-                with path.open("r", encoding="utf-8", errors="replace") as fh:
-                    fh.seek(offset)
-                    pending += fh.read()
-                    offset = fh.tell()
-                if on_line:
-                    while "\n" in pending:
-                        line, pending = pending.split("\n", 1)
-                        on_line(line)
-        stop.wait(0.2)
+        offset, pending = _read_timing(path, offset, pending, on_line)
+        if stop.is_set():
+            break
+        stop.wait(0.15)
+    deadline = time.monotonic() + 2.5
+    while time.monotonic() < deadline:
+        time.sleep(0.2)
+        nxt = _timing_file(root, platform)
+        if nxt is not None and nxt != path:
+            path = nxt
+            offset = 0
+            pending = ""
+        offset, pending = _read_timing(path, offset, pending, on_line)
+    if on_line and pending.strip():
+        on_line(pending)
 
 
 def _run_batched_steps(
@@ -1897,7 +1948,12 @@ def run_task(
     if spec.get("builder") == "agent-device" and rows and output.parts:
         tail = threading.Thread(
             target=_tail_timing,
-            args=(output, (lambda line: on_step_event(watch_plat, line)) if on_step_event else None, stop_tail),
+            args=(
+                output,
+                (lambda line: on_step_event(watch_plat, line)) if on_step_event else None,
+                stop_tail,
+                watch_plat,
+            ),
             daemon=True,
             name="testmap-steps",
         )
@@ -1907,7 +1963,7 @@ def run_task(
     finally:
         stop_tail.set()
         if tail is not None:
-            tail.join(timeout=1)
+            tail.join(timeout=3)
         if replay_log is not None:
             replay_log.close()
         if on_proc:
@@ -1948,6 +2004,11 @@ class RunManager:
         self.pause_queue = False
         self.stop_requested = False
         self.step_rows: dict[str, list[dict]] = {}
+        self.shot_locks = {
+            "android": threading.Lock(),
+            "ios": threading.Lock(),
+            "desktop": threading.Lock(),
+        }
         self.last_watch: dict | None = None
         self.last_watches: dict[str, dict | None] = {
             "android": None,
@@ -2029,12 +2090,75 @@ class RunManager:
             self.step_rows[platform or ""] = rows
 
     def _on_step_signal(self, platform: str, payload: object) -> None:
+        finished: int | None = None
+        run_id = ""
         with self.lock:
             rows = self.step_rows.get(platform or "") or []
             if isinstance(payload, str):
                 apply_timing_line(rows, payload)
             elif isinstance(payload, dict):
                 apply_event(rows, payload)
+            event = payload if isinstance(payload, dict) else None
+            if isinstance(payload, str) and payload.strip().startswith("{"):
+                try:
+                    parsed = json.loads(payload)
+                except json.JSONDecodeError:
+                    parsed = None
+                if isinstance(parsed, dict):
+                    event = parsed
+            if (
+                isinstance(event, dict)
+                and event.get("type") == "replay_action_stop"
+                and event.get("ok") is True
+                and isinstance(event.get("step"), int)
+                and self.active
+                and self.active.get("id")
+            ):
+                finished = int(event["step"])
+                run_id = str(self.active["id"])
+        if finished is not None and platform in {"android", "ios"}:
+            self._grab_step_frame(platform, run_id, finished)
+
+    def _grab_step_frame(self, platform: str, run_id: str, n: int) -> None:
+        with self.lock:
+            watch = self.last_watches.get(platform) or {}
+            device = str(watch.get("device") or "")
+        if not device:
+            slot = default_watch_slots().get(platform) or {}
+            device = str(slot.get("id") or "")
+
+        def work() -> None:
+            gate = self.shot_locks.get(platform) or self.shot_locks["android"]
+            with gate:
+                target = resolve_watch_target(
+                    platform,
+                    device,
+                    {"platform": platform, "device": device} if device else None,
+                )
+                png = capture_device_frame(target) if target else None
+                if not png:
+                    return
+                dest = RUNS_DIR / run_id / "steps"
+                dest.mkdir(parents=True, exist_ok=True)
+                name = f"{platform}-{n}.png"
+                (dest / name).write_bytes(png)
+            with self.lock:
+                if not self.active or self.active.get("id") != run_id:
+                    return
+                for row in self.step_rows.get(platform) or []:
+                    if row.get("n") == n:
+                        row["shot"] = name
+                        break
+
+        threading.Thread(
+            target=work, daemon=True, name=f"step-shot-{platform}-{n}"
+        ).start()
+
+    def _finish_steps(self, platform: str, ok: bool) -> None:
+        with self.lock:
+            for row in self.step_rows.get(platform) or []:
+                if row.get("state") == "current":
+                    row["state"] = "done" if ok else "failed"
 
     def _should_stop(self) -> bool:
         with self.lock:
@@ -2229,6 +2353,9 @@ class RunManager:
             task["state"] = "passed"
         else:
             task["state"] = "failed"
+        plat_m = re.search(r"@(android|ios|desktop)", str(task.get("id") or ""))
+        if plat_m:
+            self._finish_steps(plat_m.group(1), task["state"] in {"passed", "review_required"})
 
     def _run_lane(self, rec: dict, tasks: list[dict], logf) -> None:
         for task in tasks:
