@@ -34,6 +34,38 @@ curl -sS -X POST http://127.0.0.1:8931/api/run \
 
 Report run id, state, evidence dir. Do not mint Confirm. Skip a platform when `supported` is false.
 
+The CLI (`scripts/e2e-run.sh` / `scripts/testmap_run.py`) is the only runner. The console does not execute cases. `POST /api/run` starts that CLI and returns the run id. Stop signals the `pid` stored in the record.
+
+## Run record
+
+`docs/testmap/runs/<id>.json` is the interface between the CLI and the web UI. It is written atomically (temp file, then replace) before the first case starts, again after every step, and again when each case ends. Screenshots for that run live in `docs/testmap/runs/<id>/steps/`.
+
+```json
+{
+  "id": "20260923T151925-337162c6",
+  "git": {"sha": "7fc1364a", "dirty": true},
+  "source": "manual",
+  "pid": 12345,
+  "state": "running",
+  "tasks": [
+    {
+      "id": "edge:editor-style-then-export@android#agent",
+      "edge": "editor-style-then-export",
+      "platform": "android",
+      "repeat": {"k": 1, "n": 1},
+      "state": "running",
+      "exit_code": null,
+      "duration_s": null,
+      "steps": [
+        {"n": 1, "text": "open me.rosuh.easywatermark.debug", "state": "done", "duration_ms": 612, "shot": "android-1.png"}
+      ]
+    }
+  ]
+}
+```
+
+`source` is `manual` (a chosen task list), `select` (`e2e-select`), or `verify` (`e2e-verify.sh --run`). `repeat` is `k/N` for that row. `state` on the run and on each task is one of `pending`, `running`, `passed`, `review_required`, `failed`, `skipped`, `stopped`. `shot` is a file name under `runs/<id>/steps/` for every executed step, including a failed step. When the capture itself fails, the step has `shot_error` instead of `shot`. A missing file is shown as「无截图」and is never filled from another step. `e2e-verify.sh --run` writes one record whose rows are `1/N`, `2/N`, and keeps going after a failure. Each case restarts its own app before the script runs, so it does not continue from the previous case's screen. `/api/status` reads this file (the running record, otherwise the latest). Restarting the console does not drop it.
+
 ## Mode B — pre-merge / pre-ship
 
 Triggers: new requirement, product code change, “验证这次改动 / 出报告 / 合入前 / 上线前 / ready to merge”, or `/e2e-testmap` with a git range / current diff.

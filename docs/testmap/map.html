@@ -1429,6 +1429,15 @@ html[data-mode="file"] .live-only { display: none !important; }
 }
 .view-switch button.on { color: var(--text); border-color: var(--accent); }
 .run-path { display: none; align-items: center; gap: 8px; min-height: 36px; padding: 8px 12px; overflow: auto; }
+.task-board { display: flex; align-items: center; gap: 10px; overflow: auto; padding: 0 2px 6px; }
+.task-board[hidden] { display: none !important; }
+.task-board p { margin: 0; font: 650 12px/1.3 var(--sans); white-space: nowrap; color: var(--text); }
+.task-board ol { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.task-row { border: 1px solid var(--border); border-radius: 999px; padding: 3px 8px; font: 500 12px/1.3 var(--sans); white-space: nowrap; color: var(--text-2); }
+.task-row .dur { margin-left: 6px; color: var(--text-3); }
+.task-row.running { color: var(--text); border-color: var(--accent); }
+.task-row.failed, .task-row.blocked { color: #e55; border-color: #e55; }
+.task-row.passed, .task-row.review_required { color: var(--success); }
 .run-node.running { color: var(--accent); }
 .run-node.failed { color: #e55; }
 .run-node.passed, .run-node.review_required { color: var(--ok, #2f6); }
@@ -1545,6 +1554,10 @@ body.view-run .watch-result-bar { flex: 0 0 auto; padding: 8px 12px; }
     </section>
     <aside class="inspector">
       <div class="watch-pane live-only" id="watch-pane">
+        <div id="task-board" class="task-board" hidden>
+          <p id="task-progress"></p>
+          <ol id="task-rows"></ol>
+        </div>
         <div class="watch-grid">
           <div class="watch-slot" data-plat="android">
             <p class="watch-label">Android</p>
@@ -3933,6 +3946,36 @@ function openShot(i) {
   var item = shotGallery[shotIndex];
   openLightbox(item.src, item.cap);
 }
+function taskStateLabel(state) {
+  var zh = {pending: "等待", running: "进行中", paused: "暂停", passed: "通过", review_required: "待确认", failed: "失败", skipped: "跳过", stopped: "已停止", blocked: "阻塞"};
+  var en = {pending: "pending", running: "running", paused: "paused", passed: "passed", review_required: "review", failed: "failed", skipped: "skipped", stopped: "stopped", blocked: "blocked"};
+  var table = lang === "zh" ? zh : en;
+  return table[state] || state || "";
+}
+function renderTaskBoard(st) {
+  var board = $("task-board");
+  var progress = $("task-progress");
+  var list = $("task-rows");
+  if (!board || !list) return;
+  var tasks = (st && (st.tasks || st.queue)) || [];
+  if (!st || !st.id || !tasks.length) {
+    board.hidden = true;
+    return;
+  }
+  board.hidden = false;
+  var prog = st.progress || {};
+  var done = prog.done != null ? prog.done : 0;
+  var total = prog.total != null ? prog.total : tasks.length;
+  var failed = prog.failed || 0;
+  if (progress) progress.textContent = done + "/" + total + (failed ? (" · " + failed + (lang === "zh" ? " 失败" : " failed")) : "");
+  list.innerHTML = tasks.map(function (task) {
+    var repeat = task.repeat || {};
+    var rep = repeat.n > 1 ? (" " + repeat.k + "/" + repeat.n) : "";
+    var dur = task.duration_s != null ? (" " + task.duration_s + "s") : "";
+    var name = (task.edge_id || task.edge || task.id || "") + (task.platform ? (" · " + task.platform) : "");
+    return '<li class="task-row ' + esc(task.state || "") + '"><span class="st">' + esc(taskStateLabel(task.state)) + "</span> " + esc(name + rep) + '<span class="dur">' + esc(dur) + "</span></li>";
+  }).join("");
+}
 function renderRunStatus(st) {
   lastStatusSnap = st;
   var prev = lastRunState;
@@ -3942,6 +3985,7 @@ function renderRunStatus(st) {
   }
   renderWatchSteps(st);
   renderWatchResult(st);
+  renderTaskBoard(st);
   syncRunCards(st);
   lastRunState = st.state || "idle";
   if ((prev === "running" || prev === "paused") &&

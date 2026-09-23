@@ -1,7 +1,7 @@
 context platform=ios
 open me.rosuh.easywatermark.ios --relaunch
-wait "label=\"Choose Images\""
-press "label=\"Choose Images\""
-wait text "Faster previews"
-wait "label=\"Choose images anyway\""
+wait id="launchPickImageButton" 20000
+press id="launchPickImageButton"
+wait id="iosLibraryReadUpsellContinue" 20000
+press id="iosLibraryReadUpsellContinue"
 close

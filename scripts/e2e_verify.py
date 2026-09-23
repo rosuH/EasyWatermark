@@ -78,17 +78,47 @@ def _run_agent_task(cmd: str) -> dict:
 
 
 def collect_stability(agent: list[dict], repeats: int, do_run: bool) -> list[dict]:
-    rows = []
-    for item in agent:
-        cmd = str(item.get("cmd") or "")
-        if not cmd:
-            continue
-        results = []
-        if do_run:
-            for _ in range(repeats):
-                results.append(_run_agent_task(cmd))
-        rows.append(summarize_stability(cmd, results, repeats))
-    return rows
+    cmds = [str(item.get("cmd") or "") for item in agent if item.get("cmd")]
+    grouped: dict[str, list[dict]] = {cmd: [] for cmd in cmds}
+    if do_run and cmds:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPTS / "testmap_run.py"),
+                "--source",
+                "verify",
+                "--repeat",
+                str(repeats),
+                *cmds,
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+        )
+        run_id = ""
+        for line in (proc.stdout or "").splitlines():
+            if line.startswith("testmap run "):
+                run_id = line.split()[2]
+                break
+        rec = load_run(run_id) if run_id else None
+        for task in (rec or {}).get("tasks") or []:
+            cmd = str(task.get("id") or "")
+            if cmd not in grouped:
+                grouped[cmd] = []
+            grouped[cmd].append(
+                {
+                    "run_id": run_id,
+                    "state": task.get("state") or "failed",
+                    "evidence_dir": task.get("evidence_dir") or "",
+                    "flake_class": "",
+                }
+            )
+        if proc.returncode != 0 and not run_id:
+            for cmd in cmds:
+                grouped[cmd].append(
+                    {"run_id": "", "state": "failed", "evidence_dir": "", "flake_class": "timeout_or_spawn"}
+                )
+    return [summarize_stability(cmd, grouped.get(cmd, []), repeats) for cmd in cmds]
 
 
 def main(argv: list[str] | None = None) -> int:
