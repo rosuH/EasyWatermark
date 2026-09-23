@@ -503,15 +503,25 @@ if (!infos) { "" } else {
 
 
 def default_watch_slots() -> dict[str, dict | None]:
+    """Idle live view. Never boots. iOS never binds an Android emulator serial."""
     catalog = list_devices()
     android = None
     for item in catalog.get("android") or []:
         if item.get("state") == "ready" and item.get("kind") == "emulator":
             android = item
             break
-    # Idle iOS slot stays empty unless a running agent task binds a physical.
-    # Never default to a simulator (and never to emulator-5554).
-    return {"android": android, "ios": None, "desktop": dict(DESKTOP_WATCH)}
+    ios = None
+    for kind in ("simulator", "physical"):
+        for item in catalog.get("ios") or []:
+            if item.get("state") != "ready" or item.get("kind") != kind:
+                continue
+            if str(item.get("id") or "").startswith("emulator-"):
+                continue
+            ios = item
+            break
+        if ios:
+            break
+    return {"android": android, "ios": ios, "desktop": dict(DESKTOP_WATCH)}
 
 
 def _prefer_ready(items: list[dict]) -> dict | None:

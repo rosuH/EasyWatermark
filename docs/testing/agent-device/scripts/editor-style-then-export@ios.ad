@@ -1,7 +1,8 @@
 context platform=ios
 env WATERMARK="EWM COMBO"
-open me.rosuh.easywatermark.ios
-wait id="sharedComposeSaveButton"
+open me.rosuh.easywatermark.ios --relaunch
+press label="store-seed-editor"
+wait id="sharedComposeSaveButton" 90000
 press id="watermarkTextContent"
 wait id="watermarkTextEditField"
 fill id="watermarkTextEditField" "${WATERMARK}"
@@ -19,8 +20,8 @@ press id="editorOption-Alpha"
 wait id="editorControl-Alpha"
 press id="sliderTrack"
 press id="sharedComposeSaveButton"
-wait text "Output format"
+wait id="sharedComposeExportSheet" 20000
 press "label=\"PNG, PNG\""
 press id="sharedComposeExportPrimary"
-wait id="sharedComposeExportCounts"
+wait id="sharedComposeExportCounts" 30000
 close

@@ -43,6 +43,7 @@ from testmap_artemis import (  # noqa: E402
     sandbox_artemis_file,
 )
 from testmap_run import (  # noqa: E402
+    step_shot_path,
     DEFAULT_PORT,
     HOST,
     MANUAL_TASKS,
@@ -185,6 +186,15 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/runs":
             self._json(200, {"runs": run_summaries()})
+            return
+        if path.startswith("/api/runs/") and "/steps/" in path:
+            rest = path[len("/api/runs/") :]
+            run_id, _, name = rest.partition("/steps/")
+            found = step_shot_path(run_id, name)
+            if not found:
+                self._json(404, {"error": "step shot not found"})
+                return
+            self._send(200, found.read_bytes(), "image/png")
             return
         if path.startswith("/api/runs/"):
             rec = load_run(path[len("/api/runs/") :])

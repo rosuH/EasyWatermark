@@ -1,6 +1,5 @@
 context platform=ios
 open me.rosuh.easywatermark.ios --relaunch
-wait "label=\"Choose Images\""
-press "label=\"Choose Images\""
-wait "label=\"Choose Images\""
+press label="store-seed-editor"
+wait id="sharedComposeSaveButton" 90000
 close

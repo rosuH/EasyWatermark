@@ -145,7 +145,7 @@ def make_fixtures(folder: Path, marker: str) -> dict[str, Path]:
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
     width, height = PNG_SIZE
-    paths = {key: folder / f"ewm-suite-{marker}-{key}.png" for key in ("A", "B", "icon")}
+    paths = {key: folder / f"ewm-suite-{marker}-{key}.png" for key in ("A", "B", "C", "icon")}
     write_png(
         paths["A"],
         width,
@@ -157,6 +157,12 @@ def make_fixtures(folder: Path, marker: str) -> dict[str, Path]:
         width,
         height,
         lambda y: _band_row(width, y, height, (119, 51, 153), (255, 255, 255), (34, 136, 102)),
+    )
+    write_png(
+        paths["C"],
+        width,
+        height,
+        lambda y: _band_row(width, y, height, (16, 122, 109), (255, 255, 255), (214, 90, 36)),
     )
     write_png(paths["icon"], 128, 128, lambda y: bytes((223, 48, 48)) * 128)
     return paths
@@ -201,6 +207,19 @@ def wait_media_id(serial: str, display_name: str, timeout_s: float = 15) -> str:
             return ids[0]
         time.sleep(0.5)
     raise ValueError(f"Synthetic image {display_name} was not uniquely indexed in MediaStore")
+
+
+def android_debug_resumed(serial: str) -> bool:
+    """True when the debug app is already resumed (keep a multi-photo editor session)."""
+    try:
+        raw = adb(serial, ["shell", "dumpsys", "activity", "activities"], timeout=8)
+    except (ValueError, OSError, subprocess.TimeoutExpired):
+        return False
+    for line in raw.splitlines():
+        if "mResumedActivity" in line or "topResumedActivity" in line:
+            if ANDROID_PACKAGE in line:
+                return True
+    return False
 
 
 def android_force_stop(serial: str) -> None:
@@ -399,7 +418,9 @@ def apply_setup(
         fixtures = make_fixtures(folder, marker)
         state["fixtures"] = {key: str(path) for key, path in fixtures.items()}
         push_android_fixtures(serial, fixtures)
-        android_force_stop(serial)
+        keep_editor = setup == "editor" and android_debug_resumed(serial)
+        if not keep_editor:
+            android_force_stop(serial)
         if setup == "wide":
             state["display_backup"] = record_display(serial)
             set_wide(serial)
@@ -408,7 +429,7 @@ def apply_setup(
             state["private_backup"] = inject_crash_gate(serial, version)
         if setup in {"home", "crash"}:
             android_start_home(serial)
-        else:
+        elif not keep_editor:
             source_id = wait_media_id(serial, Path(state["fixtures"]["A"]).name)
             state["source_id"] = source_id
             android_share_in(serial, source_id)
