@@ -1,6 +1,7 @@
 context platform=ios
-open me.rosuh.easywatermark.ios
-wait id="sharedComposeSaveButton"
+open me.rosuh.easywatermark.ios --relaunch
+press id="store-seed-editor"
+wait id="sharedComposeSaveButton" 90000
 wait id="editorPhotoStrip"
 press id="editorPhotoStrip"
 wait id="editorPhotoStrip"

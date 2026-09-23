@@ -1,8 +1,8 @@
 context platform=ios
 open me.rosuh.easywatermark.ios --relaunch
-wait label="Choose Images"
-press label="About"
-wait label="Version, 3.0.0"
+wait id="launchPickImageButton"
+press id="launchAboutButton"
+wait label="版本"
 press label="Back"
-wait label="Choose Images"
+wait id="launchPickImageButton"
 close

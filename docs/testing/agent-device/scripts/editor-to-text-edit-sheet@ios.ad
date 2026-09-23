@@ -1,10 +1,11 @@
 context platform=ios
 env WATERMARK="EWM AGENT DEVICE"
-open me.rosuh.easywatermark.ios
-wait id="sharedComposeSaveButton"
+open me.rosuh.easywatermark.ios --relaunch
+press id="store-seed-editor"
+wait id="sharedComposeSaveButton" 90000
 press id="watermarkTextContent"
 wait id="watermarkTextEditField"
 fill id="watermarkTextEditField" "${WATERMARK}"
 press id="watermarkTextConfirm"
-wait id="sharedComposeSaveButton"
+wait id="sharedComposeSaveButton" 90000
 close
