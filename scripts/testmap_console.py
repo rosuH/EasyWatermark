@@ -52,6 +52,7 @@ from testmap_run import (  # noqa: E402
     TASK_SPECS,
     BusyError,
     RunManager,
+    git_info,
     confirmation_views,
     edge_badges,
     latest_edge_results,
@@ -153,6 +154,7 @@ class Handler(BaseHTTPRequestHandler):
                     "confirmations": confirmation_views(edges),
                     "witnesses": list_witness_files(),
                     "latest_run": (latest_run() or {}).get("id"),
+                    "head": git_info(),
                 },
             )
             return

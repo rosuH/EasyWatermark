@@ -2865,6 +2865,9 @@ html[data-mode="file"] .live-only { display: none !important; }
 .trow:hover { background: var(--accent-dim); }
 .trow.sel { background: var(--accent-dim); box-shadow: inset 2px 0 0 var(--accent); }
 .trow.dim { opacity: 0.12; }
+.trow.sel,
+.trow:has(input:checked),
+.trow:has(input:indeterminate) { opacity: 1; }
 .trow .t-id {
   min-width: 0;
   overflow: hidden;
@@ -4654,8 +4657,9 @@ function syncTree() {
     var nst = path && path.nodes[nid];
     var vis = nodeActive(nid);
     var pathDim = !!(path && path.active && vis && !nst);
-    row.classList.toggle("dim", !vis || pathDim);
-    row.classList.toggle("sel", nid === state.node);
+    var nodeDraft = nodeCases(nid).some(function (c) { return draftHas(c.id); });
+    row.classList.toggle("dim", (!vis || pathDim) && !nodeDraft);
+    row.classList.toggle("sel", nid === state.node || nodeDraft);
     row.classList.toggle("nst-running", nst === "running");
     row.classList.toggle("nst-passed", nst === "passed");
     row.classList.toggle("nst-failed", nst === "failed");
@@ -4669,8 +4673,9 @@ function syncTree() {
     var runSt = path && path.edges[id];
     var isCurrent = !!(path && path.current[id] && !path.stopped);
     var pathDim = !!(path && path.active && vis && !isCurrent && runSt !== "passed" && runSt !== "failed" && runSt !== "review_required");
-    row.classList.toggle("dim", !vis || pathDim);
-    row.classList.toggle("sel", id === state.selected || draftTouches(id));
+    var drafted = draftTouches(id);
+    row.classList.toggle("dim", (!vis || pathDim) && !drafted);
+    row.classList.toggle("sel", id === state.selected || drafted);
     var chip = row.querySelector(".t-chip");
     var shown = runSt || edgeResults[id] || "";
     if (chip) {
@@ -4686,9 +4691,10 @@ function syncTree() {
     var id = row.getAttribute("data-id");
     var e = DATA.edges.find(function (x) { return x.id === id; });
     var vis = !!(e && edgeVisible(e)) && (!state.plats.size || state.plats.has(plat));
-    row.classList.toggle("dim", !vis);
     var input = row.querySelector('input[data-kind="plat"]');
     if (input && input.getAttribute("data-task")) input.checked = draftHas(input.getAttribute("data-task"));
+    var checked = !!(input && input.checked);
+    row.classList.toggle("dim", !vis && !checked);
   });
   box.querySelectorAll(".trow.node").forEach(function (row) {
     checkTrio(row.querySelector('input[data-kind="node"]'), nodeCases(row.getAttribute("data-node")));
@@ -5281,13 +5287,15 @@ function relTime(iso) {
   if (s < 86400) return t("rel.hour", {n: Math.floor(s / 3600)});
   return t("rel.day", {n: Math.floor(s / 86400)});
 }
-function updateSha(runs) {
+var headGit = null;
+function updateSha() {
   var el = $("git-sha");
-  var git = runs && runs[0] && runs[0].git;
-  if (!git || !git.sha) { el.textContent = "—"; el.classList.remove("dirty"); el.title = t("history.noRuns"); return; }
+  if (!el) return;
+  var git = headGit;
+  if (!git || !git.sha) { el.textContent = "—"; el.classList.remove("dirty"); el.title = ""; return; }
   el.textContent = git.sha + (git.dirty ? " dirty" : "");
   el.classList.toggle("dirty", !!git.dirty);
-  el.title = t("history.latest", {id: (runs[0] && runs[0].id) || ""});
+  el.title = git.sha;
 }
 function renderHistory(runs) {
   lastRuns = runs;
@@ -5326,7 +5334,7 @@ function renderHistory(runs) {
       }
     });
   }
-  updateSha(runs);
+  updateSha();
 }
 function loadHist(d) {
   var hid = d.getAttribute("data-id");
@@ -5697,10 +5705,14 @@ function taskStateLabel(state) {
 function taskListOf(st) {
   return (st && (st.tasks || st.queue)) || [];
 }
+function taskRowKey(task, index) {
+  var repeat = (task && task.repeat) || {};
+  return [task && task.id || "", task && task.platform || "", repeat.k || 1, index].join("|");
+}
 function focusedTask(st) {
   var tasks = taskListOf(st);
   if (execPick) {
-    for (var i = 0; i < tasks.length; i++) if (tasks[i].id === execPick) return tasks[i];
+    for (var i = 0; i < tasks.length; i++) if (taskRowKey(tasks[i], i) === execPick) return tasks[i];
   }
   for (var j = 0; j < tasks.length; j++) {
     if (tasks[j].state === "running" || tasks[j].state === "paused") return tasks[j];
@@ -5836,7 +5848,11 @@ function renderTaskBoard(st) {
   var failed = prog.failed || 0;
   if (progress) progress.textContent = done + "/" + total + (failed ? (" · " + failed + (lang === "zh" ? " 失败" : " failed")) : "");
   var focus = focusedTask(st);
-  list.innerHTML = tasks.map(function (task) {
+  var focusKey = "";
+  tasks.forEach(function (task, index) {
+    if (focus && task === focus) focusKey = taskRowKey(task, index);
+  });
+  list.innerHTML = tasks.map(function (task, index) {
     var repeat = task.repeat || {};
     var kn = (repeat.k || 1) + "/" + (repeat.n || 1);
     var dur = task.duration_s != null ? (task.duration_s + "s") : "";
@@ -5844,15 +5860,16 @@ function renderTaskBoard(st) {
     var title = eid ? edgeTitle(eid) : (task.label || task.id || "");
     var plat = t("plat." + (task.platform || "")) || task.platform || "";
     var fail = failedStepOf(task);
-    var on = focus && focus.id === task.id ? " on" : "";
-    return '<li><button type="button" class="task-row ' + esc(task.state || "") + on + '" data-id="' + esc(task.id || "") + '"'
+    var key = taskRowKey(task, index);
+    var on = key === focusKey ? " on" : "";
+    return '<li><button type="button" class="task-row ' + esc(task.state || "") + on + '" data-key="' + esc(key) + '"'
       + (fail && fail.n != null ? ' data-fail-n="' + esc(String(fail.n)) + '"' : "") + ">"
       + '<span class="name">' + esc(title) + "</span><span>" + esc(plat) + "</span><span>" + esc(kn) + "</span><span>"
       + esc(taskStateLabel(task.state)) + '</span><span class="dur">' + esc(dur) + "</span></button></li>";
   }).join("");
   list.querySelectorAll(".task-row").forEach(function (btn) {
     btn.onclick = function () {
-      execPick = btn.getAttribute("data-id") || "";
+      execPick = btn.getAttribute("data-key") || "";
       var n = btn.getAttribute("data-fail-n");
       execJumpN = n == null || n === "" ? null : n;
       if (execJumpN == null) openResultBody();
@@ -5874,11 +5891,6 @@ function renderRunStatus(st) {
   lastRunState = st.state || "idle";
   if (sameRun && (prev === "running" || prev === "paused") &&
       (st.state === "passed" || st.state === "failed" || st.state === "stopped" || st.state === "review_required")) {
-    var finished = (st.queue || []).filter(function (task) {
-      return task.state === "passed" || task.state === "failed" || task.state === "stopped" || task.state === "review_required";
-    });
-    var last = finished[finished.length - 1];
-    toast((last ? last.id : "run") + " " + statusLabel(last ? last.state : st.state));
     lastBadgesJson = "";
     lastWitnessJson = "";
     if (st.id && (!displayedRunId || displayedRunId === st.id)) showRunResult(st.id);
@@ -6619,6 +6631,7 @@ function poll() {
     lastWitnessJson = nextWit;
     edgeBadges = m.badges || {};
     edgeResults = m.results || {};
+    if (m.head) { headGit = m.head; updateSha(); }
     confirmations = m.confirmations || {};
     witnessPresent = {};
     (m.witnesses || []).forEach(function (n) { witnessPresent[n] = true; });
