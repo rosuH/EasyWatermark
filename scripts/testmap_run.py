@@ -64,6 +64,7 @@ from testmap_agent_device import (  # noqa: E402
     case_platforms,
     case_supports_platform,
     evidence_dir_for,
+    agent_device_bin,
     ensure_pinned_agent_device,
     ingest_agent_device_result,
     is_agent_device_cmd,
@@ -99,7 +100,9 @@ WITNESS_DIR = REPO_ROOT / "shared" / "build" / "l1-witness"
 ARTIFACTS_DIR = REPO_ROOT / "docs" / "testmap" / "artifacts"
 WITNESS_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.png$")
 RUN_ID_RE = re.compile(r"^[0-9T]{15}-[0-9a-f]+(-[0-9]+)?$")
-STEP_SHOT_RE = re.compile(r"^(android|ios|desktop)-[0-9]+\.png$")
+STEP_SHOT_RE = re.compile(
+    r"^(?:[A-Za-z0-9]+-)*(android|ios|desktop)-(?:r[0-9]+-)?[0-9]+\.png$"
+)
 EDGE_TASK_RE = re.compile(
     r"^edge:([^@#]+)(?:@(desktop|ios|android))?(?:#(l2|artemis|agent))?$"
 )
@@ -486,10 +489,15 @@ def resolve_task_spec(tid: str) -> dict:
 
 
 def _record_task(tid: str, spec: dict) -> dict:
+    platform = spec.get("agent_platform") or spec.get("needs_device") or ""
     return {
         "id": tid,
+        "edge": spec.get("edge_id") or task_edge_id(tid),
+        "platform": platform or "",
+        "repeat": {"k": 1, "n": 1},
         "label": spec["label"],
         "state": "pending",
+        "steps": [],
         "cmd": list(spec.get("cmd") or []),
         "exit_code": None,
         "duration_s": None,
@@ -895,10 +903,24 @@ def step_shot_path(run_id: str, name: str) -> Path | None:
     return path
 
 
+def _public_record(rec: dict) -> dict:
+    out = {key: value for key, value in rec.items() if not str(key).startswith("_")}
+    tasks = []
+    for task in rec.get("tasks") or []:
+        item = {key: value for key, value in task.items() if not str(key).startswith("_")}
+        tasks.append(item)
+    out["tasks"] = tasks
+    return out
+
+
 def write_record(rec: dict) -> Path:
+    """Atomically replace runs/<id>.json. Private keys are not persisted."""
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
     path = RUNS_DIR / f"{rec['id']}.json"
-    path.write_text(json.dumps(rec, indent=2) + "\n", encoding="utf-8")
+    payload = json.dumps(_public_record(rec), indent=2) + "\n"
+    tmp = path.with_name(f".{path.stem}.{os.getpid()}.tmp")
+    tmp.write_text(payload, encoding="utf-8")
+    os.replace(tmp, path)
     return path
 
 
@@ -1827,6 +1849,35 @@ def _run_batched_steps(
     return 0
 
 
+def release_agent_session(cmd: list[str] | None, logf=None) -> None:
+    """Drop the agent-device session lock. Never pass --shutdown."""
+    if not cmd or "--session" not in cmd:
+        return
+    index = cmd.index("--session")
+    if index + 1 >= len(cmd):
+        return
+    session = cmd[index + 1]
+    if not session or session.startswith("-"):
+        return
+    try:
+        proc = subprocess.run(
+            [agent_device_bin(), "--session", session, "close"],
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        if logf is not None:
+            logf.write(f"session close {session} failed: {exc}\n")
+            logf.flush()
+        return
+    if logf is not None and proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout or "").strip()
+        logf.write(f"session close {session}: {proc.returncode} {detail[:240]}\n")
+        logf.flush()
+
+
 def run_task(
     spec: dict,
     logf,
@@ -1895,6 +1946,7 @@ def run_task(
         code = _run_batched_steps(
             cmd, rows, logf, tee_stdout, on_proc, on_step_event, should_stop, watch_plat, env
         )
+        release_agent_session(cmd, logf)
         _restore_agent_setup(setup_state, logf)
         extra = ingest_agent_device_result(spec, code)
         _publish_agent_device_live(spec)
@@ -1968,6 +2020,8 @@ def run_task(
             replay_log.close()
         if on_proc:
             on_proc(None)
+        if spec.get("builder") == "agent-device":
+            release_agent_session(cmd, logf)
         _restore_agent_setup(setup_state, logf)
     cases = (
         parse_junit(spec.get("xml_dir"), since, spec.get("xml_base"))
@@ -1984,6 +2038,175 @@ def run_task(
         cases = extra.get("cases") or cases
         _publish_agent_device_live(spec)
     return code, cases, extra
+
+
+def load_status_record(run_id: str | None = None) -> dict | None:
+    """The run the console should show. A running record wins over a newer finished one."""
+    if run_id:
+        return load_run(run_id)
+    if not RUNS_DIR.is_dir():
+        return None
+    running = None
+    newest = None
+    for path in RUNS_DIR.glob("*.json"):
+        if not RUN_ID_RE.match(path.stem):
+            continue
+        try:
+            rec = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(rec, dict) or rec.get("historical"):
+            continue
+        started = str(rec.get("started") or "")
+        if rec.get("state") in {"running", "paused"} and (
+            running is None or started > str(running.get("started") or "")
+        ):
+            running = rec
+        if newest is None or started > str(newest.get("started") or ""):
+            newest = rec
+    return running or newest
+
+
+def _watch_from_slots() -> dict[str, dict | None]:
+    slots = default_watch_slots()
+    watches: dict[str, dict | None] = {}
+    for plat in ("android", "ios", "desktop"):
+        item = slots.get(plat)
+        if isinstance(item, dict) and (item.get("id") or plat == "desktop"):
+            watches[plat] = {
+                "platform": plat,
+                "device": item.get("id") or plat,
+                "name": item.get("name") or plat,
+                "kind": item.get("kind"),
+            }
+        else:
+            watches[plat] = None
+    return watches
+
+
+def _steps_for_watch(tasks: list[dict]) -> list[dict]:
+    chosen: dict[str, dict] = {}
+    for task in tasks:
+        plat = str(task.get("platform") or "")
+        if task.get("state") == "running":
+            chosen[plat] = task
+    for task in tasks:
+        plat = str(task.get("platform") or "")
+        if plat not in chosen and task.get("state") not in {"pending"}:
+            chosen[plat] = task
+    steps: list[dict] = []
+    for task in chosen.values():
+        for step in task.get("steps") or []:
+            if not isinstance(step, dict):
+                continue
+            item = dict(step)
+            item["platform"] = task.get("platform") or item.get("platform") or ""
+            steps.append(item)
+    return steps
+
+
+def project_status(rec: dict | None) -> dict:
+    watches = _watch_from_slots()
+    idle = {
+        "active": False,
+        "state": "idle",
+        "id": None,
+        "source": None,
+        "pid": None,
+        "queue": [],
+        "tasks": [],
+        "progress": {"done": 0, "total": 0, "failed": 0},
+        "current": None,
+        "elapsed_s": 0,
+        "log_tail": [],
+        "pause_queue": False,
+        "semantics": SEMANTICS,
+        "live": live_snapshot(),
+        "watch": watches.get("android"),
+        "watches": watches,
+        "steps": [],
+    }
+    if not rec:
+        return idle
+    tasks = [task for task in (rec.get("tasks") or []) if isinstance(task, dict)]
+    queue = []
+    current = None
+    for task in tasks:
+        edge = task.get("edge") or task_edge_id(str(task.get("id") or ""))
+        row = {
+            "id": task.get("id"),
+            "edge": edge,
+            "edge_id": edge,
+            "platform": task.get("platform") or "",
+            "repeat": task.get("repeat") or {"k": 1, "n": 1},
+            "label": task.get("label") or "",
+            "state": task.get("state") or "pending",
+            "exit_code": task.get("exit_code"),
+            "duration_s": task.get("duration_s"),
+        }
+        queue.append(row)
+        if current is None and row["state"] in {"running", "paused"}:
+            current = {"id": row["id"], "edge_id": edge, "elapsed_s": row["duration_s"] or 0}
+    done = sum(1 for row in queue if row["state"] not in {"pending", "running", "paused"})
+    failed = sum(1 for row in queue if row["state"] == "failed")
+    log_path = Path(rec["log"]) if rec.get("log") else None
+    if log_path and not log_path.is_absolute():
+        log_path = REPO_ROOT / log_path
+    return {
+        "active": rec.get("state") in {"running", "paused"},
+        "state": rec.get("state") or "idle",
+        "id": rec.get("id"),
+        "source": rec.get("source") or "manual",
+        "pid": rec.get("pid"),
+        "git": rec.get("git"),
+        "queue": queue,
+        "tasks": queue,
+        "progress": {"done": done, "total": len(queue), "failed": failed},
+        "current": current,
+        "elapsed_s": 0,
+        "log_tail": log_tail(log_path) if log_path else [],
+        "pause_queue": False,
+        "semantics": SEMANTICS,
+        "live": live_snapshot(),
+        "watch": watches.get("android"),
+        "watches": watches,
+        "steps": _steps_for_watch(tasks),
+    }
+
+
+def _pid_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    return True
+
+
+def _drain_runner_output(proc: subprocess.Popen) -> None:
+    if proc.stdout is None:
+        return
+    try:
+        for line in proc.stdout:
+            sys.stderr.write(line)
+            sys.stderr.flush()
+    except (OSError, ValueError):
+        return
+
+
+def stop_recorded_run() -> dict:
+    rec = load_status_record()
+    if not rec or rec.get("state") not in {"running", "paused"}:
+        raise ValueError("no active run")
+    pid = rec.get("pid")
+    if isinstance(pid, int) and _pid_alive(pid):
+        os.kill(pid, signal.SIGTERM)
+        return {"id": rec.get("id"), "state": "stopping", "pid": pid}
+    rec["state"] = "stopped"
+    for task in rec.get("tasks") or []:
+        if isinstance(task, dict) and task.get("state") in {"pending", "running", "paused"}:
+            task["state"] = "stopped"
+    write_record(rec)
+    return {"id": rec.get("id"), "state": "stopped", "pid": pid}
 
 
 class BusyError(Exception):
@@ -2164,84 +2387,55 @@ class RunManager:
         with self.lock:
             return self.stop_requested
 
-    def snapshot(self) -> dict:
-        with self.lock:
-            rec = self.active
-            watch = self._remember_watch(rec)
-            if not rec:
-                return {
-                    "active": False,
-                    "state": "idle",
-                    "id": None,
-                    "queue": [],
-                    "current": None,
-                    "elapsed_s": 0,
-                    "log_tail": [],
-                    "pause_queue": False,
-                    "semantics": SEMANTICS,
-                    "live": live_snapshot(),
-                    "watch": watch,
-                    "watches": self._watch_slots(None),
-                    "steps": self._public_steps(),
-                }
-            current = None
-            elapsed = 0.0
-            for task in rec["tasks"]:
-                if task["state"] == "running":
-                    started = task.get("_started_mono") or time.monotonic()
-                    elapsed = time.monotonic() - started
-                    current = {
-                        "id": task["id"],
-                        "edge_id": task_edge_id(task["id"]),
-                        "elapsed_s": round(elapsed, 1),
-                    }
-                    break
-            log_path = Path(rec["log"]) if rec.get("log") else None
-            if log_path and not log_path.is_absolute():
-                log_path = REPO_ROOT / log_path
-            return {
-                "active": rec["state"] in {"running", "paused"},
-                "state": rec["state"],
-                "id": rec["id"],
-                "queue": [
-                    {
-                        "id": t["id"],
-                        "edge_id": task_edge_id(t["id"]),
-                        "label": t["label"],
-                        "state": t["state"],
-                        "exit_code": t.get("exit_code"),
-                        "duration_s": t.get("duration_s"),
-                    }
-                    for t in rec["tasks"]
-                ],
-                "current": current,
-                "elapsed_s": round(elapsed, 1) if current else 0,
-                "log_tail": log_tail(log_path),
-                "pause_queue": self.pause_queue,
-                "semantics": SEMANTICS,
-                "live": live_snapshot(),
-                "watch": watch,
-                "watches": self._watch_slots(rec),
-                "steps": self._public_steps(),
-            }
+    def snapshot(self, run_id: str | None = None) -> dict:
+        return project_status(load_status_record(run_id))
 
     def start(self, task_ids: list[str], device: str | None = None) -> dict:
-        with self.lock:
-            if self.active and self.active.get("state") in {"running", "paused"}:
-                raise BusyError(self.active["id"])
-            rec = new_record(expand_mobile_parallel(task_ids), device)
-            self.active = rec
-            self.pause_queue = False
-            self.stop_requested = False
-            self.step_rows = {}
-            self.proc = None
-            self.procs = {}
-            log_path = REPO_ROOT / rec["log"]
-            self.worker = threading.Thread(
-                target=self._worker, args=(rec, log_path), daemon=True, name="testmap-run"
-            )
-            self.worker.start()
-            return {"id": rec["id"], "state": "running", "selection": list(rec["selection"])}
+        active = load_status_record()
+        if active and active.get("state") in {"running", "paused"}:
+            raise BusyError(str(active.get("id") or ""))
+        if not task_ids:
+            raise ValueError("selection is empty")
+        cmd = ["bash", str(REPO_ROOT / "scripts" / "e2e-run.sh")]
+        if device:
+            cmd.extend(["--device", device])
+        cmd.extend(task_ids)
+        proc = subprocess.Popen(
+            cmd,
+            cwd=REPO_ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            start_new_session=True,
+            env={**os.environ, "TMPDIR": os.environ.get("TMPDIR") or "/tmp"},
+        )
+        holder: list[str] = []
+
+        def _first() -> None:
+            if proc.stdout is None:
+                return
+            holder.append(proc.stdout.readline())
+
+        reader = threading.Thread(target=_first, daemon=True)
+        reader.start()
+        reader.join(20)
+        line = holder[0] if holder else ""
+        run_id = ""
+        if line.startswith("testmap run "):
+            run_id = line.split()[2]
+        if proc.stdout is not None:
+            threading.Thread(
+                target=_drain_runner_output, args=(proc,), daemon=True, name="testmap-cli-log"
+            ).start()
+        if not run_id:
+            raise RuntimeError(line.strip() or "runner did not report a run id")
+        rec = load_run(run_id) or {}
+        return {
+            "id": run_id,
+            "state": rec.get("state") or "running",
+            "selection": list(rec.get("selection") or task_ids),
+        }
 
     def pause(self) -> dict:
         with self.lock:
@@ -2262,18 +2456,7 @@ class RunManager:
             return {"id": self.active["id"], "state": "running"}
 
     def stop(self) -> dict:
-        with self.lock:
-            if not self.active or self.active["state"] not in {"running", "paused"}:
-                raise ValueError("no active run")
-            self.stop_requested = True
-            self.pause_queue = False
-            proc = self.proc
-            procs = list(self.procs.values())
-            self.cv.notify_all()
-        terminate_process(proc)
-        for item in procs:
-            terminate_process(item)
-        return {"id": self.active["id"] if self.active else None, "state": "stopping"}
+        return stop_recorded_run()
 
     def kill_child(self) -> None:
         with self.lock:
@@ -2415,82 +2598,370 @@ def print_task_list() -> None:
             print(f"    {item['cmd']}")
 
 
-def run_foreground(task_ids: list[str], device: str | None = None) -> int:
-    """Sequential queue in this process. Ctrl-C writes state=stopped."""
-    rec = new_record(task_ids, device)
+def _repeat_tasks(tasks: list[dict], repeats: int) -> list[dict]:
+    count = max(1, int(repeats or 1))
+    if count == 1:
+        for task in tasks:
+            task["repeat"] = {"k": 1, "n": 1}
+        return tasks
+    out: list[dict] = []
+    for task in tasks:
+        for k in range(1, count + 1):
+            copy = json.loads(json.dumps(task))
+            copy["repeat"] = {"k": k, "n": count}
+            if k > 1 and copy.get("edge"):
+                copy["agent_device_output"] = str(evidence_dir_for(str(copy["edge"])))
+            out.append(copy)
+    return out
+
+
+def _shot_name(task: dict, platform: str, n: int) -> str:
+    edge = re.sub(r"[^A-Za-z0-9]+", "-", str(task.get("edge") or "task")).strip("-")
+    repeat = task.get("repeat") or {}
+    total = int(repeat.get("n") or 1)
+    k = int(repeat.get("k") or 1)
+    if total > 1:
+        return f"{edge}-{platform}-r{k}-{n}.png"
+    return f"{edge}-{platform}-{n}.png"
+
+
+def _device_id(value: object) -> str:
+    """Serial or UDID. A device dict must not be stringified into the id."""
+    if isinstance(value, dict):
+        raw = str(value.get("id") or "")
+    elif isinstance(value, str):
+        raw = value.strip()
+    else:
+        return ""
+    if not raw or raw in {"auto", "<device>"} or raw.startswith("{"):
+        return ""
+    return raw
+
+
+def _isolate_agent_outputs(tasks: list[dict]) -> None:
+    """Each lane and repeat gets its own evidence directory.
+
+    Android and iOS of one edge otherwise share replay.log, and the other
+    platform's divergence is then read as this task's result.
+    """
+    for task in tasks:
+        raw = str(task.get("agent_device_output") or "")
+        if not raw:
+            continue
+        plat = str(task.get("platform") or "host")
+        repeat = task.get("repeat") if isinstance(task.get("repeat"), dict) else {}
+        k = int((repeat or {}).get("k") or 1)
+        n = int((repeat or {}).get("n") or 1)
+        leaf = plat if n <= 1 else f"{plat}-r{k}"
+        path = Path(raw)
+        if path.name == leaf:
+            continue
+        task["agent_device_output"] = str(path / leaf)
+
+
+def _step_public(row: dict, task: dict) -> dict:
+    command = str(row.get("command") or "")
+    args = str(row.get("args") or "")
+    item = {
+        "n": row.get("n"),
+        "text": (command + " " + args).strip(),
+        "command": command,
+        "args": args,
+        "state": row.get("state") or "pending",
+        "platform": task.get("platform") or row.get("platform") or "",
+    }
+    if isinstance(row.get("duration_ms"), int):
+        item["duration_ms"] = row["duration_ms"]
+    if row.get("shot"):
+        item["shot"] = row["shot"]
+    elif row.get("shot_error"):
+        item["shot_error"] = row["shot_error"]
+    if row.get("point"):
+        item["point"] = row["point"]
+    return item
+
+
+class ActiveRun:
+    """One CLI process. The JSON file is the interface the console reads."""
+
+    def __init__(self, rec: dict):
+        self.rec = rec
+        self.lock = threading.Lock()
+        self.shot_locks = {name: threading.Lock() for name in ("android", "ios", "desktop")}
+        self.devices: dict[str, str] = {}
+        self.shot_threads: list[threading.Thread] = []
+        self.proc: subprocess.Popen | None = None
+        self.procs: dict[str, subprocess.Popen] = {}
+        self.stop_requested = False
+        self.cv = threading.Condition(self.lock)
+        self.log_lock = threading.Lock()
+
+    def flush(self) -> None:
+        with self.lock:
+            for task in self.rec.get("tasks") or []:
+                rows = task.get("_rows")
+                if rows is None:
+                    continue
+                task["steps"] = [_step_public(row, task) for row in rows]
+            write_record(self.rec)
+
+    def _running(self, platform: str) -> dict | None:
+        for task in self.rec.get("tasks") or []:
+            if task.get("state") == "running" and (task.get("platform") or "") == platform:
+                return task
+        return None
+
+    def on_steps(self, platform: str, rows: list[dict]) -> None:
+        with self.lock:
+            task = self._running(platform)
+            if task is None:
+                return
+            task["_rows"] = rows
+        self.flush()
+
+    def on_step(self, platform: str, payload: object) -> None:
+        grab: tuple[dict, int] | None = None
+        with self.lock:
+            task = self._running(platform)
+            rows = (task or {}).get("_rows") or []
+            if isinstance(payload, str):
+                apply_timing_line(rows, payload)
+            elif isinstance(payload, dict):
+                apply_event(rows, payload)
+            event = payload if isinstance(payload, dict) else None
+            if isinstance(payload, str) and payload.strip().startswith("{"):
+                try:
+                    parsed = json.loads(payload)
+                except json.JSONDecodeError:
+                    parsed = None
+                if isinstance(parsed, dict):
+                    event = parsed
+            if (
+                task is not None
+                and isinstance(event, dict)
+                and event.get("type") == "replay_action_stop"
+                and isinstance(event.get("step"), int)
+                and platform in {"android", "ios"}
+            ):
+                grab = (task, int(event["step"]))
+        self.flush()
+        if grab is not None:
+            self._grab_step_frame(grab[0], platform, grab[1])
+
+    def note_device(self, platform: str, device: str) -> None:
+        if platform and device:
+            with self.lock:
+                self.devices[platform] = device
+
+    def _grab_step_frame(self, task: dict, platform: str, n: int) -> None:
+        with self.lock:
+            device = _device_id(self.devices.get(platform))
+            run_id = str(self.rec.get("id") or "")
+            name = _shot_name(task, platform, n)
+        if not device:
+            slot = default_watch_slots().get(platform) or {}
+            device = _device_id(slot.get("id"))
+
+        def work() -> None:
+            gate = self.shot_locks.get(platform) or self.shot_locks["android"]
+            with gate:
+                target = resolve_watch_target(
+                    platform,
+                    device,
+                    {"platform": platform, "device": device} if device else None,
+                )
+                png = capture_device_frame(target) if target else None
+                if not png or not run_id:
+                    if not device:
+                        reason = "没有设备号，无法截图"
+                    elif target is None:
+                        reason = "设备不在可截图列表里"
+                    else:
+                        reason = "截图命令没有返回图片"
+                    sys.stderr.write(
+                        f"step shot skipped {platform} #{n} device={device!r} {reason}\n"
+                    )
+                    with self.lock:
+                        for row in task.get("_rows") or []:
+                            if row.get("n") == n and not row.get("shot"):
+                                row["shot_error"] = reason
+                                break
+                    self.flush()
+                    return
+                dest = RUNS_DIR / run_id / "steps"
+                dest.mkdir(parents=True, exist_ok=True)
+                (dest / name).write_bytes(png)
+            with self.lock:
+                for row in task.get("_rows") or []:
+                    if row.get("n") == n:
+                        row["shot"] = name
+                        break
+            self.flush()
+
+        thread = threading.Thread(target=work, daemon=True, name=f"step-shot-{name}")
+        with self.lock:
+            self.shot_threads.append(thread)
+        thread.start()
+
+    def finish_task_rows(self, task: dict, ok: bool) -> None:
+        with self.lock:
+            for row in task.get("_rows") or []:
+                if row.get("state") == "current":
+                    row["state"] = "done" if ok else "failed"
+
+
+def _execute_task(active: ActiveRun, rec: dict, task: dict, logf) -> None:
+    with active.lock:
+        while active.stop_requested is False and rec.get("state") == "paused":
+            active.cv.wait(timeout=0.5)
+        if active.stop_requested:
+            task["state"] = "stopped"
+            return
+        rec["state"] = "running"
+        task["state"] = "running"
+        task["_started_mono"] = time.monotonic()
+        spec = task_run_spec(task)
+        lane = _task_lane(spec)
+    active.flush()
+    t0 = time.monotonic()
+    with active.log_lock:
+        logf.write(f"\n## {task['id']}: {' '.join(spec['cmd'])}\n")
+        logf.flush()
+
+    def _bind(proc, lane_ref=lane):
+        with active.lock:
+            active.proc = proc
+            if proc is None:
+                active.procs.pop(lane_ref, None)
+            else:
+                active.procs[lane_ref] = proc
+
+    def _on_spec(updated, task_ref=task):
+        with active.lock:
+            if updated.get("cmd"):
+                task_ref["cmd"] = list(updated["cmd"])
+            if updated.get("device"):
+                task_ref["device"] = updated["device"]
+                dev = _device_id(updated.get("device"))
+                if dev:
+                    active.devices[str(task_ref.get("platform") or "")] = dev
+            if updated.get("agent_device_output"):
+                task_ref["agent_device_output"] = updated["agent_device_output"]
+
+    code, cases, extra = run_task(
+        spec,
+        logf,
+        tee_stdout=True,
+        on_proc=_bind,
+        on_spec=_on_spec,
+        on_steps=active.on_steps,
+        on_step_event=active.on_step,
+        should_stop=lambda: active.stop_requested,
+    )
+    task["duration_s"] = round(time.monotonic() - t0, 2)
+    task["exit_code"] = code
+    task["cases"] = cases
+    if extra:
+        task["layers"] = extra.get("layers")
+        task["evidence_dir"] = extra.get("evidence_dir")
+        task["recordings"] = extra.get("recordings")
+        task["independent_review"] = extra.get("independent_review")
+        task["human_confirmation"] = False
+    if active.stop_requested:
+        task["state"] = "stopped"
+    elif spec.get("builder") in {"artemis", "agent-device"}:
+        task["state"] = _agent_task_state(spec, extra)
+    elif code == 0:
+        task["state"] = "passed"
+    else:
+        task["state"] = "failed"
+    active.finish_task_rows(task, task["state"] in {"passed", "review_required"})
+    active.flush()
+
+
+def run_record(rec: dict) -> int:
+    """Run every task in this process. One failure does not skip the rest."""
+    active = ActiveRun(rec)
     log_path = REPO_ROOT / rec["log"]
     log_path.parent.mkdir(parents=True, exist_ok=True)
-    current: dict = {"proc": None, "stop": False}
-
-    def _on_proc(proc: subprocess.Popen | None) -> None:
-        current["proc"] = proc
+    exit_code = 0
 
     def _interrupt(_signum=None, _frame=None) -> None:
-        current["stop"] = True
-        terminate_process(current["proc"])
+        active.stop_requested = True
+        with active.lock:
+            procs = list(active.procs.values())
+            proc = active.proc
+            active.cv.notify_all()
+        terminate_process(proc)
+        for item in procs:
+            terminate_process(item)
 
     prev_int = signal.signal(signal.SIGINT, _interrupt)
     prev_term = signal.signal(signal.SIGTERM, _interrupt)
-    exit_code = 0
     try:
         with log_path.open("a", encoding="utf-8") as logf:
-            logf.write(f"# run {rec['id']} started {rec['started']}\n")
-            logf.flush()
-            print(f"testmap run {rec['id']}  (not a CI gate)", flush=True)
-            for task in rec["tasks"]:
-                if current["stop"]:
-                    task["state"] = "stopped"
-                    continue
-                spec = task_run_spec(task)
-                rec["state"] = "running"
-                task["state"] = "running"
-                task["_started_mono"] = time.monotonic()
-                t0 = time.monotonic()
-                header = f"\n## {task['id']}: {' '.join(spec['cmd'])}\n"
-                logf.write(header)
+            with active.log_lock:
+                logf.write(f"# run {rec['id']} started {rec['started']} pid {rec.get('pid')}\n")
                 logf.flush()
-                sys.stdout.write(header)
-                sys.stdout.flush()
-                code, cases, extra = run_task(spec, logf, tee_stdout=True, on_proc=_on_proc)
-                current["proc"] = None
-                if spec.get("cmd"):
-                    task["cmd"] = list(spec["cmd"])
-                task["duration_s"] = round(time.monotonic() - t0, 2)
-                task["exit_code"] = code
-                task["cases"] = cases
-                if extra:
-                    task["layers"] = extra.get("layers")
-                    task["evidence_dir"] = extra.get("evidence_dir")
-                    task["recordings"] = extra.get("recordings")
-                    task["independent_review"] = extra.get("independent_review")
-                    task["human_confirmation"] = False
-                if current["stop"]:
-                    task["state"] = "stopped"
-                    if exit_code == 0:
-                        exit_code = code if code not in (0, None) else 130
-                elif spec.get("builder") in {"artemis", "agent-device"}:
-                    task["state"] = _agent_task_state(spec, extra)
-                    if task["state"] in {"failed", "blocked"} and exit_code == 0:
-                        exit_code = 1
-                elif code == 0:
-                    task["state"] = "passed"
-                else:
-                    task["state"] = "failed"
-                    if exit_code == 0:
-                        exit_code = code
+            lanes: dict[str, list[dict]] = {"android": [], "ios": [], "host": []}
+            for task in rec["tasks"]:
+                lanes[_task_lane(task_run_spec(task))].append(task)
+            threads: list[threading.Thread] = []
+            for name, group in lanes.items():
+                if not group:
+                    continue
+
+                def _lane(tasks=group) -> None:
+                    for task in tasks:
+                        if active.stop_requested:
+                            task["state"] = "stopped"
+                            active.flush()
+                            continue
+                        _execute_task(active, rec, task, logf)
+
+                thread = threading.Thread(target=_lane, daemon=True, name=f"testmap-lane-{name}")
+                threads.append(thread)
+                thread.start()
+            for thread in threads:
+                thread.join()
+            for shot in list(active.shot_threads):
+                shot.join(timeout=120)
             for task in rec["tasks"]:
                 if task["state"] == "pending":
                     task["state"] = "stopped"
                     if exit_code == 0:
                         exit_code = 130
+                elif task["state"] in {"failed", "blocked"} and exit_code == 0:
+                    exit_code = 1
+                elif task.get("exit_code") not in (0, None) and exit_code == 0 and task["state"] == "failed":
+                    exit_code = int(task["exit_code"])
         finalize_record(rec)
-        print(f"wrote {log_path.relative_to(REPO_ROOT)}", flush=True)
-        print(f"wrote {(RUNS_DIR / (rec['id'] + '.json')).relative_to(REPO_ROOT)}", flush=True)
+        active.flush()
         print(f"state={rec['state']}", flush=True)
         return exit_code
     finally:
         signal.signal(signal.SIGINT, prev_int)
         signal.signal(signal.SIGTERM, prev_term)
+
+
+def run_foreground(
+    task_ids: list[str],
+    device: str | None = None,
+    source: str = "manual",
+    repeats: int = 1,
+) -> int:
+    """Run tasks in this process. The record is on disk before the first case."""
+    origin = source if source in {"manual", "select", "verify"} else "manual"
+    rec = new_record(expand_mobile_parallel(task_ids), device)
+    rec["source"] = origin
+    rec["pid"] = os.getpid()
+    rec["tasks"] = _repeat_tasks(rec["tasks"], repeats)
+    _isolate_agent_outputs(rec["tasks"])
+    write_record(rec)
+    print(f"testmap run {rec['id']}  (not a CI gate)", flush=True)
+    code = run_record(rec)
+    print(f"wrote {(RUNS_DIR / (rec['id'] + '.json')).relative_to(REPO_ROOT)}", flush=True)
+    return code
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -2511,6 +2982,18 @@ def main(argv: list[str] | None = None) -> int:
         "--device",
         default="auto",
         help="Device id from `python3 scripts/testmap_devices.py`, or auto.",
+    )
+    parser.add_argument(
+        "--source",
+        default="manual",
+        choices=("manual", "select", "verify"),
+        help="Where the task list came from.",
+    )
+    parser.add_argument(
+        "--repeat",
+        type=int,
+        default=1,
+        help="Run each task this many times as separate k/N rows.",
     )
     parser.add_argument(
         "tasks",
@@ -2538,7 +3021,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help()
         return 2
     try:
-        return run_foreground(args.tasks, args.device)
+        return run_foreground(args.tasks, args.device, source=args.source, repeats=args.repeat)
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

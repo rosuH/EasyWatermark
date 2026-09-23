@@ -1,7 +1,7 @@
 context platform=android
 open me.rosuh.easywatermark.debug
-wait label="Save"
+wait label="Save" 45000
 wait "label=\"Add more images\""
 press "label=\"Add more images\""
-wait "label=\"Add more images\""
+wait label="Photos"
 close

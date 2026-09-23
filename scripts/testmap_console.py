@@ -156,7 +156,8 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/status":
             try:
-                self._json(200, MANAGER.snapshot())
+                run_id = (qs.get("id") or [None])[0]
+                self._json(200, MANAGER.snapshot(run_id))
             except Exception as exc:  # noqa: BLE001
                 self._json(500, {"error": str(exc), "state": "idle", "active": False})
             return
