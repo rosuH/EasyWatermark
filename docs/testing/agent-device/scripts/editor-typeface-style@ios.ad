@@ -1,8 +1,9 @@
 context platform=ios
-open me.rosuh.easywatermark.ios
-wait id="sharedComposeSaveButton"
+open me.rosuh.easywatermark.ios --relaunch
+press id="store-seed-editor"
+wait id="sharedComposeSaveButton" 90000
 press id="editorTab-1"
 wait id="editorControl-TextTypeFace"
-press label="Bold"
-wait label="Bold"
+press label="粗体"
+wait label="粗体"
 close

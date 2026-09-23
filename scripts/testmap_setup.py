@@ -232,7 +232,23 @@ def android_leave_system_picker(serial: str) -> None:
 
 
 def android_start_home(serial: str) -> None:
-    adb_shell(serial, "am", "start", "-W", "-n", ACTIVITY)
+    """Open the launcher task. A previous share-in task must not come back as the editor."""
+    # NEW_TASK | CLEAR_TASK | CLEAR_TOP. Force-stop alone still lets the next
+    # plain start reuse the last SEND task on some images.
+    adb_shell(
+        serial,
+        "am",
+        "start",
+        "-W",
+        "-n",
+        ACTIVITY,
+        "-a",
+        "android.intent.action.MAIN",
+        "-c",
+        "android.intent.category.LAUNCHER",
+        "-f",
+        "0x14008000",
+    )
 
 
 def android_share_in(serial: str, media_id: str) -> None:
@@ -436,8 +452,9 @@ def apply_setup(
         fixtures = make_fixtures(folder, marker)
         state["fixtures"] = {key: str(path) for key, path in fixtures.items()}
         push_android_fixtures(serial, fixtures)
-        # Each case starts from its own screen. A resumed export sheet or
-        # picker must not be reused as the next case's editor.
+        # Every #agent edge, not only the last select set. Home and crash
+        # clear the task and open the launcher. Editor, wide, and failure
+        # share one sample image into the editor.
         android_leave_system_picker(serial)
         android_force_stop(serial)
         if setup == "wide":
@@ -467,8 +484,9 @@ def apply_setup(
             ios_revoke_library_read(udid)
         else:
             ios_grant_library_read(udid)
-        # editor/home/wide: the script relaunches and seeds its own start.
-        # Width change is a simulator device choice (iPad), not a runtime morph.
+        # Home stays on the launch screen after terminate. Editor and failure
+        # scripts press store-seed-editor themselves; terminate is what drops
+        # the previous editor session first.
         return state
     raise ValueError(f"Unsupported setup platform {platform}")
 

@@ -2,10 +2,10 @@ context platform=android
 open me.rosuh.easywatermark.debug
 wait label="Save"
 press label="Save"
-wait label="输出格式"
+wait label="Output format"
 wait text "JPEG"
 press text="JPEG"
-wait label="质量"
+wait label="Quality"
 press text="PNG"
 wait text "PNG"
 close
