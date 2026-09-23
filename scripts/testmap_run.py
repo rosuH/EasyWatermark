@@ -999,6 +999,7 @@ def run_summaries() -> list[dict]:
                 "state": rec.get("state"),
                 "git": rec.get("git"),
                 "selection": rec.get("selection"),
+                "source": rec.get("source") or "",
                 "pass_count": rec.get("pass_count", 0),
                 "fail_count": rec.get("fail_count", 0),
                 "skip_count": rec.get("skip_count", 0),
@@ -1204,6 +1205,55 @@ def edge_badges(edges: list[dict]) -> dict[str, str]:
             )
             break
     return badges
+
+
+_EDGE_RESULT_RANK = {
+    "failed": 60,
+    "blocked": 50,
+    "stopped": 40,
+    "review_required": 30,
+    "passed": 20,
+    "running": 15,
+    "paused": 15,
+    "skipped": 5,
+    "pending": 0,
+}
+_edge_result_cache: tuple[float, dict[str, str]] | None = None
+
+
+def latest_edge_results(edges: list[dict]) -> dict[str, str]:
+    """Read projection: newest record that contains the edge, worst task state in it.
+
+    Does not write the run files. Cached briefly because the page polls /api/map.
+    """
+    global _edge_result_cache
+    now = time.monotonic()
+    if _edge_result_cache and now - _edge_result_cache[0] < 8:
+        return _edge_result_cache[1]
+    wanted = {str(edge.get("id") or "") for edge in edges if edge.get("id")}
+    found: dict[str, str] = {}
+    for item in run_summaries():
+        if wanted <= found.keys():
+            break
+        rec = load_run(str(item.get("id") or ""))
+        if not rec:
+            continue
+        seen: dict[str, str] = {}
+        for task in rec.get("tasks") or []:
+            if not isinstance(task, dict):
+                continue
+            eid = str(task.get("edge") or task_edge_id(str(task.get("id") or "")) or "")
+            if not eid or eid not in wanted or eid in found:
+                continue
+            state = str(task.get("state") or "")
+            prev = seen.get(eid, "")
+            if _EDGE_RESULT_RANK.get(state, 0) >= _EDGE_RESULT_RANK.get(prev, 0):
+                seen[eid] = state
+        for eid, state in seen.items():
+            if state:
+                found[eid] = state
+    _edge_result_cache = (now, found)
+    return found
 
 
 def list_witness_files() -> list[str]:
@@ -2133,6 +2183,10 @@ def project_status(rec: dict | None) -> dict:
     current = None
     for task in tasks:
         edge = task.get("edge") or task_edge_id(str(task.get("id") or ""))
+        steps = []
+        for step in task.get("steps") or []:
+            if isinstance(step, dict):
+                steps.append({k: v for k, v in step.items() if not str(k).startswith("_")})
         row = {
             "id": task.get("id"),
             "edge": edge,
@@ -2143,6 +2197,7 @@ def project_status(rec: dict | None) -> dict:
             "state": task.get("state") or "pending",
             "exit_code": task.get("exit_code"),
             "duration_s": task.get("duration_s"),
+            "steps": steps,
         }
         queue.append(row)
         if current is None and row["state"] in {"running", "paused"}:
@@ -2390,15 +2445,29 @@ class RunManager:
     def snapshot(self, run_id: str | None = None) -> dict:
         return project_status(load_status_record(run_id))
 
-    def start(self, task_ids: list[str], device: str | None = None) -> dict:
+    def start(
+        self,
+        task_ids: list[str],
+        device: str | None = None,
+        repeat: int = 1,
+        source: str = "manual",
+    ) -> dict:
         active = load_status_record()
         if active and active.get("state") in {"running", "paused"}:
             raise BusyError(str(active.get("id") or ""))
         if not task_ids:
             raise ValueError("selection is empty")
+        origin = source if source in {"manual", "select", "verify"} else "manual"
+        try:
+            count = int(repeat)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("repeat must be an integer") from exc
+        if count < 1 or count > 20:
+            raise ValueError("repeat must be from 1 to 20")
         cmd = ["bash", str(REPO_ROOT / "scripts" / "e2e-run.sh")]
         if device:
             cmd.extend(["--device", device])
+        cmd.extend(["--source", origin, "--repeat", str(count)])
         cmd.extend(task_ids)
         proc = subprocess.Popen(
             cmd,

@@ -1658,6 +1658,7 @@ button { letter-spacing: inherit; }
 }
 .map-col {
   display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   min-height: 0;
   overflow: hidden;
   border-right: 1px solid var(--border);
@@ -1811,8 +1812,13 @@ button { letter-spacing: inherit; }
 .lg-line.seam { border-color: var(--drive-seam); }
 .lg-line.none { border-color: var(--drive-none); border-top-style: dashed; }
 #graph .edot { stroke: var(--bg-0); stroke-width: 1.5; }
-#graph .edot.passed { fill: var(--success); }
-#graph .edot.failed { fill: var(--error); }
+#graph .edot.passed, #graph .edot.review_required { fill: var(--success); }
+#graph .edot.failed, #graph .edot.blocked { fill: var(--error); }
+#graph .edot.running, #graph .edot.paused { fill: var(--accent); }
+#graph .edge.in-draft .edge-vis { stroke: #ffde32; stroke-width: 3.2; }
+#graph .edge-result { font: 600 10px/1 var(--sans); fill: var(--text-2); pointer-events: none; }
+#graph .edge-result.failed, #graph .edge-result.blocked { fill: #e55; }
+#graph .edge-result.passed, #graph .edge-result.review_required { fill: var(--success); }
 #graph .edot.confirmed { stroke: var(--accent); stroke-width: 2.6; }
 #graph .edot.confirmed-stale { stroke: var(--warning); stroke-width: 2.6; }
 #graph .edot.confirmed:not(.passed):not(.failed) { fill: var(--bg-0); }
@@ -2830,8 +2836,8 @@ html[data-mode="file"] .live-only { display: none !important; }
 }
 .trow {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
+  grid-template-columns: 16px 16px minmax(0, 1fr) auto;
+  gap: 6px;
   align-items: center;
   width: 100%;
   margin: 0;
@@ -2845,10 +2851,17 @@ html[data-mode="file"] .live-only { display: none !important; }
   font: 600 13px/1.3 var(--sans);
 }
 .trow.edge {
-  padding-left: 28px;
+  padding-left: 22px;
   font: 500 12px/1.3 var(--sans);
   color: var(--text-2);
 }
+.trow.plat { padding-left: 40px; font: 500 12px/1.3 var(--sans); color: var(--text-2); }
+.trow input { width: 14px; height: 14px; margin: 0; }
+.twisty {
+  width: 16px; height: 16px; padding: 0; border: 0; background: transparent;
+  color: var(--text-3); cursor: pointer; font: 600 12px/1 var(--sans);
+}
+.t-kids[hidden] { display: none !important; }
 .trow:hover { background: var(--accent-dim); }
 .trow.sel { background: var(--accent-dim); box-shadow: inset 2px 0 0 var(--accent); }
 .trow.dim { opacity: 0.12; }
@@ -2894,18 +2907,68 @@ body.view-run { overflow: hidden; }
 body.view-run .app { height: 100dvh; overflow: hidden; }
 body.view-run .foot,
 body.view-run #advanced-wrap { display: none !important; }
-body.view-run .shell { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); height: 100%; min-height: 0; }
-body.view-run .map-col > :not(#run-path) { display: none !important; }
+body.view-run .map-col,
+body.view-run .history-pane,
+body.view-map .history-pane,
+body.view-catalog .history-pane { display: none !important; }
+body.view-run .shell { grid-template-columns: 1fr; height: 100%; min-height: 0; }
 body.view-run #run-path { display: flex; }
 body.view-run .inspector { grid-template-rows: minmax(0, 1fr); height: 100%; }
-body.view-run .watch-pane { height: 100%; display: flex; flex-direction: column; }
-body.view-run .watch-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); flex: 1 1 auto; height: auto; min-height: 0; }
+body.view-run .watch-pane {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  min-height: 0;
+}
+body.view-run #run-path { grid-column: 1 / -1; }
+body.view-run #task-board {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+body.view-run #task-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: auto;
+  min-height: 0;
+}
+body.view-run .task-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+  border-radius: 8px;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+}
+body.view-run .task-row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.view-run .task-row.on { border-color: var(--accent); color: var(--text); background: var(--accent-dim); }
+body.view-run .task-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+body.view-run .watch-grid { grid-column: 2; grid-row: 2; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); height: 100%; min-height: 0; }
+body.view-run .watch-result { grid-column: 1 / -1; grid-row: 3; margin: 0; }
+body.view-run .watch-status { display: none !important; }
+body.view-history .map-col,
+body.view-history .inspector { display: none !important; }
+body.view-history .shell { grid-template-columns: 1fr; height: 100%; min-height: 0; }
+body.view-history .history-pane { display: flex; }
 body.view-run .watch-grid.one-card { grid-template-columns: minmax(280px, 760px); justify-content: center; }
 body.view-run .watch-slot,
 body.view-run .watch-body { height: 100%; min-height: 0; }
-body.view-run .watch-result { flex: 0 0 auto; min-height: 0; display: flex; flex-direction: column; background: rgba(22, 22, 12, 0.96); border: 1px solid var(--border-strong); border-radius: 12px; margin: 0 8px 8px; padding: 0; z-index: 4; overflow: hidden; }
-body.view-run .watch-result.is-open { flex: 0 0 42%; height: 42%; max-height: 42%; }
-body.view-run .watch-result-bar { flex: 0 0 auto; padding: 8px 12px; }
+body.view-run .watch-result { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; background: rgba(22, 22, 12, 0.96); border: 1px solid var(--border-strong); border-radius: 12px; margin: 0; padding: 0; z-index: 4; overflow: hidden; }
+body.view-run .watch-result.is-open { height: auto; max-height: 250px; }
+body.view-run .watch-result-tools { padding: 8px 12px; }
+body.view-run .watch-result-bar { flex: 1 1 auto; width: auto; min-width: 0; padding: 0; }
+body.view-run #exec-confirm { flex: 0 0 auto; }
 #watch-result-body { flex: 1 1 auto; min-height: 0; max-height: none; overflow-x: hidden; overflow-y: scroll; padding: 0 12px 10px; scroll-snap-type: y mandatory; scroll-padding-top: 28px; }
 #watch-result-shots { display: block; }
 .shot-group { margin: 0 0 8px; }
@@ -2924,6 +2987,41 @@ body.view-run .watch-result-bar { flex: 0 0 auto; padding: 8px 12px; }
   cursor: pointer;
   font: 500 12px/1.4 var(--sans);
 }
+.watch-result-tools { display: flex; align-items: center; gap: 8px; }
+.draft {
+  border-top: 1px solid var(--border);
+  background: var(--bg-1);
+  padding: 8px 10px;
+  max-height: 168px;
+  overflow: auto;
+}
+.draft-bar { display: flex; align-items: center; gap: 10px; }
+.draft-bar strong { font: 650 13px/1.3 var(--sans); }
+.draft-repeat { display: flex; align-items: center; gap: 6px; margin-left: auto; font: 500 12px/1 var(--sans); color: var(--text-2); }
+.draft-repeat input { width: 56px; height: 28px; padding: 0 6px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg-0); color: var(--text); }
+#draft-rows { display: grid; gap: 4px; margin: 8px 0 0; padding: 0; list-style: none; }
+#draft-rows li { display: flex; align-items: center; justify-content: space-between; gap: 8px; font: 500 12px/1.3 var(--sans); }
+.history-pane { display: none; flex-direction: column; min-height: 0; overflow: auto; padding: 16px 18px; gap: 8px; }
+.hist-head, .hist-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.6fr) 88px minmax(120px, 1fr) 64px 64px;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+}
+.hist-head { font: 600 11px/1.3 var(--sans); color: var(--text-3); padding: 0 8px 6px; }
+.hist-row {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  padding: 8px;
+  cursor: pointer;
+  font: 500 12px/1.3 var(--sans);
+}
+.hist-row code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wstep.on { box-shadow: inset 2px 0 0 var(--accent); }
 </style>
 </head>
 <body class="view-map">
@@ -2942,8 +3040,9 @@ body.view-run .watch-result-bar { flex: 0 0 auto; padding: 8px 12px; }
     <span id="git-sha" class="sha">—</span>
     <div class="topbar-right">
       <div class="view-switch" role="group" aria-label="View">
-        <button type="button" id="view-map" class="on" data-i18n="view.map">Map</button>
+        <button type="button" id="view-map" class="on" data-i18n="view.catalog">Catalog</button>
         <button type="button" id="view-run" data-i18n="view.run">Run</button>
+        <button type="button" id="view-history" data-i18n="view.history">History</button>
       </div>
       <div class="lang-switch" role="group" aria-label="Language">
         <button type="button" data-lang="en">EN</button>
@@ -2955,13 +3054,12 @@ body.view-run .watch-result-bar { flex: 0 0 auto; padding: 8px 12px; }
   </header>
   <div class="shell">
     <section class="map-col">
-      <div id="run-path" class="run-path"></div>
       <div class="graph-well" id="canvas">
         <svg id="graph" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="E2E path graph"></svg>
         <div class="canvas-toolbar canvas-ui">
           <div class="filters">
             <div class="view-switch lang-switch" role="group" data-i18n-title="view.switch" aria-label="Map or tree">
-              <button type="button" data-view="graph" class="on" data-i18n="view.graph">Graph</button>
+              <button type="button" data-view="graph" class="on" data-i18n="view.graph">Map</button>
               <button type="button" data-view="tree" data-i18n="view.tree">Tree</button>
             </div>
             <div class="fg" data-k="layers"><b data-i18n="filter.lyr" data-i18n-title="filter.lyrTitle">LYR</b></div>
@@ -2992,11 +3090,25 @@ body.view-run .watch-result-bar { flex: 0 0 auto; padding: 8px 12px; }
         </div>
         <div id="tree-view" class="tree-view canvas-ui" hidden></div>
       </div>
+      <aside id="draft" class="draft">
+        <div class="draft-bar">
+          <strong id="draft-count">本次任务列表 · 0</strong>
+          <label class="draft-repeat"><span data-i18n="draft.repeat">Repeat</span>
+            <input id="draft-repeat" type="number" min="1" max="20" value="1">
+          </label>
+          <button type="button" class="btn primary" id="draft-run" data-i18n="draft.run">Run</button>
+        </div>
+        <ul id="draft-rows"></ul>
+      </aside>
     </section>
     <aside class="inspector">
       <div class="watch-pane live-only" id="watch-pane">
+        <div id="run-path" class="run-path"></div>
         <div id="task-board" class="task-board" hidden>
-          <p id="task-progress"></p>
+          <div class="task-head">
+            <p id="task-progress"></p>
+            <button type="button" class="btn danger" id="btn-stop" disabled data-i18n="run.stop">Stop</button>
+          </div>
           <ol id="task-rows"></ol>
         </div>
         <div class="watch-grid">
@@ -3038,7 +3150,10 @@ body.view-run .watch-result-bar { flex: 0 0 auto; padding: 8px 12px; }
           </div>
         </div>
         <section class="watch-result" id="watch-result" hidden>
-          <button type="button" class="watch-result-bar" id="watch-result-toggle"><span id="watch-result-meta"></span></button>
+          <div class="watch-result-tools">
+            <button type="button" class="watch-result-bar" id="watch-result-toggle"><span id="watch-result-meta"></span></button>
+            <button type="button" class="btn" id="exec-confirm" hidden data-i18n="shots.confirm">Confirm visuals</button>
+          </div>
           <div id="watch-result-body" hidden>
             <ul id="watch-result-fails"></ul>
             <div id="watch-result-shots" class="shot-grid"></div>
@@ -3094,7 +3209,7 @@ body.view-run .watch-result-bar { flex: 0 0 auto; padding: 8px 12px; }
             <button type="button" class="btn primary" id="btn-start" disabled data-i18n="run.start">Start</button>
             <button type="button" class="btn" id="btn-pause" disabled data-i18n="run.pause" data-i18n-title="run.pauseTitle">Pause queue</button>
             <button type="button" class="btn" id="btn-resume" disabled data-i18n="run.resume" data-i18n-title="run.resumeTitle">Resume</button>
-            <button type="button" class="btn danger" id="btn-stop" disabled data-i18n="run.stop" data-i18n-title="run.stopTitle">Stop</button>
+            <button type="button" class="btn danger" id="btn-stop-advanced" disabled data-i18n="run.stop" data-i18n-title="run.stopTitle">Stop</button>
           </div>
           <div class="progress-wrap" id="run-progress" hidden>
             <div class="progress"><i id="prog-bar"></i></div>
@@ -3134,6 +3249,10 @@ body.view-run .watch-result-bar { flex: 0 0 auto; padding: 8px 12px; }
       </div>
       </details>
     </aside>
+    <section id="history-pane" class="history-pane">
+      <div class="hist-head"><span>id</span><span data-i18n="history.source">Source</span><span>SHA</span><span data-i18n="history.pass">Pass</span><span data-i18n="history.fail">Fail</span></div>
+      <div id="history-board"></div>
+    </section>
   </div>
   <footer class="foot">__BANNER__</footer>
 </div>
@@ -3193,7 +3312,10 @@ const I18N = {
     "legend.stale": "stale",
     "legend.loop": "self-loop = returns to the same screen",
     "zoom.fit": "fit", "zoom.fitTitle": "Fit graph",
-    "view.graph": "Graph", "view.tree": "Tree", "view.switch": "Map or tree",
+    "view.graph": "Map", "view.tree": "Tree", "view.switch": "Map or tree",
+    "view.catalog": "Catalog", "view.history": "History",
+    "draft.title": "This run", "draft.repeat": "Repeat", "draft.run": "Run", "draft.remove": "Remove",
+    "history.source": "Source", "history.pass": "Pass", "history.fail": "Fail",
     "node.running": "Running", "node.passed": "Done", "node.failed": "Failed",
     "legend.nodes": "node state this run",
     "watch.title": "Device",
@@ -3377,7 +3499,10 @@ const I18N = {
     "legend.stale": "待重确认",
     "legend.loop": "自环 = 回到同一页面",
     "zoom.fit": "适应", "zoom.fitTitle": "适应画布",
-    "view.graph": "图", "view.tree": "树", "view.switch": "图或树",
+    "view.graph": "Map", "view.tree": "Tree", "view.switch": "Map 或 Tree",
+    "view.catalog": "用例目录", "view.history": "历史",
+    "draft.title": "本次任务列表", "draft.repeat": "重复", "draft.run": "运行", "draft.remove": "删除",
+    "history.source": "来源", "history.pass": "通过", "history.fail": "失败",
     "node.running": "进行中", "node.passed": "完成", "node.failed": "失败",
     "legend.nodes": "本轮节点状态",
     "watch.title": "真机画面",
@@ -3609,6 +3734,13 @@ const state = {
   openRun: ""
 };
 var edgeBadges = {};
+var edgeResults = {};
+var draftIds = [];
+var execPick = "";
+var execJumpN = null;
+var pinnedRunId = "";
+var watchHoldReplay = false;
+var treeOpen = {};
 var confirmations = {};
 var witnessPresent = {};
 var latestCaseStatus = {};
@@ -3618,10 +3750,12 @@ var pollTimer = null;
 var lastStatusJson = "";
 var statusFail = 0;
 var lastBadgesJson = "";
+var lastResultsJson = "";
 var lastConfirmJson = "";
 var lastWitnessJson = "";
 var lastHistoryJson = "";
 var lastRunState = "idle";
+var lastStatusId = "";
 var lastResultId = "";
 var displayedRunId = "";
 function bindDisplayedRun(id) {
@@ -3868,6 +4002,7 @@ function buildGraph() {
     var vis = svgEl("path", {d: ge.d, "class":"edge-vis", "marker-end":"url(#arr-"+ge.drive+")"});
     g.appendChild(vis);
     g.appendChild(svgEl("circle", {cx:String(ge.dot.x), cy:String(ge.dot.y), r:"4.5", "class":"edot", "data-dot": ge.id, opacity:"0"}));
+    g.appendChild(svgEl("text", {x:String(ge.dot.x + 8), y:String(ge.dot.y - 6), "class":"edge-result"}));
     eg.appendChild(g);
   });
   world.appendChild(eg);
@@ -3985,7 +4120,7 @@ function hitFromEvent(ev) {
 }
 function handleCanvasClick(ev) {
   var hit = hitFromEvent(ev);
-  if (hit.edge) { selectEdge(hit.edge.getAttribute("data-edge")); return; }
+  if (hit.edge) { addEdgeDraft(hit.edge.getAttribute("data-edge")); return; }
   if (hit.node) {
     state.node = hit.node.getAttribute("data-node");
     syncAll();
@@ -4252,17 +4387,19 @@ function syncGraph() {
     var isCurrent = !!(path && path.current[id] && !path.stopped);
     var pathDim = !!(path && path.active && vis && !isCurrent && runSt !== "passed" && runSt !== "failed" && runSt !== "review_required");
     g.classList.toggle("dim", !vis || pathDim);
-    g.classList.toggle("sel", id === state.selected);
+    g.classList.toggle("sel", id === state.selected || draftTouches(id));
+    g.classList.toggle("in-draft", draftTouches(id));
     g.classList.toggle("sel-out", id === state.selected && !vis);
     g.classList.toggle("hi", !!hi && id !== state.selected);
     g.classList.toggle("path-current", isCurrent);
     var visP = g.querySelector(".edge-vis");
     var drive = (DATA.layout.edges.find(function (x) { return x.id === id; }) || {}).drive || "none";
-    visP.setAttribute("marker-end", "url(#arr-"+(id === state.selected || isCurrent ? "accent" : drive)+")");
+    visP.setAttribute("marker-end", "url(#arr-"+(draftTouches(id) || id === state.selected || isCurrent ? "accent" : drive)+")");
     var dot = g.querySelector(".edot");
-    var badge = edgeBadges[id];
-    if (runSt === "failed") badge = "failed";
-    else if (runSt === "passed" || runSt === "review_required") badge = badge || "passed";
+    var badge = edgeResults[id] || edgeBadges[id];
+    if (runSt === "failed" || runSt === "blocked") badge = runSt;
+    else if (runSt === "running" || runSt === "paused") badge = "running";
+    else if (runSt === "passed" || runSt === "review_required") badge = runSt;
     var conf = confirmations[id];
     var cls = "edot";
     if (badge) cls += " " + badge;
@@ -4270,11 +4407,16 @@ function syncGraph() {
     if (badge || conf) {
       dot.setAttribute("opacity", "1");
       dot.setAttribute("class", cls);
-      dot.setAttribute("title", confirmTooltip(id));
+      dot.setAttribute("title", (badge ? taskStateLabel(badge) + " " : "") + confirmTooltip(id));
     } else {
       dot.setAttribute("opacity", "0");
       dot.setAttribute("class", "edot");
       dot.removeAttribute("title");
+    }
+    var lab = g.querySelector(".edge-result");
+    if (lab) {
+      lab.textContent = badge ? taskStateLabel(badge) : "";
+      lab.setAttribute("class", "edge-result" + (badge ? " " + badge : ""));
     }
   });
   svg.querySelectorAll("[data-node]").forEach(function (g) {
@@ -4353,6 +4495,92 @@ function nodeLayer(nid) {
   var n = DATA.layout.nodes[nid] || {};
   return n.layer == null ? 0 : n.layer;
 }
+function caseTaskId(edgeId, plat) {
+  var agent = (DATA.agent || {})[edgeId] || {};
+  if ((plat === "android" || plat === "ios") && agent[plat]) return "edge:" + edgeId + "@" + plat + "#agent";
+  var slice = ((DATA.edge_plans || {})[edgeId] || {})[plat] || {};
+  if (slice.runnable_count) return "edge:" + edgeId + "@" + plat;
+  return "";
+}
+function filteredPlats() {
+  if (!state.plats.size) return PLATS.slice();
+  return PLATS.filter(function (p) { return state.plats.has(p); });
+}
+function edgeCases(edgeId) {
+  var out = [];
+  filteredPlats().forEach(function (p) {
+    if (p === "desktop") return;
+    var id = caseTaskId(edgeId, p);
+    if (id) out.push({id: id, platform: p, edge: edgeId});
+  });
+  return out;
+}
+function nodeCases(nid) {
+  var out = [];
+  DATA.edges.forEach(function (e) {
+    if (e.from === nid) edgeCases(e.id).forEach(function (c) { out.push(c); });
+  });
+  return out;
+}
+function draftHas(id) { return draftIds.indexOf(id) >= 0; }
+function draftTouches(edgeId) {
+  return draftIds.some(function (id) { return taskEdgeId(id) === edgeId; });
+}
+function setDraft(id, on) {
+  if (!id) return;
+  var i = draftIds.indexOf(id);
+  if (on && i < 0) draftIds.push(id);
+  if (!on && i >= 0) draftIds.splice(i, 1);
+}
+function addEdgeDraft(edgeId) {
+  var cases = edgeCases(edgeId);
+  if (!cases.length) return;
+  cases.forEach(function (c) { setDraft(c.id, true); });
+  state.selected = edgeId;
+  renderDraft();
+  syncGraph();
+  syncTree();
+}
+function renderDraft() {
+  var count = $("draft-count");
+  var list = $("draft-rows");
+  var btn = $("draft-run");
+  var title = t("draft.title");
+  if (count) count.textContent = title + " · " + draftIds.length;
+  if (list) {
+    list.innerHTML = draftIds.map(function (id) {
+      var edge = taskEdgeId(id);
+      var plat = (String(id).match(/@(android|ios|desktop)/) || [])[1] || "";
+      return "<li><span>" + esc(edgeTitle(edge)) + " · " + esc(t("plat." + plat) || plat) + "</span>"
+        + '<button type="button" class="btn" data-drop="' + esc(id) + '">' + esc(t("draft.remove")) + "</button></li>";
+    }).join("");
+    list.querySelectorAll("[data-drop]").forEach(function (b) {
+      b.onclick = function () {
+        setDraft(b.getAttribute("data-drop"), false);
+        renderDraft();
+        syncGraph();
+        syncTree();
+      };
+    });
+  }
+  if (btn) {
+    var busy = lastRunState === "running" || lastRunState === "paused";
+    btn.disabled = !consoleOnline || busy || !draftIds.length;
+  }
+}
+function checkTrio(input, cases) {
+  if (!input) return;
+  var n = cases.filter(function (c) { return draftHas(c.id); }).length;
+  input.checked = cases.length > 0 && n === cases.length;
+  input.indeterminate = n > 0 && n < cases.length;
+  input.disabled = !cases.length;
+}
+function treeRow(kind, attrs, title) {
+  return '<div class="trow ' + kind + '" ' + attrs + '>'
+    + '<button type="button" class="twisty" data-twist="1">▾</button>'
+    + '<input type="checkbox" ' + attrs + ' data-kind="' + kind + '">'
+    + '<span class="t-id">' + esc(title) + '</span><span class="t-chip"></span></div>';
+}
 function buildTree() {
   var box = $("tree-view");
   if (!box) return;
@@ -4368,24 +4596,51 @@ function buildTree() {
     var body = group.map(function (nid) {
       var outs = DATA.edges.filter(function (e) { return e.from === nid; });
       var kids = outs.map(function (e) {
-        return '<button type="button" class="trow edge" data-id="'+esc(e.id)+'">'
-          +'<span class="t-id">'+esc(edgeTitle(e.id))+"</span>"
-          +'<span class="t-chip"></span></button>';
+        var plats = PLATS.map(function (p) {
+          var id = caseTaskId(e.id, p);
+          var disabled = id ? "" : " disabled";
+          return '<div class="trow plat" data-id="' + esc(e.id) + '" data-plat="' + p + '">'
+            + '<span></span>'
+            + '<input type="checkbox" data-kind="plat" data-task="' + esc(id) + '"' + disabled + ">"
+            + '<span class="t-id">' + esc(t("plat." + p)) + '</span><span class="t-chip"></span></div>';
+        }).join("");
+        var open = treeOpen["e:" + e.id] !== false;
+        return treeRow("edge", 'data-id="' + esc(e.id) + '"', edgeTitle(e.id))
+          + '<div class="t-kids" data-for="e:' + esc(e.id) + '"' + (open ? "" : " hidden") + ">" + plats + "</div>";
       }).join("");
-      return '<button type="button" class="trow node" data-node="'+esc(nid)+'">'
-        +'<span class="t-id">'+esc(nodeTitle(nid))+"</span>"
-        +'<span class="t-chip"></span></button>' + kids;
+      var nopen = treeOpen["n:" + nid] !== false;
+      return treeRow("node", 'data-node="' + esc(nid) + '"', nodeTitle(nid))
+        + '<div class="t-kids" data-for="n:' + esc(nid) + '"' + (nopen ? "" : " hidden") + ">" + kids + "</div>";
     }).join("");
-    return '<div class="tree-band" data-band="'+band+'"><div class="tree-band-h">'+esc(t("band."+band))+"</div>"+body+"</div>";
+    return '<div class="tree-band" data-band="' + band + '"><div class="tree-band-h">' + esc(t("band." + band)) + "</div>" + body + "</div>";
   }).join("");
   box.onclick = function (ev) {
-    var edge = ev.target.closest(".trow.edge");
-    if (edge) { selectEdge(edge.getAttribute("data-id")); return; }
-    var node = ev.target.closest(".trow.node");
-    if (node) {
-      state.node = node.getAttribute("data-node");
-      syncAll();
-    }
+    var twist = ev.target.closest && ev.target.closest(".twisty");
+    if (!twist) return;
+    var row = twist.closest(".trow");
+    if (!row) return;
+    var key = row.getAttribute("data-node") ? ("n:" + row.getAttribute("data-node")) : ("e:" + row.getAttribute("data-id"));
+    var kids = null;
+    box.querySelectorAll(".t-kids").forEach(function (el) {
+      if (el.getAttribute("data-for") === key) kids = el;
+    });
+    if (!kids) return;
+    var closed = !kids.hidden;
+    kids.hidden = closed;
+    treeOpen[key] = !closed;
+    twist.textContent = closed ? "▸" : "▾";
+  };
+  box.onchange = function (ev) {
+    var input = ev.target;
+    if (!input || input.type !== "checkbox") return;
+    var kind = input.getAttribute("data-kind");
+    var on = !!input.checked;
+    if (kind === "plat") setDraft(input.getAttribute("data-task"), on);
+    if (kind === "edge") edgeCases(input.getAttribute("data-id")).forEach(function (c) { setDraft(c.id, on); });
+    if (kind === "node") nodeCases(input.getAttribute("data-node")).forEach(function (c) { setDraft(c.id, on); });
+    renderDraft();
+    syncGraph();
+    syncTree();
   };
   treeBuilt = true;
 }
@@ -4415,13 +4670,28 @@ function syncTree() {
     var isCurrent = !!(path && path.current[id] && !path.stopped);
     var pathDim = !!(path && path.active && vis && !isCurrent && runSt !== "passed" && runSt !== "failed" && runSt !== "review_required");
     row.classList.toggle("dim", !vis || pathDim);
-    row.classList.toggle("sel", id === state.selected);
+    row.classList.toggle("sel", id === state.selected || draftTouches(id));
     var chip = row.querySelector(".t-chip");
-    if (!chip) return;
-    if (isCurrent) chip.innerHTML = nodeChipHtml("running");
-    else if (runSt === "failed") chip.innerHTML = nodeChipHtml("failed");
-    else if (runSt === "passed" || runSt === "review_required") chip.innerHTML = '<span class="st-chip passed">'+esc(statusLabel("passed"))+"</span>";
-    else chip.innerHTML = "";
+    var shown = runSt || edgeResults[id] || "";
+    if (chip) {
+      if (isCurrent) chip.innerHTML = nodeChipHtml("running");
+      else if (shown === "failed" || shown === "blocked") chip.innerHTML = nodeChipHtml("failed");
+      else if (shown) chip.innerHTML = '<span class="st-chip '+esc(shown)+'">'+esc(taskStateLabel(shown))+"</span>";
+      else chip.innerHTML = "";
+    }
+    checkTrio(row.querySelector('input[data-kind="edge"]'), edgeCases(id));
+  });
+  box.querySelectorAll(".trow.plat").forEach(function (row) {
+    var plat = row.getAttribute("data-plat");
+    var id = row.getAttribute("data-id");
+    var e = DATA.edges.find(function (x) { return x.id === id; });
+    var vis = !!(e && edgeVisible(e)) && (!state.plats.size || state.plats.has(plat));
+    row.classList.toggle("dim", !vis);
+    var input = row.querySelector('input[data-kind="plat"]');
+    if (input && input.getAttribute("data-task")) input.checked = draftHas(input.getAttribute("data-task"));
+  });
+  box.querySelectorAll(".trow.node").forEach(function (row) {
+    checkTrio(row.querySelector('input[data-kind="node"]'), nodeCases(row.getAttribute("data-node")));
   });
 }
 
@@ -4779,6 +5049,7 @@ function syncAll() {
   syncTree();
   applyView();
   renderDetail();
+  renderDraft();
 }
 
 function toast(msg, kind) {
@@ -4850,7 +5121,7 @@ function setConsoleOnline(on) {
     if (on) banner.classList.remove("show");
     else banner.classList.add("show");
   }
-  if (consoleOnline === on) { syncStartButton(); updateStatusPill(); return; }
+  if (consoleOnline === on) { syncStartButton(); updateStatusPill(); renderDraft(); return; }
   var wasOffline = !consoleOnline;
   consoleOnline = on;
   if (!on) {
@@ -5020,54 +5291,41 @@ function updateSha(runs) {
 }
 function renderHistory(runs) {
   lastRuns = runs;
-  var box = $("history-list");
-  if (!runs.length) {
-    box.className = "empty";
-    box.textContent = t("history.empty");
-    updateSha(runs);
-    return;
-  }
-  var open = {};
-  box.querySelectorAll("details[open]").forEach(function (d) { open[d.getAttribute("data-id")] = true; });
-  box.className = "";
-  box.innerHTML = runs.map(function (r) {
-    var git = r.git || {};
-    var sel = (r.selection || []).join(", ");
-    var abs = r.started || "";
-    return '<details class="hist-item '+esc(r.state||"")+'" data-id="'+esc(r.id)+'"'+(open[r.id]?" open":"")+"><summary>"
-      +'<div class="hist-top"><code class="hist-id" title="'+esc(r.id||"")+'">'+esc(r.id||"")+"</code>"
-      +'<div class="hist-meta"><span class="st-chip '+esc(r.state||"")+'">'+esc(statusLabel(r.state))+"</span>"
-      +'<span class="via" title="'+esc(abs)+'">'+esc(relTime(abs))+"</span></div></div>"
-      +'<div class="hist-sel" title="'+esc(sel)+'">'+esc(sel)+" · "+esc(git.sha||"")+(git.dirty?" dirty":"")
-      +" · "+t("history.passFail", {pass: r.pass_count||0, fail: r.fail_count||0})+"</div></summary>"
-      +'<div class="hist-body empty">'+t("history.loading")+'</div></details>';
-  }).join("");
-  var selected = displayedRunId;
-  box.querySelectorAll("details").forEach(function (d) {
-    var hid = d.getAttribute("data-id");
-    if (state.openRun && hid === state.openRun) d.open = true;
-    if (d.open && !d.dataset.loaded) loadHist(d);
-    d.addEventListener("toggle", function () {
-      if (!d.open || d.dataset.loaded) return;
-      loadHist(d);
+  var board = $("history-board");
+  if (board) {
+    board.innerHTML = (runs || []).map(function (r) {
+      var git = r.git || {};
+      var sha = (git.sha || "") + (git.dirty ? " dirty" : "");
+      return '<button type="button" class="hist-row" data-open-run="'+esc(r.id)+'">'
+        +'<code title="'+esc(r.id||"")+'">'+esc(r.id||"")+"</code>"
+        +"<span>"+esc(r.source||"")+"</span>"
+        +'<span title="'+esc(sha)+'">'+esc(sha)+"</span>"
+        +"<span>"+esc(String(r.pass_count||0))+"</span>"
+        +"<span>"+esc(String(r.fail_count||0))+"</span></button>";
+    }).join("") || '<p class="empty">'+esc(t("history.empty"))+"</p>";
+    board.querySelectorAll("[data-open-run]").forEach(function (btn) {
+      btn.onclick = function () { openHistoryRun(btn.getAttribute("data-open-run")); };
     });
-    var summary = d.querySelector("summary");
-    if (summary) {
-      summary.addEventListener("click", function () {
-        if (!d.open) bindDisplayedRun(hid);
-      });
+  }
+  var box = $("history-list");
+  if (box) {
+    if (!runs.length) {
+      box.className = "empty";
+      box.textContent = t("history.empty");
+    } else {
+      box.className = "";
+      box.innerHTML = "";
     }
-    var idEl = d.querySelector(".hist-id");
-    if (idEl) {
-      idEl.addEventListener("click", function (ev) {
-        ev.preventDefault();
-        ev.stopPropagation();
-        bindDisplayedRun(hid);
-      });
-    }
-  });
-  if (selected) bindDisplayedRun(selected);
-  else if (state.openRun) bindDisplayedRun(state.openRun);
+    box.querySelectorAll("details").forEach(function (d) {
+      var hid = d.getAttribute("data-id");
+      var summary = d.querySelector("summary");
+      if (summary) {
+        summary.addEventListener("click", function () {
+          if (!d.open) bindDisplayedRun(hid);
+        });
+      }
+    });
+  }
   updateSha(runs);
 }
 function loadHist(d) {
@@ -5266,15 +5524,58 @@ function copyLogBundle() {
   copyText(text, $("btn-copy-log"));
 }
 var watchViewLocked = false;
-function setWatchView(mode) {
+function setSection(mode) {
+  var catalog = mode !== "run" && mode !== "history";
   var run = mode === "run";
+  var history = mode === "history";
+  document.body.classList.toggle("view-map", catalog);
+  document.body.classList.toggle("view-catalog", catalog);
   document.body.classList.toggle("view-run", run);
-  document.body.classList.toggle("view-map", !run);
+  document.body.classList.toggle("view-history", history);
   var mapBtn = $("view-map");
   var runBtn = $("view-run");
-  if (mapBtn) mapBtn.classList.toggle("on", !run);
+  var histBtn = $("view-history");
+  if (mapBtn) mapBtn.classList.toggle("on", catalog);
   if (runBtn) runBtn.classList.toggle("on", run);
-  setTimeout(function () { fitWatchPhone(); }, 40);
+  if (histBtn) histBtn.classList.toggle("on", history);
+  if (run && lastStatusSnap) applyFocusedWatch(lastStatusSnap);
+  if (run) setTimeout(function () { fitWatchPhone(); }, 40);
+}
+function setWatchView(mode) {
+  setSection(mode === "run" ? "run" : "map");
+}
+function startDraft() {
+  if (!draftIds.length) return;
+  var n = parseInt(($("draft-repeat") && $("draft-repeat").value) || "1", 10);
+  if (!n || n < 1) n = 1;
+  pinnedRunId = "";
+  execPick = "";
+  execJumpN = null;
+  watchHoldReplay = false;
+  watchViewLocked = false;
+  post("/api/run", {tasks: draftIds.slice(), device: "auto", repeat: n, source: "manual"}).then(function (res) {
+    if (!res.ok) {
+      var msg = (res.body && res.body.error) || t("run.startFailed");
+      if (res.status === 409) msg = msg || t("run.busy");
+      toast(msg, "error");
+      return;
+    }
+    beginLiveRun();
+    setSection("run");
+  }).catch(function () {});
+}
+function openHistoryRun(id) {
+  if (!id) return;
+  pinnedRunId = id;
+  execPick = "";
+  execJumpN = null;
+  watchHoldReplay = false;
+  bindDisplayedRun(id);
+  lastStatusJson = "";
+  setSection("run");
+  fetch("/api/status?id=" + encodeURIComponent(id)).then(function (r) { return r.json(); }).then(function (st) {
+    renderRunStatus(st);
+  }).catch(function () {});
 }
 function platformsInRun(st) {
   var out = [];
@@ -5393,14 +5694,139 @@ function taskStateLabel(state) {
   var table = lang === "zh" ? zh : en;
   return table[state] || state || "";
 }
+function taskListOf(st) {
+  return (st && (st.tasks || st.queue)) || [];
+}
+function focusedTask(st) {
+  var tasks = taskListOf(st);
+  if (execPick) {
+    for (var i = 0; i < tasks.length; i++) if (tasks[i].id === execPick) return tasks[i];
+  }
+  for (var j = 0; j < tasks.length; j++) {
+    if (tasks[j].state === "running" || tasks[j].state === "paused") return tasks[j];
+  }
+  return tasks[0] || null;
+}
+function taskStepsOf(task) { return (task && task.steps) || []; }
+function failedStepOf(task) {
+  var steps = taskStepsOf(task);
+  for (var i = 0; i < steps.length; i++) if (steps[i].state === "failed") return steps[i];
+  return null;
+}
+function openResultBody() {
+  var body = $("watch-result-body");
+  var box = $("watch-result");
+  if (body) body.hidden = false;
+  if (box) { box.hidden = false; box.classList.add("is-open"); }
+  setTimeout(function () { fitWatchPhone(); }, 40);
+}
+function renderCasePath(task) {
+  var bar = $("run-path");
+  if (!bar) return;
+  if (!task) { bar.textContent = ""; return; }
+  var eid = task.edge_id || taskEdgeId(task.id);
+  var edge = DATA.edges.find(function (item) { return item.id === eid; });
+  var plat = t("plat." + (task.platform || "")) || task.platform || "";
+  if (!edge) { bar.textContent = (eid || task.id || "") + (plat ? " · " + plat : ""); return; }
+  bar.textContent = nodeTitle(edge.from) + " → " + nodeTitle(edge.to) + " · " + edgeTitle(eid) + (plat ? " · " + plat : "");
+}
+function paintReplayFrame(plat, task, st) {
+  var live = !!(st && (st.state === "running" || st.state === "paused") && task && (task.state === "running" || task.state === "paused"));
+  watchHoldReplay = !live;
+  if (live) return;
+  WATCH_PLATS.forEach(function (p) {
+    stopWatch(p);
+    if (watchCtl[p]) watchCtl[p].streamKey = "replay";
+  });
+  var steps = taskStepsOf(task);
+  var shot = "";
+  steps.forEach(function (row) {
+    if (execJumpN != null && String(row.n) === String(execJumpN) && row.shot) shot = row.shot;
+  });
+  if (!shot) {
+    for (var i = steps.length - 1; i >= 0; i--) if (steps[i].shot) { shot = steps[i].shot; break; }
+  }
+  var img = plat && wEl(plat, "watch-img");
+  var empty = plat && wEl(plat, "watch-empty");
+  var canvas = plat && wEl(plat, "watch-canvas");
+  if (canvas) canvas.hidden = true;
+  if (!(img && shot && st && st.id)) return;
+  img.hidden = false;
+  img.src = "/api/runs/" + encodeURIComponent(st.id) + "/steps/" + encodeURIComponent(shot);
+  if (empty) empty.hidden = true;
+  img.onload = function () {
+    var ctl = watchCtl[plat];
+    if (ctl) { ctl.natW = img.naturalWidth || 0; ctl.natH = img.naturalHeight || 0; }
+    fitWatchPhone(plat);
+  };
+}
+function jumpToStep(plat, n) {
+  var list = $("watch-steps-" + plat);
+  if (list) {
+    list.querySelectorAll(".wstep").forEach(function (li) {
+      li.classList.toggle("on", String(li.getAttribute("data-n")) === String(n));
+    });
+    var li = list.querySelector('.wstep[data-n="' + n + '"]');
+    if (li && li.scrollIntoView) li.scrollIntoView({block: "center"});
+  }
+  var key = plat + ":" + n;
+  var idx = -1;
+  shotGallery.forEach(function (item, i) { if (item.key === key) idx = i; });
+  if (idx >= 0) {
+    var btn = document.querySelector('#watch-result-shots button.shot[data-shot="' + idx + '"]');
+    if (btn && btn.scrollIntoView) btn.scrollIntoView({block: "nearest"});
+  }
+}
+function applyFocusedWatch(st) {
+  if (!st) return;
+  var task = focusedTask(st);
+  var plat = (task && task.platform) || "";
+  var steps = taskStepsOf(task).map(function (row) {
+    var copy = {};
+    Object.keys(row || {}).forEach(function (k) { copy[k] = row[k]; });
+    if (!copy.platform) copy.platform = plat;
+    return copy;
+  });
+  var taskLive = !!(task && (task.state === "running" || task.state === "paused"));
+  var view = {
+    id: st.id,
+    state: taskLive ? (st.state || "running") : ((task && task.state) || st.state || "idle"),
+    log_tail: st.log_tail || [],
+    queue: task ? [task] : [],
+    steps: steps
+  };
+  renderWatchSteps(view);
+  renderWatchResult(view);
+  document.querySelectorAll(".watch-slot").forEach(function (el) {
+    el.hidden = !plat || el.getAttribute("data-plat") !== plat;
+  });
+  var grid = document.querySelector(".watch-grid");
+  if (grid) grid.classList.add("one-card");
+  renderCasePath(task);
+  paintReplayFrame(plat, task, st);
+  var confirm = $("exec-confirm");
+  if (confirm) {
+    var eid = task && (task.edge_id || taskEdgeId(task.id));
+    var show = !!(eid && (task.state === "review_required" || st.state === "review_required"));
+    confirm.hidden = !show;
+    confirm.onclick = function () { if (eid) confirmEdge(eid); };
+  }
+  if (execJumpN != null && plat) {
+    var n = execJumpN;
+    execJumpN = null;
+    openResultBody();
+    jumpToStep(plat, n);
+  }
+}
 function renderTaskBoard(st) {
   var board = $("task-board");
   var progress = $("task-progress");
   var list = $("task-rows");
   if (!board || !list) return;
-  var tasks = (st && (st.tasks || st.queue)) || [];
+  var tasks = taskListOf(st);
   if (!st || !st.id || !tasks.length) {
     board.hidden = true;
+    if (list) list.innerHTML = "";
     return;
   }
   board.hidden = false;
@@ -5409,13 +5835,31 @@ function renderTaskBoard(st) {
   var total = prog.total != null ? prog.total : tasks.length;
   var failed = prog.failed || 0;
   if (progress) progress.textContent = done + "/" + total + (failed ? (" · " + failed + (lang === "zh" ? " 失败" : " failed")) : "");
+  var focus = focusedTask(st);
   list.innerHTML = tasks.map(function (task) {
     var repeat = task.repeat || {};
-    var rep = repeat.n > 1 ? (" " + repeat.k + "/" + repeat.n) : "";
-    var dur = task.duration_s != null ? (" " + task.duration_s + "s") : "";
-    var name = (task.edge_id || task.edge || task.id || "") + (task.platform ? (" · " + task.platform) : "");
-    return '<li class="task-row ' + esc(task.state || "") + '"><span class="st">' + esc(taskStateLabel(task.state)) + "</span> " + esc(name + rep) + '<span class="dur">' + esc(dur) + "</span></li>";
+    var kn = (repeat.k || 1) + "/" + (repeat.n || 1);
+    var dur = task.duration_s != null ? (task.duration_s + "s") : "";
+    var eid = task.edge_id || taskEdgeId(task.id);
+    var title = eid ? edgeTitle(eid) : (task.label || task.id || "");
+    var plat = t("plat." + (task.platform || "")) || task.platform || "";
+    var fail = failedStepOf(task);
+    var on = focus && focus.id === task.id ? " on" : "";
+    return '<li><button type="button" class="task-row ' + esc(task.state || "") + on + '" data-id="' + esc(task.id || "") + '"'
+      + (fail && fail.n != null ? ' data-fail-n="' + esc(String(fail.n)) + '"' : "") + ">"
+      + '<span class="name">' + esc(title) + "</span><span>" + esc(plat) + "</span><span>" + esc(kn) + "</span><span>"
+      + esc(taskStateLabel(task.state)) + '</span><span class="dur">' + esc(dur) + "</span></button></li>";
   }).join("");
+  list.querySelectorAll(".task-row").forEach(function (btn) {
+    btn.onclick = function () {
+      execPick = btn.getAttribute("data-id") || "";
+      var n = btn.getAttribute("data-fail-n");
+      execJumpN = n == null || n === "" ? null : n;
+      if (execJumpN == null) openResultBody();
+      applyFocusedWatch(st);
+      renderTaskBoard(st);
+    };
+  });
 }
 function renderRunStatus(st) {
   lastStatusSnap = st;
@@ -5424,12 +5868,11 @@ function renderRunStatus(st) {
     watchViewLocked = false;
     setWatchView("run");
   }
-  renderWatchSteps(st);
-  renderWatchResult(st);
   renderTaskBoard(st);
-  syncRunCards(st);
+  applyFocusedWatch(st);
+  var sameRun = !lastStatusId || lastStatusId === st.id;
   lastRunState = st.state || "idle";
-  if ((prev === "running" || prev === "paused") &&
+  if (sameRun && (prev === "running" || prev === "paused") &&
       (st.state === "passed" || st.state === "failed" || st.state === "stopped" || st.state === "review_required")) {
     var finished = (st.queue || []).filter(function (task) {
       return task.state === "passed" || task.state === "failed" || task.state === "stopped" || task.state === "review_required";
@@ -5508,6 +5951,8 @@ function renderRunStatus(st) {
     edgeBtn.disabled = !consoleOnline || running || !plan.runnable_count;
   }
   syncRunChip();
+  renderDraft();
+  lastStatusId = st.id || "";
 }
 function post(url, body) {
   return fetch(url, {
@@ -6097,11 +6542,19 @@ function paintTouch(st) {
     mark.style.top = Math.round(y) + "px";
   });
 }
+function statusUrl() {
+  if (pinnedRunId) return "/api/status?id=" + encodeURIComponent(pinnedRunId);
+  return "/api/status";
+}
 function bindWatchStream() {
   if (isFileOpen()) return;
   syncWatchChrome(lastStatusSnap);
   if (!consoleOnline) {
     setTimeout(bindWatchStream, 2000);
+    return;
+  }
+  if (watchHoldReplay) {
+    setTimeout(bindWatchStream, 1000);
     return;
   }
   WATCH_PLATS.forEach(function (plat) {
@@ -6129,7 +6582,7 @@ function bindWatchStream() {
   setTimeout(bindWatchStream, 1000);
 }
 function poll() {
-  fetch("/api/status").then(function (r) {
+  fetch(statusUrl()).then(function (r) {
     if (!r.ok) throw new Error("status");
     return r.json();
   }).then(function (st) {
@@ -6156,13 +6609,16 @@ function poll() {
   });
   fetch("/api/map").then(function (r) { return r.json(); }).then(function (m) {
     var next = JSON.stringify(m.badges || {});
+    var nextRes = JSON.stringify(m.results || {});
     var nextConf = JSON.stringify(m.confirmations || {});
     var nextWit = JSON.stringify(m.witnesses || []);
-    var changed = next !== lastBadgesJson || nextConf !== lastConfirmJson || nextWit !== lastWitnessJson;
+    var changed = next !== lastBadgesJson || nextRes !== lastResultsJson || nextConf !== lastConfirmJson || nextWit !== lastWitnessJson;
     lastBadgesJson = next;
+    lastResultsJson = nextRes;
     lastConfirmJson = nextConf;
     lastWitnessJson = nextWit;
     edgeBadges = m.badges || {};
+    edgeResults = m.results || {};
     confirmations = m.confirmations || {};
     witnessPresent = {};
     (m.witnesses || []).forEach(function (n) { witnessPresent[n] = true; });
@@ -6220,7 +6676,7 @@ function bootConsole() {
     });
   }
   setConsoleOnline(false);
-  fetch("/api/status").then(function (r) {
+  fetch(statusUrl()).then(function (r) {
     if (!r.ok) throw new Error("status");
     return r.json();
   }).then(function (st) {
@@ -6301,8 +6757,12 @@ document.querySelectorAll(".lang-switch [data-lang]").forEach(function (b) {
 });
 var viewMapBtn = $("view-map");
 var viewRunBtn = $("view-run");
-if (viewMapBtn) viewMapBtn.onclick = function () { watchViewLocked = true; setWatchView("map"); };
-if (viewRunBtn) viewRunBtn.onclick = function () { watchViewLocked = false; setWatchView("run"); };
+var viewHistBtn = $("view-history");
+if (viewMapBtn) viewMapBtn.onclick = function () { watchViewLocked = true; setSection("map"); };
+if (viewRunBtn) viewRunBtn.onclick = function () { watchViewLocked = true; setSection("run"); };
+if (viewHistBtn) viewHistBtn.onclick = function () { watchViewLocked = true; setSection("history"); };
+var draftRunBtn = $("draft-run");
+if (draftRunBtn) draftRunBtn.onclick = startDraft;
 var resultToggle = $("watch-result-toggle");
 if (resultToggle) resultToggle.onclick = function () {
   var body = $("watch-result-body");
