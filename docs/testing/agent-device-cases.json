@@ -30,7 +30,7 @@
         "android",
         "ios"
       ],
-      "setup": "home",
+      "setup": "editor",
       "verify": "export-one",
       "supported": {
         "android": true,
@@ -40,7 +40,7 @@
         "android": "docs/testing/agent-device/scripts/pick-to-editor@android.json",
         "ios": "docs/testing/agent-device/scripts/pick-to-editor@ios.ad"
       },
-      "honesty": "Android uses batch JSON, not .ad: Photo Picker cells have no filename and native .ad turns find --first into a positional, so replay hits AMBIGUOUS_MATCH. Batch find first:true clicks the first 照片拍摄于 recent (home setup just pushed fixtures), then 完成, then editor Save. Drive stays seam. zh-CN picker labels. Replay/batch pass is not a product pass."
+      "honesty": "Android does not walk the system picker Done button. Editor setup shares fixtures in with ACTION_SEND; the script only waits until Save is on screen. Drive stays seam. iOS simulator store-seed-editor imports the host sample photos instead of PHPicker. Replay/batch pass is not a product pass."
     },
     {
       "id": "share-in-to-editor",

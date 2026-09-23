@@ -212,7 +212,7 @@ button { letter-spacing: inherit; }
 .chip:disabled { opacity: 0.4; cursor: not-allowed; }
 .shell {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(640px, 48vw);
+  grid-template-columns: minmax(220px, 30vw) minmax(0, 1fr);
   min-height: 0;
 }
 .map-col {
@@ -257,10 +257,9 @@ button { letter-spacing: inherit; }
 #world { transform-origin: 0 0; }
 #graph .layer-band { fill: rgba(255, 222, 50, 0.035); }
 #graph .layer-title {
-  fill: var(--text-3);
-  font: 600 11px/1 var(--font);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  fill: #f7f4e8;
+  font: 700 15px/1 var(--sans);
+  letter-spacing: 0.06em;
 }
 #graph text {
   pointer-events: none;
@@ -275,7 +274,7 @@ button { letter-spacing: inherit; }
 #graph .node:hover .node-card { stroke: var(--accent); }
 #graph .node.sel .node-card { stroke: var(--accent); stroke-width: 2; filter: url(#sel-glow); }
 #graph .node.hi .node-card { stroke: var(--accent); }
-#graph .node.dim { opacity: 0.12; }
+#graph .node.dim { opacity: 0.68; }
 #graph .node.nst-running .node-card { stroke: var(--accent); stroke-width: 2; filter: url(#sel-glow); }
 #graph .node.nst-passed .node-card { stroke: var(--success); stroke-width: 1.8; }
 #graph .node.nst-failed .node-card { stroke: var(--error); stroke-width: 1.8; }
@@ -304,7 +303,7 @@ button { letter-spacing: inherit; }
   filter: url(#sel-glow);
 }
 #graph .edge.hi .edge-vis { stroke-width: 2.2; }
-#graph .edge.dim { opacity: 0.10; }
+#graph .edge.dim { opacity: 0.38; }
 #graph .edge.sel.dim { opacity: 0.55; }
 #graph .edge.sel-out .edge-vis {
   stroke: var(--accent);
@@ -318,7 +317,8 @@ button { letter-spacing: inherit; }
   right: 12px;
   z-index: 4;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
   gap: 4px;
 }
 .graph-tools[hidden],
@@ -335,6 +335,7 @@ button { letter-spacing: inherit; }
   cursor: pointer;
 }
 .graph-tools button:hover { background: var(--surface-2); color: var(--accent); }
+#zoom-fit { width: auto; min-width: 28px; padding: 0 10px; font: 600 12px/1 var(--sans); white-space: nowrap; }
 .legend-chip {
   position: absolute;
   left: 12px;
@@ -528,25 +529,38 @@ button { letter-spacing: inherit; }
   align-items: stretch;
   gap: 8px;
   min-height: 0;
-  overflow: auto;
+  min-width: 0;
+  overflow: hidden;
   padding: 10px 10px 8px;
 }
-.watch-steps { display: none; }
-.watch-pane.has-steps {
-  display: grid;
-  grid-template-columns: minmax(148px, 34%) minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr) auto auto;
+.watch-body {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
-.watch-pane.has-steps .watch-steps {
+.watch-steps {
   display: block;
-  grid-row: 1 / span 3;
-  overflow: auto;
+  position: relative;
+  flex: 1 1 auto;
+  width: auto;
+  height: 100%;
+  min-width: 0;
   min-height: 0;
   margin: 0;
-  padding: 0 8px 0 0;
-  border-right: 1px solid var(--border-strong);
+  padding: 0;
+  overflow: auto;
   list-style: none;
 }
+.watch-steps:empty { display: none; }
+.watch-slot[data-plat="ios"] .watch-phone { aspect-ratio: 1206 / 2622; }
+.watch-slot[data-plat="desktop"] .watch-phone { aspect-ratio: 16 / 10; }
+.watch-slot[data-plat="desktop"] .watch-steps { display: none; }
 .wstep {
   display: grid;
   grid-template-columns: 1.4em minmax(0, 1fr);
@@ -556,15 +570,12 @@ button { letter-spacing: inherit; }
   border-radius: 4px;
 }
 .wstep .mk { color: var(--text-3); }
-.wstep .cmd { font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.wstep .arg { grid-column: 2; color: var(--text-3); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wstep .cmd { font-weight: 650; white-space: normal; overflow-wrap: anywhere; }
+.wstep .arg { grid-column: 2; color: var(--text-2); font-size: 11px; white-space: normal; overflow-wrap: anywhere; }
 .wstep.current { background: color-mix(in srgb, var(--accent) 18%, transparent); }
 .wstep.done .mk { color: var(--ok, #2f6); }
 .wstep.failed { background: color-mix(in srgb, #e55 16%, transparent); }
 .wstep.failed .mk { color: #e55; }
-.watch-pane.has-steps .watch-grid { grid-column: 2; }
-.watch-pane.has-steps .watch-status,
-.watch-pane.has-steps .watch-actions { grid-column: 2; }
 .watch-slot.is-main .watch-phone { max-width: 280px; }
 .watch-touch {
   position: absolute;
@@ -580,19 +591,23 @@ button { letter-spacing: inherit; }
 .watch-touch[hidden] { display: none; }
 .watch-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.72fr);
+  gap: 8px;
   width: 100%;
+  min-width: 0;
   min-height: 0;
-  flex: 1;
-  align-items: start;
+  flex: 1 1 auto;
+  overflow: hidden;
+  align-items: stretch;
 }
 .watch-slot {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 4px;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 .watch-label {
   align-self: stretch;
@@ -604,11 +619,12 @@ button { letter-spacing: inherit; }
   text-align: center;
 }
 .watch-phone {
-  width: 100%;
-  max-width: 220px;
-  height: auto;
-  aspect-ratio: 9 / 19.5;
-  max-height: min(72vh, 680px);
+  width: 180px;
+  height: 100%;
+  max-width: 46%;
+  max-height: 100%;
+  min-height: 0;
+  flex: 0 0 auto;
   border-radius: 22px;
   border: 2px solid #3a3a28;
   background: #111;
@@ -636,6 +652,25 @@ button { letter-spacing: inherit; }
   object-fit: contain;
   background: #111;
 }
+.watch-result {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  margin-top: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-1);
+}
+.watch-result h3 {
+  margin: 0 0 4px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.watch-result p { margin: 0 0 6px; font-size: 12px; }
+.watch-result ul { margin: 0 0 8px; padding-left: 1.1em; font-size: 12px; }
+.watch-result[hidden] { display: none; }
 .watch-phone canvas[hidden] { display: none; }
 .watch-empty {
   position: absolute;
@@ -654,7 +689,7 @@ button { letter-spacing: inherit; }
   color: var(--text-2);
   text-align: center;
 }
-.watch-actions { display: flex; gap: 6px; }
+.watch-actions { display: none; }
 #advanced-wrap {
   border-top: 1px solid var(--border);
   background: var(--bg-1);
@@ -903,7 +938,7 @@ button { letter-spacing: inherit; }
   color: inherit;
   text-align: left;
 }
-.shot img { display: block; width: 100%; height: 80px; object-fit: cover; }
+.shot img { display: block; width: auto; max-width: 100%; height: 140px; object-fit: contain; background: #111; }
 .shot-cap { display: block; padding: 4px 6px; font: 500 10px/1.3 var(--mono); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .shot-ph {
   min-height: 80px;
@@ -978,15 +1013,18 @@ button { letter-spacing: inherit; }
   z-index: 40;
   background: rgba(0,0,0,0.74);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 24px;
+  gap: 16px;
+  padding: 24px 72px;
 }
 #lightbox[hidden] { display: none; }
-#lightbox img { max-width: 92vw; max-height: 80vh; border-radius: 8px; box-shadow: 0 12px 40px rgba(0,0,0,0.45); }
-#lightbox-cap { color: #eee; font: 500 12px/1.3 var(--mono); }
+#lightbox-stage { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; }
+#lightbox img { max-width: min(78vw, 920px); max-height: 78vh; width: auto; height: auto; object-fit: contain; border-radius: 8px; box-shadow: 0 12px 40px rgba(0,0,0,0.45); }
+#lightbox-cap { color: #eee; font: 600 14px/1.3 var(--sans); text-align: center; }
+#lightbox-prev, #lightbox-next { width: 44px; height: 44px; flex: 0 0 auto; border-radius: 999px; font-size: 28px; line-height: 1; }
+#lightbox-close { position: absolute; top: 16px; right: 16px; }
 #offline-banner {
   display: none;
   margin: 0 0 12px;
@@ -1379,9 +1417,66 @@ html[data-mode="file"] .live-only { display: none !important; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.view-switch { display: flex; gap: 4px; }
+.view-switch button, .run-path { font: 600 12px/1 var(--sans); }
+.view-switch button {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text-2);
+}
+.view-switch button.on { color: var(--text); border-color: var(--accent); }
+.run-path { display: none; align-items: center; gap: 8px; min-height: 36px; padding: 8px 12px; overflow: auto; }
+.run-node.running { color: var(--accent); }
+.run-node.failed { color: #e55; }
+.run-node.passed, .run-node.review_required { color: var(--ok, #2f6); }
+.run-gap { margin-left: auto; color: var(--text-3); font-weight: 500; }
+.watch-empty { display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center; }
+.wstep .sub, .wstep .err { grid-column: 2; font-size: 11px; color: var(--text-3); white-space: normal; overflow-wrap: anywhere; }
+.wstep .err { color: #e55; }
+.wstep { cursor: pointer; }
+[hidden] { display: none !important; }
+body.view-map .inspector { display: none; }
+body.view-map .shell { grid-template-columns: 1fr; }
+body.view-run { overflow: hidden; }
+body.view-run .app { height: 100dvh; overflow: hidden; }
+body.view-run .foot,
+body.view-run #advanced-wrap { display: none !important; }
+body.view-run .shell { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); height: 100%; min-height: 0; }
+body.view-run .map-col > :not(#run-path) { display: none !important; }
+body.view-run #run-path { display: flex; }
+body.view-run .inspector { grid-template-rows: minmax(0, 1fr); height: 100%; }
+body.view-run .watch-pane { height: 100%; display: flex; flex-direction: column; }
+body.view-run .watch-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); flex: 1 1 auto; height: auto; min-height: 0; }
+body.view-run .watch-grid.one-card { grid-template-columns: minmax(280px, 760px); justify-content: center; }
+body.view-run .watch-slot,
+body.view-run .watch-body { height: 100%; min-height: 0; }
+body.view-run .watch-result { flex: 0 0 auto; min-height: 0; display: flex; flex-direction: column; background: rgba(22, 22, 12, 0.96); border: 1px solid var(--border-strong); border-radius: 12px; margin: 0 8px 8px; padding: 0; z-index: 4; overflow: hidden; }
+body.view-run .watch-result.is-open { flex: 0 0 42%; height: 42%; max-height: 42%; }
+body.view-run .watch-result-bar { flex: 0 0 auto; padding: 8px 12px; }
+#watch-result-body { flex: 1 1 auto; min-height: 0; max-height: none; overflow-x: hidden; overflow-y: scroll; padding: 0 12px 10px; scroll-snap-type: y mandatory; scroll-padding-top: 28px; }
+#watch-result-shots { display: block; }
+.shot-group { margin: 0 0 8px; }
+.shot-group h3 { position: sticky; top: 0; z-index: 2; margin: 0; padding: 6px 0 4px; background: #16160c; font: 600 12px/1.2 var(--sans); letter-spacing: 0.04em; text-transform: none; color: var(--text); }
+.shot-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px 12px; }
+#watch-result-shots .shot { display: flex; flex-direction: column; width: 96px; max-width: 96px; padding: 0; border: 0; background: transparent; overflow: hidden; scroll-snap-align: start; scroll-snap-stop: always; }
+#watch-result-shots .shot img, #watch-result-shots .shot-miss { display: flex; align-items: center; justify-content: center; width: 96px; height: 210px; object-fit: contain; background: #111; border-radius: 8px; border: 1px solid var(--border); color: var(--text-3); font: 500 12px/1.3 var(--sans); }
+#watch-result-shots .shot-cap { display: -webkit-box; width: 96px; max-width: 96px; height: 2.6em; margin: 0; padding: 4px 0 0; line-height: 1.3em; white-space: normal; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-overflow: ellipsis; color: var(--text); font: 500 11px/1.3 var(--sans); }
+.watch-result-bar {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  padding: 0;
+  cursor: pointer;
+  font: 500 12px/1.4 var(--sans);
+}
 </style>
 </head>
-<body>
+<body class="view-map">
 <div class="app">
   <header class="topbar">
     <div class="brand">
@@ -1396,6 +1491,10 @@ html[data-mode="file"] .live-only { display: none !important; }
     </div>
     <span id="git-sha" class="sha">—</span>
     <div class="topbar-right">
+      <div class="view-switch" role="group" aria-label="View">
+        <button type="button" id="view-map" class="on" data-i18n="view.map">Map</button>
+        <button type="button" id="view-run" data-i18n="view.run">Run</button>
+      </div>
       <div class="lang-switch" role="group" aria-label="Language">
         <button type="button" data-lang="en">EN</button>
         <button type="button" data-lang="zh">中</button>
@@ -1406,6 +1505,7 @@ html[data-mode="file"] .live-only { display: none !important; }
   </header>
   <div class="shell">
     <section class="map-col">
+      <div id="run-path" class="run-path"></div>
       <div class="graph-well" id="canvas">
         <svg id="graph" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="E2E path graph"></svg>
         <div class="canvas-toolbar canvas-ui">
@@ -1445,25 +1545,30 @@ html[data-mode="file"] .live-only { display: none !important; }
     </section>
     <aside class="inspector">
       <div class="watch-pane live-only" id="watch-pane">
-        <ol class="watch-steps" id="watch-steps"></ol>
         <div class="watch-grid">
           <div class="watch-slot" data-plat="android">
             <p class="watch-label">Android</p>
+            <div class="watch-body">
             <div class="watch-phone" id="watch-phone-android">
               <canvas id="watch-canvas-android" hidden></canvas>
               <img id="watch-img-android" alt="" hidden>
-              <p class="watch-empty" id="watch-empty-android">No Android frame</p>
+              <p class="watch-empty" id="watch-empty-android"><span id="watch-reason-android">No Android frame</span><button type="button" class="btn" id="watch-retry-android" data-i18n="watch.reconnect">Reconnect</button></p>
               <i class="watch-touch" id="watch-touch-android" hidden></i>
+            </div>
+            <ol class="watch-steps" id="watch-steps-android"></ol>
             </div>
             <p class="watch-cap" id="watch-cap-android"></p>
           </div>
           <div class="watch-slot" data-plat="ios">
             <p class="watch-label">iOS</p>
+            <div class="watch-body">
             <div class="watch-phone" id="watch-phone-ios">
               <canvas id="watch-canvas-ios" hidden></canvas>
               <img id="watch-img-ios" alt="" hidden>
-              <p class="watch-empty" id="watch-empty-ios">No iOS frame</p>
+              <p class="watch-empty" id="watch-empty-ios"><span id="watch-reason-ios">No iOS frame</span><button type="button" class="btn" id="watch-retry-ios" data-i18n="watch.reconnect">Reconnect</button></p>
               <i class="watch-touch" id="watch-touch-ios" hidden></i>
+            </div>
+            <ol class="watch-steps" id="watch-steps-ios"></ol>
             </div>
             <p class="watch-cap" id="watch-cap-ios"></p>
           </div>
@@ -1478,12 +1583,14 @@ html[data-mode="file"] .live-only { display: none !important; }
             <p class="watch-cap" id="watch-cap-desktop"></p>
           </div>
         </div>
+        <section class="watch-result" id="watch-result" hidden>
+          <button type="button" class="watch-result-bar" id="watch-result-toggle"><span id="watch-result-meta"></span></button>
+          <div id="watch-result-body" hidden>
+            <ul id="watch-result-fails"></ul>
+            <div id="watch-result-shots" class="shot-grid"></div>
+          </div>
+        </section>
         <p class="watch-status" id="watch-status"></p>
-        <div class="watch-actions">
-          <button type="button" class="btn danger" id="watch-stop" disabled data-i18n="run.stop">Stop</button>
-          <button type="button" class="btn" id="watch-scrcpy" data-i18n="watch.scrcpy">scrcpy window</button>
-          <button type="button" class="btn primary" id="watch-confirm" disabled data-i18n="watch.confirm">Confirm view</button>
-        </div>
       </div>
       <details id="advanced-wrap">
         <summary data-i18n="advanced">Advanced</summary>
@@ -1578,8 +1685,12 @@ html[data-mode="file"] .live-only { display: none !important; }
 </div>
 <div id="toasts"></div>
 <div id="lightbox" hidden>
-  <img id="lightbox-img" alt="">
-  <div id="lightbox-cap"></div>
+  <button type="button" class="btn" id="lightbox-prev" aria-label="Previous">‹</button>
+  <div id="lightbox-stage">
+    <img id="lightbox-img" alt="">
+    <div id="lightbox-cap"></div>
+  </div>
+  <button type="button" class="btn" id="lightbox-next" aria-label="Next">›</button>
   <button type="button" class="btn" id="lightbox-close" data-i18n="close">Close</button>
 </div>
 <script>
@@ -1635,6 +1746,21 @@ const I18N = {
     "watch.empty": "No live frame. Start scripts/e2e-console.sh on a ready emulator, then tell the agent to run a path.",
     "watch.confirm": "Confirm view",
     "watch.idle": "Idle — run a path via the agent",
+    "watch.result": "Result",
+    "view.map": "Map",
+    "view.run": "Run",
+    "watch.reconnect": "Reconnect",
+    "watch.noDevice": "Device not connected",
+    "watch.streamLost": "Stream disconnected",
+    "watch.uncovered": "not covered",
+    "watch.tap": "Tap {what}",
+    "watch.type": "Type {what}",
+    "watch.noShot": "No screenshot",
+    "watch.drag": "Drag {what}",
+    "watch.slider": "{what} slider",
+    "watch.waitFor": "Wait for {what}",
+    "watch.openApp": "Open {what}",
+    "watch.closeApp": "Close",
     "watch.running": "Agent running",
     "watch.review": "Review required — confirm the picture if it matches",
     "advanced": "Advanced",
@@ -1804,6 +1930,21 @@ const I18N = {
     "watch.empty": "还没有画面。先开控制台和已启动的模拟器，再用自然语言让 Agent 跑链路。",
     "watch.confirm": "确认画面",
     "watch.idle": "空闲 — 对 Agent 说要跑哪条链路",
+    "watch.result": "结果",
+    "view.map": "地图",
+    "view.run": "执行",
+    "watch.reconnect": "重连",
+    "watch.noDevice": "设备没连上",
+    "watch.streamLost": "流断了",
+    "watch.uncovered": "未覆盖",
+    "watch.tap": "点击 {what}",
+    "watch.type": "输入 {what}",
+    "watch.noShot": "无截图",
+    "watch.drag": "拖动 {what}",
+    "watch.slider": "{what}滑杆",
+    "watch.waitFor": "等待 {what}",
+    "watch.openApp": "打开 {what}",
+    "watch.closeApp": "关闭",
     "watch.running": "Agent 正在跑",
     "watch.review": "待确认 — 画面对了再点确认",
     "advanced": "高级",
@@ -2340,9 +2481,11 @@ function zoomToCursor(p, nextK) {
 }
 function fitTarget() {
   var L = DATA.layout;
-  var pad = 28;
-  var k = clampK(Math.min((wellRect.w - pad * 2) / L.width, (wellRect.h - pad * 2) / L.height));
-  return { k: k, x: (wellRect.w - L.width * k) / 2, y: (wellRect.h - L.height * k) / 2 };
+  var padX = 36;
+  var top = 84;
+  var bottom = 56;
+  var k = clampK(Math.min((wellRect.w - padX * 2) / L.width, (wellRect.h - top - bottom) / L.height));
+  return { k: k, x: (wellRect.w - L.width * k) / 2, y: top };
 }
 function applyCamInstant(next) {
   cam.x = next.x;
@@ -3668,10 +3811,138 @@ function copyLogBundle() {
   if (!text) return;
   copyText(text, $("btn-copy-log"));
 }
+var watchViewLocked = false;
+function setWatchView(mode) {
+  var run = mode === "run";
+  document.body.classList.toggle("view-run", run);
+  document.body.classList.toggle("view-map", !run);
+  var mapBtn = $("view-map");
+  var runBtn = $("view-run");
+  if (mapBtn) mapBtn.classList.toggle("on", !run);
+  if (runBtn) runBtn.classList.toggle("on", run);
+  setTimeout(function () { fitWatchPhone(); }, 40);
+}
+function platformsInRun(st) {
+  var out = [];
+  (st && st.queue || []).forEach(function (task) {
+    var m = String(task.id || "").match(/@(android|ios|desktop)/);
+    if (m && out.indexOf(m[1]) < 0) out.push(m[1]);
+  });
+  return out;
+}
+function syncRunCards(st) {
+  var plats = platformsInRun(st);
+  document.querySelectorAll(".watch-slot").forEach(function (el) {
+    var plat = el.getAttribute("data-plat");
+    el.hidden = plats.length ? plats.indexOf(plat) < 0 : plat === "desktop";
+  });
+  var grid = document.querySelector(".watch-grid");
+  if (grid) {
+    var cards = plats.length || 2;
+    grid.classList.toggle("one-card", cards === 1);
+    grid.style.gridTemplateColumns = cards === 1 ? "" : "repeat(" + cards + ", minmax(0, 1fr))";
+  }
+  var bar = $("run-path");
+  if (!bar) return;
+  var model = runPathModel();
+  var seen = {};
+  var nodes = [];
+  plats.forEach(function () {});
+  var edgeIds = [];
+  (st.queue || []).forEach(function (task) {
+    var eid = task.edge_id || taskEdgeId(task.id);
+    if (eid && edgeIds.indexOf(eid) < 0) edgeIds.push(eid);
+  });
+  edgeIds.forEach(function (eid) {
+    var edge = DATA.edges.find(function (item) { return item.id === eid; });
+    if (!edge) return;
+    [edge.from, edge.to].forEach(function (nid) {
+      if (seen[nid]) return;
+      seen[nid] = true;
+      nodes.push(nid);
+    });
+  });
+  var html = nodes.map(function (nid, i) {
+    var tone = (model && model.nodes && model.nodes[nid]) || "";
+    return (i ? '<span class="run-arrow">→</span>' : "") + '<span class="run-node ' + tone + '">' + esc(nodeTitle(nid)) + "</span>";
+  }).join("");
+  if (plats.indexOf("desktop") < 0) html += '<span class="run-gap">Desktop: ' + esc(t("watch.uncovered")) + "</span>";
+  bar.innerHTML = html;
+}
+function renderWatchResult(st) {
+  var box = $("watch-result");
+  if (!box) return;
+  var id = st && st.id;
+  if (!id) { box.hidden = true; return; }
+  box.hidden = false;
+  var meta = $("watch-result-meta");
+  var bits = [id];
+  (st.queue || []).forEach(function (task) {
+    var plat = (String(task.id || "").match(/@(android|ios|desktop)/) || [])[1] || task.id;
+    var dur = task.duration_s != null ? " " + task.duration_s + "s" : "";
+    bits.push(plat + " " + (task.state || "") + dur);
+  });
+  if (meta) meta.textContent = bits.join(" · ");
+  var rows = st.steps || [];
+  var opt = optionByStep(rows);
+  var fails = rows.filter(function (row) { return row.state === "failed"; });
+  var list = $("watch-result-fails");
+  if (list) {
+    list.innerHTML = fails.map(function (row) {
+      return "<li>" + esc(stepPhrase(row, opt[stepKey(row)])) + "</li>";
+    }).join("");
+  }
+  var shots = $("watch-result-shots");
+  if (!shots) return;
+  var live = st.state === "running" || st.state === "paused";
+  var grouped = {android: [], ios: [], desktop: []};
+  rows.forEach(function (row) {
+    var plat = row.platform || "";
+    if (!grouped[plat]) return;
+    if (live && row.state === "pending") return;
+    grouped[plat].push(row);
+  });
+  shotGallery = [];
+  var html = "";
+  ["android", "ios", "desktop"].forEach(function (plat) {
+    var items = (grouped[plat] || []).slice().sort(function (a, b) { return (a.n || 0) - (b.n || 0); });
+    if (!items.length) return;
+    var title = plat === "ios" ? "iOS" : plat === "android" ? "Android" : "Desktop";
+    html += '<section class="shot-group" id="shot-group-' + plat + '"><h3>' + esc(title) + '</h3><div class="shot-row">';
+    items.forEach(function (row) {
+      var cap = row.n + " " + stepPhrase(row, opt[stepKey(row)]);
+      var src = row.shot && st.id ? "/api/runs/" + encodeURIComponent(st.id) + "/steps/" + encodeURIComponent(row.shot) : "";
+      if (src) {
+        var idx = shotGallery.length;
+        shotGallery.push({src: src, cap: cap, key: stepKey(row)});
+        html += '<button type="button" class="shot" data-shot="' + idx + '"><img src="' + esc(src) + '" alt=""><span class="shot-cap">' + esc(cap) + "</span></button>";
+      } else {
+        html += '<div class="shot"><div class="shot-miss">' + esc(t("watch.noShot")) + '</div><span class="shot-cap">' + esc(cap) + "</span></div>";
+      }
+    });
+    html += "</div></section>";
+  });
+  shots.innerHTML = html;
+  shots.querySelectorAll("button.shot").forEach(function (btn) {
+    btn.onclick = function () { openShot(Number(btn.getAttribute("data-shot"))); };
+  });
+}
+function openShot(i) {
+  if (!shotGallery.length) return;
+  shotIndex = (i + shotGallery.length) % shotGallery.length;
+  var item = shotGallery[shotIndex];
+  openLightbox(item.src, item.cap);
+}
 function renderRunStatus(st) {
   lastStatusSnap = st;
-  renderWatchSteps(st);
   var prev = lastRunState;
+  if ((st.state === "running" || st.state === "paused") && prev !== "running" && prev !== "paused") {
+    watchViewLocked = false;
+    setWatchView("run");
+  }
+  renderWatchSteps(st);
+  renderWatchResult(st);
+  syncRunCards(st);
   lastRunState = st.state || "idle";
   if ((prev === "running" || prev === "paused") &&
       (st.state === "passed" || st.state === "failed" || st.state === "stopped" || st.state === "review_required")) {
@@ -3804,7 +4075,7 @@ function fetchLatestCases(id) {
 }
 var WATCH_PLATS = ["android", "ios", "desktop"];
 function watchNewCtl() {
-  return {abort:null, blobUrl:"", streamKey:"", pending:null, painting:false, frameN:0, natW:0, natH:0};
+  return {abort:null, blobUrl:"", streamKey:"", pending:null, painting:false, frameN:0, natW:0, natH:0, videoTimer:null};
 }
 var watchCtl = {android: watchNewCtl(), ios: watchNewCtl(), desktop: watchNewCtl()};
 function wEl(plat, suffix) { return $(suffix + "-" + plat); }
@@ -3824,41 +4095,58 @@ function syncWatchChrome(st) {
   if (!consoleOnline) { status.textContent = t("run.offline"); return; }
   if (running) { status.textContent = t("watch.running"); return; }
   if (st.state === "review_required") { status.textContent = t("watch.review"); return; }
-  status.textContent = t("watch.idle");
+  status.textContent = "";
 }
 function fitWatchPhone(plat) {
   if (!plat) { WATCH_PLATS.forEach(fitWatchPhone); return; }
   var slot = document.querySelector('.watch-slot[data-plat="'+plat+'"]');
   var phone = wEl(plat, "watch-phone");
-  if (!slot || !phone) return;
-  // Bezel follows the device, not the encoded frame (scrcpy 720x1280 is 9:16).
-  var ar = plat === "desktop" ? 16 / 10 : 9 / 19.5;
+  if (!slot || !phone || slot.hidden) return;
+  var ctl = watchCtl[plat] || {};
+  var ar = 0;
+  var ratioText = "auto";
+  if (plat === "desktop") {
+    ar = 16 / 10;
+    ratioText = "16 / 10";
+  } else if (ctl.natW > 0 && ctl.natH > 0) {
+    ar = ctl.natW / ctl.natH;
+    ratioText = ctl.natW + " / " + ctl.natH;
+  }
+  if (!ar) ar = plat === "ios" ? 1206 / 2622 : plat === "desktop" ? 16 / 10 : 1080 / 2400;
+  if (!ratioText || ratioText === "auto") ratioText = plat === "ios" ? "1206 / 2622" : plat === "desktop" ? "16 / 10" : "1080 / 2400";
+  var label = slot.querySelector(".watch-label");
   var cap = wEl(plat, "watch-cap");
-  var pane = $("watch-pane");
-  var maxW = Math.max(120, slot.clientWidth - 8);
-  var maxH = Math.max(200, (pane ? pane.clientHeight : 640) - 80 - ((cap && cap.offsetHeight) || 0));
-  var h = maxH;
+  var chrome = (label ? label.offsetHeight : 0) + (cap ? cap.offsetHeight : 0) + 12;
+  var h = Math.max(160, (slot.clientHeight || 0) - chrome);
+  if (!slot.clientHeight) return;
+  var maxW = Math.max(120, (slot.clientWidth || h) * 0.48);
   var w = h * ar;
   if (w > maxW) { w = maxW; h = w / ar; }
   phone.style.width = Math.round(w) + "px";
   phone.style.height = Math.round(h) + "px";
-  phone.style.aspectRatio = "unset";
+  phone.style.maxWidth = "none";
+  phone.style.maxHeight = "none";
+  phone.style.flex = "0 0 auto";
+  phone.style.aspectRatio = ratioText;
+  var steps = wEl(plat, "watch-steps");
+  if (steps) {
+    steps.style.height = Math.round(h) + "px";
+    steps.style.maxHeight = Math.round(h) + "px";
+  }
 }
 function watchSlot(plat) {
+  if (plat === "desktop") return null;
   var watches = (lastStatusSnap && lastStatusSnap.watches) || {};
   var w = watches[plat] || null;
   if (w && w.platform && w.platform !== plat) w = null;
   if ((!w || !w.device) && lastStatusSnap && lastStatusSnap.watch && lastStatusSnap.watch.platform === plat) {
     w = lastStatusSnap.watch;
   }
-  if (w && w.platform && w.platform !== plat) return null;
+  if (!w || !w.device) return null;
+  if (w.platform && w.platform !== plat) return null;
   if (plat === "ios") {
-    var id = String((w && w.device) || "");
-    if (!w || w.kind === "simulator" || id.indexOf("emulator-") === 0) return null;
-    var cur = lastStatusSnap && lastStatusSnap.current;
-    var iosRun = cur && String(cur.id || "").indexOf("@ios") >= 0;
-    if (!iosRun) return null;
-    if (w.kind !== "physical" && id.indexOf("0000") !== 0) return null;
+    var id = String(w.device || "");
+    if (id.indexOf("emulator-") === 0 || w.kind === "emulator") return null;
   }
   return w;
 }
@@ -3871,109 +4159,44 @@ function watchQuery(plat) {
 function stopWatch(plat) {
   var ctl = watchCtl[plat];
   if (!ctl) return;
+  if (ctl.videoTimer) { clearTimeout(ctl.videoTimer); ctl.videoTimer = null; }
   if (ctl.abort) ctl.abort.abort();
   ctl.abort = null;
   ctl.streamKey = "";
+  ctl.imgToken = "";
+  ctl.pending = null;
+  ctl.painting = false;
+  if (ctl.blobUrl) { URL.revokeObjectURL(ctl.blobUrl); ctl.blobUrl = ""; }
   var img = wEl(plat, "watch-img");
   var canvas = wEl(plat, "watch-canvas");
   var empty = wEl(plat, "watch-empty");
-  if (img) img.hidden = true;
-  if (canvas) canvas.hidden = true;
-  if (empty) empty.hidden = false;
+  if (img) {
+    img.onload = null;
+    img.onerror = null;
+    img.removeAttribute("src");
+    img.hidden = true;
+  }
+  if (canvas) {
+    var ctx = canvas.getContext("2d");
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    canvas.hidden = true;
+  }
+  if (empty) {
+    empty.hidden = false;
+    var reason = wEl(plat, "watch-reason");
+    var why = ctl.failReason === "stream" ? t("watch.streamLost") : t("watch.noDevice");
+    if (reason) reason.textContent = why;
+  }
   var mark = wEl(plat, "watch-touch");
   if (mark) mark.hidden = true;
   var cap = wEl(plat, "watch-cap");
   if (cap) cap.textContent = "";
-}
-function findPair(buf, a, b, from) {
-  for (var i = from || 0; i < buf.length - 1; i++) {
-    if (buf[i] === a && buf[i + 1] === b) return i;
-  }
-  return -1;
 }
 function concatU8(a, b) {
   var out = new Uint8Array(a.length + b.length);
   out.set(a, 0);
   out.set(b, a.length);
   return out;
-}
-function showWatchJpeg(plat, bytes) {
-  var ctl = watchCtl[plat];
-  if (!ctl) return;
-  ctl.pending = bytes;
-  if (!ctl.painting) paintWatchJpeg(plat);
-}
-function paintWatchJpeg(plat) {
-  var ctl = watchCtl[plat];
-  if (!ctl) return;
-  var bytes = ctl.pending;
-  ctl.pending = null;
-  if (!bytes) { ctl.painting = false; return; }
-  ctl.painting = true;
-  var blob = new Blob([bytes], {type: "image/jpeg"});
-  if (ctl.blobUrl) URL.revokeObjectURL(ctl.blobUrl);
-  ctl.blobUrl = URL.createObjectURL(blob);
-  var img = wEl(plat, "watch-img");
-  var empty = wEl(plat, "watch-empty");
-  function done() {
-    if (img) img.hidden = false;
-    var canvas = wEl(plat, "watch-canvas");
-    if (canvas) canvas.hidden = true;
-    if (empty) empty.hidden = true;
-    if (img && (img.naturalWidth !== ctl.natW || img.naturalHeight !== ctl.natH)) {
-      ctl.natW = img.naturalWidth;
-      ctl.natH = img.naturalHeight;
-      fitWatchPhone(plat);
-    }
-    ctl.frameN += 1;
-    watchCaption(plat);
-    paintTouch(lastStatusSnap);
-    ctl.painting = false;
-    if (ctl.pending) paintWatchJpeg(plat);
-  }
-  if (img) {
-    img.onload = done;
-    img.onerror = function () { ctl.painting = false; };
-    img.src = ctl.blobUrl;
-  } else {
-    ctl.painting = false;
-  }
-}
-function startWatchPump(plat, q) {
-  var ctl = watchCtl[plat];
-  if (!ctl) return;
-  if (ctl.abort) ctl.abort.abort();
-  ctl.abort = new AbortController();
-  var url = "/api/device-stream" + (q ? "?" + q + "&" : "?") + "n=" + Date.now();
-  fetch(url, {signal: ctl.abort.signal}).then(function (r) {
-    if (!r.ok || r.status === 204 || !r.body) throw new Error("empty");
-    var reader = r.body.getReader();
-    var buf = new Uint8Array(0);
-    function pump() {
-      return reader.read().then(function (res) {
-        if (res.done) throw new Error("ended");
-        buf = concatU8(buf, res.value);
-        var lastJpeg = null;
-        while (true) {
-          var start = findPair(buf, 0xff, 0xd8, 0);
-          if (start < 0) { buf = new Uint8Array(0); break; }
-          var end = findPair(buf, 0xff, 0xd9, start + 2);
-          if (end < 0) {
-            if (start > 0) buf = buf.slice(start);
-            break;
-          }
-          lastJpeg = buf.slice(start, end + 2);
-          buf = buf.slice(end + 2);
-        }
-        if (lastJpeg) showWatchJpeg(plat, lastJpeg);
-        return pump();
-      });
-    }
-    return pump();
-  }).catch(function (err) {
-    if (err && err.name === "AbortError") return;
-    stopWatch(plat);
-  });
 }
 function naluType(u8) {
   var i = 0;
@@ -3990,18 +4213,52 @@ function concatNalus(parts) {
   for (var j = 0; j < parts.length; j++) { out.set(parts[j], o); o += parts[j].length; }
   return out;
 }
+function paintWatchCanvas(plat, frame) {
+  var ctl = watchCtl[plat];
+  var canvas = wEl(plat, "watch-canvas");
+  var img = wEl(plat, "watch-img");
+  var empty = wEl(plat, "watch-empty");
+  if (!frame || frame.displayHeight < 320 || frame.displayHeight < frame.displayWidth) return;
+  if (canvas) {
+    if (canvas.width !== frame.displayWidth || canvas.height !== frame.displayHeight) {
+      canvas.width = frame.displayWidth;
+      canvas.height = frame.displayHeight;
+      ctl.natW = frame.displayWidth;
+      ctl.natH = frame.displayHeight;
+      fitWatchPhone(plat);
+    }
+    var ctx = canvas.getContext("2d");
+    if (ctx) ctx.drawImage(frame, 0, 0);
+    canvas.hidden = false;
+  }
+  if (img) img.hidden = true;
+  if (empty) empty.hidden = true;
+  ctl.frameN += 1;
+  watchCaption(plat);
+  paintTouch(lastStatusSnap);
+}
 function startWatchH264(plat, q) {
   var ctl = watchCtl[plat];
-  if (!ctl) return;
+  if (!ctl || typeof VideoDecoder !== "function") { startWatchImg(plat, q); return; }
+  if (ctl.videoTimer) { clearTimeout(ctl.videoTimer); ctl.videoTimer = null; }
   if (ctl.abort) ctl.abort.abort();
   ctl.abort = new AbortController();
+  ctl.frameN = 0;
   var ac = ctl.abort;
+  function armVideoWatch() {
+    if (ctl.videoTimer) clearTimeout(ctl.videoTimer);
+    var had = watchCtl[plat].frameN > 0;
+    ctl.videoTimer = setTimeout(function () {
+      if (watchCtl[plat].abort !== ac) return;
+      startWatchImg(plat, q);
+    }, had ? 1200 : 2000);
+  }
+  armVideoWatch();
   var decoder = null;
   var spsPps = [];
   var ts = 0;
   var codec = "avc1.42E01E";
-  var url = "/api/device-video" + (q ? "?" + q + "&" : "?") + "n=" + Date.now();
-  var sawVideo = false;
+  var url = "/api/device-video?" + q + "&n=" + Date.now();
   fetch(url, {signal: ac.signal}).then(function (r) {
     if (!r.ok || r.status === 204 || !r.body) throw new Error("empty");
     var reader = r.body.getReader();
@@ -4015,34 +4272,16 @@ function startWatchH264(plat, q) {
         } catch (e) {}
         return;
       }
-      var t = naluType(payload);
-      if (t === 7 || t === 8) { spsPps.push(payload); return; }
-      if (t === 6 || t === 9) return;
-      var isKey = t === 5;
-      sawVideo = true;
+      var tpe = naluType(payload);
+      if (tpe === 7 || tpe === 8) { spsPps.push(payload); return; }
+      if (tpe === 6 || tpe === 9) return;
+      var isKey = tpe === 5;
       if (!decoder || decoder.state === "closed") {
-        if (typeof VideoDecoder === "undefined") throw new Error("no VideoDecoder");
         decoder = new VideoDecoder({
           output: function (frame) {
-            var canvas = wEl(plat, "watch-canvas");
-            var img = wEl(plat, "watch-img");
-            var empty = wEl(plat, "watch-empty");
-            if (canvas) {
-              if (canvas.width !== frame.displayWidth || canvas.height !== frame.displayHeight) {
-                canvas.width = frame.displayWidth;
-                canvas.height = frame.displayHeight;
-                fitWatchPhone(plat);
-              }
-              var ctx = canvas.getContext("2d");
-              if (ctx) ctx.drawImage(frame, 0, 0);
-              canvas.hidden = false;
-            }
-            if (img) img.hidden = true;
-            if (empty) empty.hidden = true;
-            ctl.frameN += 1;
-            watchCaption(plat);
-            paintTouch(lastStatusSnap);
+            paintWatchCanvas(plat, frame);
             frame.close();
+            armVideoWatch();
           },
           error: function () {
             try { decoder.close(); } catch (e) {}
@@ -4077,10 +4316,66 @@ function startWatchH264(plat, q) {
     }
     return pump();
   }).catch(function (err) {
+    if (ctl.videoTimer) { clearTimeout(ctl.videoTimer); ctl.videoTimer = null; }
     if (err && err.name === "AbortError") return;
-    if (!sawVideo) startWatchPump(plat, q);
-    else stopWatch(plat);
+    if (watchCtl[plat].abort !== ac) return;
+    if (watchCtl[plat].frameN > 0) stopWatch(plat);
+    else startWatchImg(plat, q);
   });
+}
+function startWatchImg(plat, q) {
+  var ctl = watchCtl[plat];
+  if (!ctl) return;
+  if (ctl.videoTimer) { clearTimeout(ctl.videoTimer); ctl.videoTimer = null; }
+  if (ctl.abort) { ctl.abort.abort(); ctl.abort = null; }
+  var img = wEl(plat, "watch-img");
+  var canvas = wEl(plat, "watch-canvas");
+  var empty = wEl(plat, "watch-empty");
+  if (!img) return;
+  if (canvas) canvas.hidden = true;
+  var token = "img:" + q + ":" + Date.now();
+  ctl.imgToken = token;
+  img.onload = null;
+  img.onerror = null;
+  img.removeAttribute("src");
+  img.hidden = false;
+  if (empty) empty.hidden = false;
+  function nextFrame() {
+    if (ctl.imgToken !== token) return;
+    var url = "/api/device-frame?" + q + "&n=" + Date.now();
+    img.onload = function () {
+      if (ctl.imgToken !== token) return;
+      img.hidden = false;
+      if (empty) empty.hidden = true;
+      if (img.naturalWidth && (img.naturalWidth !== ctl.natW || img.naturalHeight !== ctl.natH)) {
+        ctl.natW = img.naturalWidth;
+        ctl.natH = img.naturalHeight;
+        fitWatchPhone(plat);
+      }
+      ctl.frameN += 1;
+      ctl.miss = 0;
+      rememberFrame(plat);
+      var live = (lastStatusSnap && lastStatusSnap.steps) || [];
+      live.forEach(function (row) {
+        if (row.platform === plat && row.state === "current" && !stepShots[stepKey(row)] && ctl.lastFrame) {
+          stepShots[stepKey(row)] = ctl.lastFrame;
+        }
+      });
+      watchCaption(plat);
+      paintTouch(lastStatusSnap);
+      nextFrame();
+    };
+    img.onerror = function () {
+      if (ctl.imgToken !== token) return;
+      ctl.miss = (ctl.miss || 0) + 1;
+      if (ctl.miss < 4) { setTimeout(nextFrame, 250); return; }
+      ctl.failReason = "stream";
+      ctl.imgToken = "";
+      stopWatch(plat);
+    };
+    img.src = url;
+  }
+  nextFrame();
 }
 var stepFollow = true;
 var stepScrolling = false;
@@ -4090,49 +4385,189 @@ function watchCaption(plat) {
   var w = ((lastStatusSnap && lastStatusSnap.watches) || {})[plat] || {};
   cap.textContent = w.device || "";
 }
+var stepClock = {};
+var stepShots = {};
+var shotGallery = [];
+var shotIndex = 0;
+var STEP_WORDS = {
+  sharedComposeSaveButton: "Save",
+  sharedComposeExportSheet: "导出面板",
+  sharedComposeExportPrimary: "导出",
+  sharedComposeExportCounts: "导出结果",
+  "editorOption-TextSize": "字号",
+  "editorOption-Color": "颜色",
+  "editorOption-Alpha": "透明度",
+  "editorControl-Alpha": "透明度",
+  "editorTab-1": "样式",
+  sliderTrack: "滑杆",
+  watermarkTextContent: "文本",
+  watermarkTextEditField: "水印文字",
+  watermarkTextConfirm: "确认",
+  "colorSwatch-FF000000": "黑色",
+  "store-seed-editor": "样图",
+  "Edit watermark": "编辑水印",
+  "Output format": "输出格式",
+  "Export to the album": "导出到相册",
+  Text: "文本",
+  Style: "样式",
+  Size: "字号",
+  Color: "颜色",
+  Alpha: "透明度",
+  Confirm: "确认",
+  black: "黑色",
+  succeeded: "导出成功"
+};
+function speakTarget(target) {
+  var text = String(target || "").replace(/\$\{WATERMARK\}/g, "EWM COMBO");
+  return STEP_WORDS[text] || text;
+}
+function stepParts(row) {
+  var arg = String(row.args || "").trim().split(String.fromCharCode(92)).join("");
+  var kind = "";
+  var target = "";
+  var quoted = arg.match(/(label|id|value|text|role)\s*=\s*"([^"]*)"/);
+  var plain = arg.match(/(label|id|value|text|role)=([^\s"]+)/);
+  var anyQuote = arg.match(/"([^"]+)"/);
+  if (quoted) { kind = quoted[1]; target = quoted[2]; }
+  else if (plain) { kind = plain[1]; target = plain[2]; }
+  else if (anyQuote) target = anyQuote[1];
+  else if (row.command === "open") target = arg.split(/\s+/)[0];
+  else target = arg.replace(/^["']|["']$/g, "");
+  var raw = kind ? (kind + " " + target) : target;
+  return {kind: kind, rawTarget: target, target: speakTarget(target), raw: raw};
+}
+function isSliderRaw(raw) {
+  return /seekbar|slider/i.test(String(raw || ""));
+}
+function optionName(raw) {
+  var zh = lang === "zh";
+  var table = {
+    Size: zh ? "字号" : "size",
+    "editorOption-TextSize": zh ? "字号" : "size",
+    Alpha: zh ? "透明度" : "opacity",
+    "editorOption-Alpha": zh ? "透明度" : "opacity",
+    "editorControl-Alpha": zh ? "透明度" : "opacity"
+  };
+  return table[raw] || "";
+}
+function optionByStep(rows) {
+  var map = {};
+  var current = {};
+  rows.slice().sort(function (a, b) {
+    if ((a.platform || "") < (b.platform || "")) return -1;
+    if ((a.platform || "") > (b.platform || "")) return 1;
+    return (a.n || 0) - (b.n || 0);
+  }).forEach(function (row) {
+    var plat = row.platform || "";
+    var part = stepParts(row);
+    var raw = part.rawTarget || "";
+    if (!isSliderRaw(raw) && !isSliderRaw(part.raw)) {
+      var name = optionName(raw);
+      if (name) current[plat] = name;
+    }
+    if (current[plat] && (isSliderRaw(raw) || isSliderRaw(part.raw))) map[stepKey(row)] = current[plat];
+  });
+  return map;
+}
+function stepPhrase(row, option) {
+  var part = stepParts(row);
+  var what = part.target || part.raw || row.command;
+  var blob = String(row.args || "") + " " + part.raw;
+  if (option && (isSliderRaw(part.rawTarget) || isSliderRaw(part.raw))) {
+    var label = t("watch.slider", {what: option});
+    if (row.command === "press" || row.command === "click" || row.command === "tap") return t("watch.drag", {what: label});
+    if (row.command === "wait") return t("watch.waitFor", {what: label});
+  }
+  if (row.command === "press" || row.command === "click" || row.command === "tap") return t("watch.tap", {what: what});
+  if (row.command === "fill") return t("watch.type", {what: what});
+  if (row.command === "wait") {
+    if (/Edit watermark|sharedComposeSaveButton/.test(blob)) return t("watch.waitFor", {what: lang === "zh" ? "编辑器出现" : "the editor"});
+    return t("watch.waitFor", {what: what});
+  }
+  if (row.command === "open") return t("watch.openApp", {what: what});
+  if (row.command === "close") return t("watch.closeApp");
+  return (row.command || "") + (what ? " " + what : "");
+}
+function stepKey(row) { return (row.platform || "") + ":" + row.n; }
+function noteStepClock(rows) {
+  var now = Date.now();
+  rows.forEach(function (row) {
+    var key = stepKey(row);
+    var rec = stepClock[key] || {};
+    if (row.state === "current" && !rec.start) rec.start = now;
+    if ((row.state === "done" || row.state === "failed") && rec.start && rec.ms == null) rec.ms = now - rec.start;
+    stepClock[key] = rec;
+    if (row.state === "current" && !stepShots[key]) captureStepShot(row.platform, key);
+    if (row.state === "done" && !stepShots[key] && rec.start) captureStepShot(row.platform, key);
+  });
+}
+function rememberFrame(plat) {
+  var img = wEl(plat, "watch-img");
+  var ctl = watchCtl[plat];
+  if (!img || !ctl || img.naturalWidth < 32 || img.naturalHeight < 32) return;
+  try {
+    var c = document.createElement("canvas");
+    c.width = img.naturalWidth;
+    c.height = img.naturalHeight;
+    c.getContext("2d").drawImage(img, 0, 0);
+    ctl.lastFrame = c.toDataURL("image/jpeg", 0.6);
+  } catch (err) {}
+}
+function captureStepShot(plat, key) {
+  var ctl = watchCtl[plat];
+  if (ctl && ctl.lastFrame) stepShots[key] = ctl.lastFrame;
+}
+function formatMs(ms) {
+  if (ms == null) return "";
+  if (ms < 1000) return ms + "ms";
+  return (ms / 1000).toFixed(1) + "s";
+}
+function failLine(st) {
+  var lines = (st && st.log_tail) || [];
+  for (var i = lines.length - 1; i >= 0; i--) {
+    var line = String(lines[i] || "");
+    if (line.indexOf("timed out") >= 0 || line.indexOf("Replay failed") >= 0 || line.indexOf("COMMAND_FAILED") >= 0) return line.slice(0, 280);
+  }
+  return "";
+}
 function renderWatchSteps(st) {
-  var list = $("watch-steps");
-  var pane = $("watch-pane");
-  if (!list || !pane) return;
   var rows = (st && st.steps) || [];
-  pane.classList.toggle("has-steps", rows.length > 0);
-  var running = st && (st.state === "running" || st.state === "paused");
-  if (!running) {
-    stepFollow = true;
-    WATCH_PLATS.forEach(stopWatch);
-  }
-  var html = rows.map(function (row) {
-    var stt = row.state === "done" || row.state === "current" || row.state === "failed" ? row.state : "pending";
-    var mark = stt === "done" ? "✓" : stt === "failed" ? "✕" : stt === "current" ? "●" : String(row.n);
-    var arg = row.args || "";
-    return '<li class="wstep ' + stt + '" data-n="' + row.n + '"><span class="mk">' + mark + '</span><span class="cmd">' + esc(row.command || "") + '</span>' +
-      (arg ? '<span class="arg">' + esc(arg) + '</span>' : "") + "</li>";
-  }).join("");
-  if (list.dataset.html !== html) {
-    list.dataset.html = html;
-    list.innerHTML = html;
-  }
-  if (!list.dataset.bound) {
-    list.dataset.bound = "1";
-    list.addEventListener("scroll", function () {
-      if (stepScrolling) return;
-      var cur = list.querySelector(".wstep.current");
-      if (!cur) return;
-      var top = cur.offsetTop;
-      var bot = top + cur.offsetHeight;
-      stepFollow = bot > list.scrollTop + 4 && top < list.scrollTop + list.clientHeight - 4;
-    });
-  }
-  var cur = list.querySelector(".wstep.current");
-  if (cur && stepFollow && !(st && st.state === "paused")) {
-    stepScrolling = true;
-    cur.scrollIntoView({block: "nearest"});
-    stepScrolling = false;
-  }
-  var curPlat = "";
-  rows.forEach(function (row) { if (row.state === "current") curPlat = row.platform || ""; });
-  document.querySelectorAll(".watch-slot").forEach(function (el) {
-    el.classList.toggle("is-main", !!curPlat && el.getAttribute("data-plat") === curPlat);
+  noteStepClock(rows);
+  var by = {android: [], ios: [], desktop: []};
+  rows.forEach(function (row) {
+    var plat = row.platform || "";
+    if (by[plat]) by[plat].push(row);
+  });
+  var err = failLine(st);
+  WATCH_PLATS.forEach(function (plat) {
+    var list = $("watch-steps-" + plat);
+    if (!list) return;
+    var mine = by[plat] || [];
+    var opt = optionByStep(mine);
+    var live = st.state === "running" || st.state === "paused";
+    var html = mine.map(function (row) {
+      var stt = row.state === "done" || row.state === "current" || row.state === "failed" ? row.state : "pending";
+      if (!live && stt === "current") stt = "done";
+      var mark = stt === "done" ? "✓" : stt === "failed" ? "✕" : stt === "current" ? "●" : String(row.n);
+      var part = stepParts(row);
+      var rec = stepClock[stepKey(row)] || {};
+      var ms = row.duration_ms != null ? Number(row.duration_ms) : null;
+      if (ms == null && live && stt === "current" && rec.start) ms = Date.now() - rec.start;
+      var sub = part.raw ? part.raw : "";
+      if (ms != null) sub += (sub ? " · " : "") + formatMs(ms);
+      return '<li class="wstep ' + stt + '" data-n="' + row.n + '" data-plat="' + plat + '"><span class="mk">' + mark + '</span><span class="cmd">' + esc(stepPhrase(row, opt[stepKey(row)])) + '</span>' +
+        (sub ? '<span class="sub">' + esc(sub) + '</span>' : '') +
+        (stt === "failed" && err ? '<span class="err">' + esc(err) + '</span>' : '') + '</li>';
+    }).join("");
+    if (list.dataset.html !== html) {
+      list.dataset.html = html;
+      list.innerHTML = html;
+    }
+    var cur = list.querySelector(".wstep.current");
+    if (cur && !(st && st.state === "paused") && list.scrollHeight > list.clientHeight + 4) {
+      var top = cur.offsetTop - (list.clientHeight / 2) + (cur.offsetHeight / 2);
+      list.scrollTop = Math.max(0, top);
+    }
   });
   paintTouch(st);
 }
@@ -4184,11 +4619,9 @@ function bindWatchStream() {
     setTimeout(bindWatchStream, 2000);
     return;
   }
-  var st = lastStatusSnap || {};
-  var running = st.state === "running" || st.state === "paused";
   WATCH_PLATS.forEach(function (plat) {
     var slot = watchSlot(plat);
-    var live = running && plat !== "desktop" && slot && slot.device && (!slot.platform || slot.platform === plat);
+    var live = plat !== "desktop" && slot && slot.device && (!slot.platform || slot.platform === plat);
     if (!live) {
       stopWatch(plat);
       fitWatchPhone(plat);
@@ -4206,8 +4639,7 @@ function bindWatchStream() {
     ctl.natW = 0;
     ctl.natH = 0;
     ctl.pending = null;
-    if (typeof VideoDecoder === "function") startWatchH264(plat, q);
-    else startWatchPump(plat, q);
+    startWatchImg(plat, q);
   });
   setTimeout(bindWatchStream, 1000);
 }
@@ -4280,11 +4712,6 @@ function bootConsole() {
     if (state.selected) confirmEdge(state.selected);
   };
   bindWatchStream();
-  if ($("watch-scrcpy")) {
-    $("watch-scrcpy").onclick = function () {
-      fetch("/api/scrcpy?" + watchQuery("android")).catch(function () {});
-    };
-  }
   window.addEventListener("resize", fitWatchPhone);
   var liveFrame = $("live-frame");
   if (liveFrame) {
@@ -4387,6 +4814,46 @@ applyStaticI18n();
 document.querySelectorAll(".lang-switch [data-lang]").forEach(function (b) {
   b.onclick = function () { setLang(b.getAttribute("data-lang")); };
 });
+var viewMapBtn = $("view-map");
+var viewRunBtn = $("view-run");
+if (viewMapBtn) viewMapBtn.onclick = function () { watchViewLocked = true; setWatchView("map"); };
+if (viewRunBtn) viewRunBtn.onclick = function () { watchViewLocked = false; setWatchView("run"); };
+var resultToggle = $("watch-result-toggle");
+if (resultToggle) resultToggle.onclick = function () {
+  var body = $("watch-result-body");
+  if (!body) return;
+  body.hidden = !body.hidden;
+  var box = $("watch-result");
+  if (box) box.classList.toggle("is-open", !body.hidden);
+  requestAnimationFrame(function () { requestAnimationFrame(function () { fitWatchPhone(); }); });
+};
+window.addEventListener("resize", function () { fitWatchPhone(); });
+["android", "ios", "desktop"].forEach(function (plat) {
+  var btn = $("watch-retry-" + plat);
+  if (!btn) return;
+  btn.onclick = function () {
+    var ctl = watchCtl[plat];
+    if (!ctl) return;
+    ctl.streamKey = "";
+    ctl.imgToken = "";
+    ctl.failReason = "";
+    bindWatchStream();
+  };
+  var list = $("watch-steps-" + plat);
+  if (!list) return;
+  list.onclick = function (ev) {
+    var li = ev.target.closest(".wstep");
+    if (!li) return;
+    var key = li.getAttribute("data-plat") + ":" + li.getAttribute("data-n");
+    var idx = -1;
+    shotGallery.forEach(function (item, i) { if (item.key === key) idx = i; });
+    if (idx >= 0) openShot(idx);
+  };
+});
+var prevShot = $("lightbox-prev");
+var nextShot = $("lightbox-next");
+if (prevShot) prevShot.onclick = function () { openShot(shotIndex - 1); };
+if (nextShot) nextShot.onclick = function () { openShot(shotIndex + 1); };
 document.querySelectorAll(".view-switch [data-view]").forEach(function (b) {
   b.onclick = function () { setView(b.getAttribute("data-view")); };
 });

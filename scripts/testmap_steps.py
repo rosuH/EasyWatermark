@@ -61,6 +61,11 @@ def public_steps(rows: list[dict]) -> list[dict]:
         }
         if row.get("point"):
             item["point"] = row["point"]
+        if isinstance(row.get("duration_ms"), int):
+            item["duration_ms"] = row["duration_ms"]
+        shot = row.get("shot")
+        if isinstance(shot, str) and shot:
+            item["shot"] = shot
         out.append(item)
     return out
 
@@ -80,6 +85,13 @@ def apply_event(rows: list[dict], event: dict) -> bool:
     if kind == "replay_action_start":
         row["state"] = "current"
         return True
+    dur = event.get("durationMs")
+    if not isinstance(dur, (int, float)):
+        timing = event.get("resultTiming")
+        if isinstance(timing, dict):
+            dur = timing.get("totalDurationMs")
+    if isinstance(dur, (int, float)) and dur >= 0:
+        row["duration_ms"] = int(dur)
     if event.get("ok") is True:
         row["state"] = "done"
         return True
@@ -218,8 +230,12 @@ swipe 1 2 9 8
     assert apply_event(rows, {"type": "replay_action_start", "step": 3})
     assert rows[2]["state"] == "current"
     assert rows[0]["state"] == "pending"
-    assert apply_event(rows, {"type": "replay_action_stop", "step": 3, "ok": True})
+    assert apply_event(
+        rows, {"type": "replay_action_stop", "step": 3, "ok": True, "durationMs": 480}
+    )
     assert rows[2]["state"] == "done"
+    assert rows[2]["duration_ms"] == 480
+    assert public_steps(rows)[2]["duration_ms"] == 480
     assert apply_event(rows, {"type": "replay_action_stop", "step": 4, "ok": False})
     assert rows[3]["state"] == "failed"
     assert rows[4]["state"] == "pending"
