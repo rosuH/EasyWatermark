@@ -54,6 +54,7 @@ from testmap_run import (  # noqa: E402
     RunManager,
     confirmation_views,
     edge_badges,
+    latest_edge_results,
     enrich_run,
     latest_run,
     artifact_png,
@@ -148,6 +149,7 @@ class Handler(BaseHTTPRequestHandler):
                     "nodes": nodes,
                     "edges": edges,
                     "badges": edge_badges(edges),
+                    "results": latest_edge_results(edges),
                     "confirmations": confirmation_views(edges),
                     "witnesses": list_witness_files(),
                     "latest_run": (latest_run() or {}).get("id"),
@@ -369,7 +371,13 @@ class Handler(BaseHTTPRequestHandler):
                 device = body.get("device") or "auto"
                 if device is not None and not isinstance(device, str):
                     raise ValueError("device must be a string")
-                result = MANAGER.start(tasks, device)
+                repeat = body.get("repeat", 1)
+                if isinstance(repeat, bool) or not isinstance(repeat, int):
+                    raise ValueError("repeat must be an integer")
+                source = body.get("source") or "manual"
+                if not isinstance(source, str):
+                    raise ValueError("source must be a string")
+                result = MANAGER.start(tasks, device, repeat=repeat, source=source)
                 self._json(202, result)
                 return
             if path == "/api/pause":
