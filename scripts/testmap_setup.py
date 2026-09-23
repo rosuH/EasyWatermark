@@ -209,21 +209,26 @@ def wait_media_id(serial: str, display_name: str, timeout_s: float = 15) -> str:
     raise ValueError(f"Synthetic image {display_name} was not uniquely indexed in MediaStore")
 
 
-def android_debug_resumed(serial: str) -> bool:
-    """True when the debug app is already resumed (keep a multi-photo editor session)."""
-    try:
-        raw = adb(serial, ["shell", "dumpsys", "activity", "activities"], timeout=8)
-    except (ValueError, OSError, subprocess.TimeoutExpired):
-        return False
-    for line in raw.splitlines():
-        if "mResumedActivity" in line or "topResumedActivity" in line:
-            if ANDROID_PACKAGE in line:
-                return True
-    return False
-
-
 def android_force_stop(serial: str) -> None:
     adb_shell(serial, "am", "force-stop", ANDROID_PACKAGE)
+
+
+def android_leave_system_picker(serial: str) -> None:
+    """Leave a system photo picker so the next case does not open behind it."""
+    try:
+        adb_shell(serial, "input", "keyevent", "KEYCODE_HOME")
+    except ValueError:
+        pass
+    for package in (
+        "com.google.android.apps.photos",
+        "com.google.android.photopicker",
+        "com.android.photopicker",
+        "com.android.providers.media.module",
+    ):
+        try:
+            adb_shell(serial, "am", "force-stop", package)
+        except ValueError:
+            continue
 
 
 def android_start_home(serial: str) -> None:
@@ -382,6 +387,19 @@ def ios_revoke_library_read(udid: str) -> None:
     simctl(udid, "privacy", udid, "revoke", "photos", IOS_BUNDLE)
 
 
+def ios_grant_library_read(udid: str) -> None:
+    simctl(udid, "privacy", udid, "grant", "photos", IOS_BUNDLE)
+    simctl(udid, "privacy", udid, "grant", "photos-add", IOS_BUNDLE)
+
+
+def ios_terminate(udid: str) -> None:
+    """Stop the app if it is running. A missing process is already a clean start."""
+    try:
+        simctl(udid, "terminate", IOS_BUNDLE)
+    except (ValueError, OSError, subprocess.TimeoutExpired):
+        return
+
+
 def apply_setup(
     setup: str,
     *,
@@ -418,9 +436,10 @@ def apply_setup(
         fixtures = make_fixtures(folder, marker)
         state["fixtures"] = {key: str(path) for key, path in fixtures.items()}
         push_android_fixtures(serial, fixtures)
-        keep_editor = setup == "editor" and android_debug_resumed(serial)
-        if not keep_editor:
-            android_force_stop(serial)
+        # Each case starts from its own screen. A resumed export sheet or
+        # picker must not be reused as the next case's editor.
+        android_leave_system_picker(serial)
+        android_force_stop(serial)
         if setup == "wide":
             state["display_backup"] = record_display(serial)
             set_wide(serial)
@@ -429,7 +448,7 @@ def apply_setup(
             state["private_backup"] = inject_crash_gate(serial, version)
         if setup in {"home", "crash"}:
             android_start_home(serial)
-        elif not keep_editor:
+        else:
             source_id = wait_media_id(serial, Path(state["fixtures"]["A"]).name)
             state["source_id"] = source_id
             android_share_in(serial, source_id)
@@ -443,10 +462,13 @@ def apply_setup(
             raise ValueError(f"Setup {setup} is not an iOS harness key")
         if not udid:
             raise ValueError("iOS setup requires --udid")
+        ios_terminate(udid)
         if setup == "ios":
             ios_revoke_library_read(udid)
-        # editor/home/wide: scripts attach or relaunch. Width change is a
-        # simulator device choice (iPad), not a runtime morph on iPhone.
+        else:
+            ios_grant_library_read(udid)
+        # editor/home/wide: the script relaunches and seeds its own start.
+        # Width change is a simulator device choice (iPad), not a runtime morph.
         return state
     raise ValueError(f"Unsupported setup platform {platform}")
 
