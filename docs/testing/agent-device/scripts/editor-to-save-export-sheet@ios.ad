@@ -2,6 +2,8 @@ context platform=ios
 open me.rosuh.easywatermark.ios --relaunch
 press id="store-seed-editor"
 wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible" 90000
+wait absent id="aboutBack" 5000
+wait absent id="openSourceBack" 5000
 press id="sharedComposeSaveButton"
 wait text "输出格式"
 press "label=\"JPEG, JPEG\""
@@ -10,4 +12,6 @@ press "label=\"PNG, PNG\""
 wait id="sharedComposeExportPrimary"
 press label="关闭工作表"
 wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible" 90000
+wait absent id="aboutBack" 5000
+wait absent id="openSourceBack" 5000
 close

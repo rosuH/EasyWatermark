@@ -382,12 +382,6 @@ class Handler(BaseHTTPRequestHandler):
                 result = MANAGER.start(tasks, device, repeat=repeat, source=source)
                 self._json(202, result)
                 return
-            if path == "/api/pause":
-                self._json(200, MANAGER.pause())
-                return
-            if path == "/api/resume":
-                self._json(200, MANAGER.resume())
-                return
             if path == "/api/stop":
                 self._json(200, MANAGER.stop())
                 return

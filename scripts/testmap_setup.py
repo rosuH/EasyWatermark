@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import plistlib
 import re
 import shlex
 import shutil
@@ -277,21 +278,30 @@ def android_frame_hash(serial: str) -> bytes:
     return hashlib.sha256(body).digest()
 
 
-def android_ui_contains(serial: str, text: str) -> bool:
+def android_ui_xml(serial: str) -> str:
     remote = "/sdcard/ewm-ready.xml"
+    adb_shell(serial, "uiautomator", "dump", remote)
+    xml = adb(serial, ["exec-out", "cat", remote], timeout=20)
+    return xml if isinstance(xml, str) else ""
+
+
+def android_ui_contains(serial: str, text: str) -> bool:
     try:
-        adb_shell(serial, "uiautomator", "dump", remote)
-        xml = adb(serial, ["exec-out", "cat", remote], timeout=20)
+        xml = android_ui_xml(serial)
     except (ValueError, OSError, subprocess.TimeoutExpired):
         return False
+    return f'text="{text}"' in xml or f'content-desc="{text}"' in xml
+
+
+def _ui_has(xml: str, text: str) -> bool:
     return f'text="{text}"' in xml or f'content-desc="{text}"' in xml
 
 
 def android_wait_editor_ready(serial: str) -> None:
     """One editor gate for every Android editor case.
 
-    Wait until two consecutive frames match, then wait for Save here.
-    Case scripts must not each race label="Save" on entry.
+    Save must be present, and the launch and About markers must be absent.
+    A Save node left under another page is not the editor.
     """
     previous = None
     deadline = time.time() + 12
@@ -306,13 +316,86 @@ def android_wait_editor_ready(serial: str) -> None:
         previous = current
         time.sleep(0.7)
     # The preview can keep animating, so a stable frame is not required.
-    # Save in the accessibility tree is the shared editor gate.
     ready = time.time() + 30
+    last = ""
     while time.time() < ready:
-        if android_ui_contains(serial, "Save"):
+        try:
+            xml = android_ui_xml(serial)
+        except (ValueError, OSError, subprocess.TimeoutExpired):
+            time.sleep(1)
+            continue
+        last = xml
+        if (
+            _ui_has(xml, "Save")
+            and not _ui_has(xml, "Version")
+            and not _ui_has(xml, "Choose Images")
+        ):
             return
         time.sleep(1)
-    raise ValueError("Android editor settled but Save was not in the accessibility tree")
+    raise ValueError(
+        "Android editor gate failed: need Save, with Version and Choose Images absent. "
+        f"dump has Save={_ui_has(last, 'Save')} "
+        f"Version={_ui_has(last, 'Version')} "
+        f"Choose Images={_ui_has(last, 'Choose Images')}"
+    )
+
+
+def product_version() -> tuple[str, int]:
+    """NAME and CODE from ProductVersion.kt. The installed package must match both."""
+    path = REPO_ROOT / "shared/src/commonMain/kotlin/me/rosuh/easywatermark/ProductVersion.kt"
+    text = path.read_text(encoding="utf-8")
+    name = re.search(r'NAME: String = "([^"]+)"', text)
+    code = re.search(r"CODE: Int = (\d+)", text)
+    if not name or not code:
+        raise ValueError(f"ProductVersion.kt has no NAME/CODE ({path})")
+    return name.group(1), int(code.group(1))
+
+
+def android_installed(serial: str) -> dict:
+    """Package name, versionName, versionCode, and sha256 of the installed base APK."""
+    dump = adb_shell(serial, "dumpsys", "package", ANDROID_PACKAGE)
+    name_m = re.search(r"versionName=(\S+)", dump)
+    code_m = re.search(r"versionCode=(\d+)", dump)
+    path_line = adb_shell(serial, "pm", "path", ANDROID_PACKAGE)
+    apk = ""
+    for line in path_line.splitlines():
+        if line.startswith("package:"):
+            apk = line.split(":", 1)[1].strip()
+            break
+    if not apk:
+        raise ValueError(f"pm path did not return an APK for {ANDROID_PACKAGE}")
+    raw = adb(serial, ["exec-out", "cat", apk], binary=True, timeout=180)
+    if not isinstance(raw, (bytes, bytearray)) or not raw:
+        raise ValueError(f"could not read installed APK {apk}")
+    return {
+        "platform": "android",
+        "package": ANDROID_PACKAGE,
+        "version": name_m.group(1) if name_m else "",
+        "version_code": int(code_m.group(1)) if code_m else None,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+        "artifact": apk,
+    }
+
+
+def ios_installed(udid: str) -> dict:
+    """Bundle id, short version, build number, and sha256 of the installed executable."""
+    app = Path(simctl(udid, "get_app_container", udid, IOS_BUNDLE, "app").strip())
+    info = plistlib.loads((app / "Info.plist").read_bytes())
+    shared = app / "Frameworks" / "Shared.framework" / "Shared"
+    exe_name = str(info.get("CFBundleExecutable") or "")
+    exe = shared if shared.is_file() else (app / exe_name if exe_name else None)
+    if exe is None or not exe.is_file():
+        raise ValueError(f"iOS app executable missing under {app}")
+    code_raw = str(info.get("CFBundleVersion") or "")
+    version_code = int(code_raw) if code_raw.isdigit() else None
+    return {
+        "platform": "ios",
+        "package": IOS_BUNDLE,
+        "version": str(info.get("CFBundleShortVersionString") or ""),
+        "version_code": version_code,
+        "sha256": hashlib.sha256(exe.read_bytes()).hexdigest(),
+        "artifact": str(exe),
+    }
 
 
 def android_share_in(serial: str, media_id: str) -> None:

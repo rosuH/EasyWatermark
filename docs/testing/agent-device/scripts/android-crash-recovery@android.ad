@@ -4,4 +4,6 @@ wait "label=\"Recovery Mode\"" 30000
 scroll down
 press "label=\"Turn off recovery mode\""
 wait "label=\"Choose Images\"" 30000
+wait absent label="Save" 5000
+wait absent label="Version" 5000
 close
