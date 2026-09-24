@@ -1,12 +1,12 @@
 context platform=ios
 open me.rosuh.easywatermark.ios --relaunch
-wait id="launchPickImageButton"
+wait "id=\"launchPickImageButton\" label=\"选择图片\" visible"
 press id="launchAboutButton"
 wait label="版本"
 press label="开源许可"
-wait id="openSourceContentMaxWidth"
+wait "id=\"openSourceContentMaxWidth\" visible"
 press id="openSourceBack"
 wait label="版本"
 press id="aboutBack"
-wait id="launchPickImageButton"
+wait "id=\"launchPickImageButton\" label=\"选择图片\" visible"
 close

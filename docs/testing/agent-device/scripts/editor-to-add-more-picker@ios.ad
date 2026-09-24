@@ -1,7 +1,7 @@
 context platform=ios
 open me.rosuh.easywatermark.ios --relaunch
 press id="store-seed-editor"
-wait id="sharedComposeSaveButton" 90000
+wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible" 90000
 wait id="sharedComposeAddMoreButton"
 press "label=\"Add more images\""
 wait text "选择最多50张照片"
