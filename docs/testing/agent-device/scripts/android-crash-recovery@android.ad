@@ -1,6 +1,6 @@
 context platform=android
 open me.rosuh.easywatermark.debug --relaunch
-wait label="Recovery Mode"
-press label="Turn off recovery mode"
-wait label="Choose Images"
+wait "label=\"Recovery Mode\""
+press "label=\"Turn off recovery mode\""
+wait "label=\"Choose Images\""
 close

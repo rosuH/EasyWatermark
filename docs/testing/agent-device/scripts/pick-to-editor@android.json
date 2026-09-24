@@ -1,5 +1,5 @@
 [
   {"command": "open", "input": {"app": "me.rosuh.easywatermark.debug"}},
-  {"command": "wait", "input": {"selector": "label=\"Save\""}},
+  {"command": "wait", "input": {"selector": "label=\"Save\"", "timeout": 20000}},
   {"command": "close", "input": {}}
 ]

@@ -6,6 +6,6 @@ press id="editorTab-1"
 wait id="editorControl-TileMode"
 press label="单个"
 wait label="单个"
-press id="sharedComposeWatermarkPreview"
-wait id="sharedComposeWatermarkPreview"
+press 603 900
+wait id="sharedComposeSaveButton"
 close

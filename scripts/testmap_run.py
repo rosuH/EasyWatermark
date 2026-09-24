@@ -1509,18 +1509,36 @@ class _DupWrite:
             self.secondary.flush()
 
 
-def _tee_child(proc: subprocess.Popen, logf, tee_stdout: bool) -> int:
+def _tee_child(
+    proc: subprocess.Popen,
+    logf,
+    tee_stdout: bool,
+    deadline_s: float | None = None,
+) -> int:
     assert proc.stdout is not None
-    while True:
-        chunk = proc.stdout.read(4096)
-        if not chunk:
-            break
-        logf.write(chunk)
-        logf.flush()
-        if tee_stdout:
-            sys.stdout.write(chunk)
-            sys.stdout.flush()
-    return proc.wait()
+    timer = None
+    if deadline_s:
+        def _expire() -> None:
+            if proc.poll() is None:
+                terminate_process_group(proc)
+
+        timer = threading.Timer(deadline_s, _expire)
+        timer.daemon = True
+        timer.start()
+    try:
+        while True:
+            chunk = proc.stdout.read(4096)
+            if not chunk:
+                break
+            logf.write(chunk)
+            logf.flush()
+            if tee_stdout:
+                sys.stdout.write(chunk)
+                sys.stdout.flush()
+        return proc.wait()
+    finally:
+        if timer is not None:
+            timer.cancel()
 
 
 def ingest_artemis_result(spec: dict, exit_code: int | None) -> dict:
@@ -1883,7 +1901,7 @@ def _run_batched_steps(
             on_proc(proc)
         buf = io.StringIO()
         try:
-            code = _tee_child(proc, _DupWrite(logf, buf), tee_stdout)
+            code = _tee_child(proc, _DupWrite(logf, buf), tee_stdout, deadline_s=420)
         finally:
             if on_proc:
                 on_proc(None)
@@ -2061,7 +2079,12 @@ def run_task(
         )
         tail.start()
     try:
-        code = _tee_child(proc, sink, tee_stdout)
+        code = _tee_child(
+            proc,
+            sink,
+            tee_stdout,
+            deadline_s=420 if spec.get("builder") == "agent-device" else None,
+        )
     finally:
         stop_tail.set()
         if tail is not None:
