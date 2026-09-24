@@ -4,7 +4,7 @@ press id="store-seed-editor"
 wait id="sharedComposeSaveButton" 90000
 press label="关于"
 wait label="版本"
-press id="aboutBack"
+press 70 256
 wait id="sharedComposeSaveButton" 90000
 wait "label=\"Watermark preview\""
 close
