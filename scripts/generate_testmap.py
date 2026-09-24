@@ -1549,6 +1549,7 @@ button { letter-spacing: inherit; }
   white-space: nowrap;
 }
 .sha.dirty { color: var(--warning); border-color: rgba(229, 197, 14, 0.35); }
+#pkg-line { max-width: 520px; overflow: hidden; text-overflow: ellipsis; }
 .topbar-right {
   margin-left: auto;
   display: flex;
@@ -3041,6 +3042,7 @@ body.view-run #exec-confirm { flex: 0 0 auto; }
       <h1 data-i18n="title">E2E Test Map</h1>
     </div>
     <span id="git-sha" class="sha">—</span>
+    <span id="pkg-line" class="sha"></span>
     <div class="topbar-right">
       <div class="view-switch" role="group" aria-label="View">
         <button type="button" id="view-map" class="on" data-i18n="view.catalog">Catalog</button>
@@ -5286,6 +5288,29 @@ function relTime(iso) {
   return t("rel.day", {n: Math.floor(s / 86400)});
 }
 var headGit = null;
+function updatePackages(st) {
+  var el = $("pkg-line");
+  if (!el) return;
+  var refusal = st && st.package_refusal;
+  if (refusal) {
+    el.textContent = refusal;
+    el.title = refusal;
+    el.classList.add("dirty");
+    return;
+  }
+  el.classList.remove("dirty");
+  var packages = st && st.packages;
+  if (!packages) { el.textContent = ""; el.title = ""; return; }
+  var parts = [];
+  ["android", "ios"].forEach(function (plat) {
+    var info = packages[plat];
+    if (!info) return;
+    var sha = info.sha256 || "";
+    parts.push(plat + " " + (info.version || "?") + " / " + (info.version_code == null ? "?" : info.version_code) + " " + sha.slice(0, 12));
+  });
+  el.textContent = parts.join(" · ");
+  el.title = parts.length ? JSON.stringify(packages) : "";
+}
 function updateSha() {
   var el = $("git-sha");
   if (!el) return;
@@ -5878,6 +5903,7 @@ function renderTaskBoard(st) {
 }
 function renderRunStatus(st) {
   lastStatusSnap = st;
+  updatePackages(st);
   var prev = lastRunState;
   if ((st.state === "running" || st.state === "paused") && prev !== "running" && prev !== "paused") {
     watchViewLocked = false;
@@ -6599,7 +6625,7 @@ function poll() {
     var payload = JSON.stringify({
       id: st.id, state: st.state, queue: st.queue, current: st.current,
       pause_queue: st.pause_queue, log_tail: st.log_tail, live: st.live, watch: st.watch,
-      watches: st.watches, steps: st.steps
+      watches: st.watches, steps: st.steps, packages: st.packages, package_refusal: st.package_refusal
     });
     if (payload === lastStatusJson) {
       syncGraph();

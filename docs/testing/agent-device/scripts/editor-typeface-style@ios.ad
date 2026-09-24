@@ -2,6 +2,8 @@ context platform=ios
 open me.rosuh.easywatermark.ios --relaunch
 press id="store-seed-editor"
 wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible" 90000
+wait absent id="aboutBack" 5000
+wait absent id="openSourceBack" 5000
 press id="editorTab-1"
 press id="editorOption-TextTypeFace"
 wait id="editorControl-TextTypeFace"
