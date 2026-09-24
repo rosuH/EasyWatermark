@@ -56,6 +56,7 @@ fun RecoveryScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .ewmTestTagsAsResourceId()
             .safeDrawingPadding()
             .padding(16.dp)
             .testTag("sharedComposeRecoveryScreen"),

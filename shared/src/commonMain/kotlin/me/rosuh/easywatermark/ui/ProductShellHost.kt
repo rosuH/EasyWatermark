@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import kotlinx.coroutines.coroutineScope
@@ -167,7 +168,8 @@ fun ProductShellHost(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(chrome),
+            .background(chrome)
+            .ewmTestTagsAsResourceId(),
     ) {
         CompositionLocalProvider(LocalShellObscured provides (aboutPresent || baseBusy)) {
             Box(
@@ -187,25 +189,24 @@ fun ProductShellHost(
                 }
             }
         }
-        if (aboutPresent) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                event.changes.forEach { it.consume() }
-                            }
-                        }
-                    },
-            )
-        }
+        // Consume leftover pointers on the About overlay itself (Final pass, after
+        // children). A prior sibling consume-all Box ate About/OpenSource clicks on iOS.
         aboutCover.AnimatedVisibility(
             visible = { it },
             enter = ProductShellTransitions.aboutEnter(motionPolicy),
             exit = ProductShellTransitions.aboutExit(motionPolicy),
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Final)
+                            event.changes.forEach { change ->
+                                if (!change.isConsumed) change.consume()
+                            }
+                        }
+                    }
+                },
         ) {
             content(ProductShellNav.Route.About)
         }
