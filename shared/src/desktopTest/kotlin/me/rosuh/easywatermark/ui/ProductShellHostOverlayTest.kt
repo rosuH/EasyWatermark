@@ -93,8 +93,12 @@ class ProductShellHostOverlayTest {
         val src = readFirst("iosApp/iosApp/ContentView.swift")
         assertTrue(src.contains("store-seed-"))
         assertTrue(
-            src.contains("constant: 56"),
+            src.contains("constant: 96"),
             "store-seed hook bar must sit below the 48pt back button",
+        )
+        assertTrue(
+            src.contains("hit is UIButton"),
+            "hook bar must pass hits through to Compose except on the seed buttons",
         )
     }
 
