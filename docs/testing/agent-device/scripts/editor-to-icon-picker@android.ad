@@ -4,5 +4,5 @@ wait label="Save"
 press label="Content"
 wait label="Icon"
 press label="Icon"
-wait label="Choose Images"
+wait "label=\"Choose Images\""
 close

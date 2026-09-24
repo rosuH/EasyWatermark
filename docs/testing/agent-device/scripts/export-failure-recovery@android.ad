@@ -2,8 +2,8 @@ context platform=android
 open me.rosuh.easywatermark.debug
 wait label="Save"
 press label="Save"
-wait label="Export to the album"
-press label="Export to the album"
+wait "label=\"Export to the album\""
+press "label=\"Export to the album\""
 wait "label=\"Retry failed\""
 press "label=\"Retry failed\""
 wait text "succeeded"

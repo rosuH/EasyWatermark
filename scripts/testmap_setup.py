@@ -320,7 +320,7 @@ def write_private(serial: str, path: str, data: bytes, timeout: int = 45) -> Non
         ANDROID_PACKAGE,
         "sh",
         "-c",
-        f"cat > {shlex.quote(path)}",
+        f"mkdir -p -- {shlex.quote(str(Path(path).parent))} && cat > {shlex.quote(path)}",
     ]
     result = subprocess.run(argv, capture_output=True, timeout=timeout, input=data)
     if result.returncode != 0:
@@ -411,9 +411,27 @@ def ios_grant_library_read(udid: str) -> None:
 def ios_terminate(udid: str) -> None:
     """Stop the app if it is running. A missing process is already a clean start."""
     try:
-        simctl(udid, "terminate", IOS_BUNDLE)
+        simctl(udid, "terminate", udid, IOS_BUNDLE)
     except (ValueError, OSError, subprocess.TimeoutExpired):
         return
+
+
+def ios_clear_saved_config(udid: str) -> None:
+    """Drop saved watermark and user config so the next launch is the default session."""
+    try:
+        container = simctl(udid, "get_app_container", udid, IOS_BUNDLE, "data").strip()
+    except (ValueError, OSError, subprocess.TimeoutExpired):
+        return
+    docs = Path(container) / "Documents"
+    if not docs.is_dir():
+        return
+    for name in (
+        "sp_water_mark_config.preferences_pb",
+        "sp_water_mark_user_config.preferences_pb",
+    ):
+        path = docs / name
+        if path.is_file():
+            path.unlink()
 
 
 def apply_setup(
@@ -480,6 +498,7 @@ def apply_setup(
         if not udid:
             raise ValueError("iOS setup requires --udid")
         ios_terminate(udid)
+        ios_clear_saved_config(udid)
         if setup == "ios":
             ios_revoke_library_read(udid)
         else:

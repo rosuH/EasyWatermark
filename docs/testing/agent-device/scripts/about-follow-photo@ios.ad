@@ -3,8 +3,10 @@ open me.rosuh.easywatermark.ios --relaunch
 wait id="launchPickImageButton"
 press id="launchAboutButton"
 wait label="版本"
-press label="Theme editor from photo"
-wait label="Theme editor from photo"
+scroll down
+scroll down
+press 'role=switch label="Theme editor from photo"'
+wait 'role=switch label="Theme editor from photo"'
 press label="Back"
 wait id="launchPickImageButton"
 close

@@ -7,6 +7,6 @@ wait text "输出格式"
 press "label=\"JPEG, JPEG\""
 wait text "质量"
 press "label=\"PNG, PNG\""
-press "label=\"Close sheet\""
+press label="关闭工作表"
 wait id="sharedComposeSaveButton" 90000
 close
